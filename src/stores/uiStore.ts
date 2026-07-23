@@ -18,7 +18,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
   lg: '1.0625rem',
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
-export type SettingsTab = 'translations' | 'provider' | 'typography';
+export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
 export type WorkspaceArea = 'translations' | 'library' | 'transcriptions';
 /**
  * Vista corrente della shell: Dashboard (home app-level), pagina del workspace

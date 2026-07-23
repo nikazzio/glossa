@@ -491,6 +491,19 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "providerTab": "Provider",
+    "storageTab": "Dati",
+    "storage": {
+      "title": "Posizione dati",
+      "description": "Dove Glossa conserva il proprio database (progetti, glossari, impostazioni). Spostarlo copia prima i dati e verifica la copia; l'originale resta intatto finché il nuovo avvio non riesce.",
+      "defaultLocation": "Posizione predefinita",
+      "customLocation": "Posizione personalizzata",
+      "changeFolder": "Cambia cartella",
+      "migrating": "Spostamento in corso…",
+      "migrationNote": "Dopo il cambio riavvia Glossa per usare la nuova posizione.",
+      "migrationSucceeded": "Posizione dati aggiornata. Riavvia Glossa per applicarla.",
+      "migrationFailed": "Spostamento posizione dati fallito",
+      "loadFailed": "Lettura posizione dati fallita"
+    },
     "phraseMemoryTab": "Memoria frasi",
     "phraseMemoryToggle": "Memoria",
     "phraseMemoryAutoSearch": "Ricerca automatica",
@@ -1319,7 +1332,9 @@
       "logFileTitle": "Directory dei log",
       "logFileDesc": "Glossa scrive un log rotativo chiamato \"glossa\" in questa directory. Allegalo o copialo quando segnali un bug.",
       "rustLogTitle": "Log dettagliato",
-      "rustLogDesc": "Imposta la variabile d'ambiente RUST_LOG per sovrascrivere il livello di log a runtime:"
+      "rustLogDesc": "Imposta la variabile d'ambiente RUST_LOG per sovrascrivere il livello di log a runtime:",
+      "dataLocationTitle": "Dove sono i miei dati",
+      "dataLocationDesc": "Il database dell'app (progetti, glossari, impostazioni) vive in una cartella predefinita del sistema. Nelle Impostazioni, scheda \"Dati\", puoi vedere la posizione attuale e spostarla altrove: lo spostamento copia prima i dati e verifica la copia prima di usarla, l'originale non viene mai cancellato automaticamente."
     },
     "version": {
       "check": "Controlla aggiornamenti",

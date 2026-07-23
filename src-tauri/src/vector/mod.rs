@@ -3,7 +3,7 @@ pub mod embedding;
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, Result as RusqliteResult};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
 #[derive(Clone)]
 pub struct VectorDatabase {
@@ -87,10 +87,7 @@ pub fn vec_ping(database: State<'_, VectorDatabase>) -> Result<String, String> {
 }
 
 pub fn get_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_config_dir()
-        .map(|d| d.join("glossa.db"))
-        .map_err(|e| e.to_string())
+    crate::storage_config::db_path(app)
 }
 
 #[cfg(test)]

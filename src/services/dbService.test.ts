@@ -86,6 +86,24 @@ vi.mock('@tauri-apps/plugin-sql', () => ({
   },
 }));
 
+const TEST_DATA_DIR = '/tmp/glossa-test-data';
+let backupFileResult: string | null = null;
+
+// getDb() calls the mocked `invoke('get_data_dir')` before any other backend
+// call to resolve the absolute sqlite URL (see resolveDbUrl in dbService.ts).
+// mockResolvedValueOnce would be consumed by that call instead of the one a
+// test actually wants to stub (e.g. backup_database_file), since it doesn't
+// look at arguments — dispatch by command name in a persistent implementation
+// instead, and let individual tests set `backupFileResult` when needed.
+beforeEach(() => {
+  backupFileResult = null;
+  vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+    if (cmd === 'get_data_dir') return { path: TEST_DATA_DIR, isOverride: false };
+    if (cmd === 'backup_database_file') return backupFileResult;
+    return undefined;
+  });
+});
+
 describe('runInTransaction', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -104,7 +122,7 @@ describe('runInTransaction', () => {
     });
 
     expect(invoke).toHaveBeenCalledWith('execute_transaction', {
-      db: 'sqlite:glossa.db',
+      db: 'sqlite:/tmp/glossa-test-data/glossa.db',
       statements: [{ query: 'INSERT INTO foo VALUES ($1)', params: ['bar'] }],
     });
     expect(dbState.db.execute).not.toHaveBeenCalledWith('BEGIN');
@@ -220,7 +238,7 @@ describe('initDatabase migrations', () => {
   it('backs up and resets a beta database with an old schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
     dbState.setSchemaVersion('1');
-    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.legacy.db.bak');
+    backupFileResult = '/tmp/glossa.legacy.db.bak';
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -277,7 +295,7 @@ describe('initDatabase migrations', () => {
   it('resets the previous schema after removing legacy project view state', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
     dbState.setSchemaVersion('db-schema-v3');
-    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.db-schema-v3.bak');
+    backupFileResult = '/tmp/glossa.db-schema-v3.bak';
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -451,7 +469,7 @@ describe('operation log pipeline scoping', () => {
     });
 
     expect(invoke).toHaveBeenCalledWith('execute_transaction', {
-      db: 'sqlite:glossa.db',
+      db: 'sqlite:/tmp/glossa-test-data/glossa.db',
       statements: [{
         query: expect.stringContaining('INSERT OR IGNORE INTO operation_logs'),
         params: ['op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello', null, null, null, null, null, null, null],
@@ -481,7 +499,7 @@ describe('operation log pipeline scoping', () => {
     await clearOperationLogs('proj-1', 'pipe-1');
 
     expect(invoke).toHaveBeenCalledWith('execute_transaction', {
-      db: 'sqlite:glossa.db',
+      db: 'sqlite:/tmp/glossa-test-data/glossa.db',
       statements: [{
         query: 'DELETE FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2',
         params: ['proj-1', 'pipe-1'],

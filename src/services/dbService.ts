@@ -7,8 +7,33 @@ import {
 } from '../constants';
 
 let db: Database | null = null;
-const DB_URL = 'sqlite:glossa.db';
+let dbUrl: string | null = null;
 const CURRENT_SCHEMA_VERSION = 'db-schema-v4';
+
+interface DataDirStatus {
+  path: string;
+  isOverride: boolean;
+}
+
+/**
+ * tauri-plugin-sql resolves a relative "sqlite:glossa.db" URL against the OS
+ * default app config dir internally — it has no notion of a configurable
+ * data location. Ask the backend (which does, via storage_config.rs) for the
+ * resolved absolute path first, so a configured override actually takes
+ * effect for the live connection, not just for backend-only file operations.
+ */
+async function resolveDbUrl(): Promise<string> {
+  try {
+    const status = await invoke<DataDirStatus>('get_data_dir');
+    if (!status?.path) return 'sqlite:glossa.db';
+    const separator = status.path.includes('\\') ? '\\' : '/';
+    return `sqlite:${status.path}${separator}glossa.db`;
+  } catch {
+    // Falls back to the plugin's own relative-path resolution (OS default
+    // app config dir) if the backend command is unavailable for any reason.
+    return 'sqlite:glossa.db';
+  }
+}
 
 // These tables were introduced before their corresponding product features
 // existed. Keep the list explicit so an older beta DB is cleaned up on boot,
@@ -40,7 +65,8 @@ const RESETTABLE_OBJECTS = [
 
 async function getDb(): Promise<Database> {
   if (!db) {
-    db = await Database.load(DB_URL);
+    dbUrl = await resolveDbUrl();
+    db = await Database.load(dbUrl);
   }
   return db;
 }
@@ -529,7 +555,7 @@ export async function initDatabase(): Promise<void> {
 export async function execute(query: string, params: unknown[] = []): Promise<void> {
   await getDb();
   await invoke('execute_transaction', {
-    db: DB_URL,
+    db: dbUrl,
     statements: [{ query, params }],
   });
 }
@@ -554,7 +580,7 @@ export async function runInTransaction<T>(
   const result = await fn(run);
   if (statements.length > 0) {
     await invoke('execute_transaction', {
-      db: DB_URL,
+      db: dbUrl,
       statements,
     });
   }
