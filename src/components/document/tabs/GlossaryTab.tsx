@@ -32,6 +32,32 @@ export function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps)
           <Highlighter size={13} />
         </IconButton>
       </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-editorial-border px-5 py-2 text-xs text-editorial-muted">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ background: 'var(--hl-match-bg)' }}
+            aria-hidden="true"
+          />
+          {t('library.glossaryLegendMatch')}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ background: 'var(--hl-mismatch-bg)' }}
+            aria-hidden="true"
+          />
+          {t('library.glossaryLegendMismatch')}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 rounded-full border-b-2"
+            style={{ borderColor: 'var(--hl-source-term-color)' }}
+            aria-hidden="true"
+          />
+          {t('library.glossaryLegendSourceTerm')}
+        </span>
+      </div>
       <p className="border-b border-editorial-border px-5 py-2 text-xs leading-relaxed text-editorial-muted">
         {t('memory.referencesGlossaryHint')}
       </p>
