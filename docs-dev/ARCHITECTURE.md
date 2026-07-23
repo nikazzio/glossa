@@ -64,7 +64,8 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 
 | File | Responsabilità |
 |---|---|
-| `hooks/usePipeline.ts` | **Engine principale** — runPipeline, runSingleChunk, auditSingleChunk, cancelPipeline. Il contesto blob è costruito dal helper condiviso `hooks/pipeline/blobContext.ts` e riusato anche dagli audit. |
+| `hooks/usePipeline.ts` | Wiring React sottile — inietta `t` (i18n) nel motore e espone `runPipeline`, `runSingleChunk`, `rerunChunkWithMemory`, `cancelPipeline`. Logica vera in `hooks/pipeline/engine.ts` (v. sotto). |
+| `hooks/pipeline/engine.ts` | **Engine principale** — nessuna dipendenza React, riceve `t` come parametro. `executePipelineForChunk`, `runPipeline`, `runChunkExecution`, `ensureProvidersReady`, `cancelPipeline`. Pensato per essere richiamato anche da entry point non-React (es. bridge trascrizione→traduzione, #224). Il contesto blob è costruito dal helper condiviso `hooks/pipeline/blobContext.ts` e riusato anche dagli audit. |
 
 > **INVARIANTE — non toccare senza motivo esplicito**: Ollama usa `runStageStream` (streaming). Tutti altri provider (OpenAI, Anthropic, Gemini, DeepSeek) usano `runStage` (non-streaming). Separazione intenzionale: cloud provider hanno timeout e gestione errori diversi. Non "uniformare" i due path.
 | `hooks/useProjectAutosave.ts` | Autosave con debounce |
@@ -211,7 +212,7 @@ usePipeline.runPipeline()
 
 ### DeepL Hybrid — bypass preflight
 
-Provider `deepl` bypassa preflight LLM e `llmService.runStage()`. In `usePipeline.ts → executePipelineForChunk`, branch `provider === 'deepl'` chiama `deeplService.runDeeplStage()` → Tauri `run_deepl_stage` → HTTP POST `/v2/translate` verso API DeepL.
+Provider `deepl` bypassa preflight LLM e `llmService.runStage()`. In `hooks/pipeline/engine.ts → executePipelineForChunk`, branch `provider === 'deepl'` chiama `deeplService.runDeeplStage()` → Tauri `run_deepl_stage` → HTTP POST `/v2/translate` verso API DeepL.
 
 ---
 
@@ -267,7 +268,7 @@ BLOCK 3 — stage instructions, NON CACHEABLE
 }
 ```
 
-**Assemblaggio** (`src/hooks/usePipeline.ts`, `assembleBlobContext()`):
+**Assemblaggio** (`src/hooks/pipeline/engine.ts`, `assembleBlobContext()`):
 - Legge `blobReferenceChunkIds` del chunk corrente
 - Serializza testo sorgente come `<chunk id="...">text</chunk>`
 - Diventa BLOCK 2 nel prompt
