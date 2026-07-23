@@ -196,7 +196,7 @@ usePipeline.runPipeline()
 4. FOR EACH chunk:
    a) setBlobAssignments() in chunksStore
    b) FOR EACH stage attivo:
-      - assembleBlobContext(chunks, chunkId) → XML reference chunks
+      - buildBlobContext(chunks, chunkId) → XML reference chunks
       - runStageStream(text, stage, config, prevResult, streamId)
       → Tauri: run_stage_stream()
       → provider.call() → HTTP stream
@@ -268,7 +268,7 @@ BLOCK 3 — stage instructions, NON CACHEABLE
 }
 ```
 
-**Assemblaggio** (`src/hooks/pipeline/engine.ts`, `assembleBlobContext()`):
+**Assemblaggio** (`src/hooks/pipeline/engine.ts`, `buildBlobContext()`):
 - Legge `blobReferenceChunkIds` del chunk corrente
 - Serializza testo sorgente come `<chunk id="...">text</chunk>`
 - Diventa BLOCK 2 nel prompt

@@ -25,11 +25,15 @@ import { runJudgeForChunk } from './runJudge';
 import { logger } from '../../utils/logger';
 
 /**
- * Framework-agnostic pipeline orchestration: stage execution, retry, judge
- * invocation, blob computation, run-state persistence. No React dependency —
- * every UI-bound concern (translation strings) is passed in by the caller,
- * so this module can be driven from a React hook (see usePipeline.ts) or
- * from any other entry point (e.g. the transcription→translation bridge).
+ * Pipeline orchestration: stage execution, retry, judge invocation, blob
+ * computation, run-state persistence. Imports no React APIs (no hooks/JSX) —
+ * it still reads/writes the Zustand stores (via their framework-agnostic
+ * `getState()`, not the `useStore()` hook form) and calls Sonner's `toast`
+ * (a plain function, not a hook), both usable outside a component tree.
+ * Translation strings are passed in by the caller instead of read via
+ * `useTranslation()`, so this module can be driven from a React hook (see
+ * usePipeline.ts) or from any other entry point (e.g. the
+ * transcription→translation bridge).
  */
 
 export type Translate = (key: string, opts?: Record<string, unknown>) => string;
