@@ -5,9 +5,9 @@ use crate::keystore::get_api_key;
 use crate::llm::blobs::{compute_blob_assignments, BlobAssignment, ChunkForBlob};
 use crate::llm::custom_profiles;
 use crate::llm::prompts::{
-    build_coherence_prompts, build_judge_prompts, build_stage_prompts, minimal_pipeline_config,
-    parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
-    REFINE_STAGE_SYSTEM_PROMPT,
+    build_coherence_prompts, build_judge_prompts, build_stage_prompts, escape_prompt_markers,
+    minimal_pipeline_config, parse_judge_rating, sanitize_llm_json_output,
+    REFINE_AUDIT_SYSTEM_PROMPT, REFINE_STAGE_SYSTEM_PROMPT,
 };
 use crate::llm::provider::{LlmProvider, LlmRequest};
 use crate::llm::providers::{get_provider, with_retry_after};
@@ -530,13 +530,15 @@ pub async fn extract_phrase_memory_pairs(
     prov.preflight(&model).await?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
+    let escaped_source = escape_prompt_markers(&source_text);
+    let escaped_target = escape_prompt_markers(&target_text);
     let structured = crate::llm::types::StructuredPrompt {
         system: vec![crate::llm::types::PromptBlock {
             text: prompt,
             cacheable: false,
         }],
         user: format!(
-            "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{source_text}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{target_text}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
+            "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
         ),
     };
     let req = LlmRequest {
