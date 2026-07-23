@@ -21,7 +21,7 @@
     "tauri": "tauri",
     "tauri:dev": "node scripts/tauri-dev.mjs",
     "tauri:dev:linux": "node scripts/tauri-dev.mjs",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build --config src-tauri/tauri.release.conf.json"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.17",

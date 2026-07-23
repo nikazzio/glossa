@@ -110,10 +110,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify release CSP has no unsafe-eval
+      - name: Verify release CSP has no unsafe-eval or unsafe-inline scripts
         run: |
           if grep -q "unsafe-eval" src-tauri/tauri.release.conf.json; then
             echo "ERROR: 'unsafe-eval' found in tauri.release.conf.json — remove it before merging"
             exit 1
           fi
-          echo "CSP check passed: no unsafe-eval in release config"
+          if grep -oP "script-src[^;]*" src-tauri/tauri.release.conf.json | grep -q "unsafe-inline"; then
+            echo "ERROR: 'unsafe-inline' found in script-src of tauri.release.conf.json — remove it before merging"
+            exit 1
+          fi
+          echo "CSP check passed: no unsafe-eval, no unsafe-inline script-src in release config"
