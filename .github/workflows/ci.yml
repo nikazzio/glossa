@@ -116,7 +116,12 @@ jobs:
             echo "ERROR: 'unsafe-eval' found in tauri.release.conf.json — remove it before merging"
             exit 1
           fi
-          if grep -oP "script-src[^;]*" src-tauri/tauri.release.conf.json | grep -q "unsafe-inline"; then
+          script_src=$(grep -oE "script-src[^;]*" src-tauri/tauri.release.conf.json)
+          if [ -z "$script_src" ]; then
+            echo "ERROR: 'script-src' directive not found in tauri.release.conf.json — cannot verify it's safe"
+            exit 1
+          fi
+          if echo "$script_src" | grep -q "unsafe-inline"; then
             echo "ERROR: 'unsafe-inline' found in script-src of tauri.release.conf.json — remove it before merging"
             exit 1
           fi
