@@ -491,6 +491,19 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configuration",
     "providerTab": "Provider",
+    "storageTab": "Data",
+    "storage": {
+      "title": "Data location",
+      "description": "Where Glossa keeps its database (projects, glossaries, settings). Moving it copies the data first and verifies the copy; the original is left untouched until the next startup succeeds.",
+      "defaultLocation": "Default location",
+      "customLocation": "Custom location",
+      "changeFolder": "Change folder",
+      "migrating": "Moving…",
+      "migrationNote": "Restart Glossa after changing this to use the new location.",
+      "migrationSucceeded": "Data location updated. Restart Glossa to apply it.",
+      "migrationFailed": "Failed to move the data location",
+      "loadFailed": "Failed to read the data location"
+    },
     "backup": "Backup & Restore",
     "backupHint": "Export the full workspace to a portable file, or restore from a previous backup.",
     "backupExport": "Export backup",
@@ -1319,7 +1332,9 @@
       "logFileTitle": "Log directory",
       "logFileDesc": "Glossa writes a rotating log named \"glossa\" in this directory. Attach or copy it when reporting a bug.",
       "rustLogTitle": "Verbose logging",
-      "rustLogDesc": "Set the RUST_LOG environment variable to override the runtime log level:"
+      "rustLogDesc": "Set the RUST_LOG environment variable to override the runtime log level:",
+      "dataLocationTitle": "Where is my data",
+      "dataLocationDesc": "The app's database (projects, glossaries, settings) lives in a default system folder. In Settings, under the \"Data\" tab, you can see the current location and move it elsewhere: moving it copies the data first and verifies the copy before using it — the original is never deleted automatically."
     },
     "version": {
       "check": "Check for updates",

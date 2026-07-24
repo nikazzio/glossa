@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { LibraryBig, BookOpen, FileText, Type, Server } from 'lucide-react';
+import { LibraryBig, BookOpen, FileText, Type, Server, HardDrive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
@@ -16,6 +16,7 @@ import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { TranslationsSettingsTab } from './TranslationsSettingsTab';
 import { TypographySettingsTab } from './TypographySettingsTab';
 import { ProviderSettingsTab } from './ProviderSettingsTab';
+import { StorageSettingsTab } from './StorageSettingsTab';
 
 export function SettingsModal() {
   const {
@@ -100,6 +101,7 @@ export function SettingsModal() {
     { id: 'translations', icon: <FileText size={14} />,          label: t('workspace.areas.translations.title') },
     { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
+    { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
   ];
 
   const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
@@ -225,6 +227,8 @@ export function SettingsModal() {
           setShowSecurityAdvisory={setShowSecurityAdvisory}
         />
       )}
+
+      {activeTab === 'storage' && <StorageSettingsTab />}
     </Dialog>
   );
 }

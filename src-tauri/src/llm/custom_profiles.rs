@@ -1,5 +1,4 @@
 use rusqlite::{params, Connection};
-use tauri::Manager;
 use url::Url;
 
 use crate::llm::provider::LlmProvider;
@@ -44,10 +43,7 @@ pub struct CustomProviderProfile {
 }
 
 fn db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app.path()
-        .app_config_dir()
-        .map(|p| p.join("glossa.db"))
-        .map_err(|e| format!("cannot resolve db path: {e}"))
+    crate::storage_config::db_path(app)
 }
 
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, String> {

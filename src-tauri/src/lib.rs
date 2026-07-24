@@ -3,6 +3,7 @@ mod deepl;
 mod documents;
 mod keystore;
 mod llm;
+mod storage_config;
 mod vector;
 
 use tauri::Manager;
@@ -96,6 +97,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             db::backup_database_file,
             db::execute_transaction,
+            storage_config::get_data_dir,
+            storage_config::set_data_dir,
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,

@@ -746,6 +746,9 @@ function TroubleshootingSection() {
       <div className="border-y border-editorial-border/70 py-3 font-mono text-xs text-editorial-ink/80">
         RUST_LOG=debug
       </div>
+
+      <SubTitle>{t('help.troubleshooting.dataLocationTitle')}</SubTitle>
+      <P>{t('help.troubleshooting.dataLocationDesc')}</P>
     </>
   );
 }
