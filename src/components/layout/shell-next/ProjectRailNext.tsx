@@ -8,7 +8,6 @@ import {
   FileOutput,
   LibraryBig,
   PanelLeftClose,
-  PanelLeftOpen,
   Plus,
   Settings2,
   Upload,
@@ -28,6 +27,7 @@ import { useConfigStore } from '../../../stores/configStore';
 import { indexPad } from '../../../utils';
 import { IconButton } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
+import { RailBrandToggle } from './RailBrandToggle';
 
 export interface ProjectRailNextProps {
   collapsed: boolean;
@@ -54,11 +54,12 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
     t('pipeline.pipelineNumber', { number: 1 });
 
   return (
-    <div className="border-b border-editorial-border/70 px-4 pt-4 pb-6">
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-display text-2xl italic leading-tight text-editorial-ink">
-          {activeName}
-        </span>
+    <div className="border-b border-editorial-border/70 px-4 pt-5 pb-4">
+      <span className="block min-w-0 truncate font-display text-2xl italic leading-tight text-editorial-ink">
+        {activeName}
+      </span>
+      <div className="mt-6 flex min-w-0 items-center justify-between gap-3">
+        <ChunkRailNavigator collapsed={false} />
         {pipelines.length > 0 && (
           <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
             <Popover.Trigger asChild>
@@ -125,7 +126,7 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
           </Popover.Root>
         )}
       </div>
-      {children ? <div className="mt-5">{children}</div> : null}
+      {children ? <div className="mt-4 border-t border-editorial-border/50 pt-4">{children}</div> : null}
     </div>
   );
 }
@@ -159,12 +160,6 @@ function ChunkRailNavigator({ collapsed }: { collapsed: boolean }) {
         >
           <ChevronUp size={14} />
         </IconButton>
-        <span className="font-display text-base italic leading-none text-editorial-ink tabular-nums">
-          {indexPad(currentIndex + 1)}
-        </span>
-        <span className="font-display text-base italic leading-none text-editorial-ink tabular-nums">
-          /{indexPad(chunks.length)}
-        </span>
         <IconButton
           size="md"
           tone="default"
@@ -319,18 +314,12 @@ export function ProjectRailNext({
   if (collapsed) {
     return (
       <div className="flex h-full min-h-0 flex-col items-center">
-        {/* Top: espandi */}
+        {/* Top: marchio; il comando di espansione appare all'hover. */}
         <div className="flex h-20 w-full shrink-0 items-center justify-center">
-          <IconButton
-            size="md"
-            tone="default"
-            onClick={() => setProjectContextCollapsed(false)}
+          <RailBrandToggle
+            onExpand={() => setProjectContextCollapsed(false)}
             title={t('sidebar.expand')}
-            tooltipSide="right"
-            className="h-9 w-9 bg-editorial-bg"
-          >
-            <PanelLeftOpen size={14} />
-          </IconButton>
+          />
         </div>
 
         {/* Contenuto: azione primaria */}
@@ -366,9 +355,8 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: navigazione frammento a sx, collassa a dx, allineato al global header */}
-      <div className="flex h-20 shrink-0 items-center gap-3 px-3">
-        <ChunkRailNavigator collapsed={false} />
+      {/* Header: solo controllo della rail; titolo e navigazione hanno fasce dedicate sotto. */}
+      <div className="flex h-20 shrink-0 items-center justify-end px-3">
         <IconButton
           size="md"
           tone="default"

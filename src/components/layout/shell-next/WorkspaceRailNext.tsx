@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   LibraryBig,
   PanelLeftClose,
-  PanelLeftOpen,
   Plus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +16,7 @@ import type { Workspace } from '../../../types';
 import { IconButton } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
+import { RailBrandToggle } from './RailBrandToggle';
 
 const AREA_ITEMS = [
   { id: 'translations', icon: BookOpenText, enabled: true },
@@ -46,8 +46,8 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
               collapsed ? 'h-9 w-9' : 'h-7 w-7'
             } ${
               active
-                ? 'border-editorial-accent/60 bg-editorial-accent/15 text-editorial-accent'
-                : 'border-editorial-accent/35 bg-editorial-accent/5 text-editorial-accent'
+                ? 'border-editorial-accent text-editorial-accent'
+                : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
             }`}
           >
             <LayoutDashboard size={collapsed ? 16 : 14} />
@@ -88,7 +88,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
                   collapsed ? 'h-9 w-9' : 'h-6 w-6'
                 } ${
                   active
-                    ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
+                    ? 'border-editorial-accent text-editorial-accent'
                     : enabled
                       ? 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-accent'
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
@@ -196,21 +196,11 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
     return (
       <div className="flex h-full min-h-0 flex-col items-center">
         <div className="flex h-20 w-full shrink-0 items-center justify-center">
-          <IconButton
-            size="md"
-            tone="default"
-            onClick={() => setCollapsed(false)}
-            title={t('sidebar.expand')}
-            tooltipSide="right"
-            className="h-9 w-9 bg-editorial-bg"
-          >
-            <PanelLeftOpen size={14} />
-          </IconButton>
+          <RailBrandToggle onExpand={() => setCollapsed(false)} title={t('sidebar.expand')} />
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
           <DashboardItem collapsed />
           <AreaSection collapsed />
-          <WorkspaceSection collapsed />
         </div>
       </div>
     );

@@ -333,27 +333,6 @@ export function PipelineSidebarRunSection({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
-        <Tooltip label={t('pipeline.repeatModeLabel')} side="bottom">
-          <button
-            type="button"
-            role="switch"
-            aria-label={t('pipeline.repeatModeLabel')}
-            aria-checked={workMode === 'all'}
-            disabled={isProcessing}
-            onClick={() => setWorkMode(workMode === 'all' ? 'chunk' : 'all')}
-            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
-              workMode === 'all' ? 'bg-editorial-accent' : 'bg-editorial-border'
-            }`}
-          >
-            <span
-              className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
-                workMode === 'all' ? 'translate-x-6' : 'translate-x-0'
-              }`}
-            >
-              <Repeat size={14} className={workMode === 'all' ? 'text-editorial-accent' : 'text-editorial-muted'} />
-            </span>
-          </button>
-        </Tooltip>
         {/* Altezza fissa: sempre presente per non spostare il pulsante
             principale quando si accende/spegne il toggle sopra. */}
         <div className="flex h-7 items-center gap-1.5">
@@ -392,6 +371,27 @@ export function PipelineSidebarRunSection({
             </>
           ) : null}
         </div>
+        <Tooltip label={t('pipeline.repeatModeLabel')} side="bottom">
+          <button
+            type="button"
+            role="switch"
+            aria-label={t('pipeline.repeatModeLabel')}
+            aria-checked={workMode === 'all'}
+            disabled={isProcessing}
+            onClick={() => setWorkMode(workMode === 'all' ? 'chunk' : 'all')}
+            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+              workMode === 'all' ? 'bg-editorial-accent' : 'bg-editorial-border'
+            }`}
+          >
+            <span
+              className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
+                workMode === 'all' ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            >
+              <Repeat size={14} className={workMode === 'all' ? 'text-editorial-accent' : 'text-editorial-muted'} />
+            </span>
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

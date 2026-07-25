@@ -68,15 +68,15 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
   });
 
-  it('keeps the workspace list reachable when the rail is collapsed', () => {
+  it('shows Dashboard and every area, but not workspaces, when the rail is collapsed', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
-    fireEvent.click(screen.getByRole('button', { name: /Beta/ }));
-
-    expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'ws-2' }),
-    );
+    expect(screen.queryByRole('button', { name: /Beta/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dashboard\.title/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /workspace\.areas\.library\.title/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /workspace\.areas\.transcriptions\.title/ })).toBeDisabled();
   });
 
   it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {

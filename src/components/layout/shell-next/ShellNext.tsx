@@ -159,7 +159,11 @@ export function ShellNext({
     >
       <span
         aria-hidden="true"
-        className={`h-7 w-px rounded-full transition-colors ${
+        className="pointer-events-none absolute inset-x-0 top-0 h-28 border-b border-editorial-border bg-editorial-page"
+      />
+      <span
+        aria-hidden="true"
+        className={`relative h-7 w-px rounded-full transition-colors ${
           dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
         }`}
       />
