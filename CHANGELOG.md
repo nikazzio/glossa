@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.3.0](https://github.com/nikazzio/glossa/compare/glossa-v1.2.1...glossa-v1.3.0) (2026-07-25)
+
+
+### ✨ Features
+
+* **glossary:** aggiunge legenda colori evidenziazioni ([#373](https://github.com/nikazzio/glossa/issues/373)) ([fe95c72](https://github.com/nikazzio/glossa/commit/fe95c727452e0826aabd5f4274d4a2f05cc4674f)), closes [#297](https://github.com/nikazzio/glossa/issues/297)
+* indicatori chunk e navigazione ([#376](https://github.com/nikazzio/glossa/issues/376)) ([b401f2b](https://github.com/nikazzio/glossa/commit/b401f2bd00506536479ba404a4f48e1269f10b8d))
+* path runtime configurabili per il database dell'app (scope ridotto) ([#374](https://github.com/nikazzio/glossa/issues/374)) ([eeb52fc](https://github.com/nikazzio/glossa/commit/eeb52fcaaa4287c7719353dcd5179e9ca5c31d2b))
+* **validation:** convalida dati esterni ([#366](https://github.com/nikazzio/glossa/issues/366)) ([efb1b6d](https://github.com/nikazzio/glossa/commit/efb1b6dc7b4ac164b6ab44b90ebb26a5673a95c0))
+
+
+### 🐛 Bug Fixes
+
+* **security:** limit document imports to user-selected files ([#367](https://github.com/nikazzio/glossa/issues/367)) ([70ba90d](https://github.com/nikazzio/glossa/commit/70ba90d8702f2f7548f14755097523cfd53e23eb))
+* **security:** preserve chunk boundaries in model context ([#369](https://github.com/nikazzio/glossa/issues/369)) ([79300fc](https://github.com/nikazzio/glossa/commit/79300fc4218cc2117692bd1c7abcdee2e35464eb))
+* **security:** require HTTPS for custom provider endpoints ([#370](https://github.com/nikazzio/glossa/issues/370)) ([78e93c9](https://github.com/nikazzio/glossa/commit/78e93c99671038ccc7f64b8650e1b20a47806a43))
+* **security:** tighten production content security policy ([#368](https://github.com/nikazzio/glossa/issues/368)) ([8cefaf6](https://github.com/nikazzio/glossa/commit/8cefaf61cce6c23a44c91d2e1880a203b0d4ce0c))
+
+
+### ♻️ Refactoring
+
+* estrarre il motore pipeline da usePipeline.ts prima del bridge trascrizione→traduzione ([#372](https://github.com/nikazzio/glossa/issues/372)) ([58d71be](https://github.com/nikazzio/glossa/commit/58d71bed4cd33bee55851fbdd9f3931de2fb9c88))
+* rimuove la sandbox legacy ([#362](https://github.com/nikazzio/glossa/issues/362)) ([c8dfd2d](https://github.com/nikazzio/glossa/commit/c8dfd2d3b5ea68a9263a0760a2b68e51f3acbb84))
+
 ## [1.2.1](https://github.com/nikazzio/glossa/compare/glossa-v1.2.0...glossa-v1.2.1) (2026-07-21)
 
 
