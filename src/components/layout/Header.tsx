@@ -8,7 +8,6 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { EASE_EDITORIAL } from './motion';
 import { ShellNavFooter } from './ShellNav';
-import glossaAppIcon from '../../assets/glossa-app-icon.png';
 import { Tooltip } from '../ui';
 
 const HelpGuide = lazy(() =>
@@ -63,15 +62,8 @@ export function Header() {
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,var(--header-bg-from)_0%,var(--header-bg-to)_100%)] px-5 py-4 md:px-8">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-end gap-3">
-          <img
-            src={glossaAppIcon}
-            alt=""
-            aria-hidden="true"
-            className="mb-1.5 h-12 w-12 shrink-0 object-contain md:mb-2 md:h-14 md:w-14"
-          />
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-baseline gap-2.5">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline gap-2.5">
               <span className="shrink-0 font-display text-4xl italic text-editorial-ink md:text-5xl">
                 {t('app.brand')}
               </span>
@@ -117,7 +109,6 @@ export function Header() {
                   </motion.span>
                 ) : null}
               </AnimatePresence>
-            </div>
           </div>
         </div>
 

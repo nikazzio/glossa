@@ -29,6 +29,12 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 5. Importa un documento ed esegui i chunk di test.
 6. Salva mentre iteri.
 
+## Navigazione compatta
+
+La barra laterale si può richiudere per lasciare più spazio al contenuto. Nel progetto restano disponibili le frecce per passare al frammento precedente o successivo e il comando di traduzione; il numero tecnico del frammento non occupa più spazio nella barra. Nella Dashboard chiusa restano Dashboard e tutte le aree: quelle non ancora disponibili sono visibili ma non selezionabili; l'elenco dei workspace torna visibile riaprendo la barra.
+
+In alto, il marchio Glossa apre la barra al passaggio del mouse: così la barra chiusa resta riconoscibile ma non aggiunge un comando visibile in permanenza.
+
 ## Risorse condivise e locali
 
 | Risorsa | Ambito |

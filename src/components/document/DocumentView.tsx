@@ -51,11 +51,16 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
 
 function buildChunkMinimapLabel(
   t: (key: string, options?: Record<string, unknown>) => string,
-  chunk: { status: string; translationLocked?: boolean },
+  chunk: {
+    status: string;
+    translationLocked?: boolean;
+    translationStale?: boolean;
+  },
   index: number,
   total: number,
   isCurrent: boolean,
   annotationCount: number,
+  unresolvedIssueCount: number,
 ): string {
   const parts = [
     `${t('document.chunkLabel')} ${index + 1}/${total}`,
@@ -63,6 +68,8 @@ function buildChunkMinimapLabel(
   ];
   if (chunk.translationLocked) parts.push(t('document.translationLockedBadge'));
   if (annotationCount > 0) parts.push(t('annotations.badgeCount', { count: annotationCount }));
+  if (unresolvedIssueCount > 0) parts.push(t('audit.issuesCount', { count: unresolvedIssueCount }));
+  if (chunk.translationStale) parts.push(t('document.translationStaleBadge'));
   if (isCurrent) parts.push(t('document.currentChunkBadge'));
   return parts.join(' · ');
 }
@@ -340,16 +347,19 @@ export function DocumentView({
   const chunkMinimapDots =
     chunks.length > 1
       ? chunks.map((chunk, idx) => {
-          const segmentTone =
+          const statusDotClass =
             chunk.status === 'completed'
-              ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-editorial-success)_16%,transparent)]'
+              ? 'h-1.5 w-1.5 rounded-full bg-editorial-success'
               : chunk.status === 'error'
-                ? 'bg-editorial-danger/18 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-editorial-danger)_18%,transparent)]'
+                ? 'h-2 w-2 rounded-[2px] bg-editorial-danger'
                 : chunk.status === 'processing'
-                  ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-editorial-running)_22%,transparent)]'
-                  : 'bg-editorial-border/40';
+                  ? 'h-1 w-2.5 rounded-full bg-editorial-running animate-pulse'
+                  : 'h-2.5 w-2.5 rounded-full border border-editorial-border bg-transparent';
           const isCurrent = idx === currentIndex;
           const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
+          const unresolvedIssueCount = chunk.judgeResult.status === 'completed'
+            ? chunk.judgeResult.issues.filter((issue) => !issue.resolved && !issue.rejected).length
+            : 0;
           const annotDotColor = chunkAnnotations.some((a) => a.type === 'problem')
             ? 'bg-editorial-danger'
             : chunkAnnotations.some((a) => a.type === 'doubt')
@@ -357,7 +367,15 @@ export function DocumentView({
               : chunkAnnotations.length > 0
                 ? 'bg-editorial-charcoal/70'
                 : null;
-          const buttonLabel = buildChunkMinimapLabel(t, chunk, idx, chunks.length, isCurrent, chunkAnnotations.length);
+          const buttonLabel = buildChunkMinimapLabel(
+            t,
+            chunk,
+            idx,
+            chunks.length,
+            isCurrent,
+            chunkAnnotations.length,
+            unresolvedIssueCount,
+          );
           return (
             <Tooltip key={chunk.id} label={buttonLabel}>
               <button
@@ -366,18 +384,21 @@ export function DocumentView({
                 onClick={() => setSelectedChunkId(chunk.id)}
                 aria-label={buttonLabel}
                 aria-current={isCurrent ? 'true' : undefined}
-                className={`relative h-4 w-4 shrink-0 rounded-full transition-transform duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${segmentTone} hover:-translate-y-px`}
+                className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-transform duration-150 ease-out hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
-                {chunk.translationLocked ? (
-                  <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
-                ) : null}
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border bg-surface-elevated">
+                  <span aria-hidden="true" className={statusDotClass} />
+                </span>
+                {unresolvedIssueCount > 0 && <span aria-hidden="true" className="absolute left-1 top-1 h-2 w-2 rounded-full bg-editorial-danger ring-1 ring-editorial-page" />}
                 {annotDotColor && (
-                  <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
+                  <span aria-hidden="true" className={`absolute right-1 top-1 h-2 w-2 rounded-full ${annotDotColor} ring-1 ring-editorial-page`} />
                 )}
+                {chunk.translationLocked && <span aria-hidden="true" className="absolute bottom-1 left-1 h-2 w-2 rounded-full bg-editorial-success ring-1 ring-editorial-page" />}
+                {chunk.translationStale && <span aria-hidden="true" className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-editorial-running ring-1 ring-editorial-page" />}
                 {isCurrent && (
                   <span
                     aria-hidden="true"
-                    className="absolute -bottom-2 left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3.5px] border-b-[4.5px] border-x-transparent border-b-editorial-ink"
+                    className="absolute -bottom-1.5 left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3.5px] border-b-[4.5px] border-x-transparent border-b-editorial-accent"
                   />
                 )}
               </button>
@@ -444,11 +465,11 @@ export function DocumentView({
           {/* Barra di navigazione a filo (border-b, allineata alle testate dei pannelli
               laterali). Stati del chunk sopra, minimap pallini sotto; a destra token/costo
               del frammento corrente (spazio altrimenti vuoto — #296 follow-up). */}
-          <div className="w-full h-24 flex items-stretch gap-5 border-b border-editorial-border bg-editorial-page px-6 py-3">
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-2.5">
+          <div className="w-full h-28 flex items-stretch gap-5 border-b border-editorial-border bg-editorial-page px-6 py-2">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
               {stageStatusButtons}
               {chunkMinimapDots ? (
-                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pt-1 pb-2.5">
+                <div className="flex items-center gap-2 overflow-x-auto overflow-y-visible custom-scrollbar py-1.5">
                   {chunkMinimapDots}
                 </div>
               ) : null}

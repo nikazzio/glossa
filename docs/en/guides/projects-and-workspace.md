@@ -29,6 +29,12 @@ Glossa separates application settings, workspace resources, and per-project pipe
 5. Import a document and run test chunks.
 6. Save as you iterate.
 
+## Compact navigation
+
+You can collapse the side rail to leave more room for the content. Inside a project, the previous/next chunk controls and the translation action remain available; the technical chunk number no longer occupies space in the rail. On the collapsed Dashboard, Dashboard and every area remain visible: areas that are not available yet are visible but cannot be selected; reopen the rail to see the workspace list.
+
+At the top, the Glossa mark opens the rail on hover. The closed rail therefore remains recognisable without permanently showing another command.
+
 ## Shared versus local resources
 
 | Resource | Scope |

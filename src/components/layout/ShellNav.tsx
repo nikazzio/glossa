@@ -204,7 +204,7 @@ export function ShellNavItem({
   const labelClassName = labelFont === 'display' ? 'font-display text-sm italic' : 'font-sans text-sm';
 
   const toneClassName = active
-    ? 'bg-editorial-accent/10 text-editorial-accent'
+    ? collapsed ? 'text-editorial-accent' : 'bg-editorial-accent/10 text-editorial-accent'
     : disabled
       ? 'text-editorial-muted opacity-50'
       : 'text-editorial-muted hover:bg-editorial-textbox/30 hover:text-editorial-accent';
