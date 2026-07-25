@@ -134,7 +134,17 @@ Popover badge costi sidebar (`SidebarCostPanel` in `PipelineSidebarRunSection.ts
 
 ---
 
-## Boundary prodotto: App / Workspace / Pipeline
+## Architettura di prodotto 2.0
+
+La destinazione architetturale di prodotto è definita in
+[`PRODUCT_ARCHITECTURE_2_0.md`](PRODUCT_ARCHITECTURE_2_0.md).
+
+Decisione principale: Biblioteca, Trascrizioni, Traduzioni e Analisi sono
+cataloghi globali; i workspace sono contesti operativi trasversali che mostrano
+gli stessi oggetti canonici senza copiarli. La shell descritta sotto documenta
+lo stato 1.x da cui parte la migrazione incrementale della #180.
+
+## Boundary prodotto corrente: App / Workspace / Pipeline
 
 Glossa 2.0 separa tre livelli:
 
@@ -144,7 +154,10 @@ Glossa 2.0 separa tre livelli:
 | Workspace traduzioni | `WorkspaceSettingsModal` (da `WorkspaceOverview`, icona Configura) | Progetti traduzione, modello embedding, extractor Phrase Memory, memoria condivisa |
 | Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle/search Phrase Memory |
 
-Workspace attuale specifico per area **Traduzioni**. Biblioteca e Trascrizioni future macro-aree separate; non devono condividere implicitamente Phrase Memory delle traduzioni.
+Il workspace corrente è implementato soprattutto per **Traduzioni**. Nel
+modello 2.0 Biblioteca e Trascrizioni diventano aree globali filtrabili per
+workspace; le regole di condivisione di Phrase Memory e delle altre risorse
+restano esplicite e non si deducono dalla sola navigazione.
 
 ### Shell UI — Layout Progetto
 
