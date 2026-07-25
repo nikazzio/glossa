@@ -67,9 +67,14 @@ Obiettivo: portare in Glossa il modello di discovery di Scriptoria senza copiare
 
 - #183 - epic acquisizione asset locali.
 - #217 - inventory asset e source policy runtime.
-- #218 - job queue persistente e orchestrazione download.
+- #218 - sistema condiviso di job asincroni persistenti; download come primo
+  consumatore.
 
-Obiettivo: scans, manifest, thumbnail, derivati e artifact devono vivere in un modello tracciabile. Download/resume/retry/cancel devono essere stati persistenti, non chiamate fire-and-forget.
+Obiettivo: introdurre una sola infrastruttura asincrona per download, OCR/HTR,
+export, analisi e altri lavori lunghi. Scans, manifest, thumbnail, derivati e
+artifact devono vivere in un modello tracciabile; progresso, pausa, ripresa,
+retry e cancellazione devono essere stati persistenti, non chiamate
+fire-and-forget.
 
 ### Fase 4 - Studio immagini, snippet, corpus
 
@@ -98,7 +103,10 @@ Obiettivo: la trascrizione approvata diventa ingresso strutturato della pipeline
 - #188 - epic export studio.
 - #225 - export studio con profili PDF/immagini e output selettivi.
 
-Obiettivo: export come sottosistema con profili, sorgenti, job, artifact history e validazione pagine. Non solo "salva risultato".
+Obiettivo: Export Studio come azione contestuale di fonte, trascrizione,
+traduzione o workspace, non come area primaria. Profili nelle impostazioni,
+esecuzione tramite il sistema condiviso di job, artifact history sull'oggetto e
+nel workspace, vista globale di servizio per job e output.
 
 ### Filone trasversale - Analisi, dataset e modelli
 

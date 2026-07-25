@@ -218,6 +218,8 @@ forzato per ogni attività.
 - home mista con riepilogo, elementi recenti, stato, attività e azioni;
 - sezioni per tipo che applicano un filtro workspace ai cataloghi globali;
 - risorse condivise e configurazioni dichiarate nello scope del workspace;
+- azione contestuale per esportare una selezione di oggetti o un pacchetto del
+  workspace;
 - nessuna copia locale delle schede globali.
 
 ### Studio di lavoro
@@ -274,19 +276,70 @@ La shell non implementa:
 Le viste orchestrano i casi d'uso; servizi e core eseguono la logica. È lo
 stesso confine architetturale di Scriptoria, adattato a React/Tauri/Rust.
 
-## 9. Job, asset e analisi come servizi trasversali
+## 9. Job, export, asset e analisi come servizi trasversali
 
 ### Job
 
-Download, OCR/HTR, export e calcoli lunghi condividono un solo modello
-persistente con:
+Download di fonti, OCR/HTR, generazione PDF e documenti, export di immagini,
+costruzione dataset, embeddings e altri calcoli lunghi condividono **un solo
+sistema di job asincroni persistenti**. Non devono nascere code separate per
+ogni feature.
+
+Il sistema separa la richiesta di lavoro dalla sua esecuzione: la UI crea il
+job, un orchestratore lo assegna a un worker appropriato e le viste osservano
+lo stato senza dover restare aperte. Il modello comune registra:
 
 - stato e progresso;
 - oggetto, workspace e origine del comando;
+- tipo di job, priorità e dipendenze da altri job;
 - configurazione usata;
 - tentativi, pausa, annullamento, ripresa e retry;
 - errore leggibile e output prodotti;
 - protezione degli stati terminali da aggiornamenti tardivi del worker.
+
+Il runtime limita la concorrenza per categoria e risorsa: download, CPU,
+provider remoto e generazione documenti non devono saturare insieme rete,
+memoria o servizi a pagamento.
+
+“Asincrono” significa che l'interfaccia resta utilizzabile e il lavoro
+continua cambiando vista. Nella prima implementazione non richiede un demone
+esterno attivo con Glossa chiusa: se l'app termina, i job restano persistiti e
+al riavvio vengono ripresi o marcati recuperabili secondo il loro tipo.
+
+I primi consumatori sono acquisizione fonti e asset (#218), poi OCR/HTR,
+export e analisi. Le traduzioni interattive di un singolo frammento possono
+restare nel flusso diretto; elaborazioni batch o lunghe potranno usare lo
+stesso sistema senza introdurre una seconda coda.
+
+### Export Studio e artifact
+
+L'esportazione non è un'area primaria e non è un'impostazione del workspace.
+È un'azione contestuale disponibile da:
+
+- una fonte, per PDF, immagini, manifest o metadati;
+- una trascrizione, per testo, PDF, DOCX, TEI/XML, immagini o selezioni;
+- una traduzione, per output monolingue, bilingue e altri formati supportati;
+- un workspace, per un pacchetto selezionato di più oggetti e artifact.
+
+L'azione apre lo stesso **Export Studio**, adattato all'oggetto di origine. Qui
+l'utente sceglie contenuto, versione, intervallo di pagine, formato, profilo,
+metadati e destinazione. La produzione viene affidata al sistema di job e ogni
+risultato diventa un artifact con origine e configurazione tracciate.
+
+I profili predefiniti — tipografia, copertina, logo, formato, metadati e
+destinazione — possono vivere nelle impostazioni del workspace o dell'app.
+L'esecuzione dell'export resta invece un'azione visibile sull'oggetto o sul
+workspace.
+
+Gli artifact sono raggiungibili:
+
+- dalla cronologia dell'oggetto che li ha prodotti;
+- dalla panoramica del workspace;
+- dalla vista globale di job e output collegata a Dashboard/status bar.
+
+Questa vista globale è una superficie di servizio, non una quinta area
+primaria. Potrà diventare un catalogo autonomo solo se il volume e i workflow
+reali lo renderanno necessario.
 
 ### Asset
 
@@ -363,7 +416,7 @@ raccolti in #383 servono come riferimenti secondari di funzionalità e UI/UX.
 - job persistenti e vault;
 - provenance e metriche;
 - Analisi, dataset e model registry;
-- export e artifact history.
+- Export Studio contestuale e artifact history.
 
 Ogni passo deve lasciare l'app utilizzabile e il database recuperabile. La
 migrazione fisica dettagliata e la strategia di backup appartengono a #212,
@@ -389,6 +442,7 @@ migrazione fisica dettagliata e la strategia di backup appartengono a #212,
 - risorse condivise e regole precise di ereditarietà: #213;
 - source/asset policy e vault: #217;
 - protocollo ed esecutore dei job: #218;
+- Export Studio, profili e artifact: #188 e #225;
 - provenance e metriche: #378;
 - visualizzazione Analisi: #379;
 - formato dei dataset: #380;
@@ -404,6 +458,6 @@ migrazione fisica dettagliata e la strategia di backup appartengono a #212,
 - [x] Contratto di navigazione e stato globale definito.
 - [x] Shell cataloghi/workspace/studi e relativi confini definiti.
 - [x] Job, asset e Analisi collocati nell'architettura.
+- [x] Export Studio e output collocati senza introdurre un'area primaria.
 - [x] Pattern Scriptoria tracciati.
 - [x] Migrazione incrementale dalla UI 1.x definita.
-
