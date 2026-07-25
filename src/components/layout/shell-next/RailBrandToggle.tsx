@@ -22,12 +22,12 @@ export function RailBrandToggle({ onExpand, title }: RailBrandToggleProps) {
         src={glossaAppIcon}
         alt=""
         aria-hidden="true"
-        className="h-7 w-7 transition-all duration-150 group-hover:scale-75 group-hover:opacity-0"
+        className="h-7 w-7 transition-all duration-150 group-hover:scale-75 group-hover:opacity-0 group-focus-visible:scale-75 group-focus-visible:opacity-0"
       />
       <PanelLeftOpen
         size={15}
         aria-hidden="true"
-        className="absolute opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        className="absolute opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
       />
     </IconButton>
   );
