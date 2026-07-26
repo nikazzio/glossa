@@ -83,7 +83,7 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `services/pipelineService.ts` | CRUD pipeline, saveChunkCheckpoint, setPipelineRunState, computeBlobs, loadTranslations, restoreTranslations |
 | `services/projectService.ts` | CRUD project, persistenza sorgente (path, metadata) |
 | `services/fileService.ts` | Import DOCX/PDF (estrazione testo), export bilingue/monolingua |
-| `services/dbService.ts` | Owner dello schema SQLite: init, migrazioni allowlist via `PRAGMA table_info`, read via plugin SQL; tutte le write runtime passano a `execute_transaction` Rust. |
+| `services/dbService.ts` | Apre la connessione (pragma WAL/synchronous/foreign_keys) e legge via plugin SQL; tutte le write runtime passano a `execute_transaction` Rust. Non possiede più lo schema (v. `src-tauri/migrations/`, #211). |
 | `services/customProviderService.ts` | Tauri invoke wrapper per comandi custom provider (list, save, delete, test_connection) |
 | `schemas/externalData.ts` | Schemi Zod ai confini esterni: backup completo prima dell'import, oggetto JSON per opzioni avanzate, profilo provider con nome e URL validi. |
 
@@ -377,7 +377,7 @@ Distinti dalla Phrase Memory: non è ricerca vettoriale per-chunk, ma un set fis
 - **Selezione**: bottone in `tabs/AuditTab.tsx` (non in `MemoryTab.tsx` — scelta deliberata: il momento naturale è quando l'audit del chunk è a posto e lo si blocca come definitivo), stesso gate `translationLocked`. Mostra anche il conteggio corrente (`N/5`) accanto al bottone. Copia `sourceDisplayText`/`translationDisplayText` del chunk corrente in un nuovo `FewShotExample` su `usePipelineStore().config.fewShotExamples`, con dedup per `sourceChunkId`.
 - **Revisione**: `components/pipeline/FewShotExamplesConfig.tsx`, montato in `SettingsTabPanel.tsx` dopo `PhraseMemoryConfig` — sola gestione (edit/rimozione) di ciò che è stato pinnato dal chunk, nessun inserimento da zero qui.
 - **Anteprima**: `promptPreview.ts` replica l'ordine reale (`few-shot-examples` dopo `glossary-constraints`, prima di `blob-context`, `kind: 'static'`).
-- **Persistenza**: `pipelineService.ts` — colonna aggiunta a `ALLOWED_MIGRATIONS` in `dbService.ts` per i DB esistenti.
+- **Persistenza**: `pipelineService.ts` — colonna `pipelines.few_shot_examples` definita direttamente nella migrazione baseline (`src-tauri/migrations/0001_baseline_2_0.sql`).
 
 ---
 
@@ -388,6 +388,7 @@ projects
   id, workspace_id FK, name, source_language, target_language
   source_display_text, source_processing_text, source_footnotes JSON
   document_format, render_profile, markdown_aware, experimental_import
+  status ('active'|'trashed'), trashed_at — cestino (#211)
   created_at, updated_at
 
 workspaces
@@ -445,15 +446,15 @@ annotations
 
 app_settings
   key PK, value
-  — include 'schema_version' (identificatore migrazione DB) e 'active_workspace_id'
-  — 'schema_version' è gestito solo da dbService.ts/initDatabase, mai da backupService.ts:
-    l'import di un backup salta questa riga apposta (altrimenti un backup vecchio
-    sovrascriverebbe il marcatore e la riga sotto lo droppa al riavvio successivo)
+  — include 'active_workspace_id'
+  — il versioning schema non passa più da questa tabella: sqlx tiene traccia delle
+    migrazioni applicate nella sua tabella interna `_sqlx_migrations` (v. sotto)
 
-Boot (main.tsx): se il DB su disco ha uno schema_version diverso da CURRENT_SCHEMA_VERSION,
-prima di chiamare initDatabase() (che farebbe backup + DROP/ricrea tutte le tabelle) viene
-mostrato un prompt di conferma (SchemaResetPrompt) — nessun wipe silenzioso. Annullare
-lascia il DB intatto e blocca l'avvio (SchemaResetCancelled).
+Boot: le migrazioni sqlx girano lato nativo in `setup()` (`lib.rs` → `db::run_startup_migrations`),
+prima che la finestra webview esista — `main.tsx` si limita ad aprire la connessione
+(`initDatabase()`, solo pragma) e non tocca più lo schema. Nessun prompt di conferma
+o reset distruttivo: le migrazioni sono additive (v. sotto), il DB utente non viene
+mai droppato per un bump di schema.
 
 phrase_memory
   id, workspace_id FK, source_phrase, target_phrase
@@ -468,11 +469,77 @@ source_phrase_embeddings
 custom_providers
   id TEXT PK, name TEXT, base_url TEXT, requires_api_key INTEGER (0|1)
   created_at TEXT (ISO datetime)
-  — schema gestito da `services/dbService.ts`; CRUD Rust serializzata da `DbWriteCoordinator`
+  — CRUD Rust serializzata da `DbWriteCoordinator`
   — API key salvata nel keystore con chiave "custom:<id>", non in questa tabella
 ```
 
-**Ownership e policy connessioni:** `services/dbService.ts` è l'unica fonte di verità DDL. Tutte le connessioni impostano `foreign_keys=ON`, `journal_mode=WAL`, `synchronous=NORMAL`, `busy_timeout=10000`. Le write runtime frontend usano `db::execute_transaction`; vector e custom provider acquisiscono lo stesso `DbWriteCoordinator` prima di scrivere. Le tabelle senza consumatori (`macro_blocks`, `historical_techniques`, `technique_tags`, `phrase_memory_presets`) vengono eliminate dalla migrazione v2.
+### Schema 2.0 — Biblioteca, Trascrizioni, job, artifact, provenance (#211)
+
+Tabelle nuove, introdotte dalla migrazione baseline insieme a quelle 1.x sopra
+(nessuna delle 1.x cambia forma). Realizzano il modello approvato in
+`PRODUCT_ARCHITECTURE_2_0.md`: aree globali per tipo, workspace come raccolte
+operative trasversali senza copie. Dettaglio implementativo demandato a #217
+(asset/source policy), #218 (job runtime), #378 (provenance/metriche).
+
+```
+sources / source_versions
+  sources: id, title, kind ('manuscript'|'print'|'pdf'|'iiif'|'web'|'other')
+    primary_language, description, external_ref, status ('active'|'trashed'), trashed_at
+  source_versions: id, source_id FK CASCADE, label, version_kind
+    ('iiif_manifest'|'pdf'|'edition'|'copy'|'other'), source_url, metadata JSON, is_primary
+    UNIQUE(source_id, label)
+
+workspace_sources  ← N-N fonte↔workspace
+  workspace_id FK CASCADE, source_id FK CASCADE, linked_at
+  PK composita (workspace_id, source_id) — cascade cancella solo il link, mai la fonte
+
+assets  ← inventario dettagliato demandato a #217
+  id, source_version_id FK CASCADE (nullable), kind ('image'|'pdf'|'manifest'|'thumbnail'|'derived'|'other')
+  locality ('remote'|'local'|'derived'), availability ('catalogued'|'partial'|'complete')
+  vault_path, remote_url, derived_from_asset_id (self-ref, SET NULL), byte_size, checksum
+
+transcription_documents / transcription_segments / transcription_revisions
+  transcription_documents: id, source_version_id FK SET NULL (nullable: import senza fonte),
+    workspace_id FK NOT NULL (home operativa obbligatoria), title, status ('active'|'archived'|'trashed')
+  transcription_segments: id, document_id FK CASCADE, position, label, asset_id FK SET NULL
+    UNIQUE(document_id, position)
+  transcription_revisions: id, segment_id FK CASCADE, revision_number, text
+    status ('draft'|'approved'|'rejected'), created_by ('user'|'ocr'|'import')
+    UNIQUE(segment_id, revision_number)
+    — "tutti i segmenti approvati" per abilitare l'origine traduzione è un invariante
+      applicativo (service layer), non un CHECK SQL su aggregato cross-riga
+
+translation_origins  ← origine testo di una traduzione, satellite 1:1 opzionale su projects
+  project_id PK FK CASCADE, origin_type ('transcription'|'source_level'|'import')
+  transcription_document_id FK SET NULL, source_version_id FK SET NULL, import_note
+  CHECK di mutua esclusione fra i 3 origin_type
+  — assenza di riga = import autonomo (comportamento di default per ogni progetto 1.x esistente)
+
+jobs  ← un solo sistema condiviso per download/OCR/export/dataset (#218)
+  id, job_type (stringa aperta, validata da registry Rust), status
+    ('queued'|'running'|'pausing'|'paused'|'cancelling'|'cancelled'|'completed'|'error')
+  priority, workspace_id SET NULL, owner_source_id/owner_transcription_document_id/
+    owner_project_id/owner_asset_id (al più una NOT NULL, CHECK), depends_on_job_id (self-ref)
+  config JSON, progress, message, attempt_count, max_attempts, error JSON, requested_by
+  — protezione stati terminali da scritture tardive = UPDATE condizionale Rust (`WHERE status
+    NOT IN (...)`), non vincolo SQL — implementazione in #218
+
+artifacts  ← export/dataset/report tracciati, prodotti da un job
+  id, source_id/transcription_document_id/project_id/workspace_id (esattamente una NOT NULL, CHECK)
+  kind ('export'|'dataset'|'report'|'index'|'intermediate'), format, vault_path, config JSON
+  job_id FK SET NULL
+
+provenance_events  ← registro append-only unico, cross-dominio (#378)
+  id, occurred_at, event_type (vocabolario aperto)
+  entity_type (CHECK: source|source_version|transcription_document|transcription_segment|
+    transcription_revision|project|translation_chunk|artifact|job), entity_id (NIENTE FK — la
+    cronologia deve sopravvivere alla cancellazione fisica dell'entità)
+  workspace_id SET NULL, actor ('user'|'system'|'model'), job_id SET NULL, input_ref/output_ref/config JSON
+```
+
+**Ownership e policy connessioni:** lo schema è posseduto da Rust/sqlx (`src-tauri/migrations/*.sql`, eseguite via `sqlx::migrate!` in `db::run_startup_migrations`, chiamata da `lib.rs::setup()` prima che la UI esista) — non più da TypeScript (#211, corregge il finding di audit "Rust ignora il DDL"). `services/dbService.ts` apre solo la connessione e imposta i pragma di sessione (`foreign_keys=ON`, `journal_mode=WAL`, `synchronous=NORMAL`, `busy_timeout=10000`). Le write runtime frontend usano `db::execute_transaction`; vector e custom provider acquisiscono lo stesso `DbWriteCoordinator` prima di scrivere. Le tabelle senza consumatori (`macro_blocks`, `historical_techniques`, `technique_tags`, `phrase_memory_presets`) vengono droppate una tantum dalla migrazione baseline `0001_baseline_2_0.sql`.
+
+**Migrazioni forward-only, additive, senza retrocompatibilità 1.x:** ogni nuovo file in `src-tauri/migrations/` usa `CREATE TABLE IF NOT EXISTS`/aggiunte pure — mai `ALTER`/`DROP` distruttivo sulle tabelle 1.x esistenti. Non c'è alcun percorso di conversione dati 1.x→2.0 perché le nuove entità (fonti, asset, trascrizioni, job, artifact, provenance — v. sotto) non hanno equivalente 1.x da cui migrare: nascono vuote. Il vecchio meccanismo "reset totale con backup" di `dbService.ts` è stato rimosso; resta solo come possibilità futura se un bump davvero incompatibile lo richiedesse (non necessario oggi, coerente con la scelta di non mantenere retrocompatibilità).
 
 **Persistito vs in-memory:**
 - ✅ Persistito: source, config, stage_results, translations, run_status, operation_logs

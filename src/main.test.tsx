@@ -1,12 +1,10 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const initDatabase = vi.hoisted(() => vi.fn(async () => {}));
-const isDatabaseSchemaOutdated = vi.hoisted(() => vi.fn(async () => false));
 
 vi.mock('./App.tsx', () => ({ default: () => <div>Glossa</div> }));
-vi.mock('./services/dbService.ts', () => ({ initDatabase, isDatabaseSchemaOutdated }));
+vi.mock('./services/dbService.ts', () => ({ initDatabase }));
 
 type TauriWindow = Window & { __TAURI_INTERNALS__?: unknown };
 
@@ -19,8 +17,6 @@ async function loadMain() {
 describe('database initialization failure', () => {
   beforeEach(() => {
     initDatabase.mockClear();
-    isDatabaseSchemaOutdated.mockClear();
-    isDatabaseSchemaOutdated.mockResolvedValue(false);
     delete (window as TauriWindow).__TAURI_INTERNALS__;
   });
 
@@ -50,51 +46,19 @@ describe('database initialization failure', () => {
   });
 });
 
-describe('outdated schema confirmation gate', () => {
+describe('boot', () => {
   beforeEach(() => {
     initDatabase.mockClear();
-    isDatabaseSchemaOutdated.mockClear();
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it('renders the app directly when the schema is current, without prompting', async () => {
-    isDatabaseSchemaOutdated.mockResolvedValue(false);
+  it('opens the connection and renders the app', async () => {
     await loadMain();
 
     await waitFor(() => expect(screen.getByText('Glossa')).toBeInTheDocument());
     expect(initDatabase).toHaveBeenCalledTimes(1);
-  });
-
-  it('asks for confirmation before resetting an outdated schema, then proceeds on confirm', async () => {
-    isDatabaseSchemaOutdated.mockResolvedValue(true);
-    const { default: i18n } = await import('./i18n');
-    await i18n.changeLanguage('en');
-    await loadMain();
-
-    const confirmButton = await screen.findByRole('button', { name: 'Continue and recreate the database' });
-    expect(initDatabase).not.toHaveBeenCalled();
-
-    const user = userEvent.setup();
-    await user.click(confirmButton);
-
-    await waitFor(() => expect(screen.getByText('Glossa')).toBeInTheDocument());
-    expect(initDatabase).toHaveBeenCalledTimes(1);
-  });
-
-  it('never resets the database when the user cancels', async () => {
-    isDatabaseSchemaOutdated.mockResolvedValue(true);
-    const { default: i18n } = await import('./i18n');
-    await i18n.changeLanguage('en');
-    await loadMain();
-
-    const cancelButton = await screen.findByRole('button', { name: 'Cancel, close Glossa' });
-    const user = userEvent.setup();
-    await user.click(cancelButton);
-
-    await waitFor(() => expect(screen.getByText('Operation cancelled')).toBeInTheDocument());
-    expect(initDatabase).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,7 @@
 import {StrictMode} from 'react';
-import {createRoot, type Root} from 'react-dom/client';
+import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
-import { initDatabase, isDatabaseSchemaOutdated } from './services/dbService.ts';
-import { AlertDialog } from './components/ui/AlertDialog.tsx';
+import { initDatabase } from './services/dbService.ts';
 import i18n from './i18n';
 import './index.css';
 
@@ -27,73 +26,12 @@ export function DatabaseInitError() {
   );
 }
 
-export function SchemaResetCancelled() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-editorial-bg px-6 font-sans text-editorial-ink">
-      <div className="max-w-md text-center">
-        <p className="text-lg font-display italic text-editorial-danger">
-          {i18n.t('errors.schemaResetCancelledTitle')}
-        </p>
-        <p className="mt-2 text-sm text-editorial-muted">
-          {i18n.t('errors.schemaResetCancelledDescription')}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export function SchemaResetPrompt({
-  onConfirm,
-  onCancel,
-}: {
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <AlertDialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
-      title={i18n.t('errors.schemaResetTitle')}
-      description={i18n.t('errors.schemaResetDescription')}
-      confirmLabel={i18n.t('errors.schemaResetConfirm')}
-      cancelLabel={i18n.t('errors.schemaResetCancel')}
-      onConfirm={onConfirm}
-      tone="danger"
-    />
-  );
-}
-
-function confirmSchemaReset(root: Root): Promise<boolean> {
-  return new Promise((resolve) => {
-    root.render(
-      <StrictMode>
-        <SchemaResetPrompt onConfirm={() => resolve(true)} onCancel={() => resolve(false)} />
-      </StrictMode>,
-    );
-  });
-}
-
 const root = createRoot(document.getElementById('root')!);
 
-// Initialize SQLite database, then render. When the on-disk database
-// predates this build's schema, ask before initDatabase() backs it up and
-// wipes the mismatched tables — a silent wipe would delete work the user
-// deliberately kept around (e.g. after restoring an older backup).
+// The schema itself is created and migrated natively before the webview
+// exists (Rust owns it via sqlx, see #211) — this only opens the connection
+// the rest of the app uses.
 async function boot(): Promise<void> {
-  if (await isDatabaseSchemaOutdated()) {
-    const proceed = await confirmSchemaReset(root);
-    if (!proceed) {
-      root.render(
-        <StrictMode>
-          <SchemaResetCancelled />
-        </StrictMode>,
-      );
-      return;
-    }
-  }
-
   await initDatabase();
   root.render(
     <StrictMode>

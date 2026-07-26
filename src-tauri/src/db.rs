@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::Acquire;
 use std::fs;
 use std::sync::Arc;
@@ -7,6 +8,40 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
 use tauri_plugin_sql::{DbInstances, DbPool};
 use tokio::sync::Mutex;
+
+/// Rust/sqlx owns the schema (see #211): this baseline runs once against a
+/// fresh or pre-2.0 glossa.db (existing 1.x tables are created idempotently,
+/// so it is a no-op on an already-populated database) and every later change
+/// ships as a new file here, tracked by sqlx in `_sqlx_migrations`.
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
+
+/// Runs before any Tauri command or frontend `Database.load()` call, so the
+/// schema is guaranteed to exist by the time the UI or the native vector
+/// connection first touch glossa.db.
+pub async fn run_startup_migrations(app: &tauri::AppHandle) -> Result<(), String> {
+    let db_path = crate::storage_config::db_path(app)?;
+    if let Some(parent) = db_path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let options = SqliteConnectOptions::new()
+        .filename(&db_path)
+        .create_if_missing(true)
+        .foreign_keys(true);
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(options)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    MIGRATOR
+        .run(&pool)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    pool.close().await;
+    Ok(())
+}
 
 /// Serializes every runtime write to glossa.db, including commands that use
 /// SQLx and commands that use the dedicated rusqlite vector connection.
@@ -177,6 +212,121 @@ fn bind_json_value<'q>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    async fn migrated_pool() -> sqlx::SqlitePool {
+        let options = SqliteConnectOptions::new()
+            .filename(":memory:")
+            .foreign_keys(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .expect("in-memory sqlite connection");
+        MIGRATOR.run(&pool).await.expect("baseline migration runs");
+        pool
+    }
+
+    #[tokio::test]
+    async fn baseline_migration_creates_every_2_0_table() {
+        let pool = migrated_pool().await;
+
+        for table in [
+            "sources",
+            "source_versions",
+            "workspace_sources",
+            "assets",
+            "transcription_documents",
+            "transcription_segments",
+            "transcription_revisions",
+            "translation_origins",
+            "jobs",
+            "artifacts",
+            "provenance_events",
+        ] {
+            let count: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+            )
+            .bind(table)
+            .fetch_one(&pool)
+            .await
+            .unwrap_or_else(|error| panic!("querying sqlite_master for {table}: {error}"));
+            assert_eq!(count, 1, "table {table} should exist after migration");
+        }
+    }
+
+    #[tokio::test]
+    async fn baseline_migration_seeds_default_workspace_on_a_fresh_database() {
+        let pool = migrated_pool().await;
+
+        let workspace_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workspaces")
+            .fetch_one(&pool)
+            .await
+            .expect("workspaces query");
+        assert_eq!(workspace_count, 1);
+
+        let active_workspace: String =
+            sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'active_workspace_id'")
+                .fetch_one(&pool)
+                .await
+                .expect("active_workspace_id row");
+        assert_eq!(active_workspace, "ws_default");
+    }
+
+    #[tokio::test]
+    async fn baseline_migration_is_idempotent_on_a_database_that_already_has_1x_tables() {
+        // Simulates the author's existing test database: 1.x tables already
+        // created directly (not via sqlx), no #211 tables yet.
+        let options = SqliteConnectOptions::new()
+            .filename(":memory:")
+            .foreign_keys(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .expect("in-memory sqlite connection");
+        sqlx::query(
+            "CREATE TABLE workspaces (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              embedding_model TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+              memory_extractor_provider TEXT NOT NULL DEFAULT 'openai',
+              memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5.4-nano',
+              memory_extractor_prompt TEXT NOT NULL DEFAULT '',
+              created_at TEXT NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .expect("pre-existing workspaces table matching the real 1.x shape");
+        sqlx::query(
+            "INSERT INTO workspaces (id, name, embedding_model, memory_extractor_provider, memory_extractor_model, memory_extractor_prompt, created_at)
+             VALUES ('ws_mine', 'Scherma', 'text-embedding-3-small', 'openai', 'gpt-5.4-nano', '', datetime('now'))",
+        )
+        .execute(&pool)
+        .await
+        .expect("pre-existing workspace row");
+
+        MIGRATOR
+            .run(&pool)
+            .await
+            .expect("migration must not fail against a pre-2.0 database");
+
+        let preserved: String =
+            sqlx::query_scalar("SELECT name FROM workspaces WHERE id = 'ws_mine'")
+                .fetch_one(&pool)
+                .await
+                .expect("existing workspace row survives the migration untouched");
+        assert_eq!(preserved, "Scherma");
+
+        let sources_exists: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'sources'",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("sqlite_master query");
+        assert_eq!(sources_exists, 1);
+    }
 
     #[test]
     fn converts_byte_array_to_blob() {

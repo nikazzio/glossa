@@ -30,6 +30,11 @@ pub fn run() {
 
     builder
         .setup(|app| {
+            // Schema ownership lives in Rust now (#211): run before the
+            // native vector connection opens and before the frontend's
+            // `Database.load()` can race it.
+            tauri::async_runtime::block_on(db::run_startup_migrations(app.handle()))?;
+
             // GTK_OVERLAY_SCROLLING è disattivato (vedi main.rs) per evitare che le
             // scrollbar sfondino lo z-index della pagina. Contropartita: WebKitGTK
             // passa alla scrollbar "classica", che disegna anche la rotaia (trough)
