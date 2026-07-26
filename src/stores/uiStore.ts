@@ -19,7 +19,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
-export type WorkspaceArea = 'translations' | 'library' | 'transcriptions';
+export type WorkspaceArea = 'translations' | 'library' | 'transcriptions' | 'analysis';
 /**
  * Vista corrente della shell: Dashboard (home app-level), pagina del workspace
  * attivo ('workspace'), o un'area del workspace attivo. Sempre esattamente una

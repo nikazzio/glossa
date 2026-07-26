@@ -714,6 +714,10 @@
       "transcriptions": {
         "title": "Transcriptions",
         "sidebarHint": "OCR and source prep"
+      },
+      "analysis": {
+        "title": "Analysis",
+        "sidebarHint": "Metrics and datasets"
       }
     },
     "newBookCard": "New book",

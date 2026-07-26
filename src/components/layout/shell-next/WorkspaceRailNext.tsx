@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Archive,
+  BarChart3,
   BookOpenText,
   FilePen,
   LayoutDashboard,
@@ -22,6 +23,7 @@ const AREA_ITEMS = [
   { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'library', icon: LibraryBig, enabled: false },
   { id: 'transcriptions', icon: FilePen, enabled: false },
+  { id: 'analysis', icon: BarChart3, enabled: false },
 ] as const;
 
 /** Dashboard: home dell'applicazione — sopra e fuori dalle aree del workspace. */
