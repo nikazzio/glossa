@@ -36,6 +36,11 @@ Via **Settings → Custom** you can define arbitrary endpoint profiles. Each pro
 To save or test a profile, both its name and base URL must be complete and valid.
 Glossa does not keep an incomplete profile or one with an unrecognizable address.
 
+To protect API keys, remote endpoints must use `https://`. `http://` is
+accepted only for services on the local machine: `localhost`, `127.0.0.1`, and
+`::1`. An insecure remote profile is rejected before Glossa sends credentials
+or requests.
+
 In the pipeline stage, selecting the *Custom* provider shows a second dropdown to choose the profile and a free-text field for the model name.
 
 ## Provider selection guide

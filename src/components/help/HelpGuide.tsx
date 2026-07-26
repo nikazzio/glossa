@@ -285,6 +285,9 @@ function PipelineSection() {
 
       <SubTitle>{t('help.pipeline.temperatureTitle')}</SubTitle>
       <P>{t('help.pipeline.temperatureDesc')}</P>
+
+      <SubTitle>{t('help.pipeline.advancedOptionsTitle')}</SubTitle>
+      <P>{t('help.pipeline.advancedOptionsDesc')}</P>
     </>
   );
 }
@@ -310,6 +313,9 @@ function FeaturesSection() {
 
       <SubTitle>{t('help.features.documentWorkspaceTitle')}</SubTitle>
       <P>{t('help.features.documentWorkspaceDesc')}</P>
+
+      <SubTitle>{t('help.features.chunkIndicatorsTitle')}</SubTitle>
+      <P>{t('help.features.chunkIndicatorsDesc')}</P>
 
       <SubTitle>{t('help.features.documentToolsTitle')}</SubTitle>
       <P>{t('help.features.documentToolsDesc')}</P>
@@ -543,6 +549,9 @@ function ProvidersSection() {
 
       <SubTitle>{t('help.providers.gatingTitle')}</SubTitle>
       <P>{t('help.providers.gatingDesc')}</P>
+
+      <SubTitle>{t('help.providers.customValidationTitle')}</SubTitle>
+      <P>{t('help.providers.customValidationDesc')}</P>
 
       <P>{t('help.providers.security')}</P>
     </>

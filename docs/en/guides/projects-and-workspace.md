@@ -33,7 +33,26 @@ Glossa separates application settings, workspace resources, and per-project pipe
 
 You can collapse the side rail to leave more room for the content. Inside a project, the previous/next chunk controls and the translation action remain available; the technical chunk number no longer occupies space in the rail. On the collapsed Dashboard, Dashboard and every area remain visible: areas that are not available yet are visible but cannot be selected; reopen the rail to see the workspace list.
 
-At the top, the Glossa mark opens the rail on hover. The closed rail therefore remains recognisable without permanently showing another command.
+The Glossa mark remains visible at the top. On hover or keyboard focus, it
+becomes the button that reopens the rail; a click or keyboard activation is
+still required.
+
+## Chunk indicators
+
+The row of circles above the document lets you switch chunks and summarises
+state without relying on colour alone:
+
+- the central mark distinguishes a chunk that is ready, processing, completed,
+  or in error;
+- the top-left signal marks unresolved audit issues;
+- the top-right signal marks notes;
+- the bottom-left signal marks a locked translation;
+- the bottom-right signal marks a translation that needs updating after its
+  source changed;
+- a small triangle under the circle marks the current chunk.
+
+Hover an indicator or reach it with the keyboard to read the full state summary
+and any related counts.
 
 ## Shared versus local resources
 

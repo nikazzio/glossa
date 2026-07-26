@@ -21,6 +21,19 @@ Use the glossary when:
 - a project has house style or editorial vocabulary
 - you want the judge to flag missing or incorrect terminology
 
+### Highlight legend
+
+The **Glossary** tab in the Insight panel always shows the legend used in the
+document:
+
+- blue underline: a glossary term found in the source text;
+- green: the expected translation is present;
+- pink: the expected translation is missing.
+
+Search matches use yellow instead. You can change these colours under
+**Settings → Highlights**; hover a term to see its expected translation and
+notes.
+
 ## Phrase memory
 
 Phrase memory is retrieval-based. Glossa extracts reusable source-target pairs

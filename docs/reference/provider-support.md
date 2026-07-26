@@ -36,6 +36,11 @@ Tramite **Impostazioni → Custom** puoi definire profili endpoint arbitrari. Og
 Per salvare o testare un profilo, nome e URL base devono essere completi e validi.
 Glossa non conserva un profilo incompleto o con un indirizzo non riconoscibile.
 
+Per proteggere le chiavi API, gli endpoint remoti devono usare `https://`.
+`http://` è accettato soltanto per servizi sulla macchina locale:
+`localhost`, `127.0.0.1` e `::1`. Un profilo remoto non sicuro viene rifiutato
+prima che Glossa invii credenziali o richieste.
+
 Nello stage della pipeline, selezionando il provider *Custom* appare un secondo menu a tendina per scegliere il profilo e un campo di testo libero per il nome del modello.
 
 ## Guida alla scelta del provider

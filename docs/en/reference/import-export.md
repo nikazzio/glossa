@@ -40,6 +40,17 @@ Before asking to replace local data, Glossa checks that a backup is complete and
 compatible. An incomplete or altered file, or one made by a newer version, is
 rejected without changing the current workspace.
 
+## Data location
+
+The app database contains projects, glossaries, and settings. Under
+**Settings → Data** you can see the folder in use and choose another one.
+Glossa first copies the database, verifies the copy, and only then records the
+new location. The original is never deleted automatically, and the new
+location is used after restarting the app.
+
+This operation covers the app database. Future Library materials such as
+downloaded scans and images are not yet part of the move.
+
 ## Export
 
 Typical export targets include:

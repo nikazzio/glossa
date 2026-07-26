@@ -40,6 +40,18 @@ Prima di chiederti di sostituire i dati locali, Glossa controlla che il backup s
 completo e compatibile. Un file incompleto, alterato o creato da una versione più
 recente viene rifiutato senza modificare il workspace corrente.
 
+## Posizione dei dati
+
+Il database dell'app contiene progetti, glossari e impostazioni. In
+**Impostazioni → Dati** puoi vedere la cartella utilizzata e sceglierne
+un'altra. Glossa copia prima il database, verifica l'integrità della copia e
+solo allora registra la nuova posizione. L'originale non viene cancellato
+automaticamente e la nuova posizione entra in uso dopo il riavvio.
+
+Questa operazione riguarda il database dell'app. I futuri materiali della
+Biblioteca, come scansioni e immagini scaricate, non fanno ancora parte dello
+spostamento.
+
 ## Export
 
 I target di export tipici includono:

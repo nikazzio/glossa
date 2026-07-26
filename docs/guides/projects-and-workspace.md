@@ -33,7 +33,26 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 
 La barra laterale si può richiudere per lasciare più spazio al contenuto. Nel progetto restano disponibili le frecce per passare al frammento precedente o successivo e il comando di traduzione; il numero tecnico del frammento non occupa più spazio nella barra. Nella Dashboard chiusa restano Dashboard e tutte le aree: quelle non ancora disponibili sono visibili ma non selezionabili; l'elenco dei workspace torna visibile riaprendo la barra.
 
-In alto, il marchio Glossa apre la barra al passaggio del mouse: così la barra chiusa resta riconoscibile ma non aggiunge un comando visibile in permanenza.
+In alto resta visibile il marchio Glossa. Al passaggio del mouse o con il focus
+da tastiera, il marchio diventa il pulsante per riaprire la barra; serve
+comunque un clic o l'attivazione da tastiera.
+
+## Indicatori dei frammenti
+
+La fila di cerchi sopra il documento permette di cambiare frammento e riassume
+lo stato senza affidarsi soltanto al colore:
+
+- il segno centrale distingue un frammento da tradurre, in elaborazione,
+  completato o in errore;
+- in alto a sinistra compare un segnale quando l'audit ha problemi irrisolti;
+- in alto a destra compare un segnale quando sono presenti note;
+- in basso a sinistra compare un segnale quando la traduzione è bloccata;
+- in basso a destra compare un segnale quando la sorgente è cambiata e la
+  traduzione deve essere aggiornata;
+- un piccolo triangolo sotto il cerchio indica il frammento corrente.
+
+Passa il mouse su un indicatore o raggiungilo da tastiera per leggere il
+riepilogo completo degli stati e degli eventuali conteggi.
 
 ## Risorse condivise e locali
 
