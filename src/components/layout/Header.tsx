@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { translationsLocation } from '../../navigation/appLocation';
 import { EASE_EDITORIAL } from './motion';
 import { ShellNavFooter } from './ShellNav';
 import { Tooltip } from '../ui';
@@ -15,11 +16,11 @@ const HelpGuide = lazy(() =>
 );
 
 export function Header() {
-  const { setShowHelp, showHelp, setActiveWorkspaceView } = useUiStore(
+  const { setShowHelp, showHelp, navigate } = useUiStore(
     useShallow((state) => ({
       setShowHelp: state.setShowHelp,
       showHelp: state.showHelp,
-      setActiveWorkspaceView: state.setActiveWorkspaceView,
+      navigate: state.navigate,
     })),
   );
   const { currentProjectId, currentProject, closeProject } = useProjectStore(
@@ -35,7 +36,7 @@ export function Header() {
       workspaces: state.workspaces,
     })),
   );
-  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
+  const location = useUiStore((state) => state.location);
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const { t } = useTranslation();
 
@@ -48,15 +49,15 @@ export function Header() {
     ? workspaces.find((workspace) => workspace.id === currentProject.workspace_id)
     : activeWorkspace;
   const workspaceLabel = projectWorkspace?.name ?? activeWorkspace?.name ?? t('header.brandArea');
-  const translationsLabel = t('workspace.areas.translations.title');
-  const isTranslationsContext = activeWorkspaceView === 'translations' || projectWithoutWorkspace;
+  const translationsLabel = t('areas.translations.title');
+  const isTranslationsContext = location.area === 'translations' || projectWithoutWorkspace;
   const contextLabel = isTranslationsContext ? translationsLabel : workspaceLabel;
-  const showContextBreadcrumb = Boolean(currentProjectId || activeWorkspaceView !== 'dashboard');
+  const showContextBreadcrumb = Boolean(currentProjectId || location.area !== 'dashboard');
   const backToContextLabel = t(projectWithoutWorkspace ? 'sidebar.backToTranslations' : 'sidebar.backToWorkspace');
 
   const handleReturnToProjectContext = () => {
     closeProject();
-    if (projectWithoutWorkspace) setActiveWorkspaceView('translations');
+    if (projectWithoutWorkspace) navigate(translationsLocation());
   };
 
   return (

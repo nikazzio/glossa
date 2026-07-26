@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DocumentLayoutPreference } from '../types';
+import { dashboardLocation, type AppLocation } from '../navigation/appLocation';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -19,14 +20,6 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
-export type WorkspaceArea = 'translations' | 'library' | 'transcriptions' | 'analysis';
-/**
- * Vista corrente della shell: Dashboard (home app-level), pagina del workspace
- * attivo ('workspace'), o un'area del workspace attivo. Sempre esattamente una
- * attiva (semantica radio, mai deselezione) — ogni voce del rail naviga al
- * proprio contenuto.
- */
-export type WorkspaceView = 'dashboard' | 'workspace' | WorkspaceArea;
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -109,9 +102,9 @@ interface UiState {
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
-  activeWorkspaceView: WorkspaceView;
+  location: AppLocation;
   setTraceStageId: (id: string | null) => void;
-  setActiveWorkspaceView: (view: WorkspaceView) => void;
+  navigate: (location: AppLocation) => void;
   setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
@@ -296,7 +289,7 @@ export const useUiStore = create<UiState>()(
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       pendingAnnotationAnchor: null,
-      activeWorkspaceView: 'dashboard',
+      location: dashboardLocation(),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
@@ -427,7 +420,7 @@ export const useUiStore = create<UiState>()(
       clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
-      setActiveWorkspaceView: (view) => set({ activeWorkspaceView: view }),
+      navigate: (location) => set({ location }),
       setActiveProjectPanel: (panel) =>
         set((state) => {
           if (panel === 'insight') {

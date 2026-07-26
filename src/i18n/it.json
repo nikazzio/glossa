@@ -667,6 +667,30 @@
     "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
     "loadFailed": "Caricamento progetto fallito"
   },
+  "areas": {
+    "translations": {
+      "title": "Traduzioni",
+      "sidebarHint": "Progetti e pipeline"
+    },
+    "library": {
+      "title": "Biblioteca",
+      "sidebarHint": "Testi e catalogo",
+      "emptyMessage": "Il catalogo Biblioteca non ha ancora contenuto.",
+      "emptyHint": "Arriverà con le fonti e i libri collegabili ai workspace."
+    },
+    "transcriptions": {
+      "title": "Trascrizioni",
+      "sidebarHint": "OCR e preparazione",
+      "emptyMessage": "Il catalogo Trascrizioni non ha ancora contenuto.",
+      "emptyHint": "Arriverà con lo Studio di trascrizione."
+    },
+    "analysis": {
+      "title": "Analisi",
+      "sidebarHint": "Metriche e dataset",
+      "emptyMessage": "L'area Analisi non ha ancora contenuto.",
+      "emptyHint": "Arriverà con metriche, confronti e dataset."
+    }
+  },
   "workspace": {
     "activeLabel": "Workspace traduzioni",
     "noActive": "Nessun workspace attivo",
@@ -702,24 +726,6 @@
     "pipelineBadge_one": "1 pipeline",
     "pipelineBadge_other": "{{count}} pipeline",
     "pipelineNamesFallback": "Nessuna pipeline",
-    "areas": {
-      "translations": {
-        "title": "Traduzioni",
-        "sidebarHint": "Progetti e pipeline"
-      },
-      "library": {
-        "title": "Biblioteca",
-        "sidebarHint": "Testi e catalogo"
-      },
-      "transcriptions": {
-        "title": "Trascrizioni",
-        "sidebarHint": "OCR e preparazione"
-      },
-      "analysis": {
-        "title": "Analisi",
-        "sidebarHint": "Metriche e dataset"
-      }
-    },
     "newBookCard": "Nuovo libro",
     "memoryExtractorModel": "Modello estrattore Memory",
     "memoryExtractorPrompt": "Prompt estrattore Memory",
@@ -1644,6 +1650,7 @@
     "areaTranslations": "Traduzioni",
     "areaLibrary": "Biblioteca",
     "areaTranscriptions": "Trascrizioni",
+    "areaAnalysis": "Analisi",
     "panel": {
       "config": "Configurazione",
       "insights": "Analisi",

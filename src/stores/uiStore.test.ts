@@ -197,24 +197,24 @@ describe('uiStore uiFont preference', () => {
   });
 });
 
-describe('uiStore — activeWorkspaceView', () => {
+describe('uiStore — location', () => {
   beforeEach(() => {
-    useUiStore.setState({ activeWorkspaceView: 'dashboard' });
+    useUiStore.setState({ location: { area: 'dashboard' } });
   });
 
   it('defaults to dashboard (never an empty selection)', () => {
-    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
+    expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
   });
 
-  it('setActiveWorkspaceView switches to an area', () => {
-    useUiStore.getState().setActiveWorkspaceView('translations');
-    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
+  it('navigate switches to an area', () => {
+    useUiStore.getState().navigate({ area: 'translations' });
+    expect(useUiStore.getState().location).toEqual({ area: 'translations' });
   });
 
-  it('setActiveWorkspaceView returns to the dashboard', () => {
-    useUiStore.getState().setActiveWorkspaceView('translations');
-    useUiStore.getState().setActiveWorkspaceView('dashboard');
-    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
+  it('navigate returns to the dashboard', () => {
+    useUiStore.getState().navigate({ area: 'translations' });
+    useUiStore.getState().navigate({ area: 'dashboard' });
+    expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
   });
 });
 

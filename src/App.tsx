@@ -23,6 +23,9 @@ import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { AppDashboard } from './components/dashboard/AppDashboard';
 import { WorkspaceOverview } from './components/workspace/WorkspaceOverview';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
+import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
+import { TranscriptionsCatalogArea } from './components/workspace/TranscriptionsCatalogArea';
+import { AnalysisArea } from './components/workspace/AnalysisArea';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
 import { extractFootnotes } from './utils/footnoteExtractor';
@@ -423,7 +426,7 @@ export default function App() {
 
   // La Dashboard è app-level: cambiare workspace non tocca la vista corrente
   // (un'area mostra il contenuto del nuovo workspace, la Dashboard è globale).
-  const activeWorkspaceView = useUiStore((s) => s.activeWorkspaceView);
+  const location = useUiStore((s) => s.location);
 
   useEffect(() => {
     loadWorkspaces().catch((err: unknown) => console.error('[App] loadWorkspaces failed:', err));
@@ -469,20 +472,26 @@ export default function App() {
           <div className="flex flex-1 min-h-0">
             <WorkspaceShellNext>
               <div className="relative flex min-w-0 flex-1">
-                {activeWorkspaceView === 'translations' ? (
+                {location.area === 'translations' ? (
                   <TranslationsArea />
-                ) : activeWorkspaceView === 'workspace' ? (
+                ) : location.area === 'library' ? (
+                  <LibraryCatalogArea />
+                ) : location.area === 'transcriptions' ? (
+                  <TranscriptionsCatalogArea />
+                ) : location.area === 'analysis' ? (
+                  <AnalysisArea />
+                ) : location.area === 'workspace' ? (
                   <WorkspaceOverview />
                 ) : (
                   <AppDashboard />
                 )}
                 <PanelTransitionVeil
                   panelKey={
-                    activeWorkspaceView === 'translations'
-                      ? 'area-translations'
-                      : activeWorkspaceView === 'workspace'
-                        ? `workspace-${activeWorkspace?.id ?? 'none'}`
-                        : 'app-dashboard'
+                    location.area === 'workspace'
+                      ? `workspace-${location.workspaceId}`
+                      : location.area === 'dashboard'
+                        ? 'app-dashboard'
+                        : `area-${location.area}`
                   }
                   tone="paper"
                   variant="workspace"

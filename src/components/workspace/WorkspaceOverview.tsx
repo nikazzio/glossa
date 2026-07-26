@@ -110,7 +110,7 @@ export function WorkspaceOverview() {
         {/* Progetti di traduzione del workspace */}
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between px-1">
-            <SectionLabel icon={BookOpenText} label={t('workspace.areas.translations.title')} />
+            <SectionLabel icon={BookOpenText} label={t('areas.translations.title')} />
             <IconButton
               size="sm"
               tone="muted"
