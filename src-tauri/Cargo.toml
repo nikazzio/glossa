@@ -22,7 +22,7 @@ bytes = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 log = "0.4"
-sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "json"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "json", "migrate"] }
 tauri = { version = "2.10.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
