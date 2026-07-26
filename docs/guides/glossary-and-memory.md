@@ -21,6 +21,19 @@ Usa il glossario quando:
 - un progetto ha house style o vocabolario editoriale specifico
 - vuoi che il judge segnali terminologia mancante o errata
 
+### Legenda delle evidenziazioni
+
+La scheda **Glossario** del pannello Insight mostra sempre la legenda usata nel
+documento:
+
+- blu sottolineato: termine del glossario presente nel testo sorgente;
+- verde: traduzione attesa presente correttamente;
+- rosa: traduzione attesa mancante.
+
+I match della ricerca usano invece il giallo. Puoi cambiare i colori da
+**Impostazioni → Evidenziazioni**; passando sul termine vedi traduzione attesa
+e note.
+
 ## Phrase memory
 
 La phrase memory è basata su retrieval. Glossa estrae coppie sorgente-target riusabili

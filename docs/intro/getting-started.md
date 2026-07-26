@@ -23,7 +23,7 @@ Se vuoi usare Glossa, il percorso corretto è scaricare una release binaria da G
 Link utili:
 
 - [Ultima release](https://github.com/nikazzio/glossa/releases/latest)
-- Release corrente al 4 luglio 2026: [`glossa-v1.1.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.1.0)
+- Release corrente al 25 luglio 2026: [`glossa-v1.3.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.3.0)
 
 ## Per sviluppatori e contributori
 

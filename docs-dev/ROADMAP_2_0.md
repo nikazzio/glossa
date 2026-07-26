@@ -1,12 +1,15 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-07-04
+Ultimo aggiornamento: 2026-07-25
 
 ## Principio guida
 
 Glossa 2.0 evolve da workspace di traduzione documentale a research workbench locale per acquisizione, studio, trascrizione, traduzione, revisione ed export.
 
-Scriptoria è la reference funzionale per il dominio IIIF/manoscritti, ma non va innestata come applicazione separata. Le funzionalità vanno riscritte nativamente in Glossa, mantenendo una sola shell di prodotto e un solo modello operativo.
+Scriptoria è il riferimento principale per codice e funzionalità nei domini
+IIIF, fonti, asset, job, trascrizione ed export. I pattern utili vengono
+adattati nativamente all'architettura React/Tauri/Rust di Glossa e alla sua
+shell di prodotto.
 
 Pattern da portare da Scriptoria:
 
@@ -30,7 +33,13 @@ Pattern da portare da Scriptoria:
 
 - #180 - architettura di prodotto e shell UI unificata.
 
-Obiettivo: definire confini di prodotto, information architecture, domini principali, regole di integrazione con la pipeline esistente e criteri "no mini-app".
+Obiettivo: definire confini di prodotto, information architecture, domini
+principali e regole di integrazione con la pipeline esistente.
+
+Decisione architetturale:
+[`PRODUCT_ARCHITECTURE_2_0.md`](PRODUCT_ARCHITECTURE_2_0.md). Le aree
+Biblioteca, Trascrizioni, Traduzioni e Analisi sono cataloghi globali; i
+workspace sono raccolte operative trasversali degli stessi oggetti canonici.
 
 ### Fase 1 - Foundation, data model, shell
 
@@ -58,9 +67,14 @@ Obiettivo: portare in Glossa il modello di discovery di Scriptoria senza copiare
 
 - #183 - epic acquisizione asset locali.
 - #217 - inventory asset e source policy runtime.
-- #218 - job queue persistente e orchestrazione download.
+- #218 - sistema condiviso di job asincroni persistenti; download come primo
+  consumatore.
 
-Obiettivo: scans, manifest, thumbnail, derivati e artifact devono vivere in un modello tracciabile. Download/resume/retry/cancel devono essere stati persistenti, non chiamate fire-and-forget.
+Obiettivo: introdurre una sola infrastruttura asincrona per download, OCR/HTR,
+export, analisi e altri lavori lunghi. Scans, manifest, thumbnail, derivati e
+artifact devono vivere in un modello tracciabile; progresso, pausa, ripresa,
+retry e cancellazione devono essere stati persistenti, non chiamate
+fire-and-forget.
 
 ### Fase 4 - Studio immagini, snippet, corpus
 
@@ -89,7 +103,24 @@ Obiettivo: la trascrizione approvata diventa ingresso strutturato della pipeline
 - #188 - epic export studio.
 - #225 - export studio con profili PDF/immagini e output selettivi.
 
-Obiettivo: export come sottosistema con profili, sorgenti, job, artifact history e validazione pagine. Non solo "salva risultato".
+Obiettivo: Export Studio come azione contestuale di fonte, trascrizione,
+traduzione o workspace, non come area primaria. Profili nelle impostazioni,
+esecuzione tramite il sistema condiviso di job, artifact history sull'oggetto e
+nel workspace, vista globale di servizio per job e output.
+
+### Filone trasversale - Analisi, dataset e modelli
+
+- #377 - epic area Analisi.
+- #378 - provenance e metriche dei workflow.
+- #379 - dashboard, esplorazione e confronti.
+- #380 - dataset builder versionato.
+- #381 - model registry e adapter locali.
+- #382 - allineamento semantico sorgente-traduzione.
+
+La raccolta di provenance e metriche (#378) comincia con la foundation, così i
+workflow successivi producono dati analizzabili fin dall'inizio. Le superfici
+Analisi e i dataset arrivano per incrementi quando esistono abbastanza dati
+reali; l'addestramento resta esterno a Glossa nella 2.0.
 
 ## Fuori dal core 2.0
 
