@@ -1,10 +1,10 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::Acquire;
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
+use sqlx::{Acquire, Row, SqlitePool};
 use std::fs;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::State;
 use tauri_plugin_sql::{DbInstances, DbPool};
 use tokio::sync::Mutex;
@@ -15,6 +15,66 @@ use tokio::sync::Mutex;
 /// ships as a new file here, tracked by sqlx in `_sqlx_migrations`.
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
+/// Columns the old TypeScript-owned schema added to a pre-existing table via
+/// `ensureColumn` rather than including in its original `CREATE TABLE`. The
+/// baseline migration's `CREATE TABLE IF NOT EXISTS` is a no-op on a database
+/// that already has these tables, so any column missing from an older shape
+/// (a beta predating the corresponding `ensureColumn` call) must be backfilled
+/// here — otherwise later `CREATE INDEX`/query statements referencing it
+/// fail with "no such column".
+const LEGACY_COLUMN_BACKFILLS: &[(&str, &str, &str)] = &[
+    ("projects", "workspace_id", "TEXT REFERENCES workspaces(id)"),
+    (
+        "pipelines",
+        "few_shot_examples",
+        "TEXT NOT NULL DEFAULT '[]'",
+    ),
+    ("phrase_memory", "embedding_model", "TEXT"),
+];
+
+async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, String> {
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?")
+            .bind(table)
+            .fetch_one(pool)
+            .await
+            .map_err(|error| error.to_string())?;
+    Ok(count > 0)
+}
+
+async fn has_column(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
+    let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
+        .fetch_all(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(rows
+        .iter()
+        .any(|row| row.get::<String, _>("name") == column))
+}
+
+/// Backfills columns the baseline migration's `CREATE TABLE IF NOT EXISTS`
+/// cannot add to an already-existing table, so the baseline's own indexes and
+/// queries against those columns succeed regardless of which pre-2.0 shape
+/// the database is currently in. Runs before `MIGRATOR.run` since it operates
+/// on tables the migration assumes already have their final shape.
+async fn backfill_legacy_columns(pool: &SqlitePool) -> Result<(), String> {
+    for (table, column, definition) in LEGACY_COLUMN_BACKFILLS {
+        if !table_exists(pool, table).await? {
+            continue;
+        }
+        if has_column(pool, table, column).await? {
+            continue;
+        }
+        sqlx::query(&format!(
+            "ALTER TABLE {table} ADD COLUMN {column} {definition}"
+        ))
+        .execute(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 /// Runs before any Tauri command or frontend `Database.load()` call, so the
 /// schema is guaranteed to exist by the time the UI or the native vector
 /// connection first touch glossa.db.
@@ -24,15 +84,24 @@ pub async fn run_startup_migrations(app: &tauri::AppHandle) -> Result<(), String
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
 
+    // Same connection pragmas as runtime writes (see execute_transaction):
+    // without busy_timeout a lock held by another process at startup (e.g.
+    // another instance still shutting down) would fail migrations
+    // immediately instead of waiting, like every other connection does.
     let options = SqliteConnectOptions::new()
         .filename(&db_path)
         .create_if_missing(true)
-        .foreign_keys(true);
+        .foreign_keys(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal)
+        .busy_timeout(Duration::from_millis(10_000));
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect_with(options)
         .await
         .map_err(|error| error.to_string())?;
+
+    backfill_legacy_columns(&pool).await?;
 
     MIGRATOR
         .run(&pool)
@@ -326,6 +395,100 @@ mod tests {
         .await
         .expect("sqlite_master query");
         assert_eq!(sources_exists, 1);
+    }
+
+    #[tokio::test]
+    async fn backfills_columns_missing_from_older_beta_shapes_before_migrating() {
+        // Simulates a database from before the corresponding `ensureColumn`
+        // calls existed in the old TypeScript-owned schema: `projects` has no
+        // `workspace_id`, `pipelines` has no `few_shot_examples`,
+        // `phrase_memory` has no `embedding_model`. Without the backfill, the
+        // baseline migration's own `CREATE INDEX idx_projects_workspace` and
+        // any query touching these columns would fail with "no such column".
+        let options = SqliteConnectOptions::new()
+            .filename(":memory:")
+            .foreign_keys(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .expect("in-memory sqlite connection");
+
+        sqlx::query("CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT NOT NULL)")
+            .execute(&pool)
+            .await
+            .expect("pre-existing projects table without workspace_id");
+        sqlx::query("INSERT INTO projects (id, name) VALUES ('proj_1', 'Old project')")
+            .execute(&pool)
+            .await
+            .expect("pre-existing project row");
+
+        sqlx::query(
+            "CREATE TABLE pipelines (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, stages TEXT NOT NULL DEFAULT '[]')",
+        )
+        .execute(&pool)
+        .await
+        .expect("pre-existing pipelines table without few_shot_examples");
+
+        sqlx::query(
+            "CREATE TABLE phrase_memory (
+              id TEXT PRIMARY KEY,
+              workspace_id TEXT NOT NULL,
+              source_phrase TEXT NOT NULL,
+              target_phrase TEXT NOT NULL,
+              confidence REAL NOT NULL DEFAULT 1.0,
+              source_language TEXT NOT NULL,
+              target_language TEXT NOT NULL,
+              chunk_id TEXT,
+              project_id TEXT,
+              embedding BLOB NOT NULL,
+              created_at TEXT NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .expect("pre-existing phrase_memory table without embedding_model");
+
+        backfill_legacy_columns(&pool)
+            .await
+            .expect("backfill succeeds against every legacy shape");
+        MIGRATOR
+            .run(&pool)
+            .await
+            .expect("migration succeeds once legacy columns are backfilled");
+
+        for (table, column) in [
+            ("projects", "workspace_id"),
+            ("pipelines", "few_shot_examples"),
+            ("phrase_memory", "embedding_model"),
+        ] {
+            assert!(
+                has_column(&pool, table, column).await.unwrap(),
+                "{table}.{column} should exist after backfill"
+            );
+        }
+
+        let preserved: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = 'proj_1'")
+            .fetch_one(&pool)
+            .await
+            .expect("existing project row survives the backfill untouched");
+        assert_eq!(preserved, "Old project");
+    }
+
+    #[tokio::test]
+    async fn backfill_is_a_no_op_when_tables_do_not_exist_yet() {
+        let options = SqliteConnectOptions::new()
+            .filename(":memory:")
+            .foreign_keys(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await
+            .expect("in-memory sqlite connection");
+
+        backfill_legacy_columns(&pool)
+            .await
+            .expect("backfill is a no-op on a brand-new database with no tables yet");
     }
 
     #[test]
