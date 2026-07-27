@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Activity, AlertTriangle, BookMarked, BookOpenText, Brain, CheckCircle2, FolderOpen, History, KeyRound, LibraryBig,
+  Activity, AlertTriangle, BookMarked, BookOpenText, Brain, CheckCircle2, FolderOpen, History, KeyRound,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -19,9 +19,8 @@ import { countPhraseMemoryEntries } from '../../services/phraseMemoryService';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useLibraryStore } from '../../stores/libraryStore';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { IconButton, PillButton, SectionLabel, Spinner } from '../ui';
+import { PillButton, SectionLabel, Spinner } from '../ui';
 
 const RESUME_LIMIT = 5;
 const ACTIVITY_LIMIT = 6;
@@ -52,7 +51,6 @@ export function AppDashboard() {
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const openProjectInWorkspace = useProjectStore((s) => s.openProjectInWorkspace);
   const setShowSettings = useUiStore((s) => s.setShowSettings);
-  const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
 
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
@@ -120,21 +118,9 @@ export function AppDashboard() {
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
       <div className="min-w-0 max-w-5xl px-5 py-5 md:px-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-            {t('dashboard.title')}
-          </h1>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowLibraryPanel(true, undefined, 'global')}
-            title={t('library.openLibraryGlobal')}
-            tooltipSide="bottom"
-            className="mt-1 shrink-0"
-          >
-            <LibraryBig size={15} />
-          </IconButton>
-        </div>
+        <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+          {t('dashboard.title')}
+        </h1>
 
         {/* Provider mancante: unico alert della dashboard, sopra tutto */}
         {shouldShowProviderBanner ? (

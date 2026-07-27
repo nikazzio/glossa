@@ -11,8 +11,8 @@ import { PromptTemplatesTab } from './PromptTemplatesTab';
 import { Dialog, DialogCancelButton, IconButton } from '../ui';
 
 const TABS: { id: LibraryTab; labelKey: string }[] = [
-  { id: 'templates', labelKey: 'library.tabTemplates' },
   { id: 'dictionaries', labelKey: 'library.tabDictionaries' },
+  { id: 'templates', labelKey: 'library.tabTemplates' },
   { id: 'memories', labelKey: 'library.tabMemories' },
 ];
 
@@ -66,21 +66,28 @@ export function LibraryPanel() {
 
   const tabBar = (
     <div className="flex gap-2" role="tablist" aria-label={panelTitle}>
-      {TABS.map((tab) => (
-        <IconButton
-          key={tab.id}
-          id={`library-tab-${tab.id}`}
-          role="tab"
-          aria-selected={activeTab === tab.id}
-          aria-controls={`library-panel-${tab.id}`}
-          size="lg"
-          tone={activeTab === tab.id ? 'accent' : 'default'}
-          onClick={() => useLibraryStore.getState().setShowLibraryPanel(true, tab.id)}
-          title={t(tab.labelKey)}
-        >
-          {tabIcon(tab.id)}
-        </IconButton>
-      ))}
+      {TABS.map((tab) => {
+        // Memoria frasi è sempre di UN workspace: senza un workspace di
+        // riferimento (scope globale, apertura dalla Dashboard) non ha nulla
+        // da mostrare — disabilitata invece di uno stato vuoto senza senso.
+        const disabled = isGlobalScope && tab.id === 'memories';
+        return (
+          <IconButton
+            key={tab.id}
+            id={`library-tab-${tab.id}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`library-panel-${tab.id}`}
+            size="lg"
+            tone={activeTab === tab.id ? 'accent' : 'default'}
+            disabled={disabled}
+            onClick={disabled ? undefined : () => useLibraryStore.getState().setShowLibraryPanel(true, tab.id, libraryScope)}
+            title={disabled ? t('library.memoriesUnavailableGlobal') : t(tab.labelKey)}
+          >
+            {tabIcon(tab.id)}
+          </IconButton>
+        );
+      })}
       <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
         {t(TABS.find((tab) => tab.id === activeTab)?.labelKey ?? 'library.title')}

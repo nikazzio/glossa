@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -77,15 +77,9 @@ export function DictionariesTab() {
   };
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !activeWorkspace) return;
     try {
-      await createGlossary(
-        newName.trim(),
-        undefined,
-        undefined,
-        undefined,
-        isGlobalScope ? null : activeWorkspace?.id ?? null,
-      );
+      await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace.id);
       setNewName('');
       setCreating(false);
     } catch (err: unknown) {
@@ -180,18 +174,22 @@ export function DictionariesTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
-            <Upload size={13} />
-          </IconButton>
-          <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
-            <Plus size={13} />
-          </IconButton>
-        </div>
+        <p className="text-xs leading-relaxed text-editorial-muted">
+          {isGlobalScope ? t('library.globalDictionariesDesc') : t('library.dictionariesDesc')}
+        </p>
+        {!isGlobalScope && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
+              <Upload size={13} />
+            </IconButton>
+            <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
+              <Plus size={13} />
+            </IconButton>
+          </div>
+        )}
       </div>
 
-      {creating && (
+      {!isGlobalScope && creating && (
         <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
           <input
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
@@ -258,6 +256,8 @@ export function DictionariesTab() {
                       onClick={(e) => e.stopPropagation()}
                       className="flex-1 border-b border-editorial-accent/60 bg-transparent text-sm font-display italic outline-none"
                     />
+                  ) : isGlobalScope ? (
+                    <span className="truncate font-display text-base italic text-editorial-ink">{g.name}</span>
                   ) : (
                     <Tooltip label={t('library.doubleClickRename')}>
                       <span
@@ -269,19 +269,25 @@ export function DictionariesTab() {
                     </Tooltip>
                   )}
                   {isAssigned && (
-                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
-                      {t('library.assignedBadge')}
-                    </span>
+                    <Tooltip label={t('library.assignedBadge')} side="top">
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-accent/15 text-editorial-accent">
+                        <Check size={11} />
+                      </span>
+                    </Tooltip>
                   )}
                   {isGlobalScope && (
-                    <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                      {g.workspaceId
-                        ? workspaces.find((w) => w.id === g.workspaceId)?.name ?? g.workspaceId
-                        : t('library.globalDictionaryBadge')}
-                    </span>
+                    <Tooltip
+                      label={g.workspaceId ? workspaces.find((w) => w.id === g.workspaceId)?.name ?? g.workspaceId : t('library.globalDictionaryBadge')}
+                      side="top"
+                    >
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted">
+                        <Building2 size={11} />
+                      </span>
+                    </Tooltip>
                   )}
                 </button>
 
+                {!isGlobalScope && (
                 <div className="flex shrink-0 items-center gap-1.5">
                   {!isAssigned && (
                     <IconButton
@@ -314,6 +320,7 @@ export function DictionariesTab() {
                     <Trash2 size={13} />
                   </IconButton>
                 </div>
+                )}
               </div>
 
               {isExpanded && (
@@ -321,8 +328,9 @@ export function DictionariesTab() {
                   <DictionaryEntryEditor
                     entries={entriesMap[g.id] ?? []}
                     onChange={(entries) => handleEntriesChange(g.id, entries)}
+                    readOnly={isGlobalScope}
                   />
-                  {isDirty && (
+                  {!isGlobalScope && isDirty && (
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
@@ -340,9 +348,9 @@ export function DictionariesTab() {
         })}
       </div>
 
-      {showImport && (
+      {showImport && activeWorkspace && (
         <CsvImportDialog
-          workspaceId={activeWorkspace?.id ?? null}
+          workspaceId={activeWorkspace.id}
           onImported={handleImported}
           onClose={() => setShowImport(false)}
         />

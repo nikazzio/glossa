@@ -48,10 +48,16 @@ function rowToEntry(row: GlossaryEntryRow): GlossaryEntry {
   };
 }
 
+/**
+ * Senza `workspaceId`: sfoglia tutti i glossari di tutti i workspace
+ * (Libreria generale). Con `workspaceId`: solo quelli posseduti da quel
+ * workspace — un glossario appartiene sempre a esattamente un workspace,
+ * non esiste piu' un livello "globale senza padrone" (#213).
+ */
 export async function listGlossaries(workspaceId?: string | null): Promise<Glossary[]> {
   const rows = workspaceId
     ? await select<GlossaryRow>(
-        'SELECT id, name, description, source_language, target_language, created_at, workspace_id FROM glossaries WHERE workspace_id = $1 OR workspace_id IS NULL ORDER BY name ASC',
+        'SELECT id, name, description, source_language, target_language, created_at, workspace_id FROM glossaries WHERE workspace_id = $1 ORDER BY name ASC',
         [workspaceId],
       )
     : await select<GlossaryRow>(
@@ -71,12 +77,12 @@ export async function createGlossary(
   description = '',
   sourceLang = '',
   targetLang = '',
-  workspaceId?: string | null,
+  workspaceId: string,
 ): Promise<string> {
   const id = generateId('gls');
   await execute(
     'INSERT INTO glossaries (id, name, description, source_language, target_language, workspace_id) VALUES ($1, $2, $3, $4, $5, $6)',
-    [id, name, description, sourceLang, targetLang, workspaceId ?? null],
+    [id, name, description, sourceLang, targetLang, workspaceId],
   );
   return id;
 }

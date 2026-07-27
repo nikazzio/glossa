@@ -12,6 +12,7 @@ import {
 } from '../services/glossaryService';
 
 export type LibraryTab = 'dictionaries' | 'templates' | 'memories';
+export const DEFAULT_LIBRARY_TAB: LibraryTab = 'dictionaries';
 /** 'workspace': dizionari del workspace attivo + globali. 'global': tutti i dizionari di tutti i workspace (apertura dalla Dashboard, senza un workspace di riferimento). */
 export type LibraryScope = 'workspace' | 'global';
 
@@ -31,7 +32,7 @@ interface LibraryState {
   setShowLibraryPanel: (show: boolean, tab?: LibraryTab, scope?: LibraryScope) => void;
   loadGlossaries: (workspaceId: string | null) => Promise<void>;
   reloadGlossaries: (workspaceId: string | null) => Promise<void>;
-  createGlossary: (name: string, description?: string, sourceLang?: string, targetLang?: string, workspaceId?: string | null) => Promise<string>;
+  createGlossary: (name: string, description: string | undefined, sourceLang: string | undefined, targetLang: string | undefined, workspaceId: string) => Promise<string>;
   renameGlossary: (id: string, name: string) => Promise<void>;
   deleteGlossary: (id: string) => Promise<void>;
   forkGlossary: (id: string, newName: string) => Promise<string>;
@@ -66,7 +67,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setShowLibraryPanel: (show, tab, scope) => {
     set({
       showLibraryPanel: show,
-      ...(tab ? { activeTab: tab } : {}),
+      // Apertura fresca (nessun tab esplicito): riparte sempre dal primo
+      // tab, mai da quello lasciato aperto l'ultima volta.
+      ...(show ? { activeTab: tab ?? DEFAULT_LIBRARY_TAB } : {}),
       ...(scope ? { libraryScope: scope } : show ? { libraryScope: 'workspace' } : {}),
     });
   },

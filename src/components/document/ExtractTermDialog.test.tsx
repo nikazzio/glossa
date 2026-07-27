@@ -22,6 +22,11 @@ vi.mock('../../stores/pipelineStore', () => ({
     selector({ config: { stages: [{ provider: 'openai', model: 'gpt-4o' }], assignedGlossaryId: null } }),
 }));
 
+vi.mock('../../stores/workspaceStore', () => ({
+  useWorkspaceStore: (selector: (s: unknown) => unknown) =>
+    selector({ activeWorkspace: { id: 'ws-1', name: 'Test workspace' } }),
+}));
+
 describe('ExtractTermDialog', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -77,7 +82,7 @@ describe('ExtractTermDialog', () => {
       'Mio dizionario',
     );
     await user.click(screen.getByRole('button', { name: 'common.confirm' }));
-    expect(createGlossary).toHaveBeenCalledWith('Mio dizionario', '', '', '', null);
+    expect(createGlossary).toHaveBeenCalledWith('Mio dizionario', '', '', '', 'ws-1');
     expect(addGlossaryEntry).toHaveBeenCalledWith(
       'new-gls-id',
       expect.objectContaining({ term: 'lex' }),
