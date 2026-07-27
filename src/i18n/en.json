@@ -1354,7 +1354,9 @@
     }
   },
   "library": {
-    "openLibrary": "Library",
+    "openLibrary": "This workspace's Library",
+    "openLibraryGlobal": "Library across all workspaces",
+    "globalDictionaryBadge": "Global",
     "title": "Library",
     "tabDictionaries": "Dictionaries",
     "tabTemplates": "Prompt Templates",

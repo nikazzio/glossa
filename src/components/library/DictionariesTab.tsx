@@ -37,9 +37,11 @@ export function DictionariesTab() {
     setExpandedGlossaryId,
     saveGlossaryEntries,
   } = useLibraryStore();
+  const { libraryScope } = useLibraryStore();
   const { config, assignGlossary } = usePipelineStore();
   const { currentProjectId } = useProjectStore();
-  const { activeWorkspace } = useWorkspaceStore();
+  const { activeWorkspace, workspaces } = useWorkspaceStore();
+  const isGlobalScope = libraryScope === 'global';
 
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -77,7 +79,13 @@ export function DictionariesTab() {
   const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
-      await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace?.id ?? null);
+      await createGlossary(
+        newName.trim(),
+        undefined,
+        undefined,
+        undefined,
+        isGlobalScope ? null : activeWorkspace?.id ?? null,
+      );
       setNewName('');
       setCreating(false);
     } catch (err: unknown) {
@@ -263,6 +271,13 @@ export function DictionariesTab() {
                   {isAssigned && (
                     <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
                       {t('library.assignedBadge')}
+                    </span>
+                  )}
+                  {isGlobalScope && (
+                    <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      {g.workspaceId
+                        ? workspaces.find((w) => w.id === g.workspaceId)?.name ?? g.workspaceId
+                        : t('library.globalDictionaryBadge')}
                     </span>
                   )}
                 </button>

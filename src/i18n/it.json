@@ -1354,7 +1354,9 @@
     }
   },
   "library": {
-    "openLibrary": "Libreria",
+    "openLibrary": "Libreria di questo spazio",
+    "openLibraryGlobal": "Libreria di tutti gli spazi",
+    "globalDictionaryBadge": "Globale",
     "title": "Libreria",
     "tabDictionaries": "Dizionari",
     "tabTemplates": "Modelli Prompt",

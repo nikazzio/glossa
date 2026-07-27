@@ -128,7 +128,7 @@ export function AppDashboard() {
             size="md"
             tone="muted"
             onClick={() => setShowLibraryPanel(true, undefined, 'global')}
-            title={t('library.openLibrary')}
+            title={t('library.openLibraryGlobal')}
             tooltipSide="bottom"
             className="mt-1 shrink-0"
           >
