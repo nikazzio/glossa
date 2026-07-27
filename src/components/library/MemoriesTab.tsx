@@ -30,7 +30,9 @@ export function MemoriesTab() {
   const [projectNameMap, setProjectNameMap] = useState<Record<string, string>>({});
   const [chunkPositionMap, setChunkPositionMap] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [workspaceFilter, setWorkspaceFilter] = useState<string>('all');
+  // Default: solo il workspace da cui è stata aperta la Libreria — "tutti"
+  // resta scelta esplicita dal filtro, non il punto di partenza.
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>(() => activeWorkspace?.id ?? 'all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftSource, setDraftSource] = useState('');
   const [draftTarget, setDraftTarget] = useState('');

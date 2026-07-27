@@ -225,7 +225,10 @@ export function DictionariesTab() {
       <div className="space-y-3">
         {glossaries.map((g) => {
           const isExpanded = expandedGlossaryId === g.id;
-          const isAssigned = config.assignedGlossaryId === g.id;
+          // Fuori da un progetto aperto config.assignedGlossaryId puo' essere
+          // lo stato residuo dell'ultimo progetto visitato: senza un progetto
+          // aperto ora, "assegnato" non ha un soggetto reale da mostrare.
+          const isAssigned = Boolean(currentProjectId) && config.assignedGlossaryId === g.id;
           const isDirty = dirtyIds.includes(g.id);
 
           return (
@@ -289,7 +292,7 @@ export function DictionariesTab() {
 
                 {!isGlobalScope && (
                 <div className="flex shrink-0 items-center gap-1.5">
-                  {!isAssigned && (
+                  {!isAssigned && currentProjectId && (
                     <IconButton
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}
