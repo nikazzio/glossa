@@ -61,5 +61,16 @@ export function getWorkspaceFilter(location: AppLocation): string | undefined {
  */
 export function withWorkspaceFilter(location: AppLocation, workspaceFilter: string | null): AppLocation {
   if (!isGlobalArea(location)) return location;
-  return { ...location, workspaceFilter: workspaceFilter ?? undefined };
+  if (workspaceFilter !== null) return { ...location, workspaceFilter };
+  const cleared: Partial<Record<'workspaceFilter', string>> & typeof location = { ...location };
+  delete cleared.workspaceFilter;
+  return cleared;
+}
+
+/** Confronto per valore (non identità): evita di ri-rendere i consumatori di `location` a fronte di una navigazione verso una posizione equivalente. */
+export function locationsEqual(a: AppLocation, b: AppLocation): boolean {
+  const aKeys = Object.keys(a) as Array<keyof AppLocation>;
+  const bKeys = Object.keys(b) as Array<keyof AppLocation>;
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
 }

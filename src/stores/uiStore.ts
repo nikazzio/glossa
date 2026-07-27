@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DocumentLayoutPreference } from '../types';
-import { dashboardLocation, type AppLocation } from '../navigation/appLocation';
+import { dashboardLocation, locationsEqual, type AppLocation } from '../navigation/appLocation';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -420,7 +420,8 @@ export const useUiStore = create<UiState>()(
       clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
-      navigate: (location) => set({ location }),
+      navigate: (location) =>
+        set((state) => (locationsEqual(state.location, location) ? state : { location })),
       setActiveProjectPanel: (panel) =>
         set((state) => {
           if (panel === 'insight') {
