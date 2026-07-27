@@ -44,7 +44,7 @@ const WS_BETA = { id: 'ws-2', name: 'Beta' };
 describe('AppDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useUiStore.setState({ activeWorkspaceView: 'dashboard' });
+    useUiStore.setState({ location: { area: 'dashboard' } });
     mockListRecent.mockResolvedValue([]);
     mockListRuns.mockResolvedValue([]);
     mockListAttention.mockResolvedValue([]);

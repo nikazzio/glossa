@@ -24,7 +24,7 @@ describe('Header', () => {
     useChunksStore.setState({
       isProcessing: false,
     });
-    useUiStore.setState({ activeWorkspaceView: 'dashboard' });
+    useUiStore.setState({ location: { area: 'dashboard' } });
   });
 
   it('hides the workspace breadcrumb on the app dashboard', () => {
@@ -43,11 +43,11 @@ describe('Header', () => {
       activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
       workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
     });
-    useUiStore.setState({ activeWorkspaceView: 'translations' });
+    useUiStore.setState({ location: { area: 'translations' } });
 
     render(<Header />);
 
-    expect(screen.getByText('workspace.areas.translations.title')).toBeInTheDocument();
+    expect(screen.getByText('areas.translations.title')).toBeInTheDocument();
     expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
   });
 
@@ -65,14 +65,14 @@ describe('Header', () => {
 
     render(<Header />);
 
-    expect(screen.getByText('workspace.areas.translations.title')).toBeInTheDocument();
+    expect(screen.getByText('areas.translations.title')).toBeInTheDocument();
     expect(screen.getByText('Draft')).toBeInTheDocument();
     expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.areas.translations.title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'areas.translations.title' }));
 
     expect(closeProject).toHaveBeenCalledTimes(1);
-    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
+    expect(useUiStore.getState().location).toEqual({ area: 'translations' });
   });
 
   it('renders the project breadcrumb and returns to the workspace dashboard', () => {

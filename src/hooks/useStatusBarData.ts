@@ -34,7 +34,7 @@ export type StatusBarContext =
 
 export function useStatusBarData(): StatusBarContext {
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const activeWorkspaceView = useUiStore((s) => s.activeWorkspaceView);
+  const location = useUiStore((s) => s.location);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const projects = useProjectStore((s) => s.projects);
   const pipelines = useProjectStore((s) => s.pipelines);
@@ -56,7 +56,7 @@ export function useStatusBarData(): StatusBarContext {
         kind: 'workspace',
         workspaceName: activeWorkspace.name,
         projectCount: projects.length,
-        areaName: activeWorkspaceView,
+        areaName: location.area,
       };
     }
 
@@ -92,7 +92,7 @@ export function useStatusBarData(): StatusBarContext {
     };
   }, [
     activeWorkspace,
-    activeWorkspaceView,
+    location,
     currentProjectId,
     projects,
     pipelines,

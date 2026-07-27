@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Archive,
+  BarChart3,
   BookOpenText,
   FilePen,
   LayoutDashboard,
@@ -12,24 +13,26 @@ import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { dashboardLocation, workspaceLocation, type GlobalArea } from '../../../navigation/appLocation';
 import type { Workspace } from '../../../types';
 import { IconButton } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
 import { RailBrandToggle } from './RailBrandToggle';
 
-const AREA_ITEMS = [
+const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; enabled: boolean }> = [
   { id: 'translations', icon: BookOpenText, enabled: true },
-  { id: 'library', icon: LibraryBig, enabled: false },
-  { id: 'transcriptions', icon: FilePen, enabled: false },
-] as const;
+  { id: 'library', icon: LibraryBig, enabled: true },
+  { id: 'transcriptions', icon: FilePen, enabled: true },
+  { id: 'analysis', icon: BarChart3, enabled: true },
+];
 
 /** Dashboard: home dell'applicazione — sopra e fuori dalle aree del workspace. */
 function DashboardItem({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
-  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
-  const active = activeWorkspaceView === 'dashboard';
+  const location = useUiStore((state) => state.location);
+  const navigate = useUiStore((state) => state.navigate);
+  const active = location.area === 'dashboard';
 
   return (
     <div className="px-2.5 pt-1">
@@ -37,7 +40,7 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
         active={active}
         collapsed={collapsed}
         labelFont="display"
-        onClick={() => setActiveWorkspaceView('dashboard')}
+        onClick={() => navigate(dashboardLocation())}
         ariaCurrent={active ? 'page' : undefined}
         icon={
           // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
@@ -66,13 +69,13 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
  */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
-  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
+  const location = useUiStore((state) => state.location);
+  const navigate = useUiStore((state) => state.navigate);
 
   return (
     <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
       {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
-        const active = enabled && activeWorkspaceView === id;
+        const active = enabled && location.area === id;
         return (
           <ShellNavItem
             key={id}
@@ -80,7 +83,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
             disabled={!enabled}
             collapsed={collapsed}
             labelFont="display"
-            onClick={enabled ? () => setActiveWorkspaceView(id) : undefined}
+            onClick={enabled ? () => navigate({ area: id }) : undefined}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
@@ -97,8 +100,8 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
                 <Icon size={collapsed ? 15 : 12} />
               </span>
             }
-            label={t(`workspace.areas.${id}.title`)}
-            hint={t(`workspace.areas.${id}.sidebarHint`)}
+            label={t(`areas.${id}.title`)}
+            hint={t(`areas.${id}.sidebarHint`)}
           />
         );
       })}
@@ -120,8 +123,8 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
   const setActive = useWorkspaceStore((s) => s.setActive);
   const closeProject = useProjectStore((s) => s.closeProject);
   const loadProjects = useProjectStore((s) => s.loadProjects);
-  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
-  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
+  const location = useUiStore((state) => state.location);
+  const navigate = useUiStore((state) => state.navigate);
 
   const handleOpenWorkspace = async (ws: Workspace) => {
     if (ws.id !== activeWorkspace?.id) {
@@ -129,7 +132,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
       await setActive(ws);
       await loadProjects();
     }
-    setActiveWorkspaceView('workspace');
+    navigate(workspaceLocation(ws.id));
   };
 
   return (
@@ -152,7 +155,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
         }
       >
         {workspaces.map((ws) => {
-          const isCurrentView = ws.id === activeWorkspace?.id && activeWorkspaceView === 'workspace';
+          const isCurrentView = location.area === 'workspace' && location.workspaceId === ws.id;
           return (
             <ShellNavItem
               key={ws.id}

@@ -14,6 +14,7 @@ const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
   library: 'statusBar.areaLibrary',
   transcriptions: 'statusBar.areaTranscriptions',
+  analysis: 'statusBar.areaAnalysis',
 };
 
 const QUALITY_ICON = {

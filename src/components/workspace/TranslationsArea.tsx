@@ -88,7 +88,7 @@ export function TranslationsArea() {
       <div className="px-5 py-5 md:px-6">
         <div className="mb-5 flex items-end justify-between gap-3">
           <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-            {t('workspace.areas.translations.title')}
+            {t('areas.translations.title')}
           </h1>
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-2">

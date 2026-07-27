@@ -667,6 +667,30 @@
     "updatedYearsAgo_other": "updated {{count}} years ago",
     "loadFailed": "Failed to load project"
   },
+  "areas": {
+    "translations": {
+      "title": "Translations",
+      "sidebarHint": "Projects and pipelines"
+    },
+    "library": {
+      "title": "Library",
+      "sidebarHint": "Texts and catalogues",
+      "emptyMessage": "The Library catalogue has no content yet.",
+      "emptyHint": "Coming with sources and books linkable to workspaces."
+    },
+    "transcriptions": {
+      "title": "Transcriptions",
+      "sidebarHint": "OCR and source prep",
+      "emptyMessage": "The Transcriptions catalogue has no content yet.",
+      "emptyHint": "Coming with the Transcription Studio."
+    },
+    "analysis": {
+      "title": "Analysis",
+      "sidebarHint": "Metrics and datasets",
+      "emptyMessage": "The Analysis area has no content yet.",
+      "emptyHint": "Coming with metrics, comparisons and datasets."
+    }
+  },
   "workspace": {
     "activeLabel": "Translation workspace",
     "noActive": "No active workspace",
@@ -702,20 +726,6 @@
     "pipelineBadge_one": "1 pipeline",
     "pipelineBadge_other": "{{count}} pipelines",
     "pipelineNamesFallback": "No pipelines",
-    "areas": {
-      "translations": {
-        "title": "Translations",
-        "sidebarHint": "Projects and pipelines"
-      },
-      "library": {
-        "title": "Library",
-        "sidebarHint": "Texts and catalogues"
-      },
-      "transcriptions": {
-        "title": "Transcriptions",
-        "sidebarHint": "OCR and source prep"
-      }
-    },
     "newBookCard": "New book",
     "memoryExtractorModel": "Memory Extractor Model",
     "memoryExtractorPrompt": "Memory Extractor Prompt",
@@ -1640,6 +1650,7 @@
     "areaTranslations": "Translations",
     "areaLibrary": "Library",
     "areaTranscriptions": "Transcriptions",
+    "areaAnalysis": "Analysis",
     "panel": {
       "config": "Configuration",
       "insights": "Analysis",

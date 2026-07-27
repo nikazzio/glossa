@@ -64,36 +64,36 @@ describe('WorkspaceShellNext (#294)', () => {
 
     fireEvent.click(screen.getByText('Alpha'));
 
-    expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
+    expect(useUiStore.getState().location).toEqual({ area: 'workspace', workspaceId: 'ws-1' });
     expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
   });
 
-  it('shows Dashboard and every area, but not workspaces, when the rail is collapsed', () => {
+  it('shows Dashboard and every area, all enabled, when the rail is collapsed', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
     expect(screen.queryByRole('button', { name: /Beta/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /dashboard\.title/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /workspace\.areas\.library\.title/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /workspace\.areas\.transcriptions\.title/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /areas\.translations\.title/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /areas\.library\.title/ })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /areas\.transcriptions\.title/ })).not.toBeDisabled();
   });
 
   it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {
     renderShell();
 
-    fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
+    fireEvent.click(screen.getByText('areas.translations.title'));
+    expect(useUiStore.getState().location).toEqual({ area: 'translations' });
 
-    fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
+    fireEvent.click(screen.getByText('areas.translations.title'));
+    expect(useUiStore.getState().location).toEqual({ area: 'translations' });
   });
 
   it('returns to the dashboard from the standalone dashboard nav item', () => {
     renderShell();
 
-    fireEvent.click(screen.getByText('workspace.areas.translations.title'));
+    fireEvent.click(screen.getByText('areas.translations.title'));
     fireEvent.click(screen.getByText('dashboard.title'));
-    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
+    expect(useUiStore.getState().location).toEqual({ area: 'dashboard' });
   });
 });

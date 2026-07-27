@@ -98,15 +98,15 @@ export function SettingsModal() {
   };
 
   const activeTabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
-    { id: 'translations', icon: <FileText size={14} />,          label: t('workspace.areas.translations.title') },
+    { id: 'translations', icon: <FileText size={14} />,          label: t('areas.translations.title') },
     { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
     { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
   ];
 
   const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
-    { icon: <LibraryBig size={14} />,  label: t('workspace.areas.library.title') },
-    { icon: <BookOpen size={14} />,    label: t('workspace.areas.transcriptions.title') },
+    { icon: <LibraryBig size={14} />,  label: t('areas.library.title') },
+    { icon: <BookOpen size={14} />,    label: t('areas.transcriptions.title') },
   ];
 
   const tabBar = (
