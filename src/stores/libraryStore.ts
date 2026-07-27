@@ -12,10 +12,13 @@ import {
 } from '../services/glossaryService';
 
 export type LibraryTab = 'dictionaries' | 'templates' | 'memories';
+/** 'workspace': dizionari del workspace attivo + globali. 'global': tutti i dizionari di tutti i workspace (apertura dalla Dashboard, senza un workspace di riferimento). */
+export type LibraryScope = 'workspace' | 'global';
 
 interface LibraryState {
   showLibraryPanel: boolean;
   activeTab: LibraryTab;
+  libraryScope: LibraryScope;
   glossaries: Glossary[];
   isLoaded: boolean;
   loadedForWorkspaceId: string | null;
@@ -25,7 +28,7 @@ interface LibraryState {
   dirtyIds: string[];
   expandedGlossaryId: string | null;
 
-  setShowLibraryPanel: (show: boolean, tab?: LibraryTab) => void;
+  setShowLibraryPanel: (show: boolean, tab?: LibraryTab, scope?: LibraryScope) => void;
   loadGlossaries: (workspaceId: string | null) => Promise<void>;
   reloadGlossaries: (workspaceId: string | null) => Promise<void>;
   createGlossary: (name: string, description?: string, sourceLang?: string, targetLang?: string, workspaceId?: string | null) => Promise<string>;
@@ -52,6 +55,7 @@ let loadGlossariesRequestId = 0;
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   showLibraryPanel: false,
   activeTab: 'dictionaries',
+  libraryScope: 'workspace',
   glossaries: [],
   isLoaded: false,
   loadedForWorkspaceId: null,
@@ -59,8 +63,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   dirtyIds: [],
   expandedGlossaryId: null,
 
-  setShowLibraryPanel: (show, tab) => {
-    set({ showLibraryPanel: show, ...(tab ? { activeTab: tab } : {}) });
+  setShowLibraryPanel: (show, tab, scope) => {
+    set({
+      showLibraryPanel: show,
+      ...(tab ? { activeTab: tab } : {}),
+      ...(scope ? { libraryScope: scope } : show ? { libraryScope: 'workspace' } : {}),
+    });
   },
 
   loadGlossaries: async (workspaceId) => {

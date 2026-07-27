@@ -27,12 +27,14 @@ export function LibraryPanel() {
   const {
     showLibraryPanel,
     activeTab,
+    libraryScope,
     setShowLibraryPanel,
     loadGlossaries,
     dirtyIds,
     saveAllDirty,
   } = useLibraryStore();
   const { activeWorkspace } = useWorkspaceStore();
+  const isGlobalScope = libraryScope === 'global';
 
   const handleClose = async () => {
     if (dirtyIds.length > 0) {
@@ -54,10 +56,11 @@ export function LibraryPanel() {
   };
 
   useEffect(() => {
-    if (showLibraryPanel) loadGlossaries(activeWorkspace?.id ?? null);
-  }, [showLibraryPanel, activeWorkspace?.id, loadGlossaries]);
+    if (!showLibraryPanel) return;
+    loadGlossaries(isGlobalScope ? null : activeWorkspace?.id ?? null);
+  }, [showLibraryPanel, isGlobalScope, activeWorkspace?.id, loadGlossaries]);
 
-  const panelTitle = activeWorkspace
+  const panelTitle = !isGlobalScope && activeWorkspace
     ? `${t('library.title')} — ${activeWorkspace.name}`
     : t('library.title');
 
