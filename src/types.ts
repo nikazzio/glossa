@@ -8,6 +8,31 @@ export interface CustomProviderProfile {
   baseUrl: string;
   requiresApiKey: boolean;
 }
+
+export type IIIFSearchMode = 'direct' | 'fallback' | 'search_first';
+
+export interface IIIFProviderFilterOption {
+  value: string;
+}
+
+export interface IIIFProviderFilter {
+  key: string;
+  options: IIIFProviderFilterOption[];
+}
+
+export interface IIIFProvider {
+  key: string;
+  label: string;
+  aliases: string[];
+  placeholder: string;
+  is_enabled: boolean;
+  resolver: string;
+  search_handler: string | null;
+  search_mode: IIIFSearchMode;
+  supports_direct_resolution: boolean;
+  supports_search: boolean;
+  filters: IIIFProviderFilter[];
+}
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
 
 export interface Annotation {
