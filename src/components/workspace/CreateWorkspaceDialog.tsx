@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, DialogCancelButton, DialogConfirmButton } from '../ui';
+import { DEFAULT_WORKSPACE_ICON, type WorkspaceIconKey } from '../../workspaceIdentity';
+import { WorkspaceIconPicker } from './WorkspaceIdentity';
 
 interface CreateWorkspaceDialogProps {
   open: boolean;
@@ -14,6 +16,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [iconKey, setIconKey] = useState<WorkspaceIconKey>(DEFAULT_WORKSPACE_ICON);
   const [saving, setSaving] = useState(false);
 
   const createAndActivate = useWorkspaceStore((s) => s.createAndActivate);
@@ -23,6 +26,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
   const close = () => {
     setName('');
     setDescription('');
+    setIconKey(DEFAULT_WORKSPACE_ICON);
     onClose();
   };
 
@@ -35,6 +39,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
         name: name.trim(),
         description: description.trim() || undefined,
         embeddingModel: 'text-embedding-3-small',
+        iconKey,
       });
       await loadProjects();
       toast.success(t('workspace.created'));
@@ -84,6 +89,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
             autoFocus
           />
         </label>
+        <WorkspaceIconPicker value={iconKey} onChange={setIconKey} />
         <label className="block space-y-1.5">
           <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
             {t('workspace.descriptionLabel')}

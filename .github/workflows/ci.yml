@@ -126,3 +126,9 @@ jobs:
             exit 1
           fi
           echo "CSP check passed: no unsafe-eval, no unsafe-inline script-src in release config"
+      - name: Verify Game Icons attribution ships in desktop bundles
+        run: |
+          test -f ATTRIBUTIONS.md
+          grep -q 'Game Icons' ATTRIBUTIONS.md
+          grep -q 'CC BY 3.0' ATTRIBUTIONS.md
+          grep -q 'ATTRIBUTIONS.md' src-tauri/tauri.conf.json

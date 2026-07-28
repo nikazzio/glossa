@@ -735,6 +735,18 @@
     "noMemoryExtractorTemplates": "Nessun template estrattore Memory.",
     "nameLabel": "Nome",
     "descriptionLabel": "Descrizione",
+    "iconLabel": "Segno del workspace",
+    "icons": {
+      "manuscript": "Manoscritto",
+      "book": "Libro",
+      "quill": "Penna d'oca",
+      "archive": "Archivio",
+      "library": "Biblioteca",
+      "map": "Mappa",
+      "lens": "Lente",
+      "compass": "Bussola",
+      "seal": "Sigillo"
+    },
     "namePlaceholder": "Nome workspace",
     "descriptionPlaceholder": "Descrizione del workspace",
     "embeddingChangeWarning": "Modello cambiato. Rigenera gli embedding per applicare.",

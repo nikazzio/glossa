@@ -21,6 +21,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { PillButton, SectionLabel, Spinner } from '../ui';
+import { WorkspaceIdentity } from '../workspace/WorkspaceIdentity';
 
 const RESUME_LIMIT = 5;
 const ACTIVITY_LIMIT = 6;
@@ -114,6 +115,13 @@ export function AppDashboard() {
     { key: 'glossary', icon: BookMarked, label: t('dashboard.stats.glossaryTerms'), value: String(overview.totalGlossaryTerms) },
   ];
 
+  const workspaceIdentity = (workspaceId: string, workspaceName: string) => {
+    const workspace = workspaces.find((item) => item.id === workspaceId);
+    return workspace
+      ? <WorkspaceIdentity workspace={workspace} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
+      : <span className="sr-only">{workspaceName}</span>;
+  };
+
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
       <div className="min-w-0 max-w-5xl px-5 py-5 md:px-6">
@@ -180,9 +188,7 @@ export function AppDashboard() {
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.project_name}
                     </span>
-                    <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                      {project.workspace_name}
-                    </span>
+                    {workspaceIdentity(project.workspace_id, project.workspace_name)}
                   </span>
                   <span className="shrink-0 text-xs text-editorial-warning">
                     {t('dashboard.attentionCount', { count: project.issue_count })}
@@ -216,9 +222,7 @@ export function AppDashboard() {
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.name}
                     </span>
-                    <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                      {project.workspace_name}
-                    </span>
+                    {workspaceIdentity(project.workspace_id, project.workspace_name)}
                   </span>
                   <span className="shrink-0 text-xs text-editorial-muted">
                     {formatWhen(project.updated_at)}

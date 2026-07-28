@@ -5,6 +5,7 @@ import {
   DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
 } from '../constants';
 import type { EmbeddingModel, ModelProvider, Workspace } from '../types';
+import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../workspaceIdentity';
 
 const generateId = () =>
   `ws_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
@@ -13,10 +14,12 @@ export async function createWorkspace(params: {
   name: string;
   description?: string;
   embeddingModel: EmbeddingModel;
+  iconKey?: WorkspaceIconKey;
 }): Promise<Workspace> {
   const workspace: Workspace = {
     id: generateId(),
     name: params.name,
+    iconKey: isWorkspaceIconKey(params.iconKey) ? params.iconKey : DEFAULT_WORKSPACE_ICON,
     description: params.description,
     embeddingModel: params.embeddingModel,
     memoryExtractorProvider: DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
@@ -26,11 +29,11 @@ export async function createWorkspace(params: {
   };
   await execute(
     `INSERT INTO workspaces (
-       id, name, description, embedding_model,
+       id, name, icon_key, description, embedding_model,
        memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
        created_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [workspace.id, workspace.name, workspace.description ?? null,
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [workspace.id, workspace.name, workspace.iconKey, workspace.description ?? null,
      workspace.embeddingModel, workspace.memoryExtractorProvider,
      workspace.memoryExtractorModel, workspace.memoryExtractorPrompt,
      workspace.createdAt],
@@ -47,18 +50,20 @@ export async function createWorkspace(params: {
 export async function listWorkspaces(): Promise<Workspace[]> {
   const rows = await select<{
     id: string; name: string; description: string | null;
+    icon_key: string | null;
     embedding_model: string;
     memory_extractor_provider: string | null;
     memory_extractor_model: string | null;
     memory_extractor_prompt: string | null;
     created_at: string;
-  }>(`SELECT id, name, description, embedding_model,
+  }>(`SELECT id, name, icon_key, description, embedding_model,
              memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
              created_at
       FROM workspaces ORDER BY created_at ASC`);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
+    iconKey: isWorkspaceIconKey(r.icon_key) ? r.icon_key : DEFAULT_WORKSPACE_ICON,
     description: r.description ?? undefined,
     embeddingModel: r.embedding_model as EmbeddingModel,
     memoryExtractorProvider: (r.memory_extractor_provider || DEFAULT_MEMORY_EXTRACTOR_PROVIDER) as ModelProvider,
@@ -72,6 +77,7 @@ export async function updateWorkspace(
   id: string,
   updates: Partial<Pick<Workspace,
     'name' | 'description' | 'embeddingModel' |
+    'iconKey' |
     'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
   >>,
 ): Promise<void> {
@@ -82,6 +88,10 @@ export async function updateWorkspace(
   if (updates.name !== undefined) {
     sets.push(`name = $${index++}`);
     params.push(updates.name);
+  }
+  if (updates.iconKey !== undefined) {
+    sets.push(`icon_key = $${index++}`);
+    params.push(isWorkspaceIconKey(updates.iconKey) ? updates.iconKey : DEFAULT_WORKSPACE_ICON);
   }
   if (updates.description !== undefined) {
     sets.push(`description = $${index++}`);

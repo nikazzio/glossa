@@ -68,11 +68,11 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
   });
 
-  it('shows Dashboard and every area, all enabled, when the rail is collapsed', () => {
+  it('shows Dashboard, every area and workspace icons when the rail is collapsed', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
-    expect(screen.queryByRole('button', { name: /Beta/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Beta/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /dashboard\.title/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /areas\.translations\.title/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /areas\.library\.title/ })).not.toBeDisabled();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X, Building2 } from 'lucide-react';
+import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -20,6 +20,7 @@ import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
 import { CopyGlossaryDialog } from './CopyGlossaryDialog';
 import { Dialog, DialogCancelButton, IconButton, Tooltip } from '../ui';
+import { WorkspaceIdentity } from '../workspace/WorkspaceIdentity';
 
 export function DictionariesTab() {
   const { t } = useTranslation();
@@ -301,14 +302,14 @@ export function DictionariesTab() {
                     </Tooltip>
                   )}
                   {isGlobalScope && (
-                    <Tooltip
-                      label={g.workspaceId ? workspaces.find((w) => w.id === g.workspaceId)?.name ?? g.workspaceId : t('library.globalDictionaryBadge')}
-                      side="top"
-                    >
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted">
-                        <Building2 size={11} />
-                      </span>
-                    </Tooltip>
+                    (() => {
+                      const owner = g.workspaceId ? workspaces.find((workspace) => workspace.id === g.workspaceId) : null;
+                      return owner ? (
+                        <WorkspaceIdentity workspace={owner} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
+                      ) : (
+                        <Tooltip label={t('library.globalDictionaryBadge')} side="top"><span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted"><X size={11} /></span></Tooltip>
+                      );
+                    })()
                   )}
                 </button>
 

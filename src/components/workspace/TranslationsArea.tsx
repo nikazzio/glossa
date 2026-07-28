@@ -8,6 +8,8 @@ import { confirm } from '../../stores/confirmStore';
 import { listAllProjects, type WorkspaceProject } from '../../services/projectService';
 import { IconButton, Spinner } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { WorkspaceIdentity } from './WorkspaceIdentity';
 
 type SortKey = 'updatedAt' | 'name';
 
@@ -17,6 +19,7 @@ export function TranslationsArea() {
   const { t, i18n } = useTranslation();
   const openProjectInWorkspace = useProjectStore((s) => s.openProjectInWorkspace);
   const removeProject = useProjectStore((s) => s.removeProject);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
 
   const [allProjects, setAllProjects] = useState<WorkspaceProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,6 +125,7 @@ export function TranslationsArea() {
           {sortedProjects.map((project) => {
             const isOpening = openingProjectId === project.id;
             const isDimmed = openingProjectId !== null && !isOpening;
+            const workspace = workspaces.find((item) => item.id === project.workspace_id);
             return (
               <motion.article
                 key={project.id}
@@ -166,9 +170,9 @@ export function TranslationsArea() {
                           {project.name}
                         </span>
                         <span className="mt-1 flex items-center gap-2">
-                          <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                            {project.workspace_name}
-                          </span>
+                          {workspace ? (
+                            <WorkspaceIdentity workspace={workspace} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
+                          ) : <span className="sr-only">{project.workspace_name}</span>}
                           <span className="text-xs text-editorial-muted">
                             {formatSavedAt(project.updated_at)}
                           </span>

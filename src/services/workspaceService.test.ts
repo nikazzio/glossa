@@ -31,6 +31,26 @@ describe('workspaceService', () => {
     expect(ws.id).toMatch(/^ws_/);
     expect(ws.name).toBe('Test');
     expect(ws.embeddingModel).toBe('text-embedding-3-small');
+    expect(ws.iconKey).toBe('book');
+  });
+
+  it('persists the selected preset icon key', async () => {
+    await createWorkspace({ name: 'Archivio', embeddingModel: 'text-embedding-3-small', iconKey: 'archive' });
+
+    expect(dbMocks.execute).toHaveBeenCalledWith(
+      expect.stringContaining('icon_key'),
+      expect.arrayContaining(['archive']),
+    );
+  });
+
+  it('maps a persisted preset icon key on load', async () => {
+    dbMocks.select.mockResolvedValueOnce([{
+      id: 'ws_archive', name: 'Archivio', icon_key: 'archive', description: null,
+      embedding_model: 'text-embedding-3-small', memory_extractor_provider: 'openai',
+      memory_extractor_model: 'gpt-5.4-nano', memory_extractor_prompt: '', created_at: '2026-07-28T00:00:00.000Z',
+    }]);
+
+    await expect(listWorkspaces()).resolves.toMatchObject([{ id: 'ws_archive', iconKey: 'archive' }]);
   });
 
   it('listWorkspaces returns empty array when db returns nothing', async () => {

@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
+import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../../workspaceIdentity';
+import { WorkspaceIconPicker } from './WorkspaceIdentity';
 
 type WorkspaceSettingsTab = 'general' | 'memory' | 'backup';
 
@@ -24,6 +26,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<WorkspaceSettingsTab>('general');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [iconKey, setIconKey] = useState<WorkspaceIconKey>(DEFAULT_WORKSPACE_ICON);
   const [embeddingModel, setEmbeddingModel] = useState<EmbeddingModel>('text-embedding-3-small');
   const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
   const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5.4-nano');
@@ -36,6 +39,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     if (!open || !activeWorkspace) return;
     setName(activeWorkspace.name);
     setDescription(activeWorkspace.description ?? '');
+    setIconKey(isWorkspaceIconKey(activeWorkspace.iconKey) ? activeWorkspace.iconKey : DEFAULT_WORKSPACE_ICON);
     setEmbeddingModel(activeWorkspace.embeddingModel);
     setMemoryExtractorProvider(activeWorkspace.memoryExtractorProvider);
     setMemoryExtractorModel(activeWorkspace.memoryExtractorModel);
@@ -52,6 +56,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       const updates = activeTab === 'memory' ? {
         name: name.trim(),
         description: description.trim() || undefined,
+        iconKey,
         embeddingModel,
         memoryExtractorProvider,
         memoryExtractorModel: memoryExtractorModel.trim(),
@@ -59,6 +64,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       } : {
         name: name.trim(),
         description: description.trim() || undefined,
+        iconKey,
       };
       await updateActiveWorkspace(updates);
       toast.success(t('workspace.updated'));
@@ -202,6 +208,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     placeholder={t('workspace.descriptionPlaceholder')}
                     className="min-h-24 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   />
+                  <WorkspaceIconPicker value={iconKey} onChange={setIconKey} />
                 </div>
               )}
 

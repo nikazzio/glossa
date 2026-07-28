@@ -735,6 +735,18 @@
     "noMemoryExtractorTemplates": "No memory extractor templates yet.",
     "nameLabel": "Name",
     "descriptionLabel": "Description",
+    "iconLabel": "Workspace mark",
+    "icons": {
+      "manuscript": "Manuscript",
+      "book": "Book",
+      "quill": "Quill",
+      "archive": "Archive",
+      "library": "Library",
+      "map": "Map",
+      "lens": "Magnifying glass",
+      "compass": "Compass",
+      "seal": "Seal"
+    },
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
     "embeddingChangeWarning": "Model changed. Regenerate embeddings to apply.",

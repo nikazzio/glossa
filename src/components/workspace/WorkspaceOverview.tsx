@@ -9,6 +9,7 @@ import { confirm } from '../../stores/confirmStore';
 import { IconButton, SectionLabel } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
 import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
+import { WorkspaceIcon } from './WorkspaceIdentity';
 
 /**
  * Pagina del workspace attivo: identità, azioni e contenuto (oggi i progetti
@@ -78,9 +79,12 @@ export function WorkspaceOverview() {
         <section>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-                {activeWorkspace?.name ?? t('workspace.noActive')}
-              </h1>
+              <div className="flex items-center gap-3">
+                {activeWorkspace && <WorkspaceIcon iconKey={activeWorkspace.iconKey} size={32} className="shrink-0 text-editorial-accent" />}
+                <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+                  {activeWorkspace?.name ?? t('workspace.noActive')}
+                </h1>
+              </div>
               {activeWorkspace?.description ? (
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
                   {activeWorkspace.description}

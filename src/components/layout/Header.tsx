@@ -10,6 +10,7 @@ import { translationsLocation } from '../../navigation/appLocation';
 import { EASE_EDITORIAL } from './motion';
 import { ShellNavFooter } from './ShellNav';
 import { Tooltip } from '../ui';
+import { WorkspaceIcon } from '../workspace/WorkspaceIdentity';
 
 const HelpGuide = lazy(() =>
   import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
@@ -85,8 +86,9 @@ export function Header() {
                       </button>
                     </Tooltip>
                   ) : (
-                    <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-                      {contextLabel}
+                    <span className="flex min-w-0 items-center gap-2 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {!isTranslationsContext && projectWorkspace && <WorkspaceIcon iconKey={projectWorkspace.iconKey} size={16} className="shrink-0 text-editorial-accent" />}
+                      <span className="truncate">{contextLabel}</span>
                     </span>
                   )}
                 </>

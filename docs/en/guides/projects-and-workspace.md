@@ -31,11 +31,19 @@ Glossa separates application settings, workspace resources, and per-project pipe
 
 ## Compact navigation
 
-You can collapse the side rail to leave more room for the content. Inside a project, the previous/next chunk controls and the translation action remain available; the technical chunk number no longer occupies space in the rail. On the collapsed Dashboard, Dashboard and every area remain visible: areas that are not available yet are visible but cannot be selected; reopen the rail to see the workspace list.
+You can collapse the side rail to leave more room for the content. Inside a project, the previous/next chunk controls and the translation action remain available; the technical chunk number no longer occupies space in the rail. On the collapsed Dashboard, Dashboard, every area, and workspace icons remain visible: areas that are not available yet are visible but cannot be selected.
 
 The Glossa mark remains visible at the top. On hover or keyboard focus, it
 becomes the button that reopens the rail; a click or keyboard activation is
 still required.
+
+## Recognising a workspace
+
+When you create a workspace, choose one of the available historical-editorial
+marks, such as a manuscript, quill, archive, or seal. You can change it later
+from workspace settings. The same mark appears in the side rail, workspace
+context, Library, and project lists; hover it or reach it with the keyboard to
+access the full workspace name.
 
 ## Chunk indicators
 
