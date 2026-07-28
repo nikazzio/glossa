@@ -46,6 +46,12 @@ export function WorkspaceOverview() {
 
   const handleDeleteWorkspace = async () => {
     if (!activeWorkspace) return;
+    if (projects.length > 0) {
+      toast.error(t('workspace.deleteBlockedTitle'), {
+        description: t('workspace.deleteBlockedMessage', { count: projects.length }),
+      });
+      return;
+    }
     const ok = await confirm({
       title: t('workspace.deleteTitle'),
       message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
@@ -53,7 +59,16 @@ export function WorkspaceOverview() {
       danger: true,
     });
     if (!ok) return;
-    await removeWorkspace(activeWorkspace.id);
+    try {
+      await removeWorkspace(activeWorkspace.id);
+    } catch (err: unknown) {
+      const code = err instanceof Error ? err.message : String(err);
+      toast.error(t('workspace.deleteBlockedTitle'), {
+        description: code === 'workspace_has_glossaries'
+          ? t('workspace.deleteBlockedGlossariesMessage')
+          : t('workspace.deleteFailed'),
+      });
+    }
   };
 
   return (

@@ -57,20 +57,22 @@ export function LibraryPanel() {
 
   useEffect(() => {
     if (!showLibraryPanel) return;
-    loadGlossaries(isGlobalScope ? null : activeWorkspace?.id ?? null);
-  }, [showLibraryPanel, isGlobalScope, activeWorkspace?.id, loadGlossaries]);
+    if (isGlobalScope) {
+      void loadGlossaries(null);
+      return;
+    }
+    if (activeWorkspace) void loadGlossaries(activeWorkspace.id);
+  }, [showLibraryPanel, isGlobalScope, activeWorkspace, loadGlossaries]);
 
-  const panelTitle = !isGlobalScope && activeWorkspace
-    ? `${t('library.title')} — ${activeWorkspace.name}`
-    : t('library.title');
+  const panelTitle = isGlobalScope
+    ? t('library.globalTitle')
+    : activeWorkspace
+      ? `${t('library.title')} — ${activeWorkspace.name}`
+      : t('library.title');
 
   const tabBar = (
     <div className="flex gap-2" role="tablist" aria-label={panelTitle}>
       {TABS.map((tab) => {
-        // Memoria frasi è sempre di UN workspace: senza un workspace di
-        // riferimento (scope globale, apertura dalla Dashboard) non ha nulla
-        // da mostrare — disabilitata invece di uno stato vuoto senza senso.
-        const disabled = isGlobalScope && tab.id === 'memories';
         return (
           <IconButton
             key={tab.id}
@@ -80,9 +82,8 @@ export function LibraryPanel() {
             aria-controls={`library-panel-${tab.id}`}
             size="lg"
             tone={activeTab === tab.id ? 'accent' : 'default'}
-            disabled={disabled}
-            onClick={disabled ? undefined : () => useLibraryStore.getState().setShowLibraryPanel(true, tab.id, libraryScope)}
-            title={disabled ? t('library.memoriesUnavailableGlobal') : t(tab.labelKey)}
+            onClick={() => useLibraryStore.getState().setShowLibraryPanel(true, tab.id, libraryScope)}
+            title={t(tab.labelKey)}
           >
             {tabIcon(tab.id)}
           </IconButton>

@@ -18,6 +18,7 @@ import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
+import { CopyGlossaryDialog } from './CopyGlossaryDialog';
 import { Dialog, DialogCancelButton, IconButton, Tooltip } from '../ui';
 
 export function DictionariesTab() {
@@ -48,6 +49,7 @@ export function DictionariesTab() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [showImport, setShowImport] = useState(false);
+  const [showCopyExisting, setShowCopyExisting] = useState(false);
   const [exportTarget, setExportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const handleToggle = async (id: string) => {
@@ -102,13 +104,33 @@ export function DictionariesTab() {
     }
   };
 
-  const handleFork = async (id: string, name: string) => {
+  const handleFork = async (id: string, name: string, destinationWorkspaceId?: string) => {
+    const workspaceId = destinationWorkspaceId ?? activeWorkspace?.id;
+    if (!workspaceId) return;
     try {
-      const newId = await forkGlossary(id, `${name} (copia)`);
+      const newId = await forkGlossary(id, `${name} (${t('library.copySuffix')})`, workspaceId);
       const forkedEntries = await getGlossaryEntries(newId);
       setGlossaryEntries(newId, forkedEntries);
     } catch (err: unknown) {
       toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
+    }
+  };
+
+  const handleCopyExisting = async (source: { id: string }, name: string) => {
+    if (!activeWorkspace) return;
+    try {
+      const newId = await forkGlossary(source.id, name, activeWorkspace.id);
+      const forkedEntries = await getGlossaryEntries(newId);
+      setGlossaryEntries(newId, forkedEntries);
+      setExpandedGlossaryId(newId);
+      if (currentProjectId) {
+        await assignGlossaryToProject(currentProjectId, newId);
+        await assignGlossary(newId);
+      }
+      toast.success(t('library.dictionaryCopied'));
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
+      throw err;
     }
   };
 
@@ -173,11 +195,8 @@ export function DictionariesTab() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs leading-relaxed text-editorial-muted">
-          {isGlobalScope ? t('library.globalDictionariesDesc') : t('library.dictionariesDesc')}
-        </p>
-        {!isGlobalScope && (
+      {!isGlobalScope && activeWorkspace && (
+        <div className="flex justify-end">
           <div className="flex shrink-0 items-center gap-1.5">
             <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
               <Upload size={13} />
@@ -185,9 +204,12 @@ export function DictionariesTab() {
             <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
               <Plus size={13} />
             </IconButton>
+            <IconButton onClick={() => setShowCopyExisting(true)} title={t('library.copyExistingDictionary')}>
+              <Copy size={13} />
+            </IconButton>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {!isGlobalScope && creating && (
         <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
@@ -308,7 +330,7 @@ export function DictionariesTab() {
                     <Download size={13} />
                   </IconButton>
                   <IconButton
-                    onClick={() => handleFork(g.id, g.name)}
+                    onClick={() => void handleFork(g.id, g.name)}
                     title={t('library.forkDictionary')}
                     className="hover:bg-editorial-textbox/30"
                   >
@@ -356,6 +378,15 @@ export function DictionariesTab() {
           workspaceId={activeWorkspace.id}
           onImported={handleImported}
           onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {activeWorkspace && (
+        <CopyGlossaryDialog
+          open={showCopyExisting}
+          destinationWorkspaceId={activeWorkspace.id}
+          onClose={() => setShowCopyExisting(false)}
+          onCopy={handleCopyExisting}
         />
       )}
 

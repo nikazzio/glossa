@@ -33,6 +33,7 @@ export function MemoriesTab() {
   // Default: solo il workspace da cui è stata aperta la Libreria — "tutti"
   // resta scelta esplicita dal filtro, non il punto di partenza.
   const [workspaceFilter, setWorkspaceFilter] = useState<string>(() => activeWorkspace?.id ?? 'all');
+  const [hasInitializedWorkspaceFilter, setHasInitializedWorkspaceFilter] = useState(Boolean(activeWorkspace));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftSource, setDraftSource] = useState('');
   const [draftTarget, setDraftTarget] = useState('');
@@ -40,6 +41,13 @@ export function MemoriesTab() {
   const [pickerOpenId, setPickerOpenId] = useState<string | null>(null);
   const [pickerGlossaryId, setPickerGlossaryId] = useState<string>('');
   const [addingId, setAddingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasInitializedWorkspaceFilter && activeWorkspace) {
+      setWorkspaceFilter(activeWorkspace.id);
+      setHasInitializedWorkspaceFilter(true);
+    }
+  }, [activeWorkspace, hasInitializedWorkspaceFilter]);
 
   const handleExportCsv = async () => {
     try {

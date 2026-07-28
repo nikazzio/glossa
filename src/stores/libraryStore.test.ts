@@ -38,4 +38,12 @@ describe('libraryStore — setShowLibraryPanel scope', () => {
     useLibraryStore.getState().setShowLibraryPanel(false);
     expect(useLibraryStore.getState().libraryScope).toBe('global');
   });
+
+  it('copies a glossary into the explicit destination workspace and reloads it', async () => {
+    const service = await import('../services/glossaryService');
+    vi.mocked(service.forkGlossary).mockResolvedValue('gls-copy');
+    await useLibraryStore.getState().forkGlossary('gls-source', 'Copia', 'ws-2');
+    expect(service.forkGlossary).toHaveBeenCalledWith('gls-source', 'Copia', 'ws-2');
+    expect(service.listGlossaries).toHaveBeenCalledWith('ws-2');
+  });
 });

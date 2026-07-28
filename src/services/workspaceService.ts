@@ -1,4 +1,4 @@
-import { execute, getSetting, select, setSetting } from './dbService';
+import { execute, getSetting, runInTransaction, select, setSetting } from './dbService';
 import {
   DEFAULT_MEMORY_EXTRACTOR_MODEL,
   DEFAULT_MEMORY_EXTRACTOR_PROMPT,
@@ -110,8 +110,17 @@ export async function updateWorkspace(
 }
 
 export async function deleteWorkspace(id: string): Promise<void> {
-  await execute('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
-  await execute('DELETE FROM workspaces WHERE id = $1', [id]);
+  const [projects, glossaries] = await Promise.all([
+    select<{ count: number }>('SELECT COUNT(*) AS count FROM projects WHERE workspace_id = $1', [id]),
+    select<{ count: number }>('SELECT COUNT(*) AS count FROM glossaries WHERE workspace_id = $1', [id]),
+  ]);
+  if ((projects[0]?.count ?? 0) > 0) throw new Error('workspace_has_projects');
+  if ((glossaries[0]?.count ?? 0) > 0) throw new Error('workspace_has_glossaries');
+
+  await runInTransaction(async (run) => {
+    await run('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
+    await run('DELETE FROM workspaces WHERE id = $1', [id]);
+  });
 }
 
 export async function getActiveWorkspaceId(): Promise<string | null> {
@@ -122,4 +131,3 @@ export async function getActiveWorkspaceId(): Promise<string | null> {
 export async function setActiveWorkspaceId(id: string): Promise<void> {
   await setSetting('active_workspace_id', id);
 }
-

@@ -8,13 +8,16 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { listGlossaries, createGlossary } = await import('./glossaryService');
+const { listGlossaries, createGlossary, forkGlossary } = await import('./glossaryService');
 
 describe('glossaryService — ownership del workspace (#213)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.execute.mockResolvedValue(undefined);
     dbMocks.select.mockResolvedValue([]);
+    dbMocks.runInTransaction.mockImplementation(async (callback: (run: typeof dbMocks.execute) => Promise<void>) => {
+      await callback(dbMocks.execute);
+    });
   });
 
   it('listGlossaries(workspaceId) filtra solo quel workspace, senza piu\' includere quelli senza padrone', async () => {
@@ -42,5 +45,23 @@ describe('glossaryService — ownership del workspace (#213)', () => {
     );
     const [, params] = dbMocks.execute.mock.calls[0];
     expect(params).not.toContain(null);
+  });
+
+  it('forkGlossary assegna la copia al workspace scelto, non al proprietario sorgente', async () => {
+    dbMocks.select.mockResolvedValueOnce([{
+      id: 'gls-source', name: 'Termini', description: '', source_language: 'IT', target_language: 'EN', created_at: '2026-01-01', workspace_id: 'ws-source',
+    }]).mockResolvedValueOnce([]);
+    await forkGlossary('gls-source', 'Termini (copia)', 'ws-destination');
+    expect(dbMocks.execute).toHaveBeenCalledWith(
+      expect.stringContaining('VALUES ($1, $2, $3, $4, $5, $6)'),
+      expect.arrayContaining(['Termini (copia)', 'ws-destination']),
+    );
+  });
+
+  it('forkGlossary rifiuta una sorgente eliminata senza creare una copia fantasma', async () => {
+    dbMocks.select.mockResolvedValueOnce([]);
+
+    await expect(forkGlossary('gls-missing', 'Copia', 'ws-destination')).rejects.toThrow('glossary_not_found');
+    expect(dbMocks.execute).not.toHaveBeenCalled();
   });
 });

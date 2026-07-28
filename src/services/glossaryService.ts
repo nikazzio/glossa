@@ -136,17 +136,28 @@ export async function upsertGlossaryEntries(
   });
 }
 
-export async function forkGlossary(id: string, newName: string): Promise<string> {
+/** Crea una copia indipendente nel workspace scelto. Non condivide mai voci o proprieta'. */
+export async function forkGlossary(
+  id: string,
+  newName: string,
+  destinationWorkspaceId: string,
+): Promise<string> {
+  const [source] = await select<GlossaryRow>(
+    'SELECT id, name, description, source_language, target_language, created_at, workspace_id FROM glossaries WHERE id = $1',
+    [id],
+  );
+  if (!source) throw new Error('glossary_not_found');
+  const entries = await select<GlossaryEntryRow>(
+    'SELECT id, glossary_id, term, translation, notes FROM glossary_entries WHERE glossary_id = $1',
+    [id],
+  );
+
   const newId = generateId('gls');
   await runInTransaction(async (run) => {
     await run(
       `INSERT INTO glossaries (id, name, description, source_language, target_language, workspace_id)
-       SELECT $1, $2, description, source_language, target_language, workspace_id FROM glossaries WHERE id = $3`,
-      [newId, newName, id],
-    );
-    const entries = await select<GlossaryEntryRow>(
-      'SELECT id, glossary_id, term, translation, notes FROM glossary_entries WHERE glossary_id = $1',
-      [id],
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [newId, newName, source.description, source.source_language, source.target_language, destinationWorkspaceId],
     );
     for (const entry of entries) {
       await run(

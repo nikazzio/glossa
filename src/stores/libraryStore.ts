@@ -13,7 +13,7 @@ import {
 
 export type LibraryTab = 'dictionaries' | 'templates' | 'memories';
 export const DEFAULT_LIBRARY_TAB: LibraryTab = 'dictionaries';
-/** 'workspace': dizionari del workspace attivo + globali. 'global': tutti i dizionari di tutti i workspace (apertura dalla Dashboard, senza un workspace di riferimento). */
+/** 'workspace': solo dizionari del workspace attivo. 'global': catalogo cross-workspace in sola lettura. */
 export type LibraryScope = 'workspace' | 'global';
 
 interface LibraryState {
@@ -35,7 +35,7 @@ interface LibraryState {
   createGlossary: (name: string, description: string | undefined, sourceLang: string | undefined, targetLang: string | undefined, workspaceId: string) => Promise<string>;
   renameGlossary: (id: string, name: string) => Promise<void>;
   deleteGlossary: (id: string) => Promise<void>;
-  forkGlossary: (id: string, newName: string) => Promise<string>;
+  forkGlossary: (id: string, newName: string, destinationWorkspaceId: string) => Promise<string>;
   importCsv: (glossaryId: string, csvText: string, strategy: 'replace' | 'merge') => Promise<number>;
 
   // Entries management
@@ -115,9 +115,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     });
   },
 
-  forkGlossary: async (id, newName) => {
-    const newId = await forkGlossary(id, newName);
-    await get().reloadGlossaries(get().loadedForWorkspaceId);
+  forkGlossary: async (id, newName, destinationWorkspaceId) => {
+    const newId = await forkGlossary(id, newName, destinationWorkspaceId);
+    await get().reloadGlossaries(destinationWorkspaceId);
     return newId;
   },
 
