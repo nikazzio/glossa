@@ -13,15 +13,11 @@ const env = { ...process.env, GLOSSA_DEV_PORT: port };
 if (process.platform === 'linux') {
   env.WEBKIT_DISABLE_DMABUF_RENDERER = '1';
   env.GSETTINGS_BACKEND = 'memory';
-
-  // WSLg può creare la finestra Tauri senza renderizzarla dopo un riavvio.
-  // Questa combinazione, verificata su WSL2, evita sia il compositore WebKit
-  // sia i percorsi GPU che restano in uno stato non utilizzabile. Tenerla qui
-  // impedisce di dover ricordare variabili d'ambiente a ogni avvio.
-  if (env.WSL_DISTRO_NAME || env.WSL_INTEROP) {
-    env.LIBGL_ALWAYS_SOFTWARE = '1';
-    env.WEBKIT_DISABLE_COMPOSITING_MODE = '1';
-  }
+  // Tutti gli avvii Linux di Glossa passano da WSL2/WSLg. Questa combinazione,
+  // verificata lì, evita sia il compositore WebKit sia i percorsi GPU che dopo
+  // un riavvio possono creare una finestra presente nella taskbar ma invisibile.
+  env.LIBGL_ALWAYS_SOFTWARE = '1';
+  env.WEBKIT_DISABLE_COMPOSITING_MODE = '1';
 }
 
 const child = spawn(
