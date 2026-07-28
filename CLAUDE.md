@@ -44,6 +44,7 @@ Niki non scrive codice, non riconosce nomi tecnici. Spiegazioni utente:
 ### Repomix (Esplorazione Iniziale)
 Prima di analizzare porzioni codebase estese o poco conosciute, usa **repomix** (`skill repomix-commands:pack-local`).
 - **Scopo**: Vista compatta e indicizzata intero progetto in un'unica operazione, azzera catene esplorative costose filesystem, risparmia token.
+- **Misura**: usa include mirati al dominio da modificare; non generare pack completi quando bastano pochi file noti.
 
 ### RTK (Rust Token Killer) - Filtro Output CLI
 Per prevenire esaurimento finestra contesto, **ogni comando terminale deve iniziare con `rtk`**.
@@ -51,6 +52,13 @@ Per prevenire esaurimento finestra contesto, **ogni comando terminale deve inizi
 `rtk` intercetta output, filtra verbosità, restituisce formati iper-compatti, risparmia 60-90% token.
 - **Uso corretto**: `rtk cargo test`, `rtk grep pattern`, `rtk read file.ts`
 - **Catene**: Anche con `&&`, applica ogni step: `rtk git add . && rtk git commit -m "msg" && rtk git push`
+
+### Economia di tempo e token
+
+- **Comunicazione**: usa il skill `caveman` nelle attività operative, salvo casi in cui la chiarezza o la sicurezza richiedano prosa normale.
+- **Verifica proporzionata**: esegui soltanto test direttamente pertinenti ai file o contratti modificati. Suite complete solo se l'utente le richiede, un rischio cross-cutting lo giustifica, o la CI fallisce.
+- **Build**: non eseguire build dell'app, build Tauri, build della documentazione, E2E o installazioni di dipendenze salvo richiesta esplicita dell'utente o necessità indispensabile per diagnosticare un errore.
+- **Esplorazione**: preferisci `rtk rg`, letture mirate e repomix compresso; evita scansioni o output completi non necessari al task.
 
 ### MCP Tools: code-review-graph
 ⚠️ **REGOLA DI INGAGGIO (OTTIMIZZAZIONE TOKEN):**
