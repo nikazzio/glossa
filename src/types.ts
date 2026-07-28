@@ -33,6 +33,44 @@ export interface IIIFProvider {
   supportsSearch: boolean;
   filters: IIIFProviderFilter[];
 }
+
+export type IIIFDiscoveryStatus = 'manifest' | 'results' | 'not_found';
+
+export interface IIIFManifestPreview {
+  manifestUrl: string;
+  title: string;
+  creator: string | null;
+  date: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  language: string | null;
+  volume: string | null;
+  subjects: string[];
+  itemCount: number | null;
+}
+
+export interface IIIFDiscoveryResult {
+  id: string;
+  title: string;
+  creator: string | null;
+  date: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  mediaType: string | null;
+  collection: string | null;
+  language: string | null;
+  volume: string | null;
+  subjects: string[];
+  manifestUrl: string;
+}
+
+export interface IIIFDiscoveryOutcome {
+  status: IIIFDiscoveryStatus;
+  providerKey: string;
+  manifest: IIIFManifestPreview | null;
+  results: IIIFDiscoveryResult[];
+  hasMore: boolean;
+}
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
 
 export interface Annotation {

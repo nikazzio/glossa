@@ -144,6 +144,7 @@ pub fn run() {
             deepl::commands::create_deepl_glossary,
             deepl::commands::delete_deepl_glossary,
             iiif::list_iiif_providers,
+            iiif::discovery::discover_iiif,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

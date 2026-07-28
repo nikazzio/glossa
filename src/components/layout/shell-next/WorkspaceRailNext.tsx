@@ -22,8 +22,8 @@ import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
 
 const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; enabled: boolean }> = [
-  { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'library', icon: LibraryBig, enabled: true },
+  { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'transcriptions', icon: FilePen, enabled: true },
   { id: 'analysis', icon: BarChart3, enabled: true },
 ];

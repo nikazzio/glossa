@@ -20,8 +20,9 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { PillButton, SectionLabel, Spinner } from '../ui';
+import { IconButton, SectionLabel, Spinner } from '../ui';
 import { WorkspaceIdentity } from '../workspace/WorkspaceIdentity';
+import { SourceDiscoveryPanel } from './SourceDiscoveryPanel';
 
 const RESUME_LIMIT = 5;
 const ACTIVITY_LIMIT = 6;
@@ -124,7 +125,7 @@ export function AppDashboard() {
 
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
-      <div className="min-w-0 max-w-5xl px-5 py-5 md:px-6">
+      <div className="w-full min-w-0 px-5 py-5 md:px-6">
         {/* Header */}
         <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
           {t('dashboard.title')}
@@ -147,28 +148,18 @@ export function AppDashboard() {
                   </p>
                 </div>
               </div>
-              <PillButton variant="accent" onClick={() => setShowSettings(true, 'provider')} className="shrink-0">
-                {t('workspace.providerBannerCta')}
-              </PillButton>
+              <IconButton onClick={() => setShowSettings(true, 'provider')} title={t('workspace.providerBannerCta')} className="shrink-0">
+                <KeyRound size={15} />
+              </IconButton>
             </div>
           </section>
         ) : null}
 
-        {/* Panoramica — numeri complessivi su tutti i workspace */}
-        <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {overviewTiles.map(({ key, icon: Icon, label, value }) => (
-            <div key={key} className="rounded-[20px] border border-editorial-border bg-editorial-bg/40 px-4 py-3">
-              <div className="flex items-center gap-1.5 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-                <Icon size={12} className="shrink-0" />
-                {label}
-              </div>
-              <div className="mt-1.5 font-display text-2xl italic text-editorial-ink">{value}</div>
-            </div>
-          ))}
-        </section>
-
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
+          <SourceDiscoveryPanel />
+          <aside className="min-w-0 space-y-6">
         {/* Richiede attenzione — frammenti con giudizio scarso/critico o problemi aperti */}
-        <section className="mt-6">
+        <section>
           <div className="mb-2 px-1">
             <SectionLabel icon={AlertTriangle} label={t('dashboard.attentionTitle')} />
           </div>
@@ -181,7 +172,7 @@ export function AppDashboard() {
                   key={project.project_id}
                   type="button"
                   onClick={() => void handleOpenProject(project.project_id, project.workspace_id)}
-                  className={ROW_CLASS}
+                  className={`${ROW_CLASS} flex-col items-start gap-1.5`}
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
@@ -190,7 +181,7 @@ export function AppDashboard() {
                     </span>
                     {workspaceIdentity(project.workspace_id, project.workspace_name)}
                   </span>
-                  <span className="shrink-0 text-xs text-editorial-warning">
+                  <span className="pl-7 text-xs text-editorial-warning">
                     {t('dashboard.attentionCount', { count: project.issue_count })}
                   </span>
                 </button>
@@ -202,7 +193,7 @@ export function AppDashboard() {
         </section>
 
         {/* Riprendi — cross-workspace */}
-        <section className="mt-6">
+        <section>
           <div className="mb-2 px-1">
             <SectionLabel icon={History} label={t('dashboard.resumeTitle')} />
           </div>
@@ -215,7 +206,7 @@ export function AppDashboard() {
                   key={project.id}
                   type="button"
                   onClick={() => void handleOpenProject(project.id, project.workspace_id)}
-                  className={ROW_CLASS}
+                  className={`${ROW_CLASS} flex-col items-start gap-1.5`}
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
@@ -224,7 +215,7 @@ export function AppDashboard() {
                     </span>
                     {workspaceIdentity(project.workspace_id, project.workspace_name)}
                   </span>
-                  <span className="shrink-0 text-xs text-editorial-muted">
+                  <span className="pl-7 text-xs text-editorial-muted">
                     {formatWhen(project.updated_at)}
                   </span>
                 </button>
@@ -236,7 +227,7 @@ export function AppDashboard() {
         </section>
 
         {/* Attività recente — esecuzioni pipeline globali */}
-        <section className="mt-6">
+        <section>
           <div className="mb-2 px-1">
             <SectionLabel icon={Activity} label={t('dashboard.activityTitle')} />
           </div>
@@ -267,6 +258,20 @@ export function AppDashboard() {
             <p className="px-1 text-sm text-editorial-muted">{t('dashboard.activityEmpty')}</p>
           )}
         </section>
+
+          <section className="grid content-start grid-cols-2 gap-3 xl:grid-cols-1">
+            {overviewTiles.map(({ key, icon: Icon, label, value }) => (
+              <div key={key} className="rounded-[20px] border border-editorial-border bg-surface-elevated px-4 py-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                  <Icon size={12} className="shrink-0" />
+                  {label}
+                </div>
+                <div className="mt-1.5 font-display text-2xl italic text-editorial-ink">{value}</div>
+              </div>
+            ))}
+          </section>
+          </aside>
+        </div>
       </div>
     </main>
   );

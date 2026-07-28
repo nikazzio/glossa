@@ -19,6 +19,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
   lg: '1.0625rem',
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
+export type DiscoveryResultsPerRow = 3 | 4;
 export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
 
 export interface HLColorSet {
@@ -64,6 +65,7 @@ interface UiState {
   colorScheme: ColorScheme;
   documentFontSize: DocumentFontSize;
   documentLineHeight: DocumentLineHeight;
+  discoveryResultsPerRow: DiscoveryResultsPerRow;
   selectedChunkId: string | null;
   showSettings: boolean;
   settingsTab: SettingsTab;
@@ -114,6 +116,7 @@ interface UiState {
   setColorScheme: (scheme: ColorScheme) => void;
   setDocumentFontSize: (size: DocumentFontSize) => void;
   setDocumentLineHeight: (height: DocumentLineHeight) => void;
+  setDiscoveryResultsPerRow: (count: DiscoveryResultsPerRow) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean, tab?: SettingsTab) => void;
   setSettingsTab: (tab: SettingsTab) => void;
@@ -241,6 +244,9 @@ export function migrateUiStorePersistedState(persisted: unknown, fromVersion: nu
   if (fromVersion < 16) {
     s.editorialAccentColor = { light: EDITORIAL_ACCENT_LIGHT, dark: EDITORIAL_ACCENT_DARK };
   }
+  if (fromVersion < 17) {
+    s.discoveryResultsPerRow = 3;
+  }
   return s;
 }
 
@@ -255,6 +261,7 @@ export const useUiStore = create<UiState>()(
       colorScheme: 'system',
       documentFontSize: 'md',
       documentLineHeight: 'normal',
+      discoveryResultsPerRow: 3,
       selectedChunkId: null,
       showSettings: false,
       settingsTab: 'translations',
@@ -298,6 +305,7 @@ export const useUiStore = create<UiState>()(
       setColorScheme: (scheme) => set({ colorScheme: scheme }),
       setDocumentFontSize: (size) => set({ documentFontSize: size }),
       setDocumentLineHeight: (height) => set({ documentLineHeight: height }),
+      setDiscoveryResultsPerRow: (count) => set({ discoveryResultsPerRow: count }),
       setSelectedChunkId: (chunkId) =>
         set((state) => ({
           selectedChunkId: chunkId,
@@ -507,7 +515,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 16,
+      version: 17,
       migrate: migrateUiStorePersistedState,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
@@ -519,6 +527,7 @@ export const useUiStore = create<UiState>()(
         colorScheme: state.colorScheme,
         documentFontSize: state.documentFontSize,
         documentLineHeight: state.documentLineHeight,
+        discoveryResultsPerRow: state.discoveryResultsPerRow,
         activeProjectPanel: INLINE_PROJECT_PANELS.includes(state.activeProjectPanel)
           ? state.activeProjectPanel
           : 'run',

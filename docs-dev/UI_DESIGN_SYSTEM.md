@@ -225,19 +225,11 @@ Regole:
 
 ---
 
-### PillButton — comandi testuali compatti
+### Azioni — solo icona, neutre
 
-Usa `PillButton` per comandi testuali compatti dentro dashboard, modali, toolbar secondarie.
+Ogni comando visivo usa `IconButton` con `tone="default"`, icona e tooltip. No pulsanti testuali, pill, riempimenti colorati o azioni primarie verdi.
 
-```tsx
-<PillButton variant="secondary">{t('common.cancel')}</PillButton>
-<PillButton variant="accent">{t('workspace.newBookCard')}</PillButton>
-```
-
-Regole:
-- `accent` è pieno: `bg-editorial-accent text-white`. Azione primaria locale.
-- `secondary` neutro, deve restare meno evidente dell'azione primaria.
-- No pill locali con `button` raw se `PillButton` basta.
+Il verde (`editorial-accent`) è riservato a tab, selettori e stati attivi; non usarlo per comandi. Eccezioni solo se richieste esplicitamente dall'utente.
 
 ---
 

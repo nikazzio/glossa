@@ -79,6 +79,15 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(screen.getByRole('button', { name: /areas\.transcriptions\.title/ })).not.toBeDisabled();
   });
 
+  it('places Library before Translations in the area navigation', () => {
+    renderShell();
+
+    const library = screen.getAllByRole('button', { name: /areas\.library\.title/ })[0];
+    const translations = screen.getAllByRole('button', { name: /areas\.translations\.title/ })[0];
+
+    expect(library.compareDocumentPosition(translations) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {
     renderShell();
 

@@ -449,6 +449,10 @@
     "highlightAnnotation": "Note",
     "typography": "Typography",
     "typographyTab": "Typography",
+    "discoveryTab": "Source search",
+    "discoveryResultsLayout": "Cards per row",
+    "discoveryResultsThree": "Three cards",
+    "discoveryResultsFour": "Four cards",
     "uiFont": "Interface font",
     "uiFontHint": "Choose the typeface for the whole interface. Editorial serif values are unaffected.",
     "accentColor": "Accent color",
@@ -675,22 +679,8 @@
     "library": {
       "title": "Library",
       "sidebarHint": "Texts and catalogues",
-      "emptyMessage": "The Library catalogue has no content yet.",
-      "emptyHint": "Coming with sources and books linkable to workspaces.",
-      "providersLabel": "Available collections",
-      "providersIntro": "Glossa has identified the IIIF collections it will be able to search or open sources from.",
-      "providersCount_one": "{{count}} collection prepared",
-      "providersCount_other": "{{count}} collections prepared",
-      "filtersAvailable_one": "{{count}} filter available",
-      "filtersAvailable_other": "{{count}} filters available",
-      "providersNext": "Searching and adding sources will arrive in the next Library steps.",
-      "registryError": "Available collections could not be read.",
-      "registryErrorHint": "Reopen Library to try again. Sources already saved are not changed.",
-      "capabilities": {
-        "direct": "Open an IIIF URL",
-        "fallback": "Open an ID or search",
-        "search_first": "Search or open an ID"
-      }
+      "emptyMessage": "Your Library is still empty.",
+      "emptyHint": "Sources you add from Dashboard will appear here."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -793,6 +783,22 @@
     "title": "Dashboard",
     "navHint": "Application home",
     "loadFailed": "Failed to load the dashboard",
+    "discovery": {
+      "source": "Collection",
+      "input": "Title, author, treatise, shelfmark, or place",
+      "submit": "Find sources",
+      "loadMore": "Load more results",
+      "notFound": "No sources found.",
+      "by": "By",
+      "published": "Published",
+      "volume": "Volume",
+      "date": "Date",
+      "pages": "Pages",
+      "language": "Language",
+      "type": "Type",
+      "collection": "Collection",
+      "subjects": "Subjects"
+    },
     "stats": {
       "projects": "Projects",
       "chunks": "Chunks translated",
@@ -1329,7 +1335,7 @@
       "libraryTitle": "Workspace dictionaries",
       "libraryDesc": "In the Dictionaries tab you can create new dictionaries, rename them with double-click, duplicate (Fork), delete, import terms from CSV/TSV, and edit entries inline by expanding a dictionary. A dictionary can be assigned as the active glossary of the current project with the Assign button.",
       "iiifTitle": "Source Library",
-      "iiifDesc": "The Library area shows digital collections prepared for searching or opening IIIF sources. At this stage you can see which collections will be available and whether they accept a search, an identifier, or a URL; searching and adding a source will arrive in the next Library updates.",
+      "iiifDesc": "From the Dashboard, choose an archive and search for a source; open a card to view all of its data and load more results when available. The Library will contain only added sources: downloads, caching, and workspace links will arrive in the next increment.",
       "csvTitle": "Import from CSV/TSV",
       "csvDesc": "The Upload button next to each dictionary opens a wizard that previews the first rows and asks for a strategy: 'Add/update' merges without touching existing terms, 'Replace all' wipes and reimports. Recognised headers: term/source/from for the source term, translation/target/to for the translation (case-insensitive); the notes column is optional.",
       "projectTitle": "Per-project glossary",
