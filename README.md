@@ -151,9 +151,9 @@ Windows:
 npm run tauri:dev      # development mode with hot reload
 ```
 
-Use this command rather than calling Tauri directly: Glossa development runs
-in WSL2 and it automatically uses the stable software-rendering path for the
-WSLg/WebKit window after a Windows or WSL restart.
+In WSL2, use this command rather than calling Tauri directly: it automatically
+uses the stable software-rendering path for the WSLg/WebKit window after a
+Windows or WSL restart.
 
 The dev server runs on a dedicated port (`48123`) to avoid clashing with other local projects. If that port is ever taken on your machine, override it:
 
