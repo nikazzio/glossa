@@ -25,7 +25,6 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 - `--strictPort` su Vite: porta occupata → comando fallisce subito errore leggibile, no scivolamento silenzioso altra porta
 - Override: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` (PowerShell: `$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev`) — variabile letta sia da Vite (`scripts/dev.mjs`) sia da Tauri (`scripts/tauri-dev.mjs`, inietta stesso valore in `devUrl` via `tauri dev --config`)
 - Script Node (`scripts/dev.mjs`/`scripts/tauri-dev.mjs`), non bash: npm su Windows esegue gli script tramite cmd.exe, che non capisce `${VAR:-default}` né richiede bash disponibile
-- **WSL2/WSLg**: `tauri:dev` rileva WSL e imposta `LIBGL_ALWAYS_SOFTWARE=1` + `WEBKIT_DISABLE_COMPOSITING_MODE=1`, oltre al fallback DMA-BUF WebKit già attivo su Linux. È il workaround verificato per finestra Tauri presente nella taskbar ma invisibile dopo riavvio; non avviare `tauri dev` direttamente.
 - Meccanismo esiste solo in sviluppo: build produzione (`npm run tauri:build`) carica `frontendDist` diretto, no dev server né porta coinvolti
 
 ---
