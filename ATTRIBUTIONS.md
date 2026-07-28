@@ -8,6 +8,7 @@ Glossa includes the following workspace identity icons from
 
 Game Icons is created by [GameIcons](https://github.com/game-icons/icons) and
 licensed under [Creative Commons Attribution 3.0 Unported](https://creativecommons.org/licenses/by/3.0/).
+Short license identifier: **CC BY 3.0**.
 The icons are rendered in Glossa with its interface colour; no artwork has been
 otherwise modified.
 
