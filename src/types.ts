@@ -1,3 +1,5 @@
+import type { WorkspaceIconKey } from './workspaceIdentity';
+
 export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama' | 'custom' | 'deepl';
 
 export interface CustomProviderProfile {
@@ -306,6 +308,8 @@ export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large'
 export type Workspace = {
   id: string;
   name: string;
+  /** Preset-only for now; future custom identities need a distinct type. */
+  iconKey: WorkspaceIconKey;
   description?: string;
   embeddingModel: EmbeddingModel;
   memoryExtractorProvider: ModelProvider;

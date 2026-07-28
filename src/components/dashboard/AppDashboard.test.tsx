@@ -62,7 +62,7 @@ describe('AppDashboard', () => {
     });
   });
 
-  it('shows recent projects across workspaces with their workspace badge', async () => {
+  it('shows recent projects across workspaces with their accessible workspace icon', async () => {
     mockListRecent.mockResolvedValue([
       { id: 'p1', name: 'Fiore dei Liberi', updated_at: '2026-07-15T10:00:00.000Z', workspace_id: 'ws-2', workspace_name: 'Beta' },
     ]);
@@ -71,7 +71,7 @@ describe('AppDashboard', () => {
 
     const projectRow = (await screen.findByText('Fiore dei Liberi')).closest('button');
     expect(projectRow).not.toBeNull();
-    expect(within(projectRow as HTMLElement).getByText('Beta')).toBeInTheDocument();
+    expect(within(projectRow as HTMLElement).getByLabelText('Beta')).toBeInTheDocument();
   });
 
   it('resuming a project delegates to the store with its id and workspace', async () => {
@@ -127,7 +127,7 @@ describe('AppDashboard', () => {
 
     const row = (await screen.findByText('Fiore dei Liberi')).closest('button');
     expect(row).not.toBeNull();
-    expect(within(row as HTMLElement).getByText('Beta')).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByLabelText('Beta')).toBeInTheDocument();
 
     await userEvent.click(row as HTMLElement);
 

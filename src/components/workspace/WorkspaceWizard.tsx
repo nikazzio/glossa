@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { DEFAULT_WORKSPACE_ICON, type WorkspaceIconKey } from '../../workspaceIdentity';
+import { WorkspaceIconPicker } from './WorkspaceIdentity';
 
 export function WorkspaceWizard() {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [iconKey, setIconKey] = useState<WorkspaceIconKey>(DEFAULT_WORKSPACE_ICON);
   const [loading, setLoading] = useState(false);
   const createAndActivate = useWorkspaceStore((s) => s.createAndActivate);
 
@@ -17,6 +20,7 @@ export function WorkspaceWizard() {
         name: name.trim(),
         description: description.trim() || undefined,
         embeddingModel: 'text-embedding-3-small',
+        iconKey,
       });
     } finally {
       setLoading(false);
@@ -48,6 +52,7 @@ export function WorkspaceWizard() {
           // eslint-disable-next-line jsx-a11y/no-autofocus -- procedura guidata aperta da un click esplicito
           autoFocus
         />
+        <WorkspaceIconPicker value={iconKey} onChange={setIconKey} />
         <input
           className={inputClass}
           placeholder={t('workspace.descriptionPlaceholder')}

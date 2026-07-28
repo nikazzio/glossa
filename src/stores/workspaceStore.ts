@@ -9,6 +9,7 @@ import {
   updateWorkspace,
 } from '../services/workspaceService';
 import type { EmbeddingModel } from '../types';
+import type { WorkspaceIconKey } from '../workspaceIdentity';
 
 type WorkspaceStore = {
   workspaces: Workspace[];
@@ -17,10 +18,11 @@ type WorkspaceStore = {
   /** true dopo il primo caricamento completato (successo o errore). */
   isLoaded: boolean;
   loadWorkspaces: () => Promise<void>;
-  createAndActivate: (params: { name: string; description?: string; embeddingModel: EmbeddingModel }) => Promise<Workspace>;
+  createAndActivate: (params: { name: string; description?: string; embeddingModel: EmbeddingModel; iconKey?: WorkspaceIconKey }) => Promise<Workspace>;
   setActive: (workspace: Workspace) => Promise<void>;
   updateActiveWorkspace: (updates: Partial<Pick<Workspace,
     'name' | 'description' | 'embeddingModel' |
+    'iconKey' |
     'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
   >>) => Promise<void>;
   removeWorkspace: (workspaceId: string) => Promise<void>;

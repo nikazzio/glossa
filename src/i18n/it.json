@@ -735,6 +735,23 @@
     "noMemoryExtractorTemplates": "Nessun template estrattore Memory.",
     "nameLabel": "Nome",
     "descriptionLabel": "Descrizione",
+    "iconLabel": "Segno del workspace",
+    "icons": {
+      "manuscript": "Manoscritto",
+      "book": "Libro",
+      "quill": "Penna d'oca",
+      "archive": "Archivio",
+      "library": "Biblioteca",
+      "lens": "Lente",
+      "seal": "Sigillo",
+      "bookmark": "Segnalibro",
+      "feather": "Piuma",
+      "hourglass": "Clessidra",
+      "leaf": "Foglia aldina",
+      "anchor": "Ancora",
+      "siren": "Sirena",
+      "scrollQuill": "Pergamena con penna"
+    },
     "namePlaceholder": "Nome workspace",
     "descriptionPlaceholder": "Descrizione del workspace",
     "embeddingChangeWarning": "Modello cambiato. Rigenera gli embedding per applicare.",
@@ -1242,6 +1259,8 @@
     "projects": {
       "title": "Progetti",
       "intro": "Ogni progetto di traduzione appartiene a un workspace. Phrase Memory e glossari possono essere condivisi fra i progetti dello stesso workspace; la configurazione resta specifica della pipeline aperta. L'area Traduzioni mostra invece tutti i progetti di tutti i workspace.",
+      "workspaceIdentityTitle": "Segno del workspace",
+      "workspaceIdentityDesc": "Nelle impostazioni del workspace scegli uno dei segni storico-editoriali disponibili, prima di nome e descrizione. Il segno identifica il workspace nelle liste progetto, nella Libreria e nella barra laterale; nelle aree globali affianca la più piccola icona del tipo di elemento. Le icone di Traduzioni, Biblioteca, Trascrizioni e Analisi restano riservate alle rispettive aree; non sono disponibili icone personalizzate.",
       "createTitle": "Crea un progetto",
       "createDesc": "Dalla pagina del workspace o dall'area Traduzioni puoi creare un progetto; dalla pagina del workspace puoi anche aprire o eliminare quelli che gli appartengono. Il nuovo progetto viene creato nel workspace scelto.",
       "saveTitle": "Salva il lavoro",
@@ -1251,7 +1270,7 @@
       "autosaveTitle": "Salvataggio automatico",
       "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
       "backupTitle": "Backup e ripristino",
-      "backupDesc": "Nelle Impostazioni del workspace, la scheda Backup esporta o importa lo stato locale tramite un file .glossa-backup. Prima di mostrare la conferma e prima di toccare i dati, Glossa verifica che il file sia completo, integro e compatibile: un backup alterato, incompleto o creato da una versione più recente viene rifiutato senza modificare il lavoro corrente."
+      "backupDesc": "Nelle Impostazioni del workspace, la scheda Backup esporta o importa lo stato locale tramite un file .glossa-backup. I due comandi sono icone circolari: passa il mouse o raggiungile da tastiera per leggerne la descrizione. Prima di mostrare la conferma e prima di toccare i dati, Glossa verifica che il file sia completo, integro e compatibile: un backup alterato, incompleto o creato da una versione più recente viene rifiutato senza modificare il lavoro corrente."
     },
     "providers": {
       "title": "Provider LLM",

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Brain, Cpu, Download, HardDrive, Loader2, RefreshCcw, Settings2, Upload } from 'lucide-react';
+import { AlignLeft, Brain, Cpu, Download, HardDrive, Loader2, RefreshCcw, Settings2, Type, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton, FieldLabel, SectionLabel, Select } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
+import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../../workspaceIdentity';
+import { WorkspaceIcon, WorkspaceIconPicker } from './WorkspaceIdentity';
 
 type WorkspaceSettingsTab = 'general' | 'memory' | 'backup';
 
@@ -24,6 +26,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<WorkspaceSettingsTab>('general');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [iconKey, setIconKey] = useState<WorkspaceIconKey>(DEFAULT_WORKSPACE_ICON);
   const [embeddingModel, setEmbeddingModel] = useState<EmbeddingModel>('text-embedding-3-small');
   const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
   const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5.4-nano');
@@ -36,6 +39,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     if (!open || !activeWorkspace) return;
     setName(activeWorkspace.name);
     setDescription(activeWorkspace.description ?? '');
+    setIconKey(isWorkspaceIconKey(activeWorkspace.iconKey) ? activeWorkspace.iconKey : DEFAULT_WORKSPACE_ICON);
     setEmbeddingModel(activeWorkspace.embeddingModel);
     setMemoryExtractorProvider(activeWorkspace.memoryExtractorProvider);
     setMemoryExtractorModel(activeWorkspace.memoryExtractorModel);
@@ -52,6 +56,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       const updates = activeTab === 'memory' ? {
         name: name.trim(),
         description: description.trim() || undefined,
+        iconKey,
         embeddingModel,
         memoryExtractorProvider,
         memoryExtractorModel: memoryExtractorModel.trim(),
@@ -59,6 +64,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       } : {
         name: name.trim(),
         description: description.trim() || undefined,
+        iconKey,
       };
       await updateActiveWorkspace(updates);
       toast.success(t('workspace.updated'));
@@ -136,7 +142,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
           <IconButton
             key={tab.id}
             id={`workspace-settings-tab-${tab.id}`}
-            size="md"
+            size="lg"
             tone={isActive ? 'accent' : 'default'}
             onClick={() => setActiveTab(tab.id)}
             title={tab.label}
@@ -163,6 +169,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       }}
       title={activeWorkspace?.name ?? t('workspace.noActive')}
       eyebrow={t('workspace.settings.eyebrow')}
+      icon={<WorkspaceIcon iconKey={iconKey} size={30} />}
       closeLabel={t('settings.close')}
       widthClassName="max-w-xl"
       bodyClassName="px-6 py-6 md:px-8"
@@ -188,20 +195,33 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   aria-labelledby="workspace-settings-tab-general"
                   className="space-y-4"
                 >
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder={t('workspace.namePlaceholder')}
-                    className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    // eslint-disable-next-line jsx-a11y/no-autofocus -- finestra impostazioni aperta da un click esplicito
-                    autoFocus
-                  />
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t('workspace.descriptionPlaceholder')}
-                    className="min-h-24 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  />
+                  <WorkspaceIconPicker value={iconKey} onChange={setIconKey} />
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="workspace-settings-name" icon={<Type size={11} className="shrink-0 text-editorial-accent" />}>
+                      {t('workspace.nameLabel')}
+                    </FieldLabel>
+                    <input
+                      id="workspace-settings-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={t('workspace.namePlaceholder')}
+                      className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- finestra impostazioni aperta da un click esplicito
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="workspace-settings-description" icon={<AlignLeft size={11} className="shrink-0 text-editorial-accent" />}>
+                      {t('workspace.descriptionLabel')}
+                    </FieldLabel>
+                    <textarea
+                      id="workspace-settings-description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder={t('workspace.descriptionPlaceholder')}
+                      className="min-h-24 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -267,33 +287,31 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   aria-labelledby="workspace-settings-tab-backup"
                   className="space-y-6"
                 >
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                      {t('settings.backup')}
-                    </p>
+                  <div className="space-y-2">
+                    <SectionLabel icon={HardDrive} label={t('settings.backup')} />
                     <p className="mt-2 text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
                       {t('settings.backupHint')}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
+                  <div className="flex flex-wrap gap-2">
+                    <IconButton
+                      size="lg"
+                      tone="default"
                       onClick={() => void handleExportBackup()}
                       disabled={isBackupBusy}
-                      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors duration-150 hover:border-editorial-ink/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      title={t('settings.backupExport')}
                     >
-                      <Download size={13} />
-                      {t('settings.backupExport')}
-                    </button>
-                    <button
-                      type="button"
+                      <Download size={16} />
+                    </IconButton>
+                    <IconButton
+                      size="lg"
+                      tone="default"
                       onClick={() => void handleImportBackup()}
                       disabled={isBackupBusy}
-                      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors duration-150 hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      title={t('settings.backupImport')}
                     >
-                      <Upload size={13} />
-                      {t('settings.backupImport')}
-                    </button>
+                      <Upload size={16} />
+                    </IconButton>
                   </div>
                 </div>
               )}

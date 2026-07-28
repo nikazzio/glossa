@@ -9,6 +9,7 @@ import { confirm } from '../../stores/confirmStore';
 import { IconButton, SectionLabel } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
 import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
+import { WorkspaceIcon } from './WorkspaceIdentity';
 
 /**
  * Pagina del workspace attivo: identità, azioni e contenuto (oggi i progetti
@@ -78,9 +79,12 @@ export function WorkspaceOverview() {
         <section>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-                {activeWorkspace?.name ?? t('workspace.noActive')}
-              </h1>
+              <div className="flex items-center gap-3">
+                {activeWorkspace && <WorkspaceIcon iconKey={activeWorkspace.iconKey} size={32} className="shrink-0 text-editorial-accent" />}
+                <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+                  {activeWorkspace?.name ?? t('workspace.noActive')}
+                </h1>
+              </div>
               {activeWorkspace?.description ? (
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
                   {activeWorkspace.description}
@@ -146,7 +150,7 @@ export function WorkspaceOverview() {
                   className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                    <WorkspaceIcon iconKey={activeWorkspace?.iconKey} size={17} className="shrink-0 text-editorial-muted" />
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.name}
                     </span>

@@ -501,6 +501,9 @@ function ProjectsSection() {
       <SectionTitle>{t('help.projects.title')}</SectionTitle>
       <P>{t('help.projects.intro')}</P>
 
+      <SubTitle>{t('help.projects.workspaceIdentityTitle')}</SubTitle>
+      <P>{t('help.projects.workspaceIdentityDesc')}</P>
+
       <Step n={1} title={t('help.projects.createTitle')}>
         {t('help.projects.createDesc')}
       </Step>

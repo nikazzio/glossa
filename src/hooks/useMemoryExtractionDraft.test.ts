@@ -22,6 +22,7 @@ const mockListEntries = vi.mocked(listPhraseMemoryEntries);
 const workspace = {
   id: 'ws-1',
   name: 'Workspace',
+  iconKey: 'book' as const,
   embeddingModel: 'text-embedding-3-small' as const,
   memoryExtractorProvider: 'openai' as const,
   memoryExtractorModel: 'gpt-5-nano',

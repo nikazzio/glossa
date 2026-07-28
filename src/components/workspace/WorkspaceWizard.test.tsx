@@ -38,6 +38,7 @@ describe('WorkspaceWizard', () => {
         name: 'Editorial',
         description: undefined,
         embeddingModel: 'text-embedding-3-small',
+        iconKey: 'book',
       });
     });
   });

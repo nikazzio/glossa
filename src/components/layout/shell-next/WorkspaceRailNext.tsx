@@ -19,6 +19,7 @@ import { IconButton } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
 import { RailBrandToggle } from './RailBrandToggle';
+import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
 
 const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; enabled: boolean }> = [
   { id: 'translations', icon: BookOpenText, enabled: true },
@@ -164,19 +165,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
               labelFont="display"
               onClick={() => void handleOpenWorkspace(ws)}
               ariaCurrent={isCurrentView ? 'page' : undefined}
-              icon={
-                // Da collassata il pallino vive in uno slot h-9: righe alte quanto la barra progetto.
-                <span
-                  className={`inline-flex shrink-0 items-center justify-center ${collapsed ? 'h-9 w-9' : ''}`}
-                  aria-hidden="true"
-                >
-                  <span
-                    className={`rounded-full transition-colors duration-200 ${collapsed ? 'h-2.5 w-2.5' : 'h-2 w-2'} ${
-                      isCurrentView ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
-                    }`}
-                  />
-                </span>
-              }
+              icon={<WorkspaceIcon iconKey={ws.iconKey} size={collapsed ? 17 : 14} />}
               label={ws.name}
             />
           );
@@ -204,6 +193,7 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
           <DashboardItem collapsed />
           <AreaSection collapsed />
+          <WorkspaceSection collapsed />
         </div>
       </div>
     );

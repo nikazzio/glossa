@@ -8,6 +8,8 @@ import { confirm } from '../../stores/confirmStore';
 import { listAllProjects, type WorkspaceProject } from '../../services/projectService';
 import { IconButton, Spinner } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { WorkspaceIdentity } from './WorkspaceIdentity';
 
 type SortKey = 'updatedAt' | 'name';
 
@@ -17,6 +19,7 @@ export function TranslationsArea() {
   const { t, i18n } = useTranslation();
   const openProjectInWorkspace = useProjectStore((s) => s.openProjectInWorkspace);
   const removeProject = useProjectStore((s) => s.removeProject);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
 
   const [allProjects, setAllProjects] = useState<WorkspaceProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,6 +125,7 @@ export function TranslationsArea() {
           {sortedProjects.map((project) => {
             const isOpening = openingProjectId === project.id;
             const isDimmed = openingProjectId !== null && !isOpening;
+            const workspace = workspaces.find((item) => item.id === project.workspace_id);
             return (
               <motion.article
                 key={project.id}
@@ -151,31 +155,25 @@ export function TranslationsArea() {
                     onClick={() => void handleOpenProject(project)}
                     disabled={openingProjectId !== null}
                     aria-busy={isOpening}
-                    className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
+                    className="min-w-0 flex-1 pr-10 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
                   >
-                    <span className="flex items-start gap-3">
-                      <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
-                        isOpening
-                          ? 'border-editorial-accent/45 text-editorial-accent'
-                          : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
-                      }`}>
-                        <BookOpenText size={17} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-display text-xl italic text-editorial-ink">
+                    <span className="min-w-0">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <BookOpenText size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+                        <span className="truncate font-display text-xl italic text-editorial-ink">
                           {project.name}
                         </span>
-                        <span className="mt-1 flex items-center gap-2">
-                          <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                            {project.workspace_name}
-                          </span>
-                          <span className="text-xs text-editorial-muted">
-                            {formatSavedAt(project.updated_at)}
-                          </span>
+                      </span>
+                      <span className="mt-1 flex items-center gap-2">
+                        <span className="truncate text-xs text-editorial-muted">
+                          {workspace?.name ?? project.workspace_name}
                         </span>
-                        <span className="mt-2 block text-xs text-editorial-ink">
-                          {t('workspace.pipelineBadge', { count: project.pipeline_count })}
+                        <span className="text-xs text-editorial-muted">
+                          {formatSavedAt(project.updated_at)}
                         </span>
+                      </span>
+                      <span className="mt-2 block text-xs text-editorial-ink">
+                        {t('workspace.pipelineBadge', { count: project.pipeline_count })}
                       </span>
                     </span>
                   </button>
@@ -189,6 +187,18 @@ export function TranslationsArea() {
                   >
                     <Trash2 size={12} />
                   </IconButton>
+                  {workspace && (
+                    <WorkspaceIdentity
+                      workspace={workspace}
+                      iconOnly
+                      iconSize={22}
+                      className={`absolute bottom-0 right-0 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
+                        isOpening
+                          ? 'border-editorial-accent/45 text-editorial-accent'
+                          : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
+                      }`}
+                    />
+                  )}
                 </div>
               </motion.article>
             );
