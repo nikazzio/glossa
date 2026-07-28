@@ -65,6 +65,17 @@ riepilogo completo degli stati e degli eventuali conteggi.
 | Glossario assegnato alla pipeline | Progetto / pipeline |
 | Chunk, bozze, audit, note | Progetto / pipeline |
 
+## Riutilizzare un dizionario in un altro workspace
+
+Ogni dizionario appartiene a un solo workspace. Se vuoi partire da termini già
+raccolti altrove, apri la Libreria del workspace di destinazione e scegli
+**Copia un dizionario esistente**. La copia può essere rinominata e diventa
+indipendente: modificarla non modifica mai l'originale. Se apri la Libreria da
+un progetto, la copia viene anche assegnata a quel progetto.
+
+Non puoi eliminare un workspace finché contiene progetti o dizionari: prima
+spostali tramite copia oppure eliminali esplicitamente.
+
 ## Consigli sui nomi
 
 - Dai alle pipeline nomi basati sullo scopo, non solo sul provider

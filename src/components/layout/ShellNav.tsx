@@ -1,6 +1,6 @@
 import type { KeyboardEvent, ReactNode, Ref } from 'react';
 import { useState } from 'react';
-import { HelpCircle, Save, Settings, type LucideIcon } from 'lucide-react';
+import { HelpCircle, Library, Save, Settings, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
@@ -64,8 +64,8 @@ export function ShellNavFooter({
   const { currentProjectId, saveCurrentProject } = useProjectStore(
     useShallow((s) => ({ currentProjectId: s.currentProjectId, saveCurrentProject: s.saveCurrentProject })),
   );
-  const { dirtyIdsLength, saveAllDirty } = useLibraryStore(
-    useShallow((s) => ({ dirtyIdsLength: s.dirtyIds.length, saveAllDirty: s.saveAllDirty })),
+  const { dirtyIdsLength, saveAllDirty, setShowLibraryPanel } = useLibraryStore(
+    useShallow((s) => ({ dirtyIdsLength: s.dirtyIds.length, saveAllDirty: s.saveAllDirty, setShowLibraryPanel: s.setShowLibraryPanel })),
   );
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const [savingAll, setSavingAll] = useState(false);
@@ -125,6 +125,15 @@ export function ShellNavFooter({
         aria-busy={savingAll}
       >
         <Save size={15} />
+      </IconButton>
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => setShowLibraryPanel(true, undefined, 'global')}
+        title={t('library.openLibraryGlobal')}
+        tooltipSide="right"
+      >
+        <Library size={15} />
       </IconButton>
       <IconButton
         size="md"

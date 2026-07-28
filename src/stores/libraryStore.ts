@@ -12,10 +12,14 @@ import {
 } from '../services/glossaryService';
 
 export type LibraryTab = 'dictionaries' | 'templates' | 'memories';
+export const DEFAULT_LIBRARY_TAB: LibraryTab = 'dictionaries';
+/** 'workspace': solo dizionari del workspace attivo. 'global': catalogo cross-workspace in sola lettura. */
+export type LibraryScope = 'workspace' | 'global';
 
 interface LibraryState {
   showLibraryPanel: boolean;
   activeTab: LibraryTab;
+  libraryScope: LibraryScope;
   glossaries: Glossary[];
   isLoaded: boolean;
   loadedForWorkspaceId: string | null;
@@ -25,13 +29,13 @@ interface LibraryState {
   dirtyIds: string[];
   expandedGlossaryId: string | null;
 
-  setShowLibraryPanel: (show: boolean, tab?: LibraryTab) => void;
+  setShowLibraryPanel: (show: boolean, tab?: LibraryTab, scope?: LibraryScope) => void;
   loadGlossaries: (workspaceId: string | null) => Promise<void>;
   reloadGlossaries: (workspaceId: string | null) => Promise<void>;
-  createGlossary: (name: string, description?: string, sourceLang?: string, targetLang?: string, workspaceId?: string | null) => Promise<string>;
+  createGlossary: (name: string, description: string | undefined, sourceLang: string | undefined, targetLang: string | undefined, workspaceId: string) => Promise<string>;
   renameGlossary: (id: string, name: string) => Promise<void>;
   deleteGlossary: (id: string) => Promise<void>;
-  forkGlossary: (id: string, newName: string) => Promise<string>;
+  forkGlossary: (id: string, newName: string, destinationWorkspaceId: string) => Promise<string>;
   importCsv: (glossaryId: string, csvText: string, strategy: 'replace' | 'merge') => Promise<number>;
 
   // Entries management
@@ -52,6 +56,7 @@ let loadGlossariesRequestId = 0;
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   showLibraryPanel: false,
   activeTab: 'dictionaries',
+  libraryScope: 'workspace',
   glossaries: [],
   isLoaded: false,
   loadedForWorkspaceId: null,
@@ -59,8 +64,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   dirtyIds: [],
   expandedGlossaryId: null,
 
-  setShowLibraryPanel: (show, tab) => {
-    set({ showLibraryPanel: show, ...(tab ? { activeTab: tab } : {}) });
+  setShowLibraryPanel: (show, tab, scope) => {
+    set({
+      showLibraryPanel: show,
+      // Apertura fresca (nessun tab esplicito): riparte sempre dal primo
+      // tab, mai da quello lasciato aperto l'ultima volta.
+      ...(show ? { activeTab: tab ?? DEFAULT_LIBRARY_TAB } : {}),
+      ...(scope ? { libraryScope: scope } : show ? { libraryScope: 'workspace' } : {}),
+    });
   },
 
   loadGlossaries: async (workspaceId) => {
@@ -104,9 +115,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     });
   },
 
-  forkGlossary: async (id, newName) => {
-    const newId = await forkGlossary(id, newName);
-    await get().reloadGlossaries(get().loadedForWorkspaceId);
+  forkGlossary: async (id, newName, destinationWorkspaceId) => {
+    const newId = await forkGlossary(id, newName, destinationWorkspaceId);
+    await get().reloadGlossaries(destinationWorkspaceId);
     return newId;
   },
 

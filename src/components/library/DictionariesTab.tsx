@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -18,6 +18,7 @@ import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
+import { CopyGlossaryDialog } from './CopyGlossaryDialog';
 import { Dialog, DialogCancelButton, IconButton, Tooltip } from '../ui';
 
 export function DictionariesTab() {
@@ -37,15 +38,18 @@ export function DictionariesTab() {
     setExpandedGlossaryId,
     saveGlossaryEntries,
   } = useLibraryStore();
+  const { libraryScope } = useLibraryStore();
   const { config, assignGlossary } = usePipelineStore();
   const { currentProjectId } = useProjectStore();
-  const { activeWorkspace } = useWorkspaceStore();
+  const { activeWorkspace, workspaces } = useWorkspaceStore();
+  const isGlobalScope = libraryScope === 'global';
 
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [showImport, setShowImport] = useState(false);
+  const [showCopyExisting, setShowCopyExisting] = useState(false);
   const [exportTarget, setExportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const handleToggle = async (id: string) => {
@@ -75,9 +79,9 @@ export function DictionariesTab() {
   };
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !activeWorkspace) return;
     try {
-      await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace?.id ?? null);
+      await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace.id);
       setNewName('');
       setCreating(false);
     } catch (err: unknown) {
@@ -100,13 +104,33 @@ export function DictionariesTab() {
     }
   };
 
-  const handleFork = async (id: string, name: string) => {
+  const handleFork = async (id: string, name: string, destinationWorkspaceId?: string) => {
+    const workspaceId = destinationWorkspaceId ?? activeWorkspace?.id;
+    if (!workspaceId) return;
     try {
-      const newId = await forkGlossary(id, `${name} (copia)`);
+      const newId = await forkGlossary(id, `${name} (${t('library.copySuffix')})`, workspaceId);
       const forkedEntries = await getGlossaryEntries(newId);
       setGlossaryEntries(newId, forkedEntries);
     } catch (err: unknown) {
       toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
+    }
+  };
+
+  const handleCopyExisting = async (source: { id: string }, name: string) => {
+    if (!activeWorkspace) return;
+    try {
+      const newId = await forkGlossary(source.id, name, activeWorkspace.id);
+      const forkedEntries = await getGlossaryEntries(newId);
+      setGlossaryEntries(newId, forkedEntries);
+      setExpandedGlossaryId(newId);
+      if (currentProjectId) {
+        await assignGlossaryToProject(currentProjectId, newId);
+        await assignGlossary(newId);
+      }
+      toast.success(t('library.dictionaryCopied'));
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
+      throw err;
     }
   };
 
@@ -171,19 +195,23 @@ export function DictionariesTab() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
-            <Upload size={13} />
-          </IconButton>
-          <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
-            <Plus size={13} />
-          </IconButton>
+      {!isGlobalScope && activeWorkspace && (
+        <div className="flex justify-end">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
+              <Upload size={13} />
+            </IconButton>
+            <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
+              <Plus size={13} />
+            </IconButton>
+            <IconButton onClick={() => setShowCopyExisting(true)} title={t('library.copyExistingDictionary')}>
+              <Copy size={13} />
+            </IconButton>
+          </div>
         </div>
-      </div>
+      )}
 
-      {creating && (
+      {!isGlobalScope && creating && (
         <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
           <input
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
@@ -219,7 +247,10 @@ export function DictionariesTab() {
       <div className="space-y-3">
         {glossaries.map((g) => {
           const isExpanded = expandedGlossaryId === g.id;
-          const isAssigned = config.assignedGlossaryId === g.id;
+          // Fuori da un progetto aperto config.assignedGlossaryId puo' essere
+          // lo stato residuo dell'ultimo progetto visitato: senza un progetto
+          // aperto ora, "assegnato" non ha un soggetto reale da mostrare.
+          const isAssigned = Boolean(currentProjectId) && config.assignedGlossaryId === g.id;
           const isDirty = dirtyIds.includes(g.id);
 
           return (
@@ -250,6 +281,8 @@ export function DictionariesTab() {
                       onClick={(e) => e.stopPropagation()}
                       className="flex-1 border-b border-editorial-accent/60 bg-transparent text-sm font-display italic outline-none"
                     />
+                  ) : isGlobalScope ? (
+                    <span className="truncate font-display text-base italic text-editorial-ink">{g.name}</span>
                   ) : (
                     <Tooltip label={t('library.doubleClickRename')}>
                       <span
@@ -261,14 +294,27 @@ export function DictionariesTab() {
                     </Tooltip>
                   )}
                   {isAssigned && (
-                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
-                      {t('library.assignedBadge')}
-                    </span>
+                    <Tooltip label={t('library.assignedBadge')} side="top">
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-accent/15 text-editorial-accent">
+                        <Check size={11} />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {isGlobalScope && (
+                    <Tooltip
+                      label={g.workspaceId ? workspaces.find((w) => w.id === g.workspaceId)?.name ?? g.workspaceId : t('library.globalDictionaryBadge')}
+                      side="top"
+                    >
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted">
+                        <Building2 size={11} />
+                      </span>
+                    </Tooltip>
                   )}
                 </button>
 
+                {!isGlobalScope && (
                 <div className="flex shrink-0 items-center gap-1.5">
-                  {!isAssigned && (
+                  {!isAssigned && currentProjectId && (
                     <IconButton
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}
@@ -284,7 +330,7 @@ export function DictionariesTab() {
                     <Download size={13} />
                   </IconButton>
                   <IconButton
-                    onClick={() => handleFork(g.id, g.name)}
+                    onClick={() => void handleFork(g.id, g.name)}
                     title={t('library.forkDictionary')}
                     className="hover:bg-editorial-textbox/30"
                   >
@@ -299,6 +345,7 @@ export function DictionariesTab() {
                     <Trash2 size={13} />
                   </IconButton>
                 </div>
+                )}
               </div>
 
               {isExpanded && (
@@ -306,8 +353,9 @@ export function DictionariesTab() {
                   <DictionaryEntryEditor
                     entries={entriesMap[g.id] ?? []}
                     onChange={(entries) => handleEntriesChange(g.id, entries)}
+                    readOnly={isGlobalScope}
                   />
-                  {isDirty && (
+                  {!isGlobalScope && isDirty && (
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
@@ -325,11 +373,20 @@ export function DictionariesTab() {
         })}
       </div>
 
-      {showImport && (
+      {showImport && activeWorkspace && (
         <CsvImportDialog
-          workspaceId={activeWorkspace?.id ?? null}
+          workspaceId={activeWorkspace.id}
           onImported={handleImported}
           onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {activeWorkspace && (
+        <CopyGlossaryDialog
+          open={showCopyExisting}
+          destinationWorkspaceId={activeWorkspace.id}
+          onClose={() => setShowCopyExisting(false)}
+          onCopy={handleCopyExisting}
         />
       )}
 

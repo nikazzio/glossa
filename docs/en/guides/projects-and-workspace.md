@@ -65,6 +65,17 @@ and any related counts.
 | Glossary assigned to pipeline | Project / pipeline |
 | Chunks, drafts, audit output, notes | Project / pipeline |
 
+## Reusing a dictionary in another workspace
+
+Every dictionary belongs to one workspace. To start from terms collected
+elsewhere, open the destination workspace Library and choose **Copy an existing
+dictionary**. You can rename the copy and it becomes independent: editing it
+never changes the original. When the Library is opened from a project, the copy
+is also assigned to that project.
+
+You cannot delete a workspace while it contains projects or dictionaries. Copy
+or explicitly delete them first.
+
 ## Naming advice
 
 - Name pipelines by purpose, not by provider alone

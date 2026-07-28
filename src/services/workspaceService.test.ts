@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const dbMocks = vi.hoisted(() => ({
   execute: vi.fn().mockResolvedValue(undefined),
   select: vi.fn().mockResolvedValue([]),
+  runInTransaction: vi.fn(),
   getSetting: vi.fn().mockResolvedValue(null),
   setSetting: vi.fn().mockResolvedValue(undefined),
 }));
@@ -18,6 +19,9 @@ describe('workspaceService', () => {
     vi.clearAllMocks();
     dbMocks.execute.mockResolvedValue(undefined);
     dbMocks.select.mockResolvedValue([]);
+    dbMocks.runInTransaction.mockImplementation(async (callback: (run: typeof dbMocks.execute) => Promise<void>) => {
+      await callback(dbMocks.execute);
+    });
     dbMocks.getSetting.mockResolvedValue(null);
     dbMocks.setSetting.mockResolvedValue(undefined);
   });
@@ -66,5 +70,19 @@ describe('workspaceService', () => {
       'DELETE FROM phrase_memory WHERE workspace_id = $1',
       'DELETE FROM workspaces WHERE id = $1',
     ]);
+  });
+
+  it('deleteWorkspace keeps every child untouched when projects block deletion', async () => {
+    dbMocks.select.mockResolvedValueOnce([{ count: 1 }]).mockResolvedValueOnce([{ count: 0 }]);
+
+    await expect(deleteWorkspace('ws_abc123')).rejects.toThrow('workspace_has_projects');
+    expect(dbMocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('deleteWorkspace keeps every child untouched when dictionaries block deletion', async () => {
+    dbMocks.select.mockResolvedValueOnce([{ count: 0 }]).mockResolvedValueOnce([{ count: 1 }]);
+
+    await expect(deleteWorkspace('ws_abc123')).rejects.toThrow('workspace_has_glossaries');
+    expect(dbMocks.execute).not.toHaveBeenCalled();
   });
 });

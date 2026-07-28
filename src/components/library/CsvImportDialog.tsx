@@ -14,7 +14,7 @@ import {
 } from '../../services/glossaryService';
 
 interface Props {
-  workspaceId: string | null;
+  workspaceId: string;
   onImported: (glossaryId: string, count: number) => void;
   onClose: () => void;
 }

@@ -64,15 +64,15 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
     (isCreatingNew ? newGlossaryName.trim() !== '' : selectedGlossaryId !== null);
 
   const handleConfirm = async () => {
-    if (!canConfirm) return;
+    if (!canConfirm || (isCreatingNew && !activeWorkspace)) return;
     setIsSaving(true);
     try {
       let targetGlossaryId = selectedGlossaryId;
-      if (isCreatingNew) {
+      if (isCreatingNew && activeWorkspace) {
         // Riusa il glossario di un tentativo precedente fallito invece di ricrearlo.
         targetGlossaryId =
           createdGlossaryIdRef.current ??
-          (await createGlossary(newGlossaryName.trim(), '', '', '', activeWorkspace?.id ?? null));
+          (await createGlossary(newGlossaryName.trim(), '', '', '', activeWorkspace.id));
         createdGlossaryIdRef.current = targetGlossaryId;
       }
       if (!targetGlossaryId) return;
