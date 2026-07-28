@@ -4,7 +4,7 @@ title: Library and IIIF sources
 
 # Library and IIIF sources
 
-Library will collect research sources globally: the same source can be linked to more than one workspace without being duplicated.
+The Library will collect research sources globally: the same source can be linked to more than one workspace without being duplicated.
 
 ## Prepared collections
 
@@ -14,4 +14,4 @@ This list does not download material or change existing data.
 
 ## What comes next
 
-Searching for and resolving a source is the next step. You will then be able to add it to Library and link it to relevant workspaces. Linking it to a workspace will not create a copy of the source.
+Searching for and resolving a source is the next step. You will then be able to add it to the Library and link it to relevant workspaces. Linking it to a workspace will not create a copy of the source.

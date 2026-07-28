@@ -44,17 +44,20 @@ pub enum SearchHandlerKind {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderFilterOption {
     pub value: &'static str,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderFilter {
     pub key: &'static str,
     pub options: &'static [ProviderFilterOption],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IIIFProvider {
     pub key: &'static str,
     pub label: &'static str,
@@ -319,5 +322,16 @@ mod tests {
             .iter()
             .all(|provider| provider.is_enabled));
         assert_eq!(enabled_providers().len(), PROVIDERS.len());
+    }
+
+    #[test]
+    fn command_contract_uses_camel_case_fields() {
+        let provider = serde_json::to_value(find_provider("gallica").expect("provider exists"))
+            .expect("provider serializes");
+
+        assert!(provider.get("isEnabled").is_some());
+        assert!(provider.get("searchMode").is_some());
+        assert!(provider.get("searchHandler").is_some());
+        assert!(provider.get("supportsSearch").is_some());
     }
 }

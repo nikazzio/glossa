@@ -12,8 +12,8 @@ describe('LibraryCatalogArea', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockListIIIFProviders.mockResolvedValue([
-      { key: 'gallica', label: 'Gallica', placeholder: 'e.g. btv1b84260335', is_enabled: true, resolver: 'gallica', search_handler: 'gallica', search_mode: 'search_first', supports_search: true, supports_direct_resolution: true, aliases: ['bnf'], filters: [{ key: 'material_type', options: [] }] },
-      { key: 'generic', label: 'Direct IIIF URL', placeholder: 'e.g. https://example.org/manifest.json', is_enabled: true, resolver: 'generic', search_handler: null, search_mode: 'direct', supports_search: false, supports_direct_resolution: true, aliases: [], filters: [] },
+      { key: 'gallica', label: 'Gallica', placeholder: 'e.g. btv1b84260335', isEnabled: true, resolver: 'gallica', searchHandler: 'gallica', searchMode: 'search_first', supportsSearch: true, supportsDirectResolution: true, aliases: ['bnf'], filters: [{ key: 'material_type', options: [] }] },
+      { key: 'generic', label: 'Direct IIIF URL', placeholder: 'e.g. https://example.org/manifest.json', isEnabled: true, resolver: 'generic', searchHandler: null, searchMode: 'direct', supportsSearch: false, supportsDirectResolution: true, aliases: [], filters: [] },
     ]);
   });
 

@@ -29,8 +29,8 @@ export function LibraryCatalogArea() {
   }, []);
 
   const capabilityLabel = (provider: IIIFProvider) => {
-    if (!provider.supports_search) return t('areas.library.capabilities.direct');
-    return t(`areas.library.capabilities.${provider.search_mode}`);
+    if (!provider.supportsSearch) return t('areas.library.capabilities.direct');
+    return t(`areas.library.capabilities.${provider.searchMode}`);
   };
 
   return (
@@ -71,7 +71,7 @@ export function LibraryCatalogArea() {
                     <p className="mt-1 text-xs text-editorial-muted">{provider.placeholder}</p>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-editorial-charcoal">
-                    {provider.supports_search ? <Search size={13} aria-hidden="true" /> : <Link size={13} aria-hidden="true" />}
+                    {provider.supportsSearch ? <Search size={13} aria-hidden="true" /> : <Link size={13} aria-hidden="true" />}
                     <span>{capabilityLabel(provider)}</span>
                     {provider.filters.length > 0 && (
                       <span className="border-l border-editorial-border pl-2">

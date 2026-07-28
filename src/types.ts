@@ -25,12 +25,12 @@ export interface IIIFProvider {
   label: string;
   aliases: string[];
   placeholder: string;
-  is_enabled: boolean;
+  isEnabled: boolean;
   resolver: string;
-  search_handler: string | null;
-  search_mode: IIIFSearchMode;
-  supports_direct_resolution: boolean;
-  supports_search: boolean;
+  searchHandler: string | null;
+  searchMode: IIIFSearchMode;
+  supportsDirectResolution: boolean;
+  supportsSearch: boolean;
   filters: IIIFProviderFilter[];
 }
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
