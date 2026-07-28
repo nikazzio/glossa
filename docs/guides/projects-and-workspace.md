@@ -33,18 +33,25 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 
 La barra laterale si può richiudere per lasciare più spazio al contenuto. Nel progetto restano disponibili le frecce per passare al frammento precedente o successivo e il comando di traduzione; il numero tecnico del frammento non occupa più spazio nella barra. Nella Dashboard chiusa restano Dashboard, tutte le aree e le icone dei workspace: quelle non ancora disponibili sono visibili ma non selezionabili.
 
-In alto resta visibile il marchio Glossa. Al passaggio del mouse o con il focus
-da tastiera, il marchio diventa il pulsante per riaprire la barra; serve
-comunque un clic o l'attivazione da tastiera.
+Nella Dashboard chiusa, in alto resta visibile il marchio Glossa. Al passaggio
+del mouse o con il focus da tastiera, il marchio diventa il pulsante per
+riaprire la barra; serve comunque un clic o l'attivazione da tastiera. Dentro
+un progetto chiuso, quello stesso posto mostra invece il segno del workspace
+del progetto.
 
 ## Riconoscere un workspace
 
 Quando crei un workspace, scegli uno dei segni storico-editoriali disponibili,
 come manoscritto, penna, archivio o sigillo. Puoi cambiarlo in seguito dalle
-impostazioni del workspace. Lo stesso segno compare nella barra laterale, nel
-contesto del workspace, nella Libreria e nelle liste di progetti; passando il
-mouse sull'icona, oppure raggiungendola con la tastiera, resta disponibile il
-nome completo del workspace.
+impostazioni del workspace, insieme a nome e descrizione. Lo stesso segno,
+più evidente nelle liste progetto, compare nella barra laterale, nel contesto
+del workspace, nella Libreria e nelle liste di progetti; passando il mouse
+sull'icona, oppure raggiungendola con la tastiera, resta disponibile il nome
+completo del workspace. Nelle aree globali il segno affianca sempre l'icona
+più piccola del tipo di elemento, senza sostituirla. Questi segni sono distinti
+dalle icone che identificano le aree Traduzioni, Biblioteca, Trascrizioni e
+Analisi: le aree mantengono sempre i propri simboli. Non sono disponibili icone
+personalizzate.
 
 ## Indicatori dei frammenti
 

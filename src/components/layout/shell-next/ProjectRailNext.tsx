@@ -24,10 +24,12 @@ import { useProjectStore } from '../../../stores/projectStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { useConfigStore } from '../../../stores/configStore';
+import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { indexPad } from '../../../utils';
 import { IconButton } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
 import { RailBrandToggle } from './RailBrandToggle';
+import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
 
 export interface ProjectRailNextProps {
   collapsed: boolean;
@@ -310,6 +312,7 @@ export function ProjectRailNext({
   const setShowExportDialog = useUiStore((state) => state.setShowExportDialog);
   const setProjectContextCollapsed = useUiStore((state) => state.setProjectContextCollapsed);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
+  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
 
   if (collapsed) {
     return (
@@ -319,6 +322,7 @@ export function ProjectRailNext({
           <RailBrandToggle
             onExpand={() => setProjectContextCollapsed(false)}
             title={t('sidebar.expand')}
+            icon={activeWorkspace ? <WorkspaceIcon iconKey={activeWorkspace.iconKey} size={24} /> : undefined}
           />
         </div>
 

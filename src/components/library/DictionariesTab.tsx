@@ -304,11 +304,13 @@ export function DictionariesTab() {
                   {isGlobalScope && (
                     (() => {
                       const owner = g.workspaceId ? workspaces.find((workspace) => workspace.id === g.workspaceId) : null;
-                      return owner ? (
+                      if (owner) return (
                         <WorkspaceIdentity workspace={owner} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
-                      ) : (
-                        <Tooltip label={t('library.globalDictionaryBadge')} side="top"><span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted"><X size={11} /></span></Tooltip>
                       );
+                      if (g.workspaceId) return (
+                        <Tooltip label={g.workspaceId} side="top"><span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" aria-label={g.workspaceId}>?</span></Tooltip>
+                      );
+                      return <Tooltip label={t('library.globalDictionaryBadge')} side="top"><span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted"><X size={11} /></span></Tooltip>;
                     })()
                   )}
                 </button>

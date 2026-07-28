@@ -4,10 +4,15 @@ export const WORKSPACE_ICON_KEYS = [
   'quill',
   'archive',
   'library',
-  'map',
   'lens',
-  'compass',
   'seal',
+  'bookmark',
+  'feather',
+  'hourglass',
+  'leaf',
+  'anchor',
+  'siren',
+  'scrollQuill',
 ] as const;
 
 export type WorkspaceIconKey = typeof WORKSPACE_ICON_KEYS[number];

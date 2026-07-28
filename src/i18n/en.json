@@ -742,10 +742,15 @@
       "quill": "Quill",
       "archive": "Archive",
       "library": "Library",
-      "map": "Map",
       "lens": "Magnifying glass",
-      "compass": "Compass",
-      "seal": "Seal"
+      "seal": "Seal",
+      "bookmark": "Bookmark",
+      "feather": "Feather",
+      "hourglass": "Hourglass",
+      "leaf": "Aldine leaf",
+      "anchor": "Anchor",
+      "siren": "Siren",
+      "scrollQuill": "Scroll and quill"
     },
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
@@ -1254,6 +1259,8 @@
     "projects": {
       "title": "Projects",
       "intro": "Every translation project belongs to a workspace. Phrase Memory and glossaries can be shared by projects in the same workspace; configuration remains specific to the open pipeline. The Translations area lists projects from every workspace.",
+      "workspaceIdentityTitle": "Workspace mark",
+      "workspaceIdentityDesc": "In workspace settings, choose one of the available historical-editorial marks before the name and description. The mark identifies the workspace in project lists, the Library, and the side rail; in global areas it accompanies the smaller icon for the item's type. The Translations, Library, Transcriptions, and Analysis icons remain reserved for their respective areas; custom icons are not available.",
       "createTitle": "Create a project",
       "createDesc": "You can create a project from a workspace page or the Translations area; the workspace page also lets you open or delete its projects. The new project is created in the workspace you choose.",
       "saveTitle": "Save your work",
@@ -1263,7 +1270,7 @@
       "autosaveTitle": "Autosave",
       "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
       "backupTitle": "Backup and restore",
-      "backupDesc": "In Workspace Settings, the Backup tab exports or imports local state through a .glossa-backup file. Before showing confirmation or touching any data, Glossa verifies that the file is complete, intact, and compatible: an altered, incomplete, or newer-version backup is rejected without changing the current work."
+      "backupDesc": "In Workspace Settings, the Backup tab exports or imports local state through a .glossa-backup file. The two commands are circular icons: hover them or reach them with the keyboard to read their descriptions. Before showing confirmation or touching any data, Glossa verifies that the file is complete, intact, and compatible: an altered, incomplete, or newer-version backup is rejected without changing the current work."
     },
     "providers": {
       "title": "LLM providers",

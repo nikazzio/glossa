@@ -150,7 +150,7 @@ export function WorkspaceOverview() {
                   className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                    <WorkspaceIcon iconKey={activeWorkspace?.iconKey} size={17} className="shrink-0 text-editorial-muted" />
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.name}
                     </span>

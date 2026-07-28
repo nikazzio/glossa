@@ -1,30 +1,38 @@
-import type { ComponentType } from 'react';
-import { BookOpenText, Compass, LibraryBig } from 'lucide-react';
 import { Icon as OfflineIcon } from '@iconify/react/offline';
+import anchor from '@iconify-icons/game-icons/anchor';
 import archiveResearch from '@iconify-icons/game-icons/archive-research';
+import bookmark from '@iconify-icons/game-icons/bookmark';
+import curledLeaf from '@iconify-icons/game-icons/curled-leaf';
+import feather from '@iconify-icons/game-icons/feather';
+import hourglass from '@iconify-icons/game-icons/hourglass';
 import magnifyingGlass from '@iconify-icons/game-icons/magnifying-glass';
+import mermaid from '@iconify-icons/game-icons/mermaid';
+import openBook from '@iconify-icons/game-icons/open-book';
 import quillInk from '@iconify-icons/game-icons/quill-ink';
+import scrollQuill from '@iconify-icons/game-icons/scroll-quill';
 import scrollUnfurled from '@iconify-icons/game-icons/scroll-unfurled';
-import treasureMap from '@iconify-icons/game-icons/treasure-map';
+import tiedScroll from '@iconify-icons/game-icons/tied-scroll';
 import waxSeal from '@iconify-icons/game-icons/wax-seal';
 import { useTranslation } from 'react-i18next';
 import type { Workspace } from '../../types';
-import { IconButton, Tooltip } from '../ui';
+import { FieldLabel, IconButton, Tooltip } from '../ui';
 import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, WORKSPACE_ICON_KEYS, type WorkspaceIconKey } from '../../workspaceIdentity';
 
 const GAME_ICONS: Partial<Record<WorkspaceIconKey, typeof archiveResearch>> = {
   manuscript: scrollUnfurled,
+  book: openBook,
   quill: quillInk,
   archive: archiveResearch,
-  map: treasureMap,
+  library: tiedScroll,
   lens: magnifyingGlass,
   seal: waxSeal,
-};
-
-const LUCIDE_ICONS: Partial<Record<WorkspaceIconKey, ComponentType<{ size?: number; className?: string }>>> = {
-  book: BookOpenText,
-  library: LibraryBig,
-  compass: Compass,
+  bookmark,
+  feather,
+  hourglass,
+  leaf: curledLeaf,
+  anchor,
+  siren: mermaid,
+  scrollQuill,
 };
 
 export function WorkspaceIcon({ iconKey, size = 16, className }: {
@@ -33,12 +41,7 @@ export function WorkspaceIcon({ iconKey, size = 16, className }: {
   className?: string;
 }) {
   const key = isWorkspaceIconKey(iconKey) ? iconKey : DEFAULT_WORKSPACE_ICON;
-  const gameIcon = GAME_ICONS[key];
-  if (gameIcon) {
-    return <OfflineIcon icon={gameIcon} width={size} height={size} className={className} aria-hidden="true" />;
-  }
-  const LucideIcon = LUCIDE_ICONS[key] ?? BookOpenText;
-  return <LucideIcon size={size} className={className} aria-hidden="true" />;
+  return <OfflineIcon icon={GAME_ICONS[key] ?? openBook} width={size} height={size} className={className} aria-hidden="true" />;
 }
 
 export { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, WORKSPACE_ICON_KEYS, type WorkspaceIconKey } from '../../workspaceIdentity';
@@ -56,7 +59,10 @@ export function WorkspaceIdentity({ workspace, iconSize = 15, className, iconOnl
   if (iconOnly) {
     return (
       <Tooltip label={workspace.name} side="top">
-        <span className={className} aria-label={workspace.name}>{icon}</span>
+        <span className={className} aria-label={workspace.name}>
+          {icon}
+          <span className="sr-only">{workspace.name}</span>
+        </span>
       </Tooltip>
     );
   }
@@ -75,21 +81,21 @@ export function WorkspaceIconPicker({ value, onChange }: {
   const { t } = useTranslation();
   return (
     <div className="space-y-2">
-      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+      <FieldLabel icon={<WorkspaceIcon iconKey={value} size={12} className="shrink-0 text-editorial-accent" />}>
         {t('workspace.iconLabel')}
-      </p>
-      <div className="grid grid-cols-5 gap-1 border-y border-editorial-border/70 py-2 sm:grid-cols-9" role="group" aria-label={t('workspace.iconLabel')}>
+      </FieldLabel>
+      <div className="grid grid-cols-4 gap-1.5 border-y border-editorial-border/70 py-3 sm:grid-cols-7" role="group" aria-label={t('workspace.iconLabel')}>
         {WORKSPACE_ICON_KEYS.map((iconKey) => (
           <IconButton
             key={iconKey}
-            size="md"
+            size="lg"
             tone={value === iconKey ? 'accent' : 'default'}
             onClick={() => onChange(iconKey)}
             title={t(`workspace.icons.${iconKey}`)}
             ariaPressed={value === iconKey}
             ariaLabel={t(`workspace.icons.${iconKey}`)}
           >
-            <WorkspaceIcon iconKey={iconKey} size={15} />
+            <WorkspaceIcon iconKey={iconKey} size={20} />
           </IconButton>
         ))}
       </div>

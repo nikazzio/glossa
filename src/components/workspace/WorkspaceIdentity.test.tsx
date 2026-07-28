@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { WorkspaceIconPicker, WorkspaceIdentity } from './WorkspaceIdentity';
+import { WORKSPACE_ICON_KEYS } from '../../workspaceIdentity';
 
 describe('Workspace identity', () => {
   it('exposes each preset choice with an accessible name', () => {
@@ -9,6 +10,9 @@ describe('Workspace identity', () => {
 
     expect(screen.getByRole('button', { name: 'workspace.icons.manuscript' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'workspace.icons.seal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'workspace.icons.siren' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'workspace.icons.leaf' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(WORKSPACE_ICON_KEYS.length);
   });
 
   it('selects a new preset icon', async () => {

@@ -1,6 +1,6 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-07-25
+Ultimo aggiornamento: 2026-07-28
 
 ## Principio guida
 
@@ -49,6 +49,8 @@ workspace sono raccolte operative trasversali degli stessi oggetti canonici.
 - #207 - epic research workspace multi-testo.
 - #213 - risorse condivise e regole di scope.
 - #210 - shell 2.0 Library / Studio / Translation.
+- #390 - identità visiva workspace completata: segni storico-editoriali preset,
+  distinti dalle icone delle aree globali.
 - #186 - interoperabilità e migrazione graduale da Scriptoria.
 
 Obiettivo: prima dati e shell, poi feature. Nessuna discovery, viewer o OCR avanzato prima che workspace, item, asset, documenti e progetti siano modellati.

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { WorkspaceIconKey } from '../workspaceIdentity';
 
 const dbMocks = vi.hoisted(() => ({
   execute: vi.fn().mockResolvedValue(undefined),
@@ -69,6 +70,20 @@ describe('workspaceService', () => {
     expect(dbMocks.execute).toHaveBeenCalledWith(
       'UPDATE workspaces SET name = $1, description = $2, embedding_model = $3 WHERE id = $4',
       ['Updated', null, 'text-embedding-3-large', 'ws_abc123'],
+    );
+  });
+
+  it('persists and validates an updated preset icon key', async () => {
+    await updateWorkspace('ws_abc123', { iconKey: 'anchor' });
+    expect(dbMocks.execute).toHaveBeenLastCalledWith(
+      'UPDATE workspaces SET icon_key = $1 WHERE id = $2',
+      ['anchor', 'ws_abc123'],
+    );
+
+    await updateWorkspace('ws_abc123', { iconKey: 'invalid' as WorkspaceIconKey });
+    expect(dbMocks.execute).toHaveBeenLastCalledWith(
+      'UPDATE workspaces SET icon_key = $1 WHERE id = $2',
+      ['book', 'ws_abc123'],
     );
   });
 

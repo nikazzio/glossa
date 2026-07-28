@@ -155,31 +155,25 @@ export function TranslationsArea() {
                     onClick={() => void handleOpenProject(project)}
                     disabled={openingProjectId !== null}
                     aria-busy={isOpening}
-                    className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
+                    className="min-w-0 flex-1 pr-10 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
                   >
-                    <span className="flex items-start gap-3">
-                      <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
-                        isOpening
-                          ? 'border-editorial-accent/45 text-editorial-accent'
-                          : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
-                      }`}>
-                        <BookOpenText size={17} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-display text-xl italic text-editorial-ink">
+                    <span className="min-w-0">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <BookOpenText size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+                        <span className="truncate font-display text-xl italic text-editorial-ink">
                           {project.name}
                         </span>
-                        <span className="mt-1 flex items-center gap-2">
-                          {workspace ? (
-                            <WorkspaceIdentity workspace={workspace} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
-                          ) : <span className="sr-only">{project.workspace_name}</span>}
-                          <span className="text-xs text-editorial-muted">
-                            {formatSavedAt(project.updated_at)}
-                          </span>
+                      </span>
+                      <span className="mt-1 flex items-center gap-2">
+                        <span className="truncate text-xs text-editorial-muted">
+                          {workspace?.name ?? project.workspace_name}
                         </span>
-                        <span className="mt-2 block text-xs text-editorial-ink">
-                          {t('workspace.pipelineBadge', { count: project.pipeline_count })}
+                        <span className="text-xs text-editorial-muted">
+                          {formatSavedAt(project.updated_at)}
                         </span>
+                      </span>
+                      <span className="mt-2 block text-xs text-editorial-ink">
+                        {t('workspace.pipelineBadge', { count: project.pipeline_count })}
                       </span>
                     </span>
                   </button>
@@ -193,6 +187,18 @@ export function TranslationsArea() {
                   >
                     <Trash2 size={12} />
                   </IconButton>
+                  {workspace && (
+                    <WorkspaceIdentity
+                      workspace={workspace}
+                      iconOnly
+                      iconSize={22}
+                      className={`absolute bottom-0 right-0 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
+                        isOpening
+                          ? 'border-editorial-accent/45 text-editorial-accent'
+                          : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
+                      }`}
+                    />
+                  )}
                 </div>
               </motion.article>
             );
