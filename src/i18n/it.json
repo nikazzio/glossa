@@ -676,7 +676,21 @@
       "title": "Biblioteca",
       "sidebarHint": "Testi e catalogo",
       "emptyMessage": "Il catalogo Biblioteca non ha ancora contenuto.",
-      "emptyHint": "Arriverà con le fonti e i libri collegabili ai workspace."
+      "emptyHint": "Arriverà con le fonti e i libri collegabili ai workspace.",
+      "providersLabel": "Archivi disponibili",
+      "providersIntro": "Glossa ha riconosciuto gli archivi IIIF da cui potrà cercare o aprire una fonte.",
+      "providersCount_one": "{{count}} archivio predisposto",
+      "providersCount_other": "{{count}} archivi predisposti",
+      "filtersAvailable_one": "{{count}} filtro disponibile",
+      "filtersAvailable_other": "{{count}} filtri disponibili",
+      "providersNext": "La ricerca e l'aggiunta delle fonti arriveranno nei prossimi passi della Biblioteca.",
+      "registryError": "Non riesco a leggere gli archivi disponibili.",
+      "registryErrorHint": "Riprova ad aprire la Biblioteca. Le fonti già salvate non vengono modificate.",
+      "capabilities": {
+        "direct": "Apri un URL IIIF",
+        "fallback": "Apri ID o cerca",
+        "search_first": "Cerca o apri ID"
+      }
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1314,6 +1328,8 @@
       "intro": "La Libreria (pulsante nella barra del workspace) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
       "libraryTitle": "Dizionari del workspace",
       "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna.",
+      "iiifTitle": "Biblioteca delle fonti",
+      "iiifDesc": "L'area Biblioteca mostra gli archivi digitali predisposti per cercare o aprire fonti IIIF. In questo passaggio puoi vedere quali archivi saranno disponibili e se accettano una ricerca, un identificatore o un URL; la ricerca e l'aggiunta della fonte arriveranno nei prossimi aggiornamenti della Biblioteca.",
       "csvTitle": "Importa da CSV/TSV",
       "csvDesc": "Il pulsante Upload accanto a ogni dizionario apre un wizard che mostra l'anteprima delle prime righe e chiede la strategia: 'Aggiungi/aggiorna' integra senza toccare i termini esistenti, 'Sostituisci tutto' cancella e reimporta. Le intestazioni riconosciute sono termine/source/from per il termine sorgente, traduzione/target/to per la traduzione (case-insensitive); la colonna notes è opzionale.",
       "projectTitle": "Glossario per progetto",

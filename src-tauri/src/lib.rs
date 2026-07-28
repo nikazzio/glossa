@@ -1,6 +1,7 @@
 mod db;
 mod deepl;
 mod documents;
+mod iiif;
 mod keystore;
 mod llm;
 mod storage_config;
@@ -142,6 +143,7 @@ pub fn run() {
             deepl::commands::list_deepl_glossaries,
             deepl::commands::create_deepl_glossary,
             deepl::commands::delete_deepl_glossary,
+            iiif::list_iiif_providers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

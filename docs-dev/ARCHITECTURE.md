@@ -553,6 +553,18 @@ provenance_events  ← registro append-only unico, cross-dominio (#378)
 - ✅ Persistito workspace: progetti, configurazione extractor Phrase Memory, memoria frasi
 - ❌ Solo in-memory: token stream real-time (ricostruito da stage_results su resume)
 
+### Registry IIIF (#214)
+
+`src-tauri/src/iiif/mod.rs` possiede il catalogo ordinato dei provider IIIF.
+Ogni descriptor espone chiave stabile, nome, alias, placeholder, modalità
+(`direct`, `fallback`, `search_first`), flag `is_enabled`, nomi stabili di
+resolver e handler search, capacità direct/search e filtri dichiarativi.
+`find_provider` normalizza le chiavi e gli alias; #215 aggancerà implementazioni
+a questi nomi nello stesso registry, senza ramificazioni per provider nella UI.
+Il comando `list_iiif_providers` espone al frontend solo provider abilitati e il
+contratto dichiarativo, letto da `iiifProviderService`; la Biblioteca mostra
+quindi capacità reali ma non avvia ancora chiamate a cataloghi remoti.
+
 ---
 
 ## Performance frontend

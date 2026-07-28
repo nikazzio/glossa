@@ -608,6 +608,9 @@ function GlossarySection() {
       <SubTitle>{t('help.glossary.libraryTitle')}</SubTitle>
       <P>{t('help.glossary.libraryDesc')}</P>
 
+      <SubTitle>{t('help.glossary.iiifTitle')}</SubTitle>
+      <P>{t('help.glossary.iiifDesc')}</P>
+
       <SubTitle>{t('help.glossary.csvTitle')}</SubTitle>
       <P>{t('help.glossary.csvDesc')}</P>
 
