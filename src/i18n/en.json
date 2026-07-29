@@ -453,6 +453,7 @@
     "discoveryResultsLayout": "Cards per row",
     "discoveryResultsThree": "Three cards",
     "discoveryResultsFour": "Four cards",
+    "discoveryResultsList": "List",
     "uiFont": "Interface font",
     "uiFontHint": "Choose the typeface for the whole interface. Editorial serif values are unaffected.",
     "accentColor": "Accent color",
@@ -650,6 +651,7 @@
     "firstSaveDescription": "You are working in an unsaved session. Give the project a name to persist text, configuration, glossary, and results.",
     "createAndSave": "Create and save",
     "namePlaceholder": "Project name...",
+    "chooseWorkspace": "Choose workspace",
     "empty": "No projects yet. Create one to save your work.",
     "delete": "Delete",
     "confirmDeleteTitle": "Delete this project?",
@@ -680,7 +682,11 @@
       "title": "Library",
       "sidebarHint": "Texts and catalogues",
       "emptyMessage": "Your Library is still empty.",
-      "emptyHint": "Sources you add from Dashboard will appear here."
+      "emptyHint": "Sources you add from Dashboard will appear here.",
+      "kind": "Type",
+      "linkWorkspace": "Link to {{name}}",
+      "unlinkWorkspace": "Unlink from {{name}}",
+      "linkedWorkspaces": "Linked workspaces"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -799,7 +805,13 @@
       "language": "Language",
       "type": "Type",
       "collection": "Collection",
-      "subjects": "Subjects"
+      "subjects": "Subjects",
+      "addToLibrary": "Add to Library",
+      "alreadyInLibrary": "Already in Library",
+      "addToLibraryFailed": "Adding to Library failed. Try again.",
+      "addToWorkspace": "Add to a workspace",
+      "noWorkspaces": "No workspace available. Create one before linking a source.",
+      "viewOptions": "View"
     },
     "stats": {
       "projects": "Projects",

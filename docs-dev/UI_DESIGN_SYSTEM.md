@@ -159,6 +159,36 @@ Regole:
 
 ---
 
+### ClickPopover — pannello a comparsa per poche opzioni (OBBLIGATORIO)
+
+Per scegliere fra poche opzioni **senza aprire una finestra modale intera**: cambio pipeline, modalità di visualizzazione risultati, e casi analoghi. Ancorato a un trigger reale (`IconButton`), si apre/chiude al click — diverso da `Popover` (quello apre a hover, per dettagli non interattivi) e da `Menu` (quello ancora a coordinate virtuali, per menu contestuali).
+
+```tsx
+import { ClickPopover, IconButton } from '../ui';
+
+const [open, setOpen] = useState(false);
+
+<ClickPopover
+  open={open}
+  onOpenChange={setOpen}
+  trigger={
+    <IconButton title={t('...')} onClick={() => setOpen((o) => !o)} ariaPressed={open}>
+      <SomeIcon size={16} />
+    </IconButton>
+  }
+>
+  {/* righe/opzioni: bottoni pieni larghezza, o gruppo IconButton radiogroup */}
+</ClickPopover>
+```
+
+Regole:
+- Il chiamante gestisce sempre `open`/`onOpenChange` (stato esplicito, non interno al componente).
+- Trigger sempre un `IconButton` con `ariaPressed={open}` (è un toggle apertura/chiusura).
+- z-index `z-[210]` (sopra finestre), incluso di default — non serve override.
+- Contenuto: righe piatte con hover (stesso stile liste dentro `Dialog`) oppure gruppo `IconButton` radiogroup — mai reintrodurre `Popover.Root` Radix a mano altrove.
+
+---
+
 ### Badge numerico rotondo con tooltip — conteggi compatti non interattivi
 
 Conteggi compatti dove basta colore + numero (es. numero note su frammento nell'Indice), no etichetta testuale a fianco: pallino colorato con numero dentro, descrizione completa in `Tooltip` all'hover.

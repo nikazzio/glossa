@@ -1,28 +1,110 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { BookOpenText, ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, IconButton, SectionLabel, Select, Spinner } from '../ui';
+import { ClickPopover, Dialog, IconButton, Select, Spinner } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
-import type { IIIFDiscoveryOutcome, IIIFDiscoveryResult, IIIFManifestPreview, IIIFProvider } from '../../types';
-import { useUiStore } from '../../stores/uiStore';
+import type { IIIFDiscoveryResult, IIIFManifestPreview, IIIFProvider } from '../../types';
+import { useUiStore, type DiscoveryResultsPerRow } from '../../stores/uiStore';
+import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
+import { EASE_EDITORIAL } from '../layout/motion';
 
 const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org']);
-type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
+export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
 
-function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
+export function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
   return 'itemCount' in card;
 }
 
-function SourceCardView({ card, providerLabel, expanded, onToggle }: { card: SourceCard; providerLabel: string; expanded: boolean; onToggle: () => void }) {
+const VIEW_OPTIONS: ReadonlyArray<{ value: DiscoveryResultsPerRow; labelKey: string; icon: ReactNode }> = [
+  { value: 3, labelKey: 'settings.discoveryResultsThree', icon: <GridGlyph columns={3} /> },
+  { value: 4, labelKey: 'settings.discoveryResultsFour', icon: <GridGlyph columns={4} /> },
+  { value: 'list', labelKey: 'settings.discoveryResultsList', icon: <List size={14} /> },
+];
+
+function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
+  const mediaType = !isManifest(card) ? card.mediaType : null;
+  return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
+  return rows;
+}
+
+/** L'espansione resta sempre nella riga in cui si trova (mai a capo da sola):
+ * prende `columns - 1` unità su `columns` totali, gli altri item della stessa
+ * riga si dividono l'unità restante — funziona qualunque sia la sua posizione
+ * nella riga (prima, in mezzo o ultima), perché la riga è un flex box a
+ * larghezza fissa, non una griglia che può mandare a capo. */
+function flexBasis(isExpandedCard: boolean, expandedInThisRow: boolean, columns: number): string {
+  if (!expandedInThisRow) return '1 1 0%';
+  if (isExpandedCard) return `${columns - 1} 1 0%`;
+  return `${1 / (columns - 1)} 1 0%`;
+}
+
+interface CardActionsProps {
+  adding: boolean;
+  alreadyAdded: boolean;
+  onAddToLibrary: () => void;
+  onAddToWorkspace: () => void;
+}
+
+function CardActions({ adding, alreadyAdded, onAddToLibrary, onAddToWorkspace }: CardActionsProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <IconButton
+        title={alreadyAdded ? t('dashboard.discovery.alreadyInLibrary') : t('dashboard.discovery.addToLibrary')}
+        onClick={onAddToLibrary}
+        disabled={adding || alreadyAdded}
+        size="sm"
+        tone={alreadyAdded ? 'success' : 'default'}
+      >
+        {adding ? <Spinner size={14} /> : alreadyAdded ? <Check size={14} /> : <BookPlus size={14} />}
+      </IconButton>
+      <IconButton
+        title={t('dashboard.discovery.addToWorkspace')}
+        onClick={onAddToWorkspace}
+        disabled={adding}
+        size="sm"
+      >
+        <FolderPlus size={14} />
+      </IconButton>
+    </div>
+  );
+}
+
+interface CardViewProps {
+  card: SourceCard;
+  providerLabel: string;
+  expanded: boolean;
+  flexBasis: string;
+  onToggle: () => void;
+  onAddToLibrary: () => void;
+  onAddToWorkspace: () => void;
+  adding: boolean;
+  alreadyAdded: boolean;
+}
+
+function SourceCardView({ card, providerLabel, expanded, flexBasis: basis, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
 
   return (
     <motion.article
       layout
-      className={`group overflow-hidden rounded-[20px] border border-editorial-border bg-surface-elevated text-left transition-colors hover:border-editorial-accent/45 ${expanded ? 'sm:col-span-full' : ''}`}
+      style={{ flex: basis, minWidth: 0 }}
+      transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
+      className="overflow-hidden rounded-[20px] border border-editorial-border bg-surface-elevated text-left transition-colors hover:border-editorial-accent/45"
     >
+      <div className="flex items-center justify-between gap-2 border-b border-editorial-border/70 px-3 py-1.5">
+        <span className="truncate text-[11px] uppercase tracking-[0.1em] text-editorial-muted">{providerLabel}</span>
+        <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />
+      </div>
       <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
         <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox ${expanded ? 'h-44 w-32' : 'h-28 w-20'}`}>
           {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={20} className="text-editorial-muted" aria-hidden="true" />}
@@ -32,7 +114,6 @@ function SourceCardView({ card, providerLabel, expanded, onToggle }: { card: Sou
           {card.creator && <span className="mt-2 block line-clamp-2 text-sm text-editorial-charcoal"><span className="text-editorial-muted">{t('dashboard.discovery.by')}</span> {card.creator}</span>}
           {card.date && <span className="mt-1 block text-xs text-editorial-muted"><span>{t('dashboard.discovery.published')}</span> {card.date}</span>}
           {card.volume && <span className="mt-1 block text-xs text-editorial-muted"><span>{t('dashboard.discovery.volume')}</span> {card.volume}</span>}
-          <span className="mt-2 block text-xs text-editorial-muted">{providerLabel}</span>
         </span>
       </button>
       <AnimatePresence initial={false}>
@@ -57,27 +138,83 @@ function SourceCardView({ card, providerLabel, expanded, onToggle }: { card: Sou
   );
 }
 
+function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'flexBasis'>) {
+  const { t } = useTranslation();
+  const title = card.title || t('dashboard.discovery.untitled');
+
+  return (
+    <motion.article layout transition={{ duration: 0.28, ease: EASE_EDITORIAL }} className="border-b border-editorial-border/70">
+      <div className={`flex gap-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>
+        <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex min-w-0 flex-1 flex-col text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+          {expanded ? (
+            <>
+              <span className="font-display italic text-editorial-ink">{title}</span>
+              <span className="mt-0.5 text-xs text-editorial-muted">
+                {card.creator && <>{card.creator} · </>}
+                {card.date && <>{card.date} · </>}
+                {sourceTypeLabel(card, providerLabel)}
+              </span>
+            </>
+          ) : (
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-display italic text-editorial-ink">{title}</span>
+                {card.creator && <span className="text-editorial-charcoal"> — {card.creator}</span>}
+              </span>
+              {card.date && <span className="shrink-0 text-xs text-editorial-muted">{card.date}</span>}
+              <span className="hidden shrink-0 text-xs text-editorial-muted sm:inline">{sourceTypeLabel(card, providerLabel)}</span>
+            </span>
+          )}
+        </button>
+        <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />
+      </div>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
+            <div className="pb-3 pl-1 pr-3">
+              {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80">{card.description}</p>}
+              {card.subjects.length > 0 && <p className="mt-2 text-xs leading-relaxed text-editorial-muted"><span className="text-editorial-ink">{t('dashboard.discovery.subjects')}:</span> {card.subjects.join(' · ')}</p>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.article>
+  );
+}
+
 export function SourceDiscoveryPanel() {
   const { t } = useTranslation();
   const resultsPerRow = useUiStore((state) => state.discoveryResultsPerRow);
   const setResultsPerRow = useUiStore((state) => state.setDiscoveryResultsPerRow);
   const [providers, setProviders] = useState<IIIFProvider[]>([]);
-  const [providerKey, setProviderKey] = useState('archive_org');
-  const [input, setInput] = useState('');
-  const [outcome, setOutcome] = useState<IIIFDiscoveryOutcome | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const providerKey = useDiscoverySearchStore((state) => state.providerKey);
+  const setProviderKey = useDiscoverySearchStore((state) => state.setProviderKey);
+  const input = useDiscoverySearchStore((state) => state.input);
+  const setInput = useDiscoverySearchStore((state) => state.setInput);
+  const outcome = useDiscoverySearchStore((state) => state.outcome);
+  const setOutcome = useDiscoverySearchStore((state) => state.setOutcome);
+  const page = useDiscoverySearchStore((state) => state.page);
+  const setPage = useDiscoverySearchStore((state) => state.setPage);
+  const expandedId = useDiscoverySearchStore((state) => state.expandedId);
+  const setExpandedId = useDiscoverySearchStore((state) => state.setExpandedId);
+  const searchError = useDiscoverySearchStore((state) => state.searchError);
+  const setSearchError = useDiscoverySearchStore((state) => state.setSearchError);
   const [showLayoutOptions, setShowLayoutOptions] = useState(false);
+  const [workspacePickerCard, setWorkspacePickerCard] = useState<SourceCard | null>(null);
+  const workspaces = useWorkspaceStore((state) => state.workspaces);
+  const addingUrls = useSourceLibraryStore((state) => state.addingUrls);
+  const addedManifestUrls = useSourceLibraryStore((state) => state.addedManifestUrls);
+  const addFromDiscovery = useSourceLibraryStore((state) => state.addFromDiscovery);
 
   useEffect(() => {
     listIIIFProviders()
       .then((items) => {
         const ready = items.filter((provider) => READY_DISCOVERY_PROVIDERS.has(provider.key));
         setProviders(ready);
-        setProviderKey((current) => ready.some((provider) => provider.key === current) ? current : (ready[0]?.key ?? current));
+        const current = useDiscoverySearchStore.getState().providerKey;
+        if (!ready.some((provider) => provider.key === current) && ready[0]) setProviderKey(ready[0].key);
       })
       .catch(() => setProviders([]))
       .finally(() => setLoading(false));
@@ -88,6 +225,8 @@ export function SourceDiscoveryPanel() {
     if (!outcome) return [];
     return outcome.manifest ? [{ ...outcome.manifest, id: outcome.manifest.manifestUrl }] : outcome.results;
   }, [outcome]);
+  const isListView = resultsPerRow === 'list';
+  const rows = useMemo(() => isListView ? [] : chunk(cards, resultsPerRow === 4 ? 4 : 3), [cards, isListView, resultsPerRow]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -113,7 +252,7 @@ export function SourceDiscoveryPanel() {
     setSearchError(false);
     try {
       const next = await discoverIIIF(providerKey, input.trim(), nextPage);
-      setOutcome((current) => current ? { ...next, results: [...current.results, ...next.results] } : next);
+      setOutcome(outcome ? { ...next, results: [...outcome.results, ...next.results] } : next);
       setPage(nextPage);
     } catch {
       setSearchError(true);
@@ -130,9 +269,41 @@ export function SourceDiscoveryPanel() {
         <IconButton title={t('dashboard.discovery.submit')} type="submit" disabled={loading || searching || !input.trim()}>
           {searching ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
-        <IconButton title={t('settings.discoveryTab')} onClick={() => setShowLayoutOptions(true)}>
-          <SlidersHorizontal size={16} />
-        </IconButton>
+        <ClickPopover
+          open={showLayoutOptions}
+          onOpenChange={setShowLayoutOptions}
+          align="end"
+          trigger={
+            <IconButton
+              title={t('dashboard.discovery.viewOptions')}
+              onClick={() => setShowLayoutOptions((current) => !current)}
+              ariaPressed={showLayoutOptions}
+            >
+              {resultsPerRow === 'list' ? <List size={16} /> : <GridGlyph columns={resultsPerRow} />}
+            </IconButton>
+          }
+        >
+          <div role="radiogroup" aria-label={t('dashboard.discovery.viewOptions')}>
+            {VIEW_OPTIONS.map(({ value, labelKey, icon }) => {
+              const isActive = resultsPerRow === value;
+              return (
+                <button
+                  key={value}
+                  role="radio"
+                  aria-checked={isActive}
+                  onClick={() => { setResultsPerRow(value); setShowLayoutOptions(false); }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-editorial-textbox/60 ${
+                    isActive ? 'font-medium text-editorial-ink' : 'text-editorial-muted'
+                  }`}
+                >
+                  <span className={`flex shrink-0 items-center justify-center ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>{icon}</span>
+                  <span className="flex-1 truncate">{t(labelKey)}</span>
+                  {isActive && <Check size={14} className="shrink-0 text-editorial-accent" />}
+                </button>
+              );
+            })}
+          </div>
+        </ClickPopover>
       </form>
       {searching && !outcome && (
         <div className="flex min-h-64 items-center justify-center" role="status">
@@ -146,7 +317,52 @@ export function SourceDiscoveryPanel() {
       )}
       {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
       {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}
-      {cards.length > 0 && <div className={`mt-4 grid gap-3 ${resultsPerRow === 4 ? 'sm:grid-cols-3 2xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>{cards.map((card) => <SourceCardView key={card.id} card={card} providerLabel={selectedProvider?.label ?? ''} expanded={expandedId === card.id} onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)} />)}</div>}
+      {cards.length > 0 && (
+        <LayoutGroup>
+          {isListView ? (
+            <div className="mt-4">
+              {cards.map((card) => (
+                <SourceListRow
+                  key={card.id}
+                  card={card}
+                  providerLabel={selectedProvider?.label ?? ''}
+                  expanded={expandedId === card.id}
+                  onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
+                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToWorkspace={() => setWorkspacePickerCard(card)}
+                  adding={addingUrls.has(card.manifestUrl)}
+                  alreadyAdded={addedManifestUrls.has(card.manifestUrl)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {rows.map((row, rowIndex) => {
+                const columns = row.length;
+                const expandedInThisRow = row.some((card) => card.id === expandedId);
+                return (
+                  <motion.div layout key={rowIndex} className="flex gap-3">
+                    {row.map((card) => (
+                      <SourceCardView
+                        key={card.id}
+                        card={card}
+                        providerLabel={selectedProvider?.label ?? ''}
+                        expanded={expandedId === card.id}
+                        flexBasis={flexBasis(expandedId === card.id, expandedInThisRow, columns)}
+                        onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
+                        onAddToLibrary={() => void addFromDiscovery(card)}
+                        onAddToWorkspace={() => setWorkspacePickerCard(card)}
+                        adding={addingUrls.has(card.manifestUrl)}
+                        alreadyAdded={addedManifestUrls.has(card.manifestUrl)}
+                      />
+                    ))}
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </LayoutGroup>
+      )}
       {outcome?.hasMore && (
         <div className="mt-4 flex justify-center">
           <IconButton title={t('dashboard.discovery.loadMore')} onClick={() => void loadMore()} disabled={searching}>
@@ -155,28 +371,34 @@ export function SourceDiscoveryPanel() {
         </div>
       )}
       <Dialog
-        open={showLayoutOptions}
-        onOpenChange={setShowLayoutOptions}
-        title={t('settings.discoveryTab')}
+        open={workspacePickerCard !== null}
+        onOpenChange={(open) => { if (!open) setWorkspacePickerCard(null); }}
+        title={t('dashboard.discovery.addToWorkspace')}
         eyebrow={t('dashboard.title')}
         closeLabel={t('common.close')}
       >
         <div className="space-y-3">
-          <SectionLabel icon={SlidersHorizontal} label={t('settings.discoveryResultsLayout')} />
-          <div role="radiogroup" aria-label={t('settings.discoveryResultsLayout')} className="flex items-center gap-2">
-            {([3, 4] as const).map((count) => (
-              <IconButton
-                key={count}
-                tone={resultsPerRow === count ? 'accent' : 'default'}
-                title={t(count === 3 ? 'settings.discoveryResultsThree' : 'settings.discoveryResultsFour')}
-                onClick={() => setResultsPerRow(count)}
-                role="radio"
-                aria-checked={resultsPerRow === count}
-              >
-                <GridGlyph columns={count} />
-              </IconButton>
-            ))}
-          </div>
+          {workspaces.length === 0 ? (
+            <p className="py-4 text-center text-sm italic text-editorial-muted">
+              {t('dashboard.discovery.noWorkspaces')}
+            </p>
+          ) : (
+            <div className="max-h-64 divide-y divide-editorial-border/70 overflow-y-auto">
+              {workspaces.map((workspace) => (
+                <button
+                  key={workspace.id}
+                  type="button"
+                  onClick={() => {
+                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id);
+                    setWorkspacePickerCard(null);
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <span className="truncate font-display text-base italic text-editorial-ink">{workspace.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </Dialog>
     </section>

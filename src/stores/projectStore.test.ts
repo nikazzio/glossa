@@ -11,16 +11,18 @@ import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 // ── workspaceStore mock ───────────────────────────────────────────────
 
+const TEST_WORKSPACE = {
+  id: 'ws-test',
+  name: 'Test',
+  embeddingModel: 'text-embedding-3-small',
+  memoryExtractorProvider: 'openai',
+  memoryExtractorModel: 'gpt-5-nano',
+  memoryExtractorPrompt: 'Extract',
+  createdAt: '2024-01-01T00:00:00Z',
+};
+
 const workspaceState = vi.hoisted(() => ({
-  activeWorkspace: {
-    id: 'ws-test',
-    name: 'Test',
-    embeddingModel: 'text-embedding-3-small',
-    memoryExtractorProvider: 'openai',
-    memoryExtractorModel: 'gpt-5-nano',
-    memoryExtractorPrompt: 'Extract',
-    createdAt: '2024-01-01T00:00:00Z',
-  },
+  activeWorkspace: null as null | { id: string; name: string },
   workspaces: [] as Array<{ id: string; name: string }>,
   setActive: vi.fn(),
 }));
@@ -102,7 +104,8 @@ const makePipeline = (overrides: Partial<Pipeline> = {}): Pipeline => ({
 describe('projectStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    workspaceState.workspaces = [];
+    workspaceState.activeWorkspace = TEST_WORKSPACE;
+    workspaceState.workspaces = [TEST_WORKSPACE];
 
     // runInTransaction calls its callback with a no-op execute
     dbMocks.runInTransaction.mockImplementation(
@@ -120,7 +123,6 @@ describe('projectStore', () => {
       currentProjectId: null,
       pipelines: [],
       activePipelineId: null,
-      showProjectPanel: false,
       saveState: 'idle',
       lastSaveError: null,
       trackedSnapshot: null,
@@ -370,7 +372,7 @@ describe('projectStore', () => {
     ]);
     usePipelineStore.getState().setInputText('Unchunked text to preserve');
 
-    await useProjectStore.getState().createAndOpen('New Project');
+    await useProjectStore.getState().createAndOpen('New Project', 'ws-test');
 
     expect(projectServiceMocks.saveProjectSource).toHaveBeenCalledWith(
       'proj-new',
@@ -390,6 +392,29 @@ describe('projectStore', () => {
     expect(useProjectStore.getState().trackedSnapshot).toBeTruthy();
     expect(useOperationLogStore.getState().currentProjectId).toBe('proj-new');
     expect(projectServiceMocks.listProjects).toHaveBeenCalledTimes(1);
+  });
+
+  it('createAndOpen rejects an unknown workspace instead of falling back to activeWorkspace', async () => {
+    workspaceState.activeWorkspace = TEST_WORKSPACE;
+    workspaceState.workspaces = [TEST_WORKSPACE];
+
+    await expect(useProjectStore.getState().createAndOpen('New Project', 'ws-unknown')).rejects.toThrow('Unknown workspace');
+    expect(projectServiceMocks.createProject).not.toHaveBeenCalled();
+  });
+
+  it('createAndOpen creates in the explicitly chosen workspace, not the stale active one', async () => {
+    const otherWorkspace = { ...TEST_WORKSPACE, id: 'ws-other', name: 'Other' };
+    workspaceState.activeWorkspace = TEST_WORKSPACE;
+    workspaceState.workspaces = [TEST_WORKSPACE, otherWorkspace];
+    projectServiceMocks.createProject.mockResolvedValue('proj-other');
+    pipelineServiceMocks.listPipelines.mockResolvedValue([
+      makePipeline({ id: 'pipeline-other', projectId: 'proj-other' }),
+    ]);
+
+    await useProjectStore.getState().createAndOpen('New Project', 'ws-other');
+
+    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('New Project', 'English', 'Italian', 'ws-other');
+    expect(workspaceState.setActive).toHaveBeenCalledWith(otherWorkspace);
   });
 
   it('does not fail the save when refreshing the project list fails', async () => {

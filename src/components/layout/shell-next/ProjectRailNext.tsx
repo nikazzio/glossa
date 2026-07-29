@@ -12,7 +12,6 @@ import {
   Settings2,
   Upload,
 } from 'lucide-react';
-import * as Popover from '@radix-ui/react-popover';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,7 +25,7 @@ import { useLibraryStore } from '../../../stores/libraryStore';
 import { useConfigStore } from '../../../stores/configStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { indexPad } from '../../../utils';
-import { IconButton } from '../../ui';
+import { ClickPopover, IconButton } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
 import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
@@ -63,69 +62,66 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
       <div className="mt-6 flex min-w-0 items-center justify-between gap-3">
         <ChunkRailNavigator collapsed={false} />
         {pipelines.length > 0 && (
-          <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <Popover.Trigger asChild>
+          <ClickPopover
+            open={popoverOpen}
+            onOpenChange={setPopoverOpen}
+            side="right"
+            align="start"
+            trigger={
               <IconButton
                 size="md"
                 tone={popoverOpen ? 'accent' : 'default'}
                 title={t('pipeline.changePipeline')}
                 ariaLabel={t('pipeline.changePipeline')}
+                ariaPressed={popoverOpen}
                 tooltipSide="right"
                 className={`h-9 w-9 shrink-0 ${popoverOpen ? '' : 'bg-editorial-bg'}`}
               >
                 <ArrowLeftRight size={14} />
               </IconButton>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                side="right"
-                align="start"
-                sideOffset={6}
-                className="z-[150] min-w-40 overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg"
+            }
+          >
+            {pipelines.map((pipeline) => (
+              <button
+                key={pipeline.id}
+                onClick={() => {
+                  void switchPipeline(pipeline.id);
+                  setPopoverOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-editorial-textbox/60 ${
+                  pipeline.id === activePipelineId
+                    ? 'font-medium text-editorial-ink'
+                    : 'text-editorial-muted'
+                }`}
               >
-                {pipelines.map((pipeline) => (
-                  <button
-                    key={pipeline.id}
-                    onClick={() => {
-                      void switchPipeline(pipeline.id);
-                      setPopoverOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-editorial-textbox/60 ${
-                      pipeline.id === activePipelineId
-                        ? 'font-medium text-editorial-ink'
-                        : 'text-editorial-muted'
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                        pipeline.id === activePipelineId
-                          ? 'bg-editorial-success'
-                          : 'bg-editorial-border'
-                      }`}
-                    />
-                    <span className="truncate">{pipeline.name}</span>
-                  </button>
-                ))}
-                {hasProject && pipelines.length < maxPipelines && (
-                  <>
-                    <div className="border-t border-editorial-border/60" />
-                    <button
-                      onClick={() => {
-                        void createNewPipeline(
-                          t('pipeline.pipelineNumber', { number: pipelines.length + 1 }),
-                        );
-                        setPopoverOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-editorial-muted transition-colors hover:bg-editorial-textbox/60 hover:text-editorial-ink"
-                    >
-                      <Plus size={12} />
-                      {t('pipeline.newPipeline')}
-                    </button>
-                  </>
-                )}
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    pipeline.id === activePipelineId
+                      ? 'bg-editorial-success'
+                      : 'bg-editorial-border'
+                  }`}
+                />
+                <span className="truncate">{pipeline.name}</span>
+              </button>
+            ))}
+            {hasProject && pipelines.length < maxPipelines && (
+              <>
+                <div className="border-t border-editorial-border/60" />
+                <button
+                  onClick={() => {
+                    void createNewPipeline(
+                      t('pipeline.pipelineNumber', { number: pipelines.length + 1 }),
+                    );
+                    setPopoverOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-editorial-muted transition-colors hover:bg-editorial-textbox/60 hover:text-editorial-ink"
+                >
+                  <Plus size={12} />
+                  {t('pipeline.newPipeline')}
+                </button>
+              </>
+            )}
+          </ClickPopover>
         )}
       </div>
       {children ? <div className="mt-4 border-t border-editorial-border/50 pt-4">{children}</div> : null}

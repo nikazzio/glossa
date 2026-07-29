@@ -160,9 +160,6 @@ const DocumentView = lazy(() =>
 const SettingsModal = lazy(() =>
   import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })),
 );
-const ProjectPanel = lazy(() =>
-  import('./components/projects/ProjectPanel').then((m) => ({ default: m.ProjectPanel })),
-);
 const LibraryPanel = lazy(() =>
   import('./components/library/LibraryPanel').then((m) => ({ default: m.LibraryPanel })),
 );
@@ -208,7 +205,6 @@ function EditorView() {
   const chunkPresetMedium = useConfigStore((state) => state.chunkPresetMedium);
   const chunkPresetShort = useConfigStore((state) => state.chunkPresetShort);
   const chunkPresetLong = useConfigStore((state) => state.chunkPresetLong);
-  const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
   const currentProjectId = useProjectStore((state) => state.currentProjectId);
   const activePipelineId = useProjectStore((state) => state.activePipelineId);
   const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
@@ -216,10 +212,8 @@ function EditorView() {
   const { loadDocument } = useChunksStore();
 
   const settingsLoaded = useRef(false);
-  const projectPanelLoaded = useRef(false);
   const libraryPanelLoaded = useRef(false);
   if (showSettings) settingsLoaded.current = true;
-  if (showProjectPanel) projectPanelLoaded.current = true;
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
@@ -370,11 +364,6 @@ function EditorView() {
           <SettingsModal />
         </Suspense>
       )}
-      {projectPanelLoaded.current && (
-        <Suspense fallback={null}>
-          <ProjectPanel />
-        </Suspense>
-      )}
       {libraryPanelLoaded.current && (
         <Suspense fallback={null}>
           <LibraryPanel />
@@ -475,7 +464,7 @@ export default function App() {
                 {location.area === 'translations' ? (
                   <TranslationsArea />
                 ) : location.area === 'library' ? (
-                  <LibraryCatalogArea />
+                  <LibraryCatalogArea itemId={location.itemId} />
                 ) : location.area === 'transcriptions' ? (
                   <TranscriptionsCatalogArea />
                 ) : location.area === 'analysis' ? (
@@ -507,7 +496,6 @@ export default function App() {
         {isShellView ? (
           <Suspense fallback={null}>
             <SettingsModal />
-            <ProjectPanel />
             <LibraryPanel />
           </Suspense>
         ) : null}

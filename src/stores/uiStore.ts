@@ -19,7 +19,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
   lg: '1.0625rem',
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
-export type DiscoveryResultsPerRow = 3 | 4;
+export type DiscoveryResultsPerRow = 3 | 4 | 'list';
 export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
 
 export interface HLColorSet {

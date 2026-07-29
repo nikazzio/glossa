@@ -453,6 +453,7 @@
     "discoveryResultsLayout": "Schede per riga",
     "discoveryResultsThree": "Tre schede",
     "discoveryResultsFour": "Quattro schede",
+    "discoveryResultsList": "Elenco",
     "uiFont": "Font interfaccia",
     "uiFontHint": "Scegli il carattere dell'intera interfaccia. I valori serif editoriali non vengono toccati.",
     "accentColor": "Colore accento",
@@ -650,6 +651,7 @@
     "firstSaveDescription": "Stai lavorando in una sessione non ancora salvata. Dai un nome al progetto per persistire testo, configurazione, glossario e risultati.",
     "createAndSave": "Crea e salva",
     "namePlaceholder": "Nome del progetto...",
+    "chooseWorkspace": "Scegli il workspace",
     "empty": "Nessun progetto. Creane uno per salvare il lavoro.",
     "delete": "Elimina",
     "confirmDeleteTitle": "Eliminare il progetto?",
@@ -680,7 +682,11 @@
       "title": "Biblioteca",
       "sidebarHint": "Testi e catalogo",
       "emptyMessage": "La tua Biblioteca è ancora vuota.",
-      "emptyHint": "Le fonti che aggiungi dalla Dashboard compariranno qui."
+      "emptyHint": "Le fonti che aggiungi dalla Dashboard compariranno qui.",
+      "kind": "Tipo",
+      "linkWorkspace": "Collega a {{name}}",
+      "unlinkWorkspace": "Scollega da {{name}}",
+      "linkedWorkspaces": "Workspace collegati"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -799,7 +805,13 @@
       "language": "Lingua",
       "type": "Tipo",
       "collection": "Collezione",
-      "subjects": "Soggetti"
+      "subjects": "Soggetti",
+      "addToLibrary": "Aggiungi alla Biblioteca",
+      "alreadyInLibrary": "Già in Biblioteca",
+      "addToLibraryFailed": "Aggiunta alla Biblioteca non riuscita. Riprova.",
+      "addToWorkspace": "Aggiungi a un workspace",
+      "noWorkspaces": "Nessun workspace disponibile. Creane uno prima di collegare una fonte.",
+      "viewOptions": "Visualizzazione"
     },
     "stats": {
       "projects": "Progetti",
