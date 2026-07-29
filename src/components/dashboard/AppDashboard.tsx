@@ -44,8 +44,10 @@ const RUN_TONE: Record<string, { dot: string; labelKey: string }> = {
   error: { dot: 'bg-editorial-danger', labelKey: 'dashboard.runOutcome.error' },
 };
 
-const ROW_CLASS =
-  'flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
+const ROW_WRAPPER_CLASS =
+  'group relative overflow-hidden rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper';
+const ROW_BUTTON_CLASS =
+  'flex w-full min-w-0 flex-col items-start gap-1.5 pr-14 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
 
 export function AppDashboard() {
   const { t, i18n } = useTranslation();
@@ -119,7 +121,14 @@ export function AppDashboard() {
   const workspaceIdentity = (workspaceId: string, workspaceName: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     return workspace
-      ? <WorkspaceIdentity workspace={workspace} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
+      ? (
+        <WorkspaceIdentity
+          workspace={workspace}
+          iconOnly
+          iconSize={22}
+          className="absolute bottom-0 right-0 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/85 text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent"
+        />
+      )
       : <span className="sr-only">{workspaceName}</span>;
   };
 
@@ -155,8 +164,9 @@ export function AppDashboard() {
           </section>
         ) : null}
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_1px_minmax(18rem,20rem)]">
           <SourceDiscoveryPanel />
+          <div className="hidden self-stretch bg-editorial-border xl:block" aria-hidden="true" />
           <aside className="min-w-0 space-y-6">
         {/* Richiede attenzione — frammenti con giudizio scarso/critico o problemi aperti */}
         <section>
@@ -168,23 +178,24 @@ export function AppDashboard() {
           ) : attentionProjects.length > 0 ? (
             <div className="space-y-1.5">
               {attentionProjects.map((project) => (
-                <button
-                  key={project.project_id}
-                  type="button"
-                  onClick={() => void handleOpenProject(project.project_id, project.workspace_id)}
-                  className={`${ROW_CLASS} flex-col items-start gap-1.5`}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
-                    <span className="truncate font-display text-base italic text-editorial-ink">
-                      {project.project_name}
+                <div key={project.project_id} className={ROW_WRAPPER_CLASS}>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenProject(project.project_id, project.workspace_id)}
+                    className={ROW_BUTTON_CLASS}
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                      <span className="truncate font-display text-base italic text-editorial-ink">
+                        {project.project_name}
+                      </span>
                     </span>
-                    {workspaceIdentity(project.workspace_id, project.workspace_name)}
-                  </span>
-                  <span className="pl-7 text-xs text-editorial-warning">
-                    {t('dashboard.attentionCount', { count: project.issue_count })}
-                  </span>
-                </button>
+                    <span className="pl-7 text-xs text-editorial-warning">
+                      {t('dashboard.attentionCount', { count: project.issue_count })}
+                    </span>
+                  </button>
+                  {workspaceIdentity(project.workspace_id, project.workspace_name)}
+                </div>
               ))}
             </div>
           ) : (
@@ -202,23 +213,24 @@ export function AppDashboard() {
           ) : recentProjects.length > 0 ? (
             <div className="space-y-1.5">
               {recentProjects.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => void handleOpenProject(project.id, project.workspace_id)}
-                  className={`${ROW_CLASS} flex-col items-start gap-1.5`}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
-                    <span className="truncate font-display text-base italic text-editorial-ink">
-                      {project.name}
+                <div key={project.id} className={ROW_WRAPPER_CLASS}>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenProject(project.id, project.workspace_id)}
+                    className={ROW_BUTTON_CLASS}
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                      <span className="truncate font-display text-base italic text-editorial-ink">
+                        {project.name}
+                      </span>
                     </span>
-                    {workspaceIdentity(project.workspace_id, project.workspace_name)}
-                  </span>
-                  <span className="pl-7 text-xs text-editorial-muted">
-                    {formatWhen(project.updated_at)}
-                  </span>
-                </button>
+                    <span className="pl-7 text-xs text-editorial-muted">
+                      {formatWhen(project.updated_at)}
+                    </span>
+                  </button>
+                  {workspaceIdentity(project.workspace_id, project.workspace_name)}
+                </div>
               ))}
             </div>
           ) : (

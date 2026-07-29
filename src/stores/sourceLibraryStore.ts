@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { LibrarySource, LibrarySourceDetail, SourceCard } from '../types';
+import { classifySourceKind, type LibrarySource, type LibrarySourceDetail, type SourceCard } from '../types';
 import {
   addSourceToLibrary as addSourceToLibraryService,
   getLibrarySourceDetail,
@@ -48,7 +48,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         manifestUrl,
         title: card.title,
         description: card.description,
-        kind: 'iiif',
+        kind: classifySourceKind(card),
         creator: card.creator,
         date: card.date,
         thumbnailUrl: card.thumbnailUrl,

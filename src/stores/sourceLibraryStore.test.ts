@@ -23,6 +23,7 @@ const manifestCard: IIIFManifestPreview & { id: string } = {
   volume: null,
   subjects: [],
   itemCount: 10,
+  materialType: null,
 };
 
 describe('sourceLibraryStore', () => {

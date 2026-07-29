@@ -25,21 +25,34 @@ function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
   return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
+/** Impacchetta le schede in righe (flex box a larghezza fissa, mai a capo):
+ * una scheda normale costa 1 unità, quella espansa costa `columns - 1` unità
+ * su `columns` totali per riga. Così la riga che contiene l'espansa mostra
+ * SEMPRE l'espansa più un solo vicino a dimensione normale (mai più vicini
+ * schiacciati) — il resto scorre alla riga successiva. Funziona qualunque sia
+ * la posizione originale della scheda aperta (anche l'ultima della riga):
+ * l'impacchettamento si ricalcola da capo, non prova a "spostare indietro"
+ * dentro una riga già fissata. */
+function packRows<T extends { id: string }>(cards: T[], columns: number, expandedId: string | null): T[][] {
   const rows: T[][] = [];
-  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
+  let current: T[] = [];
+  let unitsUsed = 0;
+  for (const card of cards) {
+    const cost = card.id === expandedId ? columns - 1 : 1;
+    if (current.length > 0 && unitsUsed + cost > columns) {
+      rows.push(current);
+      current = [];
+      unitsUsed = 0;
+    }
+    current.push(card);
+    unitsUsed += cost;
+  }
+  if (current.length > 0) rows.push(current);
   return rows;
 }
 
-/** L'espansione resta sempre nella riga in cui si trova (mai a capo da sola):
- * prende `columns - 1` unità su `columns` totali, gli altri item della stessa
- * riga si dividono l'unità restante — funziona qualunque sia la sua posizione
- * nella riga (prima, in mezzo o ultima), perché la riga è un flex box a
- * larghezza fissa, non una griglia che può mandare a capo. */
-function flexBasis(isExpandedCard: boolean, expandedInThisRow: boolean, columns: number): string {
-  if (!expandedInThisRow) return '1 1 0%';
-  if (isExpandedCard) return `${columns - 1} 1 0%`;
-  return `${1 / (columns - 1)} 1 0%`;
+function flexBasis(isExpandedCard: boolean, columns: number): string {
+  return isExpandedCard ? `${columns - 1} 1 0%` : '1 1 0%';
 }
 
 interface CardActionsProps {
@@ -102,11 +115,11 @@ function SourceCardView({ card, providerLabel, expanded, flexBasis: basis, onTog
         <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />
       </div>
       <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
-        <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox ${expanded ? 'h-44 w-32' : 'h-28 w-20'}`}>
+        <span className="flex h-28 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox">
           {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={20} className="text-editorial-muted" aria-hidden="true" />}
         </span>
         <span className="min-w-0 py-1">
-          <span className={`block font-display italic leading-tight text-editorial-ink ${expanded ? 'text-2xl' : 'line-clamp-3 text-lg'}`}>{title}</span>
+          <span className="block line-clamp-3 font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
           {card.creator && <span className="mt-2 block line-clamp-2 text-sm text-editorial-charcoal"><span className="text-editorial-muted">{t('dashboard.discovery.by')}</span> {card.creator}</span>}
           {card.date && <span className="mt-1 block text-xs text-editorial-muted"><span>{t('dashboard.discovery.published')}</span> {card.date}</span>}
           {card.volume && <span className="mt-1 block text-xs text-editorial-muted"><span>{t('dashboard.discovery.volume')}</span> {card.volume}</span>}
@@ -230,7 +243,8 @@ export function SourceDiscoveryPanel() {
     return outcome.manifest ? [{ ...outcome.manifest, id: outcome.manifest.manifestUrl }] : outcome.results;
   }, [outcome]);
   const isListView = resultsPerRow === 'list';
-  const rows = useMemo(() => isListView ? [] : chunk(cards, resultsPerRow === 4 ? 4 : 3), [cards, isListView, resultsPerRow]);
+  const columns = resultsPerRow === 4 ? 4 : 3;
+  const rows = useMemo(() => isListView ? [] : packRows(cards, columns, expandedId), [cards, isListView, columns, expandedId]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -340,28 +354,24 @@ export function SourceDiscoveryPanel() {
             </div>
           ) : (
             <div className="mt-4 space-y-3">
-              {rows.map((row, rowIndex) => {
-                const columns = row.length;
-                const expandedInThisRow = row.some((card) => card.id === expandedId);
-                return (
-                  <motion.div layout key={rowIndex} className="flex gap-3">
-                    {row.map((card) => (
-                      <SourceCardView
-                        key={card.id}
-                        card={card}
-                        providerLabel={selectedProvider?.label ?? ''}
-                        expanded={expandedId === card.id}
-                        flexBasis={flexBasis(expandedId === card.id, expandedInThisRow, columns)}
-                        onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                        onAddToLibrary={() => void addFromDiscovery(card)}
-                        onAddToWorkspace={() => setWorkspacePickerCard(card)}
-                        adding={addingUrls.has(card.manifestUrl)}
-                        alreadyAdded={addedManifestUrls.has(card.manifestUrl)}
-                      />
-                    ))}
-                  </motion.div>
-                );
-              })}
+              {rows.map((row, rowIndex) => (
+                <motion.div layout key={rowIndex} className="flex gap-3">
+                  {row.map((card) => (
+                    <SourceCardView
+                      key={card.id}
+                      card={card}
+                      providerLabel={selectedProvider?.label ?? ''}
+                      expanded={expandedId === card.id}
+                      flexBasis={flexBasis(expandedId === card.id, columns)}
+                      onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
+                      onAddToLibrary={() => void addFromDiscovery(card)}
+                      onAddToWorkspace={() => setWorkspacePickerCard(card)}
+                      adding={addingUrls.has(card.manifestUrl)}
+                      alreadyAdded={addedManifestUrls.has(card.manifestUrl)}
+                    />
+                  ))}
+                </motion.div>
+              ))}
             </div>
           )}
         </LayoutGroup>
