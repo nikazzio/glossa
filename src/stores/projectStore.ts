@@ -39,7 +39,6 @@ interface ProjectState {
   currentProjectId: string | null;
   pipelines: Pipeline[];
   activePipelineId: string | null;
-  showProjectPanel: boolean;
   saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
   lastSaveError: string | null;
   lastSavedAt: number | null;
@@ -47,9 +46,8 @@ interface ProjectState {
   runInterrupted: boolean;
   lastRunConfig: string | null;
 
-  setShowProjectPanel: (show: boolean) => void;
   loadProjects: () => Promise<void>;
-  createAndOpen: (name: string) => Promise<void>;
+  createAndOpen: (name: string, workspaceId: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
@@ -75,22 +73,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   currentProjectId: null,
   pipelines: [],
   activePipelineId: null,
-  showProjectPanel: false,
   saveState: 'idle',
   lastSaveError: null,
   lastSavedAt: null,
   trackedSnapshot: null,
   runInterrupted: false,
   lastRunConfig: null,
-
-  setShowProjectPanel: (show) => {
-    set({ showProjectPanel: show });
-    if (show) {
-      const ui = useUiStore.getState();
-      if (ui.showSettings) ui.setShowSettings(false);
-      if (ui.showHelp) ui.setShowHelp(false);
-    }
-  },
 
   loadProjects: async () => {
     const { activeWorkspace } = useWorkspaceStore.getState();
@@ -104,13 +92,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ projects });
   },
 
-  createAndOpen: async (name: string) => {
+  createAndOpen: async (name: string, workspaceId: string) => {
     const pipeline = usePipelineStore.getState();
     const chunks = useChunksStore.getState().chunks;
-    const { activeWorkspace } = useWorkspaceStore.getState();
-    if (!activeWorkspace) throw new Error('No active workspace');
+    const workspaceStore = useWorkspaceStore.getState();
+    const workspace = workspaceStore.workspaces.find((item) => item.id === workspaceId);
+    if (!workspace) throw new Error('Unknown workspace');
+    if (workspaceStore.activeWorkspace?.id !== workspace.id) {
+      await workspaceStore.setActive(workspace);
+    }
 
-    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, activeWorkspace.id);
+    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, workspace.id);
 
     const pipelines = await listPipelines(id);
     const activePipelineId = pipelines[0]?.id ?? null;

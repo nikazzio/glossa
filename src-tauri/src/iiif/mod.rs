@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+pub mod discovery;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SearchMode {
@@ -83,22 +85,6 @@ const GALLICA_FILTERS: &[ProviderFilter] = &[ProviderFilter {
     key: "material_type",
     options: GALLICA_FILTER_OPTIONS,
 }];
-const INTERNET_CULTURALE_FILTER_OPTIONS: &[ProviderFilterOption] = &[
-    ProviderFilterOption { value: "all" },
-    ProviderFilterOption {
-        value: "manuscript",
-    },
-    ProviderFilterOption { value: "printed" },
-    ProviderFilterOption { value: "music" },
-    ProviderFilterOption {
-        value: "photograph",
-    },
-];
-const INTERNET_CULTURALE_FILTERS: &[ProviderFilter] = &[ProviderFilter {
-    key: "material_type",
-    options: INTERNET_CULTURALE_FILTER_OPTIONS,
-}];
-
 pub const PROVIDERS: &[IIIFProvider] = &[
     IIIFProvider {
         key: "vatican",

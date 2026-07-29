@@ -14,7 +14,6 @@ describe('useProjectAutosave', () => {
     useProjectStore.setState({
       projects: [],
       currentProjectId: 'proj-1',
-      showProjectPanel: false,
       saveState: 'idle',
       lastSaveError: null,
       trackedSnapshot: null,

@@ -61,9 +61,20 @@ Obiettivo: prima dati e shell, poi feature. Nessuna discovery, viewer o OCR avan
 - #214 - registry provider IIIF e capability model.
 - #215 - discovery resolve/search normalizzata.
 - #216 - add-to-library e persistenza metadati.
+- #397 - rollout verificato delle biblioteche/provider: Internet Archive e URL
+  generico già usabili; poi Biblissima+ e Digital Scriptorium come aggregatori
+  ad alta copertura, quindi Vaticana, Gallica, e-codices, Estense,
+  e-manuscripta/e-rara e Wellcome. Gli altri provider del registry solo dopo
+  verifica di endpoint, metadati e capability reali.
+- #395 - ricerca globale multi-provider, solo quando esistono almeno più
+  provider realmente usabili e fonti persistibili.
 - #187 - catalogazione, metadati e gestione library/workspace.
 
 Obiettivo: portare in Glossa il modello di discovery di Scriptoria senza copiare la UI. Direct resolve, search e provider capabilities devono produrre risultati normalizzati.
+
+Il registry non abilita automaticamente un archivio: #397 conserva lista,
+priorità e riferimenti Scriptoria; ogni provider richiede un handler reale e
+verifica aggiornata prima di comparire nella ricerca.
 
 ### Fase 3 - Asset e job
 

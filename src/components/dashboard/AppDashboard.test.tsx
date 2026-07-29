@@ -6,6 +6,8 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 
+vi.mock('./SourceDiscoveryPanel', () => ({ SourceDiscoveryPanel: () => null }));
+
 vi.mock('../../hooks/useProviderKeyStatus', () => ({
   useProviderKeyStatus: () => ({
     statuses: { openai: true, anthropic: false },

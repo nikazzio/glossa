@@ -33,6 +33,95 @@ export interface IIIFProvider {
   supportsSearch: boolean;
   filters: IIIFProviderFilter[];
 }
+
+export type IIIFDiscoveryStatus = 'manifest' | 'results' | 'not_found';
+
+export interface IIIFManifestPreview {
+  manifestUrl: string;
+  title: string;
+  creator: string | null;
+  date: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  language: string | null;
+  volume: string | null;
+  subjects: string[];
+  itemCount: number | null;
+}
+
+export interface IIIFDiscoveryResult {
+  id: string;
+  title: string;
+  creator: string | null;
+  date: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  mediaType: string | null;
+  collection: string | null;
+  language: string | null;
+  volume: string | null;
+  subjects: string[];
+  manifestUrl: string;
+}
+
+export interface IIIFDiscoveryOutcome {
+  status: IIIFDiscoveryStatus;
+  providerKey: string;
+  manifest: IIIFManifestPreview | null;
+  results: IIIFDiscoveryResult[];
+  hasMore: boolean;
+}
+
+export type SourceKind = 'manuscript' | 'print' | 'pdf' | 'iiif' | 'web' | 'other';
+
+export interface AddSourceToLibraryInput {
+  manifestUrl: string;
+  title: string;
+  description: string | null;
+  kind: SourceKind;
+  creator: string | null;
+  date: string | null;
+  thumbnailUrl: string | null;
+  language: string | null;
+  subjects: string[];
+  workspaceId?: string;
+}
+
+export interface LibrarySource {
+  id: string;
+  title: string;
+  kind: SourceKind;
+  primaryLanguage: string | null;
+  externalRef: string | null;
+  createdAt: string;
+}
+
+export interface LibrarySourceVersion {
+  id: string;
+  sourceId: string;
+  label: string;
+  versionKind: 'iiif_manifest' | 'pdf' | 'edition' | 'copy' | 'other';
+  sourceUrl: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export interface LibraryAsset {
+  id: string;
+  sourceVersionId: string | null;
+  kind: 'image' | 'pdf' | 'manifest' | 'thumbnail' | 'derived' | 'other';
+  locality: 'remote' | 'local' | 'derived';
+  availability: 'catalogued' | 'partial' | 'complete';
+  remoteUrl: string | null;
+}
+
+export interface LibrarySourceDetail {
+  source: LibrarySource;
+  versions: LibrarySourceVersion[];
+  assets: LibraryAsset[];
+  linkedWorkspaceIds: string[];
+}
+
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
 
 export interface Annotation {

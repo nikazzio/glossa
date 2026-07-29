@@ -229,6 +229,7 @@ export function SettingsModal() {
       )}
 
       {activeTab === 'storage' && <StorageSettingsTab />}
+
     </Dialog>
   );
 }

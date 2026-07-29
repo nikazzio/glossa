@@ -1,0 +1,140 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '../../test/i18n-mock';
+import { SourceDiscoveryPanel } from './SourceDiscoveryPanel';
+import { useUiStore } from '../../stores/uiStore';
+import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+
+const mockListProviders = vi.fn();
+const mockDiscover = vi.fn();
+
+vi.mock('../../services/iiifProviderService', () => ({
+  listIIIFProviders: () => mockListProviders(),
+  discoverIIIF: (...args: unknown[]) => mockDiscover(...args),
+}));
+
+vi.mock('../../services/libraryService', () => ({
+  listLibrarySources: vi.fn().mockResolvedValue([]),
+  addSourceToLibrary: vi.fn().mockResolvedValue({ sourceId: 's1', wasCreated: true }),
+  getLibrarySourceDetail: vi.fn(),
+  setWorkspaceSourceLink: vi.fn(),
+}));
+
+const PROVIDERS = [
+  { key: 'archive_org', label: 'Internet Archive', aliases: [], placeholder: 'Search', isEnabled: true, resolver: 'archive_org', searchHandler: 'archive_org', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, filters: [] },
+];
+
+describe('SourceDiscoveryPanel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useUiStore.setState({ discoveryResultsPerRow: 3 });
+    useSourceLibraryStore.setState({ sources: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
+    mockListProviders.mockResolvedValue(PROVIDERS);
+  });
+
+  it('shows a distinct error when discovery fails', async () => {
+    mockDiscover.mockRejectedValueOnce(new Error('offline'));
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('dashboard.discovery.searchFailed');
+    expect(screen.queryByText('dashboard.discovery.notFound')).not.toBeInTheDocument();
+  });
+
+  it('uses a native button to expand one result at a time', async () => {
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+        { id: 'two', title: 'Second source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/two' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    const first = await screen.findByRole('button', { name: /First source/ });
+    const second = screen.getByRole('button', { name: /Second source/ });
+
+    await user.click(first);
+    await waitFor(() => expect(first).toHaveAttribute('aria-expanded', 'true'));
+    await user.click(second);
+    expect(first).toHaveAttribute('aria-expanded', 'false');
+    expect(second).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('adds a result to the library and then shows it as already added', async () => {
+    const libraryService = await import('../../services/libraryService');
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await screen.findByRole('button', { name: /First source/ });
+
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToLibrary' }));
+
+    expect(libraryService.addSourceToLibrary).toHaveBeenCalledWith(expect.objectContaining({
+      manifestUrl: 'https://example.test/one',
+      title: 'First source',
+    }));
+    expect(await screen.findByRole('button', { name: 'dashboard.discovery.alreadyInLibrary' })).toBeDisabled();
+  });
+
+  it('never links a workspace when adding via the plain library button (dashboard has no active workspace)', async () => {
+    const libraryService = await import('../../services/libraryService');
+    useWorkspaceStore.setState({ activeWorkspace: { id: 'ws-stale', name: 'Stale' } as never, workspaces: [] });
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await screen.findByRole('button', { name: /First source/ });
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToLibrary' }));
+
+    expect(vi.mocked(libraryService.addSourceToLibrary).mock.calls[0][0].workspaceId).toBeUndefined();
+  });
+
+  it('links a chosen workspace via the "add to workspace" picker', async () => {
+    const libraryService = await import('../../services/libraryService');
+    useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [{ id: 'ws-1', name: 'Archivio' } as never] });
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await screen.findByRole('button', { name: /First source/ });
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToWorkspace' }));
+    await user.click(await screen.findByRole('button', { name: 'Archivio' }));
+
+    expect(libraryService.addSourceToLibrary).toHaveBeenCalledWith(expect.objectContaining({
+      manifestUrl: 'https://example.test/one',
+      workspaceId: 'ws-1',
+    }));
+  });
+});

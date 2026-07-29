@@ -170,7 +170,9 @@ export function WorkspaceOverview() {
         </section>
       </div>
 
-      <CreateProjectDialog open={showCreateProject} onClose={() => setShowCreateProject(false)} />
+      {activeWorkspace && (
+        <CreateProjectDialog open={showCreateProject} onClose={() => setShowCreateProject(false)} workspaceId={activeWorkspace.id} />
+      )}
       <WorkspaceSettingsModal open={showWorkspaceSettings} onClose={() => setShowWorkspaceSettings(false)} />
     </main>
   );

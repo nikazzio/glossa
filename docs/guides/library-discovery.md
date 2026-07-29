@@ -4,14 +4,16 @@ title: Biblioteca e fonti IIIF
 
 # Biblioteca e fonti IIIF
 
-La Biblioteca raccoglierà le fonti di ricerca in modo globale: una stessa fonte potrà essere collegata a più workspace senza duplicarla.
+La ricerca delle fonti parte dalla Dashboard. La Biblioteca è il catalogo personale: conterrà le fonti che avrai scelto di aggiungere, non i risultati temporanei di una ricerca.
 
-## Archivi predisposti
+## Cercare una fonte
 
-La prima schermata della Biblioteca elenca gli archivi IIIF che Glossa riconosce, come Vaticana, Gallica, e-codices, Biblioteca Estense e Internet Archive. Per ciascuno indica se il prossimo passaggio potrà partire da una ricerca, da una segnatura o da un URL IIIF diretto.
+Nella Dashboard scegli l'archivio, scrivi una ricerca e avviala con l'icona di ricerca. Al momento Internet Archive offre la ricerca per parole; il provider IIIF generico apre invece un URL di manifest IIIF.
 
-Questo elenco non scarica materiali e non modifica dati esistenti.
+Ogni risultato mostra miniatura e dati essenziali. Selezionandolo, la scheda si apre e mostra titolo completo, descrizione e tutti i metadati disponibili. Puoi caricare altri risultati e scegliere tre o quattro schede chiuse per riga dalla relativa opzione.
 
-## Cosa arriverà dopo
+La ricerca non scarica materiale e non modifica la tua Biblioteca.
 
-La ricerca e la risoluzione di una fonte sono il prossimo passo. In seguito potrai aggiungere la fonte alla Biblioteca e collegarla ai workspace pertinenti. Collegarla a un workspace non creerà copie della fonte.
+## Biblioteca personale
+
+L'aggiunta di una fonte, il collegamento ai workspace, la consultazione in streaming, il download e la cache locale arriveranno nel prossimo incremento. Una fonte aggiunta sarà unica nel catalogo e potrà essere collegata a più workspace senza duplicarla.

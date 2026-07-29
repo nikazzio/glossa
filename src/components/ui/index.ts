@@ -11,6 +11,7 @@ export { Select, type SelectOption } from './Select';
 export { ToggleRow } from './ToggleRow';
 export { Tooltip, type TooltipSide } from './Tooltip';
 export { Popover } from './Popover';
+export { ClickPopover } from './ClickPopover';
 export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';
 export { ContrastBadge } from './ContrastBadge';

@@ -10,6 +10,7 @@ Sviluppo attivo (pre-1.0). Priorità assoluta modalità documento/editoriale. UI
 
 ## Principi Fondamentali
 - **Semplicità**: Codice minimo. No feature speculative future.
+- **UI (vincolo utente)**: Comandi visivi solo `IconButton` neutri, icona + tooltip hover. No pill o pulsanti testuali/colorati. Verde solo per tab, selettori e stati attivi, salvo richiesta esplicita utente.
 - **Leggibilità**: Nomi descrittivi. Commenti solo per logiche non ovvie, vincoli nascosti, workaround.
 - **Immutabilità**: No mutare oggetti esistenti (preferisci `let` a `let mut`, usa spread operator e metodi funzionali in JS).
 - **File**: Max 400-800 righe. Organizza per dominio/feature, non per tipo file.
