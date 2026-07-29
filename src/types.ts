@@ -64,6 +64,12 @@ export interface IIIFDiscoveryResult {
   manifestUrl: string;
 }
 
+export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
+
+export function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
+  return 'itemCount' in card;
+}
+
 export interface IIIFDiscoveryOutcome {
   status: IIIFDiscoveryStatus;
   providerKey: string;

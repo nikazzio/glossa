@@ -24,7 +24,12 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (open) setSelectedWorkspaceId(workspaceId ?? workspaces[0]?.id ?? null);
+    if (!open) return;
+    setSelectedWorkspaceId((current) => {
+      if (workspaceId) return workspaceId;
+      if (current && workspaces.some((workspace) => workspace.id === current)) return current;
+      return workspaces[0]?.id ?? null;
+    });
   }, [open, workspaceId, workspaces]);
 
   const close = () => {

@@ -27,7 +27,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     if (itemId) void loadDetail(itemId);
   }, [itemId, loadDetail]);
 
-  if (itemId && detail) {
+  if (itemId && detail && detail.source.id === itemId) {
     return (
       <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
         <div className="px-5 py-5 md:px-6">

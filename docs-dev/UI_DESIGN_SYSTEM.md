@@ -172,7 +172,7 @@ const [open, setOpen] = useState(false);
   open={open}
   onOpenChange={setOpen}
   trigger={
-    <IconButton title={t('...')} onClick={() => setOpen((o) => !o)} ariaPressed={open}>
+    <IconButton title={t('...')} ariaPressed={open}>
       <SomeIcon size={16} />
     </IconButton>
   }
@@ -183,7 +183,7 @@ const [open, setOpen] = useState(false);
 
 Regole:
 - Il chiamante gestisce sempre `open`/`onOpenChange` (stato esplicito, non interno al componente).
-- Trigger sempre un `IconButton` con `ariaPressed={open}` (è un toggle apertura/chiusura).
+- Trigger sempre un `IconButton` con `ariaPressed={open}` (è un toggle apertura/chiusura). **Niente `onClick` manuale sul trigger**: `RadixPopover.Trigger` gestisce già il click e chiama `onOpenChange` da solo — aggiungere un `onClick` che flippa `open` produce un doppio toggle (il popup non si apre in modo affidabile).
 - z-index `z-[210]` (sopra finestre), incluso di default — non serve override.
 - Contenuto: righe piatte con hover (stesso stile liste dentro `Dialog`) oppure gruppo `IconButton` radiogroup — mai reintrodurre `Popover.Root` Radix a mano altrove.
 

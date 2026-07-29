@@ -1,12 +1,11 @@
 import { create } from 'zustand';
-import type { LibrarySource, LibrarySourceDetail } from '../types';
+import type { LibrarySource, LibrarySourceDetail, SourceCard } from '../types';
 import {
   addSourceToLibrary as addSourceToLibraryService,
   getLibrarySourceDetail,
   listLibrarySources,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
-import { isManifest, type SourceCard } from '../components/dashboard/SourceDiscoveryPanel';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -23,6 +22,7 @@ interface SourceLibraryState {
   addFromDiscovery: (card: SourceCard, workspaceId?: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
+  clearError: () => void;
 }
 
 export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
@@ -38,7 +38,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   },
 
   addFromDiscovery: async (card, workspaceId) => {
-    const manifestUrl = isManifest(card) ? card.manifestUrl : card.manifestUrl;
+    const manifestUrl = card.manifestUrl;
     set((state) => ({
       addingUrls: new Set(state.addingUrls).add(manifestUrl),
       error: null,
@@ -78,4 +78,6 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     await setWorkspaceSourceLinkService(workspaceId, sourceId, linked);
     if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
   },
+
+  clearError: () => set({ error: null }),
 }));
