@@ -2,9 +2,10 @@ import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 're
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { ClickPopover, Dialog, IconButton, Select, Spinner } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
-import type { IIIFDiscoveryResult, IIIFManifestPreview, IIIFProvider } from '../../types';
+import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
 import { useUiStore, type DiscoveryResultsPerRow } from '../../stores/uiStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -12,11 +13,6 @@ import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
 
 const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org']);
-export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
-
-export function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
-  return 'itemCount' in card;
-}
 
 const VIEW_OPTIONS: ReadonlyArray<{ value: DiscoveryResultsPerRow; labelKey: string; icon: ReactNode }> = [
   { value: 3, labelKey: 'settings.discoveryResultsThree', icon: <GridGlyph columns={3} /> },
@@ -207,6 +203,14 @@ export function SourceDiscoveryPanel() {
   const addingUrls = useSourceLibraryStore((state) => state.addingUrls);
   const addedManifestUrls = useSourceLibraryStore((state) => state.addedManifestUrls);
   const addFromDiscovery = useSourceLibraryStore((state) => state.addFromDiscovery);
+  const libraryError = useSourceLibraryStore((state) => state.error);
+  const clearLibraryError = useSourceLibraryStore((state) => state.clearError);
+
+  useEffect(() => {
+    if (!libraryError) return;
+    toast.error(t('dashboard.discovery.addToLibraryFailed'));
+    clearLibraryError();
+  }, [libraryError, clearLibraryError, t]);
 
   useEffect(() => {
     listIIIFProviders()
@@ -276,7 +280,6 @@ export function SourceDiscoveryPanel() {
           trigger={
             <IconButton
               title={t('dashboard.discovery.viewOptions')}
-              onClick={() => setShowLayoutOptions((current) => !current)}
               ariaPressed={showLayoutOptions}
             >
               {resultsPerRow === 'list' ? <List size={16} /> : <GridGlyph columns={resultsPerRow} />}

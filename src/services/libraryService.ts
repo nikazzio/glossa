@@ -72,8 +72,7 @@ function rowToAsset(row: AssetRow): LibraryAsset {
 
 function isValidUrl(value: string): boolean {
   try {
-    new URL(value);
-    return true;
+    return ['http:', 'https:'].includes(new URL(value).protocol);
   } catch {
     return false;
   }
