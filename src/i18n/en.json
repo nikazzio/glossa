@@ -789,6 +789,8 @@
       "submit": "Find sources",
       "loadMore": "Load more results",
       "notFound": "No sources found.",
+      "searchFailed": "Search unavailable. Try again.",
+      "untitled": "Untitled source",
       "by": "By",
       "published": "Published",
       "volume": "Volume",

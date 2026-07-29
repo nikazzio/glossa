@@ -1,4 +1,4 @@
-import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, ChevronDown, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,35 +16,25 @@ function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: strin
 
 function SourceCardView({ card, providerLabel, expanded, onToggle }: { card: SourceCard; providerLabel: string; expanded: boolean; onToggle: () => void }) {
   const { t } = useTranslation();
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onToggle();
-    }
-  };
+  const title = card.title || t('dashboard.discovery.untitled');
 
   return (
     <motion.article
       layout
-      role="button"
-      tabIndex={0}
-      aria-expanded={expanded}
-      onClick={onToggle}
-      onKeyDown={onKeyDown}
-      className={`group cursor-pointer overflow-hidden rounded-[20px] border border-editorial-border bg-surface-elevated text-left transition-colors hover:border-editorial-accent/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${expanded ? 'sm:col-span-full' : ''}`}
+      className={`group overflow-hidden rounded-[20px] border border-editorial-border bg-surface-elevated text-left transition-colors hover:border-editorial-accent/45 ${expanded ? 'sm:col-span-full' : ''}`}
     >
-      <div className="flex gap-4 p-3">
-        <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox ${expanded ? 'h-44 w-32' : 'h-28 w-20'}`}>
+      <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+        <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox ${expanded ? 'h-44 w-32' : 'h-28 w-20'}`}>
           {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={20} className="text-editorial-muted" aria-hidden="true" />}
-        </div>
-        <div className="min-w-0 py-1">
-          <p className={`font-display italic leading-tight text-editorial-ink ${expanded ? 'text-2xl' : 'line-clamp-3 text-lg'}`}>{card.title}</p>
-          {card.creator && <p className="mt-2 line-clamp-2 text-sm text-editorial-charcoal"><span className="text-editorial-muted">{t('dashboard.discovery.by')}</span> {card.creator}</p>}
-          {card.date && <p className="mt-1 text-xs text-editorial-muted"><span>{t('dashboard.discovery.published')}</span> {card.date}</p>}
-          {card.volume && <p className="mt-1 text-xs text-editorial-muted"><span>{t('dashboard.discovery.volume')}</span> {card.volume}</p>}
-          <p className="mt-2 text-xs text-editorial-muted">{providerLabel}</p>
-        </div>
-      </div>
+        </span>
+        <span className="min-w-0 py-1">
+          <span className={`block font-display italic leading-tight text-editorial-ink ${expanded ? 'text-2xl' : 'line-clamp-3 text-lg'}`}>{title}</span>
+          {card.creator && <span className="mt-2 block line-clamp-2 text-sm text-editorial-charcoal"><span className="text-editorial-muted">{t('dashboard.discovery.by')}</span> {card.creator}</span>}
+          {card.date && <span className="mt-1 block text-xs text-editorial-muted"><span>{t('dashboard.discovery.published')}</span> {card.date}</span>}
+          {card.volume && <span className="mt-1 block text-xs text-editorial-muted"><span>{t('dashboard.discovery.volume')}</span> {card.volume}</span>}
+          <span className="mt-2 block text-xs text-editorial-muted">{providerLabel}</span>
+        </span>
+      </button>
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
@@ -77,6 +67,7 @@ export function SourceDiscoveryPanel() {
   const [outcome, setOutcome] = useState<IIIFDiscoveryOutcome | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [showLayoutOptions, setShowLayoutOptions] = useState(false);
@@ -105,10 +96,11 @@ export function SourceDiscoveryPanel() {
     setExpandedId(null);
     setPage(1);
     setOutcome(null);
+    setSearchError(false);
     try {
       setOutcome(await discoverIIIF(providerKey, input.trim(), 1));
     } catch {
-      setOutcome({ status: 'not_found', providerKey, manifest: null, results: [], hasMore: false });
+      setSearchError(true);
     } finally {
       setSearching(false);
     }
@@ -118,10 +110,13 @@ export function SourceDiscoveryPanel() {
     if (!outcome || searching) return;
     const nextPage = page + 1;
     setSearching(true);
+    setSearchError(false);
     try {
       const next = await discoverIIIF(providerKey, input.trim(), nextPage);
       setOutcome((current) => current ? { ...next, results: [...current.results, ...next.results] } : next);
       setPage(nextPage);
+    } catch {
+      setSearchError(true);
     } finally {
       setSearching(false);
     }
@@ -150,6 +145,7 @@ export function SourceDiscoveryPanel() {
         </div>
       )}
       {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
+      {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}
       {cards.length > 0 && <div className={`mt-4 grid gap-3 ${resultsPerRow === 4 ? 'sm:grid-cols-3 2xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>{cards.map((card) => <SourceCardView key={card.id} card={card} providerLabel={selectedProvider?.label ?? ''} expanded={expandedId === card.id} onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)} />)}</div>}
       {outcome?.hasMore && (
         <div className="mt-4 flex justify-center">

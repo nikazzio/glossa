@@ -789,6 +789,8 @@
       "submit": "Cerca fonti",
       "loadMore": "Carica altri risultati",
       "notFound": "Nessuna fonte trovata.",
+      "searchFailed": "Ricerca non disponibile. Riprova.",
+      "untitled": "Fonte senza titolo",
       "by": "Di",
       "published": "Pubblicato",
       "volume": "Volume",

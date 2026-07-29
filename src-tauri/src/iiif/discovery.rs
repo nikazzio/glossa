@@ -110,7 +110,7 @@ fn thumbnail_url(value: &Value) -> Option<String> {
 fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
     let title = text(value.get("label"))
         .or_else(|| text(value.get("title")))
-        .unwrap_or_else(|| "Untitled source".to_string());
+        .unwrap_or_default();
     let item_count = value
         .get("items")
         .and_then(Value::as_array)
@@ -331,6 +331,16 @@ mod tests {
 
         assert_eq!(outcome.status, DiscoveryStatus::Manifest);
         assert_eq!(outcome.manifest.expect("preview").title, "Book of Hours");
+    }
+
+    #[test]
+    fn manifest_without_title_leaves_localized_fallback_to_frontend() {
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({"items": []}),
+        );
+
+        assert!(preview.title.is_empty());
     }
 
     #[tokio::test]
