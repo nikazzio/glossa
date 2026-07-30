@@ -409,9 +409,10 @@ pub(crate) fn build_ollama_chat_body(
 ) -> Value {
     let mut options = build_ollama_options(ollama);
     
-    // For local inference constrained decoding, if strict JSON is requested and temperature wasn't explicitly set,
-    // enforce low temperature (0.0) for deterministic constrained sampling.
-    if json_schema_strict && ollama.temperature.is_none() {
+    // Strict JSON schema decoding must be deterministic: always force temperature to 0,
+    // overriding any configured value (merge_ollama_config always yields Some, so an
+    // is_none() check here would never fire).
+    if json_schema_strict {
         options.insert("temperature".to_string(), serde_json::json!(0.0));
     }
 

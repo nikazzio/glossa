@@ -211,10 +211,23 @@ pub struct JudgeIssue {
     pub confidence: Option<f32>,
 }
 
+/// Valori ammessi da `parse_judge_rating` (`llm/prompts.rs`) — tenerli allineati:
+/// lo schema JSON qui genera il vincolo che il decoding strict di Ollama applica,
+/// ma il parsing resta quello esistente basato su stringa.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum JudgeRating {
+    Critical,
+    Poor,
+    Fair,
+    Good,
+    Excellent,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct JudgePayloadSchema {
-    pub rating: String,
+    pub rating: JudgeRating,
     pub issues: Vec<JudgeIssue>,
     pub checked_sentence_indices: Option<Vec<u32>>,
 }
