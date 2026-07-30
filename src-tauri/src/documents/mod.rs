@@ -1,9 +1,71 @@
+use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 const MAX_DOCX_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_PDF_BYTES: u64 = 50 * 1024 * 1024;
+const IMPORT_SETTINGS_FILE: &str = "import_settings.json";
+
+/// Persisted opt-in for the #367 import path restriction (Impostazioni >
+/// Archiviazione). Lives in a small JSON file under `app_config_dir`, never
+/// as a command argument: a compromised webview must not be able to disable
+/// the check by simply passing `false` on a single `extract_*` call.
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct ImportSettings {
+    #[serde(default)]
+    restrict_document_imports: bool,
+}
+
+fn import_settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to resolve app config dir: {e}"))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create app config dir: {e}"))?;
+    Ok(dir.join(IMPORT_SETTINGS_FILE))
+}
+
+fn load_restrict_document_imports(app: &tauri::AppHandle) -> bool {
+    import_settings_path(app)
+        .ok()
+        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|raw| serde_json::from_str::<ImportSettings>(&raw).ok())
+        .map(|settings| settings.restrict_document_imports)
+        .unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn get_restrict_document_imports(app: tauri::AppHandle) -> bool {
+    load_restrict_document_imports(&app)
+}
+
+#[tauri::command]
+pub fn set_restrict_document_imports(app: tauri::AppHandle, value: bool) -> Result<(), String> {
+    let path = import_settings_path(&app)?;
+    let settings = ImportSettings {
+        restrict_document_imports: value,
+    };
+    let json = serde_json::to_string(&settings)
+        .map_err(|e| format!("Failed to serialize import settings: {e}"))?;
+    fs::write(path, json).map_err(|e| format!("Failed to write import settings: {e}"))
+}
+
+const SENSITIVE_RELATIVE_DIRS: &[&str] = &[".ssh", ".aws", ".gnupg", ".config/gcloud"];
+
+/// Even with the restriction opted out, never read from directories that
+/// hold credentials — this is a hard floor, not part of the opt-in.
+/// Takes `home` directly (rather than resolving it from an `AppHandle`
+/// internally) so it stays unit-testable without a running Tauri app.
+fn is_sensitive_path(canonical: &Path, home: &Path) -> bool {
+    let Ok(home) = fs::canonicalize(home) else {
+        return false;
+    };
+    SENSITIVE_RELATIVE_DIRS
+        .iter()
+        .filter_map(|rel| fs::canonicalize(home.join(rel)).ok())
+        .any(|denied| canonical.starts_with(denied))
+}
 
 fn check_file_size(path: &std::path::Path, limit: u64) -> Result<(), String> {
     let size = fs::metadata(path)
@@ -55,8 +117,21 @@ fn validate_path_against_roots(path: &str, allowed_roots: &[PathBuf]) -> Result<
 /// file-selection dialog (see `capabilities/default.json`), so a compromised
 /// webview cannot use these commands to read arbitrary files (e.g. `/etc/passwd`,
 /// SSH keys) via a raw `fs::read` that bypasses the Tauri fs-plugin scope.
+/// Opt-in via Impostazioni > Archiviazione (default off): the preference is
+/// read from `load_restrict_document_imports`, a backend-persisted setting —
+/// never from this call's own arguments, so a compromised webview can't
+/// silently bypass it on a single invocation while leaving the toggle "on".
 fn validate_document_path(app: &tauri::AppHandle, path: &str) -> Result<PathBuf, String> {
-    validate_path_against_roots(path, &resolve_allowed_roots(app))
+    if load_restrict_document_imports(app) {
+        return validate_path_against_roots(path, &resolve_allowed_roots(app));
+    }
+    let canonical = fs::canonicalize(path).map_err(|e| format!("Failed to read file: {e}"))?;
+    if let Ok(home) = app.path().home_dir() {
+        if is_sensitive_path(&canonical, &home) {
+            return Err("File location not permitted".to_string());
+        }
+    }
+    Ok(canonical)
 }
 
 pub mod docx_export;
@@ -247,6 +322,62 @@ mod tests {
         );
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Failed to read file"));
+    }
+
+    #[test]
+    fn import_settings_defaults_to_false_when_field_missing() {
+        let parsed: ImportSettings = serde_json::from_str("{}").unwrap();
+        assert!(!parsed.restrict_document_imports);
+    }
+
+    #[test]
+    fn import_settings_roundtrips_true() {
+        let json = serde_json::to_string(&ImportSettings {
+            restrict_document_imports: true,
+        })
+        .unwrap();
+        let parsed: ImportSettings = serde_json::from_str(&json).unwrap();
+        assert!(parsed.restrict_document_imports);
+    }
+
+    #[test]
+    fn is_sensitive_path_rejects_ssh_dir() {
+        let home = std::env::temp_dir().join("glossa_test_home_ssh");
+        let ssh = home.join(".ssh");
+        std::fs::create_dir_all(&ssh).unwrap();
+        let key = ssh.join("id_rsa");
+        std::fs::write(&key, b"fake key").unwrap();
+
+        let canonical = std::fs::canonicalize(&key).unwrap();
+        assert!(is_sensitive_path(&canonical, &home));
+
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn is_sensitive_path_accepts_unrelated_file_under_home() {
+        let home = std::env::temp_dir().join("glossa_test_home_docs");
+        let docs = home.join("Documents");
+        std::fs::create_dir_all(&docs).unwrap();
+        let file = docs.join("report.docx");
+        std::fs::write(&file, b"content").unwrap();
+
+        let canonical = std::fs::canonicalize(&file).unwrap();
+        assert!(!is_sensitive_path(&canonical, &home));
+
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn is_sensitive_path_returns_false_when_home_does_not_resolve() {
+        let missing_home = std::path::PathBuf::from("/nonexistent_glossa_home_xyz");
+        let file = std::env::temp_dir().join("glossa_test_random_file.docx");
+        std::fs::write(&file, b"content").unwrap();
+
+        let canonical = std::fs::canonicalize(&file).unwrap();
+        assert!(!is_sensitive_path(&canonical, &missing_home));
+
+        let _ = std::fs::remove_file(&file);
     }
 
     #[test]

@@ -130,6 +130,8 @@ pub fn run() {
             documents::extract_docx_markdown,
             documents::export_markdown_docx,
             documents::extract_pdf_text,
+            documents::get_restrict_document_imports,
+            documents::set_restrict_document_imports,
             vector::vec_ping,
             vector::embedding::get_embeddings,
             vector::embedding::vec_list_phrase_memory,

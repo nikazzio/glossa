@@ -507,7 +507,10 @@
       "migrationNote": "Restart Glossa after changing this to use the new location.",
       "migrationSucceeded": "Data location updated. Restart Glossa to apply it.",
       "migrationFailed": "Failed to move the data location",
-      "loadFailed": "Failed to read the data location"
+      "loadFailed": "Failed to read the data location",
+      "restrictImports": "Restrict import folders",
+      "restrictImportsHint": "When on, importing documents (.docx/.pdf) only accepts files from Documents, Downloads, Desktop, or Glossa's own folders. Off by default: picking the file in the system dialog is already an explicit choice.",
+      "restrictImportsSaveFailed": "Failed to save this preference"
     },
     "backup": "Backup & Restore",
     "backupHint": "Export the full workspace to a portable file, or restore from a previous backup.",

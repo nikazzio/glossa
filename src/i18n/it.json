@@ -507,7 +507,10 @@
       "migrationNote": "Dopo il cambio riavvia Glossa per usare la nuova posizione.",
       "migrationSucceeded": "Posizione dati aggiornata. Riavvia Glossa per applicarla.",
       "migrationFailed": "Spostamento posizione dati fallito",
-      "loadFailed": "Lettura posizione dati fallita"
+      "loadFailed": "Lettura posizione dati fallita",
+      "restrictImports": "Limita cartelle di importazione",
+      "restrictImportsHint": "Quando attivo, l'importazione di documenti (.docx/.pdf) accetta solo file da Documenti, Download, Scrivania o cartelle interne di Glossa. Disattivato di default: la scelta del file nel dialog di sistema è già esplicita.",
+      "restrictImportsSaveFailed": "Salvataggio preferenza fallito"
     },
     "phraseMemoryTab": "Memoria frasi",
     "phraseMemoryToggle": "Memoria",
