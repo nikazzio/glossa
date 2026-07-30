@@ -7,6 +7,7 @@ import {
   listLibrarySourceUrls,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
+import { logger } from '../utils/logger';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -42,8 +43,12 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   },
 
   loadLibraryManifestUrls: async () => {
-    const urls = await listLibrarySourceUrls();
-    set({ libraryManifestUrls: new Set(urls) });
+    try {
+      const urls = await listLibrarySourceUrls();
+      set({ libraryManifestUrls: new Set(urls) });
+    } catch (error) {
+      logger.error('loadLibraryManifestUrls failed', { error: getErrorMessage(error) });
+    }
   },
 
   addFromDiscovery: async (card, workspaceId) => {

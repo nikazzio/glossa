@@ -217,9 +217,9 @@ function DiscoveryCenterStats() {
   if (outcome.manifest) {
     const pageCount = outcome.manifest.itemCount;
     return (
-      <span className="flex items-center gap-1.5">
+      <span className="flex min-w-0 items-center gap-1.5">
         <Search size={11} />
-        <span className="truncate">{outcome.manifest.title}</span>
+        <span className="min-w-0 truncate">{outcome.manifest.title}</span>
         {pageCount !== null && (
           <>
             <span className="text-editorial-border">·</span>

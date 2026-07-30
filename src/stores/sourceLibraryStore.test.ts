@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IIIFManifestPreview } from '../types';
+import { classifySourceKind, type IIIFDiscoveryResult, type IIIFManifestPreview } from '../types';
 
 vi.mock('../services/libraryService', () => ({
   listLibrarySources: vi.fn().mockResolvedValue([]),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
+  listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
 }));
 
 const { useSourceLibraryStore } = await import('./sourceLibraryStore');
@@ -125,5 +126,43 @@ describe('sourceLibraryStore', () => {
     await useSourceLibraryStore.getState().toggleWorkspaceLink('ws-1', 's-other', true);
 
     expect(service.getLibrarySourceDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe('classifySourceKind', () => {
+  const resultCard = (overrides: Partial<IIIFDiscoveryResult> = {}): IIIFDiscoveryResult => ({
+    id: 'r1',
+    title: 'Result',
+    creator: null,
+    date: null,
+    description: null,
+    thumbnailUrl: null,
+    mediaType: null,
+    collection: null,
+    language: null,
+    volume: null,
+    subjects: [],
+    manifestUrl: 'https://example.test/r1',
+    ...overrides,
+  });
+
+  it('riconosce manoscritto da materialType del manifest', () => {
+    expect(classifySourceKind({ ...manifestCard, materialType: 'Illuminated manuscript' })).toBe('manuscript');
+  });
+
+  it('riconosce manoscritto da subjects anche senza materialType', () => {
+    expect(classifySourceKind({ ...manifestCard, materialType: null, subjects: ['manoscritti medievali'] })).toBe('manuscript');
+  });
+
+  it('riconosce pdf da mediaType di un risultato di ricerca', () => {
+    expect(classifySourceKind(resultCard({ mediaType: 'application/pdf' }))).toBe('pdf');
+  });
+
+  it('riconosce stampa da mediaType con parola chiave "print"', () => {
+    expect(classifySourceKind(resultCard({ mediaType: 'printed book' }))).toBe('print');
+  });
+
+  it('ricade su iiif se nessuna parola chiave nota compare', () => {
+    expect(classifySourceKind(resultCard({ mediaType: 'photograph' }))).toBe('iiif');
   });
 });

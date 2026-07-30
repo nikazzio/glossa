@@ -94,7 +94,7 @@ export async function listLibrarySources(): Promise<LibrarySource[]> {
  * che l'utente provi ad aggiungerlo. */
 export async function listLibrarySourceUrls(): Promise<string[]> {
   const rows = await select<{ source_url: string }>(
-    "SELECT source_url FROM source_versions WHERE source_url IS NOT NULL",
+    "SELECT DISTINCT source_url FROM source_versions WHERE source_url IS NOT NULL ORDER BY source_url",
   );
   return rows.map((row) => row.source_url);
 }

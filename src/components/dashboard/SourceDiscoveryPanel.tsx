@@ -102,7 +102,7 @@ interface CardViewProps {
 
 /** Riga compatta label/valore per la griglia dati della scheda espansa (stesso
  * schema di StatRow: label sans piccola, valore serif) — senza StatRow diretto
- * perché qui il valore può troncare (`truncate`), StatRow non lo previede. */
+ * perché qui il valore può troncare (`truncate`), StatRow non lo prevede. */
 function DataStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">

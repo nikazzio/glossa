@@ -193,8 +193,8 @@ export function AppDashboard() {
                     <span className="pl-7 text-xs text-editorial-warning">
                       {t('dashboard.attentionCount', { count: project.issue_count })}
                     </span>
+                    {workspaceIdentity(project.workspace_id, project.workspace_name)}
                   </button>
-                  {workspaceIdentity(project.workspace_id, project.workspace_name)}
                 </div>
               ))}
             </div>
@@ -228,8 +228,8 @@ export function AppDashboard() {
                     <span className="pl-7 text-xs text-editorial-muted">
                       {formatWhen(project.updated_at)}
                     </span>
+                    {workspaceIdentity(project.workspace_id, project.workspace_name)}
                   </button>
-                  {workspaceIdentity(project.workspace_id, project.workspace_name)}
                 </div>
               ))}
             </div>
