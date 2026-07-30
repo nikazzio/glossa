@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// A single section of a system prompt. `cacheable: true` tells the provider
@@ -194,7 +195,7 @@ pub struct OllamaPreflightStatus {
     pub model_available: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct JudgeIssue {
     #[serde(rename = "type")]
@@ -208,6 +209,19 @@ pub struct JudgeIssue {
     pub source_phrase: Option<String>,
     /// Model confidence for this issue (0.0–1.0). Lower values mean the model is less certain.
     pub confidence: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct JudgePayloadSchema {
+    pub rating: String,
+    pub issues: Vec<JudgeIssue>,
+    pub checked_sentence_indices: Option<Vec<u32>>,
+}
+
+pub fn generate_audit_json_schema() -> serde_json::Value {
+    let schema = schemars::schema_for!(JudgePayloadSchema);
+    serde_json::to_value(schema).unwrap_or_default()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -262,3 +276,17 @@ pub struct CoherenceResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::generate_audit_json_schema;
+
+    #[test]
+    fn generates_valid_audit_json_schema() {
+        let schema = generate_audit_json_schema();
+        assert_eq!(schema["type"], "object");
+        assert!(schema["properties"].get("issues").is_some());
+        assert!(schema["properties"].get("rating").is_some());
+    }
+}
+

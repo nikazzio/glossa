@@ -42,6 +42,7 @@ async-trait = "0.1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 sqlite-vec = "0.1.6"
 thiserror = "1"
+schemars = { version = "0.8", features = ["derive"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"

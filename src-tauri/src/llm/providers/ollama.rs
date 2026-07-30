@@ -407,7 +407,14 @@ pub(crate) fn build_ollama_chat_body(
     json_mode: bool,
     json_schema_strict: bool,
 ) -> Value {
-    let options = build_ollama_options(ollama);
+    let mut options = build_ollama_options(ollama);
+    
+    // For local inference constrained decoding, if strict JSON is requested and temperature wasn't explicitly set,
+    // enforce low temperature (0.0) for deterministic constrained sampling.
+    if json_schema_strict && ollama.temperature.is_none() {
+        options.insert("temperature".to_string(), serde_json::json!(0.0));
+    }
+
     let mut body = serde_json::json!({
         "model": model,
         "messages": [
@@ -425,7 +432,7 @@ pub(crate) fn build_ollama_chat_body(
         body["keep_alive"] = keep_alive;
     }
     if json_schema_strict {
-        body["format"] = translation_audit_schema();
+        body["format"] = crate::llm::types::generate_audit_json_schema();
     } else if json_mode {
         body["format"] = serde_json::json!("json");
     }
@@ -451,6 +458,7 @@ mod structured_output_tests {
 
         assert_eq!(body["format"]["type"], "object");
         assert!(body["format"].get("properties").is_some());
+        assert!(body["format"]["properties"].get("issues").is_some());
     }
 
     #[test]

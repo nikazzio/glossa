@@ -532,59 +532,98 @@ pub async fn extract_phrase_memory_pairs(
     let client = prov.http_client()?;
     let escaped_source = escape_prompt_markers(&source_text);
     let escaped_target = escape_prompt_markers(&target_text);
-    let structured = crate::llm::types::StructuredPrompt {
-        system: vec![crate::llm::types::PromptBlock {
-            text: prompt,
-            cacheable: false,
-        }],
-        user: format!(
-            "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
-        ),
-    };
-    let req = LlmRequest {
-        model: &model,
-        structured: &structured,
-        api_key: &api_key,
-        json_mode: true,
-        json_schema_strict: false,
-        provider_options: None,
-    };
 
-    let result_text = prov.call(&client, &req).await?.content;
-    let sanitized = sanitize_llm_json_output(&result_text);
-    let parsed: serde_json::Value = serde_json::from_str(sanitized)
-        .map_err(|e| format!("Failed to parse phrase memory JSON: {e}"))?;
-    let pairs = parsed["pairs"]
-        .as_array()
-        .ok_or_else(|| "Phrase memory extractor returned JSON without a pairs array".to_string())?;
+    let mut attempt = 0;
+    let max_attempts = 2;
+    let mut last_error = String::new();
 
-    let validated = pairs
-        .iter()
-        .filter_map(|entry| {
-            let source_phrase = entry["sourcePhrase"].as_str()?.trim();
-            let target_phrase = entry["targetPhrase"].as_str()?.trim();
-            if source_phrase.is_empty() || target_phrase.is_empty() {
-                return None;
+    while attempt < max_attempts {
+        attempt += 1;
+        let user_prompt = if attempt == 1 {
+            format!(
+                "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
+            )
+        } else {
+            format!(
+                "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nPrevious attempt failed with error: {last_error}.\nPlease return ONLY valid JSON with a \"pairs\" array of verbatim extracted phrases."
+            )
+        };
+
+        let structured = crate::llm::types::StructuredPrompt {
+            system: vec![crate::llm::types::PromptBlock {
+                text: prompt.clone(),
+                cacheable: false,
+            }],
+            user: user_prompt,
+        };
+
+        let req = LlmRequest {
+            model: &model,
+            structured: &structured,
+            api_key: &api_key,
+            json_mode: true,
+            json_schema_strict: false,
+            provider_options: None,
+        };
+
+        let result_text = match prov.call(&client, &req).await {
+            Ok(res) => res.content,
+            Err(e) => {
+                last_error = e;
+                continue;
             }
-            if !source_text.contains(source_phrase) || !target_text.contains(target_phrase) {
-                log::warn!(
-                    "phrase_memory.extract_pairs.discard_non_verbatim source_chars={} target_chars={}",
-                    source_phrase.len(),
-                    target_phrase.len()
-                );
-                return None;
+        };
+
+        let sanitized = sanitize_llm_json_output(&result_text);
+        let parsed: serde_json::Value = match serde_json::from_str(sanitized) {
+            Ok(v) => v,
+            Err(e) => {
+                last_error = format!("JSON parse error: {e}");
+                continue;
             }
-            let confidence = entry["confidence"].as_f64()?.clamp(0.0, 1.0);
-            Some(MemoryExtractorPair {
-                source_phrase: source_phrase.to_string(),
-                target_phrase: target_phrase.to_string(),
-                confidence,
+        };
+
+        let pairs = match parsed["pairs"].as_array() {
+            Some(arr) => arr,
+            None => {
+                last_error = "JSON output missing 'pairs' array".to_string();
+                continue;
+            }
+        };
+
+        let validated: Vec<MemoryExtractorPair> = pairs
+            .iter()
+            .filter_map(|entry| {
+                let source_phrase = entry["sourcePhrase"].as_str()?.trim();
+                let target_phrase = entry["targetPhrase"].as_str()?.trim();
+                if source_phrase.is_empty() || target_phrase.is_empty() {
+                    return None;
+                }
+                if !source_text.contains(source_phrase) || !target_text.contains(target_phrase) {
+                    log::warn!(
+                        "phrase_memory.extract_pairs.discard_non_verbatim source_chars={} target_chars={}",
+                        source_phrase.len(),
+                        target_phrase.len()
+                    );
+                    return None;
+                }
+                let confidence = entry["confidence"].as_f64()?.clamp(0.0, 1.0);
+                Some(MemoryExtractorPair {
+                    source_phrase: source_phrase.to_string(),
+                    target_phrase: target_phrase.to_string(),
+                    confidence,
+                })
             })
-        })
-        .collect();
+            .collect();
 
-    Ok(MemoryExtractorResponse { pairs: validated })
+        return Ok(MemoryExtractorResponse { pairs: validated });
+    }
+
+    Err(format!(
+        "Phrase memory extraction failed after {max_attempts} attempts. Last error: {last_error}"
+    ))
 }
+
 
 #[tauri::command]
 pub async fn run_coherence_for_chunk(
