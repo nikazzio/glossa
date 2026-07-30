@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, Highlighter, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, ShieldAlert, Terminal } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Highlighter, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
+import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
@@ -207,6 +208,45 @@ function ChunkCenterStats() {
   );
 }
 
+function DiscoveryCenterStats() {
+  const { t } = useTranslation();
+  const outcome = useDiscoverySearchStore((s) => s.outcome);
+
+  if (!outcome || outcome.status === 'not_found') return null;
+
+  if (outcome.manifest) {
+    const pageCount = outcome.manifest.itemCount;
+    return (
+      <span className="flex items-center gap-1.5">
+        <Search size={11} />
+        <span className="truncate">{outcome.manifest.title}</span>
+        {pageCount !== null && (
+          <>
+            <span className="text-editorial-border">·</span>
+            <span>{t('statusBar.discoveryPages', { count: pageCount })}</span>
+          </>
+        )}
+      </span>
+    );
+  }
+
+  const count = outcome.results.length;
+  if (count === 0) return null;
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <Search size={11} />
+      <span>{t('statusBar.discoveryResults', { count })}</span>
+      {outcome.hasMore && (
+        <>
+          <span className="text-editorial-border">·</span>
+          <span>{t('statusBar.discoveryMore')}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export function AppStatusBar() {
   const { t } = useTranslation();
   const data = useStatusBarData();
@@ -260,10 +300,15 @@ export function AppStatusBar() {
           )}
         </div>
 
-        {/* Center: stats chunk corrente */}
+        {/* Center: stats chunk corrente / risultati discovery in dashboard */}
         {data.kind === 'project' && data.totalChunks > 0 && (
           <div className="hidden items-center sm:flex">
             <ChunkCenterStats />
+          </div>
+        )}
+        {data.kind === 'workspace' && data.areaName === 'dashboard' && (
+          <div className="hidden min-w-0 items-center sm:flex">
+            <DiscoveryCenterStats />
           </div>
         )}
 

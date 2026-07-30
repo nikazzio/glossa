@@ -4,6 +4,7 @@ import {
   addSourceToLibrary as addSourceToLibraryService,
   getLibrarySourceDetail,
   listLibrarySources,
+  listLibrarySourceUrls,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
 
@@ -17,8 +18,10 @@ interface SourceLibraryState {
   detail: LibrarySourceDetail | null;
   addingUrls: Set<string>;
   addedManifestUrls: Set<string>;
+  libraryManifestUrls: Set<string>;
   error: string | null;
   loadSources: () => Promise<void>;
+  loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
@@ -30,11 +33,17 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   detail: null,
   addingUrls: new Set(),
   addedManifestUrls: new Set(),
+  libraryManifestUrls: new Set(),
   error: null,
 
   loadSources: async () => {
     const sources = await listLibrarySources();
     set({ sources });
+  },
+
+  loadLibraryManifestUrls: async () => {
+    const urls = await listLibrarySourceUrls();
+    set({ libraryManifestUrls: new Set(urls) });
   },
 
   addFromDiscovery: async (card, workspaceId) => {

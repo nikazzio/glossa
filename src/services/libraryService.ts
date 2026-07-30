@@ -89,6 +89,16 @@ export async function listLibrarySources(): Promise<LibrarySource[]> {
   return rows.map(rowToSource);
 }
 
+/** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione):
+ * usato per segnare come "già aggiunto" un risultato di ricerca prima ancora
+ * che l'utente provi ad aggiungerlo. */
+export async function listLibrarySourceUrls(): Promise<string[]> {
+  const rows = await select<{ source_url: string }>(
+    "SELECT source_url FROM source_versions WHERE source_url IS NOT NULL",
+  );
+  return rows.map((row) => row.source_url);
+}
+
 export async function addSourceToLibrary(
   input: AddSourceToLibraryInput,
 ): Promise<{ sourceId: string; wasCreated: boolean }> {
