@@ -12,6 +12,7 @@ import {
 import { HighlightedText } from './HighlightedText';
 import { CopyButton } from './CopyButton';
 import { IconButton } from '../ui';
+import { escapeHtml } from '../../hooks/useGlossaryHighlight';
 
 type EditorMode = 'write' | 'preview' | 'split';
 
@@ -105,6 +106,7 @@ export function MarkdownEditor({
   const lastValueRef = useRef(value);
   const lastTypingChangeAtRef = useRef(0);
   const previousIdentityRef = useRef(identityKey);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
   const [mode, setMode] = useState<EditorMode>('write');
   const [textSizeStep, setTextSizeStep] = useState(defaultTextSizeStep ?? DEFAULT_TEXT_SIZE_STEP);
   useEffect(() => {
@@ -116,6 +118,16 @@ export function MarkdownEditor({
     if (mode === 'write' && !readOnly) return '';
     return renderMarkdownToHtmlFragment(previewValue ?? value, { stripFootnoteNav: true });
   }, [mode, readOnly, value, previewValue]);
+  // Chi passa `highlightHtml` (anche `null`, quando al momento non c'è nulla da
+  // evidenziare) resta SEMPRE sulla stessa struttura a doppio livello (overlay
+  // colorato + textarea invisibile sotto): accendere/spegnere l'evidenziazione
+  // non deve mai smontare/rimontare un layout diverso, altrimenti il testo
+  // "salta" — sia come impaginazione (il calcolo del testo a capo cambia) sia
+  // come scroll (il browser azzera lo scrollTop quando cambia struttura DOM).
+  // Solo chi non usa mai questa prop (altri usi di MarkdownEditor senza
+  // evidenziazione) resta sulla textarea semplice originale.
+  const usesHighlightOverlay = highlightHtml !== undefined;
+  const resolvedHighlightHtml = highlightHtml ?? escapeHtml(value);
   const textSizeStyle = TEXT_SIZE_STEPS[textSizeStep];
   const effectiveStyle = useDocLineHeight
     ? { ...textSizeStyle, lineHeight: 'var(--doc-line-height)' }
@@ -149,6 +161,7 @@ export function MarkdownEditor({
     lastTypingChangeAtRef.current = 0;
     undoStackRef.current = [];
     redoStackRef.current = [];
+    pendingScrollRestoreRef.current = null;
     updateSelection(0, 0);
     requestAnimationFrame(() => {
       const element = textareaRef.current ?? readOnlyHighlightRef.current;
@@ -214,9 +227,23 @@ export function MarkdownEditor({
   // questo, scrivere o incollare fa "saltare" il testo visibile (che vive lì,
   // non nella textarea invisibile sopra) in cima al riquadro. Layout effect
   // (non effect normale) per correggerlo prima che il browser disegni il frame.
+  //
+  // Rinforzo: comparsa/sparizione di un singolo <mark> (es. selezionare/
+  // deselezionare un'issue audit) può cambiare leggermente l'altezza del
+  // contenuto e far "clampare" lo scrollTop reale della textarea, non solo
+  // quello del livello overlay — la cleanup cattura lo scrollTop reale PRIMA
+  // che React applichi il prossimo highlightHtml, il run successivo lo
+  // ripristina esplicitamente invece di fidarsi che il browser lo preservi.
   useLayoutEffect(() => {
+    const element = textareaRef.current;
+    if (element && pendingScrollRestoreRef.current !== null) {
+      element.scrollTop = pendingScrollRestoreRef.current;
+    }
     syncHighlightLayer();
-  }, [highlightHtml]);
+    return () => {
+      pendingScrollRestoreRef.current = textareaRef.current?.scrollTop ?? null;
+    };
+  }, [resolvedHighlightHtml]);
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -519,15 +546,21 @@ export function MarkdownEditor({
           ) : null}
         </div>
       )}
-      {mode === 'write' && !readOnly && highlightHtml ? (
+      {mode === 'write' && !readOnly && usesHighlightOverlay ? (
         fillHeight ? (
           // Overlay: HighlightedText behind transparent textarea — styled text visible while editing
-          <div className="relative flex-1 min-h-0" onWheel={(e) => { const ta = textareaRef.current; if (ta) { ta.scrollTop += e.deltaY; e.preventDefault(); } }}>
+          <div className="relative flex-1 min-h-0 min-w-0" onWheel={(e) => { const ta = textareaRef.current; if (ta) { ta.scrollTop += e.deltaY; e.preventDefault(); } }}>
             <HighlightedText
               ref={highlightLayerRef}
-              html={highlightHtml}
+              html={resolvedHighlightHtml}
               style={{ ...effectiveStyle, minHeight: 0 }}
-              className={`pointer-events-none absolute inset-0 overflow-y-scroll scrollbar-hidden whitespace-pre-wrap break-words select-none ${textClassName}`}
+              // overlay-scrollbar (non custom-scrollbar): stessa larghezza esatta,
+              // ma un'altra classe — usePanelScrollSync.ts cerca ".custom-scrollbar"
+              // per trovare "il" contenitore di scroll di ogni riquadro; se questo
+              // livello puramente decorativo (pointer-events-none) matchasse anche
+              // lui quel selettore, diventerebbe un candidato ambiguo insieme alla
+              // vera textarea sotto, con salti di scroll imprevedibili.
+              className={`pointer-events-none absolute inset-0 overflow-y-scroll overlay-scrollbar whitespace-pre-wrap break-words select-none ${textClassName}`}
             />
             <textarea
               ref={textareaRef}
@@ -544,6 +577,10 @@ export function MarkdownEditor({
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
+              // Stessa classe scrollbar del livello colorato sopra (custom-scrollbar
+              // su entrambi): gutter identico su entrambi, niente più disallineamento
+              // fra le due righe di testo. Il click passa attraverso l'overlay
+              // (pointer-events-none), quindi resta questa la barra trascinabile.
               className={`${textareaClassName} absolute inset-0 h-full w-full resize-none`}
               style={{ ...effectiveStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
             />
@@ -551,21 +588,21 @@ export function MarkdownEditor({
         ) : (
           <div className="space-y-2">
             {textarea}
-            <HighlightedText html={highlightHtml} style={effectiveStyle} className={`${minHeightClassName} ${textClassName}`} />
+            <HighlightedText html={resolvedHighlightHtml} style={effectiveStyle} className={`${minHeightClassName} ${textClassName}`} />
           </div>
         )
       ) : null}
-      {mode === 'write' && readOnly && highlightHtml ? (
+      {mode === 'write' && readOnly && usesHighlightOverlay ? (
         <HighlightedText
           ref={readOnlyHighlightRef}
           data-scroll-sync="true"
-          html={highlightHtml}
+          html={resolvedHighlightHtml}
           style={effectiveStyle}
           className={fillHeight ? `flex-1 min-h-0 overflow-y-auto custom-scrollbar ${textClassName}` : `${minHeightClassName} ${textClassName}`}
         />
       ) : null}
-      {mode === 'write' && readOnly && !highlightHtml ? readOnlyText : null}
-      {mode === 'write' && !readOnly && !highlightHtml ? textarea : null}
+      {mode === 'write' && readOnly && !usesHighlightOverlay ? readOnlyText : null}
+      {mode === 'write' && !readOnly && !usesHighlightOverlay ? textarea : null}
       {mode === 'preview' ? preview : null}
       {mode === 'split' ? (
         fillHeight ? (

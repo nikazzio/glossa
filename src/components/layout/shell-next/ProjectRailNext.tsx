@@ -10,14 +10,17 @@ import {
   PanelLeftClose,
   Plus,
   Settings2,
+  Trash2,
   Upload,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   PipelineSidebarExportDialogHost,
   PipelineSidebarRunSection,
 } from '../PipelineSidebarSections';
+import { confirm } from '../../../stores/confirmStore';
+import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useChunksStore } from '../../../stores/chunksStore';
@@ -47,12 +50,25 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
   const pipelines = useProjectStore((s) => s.pipelines);
   const switchPipeline = useProjectStore((s) => s.switchPipeline);
   const createNewPipeline = useProjectStore((s) => s.createNewPipeline);
+  const deletePipeline = useProjectStore((s) => s.deletePipeline);
   const hasProject = useProjectStore((s) => !!s.currentProjectId);
   const maxPipelines = useConfigStore((s) => s.maxPipelines);
+  const isRunning = usePipelineStore((s) => s.runStatus === 'running');
 
   const activeName =
     pipelines.find((p) => p.id === activePipelineId)?.name ??
     t('pipeline.pipelineNumber', { number: 1 });
+
+  const handleDeletePipeline = useCallback(async (pipelineId: string, pipelineName: string) => {
+    const ok = await confirm({
+      title: t('pipeline.confirmDeleteTitle'),
+      message: t('pipeline.confirmDeleteMessage', { name: pipelineName }),
+      confirmLabel: t('pipeline.deletePipeline'),
+      danger: true,
+    });
+    if (!ok) return;
+    await deletePipeline(pipelineId);
+  }, [deletePipeline, t]);
 
   return (
     <div className="border-b border-editorial-border/70 px-4 pt-5 pb-4">
@@ -81,29 +97,45 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
               </IconButton>
             }
           >
-            {pipelines.map((pipeline) => (
-              <button
-                key={pipeline.id}
-                onClick={() => {
-                  void switchPipeline(pipeline.id);
-                  setPopoverOpen(false);
-                }}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-editorial-textbox/60 ${
-                  pipeline.id === activePipelineId
-                    ? 'font-medium text-editorial-ink'
-                    : 'text-editorial-muted'
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                    pipeline.id === activePipelineId
-                      ? 'bg-editorial-success'
-                      : 'bg-editorial-border'
-                  }`}
-                />
-                <span className="truncate">{pipeline.name}</span>
-              </button>
-            ))}
+            {pipelines.map((pipeline) => {
+              const isActive = pipeline.id === activePipelineId;
+              const canDelete = pipelines.length > 1 && !(isActive && isRunning);
+              return (
+                <div
+                  key={pipeline.id}
+                  className="flex items-center gap-1 transition-colors hover:bg-editorial-textbox/60"
+                >
+                  <button
+                    onClick={() => {
+                      void switchPipeline(pipeline.id);
+                      setPopoverOpen(false);
+                    }}
+                    className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm ${
+                      isActive ? 'font-medium text-editorial-ink' : 'text-editorial-muted'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        isActive ? 'bg-editorial-success' : 'bg-editorial-border'
+                      }`}
+                    />
+                    <span className="truncate">{pipeline.name}</span>
+                  </button>
+                  {canDelete && (
+                    <IconButton
+                      size="sm"
+                      tone="muted"
+                      onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name)}
+                      title={t('pipeline.deletePipeline')}
+                      ariaLabel={t('pipeline.deletePipeline')}
+                      className="mr-1 h-6 w-6 shrink-0 p-0"
+                    >
+                      <Trash2 size={12} />
+                    </IconButton>
+                  )}
+                </div>
+              );
+            })}
             {hasProject && pipelines.length < maxPipelines && (
               <>
                 <div className="border-t border-editorial-border/60" />

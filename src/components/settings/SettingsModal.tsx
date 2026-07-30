@@ -54,13 +54,14 @@ export function SettingsModal() {
     setChunkPresetLong,
     ollamaBaseUrl,
     setOllamaBaseUrl,
+    ollamaAutoDiscover,
+    setOllamaAutoDiscover,
     newPipelineInit,
     setNewPipelineInit,
   } = useConfigStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
-  const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -213,6 +214,8 @@ export function SettingsModal() {
           refreshing={refreshing}
           refreshOllama={refreshOllama}
           setOllamaBaseUrl={setOllamaBaseUrl}
+          ollamaAutoDiscover={ollamaAutoDiscover}
+          setOllamaAutoDiscover={setOllamaAutoDiscover}
           keyStatuses={keyStatuses}
           refreshKeyStatuses={refreshKeyStatuses}
           showDeprecatedModels={showDeprecatedModels}
@@ -223,8 +226,6 @@ export function SettingsModal() {
           setOverride={setOverride}
           resetOverride={resetOverride}
           resetAll={resetAll}
-          showSecurityAdvisory={showSecurityAdvisory}
-          setShowSecurityAdvisory={setShowSecurityAdvisory}
         />
       )}
 

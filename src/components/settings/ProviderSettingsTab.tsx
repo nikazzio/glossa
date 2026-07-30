@@ -1,6 +1,5 @@
 import {
-  AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
-  ChevronDown, ChevronUp, Globe, History,
+  Server, RefreshCw, ChevronDown, ChevronUp, Globe, History, Zap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ApiKeyInput } from './ApiKeyInput';
@@ -80,6 +79,8 @@ interface ProviderSettingsTabProps {
   refreshing: boolean;
   refreshOllama: () => Promise<void>;
   setOllamaBaseUrl: (url: string) => void;
+  ollamaAutoDiscover: boolean;
+  setOllamaAutoDiscover: (value: boolean) => void;
   keyStatuses: ProviderKeyStatusMap;
   refreshKeyStatuses: () => void;
   showDeprecatedModels: boolean;
@@ -90,8 +91,6 @@ interface ProviderSettingsTabProps {
   setOverride: (key: string, pricing: { input: number; output: number }) => void;
   resetOverride: (key: string) => void;
   resetAll: () => void;
-  showSecurityAdvisory: boolean;
-  setShowSecurityAdvisory: (value: boolean | ((current: boolean) => boolean)) => void;
 }
 
 export function ProviderSettingsTab({
@@ -106,6 +105,8 @@ export function ProviderSettingsTab({
   refreshing,
   refreshOllama,
   setOllamaBaseUrl,
+  ollamaAutoDiscover,
+  setOllamaAutoDiscover,
   keyStatuses,
   refreshKeyStatuses,
   showDeprecatedModels,
@@ -116,10 +117,20 @@ export function ProviderSettingsTab({
   setOverride,
   resetOverride,
   resetAll,
-  showSecurityAdvisory,
-  setShowSecurityAdvisory,
 }: ProviderSettingsTabProps) {
   const { t } = useTranslation();
+  const ollamaStatusLabel =
+    ollamaStatus === 'connected'
+      ? t('ollama.connected', { count: ollamaModels.length })
+      : ollamaStatus === 'disconnected'
+        ? t('ollama.disconnected')
+        : t('ollama.unchecked');
+  const ollamaDotClass =
+    ollamaStatus === 'connected'
+      ? 'bg-editorial-success'
+      : ollamaStatus === 'disconnected'
+        ? 'bg-editorial-danger'
+        : 'bg-editorial-running';
 
   return (
     <div
@@ -197,7 +208,7 @@ export function ProviderSettingsTab({
               {activeProviderTab === 'custom' ? (
                 <CustomProviderSection />
               ) : activeProviderTab === 'ollama' ? (
-                <div className="space-y-4 border-y border-editorial-border/70 py-4">
+                <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Server size={16} className="text-editorial-muted" />
@@ -223,15 +234,9 @@ export function ProviderSettingsTab({
                         aria-label={t('ollama.baseUrl')}
                       />
                       {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
-                      {ollamaStatus === 'connected' && (
-                        <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
-                      )}
-                      {ollamaStatus === 'disconnected' && (
-                        <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
-                      )}
-                      {ollamaStatus === 'unknown' && (
-                        <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
-                      )}
+                      <Tooltip label={ollamaStatusLabel}>
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${ollamaDotClass}`} aria-label={ollamaStatusLabel} />
+                      </Tooltip>
                     </div>
                     <IconButton
                       onClick={() => void refreshOllama()}
@@ -243,22 +248,14 @@ export function ProviderSettingsTab({
                     </IconButton>
                   </div>
 
-                  {ollamaStatus === 'disconnected' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.notRunning')}
-                    </p>
-                  )}
-                  {ollamaStatus === 'unknown' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.uncheckedHint')}
-                    </p>
-                  )}
-                  {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.noModels')}
-                    </p>
-                  )}
-                  {ollamaStatus === 'connected' && ollamaModels.length > 0 && (
+                  <ToggleRow
+                    icon={<Zap size={13} />}
+                    label={t('ollama.autoDiscover')}
+                    checked={ollamaAutoDiscover}
+                    onChange={() => setOllamaAutoDiscover(!ollamaAutoDiscover)}
+                  />
+
+                  {ollamaModels.length > 0 && (
                     <div className="space-y-1.5">
                       {ollamaModels.map((modelId) => (
                         <div
@@ -272,7 +269,7 @@ export function ProviderSettingsTab({
                   )}
                 </div>
               ) : (
-                <div className="border-y border-editorial-border/70 py-4">
+                <div className="border-b border-editorial-border/70 pb-4">
                   <ApiKeyInput
                     label={PROVIDER_LABELS[activeProviderTab]}
                     provider={activeProviderTab}
@@ -443,31 +440,6 @@ export function ProviderSettingsTab({
                 </button>
               </div>
             )}
-          </div>
-        )}
-      </div>
-
-      {/* Security Advisory */}
-      <div className="border-y border-editorial-border/70">
-        <button
-          type="button"
-          onClick={() => setShowSecurityAdvisory((current) => !current)}
-          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
-          aria-expanded={showSecurityAdvisory}
-        >
-          <div className="flex items-center gap-3">
-            <AlertCircle size={18} className="text-editorial-accent shrink-0" />
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
-              {t('settings.securityAdvisory')}
-            </div>
-          </div>
-          {showSecurityAdvisory ? <ChevronUp size={14} className="text-editorial-muted" /> : <ChevronDown size={14} className="text-editorial-muted" />}
-        </button>
-        {showSecurityAdvisory && (
-          <div className="border-t border-editorial-border px-5 py-4">
-            <p className="text-sm leading-relaxed text-editorial-muted">
-              {t('settings.securityMessage')}
-            </p>
           </div>
         )}
       </div>

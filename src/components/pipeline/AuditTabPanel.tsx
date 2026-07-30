@@ -7,6 +7,7 @@ import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
 import { SectionLabel, ToggleRow, FieldLabel, Select, Tooltip } from '../ui';
+import { useConfigStore } from '../../stores/configStore';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { TemperatureControl } from '../models/TemperatureControl';
@@ -57,6 +58,7 @@ export function AuditTabPanel({
   deleteTemplate,
 }: AuditTabPanelProps) {
   const { t } = useTranslation();
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
   const judgeShowReasoningPicker =
     judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama';
@@ -146,7 +148,9 @@ export function AuditTabPanel({
             options={LLM_PROVIDER_ORDER.map((p) => ({
               value: p,
               label: p,
-              disabled: p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false,
+              disabled: p === 'ollama'
+                ? ollamaModels.length === 0
+                : (keyStatuses as Partial<Record<string, boolean>>)[p] === false,
             }))}
           />
           {effectiveJudgeModels.length > 0 ? (

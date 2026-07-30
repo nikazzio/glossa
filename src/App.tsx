@@ -27,6 +27,7 @@ import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
 import { TranscriptionsCatalogArea } from './components/workspace/TranscriptionsCatalogArea';
 import { AnalysisArea } from './components/workspace/AnalysisArea';
 import { importTextFile } from './services/fileService';
+import { ollamaService } from './services/llmService';
 import { savePipelineConfig } from './services/pipelineService';
 import { extractFootnotes } from './utils/footnoteExtractor';
 import { getContextWindow } from './models/catalog';
@@ -408,6 +409,25 @@ function EditorView() {
 
 export default function App() {
   useEffect(() => { void initLogger(); }, []);
+
+  const ollamaAutoDiscover = useConfigStore((s) => s.ollamaAutoDiscover);
+  useEffect(() => {
+    if (!ollamaAutoDiscover) return;
+    const { setOllamaModels, setOllamaStatus } = useConfigStore.getState();
+    ollamaService
+      .listModels()
+      .then((models) => {
+        setOllamaModels(models);
+        setOllamaStatus('connected');
+      })
+      .catch(() => {
+        setOllamaModels([]);
+        setOllamaStatus('disconnected');
+      });
+    // Solo all'avvio: cambiare il flag a runtime non deve riprovare da solo,
+    // l'utente ha già "Aggiorna" in Impostazioni per un check esplicito.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
