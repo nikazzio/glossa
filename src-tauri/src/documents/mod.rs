@@ -6,6 +6,8 @@ use tauri::Manager;
 const MAX_DOCX_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_PDF_BYTES: u64 = 50 * 1024 * 1024;
 const IMPORT_SETTINGS_FILE: &str = "import_settings.json";
+const DOCX_EXTENSIONS: &[&str] = &["docx"];
+const PDF_EXTENSIONS: &[&str] = &["pdf"];
 
 /// Persisted opt-in for the #367 import path restriction (Impostazioni >
 /// Archiviazione). Lives in a small JSON file under `app_config_dir`, never
@@ -51,20 +53,72 @@ pub fn set_restrict_document_imports(app: tauri::AppHandle, value: bool) -> Resu
     fs::write(path, json).map_err(|e| format!("Failed to write import settings: {e}"))
 }
 
-const SENSITIVE_RELATIVE_DIRS: &[&str] = &[".ssh", ".aws", ".gnupg", ".config/gcloud"];
+/// Credential-bearing locations, relative to the user's home directory.
+/// Entries may be directories or single files: matching is by canonical-path
+/// prefix, so a file entry matches only that exact file. Paths that do not
+/// exist on the current platform are simply skipped.
+const SENSITIVE_RELATIVE_PATHS: &[&str] = &[
+    // chiavi e portachiavi crittografici
+    ".ssh",
+    ".gnupg",
+    ".pki",
+    ".password-store",
+    ".local/share/keyrings",
+    ".gnome2/keyrings",
+    "Library/Keychains",
+    // cloud e infrastruttura
+    ".aws",
+    ".azure",
+    ".config/gcloud",
+    "AppData/Roaming/gcloud",
+    ".kube",
+    ".docker",
+    ".terraform.d",
+    // credenziali di rete e registri pacchetti
+    ".netrc",
+    "_netrc",
+    ".git-credentials",
+    ".npmrc",
+    ".pypirc",
+    ".cargo/credentials",
+    ".cargo/credentials.toml",
+    // profili browser: cookie e sessioni autenticate
+    ".mozilla",
+    ".thunderbird",
+    ".config/google-chrome",
+    ".config/chromium",
+    ".config/microsoft-edge",
+    ".config/BraveSoftware",
+    "Library/Application Support/Google/Chrome",
+    "Library/Application Support/Firefox",
+    "AppData/Roaming/Mozilla",
+    "AppData/Local/Google/Chrome",
+];
 
-/// Even with the restriction opted out, never read from directories that
-/// hold credentials — this is a hard floor, not part of the opt-in.
+/// Even with the restriction opted out, never read from locations that hold
+/// credentials — this is a hard floor, not part of the opt-in.
 /// Takes `home` directly (rather than resolving it from an `AppHandle`
 /// internally) so it stays unit-testable without a running Tauri app.
+/// Fails closed: an unresolvable home means we cannot prove the path is safe.
 fn is_sensitive_path(canonical: &Path, home: &Path) -> bool {
     let Ok(home) = fs::canonicalize(home) else {
-        return false;
+        return true;
     };
-    SENSITIVE_RELATIVE_DIRS
+    SENSITIVE_RELATIVE_PATHS
         .iter()
         .filter_map(|rel| fs::canonicalize(home.join(rel)).ok())
         .any(|denied| canonical.starts_with(denied))
+}
+
+/// The extract commands only ever handle these formats. Enforcing the
+/// extension before any read keeps a compromised webview from using them as a
+/// generic file-read primitive, independently of the location denylist.
+fn has_allowed_extension(canonical: &Path, allowed_extensions: &[&str]) -> bool {
+    canonical
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())
+        .is_some_and(|ext| allowed_extensions.contains(&ext.as_str()))
 }
 
 fn check_file_size(path: &std::path::Path, limit: u64) -> Result<(), String> {
@@ -121,17 +175,40 @@ fn validate_path_against_roots(path: &str, allowed_roots: &[PathBuf]) -> Result<
 /// read from `load_restrict_document_imports`, a backend-persisted setting —
 /// never from this call's own arguments, so a compromised webview can't
 /// silently bypass it on a single invocation while leaving the toggle "on".
-fn validate_document_path(app: &tauri::AppHandle, path: &str) -> Result<PathBuf, String> {
+/// With the restriction off, two floors still apply and are not opt-out:
+/// the extension must be one the caller actually handles, and the resolved
+/// path must not sit in a credential-bearing location. If the home directory
+/// can't be resolved that second floor can't be evaluated, so we fall back to
+/// the full allowlist rather than letting the read through.
+fn validate_document_path(
+    app: &tauri::AppHandle,
+    path: &str,
+    allowed_extensions: &[&str],
+) -> Result<PathBuf, String> {
     if load_restrict_document_imports(app) {
-        return validate_path_against_roots(path, &resolve_allowed_roots(app));
+        let canonical = validate_path_against_roots(path, &resolve_allowed_roots(app))?;
+        return require_allowed_extension(canonical, allowed_extensions);
     }
+    let Ok(home) = app.path().home_dir() else {
+        let canonical = validate_path_against_roots(path, &resolve_allowed_roots(app))?;
+        return require_allowed_extension(canonical, allowed_extensions);
+    };
     let canonical = fs::canonicalize(path).map_err(|e| format!("Failed to read file: {e}"))?;
-    if let Ok(home) = app.path().home_dir() {
-        if is_sensitive_path(&canonical, &home) {
-            return Err("File location not permitted".to_string());
-        }
+    if is_sensitive_path(&canonical, &home) {
+        return Err("File location not permitted".to_string());
     }
-    Ok(canonical)
+    require_allowed_extension(canonical, allowed_extensions)
+}
+
+fn require_allowed_extension(
+    canonical: PathBuf,
+    allowed_extensions: &[&str],
+) -> Result<PathBuf, String> {
+    if has_allowed_extension(&canonical, allowed_extensions) {
+        Ok(canonical)
+    } else {
+        Err("File type not supported".to_string())
+    }
 }
 
 pub mod docx_export;
@@ -150,7 +227,7 @@ pub(crate) use pdf_extract::normalize_pdf_text;
 
 #[tauri::command]
 pub async fn extract_docx_text(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let canonical = validate_document_path(&app, &path)?;
+    let canonical = validate_document_path(&app, &path, DOCX_EXTENSIONS)?;
     check_file_size(&canonical, MAX_DOCX_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
@@ -162,7 +239,7 @@ pub async fn extract_docx_text(app: tauri::AppHandle, path: String) -> Result<St
 
 #[tauri::command]
 pub async fn extract_docx_markdown(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let canonical = validate_document_path(&app, &path)?;
+    let canonical = validate_document_path(&app, &path, DOCX_EXTENSIONS)?;
     check_file_size(&canonical, MAX_DOCX_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
@@ -174,7 +251,7 @@ pub async fn extract_docx_markdown(app: tauri::AppHandle, path: String) -> Resul
 
 #[tauri::command]
 pub async fn extract_pdf_text(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let canonical = validate_document_path(&app, &path)?;
+    let canonical = validate_document_path(&app, &path, PDF_EXTENSIONS)?;
     check_file_size(&canonical, MAX_PDF_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
@@ -369,15 +446,67 @@ mod tests {
     }
 
     #[test]
-    fn is_sensitive_path_returns_false_when_home_does_not_resolve() {
+    fn is_sensitive_path_rejects_netrc_file_entry() {
+        let home = std::env::temp_dir().join("glossa_test_home_netrc");
+        std::fs::create_dir_all(&home).unwrap();
+        let netrc = home.join(".netrc");
+        std::fs::write(&netrc, b"machine example.com login u password p").unwrap();
+
+        let canonical = std::fs::canonicalize(&netrc).unwrap();
+        assert!(is_sensitive_path(&canonical, &home));
+
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn is_sensitive_path_rejects_browser_profile() {
+        let home = std::env::temp_dir().join("glossa_test_home_browser");
+        let profile = home.join(".mozilla").join("firefox").join("abc.default");
+        std::fs::create_dir_all(&profile).unwrap();
+        let cookies = profile.join("cookies.sqlite");
+        std::fs::write(&cookies, b"cookies").unwrap();
+
+        let canonical = std::fs::canonicalize(&cookies).unwrap();
+        assert!(is_sensitive_path(&canonical, &home));
+
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn is_sensitive_path_fails_closed_when_home_does_not_resolve() {
         let missing_home = std::path::PathBuf::from("/nonexistent_glossa_home_xyz");
         let file = std::env::temp_dir().join("glossa_test_random_file.docx");
         std::fs::write(&file, b"content").unwrap();
 
         let canonical = std::fs::canonicalize(&file).unwrap();
-        assert!(!is_sensitive_path(&canonical, &missing_home));
+        assert!(is_sensitive_path(&canonical, &missing_home));
 
         let _ = std::fs::remove_file(&file);
+    }
+
+    #[test]
+    fn allowed_extension_matches_case_insensitively() {
+        assert!(has_allowed_extension(
+            Path::new("/tmp/Report.DOCX"),
+            DOCX_EXTENSIONS
+        ));
+        assert!(has_allowed_extension(
+            Path::new("/tmp/scan.pdf"),
+            PDF_EXTENSIONS
+        ));
+    }
+
+    #[test]
+    fn allowed_extension_rejects_other_formats_and_extensionless_paths() {
+        assert!(!has_allowed_extension(
+            Path::new("/home/user/.ssh/id_rsa"),
+            DOCX_EXTENSIONS
+        ));
+        assert!(!has_allowed_extension(Path::new("/etc/passwd"), PDF_EXTENSIONS));
+        assert!(!has_allowed_extension(
+            Path::new("/tmp/report.pdf"),
+            DOCX_EXTENSIONS
+        ));
     }
 
     #[test]

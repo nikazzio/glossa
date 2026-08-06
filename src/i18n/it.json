@@ -509,7 +509,7 @@
       "migrationFailed": "Spostamento posizione dati fallito",
       "loadFailed": "Lettura posizione dati fallita",
       "restrictImports": "Limita cartelle di importazione",
-      "restrictImportsHint": "Quando attivo, l'importazione di documenti (.docx/.pdf) accetta solo file da Documenti, Download, Scrivania o cartelle interne di Glossa. Disattivato di default: la scelta del file nel dialog di sistema è già esplicita.",
+      "restrictImportsHint": "Quando attivo, l'importazione di documenti (.docx/.pdf) accetta solo file da Documenti, Download, Scrivania o cartelle interne di Glossa. Disattivato di default: la scelta del file nel dialog di sistema è già esplicita. Anche da disattivato, Glossa non legge mai file diversi da .docx/.pdf né file che si trovano in cartelle di credenziali (chiavi, accessi cloud, gestori password, profili browser).",
       "restrictImportsSaveFailed": "Salvataggio preferenza fallito"
     },
     "phraseMemoryTab": "Memoria frasi",
