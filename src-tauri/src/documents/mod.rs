@@ -1,127 +1,16 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
-use tauri::Manager;
+use std::path::Path;
+
+use serde::Serialize;
+use tauri_plugin_dialog::DialogExt;
 
 const MAX_DOCX_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_PDF_BYTES: u64 = 50 * 1024 * 1024;
-const IMPORT_SETTINGS_FILE: &str = "import_settings.json";
-const DOCX_EXTENSIONS: &[&str] = &["docx"];
-const PDF_EXTENSIONS: &[&str] = &["pdf"];
+/// Plain text and Markdown are read whole into memory, so they get the same
+/// ceiling as PDF rather than the much larger DOCX one.
+const MAX_TEXT_BYTES: u64 = 50 * 1024 * 1024;
 
-/// Persisted opt-in for the #367 import path restriction (Impostazioni >
-/// Archiviazione). Lives in a small JSON file under `app_config_dir`, never
-/// as a command argument: a compromised webview must not be able to disable
-/// the check by simply passing `false` on a single `extract_*` call.
-#[derive(Debug, Default, Serialize, Deserialize)]
-struct ImportSettings {
-    #[serde(default)]
-    restrict_document_imports: bool,
-}
-
-fn import_settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_config_dir()
-        .map_err(|e| format!("Failed to resolve app config dir: {e}"))?;
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create app config dir: {e}"))?;
-    Ok(dir.join(IMPORT_SETTINGS_FILE))
-}
-
-fn load_restrict_document_imports(app: &tauri::AppHandle) -> bool {
-    import_settings_path(app)
-        .ok()
-        .and_then(|path| fs::read_to_string(path).ok())
-        .and_then(|raw| serde_json::from_str::<ImportSettings>(&raw).ok())
-        .map(|settings| settings.restrict_document_imports)
-        .unwrap_or(false)
-}
-
-#[tauri::command]
-pub fn get_restrict_document_imports(app: tauri::AppHandle) -> bool {
-    load_restrict_document_imports(&app)
-}
-
-#[tauri::command]
-pub fn set_restrict_document_imports(app: tauri::AppHandle, value: bool) -> Result<(), String> {
-    let path = import_settings_path(&app)?;
-    let settings = ImportSettings {
-        restrict_document_imports: value,
-    };
-    let json = serde_json::to_string(&settings)
-        .map_err(|e| format!("Failed to serialize import settings: {e}"))?;
-    fs::write(path, json).map_err(|e| format!("Failed to write import settings: {e}"))
-}
-
-/// Credential-bearing locations, relative to the user's home directory.
-/// Entries may be directories or single files: matching is by canonical-path
-/// prefix, so a file entry matches only that exact file. Paths that do not
-/// exist on the current platform are simply skipped.
-const SENSITIVE_RELATIVE_PATHS: &[&str] = &[
-    // chiavi e portachiavi crittografici
-    ".ssh",
-    ".gnupg",
-    ".pki",
-    ".password-store",
-    ".local/share/keyrings",
-    ".gnome2/keyrings",
-    "Library/Keychains",
-    // cloud e infrastruttura
-    ".aws",
-    ".azure",
-    ".config/gcloud",
-    "AppData/Roaming/gcloud",
-    ".kube",
-    ".docker",
-    ".terraform.d",
-    // credenziali di rete e registri pacchetti
-    ".netrc",
-    "_netrc",
-    ".git-credentials",
-    ".npmrc",
-    ".pypirc",
-    ".cargo/credentials",
-    ".cargo/credentials.toml",
-    // profili browser: cookie e sessioni autenticate
-    ".mozilla",
-    ".thunderbird",
-    ".config/google-chrome",
-    ".config/chromium",
-    ".config/microsoft-edge",
-    ".config/BraveSoftware",
-    "Library/Application Support/Google/Chrome",
-    "Library/Application Support/Firefox",
-    "AppData/Roaming/Mozilla",
-    "AppData/Local/Google/Chrome",
-];
-
-/// Even with the restriction opted out, never read from locations that hold
-/// credentials — this is a hard floor, not part of the opt-in.
-/// Takes `home` directly (rather than resolving it from an `AppHandle`
-/// internally) so it stays unit-testable without a running Tauri app.
-/// Fails closed: an unresolvable home means we cannot prove the path is safe.
-fn is_sensitive_path(canonical: &Path, home: &Path) -> bool {
-    let Ok(home) = fs::canonicalize(home) else {
-        return true;
-    };
-    SENSITIVE_RELATIVE_PATHS
-        .iter()
-        .filter_map(|rel| fs::canonicalize(home.join(rel)).ok())
-        .any(|denied| canonical.starts_with(denied))
-}
-
-/// The extract commands only ever handle these formats. Enforcing the
-/// extension before any read keeps a compromised webview from using them as a
-/// generic file-read primitive, independently of the location denylist.
-fn has_allowed_extension(canonical: &Path, allowed_extensions: &[&str]) -> bool {
-    canonical
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_ascii_lowercase())
-        .is_some_and(|ext| allowed_extensions.contains(&ext.as_str()))
-}
-
-fn check_file_size(path: &std::path::Path, limit: u64) -> Result<(), String> {
+fn check_file_size(path: &Path, limit: u64) -> Result<(), String> {
     let size = fs::metadata(path)
         .map_err(|e| format!("Failed to read file metadata: {e}"))?
         .len();
@@ -135,80 +24,133 @@ fn check_file_size(path: &std::path::Path, limit: u64) -> Result<(), String> {
     Ok(())
 }
 
-fn is_within_allowed_roots(canonical: &std::path::Path, allowed_roots: &[PathBuf]) -> bool {
-    allowed_roots.iter().any(|root| canonical.starts_with(root))
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DocumentKind {
+    Docx,
+    Pdf,
+    Markdown,
+    PlainText,
 }
 
-fn resolve_allowed_roots(app: &tauri::AppHandle) -> Vec<PathBuf> {
-    let resolver = app.path();
-    [
-        resolver.document_dir(),
-        resolver.download_dir(),
-        resolver.desktop_dir(),
-        resolver.app_data_dir(),
-        resolver.app_config_dir(),
-        resolver.temp_dir(),
-    ]
-    .into_iter()
-    .filter_map(Result::ok)
-    .filter_map(|dir| fs::canonicalize(&dir).ok())
-    .collect()
-}
+impl DocumentKind {
+    /// Picks a decoder from the file name. Anything unrecognised is read as
+    /// plain text: the user selected the file in the native dialog, so this is
+    /// only a choice of how to decode it, never a permission check.
+    fn from_path(path: &Path) -> Self {
+        match path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref()
+        {
+            Some("docx") => Self::Docx,
+            Some("pdf") => Self::Pdf,
+            Some("md" | "markdown") => Self::Markdown,
+            _ => Self::PlainText,
+        }
+    }
 
-/// Canonicalizes `path` and checks it against `allowed_roots`, rejecting
-/// anything outside them (and any path that doesn't resolve, e.g. via a
-/// symlink to a missing target) before it is ever read from disk.
-fn validate_path_against_roots(path: &str, allowed_roots: &[PathBuf]) -> Result<PathBuf, String> {
-    let canonical = fs::canonicalize(path).map_err(|e| format!("Failed to read file: {e}"))?;
-    if is_within_allowed_roots(&canonical, allowed_roots) {
-        Ok(canonical)
-    } else {
-        Err("File location not permitted".to_string())
+    fn size_limit(self) -> u64 {
+        match self {
+            Self::Docx => MAX_DOCX_BYTES,
+            Self::Pdf => MAX_PDF_BYTES,
+            Self::Markdown | Self::PlainText => MAX_TEXT_BYTES,
+        }
     }
 }
 
-/// Restricts document imports to the same directories granted to the frontend
-/// file-selection dialog (see `capabilities/default.json`), so a compromised
-/// webview cannot use these commands to read arbitrary files (e.g. `/etc/passwd`,
-/// SSH keys) via a raw `fs::read` that bypasses the Tauri fs-plugin scope.
-/// Opt-in via Impostazioni > Archiviazione (default off): the preference is
-/// read from `load_restrict_document_imports`, a backend-persisted setting —
-/// never from this call's own arguments, so a compromised webview can't
-/// silently bypass it on a single invocation while leaving the toggle "on".
-/// With the restriction off, two floors still apply and are not opt-out:
-/// the extension must be one the caller actually handles, and the resolved
-/// path must not sit in a credential-bearing location. If the home directory
-/// can't be resolved that second floor can't be evaluated, so we fall back to
-/// the full allowlist rather than letting the read through.
-fn validate_document_path(
-    app: &tauri::AppHandle,
-    path: &str,
-    allowed_extensions: &[&str],
-) -> Result<PathBuf, String> {
-    if load_restrict_document_imports(app) {
-        let canonical = validate_path_against_roots(path, &resolve_allowed_roots(app))?;
-        return require_allowed_extension(canonical, allowed_extensions);
-    }
-    let Ok(home) = app.path().home_dir() else {
-        let canonical = validate_path_against_roots(path, &resolve_allowed_roots(app))?;
-        return require_allowed_extension(canonical, allowed_extensions);
+/// Result of an import. Mirrors the frontend `ImportedTextFile`, minus the
+/// path: the webview never receives it and has no command that accepts one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportedDocument {
+    pub name: String,
+    pub text: String,
+    /// `"markdown"` or `"plain"`, matching the frontend format union.
+    pub format: String,
+    /// Set only for the experimental DOCX to Markdown conversion, which the UI
+    /// labels as such.
+    pub experimental: Option<String>,
+}
+
+fn read_utf8(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(|e| format!("Failed to read file: {e}"))?;
+    // Distinct marker so the UI can explain the encoding problem rather than
+    // showing a raw decoding error.
+    String::from_utf8(bytes).map_err(|_| "text_not_utf8".to_string())
+}
+
+/// Reads and converts a file the user has already picked. Takes a plain path
+/// rather than an `AppHandle` so it stays unit-testable without a running app.
+fn read_picked_document(path: &Path) -> Result<ImportedDocument, String> {
+    let kind = DocumentKind::from_path(path);
+    check_file_size(path, kind.size_limit())?;
+
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_string();
+
+    let (text, format, experimental) = match kind {
+        DocumentKind::Docx => {
+            let bytes = fs::read(path).map_err(|e| format!("Failed to read file: {e}"))?;
+            (
+                extract_docx_markdown_from_bytes(&bytes)?,
+                "markdown",
+                Some("docx-markdown".to_string()),
+            )
+        }
+        DocumentKind::Pdf => {
+            let bytes = fs::read(path).map_err(|e| format!("Failed to read file: {e}"))?;
+            (extract_pdf_text_from_bytes(&bytes)?, "plain", None)
+        }
+        DocumentKind::Markdown => (read_utf8(path)?, "markdown", None),
+        DocumentKind::PlainText => (read_utf8(path)?, "plain", None),
     };
-    let canonical = fs::canonicalize(path).map_err(|e| format!("Failed to read file: {e}"))?;
-    if is_sensitive_path(&canonical, &home) {
-        return Err("File location not permitted".to_string());
-    }
-    require_allowed_extension(canonical, allowed_extensions)
+
+    Ok(ImportedDocument {
+        name,
+        text,
+        format: format.to_string(),
+        experimental,
+    })
 }
 
-fn require_allowed_extension(
-    canonical: PathBuf,
-    allowed_extensions: &[&str],
-) -> Result<PathBuf, String> {
-    if has_allowed_extension(&canonical, allowed_extensions) {
-        Ok(canonical)
-    } else {
-        Err("File type not supported".to_string())
-    }
+/// Opens the native file picker from the backend and returns the converted
+/// document. Supersedes the #367 folder allowlist: no command accepts a
+/// caller-supplied path any more and the chosen path never reaches the
+/// webview, so a compromised frontend cannot ask for a file the user did not
+/// select. Imports are therefore unrestricted by folder.
+#[tauri::command]
+pub async fn import_document(app: tauri::AppHandle) -> Result<Option<ImportedDocument>, String> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Import source text")
+        .add_filter("Documents", &["txt", "md", "text", "docx", "pdf"])
+        .add_filter("Plain text", &["txt", "md", "text"])
+        .add_filter("Word document", &["docx"])
+        .add_filter("PDF document", &["pdf"])
+        .pick_file(move |picked| {
+            let _ = sender.send(picked);
+        });
+
+    let Some(picked) = receiver
+        .await
+        .map_err(|_| "File selection was interrupted".to_string())?
+    else {
+        return Ok(None);
+    };
+
+    let path = picked
+        .into_path()
+        .map_err(|e| format!("Failed to resolve the selected file: {e}"))?;
+
+    tauri::async_runtime::spawn_blocking(move || read_picked_document(&path))
+        .await
+        .map_err(|e| format!("Document import task failed: {e}"))?
+        .map(Some)
 }
 
 pub mod docx_export;
@@ -224,42 +166,6 @@ pub use pdf_extract::extract_pdf_text_from_bytes;
 pub(crate) use docx_extract::read_docx_entry;
 #[cfg(test)]
 pub(crate) use pdf_extract::normalize_pdf_text;
-
-#[tauri::command]
-pub async fn extract_docx_text(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let canonical = validate_document_path(&app, &path, DOCX_EXTENSIONS)?;
-    check_file_size(&canonical, MAX_DOCX_BYTES)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
-        extract_docx_text_from_bytes(&bytes)
-    })
-    .await
-    .map_err(|e| format!("Document extraction task failed: {}", e))?
-}
-
-#[tauri::command]
-pub async fn extract_docx_markdown(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let canonical = validate_document_path(&app, &path, DOCX_EXTENSIONS)?;
-    check_file_size(&canonical, MAX_DOCX_BYTES)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
-        extract_docx_markdown_from_bytes(&bytes)
-    })
-    .await
-    .map_err(|e| format!("Document extraction task failed: {}", e))?
-}
-
-#[tauri::command]
-pub async fn extract_pdf_text(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let canonical = validate_document_path(&app, &path, PDF_EXTENSIONS)?;
-    check_file_size(&canonical, MAX_PDF_BYTES)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
-        extract_pdf_text_from_bytes(&bytes)
-    })
-    .await
-    .map_err(|e| format!("Document extraction task failed: {}", e))?
-}
 
 #[tauri::command]
 pub async fn export_markdown_docx(markdown: String) -> Result<Vec<u8>, String> {
@@ -345,168 +251,135 @@ mod tests {
     }
 
     #[test]
-    fn is_within_allowed_roots_accepts_path_inside_root() {
-        let root = std::env::temp_dir();
-        let file = root.join("glossa_test_inside.docx");
-        assert!(is_within_allowed_roots(&file, &[root]));
+    fn text_limit_is_50mb() {
+        assert_eq!(MAX_TEXT_BYTES, 50 * 1024 * 1024);
     }
 
     #[test]
-    fn is_within_allowed_roots_rejects_path_outside_roots() {
-        let root = std::env::temp_dir().join("glossa_allowed_subdir");
-        let outside = std::path::PathBuf::from("/etc/passwd");
-        assert!(!is_within_allowed_roots(&outside, &[root]));
-    }
-
-    #[test]
-    fn is_within_allowed_roots_rejects_when_no_roots_resolved() {
-        let file = std::env::temp_dir().join("glossa_test.docx");
-        assert!(!is_within_allowed_roots(&file, &[]));
-    }
-
-    #[test]
-    fn validate_path_against_roots_accepts_real_file_inside_allowed_root() {
-        let root = std::env::temp_dir();
-        let file = root.join("glossa_test_validate_ok.docx");
-        std::fs::write(&file, b"content").unwrap();
-
-        let result = validate_path_against_roots(file.to_str().unwrap(), &[root]);
-
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), std::fs::canonicalize(&file).unwrap());
-        let _ = std::fs::remove_file(&file);
-    }
-
-    #[test]
-    fn validate_path_against_roots_rejects_real_file_outside_allowed_roots() {
-        let allowed_root = std::env::temp_dir().join("glossa_allowed_only");
-        let file = std::env::temp_dir().join("glossa_test_validate_reject.docx");
-        std::fs::write(&file, b"content").unwrap();
-
-        let result = validate_path_against_roots(file.to_str().unwrap(), &[allowed_root]);
-
-        let _ = std::fs::remove_file(&file);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "File location not permitted");
-    }
-
-    #[test]
-    fn validate_path_against_roots_rejects_missing_file() {
-        let root = std::env::temp_dir();
-        let result = validate_path_against_roots(
-            root.join("glossa_does_not_exist.docx").to_str().unwrap(),
-            &[root],
+    fn document_kind_is_chosen_from_the_extension_case_insensitively() {
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/Report.DOCX")),
+            DocumentKind::Docx
         );
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Failed to read file"));
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/scan.pdf")),
+            DocumentKind::Pdf
+        );
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/notes.md")),
+            DocumentKind::Markdown
+        );
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/notes.markdown")),
+            DocumentKind::Markdown
+        );
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/notes.txt")),
+            DocumentKind::PlainText
+        );
     }
 
     #[test]
-    fn import_settings_defaults_to_false_when_field_missing() {
-        let parsed: ImportSettings = serde_json::from_str("{}").unwrap();
-        assert!(!parsed.restrict_document_imports);
+    fn unknown_and_missing_extensions_are_read_as_plain_text() {
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/manuscript.rtf")),
+            DocumentKind::PlainText
+        );
+        assert_eq!(
+            DocumentKind::from_path(Path::new("/tmp/README")),
+            DocumentKind::PlainText
+        );
     }
 
     #[test]
-    fn import_settings_roundtrips_true() {
-        let json = serde_json::to_string(&ImportSettings {
-            restrict_document_imports: true,
-        })
-        .unwrap();
-        let parsed: ImportSettings = serde_json::from_str(&json).unwrap();
-        assert!(parsed.restrict_document_imports);
+    fn size_limit_follows_the_document_kind() {
+        assert_eq!(DocumentKind::Docx.size_limit(), MAX_DOCX_BYTES);
+        assert_eq!(DocumentKind::Pdf.size_limit(), MAX_PDF_BYTES);
+        assert_eq!(DocumentKind::Markdown.size_limit(), MAX_TEXT_BYTES);
+        assert_eq!(DocumentKind::PlainText.size_limit(), MAX_TEXT_BYTES);
+    }
+
+    fn temp_file(name: &str, bytes: &[u8]) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(name);
+        std::fs::write(&path, bytes).unwrap();
+        path
     }
 
     #[test]
-    fn is_sensitive_path_rejects_ssh_dir() {
-        let home = std::env::temp_dir().join("glossa_test_home_ssh");
-        let ssh = home.join(".ssh");
-        std::fs::create_dir_all(&ssh).unwrap();
-        let key = ssh.join("id_rsa");
-        std::fs::write(&key, b"fake key").unwrap();
+    fn reads_plain_text_as_plain_format() {
+        let path = temp_file("glossa_read_plain.txt", "Primo capoverso.".as_bytes());
 
-        let canonical = std::fs::canonicalize(&key).unwrap();
-        assert!(is_sensitive_path(&canonical, &home));
+        let imported = read_picked_document(&path).unwrap();
 
-        let _ = std::fs::remove_dir_all(&home);
+        assert_eq!(imported.name, "glossa_read_plain.txt");
+        assert_eq!(imported.text, "Primo capoverso.");
+        assert_eq!(imported.format, "plain");
+        assert_eq!(imported.experimental, None);
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn is_sensitive_path_accepts_unrelated_file_under_home() {
-        let home = std::env::temp_dir().join("glossa_test_home_docs");
-        let docs = home.join("Documents");
-        std::fs::create_dir_all(&docs).unwrap();
-        let file = docs.join("report.docx");
-        std::fs::write(&file, b"content").unwrap();
+    fn reads_markdown_files_as_markdown_format() {
+        let path = temp_file("glossa_read_notes.md", "# Titolo".as_bytes());
 
-        let canonical = std::fs::canonicalize(&file).unwrap();
-        assert!(!is_sensitive_path(&canonical, &home));
+        let imported = read_picked_document(&path).unwrap();
 
-        let _ = std::fs::remove_dir_all(&home);
+        assert_eq!(imported.format, "markdown");
+        assert_eq!(imported.experimental, None);
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn is_sensitive_path_rejects_netrc_file_entry() {
-        let home = std::env::temp_dir().join("glossa_test_home_netrc");
-        std::fs::create_dir_all(&home).unwrap();
-        let netrc = home.join(".netrc");
-        std::fs::write(&netrc, b"machine example.com login u password p").unwrap();
+    fn reads_an_unknown_extension_as_plain_text() {
+        let path = temp_file("glossa_read_manuscript.rtf", "Testo semplice".as_bytes());
 
-        let canonical = std::fs::canonicalize(&netrc).unwrap();
-        assert!(is_sensitive_path(&canonical, &home));
+        let imported = read_picked_document(&path).unwrap();
 
-        let _ = std::fs::remove_dir_all(&home);
+        assert_eq!(imported.text, "Testo semplice");
+        assert_eq!(imported.format, "plain");
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn is_sensitive_path_rejects_browser_profile() {
-        let home = std::env::temp_dir().join("glossa_test_home_browser");
-        let profile = home.join(".mozilla").join("firefox").join("abc.default");
-        std::fs::create_dir_all(&profile).unwrap();
-        let cookies = profile.join("cookies.sqlite");
-        std::fs::write(&cookies, b"cookies").unwrap();
+    fn converts_docx_to_markdown_and_flags_it_as_experimental() {
+        let docx = build_docx(
+            r#"<?xml version="1.0"?>
+<w:document xmlns:w="x"><w:body><w:p><w:r><w:t>Paragrafo.</w:t></w:r></w:p></w:body></w:document>"#,
+        );
+        let path = temp_file("glossa_read_source.docx", &docx);
 
-        let canonical = std::fs::canonicalize(&cookies).unwrap();
-        assert!(is_sensitive_path(&canonical, &home));
+        let imported = read_picked_document(&path).unwrap();
 
-        let _ = std::fs::remove_dir_all(&home);
+        assert!(imported.text.contains("Paragrafo."));
+        assert_eq!(imported.format, "markdown");
+        assert_eq!(imported.experimental.as_deref(), Some("docx-markdown"));
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn is_sensitive_path_fails_closed_when_home_does_not_resolve() {
-        let missing_home = std::path::PathBuf::from("/nonexistent_glossa_home_xyz");
-        let file = std::env::temp_dir().join("glossa_test_random_file.docx");
-        std::fs::write(&file, b"content").unwrap();
+    fn reports_a_dedicated_marker_for_non_utf8_text() {
+        // 0xFF is never valid UTF-8; stands in for a legacy-encoded file.
+        let path = temp_file("glossa_read_latin1.txt", &[b'a', 0xFF, b'b']);
 
-        let canonical = std::fs::canonicalize(&file).unwrap();
-        assert!(is_sensitive_path(&canonical, &missing_home));
+        let error = read_picked_document(&path).unwrap_err();
 
-        let _ = std::fs::remove_file(&file);
+        assert_eq!(error, "text_not_utf8");
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
-    fn allowed_extension_matches_case_insensitively() {
-        assert!(has_allowed_extension(
-            Path::new("/tmp/Report.DOCX"),
-            DOCX_EXTENSIONS
-        ));
-        assert!(has_allowed_extension(
-            Path::new("/tmp/scan.pdf"),
-            PDF_EXTENSIONS
-        ));
-    }
+    fn reports_a_read_failure_for_a_missing_file() {
+        let path = std::env::temp_dir().join("glossa_read_missing_xyz.txt");
+        let _ = std::fs::remove_file(&path);
 
-    #[test]
-    fn allowed_extension_rejects_other_formats_and_extensionless_paths() {
-        assert!(!has_allowed_extension(
-            Path::new("/home/user/.ssh/id_rsa"),
-            DOCX_EXTENSIONS
-        ));
-        assert!(!has_allowed_extension(Path::new("/etc/passwd"), PDF_EXTENSIONS));
-        assert!(!has_allowed_extension(
-            Path::new("/tmp/report.pdf"),
-            DOCX_EXTENSIONS
-        ));
+        let error = read_picked_document(&path).unwrap_err();
+
+        assert!(error.contains("Failed to read file metadata"));
     }
 
     #[test]

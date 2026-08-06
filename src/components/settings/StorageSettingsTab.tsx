@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { HardDrive, ShieldCheck } from 'lucide-react';
-import {
-  getDataDir,
-  setDataDir,
-  pickDataDirFolder,
-  getRestrictDocumentImports,
-  setRestrictDocumentImports,
-} from '../../services/storageConfigService';
-import { PillButton, Spinner, ToggleRow } from '../ui';
+import { HardDrive } from 'lucide-react';
+import { getDataDir, setDataDir, pickDataDirFolder } from '../../services/storageConfigService';
+import { PillButton, Spinner } from '../ui';
 
 export function StorageSettingsTab() {
   const { t } = useTranslation();
@@ -17,15 +11,13 @@ export function StorageSettingsTab() {
   const [isOverride, setIsOverride] = useState(false);
   const [loading, setLoading] = useState(true);
   const [migrating, setMigrating] = useState(false);
-  const [restrictImports, setRestrictImportsState] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [status, restrict] = await Promise.all([getDataDir(), getRestrictDocumentImports()]);
+      const status = await getDataDir();
       setPath(status.path);
       setIsOverride(status.isOverride);
-      setRestrictImportsState(restrict);
     } catch (err: unknown) {
       toast.error(t('settings.storage.loadFailed'), {
         description: err instanceof Error ? err.message : String(err),
@@ -38,19 +30,6 @@ export function StorageSettingsTab() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  const handleToggleRestrictImports = async () => {
-    const next = !restrictImports;
-    setRestrictImportsState(next);
-    try {
-      await setRestrictDocumentImports(next);
-    } catch (err: unknown) {
-      setRestrictImportsState(!next);
-      toast.error(t('settings.storage.restrictImportsSaveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
 
   const handleChangeFolder = async () => {
     const selected = await pickDataDirFolder();
@@ -106,18 +85,6 @@ export function StorageSettingsTab() {
         </PillButton>
         <p className="mt-2 text-xs leading-relaxed text-editorial-muted">
           {t('settings.storage.migrationNote')}
-        </p>
-      </div>
-
-      <div className="rounded-2xl border border-editorial-border bg-surface-panel px-4 py-3">
-        <ToggleRow
-          icon={<ShieldCheck size={14} />}
-          label={t('settings.storage.restrictImports')}
-          checked={restrictImports}
-          onChange={() => void handleToggleRestrictImports()}
-        />
-        <p className="mt-2 text-xs leading-relaxed text-editorial-muted">
-          {t('settings.storage.restrictImportsHint')}
         </p>
       </div>
     </div>

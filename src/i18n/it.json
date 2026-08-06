@@ -507,10 +507,7 @@
       "migrationNote": "Dopo il cambio riavvia Glossa per usare la nuova posizione.",
       "migrationSucceeded": "Posizione dati aggiornata. Riavvia Glossa per applicarla.",
       "migrationFailed": "Spostamento posizione dati fallito",
-      "loadFailed": "Lettura posizione dati fallita",
-      "restrictImports": "Limita cartelle di importazione",
-      "restrictImportsHint": "Quando attivo, l'importazione di documenti (.docx/.pdf) accetta solo file da Documenti, Download, Scrivania o cartelle interne di Glossa. Disattivato di default: la scelta del file nel dialog di sistema è già esplicita. Anche da disattivato, Glossa non legge mai file diversi da .docx/.pdf né file che si trovano in cartelle di credenziali (chiavi, accessi cloud, gestori password, profili browser).",
-      "restrictImportsSaveFailed": "Salvataggio preferenza fallito"
+      "loadFailed": "Lettura posizione dati fallita"
     },
     "phraseMemoryTab": "Memoria frasi",
     "phraseMemoryToggle": "Memoria",
@@ -847,6 +844,7 @@
     "backupInvalidFile": "File di backup non valido",
     "backupIncompatibleVersion": "Il backup è stato creato con una versione più recente di Glossa",
     "pdfScannedError": "Questo PDF non contiene testo selezionabile. Potrebbe essere un documento scansionato.",
+    "textEncodingError": "Il file non è codificato in UTF-8. Riaprilo con un editor di testo e salvalo in UTF-8, poi riprova.",
     "importPreviewLabel": "Anteprima Import",
     "importPreviewTitle": "Controlla il documento prima di creare i chunk",
     "importPreviewHint": "Regola la segmentazione prima di sostituire il workspace corrente.",

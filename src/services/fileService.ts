@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import { open, save } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { Annotation, ExperimentalImportMode, TranslationChunk } from '../types';
 import { qualityExportLabel } from '../utils';
 import { buildMarkdownHtmlDocument, flattenMarkdownToText } from './markdown';
@@ -22,49 +22,35 @@ function chunkExportText(chunk: TranslationChunk, annotations?: ChunkAnnotations
 // ── Import ───────────────────────────────────────────────────────────
 
 export interface ImportedTextFile {
-  path: string;
   name: string;
   text: string;
   format?: 'plain' | 'markdown';
   experimental?: ExperimentalImportMode;
 }
 
-export async function importTextFile(): Promise<ImportedTextFile | null> {
-  const path = await open({
-    title: 'Import source text',
-    filters: [
-      { name: 'Documents', extensions: ['txt', 'md', 'text', 'docx', 'pdf'] },
-      { name: 'Plain text', extensions: ['txt', 'md', 'text'] },
-      { name: 'Word document', extensions: ['docx'] },
-      { name: 'PDF document', extensions: ['pdf'] },
-      { name: 'All files', extensions: ['*'] },
-    ],
-    multiple: false,
-  });
-  if (!path) return null;
-  const resolvedPath = path as string;
-  return {
-    path: resolvedPath,
-    name: basename(resolvedPath),
-    ...(await readImportedText(resolvedPath)),
-  };
+/** Payload di `import_document`. Il percorso del file resta nel backend: la
+ * finestra di scelta viene aperta di là e nessun comando accetta un percorso
+ * dal frontend, così l'import non è vincolato a cartelle specifiche. */
+interface ImportedDocumentPayload {
+  name: string;
+  text: string;
+  format: 'plain' | 'markdown';
+  experimental: ExperimentalImportMode | null;
 }
 
-async function readImportedText(path: string): Promise<Pick<ImportedTextFile, 'text' | 'format' | 'experimental'>> {
-  const ext = extension(path);
-  if (ext === 'docx') {
-    const raw = await invoke<string>('extract_docx_markdown', { path });
-    return { text: normalizeImportedText(raw, 'markdown'), format: 'markdown', experimental: 'docx-markdown' };
-  }
-  if (ext === 'pdf') {
-    const raw = await invoke<string>('extract_pdf_text', { path }).catch((err: unknown) => {
-      throw new Error(typeof err === 'string' ? err : 'pdf_import_failed');
-    });
-    return { text: normalizeImportedText(raw, 'plain'), format: 'plain' };
-  }
-  const format = ext === 'md' ? 'markdown' : 'plain';
-  const raw = await readTextFile(path);
-  return { text: normalizeImportedText(raw, format), format };
+export async function importTextFile(): Promise<ImportedTextFile | null> {
+  const imported = await invoke<ImportedDocumentPayload | null>('import_document').catch(
+    (err: unknown) => {
+      throw new Error(typeof err === 'string' ? err : 'import_failed');
+    },
+  );
+  if (!imported) return null;
+  return {
+    name: imported.name,
+    text: normalizeImportedText(imported.text, imported.format),
+    format: imported.format,
+    ...(imported.experimental ? { experimental: imported.experimental } : {}),
+  };
 }
 
 // ── Export ────────────────────────────────────────────────────────────
@@ -162,17 +148,3 @@ function buildMarkdown(
     .join(separator);
 }
 
-function fileName(path: string): string {
-  const normalized = path.replace(/\\/g, '/');
-  return normalized.split('/').pop() || normalized;
-}
-
-function basename(path: string): string {
-  return fileName(path);
-}
-
-function extension(path: string): string {
-  const name = fileName(path);
-  const dot = name.lastIndexOf('.');
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
-}
