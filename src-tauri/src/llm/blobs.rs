@@ -259,6 +259,10 @@ mod tests {
         // A single very long compound word (German-style) has a tiny word count,
         // so the word-based formula alone would badly undercount it.
         let compound = "Rindfleischetikettierungsueberwachungsaufgabenuebertragungsgesetz";
+        // La formula word-based scritta per esteso è il punto del test: mostra
+        // quanto sottostimi una parola composta lunga. Semplificarla a `1`, come
+        // suggerisce clippy, cancellerebbe ciò che il confronto sotto dimostra.
+        #[allow(clippy::identity_op)]
         let word_based_only = 1 + 1 / 3;
         assert_eq!(word_based_only, 1);
         assert!(estimate_tokens(compound) > word_based_only);
