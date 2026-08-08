@@ -240,6 +240,8 @@ function EditorView() {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'pdf_no_text_layer') {
         toast.error(t('files.pdfScannedError'));
+      } else if (msg === 'text_not_utf8') {
+        toast.error(t('files.textEncodingError'));
       } else {
         toast.error(t('files.importError'), { description: msg });
       }

@@ -1,6 +1,6 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-07-28
+Ultimo aggiornamento: 2026-08-09
 
 ## Principio guida
 
@@ -134,6 +134,25 @@ La raccolta di provenance e metriche (#378) comincia con la foundation, così i
 workflow successivi producono dati analizzabili fin dall'inizio. Le superfici
 Analisi e i dataset arrivano per incrementi quando esistono abbastanza dati
 reali; l'addestramento resta esterno a Glossa nella 2.0.
+
+### Filone trasversale - Acquisizione documenti e sicurezza dell'import
+
+- #371 - import ancorato al file scelto nel dialog (chiuso da #405).
+- #192 - nuovi formati di importazione: PPTX, XLSX, HTML, EPub, RTF, ODT, DOC.
+- #407 - stessa impostazione per backup e ripristino.
+
+Con #405 la finestra di scelta file viene aperta dal backend: nessun comando
+accetta piu' un percorso dal frontend, il percorso scelto non attraversa il
+confine IPC e l'import non ha piu' vincoli di cartella. Sostituisce
+l'allowlist di #367 e la preferenza opzionale che ne derivava.
+
+Il ripristino da backup usa ancora lo schema vecchio (#407): finche' non lo
+segue, i permessi filesystem in `capabilities/default.json` non si possono
+restringere.
+
+Le estensioni non riconosciute vengono lette come testo semplice. Per i formati
+con marcatura interna questo produce testo sporco invece di un errore: #192
+raccoglie i lettori dedicati da scrivere.
 
 ## Fuori dal core 2.0
 
