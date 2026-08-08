@@ -15,6 +15,20 @@ I formati di input supportati includono:
 - `.docx` — conversione in Markdown via estrazione strutturata (funzionalità sperimentale). Limite: **100 MB**.
 - `.pdf` — estrazione come testo piano. Limite: **50 MB**.
 
+Il testo semplice ha un limite di **50 MB**. Qualsiasi altra estensione viene
+letta come testo semplice: seleziona **All files** nel menù dei tipi della
+finestra per vederla. Attenzione, però: un formato con marcatura interna, come
+`.rtf` o `.odt`, arriva con i suoi codici di formattazione dentro il testo,
+perché Glossa non ha ancora un lettore dedicato per quei formati.
+
+**Da qualsiasi cartella.** L'import non è limitato a Documenti, Download o
+Scrivania: puoi pescare un file da dove preferisci, comprese le cartelle di
+lavoro e i dischi esterni.
+
+Se il file di testo non è codificato in UTF-8, Glossa te lo dice invece di
+importare caratteri sbagliati: riaprilo con un editor, salvalo in UTF-8 e
+riprova.
+
 Durante l'import, Glossa ti permette di rivedere la segmentazione prima che il
 documento diventi la lista chunk attiva.
 

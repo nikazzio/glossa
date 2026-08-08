@@ -4,24 +4,6 @@ use std::io::{Cursor, Read, Seek};
 use quick_xml::events::Event;
 use quick_xml::{Reader, XmlVersion};
 
-pub fn extract_docx_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
-    let cursor = Cursor::new(bytes);
-    let mut archive = zip::ZipArchive::new(cursor)
-        .map_err(|_| "Not a valid .docx file (expected a zip archive).".to_string())?;
-
-    let mut document_xml = String::new();
-    {
-        let mut document = archive
-            .by_name("word/document.xml")
-            .map_err(|_| "Not a valid .docx file (missing word/document.xml).".to_string())?;
-        document
-            .read_to_string(&mut document_xml)
-            .map_err(|e| format!("Failed to read document.xml: {}", e))?;
-    }
-
-    extract_text_from_document_xml(&document_xml)
-}
-
 pub fn extract_docx_markdown_from_bytes(bytes: &[u8]) -> Result<String, String> {
     let cursor = Cursor::new(bytes);
     let mut archive = zip::ZipArchive::new(cursor)
@@ -42,75 +24,6 @@ pub fn extract_docx_markdown_from_bytes(bytes: &[u8]) -> Result<String, String> 
         .unwrap_or_default();
 
     build_markdown_from_document_xml(&document_xml, &footnotes, &relationships)
-}
-
-fn extract_text_from_document_xml(xml: &str) -> Result<String, String> {
-    let mut reader = Reader::from_str(xml);
-    reader.config_mut().trim_text(false);
-
-    let mut paragraphs: Vec<String> = Vec::new();
-    let mut current = String::new();
-    let mut inside_text = false;
-
-    loop {
-        match reader.read_event() {
-            Ok(Event::Start(element)) => {
-                let name = element.name();
-                let local = name.as_ref();
-                if local.ends_with(b":t") || local == b"t" {
-                    inside_text = true;
-                }
-            }
-            Ok(Event::End(element)) => {
-                let name = element.name();
-                let local = name.as_ref();
-                if local.ends_with(b":t") || local == b"t" {
-                    inside_text = false;
-                } else if local.ends_with(b":p") || local == b"p" {
-                    paragraphs.push(std::mem::take(&mut current));
-                }
-            }
-            Ok(Event::Text(event)) if inside_text => {
-                let decoded = event
-                    .decode()
-                    .map_err(|e| format!("Failed to decode docx text: {}", e))?;
-                let text = quick_xml::escape::unescape(&decoded)
-                    .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
-                current.push_str(&text);
-            }
-            Ok(Event::Empty(element)) => {
-                let name = element.name();
-                let local = name.as_ref();
-                if local.ends_with(b":br") || local == b"br" {
-                    current.push('\n');
-                } else if local.ends_with(b":tab") || local == b"tab" {
-                    current.push('\t');
-                }
-            }
-            Ok(Event::Eof) => break,
-            Err(error) => {
-                return Err(format!("Failed to parse docx document.xml: {}", error));
-            }
-            _ => {}
-        }
-    }
-
-    if !current.is_empty() {
-        paragraphs.push(current);
-    }
-
-    let joined = paragraphs
-        .into_iter()
-        .map(|paragraph| paragraph.trim_end().to_string())
-        .filter(|paragraph| !paragraph.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n\n");
-
-    if joined.trim().is_empty() {
-        return Err("The .docx file did not contain any extractable text.".to_string());
-    }
-
-    Ok(joined)
 }
 
 pub(crate) fn read_docx_entry<R: Read + Seek>(
