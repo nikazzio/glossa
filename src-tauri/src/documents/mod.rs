@@ -158,7 +158,7 @@ pub mod docx_extract;
 pub mod pdf_extract;
 
 pub(crate) use docx_export::export_markdown_docx_bytes;
-pub use docx_extract::{extract_docx_markdown_from_bytes, extract_docx_text_from_bytes};
+pub use docx_extract::extract_docx_markdown_from_bytes;
 pub use pdf_extract::extract_pdf_text_from_bytes;
 
 // exposed for integration tests in mod.rs — not public API
@@ -393,14 +393,14 @@ mod tests {
 </w:document>"#;
         let bytes = build_docx(xml);
 
-        let extracted = extract_docx_text_from_bytes(&bytes).expect("expected docx text");
+        let extracted = extract_docx_markdown_from_bytes(&bytes).expect("expected docx text");
 
         assert_eq!(extracted, "First paragraph.\n\nSecond paragraph.");
     }
 
     #[test]
     fn rejects_non_zip_input_for_docx() {
-        let result = extract_docx_text_from_bytes(b"plain text, not a zip");
+        let result = extract_docx_markdown_from_bytes(b"plain text, not a zip");
         assert!(result.is_err());
     }
 
@@ -417,7 +417,7 @@ mod tests {
             writer.finish().unwrap();
         }
 
-        let result = extract_docx_text_from_bytes(&buffer);
+        let result = extract_docx_markdown_from_bytes(&buffer);
         assert!(result.is_err());
     }
 
@@ -425,7 +425,7 @@ mod tests {
     fn rejects_docx_with_only_whitespace() {
         let xml = r#"<?xml version="1.0"?><w:document xmlns:w="x"><w:body><w:p><w:r><w:t>   </w:t></w:r></w:p></w:body></w:document>"#;
         let bytes = build_docx(xml);
-        let result = extract_docx_text_from_bytes(&bytes);
+        let result = extract_docx_markdown_from_bytes(&bytes);
         assert!(result.is_err());
     }
 
