@@ -1301,7 +1301,7 @@
       "saveTitle": "Salva il lavoro",
       "saveDesc": "Glossa salva automaticamente dopo le modifiche significative; la barra di stato mostra se il progetto è salvato e l'orario dell'ultimo salvataggio. Puoi anche forzare il salvataggio con Ctrl+S. Quando riapri un progetto, configurazione, stage, glossario, chunk, traduzioni e note vengono ripristinati.",
       "importExportTitle": "Importa ed esporta",
-      "importExportDesc": "Usa Importa in fondo alla barra sinistra del progetto per scegliere un file (.txt, .md, .docx, .pdf) come sorgente. Quando ci sono chunk completati, Esporta nella stessa barra apre il dialog con formati e separatori. L'eliminazione di un progetto rimuove anche pipeline, traduzioni, log e collegamenti salvati del progetto.",
+      "importExportDesc": "Usa Importa in fondo alla barra sinistra del progetto per scegliere un file (.txt, .md, .docx, .pdf) come sorgente, da qualsiasi cartella. Scegliendo All files nel menù dei tipi puoi importare anche altre estensioni, che vengono lette come testo semplice. Quando ci sono chunk completati, Esporta nella stessa barra apre il dialog con formati e separatori. L'eliminazione di un progetto rimuove anche pipeline, traduzioni, log e collegamenti salvati del progetto.",
       "autosaveTitle": "Salvataggio automatico",
       "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
       "backupTitle": "Backup e ripristino",
