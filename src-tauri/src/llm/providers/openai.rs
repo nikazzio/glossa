@@ -1,6 +1,4 @@
-use super::{
-    format_api_error, provider_label_from_url, with_retry_after,
-};
+use super::{format_api_error, provider_label_from_url, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };

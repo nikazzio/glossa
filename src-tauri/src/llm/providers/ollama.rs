@@ -462,6 +462,36 @@ mod structured_output_tests {
     }
 
     #[test]
+    fn strict_json_forces_deterministic_temperature() {
+        let mut config = default_ollama_config();
+        config.temperature = Some(0.9);
+
+        let body = build_ollama_chat_body("model", "system", "user", &config, false, true, true);
+
+        assert_eq!(
+            body["options"]["temperature"], 0.0,
+            "il decoding vincolato deve essere deterministico anche con una temperatura configurata"
+        );
+    }
+
+    #[test]
+    fn ordinary_json_mode_keeps_the_configured_temperature() {
+        let mut config = default_ollama_config();
+        config.temperature = Some(0.9);
+
+        let body = build_ollama_chat_body("model", "system", "user", &config, false, true, false);
+
+        // La temperatura viaggia come f32: confrontata come f64 diretta darebbe
+        // 0.8999999761581421.
+        assert_eq!(
+            body["options"]["temperature"]
+                .as_f64()
+                .map(|value| value as f32),
+            Some(0.9)
+        );
+    }
+
+    #[test]
     fn ordinary_json_mode_keeps_the_compatible_format() {
         let body = build_ollama_chat_body(
             "model",

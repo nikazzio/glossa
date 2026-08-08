@@ -447,9 +447,13 @@ pub(crate) fn parse_judge_rating(parsed: &serde_json::Value) -> Result<String, S
         .as_str()
         .ok_or_else(|| "Judge response is missing rating".to_string())?;
 
-    match raw.trim().to_lowercase().as_str() {
-        "critical" | "poor" | "fair" | "good" | "excellent" => Ok(raw.trim().to_lowercase()),
-        value => Err(format!("Invalid judge response rating: {value}")),
+    let normalized = raw.trim().to_lowercase();
+    // Elenco unico: le stesse varianti che `JudgeRating` impone nello schema
+    // JSON allegato alla richiesta.
+    if crate::llm::types::JudgeRating::ALLOWED.contains(&normalized.as_str()) {
+        Ok(normalized)
+    } else {
+        Err(format!("Invalid judge response rating: {normalized}"))
     }
 }
 

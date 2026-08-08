@@ -224,9 +224,11 @@ pub struct JudgeIssue {
 // I valori ammessi sono elencati una volta sola, qui: sono la stessa fonte da
 // cui `parse_judge_rating` (`llm/prompts.rs`) si aspetta di leggere.
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+/// Mai costruito: esiste solo perché `schema_for!` ne derivi lo schema JSON.
+#[allow(dead_code)]
+#[derive(JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum JudgeRating {
+pub(crate) enum JudgeRating {
     Critical,
     Poor,
     Fair,
@@ -234,43 +236,58 @@ pub enum JudgeRating {
     Excellent,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+impl JudgeRating {
+    /// I valori ammessi, nell'ordine dello schema. `parse_judge_rating`
+    /// (`llm/prompts.rs`) valida su questo elenco invece di ripeterlo: una
+    /// variante aggiunta qui vale subito anche per il parsing.
+    pub(crate) const ALLOWED: [&'static str; 5] = ["critical", "poor", "fair", "good", "excellent"];
+}
+
+/// Mai costruito: esiste solo perché `schema_for!` ne derivi lo schema JSON.
+#[allow(dead_code)]
+#[derive(JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum JudgeIssueType {
+pub(crate) enum JudgeIssueType {
     Glossary,
     Fluency,
     Accuracy,
     Grammar,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+/// Mai costruito: esiste solo perché `schema_for!` ne derivi lo schema JSON.
+#[allow(dead_code)]
+#[derive(JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum JudgeSeverity {
+pub(crate) enum JudgeSeverity {
     Low,
     Medium,
     High,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+/// Mai costruito: esiste solo perché `schema_for!` ne derivi lo schema JSON.
+#[allow(dead_code)]
+#[derive(JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct JudgeIssueSchema {
+pub(crate) struct JudgeIssueSchema {
     #[serde(rename = "type")]
-    pub issue_type: JudgeIssueType,
-    pub severity: JudgeSeverity,
-    pub description: String,
-    pub suggested_fix: Option<String>,
-    pub phrase: Option<String>,
-    pub source_phrase: Option<String>,
-    pub confidence: Option<f32>,
+    issue_type: JudgeIssueType,
+    severity: JudgeSeverity,
+    description: String,
+    suggested_fix: Option<String>,
+    phrase: Option<String>,
+    source_phrase: Option<String>,
+    confidence: Option<f32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+/// Mai costruito: esiste solo perché `schema_for!` ne derivi lo schema JSON.
+#[allow(dead_code)]
+#[derive(JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct JudgePayloadSchema {
-    pub rating: JudgeRating,
-    pub issues: Vec<JudgeIssueSchema>,
+pub(crate) struct JudgePayloadSchema {
+    rating: JudgeRating,
+    issues: Vec<JudgeIssueSchema>,
     #[schemars(schema_with = "one_based_index_array_schema")]
-    pub checked_sentence_indices: Option<Vec<u32>>,
+    checked_sentence_indices: Option<Vec<u32>>,
 }
 
 /// Gli indici di frase sono 1-based, come dichiarato nel prompt del giudice
@@ -447,8 +464,7 @@ mod tests {
     fn contains_key_anywhere(value: &Value, key: &str) -> bool {
         match value {
             Value::Object(map) => {
-                map.contains_key(key)
-                    || map.values().any(|entry| contains_key_anywhere(entry, key))
+                map.contains_key(key) || map.values().any(|entry| contains_key_anywhere(entry, key))
             }
             Value::Array(items) => items.iter().any(|item| contains_key_anywhere(item, key)),
             _ => false,
@@ -496,12 +512,12 @@ mod tests {
     }
 
     #[test]
-    fn audit_schema_constrains_rating_to_the_parsed_values() {
+    fn audit_schema_rating_matches_the_list_the_parser_accepts() {
         let schema = audit_json_schema();
         assert_eq!(
             enum_values(&schema["properties"]["rating"]),
-            ["critical", "poor", "fair", "good", "excellent"],
-            "devono restare allineati a `parse_judge_rating`"
+            super::JudgeRating::ALLOWED,
+            "lo schema e `parse_judge_rating` devono vincolare lo stesso elenco"
         );
     }
 

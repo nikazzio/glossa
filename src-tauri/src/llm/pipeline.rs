@@ -533,30 +533,27 @@ pub async fn extract_phrase_memory_pairs(
     let escaped_source = escape_prompt_markers(&source_text);
     let escaped_target = escape_prompt_markers(&target_text);
 
-    let mut attempt = 0;
-    let max_attempts = 2;
+    /// Un solo ritentativo: se il modello sbaglia due volte la forma, insistere
+    /// non aiuta e raddoppia soltanto il costo.
+    const MAX_ATTEMPTS: usize = 2;
+
+    let context = format!(
+        "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>"
+    );
+
+    // Costruito una volta e riusato: fra un tentativo e l'altro cambia solo
+    // `user`, il blocco di sistema no.
+    let mut structured = crate::llm::types::StructuredPrompt {
+        system: vec![crate::llm::types::PromptBlock {
+            text: prompt,
+            cacheable: false,
+        }],
+        user: format!("{context}\n\nReturn JSON only with key \"pairs\"."),
+    };
+
     let mut last_error = String::new();
 
-    while attempt < max_attempts {
-        attempt += 1;
-        let user_prompt = if attempt == 1 {
-            format!(
-                "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
-            )
-        } else {
-            format!(
-                "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nPrevious attempt failed with error: {last_error}.\nPlease return ONLY valid JSON with a \"pairs\" array of verbatim extracted phrases."
-            )
-        };
-
-        let structured = crate::llm::types::StructuredPrompt {
-            system: vec![crate::llm::types::PromptBlock {
-                text: prompt.clone(),
-                cacheable: false,
-            }],
-            user: user_prompt,
-        };
-
+    for _ in 0..MAX_ATTEMPTS {
         let req = LlmRequest {
             model: &model,
             structured: &structured,
@@ -566,62 +563,69 @@ pub async fn extract_phrase_memory_pairs(
             provider_options: None,
         };
 
-        let result_text = match prov.call(&client, &req).await {
-            Ok(res) => res.content,
-            Err(e) => {
-                last_error = e;
-                continue;
-            }
-        };
+        // Gli errori del provider (chiave non valida, quota esaurita, richiesta
+        // annullata) non migliorano al secondo tentativo: propagano subito.
+        // Si ritenta solo una risposta malformata, che è ciò che il prompt di
+        // recupero può correggere.
+        let result_text = prov.call(&client, &req).await?.content;
 
         let sanitized = sanitize_llm_json_output(&result_text);
-        let parsed: serde_json::Value = match serde_json::from_str(sanitized) {
-            Ok(v) => v,
-            Err(e) => {
-                last_error = format!("JSON parse error: {e}");
-                continue;
+        match parse_memory_extractor_pairs(sanitized, &source_text, &target_text) {
+            Ok(pairs) => return Ok(MemoryExtractorResponse { pairs }),
+            Err(error) => {
+                structured.user = format!(
+                    "{context}\n\nPrevious attempt failed with error: {error}.\nPlease return ONLY valid JSON with a \"pairs\" array of verbatim extracted phrases."
+                );
+                last_error = error;
             }
-        };
-
-        let pairs = match parsed["pairs"].as_array() {
-            Some(arr) => arr,
-            None => {
-                last_error = "JSON output missing 'pairs' array".to_string();
-                continue;
-            }
-        };
-
-        let validated: Vec<MemoryExtractorPair> = pairs
-            .iter()
-            .filter_map(|entry| {
-                let source_phrase = entry["sourcePhrase"].as_str()?.trim();
-                let target_phrase = entry["targetPhrase"].as_str()?.trim();
-                if source_phrase.is_empty() || target_phrase.is_empty() {
-                    return None;
-                }
-                if !source_text.contains(source_phrase) || !target_text.contains(target_phrase) {
-                    log::warn!(
-                        "phrase_memory.extract_pairs.discard_non_verbatim source_chars={} target_chars={}",
-                        source_phrase.len(),
-                        target_phrase.len()
-                    );
-                    return None;
-                }
-                let confidence = entry["confidence"].as_f64()?.clamp(0.0, 1.0);
-                Some(MemoryExtractorPair {
-                    source_phrase: source_phrase.to_string(),
-                    target_phrase: target_phrase.to_string(),
-                    confidence,
-                })
-            })
-            .collect();
-
-        return Ok(MemoryExtractorResponse { pairs: validated });
+        }
     }
 
     Err(format!(
-        "Phrase memory extraction failed after {max_attempts} attempts. Last error: {last_error}"
+        "Phrase memory extraction failed after {MAX_ATTEMPTS} attempts. Last error: {last_error}"
     ))
+}
+
+/// Estrae le coppie verbatim dalla risposta del modello. Scarta in silenzio le
+/// singole coppie non valide (vuote o non presenti alla lettera nei testi) e
+/// segnala errore solo quando è la risposta intera a essere inutilizzabile —
+/// distinzione che decide se ritentare.
+fn parse_memory_extractor_pairs(
+    sanitized: &str,
+    source_text: &str,
+    target_text: &str,
+) -> Result<Vec<MemoryExtractorPair>, String> {
+    let parsed: serde_json::Value =
+        serde_json::from_str(sanitized).map_err(|e| format!("JSON parse error: {e}"))?;
+
+    let pairs = parsed["pairs"]
+        .as_array()
+        .ok_or_else(|| "JSON output missing 'pairs' array".to_string())?;
+
+    Ok(pairs
+        .iter()
+        .filter_map(|entry| {
+            let source_phrase = entry["sourcePhrase"].as_str()?.trim();
+            let target_phrase = entry["targetPhrase"].as_str()?.trim();
+            if source_phrase.is_empty() || target_phrase.is_empty() {
+                return None;
+            }
+            if !source_text.contains(source_phrase) || !target_text.contains(target_phrase) {
+                log::warn!(
+                    "phrase_memory.extract_pairs.discard_non_verbatim source_chars={} target_chars={}",
+                    source_phrase.len(),
+                    target_phrase.len()
+                );
+                return None;
+            }
+            let confidence = entry["confidence"].as_f64()?.clamp(0.0, 1.0);
+            Some(MemoryExtractorPair {
+                source_phrase: source_phrase.to_string(),
+                target_phrase: target_phrase.to_string(),
+                confidence,
+            })
+        })
+        .collect())
 }
 
 #[tauri::command]
