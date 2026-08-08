@@ -102,13 +102,16 @@ interface CardViewProps {
 
 /** Riga compatta label/valore per la griglia dati della scheda espansa (stesso
  * schema di StatRow: label sans piccola, valore serif) — senza StatRow diretto
- * perché qui il valore può troncare (`truncate`), StatRow non lo prevede. */
+ * perché qui il valore può troncare (`truncate`), StatRow non lo prevede.
+ * Solo `span`: la griglia vive dentro il `button` di espansione della scheda,
+ * che ammette esclusivamente phrasing content — `dl`/`dt`/`dd` (come `div` o
+ * `p`) sono flow content e renderebbero il markup non valido. */
 function DataStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
-      <dt className="w-24 shrink-0 whitespace-nowrap text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</dt>
-      <dd className="min-w-0 truncate font-display text-sm italic text-editorial-ink">{value}</dd>
-    </div>
+    <span className="flex min-w-0 items-baseline gap-2">
+      <span className="w-24 shrink-0 whitespace-nowrap text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</span>
+      <span className="min-w-0 truncate font-display text-sm italic text-editorial-ink">{value}</span>
+    </span>
   );
 }
 
@@ -159,11 +162,11 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
           <span className="flex h-full min-w-0 flex-1 gap-6">
             <span className="flex h-full min-w-0 shrink-0 basis-56 flex-col overflow-hidden">
               <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
-              {card.description && <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-editorial-ink/70">{card.description}</p>}
+              {card.description && <span className="mt-1.5 block line-clamp-2 text-xs leading-relaxed text-editorial-ink/70">{card.description}</span>}
             </span>
-            <dl className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 content-start gap-x-4 gap-y-1 overflow-hidden">
+            <span className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 content-start gap-x-4 gap-y-1 overflow-hidden">
               {stats.map(([label, value]) => <DataStat key={label} label={label} value={value} />)}
-            </dl>
+            </span>
           </span>
         ) : (
           <span className="min-w-0 overflow-hidden">
