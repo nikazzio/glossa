@@ -30,6 +30,7 @@ pub struct ManifestPreview {
     pub volume: Option<String>,
     pub subjects: Vec<String>,
     pub item_count: Option<usize>,
+    pub material_type: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -137,6 +138,11 @@ fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
         volume: metadata_value(&value, "volume").or_else(|| metadata_value(&value, "part")),
         subjects: texts(value.get("subject")),
         item_count,
+        material_type: metadata_value(&value, "type")
+            .or_else(|| metadata_value(&value, "format"))
+            .or_else(|| metadata_value(&value, "genre"))
+            .or_else(|| metadata_value(&value, "object type"))
+            .or_else(|| metadata_value(&value, "material type")),
     }
 }
 

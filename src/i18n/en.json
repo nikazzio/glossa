@@ -1742,7 +1742,12 @@
       "targetWords": "Words in current translation",
       "coverage": "Coverage ratio (translation / source)",
       "chunksProgress": "Completed segments"
-    }
+    },
+    "discoveryResults_one": "{{count}} result",
+    "discoveryResults_other": "{{count}} results",
+    "discoveryMore": "more available",
+    "discoveryPages_one": "{{count}} page",
+    "discoveryPages_other": "{{count}} pages"
   },
   "workflow": {
     "translation": "Translation",
