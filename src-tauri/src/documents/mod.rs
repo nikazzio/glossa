@@ -132,6 +132,9 @@ pub async fn import_document(app: tauri::AppHandle) -> Result<Option<ImportedDoc
         .add_filter("Plain text", &["txt", "md", "text"])
         .add_filter("Word document", &["docx"])
         .add_filter("PDF document", &["pdf"])
+        // Come il dialog precedente: i formati fuori elenco restano
+        // selezionabili e vengono letti come testo semplice.
+        .add_filter("All files", &["*"])
         .pick_file(move |picked| {
             let _ = sender.send(picked);
         });
