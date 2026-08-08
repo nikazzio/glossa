@@ -357,7 +357,20 @@ fn inline_and_tighten(value: Value, definitions: &Map<String, Value>, depth: usi
                 .map(|item| inline_and_tighten(item, definitions, depth))
                 .collect(),
         ),
+        Value::Number(number) => canonical_number(number),
         other => other,
+    }
+}
+
+/// I vincoli numerici passano dal modello di schemars, che li tiene in virgola
+/// mobile: `minimum: 1` tornerebbe sulla rete come `1.0`. Equivalente per lo
+/// standard, ma i provider ricevevano `1` e non c'è motivo di cambiarglielo.
+fn canonical_number(number: serde_json::Number) -> Value {
+    match number.as_f64() {
+        Some(value) if value.fract() == 0.0 && value.abs() < (i64::MAX as f64) => {
+            Value::Number(serde_json::Number::from(value as i64))
+        }
+        _ => Value::Number(number),
     }
 }
 
@@ -568,6 +581,17 @@ mod tests {
             .expect("nullable array")
             .iter()
             .any(|value| value == "null"));
+    }
+
+    #[test]
+    fn audit_schema_emits_integral_constraints_as_integers() {
+        let schema = audit_json_schema();
+        let minimum = &schema["properties"]["checkedSentenceIndices"]["items"]["minimum"];
+
+        assert!(
+            minimum.is_i64(),
+            "i provider ricevevano `1`, non `1.0`: {minimum}"
+        );
     }
 
     #[test]
