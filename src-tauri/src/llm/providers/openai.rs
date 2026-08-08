@@ -1,5 +1,5 @@
 use super::{
-    format_api_error, provider_label_from_url, translation_audit_schema, with_retry_after,
+    format_api_error, provider_label_from_url, with_retry_after,
 };
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
@@ -62,7 +62,7 @@ fn judge_json_schema() -> serde_json::Value {
     serde_json::json!({
         "name": "translation_audit",
         "strict": true,
-        "schema": translation_audit_schema()
+        "schema": crate::llm::types::audit_json_schema().clone()
     })
 }
 

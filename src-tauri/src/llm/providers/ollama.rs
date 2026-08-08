@@ -6,7 +6,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::translation_audit_schema;
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -408,7 +407,7 @@ pub(crate) fn build_ollama_chat_body(
     json_schema_strict: bool,
 ) -> Value {
     let mut options = build_ollama_options(ollama);
-    
+
     // Strict JSON schema decoding must be deterministic: always force temperature to 0,
     // overriding any configured value (merge_ollama_config always yields Some, so an
     // is_none() check here would never fire).
@@ -433,7 +432,7 @@ pub(crate) fn build_ollama_chat_body(
         body["keep_alive"] = keep_alive;
     }
     if json_schema_strict {
-        body["format"] = crate::llm::types::generate_audit_json_schema();
+        body["format"] = crate::llm::types::audit_json_schema().clone();
     } else if json_mode {
         body["format"] = serde_json::json!("json");
     }

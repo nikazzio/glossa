@@ -624,7 +624,6 @@ pub async fn extract_phrase_memory_pairs(
     ))
 }
 
-
 #[tauri::command]
 pub async fn run_coherence_for_chunk(
     app: AppHandle,
