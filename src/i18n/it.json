@@ -1740,7 +1740,12 @@
       "targetWords": "Parole nella traduzione corrente",
       "coverage": "Rapporto di copertura (traduzione / sorgente)",
       "chunksProgress": "Segmenti completati"
-    }
+    },
+    "discoveryResults_one": "{{count}} risultato",
+    "discoveryResults_other": "{{count}} risultati",
+    "discoveryMore": "altri disponibili",
+    "discoveryPages_one": "{{count}} pagina",
+    "discoveryPages_other": "{{count}} pagine"
   },
   "workflow": {
     "translation": "Traduzione",

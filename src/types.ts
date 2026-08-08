@@ -47,6 +47,7 @@ export interface IIIFManifestPreview {
   volume: string | null;
   subjects: string[];
   itemCount: number | null;
+  materialType: string | null;
 }
 
 export interface IIIFDiscoveryResult {
@@ -68,6 +69,22 @@ export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: stri
 
 export function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
   return 'itemCount' in card;
+}
+
+/** Tentativo automatico (best-effort) di riconoscere il tipo materiale dai metadati
+ * disponibili. Se nessuna parola chiave nota è presente, resta 'iiif' — mai bloccante,
+ * sempre correggibile a mano quando la gestione manuale sarà disponibile (#398). */
+export function classifySourceKind(card: SourceCard): SourceKind {
+  const haystack = [
+    isManifest(card) ? card.materialType : card.mediaType,
+    isManifest(card) ? null : card.collection,
+    card.subjects.join(' '),
+  ].filter((value): value is string => Boolean(value)).join(' ').toLowerCase();
+
+  if (/manuscript|manoscritt/.test(haystack)) return 'manuscript';
+  if (/\bpdf\b/.test(haystack)) return 'pdf';
+  if (/print|stamp|incunab|imprint/.test(haystack)) return 'print';
+  return 'iiif';
 }
 
 export interface IIIFDiscoveryOutcome {
