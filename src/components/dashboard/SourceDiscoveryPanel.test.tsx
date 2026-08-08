@@ -20,6 +20,7 @@ vi.mock('../../services/libraryService', () => ({
   addSourceToLibrary: vi.fn().mockResolvedValue({ sourceId: 's1', wasCreated: true }),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
+  listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
 }));
 
 const PROVIDERS = [

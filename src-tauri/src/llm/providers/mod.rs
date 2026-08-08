@@ -44,21 +44,6 @@ pub(crate) fn translation_audit_schema() -> Value {
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::translation_audit_schema;
-
-    #[test]
-    fn audit_schema_requires_one_based_checked_sentence_indices() {
-        let schema = translation_audit_schema();
-
-        assert_eq!(
-            schema["properties"]["checkedSentenceIndices"]["items"]["minimum"],
-            1
-        );
-    }
-}
-
 pub fn get_provider(
     id: &str,
     ollama_base_url: Option<String>,
@@ -148,5 +133,20 @@ pub(crate) fn provider_label_from_url(base_url: &str) -> &'static str {
         "Ollama"
     } else {
         "Provider"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::translation_audit_schema;
+
+    #[test]
+    fn audit_schema_requires_one_based_checked_sentence_indices() {
+        let schema = translation_audit_schema();
+
+        assert_eq!(
+            schema["properties"]["checkedSentenceIndices"]["items"]["minimum"],
+            1
+        );
     }
 }

@@ -44,8 +44,10 @@ const RUN_TONE: Record<string, { dot: string; labelKey: string }> = {
   error: { dot: 'bg-editorial-danger', labelKey: 'dashboard.runOutcome.error' },
 };
 
-const ROW_CLASS =
-  'flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
+const ROW_WRAPPER_CLASS =
+  'group relative rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper';
+const ROW_BUTTON_CLASS =
+  'flex w-full min-w-0 flex-col items-start gap-1.5 pr-14 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
 
 export function AppDashboard() {
   const { t, i18n } = useTranslation();
@@ -119,21 +121,28 @@ export function AppDashboard() {
   const workspaceIdentity = (workspaceId: string, workspaceName: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     return workspace
-      ? <WorkspaceIdentity workspace={workspace} iconOnly iconSize={14} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/30 text-editorial-muted" />
+      ? (
+        <WorkspaceIdentity
+          workspace={workspace}
+          iconOnly
+          iconSize={22}
+          className="absolute right-2 top-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/85 text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent"
+        />
+      )
       : <span className="sr-only">{workspaceName}</span>;
   };
 
   return (
-    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
-      <div className="w-full min-w-0 px-5 py-5 md:px-6">
+    <main className="flex flex-1 h-full min-h-0 flex-col overflow-hidden bg-editorial-paper">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col px-5 py-5 md:px-6">
         {/* Header */}
-        <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+        <h1 className="shrink-0 font-display text-4xl italic text-editorial-ink md:text-5xl">
           {t('dashboard.title')}
         </h1>
 
         {/* Provider mancante: unico alert della dashboard, sopra tutto */}
         {shouldShowProviderBanner ? (
-          <section className="mt-5 rounded-[20px] border border-editorial-accent/35 bg-editorial-accent/8 px-5 py-4">
+          <section className="mt-5 shrink-0 rounded-[20px] border border-editorial-accent/35 bg-editorial-accent/8 px-5 py-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-start gap-3">
                 <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-editorial-accent/35 bg-editorial-paper text-editorial-accent">
@@ -155,9 +164,10 @@ export function AppDashboard() {
           </section>
         ) : null}
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
+        <div className="mt-6 grid min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_1px_minmax(18rem,20rem)]">
           <SourceDiscoveryPanel />
-          <aside className="min-w-0 space-y-6">
+          <div className="hidden self-stretch bg-editorial-border xl:block" aria-hidden="true" />
+          <aside className="min-h-0 min-w-0 space-y-6 overflow-y-auto custom-scrollbar">
         {/* Richiede attenzione — frammenti con giudizio scarso/critico o problemi aperti */}
         <section>
           <div className="mb-2 px-1">
@@ -168,23 +178,24 @@ export function AppDashboard() {
           ) : attentionProjects.length > 0 ? (
             <div className="space-y-1.5">
               {attentionProjects.map((project) => (
-                <button
-                  key={project.project_id}
-                  type="button"
-                  onClick={() => void handleOpenProject(project.project_id, project.workspace_id)}
-                  className={`${ROW_CLASS} flex-col items-start gap-1.5`}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
-                    <span className="truncate font-display text-base italic text-editorial-ink">
-                      {project.project_name}
+                <div key={project.project_id} className={ROW_WRAPPER_CLASS}>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenProject(project.project_id, project.workspace_id)}
+                    className={ROW_BUTTON_CLASS}
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                      <span className="truncate font-display text-base italic text-editorial-ink">
+                        {project.project_name}
+                      </span>
+                    </span>
+                    <span className="pl-7 text-xs text-editorial-warning">
+                      {t('dashboard.attentionCount', { count: project.issue_count })}
                     </span>
                     {workspaceIdentity(project.workspace_id, project.workspace_name)}
-                  </span>
-                  <span className="pl-7 text-xs text-editorial-warning">
-                    {t('dashboard.attentionCount', { count: project.issue_count })}
-                  </span>
-                </button>
+                  </button>
+                </div>
               ))}
             </div>
           ) : (
@@ -202,23 +213,24 @@ export function AppDashboard() {
           ) : recentProjects.length > 0 ? (
             <div className="space-y-1.5">
               {recentProjects.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => void handleOpenProject(project.id, project.workspace_id)}
-                  className={`${ROW_CLASS} flex-col items-start gap-1.5`}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
-                    <span className="truncate font-display text-base italic text-editorial-ink">
-                      {project.name}
+                <div key={project.id} className={ROW_WRAPPER_CLASS}>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenProject(project.id, project.workspace_id)}
+                    className={ROW_BUTTON_CLASS}
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                      <span className="truncate font-display text-base italic text-editorial-ink">
+                        {project.name}
+                      </span>
+                    </span>
+                    <span className="pl-7 text-xs text-editorial-muted">
+                      {formatWhen(project.updated_at)}
                     </span>
                     {workspaceIdentity(project.workspace_id, project.workspace_name)}
-                  </span>
-                  <span className="pl-7 text-xs text-editorial-muted">
-                    {formatWhen(project.updated_at)}
-                  </span>
-                </button>
+                  </button>
+                </div>
               ))}
             </div>
           ) : (

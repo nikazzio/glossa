@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import type { LibrarySource, LibrarySourceDetail, SourceCard } from '../types';
+import { classifySourceKind, type LibrarySource, type LibrarySourceDetail, type SourceCard } from '../types';
 import {
   addSourceToLibrary as addSourceToLibraryService,
   getLibrarySourceDetail,
   listLibrarySources,
+  listLibrarySourceUrls,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
+import { logger } from '../utils/logger';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -17,8 +19,10 @@ interface SourceLibraryState {
   detail: LibrarySourceDetail | null;
   addingUrls: Set<string>;
   addedManifestUrls: Set<string>;
+  libraryManifestUrls: Set<string>;
   error: string | null;
   loadSources: () => Promise<void>;
+  loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
@@ -30,11 +34,21 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   detail: null,
   addingUrls: new Set(),
   addedManifestUrls: new Set(),
+  libraryManifestUrls: new Set(),
   error: null,
 
   loadSources: async () => {
     const sources = await listLibrarySources();
     set({ sources });
+  },
+
+  loadLibraryManifestUrls: async () => {
+    try {
+      const urls = await listLibrarySourceUrls();
+      set({ libraryManifestUrls: new Set(urls) });
+    } catch (error) {
+      logger.error('loadLibraryManifestUrls failed', { error: getErrorMessage(error) });
+    }
   },
 
   addFromDiscovery: async (card, workspaceId) => {
@@ -48,7 +62,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         manifestUrl,
         title: card.title,
         description: card.description,
-        kind: 'iiif',
+        kind: classifySourceKind(card),
         creator: card.creator,
         date: card.date,
         thumbnailUrl: card.thumbnailUrl,
