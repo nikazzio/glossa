@@ -96,7 +96,9 @@ fn metadata_value(value: &Value, key: &str) -> Option<String> {
         .and_then(|entries| {
             entries.iter().find_map(|entry| {
                 let label = text(entry.get("label"))?;
-                (label.eq_ignore_ascii_case(key)).then(|| text(entry.get("value"))).flatten()
+                (label.eq_ignore_ascii_case(key))
+                    .then(|| text(entry.get("value")))
+                    .flatten()
             })
         })
 }
@@ -104,8 +106,18 @@ fn metadata_value(value: &Value, key: &str) -> Option<String> {
 fn thumbnail_url(value: &Value) -> Option<String> {
     let thumbnail = value.get("thumbnail")?;
     text(Some(thumbnail))
-        .or_else(|| thumbnail.get("id").and_then(Value::as_str).map(str::to_string))
-        .or_else(|| thumbnail.get("@id").and_then(Value::as_str).map(str::to_string))
+        .or_else(|| {
+            thumbnail
+                .get("id")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
+        .or_else(|| {
+            thumbnail
+                .get("@id")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
 }
 
 fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
@@ -131,8 +143,7 @@ fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
         title,
         creator: metadata_value(&value, "creator").or_else(|| metadata_value(&value, "author")),
         date: metadata_value(&value, "date"),
-        description: text(value.get("summary"))
-            .or_else(|| text(value.get("description"))),
+        description: text(value.get("summary")).or_else(|| text(value.get("description"))),
         thumbnail_url: thumbnail_url(&value),
         language: metadata_value(&value, "language"),
         volume: metadata_value(&value, "volume").or_else(|| metadata_value(&value, "part")),
@@ -225,7 +236,10 @@ async fn search_archive(
             })
         })
         .collect::<Vec<_>>();
-    let total = value.pointer("/response/numFound").and_then(Value::as_u64).unwrap_or(0);
+    let total = value
+        .pointer("/response/numFound")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
 
     Ok(SearchPage {
         has_more: u64::from(page) * 20 < total,
@@ -302,7 +316,14 @@ pub async fn discover_iiif(
     page: Option<u32>,
 ) -> Result<DiscoveryOutcome, String> {
     let provider = find_provider(&provider_key).ok_or_else(|| "Unknown collection.".to_string())?;
-    discover_with(&client()?, provider, &input, ARCHIVE_SEARCH_URL, page.unwrap_or(1).max(1)).await
+    discover_with(
+        &client()?,
+        provider,
+        &input,
+        ARCHIVE_SEARCH_URL,
+        page.unwrap_or(1).max(1),
+    )
+    .await
 }
 
 #[cfg(test)]

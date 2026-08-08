@@ -22,42 +22,57 @@ describe('importTextFile', () => {
     writeFileMock.mockReset();
   });
 
-  it('returns null when the user cancels the dialog', async () => {
-    openMock.mockResolvedValueOnce(null);
+  it('returns null when the user cancels the native picker', async () => {
+    invokeMock.mockResolvedValueOnce(null);
 
     const result = await importTextFile();
 
     expect(result).toBeNull();
-    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it('opens the picker in the backend, never in the webview', async () => {
+    invokeMock.mockResolvedValueOnce({
+      name: 'source.txt',
+      text: 'plain text',
+      format: 'plain',
+      experimental: null,
+    });
+
+    await importTextFile();
+
+    expect(invokeMock).toHaveBeenCalledWith('import_document');
+    expect(openMock).not.toHaveBeenCalled();
     expect(readTextFileMock).not.toHaveBeenCalled();
   });
 
-  it('reads .txt files via the fs plugin', async () => {
-    openMock.mockResolvedValueOnce('/tmp/source.txt');
-    readTextFileMock.mockResolvedValueOnce('plain text');
+  it('returns plain text without an experimental marker', async () => {
+    invokeMock.mockResolvedValueOnce({
+      name: 'source.txt',
+      text: 'plain text',
+      format: 'plain',
+      experimental: null,
+    });
 
     const result = await importTextFile();
 
-    expect(readTextFileMock).toHaveBeenCalledWith('/tmp/source.txt');
-    expect(invokeMock).not.toHaveBeenCalled();
     expect(result).toEqual({
-      path: '/tmp/source.txt',
       name: 'source.txt',
       text: 'plain text',
       format: 'plain',
     });
   });
 
-  it('routes .docx files through extract_docx_text', async () => {
-    openMock.mockResolvedValueOnce('/tmp/Doc.DOCX');
-    invokeMock.mockResolvedValueOnce('docx content');
+  it('flags the docx conversion as experimental', async () => {
+    invokeMock.mockResolvedValueOnce({
+      name: 'Doc.DOCX',
+      text: 'docx content',
+      format: 'markdown',
+      experimental: 'docx-markdown',
+    });
 
     const result = await importTextFile();
 
-    expect(invokeMock).toHaveBeenCalledWith('extract_docx_markdown', { path: '/tmp/Doc.DOCX' });
-    expect(readTextFileMock).not.toHaveBeenCalled();
     expect(result).toEqual({
-      path: '/tmp/Doc.DOCX',
       name: 'Doc.DOCX',
       text: 'docx content',
       format: 'markdown',
@@ -65,27 +80,16 @@ describe('importTextFile', () => {
     });
   });
 
-  it('routes .pdf files through extract_pdf_text', async () => {
-    openMock.mockResolvedValueOnce('/tmp/book.pdf');
-    invokeMock.mockResolvedValueOnce('pdf content');
+  it('surfaces backend error markers as an Error message', async () => {
+    invokeMock.mockRejectedValueOnce('pdf_no_text_layer');
 
-    const result = await importTextFile();
-
-    expect(invokeMock).toHaveBeenCalledWith('extract_pdf_text', { path: '/tmp/book.pdf' });
-    expect(readTextFileMock).not.toHaveBeenCalled();
-    expect(result?.text).toBe('pdf content');
+    await expect(importTextFile()).rejects.toThrow('pdf_no_text_layer');
   });
 
-  it('handles Windows-style paths when extracting the basename', async () => {
-    openMock.mockResolvedValueOnce('C\\\\Users\\\\me\\\\report.docx');
-    invokeMock.mockResolvedValueOnce('win docx');
+  it('surfaces the non-utf8 marker so the UI can explain the encoding problem', async () => {
+    invokeMock.mockRejectedValueOnce('text_not_utf8');
 
-    const result = await importTextFile();
-
-    expect(invokeMock).toHaveBeenCalledWith('extract_docx_markdown', { path: 'C\\\\Users\\\\me\\\\report.docx' });
-    expect(result?.name).toBe('report.docx');
-    expect(result?.format).toBe('markdown');
-    expect(result?.experimental).toBe('docx-markdown');
+    await expect(importTextFile()).rejects.toThrow('text_not_utf8');
   });
 });
 

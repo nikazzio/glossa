@@ -15,6 +15,19 @@ Supported input formats include:
 - `.docx` — converted to Markdown via structured extraction (experimental feature). Limit: **100 MB**.
 - `.pdf` — extracted as plain text. Limit: **50 MB**.
 
+Plain text has a **50 MB** limit. Any other extension is read as plain text —
+pick **All files** in the picker's type menu to see it. Be aware, though: a
+format with internal markup such as `.rtf` or `.odt` arrives with its
+formatting codes inside the text, because Glossa does not yet have a dedicated
+reader for those formats.
+
+**From any folder.** Import is not limited to Documents, Downloads, or Desktop:
+pick a file from wherever you keep it, including working folders and external
+drives.
+
+If a text file is not UTF-8 encoded, Glossa tells you instead of importing
+mangled characters: reopen it in a text editor, save it as UTF-8, and try again.
+
 During import, Glossa lets you review segmentation before the document becomes
 the active chunk list.
 
