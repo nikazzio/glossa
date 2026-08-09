@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-09. D1 approvata con modifiche.
+Ultimo aggiornamento: 2026-08-10. D1 e D2 approvate con modifiche.
 
 ## Come si legge
 
@@ -145,34 +145,103 @@ sistema per ogni pagina visualizzata.
 disponibile localmente"* invece di restare appesa. Copre anche il caso in cui la
 sincronizzazione cambia sotto i piedi.
 
-## D2 — Come si chiamano i file
+## D2 — Come sono disposti i file sul disco
 
-**Propongo**: nessun nome "parlante". Struttura per identificativi:
+*Approvata con modifiche il 2026-08-09.*
+
+**Il disco riflette solo la provenienza.** Chi ha digitalizzato e chi possiede
+l'esemplare sono fatti che non cambiano mai. Tutto il resto — opera, edizione,
+esemplare, e i legami fra copie della stessa edizione in biblioteche diverse —
+vive nel database e nei metadati, dove si corregge senza spostare un file.
 
 ```
-vault/
-  sources/<id-fonte>/
-    versions/<id-versione>/
-      manifest.json
-      pages/0001.jpg
-      pages/0002.jpg
-      document.pdf
-      thumbnails/0001.jpg
+<radice del deposito>/
+  .glossa-vault
+  providers/<chiave-provider>/<id-digitalizzazione>/
+    manifest.json
+    pages/0001.jpg
+    pages/0002.jpg
+    thumbnails/0001.jpg
+    document.pdf
   derived/<id-asset>/…
+  trash/<id-digitalizzazione>/
 ```
 
-I numeri di pagina sono progressivi a quattro cifre, nell'ordine dichiarato dal
-manifesto, **non** l'etichetta della biblioteca (che può essere `12r`, `[iv]`,
-`Tavola III` o mancare del tutto).
+`<chiave-provider>` è la chiave già usata dal registry dei provider IIIF (#214),
+non il nome esteso dell'istituzione: stabile, senza spazi né accenti.
 
-**Scartato**: nomi derivati dal titolo dell'opera. Titoli lunghi, accentati,
-con barre e virgolette, in alfabeti diversi; limiti di lunghezza del percorso
-diversi fra Windows, macOS e Linux; e rinominare un'opera in Biblioteca
-sposterebbe file sul disco.
+`<id-digitalizzazione>` è l'identificativo interno della `source_version`, non
+un titolo.
 
-**Comporta**: la cartella non è navigabile a mano in modo utile. Se serve
-esportare "le immagini di questo manoscritto" con nomi leggibili, è una
-funzione di esportazione, non l'organizzazione interna del deposito.
+**Niente nomi parlanti.** Titoli lunghi, accentati, con barre e virgolette, in
+alfabeti diversi; limiti di lunghezza del percorso diversi fra i tre sistemi
+operativi; e rinominare un'opera in Biblioteca sposterebbe file sul disco.
+
+**Le pagine sono numerate progressivamente a quattro cifre**, nell'ordine
+dichiarato dal manifesto — non l'etichetta della biblioteca, che può essere
+`12r`, `[iv]`, `Tavola III` o mancare del tutto. L'etichetta si conserva in
+`assets.page_label` e si mostra all'utente; l'ordinamento usa `page_index`.
+
+**Perché non per opera o per edizione**: l'attribuzione di una copia a
+un'edizione è un giudizio filologico che si rivede. Se stesse nel percorso, una
+riattribuzione comporterebbe lo spostamento di gigabyte. La provenienza no: è
+un dato di fatto.
+
+**Costo accettato**: la cartella non è navigabile a mano in modo utile, e con
+D1 questo pesa di più, perché chi tiene il deposito su una cartella
+sincronizzata la vede. Se serve "le immagini di questo manoscritto con nomi
+leggibili", è una funzione di esportazione, non l'organizzazione interna.
+
+**Bassa e alta risoluzione non sono versioni diverse**: sono derivati di una
+stessa digitalizzazione, e lo schema li copre già (`assets.kind = 'derived'`,
+`derived_from_asset_id`). Stanno sotto `derived/`, non sotto un'altra cartella
+di provenienza.
+
+## D2-bis — Aderenza a IIIF
+
+IIIF è lo standard del dominio: **si rispetta, non si reinterpreta.**
+
+**Il manifesto si conserva com'è.** `manifest.json` è il documento originale
+scaricato, byte per byte, non una nostra normalizzazione. La normalizzazione
+vive in memoria e nel database; l'originale resta la verità e permette di
+ricostruire tutto se cambiamo idea sui campi che estraiamo.
+
+**L'ordine delle pagine è quello del manifesto**, non uno nostro. `page_index`
+è la posizione nella sequenza dichiarata (`items` in Presentation 3.0, `canvases`
+in 2.x); `page_label` è l'etichetta dichiarata, mostrata all'utente così com'è.
+
+**Le immagini si chiedono tramite Image API**, con i parametri dello standard
+(`/full/<size>/0/default.jpg`), rispettando ciò che il servizio dichiara di
+supportare in `info.json` — profilo, dimensioni disponibili, formati. Non si
+costruiscono URL a indovinare.
+
+**Si rispettano le dichiarazioni di licenza e attribuzione** del manifesto
+(`rights`, `requiredStatement`, `provider`): vanno conservate insieme alla
+fonte e mostrate. Materiale d'archivio senza attribuzione è un problema, non un
+dettaglio.
+
+**Le note di cortesia di D18 sono parte dell'aderenza**, non un'aggiunta:
+identificazione dell'applicazione nelle richieste e limiti di concorrenza per
+dominio.
+
+**Riferimenti**: Presentation API 3.0 e Image API 3.0. La versione 2.1 va
+ancora letta, perché molte biblioteche non hanno migrato.
+
+**Nota sul modello bibliografico** (non è una decisione di questo blocco).
+Lo schema di #211 rappresenta bene un manoscritto: opera → digitalizzazione →
+file. Per gli stampati serve un livello in più — **edizione** (la tiratura),
+**esemplare** (la copia fisica in una biblioteca), **digitalizzazione** — perché
+la stessa edizione esiste in copie diverse in biblioteche diverse. Oggi
+`source_versions` mescola il livello bibliografico (`edition`, `copy`) con il
+supporto digitale (`iiif_manifest`, `pdf`).
+
+Non serve al blocco 1: scaricamento, disponibilità e lavori operano tutti al
+livello della digitalizzazione. Serve quando si vorranno confrontare due
+esemplari della stessa edizione, o sapere quali biblioteche la possiedono, ed è
+materia di **#404** insieme ai cataloghi di autorità (ISTC, EDIT16, CERL, VIAF).
+
+La disposizione per provenienza scelta qui **non blocca** quel lavoro: se
+l'edizione stesse nel percorso, lo bloccherebbe.
 
 ## D3 — Due fonti che condividono la stessa immagine
 
@@ -194,7 +263,8 @@ verifichi davvero.
 
 **Comporta**: spazio su disco sprecato nei casi di sovrapposizione, che
 sospetto siano rari nel tuo uso. In cambio, cancellare una fonte è
-un'operazione ovvia e sicura: si cancella la sua cartella. Se un domani i dati
+un'operazione ovvia e sicura: si cancella la cartella della sua
+digitalizzazione (D2). Se un domani i dati
 mostrano che la duplicazione pesa, il passaggio al deposito condiviso si fa
 dopo, con le impronte già in tabella.
 
@@ -551,13 +621,13 @@ dipendenza, configurazione, progresso, tentativi ed errore.
 
 <radice del deposito>/            ← predefinita `<cartella dati>/vault/`,
   .glossa-vault                     riconfigurabile (D1)
-    sources/<source_id>/versions/<source_version_id>/
-      manifest.json
-      pages/0001.jpg …
-      thumbnails/0001.jpg …
-      document.pdf
-    derived/<asset_id>/…
-    trash/<source_id>/          ← cestinati, in attesa di svuotamento (D6)
+  providers/<chiave-provider>/<source_version_id>/
+    manifest.json               ← originale, byte per byte (D2-bis)
+    pages/0001.jpg …
+    thumbnails/0001.jpg …
+    document.pdf
+  derived/<asset_id>/…
+  trash/<source_version_id>/    ← cestinati, in attesa di svuotamento (D6)
 ```
 
 `assets.vault_path` è **relativo** alla radice del deposito, mai assoluto: così
