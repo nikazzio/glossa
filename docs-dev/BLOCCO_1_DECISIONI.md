@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. Approvate D1-D5, con D1-bis, D2-bis, D4-bis e D5-bis.
+Ultimo aggiornamento: 2026-08-10. Approvate D1-D8, con D1-bis, D2-bis, D4-bis e D5-bis.
 
 ## Come si legge
 
@@ -448,59 +448,142 @@ e ripreso, e siccome è un lavoro lo è per costruzione.
 Su deposito sincronizzato in streaming costringe il client a scaricare tutto
 (D1-bis): va detto prima di partire.
 
-## D6 — Cancellare una fonte
+## D6 — Liberare spazio e cancellare
 
-**Propongo**: cestinare una fonte non tocca il disco. I file spariscono solo
-quando il cestino viene svuotato davvero. Prima della cancellazione definitiva
-l'utente vede quanto spazio libera.
+*Approvata con modifiche il 2026-08-10.*
 
-**Scartato**: cancellare subito. Il cestino esiste per poter tornare indietro,
-e una fonte ripescata senza le sue immagini è una fonte da riscaricare.
+### Il principio
 
-**Comporta**: il cestino può occupare molto spazio in silenzio. Serve mostrare
-lo spazio occupato dal cestino da qualche parte in Impostazioni.
+**Le immagini sono una copia locale, non un dato.** Si riscaricano dalla
+biblioteca. Tutto il resto — scheda, note, collegamenti, trascrizione,
+traduzione, annotazioni — non si riscarica da nessuna parte.
 
----
+Questa distinzione governa tutta la decisione.
+
+### Due azioni, non una
+
+**Libera spazio** — sulla fonte. Cancella le pagine scaricate **subito e per
+davvero**, senza passare dal cestino. Restano scheda, miniature, trascrizione,
+traduzione e note. Conferma esplicita con la dimensione: *"3,2 GB. Le pagine si
+riscaricano dalla biblioteca quando ti servono."*
+
+È l'azione frequente: si cerca un'opera, si tiene la scheda, si scarica la
+carta che serve, e quando non serve più si libera.
+
+**Sposta nel cestino** — sulla fonte intera: scheda, note, collegamenti e
+immagini. È l'azione rara, ed è l'unica che il cestino debba davvero proteggere,
+perché quelle cose non si riscaricano.
+
+**Perché "libera spazio" non passa dal cestino**: spostare 3 GB nel cestino non
+libera niente. Servirebbe una seconda azione per ottenere ciò che si è chiesto.
+
+### Il cestino
+
+Mostra cosa contiene e quanto occupa. Si svuota a mano, non automaticamente:
+su materiale che costa ore di scaricamento, nessuna cancellazione alle spalle.
+
+Lo spazio occupato dal cestino va mostrato in Impostazioni → Archiviazione,
+altrimenti cresce dimenticato.
+
+### Fonti usate da trascrizioni o traduzioni
+
+Liberare lo spazio di una fonte **non tocca** trascrizioni e traduzioni, che
+sono documenti a sé. Restano leggibili e modificabili anche senza le immagini.
+
+Riscaricare in seguito solo le pagine che servono non è una funzione nuova: è
+l'azione per pagina già definita in D4, usata quando non c'è nulla in locale.
+
+### Miniature all'aggiunta
+
+Aggiungendo una fonte si scaricano **tutte le miniature**. Duecento miniature
+sono circa 3 MB: trascurabili, e rendono il libro sfogliabile anche senza rete e
+senza pagine scaricate. Le miniature non vengono rimosse da "libera spazio".
 
 # Parte B — Disponibilità e modalità di lettura
 
 ## D7 — Cosa vede l'utente sullo stato di una fonte
 
-La colonna `availability` esiste già con tre valori. Propongo di mostrarli così:
+*Approvata con modifiche il 2026-08-10.*
 
 | In tabella | L'utente legge | Significa |
 |---|---|---|
-| `catalogued` | **Solo online** | conosciamo la fonte, nessun file sul computer |
-| `partial` | **Parziale — 34 di 210 pagine** | scaricamento interrotto o parziale |
-| `complete` | **Completa sul computer** | tutte le pagine dichiarate dal manifesto sono presenti |
+| `catalogued` | **Solo online** | scheda e miniature, nessuna pagina in locale |
+| `partial` | **12 di 210 pagine** | alcune pagine in locale |
+| `complete` | **Completa sul computer** | tutte le pagine dichiarate sono presenti |
 
-Lo stato **non** è una quarta colonna "in scaricamento": quello è un lavoro in
-corso, e si legge dai lavori (Parte C). Una fonte in scaricamento resta
-`partial` e mostra in più la barra di avanzamento del suo lavoro.
+### La disponibilità non si colora
 
-**Scartato**: aggiungere `downloading` e `error` agli stati dell'asset, come
-suggerisce il testo della issue. Sono stati del *lavoro*, non del file: se
-duplicati in due posti, prima o poi divergono — l'app si chiude durante uno
-scaricamento e la fonte resta "in scaricamento" per sempre.
+`partial` **non è un avviso**. Chi scarica tre carte su duecento apposta — che è
+l'uso normale, vedi D6 — non deve trovarsi duecento bandierine gialle addosso.
+Il numero è un fatto e si mostra come un dato, in grigio.
 
-**Comporta**: l'interfaccia deve unire due fonti di informazione (disponibilità
-+ lavoro attivo) per mostrare una riga. È il prezzo di non avere stati
-duplicati.
+**Il colore lo mettono i problemi veri**, che sono fatti verificabili e non
+giudizi:
+
+- l'ultimo scaricamento è **fallito**, con il motivo;
+- la verifica ha trovato file **mancanti o corrotti** (D5, D5-bis);
+- il deposito non è raggiungibile — riguarda tutto, non la singola fonte.
+
+Nessuna bandierina da mettere a mano. Se nell'uso emergesse il bisogno di un
+"per me è finito" esplicito, è un valore booleano da aggiungere dopo; si parte
+senza, perché tolto il giallo ingiustificato probabilmente non serve.
+
+### Niente stati di scaricamento sull'asset
+
+Non si aggiungono `downloading` o `error` alla disponibilità, come suggerirebbe
+il testo di #217. Sono stati del **lavoro**, non del file: duplicati in due posti
+prima o poi divergono, e una fonte resterebbe "in scaricamento" per sempre dopo
+una chiusura dell'app.
+
+L'interfaccia unisce due informazioni — disponibilità e lavoro attivo — per
+mostrare una riga. È il prezzo di non avere stati duplicati.
 
 ## D8 — Leggere da remoto o dalla copia locale
 
-**Propongo** tre modalità, dichiarate esplicitamente:
+*Approvata con modifiche il 2026-08-10.*
 
-- **Automatica** (predefinita): se il file c'è sul computer lo usa, altrimenti
-  va in rete;
-- **Solo locale**: non tocca mai la rete; le pagine mancanti appaiono
-  esplicitamente come non disponibili invece di caricare lentamente;
-- **Solo remoto**: ignora le copie locali, utile per verificare che una copia
+- **Automatica** (predefinita): se la pagina c'è in locale la usa, altrimenti la
+  chiede al servizio della biblioteca;
+- **Solo locale**: non tocca mai la rete; le pagine assenti appaiono come non
+  disponibili invece di caricare lentamente;
+- **Solo remoto**: ignora le copie locali. Serve a verificare che una copia
   scaricata corrisponda ancora all'originale.
 
-**Scartato**: la sola modalità automatica. "Solo locale" serve davvero quando
-si lavora senza rete o su connessione lenta, e senza una modalità esplicita
-l'utente non capisce perché a volte è veloce e a volte no.
+### La modalità automatica è già "online di default"
+
+Finché non si scarica nulla, tutto arriva da remoto. La differenza fra
+automatica e "solo remoto" si vede unicamente sulle pagine che si è **deciso**
+di scaricare — e lì usare la copia locale è esattamente ciò che si è chiesto
+scaricandola.
+
+Mettere "solo remoto" come predefinita renderebbe inutile ogni scaricamento
+finché non si cambia anche l'impostazione: una trappola.
+
+### La lettura remota non è un ripiego
+
+Per sfogliare e ingrandire è **tecnicamente la scelta migliore**. Lo standard
+IIIF serve le immagini a riquadri: si carica solo la porzione visibile, alla
+risoluzione che serve. Scaricare un'immagine intera per guardarne un angolo è
+più lento e più pesante.
+
+Il locale serve per tre cose precise: lavorare senza rete, trascrivere a lungo
+sulla stessa carta, e conservare il materiale anche se la biblioteca cambia
+indirizzi o lo ritira.
+
+### Condizioni d'uso delle biblioteche
+
+Alcune istituzioni consentono la **consultazione** ma non lo **scaricamento
+sistematico**. La modalità online permette di lavorare nel rispetto delle loro
+condizioni, e per quelle fonti è l'unica ammessa.
+
+Vale insieme all'obbligo di D2-bis di conservare e mostrare licenza,
+attribuzione e istituzione dichiarate nel manifesto.
+
+### Copia temporanea
+
+Le immagini viste da remoto finiscono in una cache dell'applicazione, **non nel
+deposito**: tetto di dimensione, scarto dei più vecchi. Non contano come
+scaricate e non toccano gli stati di D7.
 
 ## D9 — Dove si salva questa preferenza
 
@@ -761,6 +844,10 @@ INSERT INTO app_settings (key, value) VALUES ('download_size_cap', '2000');
 
 -- Controllo rapido di presenza all'avvio: spento di default (D5).
 INSERT INTO app_settings (key, value) VALUES ('verify_vault_on_startup', '0');
+
+-- Tetto della cache delle immagini viste da remoto, in MB (D8). Vive nella
+-- cartella cache dell'applicazione, non nel deposito.
+INSERT INTO app_settings (key, value) VALUES ('remote_image_cache_mb', '512');
 
 -- Numero di pagine dichiarato dal manifesto: senza, 'complete' non è
 -- calcolabile (D7).
