@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. D1, D2, D4 e D5 approvate con modifiche, D3 approvata.
+Ultimo aggiornamento: 2026-08-10. Approvate D1-D5, con D1-bis, D2-bis, D4-bis e D5-bis.
 
 ## Come si legge
 
@@ -402,6 +402,51 @@ intatti**.
 Le segnalazioni all'avvio presuppongono una **zona notifiche in Dashboard**, che
 non esiste ancora e non fa parte di questo blocco. Finché non c'è, l'avviso di
 deposito non raggiungibile va nella barra di stato.
+
+## D5-bis — Verifica completa del deposito
+
+*Approvata il 2026-08-10.*
+
+Un lavoro globale avviabile a mano da **Impostazioni → Archiviazione**, accanto
+alla riga del deposito. Non dalla Biblioteca: non riguarda una fonte, riguarda
+il deposito.
+
+**Valore aggiunto oltre la sicurezza dei dati**: è il primo lavoro lungo davvero
+pesante per il **processore** e non per la rete. Serve a provare che i limiti di
+concorrenza separati di D11 funzionano davvero, invece di scoprirlo con il
+riconoscimento testo fra sei mesi.
+
+### Resoconto in quattro categorie
+
+- **integri** — verificati, impronta corrispondente;
+- **mancanti** — attesi dal database, assenti dal disco;
+- **corrotti** — presenti ma con impronta diversa: scaricamenti interrotti,
+  deterioramento del supporto, sincronizzazioni andate male;
+- **orfani** — file sul disco che il database non conosce.
+
+Gli orfani sono la parte nuova: D5 dice di ignorarli nell'uso normale, ma qui è
+il momento giusto per contarli, perché occupano spazio e nessuno li reclamerà
+mai. Il resoconto propone *"elimina file orfani, liberi 3,2 GB"* come azione
+esplicita.
+
+**Non corregge niente da solo**, come D5.
+
+### Rapporto con il backup
+
+**Non legato.** Un backup che parte con ore di verifica è un backup che non si fa
+mai.
+
+Invece: se si avvia un backup che include le immagini e la verifica completa non
+è mai stata eseguita, o è vecchia, compare una **nota non bloccante** con il
+collegamento per lanciarla.
+
+### Avvertenze
+
+Su un deposito da decine di gigabyte sono ore: deve poter essere messo in pausa
+e ripreso, e siccome è un lavoro lo è per costruzione.
+
+Su deposito sincronizzato in streaming costringe il client a scaricare tutto
+(D1-bis): va detto prima di partire.
 
 ## D6 — Cancellare una fonte
 
