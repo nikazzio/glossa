@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-09.
+Ultimo aggiornamento: 2026-08-09. D1 approvata con modifiche.
 
 ## Come si legge
 
@@ -51,19 +51,99 @@ storto.
 
 ## D1 — Dove vivono i file scaricati
 
-**Propongo**: una cartella `vault/` accanto al database, dentro la stessa
-cartella dati che l'utente può già spostare da Impostazioni → Archiviazione.
+*Approvata con modifiche il 2026-08-09.*
 
-**Scartato**: una cartella scelta separatamente dall'utente. Due percorsi
-configurabili significano due modi di rompere l'installazione, e soprattutto
-significa che spostare i dati non porta con sé le immagini, lasciando il
-database pieno di riferimenti a file che non ci sono più.
+**Il database resta dov'è**, nella cartella dati dell'utente. Non nella cartella
+di installazione: su Windows è di sola lettura senza permessi da amministratore
+e gli aggiornamenti possono ripulirla, su macOS il pacchetto è firmato e non
+deve contenere dati mutevoli. Lo spostamento della cartella dati esiste già:
+resta, ma smettiamo di consigliarlo.
 
-**Comporta**: chi sposta la cartella dati sposta tutto, come si aspetta. Ma lo
-spostamento diventa più lento e più pesante, perché non muove più solo un
-database di pochi megabyte. Va aggiornato l'avviso in Impostazioni: oggi dice
-"riavvia per usare la nuova posizione", dovrà dire anche quanto spazio si sta
-spostando.
+**Il deposito è configurabile a parte.** Predefinito `vault/` dentro la cartella
+dati, così chi non tocca niente ha tutto in un posto; ma chi vuole i gigabyte
+su un'altra partizione, un disco esterno o una cartella sincronizzata può
+sceglierne un'altra.
+
+Regge perché `assets.vault_path` è **relativo** alla radice del deposito: il
+deposito si sposta senza invalidare il database.
+
+**Modello di riferimento**: indice piccolo, fisso e locale; file grandi
+configurabili. È lo stesso di Zotero (database nel profilo, *linked attachment
+base directory* per i PDF), Lightroom (catalogo locale, fotografie ovunque),
+Calibre e Obsidian (cartella scelta al primo avvio, dentro l'app).
+
+### Il flusso
+
+**Primo avvio, dentro l'applicazione** — non nell'installatore: i tre sistemi
+operativi non condividono un modo di aggiungere schermate e mantenerne tre è
+fragile. Una schermata, due scelte:
+
+- *Tieni tutto insieme* (predefinita): deposito dentro la cartella dati;
+- *Scegli dove tenere immagini e documenti*: apre la selezione cartella.
+
+**Poi, in Impostazioni → Archiviazione**, due righe distinte: *cartella dati*
+(dov'è il database, modificabile ma sconsigliata) e *cartella del deposito*
+(quella che si sposta davvero).
+
+**Scegliendo una cartella per il deposito**, controlli in quest'ordine:
+
+1. si può scrivere;
+2. c'è spazio per quello che c'è già;
+3. cosa contiene: vuota → si crea il deposito; deposito Glossa esistente
+   (riconosciuto dal marcatore, sotto) → si propone di **ricollegarlo** senza
+   copiare, utile per spostare un disco fra due computer; cartella con altro
+   contenuto → si rifiuta;
+4. controllo sincronizzazione in streaming (D1-bis);
+5. parte il lavoro di migrazione.
+
+### Il marcatore
+
+Un file `.glossa-vault` nella radice, con dentro la versione del formato. Serve
+a riconoscere un deposito esistente da ricollegare, e a rifiutarsi di riversare
+migliaia di file dentro una cartella scelta per errore.
+
+### La migrazione è un lavoro, non un'operazione istantanea
+
+Sposta gigabyte: avanzamento visibile, verifica, annullamento e ripresa. È il
+**secondo consumatore** del sistema dei lavori dopo lo scaricamento, e conferma
+che quel sistema va costruito prima.
+
+### Deposito irraggiungibile
+
+Disco staccato, condivisione di rete non montata, cartella cloud non ancora
+sincronizzata. **Radice del deposito assente è un caso diverso da singolo file
+mancante** (vedi D5): Glossa dichiara il deposito non raggiungibile, blocca
+scaricamenti e verifiche, e non tocca nessuno stato. Senza questa distinzione
+un disco staccato farebbe apparire tutte le fonti come non scaricate, e un clic
+sbagliato riscaricherebbe l'intera biblioteca.
+
+## D1-bis — Cartelle sincronizzate (Drive, OneDrive, iCloud)
+
+**Il deposito su una cartella sincronizzata: sì**, a una condizione — il client
+deve tenere una copia vera sul disco (Drive per desktop: modalità **mirror**).
+In modalità **streaming**, che è la predefinita, i file sono segnaposto:
+risultano presenti con la dimensione giusta ma occupano zero byte e si scaricano
+all'apertura. Glossa direbbe "fonte completa sul computer" mentre non c'è
+niente, e la modalità di lettura "solo locale" diventerebbe una bugia.
+
+**Il database su una cartella sincronizzata: mai.** SQLite scrive usando file di
+appoggio e blocchi; il client li sincronizza in ritardo e separatamente, e una
+sincronizzazione a metà di una scrittura corrompe il database. È il modo
+classico di distruggerlo.
+
+Separare deposito e database, come sopra, **protegge il database**: chi vuole le
+immagini sul cloud non è più costretto a portarci anche il database.
+
+**Controllo**: una volta sola, quando si sceglie la cartella, non a ogni
+lettura. Su Windows i segnaposto portano un contrassegno leggibile senza aprire
+il file; trovandolo, avviso esplicito con l'indicazione di passare a mirror.
+Sugli altri sistemi il contrassegno non è altrettanto affidabile, quindi
+l'avviso è generico. Verificarlo a ogni lettura significherebbe una chiamata al
+sistema per ogni pagina visualizzata.
+
+**A tempo di lettura**, se il file non arriva, l'interfaccia dice *"file non
+disponibile localmente"* invece di restare appesa. Copre anche il caso in cui la
+sincronizzazione cambia sotto i piedi.
 
 ## D2 — Come si chiamano i file
 
@@ -147,6 +227,10 @@ se qualcuno tocca le cartelle a mano.
 
 **Comporta**: serve un comando manuale di verifica ("controlla i file di questa
 fonte"), che non è nel primo incremento.
+
+**Eccezione, dalla D1**: se manca la **radice** del deposito, non si applica
+niente di quanto sopra. Il deposito è dichiarato non raggiungibile e gli stati
+restano intatti.
 
 ## D6 — Cancellare una fonte
 
@@ -414,10 +498,14 @@ proporre un ritaglio. Va guardata insieme, non stanotte.
    di stato? Tocca la shell.
 3. **Tetto di dimensione predefinito** (D4): 2000 pixel sul lato lungo è la mia
    proposta. Tu sai cosa serve per leggere una scrittura del XII secolo, io no.
-4. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
+4. **Migrazione del deposito** (da D1): cambiando cartella, i file esistenti
+   vanno spostati, copiati lasciando gli originali, o solo ricollegati? Il
+   ricollegamento c'è già per un deposito esistente; la domanda riguarda il caso
+   in cui la nuova cartella è vuota.
+5. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
    testo. Con il deposito, un backup completo diventa di gigabyte. Il backup
    deve includere le immagini, escluderle sempre, o chiedere?
-5. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
+6. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
    rifiuta di scaricare? Senza, un manoscritto grande riempie il disco senza
    preavviso.
 
@@ -432,6 +520,9 @@ Il modello dati di #211 basta quasi del tutto. Servono solo:
 ```sql
 -- Modalità di lettura globale: 'auto' | 'local' | 'remote'.
 INSERT INTO app_settings (key, value) VALUES ('source_read_mode', 'auto');
+
+-- Radice del deposito. Vuoto o assente = `<cartella dati>/vault/` (D1).
+INSERT INTO app_settings (key, value) VALUES ('vault_root', '');
 
 -- Numero di pagina progressivo, per ordinare gli asset di una versione senza
 -- dipendere dall'etichetta della biblioteca (D2).
@@ -455,9 +546,11 @@ dipendenza, configurazione, progresso, tentativi ed errore.
 ## Struttura del deposito
 
 ```
-<cartella dati>/
+<cartella dati>/                  ← fissa, mai su cartella sincronizzata
   glossa.db
-  vault/
+
+<radice del deposito>/            ← predefinita `<cartella dati>/vault/`,
+  .glossa-vault                     riconfigurabile (D1)
     sources/<source_id>/versions/<source_version_id>/
       manifest.json
       pages/0001.jpg …
