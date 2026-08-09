@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. D1 e D2 approvate con modifiche, D3 approvata.
+Ultimo aggiornamento: 2026-08-10. D1, D2 e D4 approvate con modifiche, D3 approvata.
 
 ## Come si legge
 
@@ -272,19 +272,82 @@ Non serve, e non si usa, per riconoscere duplicati.
 
 ## D4 — Quali immagini si scaricano
 
-**Propongo**: una sola dimensione per pagina, la massima che il servizio
-espone entro un tetto configurabile (predefinito: lato lungo 2000 pixel), più
-una miniatura. Se il servizio offre solo dimensioni fisse, si prende la più
-grande sotto il tetto.
+*Approvata con modifiche il 2026-08-10.*
 
-**Scartato**: scaricare a piena risoluzione sempre. Un manoscritto di 400 carte
-a piena risoluzione sono decine di gigabyte, e per leggere e trascrivere non
-servono.
+### Sapere cosa è disponibile
 
-**Comporta**: se domani serve la piena risoluzione per un dettaglio — e per un
-lavoro paleografico servirà — va prevista una richiesta puntuale "scarica
-questa pagina alla massima risoluzione". La metto fra le domande aperte, non la
-decido qui.
+Ogni immagine IIIF ha un descrittore (`info.json`) che dichiara:
+
+- `sizes[]` — le dimensioni garantite;
+- `maxWidth` / `maxHeight` / `maxArea` — i tetti oltre cui il servizio rifiuta;
+- `extraFeatures` — se si può chiedere una larghezza arbitraria (`sizeByW`,
+  `sizeByWh`, …);
+- il **livello di conformità**: a livello 0 sono ammesse *solo* le dimensioni
+  predefinite; dal livello 1 in su si può chiedere per larghezza.
+
+Si legge una volta per digitalizzazione e si conserva insieme alla versione. Da
+lì l'interfaccia sa dire, per ogni pagina, quali risoluzioni esistono davvero,
+senza tentare richieste a indovinare. La dimensione massima si chiede con la
+sintassi canonica `size=max`.
+
+### Politica di scaricamento, per fonte
+
+Scelta **alla fonte**, non globale, perché dipende dal materiale: una
+cinquecentina a stampa larga si legge a molto meno di una minuscola fitta.
+
+- **Standard** (predefinita): la massima disponibile entro il tetto —
+  **2000 pixel sul lato lungo**, configurabile;
+- **Massima**: `size=max`, nessun tetto.
+
+Le miniature si scaricano sempre, in entrambi i casi.
+
+**Scartato "scarica tutto al minimo"**: produrrebbe una fonte che risulta
+completa ma è illeggibile, peggio di una non scaricata. Il minimo sono già le
+miniature.
+
+### Aggiornamento a richiesta, per singola pagina
+
+Mentre si naviga, se per quella pagina esiste una risoluzione superiore a
+quella presente, l'interfaccia lo dichiara e offre *"scarica questa pagina alla
+massima risoluzione"*. Il nuovo file **si aggiunge**, non sostituisce: serve il
+dettaglio su una carta, non su tutte.
+
+### La risoluzione in esportazione appartiene all'esportazione
+
+La scelta "a che risoluzione voglio il PDF che produco" si fa al momento
+dell'esportazione, fra ciò che si ha; se manca, l'esportazione può richiedere lo
+scaricamento di quello che serve.
+
+**Perché conta**: tenerla qui trasformerebbe lo scaricamento in quattro comandi
+diversi. Così le possibilità restano tutte, ma distribuite dove servono — una
+impostazione alla fonte, un'azione sulla pagina, una scelta in esportazione.
+
+### Conseguenza tecnica
+
+Più file per la stessa pagina: il percorso diventa
+`pages/<dimensione>/0001.jpg` e `assets` distingue le righe per dimensione
+(`size_tag`). `page_index` resta il numero di pagina, non più unico da solo.
+
+## D4-bis — Il PDF fornito dalla biblioteca
+
+Un manifesto può dichiarare un PDF dell'intero oggetto (proprietà `rendering`,
+Presentation API 3.0).
+
+**Se c'è, si mostra e si può scaricare in aggiunta — mai al posto delle
+immagini.** Le immagini restano la base: sono per pagina, di qualità dichiarata
+e ordinabili. Il PDF è comodo per leggere fuori dall'app e, quando ha un livello
+di testo, per cercarci dentro.
+
+**Non si scompone il PDF per ricavarne le pagine quando le immagini esistono**:
+quel PDF è quasi sempre costruito da immagini già compresse, quindi la qualità
+sarebbe peggiore di una richiesta diretta al servizio immagini.
+
+**Si scompone** solo quando la fonte è *soltanto* un PDF e non esiste IIIF: caso
+già previsto dallo schema (`source_versions.version_kind = 'pdf'`).
+
+**Produrre un PDF di un capitolo o di pagine scelte** si costruisce dalle
+immagini già presenti, non scomponendo quello scaricato. È funzione di
+esportazione (#188, #225), non di scaricamento.
 
 ## D5 — File presenti ma non attesi
 
@@ -564,20 +627,16 @@ proporre un ritaglio. Va guardata insieme, non stanotte.
 
 # Domande che non posso decidere io
 
-1. **Piena risoluzione su richiesta** (da D4): serve nel primo incremento o
-   dopo? Cambia il modello degli asset: due file per pagina invece di uno.
-2. **Dove vive il centro lavori** (da D20): area globale o pannello della barra
+1. **Dove vive il centro lavori** (da D20): area globale o pannello della barra
    di stato? Tocca la shell.
-3. **Tetto di dimensione predefinito** (D4): 2000 pixel sul lato lungo è la mia
-   proposta. Tu sai cosa serve per leggere una scrittura del XII secolo, io no.
-4. **Migrazione del deposito** (da D1): cambiando cartella, i file esistenti
+2. **Migrazione del deposito** (da D1): cambiando cartella, i file esistenti
    vanno spostati, copiati lasciando gli originali, o solo ricollegati? Il
    ricollegamento c'è già per un deposito esistente; la domanda riguarda il caso
    in cui la nuova cartella è vuota.
-5. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
+3. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
    testo. Con il deposito, un backup completo diventa di gigabyte. Il backup
    deve includere le immagini, escluderle sempre, o chiedere?
-6. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
+4. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
    rifiuta di scaricare? Senza, un manoscritto grande riempie il disco senza
    preavviso.
 
@@ -604,6 +663,21 @@ ALTER TABLE assets ADD COLUMN page_index INTEGER DEFAULT NULL;
 -- ordinare o per costruire percorsi.
 ALTER TABLE assets ADD COLUMN page_label TEXT DEFAULT NULL;
 
+-- Dimensione richiesta al servizio ('2000', 'max', …): la stessa pagina può
+-- esistere in piu' risoluzioni, quindi page_index da solo non e' univoco (D4).
+ALTER TABLE assets ADD COLUMN size_tag TEXT DEFAULT NULL;
+
+-- Politica di scaricamento della singola fonte: 'standard' | 'max' (D4).
+ALTER TABLE source_versions ADD COLUMN download_policy TEXT NOT NULL DEFAULT 'standard';
+
+-- Capacita' dichiarate dal servizio immagini (info.json): dimensioni
+-- disponibili, tetti, livello di conformita'. Conservate per non doverle
+-- richiedere a ogni pagina (D4).
+ALTER TABLE source_versions ADD COLUMN image_service_profile TEXT DEFAULT NULL;
+
+-- Tetto predefinito, in pixel sul lato lungo, per la politica 'standard' (D4).
+INSERT INTO app_settings (key, value) VALUES ('download_size_cap', '2000');
+
 -- Numero di pagine dichiarato dal manifesto: senza, 'complete' non è
 -- calcolabile (D7).
 ALTER TABLE source_versions ADD COLUMN expected_asset_count INTEGER DEFAULT NULL;
@@ -625,7 +699,7 @@ dipendenza, configurazione, progresso, tentativi ed errore.
   .glossa-vault                     riconfigurabile (D1)
   providers/<chiave-provider>/<source_version_id>/
     manifest.json               ← originale, byte per byte (D2-bis)
-    pages/0001.jpg …
+    pages/<dimensione>/0001.jpg …   ← 2000, max, … (D4)
     thumbnails/0001.jpg …
     document.pdf
   derived/<asset_id>/…
