@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. D1 e D2 approvate con modifiche.
+Ultimo aggiornamento: 2026-08-10. D1 e D2 approvate con modifiche, D3 approvata.
 
 ## Come si legge
 
@@ -243,30 +243,32 @@ materia di **#404** insieme ai cataloghi di autorità (ISTC, EDIT16, CERL, VIAF)
 La disposizione per provenienza scelta qui **non blocca** quel lavoro: se
 l'edizione stesse nel percorso, lo bloccherebbe.
 
-## D3 — Due fonti che condividono la stessa immagine
+## D3 — Nessuna condivisione fisica dei file
 
-Il caso: due manoscritti diversi rimandano allo stesso file remoto, oppure la
-stessa opera è aggiunta due volte da provider diversi.
+*Approvata il 2026-08-10.*
 
-**Propongo**: **nessuna condivisione fisica**. Ogni versione di una fonte tiene
-la propria copia dei file. L'impronta digitale (`checksum`) viene calcolata e
-salvata comunque, così il caso è riconoscibile e riportabile in futuro, ma non
-si usa per unificare i file adesso.
+Ogni digitalizzazione tiene i propri file. Nessun tentativo di riconoscere che
+due fonti puntano allo stesso file remoto e tenerne una copia sola.
 
-**Scartato**: un deposito indirizzato per contenuto (un file per impronta, e gli
-asset che ci puntano). È la soluzione elegante, ed è quella giusta per una
-biblioteca grande. Ma comporta il conteggio dei riferimenti — cancellando una
-fonte devi sapere se qualcun altro usa ancora quel file — e sbagliarlo
-significa cancellare immagini altrui, o non liberare mai spazio. Non è lavoro
-da fare al primo colpo, senza dati reali che dicano quanto spesso il caso si
-verifichi davvero.
+Con la disposizione per provenienza (D2) il caso è quasi inesistente: due
+digitalizzazioni di biblioteche diverse sono file diversi per definizione, e la
+stessa digitalizzazione aggiunta due volte è già impedita dal controllo
+sull'indirizzo del manifesto in fase di aggiunta.
 
-**Comporta**: spazio su disco sprecato nei casi di sovrapposizione, che
-sospetto siano rari nel tuo uso. In cambio, cancellare una fonte è
-un'operazione ovvia e sicura: si cancella la cartella della sua
-digitalizzazione (D2). Se un domani i dati
-mostrano che la duplicazione pesa, il passaggio al deposito condiviso si fa
-dopo, con le impronte già in tabella.
+**Scartato**: un deposito indirizzato per contenuto, un file per impronta con
+gli asset che ci puntano. È la soluzione giusta per una biblioteca grande, ma
+richiede il conteggio dei riferimenti — cancellando una fonte devi sapere se
+qualcun altro usa ancora quel file — e sbagliarlo significa cancellare immagini
+altrui o non liberare mai spazio. Complessità reale per un problema che qui non
+si presenta.
+
+**A cosa serve davvero l'impronta digitale** (`assets.checksum`): verificare che
+un file sia arrivato **intero**. Uno scaricamento interrotto lascia file
+troncati che sembrano validi; senza impronta, una ripresa li salterebbe come
+"già presenti". Serve anche al comando manuale di verifica di D5 e alla
+migrazione del deposito di D1.
+
+Non serve, e non si usa, per riconoscere duplicati.
 
 ## D4 — Quali immagini si scaricano
 
