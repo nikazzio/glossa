@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. Approvate D1-D8, con D1-bis, D2-bis, D4-bis e D5-bis.
+Ultimo aggiornamento: 2026-08-10. Approvate D1-D9, con D1-bis, D2-bis, D4-bis, D5-bis e D8-bis.
 
 ## Come si legge
 
@@ -585,21 +585,72 @@ Le immagini viste da remoto finiscono in una cache dell'applicazione, **non nel
 deposito**: tetto di dimensione, scarto dei più vecchi. Non contano come
 scaricate e non toccano gli stati di D7.
 
-## D9 — Dove si salva questa preferenza
+## D8-bis — Sapere sempre cosa si sta guardando
 
-**Propongo**: preferenza **globale** dell'applicazione, in `app_settings`, con
-possibilità di forzatura temporanea nella sessione di lettura corrente (non
-persistita).
+*Approvata il 2026-08-10.*
 
-**Scartato**: per fonte, o per workspace. Per fonte significa una colonna in più
-e un'impostazione che l'utente deve gestire decine di volte; per workspace
-sembra elegante ma la modalità di lettura dipende da *dove sei adesso* — in
-treno senza rete — non da *cosa stai studiando*.
+Con la modalità automatica, dentro lo stesso libro alcune carte arrivano dal
+disco e altre dalla rete. **Va sempre dichiarato quale delle due**, per pagina,
+non per fonte.
 
-**Comporta**: se un domani emerge il bisogno di fissarla per singola fonte, si
-aggiunge una colonna che, se valorizzata, vince sulla globale. Retrocompatibile.
+### L'indicatore
 
----
+Accanto alla pagina visualizzata, un segno discreto con due valori:
+
+- **copia locale** — il file è nel deposito;
+- **copia online** — arriva dal servizio della biblioteca.
+
+Un'immagine servita dalla cache temporanea (D8) si dichiara **online**: la cache
+è un dettaglio di implementazione, non una terza condizione di cui l'utente
+debba tenere conto.
+
+Icona neutra con spiegazione al passaggio del mouse, secondo il vincolo di
+interfaccia del progetto: niente pastiglie colorate, niente verde se non per
+stati attivi.
+
+**Perché conta**: su materiale d'archivio la differenza fra "l'ho scaricata a
+marzo" e "la sto vedendo adesso dal server" è rilevante. Una copia locale può
+essere vecchia rispetto a una ridigitalizzazione, e chi lavora su una lezione
+dubbia deve sapere quale delle due sta leggendo.
+
+### I collegamenti all'originale si conservano sempre
+
+Anche quando la copia locale vince, gli indirizzi restano nei metadati e sono
+raggiungibili in un clic:
+
+- **`homepage`** dichiarata dal manifesto (Presentation API 3.0): è la pagina
+  della biblioteca su quell'oggetto, fatta per le persone. Può esistere sia sul
+  manifesto sia sulla singola carta, e in quel caso si usa quella della carta.
+- **Indirizzo del manifesto**, come ripiego quando `homepage` manca.
+- **Indirizzo dell'immagine** della singola pagina, già in `assets.remote_url`.
+- **`provider`**: nome, logo e contatti dell'istituzione, già richiesti da
+  D2-bis insieme a licenza e attribuzione.
+
+L'azione *"apri l'originale in biblioteca"* è disponibile su ogni pagina, in
+qualunque modalità di lettura, anche se la fonte è completa in locale. Serve
+esattamente a togliersi un dubbio senza dover ricostruire a mano dove si era
+preso il materiale.
+
+## D9 — Dove si salva la modalità di lettura
+
+*Approvata con modifiche il 2026-08-10.*
+
+**Globale**, in `app_settings`, con forzatura temporanea nella sessione di
+lettura corrente che non viene memorizzata.
+
+**Scartato per fonte o per workspace**: la modalità dipende da *dove sei* — in
+treno senza rete — non da *cosa stai studiando*. Per fonte sarebbe
+un'impostazione da gestire decine di volte.
+
+**Un'eccezione, che non è una preferenza**: le biblioteche che consentono la
+consultazione ma non lo scaricamento sistematico (D8). Per quelle fonti il
+contrassegno `download_allowed = 0` vince sulla globale e disabilita i comandi
+di scaricamento. Non è una scelta dell'utente, è un vincolo dell'istituzione.
+
+**Non serve una modalità "solo locale" per fonte**: con l'automatica, un libro
+scaricato per intero legge già dal locale. L'unica differenza si vedrebbe su un
+libro incompleto, dove "solo locale" mostrerebbe le pagine mancanti come non
+disponibili invece di caricarle. Caso marginale, si aggiunge se emerge.
 
 # Parte C — I lavori in background
 
@@ -838,6 +889,18 @@ ALTER TABLE source_versions ADD COLUMN download_policy TEXT NOT NULL DEFAULT 'st
 -- disponibili, tetti, livello di conformita'. Conservate per non doverle
 -- richiedere a ogni pagina (D4).
 ALTER TABLE source_versions ADD COLUMN image_service_profile TEXT DEFAULT NULL;
+
+-- Pagina della biblioteca sull'oggetto, dichiarata dal manifesto come
+-- `homepage`: e' il collegamento umano all'originale (D8-bis).
+ALTER TABLE source_versions ADD COLUMN homepage_url TEXT DEFAULT NULL;
+
+-- `homepage` della singola carta, quando il manifesto la dichiara: vince su
+-- quella della versione (D8-bis).
+ALTER TABLE assets ADD COLUMN homepage_url TEXT DEFAULT NULL;
+
+-- La biblioteca consente la consultazione ma non lo scaricamento sistematico:
+-- vince sulla modalita' globale e disabilita i comandi di scaricamento (D9).
+ALTER TABLE source_versions ADD COLUMN download_allowed INTEGER NOT NULL DEFAULT 1;
 
 -- Tetto predefinito, in pixel sul lato lungo, per la politica 'standard' (D4).
 INSERT INTO app_settings (key, value) VALUES ('download_size_cap', '2000');
