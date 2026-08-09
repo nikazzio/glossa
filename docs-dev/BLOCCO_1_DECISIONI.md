@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. D1, D2 e D4 approvate con modifiche, D3 approvata.
+Ultimo aggiornamento: 2026-08-10. D1, D2, D4 e D5 approvate con modifiche, D3 approvata.
 
 ## Come si legge
 
@@ -349,23 +349,59 @@ già previsto dallo schema (`source_versions.version_kind = 'pdf'`).
 immagini già presenti, non scomponendo quello scaricato. È funzione di
 esportazione (#188, #225), non di scaricamento.
 
-## D5 — File presenti ma non attesi
+## D5 — Verifica dei file e disallineamenti
 
-**Propongo**: il database è la verità. All'avvio non si scandisce il deposito.
-Un file presente sul disco ma non in tabella viene ignorato; un asset in
-tabella il cui file manca viene segnalato come mancante alla prima lettura, e
-la fonte torna disponibile solo da remoto.
+*Approvata con modifiche il 2026-08-10.*
 
-**Scartato**: la scansione all'avvio per riallineare. Costa tempo proporzionale
-alla dimensione del deposito a ogni apertura, per un caso che si verifica solo
-se qualcuno tocca le cartelle a mano.
+**Il database è la verità.** All'avvio non si scandisce il deposito. Un file sul
+disco che il database non conosce viene ignorato; un file atteso che non c'è
+viene segnalato come mancante, e quella pagina torna disponibile solo da remoto.
 
-**Comporta**: serve un comando manuale di verifica ("controlla i file di questa
-fonte"), che non è nel primo incremento.
+**Nessun riscaricamento automatico, mai.** La verifica constata e propone:
+*"mancano 12 pagine — scaricale"*, che diventa un lavoro come gli altri. Stessa
+regola di D13. Il motivo è concreto: un disco esterno staccato per sbaglio
+farebbe ripartire il riscaricamento dell'intera biblioteca.
 
-**Eccezione, dalla D1**: se manca la **radice** del deposito, non si applica
-niente di quanto sopra. Il deposito è dichiarato non raggiungibile e gli stati
-restano intatti.
+### Due livelli, perché costano diversamente
+
+**Rapido — presenza.** Elenca i file e li confronta con il database.
+Millisecondi anche per un manoscritto grande. Risponde: *"210 attese, 198
+presenti, 12 mancanti"*.
+
+**Completo — integrità.** Ricalcola l'impronta di ogni file. Scopre anche i file
+troncati da uno scaricamento interrotto, che il controllo rapido conta come
+presenti. Lento in proporzione ai gigabyte, e su un deposito sincronizzato in
+streaming (D1-bis) **costringe il client a scaricare tutto**: va avvisato prima
+di partire.
+
+Il pulsante sulla fonte esegue il rapido. Il completo è una seconda voce,
+esplicita.
+
+### Cosa sa l'avvio senza guardare il disco
+
+Solo due cose, entrambe senza costo: **la radice del deposito è raggiungibile**
+(una chiamata sola) e **quali lavori sono rimasti interrotti** (una query).
+Queste vanno in notifica.
+
+Un singolo file mancante **non** è conoscibile senza elencare le cartelle: su
+deposito locale è veloce, su condivisione di rete no.
+
+Quindi: **controllo rapido all'avvio come opzione, spenta di default**, con
+l'avvertenza che allunga l'apertura su depositi grandi o remoti. Chi la accende
+trova le segnalazioni pronte; chi non la accende scopre il problema aprendo il
+libro, e lì ha il pulsante.
+
+### Radice del deposito assente
+
+Caso diverso, già deciso in D1: non si applica niente di quanto sopra. Deposito
+dichiarato non raggiungibile, scaricamenti e verifiche bloccati, **stati
+intatti**.
+
+### Dipendenza esterna
+
+Le segnalazioni all'avvio presuppongono una **zona notifiche in Dashboard**, che
+non esiste ancora e non fa parte di questo blocco. Finché non c'è, l'avviso di
+deposito non raggiungibile va nella barra di stato.
 
 ## D6 — Cancellare una fonte
 
@@ -677,6 +713,9 @@ ALTER TABLE source_versions ADD COLUMN image_service_profile TEXT DEFAULT NULL;
 
 -- Tetto predefinito, in pixel sul lato lungo, per la politica 'standard' (D4).
 INSERT INTO app_settings (key, value) VALUES ('download_size_cap', '2000');
+
+-- Controllo rapido di presenza all'avvio: spento di default (D5).
+INSERT INTO app_settings (key, value) VALUES ('verify_vault_on_startup', '0');
 
 -- Numero di pagine dichiarato dal manifesto: senza, 'complete' non è
 -- calcolabile (D7).
