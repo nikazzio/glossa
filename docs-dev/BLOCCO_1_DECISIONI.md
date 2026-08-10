@@ -747,10 +747,32 @@ pagina in corso, non è istantaneo. L'interfaccia deve mostrare "in pausa…" e 
 
 ## D15 — Annullamento
 
-**Propongo**: come la pausa, cooperativo, ma con pulizia. I file parziali della
-unità interrotta vengono cancellati; quelli completi restano e contano per una
-ripresa futura. Un lavoro annullato è terminale: si può solo ripetere da capo,
-non riprendere.
+*Approvata con modifiche il 2026-08-10.*
+
+Cooperativo come la pausa: si segna la richiesta, il gestore la vede al confine
+dell'unità di lavoro successiva e si ferma.
+
+**Grazie all'area di transito (D16-bis) non c'è niente di parziale da pulire**:
+i file a metà non sono mai entrati nel deposito. Si scarta la cartella di
+transito e basta.
+
+Un lavoro annullato è **terminale**: si può ripetere da capo, non riprendere.
+
+### Cosa succede alle pagine già scaricate
+
+Restano. Sono complete, verificate, e sono costate tempo — con i profili di D18
+anche molto tempo.
+
+Ma il momento dell'annullamento è quello giusto per offrire l'alternativa,
+perché è lì che l'utente sta decidendo di rinunciare. La conferma propone due
+strade:
+
+- **Annulla** (predefinito): tiene le pagine già scaricate, che contano per una
+  ripresa futura;
+- **Annulla ed elimina le 34 pagine scaricate**: libera lo spazio subito.
+
+La seconda non è una funzione nuova: è *"libera spazio"* di D6, offerta nel
+posto dove serve. Il conteggio è esplicito, così si sa cosa si sta buttando.
 
 ## D16 — Errori e tentativi
 
@@ -815,14 +837,46 @@ scaricamento: un PDF generato a metà non deve comparire fra gli artifact.
 
 ## D17 — Avanzamento
 
-**Propongo**: il gestore aggiorna il progresso **al massimo una volta al
-secondo**, e comunque a ogni cambio di stato. Il progresso è salvato sul
-database e inviato all'interfaccia con un evento.
+*Approvata con modifiche il 2026-08-10.*
 
-**Scartato**: aggiornare a ogni byte ricevuto. Scriverebbe sul database
-centinaia di volte al secondo e riverserebbe eventi sull'interfaccia.
+### Il dato
 
-**Comporta**: una barra che avanza a scatti di un secondo. Accettabile.
+Il gestore aggiorna il progresso **al massimo una volta al secondo**, e comunque
+a ogni cambio di stato. Il valore va sul database e all'interfaccia con un
+evento. Aggiornare a ogni byte scriverebbe sul database centinaia di volte al
+secondo.
+
+### Il disegno
+
+**La barra si muove con continuità**, interpolando fra un valore e il successivo.
+Il dato arriva a scatti di un secondo, il disegno no: nessun costo aggiuntivo, e
+si evita l'effetto a singhiozzo.
+
+### Il limite: mai animare un avanzamento che non esiste
+
+Con i profili di D18 un lavoro può restare **fermo per minuti** — fino a dieci
+dopo un 403 — rispettando i limiti della biblioteca. In quella condizione la
+barra **si ferma**. Non striscia, non finge.
+
+Interpolare comunque mostrerebbe un progresso inventato, ed è il caso peggiore:
+si continua ad aspettare fidandosi di un numero falso. Meglio una barra immobile
+con scritto *"in attesa, riprende fra 8 minuti"*.
+
+Vale la distinzione di D18: *"in attesa per rispettare i limiti della
+biblioteca"* e *"in errore"* sono la stessa immobilità con due significati
+opposti, e vanno dette diversamente.
+
+### Tempo stimato
+
+**Obbligatorio**, non facoltativo: un lavoro che dura un quarto d'ora senza una
+stima sembra bloccato. Si calcola dalle pagine completate e dalla pausa media
+dichiarata dal profilo, non dalla velocità osservata degli ultimi secondi, che
+con pause di 2,5–6 secondi oscilla troppo per essere utile.
+
+### Movimento ridotto
+
+L'animazione rispetta la preferenza di sistema per il movimento ridotto: in quel
+caso la barra salta al valore invece di interpolare.
 
 ## D18 — Profilo di rete, dichiarato dal provider
 
