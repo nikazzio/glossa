@@ -169,8 +169,9 @@ vive nel database e nei metadati, dove si corregge senza spostare un file.
   .glossa-vault
   providers/<chiave-provider>/<id-digitalizzazione>/
     manifest.json
-    pages/0001.jpg
-    pages/0002.jpg
+    pages/2000/0001.jpg      ← una cartella per risoluzione (D4)
+    pages/2000/0002.jpg
+    pages/max/0034.jpg       ← la carta scaricata al massimo su richiesta
     thumbnails/0001.jpg
     document.pdf
   derived/<id-asset>/…
@@ -1096,7 +1097,7 @@ proposta e risultato approvato"*.
 
 ## D22 — Storico delle traduzioni
 
-*Approvata l'11 agosto 2026.*
+*Approvata con modifiche l'11 agosto 2026.*
 
 Nuova tabella `translation_revisions`, simmetrica a `transcription_revisions`.
 
@@ -1104,15 +1105,78 @@ Nuova tabella `translation_revisions`, simmetrica a `transcription_revisions`.
 battitura, senza valore analitico. **Solo i due momenti che contano:**
 
 - **`model`** — quando la pipeline produce la traduzione di un chunk;
-- **`human`** — quando l'utente approva, con o senza modifiche.
+- **`human`** — quando l'utente scrive la propria versione.
 
-La revisione umana conserva il riferimento a quella del modello da cui deriva.
-Da lì la coppia proposta/approvata è ricostruibile per intero, e il diff si
-calcola quando serve invece di conservarlo.
+La revisione umana conserva il riferimento a quella da cui deriva. Da lì la
+coppia proposta/approvata è ricostruibile per intero, e il diff si calcola
+quando serve invece di conservarlo — così non può disallinearsi dai testi.
 
-Se l'utente approva senza toccare niente, la revisione umana si scrive lo stesso:
-**l'accettazione è un giudizio**, e per il preference training vale quanto una
-correzione.
+### Le revisioni non hanno uno stato di approvazione
+
+Prima avevo messo una casella `approved` sulla revisione. **Sbagliato**: se
+l'approvazione si sposta, bisogna modificare righe di uno storico che deve
+essere immutabile.
+
+Il modo di lavorare reale è questo: si approva un chunk, si va avanti, e più
+tardi — con la terminologia che si assesta e la comprensione del testo che
+matura — si torna indietro a cambiarlo. Oggi in Glossa quel gesto esiste già ed
+è `translations.translation_locked`, che si toglie e si rimette.
+
+Quindi, coerentemente col principio della #377 — *stato corrente nelle tabelle
+di dominio, provenienza nel registro append-only*:
+
+- le **revisioni sono testi immutabili**, senza stato;
+- **approvare e ritirare l'approvazione sono eventi** che puntano a una
+  revisione;
+- `translations` porta un **puntatore alla revisione approvata adesso**, per la
+  lettura veloce.
+
+Lo scenario diventa: si approva la revisione 2 (evento), ci si accorge
+dell'errore e si ritira (evento), si corregge creando la 3 (revisione nuova,
+derivata dalla 2), si approva la 3 (evento). **Nessuna riga modificata, storia
+completa.**
+
+La versione ritirata resta, e **vale**: *"approvata e poi superata"* dice che
+quella traduzione sembrava giusta e non lo era. Per l'addestramento è
+informazione, non rumore.
+
+L'approvazione si registra **anche quando l'utente non modifica nulla**:
+l'accettazione è un giudizio, e per il preference training vale quanto una
+correzione. Registrare solo le correzioni produrrebbe un dataset sbilanciato
+verso gli errori.
+
+### Lo stesso vale per le trascrizioni
+
+`transcription_revisions` ha oggi una colonna `status` con `draft`, `approved`,
+`rejected`: stesso difetto, perché l'approvazione che si sposta obbliga a mutare
+lo storico. Va allineata al modello a eventi.
+
+### Stato del documento
+
+Serve un `in lavorazione / completato` a livello di documento, per due motivi
+distinti da quelli sopra:
+
+- **filtro di qualità per i dataset**: un documento su cui si sta ancora
+  lavorando ha chunk bloccati provvisoriamente, mentre la terminologia si
+  assesta. Poterli escludere è utile;
+- **avanzamento**: Dashboard e area Analisi devono sapere quali lavori sono
+  finiti.
+
+**Non è un interruttore che abilita la registrazione.** Si registra sempre.
+
+### Il principio che governa tutto questo
+
+**Non si decide al momento della registrazione cosa conterà come "preferito".**
+Si registrano i fatti; il significato lo attribuisce il costruttore di dataset
+(#380) al momento dello scatto.
+
+Perché la risposta cambierà: oggi si vorranno solo i documenti finiti, fra un
+anno forse anche il resto, per studiare come evolvono le correzioni. Inciderla
+adesso nella registrazione significa portarsela dietro per sempre.
+
+Uno scatto prende la **revisione approvata in quel momento**: il chunk sistemato
+alle 16 esporta la versione delle 16, mai quella delle 10. Il problema della
+versione superata non si presenta.
 
 ## D23 — Un registro dei fatti, non tre
 
@@ -1294,110 +1358,93 @@ proporre un ritaglio. Va guardata insieme, non stanotte.
 
 # Appendice tecnica
 
+## Nota sullo schema: si riscrive, non si rattoppa
+
+Glossa è alla 1.4 ma **non la usa nessuno**: nessun dato utente da migrare,
+nessuna retrocompatibilità da preservare. Quindi queste modifiche **non** sono
+una pila di `ALTER TABLE` sopra la baseline: sono tabelle riscritte pulite in
+`0001_baseline_2_0.sql`.
+
+Ventisette modifiche incrementali produrrebbero uno schema che racconta la
+propria storia invece della propria forma, e nessuno le rileggerebbe mai per
+capire com'è fatta oggi una tabella. Si riscrive.
+
+Sotto sono elencate solo le tabelle che cambiano, nella loro forma finale.
+
 ## Modifiche allo schema
 
-Il modello dati di #211 basta quasi del tutto. Servono solo:
+### Deposito, disponibilità e scaricamento (Parti A e B)
 
 ```sql
--- Modalità di lettura globale: 'auto' | 'local' | 'remote'.
-INSERT INTO app_settings (key, value) VALUES ('source_read_mode', 'auto');
-
--- Radice del deposito. Vuoto o assente = `<cartella dati>/vault/` (D1).
-INSERT INTO app_settings (key, value) VALUES ('vault_root', '');
-
--- Numero di pagina progressivo, per ordinare gli asset di una versione senza
--- dipendere dall'etichetta della biblioteca (D2).
+-- assets: aggiunte per pagine, risoluzioni e collegamento all'originale.
+--   page_index  numero progressivo dal manifesto, per ordinare (D2)
+--   page_label  etichetta dichiarata dalla biblioteca, solo da mostrare (D2)
+--   size_tag    la stessa pagina esiste in piu' risoluzioni (D4)
+--   homepage_url  pagina della biblioteca sulla carta, quando dichiarata (D8-bis)
 ALTER TABLE assets ADD COLUMN page_index INTEGER DEFAULT NULL;
-
--- Etichetta dichiarata dalla biblioteca, mostrata all'utente ma mai usata per
--- ordinare o per costruire percorsi.
 ALTER TABLE assets ADD COLUMN page_label TEXT DEFAULT NULL;
-
--- Dimensione richiesta al servizio ('2000', 'max', …): la stessa pagina può
--- esistere in piu' risoluzioni, quindi page_index da solo non e' univoco (D4).
 ALTER TABLE assets ADD COLUMN size_tag TEXT DEFAULT NULL;
-
--- Politica di scaricamento della singola fonte: 'standard' | 'max' (D4).
-ALTER TABLE source_versions ADD COLUMN download_policy TEXT NOT NULL DEFAULT 'standard';
-
--- Capacita' dichiarate dal servizio immagini (info.json): dimensioni
--- disponibili, tetti, livello di conformita'. Conservate per non doverle
--- richiedere a ogni pagina (D4).
-ALTER TABLE source_versions ADD COLUMN image_service_profile TEXT DEFAULT NULL;
-
--- Pagina della biblioteca sull'oggetto, dichiarata dal manifesto come
--- `homepage`: e' il collegamento umano all'originale (D8-bis).
-ALTER TABLE source_versions ADD COLUMN homepage_url TEXT DEFAULT NULL;
-
--- `homepage` della singola carta, quando il manifesto la dichiara: vince su
--- quella della versione (D8-bis).
 ALTER TABLE assets ADD COLUMN homepage_url TEXT DEFAULT NULL;
 
--- La biblioteca consente la consultazione ma non lo scaricamento sistematico:
--- vince sulla modalita' globale e disabilita i comandi di scaricamento (D9).
+-- source_versions: politica di scaricamento, capacita' del servizio immagini,
+-- collegamento umano all'originale, vincolo dell'istituzione, totale atteso.
+ALTER TABLE source_versions ADD COLUMN download_policy TEXT NOT NULL DEFAULT 'standard';
+ALTER TABLE source_versions ADD COLUMN image_service_profile TEXT DEFAULT NULL;
+ALTER TABLE source_versions ADD COLUMN homepage_url TEXT DEFAULT NULL;
 ALTER TABLE source_versions ADD COLUMN download_allowed INTEGER NOT NULL DEFAULT 1;
-
--- Tetto predefinito, in pixel sul lato lungo, per la politica 'standard' (D4).
-INSERT INTO app_settings (key, value) VALUES ('download_size_cap', '2000');
-
--- Controllo rapido di presenza all'avvio: spento di default (D5).
-INSERT INTO app_settings (key, value) VALUES ('verify_vault_on_startup', '0');
-
--- Tetto della cache delle immagini viste da remoto, in MB (D8). Vive nella
--- cartella cache dell'applicazione, non nel deposito.
-INSERT INTO app_settings (key, value) VALUES ('remote_image_cache_mb', '512');
-
--- Numero di pagine dichiarato dal manifesto: senza, 'complete' non è
--- calcolabile (D7).
 ALTER TABLE source_versions ADD COLUMN expected_asset_count INTEGER DEFAULT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_assets_version_page
-  ON assets(source_version_id, page_index);
+  ON assets(source_version_id, page_index, size_tag);
 ```
 
-## Registrazione del lavoro svolto (Parte F)
+Impostazioni in `app_settings`: `vault_root` (vuoto = dentro la cartella dati,
+D1), `source_read_mode` (`auto` predefinito, D8-D9), `download_size_cap`
+(`2000`, D4), `verify_vault_on_startup` (`0`, D5), `remote_image_cache_mb`
+(`512`, D8).
+
+### Registrazione del lavoro svolto (Parte F)
 
 ```sql
--- Storico delle traduzioni, simmetrico a transcription_revisions (D22).
--- Due sole origini: la proposta del modello e la decisione umana.
+-- Storico delle traduzioni (D22). Testi immutabili, nessuno stato di
+-- approvazione: l'approvazione e' un evento, vedi sotto.
 CREATE TABLE translation_revisions (
   id TEXT PRIMARY KEY,
   translation_id TEXT NOT NULL REFERENCES translations(id) ON DELETE CASCADE,
   revision_number INTEGER NOT NULL,
   text TEXT NOT NULL DEFAULT '',
   created_by TEXT NOT NULL CHECK (created_by IN ('model', 'human', 'import')),
-  -- Per una revisione umana: la proposta da cui deriva. Da qui si ricostruisce
-  -- la coppia proposta/approvata senza conservare il diff.
+  -- Per una revisione umana: la versione da cui deriva, che puo' essere una
+  -- proposta del modello o una precedente revisione umana ritirata.
   derived_from_revision_id TEXT REFERENCES translation_revisions(id) ON DELETE SET NULL,
-  -- Vero anche quando l'utente approva senza modificare: l'accettazione e' un
-  -- giudizio, e per il preference training vale quanto una correzione.
-  approved INTEGER NOT NULL DEFAULT 0,
   content_hash TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (translation_id, revision_number)
 );
 
--- provenance_events si allarga: cio' per cui si raggruppa diventa colonna (D24).
-ALTER TABLE provenance_events ADD COLUMN status TEXT;
-ALTER TABLE provenance_events ADD COLUMN started_at DATETIME;
-ALTER TABLE provenance_events ADD COLUMN finished_at DATETIME;
-ALTER TABLE provenance_events ADD COLUMN duration_ms INTEGER;
-ALTER TABLE provenance_events ADD COLUMN provider TEXT;
-ALTER TABLE provenance_events ADD COLUMN model TEXT;
-ALTER TABLE provenance_events ADD COLUMN prompt_template_id TEXT;
-ALTER TABLE provenance_events ADD COLUMN prompt_version TEXT;
-ALTER TABLE provenance_events ADD COLUMN input_tokens INTEGER;
-ALTER TABLE provenance_events ADD COLUMN output_tokens INTEGER;
-ALTER TABLE provenance_events ADD COLUMN cached_input_tokens INTEGER;
-ALTER TABLE provenance_events ADD COLUMN cost_estimated REAL;
-ALTER TABLE provenance_events ADD COLUMN source_language TEXT;
-ALTER TABLE provenance_events ADD COLUMN target_language TEXT;
-ALTER TABLE provenance_events ADD COLUMN error_kind TEXT;
--- Cosa l'evento ha visto allora, non cosa c'e' adesso (D25).
-ALTER TABLE provenance_events ADD COLUMN input_hash TEXT;
-ALTER TABLE provenance_events ADD COLUMN output_hash TEXT;
--- Chiave naturale per l'idempotenza: un ritentativo sostituisce, non duplica (D27).
-ALTER TABLE provenance_events ADD COLUMN dedupe_key TEXT;
+-- Puntatore allo stato corrente, per la lettura veloce. Derivabile dagli
+-- eventi di approvazione, tenuto aggiornato insieme a loro (D22).
+ALTER TABLE translations ADD COLUMN approved_revision_id TEXT
+  REFERENCES translation_revisions(id) ON DELETE SET NULL;
+
+-- Stato del documento: filtro di qualita' per i dataset e avanzamento per la
+-- Dashboard. Non abilita la registrazione, che avviene sempre (D22).
+ALTER TABLE projects ADD COLUMN work_state TEXT NOT NULL DEFAULT 'in_progress'
+  CHECK (work_state IN ('in_progress', 'completed'));
+
+-- transcription_revisions perde la colonna `status`: stesso difetto della
+-- casella `approved`, l'approvazione che si sposta obbligherebbe a mutare lo
+-- storico. Diventa un evento come per le traduzioni (D22). Riscritta pulita in
+-- baseline, non alterata.
+
+-- provenance_events: cio' per cui si raggruppa diventa colonna (D24).
+-- Riscritta pulita in baseline con le colonne gia' presenti piu':
+--   status, started_at, finished_at, duration_ms
+--   provider, model, prompt_template_id, prompt_version
+--   input_tokens, output_tokens, cached_input_tokens, cost_estimated
+--   source_language, target_language, error_kind
+--   input_hash, output_hash   cosa l'evento ha visto allora, non adesso (D25)
+--   dedupe_key                un ritentativo sostituisce, non duplica (D27)
 
 CREATE UNIQUE INDEX idx_provenance_dedupe
   ON provenance_events(dedupe_key) WHERE dedupe_key IS NOT NULL;
@@ -1407,19 +1454,18 @@ CREATE INDEX idx_provenance_languages
   ON provenance_events(source_language, target_language, occurred_at);
 
 -- Metriche calcolate: separate dai fatti perche' si invalidano e si
--- ricalcolano quando cambia un input o l'algoritmo (D23, e #382).
+-- ricalcolano quando cambia un input o l'algoritmo (D23, #382).
 CREATE TABLE derived_metrics (
   id TEXT PRIMARY KEY,
   entity_type TEXT NOT NULL,
   entity_id TEXT NOT NULL,
   metric_kind TEXT NOT NULL,
   value REAL,
-  -- Versione dell'algoritmo e modello usato: senza, un confronto fra due
-  -- calcoli fatti in momenti diversi non significa niente.
+  -- Senza versione dell'algoritmo, confrontare due calcoli fatti in momenti
+  -- diversi non significa niente.
   algorithm_version TEXT NOT NULL,
   model TEXT,
-  -- Impronte degli input al momento del calcolo: se cambiano, la metrica e'
-  -- scaduta e va ricalcolata.
+  -- Impronte degli input al momento del calcolo: se cambiano, e' scaduta.
   input_hashes TEXT NOT NULL,
   computed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (entity_type, entity_id, metric_kind, algorithm_version)
@@ -1429,8 +1475,9 @@ CREATE INDEX idx_derived_metrics_entity
   ON derived_metrics(entity_type, entity_id, metric_kind);
 ```
 
-Nessuna modifica a `jobs`: la tabella copre già stati, priorità, proprietario,
-dipendenza, configurazione, progresso, tentativi ed errore.
+Tipi di evento per l'approvazione: `translation_approved`,
+`translation_approval_revoked`, e gli equivalenti per la trascrizione. Puntano
+alla revisione, non al chunk.
 
 ## Struttura del deposito
 
