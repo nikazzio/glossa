@@ -1479,6 +1479,39 @@ cifratura copre è la riservatezza del lavoro non pubblicato, non le credenziali
 
 Ordine obbligato, ogni PR verificabile da sola.
 
+## Come si verifica ogni PR
+
+**Regola per tutte e sette.** Una PR non è pronta quando il codice funziona: è
+pronta quando è stato verificato che fa quello che questo documento aveva
+deciso.
+
+Il documento è stato riletto tre volte e ogni volta sono emerse cose diverse,
+perché i difetti hanno nature diverse e si trovano con metodi diversi. Lo stesso
+vale per il codice. In ordine di importanza:
+
+1. **Fatti** — ogni affermazione sul codice esistente va riscontrata nel codice,
+   non ricordata. È il livello dove si sbaglia di più, ed è invisibile a chi non
+   legge codice. Al terzo giro su questo documento è emerso così che una
+   premessa di D23 era falsa: davo per esistente una telemetria dei costi che
+   non esiste.
+2. **Logica** — ogni regola va verificata contro sé stessa. D27 conteneva una
+   chiave di deduplicazione che includeva il numero del tentativo, e avrebbe
+   quindi prodotto esattamente la duplicazione che voleva impedire.
+3. **Forma** — rimandi, terminologia, coerenza fra parti scritte in giorni
+   diversi.
+
+### Cosa va nel corpo della PR
+
+Una **mappatura esplicita, decisione per decisione**: il numero (`D4`,
+`D16-bis`, …), cosa è stato implementato, e se ci si è discostati, perché. Le
+decisioni della stessa area non implementate in quella PR vanno elencate come
+tali.
+
+Non è burocrazia: è l'unico modo che ha chi non legge codice di controllare che
+il costruito corrisponda al deciso, invece di doversi fidare.
+
+---
+
 **PR 1 — deposito e disponibilità reale.**
 Struttura delle cartelle, calcolo e scrittura delle impronte, disponibilità
 calcolata dai file presenti, tre modalità di lettura. Nessuno scaricamento
