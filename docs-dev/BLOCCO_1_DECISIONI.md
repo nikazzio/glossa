@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. Approvate D1-D9, con D1-bis, D2-bis, D4-bis, D5-bis e D8-bis.
+Ultimo aggiornamento: 2026-08-10. Approvate D1-D9, D11, D16 e D18, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis.
 
 ## Come si legge
 
@@ -671,18 +671,34 @@ diagnosi di un secondo eseguibile.
 
 ## D11 — Quanti lavori insieme
 
-**Propongo** limiti separati per categoria, perché saturano risorse diverse:
+*Approvata con modifiche il 2026-08-10.*
 
-| Categoria | Limite | Perché |
+Limiti separati per **classe di risorsa**, perché saturano cose diverse. Quattro
+classi, non tre: il disco è a sé.
+
+| Classe | Predefinito | Perché |
 |---|---|---|
-| Rete verso biblioteche | **2 per dominio**, 4 totali | cortesia verso archivi pubblici, vedi D18 |
-| Riconoscimento testo / calcolo locale | numero di processori meno 1 | satura la macchina, non la rete |
-| Chiamate a servizi linguistici | 1 | costano soldi e hanno limiti propri |
+| Rete verso le biblioteche | dal profilo del provider (D18) | il collo di bottiglia è il loro server, non il nostro computer |
+| Processore | processori disponibili meno uno | verifica del deposito, riconoscimento testo, indicizzazione |
+| Disco | **1** | due lavori che scrivono gigabyte insieme sono più lenti di due in fila |
+| Servizi linguistici | 1 | costano denaro e hanno limiti propri |
 | Generazione documenti | 1 | scrive su disco, l'ordine conta |
 
-**Scartato**: un limite unico. Quattro scaricamenti e un riconoscimento testo
-non competono per la stessa risorsa; un limite unico o strozza la rete o
-soffoca il processore.
+### Configurabili, con una distinzione
+
+**Processore, disco, servizi linguistici, documenti**: configurabili liberamente
+in Impostazioni. Il limite giusto lo sa chi ha la macchina davanti.
+
+**Rete: non è una questione di potenza.** Il limite verso una biblioteca dipende
+dal loro server, non dal tuo computer. Configurabile, ma con l'avvertenza
+accanto e un tetto non superabile — non per limitare l'utente, per non farlo
+bandire. Vedi D18.
+
+### I lavori brevi non si mostrano singolarmente
+
+Lo scaricamento di una singola pagina dura pochi secondi. Se ogni pagina
+comparisse nel centro lavori, il pannello diventerebbe illeggibile. I lavori
+brevi girano come tutti gli altri ma si mostrano **solo se falliscono**.
 
 ## D12 — Chiusura dell'applicazione
 
@@ -736,19 +752,66 @@ unità interrotta vengono cancellati; quelli completi restano e contano per una
 ripresa futura. Un lavoro annullato è terminale: si può solo ripetere da capo,
 non riprendere.
 
-## D16 — Tentativi automatici
+## D16 — Errori e tentativi
 
-**Propongo**: tre tentativi, con attesa crescente (2 secondi, 8, 30), **solo**
-per gli errori che hanno senso ripetere — connessione caduta, timeout,
-"riprova più tardi" del server. Non si ripetono: file non trovato, accesso
-negato, spazio esaurito, formato non riconosciuto.
+*Approvata con modifiche il 2026-08-10, dopo lettura di Scriptoria.*
 
-**Scartato**: ripetere tutto. È la stessa lezione della revisione di stamattina
-sulla PR 403: ripetere un errore non ripetibile costa il doppio e non risolve.
+### Due livelli distinti
 
-**Comporta**: serve una classificazione degli errori nel gestore, non solo un
-messaggio di testo. Un errore ha: se è ripetibile, cosa mostrare all'utente,
-e cosa scrivere nel registro.
+**Trasporto**, sulla singola richiesta: connessione caduta, timeout, errore 5xx.
+Pochi tentativi ravvicinati, gestiti dal client HTTP, invisibili al lavoro.
+
+**Lavoro**: quando anche il trasporto ha rinunciato. Numero di tentativi e
+attese vengono dal profilo del provider (D18), non da costanti nel codice.
+
+### Classificazione degli errori
+
+| Situazione | Ritentabile | Attesa |
+|---|---|---|
+| Connessione caduta, timeout, 5xx | sì | esponenziale, base e tetto dal profilo |
+| **403** | **sì** | raffreddamento lungo dal profilo (Gallica: 600 s) |
+| **429** | sì | `Retry-After` se presente, altrimenti dal profilo |
+| 404, file non trovato | no | — |
+| Spazio esaurito, permesso negato | no | — |
+| Formato non riconoscibile | no | — |
+
+**Correzione a quanto avevo scritto prima**: avevo classificato il 403 come non
+ritentabile. **Sbagliato per questi servizi**: su Gallica un 403 significa "stai
+correndo troppo", non "vietato per sempre". Va ritentato dopo una lunga attesa.
+Trattarlo come definitivo farebbe fallire scaricamenti perfettamente legittimi.
+
+Le attese di partenza che avevo proposto — 2, 8, 30 secondi — erano **un ordine
+di grandezza troppo brevi**: i profili tarati usano base 20 secondi e tetto 300.
+
+### Un errore non è una stringa
+
+Ogni errore porta con sé: se è ritentabile, quanto attendere, cosa mostrare
+all'utente, cosa scrivere nel registro. Senza questo, la tabella qui sopra non è
+applicabile.
+
+## D16-bis — Area di transito e validazione
+
+*Approvata il 2026-08-10.*
+
+**Niente entra nel deposito prima di essere validato.** Ogni file scaricato
+arriva in una cartella di transito, viene verificato, e **solo allora** viene
+promosso nella sua posizione definitiva.
+
+**La validazione è per decodifica, non per dimensione**: si apre l'immagine e si
+verifica che sia leggibile. Un file troncato ha la dimensione giusta nei
+metadati HTTP ma non si apre — un controllo di dimensione non lo vedrebbe.
+
+Conseguenze:
+
+- un file parziale **non esiste mai** nel deposito: non serve pulirlo
+  all'annullamento (D15) e una ripresa non rischia di saltarlo credendolo
+  completo;
+- il conteggio della disponibilità (D7) non sovrastima mai;
+- l'annullamento è banale: si scarta la cartella di transito.
+
+È anche un requisito già scritto in #218 — *"output promossi solo dopo
+validazione"* — e vale per tutti i tipi di lavoro, non solo per lo
+scaricamento: un PDF generato a metà non deve comparire fra gli artifact.
 
 ## D17 — Avanzamento
 
@@ -761,19 +824,96 @@ centinaia di volte al secondo e riverserebbe eventi sull'interfaccia.
 
 **Comporta**: una barra che avanza a scatti di un secondo. Accettabile.
 
-## D18 — Cortesia verso le biblioteche
+## D18 — Profilo di rete, dichiarato dal provider
 
-**Propongo**: al massimo due richieste contemporanee **per dominio**, una pausa
-minima fra richieste allo stesso dominio, e rispetto dell'indicazione "riprova
-fra N secondi" quando il server la manda. Identificazione dell'applicazione
-nelle richieste, come chiede la buona pratica IIIF.
+*Approvata con modifiche il 2026-08-10, dopo lettura di Scriptoria.*
 
-**Perché è una decisione e non un dettaglio**: gli archivi digitali sono
-istituzioni pubbliche con infrastrutture modeste. Un client che scarica 400
-pagine il più in fretta possibile viene bloccato, e giustamente. Questo limite
-protegge te dal ritrovarti l'indirizzo bandito da una biblioteca.
+### Dove vive
 
----
+**Nel registro dei provider** (`iiif/mod.rs`, #393), accanto a resolver, handler
+di ricerca e filtri. Non in una tabella separata con le stesse chiavi.
+
+Il motivo: due elenchi indicizzati per la stessa chiave prima o poi divergono.
+Aggiungere una biblioteca deve significare compilare **un** record. Scriptoria
+li tiene ancora separati (`network_policy.py` e `providers.py`), ed è la sola
+cosa che non copio.
+
+### Il profilo dichiara
+
+- **pausa fra richieste**, minima e massima, di durata casuale nell'intervallo;
+- **limite a raffica**: quante richieste in quanti secondi, a finestra
+  scorrevole, indipendente dalla concorrenza;
+- **concorrenza per host** e **worker per lavoro** (sono due cose diverse);
+- **tentativi** del lavoro, **base** e **tetto** dell'attesa esponenziale;
+- **raffreddamento** dopo un 403 e dopo un 429;
+- se rispettare `Retry-After` (sempre, negli attuali);
+- **timeout** di connessione e di lettura;
+- **header di provenienza** da inviare;
+- **preriscaldamento del visualizzatore**: alcuni servizi richiedono di
+  visitare la pagina del lettore per ottenere una sessione prima di servire le
+  immagini.
+
+### I profili tarati, importati da Scriptoria
+
+Valori ottenuti da prove reali sul campo, non stimati.
+
+| Biblioteca | Pausa | Raffica | Cooldown 403 | Cooldown 429 | Worker | Per host |
+|---|---|---|---|---|---|---|
+| **Gallica** | 2,5–6 s | 20 / 60 s | 600 s | 300 s | 1 | 2 |
+| **Internet Culturale** | 1–3 s | 40 / 60 s | 300 s | 300 s | 2 | 2 |
+| **Vaticana** | 0,6–1,6 s | 100 / 60 s | 120 s | 120 s | 2 | 4 |
+| Bodleian | 0,6–1,6 s | 100 / 60 s | 120 s | 120 s | 2 | 4 |
+| Institut de France | 0,6–1,6 s | 100 / 60 s | 120 s | 120 s | 2 | 4 |
+| Estense | 0,6–1,6 s | 100 / 60 s | 120 s | 120 s | 2 | 4 |
+| **predefinito prudente** | 0,6–1,6 s | 100 / 60 s | 120 s | 120 s | 2 | 4 |
+
+Tentativi: 3 per Gallica, 4 per Internet Culturale, 5 per le altre. Attesa: base
+20 s per Gallica, 15 s altrove; tetto 300 s per tutte. Timeout: 10–15 s per
+connettersi, 30 s per leggere.
+
+La Vaticana richiede il **preriscaldamento del visualizzatore**. Tutte inviano
+l'header di provenienza.
+
+### Precedenza, tre livelli
+
+1. **modifica dell'utente**, salvata nel database per chiave provider o per host;
+2. **profilo del registro**, compilato nell'applicazione;
+3. **profilo prudente predefinito**.
+
+Il secondo garantisce che i valori tarati arrivino corretti a chi installa; il
+primo che si possano cambiare senza ricompilare.
+
+### Profilo dal provider, contatori per host
+
+Il profilo lo dichiara il provider; i contatori — raffica, concorrenza,
+raffreddamento — si tengono **per host**. Un provider può usare host diversi per
+ricerca e immagini, e il server che si affanna è quello delle immagini.
+
+Le fonti aggiunte per indirizzo diretto non hanno una voce nel registro: per
+quelle vale il profilo prudente, con contatori per host. **Nessuna fonte resta
+senza politica.**
+
+### La conseguenza che cambia il resto del blocco
+
+Con i valori di Gallica, un manoscritto di 210 carte richiede **almeno un quarto
+d'ora**: il solo limite a raffica impone dieci minuti e mezzo, e un worker con
+pausa media di 4 secondi porta a circa quindici.
+
+Quindi:
+
+- **pausa e ripresa non sono un ornamento**: nessuno resta a guardare quindici
+  minuti, l'app verrà chiusa a metà;
+- **il tempo stimato è obbligatorio** in barra di stato e centro lavori,
+  altrimenti sembra bloccato;
+- il messaggio deve distinguere *"in attesa per rispettare i limiti della
+  biblioteca"* da *"in errore"*: sono la stessa immobilità con due significati
+  opposti.
+
+### Identificazione
+
+Le richieste identificano l'applicazione, come chiede la buona pratica IIIF.
+Insieme alle dichiarazioni di licenza e attribuzione che D2-bis impone di
+conservare, è la parte non tecnica dell'aderenza allo standard.
 
 # Parte D — Cosa vede l'utente
 
@@ -948,15 +1088,25 @@ spostare la cartella dati non invalida il database.
 Ogni tipo di lavoro registra un gestore che dichiara:
 
 - `job_type`: identificativo;
-- `resource_class`: `network` | `cpu` | `llm` | `document`, che sceglie il
-  limite di concorrenza (D11);
+- `resource_class`: `network` | `cpu` | `disk` | `llm` | `document`, che sceglie
+  il limite di concorrenza (D11);
 - `resumability`: `resumable` | `restartable` | `manual`, che decide il
   comportamento al riavvio (D13);
 - `run(config, control) -> Result<Output, JobError>`, dove `control` espone il
   punto di ripresa, la richiesta di pausa o annullamento, e la segnalazione di
   avanzamento con la strozzatura di D17;
-- `JobError` porta con sé `retryable: bool` (D16) e un messaggio già
-  destinato all'utente.
+- `JobError` porta con sé `retryable: bool`, l'attesa suggerita, il messaggio
+  destinato all'utente e cosa scrivere nel registro (D16);
+- l'output passa da un'area di transito e viene promosso solo dopo validazione
+  (D16-bis).
+
+## Profilo di rete nel registro dei provider
+
+`IIIFProvider` (`iiif/mod.rs`) guadagna un campo con pausa minima e massima,
+limite a raffica, concorrenza per host, worker per lavoro, tentativi, base e
+tetto dell'attesa, raffreddamento su 403 e 429, timeout, header di provenienza e
+preriscaldamento del visualizzatore (D18). Le modifiche dell'utente vivono in
+`app_settings`, indicizzate per chiave provider o per host.
 
 ## Comandi Tauri previsti
 
