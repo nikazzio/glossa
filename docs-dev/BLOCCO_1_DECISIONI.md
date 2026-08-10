@@ -1281,9 +1281,15 @@ rieseguirebbe lo stesso passo: senza protezione, un manoscritto scaricato dopo
 tre tentativi risulterebbe scaricato tre volte, e ogni conteggio sarebbe
 sbagliato.
 
-**Identificativo derivato in modo deterministico** da lavoro, tentativo, entità
-e tipo di evento, con vincolo di unicità. Riscrivere lo stesso evento non
-duplica: sostituisce.
+**Identificativo derivato in modo deterministico** da lavoro, entità e tipo di
+evento, con vincolo di unicità. Riscrivere lo stesso evento non duplica:
+sostituisce.
+
+**Il numero del tentativo non entra nella chiave.** Se ci entrasse, ogni
+tentativo produrrebbe una chiave diversa e quindi un evento diverso — cioè
+esattamente la duplicazione che questa decisione vuole impedire. Quante volte si
+è ritentato è già in `jobs.attempt_count`: è un dato del lavoro, non un fatto
+separato da registrare.
 
 ## D28 — Conservazione
 
@@ -1482,8 +1488,7 @@ di shell.
 
 **PR 4 — scaricamento vero.**
 Il primo gestore reale: dal manifesto alle pagine sul disco, con ripresa,
-salto dei file già validi, e i limiti di cortesia. È il punto 1.3 del tuo
-piano.
+salto dei file già validi, e i limiti di cortesia del profilo di rete (D18).
 
 **PR 5 — risorse condivise e ambito.**
 #213. Indipendente dalle quattro sopra: si può fare in parallelo se serve.
@@ -1504,8 +1509,9 @@ di riservatezza, cifratura con password. Dipende dalla PR 2 per lo spostamento
 del deposito come lavoro, e va coordinata con #407, che porta backup e
 ripristino sullo stesso schema dell'import.
 
-Sul punto 1.5 del tuo piano — chiudere #210 — non ho abbastanza elementi per
-proporre un ritaglio. Va guardata insieme, non stanotte.
+**Fuori da questa suddivisione**: chiudere o restringere #210 (shell 2.0). Un
+ritaglio è già stato estratto in #413; cosa resti da fare o da archiviare va
+deciso guardando la issue nel suo insieme.
 
 ---
 
@@ -1531,36 +1537,40 @@ nessuna retrocompatibilità da preservare. Quindi queste modifiche **non** sono
 una pila di `ALTER TABLE` sopra la baseline: sono tabelle riscritte pulite in
 `0001_baseline_2_0.sql`.
 
-Ventisette modifiche incrementali produrrebbero uno schema che racconta la
-propria storia invece della propria forma, e nessuno le rileggerebbe mai per
-capire com'è fatta oggi una tabella. Si riscrive.
+Una pila di modifiche incrementali produrrebbe uno schema che racconta la
+propria storia invece della propria forma, e nessuno la rileggerebbe mai per
+capire com'è fatta oggi una tabella.
 
-Sotto sono elencate solo le tabelle che cambiano, nella loro forma finale.
+Sotto ci sono solo le tabelle nuove, per esteso, e le colonne da aggiungere a
+quelle esistenti, in forma di elenco.
 
 ## Modifiche allo schema
 
 ### Deposito, disponibilità e scaricamento (Parti A e B)
 
+Colonne da aggiungere alle tabelle esistenti, riscritte in baseline.
+
+**`assets`**
+
+| Colonna | Tipo | Perché |
+|---|---|---|
+| `page_index` | INTEGER | numero progressivo dal manifesto, per ordinare (D2) |
+| `page_label` | TEXT | etichetta della biblioteca, solo da mostrare (D2) |
+| `size_tag` | TEXT | la stessa carta esiste in più risoluzioni (D4) |
+| `homepage_url` | TEXT | pagina della biblioteca sulla carta, se dichiarata (D8-bis) |
+
+**`source_versions`**
+
+| Colonna | Tipo | Perché |
+|---|---|---|
+| `download_policy` | TEXT, default `standard` | `standard` o `max` (D4) |
+| `image_service_profile` | TEXT | capacità dichiarate da `info.json` (D4) |
+| `homepage_url` | TEXT | collegamento umano all'originale (D8-bis) |
+| `download_allowed` | INTEGER, default 1 | vincolo dell'istituzione (D9) |
+| `expected_asset_count` | INTEGER | senza, `complete` non è calcolabile (D7) |
+
 ```sql
--- assets: aggiunte per pagine, risoluzioni e collegamento all'originale.
---   page_index  numero progressivo dal manifesto, per ordinare (D2)
---   page_label  etichetta dichiarata dalla biblioteca, solo da mostrare (D2)
---   size_tag    la stessa pagina esiste in piu' risoluzioni (D4)
---   homepage_url  pagina della biblioteca sulla carta, quando dichiarata (D8-bis)
-ALTER TABLE assets ADD COLUMN page_index INTEGER DEFAULT NULL;
-ALTER TABLE assets ADD COLUMN page_label TEXT DEFAULT NULL;
-ALTER TABLE assets ADD COLUMN size_tag TEXT DEFAULT NULL;
-ALTER TABLE assets ADD COLUMN homepage_url TEXT DEFAULT NULL;
-
--- source_versions: politica di scaricamento, capacita' del servizio immagini,
--- collegamento umano all'originale, vincolo dell'istituzione, totale atteso.
-ALTER TABLE source_versions ADD COLUMN download_policy TEXT NOT NULL DEFAULT 'standard';
-ALTER TABLE source_versions ADD COLUMN image_service_profile TEXT DEFAULT NULL;
-ALTER TABLE source_versions ADD COLUMN homepage_url TEXT DEFAULT NULL;
-ALTER TABLE source_versions ADD COLUMN download_allowed INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE source_versions ADD COLUMN expected_asset_count INTEGER DEFAULT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_assets_version_page
+CREATE INDEX idx_assets_version_page
   ON assets(source_version_id, page_index, size_tag);
 ```
 
@@ -1587,16 +1597,6 @@ CREATE TABLE translation_revisions (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (translation_id, revision_number)
 );
-
--- Puntatore allo stato corrente, per la lettura veloce. Derivabile dagli
--- eventi di approvazione, tenuto aggiornato insieme a loro (D22).
-ALTER TABLE translations ADD COLUMN approved_revision_id TEXT
-  REFERENCES translation_revisions(id) ON DELETE SET NULL;
-
--- Stato del documento: filtro di qualita' per i dataset e avanzamento per la
--- Dashboard. Non abilita la registrazione, che avviene sempre (D22).
-ALTER TABLE projects ADD COLUMN work_state TEXT NOT NULL DEFAULT 'in_progress'
-  CHECK (work_state IN ('in_progress', 'completed'));
 
 -- transcription_revisions perde la colonna `status`: stesso difetto della
 -- casella `approved`, l'approvazione che si sposta obbligherebbe a mutare lo
@@ -1640,6 +1640,13 @@ CREATE TABLE derived_metrics (
 CREATE INDEX idx_derived_metrics_entity
   ON derived_metrics(entity_type, entity_id, metric_kind);
 ```
+
+Colonne da aggiungere a tabelle esistenti, riscritte in baseline:
+
+| Tabella | Colonna | Perché |
+|---|---|---|
+| `translations` | `approved_revision_id` | puntatore allo stato corrente, per la lettura veloce; derivabile dagli eventi e tenuto aggiornato insieme a loro (D22) |
+| `projects` | `work_state` (`in_progress` / `completed`) | filtro di qualità per i dataset e avanzamento per la Dashboard; non abilita la registrazione, che avviene sempre (D22) |
 
 Tipi di evento per l'approvazione: `translation_approved`,
 `translation_approval_revoked`, e gli equivalenti per la trascrizione. Puntano
