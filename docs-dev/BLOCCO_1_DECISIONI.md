@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-11. **Tutte le decisioni D1-D21 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Restano tre domande aperte in fondo.
+Ultimo aggiornamento: 2026-08-11. **Tutte le decisioni D1-D29 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Restano tre domande aperte in fondo.
 
 ## Come si legge
 
@@ -1064,6 +1064,173 @@ operativo.
 Solo quei due casi, e solo a finestra non attiva: se Glossa è davanti,
 l'indicatore in barra basta e una notifica di sistema sarebbe invadente.
 
+# Parte F — Registrazione del lavoro svolto
+
+Fondazione di #378, prima sub-issue dell'epic Analisi #377.
+
+**Perché sta nel blocco 1 e non alla fine**: la registrazione non è recuperabile
+a posteriori. Ogni giorno in cui Glossa lavora senza registrare produce dati che
+non esisteranno mai. L'area Analisi (#379) arriva dopo, quando ci sarà qualcosa
+da mostrare.
+
+## Il dato che oggi si perde
+
+La #380 mette fra i dataset previsti la coppia **"output rifiutato / output
+preferito"**: non "come si traduce", ma *come traduce questo studioso invece del
+modello*. È il materiale di maggior valore per l'addestramento, ed è irripetibile
+perché è un giudizio umano.
+
+Oggi la tabella `translations` **non ha storico**: `translation_display_text` è
+una colonna sovrascritta in place da un `INSERT ... ON CONFLICT DO UPDATE`. Non
+esiste da nessuna parte un registro che dica *"il modello aveva proposto X,
+l'umano ha approvato Y, il giorno Z"*.
+
+`transcription_revisions` esiste per le trascrizioni. Per le traduzioni no:
+asimmetria da colmare.
+
+I risultati per stadio sopravvivono in `stage_results`, quindi in alcuni casi
+l'ultima proposta del modello resta per caso. Ma non è registrato **che** un
+umano abbia cambiato qualcosa, **quando**, né **cosa** — che è precisamente ciò
+che la #378 chiede: *"accettazione, rifiuto o modifica umana, con diff tra
+proposta e risultato approvato"*.
+
+## D22 — Storico delle traduzioni
+
+*Approvata l'11 agosto 2026.*
+
+Nuova tabella `translation_revisions`, simmetrica a `transcription_revisions`.
+
+**Non una revisione per salvataggio**: si scriverebbero centinaia di righe per
+battitura, senza valore analitico. **Solo i due momenti che contano:**
+
+- **`model`** — quando la pipeline produce la traduzione di un chunk;
+- **`human`** — quando l'utente approva, con o senza modifiche.
+
+La revisione umana conserva il riferimento a quella del modello da cui deriva.
+Da lì la coppia proposta/approvata è ricostruibile per intero, e il diff si
+calcola quando serve invece di conservarlo.
+
+Se l'utente approva senza toccare niente, la revisione umana si scrive lo stesso:
+**l'accettazione è un giudizio**, e per il preference training vale quanto una
+correzione.
+
+## D23 — Un registro dei fatti, non tre
+
+*Approvata l'11 agosto 2026.*
+
+Oggi coesistono `operation_logs` (che alimenta la console), `provenance_events`
+(vuoto e molto più povero di quanto la #378 richieda) e la telemetria costi di
+#342. Tre posti dove registrare cosa è successo, sugli stessi eventi.
+
+**La regola di smistamento:**
+
+| Se… | Va in |
+|---|---|
+| lo raggrupperesti in un grafico | `provenance_events` |
+| serve solo a un umano che legge la console | `operation_logs` |
+| è un valore calcolato dopo, ricalcolabile | `derived_metrics` |
+
+`operation_logs` resta il **log tecnico**: effimero, cancellabile, nessun valore
+analitico.
+
+`provenance_events` diventa il **registro dei fatti**: append-only, mai
+cancellato, immutabile. La telemetria costi entra qui, non vive a parte.
+
+`derived_metrics` è nuova e separata **per una ragione precisa**: la #378 chiede
+*"invalidazione e ricalcolo sicuro delle metriche quando cambia una revisione"*.
+Un fatto non si invalida mai — è successo. Una metrica sì, quando cambia
+l'input o l'algoritmo. Sono due nature diverse e non stanno nella stessa tabella.
+
+## D24 — Cosa è colonna e cosa è JSON
+
+*Approvata l'11 agosto 2026.*
+
+**Colonna** tutto ciò per cui si vorrà raggruppare, filtrare o ordinare:
+momento, tipo di evento, entità, workspace, attore, lavoro, esito, durata,
+provider, modello, versione del prompt, token in ingresso e in uscita, token da
+cache, costo stimato, coppia linguistica, tipo di errore.
+
+**JSON** il resto: parametri completi della chiamata, dettagli specifici del
+tipo di evento.
+
+**Il motivo**: le interrogazioni dell'area Analisi raggruppano per modello, per
+coppia linguistica, per periodo. Dentro un campo JSON quelle interrogazioni
+funzionano ma non si indicizzano bene, e un pannello che legge decine di
+migliaia di righe diventa lento nel momento peggiore — quando finalmente ci sono
+abbastanza dati per essere interessante.
+
+## D25 — Impronta del contenuto su ogni evento
+
+*Approvata l'11 agosto 2026.*
+
+Ogni evento che consuma o produce testo conserva l'**impronta** di ciò che ha
+visto, non solo il riferimento all'oggetto.
+
+Senza, due requisiti della #380 sono inapplicabili: *"lo stesso snapshot produce
+sempre lo stesso manifest e gli stessi record"* e *"un dataset non cambia
+silenziosamente quando cambia l'oggetto originale"*. Il riferimento punta allo
+stato **corrente**; l'impronta dice cosa c'era **allora**.
+
+## D26 — Cosa non si registra
+
+*Approvata l'11 agosto 2026.*
+
+Il principio è nella #377: dati con significato scientifico, operativo o
+addestrativo, **non clickstream indiscriminato**.
+
+Quindi **no**: navigazione, clic, scorrimento, battiture, tempo passato su una
+schermata, ricerche digitate.
+
+**Sì**: chiamate ai modelli con il loro esito, decisioni umane su una proposta,
+ciclo di vita dei lavori, import e scaricamenti, esportazioni, metriche
+calcolate.
+
+**Niente lascia la macchina.** Nessuna telemetria esterna, nemmeno anonima,
+nemmeno facoltativa in questa fase.
+
+## D27 — Idempotenza
+
+*Approvata l'11 agosto 2026.*
+
+La #378 chiede eventi idempotenti. Serve perché un lavoro ritentato (D16)
+rieseguirebbe lo stesso passo: senza protezione, un manoscritto scaricato dopo
+tre tentativi risulterebbe scaricato tre volte, e ogni conteggio sarebbe
+sbagliato.
+
+**Identificativo derivato in modo deterministico** da lavoro, tentativo, entità
+e tipo di evento, con vincolo di unicità. Riscrivere lo stesso evento non
+duplica: sostituisce.
+
+## D28 — Conservazione
+
+*Approvata l'11 agosto 2026.*
+
+**`provenance_events` non si cancella mai automaticamente.** È il registro
+storico del lavoro.
+
+Il volume non è un problema: un libro di 300 pagine sono circa 600 chunk per
+quattro stadi, più giudizi e correzioni — sull'ordine delle 5.000 righe per
+libro. Per SQLite è niente, e possiamo permetterci di registrare tutto ciò che
+ha significato invece di scegliere in anticipo cosa sacrificare.
+
+`operation_logs` si può scartare per età o dimensione: è il log tecnico.
+
+Cancellazione **su richiesta esplicita** dell'utente, per oggetto o per
+workspace, come chiede la #378 con le sue "politiche di esclusione e
+cancellazione".
+
+## D29 — Quando si accende
+
+*Approvata l'11 agosto 2026.*
+
+**La registrazione parte con le fondamenta**, l'area Analisi no. Sono due lavori
+diversi e il secondo senza il primo non ha nulla da mostrare.
+
+In pratica: scrivere gli eventi diventa **parte del contratto del gestore di
+lavoro** (D-appendice) — ogni lavoro registra avvio, esito, durata e costo senza
+che chi lo scrive debba ricordarsene. E si aggiunge ai percorsi della pipeline
+già esistenti, dove oggi si scrive solo su `operation_logs`.
+
 # Parte E — Come lo spezzerei in PR
 
 Ordine obbligato, ogni PR verificabile da sola.
@@ -1094,6 +1261,16 @@ piano.
 
 **PR 5 — risorse condivise e ambito.**
 #213. Indipendente dalle quattro sopra: si può fare in parallelo se serve.
+
+**PR 6 — registrazione del lavoro svolto.**
+Parte F, cioè #378. Storico delle traduzioni, `provenance_events` allargata,
+`derived_metrics`, scrittura automatica dagli handler di lavoro e dai percorsi
+della pipeline. Nessuna interfaccia: l'area Analisi è #379 e viene dopo.
+
+**Va fatta presto, non ultima.** Ogni giorno senza registrazione è materiale
+perduto per sempre — in particolare la coppia proposta/approvata delle
+traduzioni, che oggi viene sovrascritta a ogni correzione. Se la PR 2
+(orchestratore) è pronta, questa può procedere in parallelo alla 4.
 
 Sul punto 1.5 del tuo piano — chiudere #210 — non ho abbastanza elementi per
 proporre un ritaglio. Va guardata insieme, non stanotte.
@@ -1178,6 +1355,80 @@ CREATE INDEX IF NOT EXISTS idx_assets_version_page
   ON assets(source_version_id, page_index);
 ```
 
+## Registrazione del lavoro svolto (Parte F)
+
+```sql
+-- Storico delle traduzioni, simmetrico a transcription_revisions (D22).
+-- Due sole origini: la proposta del modello e la decisione umana.
+CREATE TABLE translation_revisions (
+  id TEXT PRIMARY KEY,
+  translation_id TEXT NOT NULL REFERENCES translations(id) ON DELETE CASCADE,
+  revision_number INTEGER NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  created_by TEXT NOT NULL CHECK (created_by IN ('model', 'human', 'import')),
+  -- Per una revisione umana: la proposta da cui deriva. Da qui si ricostruisce
+  -- la coppia proposta/approvata senza conservare il diff.
+  derived_from_revision_id TEXT REFERENCES translation_revisions(id) ON DELETE SET NULL,
+  -- Vero anche quando l'utente approva senza modificare: l'accettazione e' un
+  -- giudizio, e per il preference training vale quanto una correzione.
+  approved INTEGER NOT NULL DEFAULT 0,
+  content_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (translation_id, revision_number)
+);
+
+-- provenance_events si allarga: cio' per cui si raggruppa diventa colonna (D24).
+ALTER TABLE provenance_events ADD COLUMN status TEXT;
+ALTER TABLE provenance_events ADD COLUMN started_at DATETIME;
+ALTER TABLE provenance_events ADD COLUMN finished_at DATETIME;
+ALTER TABLE provenance_events ADD COLUMN duration_ms INTEGER;
+ALTER TABLE provenance_events ADD COLUMN provider TEXT;
+ALTER TABLE provenance_events ADD COLUMN model TEXT;
+ALTER TABLE provenance_events ADD COLUMN prompt_template_id TEXT;
+ALTER TABLE provenance_events ADD COLUMN prompt_version TEXT;
+ALTER TABLE provenance_events ADD COLUMN input_tokens INTEGER;
+ALTER TABLE provenance_events ADD COLUMN output_tokens INTEGER;
+ALTER TABLE provenance_events ADD COLUMN cached_input_tokens INTEGER;
+ALTER TABLE provenance_events ADD COLUMN cost_estimated REAL;
+ALTER TABLE provenance_events ADD COLUMN source_language TEXT;
+ALTER TABLE provenance_events ADD COLUMN target_language TEXT;
+ALTER TABLE provenance_events ADD COLUMN error_kind TEXT;
+-- Cosa l'evento ha visto allora, non cosa c'e' adesso (D25).
+ALTER TABLE provenance_events ADD COLUMN input_hash TEXT;
+ALTER TABLE provenance_events ADD COLUMN output_hash TEXT;
+-- Chiave naturale per l'idempotenza: un ritentativo sostituisce, non duplica (D27).
+ALTER TABLE provenance_events ADD COLUMN dedupe_key TEXT;
+
+CREATE UNIQUE INDEX idx_provenance_dedupe
+  ON provenance_events(dedupe_key) WHERE dedupe_key IS NOT NULL;
+CREATE INDEX idx_provenance_model
+  ON provenance_events(model, occurred_at);
+CREATE INDEX idx_provenance_languages
+  ON provenance_events(source_language, target_language, occurred_at);
+
+-- Metriche calcolate: separate dai fatti perche' si invalidano e si
+-- ricalcolano quando cambia un input o l'algoritmo (D23, e #382).
+CREATE TABLE derived_metrics (
+  id TEXT PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  metric_kind TEXT NOT NULL,
+  value REAL,
+  -- Versione dell'algoritmo e modello usato: senza, un confronto fra due
+  -- calcoli fatti in momenti diversi non significa niente.
+  algorithm_version TEXT NOT NULL,
+  model TEXT,
+  -- Impronte degli input al momento del calcolo: se cambiano, la metrica e'
+  -- scaduta e va ricalcolata.
+  input_hashes TEXT NOT NULL,
+  computed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (entity_type, entity_id, metric_kind, algorithm_version)
+);
+
+CREATE INDEX idx_derived_metrics_entity
+  ON derived_metrics(entity_type, entity_id, metric_kind);
+```
+
 Nessuna modifica a `jobs`: la tabella copre già stati, priorità, proprietario,
 dipendenza, configurazione, progresso, tentativi ed errore.
 
@@ -1216,7 +1467,9 @@ Ogni tipo di lavoro registra un gestore che dichiara:
 - `JobError` porta con sé `retryable: bool`, l'attesa suggerita, il messaggio
   destinato all'utente e cosa scrivere nel registro (D16);
 - l'output passa da un'area di transito e viene promosso solo dopo validazione
-  (D16-bis).
+  (D16-bis);
+- l'orchestratore registra da sé avvio, esito, durata e costo in
+  `provenance_events` (D29): chi scrive un gestore non deve ricordarsene.
 
 ## Profilo di rete nel registro dei provider
 
