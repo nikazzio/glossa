@@ -74,8 +74,10 @@ dati, così chi non tocca niente ha tutto in un posto; ma chi vuole i gigabyte
 su un'altra partizione, un disco esterno o una cartella sincronizzata può
 sceglierne un'altra.
 
-Regge perché `assets.vault_path` è **relativo** alla radice del deposito: il
-deposito si sposta senza invalidare il database.
+Regge a una condizione, che diventa una regola: `assets.vault_path` si scrive
+**relativo** alla radice del deposito, mai assoluto. Così il deposito si sposta
+senza invalidare il database. Oggi la colonna esiste ma nessuno ci scrive
+ancora, quindi la regola si può fissare adesso senza convertire niente.
 
 **Modello di riferimento**: indice piccolo, fisso e locale; file grandi
 configurabili. È lo stesso di Zotero (database nel profilo, *linked attachment
@@ -180,7 +182,7 @@ vive nel database e nei metadati, dove si corregge senza spostare un file.
   trash/<id-digitalizzazione>/
 ```
 
-`<chiave-provider>` è la chiave già usata dal registry dei provider IIIF (#214),
+`<chiave-provider>` è la chiave già usata dal registry dei provider IIIF (#214, PR #393),
 non il nome esteso dell'istituzione: stabile, senza spazi né accenti.
 
 `<id-digitalizzazione>` è l'identificativo interno della `source_version`, non
@@ -915,7 +917,7 @@ caso la barra salta al valore invece di interpolare.
 
 ### Dove vive
 
-**Nel registro dei provider** (`iiif/mod.rs`, #393), accanto a resolver, handler
+**Nel registro dei provider** (`iiif/mod.rs`, #214), accanto a resolver, handler
 di ricerca e filtri. Non in una tabella separata con le stesse chiavi.
 
 Il motivo: due elenchi indicizzati per la stessa chiave prima o poi divergono.
@@ -1140,7 +1142,10 @@ essere immutabile.
 Il modo di lavorare reale è questo: si approva un chunk, si va avanti, e più
 tardi — con la terminologia che si assesta e la comprensione del testo che
 matura — si torna indietro a cambiarlo. Oggi in Glossa quel gesto esiste già ed
-è `translations.translation_locked`, che si toglie e si rimette.
+è `translations.translation_locked`, che si toglie e si rimette
+(`chunksStore.ts`), e che già protegge il chunk dalla riesecuzione in blocco
+(`engine.ts`, modalità *rerun-unlocked*). È quindi il segnale giusto da cui
+generare l'evento di approvazione.
 
 Quindi, coerentemente col principio della #377 — *stato corrente nelle tabelle
 di dominio, provenienza nel registro append-only*:
@@ -1202,9 +1207,15 @@ versione superata non si presenta.
 
 *Approvata l'11 agosto 2026.*
 
-Oggi coesistono `operation_logs` (che alimenta la console), `provenance_events`
-(vuoto e molto più povero di quanto la #378 richieda) e la telemetria costi di
-#342. Tre posti dove registrare cosa è successo, sugli stessi eventi.
+Oggi esistono `operation_logs`, che alimenta la console, e `provenance_events`,
+vuota e molto più povera di quanto la #378 richieda.
+
+**La telemetria costi non esiste ancora.** #342 la chiede in una tabella
+dedicata, e dice esplicitamente che oggi il costo è solo un preventivo calcolato
+al volo, senza storico. È un requisito aperto, non un terzo registro da
+riconciliare — e la decisione qui è di **non** creare quella tabella dedicata:
+il costo è un attributo del fatto, e sta in `provenance_events` accanto a
+modello, token e durata. Così #342 si soddisfa senza aggiungere un posto in più.
 
 **La regola di smistamento:**
 
@@ -1218,7 +1229,8 @@ Oggi coesistono `operation_logs` (che alimenta la console), `provenance_events`
 analitico.
 
 `provenance_events` diventa il **registro dei fatti**: append-only, mai
-cancellato, immutabile. La telemetria costi entra qui, non vive a parte.
+cancellato, immutabile. Il costo entra qui, come attributo dell'evento che lo ha
+generato.
 
 `derived_metrics` è nuova e separata **per una ragione precisa**: la #378 chiede
 *"invalidazione e ricalcolo sicuro delle metriche quando cambia una revisione"*.
