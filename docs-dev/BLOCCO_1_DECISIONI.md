@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-11. **Tutte le decisioni D1-D29 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Restano tre domande aperte in fondo.
+Ultimo aggiornamento: 2026-08-11. **Tutte le decisioni D1-D33 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Nessuna domanda aperta.
 
 ## Come si legge
 
@@ -16,7 +16,7 @@ erano nella prima stesura.
 aperte e l'appendice tecnica con schema, comandi e struttura delle cartelle.
 
 **Niente di questo documento è ancora implementato.** La suddivisione in PR è
-nella Parte E.
+nella Parte G.
 
 ### Fonti
 
@@ -129,6 +129,9 @@ sbagliato riscaricherebbe l'intera biblioteca.
 
 ## D1-bis — Cartelle sincronizzate (Drive, OneDrive, iCloud)
 
+*Approvata il 2026-08-09.*
+
+
 **Il deposito su una cartella sincronizzata: sì**, a una condizione — il client
 deve tenere una copia vera sul disco (Drive per desktop: modalità **mirror**).
 In modalità **streaming**, che è la predefinita, i file sono segnaposto:
@@ -209,6 +212,9 @@ stessa digitalizzazione, e lo schema li copre già (`assets.kind = 'derived'`,
 di provenienza.
 
 ## D2-bis — Aderenza a IIIF
+
+*Approvata il 2026-08-10.*
+
 
 IIIF è lo standard del dominio: **si rispetta, non si reinterpreta.**
 
@@ -340,6 +346,9 @@ Più file per la stessa pagina: il percorso diventa
 (`size_tag`). `page_index` resta il numero di pagina, non più unico da solo.
 
 ## D4-bis — Il PDF fornito dalla biblioteca
+
+*Approvata il 2026-08-10.*
+
 
 Un manifesto può dichiarare un PDF dell'intero oggetto (proprietà `rendering`,
 Presentation API 3.0).
@@ -669,6 +678,9 @@ Questa è la parte che, come hai detto tu, va fatta bene la prima volta.
 
 ## D10 — Chi esegue i lavori
 
+*Approvata il 2026-08-10.*
+
+
 **Propongo**: un solo orchestratore dentro l'applicazione, avviato all'apertura.
 Tiene in memoria la coda, legge e scrive lo stato sul database, e affida
 l'esecuzione a un gestore registrato per tipo di lavoro. L'interfaccia non
@@ -713,6 +725,9 @@ brevi girano come tutti gli altri ma si mostrano **solo se falliscono**.
 
 ## D12 — Chiusura dell'applicazione
 
+*Approvata il 2026-08-10.*
+
+
 **Propongo**: alla chiusura, ogni lavoro in esecuzione passa a **in pausa** e
 salva il punto raggiunto. Se la chiusura avviene mentre ci sono lavori attivi,
 l'utente vede una richiesta di conferma con l'elenco.
@@ -721,6 +736,9 @@ l'utente vede una richiesta di conferma con l'elenco.
 scaricamento perché hai chiuso la finestra è inaccettabile.
 
 ## D13 — Riapertura dopo un blocco o un arresto anomalo
+
+*Approvata il 2026-08-10.*
+
 
 Qui serve una distinzione, perché "riprendere" non vuol dire la stessa cosa per
 tutti i lavori.
@@ -746,6 +764,9 @@ annullamento — al riavvio viene portato allo stato stabile corrispondente. È 
 "recovery" della issue, e va scritto una volta sola nell'orchestratore.
 
 ## D14 — Pausa
+
+*Approvata il 2026-08-10.*
+
 
 **Propongo**: la pausa è **cooperativa**. L'orchestratore segna il lavoro come
 "in pausa richiesta"; il gestore la vede al confine dell'unità di lavoro
@@ -1065,7 +1086,7 @@ operativo.
 Solo quei due casi, e solo a finestra non attiva: se Glossa è davanti,
 l'indicatore in barra basta e una notifica di sistema sarebbe invadente.
 
-# Parte F — Registrazione del lavoro svolto
+# Parte E — Registrazione del lavoro svolto
 
 Fondazione di #378, prima sub-issue dell'epic Analisi #377.
 
@@ -1295,7 +1316,149 @@ lavoro** (D-appendice) — ogni lavoro registra avvio, esito, durata e costo sen
 che chi lo scrive debba ricordarsene. E si aggiunge ai percorsi della pipeline
 già esistenti, dove oggi si scrive solo su `operation_logs`.
 
-# Parte E — Come lo spezzerei in PR
+# Parte F — Spostamento, backup ed esportazioni
+
+Decise l'11 agosto 2026. Erano le tre domande rimaste aperte, più la cifratura
+emersa discutendole. Nessuna aggiunge un'impostazione da configurare.
+
+## D30 — Spostare il deposito
+
+*Approvata l'11 agosto 2026.*
+
+**Prima si copia tutto, poi si cancella.** Non file per file con cancellazione
+immediata: a metà strada l'origine sarebbe incompleta, e tornare indietro
+richiederebbe un'operazione inversa da scrivere e da testare.
+
+1. **Controllo preventivo**: si misura il deposito, si legge lo spazio libero
+   nella destinazione, si pretende la dimensione più un margine. Se non basta,
+   ci si rifiuta di partire, con i numeri in chiaro.
+2. **Copia integrale**, verificando ogni file. L'origine non si tocca.
+3. Solo a copia completa e verificata: si sposta il puntatore.
+4. **Poi**, come passo separato, si cancella l'origine.
+
+**Fino al passo 3 l'installazione funziona come prima**, perché l'origine è
+intatta. Annullare significa cancellare la copia parziale nella destinazione:
+non si perde niente e non c'è niente da ripristinare.
+
+Se lo spazio finisce lo stesso — disco di rete, un altro processo che scrive —
+il lavoro **si mette in pausa**: si libera spazio e si riprende saltando i file
+già verificati, oppure si annulla. In entrambi i casi il deposito buono è ancora
+al suo posto.
+
+**Il prezzo**: serve spazio pari all'intero deposito nella destinazione. Ma la
+destinazione si sceglie *perché* ha spazio — è il motivo per cui si sta
+spostando. In cambio, "posso tornare indietro?" ha una risposta banale: sì,
+sempre, perché non è stato cancellato niente.
+
+## D31 — Cosa contiene un backup
+
+*Approvata l'11 agosto 2026.*
+
+**Solo il database, mai le immagini.** Discende da D6: le immagini si
+riscaricano, tutto il resto no.
+
+Un backup da 40 GB non si fa. Uno da pochi megabyte si fa ogni settimana, e
+contiene le uniche cose irrecuperabili: schede, note, trascrizioni, traduzioni,
+glossari, memoria di frasi e — da ora — lo storico del lavoro (Parte E).
+
+**Ciò che rende indolore l'esclusione**: il backup annota *quali* fonti erano
+scaricate e a che risoluzione. Al ripristino Glossa propone *"riscarico le 12
+fonti che avevi?"*. Si recupera tutto; ci vuole tempo, ma non si è mai dovuto
+portare in giro i gigabyte.
+
+Chi vuole comunque le immagini al sicuro ha già la strada: deposito su cartella
+sincronizzata (D1).
+
+**Compresso**, in un archivio standard: il contenuto è testo, e le traduzioni si
+comprimono di circa dieci volte. Dentro, un manifesto con versione dello schema
+e impronta, per riconoscere un file troncato prima di tentare il ripristino.
+
+**La compressione non è la scusa per infilarci le immagini più avanti.** La
+regola resta questa.
+
+## D32 — Spazio su disco
+
+*Approvata l'11 agosto 2026.*
+
+**Nessun tetto da impostare**: è un numero che nessuno sa scegliere.
+
+**Prima di partire**: si stima la dimensione dalle prime pagine e si confronta
+con lo spazio libero. Se non ci sta, ci si rifiuta con i numeri in chiaro —
+*"servono circa 4,2 GB, liberi 1,1"*.
+
+**Durante**: se lo spazio libero scende sotto una soglia di sicurezza, il lavoro
+**si mette in pausa** invece di riempire il disco. Riprende quando si è fatto
+spazio.
+
+Il secondo conta più del primo: riempire il disco di sistema non danneggia solo
+Glossa.
+
+## D33 — Riservatezza di backup ed esportazioni
+
+*Approvata l'11 agosto 2026.*
+
+Tre livelli, ognuno risponde a una domanda diversa. Stessa macchina per i backup
+e per le esportazioni di workspace o pipeline.
+
+| Livello | A cosa serve | Cosa non fa |
+|---|---|---|
+| **Aperto** | usare i dati con altri strumenti, controllarli | niente riservatezza |
+| **Solo Glossa** | evitare aperture per sbaglio o per curiosità | non ferma chi ha competenze tecniche |
+| **Con password** | riservatezza vera | non impedisce al destinatario di ridistribuire il contenuto decifrato |
+
+### Il livello di mezzo, e perché non si chiama "protetto"
+
+Se il programma apre il file senza chiedere nulla, **la chiave è dentro il
+programma**, che è pubblico. È offuscamento, non cifratura.
+
+Ha però un valore reale che lo zip non ha: un archivio si rinomina e si apre con
+due clic, un formato offuscato no. Contro un destinatario non tecnico è una
+barriera vera. È la busta con scritto "non aprire".
+
+Beneficio collaterale che non riguarda il segreto: **un formato non modificabile
+a mano non viene modificato a mano**, e non torna indietro corrotto da una
+reimportazione.
+
+Nel momento della scelta va scritto senza giri di parole: *"chi ha competenze
+tecniche può comunque leggerlo"*. Mai chiamarlo protetto o sicuro, e mai
+proporlo come opzione per materiale sensibile.
+
+**Cautela**: un formato che apre solo Glossa rende i dati ostaggio del
+programma. Quindi formato documentato, e conversione verso "aperto" sempre
+possibile senza password.
+
+### Il livello con password
+
+**Argon2id** per derivare la chiave — resistente agli attacchi con schede
+grafiche. È l'unica libreria nuova: **AES-256-GCM è già nel progetto**, usato da
+`keystore.rs` per le chiavi dei provider.
+
+- cifratura **a blocchi**, non in un colpo solo: un backup da mezzo giga non si
+  carica in memoria;
+- **intestazione in chiaro** con versione del formato e parametri della
+  derivazione, per poterlo decifrare fra anni anche dopo averli cambiati;
+- **password sbagliata distinguibile da file danneggiato**, con una verifica
+  nell'intestazione: un generico "non funziona" lascia l'utente a chiedersi se
+  ha perso i dati o solo sbagliato a digitare;
+- password conservabile nel portachiavi di sistema per i ripristini sulla stessa
+  macchina, ma **mostrata e confermata alla creazione**: se il computer muore, il
+  portachiavi muore con lui.
+
+**Nessun recupero password.** Qualunque via di recupero è una seconda chiave e
+vanifica la cifratura.
+
+**Spento di default**, con la conseguenza scritta a chiare lettere al momento
+della scelta: password dimenticata, backup perduto. Il backup è ciò a cui si
+ricorre quando tutto il resto è già andato storto, e cifrarlo aggiunge un modo
+di fallire proprio in quello scenario.
+
+### Cosa non c'è nel backup
+
+Le chiavi dei provider **non sono nel backup**: stanno nel portachiavi di
+sistema o in un file cifrato a parte (`keystore.rs`). Il rischio che la
+cifratura copre è la riservatezza del lavoro non pubblicato, non le credenziali.
+
+# Parte G — Come lo spezzerei in PR
 
 Ordine obbligato, ogni PR verificabile da sola.
 
@@ -1327,7 +1490,7 @@ piano.
 #213. Indipendente dalle quattro sopra: si può fare in parallelo se serve.
 
 **PR 6 — registrazione del lavoro svolto.**
-Parte F, cioè #378. Storico delle traduzioni, `provenance_events` allargata,
+Parte E, cioè #378. Storico delle traduzioni, `provenance_events` allargata,
 `derived_metrics`, scrittura automatica dagli handler di lavoro e dai percorsi
 della pipeline. Nessuna interfaccia: l'area Analisi è #379 e viene dopo.
 
@@ -1336,23 +1499,27 @@ perduto per sempre — in particolare la coppia proposta/approvata delle
 traduzioni, che oggi viene sovrascritta a ogni correzione. Se la PR 2
 (orchestratore) è pronta, questa può procedere in parallelo alla 4.
 
+**PR 7 — backup, esportazioni e riservatezza.**
+Parte F: backup compresso con l'elenco delle fonti da riscaricare, tre livelli
+di riservatezza, cifratura con password. Dipende dalla PR 2 per lo spostamento
+del deposito come lavoro, e va coordinata con #407, che porta backup e
+ripristino sullo stesso schema dell'import.
+
 Sul punto 1.5 del tuo piano — chiudere #210 — non ho abbastanza elementi per
 proporre un ritaglio. Va guardata insieme, non stanotte.
 
 ---
 
-# Domande che non posso decidere io
+# Domande aperte
 
-1. **Migrazione del deposito** (da D1): cambiando cartella, i file esistenti
-   vanno spostati, copiati lasciando gli originali, o solo ricollegati? Il
-   ricollegamento c'è già per un deposito esistente; la domanda riguarda il caso
-   in cui la nuova cartella è vuota.
-2. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
-   testo. Con il deposito, un backup completo diventa di gigabyte. Il backup
-   deve includere le immagini, escluderle sempre, o chiedere?
-3. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
-   rifiuta di scaricare? Senza, un manoscritto grande riempie il disco senza
-   preavviso.
+Nessuna. Le tre rimaste — spostamento del deposito, contenuto del backup, limite
+di spazio — sono state decise l'11 agosto 2026 e sono nella Parte F, insieme
+alla riservatezza emersa discutendole.
+
+Quello che resta fuori è dichiarato dove serve: il livello bibliografico per gli
+stampati (D2-bis, materia di #404), l'architettura della shell (Parte D,
+materia di #413), i lettori per i formati non supportati (#192) e il ripristino
+da backup portato allo stesso schema dell'import (#407).
 
 ---
 
@@ -1403,7 +1570,7 @@ D1), `source_read_mode` (`auto` predefinito, D8-D9), `download_size_cap`
 (`2000`, D4), `verify_vault_on_startup` (`0`, D5), `remote_image_cache_mb`
 (`512`, D8).
 
-### Registrazione del lavoro svolto (Parte F)
+### Registrazione del lavoro svolto (Parte E)
 
 ```sql
 -- Storico delle traduzioni (D22). Testi immutabili, nessuno stato di
