@@ -12,8 +12,8 @@ Le decisioni sono numerate `D1`, `D2`, … e riportano cosa si è scelto, cosa s
 scartato e perché, e cosa comporta. Le voci `-bis` sono emerse discutendo e non
 erano nella prima stesura.
 
-**Tutte approvate** fra il 9 e l'11 agosto 2026. In fondo restano tre domande
-aperte e l'appendice tecnica con schema, comandi e struttura delle cartelle.
+**Tutte approvate** fra il 9 e l'11 agosto 2026, nessuna domanda aperta. In
+fondo l'appendice tecnica con schema, comandi e struttura delle cartelle.
 
 **Niente di questo documento è ancora implementato.** La suddivisione in PR è
 nella Parte G.
@@ -131,7 +131,6 @@ sbagliato riscaricherebbe l'intera biblioteca.
 
 *Approvata il 2026-08-09.*
 
-
 **Il deposito su una cartella sincronizzata: sì**, a una condizione — il client
 deve tenere una copia vera sul disco (Drive per desktop: modalità **mirror**).
 In modalità **streaming**, che è la predefinita, i file sono segnaposto:
@@ -206,15 +205,18 @@ D1 questo pesa di più, perché chi tiene il deposito su una cartella
 sincronizzata la vede. Se serve "le immagini di questo manoscritto con nomi
 leggibili", è una funzione di esportazione, non l'organizzazione interna.
 
-**Bassa e alta risoluzione non sono versioni diverse**: sono derivati di una
-stessa digitalizzazione, e lo schema li copre già (`assets.kind = 'derived'`,
-`derived_from_asset_id`). Stanno sotto `derived/`, non sotto un'altra cartella
-di provenienza.
+**Bassa e alta risoluzione non sono digitalizzazioni diverse**: sono la stessa
+carta chiesta al servizio con parametri diversi, e stanno sotto
+`pages/<dimensione>/` della stessa digitalizzazione (D4). Mai sotto un'altra
+cartella di provenienza.
+
+`derived/` è un'altra cosa: contiene ciò che **produciamo noi** — ritagli,
+immagini ottimizzate, derivati di lavorazione — che lo schema copre con
+`assets.kind = 'derived'` e `derived_from_asset_id`.
 
 ## D2-bis — Aderenza a IIIF
 
 *Approvata il 2026-08-10.*
-
 
 IIIF è lo standard del dominio: **si rispetta, non si reinterpreta.**
 
@@ -349,7 +351,6 @@ Più file per la stessa pagina: il percorso diventa
 
 *Approvata il 2026-08-10.*
 
-
 Un manifesto può dichiarare un PDF dell'intero oggetto (proprietà `rendering`,
 Presentation API 3.0).
 
@@ -456,9 +457,10 @@ esplicita.
 **Non legato.** Un backup che parte con ore di verifica è un backup che non si fa
 mai.
 
-Invece: se si avvia un backup che include le immagini e la verifica completa non
-è mai stata eseguita, o è vecchia, compare una **nota non bloccante** con il
-collegamento per lanciarla.
+E il backup non contiene comunque le immagini (D31), quindi la verifica del
+deposito non lo riguarda direttamente. Resta utile prima di **spostare il
+deposito** (D30) o prima di affidarlo a una cartella sincronizzata: lì sì che
+conviene sapere che i file sono integri prima di muoverli.
 
 ### Avvertenze
 
@@ -674,14 +676,14 @@ disponibili invece di caricarle. Caso marginale, si aggiunge se emerge.
 
 # Parte C — I lavori in background
 
-Questa è la parte che, come hai detto tu, va fatta bene la prima volta.
+È la parte che va fatta bene la prima volta: riconoscimento testo,
+esportazioni, dataset e calcoli semantici useranno tutti questo impianto.
 
 ## D10 — Chi esegue i lavori
 
 *Approvata il 2026-08-10.*
 
-
-**Propongo**: un solo orchestratore dentro l'applicazione, avviato all'apertura.
+Un solo orchestratore dentro l'applicazione, avviato all'apertura.
 Tiene in memoria la coda, legge e scrive lo stato sul database, e affida
 l'esecuzione a un gestore registrato per tipo di lavoro. L'interfaccia non
 esegue mai nulla di lungo: chiede la creazione di un lavoro e osserva.
@@ -720,15 +722,14 @@ bandire. Vedi D18.
 ### I lavori brevi non si mostrano singolarmente
 
 Lo scaricamento di una singola pagina dura pochi secondi. Se ogni pagina
-comparisse nel centro lavori, il pannello diventerebbe illeggibile. I lavori
+comparisse nella scheda Lavori, il pannello diventerebbe illeggibile. I lavori
 brevi girano come tutti gli altri ma si mostrano **solo se falliscono**.
 
 ## D12 — Chiusura dell'applicazione
 
 *Approvata il 2026-08-10.*
 
-
-**Propongo**: alla chiusura, ogni lavoro in esecuzione passa a **in pausa** e
+Alla chiusura ogni lavoro in esecuzione passa a **in pausa** e
 salva il punto raggiunto. Se la chiusura avviene mentre ci sono lavori attivi,
 l'utente vede una richiesta di conferma con l'elenco.
 
@@ -739,11 +740,10 @@ scaricamento perché hai chiuso la finestra è inaccettabile.
 
 *Approvata il 2026-08-10.*
 
-
 Qui serve una distinzione, perché "riprendere" non vuol dire la stessa cosa per
 tutti i lavori.
 
-**Propongo** due categorie dichiarate da ogni tipo di lavoro:
+Due categorie, dichiarate da ogni tipo di lavoro:
 
 - **Riprendibile**: il lavoro sa dire a che punto era e ripartire da lì. Lo
   scaricamento lo è: le pagine già complete e verificate si saltano. Alla
@@ -767,8 +767,7 @@ annullamento — al riavvio viene portato allo stato stabile corrispondente. È 
 
 *Approvata il 2026-08-10.*
 
-
-**Propongo**: la pausa è **cooperativa**. L'orchestratore segna il lavoro come
+La pausa è **cooperativa**. L'orchestratore segna il lavoro come
 "in pausa richiesta"; il gestore la vede al confine dell'unità di lavoro
 successiva — la pagina corrente, il file corrente — la porta a termine, salva
 e si ferma. Non si interrompe niente a metà.
@@ -989,7 +988,7 @@ Quindi:
 
 - **pausa e ripresa non sono un ornamento**: nessuno resta a guardare quindici
   minuti, l'app verrà chiusa a metà;
-- **il tempo stimato è obbligatorio** in barra di stato e centro lavori,
+- **il tempo stimato è obbligatorio** in barra di stato e scheda Lavori,
   altrimenti sembra bloccato;
 - il messaggio deve distinguere *"in attesa per rispettare i limiti della
   biblioteca"* da *"in errore"*: sono la stessa immobilità con due significati
