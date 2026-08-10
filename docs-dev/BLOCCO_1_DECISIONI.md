@@ -4,18 +4,28 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-10. Approvate D1-D9, D11, D16 e D18, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis.
+Ultimo aggiornamento: 2026-08-11. **Tutte le decisioni D1-D21 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Restano tre domande aperte in fondo.
 
 ## Come si legge
 
-Ogni decisione ha tre righe: **cosa propongo**, **cosa ho scartato e perché**,
-**cosa comporta**. Le decisioni sono numerate `D1`, `D2`, … così puoi
-rispondere con "D3 no, facciamo l'altra" senza riscrivere il contesto.
+Le decisioni sono numerate `D1`, `D2`, … e riportano cosa si è scelto, cosa si è
+scartato e perché, e cosa comporta. Le voci `-bis` sono emerse discutendo e non
+erano nella prima stesura.
 
-In fondo c'è un'appendice tecnica con schema, comandi e struttura delle
-cartelle, e l'elenco delle domande che **non posso decidere io**.
+**Tutte approvate** fra il 9 e l'11 agosto 2026. In fondo restano tre domande
+aperte e l'appendice tecnica con schema, comandi e struttura delle cartelle.
 
-Niente di questo documento è stato implementato. È materiale da approvare.
+**Niente di questo documento è ancora implementato.** La suddivisione in PR è
+nella Parte E.
+
+### Fonti
+
+Le decisioni su rete e scaricamento vengono da **Scriptoria**
+(`~/workspace/scriptoria`), in particolare `network_policy.py`,
+`_rate_limiter.py`, `http_client.py`, `logic/downloader_runtime.py` e
+`docs/HTTP_CLIENT.md`: sono valori ottenuti da prove reali sul campo, non
+stimati. Quelle su IIIF vengono dalle specifiche Presentation API 3.0 e Image
+API 3.0, verificate l'8 e il 10 agosto 2026.
 
 ---
 
@@ -971,35 +981,88 @@ conservare, è la parte non tecnica dell'aderenza allo standard.
 
 # Parte D — Cosa vede l'utente
 
-## D19 — Barra di stato in basso
+L'architettura di queste tre decisioni vive in **#413**, che riguarda la shell e
+non questo blocco. Qui restano le scelte che toccano i lavori.
 
-**Propongo**: quando c'è almeno un lavoro attivo, la barra mostra una riga
-sola: cosa sta facendo, quanti lavori mancano, avanzamento del lavoro corrente.
-Cliccandola si apre il centro lavori. Quando non c'è niente, la barra continua
-a mostrare quello che mostra oggi.
+## D19 — Barra di stato
 
-## D20 — Centro lavori
+*Approvata con modifiche il 2026-08-10.*
 
-**Propongo**: un pannello con tre sezioni — in corso, in attesa, terminati
-oggi. Per ogni lavoro: descrizione leggibile ("Scaricamento *Beatus di
-Girona*, pagina 34 di 210"), avanzamento, e i comandi ammessi dal suo stato.
-Comandi come icone neutre con suggerimento al passaggio del mouse, secondo il
-vincolo di interfaccia del progetto.
+**Uguale in ogni sezione**, tre zone fisse: a sinistra il contesto (l'unica parte
+che cambia), al centro l'indicatore lavori, a destra lo stato di salvataggio e
+la maniglia del pannello.
 
-**Domanda aperta**: dove vive questo pannello. Un'area globale accanto a
-Biblioteca e Studio, o un pannello che scende dalla barra di stato? La seconda
-mi sembra più coerente con "il centro lavori è di servizio, non è un luogo dove
-si lavora", ma tocca la shell 2.0 e quindi la decisione è tua.
+L'indicatore è **sempre presente**, non solo dove il lavoro è stato avviato: uno
+scaricamento parte dalla Biblioteca e prosegue mentre si lavora altrove.
 
-## D21 — Fine di un lavoro
+Compatto e denso:
 
-**Propongo**: nessuna notifica per il singolo lavoro riuscito. Un avviso solo
-quando una richiesta dell'utente si conclude interamente ("*Beatus di Girona*
-scaricato, 210 pagine") e quando qualcosa fallisce.
+```
+⣾ 3 lavori · Beatus, 34/210 · ~12 min
+```
 
-**Scartato**: una notifica per pagina. Duecento notifiche per uno scaricamento.
+Quanti in coda, quello corrente, tempo stimato (obbligatorio, D17).
 
----
+Fermo per rispettare i limiti di una biblioteca — frequente, con i profili di
+D18:
+
+```
+⏸ in attesa · riprende fra 8 min
+```
+
+Senza animazione. La distinzione fra **in attesa** e **in errore** è visiva e
+testuale: sono la stessa immobilità con significati opposti.
+
+## D20 — Dove si vedono i lavori
+
+*Approvata con modifiche il 2026-08-10.*
+
+**Nel pannello in basso, come scheda accanto ai log.** Non un'area globale, non
+un pulsante in alto a destra.
+
+Il modello è il pannello di VS Code, dove terminale, problemi e output sono
+schede della stessa area: log e lavori sono le due facce della domanda "cosa sta
+facendo il programma".
+
+Tre sezioni: **in corso**, **in attesa**, **terminati oggi**. Per ciascuno
+descrizione leggibile — *"Scaricamento Beatus di Girona, pagina 34 di 210"* —
+avanzamento, tempo stimato e i comandi ammessi dal suo stato, come icone neutre
+con spiegazione al passaggio del mouse.
+
+**I lavori brevi non compaiono singolarmente** (D11): lo scaricamento di una
+pagina dura pochi secondi, e duecento righe da due secondi rendono il pannello
+illeggibile. Compaiono solo se falliscono.
+
+**Scartato — un pulsante in alto a destra**: quella zona è per la configurazione,
+lingua e impostazioni. Ospitare uno stato operativo che cambia di continuo
+mescola due registri. I browser lo fanno perché non hanno un pannello in basso.
+
+**Scartato — un mini-pannello separato dal pannello completo**: due posti per
+leggere le stesse cose sono una tassa di apprendimento. Al passaggio del mouse
+un riepilogo breve, al clic il pannello sulla scheda Lavori. Una destinazione
+sola.
+
+## D21 — Quando avvisare
+
+*Approvata con modifiche il 2026-08-10.*
+
+**Nessun avviso per il singolo lavoro riuscito.** Duecento notifiche per uno
+scaricamento sono rumore.
+
+**Un avviso quando una richiesta dell'utente si conclude interamente**:
+*"Beatus di Girona scaricato, 210 pagine"*.
+
+**Un avviso quando qualcosa fallisce**, con il motivo e l'azione possibile.
+
+### Notifica di sistema a finestra non attiva
+
+Con i profili di D18 uno scaricamento dura un quarto d'ora: abbastanza perché
+l'utente sia andato a fare altro. Quando la finestra non è in primo piano, il
+completamento e il fallimento passano anche dalle notifiche del sistema
+operativo.
+
+Solo quei due casi, e solo a finestra non attiva: se Glossa è davanti,
+l'indicatore in barra basta e una notifica di sistema sarebbe invadente.
 
 # Parte E — Come lo spezzerei in PR
 
@@ -1016,10 +1079,13 @@ Coda, stati, limiti di concorrenza, pausa, annullamento, tentativi, ripresa al
 riavvio, comandi di creazione e osservazione. Con un solo tipo di lavoro finto,
 che serve unicamente ai test. Nessuna interfaccia. Copre metà di #218.
 
-**PR 3 — barra di stato e centro lavori.**
+**PR 3 — barra di stato e pannello lavori.**
 L'interfaccia sopra la PR 2, ancora con il tipo finto. Si vede una coda
 funzionare, si mette in pausa, si annulla, si chiude e si riapre l'app. Copre
-l'altra metà di #218.
+l'altra metà di #218 e la parte di **#413** che serve ai lavori: indicatore in
+barra e scheda Lavori nel pannello. Barra di stato unificata, stato di
+salvataggio generalizzato e console di log estesa restano a #413, che è lavoro
+di shell.
 
 **PR 4 — scaricamento vero.**
 Il primo gestore reale: dal manifesto alle pagine sul disco, con ripresa,
@@ -1036,16 +1102,14 @@ proporre un ritaglio. Va guardata insieme, non stanotte.
 
 # Domande che non posso decidere io
 
-1. **Dove vive il centro lavori** (da D20): area globale o pannello della barra
-   di stato? Tocca la shell.
-2. **Migrazione del deposito** (da D1): cambiando cartella, i file esistenti
+1. **Migrazione del deposito** (da D1): cambiando cartella, i file esistenti
    vanno spostati, copiati lasciando gli originali, o solo ricollegati? Il
    ricollegamento c'è già per un deposito esistente; la domanda riguarda il caso
    in cui la nuova cartella è vuota.
-3. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
+2. **Backup e file scaricati**: il backup del workspace oggi esporta un file di
    testo. Con il deposito, un backup completo diventa di gigabyte. Il backup
    deve includere le immagini, escluderle sempre, o chiedere?
-4. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
+3. **Limite di spazio**: vuoi un tetto oltre il quale Glossa avvisa o si
    rifiuta di scaricare? Senza, un manoscritto grande riempie il disco senza
    preavviso.
 
