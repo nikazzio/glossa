@@ -148,3 +148,13 @@ describe('tempo stimato', () => {
     expect(formatEta(null)).toBeNull();
   });
 });
+
+describe('risposte inattese dal backend', () => {
+  it('fuori da Tauri l’elenco vuoto non rompe l’interfaccia', async () => {
+    // Nel browser il comando non esiste: la risposta non è un elenco, e darla
+    // per buona farebbe cadere tutta l'applicazione.
+    invokeMock.mockResolvedValueOnce(null as never);
+
+    await expect(listActiveJobs()).resolves.toEqual([]);
+  });
+});

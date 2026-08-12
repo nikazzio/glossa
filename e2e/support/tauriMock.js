@@ -171,6 +171,9 @@
         return null;
       }
       if (command === 'get_api_key_status') return false;
+      // Coda dei lavori: nel browser non c'è orchestratore, e l'elenco vuoto è
+      // la risposta onesta.
+      if (command === 'list_active_jobs') return [];
       if (command.startsWith('plugin:log|')) throw new Error('Logging is unavailable in browser smoke tests');
       return null;
     },
