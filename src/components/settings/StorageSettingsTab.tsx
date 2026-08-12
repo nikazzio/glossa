@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { HardDrive } from 'lucide-react';
 import { getDataDir, setDataDir, pickDataDirFolder } from '../../services/storageConfigService';
 import { PillButton, Spinner } from '../ui';
+import { VaultSection } from './VaultSection';
 
 export function StorageSettingsTab() {
   const { t } = useTranslation();
@@ -87,6 +88,8 @@ export function StorageSettingsTab() {
           {t('settings.storage.migrationNote')}
         </p>
       </div>
+
+      <VaultSection />
     </div>
   );
 }

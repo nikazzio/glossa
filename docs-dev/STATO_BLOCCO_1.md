@@ -27,7 +27,7 @@ dritta su `main`.
 | 1 | Deposito dei file e disponibilità reale | #217 | **unita** in `blocco-1` (#414) |
 | 2 | Orchestratore dei lavori, a vuoto | #218 (metà) | **unita** in `blocco-1` (#415) |
 | 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
-| 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | da fare |
+| 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
 | 4 | Scaricamento vero | #218 primo consumatore | da fare |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
@@ -56,8 +56,9 @@ pausa, ripresa, annullamento e nuovo tentativo, conferma alla chiusura con i
 lavori attivi messi in pausa. Si prova con i tipi di lavoro finti delle build di
 sviluppo.
 
-**Non esiste ancora nessuna schermata di impostazioni** per deposito e lavori:
-è la PR 3-bis.
+**Impostazioni** (PR 3-bis): cartella del deposito scelta dal dialogo nativo
+aperto dal backend, con rifiuto delle cartelle occupate e avviso per le cartelle
+sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 
 ## Decisioni prese implementando, già riportate nelle decisioni
 
@@ -75,9 +76,15 @@ sviluppo.
 
 ## Aperti, da non perdere
 
-- **Scelta cartella dal dialogo nativo del backend** (PR 3): oggi
-  `check_vault_folder` riceve un percorso dal frontend e ci scrive un file di
-  prova, in contrasto con il principio fissato in #405.
+- ~~Scelta cartella dal dialogo nativo del backend~~ — **chiusa nella PR 3-bis**:
+  `choose_vault_folder` apre la finestra da Rust e il percorso non attraversa
+  più la webview. `check_vault_folder` resta come comando di sola lettura.
+- **Schermata al primo avvio** (D1): non fatta. Le due scelte — tieni tutto
+  insieme / scegli dove — vivono per ora solo in Impostazioni. Va aggiunta
+  quando esiste il primo avvio vero, cioè con lo scaricamento (PR 4).
+- **Rilevamento vero dei segnaposto** delle cartelle sincronizzate (D1-bis): oggi
+  è un riconoscimento per nome di cartella. Il contrassegno affidabile esiste
+  solo su Windows e richiede una chiamata di sistema dedicata.
 - **Notifiche di sistema** (D21): rinviate alla PR 4, quando esiste un lavoro
   vero da annunciare.
 - **Documentazione pubblica** (`docs/`, `docs/en/`) e aiuto in-app: rinviati alla

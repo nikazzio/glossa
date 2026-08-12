@@ -143,6 +143,8 @@ pub fn run() {
             vault::commands::verify_files_present,
             vault::commands::verify_files_integrity,
             vault::commands::free_version_pages,
+            vault::commands::choose_vault_folder,
+            vault::commands::use_default_vault_folder,
             jobs::commands::create_job,
             jobs::commands::list_active_jobs,
             jobs::commands::get_job,

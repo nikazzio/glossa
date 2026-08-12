@@ -507,7 +507,23 @@
       "migrationNote": "Restart Glossa after changing this to use the new location.",
       "migrationSucceeded": "Data location updated. Restart Glossa to apply it.",
       "migrationFailed": "Failed to move the data location",
-      "loadFailed": "Failed to read the data location"
+      "loadFailed": "Failed to read the data location",
+      "vault": {
+        "title": "Vault folder",
+        "description": "Where images and documents downloaded from libraries live. It is separate from the data folder: the gigabytes can sit on another disk without taking the database along.",
+        "defaultLocation": "Inside the data folder",
+        "customLocation": "Chosen folder",
+        "chooseFolder": "Choose folder",
+        "keepTogether": "Keep everything together",
+        "adopted": "Vault folder updated",
+        "chooseFailed": "Could not set the vault folder",
+        "loadFailed": "Could not read the vault status",
+        "folderNotEmpty": "That folder already holds something else: pick an empty one, or one that is already a Glossa vault.",
+        "folderNotWritable": "That folder is not writable.",
+        "unreachable": "Folder not reachable: disk unplugged or not synced yet. Nothing is lost.",
+        "syncWarning": "The folder looks like it sits inside a sync service. It only works if the client keeps a real copy on disk: in online-only mode files look present but are empty.",
+        "moveNote": "Changing folder does not move files already downloaded: moving them will arrive as a background job."
+      }
     },
     "backup": "Backup & Restore",
     "backupHint": "Export the full workspace to a portable file, or restore from a previous backup.",
@@ -550,6 +566,30 @@
       "testFailed": "Connection failed",
       "invalidProfile": "Enter a valid name and complete address.",
       "testModelRequired": "Enter a model name to test"
+    },
+    "jobsTab": "Jobs",
+    "jobs": {
+      "loadFailed": "Could not read the job settings",
+      "saveFailed": "Could not save the job settings",
+      "limitsDescription": "How many jobs run at the same time. The number is separate per resource type, because downloading, computing and writing to disk do not get in each other's way in the same manner.",
+      "automatic": "automatic",
+      "networkWarning": "The limit towards libraries does not depend on your computer but on their server: raising it too much triggers temporary blocks.",
+      "autoResume": "Resume downloads when reopening",
+      "autoResumeHint": "Off, interrupted downloads stay put and resume when you ask. On, they restart on their own from where they stopped: handy for jobs that run for hours.",
+      "resource": {
+        "network": "Downloads",
+        "cpu": "Processing",
+        "disk": "Disk writes",
+        "languageService": "Language services",
+        "documents": "Document generation"
+      },
+      "resourceHint": {
+        "network": "Towards libraries",
+        "cpu": "Checks, text recognition, indexing",
+        "disk": "Copying and moving large files",
+        "languageService": "Paid translation and review",
+        "documents": "PDFs and export packages"
+      }
     }
   },
   "ollama": {

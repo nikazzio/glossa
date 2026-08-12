@@ -158,6 +158,13 @@ impl Observer {
     }
 }
 
+/// Connessione al database con le stesse impostazioni usate ovunque nell'app.
+/// Esposta perché serve anche fuori dai lavori, per le scritture che il backend
+/// fa da sé (per esempio la cartella del deposito scelta dal dialogo nativo).
+pub fn open_database(path: &Path) -> Result<Connection, String> {
+    open(path)
+}
+
 fn open(path: &Path) -> Result<Connection, String> {
     let conn = Connection::open(path).map_err(|e| format!("DB open error: {e}"))?;
     conn.execute_batch(

@@ -507,7 +507,23 @@
       "migrationNote": "Dopo il cambio riavvia Glossa per usare la nuova posizione.",
       "migrationSucceeded": "Posizione dati aggiornata. Riavvia Glossa per applicarla.",
       "migrationFailed": "Spostamento posizione dati fallito",
-      "loadFailed": "Lettura posizione dati fallita"
+      "loadFailed": "Lettura posizione dati fallita",
+      "vault": {
+        "title": "Cartella del deposito",
+        "description": "Dove finiscono immagini e documenti scaricati dalle biblioteche. È separata dalla cartella dati: i gigabyte possono stare su un altro disco senza portarci anche il database.",
+        "defaultLocation": "Dentro la cartella dati",
+        "customLocation": "Cartella scelta",
+        "chooseFolder": "Scegli cartella",
+        "keepTogether": "Tieni tutto insieme",
+        "adopted": "Cartella del deposito aggiornata",
+        "chooseFailed": "Impossibile impostare la cartella del deposito",
+        "loadFailed": "Impossibile leggere lo stato del deposito",
+        "folderNotEmpty": "La cartella contiene già altro: scegline una vuota, o una che sia già un deposito Glossa.",
+        "folderNotWritable": "In quella cartella non si può scrivere.",
+        "unreachable": "Cartella non raggiungibile: disco staccato o non ancora sincronizzata. Nessun file risulta perso.",
+        "syncWarning": "La cartella sembra dentro un servizio di sincronizzazione. Funziona solo se il client tiene una copia vera sul disco: in modalità solo online i file risultano presenti ma sono vuoti.",
+        "moveNote": "Cambiare cartella non sposta i file già scaricati: lo spostamento arriverà come lavoro in background."
+      }
     },
     "phraseMemoryTab": "Memoria frasi",
     "phraseMemoryToggle": "Memoria",
@@ -550,7 +566,31 @@
     "backupImport": "Importa backup",
     "backupImportConfirmTitle": "Ripristinare il workspace?",
     "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
-    "backupImportConfirm": "Ripristina"
+    "backupImportConfirm": "Ripristina",
+    "jobsTab": "Lavori",
+    "jobs": {
+      "loadFailed": "Impossibile leggere le impostazioni dei lavori",
+      "saveFailed": "Impossibile salvare le impostazioni dei lavori",
+      "limitsDescription": "Quanti lavori girano insieme. Il numero è separato per tipo di risorsa, perché scaricare, calcolare e scrivere su disco non si ostacolano allo stesso modo.",
+      "automatic": "automatico",
+      "networkWarning": "Il limite verso le biblioteche non dipende dalla potenza del computer ma dal loro server: alzarlo troppo fa scattare blocchi temporanei.",
+      "autoResume": "Riprendi gli scaricamenti alla riapertura",
+      "autoResumeHint": "Spenta, gli scaricamenti interrotti restano fermi e riprendono quando lo chiedi. Accesa, ripartono da soli dal punto raggiunto: comoda per lavori che durano ore.",
+      "resource": {
+        "network": "Scaricamenti",
+        "cpu": "Elaborazioni",
+        "disk": "Scritture su disco",
+        "languageService": "Servizi linguistici",
+        "documents": "Generazione documenti"
+      },
+      "resourceHint": {
+        "network": "Verso le biblioteche",
+        "cpu": "Verifiche, riconoscimento testo, indicizzazione",
+        "disk": "Copie e spostamenti di file grandi",
+        "languageService": "Traduzione e revisione a pagamento",
+        "documents": "PDF e pacchetti da esportare"
+      }
+    }
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
