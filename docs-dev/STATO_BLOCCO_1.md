@@ -5,7 +5,7 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-13**, dopo la PR 3.
+Ultimo aggiornamento: **2026-08-13**, notte: PR 3 e 3-bis aperte, in attesa di prova.
 
 ## Come è organizzato il lavoro
 
@@ -93,6 +93,22 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 - **Barra di stato unificata, salvataggio generalizzato, console di tutta
   l'app**: restano a #413, sono lavoro di guscio.
 - **Livello bibliografico per gli stampati**: #404, fuori dal blocco.
+
+## Prossima sessione: da dove riprendere
+
+Due PR aperte e verdi, **in attesa che Niki le provi**: la **#417** (coda
+visibile) e la **#418** (impostazioni), che è impilata sulla prima e si
+ritargherà da sola su `blocco-1` quando la #417 verrà unita.
+
+Ordine consigliato: provare la #417, unirla, provare la #418, unirla, poi
+aggiornare questo file e `STATO_SESSIONE_2.0.md` sulla postazione fissa. Dopo si
+parte con la **PR 4**, lo scaricamento vero, che è anche dove rientrano le
+notifiche di sistema, la schermata di primo avvio, la documentazione pubblica e
+i lavori brevi che si mostrano solo se falliscono.
+
+**Da aprire come issue**: la cartella **dati** (non il deposito) usa ancora la
+finestra di scelta aperta dal frontend, cioè lo schema che #405 ha superato. È
+fuori dal blocco 1 ma è lo stesso buco.
 
 ## Da provare a mano, per chi rilegge
 
