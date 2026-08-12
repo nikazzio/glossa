@@ -4,7 +4,7 @@ Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-11. **Tutte le decisioni D1-D33 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Nessuna domanda aperta.
+Ultimo aggiornamento: 2026-08-12. **Tutte le decisioni D1-D33 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Nessuna domanda aperta. L'unica correzione successiva all'approvazione riguarda l'appendice tecnica: come si arriva alla forma finale dello schema, emersa implementando la PR 1 (#414).
 
 ## Come si legge
 
@@ -1575,25 +1575,40 @@ da backup portato allo stesso schema dell'import (#407).
 
 # Appendice tecnica
 
-## Nota sullo schema: si riscrive, non si rattoppa
+## Nota sullo schema: forma finale subito, consolidamento una volta sola
+
+*Corretta il 2026-08-12, implementando la PR 1.*
 
 Glossa è alla 1.4 ma **non la usa nessuno**: nessun dato utente da migrare,
-nessuna retrocompatibilità da preservare. Quindi queste modifiche **non** sono
-una pila di `ALTER TABLE` sopra la baseline: sono tabelle riscritte pulite in
-`0001_baseline_2_0.sql`.
+nessuna retrocompatibilità da preservare. Le tabelle prendono quindi la loro
+**forma finale subito**, senza rattoppi né colonne tenute in vita per
+compatibilità. Su questo la prima stesura non cambia.
 
-Una pila di modifiche incrementali produrrebbe uno schema che racconta la
-propria storia invece della propria forma, e nessuno la rileggerebbe mai per
-capire com'è fatta oggi una tabella.
+Cambia **come** ci si arriva. La prima stesura diceva di riscrivere le tabelle
+pulite dentro `0001_baseline_2_0.sql` a ogni passo. Non si può fare per PR:
+sqlx registra in `_sqlx_migrations` le migrazioni già applicate **con
+l'impronta del loro contenuto**, e una migrazione già applicata che cambia sotto
+i piedi fa fallire l'avvio su ogni database esistente — compresi quelli di
+sviluppo, sette volte nelle sette PR. È anche la convenzione dichiarata in testa
+a `db.rs`: ogni cambiamento è un file nuovo.
+
+Quindi: **ogni PR aggiunge un file di migrazione numerato**; il consolidamento
+in un'unica baseline pulita si fa **una volta sola**, prima del primo uso reale,
+buttando i database di sviluppo. Si ottiene lo schema leggibile che si voleva,
+senza rompere l'avvio nel frattempo.
+
+**Costo accettato**: fino ad allora, per sapere che forma ha una tabella si
+legge la baseline più i file successivi.
 
 Sotto ci sono solo le tabelle nuove, per esteso, e le colonne da aggiungere a
-quelle esistenti, in forma di elenco.
+quelle esistenti, in forma di elenco: è la **forma finale** da raggiungere, non
+il contenuto letterale di `0001`.
 
 ## Modifiche allo schema
 
 ### Deposito, disponibilità e scaricamento (Parti A e B)
 
-Colonne da aggiungere alle tabelle esistenti, riscritte in baseline.
+Colonne da aggiungere alle tabelle esistenti.
 
 **`assets`**
 
@@ -1645,11 +1660,10 @@ CREATE TABLE translation_revisions (
 
 -- transcription_revisions perde la colonna `status`: stesso difetto della
 -- casella `approved`, l'approvazione che si sposta obbligherebbe a mutare lo
--- storico. Diventa un evento come per le traduzioni (D22). Riscritta pulita in
--- baseline, non alterata.
+-- storico. Diventa un evento come per le traduzioni (D22).
 
 -- provenance_events: cio' per cui si raggruppa diventa colonna (D24).
--- Riscritta pulita in baseline con le colonne gia' presenti piu':
+-- Forma finale: le colonne gia' presenti piu':
 --   status, started_at, finished_at, duration_ms
 --   provider, model, prompt_template_id, prompt_version
 --   input_tokens, output_tokens, cached_input_tokens, cost_estimated
@@ -1686,7 +1700,7 @@ CREATE INDEX idx_derived_metrics_entity
   ON derived_metrics(entity_type, entity_id, metric_kind);
 ```
 
-Colonne da aggiungere a tabelle esistenti, riscritte in baseline:
+Colonne da aggiungere a tabelle esistenti:
 
 | Tabella | Colonna | Perché |
 |---|---|---|
