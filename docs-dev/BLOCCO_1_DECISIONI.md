@@ -767,8 +767,12 @@ Due categorie, dichiarate da ogni tipo di lavoro:
   scaricamento lo è: le pagine già complete e verificate si saltano. Alla
   riapertura questi lavori tornano **in pausa**, non ripartono da soli.
 - **Da rifare**: il lavoro non ha punti intermedi affidabili. Alla riapertura
-  torna **in coda** con il progresso azzerato, o viene segnalato come
-  interrotto se ripeterlo costa denaro.
+  resta **fermo in attesa di una decisione**, con il progresso azzerato perché
+  non corrisponde più a niente di riutilizzabile. *(Precisato il 2026-08-13,
+  implementando la PR 2: la prima stesura diceva "torna in coda", che con
+  l'orchestratore in moto significa ripartire al giro successivo — cioè
+  l'opposto della regola qui sotto. Rifare da capo sì, ma quando lo chiede
+  l'utente.)*
 
 **Nessun lavoro riparte da solo alla riapertura.** L'utente vede "3 lavori
 interrotti" e decide.
@@ -784,8 +788,9 @@ soli scaricamenti interrotti — lavori di rete che sanno riprendere dal punto
 salvato. Accesa, evita di dover rimettere in moto a mano ogni sera un lavoro che
 dura ore. Non vale per i lavori che costano denaro, che restano fermi comunque.
 
-**Comporta**: un lavoro rimasto in uno stato di transizione — in pausa, in
-annullamento — al riavvio viene portato allo stato stabile corrispondente. È il
+**Comporta**: nessuno dei due rami rimette un lavoro nella coda attiva da solo.
+Un lavoro rimasto in uno stato di transizione — in pausa, in annullamento — al
+riavvio viene portato allo stato stabile corrispondente. È il
 "recovery" della issue, e va scritto una volta sola nell'orchestratore.
 
 ## D14 — Pausa
