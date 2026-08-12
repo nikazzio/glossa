@@ -131,20 +131,40 @@ pub fn absolute_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
     Ok(root.join(relative))
 }
 
-/// Dimensione complessiva di una cartella, in byte. Usata per dire quanto
+/// Quanti file contiene una cartella e quanto pesano. Serve a dire quanto
 /// spazio libera un'operazione prima di eseguirla (D6, D30).
-pub fn directory_size(path: &Path) -> u64 {
+///
+/// File e byte si contano nella **stessa** camminata: su una digitalizzazione
+/// di migliaia di carte, e ancora di più su un deposito di rete, ogni passata
+/// in più è un giro completo di chiamate al filesystem.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DirectoryStats {
+    pub files: usize,
+    pub bytes: u64,
+}
+
+pub fn directory_stats(path: &Path) -> DirectoryStats {
     let Ok(entries) = fs::read_dir(path) else {
-        return 0;
+        return DirectoryStats::default();
     };
     entries
         .filter_map(Result::ok)
-        .map(|entry| match entry.file_type() {
-            Ok(kind) if kind.is_dir() => directory_size(&entry.path()),
-            Ok(kind) if kind.is_file() => entry.metadata().map(|m| m.len()).unwrap_or(0),
-            _ => 0,
+        .fold(DirectoryStats::default(), |total, entry| {
+            match entry.file_type() {
+                Ok(kind) if kind.is_dir() => {
+                    let nested = directory_stats(&entry.path());
+                    DirectoryStats {
+                        files: total.files + nested.files,
+                        bytes: total.bytes + nested.bytes,
+                    }
+                }
+                Ok(kind) if kind.is_file() => DirectoryStats {
+                    files: total.files + 1,
+                    bytes: total.bytes + entry.metadata().map(|m| m.len()).unwrap_or(0),
+                },
+                _ => total,
+            }
         })
-        .sum()
 }
 
 #[cfg(test)]
@@ -248,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn directory_size_counts_nested_files() {
+    fn directory_stats_counts_nested_files_and_bytes_together() {
         let root = temp_dir("size");
         fs::create_dir_all(root.join("providers/gallica/v1/pages/2000")).unwrap();
         fs::write(
@@ -262,13 +282,22 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(directory_size(&root), 600);
+        assert_eq!(
+            directory_stats(&root),
+            DirectoryStats {
+                files: 2,
+                bytes: 600
+            }
+        );
 
         let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
-    fn directory_size_of_a_missing_folder_is_zero() {
-        assert_eq!(directory_size(&temp_dir("absent")), 0);
+    fn directory_stats_of_a_missing_folder_is_zero() {
+        assert_eq!(
+            directory_stats(&temp_dir("absent")),
+            DirectoryStats::default()
+        );
     }
 }

@@ -3,8 +3,9 @@
 //! Sottili di proposito: la logica sta nei moduli `layout` e `integrity`, che
 //! sono funzioni pure e testabili senza un'app in esecuzione.
 
-use super::{absolute_path, classify_folder, directory_size, integrity, resolve_root, status};
+use super::{absolute_path, classify_folder, directory_stats, integrity, resolve_root, status};
 use super::{FolderKind, VaultStatus};
+use integrity::FileKind;
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -57,12 +58,20 @@ pub fn expected_version_paths(
 }
 
 /// Crea la radice e il marcatore, se mancano. Idempotente.
+///
+/// Rifiuta una cartella che contiene altro (D1). Il controllo sta qui e non
+/// solo in `check_vault_folder`: sono due comandi distinti, e una schermata che
+/// dimenticasse di chiamare il primo pianterebbe il marcatore in mezzo ai
+/// documenti dell'utente, che da quel momento sembrerebbero un deposito.
 #[tauri::command]
 pub fn initialize_vault(
     app: tauri::AppHandle,
     configured_root: Option<String>,
 ) -> Result<(), String> {
     let root = resolve_root(&app, configured_root.as_deref())?;
+    if classify_folder(&root)? == FolderKind::Foreign {
+        return Err("vault_folder_not_empty".to_string());
+    }
     super::ensure_root(&root)
 }
 
@@ -70,7 +79,10 @@ pub fn initialize_vault(
 #[serde(rename_all = "camelCase")]
 pub struct FileCheck {
     pub vault_path: String,
-    pub present: bool,
+    /// `present` | `missing` | `invalid`
+    pub state: String,
+    /// Perché il percorso è stato rifiutato, quando lo stato è `invalid`.
+    pub detail: Option<String>,
 }
 
 /// Verifica **rapida** di presenza (D5): elenca e confronta, non ricalcola le
@@ -79,6 +91,10 @@ pub struct FileCheck {
 /// Se la radice non è raggiungibile risponde con un errore invece di dichiarare
 /// tutto mancante: radice assente e file mancante sono casi diversi (D1), e
 /// confonderli farebbe riscaricare l'intera biblioteca.
+///
+/// Un percorso malformato in una riga **non** interrompe il controllo delle
+/// altre: si segna quella riga come non valida e si va avanti. La verifica di
+/// un manoscritto di duecento carte non può fermarsi tutta per un dato storto.
 #[tauri::command]
 pub fn verify_files_present(
     app: tauri::AppHandle,
@@ -89,32 +105,47 @@ pub fn verify_files_present(
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
-    vault_paths
+    Ok(vault_paths
         .into_iter()
-        .map(|vault_path| {
-            let absolute = absolute_path(&root, &vault_path)?;
-            Ok(FileCheck {
-                present: absolute.is_file(),
-                vault_path,
-            })
-        })
-        .collect()
+        .map(|vault_path| check_one(&root, vault_path))
+        .collect())
+}
+
+fn check_one(root: &std::path::Path, vault_path: String) -> FileCheck {
+    match absolute_path(root, &vault_path) {
+        Ok(absolute) => FileCheck {
+            state: if absolute.is_file() {
+                "present".to_string()
+            } else {
+                "missing".to_string()
+            },
+            detail: None,
+            vault_path,
+        },
+        Err(reason) => FileCheck {
+            state: "invalid".to_string(),
+            detail: Some(reason),
+            vault_path,
+        },
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileIntegrity {
     pub vault_path: String,
-    /// `valid` | `corrupt` | `missing`
+    /// `valid` | `corrupt` | `missing` | `invalid`
     pub state: String,
     pub detail: Option<String>,
     pub checksum: Option<String>,
 }
 
-/// Verifica **completa** di integrità (D5): apre ogni file e ne ricalcola
-/// l'impronta. Lenta in proporzione ai gigabyte, e su un deposito sincronizzato
-/// in streaming costringe il client a scaricare tutto (D1-bis) — chi chiama
-/// deve avvisare prima di partire.
+/// Verifica **completa** di integrità (D5): apre ogni file, lo valida e ne
+/// ricalcola l'impronta in una lettura sola. Lenta in proporzione ai gigabyte,
+/// e su un deposito sincronizzato in streaming costringe il client a scaricare
+/// tutto (D1-bis) — chi chiama deve avvisare prima di partire.
+///
+/// Come la verifica rapida, un percorso malformato non ferma le altre righe.
 #[tauri::command]
 pub fn verify_files_integrity(
     app: tauri::AppHandle,
@@ -125,31 +156,43 @@ pub fn verify_files_integrity(
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
-    vault_paths
+    Ok(vault_paths
         .into_iter()
-        .map(|vault_path| {
-            let absolute = absolute_path(&root, &vault_path)?;
-            let is_manifest = absolute.extension().is_some_and(|ext| ext == "json");
-            let validation = if is_manifest {
-                integrity::validate_manifest(&absolute)
-            } else {
-                integrity::validate_image(&absolute)
-            };
-            let (state, detail, checksum) = match validation {
-                integrity::Validation::Valid => {
-                    ("valid", None, integrity::file_checksum(&absolute).ok())
-                }
-                integrity::Validation::Corrupt(reason) => ("corrupt", Some(reason), None),
-                integrity::Validation::Missing => ("missing", None, None),
-            };
-            Ok(FileIntegrity {
+        .map(|vault_path| scan_one(&root, vault_path))
+        .collect())
+}
+
+fn scan_one(root: &std::path::Path, vault_path: String) -> FileIntegrity {
+    let absolute = match absolute_path(root, &vault_path) {
+        Ok(absolute) => absolute,
+        Err(reason) => {
+            return FileIntegrity {
                 vault_path,
-                state: state.to_string(),
-                detail,
-                checksum,
-            })
-        })
-        .collect()
+                state: "invalid".to_string(),
+                detail: Some(reason),
+                checksum: None,
+            }
+        }
+    };
+    // Il manifesto si riconosce dall'estensione: è l'unico file JSON che il
+    // deposito contiene (D2).
+    let kind = if absolute.extension().is_some_and(|ext| ext == "json") {
+        FileKind::Manifest
+    } else {
+        FileKind::Image
+    };
+    let scan = integrity::scan_file(&absolute, kind);
+    let (state, detail) = match scan.validation {
+        integrity::Validation::Valid => ("valid", None),
+        integrity::Validation::Corrupt(reason) => ("corrupt", Some(reason)),
+        integrity::Validation::Missing => ("missing", None),
+    };
+    FileIntegrity {
+        vault_path,
+        state: state.to_string(),
+        detail,
+        checksum: scan.checksum,
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -183,28 +226,14 @@ pub fn free_version_pages(
             freed_bytes: 0,
         });
     }
-    let freed_bytes = directory_size(&pages);
-    let deleted_files = count_files(&pages);
+    // Una sola camminata per file e byte, prima di cancellare.
+    let stats = directory_stats(&pages);
     std::fs::remove_dir_all(&pages)
         .map_err(|e| format!("Failed to free {}: {e}", pages.display()))?;
     Ok(FreedSpace {
-        deleted_files,
-        freed_bytes,
+        deleted_files: stats.files,
+        freed_bytes: stats.bytes,
     })
-}
-
-fn count_files(path: &std::path::Path) -> usize {
-    let Ok(entries) = std::fs::read_dir(path) else {
-        return 0;
-    };
-    entries
-        .filter_map(Result::ok)
-        .map(|entry| match entry.file_type() {
-            Ok(kind) if kind.is_dir() => count_files(&entry.path()),
-            Ok(kind) if kind.is_file() => 1,
-            _ => 0,
-        })
-        .sum()
 }
 
 /// Scrivere un file di prova è l'unico modo affidabile di sapere se si può
@@ -273,16 +302,57 @@ mod tests {
     }
 
     #[test]
-    fn count_files_walks_the_whole_tree() {
-        let dir = temp_dir("count");
-        fs::create_dir_all(dir.join("pages/2000")).unwrap();
-        fs::create_dir_all(dir.join("pages/max")).unwrap();
-        fs::write(dir.join("pages/2000/0001.jpg"), b"a").unwrap();
-        fs::write(dir.join("pages/2000/0002.jpg"), b"b").unwrap();
-        fs::write(dir.join("pages/max/0001.jpg"), b"c").unwrap();
+    fn a_malformed_path_is_marked_invalid_without_stopping_the_others() {
+        // Una riga storta nel database non deve far fallire il controllo
+        // dell'intera digitalizzazione.
+        let root = temp_dir("batch");
+        fs::create_dir_all(root.join("providers/gallica/v1/pages/2000")).unwrap();
+        fs::write(root.join("providers/gallica/v1/pages/2000/0001.jpg"), b"x").unwrap();
 
-        assert_eq!(count_files(&dir.join("pages")), 3);
+        let checks: Vec<FileCheck> = [
+            "providers/gallica/v1/pages/2000/0001.jpg",
+            "../fuori.jpg",
+            "providers/gallica/v1/pages/2000/0002.jpg",
+        ]
+        .into_iter()
+        .map(|path| check_one(&root, path.to_string()))
+        .collect();
 
-        let _ = fs::remove_dir_all(&dir);
+        assert_eq!(checks[0].state, "present");
+        assert_eq!(checks[1].state, "invalid");
+        assert!(checks[1].detail.is_some());
+        assert_eq!(checks[2].state, "missing");
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_full_check_marks_a_malformed_path_invalid_too() {
+        let root = temp_dir("batch_integrity");
+
+        let result = scan_one(&root, "/etc/passwd".to_string());
+
+        assert_eq!(result.state, "invalid");
+        assert_eq!(result.checksum, None);
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_manifest_is_recognised_by_its_extension() {
+        let root = temp_dir("kinds");
+        fs::create_dir_all(root.join("providers/gallica/v1")).unwrap();
+        fs::write(
+            root.join("providers/gallica/v1/manifest.json"),
+            br#"{"items":[]}"#,
+        )
+        .unwrap();
+
+        let manifest = scan_one(&root, "providers/gallica/v1/manifest.json".to_string());
+
+        assert_eq!(manifest.state, "valid", "un JSON valido non è un'immagine");
+        assert!(manifest.checksum.is_some());
+
+        let _ = fs::remove_dir_all(&root);
     }
 }

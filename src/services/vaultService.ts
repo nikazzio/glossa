@@ -31,12 +31,19 @@ export interface VaultFolderCheck {
   writable: boolean;
 }
 
+/**
+ * `invalid` è il percorso rifiutato perché uscirebbe dal deposito: la riga si
+ * segna e le altre proseguono, invece di far fallire l'intera verifica.
+ */
+export type VaultPresenceState = 'present' | 'missing' | 'invalid';
+
 export interface VaultFileCheck {
   vaultPath: string;
-  present: boolean;
+  state: VaultPresenceState;
+  detail: string | null;
 }
 
-export type VaultFileState = 'valid' | 'corrupt' | 'missing';
+export type VaultFileState = 'valid' | 'corrupt' | 'missing' | 'invalid';
 
 export interface VaultFileIntegrity {
   vaultPath: string;

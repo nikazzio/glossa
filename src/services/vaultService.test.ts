@@ -120,6 +120,23 @@ describe('verifica dei file', () => {
     );
   });
 
+  it('segna la riga storta e tiene buone le altre', async () => {
+    invokeMock.mockResolvedValueOnce([
+      { vaultPath: 'providers/gallica/v1/pages/2000/0001.jpg', state: 'present', detail: null },
+      { vaultPath: '../fuori.jpg', state: 'invalid', detail: 'vault_path must not escape the vault root' },
+      { vaultPath: 'providers/gallica/v1/pages/2000/0002.jpg', state: 'missing', detail: null },
+    ]);
+
+    const results = await verifyFilesPresent([
+      'providers/gallica/v1/pages/2000/0001.jpg',
+      '../fuori.jpg',
+      'providers/gallica/v1/pages/2000/0002.jpg',
+    ]);
+
+    expect(results.map((row) => row.state)).toEqual(['present', 'invalid', 'missing']);
+    expect(results[1].detail).toContain('escape');
+  });
+
   it('riporta lo stato di ogni file nella verifica completa', async () => {
     invokeMock.mockResolvedValueOnce([
       { vaultPath: 'a.jpg', state: 'valid', detail: null, checksum: 'abc' },
