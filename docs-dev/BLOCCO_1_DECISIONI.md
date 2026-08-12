@@ -108,6 +108,13 @@ fragile. Una schermata, due scelte:
 4. controllo sincronizzazione in streaming (D1-bis);
 5. parte il lavoro di migrazione.
 
+**La finestra di scelta cartella la apre il backend** *(vincolo aggiunto il
+2026-08-13, materia della PR 3)*, come già fa l'import documenti dopo #405: il
+percorso scelto non attraversa la webview e nessun comando accetta un percorso
+grezzo dal frontend. Nella PR 1 i comandi del deposito ricevono ancora la
+cartella come parametro, perché la schermata non esiste; con la schermata, la
+scelta passa dal dialogo nativo e quella superficie si chiude.
+
 ### Il marcatore
 
 Un file `.glossa-vault` nella radice, con dentro la versione del formato. Serve
@@ -290,6 +297,15 @@ troncati che sembrano validi; senza impronta, una ripresa li salterebbe come
 migrazione del deposito di D1.
 
 Non serve, e non si usa, per riconoscere duplicati.
+
+**Quale impronta** *(deciso il 2026-08-12, implementando la PR 1)*: FNV-1a a 64
+bit, non crittografica, calcolata a blocchi durante la lettura. La proprietà che
+serve è accorgersi di una corruzione **accidentale** — troncamento, bit rot,
+sincronizzazione a metà — e per quella basta. La resistenza a collisioni
+costruite apposta non aggiungerebbe niente: chi può scrivere nel deposito può
+scrivere anche nel database dove le impronte stanno, e nessuna biblioteca IIIF
+dichiara un digest con cui confrontarsi. Se un giorno servisse davvero, si
+sostituisce la funzione: il resto non cambia.
 
 ## D4 — Quali immagini si scaricano
 
@@ -855,6 +871,14 @@ promosso nella sua posizione definitiva.
 **La validazione è per decodifica, non per dimensione**: si apre l'immagine e si
 verifica che sia leggibile. Un file troncato ha la dimensione giusta nei
 metadati HTTP ma non si apre — un controllo di dimensione non lo vedrebbe.
+
+**Quanto a fondo** *(deciso il 2026-08-12, implementando la PR 1)*: firma
+iniziale e terminatore, senza decomprimere i pixel. Coglie i due casi reali — il
+download troncato e la pagina di errore HTML servita con stato 200 — a memoria
+costante e senza una libreria di immagini. Non coglie la corruzione interna con
+gli estremi intatti, che è rara e ha comunque lo stesso rimedio: riscaricare la
+carta. Le immagini sono copie sostituibili, non originali: un controllo più
+severo si aggiunge quando servirà, non prima.
 
 Conseguenze:
 
