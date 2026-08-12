@@ -1755,5 +1755,42 @@
   "console": {
     "toggle": "Console log",
     "title": "Console"
+  },
+  "jobs": {
+    "tab": "Jobs",
+    "drawerTabs": "Messages and jobs",
+    "openPanel": "Background jobs",
+    "activeCount_one": "{{count}} job",
+    "activeCount_other": "{{count}} jobs",
+    "failedCount_one": "{{count}} failed job",
+    "failedCount_other": "{{count}} failed jobs",
+    "etaShort": "~{{eta}}",
+    "waiting": "waiting",
+    "waitingResumesIn": "waiting · resumes in {{eta}}",
+    "running": "running",
+    "queued": "queued",
+    "paused": "paused",
+    "pausing": "pausing…",
+    "cancelling": "cancelling…",
+    "cancelled": "cancelled",
+    "done": "completed",
+    "failed": "failed",
+    "pause": "Pause",
+    "resume": "Resume",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "sectionRunning": "Running",
+    "sectionWaiting": "Waiting",
+    "sectionFinished": "Finished today",
+    "emptyTitle": "No jobs running",
+    "emptyDescription": "Downloads and checks show up here while you work.",
+    "type": {
+      "debug_counter": "Development probe",
+      "debug_restart_only": "Development probe (restart only)"
+    },
+    "closeTitle_one": "{{count}} job is still running",
+    "closeTitle_other": "{{count}} jobs are still running",
+    "closeMessage": "Closing Glossa stops them. They resume from where they left off next time you open it.",
+    "closeConfirm": "Close anyway"
   }
 }

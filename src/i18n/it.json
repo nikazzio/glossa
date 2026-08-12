@@ -1755,5 +1755,42 @@
   "console": {
     "toggle": "Console log",
     "title": "Console"
+  },
+  "jobs": {
+    "tab": "Lavori",
+    "drawerTabs": "Messaggi e lavori",
+    "openPanel": "Lavori in background",
+    "activeCount_one": "{{count}} lavoro",
+    "activeCount_other": "{{count}} lavori",
+    "failedCount_one": "{{count}} lavoro non riuscito",
+    "failedCount_other": "{{count}} lavori non riusciti",
+    "etaShort": "~{{eta}}",
+    "waiting": "in attesa",
+    "waitingResumesIn": "in attesa · riprende fra {{eta}}",
+    "running": "in corso",
+    "queued": "in coda",
+    "paused": "in pausa",
+    "pausing": "in pausa…",
+    "cancelling": "in annullamento…",
+    "cancelled": "annullato",
+    "done": "completato",
+    "failed": "non riuscito",
+    "pause": "Metti in pausa",
+    "resume": "Riprendi",
+    "retry": "Riprova",
+    "cancel": "Annulla",
+    "sectionRunning": "In corso",
+    "sectionWaiting": "In attesa",
+    "sectionFinished": "Terminati oggi",
+    "emptyTitle": "Nessun lavoro in corso",
+    "emptyDescription": "Scaricamenti e verifiche compaiono qui mentre lavori.",
+    "type": {
+      "debug_counter": "Prova di sviluppo",
+      "debug_restart_only": "Prova di sviluppo (da rifare)"
+    },
+    "closeTitle_one": "C'è {{count}} lavoro in corso",
+    "closeTitle_other": "Ci sono {{count}} lavori in corso",
+    "closeMessage": "Chiudendo Glossa si fermano. Riprenderanno dal punto raggiunto alla prossima apertura.",
+    "closeConfirm": "Chiudi comunque"
   }
 }

@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, Highlighter, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
@@ -10,6 +10,8 @@ import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
+import { JobsIndicator } from '../jobs/JobsIndicator';
+import { JobsPanel } from '../jobs/JobsPanel';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -65,13 +67,25 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   );
 }
 
-function ConsoleDrawer() {
+/**
+ * Il pannello in basso (D20). Log e lavori sono schede della stessa area — le
+ * due facce della domanda "cosa sta facendo il programma" — sul modello del
+ * pannello di VS Code. Una destinazione sola: al passaggio del mouse un
+ * riepilogo, al clic il pannello.
+ */
+function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
+  const { t } = useTranslation();
   const chunks = useChunksStore((s) => s.chunks);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
   const setShowConsoleDrawer = useUiStore((s) => s.setShowConsoleDrawer);
   const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
   const height = useUiStore((s) => s.consoleDrawerHeight);
   const setHeight = useUiStore((s) => s.setConsoleDrawerHeight);
+  const drawerTab = useUiStore((s) => s.drawerTab);
+  const setDrawerTab = useUiStore((s) => s.setDrawerTab);
+  // Fuori da un progetto i messaggi della pipeline non esistono: resta la
+  // scheda dei lavori, che invece vale ovunque.
+  const activeTab = showConsoleTab ? drawerTab : 'jobs';
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
@@ -106,15 +120,53 @@ function ConsoleDrawer() {
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>
+      {showConsoleTab && (
+        <div
+          role="tablist"
+          aria-label={t('jobs.drawerTabs')}
+          className="flex shrink-0 items-center gap-1 border-b border-terminal-border bg-terminal-chrome px-2 py-1"
+        >
+          <IconButton
+            size="xs"
+            tone={activeTab === 'console' ? 'accent' : 'default'}
+            onClick={() => setDrawerTab('console')}
+            title={t('console.toggle')}
+            id="drawer-tab-console"
+            role="tab"
+            aria-selected={activeTab === 'console'}
+            aria-controls="console-drawer-panel"
+            tooltipSide="top"
+          >
+            <Terminal size={11} />
+          </IconButton>
+          <IconButton
+            size="xs"
+            tone={activeTab === 'jobs' ? 'accent' : 'default'}
+            onClick={() => setDrawerTab('jobs')}
+            title={t('jobs.tab')}
+            id="drawer-tab-jobs"
+            role="tab"
+            aria-selected={activeTab === 'jobs'}
+            aria-controls="jobs-drawer-panel"
+            tooltipSide="top"
+          >
+            <ListChecks size={11} />
+          </IconButton>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-hidden">
-        <OperationsTab
-          panelId="console-drawer-panel"
-          labelledBy="console-drawer-label"
-          currentChunkId={selectedChunkId}
-          chunks={chunks}
-          onSelectChunk={setSelectedChunkId}
-          onClose={() => setShowConsoleDrawer(false)}
-        />
+        {activeTab === 'console' ? (
+          <OperationsTab
+            panelId="console-drawer-panel"
+            labelledBy="console-drawer-label"
+            currentChunkId={selectedChunkId}
+            chunks={chunks}
+            onSelectChunk={setSelectedChunkId}
+            onClose={() => setShowConsoleDrawer(false)}
+          />
+        ) : (
+          <JobsPanel panelId="jobs-drawer-panel" labelledBy="drawer-tab-jobs" />
+        )}
       </div>
     </div>
   );
@@ -256,6 +308,7 @@ export function AppStatusBar() {
   const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
+  const drawerTab = useUiStore((state) => state.drawerTab);
   const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
   const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
   const hasGlossary = usePipelineStore((state) => state.config.glossary.length > 0);
@@ -268,7 +321,9 @@ export function AppStatusBar() {
 
   return (
     <div className="relative shrink-0">
-      {showConsoleDrawer && data.kind === 'project' && <ConsoleDrawer />}
+      {showConsoleDrawer && (data.kind === 'project' || drawerTab === 'jobs') && (
+        <BottomDrawer showConsoleTab={data.kind === 'project'} />
+      )}
       <div
         role="status"
         aria-live="polite"
@@ -298,6 +353,11 @@ export function AppStatusBar() {
               {t(`statusBar.panel.${data.activePanel}`)}
             </span>
           )}
+        </div>
+
+        {/* Center: lavori in background — sempre, in ogni sezione (D19) */}
+        <div className="flex min-w-0 shrink items-center justify-center">
+          <JobsIndicator />
         </div>
 
         {/* Center: stats chunk corrente / risultati discovery in dashboard */}

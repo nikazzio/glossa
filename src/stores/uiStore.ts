@@ -82,6 +82,12 @@ interface UiState {
   chunkRailTab: ChunkRailTab;
   /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
   showConsoleDrawer: boolean;
+  /**
+   * Quale scheda mostra il pannello in basso (D20): i messaggi dell'app o i
+   * lavori in background. Log e lavori sono le due facce della stessa domanda,
+   * "cosa sta facendo il programma", quindi stanno nello stesso posto.
+   */
+  drawerTab: 'console' | 'jobs';
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
@@ -131,6 +137,7 @@ interface UiState {
   setShowInsightPanel: (show: boolean) => void;
   setChunkRailTab: (tab: ChunkRailTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
+  setDrawerTab: (tab: 'console' | 'jobs') => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
@@ -276,6 +283,7 @@ export const useUiStore = create<UiState>()(
       showInsightPanel: false,
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
+      drawerTab: 'console',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
@@ -393,6 +401,7 @@ export const useUiStore = create<UiState>()(
       setShowInsightPanel: (show) => set({ showInsightPanel: show }),
       setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
+      setDrawerTab: (tab) => set({ drawerTab: tab }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
@@ -538,6 +547,7 @@ export const useUiStore = create<UiState>()(
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         consoleDrawerHeight: state.consoleDrawerHeight,
+        drawerTab: state.drawerTab,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
         editorialAccentColor: state.editorialAccentColor,

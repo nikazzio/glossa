@@ -10,6 +10,8 @@ import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useJobsFeed } from './hooks/useJobsFeed';
+import { useCloseGuard } from './hooks/useCloseGuard';
 import { useUiStore } from './stores/uiStore';
 import type { UiFont, DocumentLineHeight, ColorScheme } from './stores/uiStore';
 import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
@@ -199,6 +201,10 @@ function EditorView() {
     runSingleChunk(chunkId);
   }, [runSingleChunk]);
   useProjectAutosave();
+  // I lavori in background non appartengono a una schermata: l'ascolto sta qui,
+  // in cima, e vale per tutta l'applicazione (D19).
+  useJobsFeed();
+  useCloseGuard();
   useKeyboardShortcuts({ onRunPipeline: runPipeline, onRunSingleChunk: handleRetranslateChunk });
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
