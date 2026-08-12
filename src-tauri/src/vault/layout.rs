@@ -32,6 +32,49 @@ fn is_safe_component(value: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
 }
 
+/// Radici ammesse dentro il deposito. `trash/` arriverà con il cestino (D6).
+const DERIVED_DIR: &str = "derived";
+const ALLOWED_ROOTS: [&str; 2] = [PROVIDERS_DIR, DERIVED_DIR];
+/// Estensioni che il deposito può contenere: carte e miniature, manifesto,
+/// PDF fornito dalla biblioteca (D4-bis).
+const ALLOWED_EXTENSIONS: [&str; 3] = ["jpg", "json", "pdf"];
+
+/// Verifica che un `vault_path` abbia la forma prodotta da questo modulo.
+///
+/// I comandi di verifica ricevono l'elenco dei percorsi dal frontend, e la
+/// radice del deposito è un'impostazione che la webview può scrivere: senza
+/// questo controllo direbbero a chiunque sappia invocarli se un file qualsiasi
+/// esiste. Il divieto di risalita in `absolute_path` impedisce di uscire dal
+/// deposito, non di curiosare dentro una radice scelta ad arte.
+pub fn validate_vault_path(relative: &str) -> Result<(), String> {
+    let components: Vec<&str> = Path::new(relative)
+        .components()
+        .map(|component| component.as_os_str().to_str().unwrap_or(""))
+        .collect();
+
+    let Some((file_name, folders)) = components.split_last() else {
+        return Err("empty vault path".to_string());
+    };
+    match folders.first() {
+        Some(root) if ALLOWED_ROOTS.contains(root) => {}
+        _ => return Err(format!("vault path outside the known layout: {relative}")),
+    }
+    if !folders.iter().all(|folder| is_safe_component(folder)) {
+        return Err(format!("unsafe folder in a vault path: {relative}"));
+    }
+
+    let (stem, extension) = file_name
+        .rsplit_once('.')
+        .ok_or_else(|| format!("vault path without an extension: {relative}"))?;
+    if !is_safe_component(stem) {
+        return Err(format!("unsafe file name in a vault path: {relative}"));
+    }
+    if !ALLOWED_EXTENSIONS.contains(&extension) {
+        return Err(format!("extension not allowed in the vault: {relative}"));
+    }
+    Ok(())
+}
+
 /// Cartella di una digitalizzazione: `providers/<chiave>/<id-versione>/`.
 ///
 /// `provider_key` è la chiave del registry (#214), non il nome esteso
@@ -232,6 +275,42 @@ mod tests {
             as_string(pages_dir("gallica", "v1").unwrap()),
             "providers/gallica/v1/pages"
         );
+    }
+
+    #[test]
+    fn the_shapes_this_module_produces_are_accepted() {
+        for path in [
+            "providers/gallica/v1/manifest.json",
+            "providers/gallica/v1/pages/2000/0001.jpg",
+            "providers/gallica/v1/pages/max/0034.jpg",
+            "providers/gallica/v1/thumbnails/0002.jpg",
+            "providers/gallica/v1/document.pdf",
+            "derived/asset123/0001.jpg",
+        ] {
+            assert!(validate_vault_path(path).is_ok(), "{path} deve passare");
+        }
+    }
+
+    #[test]
+    fn anything_else_in_the_vault_is_refused() {
+        // Non è il divieto di uscire dal deposito — quello sta in
+        // `absolute_path` — ma il divieto di chiedere di file che il layout non
+        // produce mai, dentro una radice scelta dalla webview.
+        for path in [
+            "glossa.db",
+            ".glossa-vault",
+            "providers/gallica/v1/pages/2000/0001.exe",
+            "providers/gallica/v1/note.txt",
+            "providers/gal lica/v1/manifest.json",
+            "trash/v1/0001.jpg",
+            "manifest.json",
+            "providers/gallica/v1/pages/2000/0001",
+        ] {
+            assert!(
+                validate_vault_path(path).is_err(),
+                "{path} deve essere rifiutato"
+            );
+        }
     }
 
     #[test]

@@ -115,20 +115,22 @@ pub fn classify_folder(candidate: &Path) -> Result<FolderKind, String> {
 /// Percorso assoluto di un file del deposito, a partire dal percorso relativo
 /// conservato in `assets.vault_path`.
 ///
-/// Rifiuta qualunque percorso che uscirebbe dalla radice: `vault_path` arriva
-/// dal database, e il database è scrivibile dalla webview.
+/// Rifiuta qualunque percorso che uscirebbe dalla radice **e** qualunque
+/// percorso che non abbia la forma del layout (D2): `vault_path` arriva dal
+/// database, e il database è scrivibile dalla webview.
 pub fn absolute_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
-    let relative = Path::new(relative);
-    if relative.is_absolute() {
+    let path = Path::new(relative);
+    if path.is_absolute() {
         return Err("vault_path must be relative to the vault root".to_string());
     }
-    if relative
+    if path
         .components()
         .any(|c| matches!(c, std::path::Component::ParentDir))
     {
         return Err("vault_path must not escape the vault root".to_string());
     }
-    Ok(root.join(relative))
+    layout::validate_vault_path(relative)?;
+    Ok(root.join(path))
 }
 
 /// Quanti file contiene una cartella e quanto pesano. Serve a dire quanto
@@ -265,6 +267,21 @@ mod tests {
         assert!(absolute_path(root, "../../etc/passwd").is_err());
         assert!(absolute_path(root, "providers/../../fuori").is_err());
         assert!(absolute_path(root, "/etc/passwd").is_err());
+    }
+
+    #[test]
+    fn absolute_path_rejects_what_the_layout_never_produces() {
+        // I percorsi da verificare arrivano dal frontend: senza questo
+        // controllo i comandi direbbero se un file qualsiasi esiste, dentro una
+        // radice che la webview può scegliere.
+        let root = Path::new("/deposito");
+        assert!(
+            absolute_path(root, "glossa.db").is_err(),
+            "fuori dal layout"
+        );
+        assert!(absolute_path(root, ".glossa-vault").is_err());
+        assert!(absolute_path(root, "providers/gallica/v1/note.txt").is_err());
+        assert!(absolute_path(root, "providers/gallica/v1/manifest.json").is_ok());
     }
 
     #[test]

@@ -108,6 +108,13 @@ fragile. Una schermata, due scelte:
 4. controllo sincronizzazione in streaming (D1-bis);
 5. parte il lavoro di migrazione.
 
+**La finestra di scelta cartella la apre il backend** *(vincolo aggiunto il
+2026-08-13, materia della PR 3)*, come già fa l'import documenti dopo #405: il
+percorso scelto non attraversa la webview e nessun comando accetta un percorso
+grezzo dal frontend. Nella PR 1 i comandi del deposito ricevono ancora la
+cartella come parametro, perché la schermata non esiste; con la schermata, la
+scelta passa dal dialogo nativo e quella superficie si chiude.
+
 ### Il marcatore
 
 Un file `.glossa-vault` nella radice, con dentro la versione del formato. Serve
