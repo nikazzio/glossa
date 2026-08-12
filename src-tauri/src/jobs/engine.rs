@@ -336,7 +336,7 @@ impl JobEngine {
                 }
                 _ => match self.handlers.get(&job.job_type) {
                     // Tipo sconosciuto: non si butta e non si indovina.
-                    None => store::park_as_paused(&conn, &job.id)?,
+                    None => store::park_as_paused(&conn, &job.id, false)?,
                     Some(handler) => match handler.recovery() {
                         Recovery::Resumable => {
                             let downloadable =
@@ -344,16 +344,16 @@ impl JobEngine {
                             if downloadable {
                                 store::requeue(&conn, &job.id, false)?;
                             } else {
-                                store::park_as_paused(&conn, &job.id)?;
+                                store::park_as_paused(&conn, &job.id, false)?;
                             }
                         }
-                        // Rifarlo da capo costa denaro: lo decide l'utente.
-                        Recovery::Restart
-                            if handler.resource_class() == ResourceClass::LanguageService =>
-                        {
-                            store::park_as_paused(&conn, &job.id)?;
-                        }
-                        Recovery::Restart => store::requeue(&conn, &job.id, true)?,
+                        // Chi non sa riprendere va rifatto da capo, ma **non da
+                        // solo**: rimetterlo in coda con l'orchestratore in moto
+                        // lo farebbe ripartire al giro successivo, che è
+                        // esattamente ciò che D13 esclude. Resta da parte, con il
+                        // progresso azzerato perché non corrisponde più a niente,
+                        // finché l'utente non lo rilancia.
+                        Recovery::Restart => store::park_as_paused(&conn, &job.id, true)?,
                     },
                 },
             }
@@ -727,9 +727,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_job_that_cannot_resume_goes_back_to_the_queue_from_the_start() {
-        // L'altro ramo di D13: senza punti intermedi affidabili si rifà, e il
-        // progresso torna a zero invece di mentire.
+    async fn a_job_that_cannot_resume_waits_for_the_user_with_no_progress() {
+        // L'altro ramo di D13: senza punti intermedi affidabili va rifatto da
+        // capo — ma **non da solo**, altrimenti riaprire l'app farebbe
+        // ripartire lavori che nessuno ha chiesto. Il progresso torna a zero
+        // perché non corrisponde più a niente.
         let path = temp_db("recovery_restart");
         let engine = engine_with(path, Observer::silent());
         let conn = engine.connection().unwrap();
@@ -752,8 +754,12 @@ mod tests {
         engine.recover_interrupted().await.unwrap();
 
         let record = store::get(&conn, "da-rifare").unwrap().unwrap();
-        assert_eq!(record.status, JobStatus::Queued);
+        assert_eq!(record.status, JobStatus::Paused, "aspetta l'utente");
         assert_eq!(record.progress, 0.0);
+        assert!(
+            store::claimable(&conn).unwrap().is_empty(),
+            "e non deve essere ripescato dal giro della coda"
+        );
     }
 
     #[tokio::test]

@@ -179,7 +179,8 @@ pub fn save_progress(
 /// A che punto era (D13). Senza, una ripresa ripartirebbe da zero.
 pub fn save_checkpoint(conn: &Connection, id: &str, checkpoint: &str) -> Result<(), String> {
     conn.execute(
-        "UPDATE jobs SET checkpoint = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        "UPDATE jobs SET checkpoint = ?2, updated_at = CURRENT_TIMESTAMP \
+         WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
         params![id, checkpoint],
     )
     .map_err(|e| format!("Failed to save the job checkpoint: {e}"))?;
@@ -189,7 +190,7 @@ pub fn save_checkpoint(conn: &Connection, id: &str, checkpoint: &str) -> Result<
 pub fn increment_attempt(conn: &Connection, id: &str) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET attempt_count = attempt_count + 1, updated_at = CURRENT_TIMESTAMP \
-         WHERE id = ?1",
+         WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
         params![id],
     )
     .map_err(|e| format!("Failed to count the attempt: {e}"))?;
@@ -251,12 +252,20 @@ pub fn requeue(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), 
     Ok(())
 }
 
-/// Riporta a `paused` un lavoro interrotto che sa riprendere (D13).
-pub fn park_as_paused(conn: &Connection, id: &str) -> Result<(), String> {
+/// Mette da parte un lavoro interrotto, in attesa che l'utente decida (D13).
+///
+/// `reset_progress` serve a chi non sa riprendere: il progresso rimasto sul
+/// database non corrisponde a niente di riutilizzabile, e mostrarlo sarebbe una
+/// bugia. Chi sa riprendere invece lo conserva, insieme al punto salvato.
+pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET status = 'paused', waiting_reason = NULL, \
-         updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
-        params![id],
+         next_attempt_at = NULL, \
+         progress = CASE WHEN ?2 THEN 0 ELSE progress END, \
+         checkpoint = CASE WHEN ?2 THEN NULL ELSE checkpoint END, \
+         updated_at = CURRENT_TIMESTAMP \
+         WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
+        params![id, reset_progress],
     )
     .map_err(|e| format!("Failed to park the job: {e}"))?;
     Ok(())
@@ -481,6 +490,23 @@ mod tests {
         assert_eq!(job.error, None);
         assert_eq!(job.next_attempt_at, None);
         assert_eq!(job.progress, 0.0);
+    }
+
+    #[test]
+    fn a_finished_job_keeps_its_checkpoint_and_its_attempts() {
+        // Stessa protezione degli altri aggiornamenti: un gestore che scrive in
+        // ritardo non tocca un lavoro già concluso.
+        let conn = migrated_connection();
+        queued(&conn, "j7");
+        save_checkpoint(&conn, "j7", r#"{"done":4}"#).unwrap();
+        set_status(&conn, "j7", JobStatus::Cancelled).unwrap();
+
+        save_checkpoint(&conn, "j7", r#"{"done":99}"#).unwrap();
+        increment_attempt(&conn, "j7").unwrap();
+
+        let job = get(&conn, "j7").unwrap().unwrap();
+        assert_eq!(job.checkpoint.as_deref(), Some(r#"{"done":4}"#));
+        assert_eq!(job.attempt_count, 0);
     }
 
     #[test]
