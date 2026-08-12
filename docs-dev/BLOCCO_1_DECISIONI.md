@@ -777,6 +777,13 @@ interrotti" e decide.
 scaricamenti che non ricordavi è ostile, e per i lavori che costano soldi è
 peggio.
 
+**Un'eccezione, a richiesta esplicita** *(aggiunta il 2026-08-13, implementando
+la PR 2; era stata chiesta il 10 agosto e non era finita nella prima stesura)*:
+un'impostazione, **spenta di default**, fa tornare in coda alla riapertura i
+soli scaricamenti interrotti — lavori di rete che sanno riprendere dal punto
+salvato. Accesa, evita di dover rimettere in moto a mano ogni sera un lavoro che
+dura ore. Non vale per i lavori che costano denaro, che restano fermi comunque.
+
 **Comporta**: un lavoro rimasto in uno stato di transizione — in pausa, in
 annullamento — al riavvio viene portato allo stato stabile corrispondente. È il
 "recovery" della issue, e va scritto una volta sola nell'orchestratore.

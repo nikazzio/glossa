@@ -2,6 +2,7 @@ mod db;
 mod deepl;
 mod documents;
 mod iiif;
+mod jobs;
 mod keystore;
 mod llm;
 mod storage_config;
@@ -65,6 +66,14 @@ pub fn run() {
 
             let vector_database = vector::VectorDatabase::initialize(app.handle());
             app.manage(vector_database);
+
+            // L'orchestratore dei lavori parte con l'applicazione (D10) e per
+            // prima cosa rimette in ordine ciò che una chiusura brusca ha
+            // lasciato a metà (D13). Un errore qui non deve impedire l'avvio:
+            // senza coda l'app resta usabile, senza finestra no.
+            if let Err(error) = jobs::commands::start(app.handle()) {
+                log::error!("jobs engine did not start: {error}");
+            }
             #[allow(unused_mut)]
             let mut log_targets: Vec<tauri_plugin_log::Target> =
                 vec![tauri_plugin_log::Target::new(
@@ -134,6 +143,13 @@ pub fn run() {
             vault::commands::verify_files_present,
             vault::commands::verify_files_integrity,
             vault::commands::free_version_pages,
+            jobs::commands::create_job,
+            jobs::commands::list_active_jobs,
+            jobs::commands::get_job,
+            jobs::commands::pause_job,
+            jobs::commands::resume_job,
+            jobs::commands::cancel_job,
+            jobs::commands::retry_job,
             documents::import_document,
             documents::export_markdown_docx,
             vector::vec_ping,
