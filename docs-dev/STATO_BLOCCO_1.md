@@ -5,7 +5,7 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-13**, notte: PR 3 e 3-bis aperte, in attesa di prova.
+Ultimo aggiornamento: **2026-08-14**, notte: PR 3, 3-bis e 4 aperte e verdi.
 
 ## Come è organizzato il lavoro
 
@@ -104,15 +104,22 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 
 ## Prossima sessione: da dove riprendere
 
-Due PR aperte e verdi, **in attesa che Niki le provi**: la **#417** (coda
-visibile) e la **#418** (impostazioni), che è impilata sulla prima e si
-ritargherà da sola su `blocco-1` quando la #417 verrà unita.
+Tre PR aperte e verdi, impilate in quest'ordine — ognuna si ritarga da sola
+quando la precedente viene unita:
 
-Ordine consigliato: provare la #417, unirla, provare la #418, unirla, poi
-aggiornare questo file e `STATO_SESSIONE_2.0.md` sulla postazione fissa. Dopo si
-parte con la **PR 4**, lo scaricamento vero, che è anche dove rientrano le
-notifiche di sistema, la schermata di primo avvio, la documentazione pubblica e
-i lavori brevi che si mostrano solo se falliscono.
+1. **#417** — coda visibile (provata da Niki il 13–14 agosto, corretti i difetti
+   emersi: pannello scuro, indicatore fisso a destra, chiusura, posizione nella
+   barra, comandi del testo spostati sopra il documento);
+2. **#418** — impostazioni di deposito e lavori, più la chiusura dell'ultimo
+   comando che accettava percorsi dal frontend (rilievi di Copilot chiusi);
+3. **#419** — scaricamento vero (**non ancora provata da Niki**).
+
+Ordine consigliato: unire #417, #418, poi provare la #419 con una fonte vera
+prima di unirla — è la prima che tocca la rete.
+
+**Poi**: notifiche di sistema (D21), pulsante di scaricamento in Biblioteca,
+schermata di primo avvio, e la PR 6 (registrazione del lavoro svolto), che il
+documento chiede di non lasciare ultima.
 
 ~~Da aprire come issue: la cartella dati usa ancora la finestra aperta dal
 frontend~~ — **chiusa nella PR 3-bis**: anche la cartella dati passa dal dialogo
