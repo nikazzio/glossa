@@ -106,9 +106,10 @@ parte con la **PR 4**, lo scaricamento vero, che è anche dove rientrano le
 notifiche di sistema, la schermata di primo avvio, la documentazione pubblica e
 i lavori brevi che si mostrano solo se falliscono.
 
-**Da aprire come issue**: la cartella **dati** (non il deposito) usa ancora la
-finestra di scelta aperta dal frontend, cioè lo schema che #405 ha superato. È
-fuori dal blocco 1 ma è lo stesso buco.
+~~Da aprire come issue: la cartella dati usa ancora la finestra aperta dal
+frontend~~ — **chiusa nella PR 3-bis**: anche la cartella dati passa dal dialogo
+nativo aperto dal backend. Dopo #405, il deposito e la cartella dati, in Glossa
+nessun comando accetta più un percorso dal frontend.
 
 ## Da provare a mano, per chi rilegge
 

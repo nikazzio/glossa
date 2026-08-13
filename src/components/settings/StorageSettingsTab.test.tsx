@@ -33,30 +33,30 @@ describe('StorageSettingsTab', () => {
   });
 
   it('does nothing when the user cancels the folder picker', async () => {
-    mocked.pickDataDirFolder.mockResolvedValue(null);
+    // La finestra la apre il backend: annullare vuol dire nessuna risposta, e
+    // non è un errore da mostrare.
+    mocked.chooseDataDirFolder.mockResolvedValue(null);
     render(<StorageSettingsTab />);
     await screen.findByText('/home/user/.config/glossa');
 
     await userEvent.click(screen.getByText('settings.storage.changeFolder'));
 
-    expect(mocked.setDataDir).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocked.chooseDataDirFolder).toHaveBeenCalled());
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('migrates to the picked folder and shows a success toast', async () => {
-    mocked.pickDataDirFolder.mockResolvedValue('/mnt/data/glossa');
-    mocked.setDataDir.mockResolvedValue(undefined);
+    mocked.chooseDataDirFolder.mockResolvedValue({ path: '/mnt/data/glossa', isOverride: true });
     render(<StorageSettingsTab />);
     await screen.findByText('/home/user/.config/glossa');
 
     await userEvent.click(screen.getByText('settings.storage.changeFolder'));
 
-    await waitFor(() => expect(mocked.setDataDir).toHaveBeenCalledWith('/mnt/data/glossa'));
-    expect(toast.success).toHaveBeenCalledWith('settings.storage.migrationSucceeded');
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('settings.storage.migrationSucceeded'));
   });
 
   it('shows an error toast when migration fails', async () => {
-    mocked.pickDataDirFolder.mockResolvedValue('/mnt/data/glossa');
-    mocked.setDataDir.mockRejectedValue(new Error('Destination folder is not writable'));
+    mocked.chooseDataDirFolder.mockRejectedValue(new Error('Destination folder is not writable'));
     render(<StorageSettingsTab />);
     await screen.findByText('/home/user/.config/glossa');
 

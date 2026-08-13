@@ -114,7 +114,7 @@ pub fn run() {
             db::backup_database_file,
             db::execute_transaction,
             storage_config::get_data_dir,
-            storage_config::set_data_dir,
+            storage_config::choose_data_dir_folder,
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,

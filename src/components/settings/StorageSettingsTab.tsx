@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { HardDrive } from 'lucide-react';
-import { getDataDir, setDataDir, pickDataDirFolder } from '../../services/storageConfigService';
+import { getDataDir, chooseDataDirFolder } from '../../services/storageConfigService';
 import { PillButton, Spinner } from '../ui';
 import { VaultSection } from './VaultSection';
 
@@ -33,11 +33,11 @@ export function StorageSettingsTab() {
   }, [refresh]);
 
   const handleChangeFolder = async () => {
-    const selected = await pickDataDirFolder();
-    if (!selected) return;
     setMigrating(true);
     try {
-      await setDataDir(selected);
+      const moved = await chooseDataDirFolder();
+      // `null` significa che l'utente ha chiuso la finestra: non è un errore.
+      if (!moved) return;
       toast.success(t('settings.storage.migrationSucceeded'));
       await refresh();
     } catch (err: unknown) {
