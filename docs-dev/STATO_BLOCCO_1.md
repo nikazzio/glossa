@@ -28,7 +28,7 @@ dritta su `main`.
 | 2 | Orchestratore dei lavori, a vuoto | #218 (metà) | **unita** in `blocco-1` (#415) |
 | 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
 | 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
-| 4 | Scaricamento vero | #218 primo consumatore | da fare |
+| 4 | Scaricamento vero | #218 primo consumatore | **in revisione** (#419) |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | da fare |

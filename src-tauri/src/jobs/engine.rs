@@ -52,6 +52,7 @@ pub struct JobContext {
     last_progress: Mutex<Option<Instant>>,
     observer: Observer,
     writes: DbWriteCoordinator,
+    default_vault_root: PathBuf,
 }
 
 /// Distanza minima fra due scritture di avanzamento (D17): aggiornare a ogni
@@ -81,6 +82,24 @@ impl JobContext {
     ) {
         self.write_progress(progress, message, eta_seconds, None, progress >= 1.0)
             .await;
+    }
+
+    /// Fermo, ma non rotto: sta rispettando i limiti della biblioteca (D17,
+    /// D18). L'interfaccia lo dice diversamente da un errore, e la barra non
+    /// finge di avanzare.
+    pub async fn report_waiting(&self, reason: &str, eta_seconds: Option<i64>) {
+        let current = self.progress_now().await;
+        self.write_progress(current, None, eta_seconds, Some(reason), true)
+            .await;
+    }
+
+    async fn progress_now(&self) -> f64 {
+        let _write_guard = self.writes.lock().await;
+        open(&self.db_path)
+            .ok()
+            .and_then(|conn| store::get(&conn, &self.id).ok().flatten())
+            .map(|job| job.progress)
+            .unwrap_or(0.0)
     }
 
     async fn write_progress(
@@ -125,6 +144,30 @@ impl JobContext {
                 true
             }
         }
+    }
+
+    /// Il database, con il lucchetto delle scritture già preso: i gestori
+    /// scrivono le loro righe passando da qui, come tutto il resto dell'app.
+    pub async fn with_database<T>(
+        &self,
+        work: impl FnOnce(&Connection) -> Result<T, String>,
+    ) -> Result<T, String> {
+        let _write_guard = self.writes.lock().await;
+        let conn = open(&self.db_path)?;
+        work(&conn)
+    }
+
+    /// La radice del deposito: quella scelta dall'utente, se c'è, altrimenti
+    /// quella predefinita risolta all'avvio (D1).
+    pub async fn vault_root(&self) -> Result<PathBuf, String> {
+        let configured = self
+            .with_database(|conn| store::read_setting(conn, "vault_root"))
+            .await?;
+        Ok(configured
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| self.default_vault_root.clone()))
     }
 
     /// A che punto è arrivato, per la ripresa (D13).
@@ -177,6 +220,9 @@ fn open(path: &Path) -> Result<Connection, String> {
 
 pub struct JobEngine {
     handlers: HashMap<String, Arc<dyn JobHandler>>,
+    /// Radice del deposito quando nessuno ne ha scelta una: risolta una volta
+    /// all'avvio, perché richiede l'handle dell'applicazione.
+    default_vault_root: PathBuf,
     permits: HashMap<ResourceClass, Arc<Semaphore>>,
     controls: Mutex<HashMap<String, Arc<JobControl>>>,
     db_path: PathBuf,
@@ -187,9 +233,15 @@ pub struct JobEngine {
 }
 
 impl JobEngine {
-    pub fn new(db_path: PathBuf, observer: Observer, writes: DbWriteCoordinator) -> Self {
+    pub fn new(
+        db_path: PathBuf,
+        observer: Observer,
+        writes: DbWriteCoordinator,
+        default_vault_root: PathBuf,
+    ) -> Self {
         Self {
             handlers: HashMap::new(),
+            default_vault_root,
             permits: HashMap::new(),
             controls: Mutex::new(HashMap::new()),
             db_path,
@@ -417,6 +469,7 @@ impl JobEngine {
             last_progress: Mutex::new(None),
             observer: self.observer.clone(),
             writes: self.writes.clone(),
+            default_vault_root: self.default_vault_root.clone(),
         };
 
         tokio::spawn(async move {
@@ -504,7 +557,12 @@ mod tests {
     }
 
     fn engine_with(path: PathBuf, observer: Observer) -> Arc<JobEngine> {
-        let mut engine = JobEngine::new(path, observer, DbWriteCoordinator::default());
+        let mut engine = JobEngine::new(
+            path,
+            observer,
+            DbWriteCoordinator::default(),
+            std::env::temp_dir().join("glossa_vault_tests"),
+        );
         engine.register("debug_counter", Arc::new(CounterJob));
         engine.register("debug_restart_only", Arc::new(RestartOnlyJob));
         engine.load_limits().expect("limits");

@@ -1840,13 +1840,15 @@
     "emptyDescription": "Scaricamenti e verifiche compaiono qui mentre lavori.",
     "type": {
       "debug_counter": "Prova di sviluppo",
-      "debug_restart_only": "Prova di sviluppo (da rifare)"
+      "debug_restart_only": "Prova di sviluppo (da rifare)",
+      "source_download": "Scaricamento fonte"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
     "closeMessage": "Chiudendo Glossa si fermano. Riprenderanno dal punto raggiunto alla prossima apertura.",
     "closeConfirm": "Chiudi comunque",
     "pauseAll": "Metti in pausa tutti ({{count}})",
-    "resumeAll": "Riprendi tutti ({{count}})"
+    "resumeAll": "Riprendi tutti ({{count}})",
+    "waitingForLibrary": "in attesa · limiti della biblioteca"
   }
 }

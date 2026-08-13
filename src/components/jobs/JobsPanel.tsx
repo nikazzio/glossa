@@ -1,7 +1,13 @@
 import { Pause, Play, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TerminalIconButton } from './TerminalIconButton';
-import { formatEta, isTerminal, isWaitingToRetry, type Job } from '../../services/jobsService';
+import {
+  formatEta,
+  isTerminal,
+  isWaitingForLibrary,
+  isWaitingToRetry,
+  type Job,
+} from '../../services/jobsService';
 import { isFinishedRecently, isRunning, useJobsStore } from '../../stores/jobsStore';
 
 /**
@@ -120,6 +126,9 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   if (isWaitingToRetry(job)) {
     return <span className="text-terminal-warn">{eta ? t('jobs.waitingResumesIn', { eta }) : t('jobs.waiting')}</span>;
   }
+  if (isWaitingForLibrary(job)) {
+    return <span className="text-terminal-warn">{t('jobs.waitingForLibrary')}</span>;
+  }
   if (job.status === 'error') {
     return <span className="text-terminal-error">{job.error ?? t('jobs.failed')}</span>;
   }
@@ -142,7 +151,7 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
 function JobProgress({ job }: { job: Job }) {
   if (isTerminal(job) || job.progress <= 0) return null;
 
-  const stalled = isWaitingToRetry(job) || job.status === 'paused';
+  const stalled = isWaitingToRetry(job) || isWaitingForLibrary(job) || job.status === 'paused';
 
   return (
     <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-terminal-line">

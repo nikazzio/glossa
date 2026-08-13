@@ -1,6 +1,7 @@
 mod db;
 mod deepl;
 mod documents;
+mod download;
 mod iiif;
 mod jobs;
 mod keystore;
@@ -158,6 +159,7 @@ pub fn run() {
             jobs::commands::resume_job,
             jobs::commands::cancel_job,
             jobs::commands::retry_job,
+            download::enqueue_source_download,
             documents::import_document,
             documents::export_markdown_docx,
             vector::vec_ping,
