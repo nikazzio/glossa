@@ -19,6 +19,25 @@ pub struct FolderCheck {
     pub writable: bool,
 }
 
+/// Crea il deposito predefinito all'avvio, se nessuno ne ha scelto un altro.
+///
+/// Senza questo, la cartella `vault/` dentro la cartella dati non esiste finché
+/// non arriva il primo scaricamento, e lo stato del deposito risulterebbe
+/// "non raggiungibile" — che è il messaggio del disco staccato (D1), non della
+/// cartella mai creata. Una radice **scelta dall'utente** invece non si crea
+/// mai da soli: se non c'è, è perché il disco non è collegato.
+pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
+    let db = crate::jobs::engine::open_database(&crate::storage_config::db_path(app)?)?;
+    let configured: Option<String> = super::super::jobs::store::read_setting(&db, "vault_root")?;
+    if configured
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
+    {
+        return Ok(());
+    }
+    super::ensure_root(&resolve_root(app, None)?)
+}
+
 /// Stato del deposito, senza scandire niente (D5).
 #[tauri::command]
 pub fn get_vault_status(

@@ -87,9 +87,10 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
   solo su Windows e richiede una chiamata di sistema dedicata.
 - **Notifiche di sistema** (D21): rinviate alla PR 4, quando esiste un lavoro
   vero da annunciare.
-- **Documentazione pubblica** (`docs/`, `docs/en/`) e aiuto in-app: rinviati alla
-  PR 4. Oggi i soli lavori esistenti sono quelli finti delle build di sviluppo:
-  documentarli darebbe istruzioni per qualcosa che l'utente non può avviare.
+- ~~Documentazione pubblica e aiuto in-app~~ — **fatti**: guida
+  `guides/storage-and-jobs` in italiano e inglese, con voce in barra laterale, e
+  sezione «Archiviazione e lavori» nell'aiuto dentro l'app. È lì che vive la
+  spiegazione lunga: i pannelli delle impostazioni restano asciutti.
 - **Barra di stato unificata, salvataggio generalizzato, console di tutta
   l'app**: restano a #413, sono lavoro di guscio.
 - **Livello bibliografico per gli stampati**: #404, fuori dal blocco.

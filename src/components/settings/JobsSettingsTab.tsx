@@ -72,20 +72,12 @@ export function JobsSettingsTab() {
       className="flex flex-col gap-6"
     >
       <section className="flex flex-col gap-3">
-        <p className="text-xs leading-relaxed text-editorial-muted">
-          {t('settings.jobs.limitsDescription')}
-        </p>
         {limits &&
           RESOURCE_CLASSES.map((resource) => (
             <div key={resource} className="flex items-center justify-between gap-3">
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-editorial-ink">
-                  {t(`settings.jobs.resource.${resource}`)}
-                </span>
-                <span className="text-[11px] text-editorial-muted">
-                  {t(`settings.jobs.resourceHint.${resource}`)}
-                </span>
-              </div>
+              <span className="text-xs font-medium text-editorial-ink">
+                {t(`settings.jobs.resource.${resource}`)}
+              </span>
               <Select
                 value={String(limits[resource])}
                 onChange={(value) => changeLimit(resource, value)}
@@ -105,16 +97,13 @@ export function JobsSettingsTab() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-2 border-t border-editorial-border/60 pt-4">
+      <section className="border-t border-editorial-border/60 pt-4">
         <ToggleRow
           icon={<RotateCw size={13} />}
           label={t('settings.jobs.autoResume')}
           checked={autoResume}
           onChange={() => void changeAutoResume(!autoResume)}
         />
-        <p className="text-[11px] leading-relaxed text-editorial-muted">
-          {t('settings.jobs.autoResumeHint')}
-        </p>
       </section>
     </div>
   );

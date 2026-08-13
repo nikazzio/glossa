@@ -67,6 +67,13 @@ pub fn run() {
             let vector_database = vector::VectorDatabase::initialize(app.handle());
             app.manage(vector_database);
 
+            // Il deposito predefinito esiste dal primo avvio: altrimenti la
+            // sua cartella risulterebbe "non raggiungibile" solo perché non è
+            // ancora stata creata (D1).
+            if let Err(error) = vault::commands::ensure_default_root(app.handle()) {
+                log::error!("default vault not created: {error}");
+            }
+
             // L'orchestratore dei lavori parte con l'applicazione (D10) e per
             // prima cosa rimette in ordine ciò che una chiusura brusca ha
             // lasciato a metà (D13). Un errore qui non deve impedire l'avvio:

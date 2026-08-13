@@ -13,6 +13,7 @@ import { OperationsTab } from '../document/OperationsTab';
 import { JobsIndicator } from '../jobs/JobsIndicator';
 import { TerminalIconButton } from '../jobs/TerminalIconButton';
 import { JobsPanel } from '../jobs/JobsPanel';
+import { JobsBulkControls } from '../jobs/JobsBulkControls';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -186,8 +187,10 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
           <ListChecks size={12} />
         </DrawerTab>
         <div className="flex-1" />
-        {/* Chiudere dev'essere possibile da qui: fuori da un progetto il
-            comando in barra che ha aperto il pannello potrebbe non esserci. */}
+        {activeTab === 'jobs' && <JobsBulkControls />}
+        {/* Separato dai comandi dei lavori: chiudere il pannello per sbaglio
+            mentre si voleva mettere in pausa sarebbe fastidioso. */}
+        <span className="mx-1.5 h-4 w-px bg-terminal-border" aria-hidden="true" />
         <TerminalIconButton label={t('common.close')} onClick={() => setShowConsoleDrawer(false)}>
           <X size={12} />
         </TerminalIconButton>

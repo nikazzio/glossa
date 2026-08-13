@@ -58,12 +58,9 @@ export function StorageSettingsTab() {
     >
       <div className="flex items-start gap-3">
         <HardDrive size={16} className="mt-0.5 shrink-0 text-editorial-muted" />
-        <div className="flex-1">
-          <p className="font-display text-sm text-editorial-ink">{t('settings.storage.title')}</p>
-          <p className="mt-1 text-xs leading-relaxed text-editorial-muted">
-            {t('settings.storage.description')}
-          </p>
-        </div>
+        <p className="flex-1 font-display text-sm text-editorial-ink">
+          {t('settings.storage.title')}
+        </p>
       </div>
 
       <div className="rounded-2xl border border-editorial-border bg-surface-panel px-4 py-3">
