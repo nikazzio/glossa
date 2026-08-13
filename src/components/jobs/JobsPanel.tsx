@@ -1,6 +1,6 @@
-import { ListChecks, Pause, Play, RotateCcw, X } from 'lucide-react';
+import { Pause, Play, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, EmptyState } from '../ui';
+import { TerminalIconButton } from './TerminalIconButton';
 import { formatEta, isTerminal, isWaitingToRetry, type Job } from '../../services/jobsService';
 import { isFinishedRecently, isRunning, useJobsStore } from '../../stores/jobsStore';
 
@@ -34,11 +34,10 @@ export function JobsPanel({ panelId, labelledBy }: { panelId: string; labelledBy
       className="terminal-scrollbar h-full overflow-y-auto bg-terminal-bg px-3 py-2"
     >
       {isEmpty ? (
-        <EmptyState
-          icon={<ListChecks size={20} />}
-          message={t('jobs.emptyTitle')}
-          hint={t('jobs.emptyDescription')}
-        />
+        <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 py-12 text-center">
+          <p className="text-sm text-terminal-secondary">{t('jobs.emptyTitle')}</p>
+          <p className="text-xs text-terminal-dim">{t('jobs.emptyDescription')}</p>
+        </div>
       ) : (
         <>
           <JobsSection title={t('jobs.sectionRunning')} jobs={running} />
@@ -79,32 +78,32 @@ function JobRow({ job }: { job: Job }) {
   const description = job.message ?? t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
 
   return (
-    <div className="rounded border border-terminal-line bg-terminal-chrome/60 px-2 py-1.5">
-      <div className="flex items-center gap-2">
+    <div className="rounded border border-terminal-line bg-terminal-chrome px-2.5 py-2">
+      <div className="flex items-center gap-3">
         <span className="min-w-0 flex-1 truncate text-xs text-terminal-ink">{description}</span>
-        <span className="shrink-0 text-[11px] text-terminal-muted">
+        <span className="shrink-0 whitespace-nowrap text-[11px] text-terminal-muted">
           <JobStateLabel job={job} eta={eta} />
         </span>
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-1">
           {job.status === 'running' && (
-            <IconButton size="xs" tone="default" onClick={() => pause(job.id)} title={t('jobs.pause')} tooltipSide="top">
+            <TerminalIconButton label={t('jobs.pause')} onClick={() => void pause(job.id)}>
               <Pause size={11} />
-            </IconButton>
+            </TerminalIconButton>
           )}
           {(job.status === 'paused' || waitingToRetry) && (
-            <IconButton size="xs" tone="default" onClick={() => resume(job.id)} title={t('jobs.resume')} tooltipSide="top">
+            <TerminalIconButton label={t('jobs.resume')} onClick={() => void resume(job.id)}>
               <Play size={11} />
-            </IconButton>
+            </TerminalIconButton>
           )}
           {job.status === 'error' && (
-            <IconButton size="xs" tone="default" onClick={() => retry(job.id)} title={t('jobs.retry')} tooltipSide="top">
+            <TerminalIconButton label={t('jobs.retry')} onClick={() => void retry(job.id)}>
               <RotateCcw size={11} />
-            </IconButton>
+            </TerminalIconButton>
           )}
           {!isTerminal(job) && (
-            <IconButton size="xs" tone="danger" onClick={() => cancel(job.id)} title={t('jobs.cancel')} tooltipSide="top">
+            <TerminalIconButton label={t('jobs.cancel')} tone="danger" onClick={() => void cancel(job.id)}>
               <X size={11} />
-            </IconButton>
+            </TerminalIconButton>
           )}
         </div>
       </div>

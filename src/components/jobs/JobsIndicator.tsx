@@ -37,7 +37,10 @@ export function JobsIndicator() {
   const eta = formatEta(summary.etaSeconds);
 
   return (
-    <div className="flex min-w-0 items-center gap-1.5">
+    // Larghezza contenuta e testo troncato: la barra di stato deve restare
+    // identica in ogni sezione, e una riga che si allunga sposterebbe tutto il
+    // resto (D19).
+    <div className="flex min-w-0 max-w-[22rem] items-center gap-1.5">
       <IconButton
         size="xs"
         tone={isOnJobs ? 'accent' : 'default'}
