@@ -504,7 +504,6 @@
       "customLocation": "Posizione personalizzata",
       "changeFolder": "Cambia cartella",
       "migrating": "Spostamento in corso…",
-      "migrationNote": "Copia il database e chiede il riavvio. L'originale resta.",
       "migrationSucceeded": "Posizione dati aggiornata. Riavvia Glossa per applicarla.",
       "migrationFailed": "Spostamento posizione dati fallito",
       "loadFailed": "Lettura posizione dati fallita",
@@ -512,7 +511,7 @@
         "title": "Cartella del deposito",
         "defaultLocation": "Dentro la cartella dati",
         "customLocation": "Cartella scelta",
-        "chooseFolder": "Scegli cartella",
+        "chooseFolder": "Cambia cartella",
         "keepTogether": "Tieni tutto insieme",
         "adopted": "Cartella del deposito aggiornata",
         "chooseFailed": "Impossibile impostare la cartella del deposito",
@@ -570,7 +569,6 @@
       "loadFailed": "Impossibile leggere le impostazioni dei lavori",
       "saveFailed": "Impossibile salvare le impostazioni dei lavori",
       "automatic": "automatico",
-      "networkWarning": "Il limite di rete dipende dalla biblioteca, non dal computer.",
       "autoResume": "Riprendi gli scaricamenti alla riapertura",
       "resource": {
         "network": "Scaricamenti",
@@ -1798,7 +1796,8 @@
     "discoveryResults_other": "{{count}} risultati",
     "discoveryMore": "altri disponibili",
     "discoveryPages_one": "{{count}} pagina",
-    "discoveryPages_other": "{{count}} pagine"
+    "discoveryPages_other": "{{count}} pagine",
+    "panelToggle": "Messaggi e lavori"
   },
   "workflow": {
     "translation": "Traduzione",

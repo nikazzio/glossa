@@ -1,7 +1,8 @@
-import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelBottom, PanelLeft, PanelRight, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -339,6 +340,67 @@ function DiscoveryCenterStats() {
   );
 }
 
+
+/**
+ * Dove sono. Prima zona della barra, **sempre compilata**: la posizione è
+ * l'informazione che non manca mai, e sapere di trovarla sempre lì vale più di
+ * qualunque dato in più.
+ */
+function LocationLabel({ data }: { data: ReturnType<typeof useStatusBarData> }) {
+  const { t } = useTranslation();
+  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+
+  if (data.kind === 'project') {
+    return (
+      <>
+        {activeWorkspace && (
+          <>
+            <span className="truncate">{activeWorkspace.name}</span>
+            <span className="text-editorial-border">/</span>
+          </>
+        )}
+        <span className="truncate font-medium text-editorial-ink">{data.projectName}</span>
+        {data.activePanel && (
+          <>
+            <span className="text-editorial-border">/</span>
+            <span className="truncate text-editorial-accent">
+              {t(`statusBar.panel.${data.activePanel}`)}
+            </span>
+          </>
+        )}
+      </>
+    );
+  }
+
+  if (data.kind === 'workspace' && data.areaName === 'dashboard') {
+    // La Dashboard è app-level: nessun prefisso workspace.
+    return <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>;
+  }
+
+  if (data.kind === 'workspace' && data.areaName === 'workspace') {
+    return (
+      <>
+        <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
+        <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+      </>
+    );
+  }
+
+  if (data.kind === 'workspace') {
+    return (
+      <>
+        <span className="truncate">{data.workspaceName}</span>
+        <span className="text-editorial-border">/</span>
+        <span className="truncate font-medium text-editorial-ink">
+          {t(AREA_KEY[data.areaName] ?? data.areaName)}
+        </span>
+      </>
+    );
+  }
+
+  return null;
+}
+
 export function AppStatusBar() {
   const { t } = useTranslation();
   const data = useStatusBarData();
@@ -349,6 +411,7 @@ export function AppStatusBar() {
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
   const drawerTab = useUiStore((state) => state.drawerTab);
+  const setDrawerTab = useUiStore((state) => state.setDrawerTab);
   const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
   const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
   const hasGlossary = usePipelineStore((state) => state.config.glossary.length > 0);
@@ -364,67 +427,49 @@ export function AppStatusBar() {
       {showConsoleDrawer && (data.kind === 'project' || drawerTab === 'jobs') && (
         <BottomDrawer showConsoleTab={data.kind === 'project'} />
       )}
+      {/* Tre zone fisse, sempre nello stesso ordine e con le stesse larghezze
+          (le due colonne laterali sono `1fr`, quindi il centro è davvero al
+          centro in ogni sezione). Cambia **cosa** mostrano, mai **dove** stanno:
+          una stessa informazione non deve spostarsi passando da una schermata
+          all'altra. Modifica a D19 chiesta dall'utente il 2026-08-14:
+          l'indicatore dei lavori sta a destra insieme agli altri comandi
+          globali, non al centro. */}
       <div
         role="status"
         aria-live="polite"
-        className="flex h-8 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
+        className="grid h-8 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
       >
-        {/* Left: pannello attivo */}
+        {/* 1 — Dove sono: sempre, in ogni sezione. */}
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-          {data.kind === 'workspace' &&
-            (data.areaName === 'dashboard' ? (
-              // La Dashboard è app-level: nessun prefisso workspace nel breadcrumb.
-              <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>
-            ) : data.areaName === 'workspace' ? (
-              <>
-                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-              </>
-            ) : (
-              <>
-                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-                <span className="text-editorial-border">/</span>
-                <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
-                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-              </>
-            ))}
-          {data.kind === 'project' && data.activePanel && (
-            <span className="text-editorial-accent">
-              {t(`statusBar.panel.${data.activePanel}`)}
-            </span>
-          )}
+          <LocationLabel data={data} />
         </div>
 
-        {/* Center: stats chunk corrente / risultati discovery in dashboard */}
-        {data.kind === 'project' && data.totalChunks > 0 && (
-          <div className="hidden items-center sm:flex">
-            <ChunkCenterStats />
-          </div>
-        )}
-        {data.kind === 'workspace' && data.areaName === 'dashboard' && (
-          <div className="hidden min-w-0 items-center sm:flex">
-            <DiscoveryCenterStats />
-          </div>
-        )}
+        {/* 2 — Il contesto della schermata: l'unica zona che può restare
+            vuota, perché non tutte le schermate hanno numeri da dire. */}
+        <div className="hidden min-w-0 items-center justify-center sm:flex">
+          {data.kind === 'project' && data.totalChunks > 0 && <ChunkCenterStats />}
+          {data.kind === 'workspace' && data.areaName === 'dashboard' && <DiscoveryCenterStats />}
+        </div>
 
-        {/* Right: lavori + console + controlli vista + salvataggio.
-            L'indicatore dei lavori sta **sempre qui**, nella stessa posizione in
-            ogni sezione: cambia cosa mostra, non dove sta. Accanto al comando
-            della console perché aprono lo stesso pannello. */}
-        <div className="flex shrink-0 items-center gap-2">
+        {/* 3 — Comandi e stato globali, ordine invariabile:
+            lavori · pannello · controlli vista · salvataggio. */}
+        <div className="flex shrink-0 items-center justify-end gap-2">
           <JobsIndicator />
-          {data.kind === 'project' && (
-            <IconButton
-              size="xs"
-              tone={showConsoleDrawer ? 'accent' : 'default'}
-              onClick={() => setShowConsoleDrawer(!showConsoleDrawer)}
-              title={t('console.toggle')}
-              ariaPressed={showConsoleDrawer}
-              tooltipSide="top"
-            >
-              <Terminal size={11} />
-            </IconButton>
-          )}
+          <IconButton
+            size="xs"
+            tone={showConsoleDrawer ? 'accent' : 'default'}
+            onClick={() => {
+              // Aprendolo da qui si va sui messaggi dove esistono — dentro una
+              // traduzione — e sui lavori altrove, che è l'unica cosa che c'è.
+              if (!showConsoleDrawer) setDrawerTab(data.kind === 'project' ? 'console' : 'jobs');
+              setShowConsoleDrawer(!showConsoleDrawer);
+            }}
+            title={t('statusBar.panelToggle')}
+            ariaPressed={showConsoleDrawer}
+            tooltipSide="top"
+          >
+            <PanelBottom size={11} />
+          </IconButton>
           {showPaneControls ? (
             <>
               <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
@@ -489,12 +534,15 @@ export function AppStatusBar() {
               </div>
             </>
           ) : null}
-          {data.kind === 'project' && (
-            <>
-              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+          {/* Lo spazio del salvataggio è riservato anche dove non c'è niente
+              da salvare: senza, tutto il gruppo scivolerebbe a destra cambiando
+              sezione. Generalizzarlo a trascrizioni e fonti è lavoro di #413. */}
+          <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+          <div className="flex min-w-[5.5rem] justify-end">
+            {data.kind === 'project' && (
               <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} />
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

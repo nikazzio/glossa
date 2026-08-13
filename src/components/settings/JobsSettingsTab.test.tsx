@@ -61,12 +61,6 @@ describe('impostazioni dei lavori', () => {
     expect(saveLimit).toHaveBeenCalledWith('disk', 2);
   });
 
-  it('avvisa che il limite verso le biblioteche non è una questione di potenza', async () => {
-    render(<JobsSettingsTab />);
-
-    expect(await screen.findByText('settings.jobs.networkWarning')).toBeInTheDocument();
-  });
-
   it('la ripresa automatica parte spenta e si può accendere', async () => {
     const user = userEvent.setup();
     render(<JobsSettingsTab />);

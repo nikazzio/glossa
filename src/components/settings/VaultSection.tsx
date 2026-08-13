@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Archive, AlertTriangle } from 'lucide-react';
-import { PillButton, Spinner } from '../ui';
+import { Spinner, Tooltip } from '../ui';
 import {
   chooseVaultFolder,
   getVaultStatus,
@@ -103,7 +103,16 @@ export function VaultSection() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-editorial-border bg-surface-panel px-4 py-3">
+      {/* La scheda **è** il comando: cliccarla apre la scelta della cartella.
+          Un pulsante separato ripeterebbe la stessa azione occupando spazio. */}
+      <Tooltip label={t('settings.storage.vault.chooseFolder')} side="top">
+        <button
+          type="button"
+          onClick={() => void handleChoose()}
+          disabled={busy || loading}
+          aria-label={t('settings.storage.vault.chooseFolder')}
+          className="w-full rounded-2xl border border-editorial-border bg-surface-panel px-4 py-3 text-left transition-colors hover:border-editorial-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+        >
         <p className="text-xs font-mono text-editorial-muted">
           {status?.isDefault
             ? t('settings.storage.vault.defaultLocation')
@@ -127,7 +136,8 @@ export function VaultSection() {
             )}
           </>
         )}
-      </div>
+        </button>
+      </Tooltip>
 
       {syncWarning && (
         <p className="flex items-start gap-2 text-xs leading-relaxed text-editorial-warning">
@@ -136,16 +146,16 @@ export function VaultSection() {
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <PillButton onClick={() => void handleChoose()} disabled={busy || loading}>
-          {t('settings.storage.vault.chooseFolder')}
-        </PillButton>
-        {!status?.isDefault && (
-          <PillButton onClick={() => void handleDefault()} disabled={busy || loading}>
-            {t('settings.storage.vault.keepTogether')}
-          </PillButton>
-        )}
-      </div>
+      {!status?.isDefault && (
+        <button
+          type="button"
+          onClick={() => void handleDefault()}
+          disabled={busy || loading}
+          className="self-start text-xs text-editorial-muted underline-offset-4 transition-colors hover:text-editorial-accent hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+        >
+          {t('settings.storage.vault.keepTogether')}
+        </button>
+      )}
     </section>
   );
 }

@@ -39,7 +39,7 @@ describe('StorageSettingsTab', () => {
     render(<StorageSettingsTab />);
     await screen.findByText('/home/user/.config/glossa');
 
-    await userEvent.click(screen.getByText('settings.storage.changeFolder'));
+    await userEvent.click(screen.getByRole('button', { name: /settings.storage.changeFolder/ }));
 
     await waitFor(() => expect(mocked.chooseDataDirFolder).toHaveBeenCalled());
     expect(toast.success).not.toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe('StorageSettingsTab', () => {
     render(<StorageSettingsTab />);
     await screen.findByText('/home/user/.config/glossa');
 
-    await userEvent.click(screen.getByText('settings.storage.changeFolder'));
+    await userEvent.click(screen.getByRole('button', { name: /settings.storage.changeFolder/ }));
 
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('settings.storage.migrationSucceeded'));
   });
@@ -60,7 +60,7 @@ describe('StorageSettingsTab', () => {
     render(<StorageSettingsTab />);
     await screen.findByText('/home/user/.config/glossa');
 
-    await userEvent.click(screen.getByText('settings.storage.changeFolder'));
+    await userEvent.click(screen.getByRole('button', { name: /settings.storage.changeFolder/ }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith(
       'settings.storage.migrationFailed',

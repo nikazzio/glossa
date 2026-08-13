@@ -62,7 +62,7 @@ describe('AppStatusBar', () => {
     expect(screen.getByText('Translations')).toBeInTheDocument();
   });
 
-  it('renders console toggle and save indicator in project context', () => {
+  it('renders the panel toggle and the save indicator in project context', () => {
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'project',
       projectName: 'Progetto A',
@@ -80,7 +80,7 @@ describe('AppStatusBar', () => {
     });
     render(<AppStatusBar />);
     // Il nome progetto non compare più nella barra (rimosso breadcrumb); il toggle console è sempre presente.
-    expect(screen.getByRole('button', { name: 'console.toggle' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'statusBar.panelToggle' })).toBeInTheDocument();
   });
 
   it('shows save indicator as dirty', () => {
@@ -182,5 +182,62 @@ describe('pannello dei lavori dalla barra di stato', () => {
     const inProject = screen.getByRole('button', { name: 'jobs.openPanel' });
 
     expect(inProject.parentElement?.parentElement?.className).toBe(workspaceClasses);
+  });
+});
+
+describe('continuità della barra di stato', () => {
+  it('dentro una traduzione il pannello si apre sui messaggi', async () => {
+    const user = userEvent.setup();
+    useUiStore.setState({ showConsoleDrawer: false, drawerTab: 'jobs' });
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'project',
+      projectName: 'Manoscritto',
+      pipelineName: null,
+      sourceWords: 0,
+      targetWords: 0,
+      coveragePct: 0,
+      saveState: 'saved',
+      lastSavedAt: null,
+      runStatus: 'idle',
+      completedChunks: 0,
+      totalChunks: 0,
+      activePanel: null,
+      panelSubTab: null,
+    });
+
+    render(<AppStatusBar />);
+    await user.click(screen.getByRole('button', { name: 'statusBar.panelToggle' }));
+
+    expect(useUiStore.getState().drawerTab).toBe('console');
+  });
+
+  it('fuori da una traduzione lo stesso comando apre i lavori, che è ciò che esiste', async () => {
+    const user = userEvent.setup();
+    useUiStore.setState({ showConsoleDrawer: false, drawerTab: 'console' });
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'workspace',
+      workspaceName: 'Archivio',
+      areaName: 'library',
+      projectCount: 1,
+    });
+
+    render(<AppStatusBar />);
+    await user.click(screen.getByRole('button', { name: 'statusBar.panelToggle' }));
+
+    expect(useUiStore.getState().drawerTab).toBe('jobs');
+  });
+
+  it('la posizione compare in ogni sezione, non solo nella dashboard', () => {
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'workspace',
+      workspaceName: 'Archivio',
+      areaName: 'library',
+      projectCount: 3,
+    });
+
+    render(<AppStatusBar />);
+
+    expect(screen.getByText('Archivio')).toBeInTheDocument();
+    expect(screen.getByText('Library')).toBeInTheDocument();
   });
 });

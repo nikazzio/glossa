@@ -33,7 +33,9 @@ describe('cartella del deposito', () => {
     render(<VaultSection />);
     await screen.findByText('/dati/vault');
 
-    expect(screen.queryByText('settings.storage.vault.keepTogether')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'settings.storage.vault.keepTogether' }),
+    ).not.toBeInTheDocument();
   });
 
   it('con una cartella scelta offre di tornare alla predefinita', async () => {
@@ -64,7 +66,7 @@ describe('cartella del deposito', () => {
     render(<VaultSection />);
     await screen.findByText('/dati/vault');
 
-    await user.click(screen.getByText('settings.storage.vault.chooseFolder'));
+    await user.click(screen.getByRole('button', { name: /settings.storage.vault.chooseFolder/ }));
 
     await waitFor(() => expect(choose).toHaveBeenCalled());
     expect(getStatus).toHaveBeenCalledTimes(2);
@@ -82,7 +84,7 @@ describe('cartella del deposito', () => {
     render(<VaultSection />);
     await screen.findByText('/dati/vault');
 
-    await user.click(screen.getByText('settings.storage.vault.chooseFolder'));
+    await user.click(screen.getByRole('button', { name: /settings.storage.vault.chooseFolder/ }));
 
     expect(await screen.findByText('settings.storage.vault.syncWarning')).toBeInTheDocument();
   });
@@ -99,7 +101,7 @@ describe('cartella del deposito', () => {
     render(<VaultSection />);
     await screen.findByText('/dati/vault');
 
-    await user.click(screen.getByText('settings.storage.vault.chooseFolder'));
+    await user.click(screen.getByRole('button', { name: /settings.storage.vault.chooseFolder/ }));
 
     await waitFor(() => expect(choose).toHaveBeenCalled());
     // Nessuna ricarica: lo stato non è cambiato.
@@ -113,7 +115,7 @@ describe('cartella del deposito', () => {
     render(<VaultSection />);
     await screen.findByText('/disco/glossa');
 
-    await user.click(screen.getByText('settings.storage.vault.keepTogether'));
+    await user.click(screen.getByRole('button', { name: 'settings.storage.vault.keepTogether' }));
 
     await waitFor(() => expect(useDefault).toHaveBeenCalled());
     expect(await screen.findByText('/dati/vault')).toBeInTheDocument();

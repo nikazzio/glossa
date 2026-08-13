@@ -92,9 +92,6 @@ export function JobsSettingsTab() {
               />
             </div>
           ))}
-        <p className="text-[11px] leading-relaxed text-editorial-muted">
-          {t('settings.jobs.networkWarning')}
-        </p>
       </section>
 
       <section className="border-t border-editorial-border/60 pt-4">
