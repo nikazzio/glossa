@@ -94,6 +94,13 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 - **Barra di stato unificata, salvataggio generalizzato, console di tutta
   l'app**: restano a #413, sono lavoro di guscio.
 - **Livello bibliografico per gli stampati**: #404, fuori dal blocco.
+- **Artefatti grafici su WSL2**: rettangoli chiari al movimento del mouse,
+  risolti avviando con `WEBKIT_DISABLE_COMPOSITING_MODE=1`. Non messo di
+  default: potrebbe essere specifico del portatile. Da riprovare sulla
+  postazione fissa prima di decidere. Dettagli in `ARCHITECTURE.md`, refactor
+  pendenti.
+- **Scrollbar su Linux**: il rimedio attuale funziona ma il risultato non
+  piace. Da rivedere con una soluzione vera, fuori dal blocco 1.
 
 ## Prossima sessione: da dove riprendere
 
