@@ -95,7 +95,11 @@ export interface JobsSummary {
   activeCount: number;
   /** Quello di cui mostrare il nome nella barra: il primo in esecuzione. */
   current: Job | null;
-  /** Somma delle stime dei lavori attivi, quando tutti ne hanno una (D17). */
+  /**
+   * Quanto manca, in secondi. La somma di tutti gli attivi quando ognuno sa
+   * dire la sua; altrimenti la stima del lavoro in corso, che è comunque un
+   * dato vero — meglio del nulla, che fa sembrare la coda bloccata (D17).
+   */
   etaSeconds: number | null;
   /** Nessuno sta girando: sono tutti fermi ad aspettare. */
   allWaiting: boolean;
@@ -114,8 +118,12 @@ export function summarizeJobs(jobs: Job[]): JobsSummary {
   return {
     activeCount: active.length,
     current: running[0] ?? null,
-    // Se anche un solo lavoro non sa quanto manca, la somma sarebbe una bugia.
-    etaSeconds: etas.length === active.length && etas.length > 0 ? etas.reduce((a, b) => a + b, 0) : null,
+    // Sommare stime parziali darebbe un totale falso, più basso del vero: in
+    // quel caso si mostra la stima del lavoro in corso, che è un dato onesto.
+    etaSeconds:
+      etas.length > 0 && etas.length === active.length
+        ? etas.reduce((a, b) => a + b, 0)
+        : (running[0]?.etaSeconds ?? null),
     allWaiting: active.length > 0 && running.length === 0,
     failedCount: jobs.filter((job) => job.status === 'error').length,
   };

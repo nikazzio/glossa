@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AppStatusBar } from './AppStatusBar';
 import * as useStatusBarDataModule from '../../hooks/useStatusBarData';
+import { useUiStore } from '../../stores/uiStore';
+import { useJobsStore } from '../../stores/jobsStore';
 
 vi.mock('../../hooks/useStatusBarData');
 
@@ -98,5 +101,86 @@ describe('AppStatusBar', () => {
     });
     render(<AppStatusBar />);
     expect(screen.getByText(/unsaved/i)).toBeInTheDocument();
+  });
+});
+
+describe('pannello dei lavori dalla barra di stato', () => {
+  const workspaceBar = {
+    kind: 'workspace' as const,
+    workspaceName: 'Archivio',
+    areaName: 'dashboard',
+    projectCount: 2,
+  };
+
+  beforeEach(() => {
+    useUiStore.setState({ showConsoleDrawer: false, drawerTab: 'console' });
+    useJobsStore.setState({
+      jobs: [
+        {
+          id: 'j1',
+          jobType: 'debug_counter',
+          status: 'running',
+          priority: 0,
+          progress: 0.3,
+          message: 'conteggio',
+          config: '{}',
+          checkpoint: null,
+          attemptCount: 1,
+          maxAttempts: 3,
+          error: null,
+          errorKind: null,
+          etaSeconds: 60,
+          waitingReason: null,
+          dependsOnJobId: null,
+          nextAttemptAt: null,
+          createdAt: null,
+          updatedAt: null,
+        },
+      ],
+    });
+  });
+
+  it('si apre anche fuori da un progetto, dove la console non esiste', async () => {
+    // Il bug: il pannello si apriva solo dentro una traduzione, mentre i
+    // lavori vanno guardati da qualunque sezione (D19).
+    const user = userEvent.setup();
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue(workspaceBar);
+
+    render(<AppStatusBar />);
+    await user.click(screen.getByRole('button', { name: 'jobs.openPanel' }));
+
+    expect(screen.getByRole('tabpanel', { name: 'jobs.tab' })).toBeInTheDocument();
+  });
+
+  it('il pannello si chiude dalla sua X, non solo dal comando in barra', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue(workspaceBar);
+    useUiStore.setState({ showConsoleDrawer: true, drawerTab: 'jobs' });
+
+    render(<AppStatusBar />);
+    await user.click(screen.getByRole('button', { name: 'common.close' }));
+
+    expect(useUiStore.getState().showConsoleDrawer).toBe(false);
+  });
+
+  it('l’indicatore sta nello stesso posto in ogni sezione', () => {
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue(workspaceBar);
+    const { unmount } = render(<AppStatusBar />);
+    const inWorkspace = screen.getByRole('button', { name: 'jobs.openPanel' });
+    const workspaceCluster = inWorkspace.parentElement?.parentElement;
+    const workspaceClasses = workspaceCluster?.className;
+    unmount();
+
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'project',
+      activePanel: null,
+      totalChunks: 0,
+      saveState: 'idle',
+      lastSavedAt: null,
+    } as never);
+    render(<AppStatusBar />);
+    const inProject = screen.getByRole('button', { name: 'jobs.openPanel' });
+
+    expect(inProject.parentElement?.parentElement?.className).toBe(workspaceClasses);
   });
 });

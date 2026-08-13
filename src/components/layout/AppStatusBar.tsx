@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
@@ -11,6 +11,7 @@ import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
 import { JobsIndicator } from '../jobs/JobsIndicator';
+import { TerminalIconButton } from '../jobs/TerminalIconButton';
 import { JobsPanel } from '../jobs/JobsPanel';
 
 const AREA_KEY: Record<string, string> = {
@@ -63,6 +64,45 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
         <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
         <span className="text-xs text-editorial-muted">{label}</span>
       </span>
+    </Tooltip>
+  );
+}
+
+
+/** Scheda del pannello in basso: stessa palette scura della console. */
+function DrawerTab({
+  children,
+  label,
+  id,
+  controls,
+  selected,
+  onSelect,
+}: {
+  children: React.ReactNode;
+  label: string;
+  id: string;
+  controls: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Tooltip label={label} side="top">
+      <button
+        type="button"
+        id={id}
+        role="tab"
+        aria-selected={selected}
+        aria-controls={controls}
+        aria-label={label}
+        onClick={onSelect}
+        className={`flex h-6.5 w-6.5 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent ${
+          selected
+            ? 'border-terminal-accent/60 text-terminal-accent'
+            : 'border-terminal-border text-terminal-secondary hover:border-terminal-accent/60 hover:text-terminal-accent'
+        }`}
+      >
+        {children}
+      </button>
     </Tooltip>
   );
 }
@@ -120,40 +160,38 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>
-      {showConsoleTab && (
-        <div
-          role="tablist"
-          aria-label={t('jobs.drawerTabs')}
-          className="flex shrink-0 items-center gap-1 border-b border-terminal-border bg-terminal-chrome px-2 py-1"
-        >
-          <IconButton
-            size="xs"
-            tone={activeTab === 'console' ? 'accent' : 'default'}
-            onClick={() => setDrawerTab('console')}
-            title={t('console.toggle')}
+      <div
+        role="tablist"
+        aria-label={t('jobs.drawerTabs')}
+        className="flex shrink-0 items-center gap-1 border-b border-terminal-border bg-terminal-chrome px-2 py-1"
+      >
+        {showConsoleTab && (
+          <DrawerTab
+            label={t('console.toggle')}
             id="drawer-tab-console"
-            role="tab"
-            aria-selected={activeTab === 'console'}
-            aria-controls="console-drawer-panel"
-            tooltipSide="top"
+            controls="console-drawer-panel"
+            selected={activeTab === 'console'}
+            onSelect={() => setDrawerTab('console')}
           >
-            <Terminal size={11} />
-          </IconButton>
-          <IconButton
-            size="xs"
-            tone={activeTab === 'jobs' ? 'accent' : 'default'}
-            onClick={() => setDrawerTab('jobs')}
-            title={t('jobs.tab')}
-            id="drawer-tab-jobs"
-            role="tab"
-            aria-selected={activeTab === 'jobs'}
-            aria-controls="jobs-drawer-panel"
-            tooltipSide="top"
-          >
-            <ListChecks size={11} />
-          </IconButton>
-        </div>
-      )}
+            <Terminal size={12} />
+          </DrawerTab>
+        )}
+        <DrawerTab
+          label={t('jobs.tab')}
+          id="drawer-tab-jobs"
+          controls="jobs-drawer-panel"
+          selected={activeTab === 'jobs'}
+          onSelect={() => setDrawerTab('jobs')}
+        >
+          <ListChecks size={12} />
+        </DrawerTab>
+        <div className="flex-1" />
+        {/* Chiudere dev'essere possibile da qui: fuori da un progetto il
+            comando in barra che ha aperto il pannello potrebbe non esserci. */}
+        <TerminalIconButton label={t('common.close')} onClick={() => setShowConsoleDrawer(false)}>
+          <X size={12} />
+        </TerminalIconButton>
+      </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === 'console' ? (
           <OperationsTab
@@ -162,7 +200,6 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
             currentChunkId={selectedChunkId}
             chunks={chunks}
             onSelectChunk={setSelectedChunkId}
-            onClose={() => setShowConsoleDrawer(false)}
           />
         ) : (
           <JobsPanel panelId="jobs-drawer-panel" labelledBy="drawer-tab-jobs" />
@@ -355,11 +392,6 @@ export function AppStatusBar() {
           )}
         </div>
 
-        {/* Center: lavori in background — sempre, in ogni sezione (D19) */}
-        <div className="flex min-w-0 shrink items-center justify-center">
-          <JobsIndicator />
-        </div>
-
         {/* Center: stats chunk corrente / risultati discovery in dashboard */}
         {data.kind === 'project' && data.totalChunks > 0 && (
           <div className="hidden items-center sm:flex">
@@ -372,8 +404,12 @@ export function AppStatusBar() {
           </div>
         )}
 
-        {/* Right: console toggle + controlli vista + salvataggio */}
+        {/* Right: lavori + console + controlli vista + salvataggio.
+            L'indicatore dei lavori sta **sempre qui**, nella stessa posizione in
+            ogni sezione: cambia cosa mostra, non dove sta. Accanto al comando
+            della console perché aprono lo stesso pannello. */}
         <div className="flex shrink-0 items-center gap-2">
+          <JobsIndicator />
           {data.kind === 'project' && (
             <IconButton
               size="xs"

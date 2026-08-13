@@ -109,12 +109,27 @@ describe('riassunto per la barra di stato', () => {
     expect(summary.allWaiting).toBe(true);
   });
 
-  it('somma le stime solo se le hanno tutti', () => {
+  it('somma le stime quando le hanno tutti', () => {
     const complete = summarizeJobs([job({ etaSeconds: 60 }), job({ id: 'j2', etaSeconds: 120 })]);
-    const partial = summarizeJobs([job({ etaSeconds: 60 }), job({ id: 'j2', etaSeconds: null })]);
 
     expect(complete.etaSeconds).toBe(180);
-    expect(partial.etaSeconds).toBeNull();
+  });
+
+  it('se qualcuno non sa dire quanto manca, mostra la stima del lavoro in corso', () => {
+    // Sommare stime parziali darebbe un totale più basso del vero; non dire
+    // niente farebbe sembrare la coda bloccata (D17).
+    const partial = summarizeJobs([
+      job({ id: 'in-corso', status: 'running', etaSeconds: 60 }),
+      job({ id: 'in-coda', status: 'queued', etaSeconds: null }),
+    ]);
+
+    expect(partial.etaSeconds).toBe(60);
+  });
+
+  it('senza nessuna stima non inventa un numero', () => {
+    const nothing = summarizeJobs([job({ status: 'queued', etaSeconds: null })]);
+
+    expect(nothing.etaSeconds).toBeNull();
   });
 
   it('i lavori non riusciti si contano a parte', () => {
