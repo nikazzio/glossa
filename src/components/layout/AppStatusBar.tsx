@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { getWorkspaceFilter } from '../../navigation/appLocation';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -342,63 +343,67 @@ function DiscoveryCenterStats() {
 
 
 /**
- * Dove sono. Prima zona della barra, **sempre compilata**: la posizione è
- * l'informazione che non manca mai, e sapere di trovarla sempre lì vale più di
- * qualunque dato in più.
+ * Dove sono. Prima zona della barra, **sempre compilata**.
+ *
+ * Segue il contratto di navigazione di `PRODUCT_ARCHITECTURE_2_0.md` §6:
+ * posizione e workspace sono concetti **distinti**. Le aree — Biblioteca,
+ * Traduzioni, Trascrizioni, Analisi — sono globali: aprire un workspace non le
+ * trasforma in aree di quel workspace, applica al massimo un **filtro visibile
+ * e rimovibile**. Scrivere «Default / Biblioteca» direbbe quindi una cosa falsa
+ * sul prodotto, oltre a leggersi male.
+ *
+ * Un solo trattamento visivo in tutte le sezioni: l'ultimo segmento in
+ * evidenza, il resto smorzato. Niente verde: qui non c'è niente di attivo da
+ * segnalare, e il verde è riservato a schede e stati attivi.
  */
 function LocationLabel({ data }: { data: ReturnType<typeof useStatusBarData> }) {
   const { t } = useTranslation();
-  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+  const location = useUiStore((state) => state.location);
+  const workspaces = useWorkspaceStore((state) => state.workspaces);
 
+  const filterId = getWorkspaceFilter(location);
+  const filterName = filterId ? workspaces.find((w) => w.id === filterId)?.name : undefined;
+
+  // Dentro un progetto la posizione è area → oggetto: qui il contenimento è
+  // vero, il progetto sta davvero dentro Traduzioni.
   if (data.kind === 'project') {
     return (
       <>
-        {activeWorkspace && (
-          <>
-            <span className="truncate">{activeWorkspace.name}</span>
-            <span className="text-editorial-border">/</span>
-          </>
-        )}
+        <span className="truncate">{t(AREA_KEY.translations)}</span>
+        <span className="text-editorial-border">/</span>
         <span className="truncate font-medium text-editorial-ink">{data.projectName}</span>
-        {data.activePanel && (
-          <>
-            <span className="text-editorial-border">/</span>
-            <span className="truncate text-editorial-accent">
-              {t(`statusBar.panel.${data.activePanel}`)}
-            </span>
-          </>
-        )}
       </>
     );
   }
 
-  if (data.kind === 'workspace' && data.areaName === 'dashboard') {
-    // La Dashboard è app-level: nessun prefisso workspace.
+  if (location.area === 'dashboard') {
     return <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>;
   }
 
-  if (data.kind === 'workspace' && data.areaName === 'workspace') {
+  if (location.area === 'workspace') {
     return (
       <>
-        <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-        <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-      </>
-    );
-  }
-
-  if (data.kind === 'workspace') {
-    return (
-      <>
-        <span className="truncate">{data.workspaceName}</span>
-        <span className="text-editorial-border">/</span>
         <span className="truncate font-medium text-editorial-ink">
-          {t(AREA_KEY[data.areaName] ?? data.areaName)}
+          {data.kind === 'workspace' ? data.workspaceName : ''}
         </span>
+        {data.kind === 'workspace' && (
+          <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+        )}
       </>
     );
   }
 
-  return null;
+  return (
+    <>
+      <span className="truncate font-medium text-editorial-ink">
+        {t(AREA_KEY[location.area] ?? location.area)}
+      </span>
+      {filterName && (
+        // Il filtro è un aggiunta all'area, non il suo contenitore.
+        <span className="truncate">{t('statusBar.workspaceFilter', { name: filterName })}</span>
+      )}
+    </>
+  );
 }
 
 export function AppStatusBar() {

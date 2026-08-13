@@ -1797,7 +1797,8 @@
     "discoveryMore": "altri disponibili",
     "discoveryPages_one": "{{count}} pagina",
     "discoveryPages_other": "{{count}} pagine",
-    "panelToggle": "Messaggi e lavori"
+    "panelToggle": "Messaggi e lavori",
+    "workspaceFilter": "· filtro: {{name}}"
   },
   "workflow": {
     "translation": "Traduzione",

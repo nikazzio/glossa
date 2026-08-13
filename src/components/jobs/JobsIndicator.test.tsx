@@ -47,12 +47,14 @@ describe('indicatore dei lavori in barra di stato', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('mostra quanti sono, quello corrente e il tempo stimato', () => {
+  it('in barra mostra quanti sono e quanto manca, il resto sta nel tooltip', () => {
+    // Il nome della fonte è lungo quanto vuole: in barra sposterebbe tutto.
     useJobsStore.setState({ jobs: [job()] });
 
     render(<JobsIndicator />);
 
-    expect(screen.getByText(/jobs.activeCount · Beatus, 34\/210 · jobs.etaShort/)).toBeInTheDocument();
+    expect(screen.getByText('jobs.activeCount · jobs.etaShort')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'jobs.openPanel' })).toBeInTheDocument();
   });
 
   it('con tutto fermo dice che è in attesa invece del progresso', () => {
