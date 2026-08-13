@@ -51,7 +51,11 @@ export async function getJobLimits(): Promise<JobLimits> {
     RESOURCE_CLASSES.map(async (resource) => {
       const raw = await readSetting(LIMIT_KEY[resource]);
       const parsed = raw === null ? 0 : Number.parseInt(raw, 10);
-      return [resource, Number.isFinite(parsed) && parsed >= 0 ? parsed : 0] as const;
+      const usable = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+      // Il tetto vale anche in lettura: un valore piu' alto — da una versione
+      // precedente o scritto a mano nel database — non comparirebbe fra le
+      // scelte, e il menu mostrerebbe un valore che non esiste.
+      return [resource, Math.min(usable, limitCap(resource))] as const;
     }),
   );
   return Object.fromEntries(entries) as JobLimits;

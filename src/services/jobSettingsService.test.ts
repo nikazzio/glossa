@@ -37,6 +37,17 @@ describe('limiti dei lavori', () => {
     expect(limits.cpu).toBe(0);
   });
 
+  it('un valore oltre il tetto viene riportato dentro anche in lettura', async () => {
+    // Puo' arrivare da una versione precedente o da una modifica a mano: il
+    // menu mostrerebbe un valore che fra le scelte non c'e'.
+    selectMock.mockResolvedValue([{ value: '99' }]);
+
+    const limits = await getJobLimits();
+
+    expect(limits.network).toBe(limitCap('network'));
+    expect(limits.cpu).toBe(limitCap('cpu'));
+  });
+
   it('un valore illeggibile non diventa un numero a caso', async () => {
     selectMock.mockResolvedValue([{ value: 'boh' }]);
 

@@ -144,7 +144,6 @@ pub fn run() {
             llm::providers::ollama::check_ollama_status,
             llm::providers::ollama::check_ollama_preflight,
             vault::commands::get_vault_status,
-            vault::commands::check_vault_folder,
             vault::commands::initialize_vault,
             vault::commands::expected_version_paths,
             vault::commands::verify_files_present,

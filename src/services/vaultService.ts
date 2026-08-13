@@ -26,11 +26,6 @@ export interface VaultStatus {
 
 export type VaultFolderKind = 'empty' | 'existingVault' | 'foreign';
 
-export interface VaultFolderCheck {
-  kind: VaultFolderKind;
-  writable: boolean;
-}
-
 /**
  * `invalid` è il percorso rifiutato perché uscirebbe dal deposito: la riga si
  * segna e le altre proseguono, invece di far fallire l'intera verifica.
@@ -71,11 +66,6 @@ export async function getVaultStatus(): Promise<VaultStatus> {
   return invoke<VaultStatus>('get_vault_status', {
     configuredRoot: await getConfiguredVaultRoot(),
   });
-}
-
-/** Classifica una cartella candidata prima di adottarla (D1). Non modifica niente. */
-export async function checkVaultFolder(path: string): Promise<VaultFolderCheck> {
-  return invoke<VaultFolderCheck>('check_vault_folder', { path });
 }
 
 export type VaultFolderKindResult = VaultFolderKind;

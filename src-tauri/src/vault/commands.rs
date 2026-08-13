@@ -7,17 +7,7 @@ use super::{absolute_path, classify_folder, directory_stats, integrity, resolve_
 use super::{FolderKind, VaultStatus};
 use integrity::FileKind;
 use serde::Serialize;
-use std::path::PathBuf;
 use tauri_plugin_dialog::DialogExt;
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FolderCheck {
-    pub kind: FolderKind,
-    /// Vero solo se ci si può davvero scrivere: l'esistenza non basta, una
-    /// cartella di rete montata in sola lettura esiste.
-    pub writable: bool,
-}
 
 /// Crea il deposito predefinito all'avvio, se nessuno ne ha scelto un altro.
 ///
@@ -28,7 +18,7 @@ pub struct FolderCheck {
 /// mai da soli: se non c'è, è perché il disco non è collegato.
 pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
     let db = crate::jobs::engine::open_database(&crate::storage_config::db_path(app)?)?;
-    let configured: Option<String> = super::super::jobs::store::read_setting(&db, "vault_root")?;
+    let configured: Option<String> = crate::jobs::store::read_setting(&db, "vault_root")?;
     if configured
         .map(|value| !value.trim().is_empty())
         .unwrap_or(false)
@@ -45,18 +35,6 @@ pub fn get_vault_status(
     configured_root: Option<String>,
 ) -> Result<VaultStatus, String> {
     status(&app, configured_root.as_deref())
-}
-
-/// Classifica una cartella candidata prima di adottarla come deposito (D1).
-/// Non modifica niente: risponde soltanto.
-#[tauri::command]
-pub fn check_vault_folder(path: String) -> Result<FolderCheck, String> {
-    let candidate = PathBuf::from(&path);
-    let kind = classify_folder(&candidate)?;
-    Ok(FolderCheck {
-        writable: is_writable(&candidate),
-        kind,
-    })
 }
 
 /// Percorsi attesi di una digitalizzazione completa (D2), da passare poi alla
@@ -79,10 +57,9 @@ pub fn expected_version_paths(
 
 /// Crea la radice e il marcatore, se mancano. Idempotente.
 ///
-/// Rifiuta una cartella che contiene altro (D1). Il controllo sta qui e non
-/// solo in `check_vault_folder`: sono due comandi distinti, e una schermata che
-/// dimenticasse di chiamare il primo pianterebbe il marcatore in mezzo ai
-/// documenti dell'utente, che da quel momento sembrerebbero un deposito.
+/// Rifiuta una cartella che contiene altro (D1): l'unico modo di adottare un
+/// deposito è passare dalla finestra aperta dal backend, che classifica prima
+/// di scrivere.
 #[tauri::command]
 pub fn initialize_vault(
     app: tauri::AppHandle,
@@ -280,6 +257,7 @@ fn is_writable(path: &std::path::Path) -> bool {
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
 
     fn temp_dir(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!("glossa_vault_cmd_{name}"));

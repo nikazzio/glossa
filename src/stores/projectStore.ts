@@ -140,9 +140,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const trimmed = name.trim();
     if (!id || !trimmed) return;
     await renameProject(id, trimmed);
+    // Il database aggiorna anche `updated_at`, e gli elenchi ci si ordinano
+    // sopra: senza allinearlo qui, dopo una rinomina l'ordine resta quello
+    // vecchio fino alla ricarica successiva. Stesso formato di SQLite
+    // (`CURRENT_TIMESTAMP`, UTC).
+    const renamedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
     set({
       projects: get().projects.map((project) =>
-        project.id === id ? { ...project, name: trimmed } : project,
+        project.id === id ? { ...project, name: trimmed, updated_at: renamedAt } : project,
       ),
     });
   },
