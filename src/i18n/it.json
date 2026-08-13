@@ -698,7 +698,9 @@
     "updatedMonthsAgo_other": "aggiornato {{count}} mesi fa",
     "updatedYearsAgo_one": "aggiornato {{count}} anno fa",
     "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
-    "loadFailed": "Caricamento progetto fallito"
+    "loadFailed": "Caricamento progetto fallito",
+    "rename": "Rinomina il progetto",
+    "untitled": "Progetto senza nome"
   },
   "areas": {
     "translations": {

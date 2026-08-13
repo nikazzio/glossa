@@ -368,9 +368,16 @@ function LocationLabel({ data }: { data: ReturnType<typeof useStatusBarData> }) 
   if (data.kind === 'project') {
     return (
       <>
-        <span className="truncate">{t(AREA_KEY.translations)}</span>
-        <span className="text-editorial-border">/</span>
-        <span className="truncate font-medium text-editorial-ink">{data.projectName}</span>
+        <span className={data.projectName ? 'truncate' : 'truncate font-medium text-editorial-ink'}>
+          {t(AREA_KEY.translations)}
+        </span>
+        {/* Nessun separatore senza qualcosa da separare. */}
+        {data.projectName && (
+          <>
+            <span className="text-editorial-border">/</span>
+            <span className="truncate font-medium text-editorial-ink">{data.projectName}</span>
+          </>
+        )}
       </>
     );
   }

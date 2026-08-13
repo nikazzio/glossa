@@ -1,15 +1,4 @@
-import {
-  AlertTriangle,
-  FileText,
-  GitCompare,
-  Languages,
-  Lock,
-  Pencil,
-  ScanLine,
-  Search,
-  SlidersHorizontal,
-  Wand2,
-} from 'lucide-react';
+import { AlertTriangle, CircleDollarSign, FileText, GitCompare, Hash, Languages, Lock, Pencil, ScanLine, Search, SlidersHorizontal, SquareStack, Wand2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +21,7 @@ import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
 import { AnnotationContextMenu } from './AnnotationContextMenu';
 import { PaneSearch } from './PaneSearch';
-import { DocumentViewControls } from './DocumentViewControls';
+import { ChunkMetric, DocumentViewControls } from './DocumentViewControls';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
 const NOOP_CHANGE = () => {};
@@ -475,37 +464,41 @@ export function DocumentView({
                 </div>
               ) : null}
             </div>
+            {/* Comandi di vista del testo, prima dei numeri: agiscono su ciò
+                che hanno sotto. */}
+            {/* Comandi di vista del testo: stanno qui e non nella barra di
+                stato perché agiscono su ciò che hanno sotto, e perché la barra
+                di stato deve avere la stessa forma in ogni sezione. */}
+            <div className="flex shrink-0 items-center border-l border-editorial-border pl-5">
+              <DocumentViewControls />
+            </div>
+
+            {/* Ultima colonna: i numeri del frammento, ridotti a icona e valore
+                con l'etichetta al passaggio del mouse, come il resto dell'app.
+                Il dettaglio per stadio resta un clic più in là. */}
             {hasCurrentChunkUsage && (
               <Popover
                 side="bottom"
                 align="end"
                 className="w-72 px-3"
                 trigger={
-                  <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5 cursor-default">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                        {t('pipeline.unit')}
-                      </span>
-                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
-                        {currentIndex + 1}<span className="text-editorial-muted">/{chunks.length}</span>
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                        {t('header.tokenCount')}
-                      </span>
-                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
-                        {currentChunkTokens.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                        {t('header.estimatedCost')}
-                      </span>
-                      <span className="font-display text-base italic text-editorial-accent tabular-nums">
-                        {formatUsd(currentChunkUsage.total.totalUsd)}
-                      </span>
-                    </div>
+                  <div className="flex shrink-0 items-center gap-3 border-l border-editorial-border pl-5">
+                    <ChunkMetric
+                      icon={<SquareStack size={13} />}
+                      label={t('pipeline.unit')}
+                      value={`${currentIndex + 1}/${chunks.length}`}
+                    />
+                    <ChunkMetric
+                      icon={<Hash size={13} />}
+                      label={t('header.tokenCount')}
+                      value={currentChunkTokens.toLocaleString()}
+                    />
+                    <ChunkMetric
+                      icon={<CircleDollarSign size={13} />}
+                      label={t('header.estimatedCost')}
+                      value={formatUsd(currentChunkUsage.total.totalUsd)}
+                      tone="accent"
+                    />
                   </div>
                 }
               >
@@ -516,14 +509,6 @@ export function DocumentView({
                 )}
               </Popover>
             )}
-            {/* Terza colonna della barra: i comandi di vista del testo, allineati
-                al centro come il blocco di token e costo e separati dallo stesso
-                bordo. Stanno qui e non nella barra di stato perché agiscono su
-                ciò che hanno sotto, e perché la barra di stato deve avere la
-                stessa forma in ogni sezione. */}
-            <div className="flex shrink-0 items-center border-l border-editorial-border pl-5">
-              <DocumentViewControls />
-            </div>
           </div>
         </div>
 

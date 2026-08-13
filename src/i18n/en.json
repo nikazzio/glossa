@@ -698,7 +698,9 @@
     "updatedMonthsAgo_other": "updated {{count}} months ago",
     "updatedYearsAgo_one": "updated {{count}} year ago",
     "updatedYearsAgo_other": "updated {{count}} years ago",
-    "loadFailed": "Failed to load project"
+    "loadFailed": "Failed to load project",
+    "rename": "Rename the project",
+    "untitled": "Untitled project"
   },
   "areas": {
     "translations": {

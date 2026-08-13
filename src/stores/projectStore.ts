@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   listProjects,
   createProject,
+  renameProject,
   deleteProject,
   getProjectSource,
   saveProjectSource,
@@ -52,6 +53,7 @@ interface ProjectState {
   openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
+  renameCurrentProject: (name: string) => Promise<void>;
   closeProject: () => void;
   setRunInterrupted: (value: boolean) => void;
   clearResumeState: () => void;
@@ -125,8 +127,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
 
     useOperationLogStore.getState().setContext(id, activePipelineId);
-    void get().loadProjects().catch(() => {});
     set({ currentProjectId: id, activePipelineId, pipelines, saveState: 'saved', lastSaveError: null, lastSavedAt: Date.now(), trackedSnapshot });
+    // Ricaricato **dopo** l'apertura e atteso: il nome del progetto vive
+    // nell'elenco, e lasciando la ricarica per aria un progetto appena creato
+    // resta senza nome in testata e in barra di stato finché non si cambia
+    // sezione.
+    await get().loadProjects().catch(() => {});
+  },
+
+  renameCurrentProject: async (name: string) => {
+    const id = get().currentProjectId;
+    const trimmed = name.trim();
+    if (!id || !trimmed) return;
+    await renameProject(id, trimmed);
+    set({
+      projects: get().projects.map((project) =>
+        project.id === id ? { ...project, name: trimmed } : project,
+      ),
+    });
   },
 
   openProject: async (id: string) => {
@@ -205,6 +223,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       lastSavedAt: null,
       trackedSnapshot: null,
     });
+
+    // L'elenco dei progetti è per workspace e può essere vuoto o vecchio quando
+    // un progetto viene aperto da altrove (ricerca globale, ripresa dell'ultimo
+    // aperto): senza questo, il nome del progetto non esiste da nessuna parte e
+    // la barra di stato mostra un separatore che non separa niente.
+    if (!get().projects.some((project) => project.id === id)) {
+      await get().loadProjects();
+    }
 
     logger.info('openProject: done', { id, activePipelineId, chunksCount: restoredChunks.length });
   },
