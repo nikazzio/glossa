@@ -35,6 +35,7 @@ export function DocumentViewControls() {
         tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
         onClick={() => setDocumentPaneFocus('both')}
         title={t('document.focusBoth')}
+        tooltipSide="bottom"
         ariaPressed={documentPaneFocus === 'both'}
       >
         <Columns2 size={12} />
@@ -44,6 +45,7 @@ export function DocumentViewControls() {
         tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
         onClick={() => setDocumentPaneFocus('source')}
         title={t('document.focusSource')}
+        tooltipSide="bottom"
         ariaPressed={documentPaneFocus === 'source'}
       >
         <PanelLeft size={12} />
@@ -53,6 +55,7 @@ export function DocumentViewControls() {
         tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
         onClick={() => setDocumentPaneFocus('translation')}
         title={t('document.focusTranslation')}
+        tooltipSide="bottom"
         ariaPressed={documentPaneFocus === 'translation'}
       >
         <PanelRight size={12} />
@@ -64,6 +67,7 @@ export function DocumentViewControls() {
         onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
         disabled={syncDisabled}
         title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+        tooltipSide="bottom"
         ariaPressed={syncOn}
       >
         {syncOn ? <Link2 size={12} /> : <Link2Off size={12} />}
@@ -74,6 +78,7 @@ export function DocumentViewControls() {
           tone={highlightsEnabled ? 'accent' : 'default'}
           onClick={() => setHighlightsEnabled(!highlightsEnabled)}
           title={t('library.glossaryHighlightToggle')}
+          tooltipSide="bottom"
           ariaPressed={highlightsEnabled}
         >
           <Highlighter size={12} />
@@ -85,6 +90,10 @@ export function DocumentViewControls() {
 
 /**
  * Un numero del frammento: icona, valore, e l'etichetta al passaggio del mouse.
+ *
+ * L'etichetta esce **verso l'alto**: i comandi di vista stanno nella riga
+ * sotto e mandano le loro verso il basso, così le due file non si coprono a
+ * vicenda.
  *
  * Le tre voci — unità, token, costo — stavano in colonne con l'etichetta scritta
  * sopra: occupavano mezza barra per dire tre numeri. Qui l'etichetta arriva
@@ -102,7 +111,7 @@ export function ChunkMetric({
   tone?: 'default' | 'accent';
 }) {
   return (
-    <Tooltip label={label} side="bottom">
+    <Tooltip label={label} side="top">
       <span className="flex cursor-default items-center gap-1.5">
         <span className="text-editorial-muted">{icon}</span>
         <span

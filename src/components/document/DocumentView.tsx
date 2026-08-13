@@ -470,7 +470,7 @@ export function DocumentView({
                 icona e valore, etichetta al passaggio del mouse — sotto i
                 comandi di vista del testo. In colonna sola stanno nell'altezza
                 della barra e non allargano la riga dei frammenti. */}
-            <div className="flex shrink-0 flex-col justify-center gap-1.5 border-l border-editorial-border pl-5">
+            <div className="flex shrink-0 flex-col justify-center gap-3 self-stretch border-l border-editorial-border py-2 pl-5">
               {hasCurrentChunkUsage ? (
                 <Popover
                   side="bottom"
