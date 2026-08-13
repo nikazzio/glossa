@@ -1,11 +1,10 @@
-import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelBottom, PanelLeft, PanelRight, Search, ShieldAlert, Terminal, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ListChecks, MinusCircle, Loader2, NotebookText, PanelBottom, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { getWorkspaceFilter } from '../../navigation/appLocation';
 import { useUiStore } from '../../stores/uiStore';
-import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
@@ -409,23 +408,12 @@ function LocationLabel({ data }: { data: ReturnType<typeof useStatusBarData> }) 
 export function AppStatusBar() {
   const { t } = useTranslation();
   const data = useStatusBarData();
-  const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
-  const setSyncScrollEnabled = useUiStore((state) => state.setSyncScrollEnabled);
-  const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
-  const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
   const drawerTab = useUiStore((state) => state.drawerTab);
   const setDrawerTab = useUiStore((state) => state.setDrawerTab);
-  const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
-  const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
-  const hasGlossary = usePipelineStore((state) => state.config.glossary.length > 0);
 
   if (data.kind === 'idle') return null;
-
-  const showPaneControls = data.kind === 'project' && data.totalChunks > 0;
-  const syncDisabled = documentPaneFocus !== 'both';
-  const syncOn = syncScrollEnabled && !syncDisabled;
 
   return (
     <div className="relative shrink-0">
@@ -475,70 +463,6 @@ export function AppStatusBar() {
           >
             <PanelBottom size={11} />
           </IconButton>
-          {showPaneControls ? (
-            <>
-              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-              <div className="flex items-center gap-1">
-                <IconButton
-                  size="xs"
-                  tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
-                  onClick={() => setDocumentPaneFocus('both')}
-                  title={t('document.focusBoth')}
-                  ariaPressed={documentPaneFocus === 'both'}
-                  tooltipSide="top"
-                >
-                  <Columns2 size={11} />
-                </IconButton>
-                <IconButton
-                  size="xs"
-                  tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
-                  onClick={() => setDocumentPaneFocus('source')}
-                  title={t('document.focusSource')}
-                  ariaPressed={documentPaneFocus === 'source'}
-                  tooltipSide="top"
-                >
-                  <PanelLeft size={11} />
-                </IconButton>
-                <IconButton
-                  size="xs"
-                  tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
-                  onClick={() => setDocumentPaneFocus('translation')}
-                  title={t('document.focusTranslation')}
-                  ariaPressed={documentPaneFocus === 'translation'}
-                  tooltipSide="top"
-                >
-                  <PanelRight size={11} />
-                </IconButton>
-                <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-                <IconButton
-                  size="xs"
-                  tone={syncOn ? 'accent' : 'default'}
-                  onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-                  disabled={syncDisabled}
-                  title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-                  ariaPressed={syncOn}
-                  tooltipSide="top"
-                >
-                  {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
-                </IconButton>
-                {hasGlossary && (
-                  <>
-                    <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-                    <IconButton
-                      size="xs"
-                      tone={highlightsEnabled ? 'accent' : 'default'}
-                      onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-                      title={t('library.glossaryHighlightToggle')}
-                      ariaPressed={highlightsEnabled}
-                      tooltipSide="top"
-                    >
-                      <Highlighter size={11} />
-                    </IconButton>
-                  </>
-                )}
-              </div>
-            </>
-          ) : null}
           {/* Lo spazio del salvataggio è riservato anche dove non c'è niente
               da salvare: senza, tutto il gruppo scivolerebbe a destra cambiando
               sezione. Generalizzarlo a trascrizioni e fonti è lavoro di #413. */}

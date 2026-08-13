@@ -32,6 +32,7 @@ import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
 import { AnnotationContextMenu } from './AnnotationContextMenu';
 import { PaneSearch } from './PaneSearch';
+import { DocumentViewControls } from './DocumentViewControls';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
 const NOOP_CHANGE = () => {};
@@ -515,6 +516,14 @@ export function DocumentView({
                 )}
               </Popover>
             )}
+            {/* Terza colonna della barra: i comandi di vista del testo, allineati
+                al centro come il blocco di token e costo e separati dallo stesso
+                bordo. Stanno qui e non nella barra di stato perché agiscono su
+                ciò che hanno sotto, e perché la barra di stato deve avere la
+                stessa forma in ogni sezione. */}
+            <div className="flex shrink-0 items-center border-l border-editorial-border pl-5">
+              <DocumentViewControls />
+            </div>
           </div>
         </div>
 
