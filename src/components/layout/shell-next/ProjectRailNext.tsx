@@ -84,7 +84,7 @@ function ProjectNameField() {
           }
         }}
         aria-label={t('projects.rename')}
-        className="w-full rounded border border-editorial-accent/50 bg-editorial-textbox px-1.5 py-0.5 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="w-full rounded border border-editorial-accent/50 bg-editorial-textbox px-1.5 py-0.5 font-display text-2xl italic leading-tight text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />
     );
   }
@@ -97,7 +97,7 @@ function ProjectNameField() {
           setDraft(projectName);
           setEditing(true);
         }}
-        className="block w-full truncate text-left text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="block w-full truncate text-left font-display text-2xl italic leading-tight text-editorial-accent transition-colors hover:text-editorial-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         {projectName || t('projects.untitled')}
       </button>
@@ -126,8 +126,8 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
           compariva da nessuna parte dentro la traduzione — solo in testata, dove
           non si poteva nemmeno rinominare. */}
       <ProjectNameField />
-      <div className="mt-1 flex min-w-0 items-start justify-between gap-3">
-        <span className="block min-w-0 truncate font-display text-2xl italic leading-tight text-editorial-ink">
+      <div className="mt-2.5 flex min-w-0 items-center justify-between gap-3">
+        <span className="block min-w-0 truncate text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
           {activeName}
         </span>
         {/* Il comando che cambia pipeline sta accanto al nome della pipeline:
@@ -141,15 +141,15 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
             align="start"
             trigger={
               <IconButton
-                size="md"
+                size="sm"
                 tone={popoverOpen ? 'accent' : 'default'}
                 title={t('pipeline.changePipeline')}
                 ariaLabel={t('pipeline.changePipeline')}
                 ariaPressed={popoverOpen}
                 tooltipSide="right"
-                className={`h-9 w-9 shrink-0 ${popoverOpen ? '' : 'bg-editorial-bg'}`}
+                className={`h-7 w-7 shrink-0 ${popoverOpen ? '' : 'bg-editorial-bg'}`}
               >
-                <ArrowLeftRight size={14} />
+                <ArrowLeftRight size={12} />
               </IconButton>
             }
           >
@@ -196,7 +196,7 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
           </ClickPopover>
         )}
       </div>
-      <div className="mt-6">
+      <div className="mt-5">
         <ChunkRailNavigator collapsed={false} />
       </div>
       {children ? <div className="mt-4 border-t border-editorial-border/50 pt-4">{children}</div> : null}
