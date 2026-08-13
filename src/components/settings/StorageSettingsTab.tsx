@@ -58,7 +58,7 @@ export function StorageSettingsTab() {
     >
       <div className="flex items-start gap-3">
         <HardDrive size={16} className="mt-0.5 shrink-0 text-editorial-muted" />
-        <p className="flex-1 font-display text-sm text-editorial-ink">
+        <p className="flex-1 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
           {t('settings.storage.title')}
         </p>
       </div>
