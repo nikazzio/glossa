@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::{Notify, OwnedSemaphorePermit, Semaphore};
@@ -47,9 +48,15 @@ pub struct JobContext {
     pub id: String,
     pub config: String,
     pub checkpoint: Option<String>,
+    /// Tentativo in corso, a partire da 1. Serve ai gestori che calcolano
+    /// l'attesa prima del prossimo tentativo con i valori del loro profilo.
+    pub attempt: u32,
     control: Arc<JobControl>,
     db_path: PathBuf,
     last_progress: Mutex<Option<Instant>>,
+    /// Vero mentre il lavoro è dichiarato fermo ad aspettare: la ripartenza va
+    /// scritta subito, senza passare dal freno di un secondo.
+    waiting: AtomicBool,
     observer: Observer,
     writes: DbWriteCoordinator,
     default_vault_root: PathBuf,
@@ -80,15 +87,42 @@ impl JobContext {
 
     /// Avanzamento, messaggio e stima del tempo che manca — obbligatoria (D17).
     /// Le chiamate più fitte di un secondo vengono scartate, tranne quella che
-    /// porta il lavoro a termine.
+    /// porta il lavoro a termine e quella che lo fa ripartire da un'attesa.
     pub async fn report_progress(
         &self,
         progress: f64,
         message: Option<&str>,
         eta_seconds: Option<i64>,
     ) {
-        self.write_progress(progress, message, eta_seconds, None, progress >= 1.0)
-            .await;
+        let was_waiting = self.waiting.swap(false, Ordering::SeqCst);
+        self.write_progress(
+            progress,
+            message,
+            eta_seconds,
+            None,
+            was_waiting || progress >= 1.0,
+        )
+        .await;
+    }
+
+    /// Fermo per rispettare i limiti della biblioteca (D17, D18): non è un
+    /// errore, ed è la stessa immobilità con il significato opposto — va detta
+    /// diversamente, e la barra non deve fingere di avanzare.
+    pub async fn report_waiting(
+        &self,
+        progress: f64,
+        message: Option<&str>,
+        eta_seconds: Option<i64>,
+    ) {
+        self.waiting.store(true, Ordering::SeqCst);
+        self.write_progress(
+            progress,
+            message,
+            eta_seconds,
+            Some(super::WAITING_LIBRARY_LIMITS),
+            true,
+        )
+        .await;
     }
 
     async fn write_progress(
@@ -210,13 +244,11 @@ struct DbGuard<'a> {
     slot: tokio::sync::MutexGuard<'a, Option<Connection>>,
 }
 
-impl std::ops::Deref for DbGuard<'_> {
-    type Target = Connection;
-
-    fn deref(&self) -> &Connection {
+impl DbGuard<'_> {
+    fn conn(&self) -> Result<&Connection, String> {
         self.slot
             .as_ref()
-            .expect("la connessione viene aperta prima di consegnare la guardia")
+            .ok_or_else(|| "connessione al database non disponibile".to_string())
     }
 }
 
@@ -299,7 +331,7 @@ impl JobEngine {
     /// Mette un lavoro in coda e sveglia l'orchestratore.
     pub async fn submit(&self, job: &NewJob) -> Result<JobRecord, String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         if !self.handlers.contains_key(&job.job_type) {
             return Err(format!("unknown job type: {}", job.job_type));
         }
@@ -313,7 +345,7 @@ impl JobEngine {
     /// `pausing`: il gestore si ferma al confine, non subito.
     pub async fn request_pause(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         let Some(job) = store::get(conn, id)? else {
             return Err(format!("unknown job: {id}"));
         };
@@ -335,7 +367,7 @@ impl JobEngine {
     /// terminale — si può ripetere da capo, non riprendere.
     pub async fn request_cancel(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         let Some(job) = store::get(conn, id)? else {
             return Err(format!("unknown job: {id}"));
         };
@@ -356,7 +388,7 @@ impl JobEngine {
     /// Riprende un lavoro in pausa: riparte dal punto salvato, non da capo.
     pub async fn resume(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         store::requeue(conn, id, false)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
@@ -366,7 +398,7 @@ impl JobEngine {
     /// Ritenta un lavoro fallito, su richiesta esplicita.
     pub async fn retry(&self, id: &str, from_scratch: bool) -> Result<(), String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         store::requeue(conn, id, from_scratch)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
@@ -376,7 +408,7 @@ impl JobEngine {
     /// Toglie dall'elenco i lavori già finiti.
     pub async fn forget_finished(&self, id: Option<&str>) -> Result<usize, String> {
         let guard = self.db_guard().await?;
-        store::forget_finished(&guard, id)
+        store::forget_finished(guard.conn()?, id)
     }
 
     fn control_of(&self, id: &str) -> Arc<JobControl> {
@@ -406,7 +438,7 @@ impl JobEngine {
     #[allow(clippy::doc_overindented_list_items)]
     pub async fn recover_interrupted(&self) -> Result<usize, String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         let auto_resume = store::read_setting(conn, "auto_resume_downloads")?
             .map(|value| value.trim() == "1")
             .unwrap_or(false);
@@ -458,7 +490,7 @@ impl JobEngine {
         let mut starting = Vec::new();
         {
             let guard = self.db_guard().await?;
-            let conn = &*guard;
+            let conn = guard.conn()?;
             for job in store::claimable(conn)? {
                 let Some(handler) = self.handlers.get(&job.job_type).cloned() else {
                     log::warn!("job {}: nessun gestore per '{}'", job.id, job.job_type);
@@ -501,9 +533,13 @@ impl JobEngine {
             id: job.id.clone(),
             config: job.config.clone(),
             checkpoint: job.checkpoint.clone(),
+            // `attempt_count` è stato incrementato alla partenza, sul record
+            // che qui è ancora quello letto prima.
+            attempt: job.attempt_count + 1,
             control,
             db_path: self.db_path.clone(),
             last_progress: Mutex::new(None),
+            waiting: AtomicBool::new(false),
             observer: self.observer.clone(),
             writes: self.writes.clone(),
             default_vault_root: self.default_vault_root.clone(),
@@ -527,7 +563,7 @@ impl JobEngine {
         outcome: Result<Outcome, JobError>,
     ) -> Result<(), String> {
         let guard = self.db_guard().await?;
-        let conn = &*guard;
+        let conn = guard.conn()?;
         match outcome {
             Ok(Outcome::Done) => {
                 store::save_progress(conn, &job.id, 1.0, None, Some(0), None)?;
@@ -617,6 +653,7 @@ mod tests {
             max_attempts: 3,
             depends_on_job_id: None,
             workspace_id: None,
+            message: None,
         }
     }
 
@@ -849,6 +886,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             },
         )
         .unwrap();
@@ -881,6 +919,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             },
         )
         .unwrap();
@@ -908,6 +947,7 @@ mod tests {
                 max_attempts: 1,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             })
             .await;
 

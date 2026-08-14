@@ -26,35 +26,71 @@ pub async fn enqueue_source_download(
     version_id: Option<String>,
     size_tag: Option<String>,
 ) -> Result<JobRecord, String> {
+    // Tentativi e attese sono del profilo della biblioteca, non costanti nostre
+    // (D16, D18): Gallica ne concede tre, le altre cinque.
+    let profile = crate::iiif::find_provider(&provider_key)
+        .map(|provider| provider.network)
+        .unwrap_or(crate::iiif::network::CAUTIOUS);
+
+    let conn = jobs.0.connection()?;
+
     // La digitalizzazione si può indicare per identificativo o lasciar
     // ritrovare dall'indirizzo del manifesto, che è l'unica cosa che l'utente
     // ha davvero in mano quando aggiunge una fonte alla Biblioteca.
     let version_id = match version_id {
         Some(id) => id,
-        None => {
-            let conn = jobs.0.connection()?;
-            conn.query_row(
+        None => conn
+            .query_row(
                 "SELECT id FROM source_versions WHERE source_url = ?1 ORDER BY created_at LIMIT 1",
                 rusqlite::params![manifest_url],
                 |row| row.get::<_, String>(0),
             )
             .map_err(|_| {
                 format!("nessuna fonte in Biblioteca con questo manifesto: {manifest_url}")
-            })?
-        }
+            })?,
     };
 
     // Il tetto predefinito lo decide l'impostazione (D4): scriverlo qui
     // significherebbe ignorare la scelta dell'utente.
     let size_tag = match size_tag {
         Some(explicit) => explicit,
-        None => {
-            let conn = jobs.0.connection()?;
-            crate::jobs::store::read_setting(&conn, "download_size_cap")?
-                .filter(|value| !value.trim().is_empty())
-                .unwrap_or_else(|| "2000".to_string())
-        }
+        None => crate::jobs::store::read_setting(&conn, "download_size_cap")?
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "2000".to_string()),
     };
+
+    // Il nome dell'opera si scrive già adesso: in coda il pannello mostra
+    // questo, e «Scaricamento» da solo non dice quale libro (D20).
+    let title: Option<String> = conn
+        .query_row(
+            "SELECT s.title FROM sources s \
+             JOIN source_versions v ON v.source_id = s.id WHERE v.id = ?1",
+            rusqlite::params![version_id],
+            |row| row.get::<_, String>(0),
+        )
+        .ok();
+
+    // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
+    // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
+    // voleva vedere.
+    let id = format!("download:{version_id}");
+    let existing = crate::jobs::store::get(&conn, &id)?;
+    drop(conn);
+
+    if let Some(job) = existing {
+        if !job.status.is_terminal() {
+            return Ok(job);
+        }
+        // Un lavoro finito che si rilancia riparte **da capo**: il punto
+        // salvato parla di carte che nel frattempo possono essere state
+        // cancellate per liberare spazio (D6), e riprendendo da lì non
+        // tornerebbero mai più. Le carte ancora sul disco costano un controllo
+        // a testa e vengono saltate lo stesso.
+        jobs.0.retry(&id, true).await?;
+        let conn = jobs.0.connection()?;
+        return crate::jobs::store::get(&conn, &id)?
+            .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());
+    }
 
     let config = serde_json::json!({
         "providerKey": provider_key,
@@ -63,36 +99,16 @@ pub async fn enqueue_source_download(
         "sizeTag": size_tag,
     });
 
-    // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
-    // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
-    // voleva vedere.
-    let id = format!("download:{version_id}");
-    let existing = {
-        let conn = jobs.0.connection()?;
-        crate::jobs::store::get(&conn, &id)?
-    };
-    if let Some(job) = existing {
-        if !job.status.is_terminal() {
-            return Ok(job);
-        }
-        // Si rilancia **senza azzerare** il punto raggiunto: su una fonte già
-        // completa il giro finisce subito, e la percentuale non riparte da zero
-        // per pagine che ci sono già.
-        jobs.0.retry(&id, false).await?;
-        let conn = jobs.0.connection()?;
-        return crate::jobs::store::get(&conn, &id)?
-            .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());
-    }
-
     jobs.0
         .submit(&NewJob {
             id,
             job_type: handler::JOB_TYPE.to_string(),
             priority: 10,
             config: config.to_string(),
-            max_attempts: 3,
+            max_attempts: profile.max_attempts,
             depends_on_job_id: None,
             workspace_id: None,
+            message: title,
         })
         .await
 }

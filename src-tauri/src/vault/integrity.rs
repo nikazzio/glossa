@@ -69,46 +69,27 @@ pub struct FileScan {
 /// È la verifica strutturale minima — firma riconosciuta e terminatore al posto
 /// giusto — che coglie il troncamento, il caso reale prodotto da uno
 /// scaricamento interrotto.
-/// Come `scan_file`, ma su byte già in memoria: quando il file arriva dalla
-/// rete è inutile scriverlo per poterlo rileggere.
-pub fn scan_bytes(bytes: &[u8], kind: FileKind) -> FileScan {
-    let mut hash = FNV_OFFSET;
-    for byte in bytes {
-        hash = (hash ^ u64::from(*byte)).wrapping_mul(FNV_PRIME);
-    }
-
-    let validation = match kind {
-        FileKind::Image => validate_image_shape(
-            &bytes[..bytes.len().min(HEAD_BYTES)],
-            &bytes[bytes.len().saturating_sub(TAIL_BYTES)..],
-            bytes.len() as u64,
-        ),
-        FileKind::Manifest => match serde_json::from_slice::<serde_json::Value>(bytes) {
-            Ok(_) => Validation::Valid,
-            Err(error) => Validation::Corrupt(format!("JSON non valido: {error}")),
+pub fn scan_file(path: &Path, kind: FileKind) -> FileScan {
+    match File::open(path) {
+        Ok(file) => scan_reader(BufReader::new(file), kind),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => FileScan {
+            validation: Validation::Missing,
+            checksum: None,
         },
-    };
-
-    let checksum = matches!(validation, Validation::Valid).then(|| format!("{hash:016x}"));
-    FileScan {
-        validation,
-        checksum,
+        Err(error) => corrupt(format!("non leggibile: {error}")),
     }
 }
 
-pub fn scan_file(path: &Path, kind: FileKind) -> FileScan {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return FileScan {
-                validation: Validation::Missing,
-                checksum: None,
-            }
-        }
-        Err(error) => return corrupt(format!("non leggibile: {error}")),
-    };
+/// Come `scan_file`, ma su byte già in memoria: quando il file arriva dalla rete
+/// è inutile scriverlo per poterlo rileggere.
+pub fn scan_bytes(bytes: &[u8], kind: FileKind) -> FileScan {
+    scan_reader(bytes, kind)
+}
 
-    let mut reader = BufReader::new(file);
+/// Il cuore di entrambi: una passata sola, impronta e validità insieme. Da un
+/// file o dalla memoria cambia solo la sorgente, non il verdetto — e un solo
+/// posto dove sbagliare.
+fn scan_reader(mut reader: impl Read, kind: FileKind) -> FileScan {
     let mut buffer = vec![0u8; CHUNK_BYTES];
     let mut hash = FNV_OFFSET;
     let mut head: Vec<u8> = Vec::with_capacity(HEAD_BYTES);

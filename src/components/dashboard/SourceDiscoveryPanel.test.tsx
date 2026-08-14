@@ -16,7 +16,8 @@ vi.mock('../../services/iiifProviderService', () => ({
 }));
 
 vi.mock('../../services/libraryService', () => ({
-  listLibrarySources: vi.fn().mockResolvedValue([]),
+  listLibraryCatalog: vi.fn().mockResolvedValue([]),
+  removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   addSourceToLibrary: vi.fn().mockResolvedValue({ sourceId: 's1', wasCreated: true }),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
@@ -31,7 +32,7 @@ describe('SourceDiscoveryPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useUiStore.setState({ discoveryResultsPerRow: 3 });
-    useSourceLibraryStore.setState({ sources: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     mockListProviders.mockResolvedValue(PROVIDERS);
   });
@@ -159,7 +160,7 @@ describe('risultati doppi dai cataloghi', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useUiStore.setState({ discoveryResultsPerRow: 3 });
-    useSourceLibraryStore.setState({ sources: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     mockListProviders.mockResolvedValue(PROVIDERS);
   });

@@ -56,6 +56,10 @@ Clicking opens the panel with the list split into *running*, *waiting*,
 **How to control them** — pause, resume, cancel and retry per job, or for all of
 them at once from the controls at the top of the panel.
 
+**How they are named** — every row carries the work's name while it is still
+waiting its turn, and adds progress and downloaded size while it runs: *I diarii
+di Marino Sanuto · 34/374 · 46 MB*.
+
 Pausing is not instant: the job finishes the piece it is on — the page it is
 downloading — saves it and stops. That is why the state goes from *pausing…* to
 *paused*.

@@ -5,10 +5,10 @@ import { LibraryCatalogArea } from './LibraryCatalogArea';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useJobsStore } from '../../stores/jobsStore';
 import '../../test/i18n-mock';
 
 vi.mock('../../services/libraryService', () => ({
-  listLibrarySources: vi.fn().mockResolvedValue([]),
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
@@ -22,13 +22,17 @@ vi.mock('../../services/jobsService', async (importOriginal) => {
   return { ...actual, enqueueSourceDownload: vi.fn() };
 });
 
-const entry = (overrides: Partial<import('../../types').LibraryCatalogEntry> = {}) => ({
+const entry = (
+  overrides: Partial<import('../../types').LibraryCatalogEntry> = {},
+): import('../../types').LibraryCatalogEntry => ({
   source: {
     id: 's1',
     title: 'Book of Hours',
     kind: 'iiif' as const,
     primaryLanguage: null,
-    externalRef: 'gallica',
+    // Provenienza completa: chiave della biblioteca **e** identificativo. Non è
+    // un nome di cartella, e passarla come tale faceva fallire lo scaricamento.
+    externalRef: 'gallica:btv1b8426',
     createdAt: '2026-01-01',
   },
   versionId: 'v1',
@@ -38,18 +42,25 @@ const entry = (overrides: Partial<import('../../types').LibraryCatalogEntry> = {
   date: null,
   expectedPages: 210,
   localPages: 0,
+  providerKey: 'gallica',
   ...overrides,
 });
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
-    useSourceLibraryStore.setState({ sources: [], catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
+    // La coda è globale: un lavoro lasciato da un altro test farebbe comparire
+    // la percentuale al posto del pulsante.
+    useJobsStore.setState({ jobs: [] });
     const service = await import('../../services/libraryService');
-    // Evita che l'effetto di mount (che ricarica il dettaglio) sovrascriva con
-    // `undefined` il fixture impostato dal test — mantiene la stessa forma.
+    // Evita che l'effetto di mount (che ricarica dettaglio e catalogo)
+    // sovrascriva il fixture impostato dal test — mantiene la stessa forma.
     vi.mocked(service.getLibrarySourceDetail).mockImplementation(
       async () => useSourceLibraryStore.getState().detail ?? undefined as never,
+    );
+    vi.mocked(service.listLibraryCatalog).mockImplementation(
+      async () => useSourceLibraryStore.getState().catalog,
     );
   });
 
@@ -77,7 +88,10 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByRole('button', { name: 'areas.library.remove' })).toBeInTheDocument();
   });
 
-  it('cliccando scarica mette in coda un lavoro per quella fonte', async () => {
+  it('cliccando scarica mette in coda un lavoro con la chiave della biblioteca', async () => {
+    // La chiave deve essere quella del registro (`gallica`), non la provenienza
+    // completa `gallica:btv1b8426`: come nome di cartella verrebbe rifiutata e
+    // il lavoro fallirebbe subito, senza scaricare niente.
     const { enqueueSourceDownload } = await import('../../services/jobsService');
     vi.mocked(enqueueSourceDownload).mockResolvedValue({ id: 'download:v1' } as never);
     useSourceLibraryStore.setState({ catalog: [entry()] });
@@ -94,6 +108,34 @@ describe('LibraryCatalogArea', () => {
         versionId: 'v1',
       }),
     );
+  });
+
+  it('una fonte senza chiave della biblioteca usa il profilo prudente', async () => {
+    // Nessuna fonte resta senza politica di rete (D18): `generic` è nel
+    // registro e porta il profilo prudente.
+    const { enqueueSourceDownload } = await import('../../services/jobsService');
+    vi.mocked(enqueueSourceDownload).mockResolvedValue({ id: 'download:v1' } as never);
+    useSourceLibraryStore.setState({ catalog: [entry({ providerKey: null })] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
+
+    await waitFor(() =>
+      expect(enqueueSourceDownload).toHaveBeenCalledWith(
+        expect.objectContaining({ providerKey: 'generic' }),
+      ),
+    );
+  });
+
+  it('una fonte tutta sul computer non offre di riscaricarla', async () => {
+    // Riscaricare quello che c'è già è un quarto d'ora di rete per niente: al
+    // posto del comando c'è il segno che è a posto.
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 210 })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.queryByRole('button', { name: 'areas.library.download' })).toBeNull();
+    expect(screen.getByLabelText('areas.library.availabilityComplete')).toBeInTheDocument();
   });
 
   it('si può passare dall’elenco alla griglia', () => {

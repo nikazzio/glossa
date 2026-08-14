@@ -142,6 +142,11 @@ export interface LibraryCatalogEntry {
   expectedPages: number | null;
   /** Carte davvero presenti sul computer. */
   localPages: number;
+  /**
+   * Chiave della biblioteca nel registro dei provider: decide il profilo di rete
+   * dello scaricamento (D18) e la cartella nel deposito (D2).
+   */
+  providerKey: string | null;
 }
 
 export interface LibrarySourceVersion {

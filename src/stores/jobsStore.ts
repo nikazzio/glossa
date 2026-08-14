@@ -91,11 +91,10 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       await clearFinishedJobs(id);
     });
     // L'elenco locale si allinea senza aspettare un evento: la rimozione non
-    // ne produce.
+    // ne produce. Si toglie solo ciò che il backend può aver tolto — i finiti —
+    // altrimenti un lavoro ancora in corso spariva dal pannello pur girando.
     set((state) => ({
-      jobs: state.jobs.filter((job) =>
-        id ? job.id !== id : !isTerminal(job),
-      ),
+      jobs: state.jobs.filter((job) => !isTerminal(job) || (id !== undefined && job.id !== id)),
     }));
   },
 }));

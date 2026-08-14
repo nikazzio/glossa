@@ -182,6 +182,11 @@ impl ErrorKind {
     }
 }
 
+/// Motivo per cui un lavoro è fermo pur essendo in esecuzione: sta rispettando
+/// i limiti della biblioteca (D17, D18). L'interfaccia lo scrive in modo
+/// diverso da un errore e **non anima** la barra.
+pub const WAITING_LIBRARY_LIMITS: &str = "libraryLimits";
+
 /// Un errore di lavoro porta con sé tutto quello che serve a decidere: se
 /// ritentare, quanto attendere, cosa mostrare (D16).
 #[derive(Debug, Clone, PartialEq, Eq)]

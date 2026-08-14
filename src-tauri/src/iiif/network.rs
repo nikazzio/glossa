@@ -84,10 +84,11 @@ impl NetworkProfile {
     /// Attesa prima del tentativo successivo, in secondi.
     ///
     /// `retry_after` è quello dichiarato dal servizio: quando c'è, vince — il
-    /// server sa meglio di noi quando è pronto.
+    /// server sa meglio di noi quando è pronto. Non lo si accorcia mai: chiedere
+    /// prima del tempo dichiarato è il modo più diretto di farsi bandire.
     pub fn wait_after(&self, status: Option<u16>, attempt: u32, retry_after: Option<u64>) -> u64 {
         if let Some(declared) = retry_after {
-            return declared.min(self.cooldown_403_secs.max(self.cooldown_429_secs));
+            return declared;
         }
         match status {
             Some(403) => self.cooldown_403_secs,
@@ -129,6 +130,13 @@ mod tests {
     #[test]
     fn a_declared_retry_after_wins_over_our_calculation() {
         assert_eq!(GALLICA.wait_after(Some(429), 1, Some(45)), 45);
+    }
+
+    #[test]
+    fn a_long_declared_wait_is_never_shortened() {
+        // Un'ora dichiarata è un'ora: accorciarla a quello che avremmo scelto
+        // noi significa ribussare mentre il servizio ha detto di non farlo.
+        assert_eq!(CAUTIOUS.wait_after(Some(429), 1, Some(3_600)), 3_600);
     }
 
     #[test]

@@ -29,6 +29,21 @@ pub struct Manifest {
     /// problema, non un dettaglio (D2-bis).
     pub rights: Option<String>,
     pub attribution: Option<String>,
+    /// Manifesto nella vecchia Presentation 2.1. Cambia il nome della
+    /// dimensione piena: `max` esiste solo dalla Image API 3.0, prima si
+    /// chiamava `full` e chiederlo alla vecchia maniera fa rispondere 400.
+    pub presentation2: bool,
+}
+
+impl Manifest {
+    /// Il parametro di dimensione da chiedere al servizio per questa etichetta.
+    pub fn size_token(&self, size_tag: &str) -> String {
+        match (size_tag, self.presentation2) {
+            ("max", true) => "full".to_string(),
+            ("max", false) => "max".to_string(),
+            (width, _) => format!("{width},"),
+        }
+    }
 }
 
 pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
@@ -36,10 +51,11 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
         JobError::new(ErrorKind::Format, format!("manifesto illeggibile: {error}"))
     })?;
 
-    let pages = if root.get("items").is_some() {
-        parse_presentation_3(&root)
-    } else {
+    let presentation2 = root.get("items").is_none();
+    let pages = if presentation2 {
         parse_presentation_2(&root)
+    } else {
+        parse_presentation_3(&root)
     };
 
     if pages.is_empty() {
@@ -57,6 +73,7 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
             .and_then(Value::as_str)
             .map(str::to_string),
         attribution: attribution_of(&root),
+        presentation2,
     })
 }
 
@@ -113,19 +130,20 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
         .unwrap_or_default()
 }
 
-/// La radice del servizio immagini: si preferisce sempre il servizio
-/// all'indirizzo diretto, perché è quello che accetta i parametri di
-/// dimensione della Image API.
+/// La radice del servizio immagini.
+///
+/// Solo il servizio, mai l'indirizzo diretto dell'immagine: quello è già un URL
+/// completo di parametri, e attaccargli in coda `/full/2000,/0/default.jpg`
+/// produrrebbe un indirizzo inventato che nessuno serve (D2-bis: niente
+/// indirizzi indovinati). Un canvas senza servizio non è scaricabile a una
+/// risoluzione scelta, e si salta.
 fn service_of(body: &Value) -> Option<String> {
-    let service = body.get("service");
-    let from_service = match service {
+    let from_service = match body.get("service") {
         Some(Value::Array(entries)) => entries.first().and_then(id_of),
         Some(single) => id_of(single),
         None => None,
     };
-    from_service
-        .or_else(|| id_of(body))
-        .map(|id| id.trim_end_matches('/').to_string())
+    from_service.map(|id| id.trim_end_matches('/').to_string())
 }
 
 fn id_of(value: &Value) -> Option<String> {
@@ -164,18 +182,13 @@ fn attribution_of(root: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Indirizzo di una carta secondo la Image API 3.0: `/full/<size>/0/default.jpg`.
+/// Indirizzo di una carta secondo la Image API: `/full/<size>/0/default.jpg`.
 ///
-/// `size_tag` è la stessa etichetta che nomina la cartella nel deposito, così
-/// quello che si è chiesto e quello che si è salvato non possono divergere:
-/// `max` per la piena risoluzione, un numero per il lato lungo.
-pub fn image_url(image_service: &str, size_tag: &str) -> String {
-    let size = if size_tag == "max" {
-        "max".to_string()
-    } else {
-        format!("{size_tag},")
-    };
-    format!("{image_service}/full/{size}/0/default.jpg")
+/// `size_token` è la stessa etichetta che nomina la cartella nel deposito, resa
+/// nella forma che il servizio capisce (`Manifest::size_token`): così quello che
+/// si è chiesto e quello che si è salvato non possono divergere.
+pub fn image_url(image_service: &str, size_token: &str) -> String {
+    format!("{image_service}/full/{size_token}/0/default.jpg")
 }
 
 #[cfg(test)]
@@ -261,13 +274,43 @@ mod tests {
 
     #[test]
     fn the_image_url_follows_the_image_api() {
+        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
+
         assert_eq!(
-            image_url("https://img/1", "2000"),
+            image_url("https://img/1", &manifest.size_token("2000")),
             "https://img/1/full/2000,/0/default.jpg"
         );
         assert_eq!(
-            image_url("https://img/1", "max"),
+            image_url("https://img/1", &manifest.size_token("max")),
             "https://img/1/full/max/0/default.jpg"
         );
+    }
+
+    #[test]
+    fn the_older_manifests_call_the_full_size_by_its_old_name() {
+        // `max` esiste dalla Image API 3.0: a un servizio 2.1 va chiesto
+        // `full`, altrimenti risponde 400 e la carta non arriva.
+        let old = parse(PRESENTATION_2.as_bytes()).unwrap();
+
+        assert_eq!(old.size_token("max"), "full");
+        assert_eq!(old.size_token("2000"), "2000,");
+    }
+
+    #[test]
+    fn a_canvas_without_an_image_service_is_skipped_not_guessed() {
+        // L'indirizzo diretto del body è già un URL completo: attaccargli i
+        // parametri della Image API produrrebbe un indirizzo che non esiste.
+        let manifest = parse(
+            br#"{"items":[
+              {"items":[{"items":[{"body":{"id":"https://img/9/full/max/0/default.jpg"}}]}]},
+              {"items":[{"items":[{"body":{"service":[{"id":"https://img/2"}]}}]}]}
+            ]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(manifest.pages.len(), 1);
+        assert_eq!(manifest.pages[0].image_service, "https://img/2");
+        // La numerazione resta quella del manifesto: la carta è la seconda.
+        assert_eq!(manifest.pages[0].index, 2);
     }
 }

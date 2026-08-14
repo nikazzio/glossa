@@ -51,6 +51,7 @@ pub async fn create_job(
         max_attempts: request.max_attempts.unwrap_or(3),
         depends_on_job_id: request.depends_on_job_id,
         workspace_id: request.workspace_id,
+        message: None,
     };
     jobs.0.submit(&job).await
 }

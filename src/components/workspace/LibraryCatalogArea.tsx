@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpenText, Download, LayoutGrid, Link2, List, Trash2 } from 'lucide-react';
+import { BookOpenText, Check, Download, LayoutGrid, Link2, List, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
@@ -8,7 +8,8 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
-import { enqueueSourceDownload } from '../../services/jobsService';
+import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
+import { summarizeAvailability } from '../../services/vaultService';
 import type { LibraryCatalogEntry } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -34,10 +35,17 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
+  // Quante carte sono sul computer cambia quando un lavoro finisce: senza
+  // guardare la coda, la riga continuerebbe a dire quello che diceva
+  // all'apertura della schermata, anche dopo un manoscritto intero.
+  const finishedDownloads = useJobsStore(
+    (state) =>
+      state.jobs.filter((job) => job.jobType === 'source_download' && isTerminal(job)).length,
+  );
 
   useEffect(() => {
     void loadCatalog();
-  }, [loadCatalog]);
+  }, [loadCatalog, finishedDownloads]);
 
   useEffect(() => {
     if (itemId) void loadDetail(itemId);
@@ -154,19 +162,20 @@ function CatalogEntryRow({
   const jobs = useJobsStore((state) => state.jobs);
   const applyChange = useJobsStore((state) => state.applyChange);
 
-  const runningJob = jobs.find(
-    (job) => job.id === `download:${entry.versionId}` && job.status !== 'completed',
-  );
+  // Solo un lavoro **non finito** occupa il posto del pulsante: uno fallito o
+  // annullato lasciava la percentuale ferma e toglieva il modo di riprovare.
+  const runningJob = jobs.find((job) => job.id === `download:${entry.versionId}` && !isTerminal(job));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
+  const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0);
   const availability =
-    entry.localPages === 0
+    summary.availability === 'catalogued'
       ? t('areas.library.availabilityRemote')
-      : entry.expectedPages && entry.localPages >= entry.expectedPages
+      : summary.availability === 'complete'
         ? t('areas.library.availabilityComplete')
         : t('areas.library.availabilityPartial', {
-            done: entry.localPages,
-            total: entry.expectedPages ?? '?',
+            done: summary.presentPages,
+            total: summary.expectedPages,
           });
 
   const startDownload = async () => {
@@ -174,7 +183,9 @@ function CatalogEntryRow({
     setDownloading(true);
     try {
       const job = await enqueueSourceDownload({
-        providerKey: entry.source.externalRef ?? 'unknown',
+        // La chiave della biblioteca, non `external_ref`: quella è chiave più
+        // identificativo e come nome di cartella verrebbe rifiutata (D2, D18).
+        providerKey: entry.providerKey ?? 'generic',
         manifestUrl: entry.manifestUrl,
         versionId: entry.versionId ?? undefined,
       });
@@ -233,6 +244,19 @@ function CatalogEntryRow({
           <Tooltip label={t('areas.library.downloadRunning')} side="top">
             <span className="text-[11px] text-editorial-accent">
               {Math.round(runningJob.progress * 100)}%
+            </span>
+          </Tooltip>
+        ) : summary.availability === 'complete' ? (
+          // Tutte le carte sono sul computer: non c'è niente da chiedere alla
+          // biblioteca, e offrire «scarica» inviterebbe a rifare per niente
+          // quindici minuti di rete. Il segno non si colora: la disponibilità
+          // è un fatto, non un avviso (D7).
+          <Tooltip label={t('areas.library.availabilityComplete')} side="top">
+            <span
+              className="flex h-6 w-6 items-center justify-center text-editorial-muted"
+              aria-label={t('areas.library.availabilityComplete')}
+            >
+              <Check size={13} />
             </span>
           </Tooltip>
         ) : (

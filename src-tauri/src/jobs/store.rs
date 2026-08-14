@@ -23,6 +23,9 @@ pub struct NewJob {
     pub max_attempts: u32,
     pub depends_on_job_id: Option<String>,
     pub workspace_id: Option<String>,
+    /// Come si chiama il lavoro nel pannello, già in coda: chi lo ha messo in
+    /// fila sa dire cos'è, il gestore lo saprà solo quando parte (D20).
+    pub message: Option<String>,
 }
 
 fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
@@ -52,7 +55,8 @@ fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
 pub fn create(conn: &Connection, job: &NewJob) -> Result<JobRecord, String> {
     conn.execute(
         "INSERT INTO jobs (id, job_type, status, priority, config, max_attempts, \
-         depends_on_job_id, workspace_id) VALUES (?1, ?2, 'queued', ?3, ?4, ?5, ?6, ?7)",
+         depends_on_job_id, workspace_id, message) \
+         VALUES (?1, ?2, 'queued', ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             job.id,
             job.job_type,
@@ -61,6 +65,7 @@ pub fn create(conn: &Connection, job: &NewJob) -> Result<JobRecord, String> {
             job.max_attempts as i64,
             job.depends_on_job_id,
             job.workspace_id,
+            job.message,
         ],
     )
     .map_err(|e| format!("Failed to queue the job: {e}"))?;
@@ -339,6 +344,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             },
         )
         .expect("job queued")
@@ -430,6 +436,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: Some("first".to_string()),
                 workspace_id: None,
+                message: None,
             },
         )
         .unwrap();
@@ -464,6 +471,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             },
         )
         .unwrap();

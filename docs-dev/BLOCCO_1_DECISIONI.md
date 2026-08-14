@@ -997,15 +997,26 @@ connettersi, 30 s per leggere.
 La Vaticana richiede il **preriscaldamento del visualizzatore**. Tutte inviano
 l'header di provenienza.
 
-**Stato dell'implementazione** *(2026-08-14, PR 4)*: pause, raffica,
-concorrenza per host, raffreddamenti, tentativi di trasporto e identificazione
-dell'applicazione ci sono. **Mancano ancora**, dichiarati: il preriscaldamento
-del visualizzatore con l'header di provenienza che ne consegue — va provato sul
-campo con la Vaticana, perché senza sessione le immagini non arrivano — e i
-*worker per lavoro* (Scriptoria ne usa 1 su Gallica e 2 altrove; qui le carte si
-scaricano una per volta, cioè sempre al ritmo più prudente). Nessuna delle due
-rende scortesi: la prima impedisce di scaricare da una biblioteca, la seconda
-rallenta e basta.
+**Stato dell'implementazione** *(aggiornato il 2026-08-14 dopo la rilettura
+esterna)*: pause, raffica, concorrenza per host, raffreddamenti, tentativi di
+trasporto e identificazione dell'applicazione ci sono. Dalla rilettura sono
+arrivati anche **tentativi del lavoro, base e tetto dell'attesa esponenziale dal
+profilo** — prima erano costanti del motore, cioè i valori di Gallica applicati a
+tutti — e la pausa fra richieste **sorteggiata una volta sola**: veniva
+riestratta a ogni controllo, e uscire al primo numero basso portava la media
+sotto quella dichiarata, cioè più veloci di quanto promesso alla biblioteca.
+
+**Mancano ancora**, dichiarati: il preriscaldamento del visualizzatore con
+l'header di provenienza che ne consegue — va provato sul campo con la Vaticana,
+perché senza sessione le immagini non arrivano — e i *worker per lavoro*
+(Scriptoria ne usa 1 su Gallica e 2 altrove; qui le carte si scaricano una per
+volta, cioè sempre al ritmo più prudente). Nessuna delle due rende scortesi: la
+prima impedisce di scaricare da una biblioteca, la seconda rallenta e basta.
+
+**Nota su Scriptoria**: la pausa fra richieste lì è configurata e mostrata nelle
+impostazioni ma **nessun consumatore la applica** — il ritmo lo impone la sola
+finestra a raffica. Qui viene applicata davvero; è l'unico punto in cui Glossa fa
+più di quello che il progetto di riferimento dichiara.
 
 ### Precedenza, tre livelli
 
@@ -1058,8 +1069,11 @@ non questo blocco. Qui restano le scelte che toccano i lavori.
 *Approvata con modifiche il 2026-08-10.*
 
 **Uguale in ogni sezione**, tre zone fisse: a sinistra il contesto (l'unica parte
-che cambia), al centro l'indicatore lavori, a destra lo stato di salvataggio e
-la maniglia del pannello.
+che cambia), al centro i numeri della schermata, a destra i comandi e lo stato
+globali. *(Modifica chiesta dall'utente il 2026-08-14, provando la PR 3:
+l'indicatore dei lavori sta **a destra** insieme al pannello e allo stato di
+salvataggio, non al centro — tre elementi affiancati per due funzioni facevano
+rumore. La prima stesura diceva "al centro l'indicatore lavori".)*
 
 L'indicatore è **sempre presente**, non solo dove il lavoro è stato avviato: uno
 scaricamento parte dalla Biblioteca e prosegue mentre si lavora altrove.

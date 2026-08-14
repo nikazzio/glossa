@@ -29,6 +29,7 @@ dritta su `main`.
 | 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
 | 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
 | 4 | Scaricamento vero | #218 primo consumatore | **in revisione** (#419) |
+| 4-bis | Catalogo Biblioteca, pulsante scarica, metadati | #217 (interfaccia) | **in revisione** (#420) |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | da fare |
@@ -50,8 +51,8 @@ errore, avanzamento al massimo una volta al secondo, recupero dei lavori
 interrotti alla riapertura, eventi verso l'interfaccia. Gli unici tipi di lavoro
 sono due finti, compilati solo nelle build di sviluppo.
 
-**Coda visibile** (PR 3): indicatore al centro della barra di stato in ogni
-sezione, scheda Lavori nel pannello in basso accanto ai messaggi, comandi per
+**Coda visibile** (PR 3): indicatore nella zona destra della barra di stato, in
+ogni sezione, scheda Lavori nel pannello in basso accanto ai messaggi, comandi per
 pausa, ripresa, annullamento e nuovo tentativo, conferma alla chiusura con i
 lavori attivi messi in pausa. Si prova con i tipi di lavoro finti delle build di
 sviluppo.
@@ -109,29 +110,72 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 - **Scrollbar su Linux**: il rimedio attuale funziona ma il risultato non
   piace. Da rivedere con una soluzione vera, fuori dal blocco 1.
 
+## Rilettura esterna del 2026-08-14, e cosa ne è uscito
+
+Le quattro PR aperte sono state riviste dall'esterno, leggendo il codice invece
+del corpo delle PR. Le correzioni sono tutte sul ramo della **#420**, che
+contiene le altre tre.
+
+**Difetti veri, corretti**
+
+- Il pulsante *scarica* passava `external_ref` come chiave della biblioteca. È
+  «chiave **e** identificativo» (`archive_org:idxyz`), e come nome di cartella
+  viene rifiutato: ogni fonte aggiunta dalla ricerca falliva subito. Ora la
+  chiave arriva dai metadati della fonte, dove era già salvata.
+- Il punto salvato contava il **numero dell'ultima carta** ma veniva usato come
+  **quante ne sono fatte**: con un canvas non scaricabile nel manifesto, la
+  ripresa saltava carte che non sarebbero tornate mai più.
+- Rilanciare un lavoro finito conservava il punto salvato: dopo aver liberato
+  spazio, il rilancio finiva in un istante dichiarando completa una fonte senza
+  più un file. Ora un lavoro terminale riparte da capo, e le carte ancora sul
+  disco si saltano una per una.
+- Cinque comandi del deposito ricevevano ancora la radice **dal frontend**, e uno
+  di quelli cancella ricorsivamente. Adesso la legge il backend: dopo #405, la
+  #414 e la #418, davvero nessun comando accetta un percorso dall'interfaccia.
+- La cartella di transito si costruiva con un identificativo non validato, e la
+  si scartava solo a lavoro riuscito.
+- «In attesa per i limiti della biblioteca» non lo scriveva nessuno: la coda
+  restava «in corso» con l'icona che girava per tutto un raffreddamento (D17).
+- Tentativi e attesa esponenziale venivano da costanti del motore, non dal
+  profilo; la pausa fra richieste veniva risorteggiata a ogni controllo, e usciva
+  in media più corta di quella dichiarata.
+- Una carta sul disco senza la sua riga (chiusura brusca fra promozione e
+  scrittura) veniva saltata per sempre.
+- In Biblioteca: le carte si contavano per riga e non per numero di carta, il
+  catalogo non si rileggeva a scaricamento finito, un lavoro fallito lasciava la
+  percentuale ferma togliendo il modo di riprovare, e una fonte completa
+  continuava a offrire *scarica*. Ora una fonte tutta sul computer mostra il
+  segno che è a posto, e basta.
+- In coda i lavori si chiamavano «Scaricamento fonte»: il nome dell'opera si
+  scrive alla messa in coda, e diventa `titolo · 34/210 · 46 MB` mentre gira.
+
+**Pulizie**: campi di `useStatusBarData` che nessuno leggeva (ricalcolavano le
+parole di ogni frammento a ogni render), doppio elenco delle fonti in
+`sourceLibraryStore`, doppione di scansione in `integrity.rs`, ramo morto sul
+429, `expect()` sui percorsi di produzione.
+
+**Non corretto, e perché**: la barra di stato non compare finché non c'è un
+workspace attivo. Succede solo al primissimo avvio, dove non esiste ancora nulla
+in coda, quindi l'indicatore non ha niente da nascondere.
+
 ## Prossima sessione: da dove riprendere
 
-Tre PR aperte e verdi, impilate in quest'ordine — ognuna si ritarga da sola
-quando la precedente viene unita:
+Quattro PR impilate, tutte verdi. La **#420 contiene le altre tre**, e le
+correzioni della rilettura stanno lì: si unisce quella in `blocco-1`, e #417,
+#418 e #419 si chiudono come incluse.
 
-1. **#417** — coda visibile (provata da Niki il 13–14 agosto, corretti i difetti
-   emersi: pannello scuro, indicatore fisso a destra, chiusura, posizione nella
-   barra, comandi del testo spostati sopra il documento);
-2. **#418** — impostazioni di deposito e lavori, più la chiusura dell'ultimo
-   comando che accettava percorsi dal frontend (rilievi di Copilot chiusi);
-3. **#419** — scaricamento vero (**non ancora provata da Niki**).
+Prima di unire serve una prova a mano sulla rete vera: è l'unica cosa che i test
+non possono dire.
 
-Ordine consigliato: unire #417, #418, poi provare la #419 con una fonte vera
-prima di unirla — è la prima che tocca la rete.
-
-**Poi**: notifiche di sistema (D21), pulsante di scaricamento in Biblioteca,
-schermata di primo avvio, e la PR 6 (registrazione del lavoro svolto), che il
+**Poi**: notifiche di sistema (D21), schermata di primo avvio, e la PR 6 (registrazione del lavoro svolto), che il
 documento chiede di non lasciare ultima.
 
 ~~Da aprire come issue: la cartella dati usa ancora la finestra aperta dal
 frontend~~ — **chiusa nella PR 3-bis**: anche la cartella dati passa dal dialogo
-nativo aperto dal backend. Dopo #405, il deposito e la cartella dati, in Glossa
-nessun comando accetta più un percorso dal frontend.
+nativo aperto dal backend. ~~Dopo #405, il deposito e la cartella dati, in Glossa
+nessun comando accetta più un percorso dal frontend.~~ — vero **solo dopo la
+rilettura**: cinque comandi del deposito ricevevano ancora la radice come
+parametro. Adesso la legge il backend.
 
 ## Da provare a mano, per chi rilegge
 

@@ -8,7 +8,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { addSourceToLibrary, listLibrarySources, getLibrarySourceDetail, setWorkspaceSourceLink } =
+const { addSourceToLibrary, getLibrarySourceDetail, setWorkspaceSourceLink } =
   await import('./libraryService');
 
 const baseInput = {
@@ -137,21 +137,6 @@ describe('libraryService', () => {
     it('rifiuta un manifestUrl non valido senza toccare il database', async () => {
       await expect(addSourceToLibrary({ ...baseInput, manifestUrl: 'not-a-url' })).rejects.toThrow();
       expect(dbMocks.select).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('listLibrarySources', () => {
-    it('mappa le righe DB in LibrarySource, catalogo globale senza filtro workspace', async () => {
-      dbMocks.select.mockResolvedValueOnce([
-        { id: 's1', title: 'Titolo', kind: 'iiif', primary_language: 'la', external_ref: null, created_at: '2026-01-01' },
-      ]);
-
-      const result = await listLibrarySources();
-
-      expect(result).toEqual([
-        { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: 'la', externalRef: null, createdAt: '2026-01-01' },
-      ]);
-      expect(dbMocks.select).toHaveBeenCalledWith(expect.not.stringContaining('workspace_sources'));
     });
   });
 

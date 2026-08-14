@@ -72,17 +72,6 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-/** Biblioteca è un catalogo globale, senza filtro workspace: ogni fonte attiva è visibile a chiunque. */
-export async function listLibrarySources(): Promise<LibrarySource[]> {
-  const rows = await select<SourceRow>(
-    `SELECT id, title, kind, primary_language, external_ref, created_at
-     FROM sources
-     WHERE status = 'active'
-     ORDER BY title ASC`,
-  );
-  return rows.map(rowToSource);
-}
-
 interface CatalogRow extends SourceRow {
   version_id: string | null;
   manifest_url: string | null;
@@ -104,7 +93,9 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
     `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref, s.created_at,
             v.id AS version_id, v.source_url AS manifest_url, v.metadata,
             v.expected_asset_count,
-            (SELECT COUNT(*) FROM assets a
+            -- Carte distinte, non righe: la stessa carta esiste anche a piena
+            -- risoluzione (D4), e contarla due volte darebbe «740 su 374».
+            (SELECT COUNT(DISTINCT a.page_index) FROM assets a
               WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_pages
        FROM sources s
        LEFT JOIN source_versions v
@@ -124,6 +115,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       date: metadata.date,
       expectedPages: row.expected_asset_count,
       localPages: row.local_pages,
+      providerKey: metadata.providerKey,
     };
   });
 }
@@ -132,26 +124,33 @@ interface SourceMetadata {
   thumbnailUrl: string | null;
   creator: string | null;
   date: string | null;
+  /**
+   * Chiave della biblioteca nel registro dei provider: porta con sé il profilo
+   * di rete (D18) e nomina la cartella nel deposito (D2). **Non** è
+   * `external_ref`, che è chiave *e* identificativo insieme e come componente di
+   * percorso verrebbe rifiutata.
+   */
+  providerKey: string | null;
 }
 
 /** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
  *  ignora il resto, invece di fidarsi della forma. */
 function parseMetadata(raw: string | null): SourceMetadata {
-  if (!raw) return { thumbnailUrl: null, creator: null, date: null };
+  const nothing: SourceMetadata = { thumbnailUrl: null, creator: null, date: null, providerKey: null };
+  if (!raw) return nothing;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) {
-      return { thumbnailUrl: null, creator: null, date: null };
-    }
+    if (typeof parsed !== 'object' || parsed === null) return nothing;
     const record = parsed as Record<string, unknown>;
     const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : null);
     return {
       thumbnailUrl: text(record.thumbnailUrl),
       creator: text(record.creator),
       date: text(record.date),
+      providerKey: text(record.providerKey),
     };
   } catch {
-    return { thumbnailUrl: null, creator: null, date: null };
+    return nothing;
   }
 }
 

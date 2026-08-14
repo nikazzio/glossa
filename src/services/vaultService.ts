@@ -7,7 +7,6 @@ import { select } from './dbService';
  */
 
 /** Radice del deposito. Vuota = dentro la cartella dati (D1). */
-const VAULT_ROOT_KEY = 'vault_root';
 /** Modalità di lettura globale (D8, D9). */
 const READ_MODE_KEY = 'source_read_mode';
 
@@ -57,15 +56,8 @@ async function readSetting(key: string): Promise<string | null> {
   return rows[0]?.value ?? null;
 }
 
-export async function getConfiguredVaultRoot(): Promise<string | null> {
-  const value = await readSetting(VAULT_ROOT_KEY);
-  return value && value.trim() ? value : null;
-}
-
 export async function getVaultStatus(): Promise<VaultStatus> {
-  return invoke<VaultStatus>('get_vault_status', {
-    configuredRoot: await getConfiguredVaultRoot(),
-  });
+  return invoke<VaultStatus>('get_vault_status');
 }
 
 export type VaultFolderKindResult = VaultFolderKind;
@@ -98,7 +90,7 @@ export async function adoptDefaultVaultFolder(): Promise<VaultStatus> {
 }
 
 export async function initializeVault(): Promise<void> {
-  await invoke('initialize_vault', { configuredRoot: await getConfiguredVaultRoot() });
+  await invoke('initialize_vault');
 }
 
 export async function getSourceReadMode(): Promise<SourceReadMode> {
@@ -126,10 +118,7 @@ export async function expectedVersionPaths(
  * dichiarare tutto mancante.
  */
 export async function verifyFilesPresent(vaultPaths: string[]): Promise<VaultFileCheck[]> {
-  return invoke<VaultFileCheck[]>('verify_files_present', {
-    configuredRoot: await getConfiguredVaultRoot(),
-    vaultPaths,
-  });
+  return invoke<VaultFileCheck[]>('verify_files_present', { vaultPaths });
 }
 
 /**
@@ -138,10 +127,7 @@ export async function verifyFilesPresent(vaultPaths: string[]): Promise<VaultFil
  * scaricare tutto (D1-bis): va avvisato prima di partire.
  */
 export async function verifyFilesIntegrity(vaultPaths: string[]): Promise<VaultFileIntegrity[]> {
-  return invoke<VaultFileIntegrity[]>('verify_files_integrity', {
-    configuredRoot: await getConfiguredVaultRoot(),
-    vaultPaths,
-  });
+  return invoke<VaultFileIntegrity[]>('verify_files_integrity', { vaultPaths });
 }
 
 /**
@@ -150,11 +136,7 @@ export async function verifyFilesIntegrity(vaultPaths: string[]): Promise<VaultF
  * Restano manifesto e miniature, così il libro resta sfogliabile.
  */
 export async function freeVersionPages(providerKey: string, versionId: string): Promise<FreedSpace> {
-  return invoke<FreedSpace>('free_version_pages', {
-    configuredRoot: await getConfiguredVaultRoot(),
-    providerKey,
-    versionId,
-  });
+  return invoke<FreedSpace>('free_version_pages', { providerKey, versionId });
 }
 
 export type SourceAvailability = 'catalogued' | 'partial' | 'complete';

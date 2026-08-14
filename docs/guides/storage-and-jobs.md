@@ -57,6 +57,10 @@ oggi*.
 **Come si comandano** — pausa, ripresa, annullamento e nuovo tentativo per
 ciascun lavoro, oppure per tutti insieme dai comandi in cima al pannello.
 
+**Come si chiamano** — ogni riga porta il nome dell'opera già mentre aspetta il
+turno, e mentre gira aggiunge a che punto è e quanto ha scaricato: *I diarii di
+Marino Sanuto · 34/374 · 46 MB*.
+
 La pausa non è istantanea: il lavoro porta a termine il pezzo in corso — la
 pagina che sta scaricando — lo salva e si ferma. Per questo lo stato passa da
 *in pausa…* a *in pausa*.

@@ -30,7 +30,11 @@ struct HostGate {
 
 #[derive(Default)]
 struct Timeline {
-    last_request: Option<Instant>,
+    /// Quando si potrà parlare di nuovo. Si sorteggia **una volta**, quando la
+    /// richiesta parte: rinnovare il sorteggio a ogni controllo farebbe uscire
+    /// al primo numero basso, e la pausa media crollerebbe sotto quella
+    /// dichiarata dal profilo — cioè si sarebbe meno cortesi del previsto.
+    next_allowed: Option<Instant>,
     recent: VecDeque<Instant>,
     /// Fino a quando questo host è in raffreddamento. Dopo un 403 o un 429 non
     /// basta far aspettare il lavoro che l'ha preso: **tutto** ciò che parla con
@@ -70,10 +74,12 @@ impl Courtesy {
         should_stop: &(dyn Fn() -> bool + Sync),
     ) -> Option<Turn> {
         let gate = self.gate_for(host, profile).await;
-        let permit = Arc::clone(&gate.permits)
-            .acquire_owned()
-            .await
-            .expect("il semaforo di un host non viene mai chiuso");
+        let Ok(permit) = Arc::clone(&gate.permits).acquire_owned().await else {
+            // Il semaforo di un host non viene mai chiuso: se succedesse, non
+            // si parla con quell'host invece di dare per buono un turno.
+            log::error!("cortesia: corsia chiusa verso {host}");
+            return None;
+        };
 
         Self::respect_timing(&gate, profile, should_stop).await?;
         Some(Turn { _permit: permit })
@@ -162,16 +168,14 @@ fn next_delay(timeline: &mut Timeline, profile: &NetworkProfile) -> Option<Durat
         return Some(window.saturating_sub(now.duration_since(oldest)));
     }
 
-    let pause = pause_for(profile);
-    let since_last = timeline
-        .last_request
-        .map(|last| now.duration_since(last))
-        .unwrap_or(pause);
-    if since_last < pause {
-        return Some(pause - since_last);
+    if let Some(until) = timeline.next_allowed {
+        if until > now {
+            return Some(until - now);
+        }
     }
 
-    timeline.last_request = Some(now);
+    // Sorteggiata qui, una volta per richiesta concessa.
+    timeline.next_allowed = Some(now + pause_for(profile));
     timeline.recent.push_back(now);
     None
 }
@@ -234,6 +238,33 @@ mod tests {
         let (_second, waited) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
 
         assert!(waited >= Duration::from_millis(40), "atteso {waited:?}");
+    }
+
+    #[test]
+    fn the_pause_is_drawn_once_not_at_every_check() {
+        // Con il sorteggio ripetuto a ogni fetta d'attesa bastava un numero
+        // basso per ripartire, e la pausa media finiva sotto quella dichiarata
+        // dal profilo. Qui il secondo controllo deve trovare la stessa attesa,
+        // solo più corta del tempo passato.
+        let profile = NetworkProfile {
+            pause_min_ms: 1_000,
+            pause_max_ms: 20_000,
+            ..crate::iiif::network::CAUTIOUS
+        };
+        let mut timeline = Timeline::default();
+
+        assert!(
+            next_delay(&mut timeline, &profile).is_none(),
+            "la prima parte"
+        );
+        let first = next_delay(&mut timeline, &profile).expect("la seconda aspetta");
+        let second = next_delay(&mut timeline, &profile).expect("aspetta ancora");
+
+        assert!(second <= first);
+        assert!(
+            first - second < Duration::from_millis(100),
+            "attesa risorteggiata: {first:?} poi {second:?}"
+        );
     }
 
     #[tokio::test]

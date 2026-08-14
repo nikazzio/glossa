@@ -3,7 +3,6 @@ import {
   classifySourceKind,
   isManifest,
   type LibraryCatalogEntry,
-  type LibrarySource,
   type LibrarySourceDetail,
   type SourceCard,
 } from '../types';
@@ -12,7 +11,6 @@ import {
   getLibrarySourceDetail,
   listLibraryCatalog,
   listLibrarySourceUrls,
-  listLibrarySources,
   removeSourceFromLibrary as removeSourceFromLibraryService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
@@ -24,13 +22,11 @@ function getErrorMessage(error: unknown): string {
 }
 
 interface SourceLibraryState {
-  sources: LibrarySource[];
   detail: LibrarySourceDetail | null;
   addingUrls: Set<string>;
   addedManifestUrls: Set<string>;
   libraryManifestUrls: Set<string>;
   error: string | null;
-  loadSources: () => Promise<void>;
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
   catalog: LibraryCatalogEntry[];
@@ -42,17 +38,11 @@ interface SourceLibraryState {
 }
 
 export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
-  sources: [],
   detail: null,
   addingUrls: new Set(),
   addedManifestUrls: new Set(),
   libraryManifestUrls: new Set(),
   error: null,
-
-  loadSources: async () => {
-    const sources = await listLibrarySources();
-    set({ sources });
-  },
 
   loadLibraryManifestUrls: async () => {
     try {
@@ -90,7 +80,9 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         workspaceId,
       });
       set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));
-      await get().loadSources();
+      // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
+      // Biblioteca senza riaprire la schermata.
+      await get().loadCatalog();
     } catch (error: unknown) {
       set({ error: getErrorMessage(error) });
     } finally {
