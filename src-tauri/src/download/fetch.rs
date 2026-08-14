@@ -40,6 +40,13 @@ pub struct Fetched {
     pub waited: Duration,
 }
 
+/// Tentativi ravvicinati sulla **singola richiesta** (D16, primo livello):
+/// una connessione che cade o un 5xx passeggero si riprovano subito, senza
+/// disturbare il lavoro. Quando anche questi finiscono, l'errore sale al
+/// secondo livello, dove le attese sono lunghe e le decide il profilo.
+const TRANSPORT_ATTEMPTS: u32 = 3;
+const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
+
 pub async fn fetch(
     client: &Client,
     courtesy: &Courtesy,
@@ -47,23 +54,74 @@ pub async fn fetch(
     url: &str,
 ) -> Result<Fetched, JobError> {
     let host = host_of(url)?;
-    let (_turn, waited) = courtesy.wait_turn(&host, profile).await;
+    let mut waited_total = Duration::ZERO;
+    let mut last_error = None;
 
-    let response = client.get(url).send().await.map_err(|error| {
-        // Connessione caduta, DNS, timeout: è trasporto, si ritenta.
-        JobError::new(ErrorKind::Transport, format!("{url}: {error}"))
-    })?;
+    for attempt in 1..=TRANSPORT_ATTEMPTS {
+        let (_turn, waited) = courtesy.wait_turn(&host, profile).await;
+        waited_total += waited;
+
+        match attempt_once(client, url, profile).await {
+            Ok(bytes) => {
+                return Ok(Fetched {
+                    bytes,
+                    waited: waited_total,
+                })
+            }
+            Err(error) => {
+                // Un rifiuto per eccesso di richieste raffredda **l'host**, non
+                // solo questo lavoro: un secondo scaricamento sullo stesso
+                // server deve rallentare anche lui (D18).
+                if matches!(error.kind, ErrorKind::Throttled | ErrorKind::RateLimited) {
+                    let seconds = error
+                        .retry_after
+                        .map(|wait| wait.as_secs())
+                        .unwrap_or(profile.cooldown_403_secs);
+                    courtesy.cool_down(&host, profile, seconds).await;
+                    return Err(error);
+                }
+                if error.kind != ErrorKind::Transport {
+                    return Err(error);
+                }
+                last_error = Some(error);
+                if attempt < TRANSPORT_ATTEMPTS {
+                    tokio::time::sleep(TRANSPORT_PAUSE * attempt).await;
+                }
+            }
+        }
+    }
+
+    Err(last_error
+        .unwrap_or_else(|| JobError::new(ErrorKind::Transport, format!("{url}: nessuna risposta"))))
+}
+
+async fn attempt_once(
+    client: &Client,
+    url: &str,
+    profile: &NetworkProfile,
+) -> Result<Vec<u8>, JobError> {
+    let response = client
+        .get(url)
+        // Alcune biblioteche servono le immagini solo a chi le chiede come le
+        // chiederebbe un browser.
+        .header(
+            reqwest::header::ACCEPT,
+            "image/*,application/json;q=0.9,*/*;q=0.8",
+        )
+        .send()
+        .await
+        .map_err(|error| {
+            // Connessione caduta, DNS, timeout: è trasporto, si ritenta.
+            JobError::new(ErrorKind::Transport, format!("{url}: {error}"))
+        })?;
 
     let status = response.status();
     if status.is_success() {
-        let bytes = response
+        return response
             .bytes()
             .await
-            .map_err(|error| JobError::new(ErrorKind::Transport, format!("{url}: {error}")))?;
-        return Ok(Fetched {
-            bytes: bytes.to_vec(),
-            waited,
-        });
+            .map(|bytes| bytes.to_vec())
+            .map_err(|error| JobError::new(ErrorKind::Transport, format!("{url}: {error}")));
     }
 
     Err(classify(status, retry_after_secs(&response), url, profile))
@@ -223,6 +281,54 @@ mod tests {
 
         assert_eq!(error.kind, ErrorKind::RateLimited);
         assert_eq!(error.retry_after, Some(Duration::from_secs(45)));
+    }
+
+    #[tokio::test]
+    async fn a_passing_server_failure_is_retried_without_disturbing_the_job() {
+        // Primo livello di D16: pochi tentativi ravvicinati sulla singola
+        // richiesta, invisibili al lavoro. Senza, un 503 di un secondo
+        // costerebbe venti secondi di attesa al livello del lavoro.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/page.jpg"))
+            .respond_with(ResponseTemplate::new(503))
+            .up_to_n_times(2)
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/page.jpg"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("ok"))
+            .mount(&server)
+            .await;
+
+        let fetched = fetch_from(&server, "/page.jpg").await.unwrap();
+
+        assert_eq!(fetched.bytes, b"ok".to_vec());
+    }
+
+    #[tokio::test]
+    async fn a_refusal_cools_down_the_whole_host_not_just_this_job() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/page.jpg"))
+            .respond_with(ResponseTemplate::new(429).insert_header("Retry-After", "2"))
+            .mount(&server)
+            .await;
+        let profile = instant_profile();
+        let client = build_client(&profile).unwrap();
+        let courtesy = Courtesy::new();
+        let url = format!("{}/page.jpg", server.uri());
+
+        let _ = fetch(&client, &courtesy, &profile, &url).await.unwrap_err();
+
+        // Una seconda richiesta allo stesso host non parte: sta scontando il
+        // raffreddamento, anche se è un altro lavoro a chiederla.
+        let blocked = tokio::time::timeout(
+            Duration::from_millis(150),
+            fetch(&client, &courtesy, &profile, &url),
+        )
+        .await;
+        assert!(blocked.is_err(), "l'host deve restare fermo");
     }
 
     #[tokio::test]

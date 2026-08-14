@@ -27,6 +27,11 @@ struct HostGate {
 struct Timeline {
     last_request: Option<Instant>,
     recent: VecDeque<Instant>,
+    /// Fino a quando questo host è in raffreddamento. Dopo un 403 o un 429 non
+    /// basta far aspettare il lavoro che l'ha preso: **tutto** ciò che parla con
+    /// quell'host deve rallentare, altrimenti un secondo scaricamento in corso
+    /// continua a bussare mentre il primo aspetta (D18).
+    cooldown_until: Option<Instant>,
 }
 
 /// I contatori di tutti gli host visti finora.
@@ -50,7 +55,7 @@ impl Courtesy {
     /// concorrenza. Restituisce quanto si è aspettato: serve a dire all'utente
     /// che il lavoro è fermo **per rispetto dei limiti**, non per un errore.
     pub async fn wait_turn(&self, host: &str, profile: &NetworkProfile) -> (Turn, Duration) {
-        let gate = self.gate_for(host).await;
+        let gate = self.gate_for(host, profile).await;
         let permit = Arc::clone(&gate.permits)
             .acquire_owned()
             .await
@@ -60,11 +65,29 @@ impl Courtesy {
         (Turn { _permit: permit }, waited)
     }
 
-    async fn gate_for(&self, host: &str) -> Arc<HostGate> {
+    /// Mette un host in raffreddamento: da qui in avanti, per quei secondi,
+    /// nessuno gli parla. Un raffreddamento più lungo di quello in corso lo
+    /// estende, uno più corto non lo accorcia.
+    pub async fn cool_down(&self, host: &str, profile: &NetworkProfile, seconds: u64) {
+        if seconds == 0 {
+            return;
+        }
+        let gate = self.gate_for(host, profile).await;
+        let until = Instant::now() + Duration::from_secs(seconds);
+        let mut timeline = gate.timeline.lock().await;
+        timeline.cooldown_until = Some(match timeline.cooldown_until {
+            Some(existing) if existing > until => existing,
+            _ => until,
+        });
+    }
+
+    async fn gate_for(&self, host: &str, profile: &NetworkProfile) -> Arc<HostGate> {
         let mut hosts = self.hosts.lock().await;
         Arc::clone(hosts.entry(host.to_string()).or_insert_with(|| {
             Arc::new(HostGate {
-                permits: Arc::new(Semaphore::new(profile_permits(host))),
+                // La concorrenza la dichiara il profilo della biblioteca: due
+                // verso Gallica, quattro verso chi regge di più (D18).
+                permits: Arc::new(Semaphore::new(profile.host_concurrency.max(1))),
                 timeline: Mutex::new(Timeline::default()),
             })
         }))
@@ -76,36 +99,52 @@ impl Courtesy {
             let sleep_for = {
                 let mut timeline = gate.timeline.lock().await;
                 let now = Instant::now();
-                let window = Duration::from_secs(profile.burst_window_secs);
-                while timeline
-                    .recent
-                    .front()
-                    .is_some_and(|stamp| now.duration_since(*stamp) >= window)
-                {
-                    timeline.recent.pop_front();
-                }
 
-                // Limite a raffica: se la finestra è piena si aspetta che ne
-                // esca la più vecchia, indipendentemente dalla concorrenza.
-                if timeline.recent.len() >= profile.burst_requests as usize {
-                    let oldest = timeline.recent.front().copied().unwrap_or(now);
-                    Some(window.saturating_sub(now.duration_since(oldest)))
-                } else {
-                    // Pausa fra due richieste: durata scelta nell'intervallo
-                    // dichiarato, per non presentarsi con un ritmo meccanico.
-                    let pause = pause_for(profile);
-                    let since_last = timeline
-                        .last_request
-                        .map(|last| now.duration_since(last))
-                        .unwrap_or(pause);
-                    if since_last < pause {
-                        Some(pause - since_last)
+                // Il raffreddamento viene prima di tutto: se l'host ha appena
+                // detto di rallentare, non si discute.
+                if let Some(until) = timeline.cooldown_until {
+                    if until > now {
+                        Some(until - now)
                     } else {
-                        timeline.last_request = Some(now);
-                        timeline.recent.push_back(now);
+                        timeline.cooldown_until = None;
                         None
                     }
+                } else {
+                    None
                 }
+                .map(Some)
+                .unwrap_or_else(|| {
+                    let window = Duration::from_secs(profile.burst_window_secs);
+                    while timeline
+                        .recent
+                        .front()
+                        .is_some_and(|stamp| now.duration_since(*stamp) >= window)
+                    {
+                        timeline.recent.pop_front();
+                    }
+
+                    // Limite a raffica: se la finestra è piena si aspetta che ne
+                    // esca la più vecchia, indipendentemente dalla concorrenza.
+                    if timeline.recent.len() >= profile.burst_requests as usize {
+                        let oldest = timeline.recent.front().copied().unwrap_or(now);
+                        Some(window.saturating_sub(now.duration_since(oldest)))
+                    } else {
+                        // Pausa fra due richieste: durata scelta nell'intervallo
+                        // dichiarato, per non presentarsi con un ritmo meccanico.
+                        let pause = pause_for(profile);
+                        let since_last = timeline
+                            .last_request
+                            .map(|last| now.duration_since(last))
+                            .unwrap_or(pause);
+                        if since_last < pause {
+                            Some(pause - since_last)
+                        } else {
+                            timeline.last_request = Some(now);
+                            timeline.recent.push_back(now);
+                            None
+                        }
+                    }
+                })
             };
 
             match sleep_for {
@@ -115,16 +154,6 @@ impl Courtesy {
             }
         }
     }
-}
-
-/// Posti concessi verso un host. Il valore vive nel profilo del provider, ma il
-/// semaforo si crea una volta sola per host: il primo profilo che lo incontra
-/// decide, e gli altri provider sullo stesso host si adeguano — è il server a
-/// dover reggere, non il chiamante a doversi distinguere.
-fn profile_permits(_host: &str) -> usize {
-    // I profili tarati vanno da 2 a 4: si parte dal più prudente e lo si alza
-    // solo quando il profilo del provider lo consente esplicitamente.
-    2
 }
 
 fn pause_for(profile: &NetworkProfile) -> Duration {
@@ -184,6 +213,55 @@ mod tests {
         let (turn, _) = courtesy.wait_turn("gallica.bnf.fr", &profile).await;
         drop(turn);
         let (_turn, waited) = courtesy.wait_turn("images.bnf.fr", &profile).await;
+
+        assert!(waited < Duration::from_millis(50), "atteso {waited:?}");
+    }
+
+    #[tokio::test]
+    async fn the_profile_decides_how_many_talk_to_a_host_at_once() {
+        // Gallica ne regge due, chi regge di più ne ha quattro: il numero è
+        // della biblioteca, non una costante nostra (D18).
+        let courtesy = Courtesy::new();
+        let strict = NetworkProfile {
+            host_concurrency: 1,
+            ..fast(0, 100, 60)
+        };
+
+        let (first, _) = courtesy.wait_turn("host", &strict).await;
+        let second = tokio::time::timeout(
+            Duration::from_millis(80),
+            courtesy.wait_turn("host", &strict),
+        )
+        .await;
+
+        assert!(second.is_err(), "il posto era uno solo, il secondo aspetta");
+        drop(first);
+    }
+
+    #[tokio::test]
+    async fn a_cooldown_stops_everyone_talking_to_that_host() {
+        // Dopo un 403 non basta far aspettare il lavoro che l'ha preso: un
+        // secondo scaricamento sullo stesso host continuerebbe a bussare.
+        let courtesy = Courtesy::new();
+        let profile = fast(0, 100, 60);
+
+        courtesy.cool_down("host", &profile, 1).await;
+        let waited = tokio::time::timeout(
+            Duration::from_millis(120),
+            courtesy.wait_turn("host", &profile),
+        )
+        .await;
+
+        assert!(waited.is_err(), "l'host è in raffreddamento");
+    }
+
+    #[tokio::test]
+    async fn the_cooldown_of_one_host_does_not_touch_the_others() {
+        let courtesy = Courtesy::new();
+        let profile = fast(0, 100, 60);
+        courtesy.cool_down("gallica.bnf.fr", &profile, 5).await;
+
+        let (_turn, waited) = courtesy.wait_turn("images.vatlib.it", &profile).await;
 
         assert!(waited < Duration::from_millis(50), "atteso {waited:?}");
     }
