@@ -79,6 +79,10 @@ impl JobHandler for SourceDownloadJob {
     }
 
     async fn run(&self, ctx: JobContext) -> Result<Outcome, JobError> {
+        // Guardato durante le attese lunghe: senza, un raffreddamento di dieci
+        // minuti renderebbe il lavoro sordo a pausa e annullamento.
+        let stop = || ctx.pause_requested() || ctx.cancel_requested();
+
         let config: DownloadConfig = serde_json::from_str(&ctx.config).map_err(|error| {
             JobError::new(ErrorKind::Internal, format!("configurazione: {error}"))
         })?;
@@ -113,7 +117,17 @@ impl JobHandler for SourceDownloadJob {
             std::fs::read(&manifest_path)
                 .map_err(|error| JobError::new(ErrorKind::Storage, error.to_string()))?
         } else {
-            let fetched = fetch(&client, &self.courtesy, &profile, &config.manifest_url).await?;
+            let Some(fetched) = fetch(
+                &client,
+                &self.courtesy,
+                &profile,
+                &config.manifest_url,
+                &stop,
+            )
+            .await?
+            else {
+                return Ok(stopped_outcome(&ctx));
+            };
             stage_and_promote(
                 &staging.join("manifest.json"),
                 &manifest_path,
@@ -125,6 +139,11 @@ impl JobHandler for SourceDownloadJob {
 
         let manifest = parse(&manifest_bytes)?;
         let total = manifest.pages.len() as u32;
+        // Il titolo va nel messaggio del lavoro: nel pannello si legge quello,
+        // e «207/362» da solo non dice quale libro sta scaricando.
+        let title = source_title(&ctx, &config.version_id)
+            .await
+            .unwrap_or_else(|| config.version_id.clone());
         record_manifest(&ctx, &config, total, &manifest).await?;
 
         // 2. Le carte, una per volta: il confine dove ci si può fermare.
@@ -143,8 +162,14 @@ impl JobHandler for SourceDownloadJob {
                 return Ok(Outcome::Paused);
             }
 
-            self.fetch_page(&ctx, &client, &profile, &config, &root, &staging, page)
+            let completed = self
+                .fetch_page(
+                    &ctx, &client, &profile, &config, &root, &staging, page, &stop,
+                )
                 .await?;
+            if !completed {
+                return Ok(stopped_outcome(&ctx));
+            }
 
             let _ = ctx
                 .save_checkpoint(
@@ -155,7 +180,7 @@ impl JobHandler for SourceDownloadJob {
             let remaining = total.saturating_sub(page.index);
             ctx.report_progress(
                 f64::from(page.index) / f64::from(total.max(1)),
-                Some(&format!("{}/{}", page.index, total)),
+                Some(&format!("{title} · {}/{}", page.index, total)),
                 Some(estimated_seconds(remaining, &profile)),
             )
             .await;
@@ -169,6 +194,8 @@ impl JobHandler for SourceDownloadJob {
 }
 
 impl SourceDownloadJob {
+    /// `Ok(false)` significa che il lavoro è stato fermato mentre aspettava il
+    /// suo turno: non è un errore e non è una carta saltata.
     #[allow(clippy::too_many_arguments)]
     async fn fetch_page(
         &self,
@@ -179,7 +206,8 @@ impl SourceDownloadJob {
         root: &Path,
         staging: &Path,
         page: &Page,
-    ) -> Result<(), JobError> {
+        stop: &(dyn Fn() -> bool + Sync),
+    ) -> Result<bool, JobError> {
         let relative = layout::page_path(
             &config.provider_key,
             &config.version_id,
@@ -193,11 +221,13 @@ impl SourceDownloadJob {
         // sostenibile: con i limiti di Gallica, riscaricare tutto significa un
         // quarto d'ora buttato (D18).
         if is_valid(&target, integrity::FileKind::Image) {
-            return Ok(());
+            return Ok(true);
         }
 
         let url = image_url(&page.image_service, &config.size_tag);
-        let fetched = fetch(client, &self.courtesy, profile, &url).await?;
+        let Some(fetched) = fetch(client, &self.courtesy, profile, &url, stop).await? else {
+            return Ok(false);
+        };
         // Se il turno è costato più di un secondo, il lavoro è rimasto fermo
         // per rispettare i limiti della biblioteca: va detto, perché è la
         // stessa immobilità di un errore con il significato opposto (D17).
@@ -221,7 +251,36 @@ impl SourceDownloadJob {
             fetched.bytes.len() as i64,
             &url,
         )
-        .await
+        .await?;
+        Ok(true)
+    }
+}
+
+/// Titolo della fonte a cui appartiene la digitalizzazione.
+async fn source_title(ctx: &JobContext, version_id: &str) -> Option<String> {
+    let version_id = version_id.to_string();
+    ctx.with_database(move |conn| {
+        Ok(conn
+            .query_row(
+                "SELECT s.title FROM sources s \
+                 JOIN source_versions v ON v.source_id = s.id WHERE v.id = ?1",
+                rusqlite::params![version_id],
+                |row| row.get::<_, String>(0),
+            )
+            .ok())
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+/// Come si è fermato: chi ha chiesto l'annullamento ha la precedenza sulla
+/// pausa, perché è la richiesta più forte.
+fn stopped_outcome(ctx: &JobContext) -> Outcome {
+    if ctx.cancel_requested() {
+        Outcome::Cancelled
+    } else {
+        Outcome::Paused
     }
 }
 

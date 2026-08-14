@@ -729,7 +729,8 @@
       "removeConfirm": "Remove",
       "availabilityRemote": "online only",
       "availabilityComplete": "all pages on this computer",
-      "availabilityPartial": "{{done}} of {{total}} pages on this computer"
+      "availabilityPartial": "{{done}} of {{total}} pages on this computer",
+      "verifyRunning": "Checking pages already present"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -1863,6 +1864,7 @@
     "closeConfirm": "Close anyway",
     "pauseAll": "Pause all ({{count}})",
     "resumeAll": "Resume all ({{count}})",
-    "waitingForLibrary": "waiting · library limits"
+    "waitingForLibrary": "waiting · library limits",
+    "commandFailed": "Command failed"
   }
 }

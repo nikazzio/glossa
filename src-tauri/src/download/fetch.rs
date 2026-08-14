@@ -47,26 +47,32 @@ pub struct Fetched {
 const TRANSPORT_ATTEMPTS: u32 = 3;
 const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 
+/// `should_stop` interrompe l'attesa del turno quando il lavoro è stato messo
+/// in pausa o annullato: `Ok(None)` significa "fermato mentre aspettava", non
+/// "fallito".
 pub async fn fetch(
     client: &Client,
     courtesy: &Courtesy,
     profile: &NetworkProfile,
     url: &str,
-) -> Result<Fetched, JobError> {
+    should_stop: &(dyn Fn() -> bool + Sync),
+) -> Result<Option<Fetched>, JobError> {
     let host = host_of(url)?;
     let mut waited_total = Duration::ZERO;
     let mut last_error = None;
 
     for attempt in 1..=TRANSPORT_ATTEMPTS {
-        let (_turn, waited) = courtesy.wait_turn(&host, profile).await;
+        let Some((_turn, waited)) = courtesy.wait_turn(&host, profile, should_stop).await else {
+            return Ok(None);
+        };
         waited_total += waited;
 
         match attempt_once(client, url, profile).await {
             Ok(bytes) => {
-                return Ok(Fetched {
+                return Ok(Some(Fetched {
                     bytes,
                     waited: waited_total,
-                })
+                }))
             }
             Err(error) => {
                 // Un rifiuto per eccesso di richieste raffredda **l'host**, non
@@ -86,6 +92,9 @@ pub async fn fetch(
                 last_error = Some(error);
                 if attempt < TRANSPORT_ATTEMPTS {
                     tokio::time::sleep(TRANSPORT_PAUSE * attempt).await;
+                    if should_stop() {
+                        return Ok(None);
+                    }
                 }
             }
         }
@@ -196,6 +205,10 @@ mod tests {
         }
     }
 
+    fn never_stop() -> impl Fn() -> bool + Sync {
+        || false
+    }
+
     async fn fetch_from(server: &MockServer, route: &str) -> Result<Fetched, JobError> {
         let profile = instant_profile();
         let client = build_client(&profile).unwrap();
@@ -205,8 +218,10 @@ mod tests {
             &courtesy,
             &profile,
             &format!("{}{route}", server.uri()),
+            &never_stop(),
         )
         .await
+        .map(|fetched| fetched.expect("nessuno ha chiesto di fermarsi"))
     }
 
     #[tokio::test]
@@ -243,6 +258,7 @@ mod tests {
             &Courtesy::new(),
             &profile,
             &format!("{}/page.jpg", server.uri()),
+            &never_stop(),
         )
         .await
         .unwrap_err();
@@ -319,13 +335,15 @@ mod tests {
         let courtesy = Courtesy::new();
         let url = format!("{}/page.jpg", server.uri());
 
-        let _ = fetch(&client, &courtesy, &profile, &url).await.unwrap_err();
+        let _ = fetch(&client, &courtesy, &profile, &url, &never_stop())
+            .await
+            .unwrap_err();
 
         // Una seconda richiesta allo stesso host non parte: sta scontando il
         // raffreddamento, anche se è un altro lavoro a chiederla.
         let blocked = tokio::time::timeout(
             Duration::from_millis(150),
-            fetch(&client, &courtesy, &profile, &url),
+            fetch(&client, &courtesy, &profile, &url, &never_stop()),
         )
         .await;
         assert!(blocked.is_err(), "l'host deve restare fermo");

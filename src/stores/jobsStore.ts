@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
+import i18next from 'i18next';
+import { logger } from '../utils/logger';
 import {
   cancelJob,
   isTerminal,
@@ -37,6 +40,17 @@ interface JobsState {
   retry: (id: string, fromScratch?: boolean) => Promise<void>;
 }
 
+/** Esegue un comando sulla coda, e se fallisce lo dice invece di inghiottirlo. */
+async function run(action: string, id: string, command: () => Promise<void>): Promise<void> {
+  try {
+    await command();
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`jobs: ${action} fallito`, { id, message });
+    toast.error(i18next.t('jobs.commandFailed'), { description: message });
+  }
+}
+
 function replace(jobs: Job[], changed: Job): Job[] {
   const known = jobs.some((job) => job.id === changed.id);
   return known ? jobs.map((job) => (job.id === changed.id ? changed : job)) : [...jobs, changed];
@@ -55,17 +69,19 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
   applyChange: (job) => set((state) => ({ jobs: replace(state.jobs, job) })),
 
+  // Un comando che fallisce deve dirlo. Prima l'errore spariva: il pulsante
+  // sembrava non fare niente e non restava traccia da nessuna parte.
   pause: async (id) => {
-    await pauseJob(id);
+    await run('pause', id, () => pauseJob(id));
   },
   resume: async (id) => {
-    await resumeJob(id);
+    await run('resume', id, () => resumeJob(id));
   },
   cancel: async (id) => {
-    await cancelJob(id);
+    await run('cancel', id, () => cancelJob(id));
   },
   retry: async (id, fromScratch = false) => {
-    await retryJob(id, fromScratch);
+    await run('retry', id, () => retryJob(id, fromScratch));
   },
 }));
 

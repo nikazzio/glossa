@@ -230,7 +230,18 @@ function CatalogEntryRow({
 
       <div className={`flex shrink-0 items-center gap-1 ${view === 'grid' ? 'justify-end' : ''}`}>
         {runningJob ? (
-          <Tooltip label={t('areas.library.downloadRunning')} side="top">
+          // Ripremendo scarica su una fonte già completa, il lavoro riscorre le
+          // pagine saltando quelle valide: è una verifica, non uno scaricamento,
+          // e mostrare solo la percentuale accanto a «tutte le pagine» sembrava
+          // una contraddizione.
+          <Tooltip
+            label={
+              entry.expectedPages && entry.localPages >= entry.expectedPages
+                ? t('areas.library.verifyRunning')
+                : t('areas.library.downloadRunning')
+            }
+            side="top"
+          >
             <span className="text-[11px] text-editorial-accent">
               {Math.round(runningJob.progress * 100)}%
             </span>

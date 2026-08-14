@@ -415,6 +415,7 @@ impl JobEngine {
     ///
     /// **Nessun lavoro riparte da solo**, con una sola eccezione a richiesta
     /// esplicita: gli scaricamenti, se l'impostazione è accesa.
+    #[allow(clippy::doc_overindented_list_items)]
     pub async fn recover_interrupted(&self) -> Result<usize, String> {
         let guard = self.db_guard().await?;
         let conn = &*guard;
@@ -455,36 +456,47 @@ impl JobEngine {
             }
             self.observer.notify(conn, &job.id);
         }
+        log::info!("coda: {touched} lavori interrotti rimessi in ordine");
         self.wake.notify_one();
         Ok(touched)
     }
 
     /// Un giro di coda: quanti lavori sono partiti.
     pub async fn tick(self: &Arc<Self>) -> Result<usize, String> {
-        let guard = self.db_guard().await?;
-        let conn = &*guard;
-        let ready = store::claimable(conn)?;
-        let mut started = 0;
-
-        for job in ready {
-            let Some(handler) = self.handlers.get(&job.job_type).cloned() else {
-                continue;
-            };
-            let Some(semaphore) = self.permits.get(&handler.resource_class()).cloned() else {
-                continue;
-            };
-            let Ok(permit) = semaphore.try_acquire_owned() else {
-                // Corsia piena: il lavoro resta in coda e riproverà al giro
-                // successivo. Non si toglie dalla coda ciò che non parte.
-                continue;
-            };
-            if !store::set_status(conn, &job.id, JobStatus::Running)? {
-                continue;
+        // Il lucchetto delle scritture si tiene solo per decidere **chi parte**.
+        // I gestori, appena avviati, scrivono anche loro: tenerlo aperto fino a
+        // dopo l'avvio significherebbe far aspettare ogni lavoro nuovo dietro a
+        // quelli del giro in corso.
+        let mut starting = Vec::new();
+        {
+            let guard = self.db_guard().await?;
+            let conn = &*guard;
+            for job in store::claimable(conn)? {
+                let Some(handler) = self.handlers.get(&job.job_type).cloned() else {
+                    log::warn!("job {}: nessun gestore per '{}'", job.id, job.job_type);
+                    continue;
+                };
+                let Some(semaphore) = self.permits.get(&handler.resource_class()).cloned() else {
+                    continue;
+                };
+                let Ok(permit) = semaphore.try_acquire_owned() else {
+                    // Corsia piena: il lavoro resta in coda e riproverà al giro
+                    // successivo. Non si toglie dalla coda ciò che non parte.
+                    continue;
+                };
+                if !store::set_status(conn, &job.id, JobStatus::Running)? {
+                    continue;
+                }
+                store::increment_attempt(conn, &job.id)?;
+                self.observer.notify(conn, &job.id);
+                starting.push((job, handler, permit));
             }
-            store::increment_attempt(conn, &job.id)?;
-            self.observer.notify(conn, &job.id);
+        }
+
+        let started = starting.len();
+        for (job, handler, permit) in starting {
+            log::info!("job {} ({}): avviato", job.id, job.job_type);
             self.spawn(job, handler, permit);
-            started += 1;
         }
         Ok(started)
     }
@@ -539,17 +551,18 @@ impl JobEngine {
             Ok(Outcome::Cancelled) => {
                 store::set_status(conn, &job.id, JobStatus::Cancelled)?;
             }
-            Err(error) => {
+            Err(ref error) => {
+                log::warn!("job {}: {} ({:?})", job.id, error.message, error.kind);
                 // `attempt_count` è già stato incrementato alla partenza.
                 let attempts = store::get(conn, &job.id)?
                     .map(|current| current.attempt_count)
                     .unwrap_or(job.attempt_count + 1);
                 let can_retry = error.kind.is_retryable() && attempts < job.max_attempts;
                 if can_retry {
-                    let wait = self.backoff.wait_for(&error, attempts);
-                    store::schedule_retry(conn, &job.id, &error, wait.as_secs() as i64)?;
+                    let wait = self.backoff.wait_for(error, attempts);
+                    store::schedule_retry(conn, &job.id, error, wait.as_secs() as i64)?;
                 } else {
-                    store::fail(conn, &job.id, &error)?;
+                    store::fail(conn, &job.id, error)?;
                 }
             }
         }

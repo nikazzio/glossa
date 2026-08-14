@@ -728,8 +728,9 @@
       "removeMessage": "Sparisce dalla Biblioteca insieme ai suoi collegamenti. Le immagini già scaricate restano sul disco: per liberare spazio c'è il comando apposta.",
       "removeConfirm": "Togli",
       "availabilityRemote": "solo online",
-      "availabilityComplete": "tutte le carte sul computer",
-      "availabilityPartial": "{{done}} carte su {{total}} sul computer"
+      "availabilityComplete": "tutte le pagine sul computer",
+      "availabilityPartial": "{{done}} pagine su {{total}} sul computer",
+      "verifyRunning": "Verifica delle pagine già presenti"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1863,6 +1864,7 @@
     "closeConfirm": "Chiudi comunque",
     "pauseAll": "Metti in pausa tutti ({{count}})",
     "resumeAll": "Riprendi tutti ({{count}})",
-    "waitingForLibrary": "in attesa · limiti della biblioteca"
+    "waitingForLibrary": "in attesa · limiti della biblioteca",
+    "commandFailed": "Comando non riuscito"
   }
 }

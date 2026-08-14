@@ -16,6 +16,11 @@ use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
 
 use crate::iiif::network::NetworkProfile;
 
+/// Quanto si dorme al massimo prima di ricontrollare se è stato chiesto di
+/// fermarsi. Un raffreddamento dura minuti: dormirlo tutto d'un fiato renderebbe
+/// il lavoro sordo a pausa e annullamento.
+const POLL_SLICE: Duration = Duration::from_millis(250);
+
 /// Stato di un singolo host: chi sta parlando adesso, quando si è parlato
 /// l'ultima volta, e le richieste della finestra corrente.
 struct HostGate {
@@ -54,15 +59,25 @@ impl Courtesy {
     /// Aspetta il proprio turno verso `host`, rispettando pausa, raffica e
     /// concorrenza. Restituisce quanto si è aspettato: serve a dire all'utente
     /// che il lavoro è fermo **per rispetto dei limiti**, non per un errore.
-    pub async fn wait_turn(&self, host: &str, profile: &NetworkProfile) -> (Turn, Duration) {
+    ///
+    /// `should_stop` viene guardato **durante** l'attesa. Senza, un lavoro
+    /// entrato in raffreddamento — dieci minuti dopo un 403 su Gallica — non
+    /// risponderebbe più né alla pausa né all'annullamento fino a scadenza, e
+    /// terrebbe occupato il suo posto in corsia per tutto il tempo.
+    pub async fn wait_turn(
+        &self,
+        host: &str,
+        profile: &NetworkProfile,
+        should_stop: &(dyn Fn() -> bool + Sync),
+    ) -> Option<(Turn, Duration)> {
         let gate = self.gate_for(host, profile).await;
         let permit = Arc::clone(&gate.permits)
             .acquire_owned()
             .await
             .expect("il semaforo di un host non viene mai chiuso");
 
-        let waited = Self::respect_timing(&gate, profile).await;
-        (Turn { _permit: permit }, waited)
+        let waited = Self::respect_timing(&gate, profile, should_stop).await?;
+        Some((Turn { _permit: permit }, waited))
     }
 
     /// Mette un host in raffreddamento: da qui in avanti, per quei secondi,
@@ -93,9 +108,16 @@ impl Courtesy {
         }))
     }
 
-    async fn respect_timing(gate: &HostGate, profile: &NetworkProfile) -> Duration {
+    async fn respect_timing(
+        gate: &HostGate,
+        profile: &NetworkProfile,
+        should_stop: &(dyn Fn() -> bool + Sync),
+    ) -> Option<Duration> {
         let started = Instant::now();
         loop {
+            if should_stop() {
+                return None;
+            }
             let sleep_for = {
                 let mut timeline = gate.timeline.lock().await;
                 let now = Instant::now();
@@ -148,9 +170,13 @@ impl Courtesy {
             };
 
             match sleep_for {
-                Some(delay) if !delay.is_zero() => tokio::time::sleep(delay).await,
+                // L'attesa si spezza in fette brevi: fra una e l'altra si
+                // guarda se nel frattempo è stato chiesto di fermarsi.
+                Some(delay) if !delay.is_zero() => {
+                    tokio::time::sleep(delay.min(POLL_SLICE)).await;
+                }
                 Some(_) => tokio::task::yield_now().await,
-                None => return started.elapsed(),
+                None => return Some(started.elapsed()),
             }
         }
     }
@@ -170,6 +196,18 @@ mod tests {
     use super::*;
     use crate::iiif::network::NetworkProfile;
 
+    fn never_stop() -> impl Fn() -> bool + Sync {
+        || false
+    }
+
+    /// Turno atteso senza interruzioni: nei test che non provano la fermata.
+    async fn turn(courtesy: &Courtesy, host: &str, profile: &NetworkProfile) -> (Turn, Duration) {
+        courtesy
+            .wait_turn(host, profile, &never_stop())
+            .await
+            .expect("nessuno ha chiesto di fermarsi")
+    }
+
     fn fast(pause_ms: u64, burst: u32, window_secs: u64) -> NetworkProfile {
         NetworkProfile {
             pause_min_ms: pause_ms,
@@ -184,9 +222,7 @@ mod tests {
     async fn the_first_request_does_not_wait() {
         let courtesy = Courtesy::new();
 
-        let (_turn, waited) = courtesy
-            .wait_turn("gallica.bnf.fr", &fast(40, 100, 60))
-            .await;
+        let (_turn, waited) = turn(&courtesy, "gallica.bnf.fr", &fast(40, 100, 60)).await;
 
         assert!(waited < Duration::from_millis(20), "atteso {waited:?}");
     }
@@ -196,9 +232,9 @@ mod tests {
         let courtesy = Courtesy::new();
         let profile = fast(60, 100, 60);
 
-        let (turn, _) = courtesy.wait_turn("gallica.bnf.fr", &profile).await;
-        drop(turn);
-        let (_turn, waited) = courtesy.wait_turn("gallica.bnf.fr", &profile).await;
+        let (first, _) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
+        drop(first);
+        let (_second, waited) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
 
         assert!(waited >= Duration::from_millis(40), "atteso {waited:?}");
     }
@@ -210,9 +246,9 @@ mod tests {
         let courtesy = Courtesy::new();
         let profile = fast(200, 100, 60);
 
-        let (turn, _) = courtesy.wait_turn("gallica.bnf.fr", &profile).await;
-        drop(turn);
-        let (_turn, waited) = courtesy.wait_turn("images.bnf.fr", &profile).await;
+        let (first, _) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
+        drop(first);
+        let (_second, waited) = turn(&courtesy, "images.bnf.fr", &profile).await;
 
         assert!(waited < Duration::from_millis(50), "atteso {waited:?}");
     }
@@ -227,12 +263,9 @@ mod tests {
             ..fast(0, 100, 60)
         };
 
-        let (first, _) = courtesy.wait_turn("host", &strict).await;
-        let second = tokio::time::timeout(
-            Duration::from_millis(80),
-            courtesy.wait_turn("host", &strict),
-        )
-        .await;
+        let (first, _) = turn(&courtesy, "host", &strict).await;
+        let second =
+            tokio::time::timeout(Duration::from_millis(80), turn(&courtesy, "host", &strict)).await;
 
         assert!(second.is_err(), "il posto era uno solo, il secondo aspetta");
         drop(first);
@@ -248,7 +281,7 @@ mod tests {
         courtesy.cool_down("host", &profile, 1).await;
         let waited = tokio::time::timeout(
             Duration::from_millis(120),
-            courtesy.wait_turn("host", &profile),
+            turn(&courtesy, "host", &profile),
         )
         .await;
 
@@ -261,9 +294,30 @@ mod tests {
         let profile = fast(0, 100, 60);
         courtesy.cool_down("gallica.bnf.fr", &profile, 5).await;
 
-        let (_turn, waited) = courtesy.wait_turn("images.vatlib.it", &profile).await;
+        let (_turn, waited) = turn(&courtesy, "images.vatlib.it", &profile).await;
 
         assert!(waited < Duration::from_millis(50), "atteso {waited:?}");
+    }
+
+    #[tokio::test]
+    async fn a_job_that_is_being_stopped_does_not_serve_out_its_cooldown() {
+        // Dopo un 403 su Gallica il raffreddamento è di dieci minuti: dormirlo
+        // tutto renderebbe il lavoro sordo a pausa e annullamento, e terrebbe
+        // occupato il posto in corsia per tutto il tempo.
+        let courtesy = Courtesy::new();
+        let profile = fast(0, 100, 60);
+        courtesy.cool_down("host", &profile, 600).await;
+
+        let outcome = tokio::time::timeout(
+            Duration::from_millis(500),
+            courtesy.wait_turn("host", &profile, &|| true),
+        )
+        .await;
+
+        assert!(
+            outcome.expect("non deve restare appeso").is_none(),
+            "chi si sta fermando non aspetta il raffreddamento"
+        );
     }
 
     #[tokio::test]
@@ -272,11 +326,11 @@ mod tests {
         // Due richieste al secondo di finestra, senza pausa fra le due.
         let profile = fast(0, 2, 1);
 
-        let (a, _) = courtesy.wait_turn("host", &profile).await;
+        let (a, _) = turn(&courtesy, "host", &profile).await;
         drop(a);
-        let (b, _) = courtesy.wait_turn("host", &profile).await;
+        let (b, _) = turn(&courtesy, "host", &profile).await;
         drop(b);
-        let (_c, waited) = courtesy.wait_turn("host", &profile).await;
+        let (_c, waited) = turn(&courtesy, "host", &profile).await;
 
         assert!(
             waited >= Duration::from_millis(500),

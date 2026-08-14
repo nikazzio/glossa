@@ -165,15 +165,9 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
         type="button"
         aria-expanded={expanded}
         onClick={onToggle}
-        className={`flex w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-          expanded ? 'min-h-40 flex-col' : 'h-40'
-        }`}
+        className="flex h-40 w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
-        <span
-          className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox ${
-            expanded ? 'h-40 w-28 self-start' : 'h-full w-28'
-          }`}
-        >
+        <span className="flex h-full w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox">
           {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
         </span>
         {expanded ? (
