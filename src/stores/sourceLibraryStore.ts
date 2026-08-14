@@ -1,10 +1,18 @@
 import { create } from 'zustand';
-import { classifySourceKind, type LibrarySource, type LibrarySourceDetail, type SourceCard } from '../types';
+import {
+  classifySourceKind,
+  type LibraryCatalogEntry,
+  type LibrarySource,
+  type LibrarySourceDetail,
+  type SourceCard,
+} from '../types';
 import {
   addSourceToLibrary as addSourceToLibraryService,
   getLibrarySourceDetail,
-  listLibrarySources,
+  listLibraryCatalog,
   listLibrarySourceUrls,
+  listLibrarySources,
+  removeSourceFromLibrary as removeSourceFromLibraryService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
 import { logger } from '../utils/logger';
@@ -24,6 +32,9 @@ interface SourceLibraryState {
   loadSources: () => Promise<void>;
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string) => Promise<void>;
+  catalog: LibraryCatalogEntry[];
+  loadCatalog: () => Promise<void>;
+  removeSource: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   clearError: () => void;
@@ -80,6 +91,26 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         addingUrls.delete(manifestUrl);
         return { addingUrls };
       });
+    }
+  },
+
+  catalog: [],
+
+  loadCatalog: async () => {
+    try {
+      set({ catalog: await listLibraryCatalog() });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error) });
+    }
+  },
+
+  removeSource: async (sourceId) => {
+    try {
+      await removeSourceFromLibraryService(sourceId);
+      await get().loadCatalog();
+      await get().loadLibraryManifestUrls();
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error) });
     }
   },
 

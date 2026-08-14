@@ -139,3 +139,50 @@ describe('SourceDiscoveryPanel', () => {
     }));
   });
 });
+
+describe('risultati doppi dai cataloghi', () => {
+  const card = (id: string, title: string) => ({
+    id,
+    title,
+    creator: null,
+    date: null,
+    description: null,
+    thumbnailUrl: null,
+    mediaType: null,
+    collection: null,
+    language: null,
+    volume: null,
+    subjects: [],
+    manifestUrl: `https://example.test/${id}`,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useUiStore.setState({ discoveryResultsPerRow: 3 });
+    useSourceLibraryStore.setState({ sources: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
+    mockListProviders.mockResolvedValue(PROVIDERS);
+  });
+
+  it('lo stesso identificativo su due pagine non produce due schede', async () => {
+    // Internet Archive rimanda lo stesso identificativo su pagine diverse:
+    // concatenare e basta duplicava la scheda, e con lei la sua chiave.
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: true,
+      results: [card('ripetuto', 'Diari')],
+    });
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [card('ripetuto', 'Diari'), card('nuovo', 'Altro')],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'diari');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await user.click(await screen.findByRole('button', { name: 'dashboard.discovery.loadMore' }));
+
+    await waitFor(() => expect(screen.getAllByText('Diari')).toHaveLength(1));
+    expect(screen.getByText('Altro')).toBeInTheDocument();
+  });
+});

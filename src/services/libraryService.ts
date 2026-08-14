@@ -1,12 +1,6 @@
 import { select, execute, runInTransaction } from './dbService';
 import { generateId } from '../utils';
-import type {
-  AddSourceToLibraryInput,
-  LibraryAsset,
-  LibrarySource,
-  LibrarySourceDetail,
-  LibrarySourceVersion,
-} from '../types';
+import type { AddSourceToLibraryInput, LibraryAsset, LibraryCatalogEntry, LibrarySource, LibrarySourceDetail, LibrarySourceVersion } from '../types';
 
 interface SourceRow {
   id: string;
@@ -87,6 +81,90 @@ export async function listLibrarySources(): Promise<LibrarySource[]> {
      ORDER BY title ASC`,
   );
   return rows.map(rowToSource);
+}
+
+interface CatalogRow extends SourceRow {
+  version_id: string | null;
+  manifest_url: string | null;
+  metadata: string | null;
+  expected_asset_count: number | null;
+  local_pages: number;
+}
+
+/**
+ * Il catalogo come lo vede la Biblioteca: la fonte con la sua digitalizzazione
+ * principale, la copertina, e **quante carte sono davvero sul computer**.
+ *
+ * Le carte presenti si contano dalle righe locali, non da uno stato scritto a
+ * parte: la disponibilità è un fatto che si osserva, non una bandierina da
+ * tenere aggiornata (D7).
+ */
+export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
+  const rows = await select<CatalogRow>(
+    `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref, s.created_at,
+            v.id AS version_id, v.source_url AS manifest_url, v.metadata,
+            v.expected_asset_count,
+            (SELECT COUNT(*) FROM assets a
+              WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_pages
+       FROM sources s
+       LEFT JOIN source_versions v
+         ON v.source_id = s.id AND v.is_primary = 1
+      WHERE s.status = 'active'
+      ORDER BY s.title ASC`,
+  );
+
+  return rows.map((row) => {
+    const metadata = parseMetadata(row.metadata);
+    return {
+      source: rowToSource(row),
+      versionId: row.version_id,
+      manifestUrl: row.manifest_url,
+      thumbnailUrl: metadata.thumbnailUrl,
+      creator: metadata.creator,
+      date: metadata.date,
+      expectedPages: row.expected_asset_count,
+      localPages: row.local_pages,
+    };
+  });
+}
+
+interface SourceMetadata {
+  thumbnailUrl: string | null;
+  creator: string | null;
+  date: string | null;
+}
+
+/** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
+ *  ignora il resto, invece di fidarsi della forma. */
+function parseMetadata(raw: string | null): SourceMetadata {
+  if (!raw) return { thumbnailUrl: null, creator: null, date: null };
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) {
+      return { thumbnailUrl: null, creator: null, date: null };
+    }
+    const record = parsed as Record<string, unknown>;
+    const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : null);
+    return {
+      thumbnailUrl: text(record.thumbnailUrl),
+      creator: text(record.creator),
+      date: text(record.date),
+    };
+  } catch {
+    return { thumbnailUrl: null, creator: null, date: null };
+  }
+}
+
+/**
+ * Toglie una fonte dalla Biblioteca. Le versioni, gli asset e i collegamenti ai
+ * workspace se ne vanno con lei (il database li lega in cascata).
+ *
+ * **I file sul disco non li tocca**: cancellarli è "libera spazio" (D6), che è
+ * un'azione diversa e va chiesta a parte, perché qui si sta rinunciando alla
+ * scheda, non ai gigabyte.
+ */
+export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
+  await execute('DELETE FROM sources WHERE id = $1', [sourceId]);
 }
 
 /** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione):

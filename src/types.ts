@@ -119,6 +119,21 @@ export interface LibrarySource {
   createdAt: string;
 }
 
+/** Una riga del catalogo della Biblioteca: la fonte più ciò che serve a
+ *  mostrarla senza aprirla. */
+export interface LibraryCatalogEntry {
+  source: LibrarySource;
+  versionId: string | null;
+  manifestUrl: string | null;
+  thumbnailUrl: string | null;
+  creator: string | null;
+  date: string | null;
+  /** Carte dichiarate dal manifesto, quando si è già letto. */
+  expectedPages: number | null;
+  /** Carte davvero presenti sul computer. */
+  localPages: number;
+}
+
 export interface LibrarySourceVersion {
   id: string;
   sourceId: string;

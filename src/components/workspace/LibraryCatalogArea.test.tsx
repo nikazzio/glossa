@@ -1,21 +1,49 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryCatalogArea } from './LibraryCatalogArea';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useUiStore } from '../../stores/uiStore';
 import '../../test/i18n-mock';
 
 vi.mock('../../services/libraryService', () => ({
   listLibrarySources: vi.fn().mockResolvedValue([]),
+  listLibraryCatalog: vi.fn().mockResolvedValue([]),
+  removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
+  listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
 }));
 
+vi.mock('../../services/jobsService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/jobsService')>();
+  return { ...actual, enqueueSourceDownload: vi.fn() };
+});
+
+const entry = (overrides: Partial<import('../../types').LibraryCatalogEntry> = {}) => ({
+  source: {
+    id: 's1',
+    title: 'Book of Hours',
+    kind: 'iiif' as const,
+    primaryLanguage: null,
+    externalRef: 'gallica',
+    createdAt: '2026-01-01',
+  },
+  versionId: 'v1',
+  manifestUrl: 'https://x.test/m.json',
+  thumbnailUrl: null,
+  creator: null,
+  date: null,
+  expectedPages: 210,
+  localPages: 0,
+  ...overrides,
+});
+
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
-    useSourceLibraryStore.setState({ sources: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    useSourceLibraryStore.setState({ sources: [], catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     const service = await import('../../services/libraryService');
     // Evita che l'effetto di mount (che ricarica il dettaglio) sovrascriva con
@@ -25,23 +53,56 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
-  it('shows the empty state when there are no sources', () => {
+  it('senza fonti spiega cosa comparirà lì', () => {
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByRole('heading', { name: 'areas.library.title' })).toBeInTheDocument();
-    expect(screen.getByText('areas.library.emptyMessage')).toBeInTheDocument();
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByText('areas.library.empty')).toBeInTheDocument();
   });
 
-  it('lists persisted sources when present', () => {
-    useSourceLibraryStore.setState({
-      sources: [{ id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' }],
-    });
+  it('elenca le fonti con quante carte sono davvero sul computer', () => {
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
 
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.queryByText('areas.library.emptyMessage')).not.toBeInTheDocument();
+    expect(screen.getByText('areas.library.availabilityPartial')).toBeInTheDocument();
+  });
+
+  it('offre lo scaricamento e la rimozione per ogni fonte', () => {
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'areas.library.remove' })).toBeInTheDocument();
+  });
+
+  it('cliccando scarica mette in coda un lavoro per quella fonte', async () => {
+    const { enqueueSourceDownload } = await import('../../services/jobsService');
+    vi.mocked(enqueueSourceDownload).mockResolvedValue({ id: 'download:v1' } as never);
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    // I comandi icona vivono dentro un tooltip: con userEvent il clic non
+    // arriva al bottone in jsdom, come già visto nella testata.
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
+
+    await waitFor(() =>
+      expect(enqueueSourceDownload).toHaveBeenCalledWith({
+        providerKey: 'gallica',
+        manifestUrl: 'https://x.test/m.json',
+        versionId: 'v1',
+      }),
+    );
+  });
+
+  it('si può passare dall’elenco alla griglia', () => {
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.viewGrid' }));
+
+    expect(useUiStore.getState().libraryView).toBe('grid');
   });
 
   it('shows the detail panel when itemId is provided and detail is loaded', () => {

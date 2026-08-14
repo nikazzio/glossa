@@ -88,6 +88,8 @@ interface UiState {
    * "cosa sta facendo il programma", quindi stanno nello stesso posto.
    */
   drawerTab: 'console' | 'jobs';
+  /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
+  libraryView: 'list' | 'grid';
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
@@ -138,6 +140,7 @@ interface UiState {
   setChunkRailTab: (tab: ChunkRailTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
   setDrawerTab: (tab: 'console' | 'jobs') => void;
+  setLibraryView: (view: 'list' | 'grid') => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
@@ -284,6 +287,7 @@ export const useUiStore = create<UiState>()(
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
       drawerTab: 'console',
+      libraryView: 'list',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
@@ -402,6 +406,7 @@ export const useUiStore = create<UiState>()(
       setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
       setDrawerTab: (tab) => set({ drawerTab: tab }),
+      setLibraryView: (view) => set({ libraryView: view }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
@@ -548,6 +553,7 @@ export const useUiStore = create<UiState>()(
         projectFlyoutWidth: state.projectFlyoutWidth,
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
+        libraryView: state.libraryView,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
         editorialAccentColor: state.editorialAccentColor,
