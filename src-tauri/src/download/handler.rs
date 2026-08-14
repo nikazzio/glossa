@@ -19,6 +19,7 @@ use crate::vault::{integrity, layout};
 use super::courtesy::Courtesy;
 use super::fetch::{build_client, fetch};
 use super::manifest::{image_url, parse, Page};
+use super::size;
 
 pub const JOB_TYPE: &str = "source_download";
 
@@ -37,8 +38,11 @@ pub struct DownloadConfig {
     pub size_tag: String,
 }
 
+/// Tetto predefinito: 2000 pixel sul lato lungo (D4).
+const DEFAULT_CAP: u32 = 2000;
+
 fn default_size_tag() -> String {
-    "2000".to_string()
+    DEFAULT_CAP.to_string()
 }
 
 #[derive(Debug, Default, serde::Serialize, Deserialize)]
@@ -160,6 +164,18 @@ impl JobHandler for SourceDownloadJob {
             .await
             .unwrap_or_else(|| config.version_id.clone());
         record_manifest(&ctx, &config, total, &manifest).await?;
+        log::info!(
+            "job download starting id={} provider={} pages={} resume_from={} cap={}",
+            ctx.id,
+            config.provider_key,
+            total,
+            ctx.checkpoint
+                .as_deref()
+                .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
+                .map(|saved| saved.done)
+                .unwrap_or(0),
+            config.size_tag
+        );
 
         // 2. Le carte, una per volta: il confine dove ci si può fermare.
         //
@@ -172,6 +188,8 @@ impl JobHandler for SourceDownloadJob {
             .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
             .map(|saved| saved.done.min(total))
             .unwrap_or(0);
+        // Le misure decise per gruppo di carte valgono per tutto il lavoro.
+        let sizes: SizeCache = Default::default();
         let mut done = start;
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
         // una volta sola evita una somma per ogni carta.
@@ -189,8 +207,8 @@ impl JobHandler for SourceDownloadJob {
             let progress = f64::from(done) / f64::from(total.max(1));
             let fetched = self
                 .fetch_page_declaring_long_waits(
-                    &ctx, &client, &profile, &config, &manifest, &root, &staging, page, progress,
-                    &label, eta, &stop,
+                    &ctx, &client, &profile, &config, &manifest, &sizes, &root, &staging, page,
+                    progress, &label, eta, &stop,
                 )
                 .await
                 .inspect_err(|_| discard(&staging))?;
@@ -200,11 +218,24 @@ impl JobHandler for SourceDownloadJob {
 
             done += 1;
             bytes += added;
+            log::debug!(
+                "job page id={} page={}/{} added={} total={}",
+                ctx.id,
+                done,
+                total,
+                added,
+                bytes
+            );
             ctx.save_checkpoint(&serde_json::json!(Checkpoint { done }).to_string())
                 .await
                 // Senza il punto salvato la ripresa ripartirebbe da più indietro:
                 // non è fatale, ma non deve sparire in silenzio.
-                .unwrap_or_else(|error| log::warn!("job {}: punto non salvato: {error}", ctx.id));
+                .unwrap_or_else(|error| {
+                    log::warn!(
+                        "job checkpoint not saved id={} at={done} error={error}",
+                        ctx.id
+                    )
+                });
 
             ctx.report_progress(
                 f64::from(done) / f64::from(total.max(1)),
@@ -214,6 +245,12 @@ impl JobHandler for SourceDownloadJob {
             .await;
         }
 
+        log::info!(
+            "job download complete id={} pages={} bytes={}",
+            ctx.id,
+            done,
+            bytes
+        );
         discard(&staging);
         Ok(Outcome::Done)
     }
@@ -232,6 +269,7 @@ impl SourceDownloadJob {
         profile: &NetworkProfile,
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
+        sizes: &SizeCache,
         root: &Path,
         staging: &Path,
         page: &Page,
@@ -241,13 +279,19 @@ impl SourceDownloadJob {
         stop: &(dyn Fn() -> bool + Sync),
     ) -> Result<Option<u64>, JobError> {
         let work = self.fetch_page(
-            ctx, client, profile, config, manifest, root, staging, page, stop,
+            ctx, client, profile, config, manifest, sizes, root, staging, page, stop,
         );
         tokio::pin!(work);
 
         tokio::select! {
             outcome = &mut work => outcome,
             _ = tokio::time::sleep(DECLARE_WAIT_AFTER) => {
+                log::info!(
+                    "job waiting id={} reason={} page={}",
+                    ctx.id,
+                    crate::jobs::WAITING_LIBRARY_LIMITS,
+                    page.index
+                );
                 ctx.report_waiting(progress, Some(label), Some(eta)).await;
                 work.await
             }
@@ -265,6 +309,7 @@ impl SourceDownloadJob {
         profile: &NetworkProfile,
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
+        sizes: &SizeCache,
         root: &Path,
         staging: &Path,
         page: &Page,
@@ -279,7 +324,6 @@ impl SourceDownloadJob {
         .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
         let target = root.join(&relative);
         let vault_path = relative.to_string_lossy().replace('\\', "/");
-        let url = image_url(&page.image_service, &manifest.size_token(&config.size_tag));
 
         // Basta che il file ci sia: nel deposito entra **solo** ciò che ha già
         // superato la validazione nell'area di transito (D16-bis), quindi ciò
@@ -299,13 +343,24 @@ impl SourceDownloadJob {
                 .map(|meta| meta.len())
                 .unwrap_or(0);
             let checksum = scan.checksum.unwrap_or_default();
+            let known = self.known_size(sizes, page, config, manifest);
+            let url = image_url(&page.image_service, known.as_str());
+            log::debug!(
+                "job page recovered id={} page={} bytes={} (file sul disco senza riga)",
+                ctx.id,
+                page.index,
+                size
+            );
             record_page(ctx, config, page, &vault_path, &checksum, size as i64, &url).await?;
             return Ok(Some(size));
         }
 
-        let Some(fetched) = fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await?
-        else {
-            return Ok(None);
+        let (fetched, url) = match self
+            .fetch_at_best_size(ctx, client, profile, config, manifest, sizes, page, stop)
+            .await?
+        {
+            Some(found) => found,
+            None => return Ok(None),
         };
         let checksum = stage_and_promote(
             &staging.join(format!("{:04}.jpg", page.index)),
@@ -318,6 +373,187 @@ impl SourceDownloadJob {
         record_page(ctx, config, page, &vault_path, &checksum, size as i64, &url).await?;
         Ok(Some(size))
     }
+
+    /// La misura già decisa per le carte di questa dimensione, o quella che si
+    /// tenterebbe per prima. Serve a scrivere nella riga dell'asset l'indirizzo
+    /// da cui la carta è arrivata.
+    fn known_size(
+        &self,
+        sizes: &SizeCache,
+        page: &Page,
+        config: &DownloadConfig,
+        manifest: &super::manifest::Manifest,
+    ) -> size::SizeToken {
+        cached(sizes, page)
+            .or_else(|| {
+                size::first_attempt(
+                    &config.size_tag,
+                    manifest.presentation2,
+                    page.service_level.as_deref(),
+                )
+            })
+            .unwrap_or_else(|| size::SizeToken(size::full_size(manifest.presentation2)))
+    }
+
+    /// Chiede la carta alla misura più vicina al tetto che il servizio sa dare.
+    ///
+    /// Il primo tentativo usa il tetto così com'è: con un servizio conforme è
+    /// già la risposta giusta e non costa nessuna richiesta in più. Se il
+    /// servizio rifiuta, si legge il **suo** descrittore, si sceglie la misura
+    /// dichiarata più vicina al tetto e si riprova — una volta sola, e la scelta
+    /// vale per tutte le carte con le stesse dimensioni, che in un manoscritto
+    /// sono quasi tutte.
+    #[allow(clippy::too_many_arguments)]
+    async fn fetch_at_best_size(
+        &self,
+        ctx: &JobContext,
+        client: &reqwest::Client,
+        profile: &NetworkProfile,
+        config: &DownloadConfig,
+        manifest: &super::manifest::Manifest,
+        sizes: &SizeCache,
+        page: &Page,
+        stop: &(dyn Fn() -> bool + Sync),
+    ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
+        let attempt = match cached(sizes, page).or_else(|| {
+            size::first_attempt(
+                &config.size_tag,
+                manifest.presentation2,
+                page.service_level.as_deref(),
+            )
+        }) {
+            Some(token) => token,
+            // Livello 0 dichiarato: la larghezza arbitraria non esiste, si
+            // legge il descrittore senza sprecare una richiesta.
+            None => {
+                let Some(token) = self
+                    .negotiate_size(ctx, client, profile, config, sizes, page, stop)
+                    .await?
+                else {
+                    return Ok(None);
+                };
+                token
+            }
+        };
+
+        let url = image_url(&page.image_service, attempt.as_str());
+        match fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await {
+            Ok(Some(fetched)) => Ok(Some((fetched, url))),
+            Ok(None) => Ok(None),
+            Err(error) => {
+                // Rifiuto che può dipendere dalla misura chiesta: il servizio
+                // dichiara un livello che non rispetta. Si negozia una volta
+                // per gruppo di carte, poi si riprova.
+                let renegotiable = matches!(error.kind, ErrorKind::Internal | ErrorKind::Transport)
+                    && cached(sizes, page).is_none()
+                    && config.size_tag != "max";
+                if !renegotiable {
+                    return Err(error);
+                }
+                log::warn!(
+                    "job size refused id={} page={} size={} error={}",
+                    ctx.id,
+                    page.index,
+                    attempt.as_str(),
+                    error.message
+                );
+                let Some(token) = self
+                    .negotiate_size(ctx, client, profile, config, sizes, page, stop)
+                    .await?
+                else {
+                    return Ok(None);
+                };
+                if token == attempt {
+                    return Err(error);
+                }
+                let url = image_url(&page.image_service, token.as_str());
+                match fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await? {
+                    Some(fetched) => Ok(Some((fetched, url))),
+                    None => Ok(None),
+                }
+            }
+        }
+    }
+
+    /// Legge il descrittore dell'immagine e ricava la misura da chiedere,
+    /// ricordandola per tutte le carte con le stesse dimensioni.
+    #[allow(clippy::too_many_arguments)]
+    async fn negotiate_size(
+        &self,
+        ctx: &JobContext,
+        client: &reqwest::Client,
+        profile: &NetworkProfile,
+        config: &DownloadConfig,
+        sizes: &SizeCache,
+        page: &Page,
+        stop: &(dyn Fn() -> bool + Sync),
+    ) -> Result<Option<size::SizeToken>, JobError> {
+        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP);
+        let info_url = size::info_url(&page.image_service);
+        let Some(fetched) = fetch(
+            client,
+            &self.courtesy,
+            profile,
+            &info_url,
+            ctx.attempt,
+            stop,
+        )
+        .await?
+        else {
+            return Ok(None);
+        };
+
+        let token = match serde_json::from_slice::<serde_json::Value>(&fetched.bytes) {
+            Ok(info) => size::from_info(&info, cap),
+            Err(error) => {
+                // Descrittore illeggibile: si continua con il riquadro, che non
+                // ingrandisce mai, invece di fermare lo scaricamento.
+                log::warn!(
+                    "job size descriptor unreadable id={} page={} error={error}",
+                    ctx.id,
+                    page.index
+                );
+                size::SizeToken(format!("!{cap},{cap}"))
+            }
+        };
+
+        log::info!(
+            "job size negotiated id={} group={} cap={} chosen={}",
+            ctx.id,
+            page.size
+                .map(|(w, h)| format!("{w}x{h}"))
+                .unwrap_or_else(|| "?".to_string()),
+            cap,
+            token.as_str()
+        );
+        remember(sizes, page, &token);
+        Ok(Some(token))
+    }
+}
+
+/// Misura decisa per ogni gruppo di carte con le stesse dimensioni.
+///
+/// Le carte di uno stesso libro non hanno tutte la stessa dimensione: su
+/// archive.org la prima carta può essere 2816x4240 e la terza 2598x3850, e le
+/// misure che il servizio offre sono dimezzamenti dell'originale, quindi
+/// diverse. Il gruppo è la dimensione dichiarata dal canvas.
+type SizeCache = std::sync::Mutex<std::collections::HashMap<(u32, u32), size::SizeToken>>;
+
+fn cached(sizes: &SizeCache, page: &Page) -> Option<size::SizeToken> {
+    let key = page.size?;
+    match sizes.lock() {
+        Ok(cache) => cache.get(&key).cloned(),
+        Err(poisoned) => poisoned.into_inner().get(&key).cloned(),
+    }
+}
+
+fn remember(sizes: &SizeCache, page: &Page, token: &size::SizeToken) {
+    let Some(key) = page.size else { return };
+    let mut cache = match sizes.lock() {
+        Ok(cache) => cache,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    cache.insert(key, token.clone());
 }
 
 /// Titolo della fonte a cui appartiene la digitalizzazione.
@@ -356,7 +592,10 @@ fn stopped_outcome(ctx: &JobContext, staging: &Path) -> Outcome {
 fn discard(staging: &Path) {
     if let Err(error) = std::fs::remove_dir_all(staging) {
         if error.kind() != std::io::ErrorKind::NotFound {
-            log::warn!("transito non ripulito ({}): {error}", staging.display());
+            log::warn!(
+                "job staging not cleaned path={} error={error}",
+                staging.display()
+            );
         }
     }
 }
@@ -631,19 +870,17 @@ mod tests {
     }
 
     #[test]
-    fn the_size_asked_and_the_folder_written_cannot_diverge() {
-        // La stessa etichetta nomina la cartella e il parametro chiesto al
-        // servizio: se fossero due valori distinti, prima o poi salverebbero
-        // una risoluzione dentro la cartella di un'altra (D4).
+    fn the_folder_is_named_by_the_policy_not_by_the_pixels_obtained() {
+        // La cartella porta il **tetto** chiesto, non la misura ottenuta: il
+        // servizio può servire 1299 dove ne chiedevamo 2000, e le carte dello
+        // stesso libro possono avere misure diverse fra loro. Tenere il tetto
+        // come nome è ciò che permette a una ripresa di ritrovare le carte già
+        // scaricate (D4).
         let relative = crate::vault::layout::page_path("gallica", "v1", "2000", 7).unwrap();
-        let manifest = super::super::manifest::parse(
-            br#"{"items":[{"items":[{"items":[{"body":{"service":[{"id":"https://img/1"}]}}]}]}]}"#,
-        )
-        .unwrap();
-        let url = super::image_url("https://img/1", &manifest.size_token("2000"));
+        let served = super::image_url("https://img/1", "1299,");
 
-        assert!(relative.to_string_lossy().contains("2000"));
-        assert!(url.contains("/full/2000,/"));
+        assert!(relative.to_string_lossy().contains("/2000/"));
+        assert!(served.contains("/full/1299,/"));
     }
 
     #[test]

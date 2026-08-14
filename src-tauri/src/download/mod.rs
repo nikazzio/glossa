@@ -8,6 +8,7 @@ pub mod courtesy;
 pub mod fetch;
 pub mod handler;
 pub mod manifest;
+pub mod size;
 
 use crate::jobs::commands::JobsState;
 use crate::jobs::store::NewJob;

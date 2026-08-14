@@ -35,6 +35,8 @@ Il comando **scarica** mette in coda il lavoro vero: puoi cambiare schermata, me
 
 Quando una fonte è tutta sul computer il comando **sparisce**, e al suo posto resta un segno di spunta: non c'è niente da chiedere alla biblioteca, e con i limiti di cortesia un manoscritto intero può costare un quarto d'ora di rete.
 
+**A che risoluzione** — Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre. Se la biblioteca rifiuta quella richiesta, Glossa le chiede cosa sa produrre e riprova con la misura più vicina: non è un errore e non richiede niente da parte tua.
+
 Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Archiviazione e lavori](/guides/storage-and-jobs).
 
 ## Togliere una fonte

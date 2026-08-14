@@ -6,8 +6,25 @@
 //! a metà (D13).
 //!
 //! Non sa niente di rete, di immagini o di documenti: quello è il mestiere dei
-//! gestori, che si registrano per tipo di lavoro. In questa PR l'unico gestore
-//! è quello finto dei test.
+//! gestori, che si registrano per tipo di lavoro.
+//!
+//! ## I log della coda
+//!
+//! Una riga per evento, sempre nella stessa forma: `job <evento> id=… key=value`,
+//! così una sola ricerca su `id=` ricostruisce la storia di un lavoro dal log.
+//! I livelli sono scelti perché la build compilata resti leggibile:
+//!
+//! - `error`: il lavoro è finito male e serve una decisione — fallito, coda ferma;
+//! - `warn`: è andato storto qualcosa che si rimedia da solo — tentativo
+//!   rimandato, misura rifiutata dal servizio, punto non salvato, raffreddamento;
+//! - `info`: il ciclo di vita — messo in coda, avviato, in pausa, ripreso,
+//!   annullato, finito, recupero all'avvio, limiti letti;
+//! - `debug`: il dettaglio per carta e le attese di cortesia, che in produzione
+//!   sarebbero centinaia di righe per libro.
+//!
+//! Il taglio fra `debug` e `info` è lo stesso che separa la build di sviluppo da
+//! quella compilata (`lib.rs`): in sviluppo si vede tutto, nell'applicazione
+//! installata restano ciclo di vita e problemi. `RUST_LOG` scavalca entrambi.
 
 use async_trait::async_trait;
 use rusqlite::Connection;
@@ -319,6 +336,14 @@ impl JobEngine {
             } else {
                 configured
             };
+            log::info!(
+                "queue limit lane={class:?} value={limit} source={}",
+                if configured == 0 {
+                    "automatico"
+                } else {
+                    "impostazione"
+                }
+            );
             self.permits.insert(class, Arc::new(Semaphore::new(limit)));
         }
         Ok(())
@@ -336,6 +361,13 @@ impl JobEngine {
             return Err(format!("unknown job type: {}", job.job_type));
         }
         let record = store::create(conn, job)?;
+        log::info!(
+            "job submitted id={} type={} priority={} attempts={}",
+            record.id,
+            record.job_type,
+            record.priority,
+            record.max_attempts
+        );
         self.observer.notify(conn, &record.id);
         self.wake.notify_one();
         Ok(record)
@@ -351,6 +383,7 @@ impl JobEngine {
         };
         match job.status {
             JobStatus::Running => {
+                log::info!("job pause requested id={id}");
                 self.control_of(id).request_pause();
                 store::set_status(conn, id, JobStatus::Pausing)?;
             }
@@ -373,6 +406,7 @@ impl JobEngine {
         };
         match job.status {
             JobStatus::Running | JobStatus::Pausing => {
+                log::info!("job cancel requested id={id}");
                 self.control_of(id).request_cancel();
                 store::set_status(conn, id, JobStatus::Cancelling)?;
             }
@@ -389,6 +423,7 @@ impl JobEngine {
     pub async fn resume(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
+        log::info!("job resumed id={id}");
         store::requeue(conn, id, false)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
@@ -399,6 +434,7 @@ impl JobEngine {
     pub async fn retry(&self, id: &str, from_scratch: bool) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
+        log::info!("job relaunched id={id} from_scratch={from_scratch}");
         store::requeue(conn, id, from_scratch)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
@@ -445,22 +481,40 @@ impl JobEngine {
 
         let interrupted = store::interrupted(conn)?;
         let touched = interrupted.len();
+        let (mut requeued, mut parked, mut cancelled) = (0, 0, 0);
         for job in interrupted {
+            log::debug!(
+                "job recovering id={} type={} status={:?}",
+                job.id,
+                job.job_type,
+                job.status
+            );
             match job.status {
                 // Chi stava annullando ha già deciso: si porta a termine.
                 JobStatus::Cancelling => {
                     store::set_status(conn, &job.id, JobStatus::Cancelled)?;
+                    cancelled += 1;
                 }
                 _ => match self.handlers.get(&job.job_type) {
                     // Tipo sconosciuto: non si butta e non si indovina.
-                    None => store::park_as_paused(conn, &job.id, false)?,
+                    None => {
+                        log::warn!(
+                            "job orphaned id={} type={} (nessun gestore, messo da parte)",
+                            job.id,
+                            job.job_type
+                        );
+                        parked += 1;
+                        store::park_as_paused(conn, &job.id, false)?
+                    }
                     Some(handler) => match handler.recovery() {
                         Recovery::Resumable => {
                             let downloadable =
                                 handler.resource_class() == ResourceClass::Network && auto_resume;
                             if downloadable {
+                                requeued += 1;
                                 store::requeue(conn, &job.id, false)?;
                             } else {
+                                parked += 1;
                                 store::park_as_paused(conn, &job.id, false)?;
                             }
                         }
@@ -470,13 +524,20 @@ impl JobEngine {
                         // esattamente ciò che D13 esclude. Resta da parte, con il
                         // progresso azzerato perché non corrisponde più a niente,
                         // finché l'utente non lo rilancia.
-                        Recovery::Restart => store::park_as_paused(conn, &job.id, true)?,
+                        Recovery::Restart => {
+                            parked += 1;
+                            store::park_as_paused(conn, &job.id, true)?
+                        }
                     },
                 },
             }
             self.observer.notify(conn, &job.id);
         }
-        log::info!("coda: {touched} lavori interrotti rimessi in ordine");
+        if touched > 0 {
+            log::info!(
+                "queue recovered interrupted={touched} requeued={requeued} parked={parked} cancelled={cancelled}"
+            );
+        }
         self.wake.notify_one();
         Ok(touched)
     }
@@ -493,7 +554,7 @@ impl JobEngine {
             let conn = guard.conn()?;
             for job in store::claimable(conn)? {
                 let Some(handler) = self.handlers.get(&job.job_type).cloned() else {
-                    log::warn!("job {}: nessun gestore per '{}'", job.id, job.job_type);
+                    log::warn!("job unknown type id={} type={}", job.id, job.job_type);
                     continue;
                 };
                 let Some(semaphore) = self.permits.get(&handler.resource_class()).cloned() else {
@@ -515,7 +576,14 @@ impl JobEngine {
 
         let started = starting.len();
         for (job, handler, permit) in starting {
-            log::info!("job {} ({}): avviato", job.id, job.job_type);
+            log::info!(
+                "job started id={} type={} attempt={}/{} lane={:?}",
+                job.id,
+                job.job_type,
+                job.attempt_count + 1,
+                job.max_attempts,
+                handler.resource_class()
+            );
             self.spawn(job, handler, permit);
         }
         Ok(started)
@@ -550,7 +618,7 @@ impl JobEngine {
             let outcome = handler.run(context).await;
             let _permit = permit;
             if let Err(error) = engine.settle(&job, outcome).await {
-                log::error!("job {}: {error}", job.id);
+                log::error!("job settle failed id={} error={error}", job.id);
             }
             engine.forget_control(&job.id);
             engine.wake.notify_one();
@@ -564,28 +632,55 @@ impl JobEngine {
     ) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
+        // Il progresso raggiunto vale quanto l'esito: è la prima cosa che si
+        // vuole sapere leggendo il log di un lavoro finito male.
+        let reached = store::get(conn, &job.id)?;
+        let at = reached
+            .as_ref()
+            .map(|current| format!("{:.0}%", current.progress * 100.0))
+            .unwrap_or_else(|| "?".to_string());
+
         match outcome {
             Ok(Outcome::Done) => {
                 store::save_progress(conn, &job.id, 1.0, None, Some(0), None)?;
                 store::set_status(conn, &job.id, JobStatus::Completed)?;
+                log::info!("job finished id={} type={}", job.id, job.job_type);
             }
             Ok(Outcome::Paused) => {
                 store::set_status(conn, &job.id, JobStatus::Paused)?;
+                log::info!("job paused id={} at={at}", job.id);
             }
             Ok(Outcome::Cancelled) => {
                 store::set_status(conn, &job.id, JobStatus::Cancelled)?;
+                log::info!("job cancelled id={} at={at}", job.id);
             }
             Err(ref error) => {
-                log::warn!("job {}: {} ({:?})", job.id, error.message, error.kind);
                 // `attempt_count` è già stato incrementato alla partenza.
-                let attempts = store::get(conn, &job.id)?
+                let attempts = reached
                     .map(|current| current.attempt_count)
                     .unwrap_or(job.attempt_count + 1);
                 let can_retry = error.kind.is_retryable() && attempts < job.max_attempts;
                 if can_retry {
                     let wait = self.backoff.wait_for(error, attempts);
+                    log::warn!(
+                        "job retry id={} attempt={}/{} kind={} wait={}s at={at} error={}",
+                        job.id,
+                        attempts,
+                        job.max_attempts,
+                        error.kind.as_str(),
+                        wait.as_secs(),
+                        error.message
+                    );
                     store::schedule_retry(conn, &job.id, error, wait.as_secs() as i64)?;
                 } else {
+                    log::error!(
+                        "job failed id={} attempts={}/{} kind={} at={at} error={}",
+                        job.id,
+                        attempts,
+                        job.max_attempts,
+                        error.kind.as_str(),
+                        error.message
+                    );
                     store::fail(conn, &job.id, error)?;
                 }
             }
@@ -599,7 +694,7 @@ impl JobEngine {
     pub async fn run_forever(self: Arc<Self>) {
         loop {
             if let Err(error) = self.tick().await {
-                log::error!("jobs queue: {error}");
+                log::error!("queue tick failed error={error}");
             }
             tokio::select! {
                 _ = self.wake.notified() => {}

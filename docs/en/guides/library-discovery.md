@@ -35,6 +35,8 @@ The **download** command queues the real job: you can switch screen, pause it, r
 
 When a source is entirely on your computer the command **disappears** and a tick takes its place: there is nothing left to ask the library, and with courtesy limits a whole manuscript can cost a quarter of an hour of network time.
 
+**At what resolution** — Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce. If the library refuses that request, Glossa asks what it can produce and retries with the closest size: this is not an error and needs nothing from you.
+
 Some libraries are slow on purpose: see [Storage and jobs](/en/guides/storage-and-jobs).
 
 ## Removing a source

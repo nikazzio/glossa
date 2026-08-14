@@ -158,6 +158,31 @@ parole di ogni frammento a ogni render), doppio elenco delle fonti in
 workspace attivo. Succede solo al primissimo avvio, dove non esiste ancora nulla
 in coda, quindi l'indicatore non ha niente da nascondere.
 
+## Prova sul campo del 2026-08-15, e cosa ne è uscito
+
+Provando lo scaricamento su archive.org sono emerse due cose.
+
+**La misura chiesta al servizio.** Chiedevamo `/full/2000,/`, cioè «larghezza
+esattamente 2000». Misurato con richieste vere: archive.org risponde `500` su
+pagine che poco prima aveva servito, e `400` quando 2000 supera la larghezza
+dell'originale — mentre serve senza problemi `/full/1299,/`, che è una delle
+misure che dichiara nel proprio descrittore. La specifica Image API garantisce
+le misure elencate in `sizes` a qualunque livello di conformità; la larghezza
+arbitraria solo dal livello 1 in su, e il livello dichiarato non è affidabile.
+Ora il tetto si prova così com'è, e solo se il servizio rifiuta si legge il suo
+descrittore e si sceglie la misura più vicina al tetto, ricordandola per tutte
+le carte con le stesse dimensioni. Regola aggiornata in D4.
+
+**I log dei lavori.** La coda scriveva sei righe in tutto, in forma libera.
+Adesso ogni evento ha una riga sola con la stessa forma — `job <evento> id=…` —
+e i livelli separano ciò che serve nell'applicazione compilata (ciclo di vita e
+problemi) da ciò che serve mentre si sviluppa (dettaglio a carta, attese di
+cortesia). Vocabolario e livelli sono documentati in testa a `jobs/engine.rs` e
+nella scheda di `ARCHITECTURE.md`.
+
+**Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
+(tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
+
 ## Prossima sessione: da dove riprendere
 
 Quattro PR impilate, tutte verdi. La **#420 contiene le altre tre**, e le

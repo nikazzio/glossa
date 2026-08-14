@@ -149,7 +149,7 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     let starting = Arc::clone(&engine);
     tauri::async_runtime::spawn(async move {
         if let Err(error) = starting.recover_interrupted().await {
-            log::error!("jobs recovery: {error}");
+            log::error!("queue recovery failed error={error}");
         }
         starting.run_forever().await;
     });

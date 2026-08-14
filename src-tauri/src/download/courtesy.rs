@@ -21,6 +21,10 @@ use crate::iiif::network::NetworkProfile;
 /// il lavoro sordo a pausa e annullamento.
 const POLL_SLICE: Duration = Duration::from_millis(250);
 
+/// Sopra questa attesa vale la pena scriverlo nel registro: sotto è la pausa
+/// normale fra due richieste, e ce n'è una per ogni carta.
+const LONG_WAIT: Duration = Duration::from_secs(5);
+
 /// Stato di un singolo host: chi sta parlando adesso, quando si è parlato
 /// l'ultima volta, e le richieste della finestra corrente.
 struct HostGate {
@@ -81,7 +85,7 @@ impl Courtesy {
             return None;
         };
 
-        Self::respect_timing(&gate, profile, should_stop).await?;
+        Self::respect_timing(host, &gate, profile, should_stop).await?;
         Some(Turn { _permit: permit })
     }
 
@@ -92,6 +96,7 @@ impl Courtesy {
         if seconds == 0 {
             return;
         }
+        log::warn!("courtesy cooldown host={host} seconds={seconds}");
         let gate = self.gate_for(host, profile).await;
         let until = Instant::now() + Duration::from_secs(seconds);
         let mut timeline = gate.timeline.lock().await;
@@ -116,6 +121,7 @@ impl Courtesy {
     /// Aspetta finché non è il momento di parlare con questo host, oppure
     /// finché non viene chiesto di fermarsi (`None`).
     async fn respect_timing(
+        host: &str,
         gate: &HostGate,
         profile: &NetworkProfile,
         should_stop: &(dyn Fn() -> bool + Sync),
@@ -133,7 +139,12 @@ impl Courtesy {
             match delay {
                 // L'attesa si spezza in fette brevi: fra una e l'altra si
                 // guarda se nel frattempo è stato chiesto di fermarsi.
-                Some(delay) => tokio::time::sleep(delay.min(POLL_SLICE)).await,
+                Some(delay) => {
+                    if delay > LONG_WAIT {
+                        log::debug!("courtesy waiting host={host} seconds={}", delay.as_secs());
+                    }
+                    tokio::time::sleep(delay.min(POLL_SLICE)).await
+                }
                 None => return Some(()),
             }
         }

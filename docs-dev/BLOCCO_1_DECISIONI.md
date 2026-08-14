@@ -332,9 +332,43 @@ sintassi canonica `size=max`.
 Scelta **alla fonte**, non globale, perché dipende dal materiale: una
 cinquecentina a stampa larga si legge a molto meno di una minuscola fitta.
 
-- **Standard** (predefinita): la massima disponibile entro il tetto —
-  **2000 pixel sul lato lungo**, configurabile;
+- **Standard** (predefinita): la misura dichiarata dal servizio **più vicina al
+  tetto** — 2000 pixel sul lato lungo, configurabile — sopra o sotto che sia; a
+  parità di distanza vince la più grande;
 - **Massima**: `size=max`, nessun tetto.
+
+*(Regola precisata dall'utente il 2026-08-15. La prima stesura diceva «la massima
+disponibile entro il tetto»: con misure 1200 e 2100 e tetto 2000 avrebbe scelto
+1200, cioè metà dei pixel voluti per stare sotto una soglia che è un obiettivo,
+non un divieto.)*
+
+**Come si sceglie, in pratica** *(deciso il 2026-08-15, provando su
+archive.org)*: il tetto è una **politica**, non un pixel. La misura effettiva la
+dichiara il descrittore dell'immagine (`info.json`), e la specifica Image API
+garantisce che le misure elencate in `sizes` — e quelle implicite in `tiles` —
+siano servite **a qualunque livello di conformità**, mentre la larghezza
+arbitraria (`sizeByW`) è garantita solo dal livello 1 in su.
+
+Il livello dichiarato non è affidabile: archive.org dichiara `level2`, che
+imporrebbe la larghezza arbitraria, e risponde `500` a `/full/2000,/` servendo
+però `/full/1299,/`, che è una delle misure che dichiara. Quindi:
+
+1. si chiede il tetto così com'è — con un servizio conforme è già la risposta
+   giusta e non costa nessuna richiesta in più;
+2. se il servizio rifiuta, si legge il **suo** descrittore, si prende la misura
+   dichiarata più vicina al tetto e si riprova;
+3. la scelta vale per tutte le carte con le stesse dimensioni, che in un
+   manoscritto sono quasi tutte: il tentativo sbagliato si paga una volta per
+   gruppo, non per carta. Le carte di uno stesso libro **non** hanno tutte la
+   stessa dimensione, e le misure offerte sono dimezzamenti dell'originale;
+4. un servizio che dichiara livello 0 salta il primo passo: lì la larghezza
+   arbitraria non esiste.
+
+**Conseguenza sul deposito**: la cartella continua a chiamarsi con il tetto
+(`pages/2000/`), che è la politica, mentre i pixel ottenuti variano da carta a
+carta. Le due cose divergono di proposito: se la cartella prendesse il nome dai
+pixel, la stessa fonte finirebbe sparsa in cartelle diverse e la ripresa non
+ritroverebbe più ciò che ha già scaricato.
 
 Le miniature si scaricano sempre, in entrambi i casi.
 

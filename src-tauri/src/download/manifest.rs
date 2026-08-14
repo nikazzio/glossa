@@ -18,6 +18,14 @@ pub struct Page {
     pub label: Option<String>,
     /// Radice del servizio immagini, senza parametri.
     pub image_service: String,
+    /// Dimensioni dell'originale dichiarate dal canvas. Le carte di uno stesso
+    /// libro **non** hanno tutte la stessa dimensione, e da queste si ricava a
+    /// quale gruppo appartiene la carta quando si negozia la misura da chiedere.
+    pub size: Option<(u32, u32)>,
+    /// Livello di conformità dichiarato dal servizio (`level0`, `level1`,
+    /// `level2`). A livello 0 la larghezza arbitraria non esiste: sono ammesse
+    /// solo le misure elencate dal descrittore dell'immagine.
+    pub service_level: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,17 +41,6 @@ pub struct Manifest {
     /// dimensione piena: `max` esiste solo dalla Image API 3.0, prima si
     /// chiamava `full` e chiederlo alla vecchia maniera fa rispondere 400.
     pub presentation2: bool,
-}
-
-impl Manifest {
-    /// Il parametro di dimensione da chiedere al servizio per questa etichetta.
-    pub fn size_token(&self, size_tag: &str) -> String {
-        match (size_tag, self.presentation2) {
-            ("max", true) => "full".to_string(),
-            ("max", false) => "max".to_string(),
-            (width, _) => format!("{width},"),
-        }
-    }
 }
 
 pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
@@ -98,6 +95,8 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         index: position as u32 + 1,
                         label: label_of(canvas.get("label")),
                         image_service: service_of(body)?,
+                        size: canvas_size(canvas),
+                        service_level: service_level_of(body),
                     })
                 })
                 .collect()
@@ -123,6 +122,10 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         index: position as u32 + 1,
                         label: label_of(canvas.get("label")),
                         image_service: service_of(resource)?,
+                        // In 2.1 le dimensioni stanno sulla risorsa quando il
+                        // canvas non le dichiara.
+                        size: canvas_size(canvas).or_else(|| canvas_size(resource)),
+                        service_level: service_level_of(resource),
                     })
                 })
                 .collect()
@@ -144,6 +147,35 @@ fn service_of(body: &Value) -> Option<String> {
         None => None,
     };
     from_service.map(|id| id.trim_end_matches('/').to_string())
+}
+
+/// Dimensioni dell'originale dichiarate dal canvas.
+fn canvas_size(canvas: &Value) -> Option<(u32, u32)> {
+    let width = canvas.get("width")?.as_u64()? as u32;
+    let height = canvas.get("height")?.as_u64()? as u32;
+    (width > 0 && height > 0).then_some((width, height))
+}
+
+/// Livello di conformità del servizio immagini.
+///
+/// In Presentation 3.0 è la stringa `level2`; in 2.1 è un indirizzo che finisce
+/// con `level2.json`. Serve a sapere in anticipo se la larghezza arbitraria è
+/// ammessa: a livello 0 valgono solo le misure elencate dal descrittore.
+fn service_level_of(body: &Value) -> Option<String> {
+    let service = match body.get("service")? {
+        Value::Array(entries) => entries.first()?,
+        single => single,
+    };
+    let declared = service.get("profile").or_else(|| service.get("@profile"))?;
+    let text = match declared {
+        Value::String(text) => text.clone(),
+        Value::Array(entries) => entries.first()?.as_str()?.to_string(),
+        _ => return None,
+    };
+    ["level0", "level1", "level2"]
+        .into_iter()
+        .find(|level| text.contains(level))
+        .map(str::to_string)
 }
 
 fn id_of(value: &Value) -> Option<String> {
@@ -201,9 +233,10 @@ mod tests {
       "requiredStatement": { "value": { "it": ["Biblioteca di prova"] } },
       "homepage": [{ "id": "https://example.org/opera" }],
       "items": [
-        { "label": { "it": ["12r"] },
+        { "label": { "it": ["12r"] }, "width": 2816, "height": 4240,
           "items": [{ "items": [{ "body": { "id": "https://img/1/full/max/0/default.jpg",
-                                            "service": [{ "id": "https://img/1" }] } }] }] },
+                                            "service": [{ "id": "https://img/1",
+                                                          "profile": "level2" }] } }] }] },
         { "label": { "none": ["[iv]"] },
           "items": [{ "items": [{ "body": { "service": { "id": "https://img/2/" } } }] }] }
       ]
@@ -213,8 +246,10 @@ mod tests {
       "@id": "https://example.org/manifest",
       "attribution": "Biblioteca di prova",
       "sequences": [{ "canvases": [
-        { "label": "1r", "images": [{ "resource": { "@id": "https://img/a/full/full/0/default.jpg",
-                                                     "service": { "@id": "https://img/a" } } }] }
+        { "label": "1r", "width": 1275, "height": 1650,
+          "images": [{ "resource": { "@id": "https://img/a/full/full/0/default.jpg",
+                                     "service": { "@id": "https://img/a",
+                                                  "profile": "http://iiif.io/api/image/2/level1.json" } } }] }
       ]}]
     }"#;
 
@@ -274,26 +309,34 @@ mod tests {
 
     #[test]
     fn the_image_url_follows_the_image_api() {
-        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
-
         assert_eq!(
-            image_url("https://img/1", &manifest.size_token("2000")),
+            image_url("https://img/1", "2000,"),
             "https://img/1/full/2000,/0/default.jpg"
         );
         assert_eq!(
-            image_url("https://img/1", &manifest.size_token("max")),
+            image_url("https://img/1", "max"),
             "https://img/1/full/max/0/default.jpg"
         );
     }
 
     #[test]
-    fn the_older_manifests_call_the_full_size_by_its_old_name() {
-        // `max` esiste dalla Image API 3.0: a un servizio 2.1 va chiesto
-        // `full`, altrimenti risponde 400 e la carta non arriva.
+    fn the_declared_page_size_and_service_level_are_read() {
+        // Servono a scegliere la misura da chiedere: le carte di uno stesso
+        // libro non hanno tutte la stessa dimensione, e il livello dice se la
+        // larghezza arbitraria è ammessa.
+        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
+
+        assert_eq!(manifest.pages[0].size, Some((2816, 4240)));
+        assert_eq!(manifest.pages[0].service_level.as_deref(), Some("level2"));
+    }
+
+    #[test]
+    fn the_older_manifests_declare_their_level_as_a_url() {
+        // In 2.1 il livello è un indirizzo che finisce con `level1.json`.
         let old = parse(PRESENTATION_2.as_bytes()).unwrap();
 
-        assert_eq!(old.size_token("max"), "full");
-        assert_eq!(old.size_token("2000"), "2000,");
+        assert_eq!(old.pages[0].service_level.as_deref(), Some("level1"));
+        assert!(old.presentation2);
     }
 
     #[test]
