@@ -38,6 +38,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'context',         label: t('help.sections.context') },
     { id: 'audit',           label: t('help.sections.audit') },
     { id: 'projects',        label: t('help.sections.projects') },
+    { id: 'storage',         label: t('help.sections.storage') },
     { id: 'providers',       label: t('help.sections.providers') },
     { id: 'ollama',          label: t('help.sections.ollama') },
     { id: 'glossary',        label: t('help.sections.library') },
@@ -94,6 +95,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'context'         && <ContextSection />}
               {activeSection === 'audit'           && <AuditSection />}
               {activeSection === 'projects'        && <ProjectsSection />}
+              {activeSection === 'storage'         && <StorageSection />}
               {activeSection === 'providers'       && <ProvidersSection />}
               {activeSection === 'ollama'          && <OllamaSection />}
               {activeSection === 'glossary'        && <GlossarySection />}
@@ -490,6 +492,47 @@ function AuditSection() {
 
       <SubTitle>{t('help.audit.coherenceTitle')}</SubTitle>
       <P>{t('help.audit.coherenceDesc')}</P>
+    </>
+  );
+}
+
+/**
+ * Archiviazione e lavori in background. Sta qui, e non nei pannelli delle
+ * impostazioni, perché lì il testo lungo affolla i comandi: le impostazioni
+ * dicono cosa fanno, l'aiuto spiega perché.
+ */
+function StorageSection() {
+  const { t } = useTranslation();
+  return (
+    <>
+      <SectionTitle>{t('help.storage.title')}</SectionTitle>
+      <P>{t('help.storage.intro')}</P>
+
+      <SubTitle>{t('help.storage.twoFoldersTitle')}</SubTitle>
+      <P>{t('help.storage.twoFoldersDesc')}</P>
+
+      <SubTitle>{t('help.storage.chooseTitle')}</SubTitle>
+      <P>{t('help.storage.chooseDesc')}</P>
+
+      <Tip title={t('help.storage.cloudTitle')}>{t('help.storage.cloudDesc')}</Tip>
+
+      <SubTitle>{t('help.storage.jobsTitle')}</SubTitle>
+      <P>{t('help.storage.jobsDesc')}</P>
+
+      <Step n={1} title={t('help.storage.jobsWhereTitle')}>
+        {t('help.storage.jobsWhereDesc')}
+      </Step>
+      <Step n={2} title={t('help.storage.jobsControlTitle')}>
+        {t('help.storage.jobsControlDesc')}
+      </Step>
+      <Step n={3} title={t('help.storage.jobsRestartTitle')}>
+        {t('help.storage.jobsRestartDesc')}
+      </Step>
+
+      <SubTitle>{t('help.storage.limitsTitle')}</SubTitle>
+      <P>{t('help.storage.limitsDesc')}</P>
+
+      <Tip title={t('help.storage.waitingTitle')}>{t('help.storage.waitingDesc')}</Tip>
     </>
   );
 }

@@ -499,15 +499,28 @@
     "storageTab": "Data",
     "storage": {
       "title": "Data location",
-      "description": "Where Glossa keeps its database (projects, glossaries, settings). Moving it copies the data first and verifies the copy; the original is left untouched until the next startup succeeds.",
+      "description": "Where the database lives.",
       "defaultLocation": "Default location",
       "customLocation": "Custom location",
       "changeFolder": "Change folder",
       "migrating": "Moving…",
-      "migrationNote": "Restart Glossa after changing this to use the new location.",
       "migrationSucceeded": "Data location updated. Restart Glossa to apply it.",
       "migrationFailed": "Failed to move the data location",
-      "loadFailed": "Failed to read the data location"
+      "loadFailed": "Failed to read the data location",
+      "vault": {
+        "title": "Vault folder",
+        "defaultLocation": "Inside the data folder",
+        "customLocation": "Chosen folder",
+        "chooseFolder": "Change folder",
+        "keepTogether": "Keep everything together",
+        "adopted": "Vault folder updated",
+        "chooseFailed": "Could not set the vault folder",
+        "loadFailed": "Could not read the vault status",
+        "folderNotEmpty": "That folder already holds something else: pick an empty one, or one that is already a Glossa vault.",
+        "folderNotWritable": "That folder is not writable.",
+        "unreachable": "Folder not reachable.",
+        "syncWarning": "Synced folder: it needs a real copy on disk, not online-only."
+      }
     },
     "backup": "Backup & Restore",
     "backupHint": "Export the full workspace to a portable file, or restore from a previous backup.",
@@ -550,6 +563,20 @@
       "testFailed": "Connection failed",
       "invalidProfile": "Enter a valid name and complete address.",
       "testModelRequired": "Enter a model name to test"
+    },
+    "jobsTab": "Jobs",
+    "jobs": {
+      "loadFailed": "Could not read the job settings",
+      "saveFailed": "Could not save the job settings",
+      "automatic": "automatic",
+      "autoResume": "Resume downloads when reopening",
+      "resource": {
+        "network": "Downloads",
+        "cpu": "Processing",
+        "disk": "Disk writes",
+        "languageService": "Language services",
+        "documents": "Document generation"
+      }
     }
   },
   "ollama": {
@@ -671,7 +698,9 @@
     "updatedMonthsAgo_other": "updated {{count}} months ago",
     "updatedYearsAgo_one": "updated {{count}} year ago",
     "updatedYearsAgo_other": "updated {{count}} years ago",
-    "loadFailed": "Failed to load project"
+    "loadFailed": "Failed to load project",
+    "rename": "Rename the project",
+    "untitled": "Untitled project"
   },
   "areas": {
     "translations": {
@@ -1122,7 +1151,8 @@
       "library": "Library",
       "shortcuts": "Interface",
       "troubleshooting": "Troubleshooting",
-      "design": "Design System"
+      "design": "Design System",
+      "storage": "Storage and jobs"
     },
     "overview": {
       "title": "What is Glossa?",
@@ -1408,6 +1438,28 @@
       "upToDate": "Up to date",
       "updateAvailable": "Update available: {{tag}}",
       "error": "Could not check"
+    },
+    "storage": {
+      "title": "Storage and background jobs",
+      "intro": "Glossa keeps data in two distinct places and runs long operations in a queue you can pause and resume.",
+      "twoFoldersTitle": "Two folders, not one",
+      "twoFoldersDesc": "The data folder holds the database: records, translations, glossaries. It is small and belongs on a local disk. The vault folder holds images and documents downloaded from libraries: those are gigabytes and can live elsewhere, even on an external drive. Keeping them apart protects the database, which risks corruption inside a synced folder.",
+      "chooseTitle": "Changing folder",
+      "chooseDesc": "In Settings → Storage. Glossa opens the picker itself. A folder that already holds something else is refused: use an empty one, or one that is already a Glossa vault, which gets reconnected without copying anything. Changing folder does not move files already downloaded.",
+      "cloudTitle": "Synced folders",
+      "cloudDesc": "The vault can sit on Drive, OneDrive or iCloud, but only if the client keeps a real copy on disk. In online-only mode files look present and are empty: Glossa would call a source complete while nothing is there. Never put the database there.",
+      "jobsTitle": "The job queue",
+      "jobsDesc": "Downloads, checks and long generations do not block the app: they become queued jobs.",
+      "jobsWhereTitle": "Where to see them",
+      "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today.",
+      "jobsControlTitle": "How to control them",
+      "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
+      "jobsRestartTitle": "Closing and reopening",
+      "jobsRestartDesc": "Closing Glossa stops the jobs and asks for confirmation. On reopening nothing restarts on its own: you find them stopped and decide. Only downloads can restart automatically, if you turn the option on in Settings → Jobs.",
+      "limitsTitle": "How many at once",
+      "limitsDesc": "Settings → Jobs decides how many jobs run together, separately for downloads, processing, disk writes, language services and document generation. The download limit depends on the library's server, not on your computer: raising it too much triggers temporary blocks.",
+      "waitingTitle": "Stopped does not mean broken",
+      "waitingDesc": "A job can sit still for minutes while respecting a library's limits. The indicator then says \"waiting\" and the bar does not move: it is not an error, and it resumes by itself."
     }
   },
   "library": {
@@ -1746,7 +1798,9 @@
     "discoveryResults_other": "{{count}} results",
     "discoveryMore": "more available",
     "discoveryPages_one": "{{count}} page",
-    "discoveryPages_other": "{{count}} pages"
+    "discoveryPages_other": "{{count}} pages",
+    "panelToggle": "Messages and jobs",
+    "workspaceFilter": "· filter: {{name}}"
   },
   "workflow": {
     "translation": "Translation",
@@ -1791,6 +1845,8 @@
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",
     "closeMessage": "Closing Glossa stops them. They resume from where they left off next time you open it.",
-    "closeConfirm": "Close anyway"
+    "closeConfirm": "Close anyway",
+    "pauseAll": "Pause all ({{count}})",
+    "resumeAll": "Resume all ({{count}})"
   }
 }

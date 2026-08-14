@@ -7,7 +7,7 @@ export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'gl
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
 export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references' | 'promptPreview';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
-export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
+export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'storage' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
@@ -20,7 +20,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type DiscoveryResultsPerRow = 3 | 4 | 'list';
-export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
+export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage' | 'jobs';
 
 export interface HLColorSet {
   sourceTerm: string;

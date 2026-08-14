@@ -7,15 +7,25 @@ use super::{absolute_path, classify_folder, directory_stats, integrity, resolve_
 use super::{FolderKind, VaultStatus};
 use integrity::FileKind;
 use serde::Serialize;
-use std::path::PathBuf;
+use tauri_plugin_dialog::DialogExt;
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FolderCheck {
-    pub kind: FolderKind,
-    /// Vero solo se ci si può davvero scrivere: l'esistenza non basta, una
-    /// cartella di rete montata in sola lettura esiste.
-    pub writable: bool,
+/// Crea il deposito predefinito all'avvio, se nessuno ne ha scelto un altro.
+///
+/// Senza questo, la cartella `vault/` dentro la cartella dati non esiste finché
+/// non arriva il primo scaricamento, e lo stato del deposito risulterebbe
+/// "non raggiungibile" — che è il messaggio del disco staccato (D1), non della
+/// cartella mai creata. Una radice **scelta dall'utente** invece non si crea
+/// mai da soli: se non c'è, è perché il disco non è collegato.
+pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
+    let db = crate::jobs::engine::open_database(&crate::storage_config::db_path(app)?)?;
+    let configured: Option<String> = crate::jobs::store::read_setting(&db, "vault_root")?;
+    if configured
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
+    {
+        return Ok(());
+    }
+    super::ensure_root(&resolve_root(app, None)?)
 }
 
 /// Stato del deposito, senza scandire niente (D5).
@@ -25,18 +35,6 @@ pub fn get_vault_status(
     configured_root: Option<String>,
 ) -> Result<VaultStatus, String> {
     status(&app, configured_root.as_deref())
-}
-
-/// Classifica una cartella candidata prima di adottarla come deposito (D1).
-/// Non modifica niente: risponde soltanto.
-#[tauri::command]
-pub fn check_vault_folder(path: String) -> Result<FolderCheck, String> {
-    let candidate = PathBuf::from(&path);
-    let kind = classify_folder(&candidate)?;
-    Ok(FolderCheck {
-        writable: is_writable(&candidate),
-        kind,
-    })
 }
 
 /// Percorsi attesi di una digitalizzazione completa (D2), da passare poi alla
@@ -59,10 +57,9 @@ pub fn expected_version_paths(
 
 /// Crea la radice e il marcatore, se mancano. Idempotente.
 ///
-/// Rifiuta una cartella che contiene altro (D1). Il controllo sta qui e non
-/// solo in `check_vault_folder`: sono due comandi distinti, e una schermata che
-/// dimenticasse di chiamare il primo pianterebbe il marcatore in mezzo ai
-/// documenti dell'utente, che da quel momento sembrerebbero un deposito.
+/// Rifiuta una cartella che contiene altro (D1): l'unico modo di adottare un
+/// deposito è passare dalla finestra aperta dal backend, che classifica prima
+/// di scrivere.
 #[tauri::command]
 pub fn initialize_vault(
     app: tauri::AppHandle,
@@ -260,6 +257,7 @@ fn is_writable(path: &std::path::Path) -> bool {
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
 
     fn temp_dir(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!("glossa_vault_cmd_{name}"));
@@ -355,4 +353,107 @@ mod tests {
 
         let _ = fs::remove_dir_all(&root);
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultChoice {
+    pub path: String,
+    pub kind: FolderKind,
+    pub writable: bool,
+    /// Vero quando la cartella è stata davvero adottata come deposito.
+    pub adopted: bool,
+    /// La cartella sembra dentro un servizio di sincronizzazione (D1-bis). In
+    /// modalità streaming i file risultano presenti ma occupano zero byte, e la
+    /// modalità di lettura "solo locale" diventerebbe una bugia.
+    pub sync_folder: bool,
+}
+
+/// Nomi delle cartelle radice dei client di sincronizzazione più diffusi. È un
+/// riconoscimento **per indizio**, non una certezza: il contrassegno vero dei
+/// segnaposto è leggibile solo su Windows, e nemmeno lì in modo affidabile per
+/// tutti i client. Serve a far comparire l'avvertenza, non a vietare la scelta.
+const SYNC_FOLDER_HINTS: [&str; 6] = [
+    "onedrive",
+    "google drive",
+    "googledrive",
+    "dropbox",
+    "icloud",
+    "nextcloud",
+];
+
+fn looks_like_a_sync_folder(path: &std::path::Path) -> bool {
+    let lowered = path.to_string_lossy().to_lowercase();
+    SYNC_FOLDER_HINTS.iter().any(|hint| lowered.contains(hint))
+}
+
+/// Apre la finestra di scelta cartella **dal backend** e adotta il deposito.
+///
+/// Il percorso non attraversa la webview e nessun comando lo accetta come
+/// parametro, come per l'import documenti dopo #405: il frontend riceve solo
+/// l'esito. Rifiuta una cartella con altro contenuto e una dove non si può
+/// scrivere (D1).
+#[tauri::command]
+pub async fn choose_vault_folder(
+    app: tauri::AppHandle,
+    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
+) -> Result<Option<VaultChoice>, String> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    app.dialog().file().pick_folder(move |picked| {
+        let _ = sender.send(picked);
+    });
+
+    let Some(picked) = receiver
+        .await
+        .map_err(|_| "Folder selection was interrupted".to_string())?
+    else {
+        return Ok(None);
+    };
+    let folder = picked
+        .into_path()
+        .map_err(|error| format!("Unusable folder: {error}"))?;
+
+    let kind = classify_folder(&folder)?;
+    let writable = is_writable(&folder);
+    let adoptable = writable && kind != FolderKind::Foreign;
+
+    if adoptable {
+        super::ensure_root(&folder)?;
+        let _write_guard = write_coordinator.lock().await;
+        let conn = crate::jobs::engine::open_database(&crate::storage_config::db_path(&app)?)?;
+        conn.execute(
+            "INSERT INTO app_settings (key, value) VALUES ('vault_root', ?1) \
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            rusqlite::params![folder.to_string_lossy()],
+        )
+        .map_err(|e| format!("Failed to save the vault folder: {e}"))?;
+    }
+
+    Ok(Some(VaultChoice {
+        path: folder.to_string_lossy().to_string(),
+        kind,
+        writable,
+        adopted: adoptable,
+        sync_folder: looks_like_a_sync_folder(&folder),
+    }))
+}
+
+/// "Tieni tutto insieme" (D1): deposito dentro la cartella dati, che è la
+/// scelta predefinita e quella di chi non vuole pensarci.
+#[tauri::command]
+pub async fn use_default_vault_folder(
+    app: tauri::AppHandle,
+    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
+) -> Result<VaultStatus, String> {
+    let root = resolve_root(&app, None)?;
+    super::ensure_root(&root)?;
+    let _write_guard = write_coordinator.lock().await;
+    let conn = crate::jobs::engine::open_database(&crate::storage_config::db_path(&app)?)?;
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES ('vault_root', '') \
+         ON CONFLICT(key) DO UPDATE SET value = ''",
+        [],
+    )
+    .map_err(|e| format!("Failed to reset the vault folder: {e}"))?;
+    status(&app, None)
 }

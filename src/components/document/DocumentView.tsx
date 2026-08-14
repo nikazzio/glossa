@@ -1,15 +1,4 @@
-import {
-  AlertTriangle,
-  FileText,
-  GitCompare,
-  Languages,
-  Lock,
-  Pencil,
-  ScanLine,
-  Search,
-  SlidersHorizontal,
-  Wand2,
-} from 'lucide-react';
+import { AlertTriangle, CircleDollarSign, FileText, GitCompare, Hash, Languages, Lock, Pencil, ScanLine, Search, SlidersHorizontal, SquareStack, Wand2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +21,7 @@ import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
 import { AnnotationContextMenu } from './AnnotationContextMenu';
 import { PaneSearch } from './PaneSearch';
+import { ChunkMetric, DocumentViewControls } from './DocumentViewControls';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
 const NOOP_CHANGE = () => {};
@@ -474,47 +464,50 @@ export function DocumentView({
                 </div>
               ) : null}
             </div>
-            {hasCurrentChunkUsage && (
-              <Popover
-                side="bottom"
-                align="end"
-                className="w-72 px-3"
-                trigger={
-                  <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5 cursor-default">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                        {t('pipeline.unit')}
-                      </span>
-                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
-                        {currentIndex + 1}<span className="text-editorial-muted">/{chunks.length}</span>
-                      </span>
+            {/* Comandi di vista del testo, prima dei numeri: agiscono su ciò
+                che hanno sotto. */}
+            {/* Ultima colonna, in due righe: sopra i numeri del frammento —
+                icona e valore, etichetta al passaggio del mouse — sotto i
+                comandi di vista del testo. In colonna sola stanno nell'altezza
+                della barra e non allargano la riga dei frammenti. */}
+            <div className="flex shrink-0 flex-col justify-center gap-3 self-stretch border-l border-editorial-border py-2 pl-5">
+              {hasCurrentChunkUsage ? (
+                <Popover
+                  side="bottom"
+                  align="end"
+                  className="w-72 px-3"
+                  trigger={
+                    <div className="flex items-center justify-end gap-3">
+                      <ChunkMetric
+                        icon={<SquareStack size={13} />}
+                        label={t('pipeline.unit')}
+                        value={`${currentIndex + 1}/${chunks.length}`}
+                      />
+                      <ChunkMetric
+                        icon={<Hash size={13} />}
+                        label={t('header.tokenCount')}
+                        value={currentChunkTokens.toLocaleString()}
+                      />
+                      <ChunkMetric
+                        icon={<CircleDollarSign size={13} />}
+                        label={t('header.estimatedCost')}
+                        value={formatUsd(currentChunkUsage.total.totalUsd)}
+                        tone="accent"
+                      />
                     </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                        {t('header.tokenCount')}
-                      </span>
-                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
-                        {currentChunkTokens.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                        {t('header.estimatedCost')}
-                      </span>
-                      <span className="font-display text-base italic text-editorial-accent tabular-nums">
-                        {formatUsd(currentChunkUsage.total.totalUsd)}
-                      </span>
-                    </div>
-                  </div>
-                }
-              >
-                {currentChunkUsage.scopeBreakdown.length > 0 ? (
-                  <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
-                ) : (
-                  <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
-                )}
-              </Popover>
-            )}
+                  }
+                >
+                  {currentChunkUsage.scopeBreakdown.length > 0 ? (
+                    <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
+                  ) : (
+                    <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
+                  )}
+                </Popover>
+              ) : null}
+              <div className="flex items-center justify-end">
+                <DocumentViewControls />
+              </div>
+            </div>
           </div>
         </div>
 

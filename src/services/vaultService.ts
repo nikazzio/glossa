@@ -26,11 +26,6 @@ export interface VaultStatus {
 
 export type VaultFolderKind = 'empty' | 'existingVault' | 'foreign';
 
-export interface VaultFolderCheck {
-  kind: VaultFolderKind;
-  writable: boolean;
-}
-
 /**
  * `invalid` è il percorso rifiutato perché uscirebbe dal deposito: la riga si
  * segna e le altre proseguono, invece di far fallire l'intera verifica.
@@ -73,9 +68,33 @@ export async function getVaultStatus(): Promise<VaultStatus> {
   });
 }
 
-/** Classifica una cartella candidata prima di adottarla (D1). Non modifica niente. */
-export async function checkVaultFolder(path: string): Promise<VaultFolderCheck> {
-  return invoke<VaultFolderCheck>('check_vault_folder', { path });
+export type VaultFolderKindResult = VaultFolderKind;
+
+export interface VaultChoice {
+  path: string;
+  kind: VaultFolderKindResult;
+  writable: boolean;
+  /** La cartella è stata davvero adottata come deposito. */
+  adopted: boolean;
+  /**
+   * La cartella sembra dentro un servizio di sincronizzazione (D1-bis): in
+   * modalità streaming i file risultano presenti ma occupano zero byte.
+   */
+  syncFolder: boolean;
+}
+
+/**
+ * Apre la finestra di scelta cartella **dal backend** e adotta il deposito, come
+ * l'import documenti dopo #405: il percorso non attraversa mai l'interfaccia.
+ * Restituisce `null` se la scelta viene annullata.
+ */
+export async function chooseVaultFolder(): Promise<VaultChoice | null> {
+  return invoke<VaultChoice | null>('choose_vault_folder');
+}
+
+/** "Tieni tutto insieme": deposito dentro la cartella dati (D1). */
+export async function adoptDefaultVaultFolder(): Promise<VaultStatus> {
+  return invoke<VaultStatus>('use_default_vault_folder');
 }
 
 export async function initializeVault(): Promise<void> {

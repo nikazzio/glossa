@@ -394,6 +394,32 @@ describe('projectStore', () => {
     expect(projectServiceMocks.listProjects).toHaveBeenCalledTimes(1);
   });
 
+  it('un progetto appena creato ha subito il suo nome nell’elenco', async () => {
+    // Il nome vive nell'elenco dei progetti: se la ricarica resta per aria, in
+    // testata e in barra di stato compare «Traduzioni» e basta.
+    projectServiceMocks.createProject.mockResolvedValue('proj-new');
+    pipelineServiceMocks.listPipelines.mockResolvedValue([
+      makePipeline({ id: 'pipeline-new', projectId: 'proj-new' }),
+    ]);
+    projectServiceMocks.listProjects.mockResolvedValue([
+      {
+        id: 'proj-new',
+        name: 'Manoscritto',
+        workspace_id: 'ws-test',
+        sourceLanguage: 'English',
+        targetLanguage: 'Italian',
+        createdAt: '2026-08-14',
+        updatedAt: '2026-08-14',
+      } as never,
+    ]);
+
+    await useProjectStore.getState().createAndOpen('Manoscritto', 'ws-test');
+
+    const state = useProjectStore.getState();
+    expect(state.currentProjectId).toBe('proj-new');
+    expect(state.projects.find((project) => project.id === 'proj-new')?.name).toBe('Manoscritto');
+  });
+
   it('createAndOpen rejects an unknown workspace instead of falling back to activeWorkspace', async () => {
     workspaceState.activeWorkspace = TEST_WORKSPACE;
     workspaceState.workspaces = [TEST_WORKSPACE];

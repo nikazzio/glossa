@@ -112,19 +112,50 @@ pub fn get_data_dir(app: tauri::AppHandle) -> Result<DataDirStatus, String> {
     })
 }
 
-/// Copies glossa.db (+ WAL/SHM sidecars) to `new_path`, verifies the copy
+/// Opens the native folder picker **from the backend** and migrates the data
+/// folder to the chosen destination.
+///
+/// Same rule as the document import (#405) and the vault folder: the chosen
+/// path never reaches the webview and no command accepts a caller-supplied
+/// path, so a compromised frontend cannot move the database somewhere of its
+/// choosing. Returns `None` when the user cancels.
+#[tauri::command]
+pub async fn choose_data_dir_folder(
+    app: tauri::AppHandle,
+    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
+) -> Result<Option<DataDirStatus>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    app.dialog().file().pick_folder(move |picked| {
+        let _ = sender.send(picked);
+    });
+
+    let Some(picked) = receiver
+        .await
+        .map_err(|_| "Folder selection was interrupted".to_string())?
+    else {
+        return Ok(None);
+    };
+    let destination = picked
+        .into_path()
+        .map_err(|error| format!("Unusable folder: {error}"))?;
+
+    migrate_data_dir(&app, &write_coordinator, destination).await?;
+    get_data_dir(app).map(Some)
+}
+
+/// Copies glossa.db (+ WAL/SHM sidecars) to `new_dir`, verifies the copy
 /// opens and passes `PRAGMA quick_check`, then switches the bootstrap
 /// pointer to it. The original location is left untouched — nothing here
 /// deletes it — so a failed migration or a crash before the next successful
 /// launch never loses data; the app simply keeps using the old location
 /// until the override is proven to work.
-#[tauri::command]
-pub async fn set_data_dir(
-    app: tauri::AppHandle,
-    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
-    new_path: String,
+async fn migrate_data_dir(
+    app: &tauri::AppHandle,
+    write_coordinator: &tauri::State<'_, crate::db::DbWriteCoordinator>,
+    new_dir: PathBuf,
 ) -> Result<(), String> {
-    let new_dir = PathBuf::from(&new_path);
     fs::create_dir_all(&new_dir).map_err(|e| format!("Cannot create destination folder: {e}"))?;
     if !is_writable_dir(&new_dir) {
         return Err("Destination folder is not writable".to_string());
@@ -132,7 +163,7 @@ pub async fn set_data_dir(
 
     let _write_guard = write_coordinator.lock().await;
 
-    let current_dir = resolve_data_dir(&app)?;
+    let current_dir = resolve_data_dir(app)?;
     if current_dir == new_dir {
         return Err("The selected folder is already the current data location".to_string());
     }
@@ -176,9 +207,9 @@ pub async fn set_data_dir(
     }
 
     save_runtime_config(
-        &app,
+        app,
         &RuntimeConfig {
-            data_dir_override: Some(new_path),
+            data_dir_override: Some(new_dir.to_string_lossy().into_owned()),
         },
     )
 }

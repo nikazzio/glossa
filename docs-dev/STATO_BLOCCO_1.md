@@ -5,7 +5,7 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-13**, dopo la PR 3.
+Ultimo aggiornamento: **2026-08-13**, notte: PR 3 e 3-bis aperte, in attesa di prova.
 
 ## Come è organizzato il lavoro
 
@@ -27,7 +27,7 @@ dritta su `main`.
 | 1 | Deposito dei file e disponibilità reale | #217 | **unita** in `blocco-1` (#414) |
 | 2 | Orchestratore dei lavori, a vuoto | #218 (metà) | **unita** in `blocco-1` (#415) |
 | 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
-| 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | da fare |
+| 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
 | 4 | Scaricamento vero | #218 primo consumatore | da fare |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
@@ -56,8 +56,9 @@ pausa, ripresa, annullamento e nuovo tentativo, conferma alla chiusura con i
 lavori attivi messi in pausa. Si prova con i tipi di lavoro finti delle build di
 sviluppo.
 
-**Non esiste ancora nessuna schermata di impostazioni** per deposito e lavori:
-è la PR 3-bis.
+**Impostazioni** (PR 3-bis): cartella del deposito scelta dal dialogo nativo
+aperto dal backend, con rifiuto delle cartelle occupate e avviso per le cartelle
+sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 
 ## Decisioni prese implementando, già riportate nelle decisioni
 
@@ -75,17 +76,48 @@ sviluppo.
 
 ## Aperti, da non perdere
 
-- **Scelta cartella dal dialogo nativo del backend** (PR 3): oggi
-  `check_vault_folder` riceve un percorso dal frontend e ci scrive un file di
-  prova, in contrasto con il principio fissato in #405.
+- ~~Scelta cartella dal dialogo nativo del backend~~ — **chiusa nella PR 3-bis**:
+  `choose_vault_folder` apre la finestra da Rust e il percorso non attraversa
+  più la webview. `check_vault_folder` resta come comando di sola lettura.
+- **Schermata al primo avvio** (D1): non fatta. Le due scelte — tieni tutto
+  insieme / scegli dove — vivono per ora solo in Impostazioni. Va aggiunta
+  quando esiste il primo avvio vero, cioè con lo scaricamento (PR 4).
+- **Rilevamento vero dei segnaposto** delle cartelle sincronizzate (D1-bis): oggi
+  è un riconoscimento per nome di cartella. Il contrassegno affidabile esiste
+  solo su Windows e richiede una chiamata di sistema dedicata.
 - **Notifiche di sistema** (D21): rinviate alla PR 4, quando esiste un lavoro
   vero da annunciare.
-- **Documentazione pubblica** (`docs/`, `docs/en/`) e aiuto in-app: rinviati alla
-  PR 4. Oggi i soli lavori esistenti sono quelli finti delle build di sviluppo:
-  documentarli darebbe istruzioni per qualcosa che l'utente non può avviare.
+- ~~Documentazione pubblica e aiuto in-app~~ — **fatti**: guida
+  `guides/storage-and-jobs` in italiano e inglese, con voce in barra laterale, e
+  sezione «Archiviazione e lavori» nell'aiuto dentro l'app. È lì che vive la
+  spiegazione lunga: i pannelli delle impostazioni restano asciutti.
 - **Barra di stato unificata, salvataggio generalizzato, console di tutta
   l'app**: restano a #413, sono lavoro di guscio.
 - **Livello bibliografico per gli stampati**: #404, fuori dal blocco.
+- **Artefatti grafici su WSL2**: rettangoli chiari al movimento del mouse,
+  risolti avviando con `WEBKIT_DISABLE_COMPOSITING_MODE=1`. Non messo di
+  default: potrebbe essere specifico del portatile. Da riprovare sulla
+  postazione fissa prima di decidere. Dettagli in `ARCHITECTURE.md`, refactor
+  pendenti.
+- **Scrollbar su Linux**: il rimedio attuale funziona ma il risultato non
+  piace. Da rivedere con una soluzione vera, fuori dal blocco 1.
+
+## Prossima sessione: da dove riprendere
+
+Due PR aperte e verdi, **in attesa che Niki le provi**: la **#417** (coda
+visibile) e la **#418** (impostazioni), che è impilata sulla prima e si
+ritargherà da sola su `blocco-1` quando la #417 verrà unita.
+
+Ordine consigliato: provare la #417, unirla, provare la #418, unirla, poi
+aggiornare questo file e `STATO_SESSIONE_2.0.md` sulla postazione fissa. Dopo si
+parte con la **PR 4**, lo scaricamento vero, che è anche dove rientrano le
+notifiche di sistema, la schermata di primo avvio, la documentazione pubblica e
+i lavori brevi che si mostrano solo se falliscono.
+
+~~Da aprire come issue: la cartella dati usa ancora la finestra aperta dal
+frontend~~ — **chiusa nella PR 3-bis**: anche la cartella dati passa dal dialogo
+nativo aperto dal backend. Dopo #405, il deposito e la cartella dati, in Glossa
+nessun comando accetta più un percorso dal frontend.
 
 ## Da provare a mano, per chi rilegge
 

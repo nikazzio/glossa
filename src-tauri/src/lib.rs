@@ -67,6 +67,13 @@ pub fn run() {
             let vector_database = vector::VectorDatabase::initialize(app.handle());
             app.manage(vector_database);
 
+            // Il deposito predefinito esiste dal primo avvio: altrimenti la
+            // sua cartella risulterebbe "non raggiungibile" solo perché non è
+            // ancora stata creata (D1).
+            if let Err(error) = vault::commands::ensure_default_root(app.handle()) {
+                log::error!("default vault not created: {error}");
+            }
+
             // L'orchestratore dei lavori parte con l'applicazione (D10) e per
             // prima cosa rimette in ordine ciò che una chiusura brusca ha
             // lasciato a metà (D13). Un errore qui non deve impedire l'avvio:
@@ -114,7 +121,7 @@ pub fn run() {
             db::backup_database_file,
             db::execute_transaction,
             storage_config::get_data_dir,
-            storage_config::set_data_dir,
+            storage_config::choose_data_dir_folder,
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,
@@ -137,12 +144,13 @@ pub fn run() {
             llm::providers::ollama::check_ollama_status,
             llm::providers::ollama::check_ollama_preflight,
             vault::commands::get_vault_status,
-            vault::commands::check_vault_folder,
             vault::commands::initialize_vault,
             vault::commands::expected_version_paths,
             vault::commands::verify_files_present,
             vault::commands::verify_files_integrity,
             vault::commands::free_version_pages,
+            vault::commands::choose_vault_folder,
+            vault::commands::use_default_vault_folder,
             jobs::commands::create_job,
             jobs::commands::list_active_jobs,
             jobs::commands::get_job,

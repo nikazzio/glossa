@@ -499,15 +499,28 @@
     "storageTab": "Dati",
     "storage": {
       "title": "Posizione dati",
-      "description": "Dove Glossa conserva il proprio database (progetti, glossari, impostazioni). Spostarlo copia prima i dati e verifica la copia; l'originale resta intatto finché il nuovo avvio non riesce.",
+      "description": "Dove sta il database.",
       "defaultLocation": "Posizione predefinita",
       "customLocation": "Posizione personalizzata",
       "changeFolder": "Cambia cartella",
       "migrating": "Spostamento in corso…",
-      "migrationNote": "Dopo il cambio riavvia Glossa per usare la nuova posizione.",
       "migrationSucceeded": "Posizione dati aggiornata. Riavvia Glossa per applicarla.",
       "migrationFailed": "Spostamento posizione dati fallito",
-      "loadFailed": "Lettura posizione dati fallita"
+      "loadFailed": "Lettura posizione dati fallita",
+      "vault": {
+        "title": "Cartella del deposito",
+        "defaultLocation": "Dentro la cartella dati",
+        "customLocation": "Cartella scelta",
+        "chooseFolder": "Cambia cartella",
+        "keepTogether": "Tieni tutto insieme",
+        "adopted": "Cartella del deposito aggiornata",
+        "chooseFailed": "Impossibile impostare la cartella del deposito",
+        "loadFailed": "Impossibile leggere lo stato del deposito",
+        "folderNotEmpty": "La cartella contiene già altro: scegline una vuota, o una che sia già un deposito Glossa.",
+        "folderNotWritable": "In quella cartella non si può scrivere.",
+        "unreachable": "Cartella non raggiungibile.",
+        "syncWarning": "Cartella sincronizzata: serve una copia vera sul disco, non solo online."
+      }
     },
     "phraseMemoryTab": "Memoria frasi",
     "phraseMemoryToggle": "Memoria",
@@ -550,7 +563,21 @@
     "backupImport": "Importa backup",
     "backupImportConfirmTitle": "Ripristinare il workspace?",
     "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
-    "backupImportConfirm": "Ripristina"
+    "backupImportConfirm": "Ripristina",
+    "jobsTab": "Lavori",
+    "jobs": {
+      "loadFailed": "Impossibile leggere le impostazioni dei lavori",
+      "saveFailed": "Impossibile salvare le impostazioni dei lavori",
+      "automatic": "automatico",
+      "autoResume": "Riprendi gli scaricamenti alla riapertura",
+      "resource": {
+        "network": "Scaricamenti",
+        "cpu": "Elaborazioni",
+        "disk": "Scritture su disco",
+        "languageService": "Servizi linguistici",
+        "documents": "Generazione documenti"
+      }
+    }
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
@@ -671,7 +698,9 @@
     "updatedMonthsAgo_other": "aggiornato {{count}} mesi fa",
     "updatedYearsAgo_one": "aggiornato {{count}} anno fa",
     "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
-    "loadFailed": "Caricamento progetto fallito"
+    "loadFailed": "Caricamento progetto fallito",
+    "rename": "Rinomina il progetto",
+    "untitled": "Progetto senza nome"
   },
   "areas": {
     "translations": {
@@ -1122,7 +1151,8 @@
       "library": "Libreria",
       "shortcuts": "Interfaccia",
       "troubleshooting": "Risoluzione problemi",
-      "design": "Design System"
+      "design": "Design System",
+      "storage": "Archiviazione e lavori"
     },
     "overview": {
       "title": "Cos'è Glossa?",
@@ -1408,6 +1438,28 @@
       "upToDate": "Aggiornato",
       "updateAvailable": "Aggiornamento disponibile: {{tag}}",
       "error": "Controllo non riuscito"
+    },
+    "storage": {
+      "title": "Archiviazione e lavori in background",
+      "intro": "Glossa tiene i dati in due posti distinti e svolge le operazioni lunghe in una coda che puoi fermare e riprendere.",
+      "twoFoldersTitle": "Due cartelle, non una",
+      "twoFoldersDesc": "La cartella dati contiene il database: schede, traduzioni, glossari. È piccola e va tenuta su un disco locale. La cartella del deposito contiene le immagini e i documenti scaricati dalle biblioteche: sono gigabyte e possono stare altrove, anche su un disco esterno. Separarle protegge il database, che su una cartella sincronizzata rischia di corrompersi.",
+      "chooseTitle": "Cambiare cartella",
+      "chooseDesc": "In Impostazioni → Archiviazione. La finestra di scelta la apre Glossa stessa. Una cartella che contiene già altro viene rifiutata: serve una cartella vuota, oppure una che sia già un deposito Glossa, che viene ricollegato senza copiare niente. Cambiare cartella non sposta i file già scaricati.",
+      "cloudTitle": "Cartelle sincronizzate",
+      "cloudDesc": "Il deposito può stare su Drive, OneDrive o iCloud, ma solo se il client tiene una copia vera sul disco. In modalità solo online i file risultano presenti e sono vuoti: Glossa direbbe che una fonte è completa mentre non c'è niente. Il database non va mai messo lì.",
+      "jobsTitle": "La coda dei lavori",
+      "jobsDesc": "Scaricamenti, verifiche e generazioni lunghe non bloccano l'applicazione: diventano lavori in coda.",
+      "jobsWhereTitle": "Dove si vedono",
+      "jobsWhereDesc": "Nella barra in basso a destra, in ogni sezione. Il clic apre il pannello con l'elenco: in corso, in attesa, terminati oggi.",
+      "jobsControlTitle": "Come si comandano",
+      "jobsControlDesc": "Pausa, ripresa, annullamento e nuovo tentativo per ciascun lavoro, o per tutti insieme dai comandi in cima al pannello. La pausa non è istantanea: il lavoro finisce il pezzo in corso, lo salva e si ferma.",
+      "jobsRestartTitle": "Chiudere e riaprire",
+      "jobsRestartDesc": "Chiudendo Glossa i lavori si fermano e viene chiesta conferma. Alla riapertura nessuno riparte da solo: li ritrovi fermi e decidi tu. Solo gli scaricamenti possono ripartire in automatico, se accendi l'opzione in Impostazioni → Lavori.",
+      "limitsTitle": "Quanti insieme",
+      "limitsDesc": "In Impostazioni → Lavori si decide quanti lavori girano insieme, separatamente per scaricamenti, elaborazioni, scritture su disco, servizi linguistici e generazione documenti. Il limite degli scaricamenti dipende dal server della biblioteca, non dalla potenza del computer: alzarlo troppo fa scattare blocchi temporanei.",
+      "waitingTitle": "Fermo non vuol dire rotto",
+      "waitingDesc": "Un lavoro può restare immobile per minuti rispettando i limiti di una biblioteca. In quel caso l'indicatore dice «in attesa» e la barra non si muove: non è un errore, e riprende da solo."
     }
   },
   "library": {
@@ -1746,7 +1798,9 @@
     "discoveryResults_other": "{{count}} risultati",
     "discoveryMore": "altri disponibili",
     "discoveryPages_one": "{{count}} pagina",
-    "discoveryPages_other": "{{count}} pagine"
+    "discoveryPages_other": "{{count}} pagine",
+    "panelToggle": "Messaggi e lavori",
+    "workspaceFilter": "· filtro: {{name}}"
   },
   "workflow": {
     "translation": "Traduzione",
@@ -1791,6 +1845,8 @@
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
     "closeMessage": "Chiudendo Glossa si fermano. Riprenderanno dal punto raggiunto alla prossima apertura.",
-    "closeConfirm": "Chiudi comunque"
+    "closeConfirm": "Chiudi comunque",
+    "pauseAll": "Metti in pausa tutti ({{count}})",
+    "resumeAll": "Riprendi tutti ({{count}})"
   }
 }

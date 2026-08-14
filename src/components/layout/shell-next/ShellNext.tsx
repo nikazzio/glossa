@@ -171,10 +171,13 @@ export function ShellNext({
   );
 
   return (
-    <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
-      {/* Rail + documento + barra di stato: la barra vive solo sotto queste due colonne,
-          non sotto l'ispettore destro — rende chiaro che i comandi lì appartengono al testo. */}
-      <Panel id="project-main" className="flex min-w-0 flex-col">
+    // La barra di stato sta **sotto tutto**, ispettore compreso: è la barra
+    // dell'applicazione, non del documento, e una barra che si ferma a metà
+    // schermo smette di leggersi come tale. Il pannello in basso, che le vive
+    // attaccato, ne guadagna la stessa larghezza.
+    <div className="flex min-h-0 flex-1 flex-col">
+      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
+        <Panel id="project-main" className="flex min-w-0 flex-col">
         <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
           <Panel
             id="project-rail"
@@ -198,8 +201,7 @@ export function ShellNext({
             {children}
           </Panel>
         </Group>
-        <AppStatusBar />
-      </Panel>
+        </Panel>
 
       {railSeparator}
 
@@ -220,7 +222,9 @@ export function ShellNext({
           collapsed={inspectorCollapsed}
           onRunCoherenceAudit={onRunCoherenceAudit}
         />
-      </Panel>
-    </Group>
+        </Panel>
+      </Group>
+      <AppStatusBar />
+    </div>
   );
 }

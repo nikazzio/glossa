@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 import { select } from './dbService';
 import {
-  checkVaultFolder,
   expectedVersionPaths,
   freeVersionPages,
   getConfiguredVaultRoot,
@@ -50,22 +49,6 @@ describe('radice del deposito', () => {
     await getVaultStatus();
 
     expect(invokeMock).toHaveBeenCalledWith('get_vault_status', { configuredRoot: '/mnt/manoscritti' });
-  });
-});
-
-describe('scelta di una cartella', () => {
-  beforeEach(() => {
-    invokeMock.mockReset();
-    selectMock.mockReset();
-  });
-
-  it('riporta il tipo di cartella senza modificarla', async () => {
-    invokeMock.mockResolvedValueOnce({ kind: 'foreign', writable: true });
-
-    const check = await checkVaultFolder('/home/niki');
-
-    expect(check.kind).toBe('foreign');
-    expect(invokeMock).toHaveBeenCalledWith('check_vault_folder', { path: '/home/niki' });
   });
 });
 
