@@ -34,6 +34,7 @@ function job(overrides: Partial<Job> = {}): Job {
     errorKind: null,
     etaSeconds: 720,
     waitingReason: null,
+    phase: null,
     dependsOnJobId: null,
     nextAttemptAt: null,
     createdAt: null,
@@ -126,5 +127,19 @@ describe('attesa per i limiti della biblioteca', () => {
 
     expect(screen.getByText('jobs.waitingForLibrary')).toBeInTheDocument();
     expect(screen.getByRole('progressbar').className).not.toContain('transition');
+  });
+
+  it('mentre gira dice cosa sta facendo, non un generico «in corso»', () => {
+    renderPanel([job({ status: 'running', phase: 'manifest', progress: 0.01 })]);
+
+    expect(screen.getByText(/jobs\.phase\.manifest/)).toBeInTheDocument();
+  });
+
+  it('una fase che l\u2019interfaccia non conosce si legge com\u2019\u00e8 scritta', () => {
+    // Ogni tipo di lavoro ha il suo vocabolario: quelli futuri non devono
+    // sparire dalla riga solo perché la traduzione non c'è ancora.
+    renderPanel([job({ status: 'running', phase: 'ocr_pass_2', progress: 0.5 })]);
+
+    expect(screen.getByText(/ocr_pass_2/)).toBeInTheDocument();
   });
 });

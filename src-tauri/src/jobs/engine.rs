@@ -218,6 +218,25 @@ impl JobContext {
             .unwrap_or_else(|| self.default_vault_root.clone()))
     }
 
+    /// Dichiara cosa sta facendo adesso (`manifest`, `downloading`, …).
+    ///
+    /// Va scritta quando **cambia**, non a ogni giro: è ciò che il pannello
+    /// legge per dire momento per momento a che punto è il lavoro, e passa
+    /// dritta senza il freno di un secondo che vale per l'avanzamento.
+    pub async fn report_phase(&self, phase: &str) {
+        log::debug!("job phase id={} phase={phase}", self.id);
+        let id = self.id.clone();
+        let phase = phase.to_string();
+        let observer = self.observer.clone();
+        let _ = self
+            .with_database(move |conn| {
+                store::save_phase(conn, &id, &phase)?;
+                observer.notify(conn, &id);
+                Ok(())
+            })
+            .await;
+    }
+
     /// A che punto è arrivato, per la ripresa (D13).
     pub async fn save_checkpoint(&self, checkpoint: &str) -> Result<(), String> {
         let id = self.id.clone();
@@ -720,6 +739,7 @@ mod tests {
             include_str!("../../migrations/0002_workspace_icon_key.sql"),
             include_str!("../../migrations/0003_vault_and_read_mode.sql"),
             include_str!("../../migrations/0004_jobs_runtime.sql"),
+            include_str!("../../migrations/0005_job_phase.sql"),
         ] {
             conn.execute_batch(migration).unwrap();
         }

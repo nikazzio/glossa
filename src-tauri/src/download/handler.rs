@@ -54,6 +54,19 @@ struct Checkpoint {
     done: u32,
 }
 
+/// Le fasi dello scaricamento, come le legge il pannello. Ogni tipo di lavoro
+/// ha le sue: il riconoscimento testo dirà altre cose.
+mod phase {
+    /// Configurazione, deposito, area di transito.
+    pub const STARTING: &str = "starting";
+    /// Il manifesto: quante carte sono e dove stanno.
+    pub const MANIFEST: &str = "manifest";
+    /// Si chiede al servizio quali misure sa produrre (D4).
+    pub const NEGOTIATING: &str = "negotiating";
+    /// Le carte, una per volta.
+    pub const DOWNLOADING: &str = "downloading";
+}
+
 /// Oltre questa attesa il lavoro dichiara che è fermo per i limiti della
 /// biblioteca (D17). Più lunga della pausa massima fra due richieste (6 s su
 /// Gallica) e molto più corta del raffreddamento più breve (120 s): così la
@@ -95,6 +108,8 @@ impl JobHandler for SourceDownloadJob {
         // minuti renderebbe il lavoro sordo a pausa e annullamento.
         let stop = || ctx.pause_requested() || ctx.cancel_requested();
 
+        ctx.report_phase(phase::STARTING).await;
+
         let config: DownloadConfig = serde_json::from_str(&ctx.config).map_err(|error| {
             JobError::new(ErrorKind::Internal, format!("configurazione: {error}"))
         })?;
@@ -126,6 +141,7 @@ impl JobHandler for SourceDownloadJob {
         })?;
 
         // 1. Il manifesto, conservato com'è (D2-bis).
+        ctx.report_phase(phase::MANIFEST).await;
         let manifest_path = root.join(
             layout::manifest_path(&config.provider_key, &config.version_id)
                 .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
@@ -190,6 +206,7 @@ impl JobHandler for SourceDownloadJob {
             .unwrap_or(0);
         // Le misure decise per gruppo di carte valgono per tutto il lavoro.
         let sizes: SizeCache = Default::default();
+        ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
         // una volta sola evita una somma per ogni carta.
@@ -488,6 +505,7 @@ impl SourceDownloadJob {
         page: &Page,
         stop: &(dyn Fn() -> bool + Sync),
     ) -> Result<Option<size::SizeToken>, JobError> {
+        ctx.report_phase(phase::NEGOTIATING).await;
         let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP);
         let info_url = size::info_url(&page.image_service);
         let Some(fetched) = fetch(
@@ -517,6 +535,7 @@ impl SourceDownloadJob {
             }
         };
 
+        ctx.report_phase(phase::DOWNLOADING).await;
         log::info!(
             "job size negotiated id={} group={} cap={} chosen={}",
             ctx.id,

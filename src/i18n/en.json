@@ -1465,7 +1465,7 @@
       "jobsTitle": "The job queue",
       "jobsDesc": "Downloads, checks and long generations do not block the app: they become queued jobs.",
       "jobsWhereTitle": "Where to see them",
-      "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today. Every row carries the work's name, how far it got and how much it downloaded.",
+      "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today. Every row carries the work's name, how far it got and how much it downloaded. In the panel every row says what the job is doing right now: starting, reading the manifest, choosing the resolution, downloading.",
       "jobsControlTitle": "How to control them",
       "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
       "downloadTitle": "Downloading a source",
@@ -1858,6 +1858,12 @@
       "debug_counter": "Development probe",
       "debug_restart_only": "Development probe (restart only)",
       "source_download": "Source download"
+    },
+    "phase": {
+      "starting": "starting",
+      "manifest": "reading the manifest",
+      "negotiating": "choosing the resolution",
+      "downloading": "downloading"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",

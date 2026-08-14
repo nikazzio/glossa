@@ -140,6 +140,7 @@ describe('pannello dei lavori dalla barra di stato', () => {
           errorKind: null,
           etaSeconds: 60,
           waitingReason: null,
+          phase: null,
           dependsOnJobId: null,
           nextAttemptAt: null,
           createdAt: null,

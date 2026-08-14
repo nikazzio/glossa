@@ -10,7 +10,7 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use super::{JobError, JobRecord, JobStatus};
 
 const COLUMNS: &str = "id, job_type, status, priority, progress, message, config, checkpoint, \
-     attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, \
+     attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, phase, \
      depends_on_job_id, next_attempt_at, created_at, updated_at";
 
 /// Cosa serve per mettere un lavoro in coda. Il resto lo mette il database.
@@ -45,10 +45,11 @@ fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
         error_kind: row.get(11)?,
         eta_seconds: row.get(12)?,
         waiting_reason: row.get(13)?,
-        depends_on_job_id: row.get(14)?,
-        next_attempt_at: row.get(15)?,
-        created_at: row.get(16)?,
-        updated_at: row.get(17)?,
+        phase: row.get(14)?,
+        depends_on_job_id: row.get(15)?,
+        next_attempt_at: row.get(16)?,
+        created_at: row.get(17)?,
+        updated_at: row.get(18)?,
     })
 }
 
@@ -188,6 +189,19 @@ pub fn save_progress(
     Ok(())
 }
 
+/// Cosa sta facendo adesso: lettura del manifesto, scelta della risoluzione,
+/// scaricamento. La scrive il gestore quando cambia, non a ogni giro, perché il
+/// pannello deve poterla leggere senza aspettare il freno di un secondo.
+pub fn save_phase(conn: &Connection, id: &str, phase: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE jobs SET phase = ?2, updated_at = CURRENT_TIMESTAMP \
+         WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
+        params![id, phase],
+    )
+    .map_err(|e| format!("Failed to save the job phase: {e}"))?;
+    Ok(())
+}
+
 /// A che punto era (D13). Senza, una ripresa ripartirebbe da zero.
 pub fn save_checkpoint(conn: &Connection, id: &str, checkpoint: &str) -> Result<(), String> {
     conn.execute(
@@ -258,7 +272,7 @@ pub fn fail(conn: &Connection, id: &str, error: &JobError) -> Result<(), String>
 pub fn requeue(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET status = 'queued', error = NULL, error_kind = NULL, \
-         waiting_reason = NULL, next_attempt_at = NULL, finished_at = NULL, \
+         waiting_reason = NULL, phase = NULL, next_attempt_at = NULL, finished_at = NULL, \
          progress = CASE WHEN ?2 THEN 0 ELSE progress END, \
          checkpoint = CASE WHEN ?2 THEN NULL ELSE checkpoint END, \
          updated_at = CURRENT_TIMESTAMP \
@@ -332,6 +346,7 @@ pub(crate) mod test_support {
             include_str!("../../migrations/0002_workspace_icon_key.sql"),
             include_str!("../../migrations/0003_vault_and_read_mode.sql"),
             include_str!("../../migrations/0004_jobs_runtime.sql"),
+            include_str!("../../migrations/0005_job_phase.sql"),
         ] {
             conn.execute_batch(migration).expect("migration applies");
         }

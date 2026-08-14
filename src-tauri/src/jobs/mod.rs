@@ -295,6 +295,9 @@ pub struct JobRecord {
     /// Perché è fermo pur essendo in esecuzione: attesa per rispettare i limiti
     /// della biblioteca, non un errore (D17).
     pub waiting_reason: Option<String>,
+    /// Cosa sta facendo adesso, dentro lo stato: chiave breve decisa dal tipo
+    /// di lavoro e tradotta dall'interfaccia (`manifest`, `downloading`, …).
+    pub phase: Option<String>,
     pub depends_on_job_id: Option<String>,
     pub next_attempt_at: Option<String>,
     pub created_at: Option<String>,

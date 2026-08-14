@@ -59,6 +59,12 @@ export interface Job {
    * da dire in modo diverso.
    */
   waitingReason: string | null;
+  /**
+   * Cosa sta facendo adesso, dentro lo stato: `manifest`, `negotiating`,
+   * `downloading`… Il vocabolario lo decide il tipo di lavoro, l'interfaccia lo
+   * traduce e mostra la chiave grezza per quelle che non conosce ancora.
+   */
+  phase: string | null;
   dependsOnJobId: string | null;
   nextAttemptAt: string | null;
   createdAt: string | null;

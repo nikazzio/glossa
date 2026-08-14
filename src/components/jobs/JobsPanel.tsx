@@ -152,7 +152,14 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   if (job.status === 'cancelling') return <span>{t('jobs.cancelling')}</span>;
   if (job.status === 'paused') return <span>{t('jobs.paused')}</span>;
   if (job.status === 'queued') return <span>{t('jobs.queued')}</span>;
-  return <span>{eta ? t('jobs.etaShort', { eta }) : t('jobs.running')}</span>;
+
+  // In esecuzione si legge **cosa sta facendo**, non un generico «in corso»:
+  // lettura del manifesto, scelta della risoluzione, scaricamento. Le fasi che
+  // l'interfaccia non conosce si mostrano com'è scritta la chiave, invece di
+  // sparire.
+  const phase = job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : null;
+  const parts = [phase, eta ? t('jobs.etaShort', { eta }) : null].filter(Boolean);
+  return <span>{parts.length > 0 ? parts.join(' · ') : t('jobs.running')}</span>;
 }
 
 /**

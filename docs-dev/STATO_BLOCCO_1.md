@@ -195,6 +195,17 @@ Insieme sono stati sistemati altri tre rilievi della stessa prova:
   altri. Adesso comprende anche i terminati nelle ultime 24 ore, la stessa
   finestra che il pannello mostra.
 
+**Lavori più parlanti** *(chiesto dall'utente il 2026-08-15)*: la riga del
+pannello dice cosa sta facendo il lavoro adesso — avvio, lettura del manifesto,
+scelta della risoluzione, scaricamento — e non un generico «in corso». La fase è
+una chiave breve che scrive il gestore e traduce l'interfaccia, quindi ogni tipo
+di lavoro avrà il suo vocabolario; quelle che l'interfaccia non conosce ancora si
+leggono com'è scritta la chiave invece di sparire.
+
+**Piano delle decisioni scoperte**: `PIANO_DECISIONI_SCOPERTE.md` raccoglie le
+otto voci che nessuna PR ha implementato né dichiarato, con come si fanno e in
+quale ordine.
+
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
 
