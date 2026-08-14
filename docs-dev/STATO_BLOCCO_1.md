@@ -99,6 +99,13 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
   default: potrebbe essere specifico del portatile. Da riprovare sulla
   postazione fissa prima di decidere. Dettagli in `ARCHITECTURE.md`, refactor
   pendenti.
+- **Codice di retrocompatibilità pre-2.0** (`db.rs`,
+  `backfill_legacy_columns` e le tre colonne di `LEGACY_COLUMN_BACKFILLS`):
+  serve solo a database rimasti a una forma antecedente alla baseline 2.0.
+  Glossa non ha utenti, quindi quei database esistono soltanto sulle macchine di
+  sviluppo. Va tolto **insieme al consolidamento delle migrazioni**, nello stesso
+  momento in cui si butta il database di sviluppo: toglierlo prima non
+  guadagnerebbe niente e rischierebbe di bloccare l'avvio qui.
 - **Scrollbar su Linux**: il rimedio attuale funziona ma il risultato non
   piace. Da rivedere con una soluzione vera, fuori dal blocco 1.
 
