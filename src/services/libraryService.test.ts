@@ -21,7 +21,53 @@ const baseInput = {
   thumbnailUrl: null,
   language: null,
   subjects: [],
+  providerKey: null,
+  externalId: null,
+  mediaType: null,
+  materialType: null,
+  collection: null,
+  volume: null,
+  itemCount: null,
 };
+
+describe('metadati della fonte', () => {
+  const recorded: unknown[][] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    recorded.length = 0;
+    dbMocks.select.mockResolvedValue([]);
+    dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.runInTransaction.mockImplementation(
+      async (callback: (run: (query: string, params?: unknown[]) => Promise<void>) => Promise<void>) => {
+        await callback(async (query, params) => {
+          recorded.push([query, params]);
+        });
+      },
+    );
+  });
+
+  it('salva anche i dati che oggi nessuna schermata mostra', async () => {
+    // Rifare la ricerca per recuperare un dato che avevamo gia' in mano e'
+    // lavoro sprecato, e la biblioteca potrebbe non ridarlo uguale domani.
+    await addSourceToLibrary({
+      ...baseInput,
+      providerKey: 'gallica',
+      externalId: 'btv1b84260335',
+      mediaType: 'text',
+      collection: 'manuscrits',
+      volume: 'II',
+      itemCount: 210,
+    });
+
+    const written = JSON.stringify(recorded);
+    // La provenienza sulla fonte, il resto nei metadati della digitalizzazione.
+    expect(written).toContain('gallica:btv1b84260335');
+    expect(written).toContain('providerKey');
+    expect(written).toContain('manuscrits');
+    expect(written).toContain('210');
+  });
+});
 
 describe('libraryService', () => {
   beforeEach(() => {

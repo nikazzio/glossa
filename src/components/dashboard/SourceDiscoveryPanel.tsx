@@ -417,7 +417,7 @@ export function SourceDiscoveryPanel() {
                   providerLabel={selectedProvider?.label ?? ''}
                   expanded={expandedId === card.id}
                   onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
                   onAddToWorkspace={() => setWorkspacePickerCard(card)}
                   adding={addingUrls.has(card.manifestUrl)}
                   alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -434,7 +434,7 @@ export function SourceDiscoveryPanel() {
                   expanded={expandedId === card.id}
                   width={cardWidth(expandedId === card.id, columns)}
                   onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
                   onAddToWorkspace={() => setWorkspacePickerCard(card)}
                   adding={addingUrls.has(card.manifestUrl)}
                   alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -471,7 +471,7 @@ export function SourceDiscoveryPanel() {
                   key={workspace.id}
                   type="button"
                   onClick={() => {
-                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id);
+                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, providerKey);
                     setWorkspacePickerCard(null);
                   }}
                   className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

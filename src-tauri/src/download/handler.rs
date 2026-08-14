@@ -302,6 +302,9 @@ async fn record_manifest(
     let version_id = config.version_id.clone();
     let url = config.manifest_url.clone();
 
+    let rights = manifest.rights.clone();
+    let attribution = manifest.attribution.clone();
+
     ctx.with_database(move |conn| {
         conn.execute(
             "UPDATE source_versions SET expected_asset_count = ?2, homepage_url = COALESCE(?3, homepage_url) \
@@ -309,6 +312,34 @@ async fn record_manifest(
             params![version_id, total as i64, homepage],
         )
         .map_err(|error| format!("conteggio carte: {error}"))?;
+
+        // Licenza e attribuzione dichiarate dal manifesto vanno conservate
+        // insieme alla fonte (D2-bis): materiale d'archivio senza attribuzione
+        // è un problema, non un dettaglio. Si aggiungono ai metadati esistenti
+        // invece di sostituirli, perché quelli vengono dal catalogo.
+        if rights.is_some() || attribution.is_some() {
+            let existing: Option<String> = conn
+                .query_row(
+                    "SELECT metadata FROM source_versions WHERE id = ?1",
+                    params![version_id],
+                    |row| row.get(0),
+                )
+                .map_err(|error| format!("metadati della digitalizzazione: {error}"))?;
+            let mut merged: serde_json::Map<String, serde_json::Value> = existing
+                .and_then(|raw| serde_json::from_str(&raw).ok())
+                .unwrap_or_default();
+            if let Some(value) = rights {
+                merged.insert("rights".to_string(), serde_json::Value::String(value));
+            }
+            if let Some(value) = attribution {
+                merged.insert("attribution".to_string(), serde_json::Value::String(value));
+            }
+            conn.execute(
+                "UPDATE source_versions SET metadata = ?2 WHERE id = ?1",
+                params![version_id, serde_json::Value::Object(merged).to_string()],
+            )
+            .map_err(|error| format!("licenza e attribuzione: {error}"))?;
+        }
         // La riga del manifesto esiste già: l'aggiunta della fonte alla
         // Biblioteca ne crea una `remote`/`catalogued`. Va **aggiornata**, non
         // affiancata da una seconda: due righe manifesto per la stessa

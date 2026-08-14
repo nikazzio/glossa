@@ -107,6 +107,16 @@ export interface AddSourceToLibraryInput {
   thumbnailUrl: string | null;
   language: string | null;
   subjects: string[];
+  /** Da quale biblioteca viene: è un fatto che non cambia mai (D2). */
+  providerKey: string | null;
+  /** Identificativo dell'opera presso quella biblioteca. */
+  externalId: string | null;
+  mediaType: string | null;
+  materialType: string | null;
+  collection: string | null;
+  volume: string | null;
+  /** Carte dichiarate dal manifesto, quando la ricerca le ha già lette. */
+  itemCount: number | null;
   workspaceId?: string;
 }
 

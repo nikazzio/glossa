@@ -202,18 +202,41 @@ export async function addSourceToLibrary(
   const sourceId = generateId('source');
   const versionId = generateId('sver');
   const assetId = generateId('asset');
+  // Si salva tutto quello che il catalogo ha detto, anche ciò che oggi nessuna
+  // schermata mostra: rifare la ricerca per recuperare un dato che avevamo già
+  // in mano è lavoro sprecato, e alcune di queste informazioni la biblioteca
+  // potrebbe non ridarle uguali domani.
   const metadata = JSON.stringify({
     creator: input.creator,
     date: input.date,
     thumbnailUrl: input.thumbnailUrl,
     language: input.language,
     subjects: input.subjects,
+    providerKey: input.providerKey,
+    externalId: input.externalId,
+    mediaType: input.mediaType,
+    materialType: input.materialType,
+    collection: input.collection,
+    volume: input.volume,
+    itemCount: input.itemCount,
   });
 
   await runInTransaction(async (run) => {
     await run(
       'INSERT INTO sources (id, title, kind, primary_language, description, external_ref, status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [sourceId, title, input.kind, input.language, input.description, null, 'active'],
+      // `external_ref` è la provenienza: chiave della biblioteca e suo
+      // identificativo, che insieme dicono da dove viene questa copia.
+      [
+        sourceId,
+        title,
+        input.kind,
+        input.language,
+        input.description,
+        input.providerKey && input.externalId
+          ? `${input.providerKey}:${input.externalId}`
+          : input.providerKey,
+        'active',
+      ],
     );
     await run(
       'INSERT INTO source_versions (id, source_id, label, version_kind, source_url, metadata, is_primary) VALUES ($1, $2, $3, $4, $5, $6, $7)',

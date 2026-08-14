@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   classifySourceKind,
+  isManifest,
   type LibraryCatalogEntry,
   type LibrarySource,
   type LibrarySourceDetail,
@@ -31,7 +32,7 @@ interface SourceLibraryState {
   error: string | null;
   loadSources: () => Promise<void>;
   loadLibraryManifestUrls: () => Promise<void>;
-  addFromDiscovery: (card: SourceCard, workspaceId?: string) => Promise<void>;
+  addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
   catalog: LibraryCatalogEntry[];
   loadCatalog: () => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
@@ -62,7 +63,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     }
   },
 
-  addFromDiscovery: async (card, workspaceId) => {
+  addFromDiscovery: async (card, workspaceId, providerKey) => {
     const manifestUrl = card.manifestUrl;
     set((state) => ({
       addingUrls: new Set(state.addingUrls).add(manifestUrl),
@@ -79,6 +80,13 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         thumbnailUrl: card.thumbnailUrl,
         language: card.language,
         subjects: card.subjects,
+        providerKey: providerKey ?? null,
+        externalId: isManifest(card) ? null : card.id,
+        mediaType: isManifest(card) ? null : card.mediaType,
+        materialType: isManifest(card) ? card.materialType : null,
+        collection: isManifest(card) ? null : card.collection,
+        volume: card.volume,
+        itemCount: isManifest(card) ? card.itemCount : null,
         workspaceId,
       });
       set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));
