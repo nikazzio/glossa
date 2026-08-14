@@ -159,6 +159,7 @@ pub fn run() {
             jobs::commands::resume_job,
             jobs::commands::cancel_job,
             jobs::commands::retry_job,
+            jobs::commands::clear_finished_jobs,
             download::enqueue_source_download,
             documents::import_document,
             documents::export_markdown_docx,

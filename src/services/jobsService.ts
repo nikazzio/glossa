@@ -124,6 +124,14 @@ export async function enqueueSourceDownload(request: {
   return invoke<Job>('enqueue_source_download', request);
 }
 
+/**
+ * Toglie dall'elenco i lavori già finiti. Senza `id` li toglie tutti: sono
+ * righe di storico, e quando diventano rumore si buttano.
+ */
+export async function clearFinishedJobs(id?: string): Promise<number> {
+  return invoke<number>('clear_finished_jobs', { id });
+}
+
 export async function retryJob(id: string, fromScratch = false): Promise<void> {
   await invoke('retry_job', { id, fromScratch });
 }

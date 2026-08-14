@@ -4,6 +4,7 @@ import i18next from 'i18next';
 import { logger } from '../utils/logger';
 import {
   cancelJob,
+  clearFinishedJobs,
   isTerminal,
   isWaitingToRetry,
   listActiveJobs,
@@ -38,6 +39,7 @@ interface JobsState {
   resume: (id: string) => Promise<void>;
   cancel: (id: string) => Promise<void>;
   retry: (id: string, fromScratch?: boolean) => Promise<void>;
+  clearFinished: (id?: string) => Promise<void>;
 }
 
 /** Esegue un comando sulla coda, e se fallisce lo dice invece di inghiottirlo. */
@@ -82,6 +84,19 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
   retry: async (id, fromScratch = false) => {
     await run('retry', id, () => retryJob(id, fromScratch));
+  },
+
+  clearFinished: async (id) => {
+    await run('clear', id ?? 'tutti', async () => {
+      await clearFinishedJobs(id);
+    });
+    // L'elenco locale si allinea senza aspettare un evento: la rimozione non
+    // ne produce.
+    set((state) => ({
+      jobs: state.jobs.filter((job) =>
+        id ? job.id !== id : !isTerminal(job),
+      ),
+    }));
   },
 }));
 

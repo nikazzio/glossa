@@ -1,7 +1,7 @@
-import { Pause, Play } from 'lucide-react';
+import { Pause, Play, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { isRunning, useJobsStore } from '../../stores/jobsStore';
-import { isWaitingToRetry } from '../../services/jobsService';
+import { isTerminal, isWaitingToRetry } from '../../services/jobsService';
 import { TerminalIconButton } from './TerminalIconButton';
 
 /**
@@ -16,10 +16,12 @@ export function JobsBulkControls() {
   const jobs = useJobsStore((state) => state.jobs);
   const pause = useJobsStore((state) => state.pause);
   const resume = useJobsStore((state) => state.resume);
+  const clearFinished = useJobsStore((state) => state.clearFinished);
 
   const running = jobs.filter((job) => job.status === 'running');
   const resumable = jobs.filter((job) => job.status === 'paused' || isWaitingToRetry(job));
   const pausable = jobs.filter((job) => isRunning(job) || job.status === 'queued');
+  const finished = jobs.filter(isTerminal);
 
   return (
     <div className="flex items-center gap-1">
@@ -37,6 +39,14 @@ export function JobsBulkControls() {
           onClick={() => resumable.forEach((job) => void resume(job.id))}
         >
           <Play size={12} />
+        </TerminalIconButton>
+      )}
+      {finished.length > 0 && (
+        <TerminalIconButton
+          label={t('jobs.clearFinished', { count: finished.length })}
+          onClick={() => void clearFinished()}
+        >
+          <Trash2 size={12} />
         </TerminalIconButton>
       )}
     </div>

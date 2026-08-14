@@ -98,6 +98,15 @@ pub async fn retry_job(
     jobs.0.retry(&id, from_scratch.unwrap_or(false)).await
 }
 
+/// Toglie dall'elenco i lavori finiti. Senza `id` li toglie tutti.
+#[tauri::command]
+pub async fn clear_finished_jobs(
+    jobs: State<'_, JobsState>,
+    id: Option<String>,
+) -> Result<usize, String> {
+    jobs.0.forget_finished(id.as_deref()).await
+}
+
 /// Avvia l'orchestratore all'apertura dell'applicazione: registra i gestori,
 /// legge i limiti, rimette in ordine i lavori interrotti (D13) e mette in moto
 /// il giro della coda.

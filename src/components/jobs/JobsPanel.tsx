@@ -1,4 +1,4 @@
-import { Pause, Play, RotateCcw, X } from 'lucide-react';
+import { Pause, Play, RotateCcw, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TerminalIconButton } from './TerminalIconButton';
 import {
@@ -78,6 +78,7 @@ function JobRow({ job }: { job: Job }) {
   const resume = useJobsStore((state) => state.resume);
   const cancel = useJobsStore((state) => state.cancel);
   const retry = useJobsStore((state) => state.retry);
+  const clearFinished = useJobsStore((state) => state.clearFinished);
 
   const waitingToRetry = isWaitingToRetry(job);
   const eta = formatEta(job.etaSeconds);
@@ -109,6 +110,11 @@ function JobRow({ job }: { job: Job }) {
           {!isTerminal(job) && (
             <TerminalIconButton label={t('jobs.cancel')} tone="danger" onClick={() => void cancel(job.id)}>
               <X size={11} />
+            </TerminalIconButton>
+          )}
+          {isTerminal(job) && (
+            <TerminalIconButton label={t('jobs.dismiss')} onClick={() => void clearFinished(job.id)}>
+              <Trash2 size={11} />
             </TerminalIconButton>
           )}
         </div>

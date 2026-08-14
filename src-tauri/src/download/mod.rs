@@ -75,8 +75,10 @@ pub async fn enqueue_source_download(
         if !job.status.is_terminal() {
             return Ok(job);
         }
-        // Un lavoro finito, annullato o fallito si rimette in coda da capo.
-        jobs.0.retry(&id, true).await?;
+        // Si rilancia **senza azzerare** il punto raggiunto: su una fonte già
+        // completa il giro finisce subito, e la percentuale non riparte da zero
+        // per pagine che ci sono già.
+        jobs.0.retry(&id, false).await?;
         let conn = jobs.0.connection()?;
         return crate::jobs::store::get(&conn, &id)?
             .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());

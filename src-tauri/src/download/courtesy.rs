@@ -56,28 +56,27 @@ impl Courtesy {
         Self::default()
     }
 
-    /// Aspetta il proprio turno verso `host`, rispettando pausa, raffica e
-    /// concorrenza. Restituisce quanto si è aspettato: serve a dire all'utente
-    /// che il lavoro è fermo **per rispetto dei limiti**, non per un errore.
+    /// Aspetta il proprio turno verso `host`, rispettando pausa fra richieste,
+    /// limite a raffica, concorrenza e raffreddamento.
     ///
-    /// `should_stop` viene guardato **durante** l'attesa. Senza, un lavoro
-    /// entrato in raffreddamento — dieci minuti dopo un 403 su Gallica — non
-    /// risponderebbe più né alla pausa né all'annullamento fino a scadenza, e
-    /// terrebbe occupato il suo posto in corsia per tutto il tempo.
+    /// `should_stop` viene guardato **durante** l'attesa: senza, un lavoro in
+    /// raffreddamento non risponderebbe più né alla pausa né all'annullamento
+    /// fino a scadenza, e terrebbe occupato il suo posto in corsia.
+    /// `None` significa "fermato mentre aspettava".
     pub async fn wait_turn(
         &self,
         host: &str,
         profile: &NetworkProfile,
         should_stop: &(dyn Fn() -> bool + Sync),
-    ) -> Option<(Turn, Duration)> {
+    ) -> Option<Turn> {
         let gate = self.gate_for(host, profile).await;
         let permit = Arc::clone(&gate.permits)
             .acquire_owned()
             .await
             .expect("il semaforo di un host non viene mai chiuso");
 
-        let waited = Self::respect_timing(&gate, profile, should_stop).await?;
-        Some((Turn { _permit: permit }, waited))
+        Self::respect_timing(&gate, profile, should_stop).await?;
+        Some(Turn { _permit: permit })
     }
 
     /// Mette un host in raffreddamento: da qui in avanti, per quei secondi,
@@ -200,12 +199,15 @@ mod tests {
         || false
     }
 
-    /// Turno atteso senza interruzioni: nei test che non provano la fermata.
+    /// Turno atteso senza interruzioni, con quanto è durata l'attesa: i test
+    /// misurano il tempo, il codice di produzione no.
     async fn turn(courtesy: &Courtesy, host: &str, profile: &NetworkProfile) -> (Turn, Duration) {
-        courtesy
+        let started = Instant::now();
+        let turn = courtesy
             .wait_turn(host, profile, &never_stop())
             .await
-            .expect("nessuno ha chiesto di fermarsi")
+            .expect("nessuno ha chiesto di fermarsi");
+        (turn, started.elapsed())
     }
 
     fn fast(pause_ms: u64, burst: u32, window_secs: u64) -> NetworkProfile {

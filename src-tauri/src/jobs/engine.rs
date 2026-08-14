@@ -91,24 +91,6 @@ impl JobContext {
             .await;
     }
 
-    /// Fermo, ma non rotto: sta rispettando i limiti della biblioteca (D17,
-    /// D18). L'interfaccia lo dice diversamente da un errore, e la barra non
-    /// finge di avanzare.
-    pub async fn report_waiting(&self, reason: &str, eta_seconds: Option<i64>) {
-        let current = self.progress_now().await;
-        self.write_progress(current, None, eta_seconds, Some(reason), true)
-            .await;
-    }
-
-    async fn progress_now(&self) -> f64 {
-        let id = self.id.clone();
-        self.with_database(move |conn| Ok(store::get(conn, &id)?.map(|job| job.progress)))
-            .await
-            .ok()
-            .flatten()
-            .unwrap_or(0.0)
-    }
-
     async fn write_progress(
         &self,
         progress: f64,
@@ -389,6 +371,12 @@ impl JobEngine {
         self.observer.notify(conn, id);
         self.wake.notify_one();
         Ok(())
+    }
+
+    /// Toglie dall'elenco i lavori già finiti.
+    pub async fn forget_finished(&self, id: Option<&str>) -> Result<usize, String> {
+        let guard = self.db_guard().await?;
+        store::forget_finished(&guard, id)
     }
 
     fn control_of(&self, id: &str) -> Arc<JobControl> {

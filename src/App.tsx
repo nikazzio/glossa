@@ -201,10 +201,6 @@ function EditorView() {
     runSingleChunk(chunkId);
   }, [runSingleChunk]);
   useProjectAutosave();
-  // I lavori in background non appartengono a una schermata: l'ascolto sta qui,
-  // in cima, e vale per tutta l'applicazione (D19).
-  useJobsFeed();
-  useCloseGuard();
   useKeyboardShortcuts({ onRunPipeline: runPipeline, onRunSingleChunk: handleRetranslateChunk });
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
@@ -416,6 +412,14 @@ function EditorView() {
 
 export default function App() {
   useEffect(() => { void initLogger(); }, []);
+
+  // I lavori in background non appartengono a una schermata: l'ascolto sta qui,
+  // nel componente radice, e vale per tutta l'applicazione (D19). Stava dentro
+  // `EditorView`, montato solo con un progetto aperto: in Dashboard la coda
+  // risultava vuota, entrando in una traduzione compariva, e uscendo restava
+  // l'elenco vecchio senza più nessuno in ascolto.
+  useJobsFeed();
+  useCloseGuard();
 
   const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const currentProjectId = useProjectStore((s) => s.currentProjectId);

@@ -729,8 +729,7 @@
       "removeConfirm": "Togli",
       "availabilityRemote": "solo online",
       "availabilityComplete": "tutte le pagine sul computer",
-      "availabilityPartial": "{{done}} pagine su {{total}} sul computer",
-      "verifyRunning": "Verifica delle pagine già presenti"
+      "availabilityPartial": "{{done}} pagine su {{total}} sul computer"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1865,6 +1864,8 @@
     "pauseAll": "Metti in pausa tutti ({{count}})",
     "resumeAll": "Riprendi tutti ({{count}})",
     "waitingForLibrary": "in attesa · limiti della biblioteca",
-    "commandFailed": "Comando non riuscito"
+    "commandFailed": "Comando non riuscito",
+    "dismiss": "Togli dall'elenco",
+    "clearFinished": "Svuota i terminati ({{count}})"
   }
 }

@@ -271,6 +271,25 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
     Ok(())
 }
 
+/// Toglie dall'elenco i lavori finiti: completati, annullati, falliti.
+///
+/// Sono righe di storico che il pannello mostra per la giornata (D20); quando
+/// diventano rumore si buttano. `id` limita la pulizia a un lavoro solo.
+pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
+    let removed = match id {
+        Some(id) => conn.execute(
+            "DELETE FROM jobs WHERE id = ?1 AND status IN ('completed', 'cancelled', 'error')",
+            params![id],
+        ),
+        None => conn.execute(
+            "DELETE FROM jobs WHERE status IN ('completed', 'cancelled', 'error')",
+            [],
+        ),
+    }
+    .map_err(|error| format!("Failed to clear finished jobs: {error}"))?;
+    Ok(removed)
+}
+
 pub fn read_setting(conn: &Connection, key: &str) -> Result<Option<String>, String> {
     conn.query_row(
         "SELECT value FROM app_settings WHERE key = ?1",
@@ -507,6 +526,34 @@ mod tests {
         let job = get(&conn, "j7").unwrap().unwrap();
         assert_eq!(job.checkpoint.as_deref(), Some(r#"{"done":4}"#));
         assert_eq!(job.attempt_count, 0);
+    }
+
+    #[test]
+    fn clearing_finished_jobs_leaves_the_ones_still_going() {
+        let conn = migrated_connection();
+        queued(&conn, "finito");
+        queued(&conn, "in-corso");
+        queued(&conn, "in-coda");
+        set_status(&conn, "finito", JobStatus::Completed).unwrap();
+        set_status(&conn, "in-corso", JobStatus::Running).unwrap();
+
+        let removed = forget_finished(&conn, None).unwrap();
+
+        assert_eq!(removed, 1);
+        assert!(get(&conn, "finito").unwrap().is_none());
+        assert!(get(&conn, "in-corso").unwrap().is_some());
+        assert!(get(&conn, "in-coda").unwrap().is_some());
+    }
+
+    #[test]
+    fn a_single_job_can_be_dismissed_only_once_finished() {
+        let conn = migrated_connection();
+        queued(&conn, "vivo");
+
+        assert_eq!(forget_finished(&conn, Some("vivo")).unwrap(), 0);
+
+        set_status(&conn, "vivo", JobStatus::Cancelled).unwrap();
+        assert_eq!(forget_finished(&conn, Some("vivo")).unwrap(), 1);
     }
 
     #[test]

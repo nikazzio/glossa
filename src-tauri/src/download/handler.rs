@@ -154,6 +154,11 @@ impl JobHandler for SourceDownloadJob {
             .map(|saved| saved.done)
             .unwrap_or(0);
 
+        // Quante pagine sono sul disco, non quante ne ho scorse: sono due cose
+        // diverse quando si riprende o si rilancia, e mostrare la seconda fa
+        // ripartire una barra da zero su un libro già completo.
+        let mut present = start;
+
         for page in manifest.pages.iter().skip(start as usize) {
             if ctx.cancel_requested() {
                 return Ok(Outcome::Cancelled);
@@ -171,16 +176,17 @@ impl JobHandler for SourceDownloadJob {
                 return Ok(stopped_outcome(&ctx));
             }
 
+            present = present.max(page.index);
             let _ = ctx
                 .save_checkpoint(
-                    &serde_json::to_string(&Checkpoint { done: page.index })
+                    &serde_json::to_string(&Checkpoint { done: present })
                         .unwrap_or_else(|_| "{}".to_string()),
                 )
                 .await;
-            let remaining = total.saturating_sub(page.index);
+            let remaining = total.saturating_sub(present);
             ctx.report_progress(
-                f64::from(page.index) / f64::from(total.max(1)),
-                Some(&format!("{title} · {}/{}", page.index, total)),
+                f64::from(present) / f64::from(total.max(1)),
+                Some(&format!("{title} · {present}/{total}")),
                 Some(estimated_seconds(remaining, &profile)),
             )
             .await;
@@ -217,10 +223,12 @@ impl SourceDownloadJob {
         .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
         let target = root.join(&relative);
 
-        // Saltare ciò che è già valido è quello che rende una ripresa
-        // sostenibile: con i limiti di Gallica, riscaricare tutto significa un
-        // quarto d'ora buttato (D18).
-        if is_valid(&target, integrity::FileKind::Image) {
+        // Basta che il file ci sia: nel deposito entra **solo** ciò che ha già
+        // superato la validazione nell'area di transito (D16-bis), quindi ciò
+        // che è lì dentro è valido per costruzione. Rileggerlo e ricalcolarne
+        // l'impronta a ogni ripresa vorrebbe dire rileggere centinaia di
+        // megabyte per non scoprire niente.
+        if target.is_file() {
             return Ok(true);
         }
 
@@ -228,13 +236,6 @@ impl SourceDownloadJob {
         let Some(fetched) = fetch(client, &self.courtesy, profile, &url, stop).await? else {
             return Ok(false);
         };
-        // Se il turno è costato più di un secondo, il lavoro è rimasto fermo
-        // per rispettare i limiti della biblioteca: va detto, perché è la
-        // stessa immobilità di un errore con il significato opposto (D17).
-        if fetched.waited > Duration::from_secs(1) {
-            ctx.report_waiting("libraryLimits", Some(fetched.waited.as_secs() as i64))
-                .await;
-        }
         let checksum = stage_and_promote(
             &staging.join(format!("{:04}.jpg", page.index)),
             &target,

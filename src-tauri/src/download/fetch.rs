@@ -32,12 +32,10 @@ pub fn build_client(profile: &NetworkProfile) -> Result<Client, JobError> {
         .map_err(|error| JobError::new(ErrorKind::Internal, format!("client HTTP: {error}")))
 }
 
-/// Esito di una richiesta riuscita, con quanto si è aspettato per rispettare i
-/// limiti: serve a dire all'utente che il lavoro è fermo ma non rotto (D17).
+/// Esito di una richiesta riuscita.
 #[derive(Debug)]
 pub struct Fetched {
     pub bytes: Vec<u8>,
-    pub waited: Duration,
 }
 
 /// Tentativi ravvicinati sulla **singola richiesta** (D16, primo livello):
@@ -58,22 +56,15 @@ pub async fn fetch(
     should_stop: &(dyn Fn() -> bool + Sync),
 ) -> Result<Option<Fetched>, JobError> {
     let host = host_of(url)?;
-    let mut waited_total = Duration::ZERO;
     let mut last_error = None;
 
     for attempt in 1..=TRANSPORT_ATTEMPTS {
-        let Some((_turn, waited)) = courtesy.wait_turn(&host, profile, should_stop).await else {
+        let Some(_turn) = courtesy.wait_turn(&host, profile, should_stop).await else {
             return Ok(None);
         };
-        waited_total += waited;
 
         match attempt_once(client, url, profile).await {
-            Ok(bytes) => {
-                return Ok(Some(Fetched {
-                    bytes,
-                    waited: waited_total,
-                }))
-            }
+            Ok(bytes) => return Ok(Some(Fetched { bytes })),
             Err(error) => {
                 // Un rifiuto per eccesso di richieste raffredda **l'host**, non
                 // solo questo lavoro: un secondo scaricamento sullo stesso
