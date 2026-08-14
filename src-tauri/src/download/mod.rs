@@ -21,11 +21,29 @@ use crate::jobs::JobRecord;
 #[tauri::command]
 pub async fn enqueue_source_download(
     jobs: tauri::State<'_, JobsState>,
-    version_id: String,
     provider_key: String,
     manifest_url: String,
+    version_id: Option<String>,
     size_tag: Option<String>,
 ) -> Result<JobRecord, String> {
+    // La digitalizzazione si può indicare per identificativo o lasciar
+    // ritrovare dall'indirizzo del manifesto, che è l'unica cosa che l'utente
+    // ha davvero in mano quando aggiunge una fonte alla Biblioteca.
+    let version_id = match version_id {
+        Some(id) => id,
+        None => {
+            let conn = jobs.0.connection()?;
+            conn.query_row(
+                "SELECT id FROM source_versions WHERE source_url = ?1 ORDER BY created_at LIMIT 1",
+                rusqlite::params![manifest_url],
+                |row| row.get::<_, String>(0),
+            )
+            .map_err(|_| {
+                format!("nessuna fonte in Biblioteca con questo manifesto: {manifest_url}")
+            })?
+        }
+    };
+
     // Il tetto predefinito lo decide l'impostazione (D4): scriverlo qui
     // significherebbe ignorare la scelta dell'utente.
     let size_tag = match size_tag {

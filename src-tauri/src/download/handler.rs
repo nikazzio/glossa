@@ -309,19 +309,27 @@ async fn record_manifest(
             params![version_id, total as i64, homepage],
         )
         .map_err(|error| format!("conteggio carte: {error}"))?;
-        conn.execute(
-            "INSERT INTO assets (id, source_version_id, kind, locality, availability, vault_path, remote_url) \
-             VALUES (?1, ?2, 'manifest', 'local', 'complete', ?3, ?4) \
-             ON CONFLICT(id) DO UPDATE SET vault_path = excluded.vault_path, \
-               availability = 'complete', updated_at = CURRENT_TIMESTAMP",
-            params![
-                format!("{}:manifest", version_id),
-                version_id,
-                relative,
-                url
-            ],
-        )
-        .map_err(|error| format!("riga del manifesto: {error}"))?;
+        // La riga del manifesto esiste già: l'aggiunta della fonte alla
+        // Biblioteca ne crea una `remote`/`catalogued`. Va **aggiornata**, non
+        // affiancata da una seconda: due righe manifesto per la stessa
+        // digitalizzazione falserebbero il conteggio della disponibilità.
+        let updated = conn
+            .execute(
+                "UPDATE assets SET locality = 'local', availability = 'complete', \
+                 vault_path = ?2, updated_at = CURRENT_TIMESTAMP \
+                 WHERE source_version_id = ?1 AND kind = 'manifest'",
+                params![version_id, relative],
+            )
+            .map_err(|error| format!("riga del manifesto: {error}"))?;
+        if updated == 0 {
+            conn.execute(
+                "INSERT INTO assets (id, source_version_id, kind, locality, availability, \
+                     vault_path, remote_url) \
+                 VALUES (?1, ?2, 'manifest', 'local', 'complete', ?3, ?4)",
+                params![format!("{version_id}:manifest"), version_id, relative, url],
+            )
+            .map_err(|error| format!("riga del manifesto: {error}"))?;
+        }
         Ok(())
     })
     .await

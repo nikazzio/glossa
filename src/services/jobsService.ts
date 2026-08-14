@@ -115,9 +115,10 @@ export async function cancelJob(id: string): Promise<void> {
  * scarica niente: chiede un lavoro e osserva (D10).
  */
 export async function enqueueSourceDownload(request: {
-  versionId: string;
   providerKey: string;
   manifestUrl: string;
+  /** Se manca, la digitalizzazione si ritrova dall'indirizzo del manifesto. */
+  versionId?: string;
   sizeTag?: string;
 }): Promise<Job> {
   return invoke<Job>('enqueue_source_download', request);
