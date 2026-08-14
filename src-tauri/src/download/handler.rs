@@ -8,7 +8,7 @@
 use async_trait::async_trait;
 use rusqlite::params;
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 use crate::iiif::network::{NetworkProfile, CAUTIOUS};
@@ -108,12 +108,11 @@ impl JobHandler for SourceDownloadJob {
         })?;
 
         // 1. Il manifesto, conservato com'è (D2-bis).
-        let manifest_path = promote_path(
-            &root,
+        let manifest_path = root.join(
             layout::manifest_path(&config.provider_key, &config.version_id)
                 .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
         );
-        let manifest_bytes = if is_valid(&manifest_path, integrity::FileKind::Manifest) {
+        let manifest_bytes = if manifest_path.is_file() {
             std::fs::read(&manifest_path)
                 .map_err(|error| JobError::new(ErrorKind::Storage, error.to_string()))?
         } else {
@@ -160,11 +159,10 @@ impl JobHandler for SourceDownloadJob {
         let mut present = start;
 
         for page in manifest.pages.iter().skip(start as usize) {
-            if ctx.cancel_requested() {
-                return Ok(Outcome::Cancelled);
-            }
-            if ctx.pause_requested() {
-                return Ok(Outcome::Paused);
+            // Il confine dell'unità di lavoro: qui ci si ferma, mai a metà
+            // pagina (D14, D15).
+            if stop() {
+                return Ok(stopped_outcome(&ctx));
             }
 
             let completed = self
@@ -293,17 +291,6 @@ fn profile_for(provider_key: &str) -> NetworkProfile {
         .unwrap_or(CAUTIOUS)
 }
 
-fn promote_path(root: &Path, relative: PathBuf) -> PathBuf {
-    root.join(relative)
-}
-
-fn is_valid(path: &Path, kind: integrity::FileKind) -> bool {
-    matches!(
-        integrity::scan_file(path, kind).validation,
-        integrity::Validation::Valid
-    )
-}
-
 /// Scrive nell'area di transito, valida, e **solo allora** promuove (D16-bis).
 /// Un file parziale non entra mai nel deposito, quindi l'annullamento non deve
 /// ripulire niente e una ripresa non rischia di saltarlo credendolo completo.
@@ -313,18 +300,12 @@ fn stage_and_promote(
     bytes: &[u8],
     kind: integrity::FileKind,
 ) -> Result<String, JobError> {
-    if let Some(parent) = staged.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|error| JobError::new(ErrorKind::Storage, error.to_string()))?;
-    }
-    std::fs::write(staged, bytes)
-        .map_err(|error| JobError::new(ErrorKind::Storage, error.to_string()))?;
-
-    let scan = integrity::scan_file(staged, kind);
+    // Si valida quello che è arrivato, che è già in memoria: scriverlo per
+    // poterlo rileggere sarebbe una lettura in più per ogni pagina.
+    let scan = integrity::scan_bytes(bytes, kind);
     match scan.validation {
         integrity::Validation::Valid => {}
         integrity::Validation::Corrupt(reason) => {
-            let _ = std::fs::remove_file(staged);
             // Un file troncato ha la dimensione dichiarata dai metadati HTTP:
             // è il caso reale che un controllo di dimensione non vede.
             return Err(JobError::new(ErrorKind::Transport, reason));
@@ -332,10 +313,21 @@ fn stage_and_promote(
         integrity::Validation::Missing => {
             return Err(JobError::new(
                 ErrorKind::Storage,
-                "il file appena scritto non esiste".to_string(),
+                "risposta vuota".to_string(),
             ))
         }
     }
+
+    // Prima nell'area di transito, poi lo spostamento, che è atomico: se
+    // l'applicazione muore in mezzo, nel deposito non resta un file a metà
+    // (D16-bis). È anche ciò che permette di fidarsi della sola presenza del
+    // file quando si riprende.
+    if let Some(parent) = staged.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|error| JobError::new(ErrorKind::Storage, error.to_string()))?;
+    }
+    std::fs::write(staged, bytes)
+        .map_err(|error| JobError::new(ErrorKind::Storage, error.to_string()))?;
 
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)

@@ -107,78 +107,73 @@ impl Courtesy {
         }))
     }
 
+    /// Aspetta finché non è il momento di parlare con questo host, oppure
+    /// finché non viene chiesto di fermarsi (`None`).
     async fn respect_timing(
         gate: &HostGate,
         profile: &NetworkProfile,
         should_stop: &(dyn Fn() -> bool + Sync),
-    ) -> Option<Duration> {
-        let started = Instant::now();
+    ) -> Option<()> {
         loop {
             if should_stop() {
                 return None;
             }
-            let sleep_for = {
+
+            let delay = {
                 let mut timeline = gate.timeline.lock().await;
-                let now = Instant::now();
-
-                // Il raffreddamento viene prima di tutto: se l'host ha appena
-                // detto di rallentare, non si discute.
-                if let Some(until) = timeline.cooldown_until {
-                    if until > now {
-                        Some(until - now)
-                    } else {
-                        timeline.cooldown_until = None;
-                        None
-                    }
-                } else {
-                    None
-                }
-                .map(Some)
-                .unwrap_or_else(|| {
-                    let window = Duration::from_secs(profile.burst_window_secs);
-                    while timeline
-                        .recent
-                        .front()
-                        .is_some_and(|stamp| now.duration_since(*stamp) >= window)
-                    {
-                        timeline.recent.pop_front();
-                    }
-
-                    // Limite a raffica: se la finestra è piena si aspetta che ne
-                    // esca la più vecchia, indipendentemente dalla concorrenza.
-                    if timeline.recent.len() >= profile.burst_requests as usize {
-                        let oldest = timeline.recent.front().copied().unwrap_or(now);
-                        Some(window.saturating_sub(now.duration_since(oldest)))
-                    } else {
-                        // Pausa fra due richieste: durata scelta nell'intervallo
-                        // dichiarato, per non presentarsi con un ritmo meccanico.
-                        let pause = pause_for(profile);
-                        let since_last = timeline
-                            .last_request
-                            .map(|last| now.duration_since(last))
-                            .unwrap_or(pause);
-                        if since_last < pause {
-                            Some(pause - since_last)
-                        } else {
-                            timeline.last_request = Some(now);
-                            timeline.recent.push_back(now);
-                            None
-                        }
-                    }
-                })
+                next_delay(&mut timeline, profile)
             };
 
-            match sleep_for {
+            match delay {
                 // L'attesa si spezza in fette brevi: fra una e l'altra si
                 // guarda se nel frattempo è stato chiesto di fermarsi.
-                Some(delay) if !delay.is_zero() => {
-                    tokio::time::sleep(delay.min(POLL_SLICE)).await;
-                }
-                Some(_) => tokio::task::yield_now().await,
-                None => return Some(started.elapsed()),
+                Some(delay) => tokio::time::sleep(delay.min(POLL_SLICE)).await,
+                None => return Some(()),
             }
         }
     }
+}
+
+/// Quanto manca prima di poter parlare, o `None` se si può parlare adesso — e
+/// in quel caso la richiesta viene segnata sulla linea del tempo dell'host.
+///
+/// I tre freni si guardano in ordine: raffreddamento, limite a raffica, pausa
+/// fra due richieste. Il primo che dice di aspettare vince.
+fn next_delay(timeline: &mut Timeline, profile: &NetworkProfile) -> Option<Duration> {
+    let now = Instant::now();
+
+    if let Some(until) = timeline.cooldown_until {
+        if until > now {
+            return Some(until - now);
+        }
+        timeline.cooldown_until = None;
+    }
+
+    let window = Duration::from_secs(profile.burst_window_secs);
+    while timeline
+        .recent
+        .front()
+        .is_some_and(|stamp| now.duration_since(*stamp) >= window)
+    {
+        timeline.recent.pop_front();
+    }
+    if timeline.recent.len() >= profile.burst_requests as usize {
+        let oldest = timeline.recent.front().copied().unwrap_or(now);
+        return Some(window.saturating_sub(now.duration_since(oldest)));
+    }
+
+    let pause = pause_for(profile);
+    let since_last = timeline
+        .last_request
+        .map(|last| now.duration_since(last))
+        .unwrap_or(pause);
+    if since_last < pause {
+        return Some(pause - since_last);
+    }
+
+    timeline.last_request = Some(now);
+    timeline.recent.push_back(now);
+    None
 }
 
 fn pause_for(profile: &NetworkProfile) -> Duration {

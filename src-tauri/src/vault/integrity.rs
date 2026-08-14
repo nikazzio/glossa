@@ -69,6 +69,33 @@ pub struct FileScan {
 /// È la verifica strutturale minima — firma riconosciuta e terminatore al posto
 /// giusto — che coglie il troncamento, il caso reale prodotto da uno
 /// scaricamento interrotto.
+/// Come `scan_file`, ma su byte già in memoria: quando il file arriva dalla
+/// rete è inutile scriverlo per poterlo rileggere.
+pub fn scan_bytes(bytes: &[u8], kind: FileKind) -> FileScan {
+    let mut hash = FNV_OFFSET;
+    for byte in bytes {
+        hash = (hash ^ u64::from(*byte)).wrapping_mul(FNV_PRIME);
+    }
+
+    let validation = match kind {
+        FileKind::Image => validate_image_shape(
+            &bytes[..bytes.len().min(HEAD_BYTES)],
+            &bytes[bytes.len().saturating_sub(TAIL_BYTES)..],
+            bytes.len() as u64,
+        ),
+        FileKind::Manifest => match serde_json::from_slice::<serde_json::Value>(bytes) {
+            Ok(_) => Validation::Valid,
+            Err(error) => Validation::Corrupt(format!("JSON non valido: {error}")),
+        },
+    };
+
+    let checksum = matches!(validation, Validation::Valid).then(|| format!("{hash:016x}"));
+    FileScan {
+        validation,
+        checksum,
+    }
+}
+
 pub fn scan_file(path: &Path, kind: FileKind) -> FileScan {
     let file = match File::open(path) {
         Ok(file) => file,
@@ -297,6 +324,31 @@ mod tests {
             scan_file(&missing, FileKind::Image).validation,
             Validation::Missing
         );
+    }
+
+    #[test]
+    fn bytes_in_memory_give_the_same_verdict_and_the_same_checksum_as_the_file() {
+        let bytes = valid_jpeg();
+        let path = temp_file("scan_bytes.jpg", &bytes);
+
+        let from_memory = scan_bytes(&bytes, FileKind::Image);
+        let from_disk = scan_file(&path, FileKind::Image);
+
+        assert_eq!(from_memory.validation, from_disk.validation);
+        assert_eq!(from_memory.checksum, from_disk.checksum);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_truncated_image_in_memory_is_corrupt_too() {
+        let mut bytes = valid_jpeg();
+        bytes.truncate(bytes.len() - 2);
+
+        assert!(matches!(
+            scan_bytes(&bytes, FileKind::Image).validation,
+            Validation::Corrupt(_)
+        ));
     }
 
     #[test]
