@@ -102,8 +102,8 @@ pub async fn fetch(
 
     // Il trasporto ha rinunciato: l'attesa prima del prossimo tentativo del
     // lavoro la decide il profilo della biblioteca, non il motore.
-    let error = last_error
-        .unwrap_or_else(|| JobError::new(ErrorKind::Transport, format!("{url}: nessuna risposta")));
+    let error =
+        last_error.unwrap_or_else(|| JobError::new(ErrorKind::Transport, "nessuna risposta"));
     Err(JobError {
         retry_after: Some(Duration::from_secs(profile.wait_after(
             None,
@@ -131,7 +131,8 @@ async fn attempt_once(
         .await
         .map_err(|error| {
             // Connessione caduta, DNS, timeout: è trasporto, si ritenta.
-            JobError::new(ErrorKind::Transport, format!("{url}: {error}"))
+            log::warn!("request failed url={url} error={error}");
+            JobError::new(ErrorKind::Transport, "la biblioteca non risponde")
         })?;
 
     let status = response.status();
@@ -140,7 +141,10 @@ async fn attempt_once(
             .bytes()
             .await
             .map(|bytes| bytes.to_vec())
-            .map_err(|error| JobError::new(ErrorKind::Transport, format!("{url}: {error}")));
+            .map_err(|error| {
+                log::warn!("request truncated url={url} error={error}");
+                JobError::new(ErrorKind::Transport, "risposta interrotta a metà")
+            });
     }
 
     Err(classify(status, retry_after_secs(&response), url, profile))
@@ -156,14 +160,33 @@ fn classify(
     profile: &NetworkProfile,
 ) -> JobError {
     let code = status.as_u16();
+    // L'indirizzo completo va nel registro, non nel messaggio: nel pannello
+    // occupava tre righe di parametri IIIF e copriva il motivo vero.
+    log::warn!("request refused url={url} status={code}");
+
     let error = match code {
         // "Stai correndo troppo", non "vietato per sempre": correzione
         // esplicita di D16 dopo le prove su Gallica.
-        403 => JobError::new(ErrorKind::Throttled, format!("{url}: 403")),
-        429 => JobError::new(ErrorKind::RateLimited, format!("{url}: 429")),
-        404 | 410 => JobError::new(ErrorKind::NotFound, format!("{url}: {code}")),
-        500..=599 => JobError::new(ErrorKind::Transport, format!("{url}: {code}")),
-        _ => JobError::new(ErrorKind::Internal, format!("{url}: {code}")),
+        403 => JobError::new(
+            ErrorKind::Throttled,
+            "la biblioteca ha chiesto di rallentare (403)",
+        ),
+        429 => JobError::new(ErrorKind::RateLimited, "troppe richieste insieme (429)"),
+        404 | 410 => JobError::new(
+            ErrorKind::NotFound,
+            format!("carta non disponibile ({code})"),
+        ),
+        500..=599 => JobError::new(
+            ErrorKind::Transport,
+            format!("errore del servizio della biblioteca ({code})"),
+        ),
+        // L'unico parametro che facciamo variare è la misura, quindi un
+        // rifiuto di questo tipo riguarda quella (D4).
+        400 => JobError::new(
+            ErrorKind::Internal,
+            "misura non disponibile per questa carta (400)",
+        ),
+        _ => JobError::new(ErrorKind::Internal, format!("richiesta rifiutata ({code})")),
     };
     // Sul trasporto lasciamo crescere l'attesa al motore: è lì che vive il
     // raddoppio a ogni tentativo. Su 403 e 429 comanda il profilo.

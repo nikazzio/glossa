@@ -6,6 +6,7 @@ import {
   isTerminal,
   isWaitingForLibrary,
   isWaitingToRetry,
+  retryCountdownSeconds,
   type Job,
 } from '../../services/jobsService';
 import { isFinishedRecently, isRunning, useJobsStore } from '../../stores/jobsStore';
@@ -130,7 +131,14 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   // Fermo in attesa di riprovare e fermo perché fallito sono la stessa
   // immobilità con significati opposti (D17): vanno dette diversamente.
   if (isWaitingToRetry(job)) {
-    return <span className="text-terminal-warn">{eta ? t('jobs.waitingResumesIn', { eta }) : t('jobs.waiting')}</span>;
+    // Il tempo mostrato è quello che manca al tentativo, non la stima dello
+    // scaricamento: erano due numeri diversi sotto la stessa etichetta.
+    const countdown = formatEta(retryCountdownSeconds(job));
+    return (
+      <span className="text-terminal-warn">
+        {countdown ? t('jobs.waitingResumesIn', { eta: countdown }) : t('jobs.waiting')}
+      </span>
+    );
   }
   if (isWaitingForLibrary(job)) {
     return <span className="text-terminal-warn">{t('jobs.waitingForLibrary')}</span>;
@@ -162,11 +170,13 @@ function JobProgress({ job }: { job: Job }) {
   return (
     <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-terminal-line">
       <div
+        // Larghezza minima visibile: una carta su trecento è lo 0,3%, che
+        // arrotondato sparisce e fa sembrare la barra ferma.
         role="progressbar"
         aria-valuenow={Math.round(job.progress * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
-        className={`h-full ${stalled ? 'bg-terminal-warn' : 'bg-terminal-accent motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear'}`}
+        className={`h-full min-w-[2px] ${stalled ? 'bg-terminal-warn' : 'bg-terminal-accent motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear'}`}
         style={{ width: `${Math.min(100, Math.round(job.progress * 100))}%` }}
       />
     </div>

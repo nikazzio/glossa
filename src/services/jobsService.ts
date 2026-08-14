@@ -153,6 +153,21 @@ export function isWaitingToRetry(job: Job): boolean {
 }
 
 /**
+ * Quanti secondi mancano al prossimo tentativo.
+ *
+ * Si conta dall'orario del prossimo tentativo, non dal numero scritto quando
+ * l'attesa è cominciata: quello invecchia mentre la riga resta ferma sullo
+ * schermo, e dopo cinque minuti direbbe ancora «riprende fra 10 minuti».
+ * Il database scrive gli orari in UTC senza dirlo.
+ */
+export function retryCountdownSeconds(job: Job, now = Date.now()): number | null {
+  if (!isWaitingToRetry(job) || !job.nextAttemptAt) return null;
+  const at = Date.parse(job.nextAttemptAt.replace(' ', 'T') + 'Z');
+  if (Number.isNaN(at)) return job.etaSeconds;
+  return Math.max(0, Math.round((at - now) / 1000));
+}
+
+/**
  * Il lavoro sta girando ma è fermo per rispettare i limiti della biblioteca
  * (D18): con i profili tarati può restare immobile per minuti. È la stessa
  * immobilità di un errore con il significato opposto, e va detta diversamente.

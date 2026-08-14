@@ -180,6 +180,21 @@ problemi) da ciò che serve mentre si sviluppa (dettaglio a carta, attese di
 cortesia). Vocabolario e livelli sono documentati in testa a `jobs/engine.rs` e
 nella scheda di `ARCHITECTURE.md`.
 
+Insieme sono stati sistemati altri tre rilievi della stessa prova:
+
+- «riprende fra 11 minuti» mostrava la stima dello scaricamento al posto
+  dell'attesa prima del tentativo. Ora il motore scrive nel campo della stima i
+  secondi che mancano, e il pannello li conta dall'orario del prossimo
+  tentativo, così il numero cala mentre la riga resta ferma sullo schermo;
+- la barra di avanzamento spariva sotto l'1%: ha una larghezza minima;
+- il messaggio d'errore era l'indirizzo IIIF completo, tre righe di parametri.
+  Adesso dice cosa è successo — «misura non disponibile per questa carta (400)»,
+  «la biblioteca ha chiesto di rallentare (403)» — e l'indirizzo va nel registro;
+- la sezione «terminati oggi» si svuotava a ogni riavvio: l'elenco iniziale
+  chiedeva solo i lavori non finiti, e nessun evento riportava indietro gli
+  altri. Adesso comprende anche i terminati nelle ultime 24 ore, la stessa
+  finestra che il pannello mostra.
+
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
 

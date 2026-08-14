@@ -82,13 +82,20 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<JobRecord>, String> {
     .map_err(|e| format!("Failed to read the job: {e}"))
 }
 
-/// I lavori non ancora finiti, dal più recente. L'interfaccia mostra questi;
-/// lo storico completo non serve a nessuno finché non c'è l'area Analisi.
+/// I lavori che il pannello mostra: quelli non ancora finiti **e quelli
+/// terminati oggi** (D20).
+///
+/// I terminati servono: senza, la sezione «terminati oggi» si svuotava a ogni
+/// riavvio dell'applicazione, perché l'elenco iniziale li escludeva e nessun
+/// evento li riportava indietro. La finestra è la stessa che usa il pannello.
+/// Lo storico completo non serve a nessuno finché non c'è l'area Analisi.
 pub fn list_active(conn: &Connection) -> Result<Vec<JobRecord>, String> {
     query_many(
         conn,
         &format!(
-            "SELECT {COLUMNS} FROM jobs WHERE status NOT IN ('completed', 'cancelled') \
+            "SELECT {COLUMNS} FROM jobs \
+             WHERE status NOT IN ('completed', 'cancelled') \
+                OR finished_at >= datetime('now', '-1 day') \
              ORDER BY priority DESC, created_at"
         ),
         params![],
@@ -212,10 +219,14 @@ pub fn schedule_retry(
     wait_seconds: i64,
 ) -> Result<(), String> {
     conn.execute(
+        // `eta_seconds` diventa **l'attesa prima del prossimo tentativo**: è
+        // quello che l'interfaccia scrive accanto a «riprende fra…», e finché
+        // conteneva la stima dello scaricamento diceva un numero vero al posto
+        // sbagliato (D17). Alla ripartenza il gestore lo riscrive con la stima.
         "UPDATE jobs SET status = 'queued', \
          next_attempt_at = datetime('now', ?3), \
          error = ?2, error_kind = ?4, \
-         waiting_reason = 'retry', \
+         waiting_reason = 'retry', eta_seconds = ?5, \
          updated_at = CURRENT_TIMESTAMP \
          WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
         params![
@@ -223,6 +234,7 @@ pub fn schedule_retry(
             error.message,
             format!("+{wait_seconds} seconds"),
             error.kind.as_str(),
+            wait_seconds,
         ],
     )
     .map_err(|e| format!("Failed to schedule the retry: {e}"))?;
@@ -404,6 +416,9 @@ mod tests {
         assert_eq!(job.status, JobStatus::Queued, "fermo, non fallito");
         assert_eq!(job.error_kind.as_deref(), Some("throttled"));
         assert_eq!(job.waiting_reason.as_deref(), Some("retry"));
+        // Il tempo mostrato dev'essere quello che manca al tentativo, non la
+        // stima dello scaricamento rimasta lì dal giro precedente.
+        assert_eq!(job.eta_seconds, Some(600));
     }
 
     #[test]
@@ -534,6 +549,33 @@ mod tests {
         let job = get(&conn, "j7").unwrap().unwrap();
         assert_eq!(job.checkpoint.as_deref(), Some(r#"{"done":4}"#));
         assert_eq!(job.attempt_count, 0);
+    }
+
+    #[test]
+    fn the_panel_list_keeps_what_finished_today_and_drops_the_old() {
+        // La sezione «terminati oggi» si riempiva solo con gli eventi: dopo un
+        // riavvio restava vuota anche con i lavori finiti dieci minuti prima.
+        let conn = migrated_connection();
+        queued(&conn, "oggi");
+        queued(&conn, "ieri");
+        queued(&conn, "in-corso");
+        set_status(&conn, "oggi", JobStatus::Completed).unwrap();
+        set_status(&conn, "ieri", JobStatus::Completed).unwrap();
+        conn.execute(
+            "UPDATE jobs SET finished_at = datetime('now', '-3 days') WHERE id = 'ieri'",
+            [],
+        )
+        .unwrap();
+
+        let listed: Vec<String> = list_active(&conn)
+            .unwrap()
+            .into_iter()
+            .map(|job| job.id)
+            .collect();
+
+        assert!(listed.contains(&"oggi".to_string()));
+        assert!(listed.contains(&"in-corso".to_string()));
+        assert!(!listed.contains(&"ieri".to_string()));
     }
 
     #[test]
