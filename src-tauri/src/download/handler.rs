@@ -89,6 +89,15 @@ impl JobHandler for SourceDownloadJob {
             .vault_root()
             .await
             .map_err(|error| JobError::new(ErrorKind::Storage, error))?;
+        // Radice assente è un caso diverso da file mancante (D1): un disco
+        // staccato non va "riparato" creando una cartella locale che ne prende
+        // il posto e si riempie di gigabyte fuori posto.
+        if !root.is_dir() {
+            return Err(JobError::new(
+                ErrorKind::Storage,
+                "vault_unreachable".to_string(),
+            ));
+        }
         let staging = root.join("staging").join(&config.version_id);
         std::fs::create_dir_all(&staging).map_err(|error| {
             JobError::new(ErrorKind::Storage, format!("area di transito: {error}"))
@@ -116,7 +125,7 @@ impl JobHandler for SourceDownloadJob {
 
         let manifest = parse(&manifest_bytes)?;
         let total = manifest.pages.len() as u32;
-        record_manifest(&ctx, &config, total, &manifest_bytes).await?;
+        record_manifest(&ctx, &config, total, &manifest).await?;
 
         // 2. Le carte, una per volta: il confine dove ci si può fermare.
         let start = ctx
@@ -283,9 +292,9 @@ async fn record_manifest(
     ctx: &JobContext,
     config: &DownloadConfig,
     total: u32,
-    bytes: &[u8],
+    manifest: &super::manifest::Manifest,
 ) -> Result<(), JobError> {
-    let manifest = parse(bytes)?;
+    let homepage = manifest.homepage.clone();
     let relative = layout::manifest_path(&config.provider_key, &config.version_id)
         .map_err(|error| JobError::new(ErrorKind::Internal, error))?
         .to_string_lossy()
@@ -297,7 +306,7 @@ async fn record_manifest(
         conn.execute(
             "UPDATE source_versions SET expected_asset_count = ?2, homepage_url = COALESCE(?3, homepage_url) \
              WHERE id = ?1",
-            params![version_id, total as i64, manifest.homepage],
+            params![version_id, total as i64, homepage],
         )
         .map_err(|error| format!("conteggio carte: {error}"))?;
         conn.execute(
@@ -388,6 +397,18 @@ mod tests {
         // Con i valori di Gallica un manoscritto di 210 carte non scende sotto
         // il quarto d'ora: se la stima dicesse meno, mentirebbe.
         assert!(long >= 900, "stimati {long} secondi");
+    }
+
+    #[test]
+    fn the_size_asked_and_the_folder_written_cannot_diverge() {
+        // La stessa etichetta nomina la cartella e il parametro chiesto al
+        // servizio: se fossero due valori distinti, prima o poi salverebbero
+        // una risoluzione dentro la cartella di un'altra (D4).
+        let relative = crate::vault::layout::page_path("gallica", "v1", "2000", 7).unwrap();
+        let url = super::image_url("https://img/1", "2000");
+
+        assert!(relative.to_string_lossy().contains("2000"));
+        assert!(url.contains("/full/2000,/"));
     }
 
     #[test]

@@ -26,18 +26,47 @@ pub async fn enqueue_source_download(
     manifest_url: String,
     size_tag: Option<String>,
 ) -> Result<JobRecord, String> {
+    // Il tetto predefinito lo decide l'impostazione (D4): scriverlo qui
+    // significherebbe ignorare la scelta dell'utente.
+    let size_tag = match size_tag {
+        Some(explicit) => explicit,
+        None => {
+            let conn = jobs.0.connection()?;
+            crate::jobs::store::read_setting(&conn, "download_size_cap")?
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or_else(|| "2000".to_string())
+        }
+    };
+
     let config = serde_json::json!({
         "providerKey": provider_key,
         "versionId": version_id,
         "manifestUrl": manifest_url,
-        "sizeTag": size_tag.unwrap_or_else(|| "2000".to_string()),
+        "sizeTag": size_tag,
     });
+
+    // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
+    // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
+    // voleva vedere.
+    let id = format!("download:{version_id}");
+    let existing = {
+        let conn = jobs.0.connection()?;
+        crate::jobs::store::get(&conn, &id)?
+    };
+    if let Some(job) = existing {
+        if !job.status.is_terminal() {
+            return Ok(job);
+        }
+        // Un lavoro finito, annullato o fallito si rimette in coda da capo.
+        jobs.0.retry(&id, true).await?;
+        let conn = jobs.0.connection()?;
+        return crate::jobs::store::get(&conn, &id)?
+            .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());
+    }
 
     jobs.0
         .submit(&NewJob {
-            // Un lavoro per digitalizzazione: chiedere due volte la stessa non
-            // ne apre due, la seconda viene rifiutata dalla chiave.
-            id: format!("download:{version_id}"),
+            id,
             job_type: handler::JOB_TYPE.to_string(),
             priority: 10,
             config: config.to_string(),
