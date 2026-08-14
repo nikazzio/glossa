@@ -79,9 +79,17 @@ export async function createJob(request: NewJobRequest): Promise<Job> {
   return invoke<Job>('create_job', { request });
 }
 
-/** I lavori non ancora finiti. Lo storico arriverà con l'area Analisi. */
+/**
+ * I lavori non ancora finiti. Lo storico arriverà con l'area Analisi.
+ *
+ * La risposta viene controllata invece che data per buona: fuori da Tauri — le
+ * prove nel browser, un'anteprima web — il comando non esiste e la risposta non
+ * è un elenco. Senza questo controllo l'intera interfaccia si romperebbe per
+ * una coda che in quel contesto non può nemmeno esistere.
+ */
 export async function listActiveJobs(): Promise<Job[]> {
-  return invoke<Job[]>('list_active_jobs');
+  const answer = await invoke<Job[] | null>('list_active_jobs');
+  return Array.isArray(answer) ? answer : [];
 }
 
 export async function getJob(id: string): Promise<Job | null> {

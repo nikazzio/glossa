@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, Highlighter, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Highlighter, ListChecks, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
@@ -10,6 +10,9 @@ import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
+import { JobsIndicator } from '../jobs/JobsIndicator';
+import { TerminalIconButton } from '../jobs/TerminalIconButton';
+import { JobsPanel } from '../jobs/JobsPanel';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -65,13 +68,64 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   );
 }
 
-function ConsoleDrawer() {
+
+/** Scheda del pannello in basso: stessa palette scura della console. */
+function DrawerTab({
+  children,
+  label,
+  id,
+  controls,
+  selected,
+  onSelect,
+}: {
+  children: React.ReactNode;
+  label: string;
+  id: string;
+  controls: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Tooltip label={label} side="top">
+      <button
+        type="button"
+        id={id}
+        role="tab"
+        aria-selected={selected}
+        aria-controls={controls}
+        aria-label={label}
+        onClick={onSelect}
+        className={`flex h-6.5 w-6.5 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent ${
+          selected
+            ? 'border-terminal-accent/60 text-terminal-accent'
+            : 'border-terminal-border text-terminal-secondary hover:border-terminal-accent/60 hover:text-terminal-accent'
+        }`}
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * Il pannello in basso (D20). Log e lavori sono schede della stessa area — le
+ * due facce della domanda "cosa sta facendo il programma" — sul modello del
+ * pannello di VS Code. Una destinazione sola: al passaggio del mouse un
+ * riepilogo, al clic il pannello.
+ */
+function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
+  const { t } = useTranslation();
   const chunks = useChunksStore((s) => s.chunks);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
   const setShowConsoleDrawer = useUiStore((s) => s.setShowConsoleDrawer);
   const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
   const height = useUiStore((s) => s.consoleDrawerHeight);
   const setHeight = useUiStore((s) => s.setConsoleDrawerHeight);
+  const drawerTab = useUiStore((s) => s.drawerTab);
+  const setDrawerTab = useUiStore((s) => s.setDrawerTab);
+  // Fuori da un progetto i messaggi della pipeline non esistono: resta la
+  // scheda dei lavori, che invece vale ovunque.
+  const activeTab = showConsoleTab ? drawerTab : 'jobs';
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
@@ -106,15 +160,50 @@ function ConsoleDrawer() {
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>
+      <div
+        role="tablist"
+        aria-label={t('jobs.drawerTabs')}
+        className="flex shrink-0 items-center gap-1 border-b border-terminal-border bg-terminal-chrome px-2 py-1"
+      >
+        {showConsoleTab && (
+          <DrawerTab
+            label={t('console.toggle')}
+            id="drawer-tab-console"
+            controls="console-drawer-panel"
+            selected={activeTab === 'console'}
+            onSelect={() => setDrawerTab('console')}
+          >
+            <Terminal size={12} />
+          </DrawerTab>
+        )}
+        <DrawerTab
+          label={t('jobs.tab')}
+          id="drawer-tab-jobs"
+          controls="jobs-drawer-panel"
+          selected={activeTab === 'jobs'}
+          onSelect={() => setDrawerTab('jobs')}
+        >
+          <ListChecks size={12} />
+        </DrawerTab>
+        <div className="flex-1" />
+        {/* Chiudere dev'essere possibile da qui: fuori da un progetto il
+            comando in barra che ha aperto il pannello potrebbe non esserci. */}
+        <TerminalIconButton label={t('common.close')} onClick={() => setShowConsoleDrawer(false)}>
+          <X size={12} />
+        </TerminalIconButton>
+      </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <OperationsTab
-          panelId="console-drawer-panel"
-          labelledBy="console-drawer-label"
-          currentChunkId={selectedChunkId}
-          chunks={chunks}
-          onSelectChunk={setSelectedChunkId}
-          onClose={() => setShowConsoleDrawer(false)}
-        />
+        {activeTab === 'console' ? (
+          <OperationsTab
+            panelId="console-drawer-panel"
+            labelledBy="console-drawer-label"
+            currentChunkId={selectedChunkId}
+            chunks={chunks}
+            onSelectChunk={setSelectedChunkId}
+          />
+        ) : (
+          <JobsPanel panelId="jobs-drawer-panel" labelledBy="drawer-tab-jobs" />
+        )}
       </div>
     </div>
   );
@@ -256,6 +345,7 @@ export function AppStatusBar() {
   const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
+  const drawerTab = useUiStore((state) => state.drawerTab);
   const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
   const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
   const hasGlossary = usePipelineStore((state) => state.config.glossary.length > 0);
@@ -268,7 +358,9 @@ export function AppStatusBar() {
 
   return (
     <div className="relative shrink-0">
-      {showConsoleDrawer && data.kind === 'project' && <ConsoleDrawer />}
+      {showConsoleDrawer && (data.kind === 'project' || drawerTab === 'jobs') && (
+        <BottomDrawer showConsoleTab={data.kind === 'project'} />
+      )}
       <div
         role="status"
         aria-live="polite"
@@ -312,8 +404,12 @@ export function AppStatusBar() {
           </div>
         )}
 
-        {/* Right: console toggle + controlli vista + salvataggio */}
+        {/* Right: lavori + console + controlli vista + salvataggio.
+            L'indicatore dei lavori sta **sempre qui**, nella stessa posizione in
+            ogni sezione: cambia cosa mostra, non dove sta. Accanto al comando
+            della console perché aprono lo stesso pannello. */}
         <div className="flex shrink-0 items-center gap-2">
+          <JobsIndicator />
           {data.kind === 'project' && (
             <IconButton
               size="xs"

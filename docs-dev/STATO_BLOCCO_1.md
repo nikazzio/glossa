@@ -5,7 +5,7 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-13**.
+Ultimo aggiornamento: **2026-08-13**, dopo la PR 3.
 
 ## Come è organizzato il lavoro
 
@@ -26,7 +26,7 @@ dritta su `main`.
 |---|---|---|---|
 | 1 | Deposito dei file e disponibilità reale | #217 | **unita** in `blocco-1` (#414) |
 | 2 | Orchestratore dei lavori, a vuoto | #218 (metà) | **unita** in `blocco-1` (#415) |
-| 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | in corso |
+| 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
 | 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | da fare |
 | 4 | Scaricamento vero | #218 primo consumatore | da fare |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
@@ -50,7 +50,14 @@ errore, avanzamento al massimo una volta al secondo, recupero dei lavori
 interrotti alla riapertura, eventi verso l'interfaccia. Gli unici tipi di lavoro
 sono due finti, compilati solo nelle build di sviluppo.
 
-**Non esiste ancora nessuna interfaccia** per nessuna delle due cose: è la PR 3.
+**Coda visibile** (PR 3): indicatore al centro della barra di stato in ogni
+sezione, scheda Lavori nel pannello in basso accanto ai messaggi, comandi per
+pausa, ripresa, annullamento e nuovo tentativo, conferma alla chiusura con i
+lavori attivi messi in pausa. Si prova con i tipi di lavoro finti delle build di
+sviluppo.
+
+**Non esiste ancora nessuna schermata di impostazioni** per deposito e lavori:
+è la PR 3-bis.
 
 ## Decisioni prese implementando, già riportate nelle decisioni
 
@@ -73,6 +80,9 @@ sono due finti, compilati solo nelle build di sviluppo.
   prova, in contrasto con il principio fissato in #405.
 - **Notifiche di sistema** (D21): rinviate alla PR 4, quando esiste un lavoro
   vero da annunciare.
+- **Documentazione pubblica** (`docs/`, `docs/en/`) e aiuto in-app: rinviati alla
+  PR 4. Oggi i soli lavori esistenti sono quelli finti delle build di sviluppo:
+  documentarli darebbe istruzioni per qualcosa che l'utente non può avviare.
 - **Barra di stato unificata, salvataggio generalizzato, console di tutta
   l'app**: restano a #413, sono lavoro di guscio.
 - **Livello bibliografico per gli stampati**: #404, fuori dal blocco.
