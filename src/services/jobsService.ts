@@ -65,6 +65,8 @@ export interface Job {
    * traduce e mostra la chiave grezza per quelle che non conosce ancora.
    */
   phase: string | null;
+  /** Dettagli strutturati in JSON, scritti dal gestore. Vedi `parseJobDetail`. */
+  detail: string | null;
   dependsOnJobId: string | null;
   nextAttemptAt: string | null;
   createdAt: string | null;
@@ -167,6 +169,81 @@ export async function retryJob(id: string, fromScratch = false): Promise<void> {
  */
 export async function onJobChanged(handler: (job: Job) => void): Promise<() => void> {
   return listen<Job>(JOB_EVENT, (event) => handler(event.payload));
+}
+
+/**
+ * I dettagli che un lavoro sa dire di sé.
+ *
+ * Le chiavi le decide il gestore: uno scaricamento parla di carte, megabyte e
+ * risoluzione, una verifica di file integri e orfani. Qui si dichiara quello che
+ * l'interfaccia sa mostrare — il resto viene ignorato invece di comparire a
+ * metà, e un gestore futuro può aggiungere chiavi senza rompere niente.
+ */
+export interface JobDetail {
+  units?: { done: number; total: number; label: string };
+  bytes?: { downloaded: number; estimated: number };
+  last?: { index: number; bytes: number };
+  size?: string;
+  provider?: string;
+  host?: string;
+  level?: string;
+  intact?: number;
+  missing?: number;
+  corrupt?: number;
+  orphans?: { count: number; bytes: number };
+}
+
+/**
+ * Legge i dettagli senza fidarsi della forma: arrivano da un gestore che può
+ * essere più nuovo dell'interfaccia, e una chiave inattesa non deve far sparire
+ * la riga.
+ */
+export function parseJobDetail(raw: string | null): JobDetail {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return {};
+    const record = parsed as Record<string, unknown>;
+    const num = (value: unknown): number | undefined =>
+      typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    const text = (value: unknown): string | undefined =>
+      typeof value === 'string' && value.trim() ? value : undefined;
+    const group = (value: unknown): Record<string, unknown> =>
+      typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+
+    const units = group(record.units);
+    const bytes = group(record.bytes);
+    const last = group(record.last);
+    const orphans = group(record.orphans);
+
+    return {
+      units:
+        num(units.done) !== undefined && num(units.total) !== undefined
+          ? { done: num(units.done)!, total: num(units.total)!, label: text(units.label) ?? 'generic' }
+          : undefined,
+      bytes:
+        num(bytes.downloaded) !== undefined
+          ? { downloaded: num(bytes.downloaded)!, estimated: num(bytes.estimated) ?? 0 }
+          : undefined,
+      last:
+        num(last.index) !== undefined
+          ? { index: num(last.index)!, bytes: num(last.bytes) ?? 0 }
+          : undefined,
+      size: text(record.size),
+      provider: text(record.provider),
+      host: text(record.host),
+      level: text(record.level),
+      intact: num(record.intact),
+      missing: num(record.missing),
+      corrupt: num(record.corrupt),
+      orphans:
+        num(orphans.count) !== undefined
+          ? { count: num(orphans.count)!, bytes: num(orphans.bytes) ?? 0 }
+          : undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
 /**

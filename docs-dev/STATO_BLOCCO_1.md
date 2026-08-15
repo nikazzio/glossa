@@ -232,6 +232,14 @@ ogni fonte; l'elenco locale dei lavori si svuotava anche quando la cancellazione
 falliva; l'interruttore della verifica all'avvio restava acceso anche se
 l'impostazione non veniva scritta.
 
+**Righe dei lavori parlanti** *(chiesto dall'utente il 2026-08-15)*: il tipo di
+lavoro si legge in un contrassegno — carte, miniature, verifica — e i numeri
+distinguono quanto è arrivato da quanto si prevede in tutto, perché il peso della
+carta in corso da solo è fuorviante. La riga si apre con un'animazione e mostra i
+dettagli veri: risoluzione negoziata, biblioteca, host, tentativi, orari. Il dato
+sta in una colonna nuova, `jobs.detail`, in JSON: le chiavi le decide il tipo di
+lavoro, così i gestori futuri ne aggiungono senza toccare l'interfaccia.
+
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
 

@@ -59,7 +59,12 @@ them at once from the controls at the top of the panel.
 **How they are named** — every row carries the work's name while it is still
 waiting its turn, and adds progress and downloaded size while it runs: *I diarii
 di Marino Sanuto · 34/374 · 46 MB*. Next to it you see what it is doing right
-now: starting, reading the manifest, choosing the resolution, downloading.
+now: starting, reading the manifest, choosing the resolution, downloading. A tag
+says which kind of job it is — pages, thumbnails, check — and the numbers keep
+what has arrived separate from what is expected in total.
+
+**Clicking a row** opens it and shows the details: the resolution the library
+accepted, its server address, the attempts made, the timestamps.
 
 Pausing is not instant: the job finishes the piece it is on — the page it is
 downloading — saves it and stops. That is why the state goes from *pausing…* to

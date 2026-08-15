@@ -11,7 +11,7 @@ use super::{JobError, JobRecord, JobStatus};
 
 const COLUMNS: &str = "id, job_type, status, priority, progress, message, config, checkpoint, \
      attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, phase, \
-     depends_on_job_id, next_attempt_at, created_at, updated_at";
+     detail, depends_on_job_id, next_attempt_at, created_at, updated_at";
 
 /// Cosa serve per mettere un lavoro in coda. Il resto lo mette il database.
 #[derive(Debug, Clone)]
@@ -46,10 +46,11 @@ fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
         eta_seconds: row.get(12)?,
         waiting_reason: row.get(13)?,
         phase: row.get(14)?,
-        depends_on_job_id: row.get(15)?,
-        next_attempt_at: row.get(16)?,
-        created_at: row.get(17)?,
-        updated_at: row.get(18)?,
+        detail: row.get(15)?,
+        depends_on_job_id: row.get(16)?,
+        next_attempt_at: row.get(17)?,
+        created_at: row.get(18)?,
+        updated_at: row.get(19)?,
     })
 }
 
@@ -171,6 +172,7 @@ pub fn set_status(conn: &Connection, id: &str, status: JobStatus) -> Result<bool
 /// Avanzamento, messaggio, stima e motivo dell'attesa (D17). Il gestore chiama
 /// al massimo una volta al secondo: il limite sta in `JobContext`, qui si
 /// scrive e basta.
+#[allow(clippy::too_many_arguments)]
 pub fn save_progress(
     conn: &Connection,
     id: &str,
@@ -178,12 +180,17 @@ pub fn save_progress(
     message: Option<&str>,
     eta_seconds: Option<i64>,
     waiting_reason: Option<&str>,
+    detail: Option<&str>,
 ) -> Result<(), String> {
     conn.execute(
+        // Il dettaglio viaggia con l'avanzamento: cambia insieme a lui, e una
+        // scrittura separata raddoppierebbe gli aggiornamenti per ogni carta.
+        // `COALESCE` lascia stare quello vecchio quando il gestore non ne manda
+        // uno nuovo, invece di cancellarlo.
         "UPDATE jobs SET progress = ?2, message = ?3, eta_seconds = ?4, waiting_reason = ?5, \
-         updated_at = CURRENT_TIMESTAMP \
+         detail = COALESCE(?6, detail), updated_at = CURRENT_TIMESTAMP \
          WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
-        params![id, progress, message, eta_seconds, waiting_reason],
+        params![id, progress, message, eta_seconds, waiting_reason, detail],
     )
     .map_err(|e| format!("Failed to save the job progress: {e}"))?;
     Ok(())
@@ -272,7 +279,8 @@ pub fn fail(conn: &Connection, id: &str, error: &JobError) -> Result<(), String>
 pub fn requeue(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET status = 'queued', error = NULL, error_kind = NULL, \
-         waiting_reason = NULL, phase = NULL, next_attempt_at = NULL, finished_at = NULL, \
+         waiting_reason = NULL, phase = NULL, detail = NULL, next_attempt_at = NULL, \
+         finished_at = NULL, \
          progress = CASE WHEN ?2 THEN 0 ELSE progress END, \
          checkpoint = CASE WHEN ?2 THEN NULL ELSE checkpoint END, \
          updated_at = CURRENT_TIMESTAMP \
@@ -347,6 +355,7 @@ pub(crate) mod test_support {
             include_str!("../../migrations/0003_vault_and_read_mode.sql"),
             include_str!("../../migrations/0004_jobs_runtime.sql"),
             include_str!("../../migrations/0005_job_phase.sql"),
+            include_str!("../../migrations/0006_job_detail.sql"),
         ] {
             conn.execute_batch(migration).expect("migration applies");
         }
@@ -411,11 +420,44 @@ mod tests {
         queued(&conn, "j3");
         set_status(&conn, "j3", JobStatus::Completed).unwrap();
 
-        save_progress(&conn, "j3", 0.5, Some("a metà"), Some(60), None).unwrap();
+        save_progress(
+            &conn,
+            "j3",
+            0.5,
+            Some("a metà"),
+            Some(60),
+            None,
+            Some(r#"{"units":{"done":1}}"#),
+        )
+        .unwrap();
 
         let job = get(&conn, "j3").unwrap().unwrap();
         assert_eq!(job.progress, 0.0);
         assert_eq!(job.message, None);
+        assert_eq!(job.detail, None, "nemmeno i dettagli");
+    }
+
+    #[test]
+    fn a_progress_without_details_keeps_the_ones_already_written() {
+        // I dettagli cambiano meno spesso dell'avanzamento: chi non ne manda di
+        // nuovi non deve cancellare quelli buoni.
+        let conn = migrated_connection();
+        queued(&conn, "j-detail");
+        save_progress(
+            &conn,
+            "j-detail",
+            0.1,
+            None,
+            None,
+            None,
+            Some(r#"{"units":{"done":1}}"#),
+        )
+        .unwrap();
+
+        save_progress(&conn, "j-detail", 0.2, None, None, None, None).unwrap();
+
+        let job = get(&conn, "j-detail").unwrap().unwrap();
+        assert_eq!(job.detail.as_deref(), Some(r#"{"units":{"done":1}}"#));
     }
 
     #[test]

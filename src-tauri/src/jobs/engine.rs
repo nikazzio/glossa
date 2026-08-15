@@ -111,12 +111,26 @@ impl JobContext {
         message: Option<&str>,
         eta_seconds: Option<i64>,
     ) {
+        self.report(progress, message, eta_seconds, None).await;
+    }
+
+    /// Come `report_progress`, con i **dettagli** che il tipo di lavoro sa dire:
+    /// carte fatte, byte arrivati e previsti, risoluzione chiesta, host. È JSON,
+    /// e l'interfaccia mostra le chiavi che conosce.
+    pub async fn report(
+        &self,
+        progress: f64,
+        message: Option<&str>,
+        eta_seconds: Option<i64>,
+        detail: Option<&str>,
+    ) {
         let was_waiting = self.waiting.swap(false, Ordering::SeqCst);
         self.write_progress(
             progress,
             message,
             eta_seconds,
             None,
+            detail,
             was_waiting || progress >= 1.0,
         )
         .await;
@@ -137,17 +151,20 @@ impl JobContext {
             message,
             eta_seconds,
             Some(super::WAITING_LIBRARY_LIMITS),
+            None,
             true,
         )
         .await;
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn write_progress(
         &self,
         progress: f64,
         message: Option<&str>,
         eta_seconds: Option<i64>,
         waiting_reason: Option<&str>,
+        detail: Option<&str>,
         force: bool,
     ) {
         if !force && !self.due_for_a_write() {
@@ -157,6 +174,7 @@ impl JobContext {
         let observer = self.observer.clone();
         let message = message.map(str::to_string);
         let waiting_reason = waiting_reason.map(str::to_string);
+        let detail = detail.map(str::to_string);
         let _ = self
             .with_database(move |conn| {
                 store::save_progress(
@@ -166,6 +184,7 @@ impl JobContext {
                     message.as_deref(),
                     eta_seconds,
                     waiting_reason.as_deref(),
+                    detail.as_deref(),
                 )?;
                 observer.notify(conn, &id);
                 Ok(())
@@ -661,7 +680,7 @@ impl JobEngine {
 
         match outcome {
             Ok(Outcome::Done) => {
-                store::save_progress(conn, &job.id, 1.0, None, Some(0), None)?;
+                store::save_progress(conn, &job.id, 1.0, None, Some(0), None, None)?;
                 store::set_status(conn, &job.id, JobStatus::Completed)?;
                 log::info!("job finished id={} type={}", job.id, job.job_type);
             }
@@ -740,6 +759,7 @@ mod tests {
             include_str!("../../migrations/0003_vault_and_read_mode.sql"),
             include_str!("../../migrations/0004_jobs_runtime.sql"),
             include_str!("../../migrations/0005_job_phase.sql"),
+            include_str!("../../migrations/0006_job_detail.sql"),
         ] {
             conn.execute_batch(migration).unwrap();
         }
@@ -1006,7 +1026,7 @@ mod tests {
         )
         .unwrap();
         store::set_status(&conn, "da-rifare", JobStatus::Running).unwrap();
-        store::save_progress(&conn, "da-rifare", 0.7, None, None, None).unwrap();
+        store::save_progress(&conn, "da-rifare", 0.7, None, None, None, None).unwrap();
 
         engine.recover_interrupted().await.unwrap();
 

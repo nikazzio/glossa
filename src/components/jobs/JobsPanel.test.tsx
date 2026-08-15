@@ -35,6 +35,7 @@ function job(overrides: Partial<Job> = {}): Job {
     etaSeconds: 720,
     waitingReason: null,
     phase: null,
+    detail: null,
     dependsOnJobId: null,
     nextAttemptAt: null,
     createdAt: null,
@@ -141,5 +142,60 @@ describe('attesa per i limiti della biblioteca', () => {
     renderPanel([job({ status: 'running', phase: 'ocr_pass_2', progress: 0.5 })]);
 
     expect(screen.getByText(/ocr_pass_2/)).toBeInTheDocument();
+  });
+
+
+  it('la riga dice di che tipo di lavoro si tratta', () => {
+    // Scaricare le carte e scaricare le miniature sono due cose diverse, e
+    // finché la riga diceva solo il nome dell'opera non si distinguevano.
+    renderPanel([job({ status: 'running', jobType: 'source_thumbnails', message: 'Beatus' })]);
+
+    expect(screen.getByText('jobs.short.source_thumbnails')).toBeInTheDocument();
+  });
+
+  it('mostra quanto è arrivato e quanto si prevede in tutto', () => {
+    // Il peso della sola carta in corso non dice niente su quanto manca.
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.1,
+        detail: JSON.stringify({
+          units: { done: 34, total: 352, label: 'pages' },
+          bytes: { downloaded: 48_234_496, estimated: 499_122_176 },
+        }),
+      }),
+    ]);
+
+    expect(screen.getByText('34/352')).toBeInTheDocument();
+    expect(screen.getByText(/46 MB \/ ~476 MB/)).toBeInTheDocument();
+  });
+
+  it('la riga si apre e mostra i dettagli veri', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.1,
+        detail: JSON.stringify({
+          units: { done: 2, total: 352, label: 'pages' },
+          bytes: { downloaded: 1_000_000, estimated: 176_000_000 },
+          size: '1299,',
+          provider: 'archive_org',
+          host: 'iiif.archive.org',
+        }),
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('1299,')).toBeInTheDocument();
+    expect(screen.getByText('iiif.archive.org')).toBeInTheDocument();
+    expect(screen.getByRole('button', { expanded: true })).toBeInTheDocument();
+  });
+
+  it('un dettaglio malformato non fa sparire la riga', () => {
+    renderPanel([job({ status: 'running', message: 'Beatus', detail: 'non è json' })]);
+
+    expect(screen.getByText('Beatus')).toBeInTheDocument();
   });
 });

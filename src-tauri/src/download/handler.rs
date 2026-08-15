@@ -17,7 +17,7 @@ use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
 
 use super::courtesy::Courtesy;
-use super::fetch::{build_client, fetch};
+use super::fetch::{build_client, fetch, host_of};
 use super::manifest::{image_url, parse, Page};
 use super::size;
 
@@ -284,13 +284,12 @@ impl JobHandler for SourceDownloadJob {
                 return Ok(stopped_outcome(&ctx, &staging));
             }
 
-            let label = progress_message(&title, done, total, bytes);
             let eta = estimated_seconds(total.saturating_sub(done), &profile);
             let progress = f64::from(done) / f64::from(total.max(1));
             let fetched = self
                 .fetch_page_declaring_long_waits(
                     &ctx, &client, &profile, &config, &manifest, &sizes, &root, &staging, page,
-                    progress, &label, eta, &stop,
+                    progress, &title, eta, &stop,
                 )
                 .await
                 .inspect_err(|_| discard(&staging))?;
@@ -319,10 +318,22 @@ impl JobHandler for SourceDownloadJob {
                     )
                 });
 
-            ctx.report_progress(
+            ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
-                Some(&progress_message(&title, done, total, bytes)),
+                Some(&title),
                 Some(estimated_seconds(total.saturating_sub(done), &profile)),
+                Some(&progress_detail(
+                    done,
+                    total,
+                    bytes,
+                    page.index,
+                    added,
+                    &cached(&sizes, page)
+                        .map(|token| token.0)
+                        .unwrap_or_else(|| self.target.cap(&config).to_string()),
+                    &config.provider_key,
+                    &host_of(&page.image_service).unwrap_or_default(),
+                )),
             )
             .await;
         }
@@ -709,24 +720,37 @@ fn discard(staging: &Path) {
     }
 }
 
-/// La riga del pannello (D20): nome dell'opera, a che punto è, quanto pesa.
-/// La forma la decide il tipo di lavoro — questo è quella dello scaricamento.
-fn progress_message(title: &str, done: u32, total: u32, bytes: u64) -> String {
-    format!("{title} · {done}/{total} · {}", human_size(bytes))
-}
-
-/// Dimensione leggibile. Le carte di un manoscritto stanno fra i decimi di
-/// megabyte e la decina: sotto il megabyte si scrive in kB, sopra in MB.
-fn human_size(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = 1024 * KB;
-    const GB: u64 = 1024 * MB;
-    match bytes {
-        0..=KB => format!("{bytes} B"),
-        b if b < MB => format!("{} kB", b / KB),
-        b if b < GB => format!("{} MB", b / MB),
-        b => format!("{:.1} GB", b as f64 / GB as f64),
-    }
+/// I dettagli dello scaricamento, come li legge il pannello (D20).
+///
+/// Il **nome** dell'opera sta nel messaggio; qui stanno i numeri, separati,
+/// perché a formattarli — e a tradurli — è l'interfaccia. Il totale in byte è
+/// una **stima** ricavata dalle carte già arrivate: dire solo quanto pesa la
+/// carta in corso non direbbe niente su quanto manca.
+#[allow(clippy::too_many_arguments)]
+fn progress_detail(
+    done: u32,
+    total: u32,
+    bytes: u64,
+    last_page: u32,
+    last_bytes: u64,
+    size_token: &str,
+    provider: &str,
+    host: &str,
+) -> String {
+    let estimated = if done > 0 {
+        bytes / u64::from(done) * u64::from(total)
+    } else {
+        0
+    };
+    serde_json::json!({
+        "units": { "done": done, "total": total, "label": "pages" },
+        "bytes": { "downloaded": bytes, "estimated": estimated },
+        "last": { "index": last_page, "bytes": last_bytes },
+        "size": size_token,
+        "provider": provider,
+        "host": host,
+    })
+    .to_string()
 }
 
 /// Quanto pesa già nel deposito questa digitalizzazione.
@@ -1004,22 +1028,36 @@ mod tests {
     }
 
     #[test]
-    fn the_panel_line_says_which_work_where_it_is_and_how_much_it_weighs() {
-        // In coda il pannello mostrava «source download»: il nome dell'opera
-        // c'è dalla messa in coda, e i numeri arrivano appena si sa quanti sono.
-        assert_eq!(
-            progress_message("Beatus di Girona", 34, 210, 48_234_496),
-            "Beatus di Girona · 34/210 · 46 MB"
+    fn the_detail_says_how_much_is_arrived_and_how_much_is_expected() {
+        // Dire solo quanto pesa la carta in corso non dice niente su quanto
+        // manca: il totale è una stima ricavata da quelle già arrivate.
+        let detail = progress_detail(
+            34,
+            352,
+            48_234_496,
+            34,
+            1_420_000,
+            "1299,",
+            "archive_org",
+            "iiif.archive.org",
         );
+        let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
+
+        assert_eq!(parsed["units"]["done"], 34);
+        assert_eq!(parsed["units"]["total"], 352);
+        assert_eq!(parsed["bytes"]["downloaded"], 48_234_496);
+        // 48 MB per 34 carte, 352 carte in tutto: mezzo giga scarso.
+        assert_eq!(parsed["bytes"]["estimated"], 48_234_496u64 / 34 * 352);
+        assert_eq!(parsed["last"]["bytes"], 1_420_000);
+        assert_eq!(parsed["size"], "1299,");
     }
 
     #[test]
-    fn sizes_are_written_in_the_unit_that_fits() {
-        assert_eq!(human_size(0), "0 B");
-        assert_eq!(human_size(900), "900 B");
-        assert_eq!(human_size(20_480), "20 kB");
-        assert_eq!(human_size(5 * 1024 * 1024), "5 MB");
-        assert_eq!(human_size(3 * 1024 * 1024 * 1024), "3.0 GB");
+    fn without_a_single_page_done_no_total_is_invented() {
+        let detail = progress_detail(0, 352, 0, 0, 0, "2000,", "gallica", "gallica.bnf.fr");
+        let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
+
+        assert_eq!(parsed["bytes"]["estimated"], 0);
     }
 
     #[test]

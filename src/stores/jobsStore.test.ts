@@ -32,6 +32,7 @@ function job(overrides: Partial<Job> = {}): Job {
     etaSeconds: 600,
     waitingReason: null,
     phase: null,
+    detail: null,
     dependsOnJobId: null,
     nextAttemptAt: null,
     createdAt: null,

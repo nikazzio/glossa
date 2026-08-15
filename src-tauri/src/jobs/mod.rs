@@ -298,6 +298,8 @@ pub struct JobRecord {
     /// Cosa sta facendo adesso, dentro lo stato: chiave breve decisa dal tipo
     /// di lavoro e tradotta dall'interfaccia (`manifest`, `downloading`, …).
     pub phase: Option<String>,
+    /// Dettagli strutturati, in JSON: le chiavi le decide il tipo di lavoro.
+    pub detail: Option<String>,
     pub depends_on_job_id: Option<String>,
     pub next_attempt_at: Option<String>,
     pub created_at: Option<String>,

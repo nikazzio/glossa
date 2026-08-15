@@ -1488,7 +1488,7 @@
       "jobsTitle": "La coda dei lavori",
       "jobsDesc": "Scaricamenti, verifiche e generazioni lunghe non bloccano l'applicazione: diventano lavori in coda. In Impostazioni → Archiviazione trovi anche la verifica del deposito, rapida o completa: diventa un lavoro come gli altri e non cancella né riscarica niente da sola.",
       "jobsWhereTitle": "Dove si vedono",
-      "jobsWhereDesc": "Nella barra in basso a destra, in ogni sezione. Il clic apre il pannello con l'elenco: in corso, in attesa, terminati oggi. Ogni riga porta il nome dell'opera, a che punto è e quanto ha scaricato. Nel pannello ogni riga dice cosa sta facendo il lavoro in quel momento: avvio, lettura del manifesto, scelta della risoluzione, scaricamento.",
+      "jobsWhereDesc": "Nella barra in basso a destra, in ogni sezione. Il clic apre il pannello con l'elenco: in corso, in attesa, terminati oggi. Ogni riga porta il nome dell'opera, a che punto è e quanto ha scaricato. Nel pannello ogni riga dice cosa sta facendo il lavoro in quel momento: avvio, lettura del manifesto, scelta della risoluzione, scaricamento. Cliccando una riga si apre e mostra i dettagli: risoluzione chiesta alla biblioteca, host, tentativi, orari.",
       "jobsControlTitle": "Come si comandano",
       "jobsControlDesc": "Pausa, ripresa, annullamento e nuovo tentativo per ciascun lavoro, o per tutti insieme dai comandi in cima al pannello. La pausa non è istantanea: il lavoro finisce il pezzo in corso, lo salva e si ferma.",
       "downloadTitle": "Scaricare una fonte",
@@ -1902,6 +1902,41 @@
     "waitingForLibrary": "in attesa · limiti della biblioteca",
     "commandFailed": "Comando non riuscito",
     "dismiss": "Togli dall'elenco",
-    "clearFinished": "Svuota i terminati ({{count}})"
+    "clearFinished": "Svuota i terminati ({{count}})",
+    "short": {
+      "source_download": "carte",
+      "source_thumbnails": "miniature",
+      "vault_verification": "verifica",
+      "debug_counter": "prova",
+      "debug_restart_only": "prova"
+    },
+    "detail": {
+      "type": "tipo",
+      "phase": "fase",
+      "bytes": "scaricato",
+      "last": "ultima",
+      "size": "risoluzione",
+      "provider": "biblioteca",
+      "host": "host",
+      "level": "livello",
+      "intact": "integri",
+      "missing": "mancanti",
+      "corrupt": "corrotti",
+      "orphans": "orfani",
+      "attempt": "tentativo",
+      "started": "avviato",
+      "updated": "aggiornato",
+      "error": "errore",
+      "id": "identificativo",
+      "units": {
+        "pages": "carte",
+        "files": "file",
+        "generic": "unità"
+      },
+      "levelValue": {
+        "quick": "rapida",
+        "full": "completa"
+      }
+    }
   }
 }

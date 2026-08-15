@@ -60,7 +60,12 @@ ciascun lavoro, oppure per tutti insieme dai comandi in cima al pannello.
 **Come si chiamano** — ogni riga porta il nome dell'opera già mentre aspetta il
 turno, e mentre gira aggiunge a che punto è e quanto ha scaricato: *I diarii di
 Marino Sanuto · 34/374 · 46 MB*. Accanto trovi cosa sta facendo in quel momento:
-avvio, lettura del manifesto, scelta della risoluzione, scaricamento.
+avvio, lettura del manifesto, scelta della risoluzione, scaricamento. Un
+contrassegno dice di che tipo di lavoro si tratta — carte, miniature, verifica —
+e i numeri distinguono quanto è arrivato da quanto si prevede in tutto.
+
+**Cliccando una riga** si apre e mostra i dettagli: la risoluzione che la
+biblioteca ha accettato, l'indirizzo del suo server, i tentativi fatti, gli orari.
 
 La pausa non è istantanea: il lavoro porta a termine il pezzo in corso — la
 pagina che sta scaricando — lo salva e si ferma. Per questo lo stato passa da

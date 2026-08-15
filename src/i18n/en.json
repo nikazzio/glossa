@@ -1488,7 +1488,7 @@
       "jobsTitle": "The job queue",
       "jobsDesc": "Downloads, checks and long generations do not block the app: they become queued jobs. Settings → Storage also has the vault check, quick or full: it becomes a job like the others and never deletes or re-downloads anything on its own.",
       "jobsWhereTitle": "Where to see them",
-      "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today. Every row carries the work's name, how far it got and how much it downloaded. In the panel every row says what the job is doing right now: starting, reading the manifest, choosing the resolution, downloading.",
+      "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today. Every row carries the work's name, how far it got and how much it downloaded. In the panel every row says what the job is doing right now: starting, reading the manifest, choosing the resolution, downloading. Clicking a row opens it and shows the details: resolution requested from the library, host, attempts, timestamps.",
       "jobsControlTitle": "How to control them",
       "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
       "downloadTitle": "Downloading a source",
@@ -1902,6 +1902,41 @@
     "waitingForLibrary": "waiting · library limits",
     "commandFailed": "Command failed",
     "dismiss": "Remove from the list",
-    "clearFinished": "Clear finished ({{count}})"
+    "clearFinished": "Clear finished ({{count}})",
+    "short": {
+      "source_download": "pages",
+      "source_thumbnails": "thumbs",
+      "vault_verification": "check",
+      "debug_counter": "test",
+      "debug_restart_only": "test"
+    },
+    "detail": {
+      "type": "type",
+      "phase": "phase",
+      "bytes": "downloaded",
+      "last": "last",
+      "size": "resolution",
+      "provider": "library",
+      "host": "host",
+      "level": "level",
+      "intact": "intact",
+      "missing": "missing",
+      "corrupt": "corrupt",
+      "orphans": "orphans",
+      "attempt": "attempt",
+      "started": "started",
+      "updated": "updated",
+      "error": "error",
+      "id": "id",
+      "units": {
+        "pages": "pages",
+        "files": "files",
+        "generic": "units"
+      },
+      "levelValue": {
+        "quick": "quick",
+        "full": "full"
+      }
+    }
   }
 }

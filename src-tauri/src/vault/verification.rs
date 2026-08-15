@@ -58,6 +58,20 @@ impl Report {
             self.intact, self.missing, self.corrupt, self.orphans
         )
     }
+
+    /// Gli stessi numeri in forma strutturata: l'interfaccia li mostra uno per
+    /// uno quando si apre la riga, invece di far leggere una frase.
+    pub fn detail(&self, checked: u32, total: u32, full: bool) -> String {
+        serde_json::json!({
+            "units": { "done": checked, "total": total, "label": "files" },
+            "intact": self.intact,
+            "missing": self.missing,
+            "corrupt": self.corrupt,
+            "orphans": { "count": self.orphans, "bytes": self.orphan_bytes },
+            "level": if full { "full" } else { "quick" },
+        })
+        .to_string()
+    }
 }
 
 pub struct VaultVerificationJob;
@@ -135,10 +149,11 @@ impl JobHandler for VaultVerificationJob {
             }
 
             let done = done as u32 + 1;
-            ctx.report_progress(
+            ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
                 Some(&report.message()),
                 None,
+                Some(&report.detail(done, total, config.full)),
             )
             .await;
             // Una scansione di gigabyte non deve tenersi il filo: fra un file e
@@ -164,8 +179,13 @@ impl JobHandler for VaultVerificationJob {
             report.orphans,
             report.orphan_bytes
         );
-        ctx.report_progress(1.0, Some(&report.message()), Some(0))
-            .await;
+        ctx.report(
+            1.0,
+            Some(&report.message()),
+            Some(0),
+            Some(&report.detail(total, total, config.full)),
+        )
+        .await;
         Ok(Outcome::Done)
     }
 }
