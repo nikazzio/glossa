@@ -100,6 +100,43 @@ writes, language services, document generation. *Automatic* lets Glossa choose.
 The **download** limit does not depend on your computer's power but on the
 library's server: raising it too much triggers temporary blocks.
 
+## How large the pages
+
+In **Settings → Download** you choose the page size and the thumbnail size.
+
+The page size is a **target, not an exact number**: Glossa asks the library for
+the one it declares closest, above or below. Asking for an invented size would
+force the service to produce it on the spot — measured: twenty-three seconds
+against one.
+
+The same choice can be made closer to the work, and the closest one wins:
+
+1. on the **single work**, by opening its card in the Library;
+2. on the **single library**, in Settings → Libraries;
+3. on **everything**, in Settings → Download.
+
+Pages already downloaded stay as they are: the choice applies to what is
+downloaded from now on.
+
+**Thumbnails** are not asked of the library: Glossa derives them from the pages
+it has downloaded, on your computer. Larger ones take more space and browse
+better; they cost no request at all.
+
+## Libraries, one by one
+
+**Settings → Libraries** lists the libraries Glossa knows, and for each one its
+pace: how long to wait between requests, how many requests in a minute, how
+long to stop when the library asks you to slow down, how many attempts to make.
+
+They ship already tuned in the field. They can be changed, and one command
+restores any library to the values it came with.
+
+**Requests at the same time never go above four**, whatever you write: the
+limit depends on their server and it keeps you from being blocked.
+
+If you download from an address belonging to none of the listed libraries, you
+can **add it** and give it its own pace.
+
 ## Stopped does not mean broken
 
 A job can sit still for minutes while respecting a library's limits. The

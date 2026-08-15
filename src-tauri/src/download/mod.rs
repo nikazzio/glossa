@@ -21,9 +21,6 @@ const JOB_ID_PREFIX: &str = "download";
 /// preferisce alle verifiche di fondo.
 const DOWNLOAD_PRIORITY: i64 = 10;
 
-/// Tetto di risoluzione predefinito, in pixel sul lato lungo (D4).
-const DEFAULT_SIZE_CAP: u32 = 2000;
-
 pub const THUMBNAIL_EDGE_SETTING: &str = "thumbnail_long_edge";
 
 /// Estremi entro cui una miniatura resta una miniatura: sotto i 100 pixel non
@@ -62,13 +59,18 @@ async fn enqueue(
     version_id: Option<String>,
     size_tag: Option<String>,
 ) -> Result<JobRecord, String> {
-    // Tentativi e attese sono del profilo della biblioteca, non costanti nostre
-    // (D16, D18): Gallica ne concede tre, le altre cinque.
-    let profile = crate::iiif::find_provider(&provider_key)
-        .map(|provider| provider.network)
-        .unwrap_or(crate::iiif::network::CAUTIOUS);
-
     let conn = jobs.0.connection()?;
+
+    // Tentativi e attese sono del profilo della biblioteca, non costanti nostre
+    // (D16, D18): Gallica ne concede tre, le altre cinque. Il profilo è quello
+    // **in vigore**, cioè con dentro le modifiche dell'utente (#421).
+    let profile = crate::iiif::settings::effective_profile(
+        &conn,
+        &provider_key,
+        crate::download::fetch::host_of(&manifest_url)
+            .ok()
+            .as_deref(),
+    );
 
     // La digitalizzazione si può indicare per identificativo o lasciar
     // ritrovare dall'indirizzo del manifesto, che è l'unica cosa che l'utente
@@ -86,13 +88,16 @@ async fn enqueue(
             })?,
     };
 
-    // Il tetto predefinito lo decide l'impostazione (D4): scriverlo qui
-    // significherebbe ignorare la scelta dell'utente.
-    let size_tag = match size_tag {
+    // Il tetto lo decide la fonte, poi la biblioteca, poi l'impostazione
+    // generale (D4). Un valore chiesto esplicitamente — «scarica questa alla
+    // massima risoluzione» — passa davanti a tutti, ma deve comunque essere un
+    // tetto che significa qualcosa.
+    let size_tag = match size_tag
+        .as_deref()
+        .and_then(crate::iiif::settings::normalise_cap)
+    {
         Some(explicit) => explicit,
-        None => crate::jobs::store::read_setting(&conn, "download_size_cap")?
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| DEFAULT_SIZE_CAP.to_string()),
+        None => crate::iiif::settings::effective_size_cap(&conn, &provider_key, &version_id)?,
     };
 
     // Il lato lungo delle miniature: adesso che le ricaviamo noi è una misura

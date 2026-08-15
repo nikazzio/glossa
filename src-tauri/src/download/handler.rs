@@ -16,7 +16,7 @@ use serde::Deserialize;
 use std::path::Path;
 use std::time::Duration;
 
-use crate::iiif::network::{NetworkProfile, CAUTIOUS};
+use crate::iiif::network::NetworkProfile;
 use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
@@ -28,6 +28,10 @@ use super::manifest::{image_url, parse, Page};
 use super::size;
 
 pub const JOB_TYPE: &str = "source_download";
+
+/// Tetto di riserva quando il tetto configurato non è un numero — cioè quando
+/// è la politica «massima», che non passa mai di qui.
+const DEFAULT_CAP_PIXELS: u32 = 2000;
 
 /// `assets.kind` delle carte: è quello che conta nella disponibilità (D7) ed è
 /// quello che «libera spazio» cancella (D6).
@@ -61,11 +65,8 @@ fn default_thumbnail_edge() -> u32 {
     images::DEFAULT_THUMBNAIL_EDGE
 }
 
-/// Tetto predefinito: 2000 pixel sul lato lungo (D4).
-const DEFAULT_CAP: u32 = 2000;
-
 fn default_size_tag() -> String {
-    DEFAULT_CAP.to_string()
+    crate::iiif::settings::DEFAULT_SIZE_CAP.to_string()
 }
 
 #[derive(Debug, Default, serde::Serialize, Deserialize)]
@@ -138,7 +139,7 @@ impl JobHandler for SourceDownloadJob {
         let config: DownloadConfig = serde_json::from_str(&ctx.config).map_err(|error| {
             JobError::new(ErrorKind::Internal, format!("configurazione: {error}"))
         })?;
-        let profile = profile_for(&config.provider_key);
+        let profile = profile_for(&ctx, &config).await;
         let client = build_client(&profile)?;
 
         let root = ctx
@@ -666,7 +667,7 @@ impl SourceDownloadJob {
         signals: &Signals<'_>,
     ) -> Result<Option<size::SizeToken>, JobError> {
         ctx.report_phase(phase::NEGOTIATING).await;
-        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP);
+        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP_PIXELS);
         let info_url = size::info_url(&page.image_service);
         let Some(fetched) = fetch(
             client,
@@ -873,12 +874,31 @@ fn thumbnail_staging_name(page_index: u32) -> String {
     format!("{page_index:04}-thumb.jpg")
 }
 
-/// Profilo del provider, o quello prudente per chi non è nel registro: nessuna
-/// fonte resta senza politica (D18).
-fn profile_for(provider_key: &str) -> NetworkProfile {
-    crate::iiif::find_provider(provider_key)
-        .map(|provider| provider.network)
-        .unwrap_or(CAUTIOUS)
+/// Il profilo **in vigore** per questa biblioteca: prima quello che l'utente ha
+/// cambiato, poi quello compilato nel registro, poi il prudente. Nessuna fonte
+/// resta senza politica (D18).
+///
+/// Si rilegge all'avvio del lavoro e non alla messa in coda: fra le due può
+/// passare tempo, e un lavoro ripreso dopo giorni deve rispettare i limiti di
+/// adesso, non quelli di allora.
+async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> NetworkProfile {
+    let key = config.provider_key.clone();
+    let host = host_of(&config.manifest_url).ok();
+    ctx.with_database(move |conn| {
+        Ok(crate::iiif::settings::effective_profile(
+            conn,
+            &key,
+            host.as_deref(),
+        ))
+    })
+    .await
+    .unwrap_or_else(|error| {
+        log::warn!(
+            "job profile not read id={} error={error} (si usa quello del registro)",
+            ctx.id
+        );
+        crate::iiif::settings::registry_profile(&config.provider_key)
+    })
 }
 
 /// Scrive nell'area di transito, valida, e **solo allora** promuove (D16-bis).
@@ -1068,17 +1088,20 @@ fn estimated_seconds(remaining: u32, profile: &NetworkProfile) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::iiif::network::GALLICA;
+    use crate::iiif::network::{CAUTIOUS, GALLICA};
 
     #[test]
     fn an_unknown_provider_gets_the_cautious_profile() {
         // Le fonti aggiunte per indirizzo diretto non hanno voce nel registro.
-        assert_eq!(profile_for("mai-vista"), CAUTIOUS);
+        assert_eq!(
+            crate::iiif::settings::registry_profile("mai-vista"),
+            CAUTIOUS
+        );
     }
 
     #[test]
     fn a_known_provider_brings_its_own_profile() {
-        assert_eq!(profile_for("gallica"), GALLICA);
+        assert_eq!(crate::iiif::settings::registry_profile("gallica"), GALLICA);
     }
 
     #[test]

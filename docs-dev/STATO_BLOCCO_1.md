@@ -6,7 +6,7 @@ sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
 Ultimo aggiornamento: **2026-08-16**: #414-#420 unite in `blocco-1`, miniature
-ricavate in locale.
+ricavate in locale, impostazioni di scaricamento e biblioteche.
 
 ## Come è organizzato il lavoro
 
@@ -251,6 +251,7 @@ generare l'immagine sul momento — misurato su archive.org: 23 secondi contro 1
 
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
+**Entrambe fatte il 2026-08-16**: vedi più sotto.
 
 ## Miniature in locale, 2026-08-16
 
@@ -284,6 +285,41 @@ Cosa è cambiato:
 D6 aggiornata: diceva «si scaricano», adesso dice come si ricavano. Cade con lei
 il primo dei tre livelli di D4 — «l'indirizzo che il manifesto dichiara già
 pronto» — che valeva per le sole miniature.
+
+## Impostazioni di scaricamento e biblioteche, 2026-08-16
+
+Due schermate nuove in Impostazioni, e le due issue aperte dal piano si
+chiudono.
+
+**Scaricamento** (#422): il tetto di risoluzione — 1000, 1500, 2000, 3000 o «la
+più grande disponibile» — e il lato lungo delle miniature. Il tetto si può dire
+a tre livelli e vince il più vicino all'opera: **fonte → biblioteca → globale**,
+come prescrive D4. La scelta per la singola opera sta sulla sua scheda in
+Biblioteca, che è dove la decisione la vuole; quella per biblioteca sta insieme
+agli altri valori di quella biblioteca.
+
+**Biblioteche** (#421): l'elenco del registro, ognuna apribile sui propri
+tredici valori — pause, raffica, richieste insieme, tentativi, attese,
+raffreddamenti, timeout, preriscaldamento del visualizzatore — con il comando
+che la riporta ai valori compilati nell'applicazione, disattivato per chi non è
+mai stato toccato. Si può aggiungere una voce per un **host fuori dal registro**,
+che è il caso delle fonti aggiunte per indirizzo diretto (D18): parte dal
+profilo prudente, letto dal backend perché tenerlo anche nell'interfaccia
+vorrebbe dire due elenchi destinati a divergere.
+
+Due cose che valgono più della schermata:
+
+- **il tetto sulle richieste insieme adesso vale nel backend** (D11). Prima
+  viveva solo nel menu, che è un aiuto e non una difesa: un profilo scritto a
+  mano nel database scavalcava tutto. Adesso ogni profilo viene riportato dentro
+  i limiti nel punto in cui si usa;
+- **il profilo si rilegge all'avvio del lavoro**, non alla messa in coda: un
+  lavoro ripreso dopo giorni deve rispettare i limiti di adesso.
+
+Migrazione `0007`: colonna `source_versions.size_cap` e tabella
+`library_settings` — una riga per biblioteca, e **solo** per chi è stato
+cambiato. Chi non compare si comporta come dichiara il registro, e togliere la
+riga è il modo di tornare ai valori di fabbrica.
 
 ## Prossima sessione: da dove riprendere
 

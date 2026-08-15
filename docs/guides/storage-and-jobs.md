@@ -102,6 +102,45 @@ generazione documenti. *Automatico* lascia scegliere a Glossa.
 Il limite degli **scaricamenti** non dipende dalla potenza del computer ma dal
 server della biblioteca: alzarlo troppo fa scattare blocchi temporanei.
 
+## Quanto grandi le carte
+
+In **Impostazioni → Scaricamento** scegli la misura delle carte e quella delle
+miniature.
+
+La misura delle carte è un **obiettivo, non un numero esatto**: Glossa chiede
+alla biblioteca quella che dichiara più vicina, sopra o sotto. Chiedere una
+misura inventata costringerebbe il servizio a produrla sul momento — misurato:
+ventitré secondi contro uno.
+
+La stessa scelta si può fare più vicino all'opera, e vince la più vicina:
+
+1. sulla **singola opera**, aprendo la sua scheda in Biblioteca;
+2. sulla **singola biblioteca**, in Impostazioni → Biblioteche;
+3. su **tutto**, in Impostazioni → Scaricamento.
+
+Le carte già scaricate restano come sono: la scelta vale per quello che si
+scarica da adesso.
+
+Le **miniature** non si chiedono alla biblioteca: Glossa le ricava dalle carte
+che ha scaricato, sul computer. Più grandi occupano più spazio e si sfogliano
+meglio; non costano nessuna richiesta.
+
+## Le biblioteche, una per una
+
+In **Impostazioni → Biblioteche** c'è l'elenco delle biblioteche che Glossa
+conosce, e per ognuna i suoi tempi: quanto aspettare fra una richiesta e
+l'altra, quante richieste in un minuto, quanto fermarsi quando la biblioteca
+chiede di rallentare, quanti tentativi fare.
+
+Arrivano già tarati sul campo. Si possono cambiare, e un comando riporta ogni
+biblioteca ai valori con cui è arrivata.
+
+Le **richieste insieme non superano mai quattro**, qualunque cosa si scriva: il
+limite dipende dal loro server e serve a non farsi bloccare.
+
+Se scarichi da un indirizzo che non appartiene a nessuna delle biblioteche in
+elenco, puoi **aggiungerlo** e dargli i suoi tempi.
+
 ## Fermo non vuol dire rotto
 
 Un lavoro può restare immobile per minuti rispettando i limiti di una

@@ -180,6 +180,12 @@ pub fn run() {
             deepl::commands::delete_deepl_glossary,
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
+            iiif::commands::list_library_settings,
+            iiif::commands::cautious_network_profile,
+            iiif::commands::save_library_settings,
+            iiif::commands::reset_library_settings,
+            iiif::commands::get_version_size_cap,
+            iiif::commands::set_version_size_cap,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

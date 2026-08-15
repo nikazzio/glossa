@@ -332,6 +332,12 @@ sintassi canonica `size=max`.
 Scelta **alla fonte**, non globale, perché dipende dal materiale: una
 cinquecentina a stampa larga si legge a molto meno di una minuscola fitta.
 
+*(Fatto il 2026-08-16, #422.)* Tre livelli, e vince il più vicino all'opera:
+**fonte** (scheda in Biblioteca), **biblioteca** (Impostazioni → Biblioteche),
+**globale** (Impostazioni → Scaricamento). Un tetto che non significa niente —
+scritto a mano nel database, o rimasto da una forma precedente — vale come non
+scritto, e si torna al livello sotto.
+
 - **Standard** (predefinita): la misura dichiarata dal servizio **più vicina al
   tetto** — 2000 pixel sul lato lungo, configurabile — sopra o sotto che sia; a
   parità di distanza vince la più grande;
@@ -806,6 +812,10 @@ dal loro server, non dal tuo computer. Configurabile, ma con l'avvertenza
 accanto e un tetto non superabile — non per limitare l'utente, per non farlo
 bandire. Vedi D18.
 
+*(Il tetto è quattro richieste insieme per host, e dal 2026-08-16 vale dove i
+valori si usano e non solo dove si scelgono: un profilo scritto a mano nel
+database viene riportato dentro i limiti prima di scaricare.)*
+
 ### I lavori brevi non si mostrano singolarmente
 
 Lo scaricamento di una singola pagina dura pochi secondi. Se ogni pagina
@@ -1095,6 +1105,14 @@ più di quello che il progetto di riferimento dichiara.
 
 Il secondo garantisce che i valori tarati arrivino corretti a chi installa; il
 primo che si possano cambiare senza ricompilare.
+
+*(Fatto il 2026-08-16, #421.)* La modifica dell'utente vive in
+`library_settings`, una riga per biblioteca, e la schermata è Impostazioni →
+Biblioteche: ogni biblioteca si apre sui propri valori e un comando la riporta
+a quelli compilati. Il profilo si rilegge **all'avvio del lavoro**, non alla
+messa in coda: un lavoro ripreso dopo giorni deve rispettare i limiti di
+adesso. Il tetto sulle richieste insieme è applicato **anche nel backend**
+(D11): prima viveva solo nel menu, che è un aiuto e non una difesa.
 
 ### Profilo dal provider, contatori per host
 

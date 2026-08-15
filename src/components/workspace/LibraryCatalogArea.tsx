@@ -25,6 +25,7 @@ import {
   versionProviderKey,
 } from '../../services/libraryService';
 import { freeVersionPages, summarizeAvailability, verifyFilesPresent } from '../../services/vaultService';
+import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
 import type { LibraryCatalogEntry } from '../../types';
 
@@ -78,6 +79,13 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               <div key={version.id}><dt className="inline text-editorial-muted">{version.label}</dt><dd className="inline pl-2 text-editorial-ink">{version.sourceUrl}</dd></div>
             ))}
           </dl>
+          {/* La misura con cui si scarica questa opera: l'ultima parola sulla
+              politica generale e su quella della biblioteca (D4). */}
+          <div className="mt-4 flex flex-col gap-2">
+            {detail.versions.map((version) => (
+              <SourceSizeCap key={version.id} versionId={version.id} />
+            ))}
+          </div>
           {workspaces.length > 0 && (
             <div className="mt-6">
               <SectionLabel icon={Link2} label={t('areas.library.linkedWorkspaces')} />

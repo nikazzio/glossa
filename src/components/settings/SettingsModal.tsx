@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { LibraryBig, BookOpen, FileText, Type, Server, HardDrive, ListChecks } from 'lucide-react';
+import {
+  LibraryBig,
+  BookOpen,
+  FileText,
+  Type,
+  Server,
+  HardDrive,
+  ListChecks,
+  Download,
+  Landmark,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
@@ -18,6 +28,8 @@ import { TypographySettingsTab } from './TypographySettingsTab';
 import { ProviderSettingsTab } from './ProviderSettingsTab';
 import { StorageSettingsTab } from './StorageSettingsTab';
 import { JobsSettingsTab } from './JobsSettingsTab';
+import { DownloadSettingsTab } from './DownloadSettingsTab';
+import { LibrariesSettingsTab } from './LibrariesSettingsTab';
 
 export function SettingsModal() {
   const {
@@ -104,6 +116,8 @@ export function SettingsModal() {
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
     { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
     { id: 'jobs',         icon: <ListChecks size={14} />,        label: t('settings.jobsTab') },
+    { id: 'download',     icon: <Download size={14} />,          label: t('settings.downloadTab') },
+    { id: 'libraries',    icon: <Landmark size={14} />,          label: t('settings.librariesTab') },
   ];
 
   const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
@@ -233,6 +247,10 @@ export function SettingsModal() {
       {activeTab === 'storage' && <StorageSettingsTab />}
 
       {activeTab === 'jobs' && <JobsSettingsTab />}
+
+      {activeTab === 'download' && <DownloadSettingsTab />}
+
+      {activeTab === 'libraries' && <LibrariesSettingsTab />}
 
     </Dialog>
   );
