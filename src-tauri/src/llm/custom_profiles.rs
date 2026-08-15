@@ -47,12 +47,7 @@ fn db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
 }
 
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, String> {
-    let path = db_path(app)?;
-    let conn = Connection::open(&path).map_err(|e| format!("DB open error: {e}"))?;
-    conn.execute_batch(
-        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=10000;",
-    )
-        .map_err(|e| format!("PRAGMA error: {e}"))?;
+    let conn = crate::db::open_connection(&db_path(app)?)?;
     verify_schema(&conn)?;
     Ok(conn)
 }

@@ -17,7 +17,7 @@ use tauri_plugin_dialog::DialogExt;
 /// cartella mai creata. Una radice **scelta dall'utente** invece non si crea
 /// mai da soli: se non c'è, è perché il disco non è collegato.
 pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
-    let db = crate::jobs::engine::open_database(&crate::storage_config::db_path(app)?)?;
+    let db = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
     let configured: Option<String> = crate::jobs::store::read_setting(&db, "vault_root")?;
     if configured
         .map(|value| !value.trim().is_empty())
@@ -420,7 +420,7 @@ pub async fn choose_vault_folder(
     if adoptable {
         super::ensure_root(&folder)?;
         let _write_guard = write_coordinator.lock().await;
-        let conn = crate::jobs::engine::open_database(&crate::storage_config::db_path(&app)?)?;
+        let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
         conn.execute(
             "INSERT INTO app_settings (key, value) VALUES ('vault_root', ?1) \
              ON CONFLICT(key) DO UPDATE SET value = excluded.value",
@@ -448,7 +448,7 @@ pub async fn use_default_vault_folder(
     let root = resolve_root(&app, None)?;
     super::ensure_root(&root)?;
     let _write_guard = write_coordinator.lock().await;
-    let conn = crate::jobs::engine::open_database(&crate::storage_config::db_path(&app)?)?;
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
     conn.execute(
         "INSERT INTO app_settings (key, value) VALUES ('vault_root', '') \
          ON CONFLICT(key) DO UPDATE SET value = ''",

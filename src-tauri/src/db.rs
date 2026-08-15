@@ -112,6 +112,24 @@ pub async fn run_startup_migrations(app: &tauri::AppHandle) -> Result<(), String
     Ok(())
 }
 
+/// Apre una connessione rusqlite a `glossa.db` con le impostazioni che tutta
+/// l'applicazione usa: chiavi esterne attive, WAL, attesa di dieci secondi
+/// quando un'altra scrittura è in corso.
+///
+/// Sta qui perché era ripetuta in tre moduli diversi: tre copie della stessa
+/// riga di PRAGMA sono tre occasioni di divergere, e la prima volta che una
+/// dimentica `busy_timeout` il difetto si manifesta come un errore casuale
+/// sotto carico.
+pub fn open_connection(path: &std::path::Path) -> Result<rusqlite::Connection, String> {
+    let conn = rusqlite::Connection::open(path).map_err(|e| format!("DB open error: {e}"))?;
+    conn.execute_batch(
+        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; \
+         PRAGMA busy_timeout=10000;",
+    )
+    .map_err(|e| format!("PRAGMA error: {e}"))?;
+    Ok(conn)
+}
+
 /// Serializes every runtime write to glossa.db, including commands that use
 /// SQLx and commands that use the dedicated rusqlite vector connection.
 /// Schema setup is intentionally separate and happens before the UI renders.

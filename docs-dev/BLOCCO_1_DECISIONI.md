@@ -997,6 +997,16 @@ connettersi, 30 s per leggere.
 La Vaticana richiede il **preriscaldamento del visualizzatore**. Tutte inviano
 l'header di provenienza.
 
+**Stato dell'implementazione** *(2026-08-14, PR 4)*: pause, raffica,
+concorrenza per host, raffreddamenti, tentativi di trasporto e identificazione
+dell'applicazione ci sono. **Mancano ancora**, dichiarati: il preriscaldamento
+del visualizzatore con l'header di provenienza che ne consegue — va provato sul
+campo con la Vaticana, perché senza sessione le immagini non arrivano — e i
+*worker per lavoro* (Scriptoria ne usa 1 su Gallica e 2 altrove; qui le carte si
+scaricano una per volta, cioè sempre al ritmo più prudente). Nessuna delle due
+rende scortesi: la prima impedisce di scaricare da una biblioteca, la seconda
+rallenta e basta.
+
 ### Precedenza, tre livelli
 
 1. **modifica dell'utente**, salvata nel database per chiave provider o per host;

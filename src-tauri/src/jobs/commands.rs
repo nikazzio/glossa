@@ -112,11 +112,17 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         db_path,
         observer,
         app.state::<crate::db::DbWriteCoordinator>().inner().clone(),
+        crate::vault::resolve_root(app, None)?,
     );
 
-    // In questa PR gli unici gestori sono quelli finti, e solo nelle build di
-    // sviluppo: uno che sa riprendere e uno che va rifatto da capo, i due rami
-    // di D13. Il primo gestore reale è lo scaricamento, che arriva con la PR 4.
+    // Il gestore vero: lo scaricamento delle fonti dalle biblioteche.
+    engine.register(
+        crate::download::handler::JOB_TYPE,
+        Arc::new(crate::download::handler::SourceDownloadJob::new()),
+    );
+
+    // Accanto, nelle sole build di sviluppo, i due tipi finti che servono a
+    // provare la coda senza rete: uno che sa riprendere e uno da rifare.
     #[cfg(debug_assertions)]
     {
         engine.register("debug_counter", Arc::new(super::testing::CounterJob));

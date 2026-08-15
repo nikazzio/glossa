@@ -5,7 +5,7 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-13**, notte: PR 3 e 3-bis aperte, in attesa di prova.
+Ultimo aggiornamento: **2026-08-14**, notte: PR 3, 3-bis e 4 aperte e verdi.
 
 ## Come è organizzato il lavoro
 
@@ -28,7 +28,7 @@ dritta su `main`.
 | 2 | Orchestratore dei lavori, a vuoto | #218 (metà) | **unita** in `blocco-1` (#415) |
 | 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
 | 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
-| 4 | Scaricamento vero | #218 primo consumatore | da fare |
+| 4 | Scaricamento vero | #218 primo consumatore | **in revisione** (#419) |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | da fare |
@@ -99,20 +99,34 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
   default: potrebbe essere specifico del portatile. Da riprovare sulla
   postazione fissa prima di decidere. Dettagli in `ARCHITECTURE.md`, refactor
   pendenti.
+- **Codice di retrocompatibilità pre-2.0** (`db.rs`,
+  `backfill_legacy_columns` e le tre colonne di `LEGACY_COLUMN_BACKFILLS`):
+  serve solo a database rimasti a una forma antecedente alla baseline 2.0.
+  Glossa non ha utenti, quindi quei database esistono soltanto sulle macchine di
+  sviluppo. Va tolto **insieme al consolidamento delle migrazioni**, nello stesso
+  momento in cui si butta il database di sviluppo: toglierlo prima non
+  guadagnerebbe niente e rischierebbe di bloccare l'avvio qui.
 - **Scrollbar su Linux**: il rimedio attuale funziona ma il risultato non
   piace. Da rivedere con una soluzione vera, fuori dal blocco 1.
 
 ## Prossima sessione: da dove riprendere
 
-Due PR aperte e verdi, **in attesa che Niki le provi**: la **#417** (coda
-visibile) e la **#418** (impostazioni), che è impilata sulla prima e si
-ritargherà da sola su `blocco-1` quando la #417 verrà unita.
+Tre PR aperte e verdi, impilate in quest'ordine — ognuna si ritarga da sola
+quando la precedente viene unita:
 
-Ordine consigliato: provare la #417, unirla, provare la #418, unirla, poi
-aggiornare questo file e `STATO_SESSIONE_2.0.md` sulla postazione fissa. Dopo si
-parte con la **PR 4**, lo scaricamento vero, che è anche dove rientrano le
-notifiche di sistema, la schermata di primo avvio, la documentazione pubblica e
-i lavori brevi che si mostrano solo se falliscono.
+1. **#417** — coda visibile (provata da Niki il 13–14 agosto, corretti i difetti
+   emersi: pannello scuro, indicatore fisso a destra, chiusura, posizione nella
+   barra, comandi del testo spostati sopra il documento);
+2. **#418** — impostazioni di deposito e lavori, più la chiusura dell'ultimo
+   comando che accettava percorsi dal frontend (rilievi di Copilot chiusi);
+3. **#419** — scaricamento vero (**non ancora provata da Niki**).
+
+Ordine consigliato: unire #417, #418, poi provare la #419 con una fonte vera
+prima di unirla — è la prima che tocca la rete.
+
+**Poi**: notifiche di sistema (D21), pulsante di scaricamento in Biblioteca,
+schermata di primo avvio, e la PR 6 (registrazione del lavoro svolto), che il
+documento chiede di non lasciare ultima.
 
 ~~Da aprire come issue: la cartella dati usa ancora la finestra aperta dal
 frontend~~ — **chiusa nella PR 3-bis**: anche la cartella dati passa dal dialogo

@@ -110,6 +110,20 @@ export async function cancelJob(id: string): Promise<void> {
   await invoke('cancel_job', { id });
 }
 
+/**
+ * Mette in coda lo scaricamento di una digitalizzazione. L'interfaccia non
+ * scarica niente: chiede un lavoro e osserva (D10).
+ */
+export async function enqueueSourceDownload(request: {
+  providerKey: string;
+  manifestUrl: string;
+  /** Se manca, la digitalizzazione si ritrova dall'indirizzo del manifesto. */
+  versionId?: string;
+  sizeTag?: string;
+}): Promise<Job> {
+  return invoke<Job>('enqueue_source_download', request);
+}
+
 export async function retryJob(id: string, fromScratch = false): Promise<void> {
   await invoke('retry_job', { id, fromScratch });
 }
@@ -128,6 +142,15 @@ export async function onJobChanged(handler: (job: Job) => void): Promise<() => v
  */
 export function isWaitingToRetry(job: Job): boolean {
   return job.status === 'queued' && job.nextAttemptAt !== null;
+}
+
+/**
+ * Il lavoro sta girando ma è fermo per rispettare i limiti della biblioteca
+ * (D18): con i profili tarati può restare immobile per minuti. È la stessa
+ * immobilità di un errore con il significato opposto, e va detta diversamente.
+ */
+export function isWaitingForLibrary(job: Job): boolean {
+  return job.waitingReason === 'libraryLimits';
 }
 
 /** Un lavoro finito non cambia più stato: né ripartenze né aggiornamenti tardivi. */

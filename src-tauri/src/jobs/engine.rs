@@ -52,6 +52,14 @@ pub struct JobContext {
     last_progress: Mutex<Option<Instant>>,
     observer: Observer,
     writes: DbWriteCoordinator,
+    default_vault_root: PathBuf,
+    /// Connessione tenuta aperta per la durata del lavoro.
+    ///
+    /// Uno scaricamento di duecento carte scrive avanzamento, punto raggiunto e
+    /// riga dell'asset per ogni carta: aprire ogni volta una connessione nuova
+    /// significa seicento aperture e altrettante raffiche di PRAGMA, per un
+    /// database che è sempre lo stesso file.
+    database: tokio::sync::Mutex<Option<Connection>>,
 }
 
 /// Distanza minima fra due scritture di avanzamento (D17): aggiornare a ogni
@@ -83,6 +91,24 @@ impl JobContext {
             .await;
     }
 
+    /// Fermo, ma non rotto: sta rispettando i limiti della biblioteca (D17,
+    /// D18). L'interfaccia lo dice diversamente da un errore, e la barra non
+    /// finge di avanzare.
+    pub async fn report_waiting(&self, reason: &str, eta_seconds: Option<i64>) {
+        let current = self.progress_now().await;
+        self.write_progress(current, None, eta_seconds, Some(reason), true)
+            .await;
+    }
+
+    async fn progress_now(&self) -> f64 {
+        let id = self.id.clone();
+        self.with_database(move |conn| Ok(store::get(conn, &id)?.map(|job| job.progress)))
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or(0.0)
+    }
+
     async fn write_progress(
         &self,
         progress: f64,
@@ -94,22 +120,24 @@ impl JobContext {
         if !force && !self.due_for_a_write() {
             return;
         }
-        let _write_guard = self.writes.lock().await;
-        let Ok(conn) = open(&self.db_path) else {
-            return;
-        };
-        if store::save_progress(
-            &conn,
-            &self.id,
-            progress,
-            message,
-            eta_seconds,
-            waiting_reason,
-        )
-        .is_ok()
-        {
-            self.observer.notify(&conn, &self.id);
-        }
+        let id = self.id.clone();
+        let observer = self.observer.clone();
+        let message = message.map(str::to_string);
+        let waiting_reason = waiting_reason.map(str::to_string);
+        let _ = self
+            .with_database(move |conn| {
+                store::save_progress(
+                    conn,
+                    &id,
+                    progress,
+                    message.as_deref(),
+                    eta_seconds,
+                    waiting_reason.as_deref(),
+                )?;
+                observer.notify(conn, &id);
+                Ok(())
+            })
+            .await;
     }
 
     fn due_for_a_write(&self) -> bool {
@@ -127,11 +155,42 @@ impl JobContext {
         }
     }
 
+    /// Il database, con il lucchetto delle scritture già preso: i gestori
+    /// scrivono le loro righe passando da qui, come tutto il resto dell'app.
+    pub async fn with_database<T>(
+        &self,
+        work: impl FnOnce(&Connection) -> Result<T, String>,
+    ) -> Result<T, String> {
+        let _write_guard = self.writes.lock().await;
+        let mut slot = self.database.lock().await;
+        if slot.is_none() {
+            *slot = Some(open(&self.db_path)?);
+        }
+        let conn = slot
+            .as_ref()
+            .ok_or_else(|| "connessione al database non disponibile".to_string())?;
+        work(conn)
+    }
+
+    /// La radice del deposito: quella scelta dall'utente, se c'è, altrimenti
+    /// quella predefinita risolta all'avvio (D1).
+    pub async fn vault_root(&self) -> Result<PathBuf, String> {
+        let configured = self
+            .with_database(|conn| store::read_setting(conn, "vault_root"))
+            .await?;
+        Ok(configured
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| self.default_vault_root.clone()))
+    }
+
     /// A che punto è arrivato, per la ripresa (D13).
     pub async fn save_checkpoint(&self, checkpoint: &str) -> Result<(), String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        store::save_checkpoint(&conn, &self.id, checkpoint)
+        let id = self.id.clone();
+        let checkpoint = checkpoint.to_string();
+        self.with_database(move |conn| store::save_checkpoint(conn, &id, &checkpoint))
+            .await
     }
 }
 
@@ -158,25 +217,32 @@ impl Observer {
     }
 }
 
-/// Connessione al database con le stesse impostazioni usate ovunque nell'app.
-/// Esposta perché serve anche fuori dai lavori, per le scritture che il backend
-/// fa da sé (per esempio la cartella del deposito scelta dal dialogo nativo).
-pub fn open_database(path: &Path) -> Result<Connection, String> {
-    open(path)
+fn open(path: &Path) -> Result<Connection, String> {
+    crate::db::open_connection(path)
 }
 
-fn open(path: &Path) -> Result<Connection, String> {
-    let conn = Connection::open(path).map_err(|e| format!("DB open error: {e}"))?;
-    conn.execute_batch(
-        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; \
-         PRAGMA busy_timeout=10000;",
-    )
-    .map_err(|e| format!("PRAGMA error: {e}"))?;
-    Ok(conn)
+/// Il database dell'orchestratore, con il lucchetto delle scritture già preso.
+/// Vive finché serve la connessione e la restituisce al posto suo.
+struct DbGuard<'a> {
+    _writes: tokio::sync::OwnedMutexGuard<()>,
+    slot: tokio::sync::MutexGuard<'a, Option<Connection>>,
+}
+
+impl std::ops::Deref for DbGuard<'_> {
+    type Target = Connection;
+
+    fn deref(&self) -> &Connection {
+        self.slot
+            .as_ref()
+            .expect("la connessione viene aperta prima di consegnare la guardia")
+    }
 }
 
 pub struct JobEngine {
     handlers: HashMap<String, Arc<dyn JobHandler>>,
+    /// Radice del deposito quando nessuno ne ha scelta una: risolta una volta
+    /// all'avvio, perché richiede l'handle dell'applicazione.
+    default_vault_root: PathBuf,
     permits: HashMap<ResourceClass, Arc<Semaphore>>,
     controls: Mutex<HashMap<String, Arc<JobControl>>>,
     db_path: PathBuf,
@@ -184,12 +250,22 @@ pub struct JobEngine {
     writes: DbWriteCoordinator,
     backoff: BackoffProfile,
     wake: Notify,
+    /// Connessione riusata da tutti i giri della coda: il giro parte ogni mezzo
+    /// secondo, e riaprire il database ogni volta significa due aperture al
+    /// secondo per tutta la durata della sessione.
+    database: tokio::sync::Mutex<Option<Connection>>,
 }
 
 impl JobEngine {
-    pub fn new(db_path: PathBuf, observer: Observer, writes: DbWriteCoordinator) -> Self {
+    pub fn new(
+        db_path: PathBuf,
+        observer: Observer,
+        writes: DbWriteCoordinator,
+        default_vault_root: PathBuf,
+    ) -> Self {
         Self {
             handlers: HashMap::new(),
+            default_vault_root,
             permits: HashMap::new(),
             controls: Mutex::new(HashMap::new()),
             db_path,
@@ -197,7 +273,20 @@ impl JobEngine {
             writes,
             backoff: BackoffProfile::default(),
             wake: Notify::new(),
+            database: tokio::sync::Mutex::new(None),
         }
+    }
+
+    async fn db_guard(&self) -> Result<DbGuard<'_>, String> {
+        let writes = self.writes.lock().await;
+        let mut slot = self.database.lock().await;
+        if slot.is_none() {
+            *slot = Some(open(&self.db_path)?);
+        }
+        Ok(DbGuard {
+            _writes: writes,
+            slot,
+        })
     }
 
     pub fn register(&mut self, job_type: &str, handler: Arc<dyn JobHandler>) {
@@ -227,13 +316,13 @@ impl JobEngine {
 
     /// Mette un lavoro in coda e sveglia l'orchestratore.
     pub async fn submit(&self, job: &NewJob) -> Result<JobRecord, String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
         if !self.handlers.contains_key(&job.job_type) {
             return Err(format!("unknown job type: {}", job.job_type));
         }
-        let record = store::create(&conn, job)?;
-        self.observer.notify(&conn, &record.id);
+        let record = store::create(conn, job)?;
+        self.observer.notify(conn, &record.id);
         self.wake.notify_one();
         Ok(record)
     }
@@ -241,63 +330,63 @@ impl JobEngine {
     /// Pausa (D14). Su un lavoro in esecuzione segna la richiesta e passa per
     /// `pausing`: il gestore si ferma al confine, non subito.
     pub async fn request_pause(&self, id: &str) -> Result<(), String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        let Some(job) = store::get(&conn, id)? else {
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
+        let Some(job) = store::get(conn, id)? else {
             return Err(format!("unknown job: {id}"));
         };
         match job.status {
             JobStatus::Running => {
                 self.control_of(id).request_pause();
-                store::set_status(&conn, id, JobStatus::Pausing)?;
+                store::set_status(conn, id, JobStatus::Pausing)?;
             }
             JobStatus::Queued => {
-                store::set_status(&conn, id, JobStatus::Paused)?;
+                store::set_status(conn, id, JobStatus::Paused)?;
             }
             _ => {}
         }
-        self.observer.notify(&conn, id);
+        self.observer.notify(conn, id);
         Ok(())
     }
 
     /// Annullamento (D15). Cooperativo come la pausa; un lavoro annullato è
     /// terminale — si può ripetere da capo, non riprendere.
     pub async fn request_cancel(&self, id: &str) -> Result<(), String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        let Some(job) = store::get(&conn, id)? else {
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
+        let Some(job) = store::get(conn, id)? else {
             return Err(format!("unknown job: {id}"));
         };
         match job.status {
             JobStatus::Running | JobStatus::Pausing => {
                 self.control_of(id).request_cancel();
-                store::set_status(&conn, id, JobStatus::Cancelling)?;
+                store::set_status(conn, id, JobStatus::Cancelling)?;
             }
             status if !status.is_terminal() => {
-                store::set_status(&conn, id, JobStatus::Cancelled)?;
+                store::set_status(conn, id, JobStatus::Cancelled)?;
             }
             _ => {}
         }
-        self.observer.notify(&conn, id);
+        self.observer.notify(conn, id);
         Ok(())
     }
 
     /// Riprende un lavoro in pausa: riparte dal punto salvato, non da capo.
     pub async fn resume(&self, id: &str) -> Result<(), String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        store::requeue(&conn, id, false)?;
-        self.observer.notify(&conn, id);
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
+        store::requeue(conn, id, false)?;
+        self.observer.notify(conn, id);
         self.wake.notify_one();
         Ok(())
     }
 
     /// Ritenta un lavoro fallito, su richiesta esplicita.
     pub async fn retry(&self, id: &str, from_scratch: bool) -> Result<(), String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        store::requeue(&conn, id, from_scratch)?;
-        self.observer.notify(&conn, id);
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
+        store::requeue(conn, id, from_scratch)?;
+        self.observer.notify(conn, id);
         self.wake.notify_one();
         Ok(())
     }
@@ -327,31 +416,31 @@ impl JobEngine {
     /// **Nessun lavoro riparte da solo**, con una sola eccezione a richiesta
     /// esplicita: gli scaricamenti, se l'impostazione è accesa.
     pub async fn recover_interrupted(&self) -> Result<usize, String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        let auto_resume = store::read_setting(&conn, "auto_resume_downloads")?
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
+        let auto_resume = store::read_setting(conn, "auto_resume_downloads")?
             .map(|value| value.trim() == "1")
             .unwrap_or(false);
 
-        let interrupted = store::interrupted(&conn)?;
+        let interrupted = store::interrupted(conn)?;
         let touched = interrupted.len();
         for job in interrupted {
             match job.status {
                 // Chi stava annullando ha già deciso: si porta a termine.
                 JobStatus::Cancelling => {
-                    store::set_status(&conn, &job.id, JobStatus::Cancelled)?;
+                    store::set_status(conn, &job.id, JobStatus::Cancelled)?;
                 }
                 _ => match self.handlers.get(&job.job_type) {
                     // Tipo sconosciuto: non si butta e non si indovina.
-                    None => store::park_as_paused(&conn, &job.id, false)?,
+                    None => store::park_as_paused(conn, &job.id, false)?,
                     Some(handler) => match handler.recovery() {
                         Recovery::Resumable => {
                             let downloadable =
                                 handler.resource_class() == ResourceClass::Network && auto_resume;
                             if downloadable {
-                                store::requeue(&conn, &job.id, false)?;
+                                store::requeue(conn, &job.id, false)?;
                             } else {
-                                store::park_as_paused(&conn, &job.id, false)?;
+                                store::park_as_paused(conn, &job.id, false)?;
                             }
                         }
                         // Chi non sa riprendere va rifatto da capo, ma **non da
@@ -360,11 +449,11 @@ impl JobEngine {
                         // esattamente ciò che D13 esclude. Resta da parte, con il
                         // progresso azzerato perché non corrisponde più a niente,
                         // finché l'utente non lo rilancia.
-                        Recovery::Restart => store::park_as_paused(&conn, &job.id, true)?,
+                        Recovery::Restart => store::park_as_paused(conn, &job.id, true)?,
                     },
                 },
             }
-            self.observer.notify(&conn, &job.id);
+            self.observer.notify(conn, &job.id);
         }
         self.wake.notify_one();
         Ok(touched)
@@ -372,9 +461,9 @@ impl JobEngine {
 
     /// Un giro di coda: quanti lavori sono partiti.
     pub async fn tick(self: &Arc<Self>) -> Result<usize, String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
-        let ready = store::claimable(&conn)?;
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
+        let ready = store::claimable(conn)?;
         let mut started = 0;
 
         for job in ready {
@@ -389,11 +478,11 @@ impl JobEngine {
                 // successivo. Non si toglie dalla coda ciò che non parte.
                 continue;
             };
-            if !store::set_status(&conn, &job.id, JobStatus::Running)? {
+            if !store::set_status(conn, &job.id, JobStatus::Running)? {
                 continue;
             }
-            store::increment_attempt(&conn, &job.id)?;
-            self.observer.notify(&conn, &job.id);
+            store::increment_attempt(conn, &job.id)?;
+            self.observer.notify(conn, &job.id);
             self.spawn(job, handler, permit);
             started += 1;
         }
@@ -417,6 +506,8 @@ impl JobEngine {
             last_progress: Mutex::new(None),
             observer: self.observer.clone(),
             writes: self.writes.clone(),
+            default_vault_root: self.default_vault_root.clone(),
+            database: tokio::sync::Mutex::new(None),
         };
 
         tokio::spawn(async move {
@@ -435,34 +526,34 @@ impl JobEngine {
         job: &JobRecord,
         outcome: Result<Outcome, JobError>,
     ) -> Result<(), String> {
-        let _write_guard = self.writes.lock().await;
-        let conn = open(&self.db_path)?;
+        let guard = self.db_guard().await?;
+        let conn = &*guard;
         match outcome {
             Ok(Outcome::Done) => {
-                store::save_progress(&conn, &job.id, 1.0, None, Some(0), None)?;
-                store::set_status(&conn, &job.id, JobStatus::Completed)?;
+                store::save_progress(conn, &job.id, 1.0, None, Some(0), None)?;
+                store::set_status(conn, &job.id, JobStatus::Completed)?;
             }
             Ok(Outcome::Paused) => {
-                store::set_status(&conn, &job.id, JobStatus::Paused)?;
+                store::set_status(conn, &job.id, JobStatus::Paused)?;
             }
             Ok(Outcome::Cancelled) => {
-                store::set_status(&conn, &job.id, JobStatus::Cancelled)?;
+                store::set_status(conn, &job.id, JobStatus::Cancelled)?;
             }
             Err(error) => {
                 // `attempt_count` è già stato incrementato alla partenza.
-                let attempts = store::get(&conn, &job.id)?
+                let attempts = store::get(conn, &job.id)?
                     .map(|current| current.attempt_count)
                     .unwrap_or(job.attempt_count + 1);
                 let can_retry = error.kind.is_retryable() && attempts < job.max_attempts;
                 if can_retry {
                     let wait = self.backoff.wait_for(&error, attempts);
-                    store::schedule_retry(&conn, &job.id, &error, wait.as_secs() as i64)?;
+                    store::schedule_retry(conn, &job.id, &error, wait.as_secs() as i64)?;
                 } else {
-                    store::fail(&conn, &job.id, &error)?;
+                    store::fail(conn, &job.id, &error)?;
                 }
             }
         }
-        self.observer.notify(&conn, &job.id);
+        self.observer.notify(conn, &job.id);
         Ok(())
     }
 
@@ -504,7 +595,12 @@ mod tests {
     }
 
     fn engine_with(path: PathBuf, observer: Observer) -> Arc<JobEngine> {
-        let mut engine = JobEngine::new(path, observer, DbWriteCoordinator::default());
+        let mut engine = JobEngine::new(
+            path,
+            observer,
+            DbWriteCoordinator::default(),
+            std::env::temp_dir().join("glossa_vault_tests"),
+        );
         engine.register("debug_counter", Arc::new(CounterJob));
         engine.register("debug_restart_only", Arc::new(RestartOnlyJob));
         engine.load_limits().expect("limits");

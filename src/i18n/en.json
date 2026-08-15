@@ -1840,13 +1840,15 @@
     "emptyDescription": "Downloads and checks show up here while you work.",
     "type": {
       "debug_counter": "Development probe",
-      "debug_restart_only": "Development probe (restart only)"
+      "debug_restart_only": "Development probe (restart only)",
+      "source_download": "Source download"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",
     "closeMessage": "Closing Glossa stops them. They resume from where they left off next time you open it.",
     "closeConfirm": "Close anyway",
     "pauseAll": "Pause all ({{count}})",
-    "resumeAll": "Resume all ({{count}})"
+    "resumeAll": "Resume all ({{count}})",
+    "waitingForLibrary": "waiting · library limits"
   }
 }

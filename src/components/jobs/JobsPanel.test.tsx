@@ -113,3 +113,18 @@ describe('pannello dei lavori', () => {
     expect(screen.queryByRole('button', { name: 'jobs.pause' })).not.toBeInTheDocument();
   });
 });
+
+describe('attesa per i limiti della biblioteca', () => {
+  beforeEach(() => {
+    useJobsStore.setState({ jobs: [], isLoaded: false });
+  });
+
+  it('un lavoro fermo per i limiti non è un errore e non anima la barra', () => {
+    // Con i profili tarati può restare immobile per minuti (D18): dirlo
+    // «errore» farebbe rinunciare a uno scaricamento che sta procedendo.
+    renderPanel([job({ status: 'running', waitingReason: 'libraryLimits', progress: 0.4 })]);
+
+    expect(screen.getByText('jobs.waitingForLibrary')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar').className).not.toContain('transition');
+  });
+});
