@@ -146,11 +146,11 @@ describe('attesa per i limiti della biblioteca', () => {
 
 
   it('la riga dice di che tipo di lavoro si tratta', () => {
-    // Scaricare le carte e scaricare le miniature sono due cose diverse, e
+    // Scaricare un libro e verificare il deposito sono due cose diverse, e
     // finché la riga diceva solo il nome dell'opera non si distinguevano.
-    renderPanel([job({ status: 'running', jobType: 'source_thumbnails', message: 'Beatus' })]);
+    renderPanel([job({ status: 'running', jobType: 'vault_verification', message: 'Beatus' })]);
 
-    expect(screen.getByText('jobs.short.source_thumbnails')).toBeInTheDocument();
+    expect(screen.getByText('jobs.short.vault_verification')).toBeInTheDocument();
   });
 
   it('mostra quanto è arrivato e quanto si prevede in tutto', () => {

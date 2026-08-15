@@ -61,7 +61,7 @@ ciascun lavoro, oppure per tutti insieme dai comandi in cima al pannello.
 turno, e mentre gira aggiunge a che punto è e quanto ha scaricato: *I diarii di
 Marino Sanuto · 34/374 · 46 MB*. Accanto trovi cosa sta facendo in quel momento:
 avvio, lettura del manifesto, scelta della risoluzione, scaricamento. Un
-contrassegno dice di che tipo di lavoro si tratta — pagine, miniature, verifica —
+contrassegno dice di che tipo di lavoro si tratta — pagine, verifica —
 e i numeri distinguono quanto è arrivato da quanto si prevede in tutto.
 
 **Cliccando una riga** si apre e mostra i dettagli: la risoluzione che la

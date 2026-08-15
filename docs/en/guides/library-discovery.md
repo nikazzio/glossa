@@ -45,7 +45,7 @@ Every row in the Library has four commands, always present: **download**, **chec
 
 **Check** compares what Glossa registered with what is actually on disk. If something is missing it says so and offers to download it again: pages already there are not requested twice.
 
-Along with the pages, Glossa also downloads the book's **thumbnails**, as a separate job: they let you browse it offline. Until you download, thumbnails are viewed online like the pages.
+From every page it downloads, Glossa derives its **thumbnail**, without asking the library for anything more: thumbnails let you browse the book offline. Until you download, thumbnails are viewed online like the pages.
 
 **Free space** deletes the downloaded pages, right away and for real. The record, the manifest and the thumbnails stay, so the book is still browsable and pages come back when you need them. The confirmation tells you how much you are freeing.
 

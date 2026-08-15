@@ -3,6 +3,7 @@ mod deepl;
 mod documents;
 mod download;
 mod iiif;
+mod images;
 mod jobs;
 mod keystore;
 mod llm;

@@ -60,7 +60,7 @@ them at once from the controls at the top of the panel.
 waiting its turn, and adds progress and downloaded size while it runs: *I diarii
 di Marino Sanuto · 34/374 · 46 MB*. Next to it you see what it is doing right
 now: starting, reading the manifest, choosing the resolution, downloading. A tag
-says which kind of job it is — pages, thumbnails, check — and the numbers keep
+says which kind of job it is — pages, check — and the numbers keep
 what has arrived separate from what is expected in total.
 
 **Clicking a row** opens it and shows the details: the resolution the library
