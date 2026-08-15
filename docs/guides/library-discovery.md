@@ -29,8 +29,6 @@ Aprendo una fonte dal catalogo Biblioteca vedi il dettaglio con le versioni regi
 
 ## Scaricare una fonte
 
-Aggiungendo una fonte, Glossa ne scarica subito le **miniature** — circa 3 MB per un codice — così il libro è sfogliabile anche senza rete e senza aver scaricato niente.
-
 Nel catalogo ogni riga dice **quante carte sono davvero sul computer**: *solo online*, *34 pagine su 210 sul computer*, oppure *tutte le pagine sul computer*.
 
 Il comando **scarica** mette in coda il lavoro vero: puoi cambiare schermata, metterlo in pausa, riprenderlo. Mentre gira, al posto del comando compare la percentuale; nel pannello dei lavori in basso trovi la stessa cosa con il nome dell'opera e quanto ha scaricato.
@@ -46,6 +44,8 @@ Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Ar
 Ogni riga della Biblioteca ha quattro comandi, sempre presenti: **scarica**, **verifica**, **libera spazio**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
 
 **Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le carte già presenti non vengono richieste di nuovo.
+
+Insieme alle pagine Glossa scarica anche le **miniature** del libro, come lavoro a parte: servono a sfogliarlo senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
 
 **Libera spazio** cancella le carte scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le carte si riscaricano quando servono. La conferma dice quanto stai liberando.
 

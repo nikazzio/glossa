@@ -119,8 +119,9 @@ export async function cancelJob(id: string): Promise<void> {
 }
 
 /**
- * Mette in coda lo scaricamento di una digitalizzazione. L'interfaccia non
- * scarica niente: chiede un lavoro e osserva (D10).
+ * Mette in coda lo scaricamento di una digitalizzazione: le carte e le sue
+ * miniature, che sono due lavori distinti (D6). L'interfaccia non scarica
+ * niente: chiede e osserva (D10). Restituisce il lavoro delle carte.
  */
 export async function enqueueSourceDownload(request: {
   providerKey: string;
@@ -130,18 +131,6 @@ export async function enqueueSourceDownload(request: {
   sizeTag?: string;
 }): Promise<Job> {
   return invoke<Job>('enqueue_source_download', request);
-}
-
-/**
- * Mette in coda le miniature di una digitalizzazione (D6): si chiama aggiungendo
- * una fonte, non quando si scaricano le carte.
- */
-export async function enqueueSourceThumbnails(request: {
-  providerKey: string;
-  manifestUrl: string;
-  versionId?: string;
-}): Promise<Job> {
-  return invoke<Job>('enqueue_source_thumbnails', request);
 }
 
 /**

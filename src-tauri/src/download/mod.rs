@@ -14,19 +14,42 @@ use crate::jobs::commands::JobsState;
 use crate::jobs::store::NewJob;
 use crate::jobs::JobRecord;
 
-/// Mette in coda lo scaricamento delle **miniature** di una digitalizzazione.
+/// Mette in coda lo scaricamento di una digitalizzazione: le carte **e le sue
+/// miniature**.
 ///
-/// Si chiama aggiungendo una fonte alla Biblioteca (D6): duecento miniature sono
-/// circa 3 MB e rendono il libro sfogliabile senza rete e senza carte scaricate.
-/// Priorità bassa: non deve rallentare uno scaricamento vero già in corso.
+/// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
+/// priorità è alta perché è ciò che l'utente ha appena chiesto guardando lo
+/// schermo, e la coda deve preferirlo alle verifiche di fondo.
+///
+/// Le miniature vanno **qui e non all'aggiunta della fonte** *(D6, corretta il
+/// 2026-08-15)*: la stima di «3 MB, trascurabili» era su duecento carte, e su un
+/// libro di novecento diventa un quarto d'ora di rete per qualcosa che serve
+/// solo a chi lavora offline. Finché il libro non si scarica, le miniature si
+/// leggono online come le carte. Sono un lavoro a parte, con priorità più
+/// bassa: si possono fermare senza fermare il libro, e non rallentano le carte.
 #[tauri::command]
-pub async fn enqueue_source_thumbnails(
+pub async fn enqueue_source_download(
     jobs: tauri::State<'_, JobsState>,
     provider_key: String,
     manifest_url: String,
     version_id: Option<String>,
+    size_tag: Option<String>,
 ) -> Result<JobRecord, String> {
-    enqueue(
+    let pages = enqueue(
+        &jobs,
+        handler::JOB_TYPE,
+        "download",
+        10,
+        provider_key.clone(),
+        manifest_url.clone(),
+        version_id.clone(),
+        size_tag,
+    )
+    .await?;
+
+    // Le miniature seguono le carte. Se non si riesce a metterle in coda, il
+    // libro si scarica lo stesso: si dice e si va avanti.
+    if let Err(error) = enqueue(
         &jobs,
         handler::THUMBNAILS_JOB_TYPE,
         "thumbnails",
@@ -37,32 +60,11 @@ pub async fn enqueue_source_thumbnails(
         None,
     )
     .await
-}
+    {
+        log::warn!("job thumbnails not queued error={error}");
+    }
 
-/// Mette in coda lo scaricamento di una digitalizzazione.
-///
-/// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
-/// priorità è alta perché è ciò che l'utente ha appena chiesto guardando lo
-/// schermo, e la coda deve preferirlo alle verifiche di fondo.
-#[tauri::command]
-pub async fn enqueue_source_download(
-    jobs: tauri::State<'_, JobsState>,
-    provider_key: String,
-    manifest_url: String,
-    version_id: Option<String>,
-    size_tag: Option<String>,
-) -> Result<JobRecord, String> {
-    enqueue(
-        &jobs,
-        handler::JOB_TYPE,
-        "download",
-        10,
-        provider_key,
-        manifest_url,
-        version_id,
-        size_tag,
-    )
-    .await
+    Ok(pages)
 }
 
 /// La messa in coda, uguale per carte e miniature: cambiano il tipo di lavoro,

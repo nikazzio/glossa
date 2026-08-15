@@ -240,6 +240,14 @@ dettagli veri: risoluzione negoziata, biblioteca, host, tentativi, orari. Il dat
 sta in una colonna nuova, `jobs.detail`, in JSON: le chiavi le decide il tipo di
 lavoro, così i gestori futuri ne aggiungono senza toccare l'interfaccia.
 
+**Miniature spostate allo scaricamento** *(D6 corretta il 2026-08-15)*: partivano
+all'aggiunta della fonte, e su un libro di 924 carte erano 18 MB e un quarto
+d'ora di rete per qualcosa che serve solo offline. Ora vanno con il libro, come
+lavoro separato a priorità più bassa. La misura si sceglie a tre livelli: la
+miniatura dichiarata dal canvas se c'è, altrimenti la misura dichiarata dal
+descrittore letto una volta per gruppo. Chiedere 256 px alla cieca faceva
+generare l'immagine sul momento — misurato su archive.org: 23 secondi contro 1.
+
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
 

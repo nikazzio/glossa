@@ -29,8 +29,6 @@ Opening a source from the Library catalogue shows its detail with recorded versi
 
 ## Downloading a source
 
-When you add a source, Glossa immediately downloads its **thumbnails** — about 3 MB for a codex — so the book is browsable even offline and before anything else is downloaded.
-
 Every row in the catalogue says **how many pages are actually on your computer**: *online only*, *34 of 210 pages on your computer*, or *all pages on your computer*.
 
 The **download** command queues the real job: you can switch screen, pause it, resume it. While it runs the command is replaced by the percentage; the jobs panel at the bottom shows the same thing with the work's name and how much has been downloaded.
@@ -46,6 +44,8 @@ Some libraries are slow on purpose: see [Storage and jobs](/en/guides/storage-an
 Every row in the Library has four commands, always present: **download**, **check**, **free space**, **remove**. The ones that do not apply right now stay in place, disabled — so you always know what can be done.
 
 **Check** compares what Glossa registered with what is actually on disk. If something is missing it says so and offers to download it again: pages already there are not requested twice.
+
+Along with the pages, Glossa also downloads the book's **thumbnails**, as a separate job: they let you browse it offline. Until you download, thumbnails are viewed online like the pages.
 
 **Free space** deletes the downloaded pages, right away and for real. The record, the manifest and the thumbnails stay, so the book is still browsable and pages come back when you need them. The confirmation tells you how much you are freeing.
 

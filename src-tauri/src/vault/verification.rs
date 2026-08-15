@@ -63,7 +63,7 @@ impl Report {
     /// uno quando si apre la riga, invece di far leggere una frase.
     pub fn detail(&self, checked: u32, total: u32, full: bool) -> String {
         serde_json::json!({
-            "units": { "done": checked, "total": total, "label": "files" },
+            "units": { "done": checked, "total": total, "label": "items" },
             "intact": self.intact,
             "missing": self.missing,
             "corrupt": self.corrupt,

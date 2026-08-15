@@ -26,6 +26,14 @@ pub struct Page {
     /// `level2`). A livello 0 la larghezza arbitraria non esiste: sono ammesse
     /// solo le misure elencate dal descrittore dell'immagine.
     pub service_level: Option<String>,
+    /// Miniatura **già pronta**, quando la biblioteca la dichiara sul canvas.
+    ///
+    /// È la via più economica per averla: nessun descrittore da leggere e
+    /// nessuna misura da scegliere, si scarica quell'indirizzo. La specifica la
+    /// prevede — «A Canvas *may* have the `thumbnail` property» — ma non tutte
+    /// la mettono: archive.org dichiara solo la copertina dell'opera, e nessuna
+    /// delle 924 carte del libro provato ne aveva una.
+    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,6 +105,7 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         image_service: service_of(body)?,
                         size: canvas_size(canvas),
                         service_level: service_level_of(body),
+                        thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
                 .collect()
@@ -126,6 +135,7 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         // canvas non le dichiara.
                         size: canvas_size(canvas).or_else(|| canvas_size(resource)),
                         service_level: service_level_of(resource),
+                        thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
                 .collect()
@@ -317,6 +327,30 @@ mod tests {
             image_url("https://img/1", "max"),
             "https://img/1/full/max/0/default.jpg"
         );
+    }
+
+    #[test]
+    fn a_canvas_that_declares_its_thumbnail_is_believed() {
+        // È la via più economica: niente descrittore da leggere, niente misura
+        // da scegliere.
+        let manifest = parse(
+            br#"{"items":[{"width":100,"height":200,
+              "thumbnail":[{"id":"https://img/1/full/160,/0/default.jpg"}],
+              "items":[{"items":[{"body":{"service":[{"id":"https://img/1"}]}}]}]}]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            manifest.pages[0].thumbnail.as_deref(),
+            Some("https://img/1/full/160,/0/default.jpg")
+        );
+    }
+
+    #[test]
+    fn without_a_declared_thumbnail_there_is_nothing_to_believe() {
+        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
+
+        assert_eq!(manifest.pages[0].thumbnail, None);
     }
 
     #[test]

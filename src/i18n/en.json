@@ -1492,7 +1492,7 @@
       "jobsControlTitle": "How to control them",
       "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
       "downloadTitle": "Downloading a source",
-      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce; if that request is refused, it asks the library what it can produce and retries on its own. When you add a source, Glossa immediately downloads its thumbnails: about 3 MB, and the book becomes browsable offline.",
+      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce; if that request is refused, it asks the library what it can produce and retries on its own. Along with the pages, the thumbnails job starts too: they let you browse the book offline.",
       "jobsRestartTitle": "Closing and reopening",
       "jobsRestartDesc": "Closing Glossa stops the jobs and asks for confirmation. On reopening nothing restarts on its own: you find them stopped and decide. Only downloads can restart automatically, if you turn the option on in Settings → Jobs.",
       "limitsTitle": "How many at once",
@@ -1931,7 +1931,8 @@
       "units": {
         "pages": "pages",
         "files": "files",
-        "generic": "units"
+        "generic": "items",
+        "items": "items"
       },
       "levelValue": {
         "quick": "quick",

@@ -567,11 +567,31 @@ sono documenti a sé. Restano leggibili e modificabili anche senza le immagini.
 Riscaricare in seguito solo le pagine che servono non è una funzione nuova: è
 l'azione per pagina già definita in D4, usata quando non c'è nulla in locale.
 
-### Miniature all'aggiunta
+### Miniature, insieme allo scaricamento
 
-Aggiungendo una fonte si scaricano **tutte le miniature**. Duecento miniature
-sono circa 3 MB: trascurabili, e rendono il libro sfogliabile anche senza rete e
-senza pagine scaricate. Le miniature non vengono rimosse da "libera spazio".
+*Corretta il 2026-08-15, dopo averlo provato.*
+
+Le miniature si scaricano **quando si scarica il libro**, non quando si aggiunge
+la fonte. Restano tutte, restano fuori da "libera spazio", e rendono il libro
+sfogliabile senza rete: cambia solo il momento.
+
+**Perché la prima stesura non regge.** Diceva «duecento miniature sono circa
+3 MB: trascurabili». Su un libro di 924 carte sono 18 MB e un quarto d'ora di
+rete, e soprattutto contraddicono l'uso normale: si aggiunge una fonte, la si
+legge online, e si scarica solo quello che serve davvero. Scaricare novecento
+miniature per una fonte che forse non si aprirà mai è lavoro fatto a vuoto —
+verso di noi e verso la biblioteca.
+
+**Finché il libro non si scarica**, le miniature si leggono online come le carte
+(D8). La copertina che la Biblioteca mostra non c'entra: è la miniatura
+dell'opera dichiarata dal manifesto, una sola immagine, che non costa niente.
+
+**Come si chiedono** *(misurato su archive.org)*: prima la miniatura che il
+canvas dichiara, se c'è — la specifica lo prevede e non costa nessuna richiesta
+in più. Altrimenti si legge il descrittore dell'immagine e si chiede la misura
+dichiarata più vicina al tetto, una volta per gruppo di carte con le stesse
+dimensioni. Chiedere una larghezza inventata costringe il servizio a generarla
+sul momento: 23 secondi contro 1, e senza nemmeno tenerla in cache.
 
 # Parte B — Disponibilità e modalità di lettura
 

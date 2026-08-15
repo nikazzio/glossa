@@ -31,8 +31,9 @@ pub const THUMBNAILS_JOB_TYPE: &str = "source_thumbnails";
 pub enum Target {
     /// Le carte alla risoluzione scelta dalla politica (D4).
     Pages,
-    /// Le miniature, tutte, all'aggiunta della fonte (D6): circa 3 MB per un
-    /// codice, e rendono il libro sfogliabile senza rete.
+    /// Le miniature, tutte, **insieme allo scaricamento del libro** (D6,
+    /// corretta il 2026-08-15): rendono il libro sfogliabile senza rete, e
+    /// finché non lo si scarica si leggono online come le carte.
     Thumbnails,
 }
 
@@ -65,6 +66,31 @@ impl Target {
         }
     }
 
+    /// L'indirizzo che la biblioteca dichiara per questa unità, quando esiste.
+    ///
+    /// È il primo dei tre livelli: la specifica prevede che un canvas possa
+    /// dichiarare la propria miniatura già pronta, e in quel caso non c'è
+    /// nessuna misura da scegliere né nessun descrittore da leggere.
+    fn declared_url(self, page: &Page) -> Option<String> {
+        match self {
+            Target::Pages => None,
+            Target::Thumbnails => page.thumbnail.clone(),
+        }
+    }
+
+    /// Se leggere il descrittore **prima** di chiedere, invece di provare il
+    /// tetto e ripiegare.
+    ///
+    /// Per le miniature sì, sempre: il tetto è piccolo e quasi mai coincide con
+    /// una misura che il servizio tiene pronta, quindi il server la genera sul
+    /// momento. Misurato su archive.org: 23 secondi per una larghezza inventata
+    /// contro 1 secondo per una dichiarata, senza nemmeno tenerla in cache. Per
+    /// le carte no: il tetto è grande, la richiesta o viene servita o dà errore,
+    /// e leggere il descrittore costerebbe una richiesta in più per niente.
+    fn ask_the_descriptor_first(self) -> bool {
+        matches!(self, Target::Thumbnails)
+    }
+
     fn relative_path(
         self,
         config: &DownloadConfig,
@@ -92,9 +118,11 @@ pub struct DownloadConfig {
     /// Identificativo interno della digitalizzazione, che nomina la cartella.
     pub version_id: String,
     pub manifest_url: String,
-    /// Etichetta della risoluzione: `max`, oppure il lato lungo in pixel.
-    /// Nomina la cartella **e** il parametro chiesto al servizio, così ciò che
-    /// si chiede e ciò che si salva non possono divergere (D4).
+    /// La **politica** di risoluzione: `max`, oppure il lato lungo in pixel.
+    /// Nomina la cartella nel deposito; la misura davvero chiesta al servizio è
+    /// quella dichiarata più vicina a questo tetto, e le due divergono di
+    /// proposito (D4). Se la cartella prendesse il nome dai pixel ottenuti, la
+    /// stessa fonte finirebbe sparsa in cartelle diverse.
     #[serde(default = "default_size_tag")]
     pub size_tag: String,
 }
@@ -328,9 +356,7 @@ impl JobHandler for SourceDownloadJob {
                     bytes,
                     page.index,
                     added,
-                    &cached(&sizes, page)
-                        .map(|token| token.0)
-                        .unwrap_or_else(|| self.target.cap(&config).to_string()),
+                    &self.requested_size(&sizes, page, &config, &manifest),
                     &config.provider_key,
                     &host_of(&page.image_service).unwrap_or_default(),
                 )),
@@ -433,8 +459,7 @@ impl SourceDownloadJob {
                 .map(|meta| meta.len())
                 .unwrap_or(0);
             let checksum = scan.checksum.unwrap_or_default();
-            let known = self.known_size(sizes, page, config, manifest);
-            let url = image_url(&page.image_service, known.as_str());
+            let url = self.known_url(sizes, page, config, manifest);
             log::debug!(
                 "job page recovered id={} page={} bytes={} (file sul disco senza riga)",
                 ctx.id,
@@ -488,16 +513,20 @@ impl SourceDownloadJob {
         Ok(Some(size))
     }
 
-    /// La misura già decisa per le carte di questa dimensione, o quella che si
-    /// tenterebbe per prima. Serve a scrivere nella riga dell'asset l'indirizzo
-    /// da cui la carta è arrivata.
-    fn known_size(
+    /// La misura davvero chiesta al servizio per questa unità, come la mostra il
+    /// pannello: quella negoziata se c'è stata una negoziazione, il tetto
+    /// altrimenti, e la parola per «l'ha dichiarata la biblioteca» quando
+    /// l'indirizzo arriva dal manifesto.
+    fn requested_size(
         &self,
         sizes: &SizeCache,
         page: &Page,
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
-    ) -> size::SizeToken {
+    ) -> String {
+        if self.target.declared_url(page).is_some() {
+            return "declared".to_string();
+        }
         cached(sizes, page)
             .or_else(|| {
                 size::first_attempt(
@@ -506,17 +535,42 @@ impl SourceDownloadJob {
                     page.service_level.as_deref(),
                 )
             })
-            .unwrap_or_else(|| size::SizeToken(size::full_size(manifest.presentation2)))
+            .map(|token| token.0)
+            .unwrap_or_else(|| size::full_size(manifest.presentation2))
     }
 
-    /// Chiede la carta alla misura più vicina al tetto che il servizio sa dare.
+    /// L'indirizzo da cui è arrivata un'unità già presente sul disco, per
+    /// scriverlo nella sua riga.
+    fn known_url(
+        &self,
+        sizes: &SizeCache,
+        page: &Page,
+        config: &DownloadConfig,
+        manifest: &super::manifest::Manifest,
+    ) -> String {
+        if let Some(declared) = self.target.declared_url(page) {
+            return declared;
+        }
+        let token = cached(sizes, page)
+            .or_else(|| {
+                size::first_attempt(
+                    self.target.cap(config),
+                    manifest.presentation2,
+                    page.service_level.as_deref(),
+                )
+            })
+            .unwrap_or_else(|| size::SizeToken(size::full_size(manifest.presentation2)));
+        image_url(&page.image_service, token.as_str())
+    }
+
+    /// Prende l'unità dall'indirizzo migliore fra i tre previsti.
     ///
-    /// Il primo tentativo usa il tetto così com'è: con un servizio conforme è
-    /// già la risposta giusta e non costa nessuna richiesta in più. Se il
-    /// servizio rifiuta, si legge il **suo** descrittore, si sceglie la misura
-    /// dichiarata più vicina al tetto e si riprova — una volta sola, e la scelta
-    /// vale per tutte le carte con le stesse dimensioni, che in un manoscritto
-    /// sono quasi tutte.
+    /// 1. **quello dichiarato dalla biblioteca**, quando c'è: niente da scegliere;
+    /// 2. **la misura dichiarata dal descrittore** più vicina al tetto, letta una
+    ///    volta per gruppo di unità con le stesse dimensioni — sempre per le
+    ///    miniature, e per le carte solo dopo un rifiuto;
+    /// 3. **il tetto così com'è**, che con un servizio conforme è già la
+    ///    risposta giusta e non costa richieste in più.
     #[allow(clippy::too_many_arguments)]
     async fn fetch_at_best_size(
         &self,
@@ -529,16 +583,25 @@ impl SourceDownloadJob {
         page: &Page,
         stop: &(dyn Fn() -> bool + Sync),
     ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
-        let attempt = match cached(sizes, page).or_else(|| {
-            size::first_attempt(
+        if let Some(url) = self.target.declared_url(page) {
+            let fetched = fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await?;
+            return Ok(fetched.map(|fetched| (fetched, url)));
+        }
+
+        let first = match cached(sizes, page) {
+            Some(token) => Some(token),
+            None if self.target.ask_the_descriptor_first() => None,
+            None => size::first_attempt(
                 self.target.cap(config),
                 manifest.presentation2,
                 page.service_level.as_deref(),
-            )
-        }) {
+            ),
+        };
+        // Niente da tentare: o si è deciso di chiedere prima al descrittore, o
+        // il servizio dichiara livello 0, dove la larghezza arbitraria non
+        // esiste. In entrambi i casi la misura si legge invece di indovinarla.
+        let token = match first {
             Some(token) => token,
-            // Livello 0 dichiarato: la larghezza arbitraria non esiste, si
-            // legge il descrittore senza sprecare una richiesta.
             None => {
                 let Some(token) = self
                     .negotiate_size(ctx, client, profile, config, sizes, page, stop)
@@ -550,14 +613,14 @@ impl SourceDownloadJob {
             }
         };
 
-        let url = image_url(&page.image_service, attempt.as_str());
+        let url = image_url(&page.image_service, token.as_str());
         match fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await {
             Ok(Some(fetched)) => Ok(Some((fetched, url))),
             Ok(None) => Ok(None),
             Err(error) => {
                 // Rifiuto che può dipendere dalla misura chiesta: il servizio
-                // dichiara un livello che non rispetta. Si negozia una volta
-                // per gruppo di carte, poi si riprova.
+                // dichiara un livello che non rispetta. Si negozia una volta per
+                // gruppo di unità, poi si riprova.
                 let renegotiable = matches!(error.kind, ErrorKind::Internal | ErrorKind::Transport)
                     && cached(sizes, page).is_none()
                     && self.target.cap(config) != "max";
@@ -568,23 +631,22 @@ impl SourceDownloadJob {
                     "job size refused id={} page={} size={} error={}",
                     ctx.id,
                     page.index,
-                    attempt.as_str(),
+                    token.as_str(),
                     error.message
                 );
-                let Some(token) = self
+                let Some(negotiated) = self
                     .negotiate_size(ctx, client, profile, config, sizes, page, stop)
                     .await?
                 else {
                     return Ok(None);
                 };
-                if token == attempt {
+                if negotiated == token {
                     return Err(error);
                 }
-                let url = image_url(&page.image_service, token.as_str());
-                match fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await? {
-                    Some(fetched) => Ok(Some((fetched, url))),
-                    None => Ok(None),
-                }
+                let url = image_url(&page.image_service, negotiated.as_str());
+                let fetched =
+                    fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await?;
+                Ok(fetched.map(|fetched| (fetched, url)))
             }
         }
     }
@@ -743,7 +805,7 @@ fn progress_detail(
         0
     };
     serde_json::json!({
-        "units": { "done": done, "total": total, "label": "pages" },
+        "units": { "done": done, "total": total, "label": "items" },
         "bytes": { "downloaded": bytes, "estimated": estimated },
         "last": { "index": last_page, "bytes": last_bytes },
         "size": size_token,
@@ -1011,6 +1073,37 @@ mod tests {
         // Con i valori di Gallica un manoscritto di 210 carte non scende sotto
         // il quarto d'ora: se la stima dicesse meno, mentirebbe.
         assert!(long >= 900, "stimati {long} secondi");
+    }
+
+    #[test]
+    fn the_thumbnails_ask_the_descriptor_before_requesting() {
+        // Il tetto delle miniature quasi mai coincide con una misura pronta:
+        // chiederlo alla cieca fa generare l'immagine sul momento — misurato,
+        // 23 secondi contro 1.
+        assert!(Target::Thumbnails.ask_the_descriptor_first());
+        // Per le carte il tetto è grande e la richiesta o è servita o dà
+        // errore: leggere il descrittore prima costerebbe una richiesta per
+        // niente.
+        assert!(!Target::Pages.ask_the_descriptor_first());
+    }
+
+    #[test]
+    fn a_thumbnail_declared_by_the_library_is_taken_as_it_is() {
+        let page = Page {
+            index: 1,
+            label: None,
+            image_service: "https://img/1".to_string(),
+            size: Some((100, 200)),
+            service_level: None,
+            thumbnail: Some("https://img/1/full/160,/0/default.jpg".to_string()),
+        };
+
+        assert_eq!(
+            Target::Thumbnails.declared_url(&page).as_deref(),
+            Some("https://img/1/full/160,/0/default.jpg")
+        );
+        // La miniatura dichiarata è una miniatura: non è la carta.
+        assert_eq!(Target::Pages.declared_url(&page), None);
     }
 
     #[test]
