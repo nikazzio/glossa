@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { select } from './dbService';
+import { execute, select } from './dbService';
 
 /**
  * Il deposito: dove vivono i file scaricati dalle biblioteche.
@@ -91,6 +91,24 @@ export async function adoptDefaultVaultFolder(): Promise<VaultStatus> {
 
 export async function initializeVault(): Promise<void> {
   await invoke('initialize_vault');
+}
+
+const VERIFY_ON_STARTUP_KEY = 'verify_vault_on_startup';
+
+/**
+ * Controllo rapido del deposito all'apertura (D5), **spento di default**:
+ * allunga l'avvio su depositi grandi o su una condivisione di rete, quindi lo
+ * accende chi vuole trovare le segnalazioni già pronte.
+ */
+export async function getVerifyVaultOnStartup(): Promise<boolean> {
+  return (await readSetting(VERIFY_ON_STARTUP_KEY)) === '1';
+}
+
+export async function setVerifyVaultOnStartup(enabled: boolean): Promise<void> {
+  await execute(
+    'INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    [VERIFY_ON_STARTUP_KEY, enabled ? '1' : '0'],
+  );
 }
 
 export async function getSourceReadMode(): Promise<SourceReadMode> {

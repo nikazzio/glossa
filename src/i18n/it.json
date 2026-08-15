@@ -519,7 +519,15 @@
         "folderNotEmpty": "La cartella contiene già altro: scegline una vuota, o una che sia già un deposito Glossa.",
         "folderNotWritable": "In quella cartella non si può scrivere.",
         "unreachable": "Cartella non raggiungibile.",
-        "syncWarning": "Cartella sincronizzata: serve una copia vera sul disco, non solo online."
+        "syncWarning": "Cartella sincronizzata: serve una copia vera sul disco, non solo online.",
+        "verifyQuick": "Verifica rapida",
+        "verifyQuickTooltip": "Controlla che i file del deposito ci siano ancora",
+        "verifyFull": "Verifica completa",
+        "verifyFullTooltip": "Apre ogni file e ne ricalcola l'impronta",
+        "verifyHint": "La verifica diventa un lavoro in coda: la segui dal pannello in basso. Quella completa apre ogni file, quindi su una cartella sincronizzata costringe il servizio a scaricare tutto.",
+        "verifyOnStartup": "Verifica rapida all'avvio",
+        "verificationQueued": "Verifica messa in coda",
+        "verificationFailed": "Verifica non avviata"
       }
     },
     "phraseMemoryTab": "Memoria frasi",
@@ -729,7 +737,20 @@
       "removeConfirm": "Togli",
       "availabilityRemote": "solo online",
       "availabilityComplete": "tutte le pagine sul computer",
-      "availabilityPartial": "{{done}} pagine su {{total}} sul computer"
+      "availabilityPartial": "{{done}} pagine su {{total}} sul computer",
+      "verify": "Verifica i file di questa fonte",
+      "verifyIntact": "Tutti i {{count}} file sono al loro posto",
+      "verifyMissingTitle": "Mancano {{count}} file",
+      "verifyMissingMessage": "Su {{total}} file registrati. Le carte mancanti si riscaricano dalla biblioteca: quelle presenti non vengono richieste di nuovo.",
+      "verifyDownloadMissing": "Scarica le mancanti",
+      "verifyFailed": "Verifica non riuscita",
+      "vaultUnreachable": "Deposito non raggiungibile: disco staccato o cartella non montata",
+      "freeSpace": "Libera spazio: cancella le carte scaricate",
+      "freeSpaceTitle": "Liberare {{size}}?",
+      "freeSpaceMessage": "Le carte scaricate vengono cancellate subito. Restano scheda, manifesto e miniature, e le carte si riscaricano dalla biblioteca quando servono.",
+      "freeSpaceConfirm": "Libera spazio",
+      "freeSpaceDone": "Liberati {{size}}",
+      "freeSpaceFailed": "Non è stato possibile liberare lo spazio"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1463,13 +1484,13 @@
       "cloudTitle": "Cartelle sincronizzate",
       "cloudDesc": "Il deposito può stare su Drive, OneDrive o iCloud, ma solo se il client tiene una copia vera sul disco. In modalità solo online i file risultano presenti e sono vuoti: Glossa direbbe che una fonte è completa mentre non c'è niente. Il database non va mai messo lì.",
       "jobsTitle": "La coda dei lavori",
-      "jobsDesc": "Scaricamenti, verifiche e generazioni lunghe non bloccano l'applicazione: diventano lavori in coda.",
+      "jobsDesc": "Scaricamenti, verifiche e generazioni lunghe non bloccano l'applicazione: diventano lavori in coda. In Impostazioni → Archiviazione trovi anche la verifica del deposito, rapida o completa: diventa un lavoro come gli altri e non cancella né riscarica niente da sola.",
       "jobsWhereTitle": "Dove si vedono",
       "jobsWhereDesc": "Nella barra in basso a destra, in ogni sezione. Il clic apre il pannello con l'elenco: in corso, in attesa, terminati oggi. Ogni riga porta il nome dell'opera, a che punto è e quanto ha scaricato. Nel pannello ogni riga dice cosa sta facendo il lavoro in quel momento: avvio, lettura del manifesto, scelta della risoluzione, scaricamento.",
       "jobsControlTitle": "Come si comandano",
       "jobsControlDesc": "Pausa, ripresa, annullamento e nuovo tentativo per ciascun lavoro, o per tutti insieme dai comandi in cima al pannello. La pausa non è istantanea: il lavoro finisce il pezzo in corso, lo salva e si ferma.",
       "downloadTitle": "Scaricare una fonte",
-      "downloadDesc": "In Biblioteca ogni riga dice quante carte sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre; se quella richiesta viene rifiutata, chiede alla biblioteca cosa sa produrre e riprova da sé.",
+      "downloadDesc": "In Biblioteca ogni riga dice quante carte sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre; se quella richiesta viene rifiutata, chiede alla biblioteca cosa sa produrre e riprova da sé. Aggiungendo una fonte, Glossa ne scarica subito le miniature: circa 3 MB, e il libro diventa sfogliabile senza rete.",
       "jobsRestartTitle": "Chiudere e riaprire",
       "jobsRestartDesc": "Chiudendo Glossa i lavori si fermano e viene chiesta conferma. Alla riapertura nessuno riparte da solo: li ritrovi fermi e decidi tu. Solo gli scaricamenti possono ripartire in automatico, se accendi l'opzione in Impostazioni → Lavori.",
       "limitsTitle": "Quanti insieme",
@@ -1857,13 +1878,18 @@
     "type": {
       "debug_counter": "Prova di sviluppo",
       "debug_restart_only": "Prova di sviluppo (da rifare)",
-      "source_download": "Scaricamento fonte"
+      "source_download": "Scaricamento fonte",
+      "source_thumbnails": "Miniature della fonte",
+      "vault_verification": "Verifica del deposito"
     },
     "phase": {
       "starting": "avvio",
       "manifest": "lettura del manifesto",
       "negotiating": "scelta della risoluzione",
-      "downloading": "scaricamento"
+      "downloading": "scaricamento",
+      "thumbnails": "miniature",
+      "checking_files": "controllo dei file",
+      "looking_for_orphans": "ricerca dei file orfani"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",

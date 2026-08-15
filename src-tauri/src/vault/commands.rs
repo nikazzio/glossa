@@ -447,6 +447,20 @@ pub async fn choose_vault_folder(
     }))
 }
 
+/// Mette in coda la verifica del deposito (D5-bis).
+///
+/// Un lavoro solo per volta: chiederla due volte non ne apre due, restituisce
+/// quella in corso. Rapida di default; completa su richiesta esplicita, perché
+/// apre ogni file e su un deposito sincronizzato costringe il client a
+/// scaricare tutto (D1-bis).
+#[tauri::command]
+pub async fn enqueue_vault_verification(
+    jobs: tauri::State<'_, crate::jobs::commands::JobsState>,
+    full: Option<bool>,
+) -> Result<crate::jobs::JobRecord, String> {
+    super::verification::enqueue(&jobs.0, full.unwrap_or(false)).await
+}
+
 /// "Tieni tutto insieme" (D1): deposito dentro la cartella dati, che è la
 /// scelta predefinita e quella di chi non vuole pensarci.
 #[tauri::command]

@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { BookOpenText, Check, Download, LayoutGrid, Link2, List, Trash2 } from 'lucide-react';
+import {
+  BookOpenText,
+  Check,
+  Download,
+  Eraser,
+  LayoutGrid,
+  Link2,
+  List,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
@@ -9,7 +19,8 @@ import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import { summarizeAvailability } from '../../services/vaultService';
+import { forgetVersionPages, listVersionVaultPaths } from '../../services/libraryService';
+import { freeVersionPages, summarizeAvailability, verifyFilesPresent } from '../../services/vaultService';
 import type { LibraryCatalogEntry } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -138,6 +149,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               view={view}
               onOpen={() => void loadDetail(entry.source.id)}
               onRemove={() => void removeSource(entry.source.id)}
+              onRefresh={() => void loadCatalog()}
             />
           ))}
         </div>
@@ -146,19 +158,29 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   );
 }
 
+/** Dimensione leggibile, come la scrive il pannello dei lavori. */
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
+  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
 function CatalogEntryRow({
   entry,
   view,
   onOpen,
   onRemove,
+  onRefresh,
 }: {
   entry: LibraryCatalogEntry;
   view: 'list' | 'grid';
   onOpen: () => void;
   onRemove: () => void;
+  onRefresh: () => void;
 }) {
   const { t } = useTranslation();
-  const [downloading, setDownloading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const jobs = useJobsStore((state) => state.jobs);
   const applyChange = useJobsStore((state) => state.applyChange);
 
@@ -180,7 +202,7 @@ function CatalogEntryRow({
 
   const startDownload = async () => {
     if (!entry.manifestUrl) return;
-    setDownloading(true);
+    setBusy(true);
     try {
       const job = await enqueueSourceDownload({
         // La chiave della biblioteca, non `external_ref`: quella è chiave più
@@ -196,7 +218,72 @@ function CatalogEntryRow({
         description: error instanceof Error ? error.message : String(error),
       });
     } finally {
-      setDownloading(false);
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Verifica rapida (D5): si prende quello che il database dichiara e si guarda
+   * se è ancora sul disco. Non corregge niente da sola — propone di scaricare
+   * quello che manca, che è un lavoro come gli altri.
+   */
+  const verify = async () => {
+    if (!entry.versionId) return;
+    setBusy(true);
+    try {
+      const paths = await listVersionVaultPaths(entry.versionId);
+      const checks = await verifyFilesPresent(paths);
+      const missing = checks.filter((check) => check.state !== 'present').length;
+      if (missing === 0) {
+        toast.success(t('areas.library.verifyIntact', { count: checks.length }));
+        return;
+      }
+      const confirmed = await confirm({
+        title: t('areas.library.verifyMissingTitle', { count: missing }),
+        message: t('areas.library.verifyMissingMessage', { total: checks.length }),
+        confirmLabel: t('areas.library.verifyDownloadMissing'),
+      });
+      if (confirmed) await startDownload();
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : String(error);
+      toast.error(
+        reason.includes('vault_unreachable')
+          ? t('areas.library.vaultUnreachable')
+          : t('areas.library.verifyFailed'),
+        { description: reason },
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * «Libera spazio» (D6): cancella le carte e basta. Restano scheda, manifesto e
+   * miniature, e le righe delle carte se ne vanno insieme ai file — altrimenti
+   * la Biblioteca continuerebbe a dichiararle presenti.
+   */
+  const freeSpace = async () => {
+    if (!entry.versionId) return;
+    const confirmed = await confirm({
+      title: t('areas.library.freeSpaceTitle', { size: humanSize(entry.localBytes) }),
+      message: t('areas.library.freeSpaceMessage'),
+      confirmLabel: t('areas.library.freeSpaceConfirm'),
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    setBusy(true);
+    try {
+      const freed = await freeVersionPages(entry.providerKey ?? 'generic', entry.versionId);
+      await forgetVersionPages(entry.versionId);
+      toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
+      onRefresh();
+    } catch (error: unknown) {
+      toast.error(t('areas.library.freeSpaceFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -240,35 +327,47 @@ function CatalogEntryRow({
       </div>
 
       <div className={`flex shrink-0 items-center gap-1 ${view === 'grid' ? 'justify-end' : ''}`}>
-        {runningJob ? (
-          <Tooltip label={t('areas.library.downloadRunning')} side="top">
-            <span className="text-[11px] text-editorial-accent">
-              {Math.round(runningJob.progress * 100)}%
-            </span>
-          </Tooltip>
-        ) : summary.availability === 'complete' ? (
-          // Tutte le carte sono sul computer: non c'è niente da chiedere alla
-          // biblioteca, e offrire «scarica» inviterebbe a rifare per niente
-          // quindici minuti di rete. Il segno non si colora: la disponibilità
-          // è un fatto, non un avviso (D7).
-          <Tooltip label={t('areas.library.availabilityComplete')} side="top">
-            <span
-              className="flex h-6 w-6 items-center justify-center text-editorial-muted"
-              aria-label={t('areas.library.availabilityComplete')}
-            >
-              <Check size={13} />
-            </span>
-          </Tooltip>
-        ) : (
-          <IconButton
-            size="sm"
-            onClick={() => void startDownload()}
-            disabled={!entry.manifestUrl || downloading}
-            title={t('areas.library.download')}
-          >
-            <Download size={13} />
-          </IconButton>
-        )}
+        {/* Lo stato non è un comando: sta prima, e non prende il posto di
+            nessun pulsante. I comandi restano tutti al loro posto e si
+            disattivano quando non si possono usare. */}
+        <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
+          {runningJob ? (
+            <Tooltip label={t('areas.library.downloadRunning')} side="top">
+              <span className="text-editorial-accent">{Math.round(runningJob.progress * 100)}%</span>
+            </Tooltip>
+          ) : summary.availability === 'complete' ? (
+            <Tooltip label={t('areas.library.availabilityComplete')} side="top">
+              <span aria-label={t('areas.library.availabilityComplete')}>
+                <Check size={13} />
+              </span>
+            </Tooltip>
+          ) : null}
+        </span>
+
+        <IconButton
+          size="sm"
+          onClick={() => void startDownload()}
+          disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
+          title={t('areas.library.download')}
+        >
+          <Download size={13} />
+        </IconButton>
+        <IconButton
+          size="sm"
+          onClick={() => void verify()}
+          disabled={busy || entry.localPages === 0}
+          title={t('areas.library.verify')}
+        >
+          <ShieldCheck size={13} />
+        </IconButton>
+        <IconButton
+          size="sm"
+          onClick={() => void freeSpace()}
+          disabled={busy || entry.localPages === 0}
+          title={t('areas.library.freeSpace')}
+        >
+          <Eraser size={13} />
+        </IconButton>
         <IconButton size="sm" tone="danger" onClick={() => void askRemoval()} title={t('areas.library.remove')}>
           <Trash2 size={13} />
         </IconButton>

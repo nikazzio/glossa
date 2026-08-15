@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Archive, AlertTriangle } from 'lucide-react';
-import { Spinner, Tooltip } from '../ui';
+import { Archive, AlertTriangle, ScanSearch, ShieldCheck } from 'lucide-react';
+import { IconButton, Spinner, ToggleRow, Tooltip } from '../ui';
 import {
   chooseVaultFolder,
   getVaultStatus,
+  getVerifyVaultOnStartup,
+  setVerifyVaultOnStartup,
   adoptDefaultVaultFolder,
   type VaultStatus,
 } from '../../services/vaultService';
+import { enqueueVaultVerification } from '../../services/jobsService';
 
 /**
  * La cartella del deposito, distinta dalla cartella dati (D1).
@@ -28,6 +31,7 @@ export function VaultSection() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [syncWarning, setSyncWarning] = useState(false);
+  const [verifyOnStartup, setVerifyOnStartup] = useState(false);
 
   // `t` cambia identità a ogni render con alcune configurazioni di i18n: se
   // entrasse fra le dipendenze, l'effetto si rilancerebbe all'infinito e lo
@@ -50,7 +54,33 @@ export function VaultSection() {
 
   useEffect(() => {
     void refresh();
+    void getVerifyVaultOnStartup().then(setVerifyOnStartup);
   }, [refresh]);
+
+  const changeVerifyOnStartup = async (enabled: boolean) => {
+    setVerifyOnStartup(enabled);
+    await setVerifyVaultOnStartup(enabled);
+  };
+
+  /**
+   * La verifica del deposito è un lavoro (D5-bis): si mette in coda e si guarda
+   * nel pannello, come tutto il resto. Quella completa apre ogni file, quindi su
+   * un deposito sincronizzato costringe il client a scaricare tutto (D1-bis) —
+   * per questo è una voce a parte e non il comportamento predefinito.
+   */
+  const startVerification = async (full: boolean) => {
+    setBusy(true);
+    try {
+      await enqueueVaultVerification(full);
+      toast.success(t('settings.storage.vault.verificationQueued'));
+    } catch (error: unknown) {
+      toast.error(t('settings.storage.vault.verificationFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleChoose = async () => {
     setBusy(true);
@@ -145,6 +175,49 @@ export function VaultSection() {
           {t('settings.storage.vault.syncWarning')}
         </p>
       )}
+
+      <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
+            <span className="text-editorial-accent"><ShieldCheck size={13} /></span>
+            <span>{t('settings.storage.vault.verifyQuick')}</span>
+          </div>
+          <IconButton
+            size="sm"
+            onClick={() => void startVerification(false)}
+            disabled={busy || loading || !status?.reachable}
+            title={t('settings.storage.vault.verifyQuickTooltip')}
+          >
+            <ShieldCheck size={13} />
+          </IconButton>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
+            <span className="text-editorial-accent"><ScanSearch size={13} /></span>
+            <span>{t('settings.storage.vault.verifyFull')}</span>
+          </div>
+          <IconButton
+            size="sm"
+            onClick={() => void startVerification(true)}
+            disabled={busy || loading || !status?.reachable}
+            title={t('settings.storage.vault.verifyFullTooltip')}
+          >
+            <ScanSearch size={13} />
+          </IconButton>
+        </div>
+        <p className="text-[11px] leading-relaxed text-editorial-muted">
+          {t('settings.storage.vault.verifyHint')}
+        </p>
+
+        <ToggleRow
+          icon={<ShieldCheck size={13} />}
+          label={t('settings.storage.vault.verifyOnStartup')}
+          checked={verifyOnStartup}
+          disabled={busy}
+          onChange={() => void changeVerifyOnStartup(!verifyOnStartup)}
+        />
+      </div>
 
       {!status?.isDefault && (
         <button

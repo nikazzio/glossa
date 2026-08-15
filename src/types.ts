@@ -142,6 +142,8 @@ export interface LibraryCatalogEntry {
   expectedPages: number | null;
   /** Carte davvero presenti sul computer. */
   localPages: number;
+  /** Quanto occupano quelle carte: serve alla conferma di «libera spazio» (D6). */
+  localBytes: number;
   /**
    * Chiave della biblioteca nel registro dei provider: decide il profilo di rete
    * dello scaricamento (D18) e la cartella nel deposito (D2).

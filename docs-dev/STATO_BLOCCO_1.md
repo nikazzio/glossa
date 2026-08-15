@@ -206,6 +206,19 @@ leggono com'è scritta la chiave invece di sparire.
 otto voci che nessuna PR ha implementato né dichiarato, con come si fanno e in
 quale ordine.
 
+**Quattro decisioni scoperte, implementate il 2026-08-15**: le miniature si
+scaricano all'aggiunta della fonte (D6) come lavoro a priorità bassa che
+condivide i contatori di cortesia con lo scaricamento; in Biblioteca ogni riga ha
+ora quattro comandi sempre visibili — scarica, verifica, libera spazio, togli —
+che si disattivano quando non si possono usare; la verifica di una fonte
+confronta quello che il database dichiara con quello che c'è sul disco e propone
+di riscaricare le mancanti (D5); la verifica del deposito è un lavoro avviabile
+da Impostazioni, rapida o completa, con il conteggio degli orfani (D5-bis), e
+l'impostazione «verifica all'avvio» finalmente ha un lettore.
+
+Restano scoperte la 5 (divieto dell'istituzione, D9) e la 7 (primo avvio e
+controllo dello spazio, D1): vedi `PIANO_DECISIONI_SCOPERTE.md`.
+
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
 

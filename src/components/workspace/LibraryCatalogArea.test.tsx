@@ -42,6 +42,7 @@ const entry = (
   date: null,
   expectedPages: 210,
   localPages: 0,
+  localBytes: 0,
   providerKey: 'gallica',
   ...overrides,
 });
@@ -128,14 +129,33 @@ describe('LibraryCatalogArea', () => {
   });
 
   it('una fonte tutta sul computer non offre di riscaricarla', async () => {
-    // Riscaricare quello che c'è già è un quarto d'ora di rete per niente: al
-    // posto del comando c'è il segno che è a posto.
+    // Riscaricare quello che c'è già è un quarto d'ora di rete per niente. Il
+    // comando però non sparisce: resta al suo posto, disattivato, con accanto
+    // il segno che è a posto.
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 210 })] });
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.queryByRole('button', { name: 'areas.library.download' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
     expect(screen.getByLabelText('areas.library.availabilityComplete')).toBeInTheDocument();
+  });
+
+  it('verifica e libera spazio ci sono sempre, spenti quando non c\u2019è niente in locale', () => {
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0 })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
+  });
+
+  it('con carte sul computer verifica e libera spazio si accendono', () => {
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 48_234_496 })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
   });
 
   it('si può passare dall’elenco alla griglia', () => {

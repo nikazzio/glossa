@@ -519,7 +519,15 @@
         "folderNotEmpty": "That folder already holds something else: pick an empty one, or one that is already a Glossa vault.",
         "folderNotWritable": "That folder is not writable.",
         "unreachable": "Folder not reachable.",
-        "syncWarning": "Synced folder: it needs a real copy on disk, not online-only."
+        "syncWarning": "Synced folder: it needs a real copy on disk, not online-only.",
+        "verifyQuick": "Quick check",
+        "verifyQuickTooltip": "Check that the vault files are still there",
+        "verifyFull": "Full check",
+        "verifyFullTooltip": "Opens every file and recomputes its fingerprint",
+        "verifyHint": "The check becomes a queued job: follow it from the bottom panel. The full one opens every file, so on a synced folder it forces the service to download everything.",
+        "verifyOnStartup": "Quick check at startup",
+        "verificationQueued": "Check queued",
+        "verificationFailed": "Check not started"
       }
     },
     "backup": "Backup & Restore",
@@ -729,7 +737,20 @@
       "removeConfirm": "Remove",
       "availabilityRemote": "online only",
       "availabilityComplete": "all pages on this computer",
-      "availabilityPartial": "{{done}} of {{total}} pages on this computer"
+      "availabilityPartial": "{{done}} of {{total}} pages on this computer",
+      "verify": "Check this source's files",
+      "verifyIntact": "All {{count}} files are in place",
+      "verifyMissingTitle": "{{count}} files are missing",
+      "verifyMissingMessage": "Out of {{total}} registered files. Missing pages are downloaded again from the library; the ones already there are not requested twice.",
+      "verifyDownloadMissing": "Download the missing ones",
+      "verifyFailed": "Check failed",
+      "vaultUnreachable": "Vault unreachable: disconnected disk or unmounted folder",
+      "freeSpace": "Free space: delete the downloaded pages",
+      "freeSpaceTitle": "Free {{size}}?",
+      "freeSpaceMessage": "The downloaded pages are deleted right away. The record, the manifest and the thumbnails stay, and pages are downloaded again from the library when you need them.",
+      "freeSpaceConfirm": "Free space",
+      "freeSpaceDone": "{{size}} freed",
+      "freeSpaceFailed": "Could not free the space"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -1463,13 +1484,13 @@
       "cloudTitle": "Synced folders",
       "cloudDesc": "The vault can sit on Drive, OneDrive or iCloud, but only if the client keeps a real copy on disk. In online-only mode files look present and are empty: Glossa would call a source complete while nothing is there. Never put the database there.",
       "jobsTitle": "The job queue",
-      "jobsDesc": "Downloads, checks and long generations do not block the app: they become queued jobs.",
+      "jobsDesc": "Downloads, checks and long generations do not block the app: they become queued jobs. Settings → Storage also has the vault check, quick or full: it becomes a job like the others and never deletes or re-downloads anything on its own.",
       "jobsWhereTitle": "Where to see them",
       "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today. Every row carries the work's name, how far it got and how much it downloaded. In the panel every row says what the job is doing right now: starting, reading the manifest, choosing the resolution, downloading.",
       "jobsControlTitle": "How to control them",
       "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
       "downloadTitle": "Downloading a source",
-      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce; if that request is refused, it asks the library what it can produce and retries on its own.",
+      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce; if that request is refused, it asks the library what it can produce and retries on its own. When you add a source, Glossa immediately downloads its thumbnails: about 3 MB, and the book becomes browsable offline.",
       "jobsRestartTitle": "Closing and reopening",
       "jobsRestartDesc": "Closing Glossa stops the jobs and asks for confirmation. On reopening nothing restarts on its own: you find them stopped and decide. Only downloads can restart automatically, if you turn the option on in Settings → Jobs.",
       "limitsTitle": "How many at once",
@@ -1857,13 +1878,18 @@
     "type": {
       "debug_counter": "Development probe",
       "debug_restart_only": "Development probe (restart only)",
-      "source_download": "Source download"
+      "source_download": "Source download",
+      "source_thumbnails": "Source thumbnails",
+      "vault_verification": "Vault check"
     },
     "phase": {
       "starting": "starting",
       "manifest": "reading the manifest",
       "negotiating": "choosing the resolution",
-      "downloading": "downloading"
+      "downloading": "downloading",
+      "thumbnails": "thumbnails",
+      "checking_files": "checking files",
+      "looking_for_orphans": "looking for orphans"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",

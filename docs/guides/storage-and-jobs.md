@@ -78,6 +78,16 @@ Alla riapertura **nessun lavoro riparte da solo**: li ritrovi fermi e decidi tu.
 L'unica eccezione è opzionale — in **Impostazioni → Lavori** puoi far ripartire
 automaticamente gli scaricamenti interrotti.
 
+## Verificare il deposito
+
+In **Impostazioni → Archiviazione** ci sono due controlli.
+
+La **verifica rapida** guarda se i file che Glossa ha registrato sono ancora al loro posto: è questione di millisecondi anche per un manoscritto grande. La **verifica completa** apre ogni file e ne ricontrolla l'impronta, quindi scopre anche quelli troncati da uno scaricamento interrotto — ma è lenta in proporzione ai gigabyte, e su una cartella sincronizzata costringe il servizio a scaricare tutto.
+
+Entrambe diventano lavori in coda: le segui dal pannello in basso, le metti in pausa, le annulli. Il risultato è un conteggio in quattro parti — integri, mancanti, corrotti, orfani — dove gli *orfani* sono file rimasti nel deposito che nessuna scheda reclama. **Nessuna delle due cancella o riscarica niente da sola.**
+
+Un interruttore accende la verifica rapida a ogni avvio. È spenta di default: allunga l'apertura su depositi grandi o su una cartella di rete.
+
 ## Quanti lavori insieme
 
 In **Impostazioni → Lavori**, un limite per ciascun tipo di risorsa:

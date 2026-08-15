@@ -131,6 +131,26 @@ export async function enqueueSourceDownload(request: {
 }
 
 /**
+ * Mette in coda le miniature di una digitalizzazione (D6): si chiama aggiungendo
+ * una fonte, non quando si scaricano le carte.
+ */
+export async function enqueueSourceThumbnails(request: {
+  providerKey: string;
+  manifestUrl: string;
+  versionId?: string;
+}): Promise<Job> {
+  return invoke<Job>('enqueue_source_thumbnails', request);
+}
+
+/**
+ * Mette in coda la verifica del deposito (D5-bis). Rapida di default; completa
+ * su richiesta esplicita, perché apre ogni file.
+ */
+export async function enqueueVaultVerification(full = false): Promise<Job> {
+  return invoke<Job>('enqueue_vault_verification', { full });
+}
+
+/**
  * Toglie dall'elenco i lavori già finiti. Senza `id` li toglie tutti: sono
  * righe di storico, e quando diventano rumore si buttano.
  */

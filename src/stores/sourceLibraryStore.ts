@@ -14,6 +14,7 @@ import {
   removeSourceFromLibrary as removeSourceFromLibraryService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
+import { enqueueSourceThumbnails } from '../services/jobsService';
 import { logger } from '../utils/logger';
 
 function getErrorMessage(error: unknown): string {
@@ -80,6 +81,15 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         workspaceId,
       });
       set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));
+      // Le miniature si scaricano all'aggiunta (D6): circa 3 MB per un codice, e
+      // rendono il libro sfogliabile senza rete e senza carte scaricate. È un
+      // lavoro a priorità bassa, quindi non rallenta uno scaricamento in corso;
+      // se fallisce non compromette l'aggiunta, che è già avvenuta.
+      try {
+        await enqueueSourceThumbnails({ providerKey: providerKey ?? 'generic', manifestUrl });
+      } catch (error: unknown) {
+        logger.warn('miniature non messe in coda', { error: getErrorMessage(error) });
+      }
       // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
       // Biblioteca senza riaprire la schermata.
       await get().loadCatalog();

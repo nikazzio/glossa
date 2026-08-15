@@ -78,6 +78,7 @@ interface CatalogRow extends SourceRow {
   metadata: string | null;
   expected_asset_count: number | null;
   local_pages: number;
+  local_bytes: number;
 }
 
 /**
@@ -96,7 +97,9 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
             -- Carte distinte, non righe: la stessa carta esiste anche a piena
             -- risoluzione (D4), e contarla due volte darebbe «740 su 374».
             (SELECT COUNT(DISTINCT a.page_index) FROM assets a
-              WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_pages
+              WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_pages,
+            (SELECT COALESCE(SUM(a.byte_size), 0) FROM assets a
+              WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_bytes
        FROM sources s
        LEFT JOIN source_versions v
          ON v.source_id = s.id AND v.is_primary = 1
@@ -115,6 +118,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       date: metadata.date,
       expectedPages: row.expected_asset_count,
       localPages: row.local_pages,
+      localBytes: row.local_bytes,
       providerKey: metadata.providerKey,
     };
   });
@@ -162,6 +166,31 @@ function parseMetadata(raw: string | null): SourceMetadata {
  * un'azione diversa e va chiesta a parte, perché qui si sta rinunciando alla
  * scheda, non ai gigabyte.
  */
+/**
+ * I percorsi che il database dichiara di avere nel deposito per questa
+ * digitalizzazione. La verifica confronta questi con quello che c'è davvero: il
+ * database è la verità, il disco si controlla (D5).
+ */
+export async function listVersionVaultPaths(versionId: string): Promise<string[]> {
+  const rows = await select<{ vault_path: string }>(
+    "SELECT vault_path FROM assets WHERE source_version_id = $1 AND vault_path IS NOT NULL AND locality = 'local' ORDER BY vault_path",
+    [versionId],
+  );
+  return rows.map((row) => row.vault_path);
+}
+
+/**
+ * Toglie dal database le carte di una digitalizzazione, dopo che i file sono
+ * stati cancellati da «libera spazio» (D6).
+ *
+ * Senza questo la Biblioteca continuerebbe a dichiarare presenti carte che non
+ * ci sono più: il conteggio si legge dalle righe. Miniature e manifesto restano,
+ * perché «libera spazio» non li tocca.
+ */
+export async function forgetVersionPages(versionId: string): Promise<void> {
+  await execute("DELETE FROM assets WHERE source_version_id = $1 AND kind = 'image'", [versionId]);
+}
+
 export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
   await execute('DELETE FROM sources WHERE id = $1', [sourceId]);
 }

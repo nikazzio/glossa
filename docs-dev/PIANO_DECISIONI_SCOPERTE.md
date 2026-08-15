@@ -14,6 +14,9 @@ Ogni voce dice cosa prescrive la decisione, cosa esiste oggi nel codice, cosa
 manca e come si fa. I riferimenti al codice e alle issue sono stati verificati il
 2026-08-15.
 
+**Stato al 2026-08-15**: fatte la 1, la 2, la 3 e la 4. Restano la **5** e la
+**7**, che l'utente ha scelto di vedere una per una.
+
 **Ordine consigliato**: 1, 2, 3, 5, 4, 7. Le prime due sono piccole e sbloccano
 comandi già scritti; la 5 riguarda il rapporto con le biblioteche; la 4 introduce
 il secondo tipo di lavoro.
@@ -35,7 +38,7 @@ retention», ma le sue uniche sub-issue sono #217 e #218, che non le eseguono.
 
 ---
 
-## 1. Miniature all'aggiunta della fonte (D6)
+## 1. Miniature all'aggiunta della fonte (D6) — FATTA il 2026-08-15
 
 **La decisione**: «Aggiungendo una fonte si scaricano **tutte le miniature**.
 Duecento miniature sono circa 3 MB: trascurabili, e rendono il libro sfogliabile
@@ -77,7 +80,7 @@ verifica anche che registrare un secondo tipo sia davvero indolore.
 
 ---
 
-## 2. «Libera spazio» nell'interfaccia (D6)
+## 2. «Libera spazio» nell'interfaccia (D6) — FATTA il 2026-08-15
 
 **La decisione**: «**Libera spazio** — sulla fonte. Cancella le pagine scaricate
 subito e per davvero, senza passare dal cestino. Restano scheda, miniature,
@@ -115,7 +118,7 @@ attenzione.
 
 ---
 
-## 3. Verifica di una fonte, dall'interfaccia (D5)
+## 3. Verifica di una fonte, dall'interfaccia (D5) — FATTA il 2026-08-15
 
 **La decisione**: due livelli. «**Rapido — presenza.** Elenca i file e li
 confronta con il database. Millisecondi anche per un manoscritto grande.
@@ -152,7 +155,7 @@ altre (già coperto nel backend); radice assente distinta da file assenti.
 
 ---
 
-## 4. Verifica completa del deposito (D5-bis) e controllo all'avvio (D5)
+## 4. Verifica completa del deposito (D5-bis) e controllo all'avvio (D5) — FATTA il 2026-08-15
 
 **Le decisioni**: D5-bis vuole «un lavoro globale avviabile a mano da
 Impostazioni → Archiviazione», con resoconto in quattro categorie — integri,

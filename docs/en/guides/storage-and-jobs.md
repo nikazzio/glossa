@@ -77,6 +77,16 @@ On reopening **no job restarts on its own**: you find them stopped and decide.
 The only exception is optional — in **Settings → Jobs** you can let interrupted
 downloads restart automatically.
 
+## Checking the vault
+
+**Settings → Storage** has two controls.
+
+The **quick check** looks at whether the files Glossa registered are still in place: milliseconds even for a large manuscript. The **full check** opens every file and recomputes its fingerprint, so it also finds the ones truncated by an interrupted download — but it is slow in proportion to the gigabytes, and on a synced folder it forces the service to download everything.
+
+Both become queued jobs: follow them from the bottom panel, pause them, cancel them. The result is a four-part count — intact, missing, corrupt, orphans — where *orphans* are files left in the vault that no record claims. **Neither one deletes or re-downloads anything on its own.**
+
+A switch runs the quick check at every startup. It is off by default: it makes opening slower on large or networked vaults.
+
 ## How many jobs at once
 
 In **Settings → Jobs**, one limit per resource type: downloads, processing, disk

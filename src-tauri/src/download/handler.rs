@@ -22,6 +22,67 @@ use super::manifest::{image_url, parse, Page};
 use super::size;
 
 pub const JOB_TYPE: &str = "source_download";
+pub const THUMBNAILS_JOB_TYPE: &str = "source_thumbnails";
+
+/// Cosa scarica questo lavoro. Il giro è lo stesso — manifesto, carte una per
+/// volta, area di transito, punto salvato — cambiano il tetto di risoluzione,
+/// dove finisce il file e come si chiama la riga nel database.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Target {
+    /// Le carte alla risoluzione scelta dalla politica (D4).
+    Pages,
+    /// Le miniature, tutte, all'aggiunta della fonte (D6): circa 3 MB per un
+    /// codice, e rendono il libro sfogliabile senza rete.
+    Thumbnails,
+}
+
+/// Tetto delle miniature, sul lato lungo. Basso e fisso: servono a sfogliare,
+/// non a leggere.
+const THUMBNAIL_CAP: &str = "256";
+
+impl Target {
+    fn job_type(self) -> &'static str {
+        match self {
+            Target::Pages => JOB_TYPE,
+            Target::Thumbnails => THUMBNAILS_JOB_TYPE,
+        }
+    }
+
+    /// Il tetto di risoluzione da chiedere al servizio.
+    fn cap(self, config: &DownloadConfig) -> &str {
+        match self {
+            Target::Pages => &config.size_tag,
+            Target::Thumbnails => THUMBNAIL_CAP,
+        }
+    }
+
+    /// `assets.kind`: le miniature non contano nella disponibilità delle carte
+    /// (D7), e «libera spazio» non le tocca (D6).
+    fn asset_kind(self) -> &'static str {
+        match self {
+            Target::Pages => "image",
+            Target::Thumbnails => "thumbnail",
+        }
+    }
+
+    fn relative_path(
+        self,
+        config: &DownloadConfig,
+        page_index: u32,
+    ) -> Result<std::path::PathBuf, String> {
+        match self {
+            Target::Pages => layout::page_path(
+                &config.provider_key,
+                &config.version_id,
+                &config.size_tag,
+                page_index,
+            ),
+            Target::Thumbnails => {
+                layout::thumbnail_path(&config.provider_key, &config.version_id, page_index)
+            }
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,20 +135,16 @@ mod phase {
 const DECLARE_WAIT_AFTER: Duration = Duration::from_secs(15);
 
 pub struct SourceDownloadJob {
-    courtesy: Courtesy,
+    /// Condivisa fra i tipi di lavoro che parlano con le stesse biblioteche:
+    /// carte e miniature dello stesso libro vanno sullo stesso host, e due
+    /// contatori separati raddoppierebbero il ritmo verso quel server (D18).
+    courtesy: std::sync::Arc<Courtesy>,
+    target: Target,
 }
 
 impl SourceDownloadJob {
-    pub fn new() -> Self {
-        Self {
-            courtesy: Courtesy::new(),
-        }
-    }
-}
-
-impl Default for SourceDownloadJob {
-    fn default() -> Self {
-        Self::new()
+    pub fn new(courtesy: std::sync::Arc<Courtesy>, target: Target) -> Self {
+        Self { courtesy, target }
     }
 }
 
@@ -181,8 +238,9 @@ impl JobHandler for SourceDownloadJob {
             .unwrap_or_else(|| config.version_id.clone());
         record_manifest(&ctx, &config, total, &manifest).await?;
         log::info!(
-            "job download starting id={} provider={} pages={} resume_from={} cap={}",
+            "job download starting id={} type={} provider={} pages={} resume_from={} cap={}",
             ctx.id,
+            self.target.job_type(),
             config.provider_key,
             total,
             ctx.checkpoint
@@ -190,7 +248,7 @@ impl JobHandler for SourceDownloadJob {
                 .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
                 .map(|saved| saved.done)
                 .unwrap_or(0),
-            config.size_tag
+            self.target.cap(&config)
         );
 
         // 2. Le carte, una per volta: il confine dove ci si può fermare.
@@ -210,7 +268,7 @@ impl JobHandler for SourceDownloadJob {
         let mut done = start;
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
         // una volta sola evita una somma per ogni carta.
-        let mut bytes = recorded_bytes(&ctx, &config.version_id).await;
+        let mut bytes = recorded_bytes(&ctx, &config.version_id, self.target.asset_kind()).await;
 
         for page in manifest.pages.iter().skip(start as usize) {
             // Il confine dell'unità di lavoro: qui ci si ferma, mai a metà
@@ -332,13 +390,10 @@ impl SourceDownloadJob {
         page: &Page,
         stop: &(dyn Fn() -> bool + Sync),
     ) -> Result<Option<u64>, JobError> {
-        let relative = layout::page_path(
-            &config.provider_key,
-            &config.version_id,
-            &config.size_tag,
-            page.index,
-        )
-        .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
+        let relative = self
+            .target
+            .relative_path(config, page.index)
+            .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
         let target = root.join(&relative);
         let vault_path = relative.to_string_lossy().replace('\\', "/");
 
@@ -352,7 +407,7 @@ impl SourceDownloadJob {
             // morta fra la promozione e la scrittura: senza rifarla adesso, il
             // conteggio della disponibilità resterebbe sotto il vero per
             // sempre, perché la ripresa la salterà ogni volta.
-            if is_recorded(ctx, &page_asset_id(config, page)).await {
+            if is_recorded(ctx, &page_asset_id(config, self.target, page)).await {
                 return Ok(Some(0));
             }
             let scan = integrity::scan_file(&target, integrity::FileKind::Image);
@@ -368,7 +423,17 @@ impl SourceDownloadJob {
                 page.index,
                 size
             );
-            record_page(ctx, config, page, &vault_path, &checksum, size as i64, &url).await?;
+            record_page(
+                ctx,
+                config,
+                self.target,
+                page,
+                &vault_path,
+                &checksum,
+                size as i64,
+                &url,
+            )
+            .await?;
             return Ok(Some(size));
         }
 
@@ -380,14 +445,28 @@ impl SourceDownloadJob {
             None => return Ok(None),
         };
         let checksum = stage_and_promote(
-            &staging.join(format!("{:04}.jpg", page.index)),
+            &staging.join(format!(
+                "{}-{:04}.jpg",
+                self.target.asset_kind(),
+                page.index
+            )),
             &target,
             &fetched.bytes,
             integrity::FileKind::Image,
         )?;
 
         let size = fetched.bytes.len() as u64;
-        record_page(ctx, config, page, &vault_path, &checksum, size as i64, &url).await?;
+        record_page(
+            ctx,
+            config,
+            self.target,
+            page,
+            &vault_path,
+            &checksum,
+            size as i64,
+            &url,
+        )
+        .await?;
         Ok(Some(size))
     }
 
@@ -404,7 +483,7 @@ impl SourceDownloadJob {
         cached(sizes, page)
             .or_else(|| {
                 size::first_attempt(
-                    &config.size_tag,
+                    self.target.cap(config),
                     manifest.presentation2,
                     page.service_level.as_deref(),
                 )
@@ -434,7 +513,7 @@ impl SourceDownloadJob {
     ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
         let attempt = match cached(sizes, page).or_else(|| {
             size::first_attempt(
-                &config.size_tag,
+                self.target.cap(config),
                 manifest.presentation2,
                 page.service_level.as_deref(),
             )
@@ -463,7 +542,7 @@ impl SourceDownloadJob {
                 // per gruppo di carte, poi si riprova.
                 let renegotiable = matches!(error.kind, ErrorKind::Internal | ErrorKind::Transport)
                     && cached(sizes, page).is_none()
-                    && config.size_tag != "max";
+                    && self.target.cap(config) != "max";
                 if !renegotiable {
                     return Err(error);
                 }
@@ -506,7 +585,11 @@ impl SourceDownloadJob {
         stop: &(dyn Fn() -> bool + Sync),
     ) -> Result<Option<size::SizeToken>, JobError> {
         ctx.report_phase(phase::NEGOTIATING).await;
-        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP);
+        let cap = self
+            .target
+            .cap(config)
+            .parse::<u32>()
+            .unwrap_or(DEFAULT_CAP);
         let info_url = size::info_url(&page.image_service);
         let Some(fetched) = fetch(
             client,
@@ -640,13 +723,14 @@ fn human_size(bytes: u64) -> String {
 }
 
 /// Quanto pesa già nel deposito questa digitalizzazione.
-async fn recorded_bytes(ctx: &JobContext, version_id: &str) -> u64 {
+async fn recorded_bytes(ctx: &JobContext, version_id: &str, kind: &str) -> u64 {
     let version_id = version_id.to_string();
+    let kind = kind.to_string();
     ctx.with_database(move |conn| {
         conn.query_row(
             "SELECT COALESCE(SUM(byte_size), 0) FROM assets \
-             WHERE source_version_id = ?1 AND kind = 'image'",
-            rusqlite::params![version_id],
+             WHERE source_version_id = ?1 AND kind = ?2",
+            rusqlite::params![version_id, kind],
             |row| row.get::<_, i64>(0),
         )
         .map_err(|error| error.to_string())
@@ -677,8 +761,13 @@ async fn is_recorded(ctx: &JobContext, asset_id: &str) -> bool {
 
 /// Identificativo della riga di una carta: digitalizzazione, risoluzione,
 /// numero. La stessa carta a due risoluzioni sono due righe.
-fn page_asset_id(config: &DownloadConfig, page: &Page) -> String {
-    format!("{}:{}:{}", config.version_id, config.size_tag, page.index)
+fn page_asset_id(config: &DownloadConfig, target: Target, page: &Page) -> String {
+    format!(
+        "{}:{}:{}",
+        config.version_id,
+        target.cap(config),
+        page.index
+    )
 }
 
 /// Profilo del provider, o quello prudente per chi non è nel registro: nessuna
@@ -817,18 +906,21 @@ async fn record_manifest(
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn record_page(
     ctx: &JobContext,
     config: &DownloadConfig,
+    target: Target,
     page: &Page,
     vault_path: &str,
     checksum: &str,
     byte_size: i64,
     url: &str,
 ) -> Result<(), JobError> {
-    let id = page_asset_id(config, page);
+    let id = page_asset_id(config, target, page);
     let version_id = config.version_id.clone();
-    let size_tag = config.size_tag.clone();
+    let kind = target.asset_kind();
+    let size_tag = target.cap(config).to_string();
     let (index, label) = (page.index as i64, page.label.clone());
     let (vault_path, checksum, url) = (
         vault_path.to_string(),
@@ -840,11 +932,13 @@ async fn record_page(
         conn.execute(
             "INSERT INTO assets (id, source_version_id, kind, locality, availability, vault_path, \
                  remote_url, byte_size, checksum, page_index, page_label, size_tag) \
-             VALUES (?1, ?2, 'image', 'local', 'complete', ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
+             VALUES (?1, ?2, ?10, 'local', 'complete', ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
              ON CONFLICT(id) DO UPDATE SET vault_path = excluded.vault_path, \
                availability = 'complete', byte_size = excluded.byte_size, \
                checksum = excluded.checksum, updated_at = CURRENT_TIMESTAMP",
-            params![id, version_id, vault_path, url, byte_size, checksum, index, label, size_tag],
+            params![
+                id, version_id, vault_path, url, byte_size, checksum, index, label, size_tag, kind
+            ],
         )
         .map_err(|error| format!("riga della carta: {error}"))?;
         Ok(())

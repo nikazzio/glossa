@@ -14,6 +14,31 @@ use crate::jobs::commands::JobsState;
 use crate::jobs::store::NewJob;
 use crate::jobs::JobRecord;
 
+/// Mette in coda lo scaricamento delle **miniature** di una digitalizzazione.
+///
+/// Si chiama aggiungendo una fonte alla Biblioteca (D6): duecento miniature sono
+/// circa 3 MB e rendono il libro sfogliabile senza rete e senza carte scaricate.
+/// Priorità bassa: non deve rallentare uno scaricamento vero già in corso.
+#[tauri::command]
+pub async fn enqueue_source_thumbnails(
+    jobs: tauri::State<'_, JobsState>,
+    provider_key: String,
+    manifest_url: String,
+    version_id: Option<String>,
+) -> Result<JobRecord, String> {
+    enqueue(
+        &jobs,
+        handler::THUMBNAILS_JOB_TYPE,
+        "thumbnails",
+        1,
+        provider_key,
+        manifest_url,
+        version_id,
+        None,
+    )
+    .await
+}
+
 /// Mette in coda lo scaricamento di una digitalizzazione.
 ///
 /// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
@@ -22,6 +47,33 @@ use crate::jobs::JobRecord;
 #[tauri::command]
 pub async fn enqueue_source_download(
     jobs: tauri::State<'_, JobsState>,
+    provider_key: String,
+    manifest_url: String,
+    version_id: Option<String>,
+    size_tag: Option<String>,
+) -> Result<JobRecord, String> {
+    enqueue(
+        &jobs,
+        handler::JOB_TYPE,
+        "download",
+        10,
+        provider_key,
+        manifest_url,
+        version_id,
+        size_tag,
+    )
+    .await
+}
+
+/// La messa in coda, uguale per carte e miniature: cambiano il tipo di lavoro,
+/// la priorità e il prefisso dell'identificativo, che tiene separati i due
+/// lavori sulla stessa digitalizzazione.
+#[allow(clippy::too_many_arguments)]
+async fn enqueue(
+    jobs: &tauri::State<'_, JobsState>,
+    job_type: &str,
+    id_prefix: &str,
+    priority: i64,
     provider_key: String,
     manifest_url: String,
     version_id: Option<String>,
@@ -74,7 +126,7 @@ pub async fn enqueue_source_download(
     // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
     // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
     // voleva vedere.
-    let id = format!("download:{version_id}");
+    let id = format!("{id_prefix}:{version_id}");
     let existing = crate::jobs::store::get(&conn, &id)?;
     drop(conn);
 
@@ -103,8 +155,8 @@ pub async fn enqueue_source_download(
     jobs.0
         .submit(&NewJob {
             id,
-            job_type: handler::JOB_TYPE.to_string(),
-            priority: 10,
+            job_type: job_type.to_string(),
+            priority,
             config: config.to_string(),
             max_attempts: profile.max_attempts,
             depends_on_job_id: None,
