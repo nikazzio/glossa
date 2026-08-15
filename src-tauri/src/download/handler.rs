@@ -16,7 +16,7 @@ use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
 
-use super::courtesy::Courtesy;
+use super::courtesy::{Courtesy, Signals};
 use super::fetch::{build_client, fetch, host_of};
 use super::manifest::{image_url, parse, Page};
 use super::size;
@@ -76,19 +76,6 @@ impl Target {
             Target::Pages => None,
             Target::Thumbnails => page.thumbnail.clone(),
         }
-    }
-
-    /// Se leggere il descrittore **prima** di chiedere, invece di provare il
-    /// tetto e ripiegare.
-    ///
-    /// Per le miniature sì, sempre: il tetto è piccolo e quasi mai coincide con
-    /// una misura che il servizio tiene pronta, quindi il server la genera sul
-    /// momento. Misurato su archive.org: 23 secondi per una larghezza inventata
-    /// contro 1 secondo per una dichiarata, senza nemmeno tenerla in cache. Per
-    /// le carte no: il tetto è grande, la richiesta o viene servita o dà errore,
-    /// e leggere il descrittore costerebbe una richiesta in più per niente.
-    fn ask_the_descriptor_first(self) -> bool {
-        matches!(self, Target::Thumbnails)
     }
 
     fn relative_path(
@@ -192,6 +179,13 @@ impl JobHandler for SourceDownloadJob {
         // Guardato durante le attese lunghe: senza, un raffreddamento di dieci
         // minuti renderebbe il lavoro sordo a pausa e annullamento.
         let stop = || ctx.pause_requested() || ctx.cancel_requested();
+        // Alzato dalla cortesia mentre è **lei** a farci aspettare: serve a non
+        // chiamare «limite della biblioteca» un server semplicemente lento.
+        let courtesy_wait = std::sync::atomic::AtomicBool::new(false);
+        let signals = Signals {
+            stop: &stop,
+            courtesy_wait: &courtesy_wait,
+        };
 
         ctx.report_phase(phase::STARTING).await;
 
@@ -248,7 +242,7 @@ impl JobHandler for SourceDownloadJob {
                 &profile,
                 &config.manifest_url,
                 ctx.attempt,
-                &stop,
+                &signals,
             )
             .await
             .inspect_err(|_| discard(&staging))?
@@ -317,7 +311,7 @@ impl JobHandler for SourceDownloadJob {
             let fetched = self
                 .fetch_page_declaring_long_waits(
                     &ctx, &client, &profile, &config, &manifest, &sizes, &root, &staging, page,
-                    progress, &title, eta, &stop,
+                    progress, &title, eta, &signals,
                 )
                 .await
                 .inspect_err(|_| discard(&staging))?;
@@ -356,7 +350,7 @@ impl JobHandler for SourceDownloadJob {
                     bytes,
                     page.index,
                     added,
-                    &self.requested_size(&sizes, page, &config, &manifest),
+                    &self.requested_size(&sizes, page, &config),
                     &config.provider_key,
                     &host_of(&page.image_service).unwrap_or_default(),
                 )),
@@ -395,23 +389,29 @@ impl SourceDownloadJob {
         progress: f64,
         label: &str,
         eta: i64,
-        stop: &(dyn Fn() -> bool + Sync),
+        signals: &Signals<'_>,
     ) -> Result<Option<u64>, JobError> {
         let work = self.fetch_page(
-            ctx, client, profile, config, manifest, sizes, root, staging, page, stop,
+            ctx, client, profile, config, manifest, sizes, root, staging, page, signals,
         );
         tokio::pin!(work);
 
         tokio::select! {
             outcome = &mut work => outcome,
             _ = tokio::time::sleep(DECLARE_WAIT_AFTER) => {
-                log::info!(
-                    "job waiting id={} reason={} page={}",
-                    ctx.id,
-                    crate::jobs::WAITING_LIBRARY_LIMITS,
-                    page.index
-                );
-                ctx.report_waiting(progress, Some(label), Some(eta)).await;
+                // Si dichiara l'attesa **solo se è la nostra**: pausa, raffica o
+                // raffreddamento. Un server lento a rispondere non è un limite
+                // che stiamo rispettando, ed è la stessa immobilità con la causa
+                // opposta (D17).
+                if signals.courtesy_wait.load(std::sync::atomic::Ordering::SeqCst) {
+                    log::info!(
+                        "job waiting id={} reason={} page={}",
+                        ctx.id,
+                        crate::jobs::WAITING_LIBRARY_LIMITS,
+                        page.index
+                    );
+                    ctx.report_waiting(progress, Some(label), Some(eta)).await;
+                }
                 work.await
             }
         }
@@ -432,7 +432,7 @@ impl SourceDownloadJob {
         root: &Path,
         staging: &Path,
         page: &Page,
-        stop: &(dyn Fn() -> bool + Sync),
+        signals: &Signals<'_>,
     ) -> Result<Option<u64>, JobError> {
         let relative = self
             .target
@@ -459,7 +459,7 @@ impl SourceDownloadJob {
                 .map(|meta| meta.len())
                 .unwrap_or(0);
             let checksum = scan.checksum.unwrap_or_default();
-            let url = self.known_url(sizes, page, config, manifest);
+            let url = self.known_url(sizes, page, manifest);
             log::debug!(
                 "job page recovered id={} page={} bytes={} (file sul disco senza riga)",
                 ctx.id,
@@ -481,18 +481,16 @@ impl SourceDownloadJob {
         }
 
         let (fetched, url) = match self
-            .fetch_at_best_size(ctx, client, profile, config, manifest, sizes, page, stop)
+            .fetch_at_best_size(ctx, client, profile, config, manifest, sizes, page, signals)
             .await?
         {
             Some(found) => found,
             None => return Ok(None),
         };
         let checksum = stage_and_promote(
-            &staging.join(format!(
-                "{}-{:04}.jpg",
-                self.target.asset_kind(),
-                page.index
-            )),
+            // La cartella di transito è già una per variante: il nome del file
+            // non deve ripetere la stessa distinzione.
+            &staging.join(format!("{:04}.jpg", page.index)),
             &target,
             &fetched.bytes,
             integrity::FileKind::Image,
@@ -517,26 +515,13 @@ impl SourceDownloadJob {
     /// pannello: quella negoziata se c'è stata una negoziazione, il tetto
     /// altrimenti, e la parola per «l'ha dichiarata la biblioteca» quando
     /// l'indirizzo arriva dal manifesto.
-    fn requested_size(
-        &self,
-        sizes: &SizeCache,
-        page: &Page,
-        config: &DownloadConfig,
-        manifest: &super::manifest::Manifest,
-    ) -> String {
+    fn requested_size(&self, sizes: &SizeCache, page: &Page, config: &DownloadConfig) -> String {
         if self.target.declared_url(page).is_some() {
             return "declared".to_string();
         }
         cached(sizes, page)
-            .or_else(|| {
-                size::first_attempt(
-                    self.target.cap(config),
-                    manifest.presentation2,
-                    page.service_level.as_deref(),
-                )
-            })
             .map(|token| token.0)
-            .unwrap_or_else(|| size::full_size(manifest.presentation2))
+            .unwrap_or_else(|| self.target.cap(config).to_string())
     }
 
     /// L'indirizzo da cui è arrivata un'unità già presente sul disco, per
@@ -545,32 +530,28 @@ impl SourceDownloadJob {
         &self,
         sizes: &SizeCache,
         page: &Page,
-        config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
     ) -> String {
         if let Some(declared) = self.target.declared_url(page) {
             return declared;
         }
         let token = cached(sizes, page)
-            .or_else(|| {
-                size::first_attempt(
-                    self.target.cap(config),
-                    manifest.presentation2,
-                    page.service_level.as_deref(),
-                )
-            })
             .unwrap_or_else(|| size::SizeToken(size::full_size(manifest.presentation2)));
         image_url(&page.image_service, token.as_str())
     }
 
-    /// Prende l'unità dall'indirizzo migliore fra i tre previsti.
+    /// Prende l'unità dall'indirizzo migliore fra quelli previsti.
     ///
     /// 1. **quello dichiarato dalla biblioteca**, quando c'è: niente da scegliere;
     /// 2. **la misura dichiarata dal descrittore** più vicina al tetto, letta una
-    ///    volta per gruppo di unità con le stesse dimensioni — sempre per le
-    ///    miniature, e per le carte solo dopo un rifiuto;
-    /// 3. **il tetto così com'è**, che con un servizio conforme è già la
-    ///    risposta giusta e non costa richieste in più.
+    ///    volta per gruppo di unità con le stesse dimensioni.
+    ///
+    /// Non si tenta il tetto alla cieca. È quello che dice D4 — «si legge una
+    /// volta per digitalizzazione […] senza tentare richieste a indovinare» — ed
+    /// è quello che dice la misura: su archive.org una larghezza che il servizio
+    /// non tiene pronta la genera sul momento, 26 secondi contro 2 per una
+    /// dichiarata, e non la tiene nemmeno in cache. Il descrittore costa una
+    /// richiesta ogni gruppo: cinque su un libro di 924 carte.
     #[allow(clippy::too_many_arguments)]
     async fn fetch_at_best_size(
         &self,
@@ -581,74 +562,37 @@ impl SourceDownloadJob {
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
         page: &Page,
-        stop: &(dyn Fn() -> bool + Sync),
+        signals: &Signals<'_>,
     ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
         if let Some(url) = self.target.declared_url(page) {
-            let fetched = fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await?;
+            let fetched =
+                fetch(client, &self.courtesy, profile, &url, ctx.attempt, signals).await?;
             return Ok(fetched.map(|fetched| (fetched, url)));
         }
 
-        let first = match cached(sizes, page) {
-            Some(token) => Some(token),
-            None if self.target.ask_the_descriptor_first() => None,
-            None => size::first_attempt(
-                self.target.cap(config),
-                manifest.presentation2,
-                page.service_level.as_deref(),
-            ),
-        };
-        // Niente da tentare: o si è deciso di chiedere prima al descrittore, o
-        // il servizio dichiara livello 0, dove la larghezza arbitraria non
-        // esiste. In entrambi i casi la misura si legge invece di indovinarla.
-        let token = match first {
-            Some(token) => token,
-            None => {
-                let Some(token) = self
-                    .negotiate_size(ctx, client, profile, config, sizes, page, stop)
-                    .await?
-                else {
-                    return Ok(None);
-                };
-                token
+        // Politica «massima»: non c'è niente da scegliere, la dimensione piena
+        // ha un nome suo nella specifica e il descrittore non aggiungerebbe
+        // niente (D4).
+        let token = if self.target.cap(config) == "max" {
+            size::SizeToken(size::full_size(manifest.presentation2))
+        } else {
+            match cached(sizes, page) {
+                Some(token) => token,
+                None => {
+                    let Some(token) = self
+                        .negotiate_size(ctx, client, profile, config, sizes, page, signals)
+                        .await?
+                    else {
+                        return Ok(None);
+                    };
+                    token
+                }
             }
         };
 
         let url = image_url(&page.image_service, token.as_str());
-        match fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await {
-            Ok(Some(fetched)) => Ok(Some((fetched, url))),
-            Ok(None) => Ok(None),
-            Err(error) => {
-                // Rifiuto che può dipendere dalla misura chiesta: il servizio
-                // dichiara un livello che non rispetta. Si negozia una volta per
-                // gruppo di unità, poi si riprova.
-                let renegotiable = matches!(error.kind, ErrorKind::Internal | ErrorKind::Transport)
-                    && cached(sizes, page).is_none()
-                    && self.target.cap(config) != "max";
-                if !renegotiable {
-                    return Err(error);
-                }
-                log::warn!(
-                    "job size refused id={} page={} size={} error={}",
-                    ctx.id,
-                    page.index,
-                    token.as_str(),
-                    error.message
-                );
-                let Some(negotiated) = self
-                    .negotiate_size(ctx, client, profile, config, sizes, page, stop)
-                    .await?
-                else {
-                    return Ok(None);
-                };
-                if negotiated == token {
-                    return Err(error);
-                }
-                let url = image_url(&page.image_service, negotiated.as_str());
-                let fetched =
-                    fetch(client, &self.courtesy, profile, &url, ctx.attempt, stop).await?;
-                Ok(fetched.map(|fetched| (fetched, url)))
-            }
-        }
+        let fetched = fetch(client, &self.courtesy, profile, &url, ctx.attempt, signals).await?;
+        Ok(fetched.map(|fetched| (fetched, url)))
     }
 
     /// Legge il descrittore dell'immagine e ricava la misura da chiedere,
@@ -662,7 +606,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         sizes: &SizeCache,
         page: &Page,
-        stop: &(dyn Fn() -> bool + Sync),
+        signals: &Signals<'_>,
     ) -> Result<Option<size::SizeToken>, JobError> {
         ctx.report_phase(phase::NEGOTIATING).await;
         let cap = self
@@ -677,7 +621,7 @@ impl SourceDownloadJob {
             profile,
             &info_url,
             ctx.attempt,
-            stop,
+            signals,
         )
         .await?
         else {
@@ -1076,25 +1020,12 @@ mod tests {
     }
 
     #[test]
-    fn the_thumbnails_ask_the_descriptor_before_requesting() {
-        // Il tetto delle miniature quasi mai coincide con una misura pronta:
-        // chiederlo alla cieca fa generare l'immagine sul momento — misurato,
-        // 23 secondi contro 1.
-        assert!(Target::Thumbnails.ask_the_descriptor_first());
-        // Per le carte il tetto è grande e la richiesta o è servita o dà
-        // errore: leggere il descrittore prima costerebbe una richiesta per
-        // niente.
-        assert!(!Target::Pages.ask_the_descriptor_first());
-    }
-
-    #[test]
     fn a_thumbnail_declared_by_the_library_is_taken_as_it_is() {
         let page = Page {
             index: 1,
             label: None,
             image_service: "https://img/1".to_string(),
             size: Some((100, 200)),
-            service_level: None,
             thumbnail: Some("https://img/1/full/160,/0/default.jpg".to_string()),
         };
 

@@ -5,12 +5,13 @@
 //! produrre. La misura effettiva è quella dichiarata dal descrittore
 //! dell'immagine con la distanza minima dal tetto, sopra o sotto.
 //!
-//! Perché non basta chiedere il tetto: la specifica garantisce le misure
-//! elencate in `sizes` **a qualunque livello di conformità**, mentre la
-//! larghezza arbitraria (`w,`, in gergo `sizeByW`) è garantita solo dal livello
-//! 1 in su — e il livello dichiarato non è affidabile. Archive.org dichiara
-//! `level2` e risponde 500 a `/full/2000,/`, servendo però `/full/1299,/`, che è
-//! una delle misure che dichiara.
+//! **Non si tenta il tetto alla cieca.** Lo dice D4 — «si legge una volta per
+//! digitalizzazione […] senza tentare richieste a indovinare» — e lo conferma la
+//! specifica: le misure elencate in `sizes` sono garantite a qualunque livello
+//! di conformità, la larghezza arbitraria solo dal livello 1 in su, e il livello
+//! dichiarato non è affidabile. Archive.org dichiara `level2`, risponde 500 a
+//! `/full/2000,/` su una pagina e ci mette 26 secondi su un'altra a generare una
+//! misura che non tiene pronta, contro 2 secondi per una dichiarata.
 
 use serde_json::Value;
 
@@ -22,26 +23,6 @@ impl SizeToken {
     pub fn as_str(&self) -> &str {
         &self.0
     }
-}
-
-/// La misura da chiedere quando non si è ancora parlato con il servizio.
-///
-/// Con un servizio conforme dal livello 1 in su, chiedere il tetto dà
-/// esattamente il tetto, che è la misura più vicina al tetto possibile: nessuna
-/// richiesta in più. A livello 0 la larghezza arbitraria non esiste, quindi non
-/// si prova nemmeno.
-pub fn first_attempt(
-    size_tag: &str,
-    presentation2: bool,
-    service_level: Option<&str>,
-) -> Option<SizeToken> {
-    if size_tag == "max" {
-        return Some(SizeToken(full_size(presentation2)));
-    }
-    if service_level == Some("level0") {
-        return None;
-    }
-    Some(SizeToken(format!("{size_tag},")))
 }
 
 /// Il nome della dimensione piena: `max` dalla Image API 3.0, `full` prima.
@@ -190,29 +171,9 @@ mod tests {
     }
 
     #[test]
-    fn the_first_attempt_asks_for_the_cap_when_the_service_allows_it() {
-        assert_eq!(
-            first_attempt("2000", false, Some("level2")).map(|token| token.0),
-            Some("2000,".to_string())
-        );
-    }
-
-    #[test]
-    fn a_level_zero_service_is_not_even_asked_for_an_arbitrary_width() {
-        // A livello 0 la larghezza arbitraria non esiste: si va dritti al
-        // descrittore invece di sprecare una richiesta destinata a fallire.
-        assert_eq!(first_attempt("2000", false, Some("level0")), None);
-    }
-
-    #[test]
     fn the_full_size_keeps_the_name_of_its_api_version() {
-        assert_eq!(
-            first_attempt("max", false, None).map(|token| token.0),
-            Some("max".to_string())
-        );
-        assert_eq!(
-            first_attempt("max", true, None).map(|token| token.0),
-            Some("full".to_string())
-        );
+        // `max` esiste dalla Image API 3.0: a un servizio 2.1 va chiesto `full`.
+        assert_eq!(full_size(false), "max");
+        assert_eq!(full_size(true), "full");
     }
 }

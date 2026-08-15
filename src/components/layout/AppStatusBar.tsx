@@ -35,7 +35,14 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   if (state === 'idle') return null;
 
   const tooltipLabel = lastSavedAt
-    ? t('statusBar.lastSavedTooltip', { time: new Date(lastSavedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) })
+    ? t('statusBar.lastSavedTooltip', {
+        // Sempre su 24 ore, come nel pannello dei lavori.
+        time: new Date(lastSavedAt).toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }),
+      })
     : t('statusBar.neverSavedTooltip');
 
   if (state === 'saving') {

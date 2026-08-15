@@ -10,6 +10,7 @@
 //! non scaricare più niente, per ore.
 
 use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
@@ -47,6 +48,26 @@ struct Timeline {
     cooldown_until: Option<Instant>,
 }
 
+/// Quello che un lavoro dice e chiede mentre una richiesta è in corso.
+pub struct Signals<'a> {
+    /// Vero quando è stato chiesto di fermarsi: pausa o annullamento.
+    pub stop: &'a (dyn Fn() -> bool + Sync),
+    /// Alzato mentre è **la nostra cortesia** a far aspettare — pausa fra
+    /// richieste, limite a raffica, raffreddamento — e abbassato appena il turno
+    /// arriva.
+    ///
+    /// Serve a non chiamare «limite della biblioteca» un server semplicemente
+    /// lento: sono due immobilità con cause opposte, e chi guarda deve sapere se
+    /// stiamo rispettando un limite o stiamo aspettando loro (D17).
+    pub courtesy_wait: &'a AtomicBool,
+}
+
+impl Signals<'_> {
+    fn stop(&self) -> bool {
+        (self.stop)()
+    }
+}
+
 /// I contatori di tutti gli host visti finora.
 #[derive(Default)]
 pub struct Courtesy {
@@ -75,7 +96,7 @@ impl Courtesy {
         &self,
         host: &str,
         profile: &NetworkProfile,
-        should_stop: &(dyn Fn() -> bool + Sync),
+        signals: &Signals<'_>,
     ) -> Option<Turn> {
         let gate = self.gate_for(host, profile).await;
         let Ok(permit) = Arc::clone(&gate.permits).acquire_owned().await else {
@@ -85,7 +106,7 @@ impl Courtesy {
             return None;
         };
 
-        Self::respect_timing(host, &gate, profile, should_stop).await?;
+        Self::respect_timing(host, &gate, profile, signals).await?;
         Some(Turn { _permit: permit })
     }
 
@@ -124,10 +145,11 @@ impl Courtesy {
         host: &str,
         gate: &HostGate,
         profile: &NetworkProfile,
-        should_stop: &(dyn Fn() -> bool + Sync),
+        signals: &Signals<'_>,
     ) -> Option<()> {
         loop {
-            if should_stop() {
+            if signals.stop() {
+                signals.courtesy_wait.store(false, Ordering::SeqCst);
                 return None;
             }
 
@@ -141,11 +163,15 @@ impl Courtesy {
                 // guarda se nel frattempo è stato chiesto di fermarsi.
                 Some(delay) => {
                     if delay > LONG_WAIT {
+                        signals.courtesy_wait.store(true, Ordering::SeqCst);
                         log::debug!("courtesy waiting host={host} seconds={}", delay.as_secs());
                     }
                     tokio::time::sleep(delay.min(POLL_SLICE)).await
                 }
-                None => return Some(()),
+                None => {
+                    signals.courtesy_wait.store(false, Ordering::SeqCst);
+                    return Some(());
+                }
             }
         }
     }
@@ -209,12 +235,23 @@ mod tests {
         || false
     }
 
+    /// Segnali di un lavoro che non si sta fermando, per i test che non
+    /// guardano l'attesa di cortesia.
+    fn signals<'a>(stop: &'a (dyn Fn() -> bool + Sync), waiting: &'a AtomicBool) -> Signals<'a> {
+        Signals {
+            stop,
+            courtesy_wait: waiting,
+        }
+    }
+
     /// Turno atteso senza interruzioni, con quanto è durata l'attesa: i test
     /// misurano il tempo, il codice di produzione no.
     async fn turn(courtesy: &Courtesy, host: &str, profile: &NetworkProfile) -> (Turn, Duration) {
         let started = Instant::now();
+        let stop = never_stop();
+        let waiting = AtomicBool::new(false);
         let turn = courtesy
-            .wait_turn(host, profile, &never_stop())
+            .wait_turn(host, profile, &signals(&stop, &waiting))
             .await
             .expect("nessuno ha chiesto di fermarsi");
         (turn, started.elapsed())
@@ -349,7 +386,11 @@ mod tests {
 
         let outcome = tokio::time::timeout(
             Duration::from_millis(500),
-            courtesy.wait_turn("host", &profile, &|| true),
+            courtesy.wait_turn(
+                "host",
+                &profile,
+                &signals(&|| true, &AtomicBool::new(false)),
+            ),
         )
         .await;
 

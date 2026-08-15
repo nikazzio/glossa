@@ -22,10 +22,6 @@ pub struct Page {
     /// libro **non** hanno tutte la stessa dimensione, e da queste si ricava a
     /// quale gruppo appartiene la carta quando si negozia la misura da chiedere.
     pub size: Option<(u32, u32)>,
-    /// Livello di conformità dichiarato dal servizio (`level0`, `level1`,
-    /// `level2`). A livello 0 la larghezza arbitraria non esiste: sono ammesse
-    /// solo le misure elencate dal descrittore dell'immagine.
-    pub service_level: Option<String>,
     /// Miniatura **già pronta**, quando la biblioteca la dichiara sul canvas.
     ///
     /// È la via più economica per averla: nessun descrittore da leggere e
@@ -104,7 +100,6 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         label: label_of(canvas.get("label")),
                         image_service: service_of(body)?,
                         size: canvas_size(canvas),
-                        service_level: service_level_of(body),
                         thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
@@ -134,7 +129,6 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         // In 2.1 le dimensioni stanno sulla risorsa quando il
                         // canvas non le dichiara.
                         size: canvas_size(canvas).or_else(|| canvas_size(resource)),
-                        service_level: service_level_of(resource),
                         thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
@@ -164,28 +158,6 @@ fn canvas_size(canvas: &Value) -> Option<(u32, u32)> {
     let width = canvas.get("width")?.as_u64()? as u32;
     let height = canvas.get("height")?.as_u64()? as u32;
     (width > 0 && height > 0).then_some((width, height))
-}
-
-/// Livello di conformità del servizio immagini.
-///
-/// In Presentation 3.0 è la stringa `level2`; in 2.1 è un indirizzo che finisce
-/// con `level2.json`. Serve a sapere in anticipo se la larghezza arbitraria è
-/// ammessa: a livello 0 valgono solo le misure elencate dal descrittore.
-fn service_level_of(body: &Value) -> Option<String> {
-    let service = match body.get("service")? {
-        Value::Array(entries) => entries.first()?,
-        single => single,
-    };
-    let declared = service.get("profile").or_else(|| service.get("@profile"))?;
-    let text = match declared {
-        Value::String(text) => text.clone(),
-        Value::Array(entries) => entries.first()?.as_str()?.to_string(),
-        _ => return None,
-    };
-    ["level0", "level1", "level2"]
-        .into_iter()
-        .find(|level| text.contains(level))
-        .map(str::to_string)
 }
 
 fn id_of(value: &Value) -> Option<String> {
@@ -354,22 +326,19 @@ mod tests {
     }
 
     #[test]
-    fn the_declared_page_size_and_service_level_are_read() {
-        // Servono a scegliere la misura da chiedere: le carte di uno stesso
-        // libro non hanno tutte la stessa dimensione, e il livello dice se la
-        // larghezza arbitraria è ammessa.
+    fn the_declared_page_size_is_read() {
+        // Serve a scegliere la misura da chiedere: le carte di uno stesso libro
+        // non hanno tutte la stessa dimensione, quindi nemmeno le misure che il
+        // servizio tiene pronte sono le stesse.
         let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
 
         assert_eq!(manifest.pages[0].size, Some((2816, 4240)));
-        assert_eq!(manifest.pages[0].service_level.as_deref(), Some("level2"));
     }
 
     #[test]
-    fn the_older_manifests_declare_their_level_as_a_url() {
-        // In 2.1 il livello è un indirizzo che finisce con `level1.json`.
+    fn the_older_manifests_are_recognised_as_such() {
         let old = parse(PRESENTATION_2.as_bytes()).unwrap();
 
-        assert_eq!(old.pages[0].service_level.as_deref(), Some("level1"));
         assert!(old.presentation2);
     }
 

@@ -342,27 +342,32 @@ disponibile entro il tetto»: con misure 1200 e 2100 e tetto 2000 avrebbe scelto
 1200, cioè metà dei pixel voluti per stare sotto una soglia che è un obiettivo,
 non un divieto.)*
 
-**Come si sceglie, in pratica** *(deciso il 2026-08-15, provando su
+**Come si sceglie, in pratica** *(precisato il 2026-08-16, misurando su
 archive.org)*: il tetto è una **politica**, non un pixel. La misura effettiva la
-dichiara il descrittore dell'immagine (`info.json`), e la specifica Image API
-garantisce che le misure elencate in `sizes` — e quelle implicite in `tiles` —
-siano servite **a qualunque livello di conformità**, mentre la larghezza
-arbitraria (`sizeByW`) è garantita solo dal livello 1 in su.
+dichiara il descrittore dell'immagine, e **non si tenta niente alla cieca** — che
+è quello che questa decisione diceva già dal 10 agosto: «senza tentare richieste
+a indovinare».
 
-Il livello dichiarato non è affidabile: archive.org dichiara `level2`, che
-imporrebbe la larghezza arbitraria, e risponde `500` a `/full/2000,/` servendo
-però `/full/1299,/`, che è una delle misure che dichiara. Quindi:
+L'ordine è:
 
-1. si chiede il tetto così com'è — con un servizio conforme è già la risposta
-   giusta e non costa nessuna richiesta in più;
-2. se il servizio rifiuta, si legge il **suo** descrittore, si prende la misura
-   dichiarata più vicina al tetto e si riprova;
-3. la scelta vale per tutte le carte con le stesse dimensioni, che in un
-   manoscritto sono quasi tutte: il tentativo sbagliato si paga una volta per
-   gruppo, non per carta. Le carte di uno stesso libro **non** hanno tutte la
-   stessa dimensione, e le misure offerte sono dimezzamenti dell'originale;
-4. un servizio che dichiara livello 0 salta il primo passo: lì la larghezza
-   arbitraria non esiste.
+1. l'indirizzo che il **manifesto dichiara già pronto**, quando c'è — la
+   specifica prevede che un canvas dichiari la propria miniatura: non c'è niente
+   da scegliere e non costa nessuna richiesta in più;
+2. altrimenti si legge il descrittore e si prende la misura dichiarata più
+   vicina al tetto sul lato lungo;
+3. la scelta vale per tutte le carte con le stesse dimensioni. Le carte di uno
+   stesso libro **non** hanno tutte la stessa dimensione — 924 carte e cinque
+   formati, nel libro provato — quindi il descrittore si legge una volta per
+   gruppo: cinque letture, non una sola e nemmeno 924.
+
+**Perché non ci si limita a chiedere il tetto**, che costerebbe zero richieste in
+più: la specifica garantisce le misure elencate in `sizes` — e quelle implicite
+in `tiles` — a **qualunque** livello di conformità, mentre la larghezza
+arbitraria (`sizeByW`) solo dal livello 1 in su, e il livello dichiarato non è
+affidabile. Archive.org dichiara `level2`; su una pagina risponde `500` a
+`/full/2000,/`, su un'altra la genera sul momento in **26 secondi** contro 2 per
+una misura dichiarata, e non la tiene nemmeno in cache. La richiesta risparmiata
+ne costa venti di attesa.
 
 **Conseguenza sul deposito**: la cartella continua a chiamarsi con il tetto
 (`pages/2000/`), che è la politica, mentre i pixel ottenuti variano da carta a
@@ -370,7 +375,7 @@ carta. Le due cose divergono di proposito: se la cartella prendesse il nome dai
 pixel, la stessa fonte finirebbe sparsa in cartelle diverse e la ripresa non
 ritroverebbe più ciò che ha già scaricato.
 
-Le miniature si scaricano sempre, in entrambi i casi.
+Le miniature si scaricano sempre, in entrambi i casi, insieme al libro (D6).
 
 **Scartato "scarica tutto al minimo"**: produrrebbe una fonte che risulta
 completa ma è illeggibile, peggio di una non scaricata. Il minimo sono già le

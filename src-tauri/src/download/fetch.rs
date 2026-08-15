@@ -12,7 +12,7 @@ use std::time::Duration;
 use crate::iiif::network::NetworkProfile;
 use crate::jobs::{ErrorKind, JobError};
 
-use super::courtesy::Courtesy;
+use super::courtesy::{Courtesy, Signals};
 
 /// Come si presenta Glossa alle biblioteche. Identificarsi è buona pratica
 /// IIIF, ed è la parte non tecnica dell'aderenza allo standard (D18).
@@ -45,9 +45,10 @@ pub struct Fetched {
 const TRANSPORT_ATTEMPTS: u32 = 3;
 const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 
-/// `should_stop` interrompe l'attesa del turno quando il lavoro è stato messo
-/// in pausa o annullato: `Ok(None)` significa "fermato mentre aspettava", non
-/// "fallito".
+/// I segnali del lavoro interrompono l'attesa del turno quando è stato messo in
+/// pausa o annullato — `Ok(None)` significa "fermato mentre aspettava", non
+/// "fallito" — e dicono a chi guarda se l'attesa è la nostra cortesia o la
+/// lentezza del servizio.
 ///
 /// `job_attempt` è il tentativo del **lavoro**, non della richiesta: serve a
 /// calcolare l'attesa esponenziale con la base e il tetto del profilo della
@@ -58,13 +59,13 @@ pub async fn fetch(
     profile: &NetworkProfile,
     url: &str,
     job_attempt: u32,
-    should_stop: &(dyn Fn() -> bool + Sync),
+    signals: &Signals<'_>,
 ) -> Result<Option<Fetched>, JobError> {
     let host = host_of(url)?;
     let mut last_error = None;
 
     for attempt in 1..=TRANSPORT_ATTEMPTS {
-        let Some(_turn) = courtesy.wait_turn(&host, profile, should_stop).await else {
+        let Some(_turn) = courtesy.wait_turn(&host, profile, signals).await else {
             return Ok(None);
         };
 
@@ -92,7 +93,7 @@ pub async fn fetch(
                 last_error = Some(error);
                 if attempt < TRANSPORT_ATTEMPTS {
                     tokio::time::sleep(TRANSPORT_PAUSE * attempt).await;
-                    if should_stop() {
+                    if (signals.stop)() {
                         return Ok(None);
                     }
                 }
@@ -242,6 +243,16 @@ mod tests {
         || false
     }
 
+    fn signals<'a>(
+        stop: &'a (dyn Fn() -> bool + Sync),
+        waiting: &'a std::sync::atomic::AtomicBool,
+    ) -> Signals<'a> {
+        Signals {
+            stop,
+            courtesy_wait: waiting,
+        }
+    }
+
     async fn fetch_from(server: &MockServer, route: &str) -> Result<Fetched, JobError> {
         let profile = instant_profile();
         let client = build_client(&profile).unwrap();
@@ -252,7 +263,7 @@ mod tests {
             &profile,
             &format!("{}{route}", server.uri()),
             1,
-            &never_stop(),
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
         .await
         .map(|fetched| fetched.expect("nessuno ha chiesto di fermarsi"))
@@ -293,7 +304,7 @@ mod tests {
             &profile,
             &format!("{}/page.jpg", server.uri()),
             1,
-            &never_stop(),
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
         .await
         .unwrap_err();
@@ -324,7 +335,7 @@ mod tests {
             &profile,
             &format!("{}/page.jpg", server.uri()),
             2,
-            &never_stop(),
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
         .await
         .unwrap_err();
@@ -402,15 +413,29 @@ mod tests {
         let courtesy = Courtesy::new();
         let url = format!("{}/page.jpg", server.uri());
 
-        let _ = fetch(&client, &courtesy, &profile, &url, 1, &never_stop())
-            .await
-            .unwrap_err();
+        let _ = fetch(
+            &client,
+            &courtesy,
+            &profile,
+            &url,
+            1,
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
+        )
+        .await
+        .unwrap_err();
 
         // Una seconda richiesta allo stesso host non parte: sta scontando il
         // raffreddamento, anche se è un altro lavoro a chiederla.
         let blocked = tokio::time::timeout(
             Duration::from_millis(150),
-            fetch(&client, &courtesy, &profile, &url, 1, &never_stop()),
+            fetch(
+                &client,
+                &courtesy,
+                &profile,
+                &url,
+                1,
+                &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
+            ),
         )
         .await;
         assert!(blocked.is_err(), "l'host deve restare fermo");

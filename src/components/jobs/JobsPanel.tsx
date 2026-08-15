@@ -202,8 +202,16 @@ function Field({ label, value }: { label: string; value: string }) {
  */
 function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
   const { t } = useTranslation();
+  // Sempre su 24 ore: un registro tecnico non si legge con AM e PM.
   const time = (value: string | null) =>
-    value ? new Date(value.replace(' ', 'T') + 'Z').toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+    value
+      ? new Date(value.replace(' ', 'T') + 'Z').toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        })
+      : '—';
 
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-1 border-t border-terminal-line pt-2 sm:grid-cols-2">
