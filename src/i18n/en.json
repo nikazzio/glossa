@@ -527,7 +527,8 @@
         "verifyHint": "The check becomes a queued job: follow it from the bottom panel. The full one opens every file, so on a synced folder it forces the service to download everything.",
         "verifyOnStartup": "Quick check at startup",
         "verificationQueued": "Check queued",
-        "verificationFailed": "Check not started"
+        "verificationFailed": "Check not started",
+        "verifyOnStartupFailed": "Setting not saved"
       }
     },
     "backup": "Backup & Restore",
@@ -750,7 +751,8 @@
       "freeSpaceMessage": "The downloaded pages are deleted right away. The record, the manifest and the thumbnails stay, and pages are downloaded again from the library when you need them.",
       "freeSpaceConfirm": "Free space",
       "freeSpaceDone": "{{size}} freed",
-      "freeSpaceFailed": "Could not free the space"
+      "freeSpaceFailed": "Could not free the space",
+      "verifyNothing": "This source has no files registered in the vault yet"
     },
     "transcriptions": {
       "title": "Transcriptions",

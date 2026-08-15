@@ -19,8 +19,13 @@ import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import { forgetVersionPages, listVersionVaultPaths } from '../../services/libraryService';
+import {
+  forgetVersionPages,
+  listVersionVaultPaths,
+  versionProviderKey,
+} from '../../services/libraryService';
 import { freeVersionPages, summarizeAvailability, verifyFilesPresent } from '../../services/vaultService';
+import { humanSize } from '../../utils';
 import type { LibraryCatalogEntry } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -158,14 +163,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   );
 }
 
-/** Dimensione leggibile, come la scrive il pannello dei lavori. */
-function humanSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
-  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
 function CatalogEntryRow({
   entry,
   view,
@@ -200,6 +197,16 @@ function CatalogEntryRow({
             total: summary.expectedPages,
           });
 
+  /**
+   * La chiave con cui questa fonte vive nel deposito: prima quella dei file già
+   * scaricati, poi quella dei metadati. Sbagliarla significa riscaricare tutto
+   * in una cartella nuova, o cancellare la cartella sbagliata.
+   */
+  const providerKey = async () =>
+    (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
+    entry.providerKey ??
+    'generic';
+
   const startDownload = async () => {
     if (!entry.manifestUrl) return;
     setBusy(true);
@@ -207,7 +214,7 @@ function CatalogEntryRow({
       const job = await enqueueSourceDownload({
         // La chiave della biblioteca, non `external_ref`: quella è chiave più
         // identificativo e come nome di cartella verrebbe rifiutata (D2, D18).
-        providerKey: entry.providerKey ?? 'generic',
+        providerKey: await providerKey(),
         manifestUrl: entry.manifestUrl,
         versionId: entry.versionId ?? undefined,
       });
@@ -232,6 +239,12 @@ function CatalogEntryRow({
     setBusy(true);
     try {
       const paths = await listVersionVaultPaths(entry.versionId);
+      if (paths.length === 0) {
+        // Nessun file registrato: non c'è niente da confrontare, e dire «tutto
+        // a posto» sarebbe una risposta su zero file.
+        toast.info(t('areas.library.verifyNothing'));
+        return;
+      }
       const checks = await verifyFilesPresent(paths);
       const missing = checks.filter((check) => check.state !== 'present').length;
       if (missing === 0) {
@@ -274,7 +287,7 @@ function CatalogEntryRow({
 
     setBusy(true);
     try {
-      const freed = await freeVersionPages(entry.providerKey ?? 'generic', entry.versionId);
+      const freed = await freeVersionPages(await providerKey(), entry.versionId);
       await forgetVersionPages(entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
       onRefresh();

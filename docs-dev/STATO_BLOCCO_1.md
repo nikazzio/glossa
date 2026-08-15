@@ -219,6 +219,19 @@ l'impostazione «verifica all'avvio» finalmente ha un lettore.
 Restano scoperte la 5 (divieto dell'istituzione, D9) e la 7 (primo avvio e
 controllo dello spazio, D1): vedi `PIANO_DECISIONI_SCOPERTE.md`.
 
+**Rilettura del 2026-08-15 sul codice appena scritto**, mia e di Copilot. Sei
+correzioni: la cartella di transito era una sola per carte e miniature, quindi
+chi finiva per primo poteva portare via il file che l'altro aveva appena scritto;
+la chiave della biblioteca per scaricare e per liberare spazio veniva dai
+metadati invece che da dove i file stanno davvero, e sulle fonti aggiunte prima
+che la provenienza venisse salvata avrebbe riscaricato tutto in una cartella
+nuova o cancellato le righe lasciando i file; i lavori **falliti** restavano
+nell'elenco per sempre, e l'indicatore in barra continuava a segnalarli a
+distanza di giorni; il catalogo faceva due letture della tabella degli asset per
+ogni fonte; l'elenco locale dei lavori si svuotava anche quando la cancellazione
+falliva; l'interruttore della verifica all'avvio restava acceso anche se
+l'impostazione non veniva scritta.
+
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
 

@@ -189,10 +189,17 @@ impl JobHandler for SourceDownloadJob {
         // La configurazione arriva dal frontend: la cartella di transito si
         // costruisce dalla componente **già validata** dal layout, altrimenti un
         // identificativo con `..` farebbe creare cartelle fuori dal deposito.
-        let staging = root.join(layout::STAGING_DIR).join(
-            layout::safe_component(&config.version_id)
-                .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
-        );
+        // Una transito **per variante**: carte e miniature della stessa
+        // digitalizzazione girano insieme, e chi finisce per primo scarta la
+        // propria cartella. Con una sola, il primo che finisce porterebbe via il
+        // file che l'altro ha appena scritto e non ancora promosso.
+        let staging = root
+            .join(layout::STAGING_DIR)
+            .join(
+                layout::safe_component(&config.version_id)
+                    .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
+            )
+            .join(self.target.asset_kind());
         std::fs::create_dir_all(&staging).map_err(|error| {
             JobError::new(ErrorKind::Storage, format!("area di transito: {error}"))
         })?;

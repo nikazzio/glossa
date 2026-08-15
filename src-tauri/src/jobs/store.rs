@@ -95,7 +95,7 @@ pub fn list_active(conn: &Connection) -> Result<Vec<JobRecord>, String> {
         conn,
         &format!(
             "SELECT {COLUMNS} FROM jobs \
-             WHERE status NOT IN ('completed', 'cancelled') \
+             WHERE status NOT IN ('completed', 'cancelled', 'error') \
                 OR finished_at >= datetime('now', '-1 day') \
              ORDER BY priority DESC, created_at"
         ),
@@ -574,8 +574,20 @@ mod tests {
         queued(&conn, "oggi");
         queued(&conn, "ieri");
         queued(&conn, "in-corso");
+        queued(&conn, "fallito-vecchio");
         set_status(&conn, "oggi", JobStatus::Completed).unwrap();
         set_status(&conn, "ieri", JobStatus::Completed).unwrap();
+        fail(
+            &conn,
+            "fallito-vecchio",
+            &JobError::new(ErrorKind::NotFound, "404"),
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE jobs SET finished_at = datetime('now', '-3 days') WHERE id = 'fallito-vecchio'",
+            [],
+        )
+        .unwrap();
         conn.execute(
             "UPDATE jobs SET finished_at = datetime('now', '-3 days') WHERE id = 'ieri'",
             [],
@@ -591,6 +603,9 @@ mod tests {
         assert!(listed.contains(&"oggi".to_string()));
         assert!(listed.contains(&"in-corso".to_string()));
         assert!(!listed.contains(&"ieri".to_string()));
+        // Anche un fallito vecchio esce: restando dentro terrebbe acceso
+        // l'indicatore in barra per sempre.
+        assert!(!listed.contains(&"fallito-vecchio".to_string()));
     }
 
     #[test]

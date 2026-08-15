@@ -527,7 +527,8 @@
         "verifyHint": "La verifica diventa un lavoro in coda: la segui dal pannello in basso. Quella completa apre ogni file, quindi su una cartella sincronizzata costringe il servizio a scaricare tutto.",
         "verifyOnStartup": "Verifica rapida all'avvio",
         "verificationQueued": "Verifica messa in coda",
-        "verificationFailed": "Verifica non avviata"
+        "verificationFailed": "Verifica non avviata",
+        "verifyOnStartupFailed": "Impostazione non salvata"
       }
     },
     "phraseMemoryTab": "Memoria frasi",
@@ -750,7 +751,8 @@
       "freeSpaceMessage": "Le carte scaricate vengono cancellate subito. Restano scheda, manifesto e miniature, e le carte si riscaricano dalla biblioteca quando servono.",
       "freeSpaceConfirm": "Libera spazio",
       "freeSpaceDone": "Liberati {{size}}",
-      "freeSpaceFailed": "Non è stato possibile liberare lo spazio"
+      "freeSpaceFailed": "Non è stato possibile liberare lo spazio",
+      "verifyNothing": "Questa fonte non ha ancora file registrati nel deposito"
     },
     "transcriptions": {
       "title": "Trascrizioni",

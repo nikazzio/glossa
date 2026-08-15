@@ -12,6 +12,11 @@ vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
+  listVersionVaultPaths: vi.fn().mockResolvedValue([]),
+  forgetVersionPages: vi.fn().mockResolvedValue(undefined),
+  // Nessun file registrato: la chiave viene dai metadati, come per una fonte
+  // appena aggiunta.
+  versionProviderKey: vi.fn().mockResolvedValue(null),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
@@ -229,5 +234,27 @@ describe('LibraryCatalogArea', () => {
     await user.click(within(archivioRow).getByRole('button'));
 
     expect(service.setWorkspaceSourceLink).toHaveBeenCalledWith('ws-1', 's1', true);
+  });
+
+
+  it('la chiave della biblioteca viene da dove i file stanno davvero', async () => {
+    // I metadati e il disco possono non concordare: le fonti aggiunte prima che
+    // la provenienza venisse salvata hanno i file sotto una chiave e i metadati
+    // vuoti. Chiedere lo scaricamento con la chiave dei metadati farebbe
+    // riscaricare tutto in una cartella nuova.
+    const service = await import('../../services/libraryService');
+    vi.mocked(service.versionProviderKey).mockResolvedValue('unknown');
+    const { enqueueSourceDownload } = await import('../../services/jobsService');
+    vi.mocked(enqueueSourceDownload).mockResolvedValue({ id: 'download:v1' } as never);
+    useSourceLibraryStore.setState({ catalog: [entry({ providerKey: 'archive_org' })] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
+
+    await waitFor(() =>
+      expect(enqueueSourceDownload).toHaveBeenCalledWith(
+        expect.objectContaining({ providerKey: 'unknown' }),
+      ),
+    );
   });
 });

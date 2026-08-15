@@ -91,19 +91,23 @@ interface CatalogRow extends SourceRow {
  */
 export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   const rows = await select<CatalogRow>(
+    // Un solo passaggio sugli asset: con due subquery per riga la Biblioteca
+    // faceva due letture della tabella per ogni fonte.
     `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref, s.created_at,
             v.id AS version_id, v.source_url AS manifest_url, v.metadata,
             v.expected_asset_count,
             -- Carte distinte, non righe: la stessa carta esiste anche a piena
-            -- risoluzione (D4), e contarla due volte darebbe «740 su 374».
-            (SELECT COUNT(DISTINCT a.page_index) FROM assets a
-              WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_pages,
-            (SELECT COALESCE(SUM(a.byte_size), 0) FROM assets a
-              WHERE a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local') AS local_bytes
+            -- risoluzione (D4), e contarla due volte darebbe «740 su 374». I
+            -- byte invece si sommano tutti, perché lo spazio lo occupano tutti.
+            COUNT(DISTINCT a.page_index) AS local_pages,
+            COALESCE(SUM(a.byte_size), 0) AS local_bytes
        FROM sources s
        LEFT JOIN source_versions v
          ON v.source_id = s.id AND v.is_primary = 1
+       LEFT JOIN assets a
+         ON a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local'
       WHERE s.status = 'active'
+      GROUP BY s.id, v.id
       ORDER BY s.title ASC`,
   );
 
@@ -177,6 +181,24 @@ export async function listVersionVaultPaths(versionId: string): Promise<string[]
     [versionId],
   );
   return rows.map((row) => row.vault_path);
+}
+
+/**
+ * La chiave della biblioteca **come è scritta nel deposito**, ricavata dal
+ * percorso di un file già registrato (`providers/<chiave>/<versione>/…`).
+ *
+ * Serve perché i metadati e il disco possono non concordare: le fonti aggiunte
+ * prima che la provenienza venisse salvata hanno i file sotto una chiave e i
+ * metadati vuoti. Chiedere lo scaricamento con la chiave sbagliata farebbe
+ * riscaricare tutto in una cartella nuova; cancellare con quella sbagliata
+ * lascerebbe i file sul disco e toglierebbe le righe dal database.
+ */
+export async function versionProviderKey(versionId: string): Promise<string | null> {
+  const [row] = await select<{ vault_path: string }>(
+    "SELECT vault_path FROM assets WHERE source_version_id = $1 AND vault_path LIKE 'providers/%' LIMIT 1",
+    [versionId],
+  );
+  return row?.vault_path.split('/')[1] ?? null;
 }
 
 /**

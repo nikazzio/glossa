@@ -58,8 +58,18 @@ export function VaultSection() {
   }, [refresh]);
 
   const changeVerifyOnStartup = async (enabled: boolean) => {
+    // Ottimistico, ma con il ritorno indietro: un interruttore che resta acceso
+    // mentre l'impostazione non è stata scritta è una bugia che si scopre solo
+    // al riavvio successivo.
     setVerifyOnStartup(enabled);
-    await setVerifyVaultOnStartup(enabled);
+    try {
+      await setVerifyVaultOnStartup(enabled);
+    } catch (error: unknown) {
+      setVerifyOnStartup(!enabled);
+      toast.error(t('settings.storage.vault.verifyOnStartupFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   /**
