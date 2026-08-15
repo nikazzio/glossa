@@ -6,7 +6,8 @@ sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
 Ultimo aggiornamento: **2026-08-16**: #414-#420 unite in `blocco-1`, miniature
-ricavate in locale, impostazioni di scaricamento e biblioteche.
+ricavate in locale, impostazioni di scaricamento e biblioteche, fondazione della
+registrazione del lavoro svolto.
 
 ## Come è organizzato il lavoro
 
@@ -32,7 +33,7 @@ dritta su `main`.
 | 4 | Scaricamento vero | #218 primo consumatore | **unita** in `blocco-1` (#419) |
 | 4-bis | Catalogo Biblioteca, pulsante scarica, metadati | #217 (interfaccia) | **unita** in `blocco-1` (#420) |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
-| 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
+| 6 | Registrazione del lavoro svolto | #378 | **fondazione fatta**, restano gli eventi della pipeline |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | da fare |
 
 **Perché la 6 non va lasciata ultima**: ogni giorno senza registrazione è
@@ -320,6 +321,54 @@ Migrazione `0007`: colonna `source_versions.size_cap` e tabella
 `library_settings` — una riga per biblioteca, e **solo** per chi è stato
 cambiato. Chi non compare si comporta come dichiara il registro, e togliere la
 riga è il modo di tornare ai valori di fabbrica.
+
+## Registrazione del lavoro svolto, 2026-08-16 (PR 6, prima parte)
+
+La fondazione di #378. **Va fatta presto e non ultima**: ogni giorno senza
+registrazione produce dati che non esisteranno mai, e la coppia
+proposta/approvata delle traduzioni oggi veniva sovrascritta a ogni correzione.
+
+**Lo storico delle traduzioni** (D22), che finora esisteva solo per le
+trascrizioni. Non una revisione per salvataggio — sarebbero centinaia di righe
+per battitura — ma i due soli momenti che contano: quando la pipeline propone e
+quando l'utente approva la propria versione. Le revisioni **non hanno uno stato
+di approvazione**: approvare e ritirare sono fatti che puntano a una revisione,
+e la traduzione porta un puntatore a quella in vigore adesso. Una revisione
+ritirata resta e vale: «approvata e poi superata» dice qualcosa che «approvata»
+da sola non dice. L'approvazione si registra **anche quando l'utente non cambia
+niente**, perché accettare è un giudizio.
+
+**Il registro dei fatti** (D23-D28): `provenance_events` prende le colonne che
+l'area Analisi raggrupperà — esito, durata, provider, modello, versione del
+prompt, token, token da cache, costo, coppia linguistica, tipo di errore,
+impronte di ingresso e uscita — e resta in JSON solo il resto. Il costo sta qui
+e non in una tabella dedicata: è un attributo del fatto. `derived_metrics` è
+nuova e separata perché un fatto non si invalida mai e una metrica sì.
+
+**L'identità di un fatto è derivata** (D27): riscriverlo sostituisce invece di
+duplicare, e il numero del tentativo non entra nella chiave — se ci entrasse
+produrrebbe esattamente la duplicazione che la regola vuole impedire. Backend e
+interfaccia usano la **stessa formula e la stessa impronta**: scrivono nella
+stessa tabella.
+
+**Chi registra**: il ciclo di vita dei lavori lo scrive il motore da sé (D29),
+non chi scrive un gestore — avvio ed esito, con la durata. Le decisioni umane
+sulle traduzioni le scrive l'interfaccia, dove accadono.
+
+Migrazione `0008`. Una registrazione che fallisce non ferma niente: si dice nel
+log tecnico e si va avanti.
+
+**Cosa resta della PR 6**, dichiarato e non fatto:
+
+- gli eventi delle **chiamate ai modelli** — provider, modello, token, costo,
+  durata per ogni stadio della pipeline. Le colonne ci sono e sono vuote finché
+  i percorsi della pipeline non le scrivono;
+- `transcription_revisions` ha ancora la colonna `status` con
+  `draft/approved/rejected`, che D22 vuole allineata al modello a eventi;
+- `derived_metrics` non ha ancora chi la riempie: arriva con l'area Analisi
+  (#379);
+- backup ed esportazione non portano ancora con sé revisioni e fatti: è lavoro
+  della PR 7, che rifà il backup.
 
 ## Prossima sessione: da dove riprendere
 

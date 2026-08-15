@@ -1266,7 +1266,11 @@ proposta e risultato approvato"*.
 
 ## D22 — Storico delle traduzioni
 
-*Approvata con modifiche l'11 agosto 2026.*
+*Approvata con modifiche l'11 agosto 2026. **Fatta il 2026-08-16**: tabella
+`translation_revisions`, `translations.approved_revision_id`, e i fatti di
+approvazione e ritiro scritti dove l'utente blocca e sblocca la traduzione di
+un chunk. Resta da allineare `transcription_revisions`, che ha ancora la
+colonna `status`.*
 
 Nuova tabella `translation_revisions`, simmetrica a `transcription_revisions`.
 
@@ -1470,7 +1474,10 @@ cancellazione".
 
 ## D29 — Quando si accende
 
-*Approvata l'11 agosto 2026.*
+*Approvata l'11 agosto 2026. **Fatta il 2026-08-16 per i lavori**: avvio ed
+esito con la durata li scrive il motore, non i gestori. I percorsi della
+pipeline — provider, modello, token, costo per ogni stadio — restano da
+collegare: le colonne esistono e sono vuote.*
 
 **La registrazione parte con le fondamenta**, l'area Analisi no. Sono due lavori
 diversi e il secondo senza il primo non ha nulla da mostrare.

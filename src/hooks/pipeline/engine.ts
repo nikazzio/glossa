@@ -15,6 +15,7 @@ import type { PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { buildMemoryInjection } from '../../services/phraseMemoryInjection';
 import { getChunksWithAllMatchesDisabled } from '../../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../../services/pipelineService';
+import { recordModelRevision } from '../../services/translationRevisionsService';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../../models/catalog';
 import { toDeeplCode } from '../../constants';
@@ -364,6 +365,13 @@ export async function executePipelineForChunk(
   }
 
   updateChunkDraft(chunk.id, lastResult);
+  // La proposta del modello entra nello storico (D22). È uno dei due soli
+  // momenti che meritano una revisione: l'altro è quando l'utente approva la
+  // propria versione. Se non si riesce a scriverla, la traduzione resta:
+  // registrare serve a sapere cosa è successo, non a decidere cosa succede.
+  void recordModelRevision(chunk.id, lastResult).catch((error: unknown) => {
+    warnAsyncFailure('translation.revision.persist_failed', error, { chunkId: chunk.id });
+  });
 
   if (lastResult) {
     if (useChunksStore.getState().cancelRequested) {

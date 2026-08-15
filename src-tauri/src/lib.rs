@@ -7,6 +7,7 @@ mod images;
 mod jobs;
 mod keystore;
 mod llm;
+mod provenance;
 mod storage_config;
 mod vault;
 mod vector;

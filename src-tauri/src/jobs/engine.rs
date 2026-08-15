@@ -607,6 +607,17 @@ impl JobEngine {
                     continue;
                 }
                 store::increment_attempt(conn, &job.id)?;
+                // La registrazione è **parte del contratto del motore**, non di
+                // chi scrive un gestore (D29): ogni lavoro registra avvio ed
+                // esito senza che nessuno debba ricordarsene.
+                record_fact(
+                    conn,
+                    &crate::provenance::Event::for_job(
+                        crate::provenance::event_type::JOB_STARTED,
+                        &job.id,
+                        &job.job_type,
+                    ),
+                );
                 self.observer.notify(conn, &job.id);
                 starting.push((job, handler, permit));
             }
@@ -678,6 +689,24 @@ impl JobEngine {
             .map(|current| format!("{:.0}%", current.progress * 100.0))
             .unwrap_or_else(|| "?".to_string());
 
+        // Come è andata, deciso **prima** del `match` che consuma l'esito.
+        // `None` significa che il lavoro non è arrivato a un capolinea: una
+        // pausa e un tentativo rimandato non sono la fine di niente, e il
+        // fatto dell'avvio è già scritto.
+        let reached_the_end: Option<(&'static str, Option<String>)> = match &outcome {
+            Ok(Outcome::Done) => Some(("completed", None)),
+            Ok(Outcome::Cancelled) => Some(("cancelled", None)),
+            Ok(Outcome::Paused) => None,
+            Err(error) => {
+                let attempts = reached
+                    .as_ref()
+                    .map(|current| current.attempt_count)
+                    .unwrap_or(job.attempt_count + 1);
+                let will_retry = error.kind.is_retryable() && attempts < job.max_attempts;
+                (!will_retry).then(|| ("error", Some(error.kind.as_str().to_string())))
+            }
+        };
+
         match outcome {
             Ok(Outcome::Done) => {
                 store::save_progress(conn, &job.id, 1.0, None, Some(0), None, None)?;
@@ -723,6 +752,19 @@ impl JobEngine {
                 }
             }
         }
+        if let Some((result, error_kind)) = reached_the_end {
+            let mut fact = crate::provenance::Event::for_job(
+                crate::provenance::event_type::JOB_FINISHED,
+                &job.id,
+                &job.job_type,
+            );
+            fact.outcome = Some(result.to_string());
+            fact.error_kind = error_kind;
+            // Letta **dopo** la scrittura dello stato, che è ciò che segna
+            // l'orario di fine.
+            fact.duration_ms = crate::provenance::job_duration_ms(conn, &job.id);
+            record_fact(conn, &fact);
+        }
         self.observer.notify(conn, &job.id);
         Ok(())
     }
@@ -739,6 +781,17 @@ impl JobEngine {
                 _ = tokio::time::sleep(IDLE_TICK) => {}
             }
         }
+    }
+}
+
+/// Scrive un fatto nel registro (D23, D29).
+///
+/// Un errore qui **non cambia l'esito del lavoro**: la registrazione serve a
+/// sapere cosa è successo, non a decidere cosa succede. Si dice nel log tecnico
+/// e si va avanti.
+fn record_fact(conn: &Connection, event: &crate::provenance::Event) {
+    if let Err(error) = crate::provenance::record(conn, event) {
+        log::warn!("job fact not recorded id={} error={error}", event.entity_id);
     }
 }
 
@@ -760,6 +813,8 @@ mod tests {
             include_str!("../../migrations/0004_jobs_runtime.sql"),
             include_str!("../../migrations/0005_job_phase.sql"),
             include_str!("../../migrations/0006_job_detail.sql"),
+            include_str!("../../migrations/0007_download_policy.sql"),
+            include_str!("../../migrations/0008_provenance_foundation.sql"),
         ] {
             conn.execute_batch(migration).unwrap();
         }
@@ -811,6 +866,65 @@ mod tests {
         let record = store::get(&conn, "j1").unwrap().unwrap();
         assert_eq!(record.status, JobStatus::Completed);
         assert_eq!(record.progress, 1.0);
+    }
+
+    #[tokio::test]
+    async fn a_finished_job_leaves_two_facts_in_the_register() {
+        // La registrazione è parte del contratto del motore, non del gestore
+        // (D29): un lavoro che nessuno ha istruito a registrare registra lo
+        // stesso avvio ed esito.
+        let path = temp_db("facts");
+        let engine = engine_with(path, Observer::silent());
+        engine
+            .submit(&job("j-facts", r#"{"steps":2}"#))
+            .await
+            .unwrap();
+
+        settle(&engine).await;
+
+        let conn = engine.connection().unwrap();
+        let facts: Vec<(String, Option<String>)> = conn
+            .prepare("SELECT event_type, outcome FROM provenance_events WHERE job_id = ?1 ORDER BY event_type")
+            .unwrap()
+            .query_map(["j-facts"], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+
+        assert_eq!(
+            facts,
+            vec![
+                ("job.finished".to_string(), Some("completed".to_string())),
+                ("job.started".to_string(), None),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_job_run_twice_does_not_duplicate_its_facts() {
+        // Rilanciare un lavoro riesegue lo stesso passo: senza identificativo
+        // derivato, ogni conteggio finirebbe doppio (D27).
+        let path = temp_db("facts_once");
+        let engine = engine_with(path, Observer::silent());
+        engine
+            .submit(&job("j-once", r#"{"steps":1}"#))
+            .await
+            .unwrap();
+        settle(&engine).await;
+
+        engine.retry("j-once", true).await.unwrap();
+        settle(&engine).await;
+
+        let conn = engine.connection().unwrap();
+        let facts: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM provenance_events WHERE job_id = ?1",
+                ["j-once"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(facts, 2, "avvio ed esito, non quattro righe");
     }
 
     #[tokio::test]
