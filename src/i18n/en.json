@@ -1878,9 +1878,9 @@
     "emptyTitle": "No jobs running",
     "emptyDescription": "Downloads and checks show up here while you work.",
     "type": {
-      "debug_counter": "Development probe",
-      "debug_restart_only": "Development probe (restart only)",
-      "source_download": "Source download",
+      "debug_counter": "Development test",
+      "debug_restart_only": "Development test (restart only)",
+      "source_download": "Page download",
       "source_thumbnails": "Source thumbnails",
       "vault_verification": "Vault check"
     },
@@ -1905,7 +1905,7 @@
     "clearFinished": "Clear finished ({{count}})",
     "short": {
       "source_download": "pages",
-      "source_thumbnails": "thumbs",
+      "source_thumbnails": "thumbnails",
       "vault_verification": "check",
       "debug_counter": "test",
       "debug_restart_only": "test"

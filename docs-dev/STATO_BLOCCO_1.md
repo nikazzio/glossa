@@ -233,7 +233,7 @@ falliva; l'interruttore della verifica all'avvio restava acceso anche se
 l'impostazione non veniva scritta.
 
 **Righe dei lavori parlanti** *(chiesto dall'utente il 2026-08-15)*: il tipo di
-lavoro si legge in un contrassegno — carte, miniature, verifica — e i numeri
+lavoro si legge in un contrassegno — pagine, miniature, verifica — e i numeri
 distinguono quanto è arrivato da quanto si prevede in tutto, perché il peso della
 carta in corso da solo è fuorviante. La riga si apre con un'animazione e mostra i
 dettagli veri: risoluzione negoziata, biblioteca, host, tentativi, orari. Il dato

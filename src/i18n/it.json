@@ -1880,7 +1880,7 @@
     "type": {
       "debug_counter": "Prova di sviluppo",
       "debug_restart_only": "Prova di sviluppo (da rifare)",
-      "source_download": "Scaricamento fonte",
+      "source_download": "Scaricamento pagine",
       "source_thumbnails": "Miniature della fonte",
       "vault_verification": "Verifica del deposito"
     },
@@ -1904,7 +1904,7 @@
     "dismiss": "Togli dall'elenco",
     "clearFinished": "Svuota i terminati ({{count}})",
     "short": {
-      "source_download": "carte",
+      "source_download": "pagine",
       "source_thumbnails": "miniature",
       "vault_verification": "verifica",
       "debug_counter": "prova",
@@ -1929,7 +1929,7 @@
       "error": "errore",
       "id": "identificativo",
       "units": {
-        "pages": "carte",
+        "pages": "pagine",
         "files": "file",
         "generic": "unità"
       },
