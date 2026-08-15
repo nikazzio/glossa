@@ -19,10 +19,14 @@ use tauri_plugin_dialog::DialogExt;
 pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
     let db = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
     let configured: Option<String> = crate::jobs::store::read_setting(&db, "vault_root")?;
-    if configured
-        .map(|value| !value.trim().is_empty())
-        .unwrap_or(false)
-    {
+    let chosen = configured.filter(|value| !value.trim().is_empty());
+    // Quello che una chiusura brusca ha lasciato nell'area di transito si
+    // butta adesso: all'avvio non c'è nessun lavoro in corso, e lì dentro c'è
+    // solo roba mai promossa (D16-bis).
+    super::discard_stale_staging(&resolve_root(app, chosen.as_deref())?);
+    if chosen.is_some() {
+        // Una radice scelta dall'utente non si crea mai da soli: se non c'è, è
+        // perché il disco non è collegato.
         return Ok(());
     }
     super::ensure_root(&resolve_root(app, None)?)

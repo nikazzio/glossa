@@ -92,6 +92,45 @@ pub fn ensure_root(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Butta quello che una chiusura brusca ha lasciato nell'area di transito.
+///
+/// Lì dentro c'è **solo** roba non ancora promossa (D16-bis): un file che ha
+/// superato la validazione è già nel deposito, e uno che non l'ha superata non
+/// serve a nessuno. Un lavoro ripreso riscarica quella carta e basta.
+///
+/// Si chiama all'avvio, quando per definizione non c'è nessun lavoro in corso
+/// che possa averci scritto dentro un istante fa. Restituisce quante cartelle
+/// sono state buttate.
+///
+/// Un errore qui non impedisce di aprire l'applicazione: si dice e si va
+/// avanti, al massimo restano dei file di troppo.
+pub fn discard_stale_staging(root: &Path) -> usize {
+    let staging = root.join(layout::STAGING_DIR);
+    let Ok(entries) = fs::read_dir(&staging) else {
+        return 0;
+    };
+    let mut discarded = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let removed = if path.is_dir() {
+            fs::remove_dir_all(&path)
+        } else {
+            fs::remove_file(&path)
+        };
+        match removed {
+            Ok(()) => discarded += 1,
+            Err(error) => log::warn!(
+                "vault staging not cleaned path={} error={error}",
+                path.display()
+            ),
+        }
+    }
+    if discarded > 0 {
+        log::info!("vault staging cleaned entries={discarded}");
+    }
+    discarded
+}
+
 /// Classifica una cartella candidata (D1). Il marcatore distingue un deposito
 /// da ricollegare da una cartella qualunque piena di roba altrui.
 pub fn classify_folder(candidate: &Path) -> Result<FolderKind, String> {
@@ -317,5 +356,37 @@ mod tests {
             directory_stats(&temp_dir("absent")),
             DirectoryStats::default()
         );
+    }
+
+    #[test]
+    fn what_a_brutal_shutdown_left_in_the_staging_area_is_thrown_away() {
+        // Lì dentro c'è solo roba mai promossa (D16-bis): tenerla non serve a
+        // nessuno, e un lavoro ripreso riscarica quella carta.
+        let root = std::env::temp_dir().join("glossa_staging_cleanup");
+        let _ = fs::remove_dir_all(&root);
+        let leftover = root.join(layout::STAGING_DIR).join("sver-1");
+        fs::create_dir_all(&leftover).unwrap();
+        fs::write(leftover.join("0007.jpg"), b"mezza carta").unwrap();
+        let kept = root.join("providers");
+        fs::create_dir_all(&kept).unwrap();
+
+        let discarded = discard_stale_staging(&root);
+
+        assert_eq!(discarded, 1);
+        assert!(!leftover.exists(), "l'area di transito resta vuota");
+        assert!(kept.is_dir(), "il deposito non si tocca");
+
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_vault_without_a_staging_area_is_not_a_problem() {
+        let root = std::env::temp_dir().join("glossa_staging_absent");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+
+        assert_eq!(discard_stale_staging(&root), 0);
+
+        let _ = fs::remove_dir_all(&root);
     }
 }
