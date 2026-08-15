@@ -117,8 +117,11 @@ Una sezione nuova, **Impostazioni → Scaricamento**:
   fra alcuni valori sensati (1000, 1500, 2000, 3000) e «massima». La misura
   chiesta resterà quella dichiarata dalla biblioteca più vicina al tetto, sopra o
   sotto;
-- **lato lungo delle miniature**: adesso che le ricaviamo noi, è un numero che
-  decidiamo davvero;
+- **lato lungo delle miniature**: adesso che le ricaviamo noi è un numero che
+  decidiamo davvero. Configurabile, **predefinito 300 px** *(scelto dall'utente
+  il 2026-08-16)*: 160 è quello che ci dava la biblioteca per ripiego, 300 è la
+  misura giusta per sfogliare. Costa qualche megabyte in più per libro e zero
+  richieste;
 - **per biblioteca**: lo stesso tetto, sovrascrivibile per una singola
   biblioteca;
 - **per fonte**: l'ultima parola, sulla scheda della fonte in Biblioteca, come
