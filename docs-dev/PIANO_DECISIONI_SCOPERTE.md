@@ -1,20 +1,37 @@
-# Piano — le sette decisioni rimaste scoperte
+# Piano — le decisioni rimaste scoperte
 
-Scritto il 2026-08-15, dopo la rilettura esterna del blocco 1.
+Scritto il 2026-08-15, dopo la rilettura esterna del blocco 1. **Rivisto lo
+stesso giorno** confrontando ogni voce con tutte le 219 issue del repository, non
+solo con i documenti: due delle otto avevano già una casa e sono uscite
+dall'elenco.
 
-Queste voci — sette dalla rilettura, più una emersa provando — sono decisioni approvate in `BLOCCO_1_DECISIONI.md` che
-**nessuna PR ha implementato e nessuna PR ha dichiarato come rinviate**. Non
-sono predisposizioni per il futuro: sono buchi. Le altre — cestino, spostamento
-del deposito, profili di rete, tetto configurabile — hanno una issue o una PR
-che se ne fa carico e restano fuori da qui.
+Restano le decisioni approvate in `BLOCCO_1_DECISIONI.md` che **nessuna PR ha
+implementato, nessuna PR ha dichiarato come rinviate e nessuna issue ha in
+carico**. Le altre — cestino, spostamento del deposito, profili di rete (#421),
+tetto configurabile (#422) — hanno già dove vivere.
 
 Ogni voce dice cosa prescrive la decisione, cosa esiste oggi nel codice, cosa
-manca e come si fa. I riferimenti al codice sono stati verificati il 2026-08-15.
+manca e come si fa. I riferimenti al codice e alle issue sono stati verificati il
+2026-08-15.
 
-**Ordine consigliato**: 1, 2, 3, 5, 8, 4, 7, 6. Le prime tre sono piccole e
-sbloccano cose già scritte; la 5 è quella che riguarda il rapporto con le
-biblioteche; la 4 introduce il secondo tipo di lavoro; la 6 dipende da una
-schermata che non esiste.
+**Ordine consigliato**: 1, 2, 3, 5, 4, 7. Le prime due sono piccole e sbloccano
+comandi già scritti; la 5 riguarda il rapporto con le biblioteche; la 4 introduce
+il secondo tipo di lavoro.
+
+## Cosa è uscito da questo elenco, e dove è andato
+
+| Voce | Dove sta | Perché |
+|---|---|---|
+| Modalità di lettura e indicatore di provenienza (D8, D8-bis) | **#217** e **#221** | #217 ha nello scope «policy `read source mode` e source switching»; #221 è il viewer, dove l'indicatore deve stare. Senza una schermata che mostri una carta non c'è posto per l'indicatore |
+| Lavori vecchi che restano invisibili (D20, D28) | **#413** | il suo modello prevede «pannello completo con **storico** e controlli»: lo storico dei lavori è parte di quella issue |
+
+Per queste due resta una cosa sola da fare adesso: **commentare le issue con le
+decisioni**, così chi le prende in mano trova le regole invece di riscoprirle —
+D8, D8-bis e D9 sulla #221; D28 e la finestra delle 24 ore sulla #413.
+
+Due voci restano qui pur avendo un'epic che le nomina: l'epic **#183** ha nello
+scope i derivati («thumbnails, hover preview») e le «politiche di cleanup e
+retention», ma le sue uniche sub-issue sono #217 e #218, che non le eseguono.
 
 ---
 
@@ -202,35 +219,12 @@ coda → il lavoro si ferma con un errore non ritentabile.
 
 ---
 
-## 6. Modalità di lettura e indicatore di provenienza (D8, D8-bis)
+## 6. — spostata
 
-**Le decisioni**: D8 stabilisce tre modalità — automatica, solo locale, solo
-remota — e D8-bis vuole che si sappia sempre cosa si sta guardando: «l'indicatore
-dice se la carta arriva dal computer o dalla biblioteca», e i collegamenti
-all'originale si conservano sempre.
-
-**Oggi**: l'impostazione `source_read_mode` esiste con valore `auto` e non ha
-lettori; `homepage_url` viene scritto dal manifesto e non è mostrato da nessuna
-parte. Soprattutto: **non esiste nessuna schermata che mostri una carta**.
-Verificato: niente nel frontend legge `vault_path` o costruisce un indirizzo di
-file locale.
-
-**Cosa fare**
-
-Questa non si può implementare adesso, e non per mancanza di tempo: l'indicatore
-deve stare accanto all'immagine, e l'immagine non c'è. Il visualizzatore è la
-issue **#221** (image workbench con viewer e source switching), sotto l'epic
-#208.
-
-Quello che si può fare ora, e che ha senso fare:
-
-- **portare la decisione dove verrà implementata**: commentare la #221 con D8,
-  D8-bis e D9, così chi la prende in mano non riscopre le regole da zero;
-- esporre il collegamento all'originale nella scheda della fonte in Biblioteca,
-  che è un posto che esiste già: è il minimo che D8-bis chiede («i collegamenti
-  all'originale si conservano sempre») e oggi il dato è salvato e invisibile.
-
-**Dimensione**: piccola adesso, il resto va con #221.
+Modalità di lettura e indicatore di provenienza sono di **#217** e **#221**: vedi
+la tabella in testa. Qui resta solo da esporre il collegamento all'originale
+nella scheda della fonte in Biblioteca, che è un posto che esiste già e dove il
+dato è salvato e invisibile — un'ora di lavoro, non una voce di piano.
 
 ---
 
@@ -244,9 +238,9 @@ migrazione.
 
 **Oggi**: le due scelte esistono in Impostazioni → Archiviazione, con
 classificazione della cartella, prova di scrittura vera e avviso sulle cartelle
-sincronizzate. Mancano la schermata al primo avvio — rinviata prima alla PR 3,
-poi alla PR 4, e mai fatta — e **il controllo dello spazio**, che non è mai stato
-nominato da nessuna PR.
+sincronizzate. Manca il passo al primo avvio — rinviato prima alla PR 3, poi alla
+PR 4, e mai fatto — e **il controllo dello spazio**, che nessuna PR e nessuna
+issue ha mai nominato.
 
 **Cosa fare**
 
@@ -256,11 +250,16 @@ Sono due lavori indipendenti, e il secondo è molto più piccolo:
   spazio libero del volume con quanto occupa il deposito attuale. Serve una
   dipendenza nuova o una chiamata di sistema per lo spazio libero; se il margine
   non basta si avvisa e si lascia decidere, senza vietare;
-- **schermata al primo avvio**: si mostra quando non esiste ancora un deposito
-  adottato e nessuna cartella è stata scelta. Due scelte, la predefinita già
-  selezionata, e una riga che spiega che si può cambiare dopo. Va decisa una
-  cosa sola: se mostrarla prima o dopo la creazione del primo workspace, che è
-  l'altro passaggio obbligato del primo avvio.
+- **schermata al primo avvio**: **non va inventata**. Esiste già: `App.tsx`
+  mostra `WorkspaceWizard` quando non c'è nessun workspace, ed è il primo avvio
+  vero dell'applicazione. La scelta del deposito diventa un passo di quella
+  procedura — due scelte, la predefinita già selezionata, e una riga che spiega
+  che si può cambiare dopo in Impostazioni.
+
+  Resta da decidere una cosa sola: se il passo del deposito viene **prima** della
+  creazione del workspace (si sceglie dove tenere i file, poi si crea) o **dopo**
+  (si crea il workspace, poi si sceglie). Propendo per dopo: creare il workspace
+  è ciò che l'utente è venuto a fare, la cartella è una conseguenza.
 
 **Test**: cartella su un volume pieno → avviso e non blocco; primo avvio simulato
 con impostazione assente → schermata; secondo avvio → niente.
@@ -269,54 +268,24 @@ con impostazione assente → schermata; secondo avvio → niente.
 
 ---
 
-## 8. I lavori vecchi che restano nel database (emersa il 2026-08-15)
+## 8. — spostata
 
-**Il problema**: un lavoro finito resta nella tabella per sempre. Il pannello ne
-mostra i terminati delle ultime 24 ore — è la finestra di D20, «terminati oggi» —
-quindi dopo un giorno quelle righe diventano invisibili ma continuano a esistere.
-Oggi nel database di prova ce ne sono undici, fra lavori finti e scaricamenti, e
-nessuna schermata li nomina.
-
-**Cosa dice il documento**: D28 riguarda il registro del lavoro svolto, non i
-lavori, e distingue due regimi: il registro storico non si cancella mai da solo,
-mentre il log tecnico «si può scartare per età o dimensione»; la cancellazione
-vera avviene «su richiesta esplicita dell'utente». La coda è runtime, quindi sta
-dalla parte del log tecnico — ma il principio della richiesta esplicita resta il
-più prudente, perché un lavoro fallito è la traccia di qualcosa che non ha
-funzionato e buttarlo di nascosto è il modo di non accorgersene.
-
-**Proposta**
-
-- comando nuovo `list_job_history(limit)`: i terminali dal più recente, con un
-  tetto (200) per non caricare tutto;
-- nel pannello, sotto «terminati oggi», una riga che compare **solo** se nel
-  database c'è dell'altro: «83 lavori più vecchi — mostra». Aprendola si vede
-  l'elenco, con la data e l'esito;
-- da lì il comando che già esiste, `clear_finished_jobs`, senza identificativo:
-  li toglie tutti. Sulla singola riga resta il cestino che c'è già;
-- **nessuna cancellazione automatica**, coerente con D28. In alternativa, se
-  preferisci, una conservazione a tempo — trenta giorni — con l'avvertenza che
-  toglie anche i falliti. È una decisione tua: la prima non perde niente e
-  richiede un clic ogni tanto, la seconda non richiede niente e perde le tracce
-  vecchie.
-
-**Test**: che la riga compaia solo quando c'è dello storico; che il tetto valga;
-che svuotare non tocchi i lavori ancora in corso (già coperto nel backend).
-
-**Dimensione**: piccola.
+I lavori vecchi che restano invisibili nel database sono lo **storico** previsto
+da **#413**. Quello che avevo proposto — un comando `list_job_history(limit)`,
+una riga «83 lavori più vecchi — mostra» sotto i terminati di oggi, e nessuna
+cancellazione automatica in coerenza con D28 — va scritto come commento sulla
+#413, non fatto qui.
 
 ## Riepilogo
 
 | # | Voce | Decisione | Dimensione | Dipendenze |
 |---|---|---|---|---|
-| 1 | Miniature all'aggiunta | D6 | media | — |
-| 2 | «Libera spazio» in interfaccia | D6 | piccola | — |
+| 1 | Miniature all'aggiunta | D6 | media | tema nell'epic #183 |
+| 2 | «Libera spazio» in interfaccia | D6 | piccola | tema nell'epic #183 |
 | 3 | Verifica di una fonte | D5 | media | la 1, altrimenti dirà sempre che mancano le miniature |
 | 4 | Verifica completa e controllo all'avvio | D5-bis, D5 | grande | la 3 per l'interfaccia del resoconto |
 | 5 | Divieto dell'istituzione | D9 | piccola | — |
-| 6 | Modalità di lettura e provenienza | D8, D8-bis | piccola ora | il resto va con #221 |
-| 7 | Primo avvio e spazio disponibile | D1 | piccola + media | — |
-| 8 | Lavori vecchi visibili invece che invisibili | D20, D28 | piccola | — |
+| 7 | Primo avvio e spazio disponibile | D1 | piccola + media | la schermata esiste già |
 
 Il resto delle decisioni scoperte ha già un posto dove vivere: **#421** (profili
 di rete modificabili), **#422** (tetto di risoluzione configurabile, e con esso
