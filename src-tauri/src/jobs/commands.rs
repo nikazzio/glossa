@@ -51,6 +51,7 @@ pub async fn create_job(
         max_attempts: request.max_attempts.unwrap_or(3),
         depends_on_job_id: request.depends_on_job_id,
         workspace_id: request.workspace_id,
+        message: None,
     };
     jobs.0.submit(&job).await
 }
@@ -98,6 +99,31 @@ pub async fn retry_job(
     jobs.0.retry(&id, from_scratch.unwrap_or(false)).await
 }
 
+/// Toglie dall'elenco i lavori finiti. Senza `id` li toglie tutti.
+#[tauri::command]
+pub async fn clear_finished_jobs(
+    jobs: State<'_, JobsState>,
+    id: Option<String>,
+) -> Result<usize, String> {
+    jobs.0.forget_finished(id.as_deref()).await
+}
+
+/// Mette in coda la verifica rapida del deposito, se l'impostazione è accesa.
+async fn verify_on_startup(engine: &Arc<JobEngine>) -> Result<(), String> {
+    let enabled = {
+        let conn = engine.connection()?;
+        super::store::read_setting(&conn, "verify_vault_on_startup")?
+            .map(|value| value.trim() == "1")
+            .unwrap_or(false)
+    };
+    if !enabled {
+        return Ok(());
+    }
+    crate::vault::verification::enqueue(engine, false)
+        .await
+        .map(|_| ())
+}
+
 /// Avvia l'orchestratore all'apertura dell'applicazione: registra i gestori,
 /// legge i limiti, rimette in ordine i lavori interrotti (D13) e mette in moto
 /// il giro della coda.
@@ -115,10 +141,30 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         crate::vault::resolve_root(app, None)?,
     );
 
-    // Il gestore vero: lo scaricamento delle fonti dalle biblioteche.
+    // I gestori veri. Carte e miniature parlano con le stesse biblioteche,
+    // quindi **condividono i contatori di cortesia**: due contatori separati
+    // sullo stesso host raddoppierebbero il ritmo verso quel server (D18).
+    let courtesy = Arc::new(crate::download::courtesy::Courtesy::new());
     engine.register(
         crate::download::handler::JOB_TYPE,
-        Arc::new(crate::download::handler::SourceDownloadJob::new()),
+        Arc::new(crate::download::handler::SourceDownloadJob::new(
+            Arc::clone(&courtesy),
+            crate::download::handler::Target::Pages,
+        )),
+    );
+    engine.register(
+        crate::download::handler::THUMBNAILS_JOB_TYPE,
+        Arc::new(crate::download::handler::SourceDownloadJob::new(
+            Arc::clone(&courtesy),
+            crate::download::handler::Target::Thumbnails,
+        )),
+    );
+
+    // La verifica del deposito: il primo lavoro che pesa sul processore e non
+    // sulla rete (D5-bis).
+    engine.register(
+        crate::vault::verification::JOB_TYPE,
+        Arc::new(crate::vault::verification::VaultVerificationJob),
     );
 
     // Accanto, nelle sole build di sviluppo, i due tipi finti che servono a
@@ -139,7 +185,12 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     let starting = Arc::clone(&engine);
     tauri::async_runtime::spawn(async move {
         if let Err(error) = starting.recover_interrupted().await {
-            log::error!("jobs recovery: {error}");
+            log::error!("queue recovery failed error={error}");
+        }
+        // Controllo rapido all'avvio, **spento di default** (D5): chi lo accende
+        // trova le segnalazioni pronte, chi non lo accende non paga niente.
+        if let Err(error) = verify_on_startup(&starting).await {
+            log::warn!("queue startup verification failed error={error}");
         }
         starting.run_forever().await;
     });

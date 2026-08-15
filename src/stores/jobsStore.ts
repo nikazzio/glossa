@@ -1,6 +1,10 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
+import i18next from 'i18next';
+import { logger } from '../utils/logger';
 import {
   cancelJob,
+  clearFinishedJobs,
   isTerminal,
   isWaitingToRetry,
   listActiveJobs,
@@ -35,6 +39,24 @@ interface JobsState {
   resume: (id: string) => Promise<void>;
   cancel: (id: string) => Promise<void>;
   retry: (id: string, fromScratch?: boolean) => Promise<void>;
+  clearFinished: (id?: string) => Promise<void>;
+}
+
+/**
+ * Esegue un comando sulla coda, e se fallisce lo dice invece di inghiottirlo.
+ * Restituisce se è andato a buon fine, perché chi cambia lo stato locale deve
+ * farlo solo allora.
+ */
+async function run(action: string, id: string, command: () => Promise<void>): Promise<boolean> {
+  try {
+    await command();
+    return true;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`jobs: ${action} fallito`, { id, message });
+    toast.error(i18next.t('jobs.commandFailed'), { description: message });
+    return false;
+  }
 }
 
 function replace(jobs: Job[], changed: Job): Job[] {
@@ -55,17 +77,33 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
   applyChange: (job) => set((state) => ({ jobs: replace(state.jobs, job) })),
 
+  // Un comando che fallisce deve dirlo. Prima l'errore spariva: il pulsante
+  // sembrava non fare niente e non restava traccia da nessuna parte.
   pause: async (id) => {
-    await pauseJob(id);
+    await run('pause', id, () => pauseJob(id));
   },
   resume: async (id) => {
-    await resumeJob(id);
+    await run('resume', id, () => resumeJob(id));
   },
   cancel: async (id) => {
-    await cancelJob(id);
+    await run('cancel', id, () => cancelJob(id));
   },
   retry: async (id, fromScratch = false) => {
-    await retryJob(id, fromScratch);
+    await run('retry', id, () => retryJob(id, fromScratch));
+  },
+
+  clearFinished: async (id) => {
+    const done = await run('clear', id ?? 'tutti', async () => {
+      await clearFinishedJobs(id);
+    });
+    // L'elenco locale si allinea senza aspettare un evento, perché la rimozione
+    // non ne produce — ma **solo se il comando è riuscito**: togliere righe che
+    // nel database ci sono ancora le farebbe ricomparire al riavvio. Si toglie
+    // solo ciò che il backend può aver tolto, cioè i finiti.
+    if (!done) return;
+    set((state) => ({
+      jobs: state.jobs.filter((job) => !isTerminal(job) || (id !== undefined && job.id !== id)),
+    }));
   },
 }));
 

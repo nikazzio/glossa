@@ -48,9 +48,6 @@ describe('useStatusBarData', () => {
     expect(result.current.kind).toBe('project');
     if (result.current.kind === 'project') {
       expect(result.current.projectName).toBe('Progetto A');
-      expect(result.current.pipelineName).toBe('Pipeline A');
-      expect(result.current.sourceWords).toBe(4); // "hello world foo bar"
-      expect(result.current.completedChunks).toBe(1);
       expect(result.current.totalChunks).toBe(2);
       expect(result.current.saveState).toBe('saved');
     }

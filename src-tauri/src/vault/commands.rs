@@ -28,13 +28,28 @@ pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
     super::ensure_root(&resolve_root(app, None)?)
 }
 
+/// La radice scelta dall'utente, letta **qui**.
+///
+/// Prima arrivava come parametro dal frontend: significava che la webview
+/// poteva far guardare — e far cancellare — dentro una cartella qualsiasi,
+/// in contrasto con il principio di #405. Il percorso non attraversa più
+/// l'interfaccia in nessuna direzione.
+fn configured_root(app: &tauri::AppHandle) -> Result<Option<String>, String> {
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
+    crate::jobs::store::read_setting(&conn, "vault_root")
+}
+
+/// La radice da usare adesso: quella scelta, se c'è, altrimenti la predefinita.
+fn root_of(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let configured = configured_root(app)?;
+    resolve_root(app, configured.as_deref())
+}
+
 /// Stato del deposito, senza scandire niente (D5).
 #[tauri::command]
-pub fn get_vault_status(
-    app: tauri::AppHandle,
-    configured_root: Option<String>,
-) -> Result<VaultStatus, String> {
-    status(&app, configured_root.as_deref())
+pub fn get_vault_status(app: tauri::AppHandle) -> Result<VaultStatus, String> {
+    let configured = configured_root(&app)?;
+    status(&app, configured.as_deref())
 }
 
 /// Percorsi attesi di una digitalizzazione completa (D2), da passare poi alla
@@ -61,11 +76,8 @@ pub fn expected_version_paths(
 /// deposito è passare dalla finestra aperta dal backend, che classifica prima
 /// di scrivere.
 #[tauri::command]
-pub fn initialize_vault(
-    app: tauri::AppHandle,
-    configured_root: Option<String>,
-) -> Result<(), String> {
-    let root = resolve_root(&app, configured_root.as_deref())?;
+pub fn initialize_vault(app: tauri::AppHandle) -> Result<(), String> {
+    let root = root_of(&app)?;
     if classify_folder(&root)? == FolderKind::Foreign {
         return Err("vault_folder_not_empty".to_string());
     }
@@ -95,10 +107,9 @@ pub struct FileCheck {
 #[tauri::command]
 pub fn verify_files_present(
     app: tauri::AppHandle,
-    configured_root: Option<String>,
     vault_paths: Vec<String>,
 ) -> Result<Vec<FileCheck>, String> {
-    let root = resolve_root(&app, configured_root.as_deref())?;
+    let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
@@ -146,10 +157,9 @@ pub struct FileIntegrity {
 #[tauri::command]
 pub fn verify_files_integrity(
     app: tauri::AppHandle,
-    configured_root: Option<String>,
     vault_paths: Vec<String>,
 ) -> Result<Vec<FileIntegrity>, String> {
-    let root = resolve_root(&app, configured_root.as_deref())?;
+    let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
@@ -208,11 +218,10 @@ pub struct FreedSpace {
 #[tauri::command]
 pub fn free_version_pages(
     app: tauri::AppHandle,
-    configured_root: Option<String>,
     provider_key: String,
     version_id: String,
 ) -> Result<FreedSpace, String> {
-    let root = resolve_root(&app, configured_root.as_deref())?;
+    let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
@@ -436,6 +445,20 @@ pub async fn choose_vault_folder(
         adopted: adoptable,
         sync_folder: looks_like_a_sync_folder(&folder),
     }))
+}
+
+/// Mette in coda la verifica del deposito (D5-bis).
+///
+/// Un lavoro solo per volta: chiederla due volte non ne apre due, restituisce
+/// quella in corso. Rapida di default; completa su richiesta esplicita, perché
+/// apre ogni file e su un deposito sincronizzato costringe il client a
+/// scaricare tutto (D1-bis).
+#[tauri::command]
+pub async fn enqueue_vault_verification(
+    jobs: tauri::State<'_, crate::jobs::commands::JobsState>,
+    full: Option<bool>,
+) -> Result<crate::jobs::JobRecord, String> {
+    super::verification::enqueue(&jobs.0, full.unwrap_or(false)).await
 }
 
 /// "Tieni tutto insieme" (D1): deposito dentro la cartella dati, che è la

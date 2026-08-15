@@ -332,11 +332,50 @@ sintassi canonica `size=max`.
 Scelta **alla fonte**, non globale, perché dipende dal materiale: una
 cinquecentina a stampa larga si legge a molto meno di una minuscola fitta.
 
-- **Standard** (predefinita): la massima disponibile entro il tetto —
-  **2000 pixel sul lato lungo**, configurabile;
+- **Standard** (predefinita): la misura dichiarata dal servizio **più vicina al
+  tetto** — 2000 pixel sul lato lungo, configurabile — sopra o sotto che sia; a
+  parità di distanza vince la più grande;
 - **Massima**: `size=max`, nessun tetto.
 
-Le miniature si scaricano sempre, in entrambi i casi.
+*(Regola precisata dall'utente il 2026-08-15. La prima stesura diceva «la massima
+disponibile entro il tetto»: con misure 1200 e 2100 e tetto 2000 avrebbe scelto
+1200, cioè metà dei pixel voluti per stare sotto una soglia che è un obiettivo,
+non un divieto.)*
+
+**Come si sceglie, in pratica** *(precisato il 2026-08-16, misurando su
+archive.org)*: il tetto è una **politica**, non un pixel. La misura effettiva la
+dichiara il descrittore dell'immagine, e **non si tenta niente alla cieca** — che
+è quello che questa decisione diceva già dal 10 agosto: «senza tentare richieste
+a indovinare».
+
+L'ordine è:
+
+1. l'indirizzo che il **manifesto dichiara già pronto**, quando c'è — la
+   specifica prevede che un canvas dichiari la propria miniatura: non c'è niente
+   da scegliere e non costa nessuna richiesta in più;
+2. altrimenti si legge il descrittore e si prende la misura dichiarata più
+   vicina al tetto sul lato lungo;
+3. la scelta vale per tutte le carte con le stesse dimensioni. Le carte di uno
+   stesso libro **non** hanno tutte la stessa dimensione — 924 carte e cinque
+   formati, nel libro provato — quindi il descrittore si legge una volta per
+   gruppo: cinque letture, non una sola e nemmeno 924.
+
+**Perché non ci si limita a chiedere il tetto**, che costerebbe zero richieste in
+più: la specifica garantisce le misure elencate in `sizes` — e quelle implicite
+in `tiles` — a **qualunque** livello di conformità, mentre la larghezza
+arbitraria (`sizeByW`) solo dal livello 1 in su, e il livello dichiarato non è
+affidabile. Archive.org dichiara `level2`; su una pagina risponde `500` a
+`/full/2000,/`, su un'altra la genera sul momento in **26 secondi** contro 2 per
+una misura dichiarata, e non la tiene nemmeno in cache. La richiesta risparmiata
+ne costa venti di attesa.
+
+**Conseguenza sul deposito**: la cartella continua a chiamarsi con il tetto
+(`pages/2000/`), che è la politica, mentre i pixel ottenuti variano da carta a
+carta. Le due cose divergono di proposito: se la cartella prendesse il nome dai
+pixel, la stessa fonte finirebbe sparsa in cartelle diverse e la ripresa non
+ritroverebbe più ciò che ha già scaricato.
+
+Le miniature si scaricano sempre, in entrambi i casi, insieme al libro (D6).
 
 **Scartato "scarica tutto al minimo"**: produrrebbe una fonte che risulta
 completa ma è illeggibile, peggio di una non scaricata. Il minimo sono già le
@@ -533,11 +572,31 @@ sono documenti a sé. Restano leggibili e modificabili anche senza le immagini.
 Riscaricare in seguito solo le pagine che servono non è una funzione nuova: è
 l'azione per pagina già definita in D4, usata quando non c'è nulla in locale.
 
-### Miniature all'aggiunta
+### Miniature, insieme allo scaricamento
 
-Aggiungendo una fonte si scaricano **tutte le miniature**. Duecento miniature
-sono circa 3 MB: trascurabili, e rendono il libro sfogliabile anche senza rete e
-senza pagine scaricate. Le miniature non vengono rimosse da "libera spazio".
+*Corretta il 2026-08-15, dopo averlo provato.*
+
+Le miniature si scaricano **quando si scarica il libro**, non quando si aggiunge
+la fonte. Restano tutte, restano fuori da "libera spazio", e rendono il libro
+sfogliabile senza rete: cambia solo il momento.
+
+**Perché la prima stesura non regge.** Diceva «duecento miniature sono circa
+3 MB: trascurabili». Su un libro di 924 carte sono 18 MB e un quarto d'ora di
+rete, e soprattutto contraddicono l'uso normale: si aggiunge una fonte, la si
+legge online, e si scarica solo quello che serve davvero. Scaricare novecento
+miniature per una fonte che forse non si aprirà mai è lavoro fatto a vuoto —
+verso di noi e verso la biblioteca.
+
+**Finché il libro non si scarica**, le miniature si leggono online come le carte
+(D8). La copertina che la Biblioteca mostra non c'entra: è la miniatura
+dell'opera dichiarata dal manifesto, una sola immagine, che non costa niente.
+
+**Come si chiedono** *(misurato su archive.org)*: prima la miniatura che il
+canvas dichiara, se c'è — la specifica lo prevede e non costa nessuna richiesta
+in più. Altrimenti si legge il descrittore dell'immagine e si chiede la misura
+dichiarata più vicina al tetto, una volta per gruppo di carte con le stesse
+dimensioni. Chiedere una larghezza inventata costringe il servizio a generarla
+sul momento: 23 secondi contro 1, e senza nemmeno tenerla in cache.
 
 # Parte B — Disponibilità e modalità di lettura
 
@@ -997,15 +1056,26 @@ connettersi, 30 s per leggere.
 La Vaticana richiede il **preriscaldamento del visualizzatore**. Tutte inviano
 l'header di provenienza.
 
-**Stato dell'implementazione** *(2026-08-14, PR 4)*: pause, raffica,
-concorrenza per host, raffreddamenti, tentativi di trasporto e identificazione
-dell'applicazione ci sono. **Mancano ancora**, dichiarati: il preriscaldamento
-del visualizzatore con l'header di provenienza che ne consegue — va provato sul
-campo con la Vaticana, perché senza sessione le immagini non arrivano — e i
-*worker per lavoro* (Scriptoria ne usa 1 su Gallica e 2 altrove; qui le carte si
-scaricano una per volta, cioè sempre al ritmo più prudente). Nessuna delle due
-rende scortesi: la prima impedisce di scaricare da una biblioteca, la seconda
-rallenta e basta.
+**Stato dell'implementazione** *(aggiornato il 2026-08-14 dopo la rilettura
+esterna)*: pause, raffica, concorrenza per host, raffreddamenti, tentativi di
+trasporto e identificazione dell'applicazione ci sono. Dalla rilettura sono
+arrivati anche **tentativi del lavoro, base e tetto dell'attesa esponenziale dal
+profilo** — prima erano costanti del motore, cioè i valori di Gallica applicati a
+tutti — e la pausa fra richieste **sorteggiata una volta sola**: veniva
+riestratta a ogni controllo, e uscire al primo numero basso portava la media
+sotto quella dichiarata, cioè più veloci di quanto promesso alla biblioteca.
+
+**Mancano ancora**, dichiarati: il preriscaldamento del visualizzatore con
+l'header di provenienza che ne consegue — va provato sul campo con la Vaticana,
+perché senza sessione le immagini non arrivano — e i *worker per lavoro*
+(Scriptoria ne usa 1 su Gallica e 2 altrove; qui le carte si scaricano una per
+volta, cioè sempre al ritmo più prudente). Nessuna delle due rende scortesi: la
+prima impedisce di scaricare da una biblioteca, la seconda rallenta e basta.
+
+**Nota su Scriptoria**: la pausa fra richieste lì è configurata e mostrata nelle
+impostazioni ma **nessun consumatore la applica** — il ritmo lo impone la sola
+finestra a raffica. Qui viene applicata davvero; è l'unico punto in cui Glossa fa
+più di quello che il progetto di riferimento dichiara.
 
 ### Precedenza, tre livelli
 
@@ -1058,8 +1128,11 @@ non questo blocco. Qui restano le scelte che toccano i lavori.
 *Approvata con modifiche il 2026-08-10.*
 
 **Uguale in ogni sezione**, tre zone fisse: a sinistra il contesto (l'unica parte
-che cambia), al centro l'indicatore lavori, a destra lo stato di salvataggio e
-la maniglia del pannello.
+che cambia), al centro i numeri della schermata, a destra i comandi e lo stato
+globali. *(Modifica chiesta dall'utente il 2026-08-14, provando la PR 3:
+l'indicatore dei lavori sta **a destra** insieme al pannello e allo stato di
+salvataggio, non al centro — tre elementi affiancati per due funzioni facevano
+rumore. La prima stesura diceva "al centro l'indicatore lavori".)*
 
 L'indicatore è **sempre presente**, non solo dove il lavoro è stato avviato: uno
 scaricamento parte dalla Biblioteca e prosegue mentre si lavora altrove.

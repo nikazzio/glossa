@@ -8,6 +8,7 @@
 pub mod commands;
 pub mod integrity;
 pub mod layout;
+pub mod verification;
 
 use serde::Serialize;
 use std::fs;

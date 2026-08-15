@@ -182,6 +182,11 @@ impl ErrorKind {
     }
 }
 
+/// Motivo per cui un lavoro è fermo pur essendo in esecuzione: sta rispettando
+/// i limiti della biblioteca (D17, D18). L'interfaccia lo scrive in modo
+/// diverso da un errore e **non anima** la barra.
+pub const WAITING_LIBRARY_LIMITS: &str = "libraryLimits";
+
 /// Un errore di lavoro porta con sé tutto quello che serve a decidere: se
 /// ritentare, quanto attendere, cosa mostrare (D16).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -290,6 +295,11 @@ pub struct JobRecord {
     /// Perché è fermo pur essendo in esecuzione: attesa per rispettare i limiti
     /// della biblioteca, non un errore (D17).
     pub waiting_reason: Option<String>,
+    /// Cosa sta facendo adesso, dentro lo stato: chiave breve decisa dal tipo
+    /// di lavoro e tradotta dall'interfaccia (`manifest`, `downloading`, …).
+    pub phase: Option<String>,
+    /// Dettagli strutturati, in JSON: le chiavi le decide il tipo di lavoro.
+    pub detail: Option<String>,
     pub depends_on_job_id: Option<String>,
     pub next_attempt_at: Option<String>,
     pub created_at: Option<String>,

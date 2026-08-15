@@ -57,6 +57,16 @@ oggi*.
 **Come si comandano** — pausa, ripresa, annullamento e nuovo tentativo per
 ciascun lavoro, oppure per tutti insieme dai comandi in cima al pannello.
 
+**Come si chiamano** — ogni riga porta il nome dell'opera già mentre aspetta il
+turno, e mentre gira aggiunge a che punto è e quanto ha scaricato: *I diarii di
+Marino Sanuto · 34/374 · 46 MB*. Accanto trovi cosa sta facendo in quel momento:
+avvio, lettura del manifesto, scelta della risoluzione, scaricamento. Un
+contrassegno dice di che tipo di lavoro si tratta — pagine, miniature, verifica —
+e i numeri distinguono quanto è arrivato da quanto si prevede in tutto.
+
+**Cliccando una riga** si apre e mostra i dettagli: la risoluzione che la
+biblioteca ha accettato, l'indirizzo del suo server, i tentativi fatti, gli orari.
+
 La pausa non è istantanea: il lavoro porta a termine il pezzo in corso — la
 pagina che sta scaricando — lo salva e si ferma. Per questo lo stato passa da
 *in pausa…* a *in pausa*.
@@ -72,6 +82,16 @@ vengono messi **in pausa**, non annullati, salvando il punto raggiunto.
 Alla riapertura **nessun lavoro riparte da solo**: li ritrovi fermi e decidi tu.
 L'unica eccezione è opzionale — in **Impostazioni → Lavori** puoi far ripartire
 automaticamente gli scaricamenti interrotti.
+
+## Verificare il deposito
+
+In **Impostazioni → Archiviazione** ci sono due controlli.
+
+La **verifica rapida** guarda se i file che Glossa ha registrato sono ancora al loro posto: è questione di millisecondi anche per un manoscritto grande. La **verifica completa** apre ogni file e ne ricontrolla l'impronta, quindi scopre anche quelli troncati da uno scaricamento interrotto — ma è lenta in proporzione ai gigabyte, e su una cartella sincronizzata costringe il servizio a scaricare tutto.
+
+Entrambe diventano lavori in coda: le segui dal pannello in basso, le metti in pausa, le annulli. Il risultato è un conteggio in quattro parti — integri, mancanti, corrotti, orfani — dove gli *orfani* sono file rimasti nel deposito che nessuna scheda reclama. **Nessuna delle due cancella o riscarica niente da sola.**
+
+Un interruttore accende la verifica rapida a ogni avvio. È spenta di default: allunga l'apertura su depositi grandi o su una cartella di rete.
 
 ## Quanti lavori insieme
 

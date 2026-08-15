@@ -59,6 +59,14 @@ export interface Job {
    * da dire in modo diverso.
    */
   waitingReason: string | null;
+  /**
+   * Cosa sta facendo adesso, dentro lo stato: `manifest`, `negotiating`,
+   * `downloading`… Il vocabolario lo decide il tipo di lavoro, l'interfaccia lo
+   * traduce e mostra la chiave grezza per quelle che non conosce ancora.
+   */
+  phase: string | null;
+  /** Dettagli strutturati in JSON, scritti dal gestore. Vedi `parseJobDetail`. */
+  detail: string | null;
   dependsOnJobId: string | null;
   nextAttemptAt: string | null;
   createdAt: string | null;
@@ -111,8 +119,9 @@ export async function cancelJob(id: string): Promise<void> {
 }
 
 /**
- * Mette in coda lo scaricamento di una digitalizzazione. L'interfaccia non
- * scarica niente: chiede un lavoro e osserva (D10).
+ * Mette in coda lo scaricamento di una digitalizzazione: le carte e le sue
+ * miniature, che sono due lavori distinti (D6). L'interfaccia non scarica
+ * niente: chiede e osserva (D10). Restituisce il lavoro delle carte.
  */
 export async function enqueueSourceDownload(request: {
   providerKey: string;
@@ -122,6 +131,22 @@ export async function enqueueSourceDownload(request: {
   sizeTag?: string;
 }): Promise<Job> {
   return invoke<Job>('enqueue_source_download', request);
+}
+
+/**
+ * Mette in coda la verifica del deposito (D5-bis). Rapida di default; completa
+ * su richiesta esplicita, perché apre ogni file.
+ */
+export async function enqueueVaultVerification(full = false): Promise<Job> {
+  return invoke<Job>('enqueue_vault_verification', { full });
+}
+
+/**
+ * Toglie dall'elenco i lavori già finiti. Senza `id` li toglie tutti: sono
+ * righe di storico, e quando diventano rumore si buttano.
+ */
+export async function clearFinishedJobs(id?: string): Promise<number> {
+  return invoke<number>('clear_finished_jobs', { id });
 }
 
 export async function retryJob(id: string, fromScratch = false): Promise<void> {
@@ -136,12 +161,102 @@ export async function onJobChanged(handler: (job: Job) => void): Promise<() => v
 }
 
 /**
+ * I dettagli che un lavoro sa dire di sé.
+ *
+ * Le chiavi le decide il gestore: uno scaricamento parla di carte, megabyte e
+ * risoluzione, una verifica di file integri e orfani. Qui si dichiara quello che
+ * l'interfaccia sa mostrare — il resto viene ignorato invece di comparire a
+ * metà, e un gestore futuro può aggiungere chiavi senza rompere niente.
+ */
+export interface JobDetail {
+  units?: { done: number; total: number; label: string };
+  bytes?: { downloaded: number; estimated: number };
+  last?: { index: number; bytes: number };
+  size?: string;
+  provider?: string;
+  host?: string;
+  level?: string;
+  intact?: number;
+  missing?: number;
+  corrupt?: number;
+  orphans?: { count: number; bytes: number };
+}
+
+/**
+ * Legge i dettagli senza fidarsi della forma: arrivano da un gestore che può
+ * essere più nuovo dell'interfaccia, e una chiave inattesa non deve far sparire
+ * la riga.
+ */
+export function parseJobDetail(raw: string | null): JobDetail {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return {};
+    const record = parsed as Record<string, unknown>;
+    const num = (value: unknown): number | undefined =>
+      typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    const text = (value: unknown): string | undefined =>
+      typeof value === 'string' && value.trim() ? value : undefined;
+    const group = (value: unknown): Record<string, unknown> =>
+      typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+
+    const units = group(record.units);
+    const bytes = group(record.bytes);
+    const last = group(record.last);
+    const orphans = group(record.orphans);
+
+    return {
+      units:
+        num(units.done) !== undefined && num(units.total) !== undefined
+          ? { done: num(units.done)!, total: num(units.total)!, label: text(units.label) ?? 'generic' }
+          : undefined,
+      bytes:
+        num(bytes.downloaded) !== undefined
+          ? { downloaded: num(bytes.downloaded)!, estimated: num(bytes.estimated) ?? 0 }
+          : undefined,
+      last:
+        num(last.index) !== undefined
+          ? { index: num(last.index)!, bytes: num(last.bytes) ?? 0 }
+          : undefined,
+      size: text(record.size),
+      provider: text(record.provider),
+      host: text(record.host),
+      level: text(record.level),
+      intact: num(record.intact),
+      missing: num(record.missing),
+      corrupt: num(record.corrupt),
+      orphans:
+        num(orphans.count) !== undefined
+          ? { count: num(orphans.count)!, bytes: num(orphans.bytes) ?? 0 }
+          : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Un lavoro è fermo in attesa di poter riprovare: non è fallito, e la barra non
  * deve fingere di avanzare (D17). Con i limiti delle biblioteche l'attesa può
  * durare minuti.
  */
 export function isWaitingToRetry(job: Job): boolean {
   return job.status === 'queued' && job.nextAttemptAt !== null;
+}
+
+/**
+ * Quanti secondi mancano al prossimo tentativo.
+ *
+ * Si conta dall'orario del prossimo tentativo, non dal numero scritto quando
+ * l'attesa è cominciata: quello invecchia mentre la riga resta ferma sullo
+ * schermo, e dopo cinque minuti direbbe ancora «riprende fra 10 minuti».
+ * Il database scrive gli orari in UTC senza dirlo.
+ */
+export function retryCountdownSeconds(job: Job, now = Date.now()): number | null {
+  if (!isWaitingToRetry(job) || !job.nextAttemptAt) return null;
+  const at = Date.parse(job.nextAttemptAt.replace(' ', 'T') + 'Z');
+  if (Number.isNaN(at)) return job.etaSeconds;
+  return Math.max(0, Math.round((at - now) / 1000));
 }
 
 /**

@@ -4,7 +4,6 @@ import { select } from './dbService';
 import {
   expectedVersionPaths,
   freeVersionPages,
-  getConfiguredVaultRoot,
   getSourceReadMode,
   getVaultStatus,
   summarizeAvailability,
@@ -27,28 +26,15 @@ describe('radice del deposito', () => {
     selectMock.mockReset();
   });
 
-  it('tratta l’impostazione vuota come "dentro la cartella dati"', async () => {
-    settingReturns('');
-    expect(await getConfiguredVaultRoot()).toBeNull();
-  });
-
-  it('ignora un’impostazione fatta di soli spazi', async () => {
-    settingReturns('   ');
-    expect(await getConfiguredVaultRoot()).toBeNull();
-  });
-
-  it('restituisce la radice scelta quando c’è', async () => {
-    settingReturns('/mnt/manoscritti');
-    expect(await getConfiguredVaultRoot()).toBe('/mnt/manoscritti');
-  });
-
-  it('passa la radice configurata al backend', async () => {
+  it('non manda nessun percorso al backend: lo legge lui', async () => {
+    // Un comando che accetta un percorso dall'interfaccia farebbe guardare — e
+    // cancellare — dentro cartelle che non sono il deposito (#405).
     settingReturns('/mnt/manoscritti');
     invokeMock.mockResolvedValueOnce({ path: '/mnt/manoscritti', reachable: true, isDefault: false });
 
     await getVaultStatus();
 
-    expect(invokeMock).toHaveBeenCalledWith('get_vault_status', { configuredRoot: '/mnt/manoscritti' });
+    expect(invokeMock).toHaveBeenCalledWith('get_vault_status');
   });
 });
 

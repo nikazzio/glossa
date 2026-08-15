@@ -26,6 +26,18 @@ function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
 }
 
 
+/** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del
+ * catalogo, e riordinarlo per deduplicare cambierebbe quello che l'utente
+ * vede. */
+function dedupeById<T extends { id: string }>(cards: T[]): T[] {
+  const seen = new Set<string>();
+  return cards.filter((card) => {
+    if (seen.has(card.id)) return false;
+    seen.add(card.id);
+    return true;
+  });
+}
+
 /** Riordina la lista SOLO per la visualizzazione (chiavi card.id restano stabili,
  * Framer Motion anima lo spostamento, nessun remount): la scheda espansa tiene con
  * sé SOLO la prima scheda della sua riga originale (1 unità + `columns-1` unità
@@ -159,12 +171,18 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
           {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
         </span>
         {expanded ? (
-          <span className="flex h-full min-w-0 flex-1 gap-6">
-            <span className="flex h-full min-w-0 shrink-0 basis-56 flex-col overflow-hidden">
+          // A tre o quattro colonne non c'è larghezza per mettere i dati
+          // accanto al titolo: affiancarli taglia gli uni e gli altri. La
+          // scheda cresce in altezza e i dati vanno sotto. (In vista elenco la
+          // scheda è un'altra, e lì lo spazio c'è.)
+          <span className="mt-3 flex min-w-0 flex-1 flex-col gap-3">
+            <span className="flex min-w-0 flex-col overflow-hidden">
               <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
               {card.description && <span className="mt-1.5 block line-clamp-2 text-xs leading-relaxed text-editorial-ink/70">{card.description}</span>}
             </span>
-            <span className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 content-start gap-x-4 gap-y-1 overflow-hidden">
+            <span
+              className="grid min-w-0 flex-1 auto-rows-min grid-cols-1 content-start gap-x-4 gap-y-1 overflow-hidden" 
+            >
               {stats.map(([label, value]) => <DataStat key={label} label={label} value={value} />)}
             </span>
           </span>
@@ -314,7 +332,10 @@ export function SourceDiscoveryPanel() {
     setSearchError(false);
     try {
       const next = await discoverIIIF(providerKey, input.trim(), nextPage);
-      setOutcome(outcome ? { ...next, results: [...outcome.results, ...next.results] } : next);
+      // Alcuni cataloghi — Internet Archive fra questi — restituiscono lo
+      // stesso identificativo su due pagine diverse. Concatenare e basta
+      // produce schede doppie con la stessa chiave.
+      setOutcome(outcome ? { ...next, results: dedupeById([...outcome.results, ...next.results]) } : next);
       setPage(nextPage);
     } catch {
       setSearchError(true);
@@ -390,7 +411,7 @@ export function SourceDiscoveryPanel() {
                   providerLabel={selectedProvider?.label ?? ''}
                   expanded={expandedId === card.id}
                   onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
                   onAddToWorkspace={() => setWorkspacePickerCard(card)}
                   adding={addingUrls.has(card.manifestUrl)}
                   alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -407,7 +428,7 @@ export function SourceDiscoveryPanel() {
                   expanded={expandedId === card.id}
                   width={cardWidth(expandedId === card.id, columns)}
                   onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
                   onAddToWorkspace={() => setWorkspacePickerCard(card)}
                   adding={addingUrls.has(card.manifestUrl)}
                   alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -444,7 +465,7 @@ export function SourceDiscoveryPanel() {
                   key={workspace.id}
                   type="button"
                   onClick={() => {
-                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id);
+                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, providerKey);
                     setWorkspacePickerCard(null);
                   }}
                   className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

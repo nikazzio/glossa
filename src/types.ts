@@ -107,6 +107,16 @@ export interface AddSourceToLibraryInput {
   thumbnailUrl: string | null;
   language: string | null;
   subjects: string[];
+  /** Da quale biblioteca viene: è un fatto che non cambia mai (D2). */
+  providerKey: string | null;
+  /** Identificativo dell'opera presso quella biblioteca. */
+  externalId: string | null;
+  mediaType: string | null;
+  materialType: string | null;
+  collection: string | null;
+  volume: string | null;
+  /** Carte dichiarate dal manifesto, quando la ricerca le ha già lette. */
+  itemCount: number | null;
   workspaceId?: string;
 }
 
@@ -117,6 +127,28 @@ export interface LibrarySource {
   primaryLanguage: string | null;
   externalRef: string | null;
   createdAt: string;
+}
+
+/** Una riga del catalogo della Biblioteca: la fonte più ciò che serve a
+ *  mostrarla senza aprirla. */
+export interface LibraryCatalogEntry {
+  source: LibrarySource;
+  versionId: string | null;
+  manifestUrl: string | null;
+  thumbnailUrl: string | null;
+  creator: string | null;
+  date: string | null;
+  /** Carte dichiarate dal manifesto, quando si è già letto. */
+  expectedPages: number | null;
+  /** Carte davvero presenti sul computer. */
+  localPages: number;
+  /** Quanto occupano quelle carte: serve alla conferma di «libera spazio» (D6). */
+  localBytes: number;
+  /**
+   * Chiave della biblioteca nel registro dei provider: decide il profilo di rete
+   * dello scaricamento (D18) e la cartella nel deposito (D2).
+   */
+  providerKey: string | null;
 }
 
 export interface LibrarySourceVersion {

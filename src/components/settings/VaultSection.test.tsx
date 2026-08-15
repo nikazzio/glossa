@@ -8,6 +8,12 @@ vi.mock('../../services/vaultService', () => ({
   getVaultStatus: vi.fn(),
   chooseVaultFolder: vi.fn(),
   adoptDefaultVaultFolder: vi.fn(),
+  getVerifyVaultOnStartup: vi.fn().mockResolvedValue(false),
+  setVerifyVaultOnStartup: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../services/jobsService', () => ({
+  enqueueVaultVerification: vi.fn().mockResolvedValue({ id: 'verification:quick' }),
 }));
 
 const getStatus = vi.mocked(getVaultStatus);
@@ -119,5 +125,37 @@ describe('cartella del deposito', () => {
 
     await waitFor(() => expect(useDefault).toHaveBeenCalled());
     expect(await screen.findByText('/dati/vault')).toBeInTheDocument();
+  });
+
+
+  it('la verifica del deposito si avvia da qui e diventa un lavoro', async () => {
+    // D5-bis: è un lavoro, non un'operazione istantanea — si segue dal pannello.
+    const { enqueueVaultVerification } = await import('../../services/jobsService');
+    const user = userEvent.setup();
+    render(<VaultSection />);
+    await waitFor(() => expect(getStatus).toHaveBeenCalled());
+
+    await user.click(screen.getByRole('button', { name: 'settings.storage.vault.verifyQuickTooltip' }));
+
+    expect(enqueueVaultVerification).toHaveBeenCalledWith(false);
+  });
+
+  it('la verifica completa è una voce separata, perché apre ogni file', async () => {
+    const { enqueueVaultVerification } = await import('../../services/jobsService');
+    const user = userEvent.setup();
+    render(<VaultSection />);
+    await waitFor(() => expect(getStatus).toHaveBeenCalled());
+
+    await user.click(screen.getByRole('button', { name: 'settings.storage.vault.verifyFullTooltip' }));
+
+    expect(enqueueVaultVerification).toHaveBeenCalledWith(true);
+  });
+
+  it('con il deposito non raggiungibile non si verifica niente', async () => {
+    getStatus.mockResolvedValue({ path: '/mnt/staccato', reachable: false, isDefault: false });
+    render(<VaultSection />);
+    await waitFor(() => expect(getStatus).toHaveBeenCalled());
+
+    expect(screen.getByRole('button', { name: 'settings.storage.vault.verifyQuickTooltip' })).toBeDisabled();
   });
 });

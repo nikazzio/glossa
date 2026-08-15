@@ -34,6 +34,8 @@ function job(overrides: Partial<Job> = {}): Job {
     errorKind: null,
     etaSeconds: 720,
     waitingReason: null,
+    phase: null,
+    detail: null,
     dependsOnJobId: null,
     nextAttemptAt: null,
     createdAt: null,
@@ -126,5 +128,74 @@ describe('attesa per i limiti della biblioteca', () => {
 
     expect(screen.getByText('jobs.waitingForLibrary')).toBeInTheDocument();
     expect(screen.getByRole('progressbar').className).not.toContain('transition');
+  });
+
+  it('mentre gira dice cosa sta facendo, non un generico «in corso»', () => {
+    renderPanel([job({ status: 'running', phase: 'manifest', progress: 0.01 })]);
+
+    expect(screen.getByText(/jobs\.phase\.manifest/)).toBeInTheDocument();
+  });
+
+  it('una fase che l\u2019interfaccia non conosce si legge com\u2019\u00e8 scritta', () => {
+    // Ogni tipo di lavoro ha il suo vocabolario: quelli futuri non devono
+    // sparire dalla riga solo perché la traduzione non c'è ancora.
+    renderPanel([job({ status: 'running', phase: 'ocr_pass_2', progress: 0.5 })]);
+
+    expect(screen.getByText(/ocr_pass_2/)).toBeInTheDocument();
+  });
+
+
+  it('la riga dice di che tipo di lavoro si tratta', () => {
+    // Scaricare le carte e scaricare le miniature sono due cose diverse, e
+    // finché la riga diceva solo il nome dell'opera non si distinguevano.
+    renderPanel([job({ status: 'running', jobType: 'source_thumbnails', message: 'Beatus' })]);
+
+    expect(screen.getByText('jobs.short.source_thumbnails')).toBeInTheDocument();
+  });
+
+  it('mostra quanto è arrivato e quanto si prevede in tutto', () => {
+    // Il peso della sola carta in corso non dice niente su quanto manca.
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.1,
+        detail: JSON.stringify({
+          units: { done: 34, total: 352, label: 'pages' },
+          bytes: { downloaded: 48_234_496, estimated: 499_122_176 },
+        }),
+      }),
+    ]);
+
+    expect(screen.getByText('34/352')).toBeInTheDocument();
+    expect(screen.getByText(/46 MB \/ ~476 MB/)).toBeInTheDocument();
+  });
+
+  it('la riga si apre e mostra i dettagli veri', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.1,
+        detail: JSON.stringify({
+          units: { done: 2, total: 352, label: 'pages' },
+          bytes: { downloaded: 1_000_000, estimated: 176_000_000 },
+          size: '1299,',
+          provider: 'archive_org',
+          host: 'iiif.archive.org',
+        }),
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('1299,')).toBeInTheDocument();
+    expect(screen.getByText('iiif.archive.org')).toBeInTheDocument();
+    expect(screen.getByRole('button', { expanded: true })).toBeInTheDocument();
+  });
+
+  it('un dettaglio malformato non fa sparire la riga', () => {
+    renderPanel([job({ status: 'running', message: 'Beatus', detail: 'non è json' })]);
+
+    expect(screen.getByText('Beatus')).toBeInTheDocument();
   });
 });

@@ -14,6 +14,22 @@ import { isRunning, useJobsStore } from '../stores/jobsStore';
  * inaccettabile: perdere venti minuti di scaricamento perché hai chiuso la
  * finestra.
  */
+/**
+ * Quanto si aspetta che i lavori si fermino davvero prima di chiudere. Oltre
+ * questo si chiude comunque: niente va perduto — le carte a metà non entrano nel
+ * deposito (D16-bis) — e una finestra che non si chiude è peggio.
+ */
+const PAUSE_GRACE_MS = 5_000;
+const PAUSE_POLL_MS = 200;
+
+async function waitUntilStopped(): Promise<void> {
+  const deadline = Date.now() + PAUSE_GRACE_MS;
+  while (Date.now() < deadline) {
+    if (!useJobsStore.getState().jobs.some(isRunning)) return;
+    await new Promise((resolve) => setTimeout(resolve, PAUSE_POLL_MS));
+  }
+}
+
 export function useCloseGuard() {
   const { t } = useTranslation();
 
@@ -45,6 +61,11 @@ export function useCloseGuard() {
           // si riprende da lì (D13).
           const { pause } = useJobsStore.getState();
           await Promise.all(active.filter(isRunning).map((job) => pause(job.id).catch(() => {})));
+          // La pausa è cooperativa (D14): chiedere non è fermare. Si dà ai
+          // lavori il tempo di finire la carta in corso, altrimenti la finestra
+          // muore con lo stato «in pausa…» sul database, e a rimetterlo a posto
+          // sarebbe il riavvio successivo.
+          await waitUntilStopped();
           await appWindow.destroy();
         });
         if (stopped) stop();

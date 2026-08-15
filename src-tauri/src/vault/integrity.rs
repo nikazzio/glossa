@@ -70,18 +70,26 @@ pub struct FileScan {
 /// giusto — che coglie il troncamento, il caso reale prodotto da uno
 /// scaricamento interrotto.
 pub fn scan_file(path: &Path, kind: FileKind) -> FileScan {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return FileScan {
-                validation: Validation::Missing,
-                checksum: None,
-            }
-        }
-        Err(error) => return corrupt(format!("non leggibile: {error}")),
-    };
+    match File::open(path) {
+        Ok(file) => scan_reader(BufReader::new(file), kind),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => FileScan {
+            validation: Validation::Missing,
+            checksum: None,
+        },
+        Err(error) => corrupt(format!("non leggibile: {error}")),
+    }
+}
 
-    let mut reader = BufReader::new(file);
+/// Come `scan_file`, ma su byte già in memoria: quando il file arriva dalla rete
+/// è inutile scriverlo per poterlo rileggere.
+pub fn scan_bytes(bytes: &[u8], kind: FileKind) -> FileScan {
+    scan_reader(bytes, kind)
+}
+
+/// Il cuore di entrambi: una passata sola, impronta e validità insieme. Da un
+/// file o dalla memoria cambia solo la sorgente, non il verdetto — e un solo
+/// posto dove sbagliare.
+fn scan_reader(mut reader: impl Read, kind: FileKind) -> FileScan {
     let mut buffer = vec![0u8; CHUNK_BYTES];
     let mut hash = FNV_OFFSET;
     let mut head: Vec<u8> = Vec::with_capacity(HEAD_BYTES);
@@ -297,6 +305,31 @@ mod tests {
             scan_file(&missing, FileKind::Image).validation,
             Validation::Missing
         );
+    }
+
+    #[test]
+    fn bytes_in_memory_give_the_same_verdict_and_the_same_checksum_as_the_file() {
+        let bytes = valid_jpeg();
+        let path = temp_file("scan_bytes.jpg", &bytes);
+
+        let from_memory = scan_bytes(&bytes, FileKind::Image);
+        let from_disk = scan_file(&path, FileKind::Image);
+
+        assert_eq!(from_memory.validation, from_disk.validation);
+        assert_eq!(from_memory.checksum, from_disk.checksum);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_truncated_image_in_memory_is_corrupt_too() {
+        let mut bytes = valid_jpeg();
+        bytes.truncate(bytes.len() - 2);
+
+        assert!(matches!(
+            scan_bytes(&bytes, FileKind::Image).validation,
+            Validation::Corrupt(_)
+        ));
     }
 
     #[test]

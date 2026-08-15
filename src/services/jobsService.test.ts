@@ -11,6 +11,7 @@ import {
   onJobChanged,
   pauseJob,
   resumeJob,
+  retryCountdownSeconds,
   retryJob,
   type Job,
 } from './jobsService';
@@ -34,6 +35,8 @@ function job(overrides: Partial<Job> = {}): Job {
     errorKind: null,
     etaSeconds: null,
     waitingReason: null,
+    phase: null,
+    detail: null,
     dependsOnJobId: null,
     nextAttemptAt: null,
     createdAt: null,
@@ -156,5 +159,39 @@ describe('risposte inattese dal backend', () => {
     invokeMock.mockResolvedValueOnce(null as never);
 
     await expect(listActiveJobs()).resolves.toEqual([]);
+  });
+});
+
+describe('conto alla rovescia prima del prossimo tentativo', () => {
+  const waiting = (overrides: Partial<Job> = {}) =>
+    job({ status: 'queued', nextAttemptAt: '2026-08-15 10:05:00', etaSeconds: 660, ...overrides });
+
+  it('conta i secondi che mancano, non la stima dello scaricamento', () => {
+    // Il numero scritto quando l'attesa è cominciata resta fermo mentre la riga
+    // invecchia sullo schermo: dopo quattro minuti direbbe ancora dieci.
+    const now = Date.parse('2026-08-15T10:00:00Z');
+
+    expect(retryCountdownSeconds(waiting(), now)).toBe(300);
+  });
+
+  it('gli orari del database sono UTC anche quando non lo dicono', () => {
+    const now = Date.parse('2026-08-15T10:04:30Z');
+
+    expect(retryCountdownSeconds(waiting(), now)).toBe(30);
+  });
+
+  it('non scende sotto zero quando il momento è passato', () => {
+    const now = Date.parse('2026-08-15T11:00:00Z');
+
+    expect(retryCountdownSeconds(waiting(), now)).toBe(0);
+  });
+
+  it('senza attesa in corso non c\u2019è niente da contare', () => {
+    expect(retryCountdownSeconds(job({ status: 'running' }))).toBeNull();
+    expect(retryCountdownSeconds(job({ status: 'queued', nextAttemptAt: null }))).toBeNull();
+  });
+
+  it('davanti a una data illeggibile resta il valore scritto dal motore', () => {
+    expect(retryCountdownSeconds(waiting({ nextAttemptAt: 'boh' }), Date.now())).toBe(660);
   });
 });

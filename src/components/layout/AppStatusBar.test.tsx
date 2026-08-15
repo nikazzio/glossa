@@ -91,17 +91,9 @@ describe('AppStatusBar', () => {
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'project',
       projectName: 'Progetto A',
-      pipelineName: 'Pipeline 1',
-      sourceWords: 100,
-      targetWords: 95,
-      coveragePct: 95,
       saveState: 'saved',
       lastSavedAt: null,
-      runStatus: 'idle',
-      completedChunks: 5,
       totalChunks: 10,
-      activePanel: null,
-      panelSubTab: null,
     });
     render(<AppStatusBar />);
     // Il nome progetto non compare più nella barra (rimosso breadcrumb); il toggle console è sempre presente.
@@ -112,17 +104,9 @@ describe('AppStatusBar', () => {
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'project',
       projectName: 'Progetto A',
-      pipelineName: null,
-      sourceWords: 0,
-      targetWords: 0,
-      coveragePct: 0,
       saveState: 'dirty',
       lastSavedAt: null,
-      runStatus: 'idle',
-      completedChunks: 0,
       totalChunks: 0,
-      activePanel: null,
-      panelSubTab: null,
     });
     render(<AppStatusBar />);
     expect(screen.getByText(/unsaved/i)).toBeInTheDocument();
@@ -156,6 +140,8 @@ describe('pannello dei lavori dalla barra di stato', () => {
           errorKind: null,
           etaSeconds: 60,
           waitingReason: null,
+          phase: null,
+          detail: null,
           dependsOnJobId: null,
           nextAttemptAt: null,
           createdAt: null,
@@ -198,7 +184,6 @@ describe('pannello dei lavori dalla barra di stato', () => {
 
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'project',
-      activePanel: null,
       totalChunks: 0,
       saveState: 'idle',
       lastSavedAt: null,
@@ -218,17 +203,9 @@ describe('continuità della barra di stato', () => {
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'project',
       projectName: 'Manoscritto',
-      pipelineName: null,
-      sourceWords: 0,
-      targetWords: 0,
-      coveragePct: 0,
       saveState: 'saved',
       lastSavedAt: null,
-      runStatus: 'idle',
-      completedChunks: 0,
       totalChunks: 0,
-      activePanel: null,
-      panelSubTab: null,
     });
 
     render(<AppStatusBar />);

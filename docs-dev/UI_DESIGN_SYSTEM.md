@@ -491,37 +491,50 @@ Dall'alto verso il basso per importanza percepita dall'utente:
 
 ## Console Terminal
 
-Tab Console simula terminale, usa **versione scura della palette editoriale** — non colori neon generici. Tutti token definiti in `src/index.css` nel blocco `@theme` con prefisso `--color-terminal-*`.
+Il pannello in basso (tab Console + tab Lavori) usa una **palette dedicata `terminal-*`**, sempre della stessa famiglia calda editoriale — mai colori neon generici. Tutti i token sono definiti in `src/index.css`: i **valori chiari** nel blocco `@theme`, gli **override scuri** in `html.dark` (stesso meccanismo di `editorial-*`, classe `dark` applicata da `ThemeSync` in `App.tsx`).
+
+I componenti (`OperationsTab.tsx`, `components/jobs/*`, `AppStatusBar.tsx`) usano **solo** i token: nessun colore cablato, il tema cambia da sé.
 
 ### Token di sfondo
 
-| Token Tailwind | CSS var | Valore | Uso |
-|---|---|---|---|
-| `bg-terminal-bg` | `--color-terminal-bg` | `#0d0b09` | Sfondo principale — nero caldo |
-| `bg-terminal-chrome` | `--color-terminal-chrome` | `#131008` | Header chrome, leggermente elevato |
-| `border-terminal-border` | `--color-terminal-border` | `#2a2218` | Bordi e separatori principali |
-| `border-terminal-line` | `--color-terminal-line` | `#1e1810` | Bordi gerarchia indent interni |
+| Token Tailwind | CSS var | Chiaro | Scuro | Uso |
+|---|---|---|---|---|
+| `bg-terminal-bg` | `--color-terminal-bg` | `#F7F3EC` | `#0d0b09` | Sfondo principale — carta calda / nero caldo |
+| `bg-terminal-chrome` | `--color-terminal-chrome` | `#EFE8DC` | `#131008` | Header chrome, un gradino staccato dallo sfondo |
+| `border-terminal-border` | `--color-terminal-border` | `#C6BEB0` | `#2a2218` | Bordi e separatori principali |
+| `border-terminal-line` | `--color-terminal-line` | `#DED5C6` | `#1e1810` | Bordi gerarchia indent interni |
+
+In chiaro `bg` è deliberatamente vicino a `surface-panel` (`#F8F5F0`, rapporto 1.02): il pannello deve **appoggiarsi** al bianco caldo dell'app, non aprirci un buco nero dentro. L'identità "console" resta affidata al monospace, al prompt `$` e alla riga chrome. `border` sta a `bg` come `editorial-border` sta a `editorial-bg` (1.67 vs 1.73) — stessa densità percepita del resto dell'interfaccia.
 
 ### Token testo
 
-| Token Tailwind | Valore | Contrasto su `bg` | Uso |
-|---|---|---|---|
-| `text-terminal-ink` | `#d8cfc5` | ~14:1 | Testo principale messaggi |
-| `text-terminal-secondary` | `#8a7a6e` | ~5.2:1 ✓ AA | Timestamp, scope, header label |
-| `text-terminal-muted` | `#908070` | ~5.2:1 ✓ AA | Meta items, stats secondari |
-| `text-terminal-dim` | `#3a3028` | decorativo | Prompt `$`, placeholder |
+| Token Tailwind | Chiaro | Contrasto su `bg` chiaro | Su `chrome` chiaro | Scuro | Uso |
+|---|---|---|---|---|---|
+| `text-terminal-ink` | `#2F2A23` | 12.86:1 ✓ AAA | 11.78:1 | `#d8cfc5` | Testo principale messaggi |
+| `text-terminal-secondary` | `#665748` | 6.28:1 ✓ AA | 5.76:1 ✓ AA | `#8a7a6e` | Timestamp, scope, header label |
+| `text-terminal-muted` | `#6D5D50` | 5.70:1 ✓ AA | 5.22:1 ✓ AA | `#908070` | Meta items, stats secondari |
+| `text-terminal-dim` | `#B0A597` | 2.19:1 decorativo | 2.00:1 | `#3a3028` | Prompt `$`, placeholder, maniglia resize |
 
-### Token livelli log (pastello editoriale)
+### Token livelli log
 
-| Token Tailwind | Valore | Derivazione |
-|---|---|---|
-| `text-terminal-error` | `#c07060` | family `editorial-danger`, smorzato |
-| `text-terminal-warn` | `#c49b2a` | `editorial-running` — riuso esatto |
-| `text-terminal-success` | `#5a9a7a` | `editorial-success` #3A7A65, schiarito per dark bg |
-| `text-terminal-info` | `#7898aa` | family teal editoriale, smorzato |
-| `text-terminal-accent` | `#c49b2a` | amber — highlight interattivi, stato running |
+| Token Tailwind | Chiaro | Contrasto su `bg` chiaro | Su `chrome` chiaro | Scuro | Derivazione |
+|---|---|---|---|---|---|
+| `text-terminal-error` | `#862E1E` | 7.84:1 ✓ AAA | 7.18:1 ✓ AAA | `#c07060` | family `editorial-danger`, terracotta scurita |
+| `text-terminal-warn` | `#6F5410` | 6.43:1 ✓ AA | 5.89:1 ✓ AA | `#c49b2a` | `editorial-running` amber, scurito |
+| `text-terminal-success` | `#275B4A` | 7.08:1 ✓ AAA | 6.49:1 ✓ AA | `#5a9a7a` | `editorial-success` `#3A7A65`, scurito |
+| `text-terminal-info` | `#315B72` | 6.62:1 ✓ AA | 6.06:1 ✓ AA | `#7898aa` | family teal editoriale, scurito |
+| `text-terminal-accent` | `#6F5410` | 6.43:1 ✓ AA | 5.89:1 ✓ AA | `#c49b2a` | amber — highlight interattivi, stato running |
 
-> **Principio fondamentale**: terminale è versione *scura* degli stessi toni caldi dell'app.
+**Perché i livelli chiari sono più scuri degli omologhi `editorial-*`**: diversi punti li usano con opacità ridotta o su tinta dello stesso colore. Con questi valori restano AA anche lì:
+
+| Combinazione (tema chiaro) | Contrasto |
+|---|---|
+| `text-terminal-error/80` su `bg-terminal-error/[0.08]` (stack trace) | 4.52:1 ✓ AA |
+| `text-terminal-accent` su `bg-terminal-accent/12` (pill di stato) | 4.98:1 ✓ AA |
+| `text-terminal-info` su `bg-terminal-info/12` (pill di stato) | 5.11:1 ✓ AA |
+| `text-terminal-error/70` icona pulisci su `chrome` | 3.73:1 ✓ AA non-testuale |
+
+> **Principio fondamentale**: il pannello è la versione *chiara o scura* degli stessi toni caldi dell'app, mai una palette a sé.
 > Mai colori neon (`#69db7c`, `#74c0fc`, `#ff6b6b`) nel Console tab.
 
 ### Scrollbar
@@ -538,7 +551,7 @@ Un solo header a due righe con ruoli distinti, non due header sovrapposti:
 - **Riga chrome** (`bg-terminal-chrome`): icona + titolo + pill di stato live inline (elaborazione/memoria in corso, con `Loader2` animato) + pulsante chiudi. No righe di stato separate sotto.
 - **Riga toolbar** (`bg-terminal-bg`, sotto chrome): ricerca sempre visibile + toggle raggruppato + trigger filtri a scomparsa (chip scope/livello restano dietro accordion — troppi per stare sempre visibili senza affollare) + vai al frammento + pulisci.
 
-**Colori (CRITICO):** dentro drawer Console usa **solo** token `terminal-*` (`terminal-accent`, `terminal-secondary`, ecc.), mai `editorial-*`. Terminale ha palette scura dedicata apposta per restare "versione scura degli stessi toni" — infiltrare accento interfaccia chiara (verde) rompe quel principio.
+**Colori (CRITICO):** dentro drawer Console usa **solo** token `terminal-*` (`terminal-accent`, `terminal-secondary`, ecc.), mai `editorial-*`, e mai valori esadecimali o classi colore Tailwind cablate — i token sono l'unico punto in cui il pannello cambia col tema. Il pannello ha palette dedicata apposta per restare "gli stessi toni caldi, declinati per il tema corrente": infiltrare l'accento dell'interfaccia (verde) rompe quel principio.
 
 **Ridimensionabile:** maniglia orizzontale in cima al drawer (`cursor-ns-resize`, trascinabile), altezza persistita in `uiStore.consoleDrawerHeight` (default 256px, min 160, max 520).
 

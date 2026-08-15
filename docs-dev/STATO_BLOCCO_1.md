@@ -29,6 +29,7 @@ dritta su `main`.
 | 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
 | 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
 | 4 | Scaricamento vero | #218 primo consumatore | **in revisione** (#419) |
+| 4-bis | Catalogo Biblioteca, pulsante scarica, metadati | #217 (interfaccia) | **in revisione** (#420) |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | da fare |
@@ -50,8 +51,8 @@ errore, avanzamento al massimo una volta al secondo, recupero dei lavori
 interrotti alla riapertura, eventi verso l'interfaccia. Gli unici tipi di lavoro
 sono due finti, compilati solo nelle build di sviluppo.
 
-**Coda visibile** (PR 3): indicatore al centro della barra di stato in ogni
-sezione, scheda Lavori nel pannello in basso accanto ai messaggi, comandi per
+**Coda visibile** (PR 3): indicatore nella zona destra della barra di stato, in
+ogni sezione, scheda Lavori nel pannello in basso accanto ai messaggi, comandi per
 pausa, ripresa, annullamento e nuovo tentativo, conferma alla chiusura con i
 lavori attivi messi in pausa. Si prova con i tipi di lavoro finti delle build di
 sviluppo.
@@ -109,29 +110,165 @@ sincronizzate; scheda Lavori con i cinque limiti e la ripresa automatica.
 - **Scrollbar su Linux**: il rimedio attuale funziona ma il risultato non
   piace. Da rivedere con una soluzione vera, fuori dal blocco 1.
 
+## Rilettura esterna del 2026-08-14, e cosa ne è uscito
+
+Le quattro PR aperte sono state riviste dall'esterno, leggendo il codice invece
+del corpo delle PR. Le correzioni sono tutte sul ramo della **#420**, che
+contiene le altre tre.
+
+**Difetti veri, corretti**
+
+- Il pulsante *scarica* passava `external_ref` come chiave della biblioteca. È
+  «chiave **e** identificativo» (`archive_org:idxyz`), e come nome di cartella
+  viene rifiutato: ogni fonte aggiunta dalla ricerca falliva subito. Ora la
+  chiave arriva dai metadati della fonte, dove era già salvata.
+- Il punto salvato contava il **numero dell'ultima carta** ma veniva usato come
+  **quante ne sono fatte**: con un canvas non scaricabile nel manifesto, la
+  ripresa saltava carte che non sarebbero tornate mai più.
+- Rilanciare un lavoro finito conservava il punto salvato: dopo aver liberato
+  spazio, il rilancio finiva in un istante dichiarando completa una fonte senza
+  più un file. Ora un lavoro terminale riparte da capo, e le carte ancora sul
+  disco si saltano una per una.
+- Cinque comandi del deposito ricevevano ancora la radice **dal frontend**, e uno
+  di quelli cancella ricorsivamente. Adesso la legge il backend: dopo #405, la
+  #414 e la #418, davvero nessun comando accetta un percorso dall'interfaccia.
+- La cartella di transito si costruiva con un identificativo non validato, e la
+  si scartava solo a lavoro riuscito.
+- «In attesa per i limiti della biblioteca» non lo scriveva nessuno: la coda
+  restava «in corso» con l'icona che girava per tutto un raffreddamento (D17).
+- Tentativi e attesa esponenziale venivano da costanti del motore, non dal
+  profilo; la pausa fra richieste veniva risorteggiata a ogni controllo, e usciva
+  in media più corta di quella dichiarata.
+- Una carta sul disco senza la sua riga (chiusura brusca fra promozione e
+  scrittura) veniva saltata per sempre.
+- In Biblioteca: le carte si contavano per riga e non per numero di carta, il
+  catalogo non si rileggeva a scaricamento finito, un lavoro fallito lasciava la
+  percentuale ferma togliendo il modo di riprovare, e una fonte completa
+  continuava a offrire *scarica*. Ora una fonte tutta sul computer mostra il
+  segno che è a posto, e basta.
+- In coda i lavori si chiamavano «Scaricamento fonte»: il nome dell'opera si
+  scrive alla messa in coda, e diventa `titolo · 34/210 · 46 MB` mentre gira.
+
+**Pulizie**: campi di `useStatusBarData` che nessuno leggeva (ricalcolavano le
+parole di ogni frammento a ogni render), doppio elenco delle fonti in
+`sourceLibraryStore`, doppione di scansione in `integrity.rs`, ramo morto sul
+429, `expect()` sui percorsi di produzione.
+
+**Non corretto, e perché**: la barra di stato non compare finché non c'è un
+workspace attivo. Succede solo al primissimo avvio, dove non esiste ancora nulla
+in coda, quindi l'indicatore non ha niente da nascondere.
+
+## Prova sul campo del 2026-08-15, e cosa ne è uscito
+
+Provando lo scaricamento su archive.org sono emerse due cose.
+
+**La misura chiesta al servizio.** Chiedevamo `/full/2000,/`, cioè «larghezza
+esattamente 2000». Misurato con richieste vere: archive.org risponde `500` su
+pagine che poco prima aveva servito, e `400` quando 2000 supera la larghezza
+dell'originale — mentre serve senza problemi `/full/1299,/`, che è una delle
+misure che dichiara nel proprio descrittore. La specifica Image API garantisce
+le misure elencate in `sizes` a qualunque livello di conformità; la larghezza
+arbitraria solo dal livello 1 in su, e il livello dichiarato non è affidabile.
+Ora il tetto si prova così com'è, e solo se il servizio rifiuta si legge il suo
+descrittore e si sceglie la misura più vicina al tetto, ricordandola per tutte
+le carte con le stesse dimensioni. Regola aggiornata in D4.
+
+**I log dei lavori.** La coda scriveva sei righe in tutto, in forma libera.
+Adesso ogni evento ha una riga sola con la stessa forma — `job <evento> id=…` —
+e i livelli separano ciò che serve nell'applicazione compilata (ciclo di vita e
+problemi) da ciò che serve mentre si sviluppa (dettaglio a carta, attese di
+cortesia). Vocabolario e livelli sono documentati in testa a `jobs/engine.rs` e
+nella scheda di `ARCHITECTURE.md`.
+
+Insieme sono stati sistemati altri tre rilievi della stessa prova:
+
+- «riprende fra 11 minuti» mostrava la stima dello scaricamento al posto
+  dell'attesa prima del tentativo. Ora il motore scrive nel campo della stima i
+  secondi che mancano, e il pannello li conta dall'orario del prossimo
+  tentativo, così il numero cala mentre la riga resta ferma sullo schermo;
+- la barra di avanzamento spariva sotto l'1%: ha una larghezza minima;
+- il messaggio d'errore era l'indirizzo IIIF completo, tre righe di parametri.
+  Adesso dice cosa è successo — «misura non disponibile per questa carta (400)»,
+  «la biblioteca ha chiesto di rallentare (403)» — e l'indirizzo va nel registro;
+- la sezione «terminati oggi» si svuotava a ogni riavvio: l'elenco iniziale
+  chiedeva solo i lavori non finiti, e nessun evento riportava indietro gli
+  altri. Adesso comprende anche i terminati nelle ultime 24 ore, la stessa
+  finestra che il pannello mostra.
+
+**Lavori più parlanti** *(chiesto dall'utente il 2026-08-15)*: la riga del
+pannello dice cosa sta facendo il lavoro adesso — avvio, lettura del manifesto,
+scelta della risoluzione, scaricamento — e non un generico «in corso». La fase è
+una chiave breve che scrive il gestore e traduce l'interfaccia, quindi ogni tipo
+di lavoro avrà il suo vocabolario; quelle che l'interfaccia non conosce ancora si
+leggono com'è scritta la chiave invece di sparire.
+
+**Piano delle decisioni scoperte**: `PIANO_DECISIONI_SCOPERTE.md` raccoglie le
+otto voci che nessuna PR ha implementato né dichiarato, con come si fanno e in
+quale ordine.
+
+**Quattro decisioni scoperte, implementate il 2026-08-15**: le miniature si
+scaricano all'aggiunta della fonte (D6) come lavoro a priorità bassa che
+condivide i contatori di cortesia con lo scaricamento; in Biblioteca ogni riga ha
+ora quattro comandi sempre visibili — scarica, verifica, libera spazio, togli —
+che si disattivano quando non si possono usare; la verifica di una fonte
+confronta quello che il database dichiara con quello che c'è sul disco e propone
+di riscaricare le mancanti (D5); la verifica del deposito è un lavoro avviabile
+da Impostazioni, rapida o completa, con il conteggio degli orfani (D5-bis), e
+l'impostazione «verifica all'avvio» finalmente ha un lettore.
+
+Restano scoperte la 5 (divieto dell'istituzione, D9) e la 7 (primo avvio e
+controllo dello spazio, D1): vedi `PIANO_DECISIONI_SCOPERTE.md`.
+
+**Rilettura del 2026-08-15 sul codice appena scritto**, mia e di Copilot. Sei
+correzioni: la cartella di transito era una sola per carte e miniature, quindi
+chi finiva per primo poteva portare via il file che l'altro aveva appena scritto;
+la chiave della biblioteca per scaricare e per liberare spazio veniva dai
+metadati invece che da dove i file stanno davvero, e sulle fonti aggiunte prima
+che la provenienza venisse salvata avrebbe riscaricato tutto in una cartella
+nuova o cancellato le righe lasciando i file; i lavori **falliti** restavano
+nell'elenco per sempre, e l'indicatore in barra continuava a segnalarli a
+distanza di giorni; il catalogo faceva due letture della tabella degli asset per
+ogni fonte; l'elenco locale dei lavori si svuotava anche quando la cancellazione
+falliva; l'interruttore della verifica all'avvio restava acceso anche se
+l'impostazione non veniva scritta.
+
+**Righe dei lavori parlanti** *(chiesto dall'utente il 2026-08-15)*: il tipo di
+lavoro si legge in un contrassegno — pagine, miniature, verifica — e i numeri
+distinguono quanto è arrivato da quanto si prevede in tutto, perché il peso della
+carta in corso da solo è fuorviante. La riga si apre con un'animazione e mostra i
+dettagli veri: risoluzione negoziata, biblioteca, host, tentativi, orari. Il dato
+sta in una colonna nuova, `jobs.detail`, in JSON: le chiavi le decide il tipo di
+lavoro, così i gestori futuri ne aggiungono senza toccare l'interfaccia.
+
+**Miniature spostate allo scaricamento** *(D6 corretta il 2026-08-15)*: partivano
+all'aggiunta della fonte, e su un libro di 924 carte erano 18 MB e un quarto
+d'ora di rete per qualcosa che serve solo offline. Ora vanno con il libro, come
+lavoro separato a priorità più bassa. La misura si sceglie a tre livelli: la
+miniatura dichiarata dal canvas se c'è, altrimenti la misura dichiarata dal
+descrittore letto una volta per gruppo. Chiedere 256 px alla cieca faceva
+generare l'immagine sul momento — misurato su archive.org: 23 secondi contro 1.
+
+**Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
+(tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
+
 ## Prossima sessione: da dove riprendere
 
-Tre PR aperte e verdi, impilate in quest'ordine — ognuna si ritarga da sola
-quando la precedente viene unita:
+Quattro PR impilate, tutte verdi. La **#420 contiene le altre tre**, e le
+correzioni della rilettura stanno lì: si unisce quella in `blocco-1`, e #417,
+#418 e #419 si chiudono come incluse.
 
-1. **#417** — coda visibile (provata da Niki il 13–14 agosto, corretti i difetti
-   emersi: pannello scuro, indicatore fisso a destra, chiusura, posizione nella
-   barra, comandi del testo spostati sopra il documento);
-2. **#418** — impostazioni di deposito e lavori, più la chiusura dell'ultimo
-   comando che accettava percorsi dal frontend (rilievi di Copilot chiusi);
-3. **#419** — scaricamento vero (**non ancora provata da Niki**).
+Prima di unire serve una prova a mano sulla rete vera: è l'unica cosa che i test
+non possono dire.
 
-Ordine consigliato: unire #417, #418, poi provare la #419 con una fonte vera
-prima di unirla — è la prima che tocca la rete.
-
-**Poi**: notifiche di sistema (D21), pulsante di scaricamento in Biblioteca,
-schermata di primo avvio, e la PR 6 (registrazione del lavoro svolto), che il
+**Poi**: notifiche di sistema (D21), schermata di primo avvio, e la PR 6 (registrazione del lavoro svolto), che il
 documento chiede di non lasciare ultima.
 
 ~~Da aprire come issue: la cartella dati usa ancora la finestra aperta dal
 frontend~~ — **chiusa nella PR 3-bis**: anche la cartella dati passa dal dialogo
-nativo aperto dal backend. Dopo #405, il deposito e la cartella dati, in Glossa
-nessun comando accetta più un percorso dal frontend.
+nativo aperto dal backend. ~~Dopo #405, il deposito e la cartella dati, in Glossa
+nessun comando accetta più un percorso dal frontend.~~ — vero **solo dopo la
+rilettura**: cinque comandi del deposito ricevevano ancora la radice come
+parametro. Adesso la legge il backend.
 
 ## Da provare a mano, per chi rilegge
 

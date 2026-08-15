@@ -531,3 +531,20 @@ export function formatDateTime(value: string | number | Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+/**
+ * Dimensione in forma leggibile.
+ *
+ * Le carte di un manoscritto stanno fra i decimi di megabyte e la decina, e un
+ * codice intero arriva ai gigabyte: sotto il megabyte si scrive in kB, sopra in
+ * MB, e solo oltre il gigabyte si tengono i decimali.
+ */
+export function humanSize(bytes: number): string {
+  const KB = 1024;
+  const MB = KB * 1024;
+  const GB = MB * 1024;
+  if (bytes < KB) return `${bytes} B`;
+  if (bytes < MB) return `${Math.round(bytes / KB)} kB`;
+  if (bytes < GB) return `${Math.round(bytes / MB)} MB`;
+  return `${(bytes / GB).toFixed(1)} GB`;
+}

@@ -18,6 +18,18 @@ pub struct Page {
     pub label: Option<String>,
     /// Radice del servizio immagini, senza parametri.
     pub image_service: String,
+    /// Dimensioni dell'originale dichiarate dal canvas. Le carte di uno stesso
+    /// libro **non** hanno tutte la stessa dimensione, e da queste si ricava a
+    /// quale gruppo appartiene la carta quando si negozia la misura da chiedere.
+    pub size: Option<(u32, u32)>,
+    /// Miniatura **già pronta**, quando la biblioteca la dichiara sul canvas.
+    ///
+    /// È la via più economica per averla: nessun descrittore da leggere e
+    /// nessuna misura da scegliere, si scarica quell'indirizzo. La specifica la
+    /// prevede — «A Canvas *may* have the `thumbnail` property» — ma non tutte
+    /// la mettono: archive.org dichiara solo la copertina dell'opera, e nessuna
+    /// delle 924 carte del libro provato ne aveva una.
+    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +41,10 @@ pub struct Manifest {
     /// problema, non un dettaglio (D2-bis).
     pub rights: Option<String>,
     pub attribution: Option<String>,
+    /// Manifesto nella vecchia Presentation 2.1. Cambia il nome della
+    /// dimensione piena: `max` esiste solo dalla Image API 3.0, prima si
+    /// chiamava `full` e chiederlo alla vecchia maniera fa rispondere 400.
+    pub presentation2: bool,
 }
 
 pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
@@ -36,10 +52,11 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
         JobError::new(ErrorKind::Format, format!("manifesto illeggibile: {error}"))
     })?;
 
-    let pages = if root.get("items").is_some() {
-        parse_presentation_3(&root)
-    } else {
+    let presentation2 = root.get("items").is_none();
+    let pages = if presentation2 {
         parse_presentation_2(&root)
+    } else {
+        parse_presentation_3(&root)
     };
 
     if pages.is_empty() {
@@ -57,6 +74,7 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
             .and_then(Value::as_str)
             .map(str::to_string),
         attribution: attribution_of(&root),
+        presentation2,
     })
 }
 
@@ -81,6 +99,8 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         index: position as u32 + 1,
                         label: label_of(canvas.get("label")),
                         image_service: service_of(body)?,
+                        size: canvas_size(canvas),
+                        thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
                 .collect()
@@ -106,6 +126,10 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         index: position as u32 + 1,
                         label: label_of(canvas.get("label")),
                         image_service: service_of(resource)?,
+                        // In 2.1 le dimensioni stanno sulla risorsa quando il
+                        // canvas non le dichiara.
+                        size: canvas_size(canvas).or_else(|| canvas_size(resource)),
+                        thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
                 .collect()
@@ -113,19 +137,27 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
         .unwrap_or_default()
 }
 
-/// La radice del servizio immagini: si preferisce sempre il servizio
-/// all'indirizzo diretto, perché è quello che accetta i parametri di
-/// dimensione della Image API.
+/// La radice del servizio immagini.
+///
+/// Solo il servizio, mai l'indirizzo diretto dell'immagine: quello è già un URL
+/// completo di parametri, e attaccargli in coda `/full/2000,/0/default.jpg`
+/// produrrebbe un indirizzo inventato che nessuno serve (D2-bis: niente
+/// indirizzi indovinati). Un canvas senza servizio non è scaricabile a una
+/// risoluzione scelta, e si salta.
 fn service_of(body: &Value) -> Option<String> {
-    let service = body.get("service");
-    let from_service = match service {
+    let from_service = match body.get("service") {
         Some(Value::Array(entries)) => entries.first().and_then(id_of),
         Some(single) => id_of(single),
         None => None,
     };
-    from_service
-        .or_else(|| id_of(body))
-        .map(|id| id.trim_end_matches('/').to_string())
+    from_service.map(|id| id.trim_end_matches('/').to_string())
+}
+
+/// Dimensioni dell'originale dichiarate dal canvas.
+fn canvas_size(canvas: &Value) -> Option<(u32, u32)> {
+    let width = canvas.get("width")?.as_u64()? as u32;
+    let height = canvas.get("height")?.as_u64()? as u32;
+    (width > 0 && height > 0).then_some((width, height))
 }
 
 fn id_of(value: &Value) -> Option<String> {
@@ -164,18 +196,13 @@ fn attribution_of(root: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Indirizzo di una carta secondo la Image API 3.0: `/full/<size>/0/default.jpg`.
+/// Indirizzo di una carta secondo la Image API: `/full/<size>/0/default.jpg`.
 ///
-/// `size_tag` è la stessa etichetta che nomina la cartella nel deposito, così
-/// quello che si è chiesto e quello che si è salvato non possono divergere:
-/// `max` per la piena risoluzione, un numero per il lato lungo.
-pub fn image_url(image_service: &str, size_tag: &str) -> String {
-    let size = if size_tag == "max" {
-        "max".to_string()
-    } else {
-        format!("{size_tag},")
-    };
-    format!("{image_service}/full/{size}/0/default.jpg")
+/// `size_token` è la stessa etichetta che nomina la cartella nel deposito, resa
+/// nella forma che il servizio capisce (`Manifest::size_token`): così quello che
+/// si è chiesto e quello che si è salvato non possono divergere.
+pub fn image_url(image_service: &str, size_token: &str) -> String {
+    format!("{image_service}/full/{size_token}/0/default.jpg")
 }
 
 #[cfg(test)]
@@ -188,9 +215,10 @@ mod tests {
       "requiredStatement": { "value": { "it": ["Biblioteca di prova"] } },
       "homepage": [{ "id": "https://example.org/opera" }],
       "items": [
-        { "label": { "it": ["12r"] },
+        { "label": { "it": ["12r"] }, "width": 2816, "height": 4240,
           "items": [{ "items": [{ "body": { "id": "https://img/1/full/max/0/default.jpg",
-                                            "service": [{ "id": "https://img/1" }] } }] }] },
+                                            "service": [{ "id": "https://img/1",
+                                                          "profile": "level2" }] } }] }] },
         { "label": { "none": ["[iv]"] },
           "items": [{ "items": [{ "body": { "service": { "id": "https://img/2/" } } }] }] }
       ]
@@ -200,8 +228,10 @@ mod tests {
       "@id": "https://example.org/manifest",
       "attribution": "Biblioteca di prova",
       "sequences": [{ "canvases": [
-        { "label": "1r", "images": [{ "resource": { "@id": "https://img/a/full/full/0/default.jpg",
-                                                     "service": { "@id": "https://img/a" } } }] }
+        { "label": "1r", "width": 1275, "height": 1650,
+          "images": [{ "resource": { "@id": "https://img/a/full/full/0/default.jpg",
+                                     "service": { "@id": "https://img/a",
+                                                  "profile": "http://iiif.io/api/image/2/level1.json" } } }] }
       ]}]
     }"#;
 
@@ -262,12 +292,71 @@ mod tests {
     #[test]
     fn the_image_url_follows_the_image_api() {
         assert_eq!(
-            image_url("https://img/1", "2000"),
+            image_url("https://img/1", "2000,"),
             "https://img/1/full/2000,/0/default.jpg"
         );
         assert_eq!(
             image_url("https://img/1", "max"),
             "https://img/1/full/max/0/default.jpg"
         );
+    }
+
+    #[test]
+    fn a_canvas_that_declares_its_thumbnail_is_believed() {
+        // È la via più economica: niente descrittore da leggere, niente misura
+        // da scegliere.
+        let manifest = parse(
+            br#"{"items":[{"width":100,"height":200,
+              "thumbnail":[{"id":"https://img/1/full/160,/0/default.jpg"}],
+              "items":[{"items":[{"body":{"service":[{"id":"https://img/1"}]}}]}]}]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            manifest.pages[0].thumbnail.as_deref(),
+            Some("https://img/1/full/160,/0/default.jpg")
+        );
+    }
+
+    #[test]
+    fn without_a_declared_thumbnail_there_is_nothing_to_believe() {
+        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
+
+        assert_eq!(manifest.pages[0].thumbnail, None);
+    }
+
+    #[test]
+    fn the_declared_page_size_is_read() {
+        // Serve a scegliere la misura da chiedere: le carte di uno stesso libro
+        // non hanno tutte la stessa dimensione, quindi nemmeno le misure che il
+        // servizio tiene pronte sono le stesse.
+        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
+
+        assert_eq!(manifest.pages[0].size, Some((2816, 4240)));
+    }
+
+    #[test]
+    fn the_older_manifests_are_recognised_as_such() {
+        let old = parse(PRESENTATION_2.as_bytes()).unwrap();
+
+        assert!(old.presentation2);
+    }
+
+    #[test]
+    fn a_canvas_without_an_image_service_is_skipped_not_guessed() {
+        // L'indirizzo diretto del body è già un URL completo: attaccargli i
+        // parametri della Image API produrrebbe un indirizzo che non esiste.
+        let manifest = parse(
+            br#"{"items":[
+              {"items":[{"items":[{"body":{"id":"https://img/9/full/max/0/default.jpg"}}]}]},
+              {"items":[{"items":[{"body":{"service":[{"id":"https://img/2"}]}}]}]}
+            ]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(manifest.pages.len(), 1);
+        assert_eq!(manifest.pages[0].image_service, "https://img/2");
+        // La numerazione resta quella del manifesto: la carta è la seconda.
+        assert_eq!(manifest.pages[0].index, 2);
     }
 }

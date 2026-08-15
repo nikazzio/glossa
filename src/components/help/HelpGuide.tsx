@@ -529,6 +529,9 @@ function StorageSection() {
         {t('help.storage.jobsRestartDesc')}
       </Step>
 
+      <SubTitle>{t('help.storage.downloadTitle')}</SubTitle>
+      <P>{t('help.storage.downloadDesc')}</P>
+
       <SubTitle>{t('help.storage.limitsTitle')}</SubTitle>
       <P>{t('help.storage.limitsDesc')}</P>
 

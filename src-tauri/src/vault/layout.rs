@@ -20,6 +20,21 @@ const PAGES_DIR: &str = "pages";
 const THUMBNAILS_DIR: &str = "thumbnails";
 const MANIFEST_FILE: &str = "manifest.json";
 
+/// Area di transito (D16-bis): ci si scrive, si valida, e solo allora si
+/// promuove. Sta accanto alle radici del layout perché quello che c'è dentro
+/// **non** è ancora nel deposito.
+pub const STAGING_DIR: &str = "staging";
+
+/// Una componente di percorso, verificata. Da usare ogni volta che un valore
+/// arrivato dal frontend diventa il nome di una cartella.
+pub fn safe_component(value: &str) -> Result<&str, String> {
+    if is_safe_component(value) {
+        Ok(value)
+    } else {
+        Err(format!("Invalid path component for the vault: {value}"))
+    }
+}
+
 /// Caratteri ammessi in una componente di percorso costruita da noi.
 /// Chiavi provider e identificativi sono già ASCII, ma un valore che arrivasse
 /// sporco non deve poter uscire dal deposito con `..` o una barra.

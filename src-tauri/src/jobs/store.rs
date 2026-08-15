@@ -10,8 +10,8 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use super::{JobError, JobRecord, JobStatus};
 
 const COLUMNS: &str = "id, job_type, status, priority, progress, message, config, checkpoint, \
-     attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, \
-     depends_on_job_id, next_attempt_at, created_at, updated_at";
+     attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, phase, \
+     detail, depends_on_job_id, next_attempt_at, created_at, updated_at";
 
 /// Cosa serve per mettere un lavoro in coda. Il resto lo mette il database.
 #[derive(Debug, Clone)]
@@ -23,6 +23,9 @@ pub struct NewJob {
     pub max_attempts: u32,
     pub depends_on_job_id: Option<String>,
     pub workspace_id: Option<String>,
+    /// Come si chiama il lavoro nel pannello, già in coda: chi lo ha messo in
+    /// fila sa dire cos'è, il gestore lo saprà solo quando parte (D20).
+    pub message: Option<String>,
 }
 
 fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
@@ -42,17 +45,20 @@ fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
         error_kind: row.get(11)?,
         eta_seconds: row.get(12)?,
         waiting_reason: row.get(13)?,
-        depends_on_job_id: row.get(14)?,
-        next_attempt_at: row.get(15)?,
-        created_at: row.get(16)?,
-        updated_at: row.get(17)?,
+        phase: row.get(14)?,
+        detail: row.get(15)?,
+        depends_on_job_id: row.get(16)?,
+        next_attempt_at: row.get(17)?,
+        created_at: row.get(18)?,
+        updated_at: row.get(19)?,
     })
 }
 
 pub fn create(conn: &Connection, job: &NewJob) -> Result<JobRecord, String> {
     conn.execute(
         "INSERT INTO jobs (id, job_type, status, priority, config, max_attempts, \
-         depends_on_job_id, workspace_id) VALUES (?1, ?2, 'queued', ?3, ?4, ?5, ?6, ?7)",
+         depends_on_job_id, workspace_id, message) \
+         VALUES (?1, ?2, 'queued', ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             job.id,
             job.job_type,
@@ -61,6 +67,7 @@ pub fn create(conn: &Connection, job: &NewJob) -> Result<JobRecord, String> {
             job.max_attempts as i64,
             job.depends_on_job_id,
             job.workspace_id,
+            job.message,
         ],
     )
     .map_err(|e| format!("Failed to queue the job: {e}"))?;
@@ -77,13 +84,20 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<JobRecord>, String> {
     .map_err(|e| format!("Failed to read the job: {e}"))
 }
 
-/// I lavori non ancora finiti, dal più recente. L'interfaccia mostra questi;
-/// lo storico completo non serve a nessuno finché non c'è l'area Analisi.
+/// I lavori che il pannello mostra: quelli non ancora finiti **e quelli
+/// terminati oggi** (D20).
+///
+/// I terminati servono: senza, la sezione «terminati oggi» si svuotava a ogni
+/// riavvio dell'applicazione, perché l'elenco iniziale li escludeva e nessun
+/// evento li riportava indietro. La finestra è la stessa che usa il pannello.
+/// Lo storico completo non serve a nessuno finché non c'è l'area Analisi.
 pub fn list_active(conn: &Connection) -> Result<Vec<JobRecord>, String> {
     query_many(
         conn,
         &format!(
-            "SELECT {COLUMNS} FROM jobs WHERE status NOT IN ('completed', 'cancelled') \
+            "SELECT {COLUMNS} FROM jobs \
+             WHERE status NOT IN ('completed', 'cancelled', 'error') \
+                OR finished_at >= datetime('now', '-1 day') \
              ORDER BY priority DESC, created_at"
         ),
         params![],
@@ -158,6 +172,7 @@ pub fn set_status(conn: &Connection, id: &str, status: JobStatus) -> Result<bool
 /// Avanzamento, messaggio, stima e motivo dell'attesa (D17). Il gestore chiama
 /// al massimo una volta al secondo: il limite sta in `JobContext`, qui si
 /// scrive e basta.
+#[allow(clippy::too_many_arguments)]
 pub fn save_progress(
     conn: &Connection,
     id: &str,
@@ -165,14 +180,32 @@ pub fn save_progress(
     message: Option<&str>,
     eta_seconds: Option<i64>,
     waiting_reason: Option<&str>,
+    detail: Option<&str>,
 ) -> Result<(), String> {
     conn.execute(
+        // Il dettaglio viaggia con l'avanzamento: cambia insieme a lui, e una
+        // scrittura separata raddoppierebbe gli aggiornamenti per ogni carta.
+        // `COALESCE` lascia stare quello vecchio quando il gestore non ne manda
+        // uno nuovo, invece di cancellarlo.
         "UPDATE jobs SET progress = ?2, message = ?3, eta_seconds = ?4, waiting_reason = ?5, \
-         updated_at = CURRENT_TIMESTAMP \
+         detail = COALESCE(?6, detail), updated_at = CURRENT_TIMESTAMP \
          WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
-        params![id, progress, message, eta_seconds, waiting_reason],
+        params![id, progress, message, eta_seconds, waiting_reason, detail],
     )
     .map_err(|e| format!("Failed to save the job progress: {e}"))?;
+    Ok(())
+}
+
+/// Cosa sta facendo adesso: lettura del manifesto, scelta della risoluzione,
+/// scaricamento. La scrive il gestore quando cambia, non a ogni giro, perché il
+/// pannello deve poterla leggere senza aspettare il freno di un secondo.
+pub fn save_phase(conn: &Connection, id: &str, phase: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE jobs SET phase = ?2, updated_at = CURRENT_TIMESTAMP \
+         WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
+        params![id, phase],
+    )
+    .map_err(|e| format!("Failed to save the job phase: {e}"))?;
     Ok(())
 }
 
@@ -207,10 +240,14 @@ pub fn schedule_retry(
     wait_seconds: i64,
 ) -> Result<(), String> {
     conn.execute(
+        // `eta_seconds` diventa **l'attesa prima del prossimo tentativo**: è
+        // quello che l'interfaccia scrive accanto a «riprende fra…», e finché
+        // conteneva la stima dello scaricamento diceva un numero vero al posto
+        // sbagliato (D17). Alla ripartenza il gestore lo riscrive con la stima.
         "UPDATE jobs SET status = 'queued', \
          next_attempt_at = datetime('now', ?3), \
          error = ?2, error_kind = ?4, \
-         waiting_reason = 'retry', \
+         waiting_reason = 'retry', eta_seconds = ?5, \
          updated_at = CURRENT_TIMESTAMP \
          WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
         params![
@@ -218,6 +255,7 @@ pub fn schedule_retry(
             error.message,
             format!("+{wait_seconds} seconds"),
             error.kind.as_str(),
+            wait_seconds,
         ],
     )
     .map_err(|e| format!("Failed to schedule the retry: {e}"))?;
@@ -241,7 +279,8 @@ pub fn fail(conn: &Connection, id: &str, error: &JobError) -> Result<(), String>
 pub fn requeue(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET status = 'queued', error = NULL, error_kind = NULL, \
-         waiting_reason = NULL, next_attempt_at = NULL, finished_at = NULL, \
+         waiting_reason = NULL, phase = NULL, detail = NULL, next_attempt_at = NULL, \
+         finished_at = NULL, \
          progress = CASE WHEN ?2 THEN 0 ELSE progress END, \
          checkpoint = CASE WHEN ?2 THEN NULL ELSE checkpoint END, \
          updated_at = CURRENT_TIMESTAMP \
@@ -271,6 +310,25 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
     Ok(())
 }
 
+/// Toglie dall'elenco i lavori finiti: completati, annullati, falliti.
+///
+/// Sono righe di storico che il pannello mostra per la giornata (D20); quando
+/// diventano rumore si buttano. `id` limita la pulizia a un lavoro solo.
+pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
+    let removed = match id {
+        Some(id) => conn.execute(
+            "DELETE FROM jobs WHERE id = ?1 AND status IN ('completed', 'cancelled', 'error')",
+            params![id],
+        ),
+        None => conn.execute(
+            "DELETE FROM jobs WHERE status IN ('completed', 'cancelled', 'error')",
+            [],
+        ),
+    }
+    .map_err(|error| format!("Failed to clear finished jobs: {error}"))?;
+    Ok(removed)
+}
+
 pub fn read_setting(conn: &Connection, key: &str) -> Result<Option<String>, String> {
     conn.query_row(
         "SELECT value FROM app_settings WHERE key = ?1",
@@ -296,6 +354,8 @@ pub(crate) mod test_support {
             include_str!("../../migrations/0002_workspace_icon_key.sql"),
             include_str!("../../migrations/0003_vault_and_read_mode.sql"),
             include_str!("../../migrations/0004_jobs_runtime.sql"),
+            include_str!("../../migrations/0005_job_phase.sql"),
+            include_str!("../../migrations/0006_job_detail.sql"),
         ] {
             conn.execute_batch(migration).expect("migration applies");
         }
@@ -320,6 +380,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             },
         )
         .expect("job queued")
@@ -359,11 +420,44 @@ mod tests {
         queued(&conn, "j3");
         set_status(&conn, "j3", JobStatus::Completed).unwrap();
 
-        save_progress(&conn, "j3", 0.5, Some("a metà"), Some(60), None).unwrap();
+        save_progress(
+            &conn,
+            "j3",
+            0.5,
+            Some("a metà"),
+            Some(60),
+            None,
+            Some(r#"{"units":{"done":1}}"#),
+        )
+        .unwrap();
 
         let job = get(&conn, "j3").unwrap().unwrap();
         assert_eq!(job.progress, 0.0);
         assert_eq!(job.message, None);
+        assert_eq!(job.detail, None, "nemmeno i dettagli");
+    }
+
+    #[test]
+    fn a_progress_without_details_keeps_the_ones_already_written() {
+        // I dettagli cambiano meno spesso dell'avanzamento: chi non ne manda di
+        // nuovi non deve cancellare quelli buoni.
+        let conn = migrated_connection();
+        queued(&conn, "j-detail");
+        save_progress(
+            &conn,
+            "j-detail",
+            0.1,
+            None,
+            None,
+            None,
+            Some(r#"{"units":{"done":1}}"#),
+        )
+        .unwrap();
+
+        save_progress(&conn, "j-detail", 0.2, None, None, None, None).unwrap();
+
+        let job = get(&conn, "j-detail").unwrap().unwrap();
+        assert_eq!(job.detail.as_deref(), Some(r#"{"units":{"done":1}}"#));
     }
 
     #[test]
@@ -379,6 +473,9 @@ mod tests {
         assert_eq!(job.status, JobStatus::Queued, "fermo, non fallito");
         assert_eq!(job.error_kind.as_deref(), Some("throttled"));
         assert_eq!(job.waiting_reason.as_deref(), Some("retry"));
+        // Il tempo mostrato dev'essere quello che manca al tentativo, non la
+        // stima dello scaricamento rimasta lì dal giro precedente.
+        assert_eq!(job.eta_seconds, Some(600));
     }
 
     #[test]
@@ -411,6 +508,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: Some("first".to_string()),
                 workspace_id: None,
+                message: None,
             },
         )
         .unwrap();
@@ -445,6 +543,7 @@ mod tests {
                 max_attempts: 3,
                 depends_on_job_id: None,
                 workspace_id: None,
+                message: None,
             },
         )
         .unwrap();
@@ -507,6 +606,76 @@ mod tests {
         let job = get(&conn, "j7").unwrap().unwrap();
         assert_eq!(job.checkpoint.as_deref(), Some(r#"{"done":4}"#));
         assert_eq!(job.attempt_count, 0);
+    }
+
+    #[test]
+    fn the_panel_list_keeps_what_finished_today_and_drops_the_old() {
+        // La sezione «terminati oggi» si riempiva solo con gli eventi: dopo un
+        // riavvio restava vuota anche con i lavori finiti dieci minuti prima.
+        let conn = migrated_connection();
+        queued(&conn, "oggi");
+        queued(&conn, "ieri");
+        queued(&conn, "in-corso");
+        queued(&conn, "fallito-vecchio");
+        set_status(&conn, "oggi", JobStatus::Completed).unwrap();
+        set_status(&conn, "ieri", JobStatus::Completed).unwrap();
+        fail(
+            &conn,
+            "fallito-vecchio",
+            &JobError::new(ErrorKind::NotFound, "404"),
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE jobs SET finished_at = datetime('now', '-3 days') WHERE id = 'fallito-vecchio'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE jobs SET finished_at = datetime('now', '-3 days') WHERE id = 'ieri'",
+            [],
+        )
+        .unwrap();
+
+        let listed: Vec<String> = list_active(&conn)
+            .unwrap()
+            .into_iter()
+            .map(|job| job.id)
+            .collect();
+
+        assert!(listed.contains(&"oggi".to_string()));
+        assert!(listed.contains(&"in-corso".to_string()));
+        assert!(!listed.contains(&"ieri".to_string()));
+        // Anche un fallito vecchio esce: restando dentro terrebbe acceso
+        // l'indicatore in barra per sempre.
+        assert!(!listed.contains(&"fallito-vecchio".to_string()));
+    }
+
+    #[test]
+    fn clearing_finished_jobs_leaves_the_ones_still_going() {
+        let conn = migrated_connection();
+        queued(&conn, "finito");
+        queued(&conn, "in-corso");
+        queued(&conn, "in-coda");
+        set_status(&conn, "finito", JobStatus::Completed).unwrap();
+        set_status(&conn, "in-corso", JobStatus::Running).unwrap();
+
+        let removed = forget_finished(&conn, None).unwrap();
+
+        assert_eq!(removed, 1);
+        assert!(get(&conn, "finito").unwrap().is_none());
+        assert!(get(&conn, "in-corso").unwrap().is_some());
+        assert!(get(&conn, "in-coda").unwrap().is_some());
+    }
+
+    #[test]
+    fn a_single_job_can_be_dismissed_only_once_finished() {
+        let conn = migrated_connection();
+        queued(&conn, "vivo");
+
+        assert_eq!(forget_finished(&conn, Some("vivo")).unwrap(), 0);
+
+        set_status(&conn, "vivo", JobStatus::Cancelled).unwrap();
+        assert_eq!(forget_finished(&conn, Some("vivo")).unwrap(), 1);
     }
 
     #[test]

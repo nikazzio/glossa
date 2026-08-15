@@ -12,7 +12,7 @@ use std::time::Duration;
 use crate::iiif::network::NetworkProfile;
 use crate::jobs::{ErrorKind, JobError};
 
-use super::courtesy::Courtesy;
+use super::courtesy::{Courtesy, Signals};
 
 /// Come si presenta Glossa alle biblioteche. Identificarsi è buona pratica
 /// IIIF, ed è la parte non tecnica dell'aderenza allo standard (D18).
@@ -32,12 +32,10 @@ pub fn build_client(profile: &NetworkProfile) -> Result<Client, JobError> {
         .map_err(|error| JobError::new(ErrorKind::Internal, format!("client HTTP: {error}")))
 }
 
-/// Esito di una richiesta riuscita, con quanto si è aspettato per rispettare i
-/// limiti: serve a dire all'utente che il lavoro è fermo ma non rotto (D17).
+/// Esito di una richiesta riuscita.
 #[derive(Debug)]
 pub struct Fetched {
     pub bytes: Vec<u8>,
-    pub waited: Duration,
 }
 
 /// Tentativi ravvicinati sulla **singola richiesta** (D16, primo livello):
@@ -47,37 +45,46 @@ pub struct Fetched {
 const TRANSPORT_ATTEMPTS: u32 = 3;
 const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 
+/// I segnali del lavoro interrompono l'attesa del turno quando è stato messo in
+/// pausa o annullato — `Ok(None)` significa "fermato mentre aspettava", non
+/// "fallito" — e dicono a chi guarda se l'attesa è la nostra cortesia o la
+/// lentezza del servizio.
+///
+/// `job_attempt` è il tentativo del **lavoro**, non della richiesta: serve a
+/// calcolare l'attesa esponenziale con la base e il tetto del profilo della
+/// biblioteca (D16), invece che con costanti del motore.
 pub async fn fetch(
     client: &Client,
     courtesy: &Courtesy,
     profile: &NetworkProfile,
     url: &str,
-) -> Result<Fetched, JobError> {
+    job_attempt: u32,
+    signals: &Signals<'_>,
+) -> Result<Option<Fetched>, JobError> {
     let host = host_of(url)?;
-    let mut waited_total = Duration::ZERO;
     let mut last_error = None;
 
     for attempt in 1..=TRANSPORT_ATTEMPTS {
-        let (_turn, waited) = courtesy.wait_turn(&host, profile).await;
-        waited_total += waited;
+        let Some(_turn) = courtesy.wait_turn(&host, profile, signals).await else {
+            return Ok(None);
+        };
 
         match attempt_once(client, url, profile).await {
-            Ok(bytes) => {
-                return Ok(Fetched {
-                    bytes,
-                    waited: waited_total,
-                })
-            }
+            Ok(bytes) => return Ok(Some(Fetched { bytes })),
             Err(error) => {
                 // Un rifiuto per eccesso di richieste raffredda **l'host**, non
                 // solo questo lavoro: un secondo scaricamento sullo stesso
                 // server deve rallentare anche lui (D18).
                 if matches!(error.kind, ErrorKind::Throttled | ErrorKind::RateLimited) {
-                    let seconds = error
-                        .retry_after
-                        .map(|wait| wait.as_secs())
-                        .unwrap_or(profile.cooldown_403_secs);
-                    courtesy.cool_down(&host, profile, seconds).await;
+                    let declared = error.retry_after.map(|wait| wait.as_secs());
+                    let code = if error.kind == ErrorKind::Throttled {
+                        403
+                    } else {
+                        429
+                    };
+                    courtesy
+                        .cool_down(&host, profile, profile.wait_after(Some(code), 1, declared))
+                        .await;
                     return Err(error);
                 }
                 if error.kind != ErrorKind::Transport {
@@ -86,13 +93,26 @@ pub async fn fetch(
                 last_error = Some(error);
                 if attempt < TRANSPORT_ATTEMPTS {
                     tokio::time::sleep(TRANSPORT_PAUSE * attempt).await;
+                    if (signals.stop)() {
+                        return Ok(None);
+                    }
                 }
             }
         }
     }
 
-    Err(last_error
-        .unwrap_or_else(|| JobError::new(ErrorKind::Transport, format!("{url}: nessuna risposta"))))
+    // Il trasporto ha rinunciato: l'attesa prima del prossimo tentativo del
+    // lavoro la decide il profilo della biblioteca, non il motore.
+    let error =
+        last_error.unwrap_or_else(|| JobError::new(ErrorKind::Transport, "nessuna risposta"));
+    Err(JobError {
+        retry_after: Some(Duration::from_secs(profile.wait_after(
+            None,
+            job_attempt,
+            None,
+        ))),
+        ..error
+    })
 }
 
 async fn attempt_once(
@@ -112,7 +132,8 @@ async fn attempt_once(
         .await
         .map_err(|error| {
             // Connessione caduta, DNS, timeout: è trasporto, si ritenta.
-            JobError::new(ErrorKind::Transport, format!("{url}: {error}"))
+            log::warn!("request failed url={url} error={error}");
+            JobError::new(ErrorKind::Transport, "la biblioteca non risponde")
         })?;
 
     let status = response.status();
@@ -121,7 +142,10 @@ async fn attempt_once(
             .bytes()
             .await
             .map(|bytes| bytes.to_vec())
-            .map_err(|error| JobError::new(ErrorKind::Transport, format!("{url}: {error}")));
+            .map_err(|error| {
+                log::warn!("request truncated url={url} error={error}");
+                JobError::new(ErrorKind::Transport, "risposta interrotta a metà")
+            });
     }
 
     Err(classify(status, retry_after_secs(&response), url, profile))
@@ -137,14 +161,33 @@ fn classify(
     profile: &NetworkProfile,
 ) -> JobError {
     let code = status.as_u16();
+    // L'indirizzo completo va nel registro, non nel messaggio: nel pannello
+    // occupava tre righe di parametri IIIF e copriva il motivo vero.
+    log::warn!("request refused url={url} status={code}");
+
     let error = match code {
         // "Stai correndo troppo", non "vietato per sempre": correzione
         // esplicita di D16 dopo le prove su Gallica.
-        403 => JobError::new(ErrorKind::Throttled, format!("{url}: 403")),
-        429 => JobError::new(ErrorKind::RateLimited, format!("{url}: 429")),
-        404 | 410 => JobError::new(ErrorKind::NotFound, format!("{url}: {code}")),
-        500..=599 => JobError::new(ErrorKind::Transport, format!("{url}: {code}")),
-        _ => JobError::new(ErrorKind::Internal, format!("{url}: {code}")),
+        403 => JobError::new(
+            ErrorKind::Throttled,
+            "la biblioteca ha chiesto di rallentare (403)",
+        ),
+        429 => JobError::new(ErrorKind::RateLimited, "troppe richieste insieme (429)"),
+        404 | 410 => JobError::new(
+            ErrorKind::NotFound,
+            format!("carta non disponibile ({code})"),
+        ),
+        500..=599 => JobError::new(
+            ErrorKind::Transport,
+            format!("errore del servizio della biblioteca ({code})"),
+        ),
+        // L'unico parametro che facciamo variare è la misura, quindi un
+        // rifiuto di questo tipo riguarda quella (D4).
+        400 => JobError::new(
+            ErrorKind::Internal,
+            "misura non disponibile per questa carta (400)",
+        ),
+        _ => JobError::new(ErrorKind::Internal, format!("richiesta rifiutata ({code})")),
     };
     // Sul trasporto lasciamo crescere l'attesa al motore: è lì che vive il
     // raddoppio a ogni tentativo. Su 403 e 429 comanda il profilo.
@@ -196,6 +239,20 @@ mod tests {
         }
     }
 
+    fn never_stop() -> impl Fn() -> bool + Sync {
+        || false
+    }
+
+    fn signals<'a>(
+        stop: &'a (dyn Fn() -> bool + Sync),
+        waiting: &'a std::sync::atomic::AtomicBool,
+    ) -> Signals<'a> {
+        Signals {
+            stop,
+            courtesy_wait: waiting,
+        }
+    }
+
     async fn fetch_from(server: &MockServer, route: &str) -> Result<Fetched, JobError> {
         let profile = instant_profile();
         let client = build_client(&profile).unwrap();
@@ -205,8 +262,11 @@ mod tests {
             &courtesy,
             &profile,
             &format!("{}{route}", server.uri()),
+            1,
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
         .await
+        .map(|fetched| fetched.expect("nessuno ha chiesto di fermarsi"))
     }
 
     #[tokio::test]
@@ -243,11 +303,45 @@ mod tests {
             &Courtesy::new(),
             &profile,
             &format!("{}/page.jpg", server.uri()),
+            1,
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
         .await
         .unwrap_err();
 
         assert_eq!(error.retry_after, Some(Duration::from_secs(600)));
+    }
+
+    #[tokio::test]
+    async fn the_wait_between_job_attempts_comes_from_the_library_profile() {
+        // D16: base e tetto dell'attesa esponenziale sono del profilo, non
+        // costanti del motore. Gallica parte da 20 s e raddoppia.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/page.jpg"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+        let profile = NetworkProfile {
+            pause_min_ms: 0,
+            pause_max_ms: 0,
+            ..crate::iiif::network::GALLICA
+        };
+        let client = build_client(&profile).unwrap();
+
+        let error = fetch(
+            &client,
+            &Courtesy::new(),
+            &profile,
+            &format!("{}/page.jpg", server.uri()),
+            2,
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(error.kind, ErrorKind::Transport);
+        assert_eq!(error.retry_after, Some(Duration::from_secs(40)));
     }
 
     #[tokio::test]
@@ -319,13 +413,29 @@ mod tests {
         let courtesy = Courtesy::new();
         let url = format!("{}/page.jpg", server.uri());
 
-        let _ = fetch(&client, &courtesy, &profile, &url).await.unwrap_err();
+        let _ = fetch(
+            &client,
+            &courtesy,
+            &profile,
+            &url,
+            1,
+            &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
+        )
+        .await
+        .unwrap_err();
 
         // Una seconda richiesta allo stesso host non parte: sta scontando il
         // raffreddamento, anche se è un altro lavoro a chiederla.
         let blocked = tokio::time::timeout(
             Duration::from_millis(150),
-            fetch(&client, &courtesy, &profile, &url),
+            fetch(
+                &client,
+                &courtesy,
+                &profile,
+                &url,
+                1,
+                &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
+            ),
         )
         .await;
         assert!(blocked.is_err(), "l'host deve restare fermo");
