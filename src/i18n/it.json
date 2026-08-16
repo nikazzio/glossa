@@ -579,10 +579,11 @@
       "saveFailed": "Impossibile salvare le impostazioni di scaricamento",
       "sizeCap": "Misura delle carte",
       "sizeCapMax": "la più grande disponibile",
-      "sizeCapHint": "Glossa chiede la misura che la biblioteca dichiara più vicina a questa, sopra o sotto: la misura esatta la decide la biblioteca. Una singola biblioteca o una singola opera possono chiedere altro, e vale quello.",
+      "sizeCapHint": "La misura verso cui puntare sul lato lungo. La biblioteca serve quella dichiarata più vicina, sopra o sotto: la scelta è una politica, non un numero esatto.",
       "pixels": "{{value}} pixel",
       "thumbnailEdge": "Misura delle miniature",
-      "thumbnailEdgeHint": "Le miniature si ricavano dalle carte scaricate, sul computer: non costano nessuna richiesta alla biblioteca. Più grandi occupano più spazio e si sfogliano meglio."
+      "thumbnailEdgeHint": "Le miniature si ricavano dalle pagine scaricate, sul computer: non costano nessuna richiesta. Più grandi occupano più spazio e si sfogliano meglio.",
+      "sizes": "Misure"
     },
     "librariesTab": "Biblioteche",
     "libraries": {
@@ -590,17 +591,12 @@
       "saveFailed": "Impossibile salvare le impostazioni della biblioteca",
       "saved": "Impostazioni della biblioteca salvate",
       "resetDone": "Biblioteca riportata ai valori dell'applicazione",
-      "changed": "modificata",
-      "expand": "Apri i valori di questa biblioteca",
-      "collapse": "Chiudi i valori di questa biblioteca",
       "save": "Salva i valori di questa biblioteca",
       "reset": "Riporta ai valori dell'applicazione",
       "sizeCap": "Misura delle carte",
       "sizeCapInherited": "come l'impostazione generale",
-      "concurrencyHint": "Le richieste insieme non superano {{max}}: il limite dipende dal server della biblioteca, non dal tuo computer, e serve a non farsi bloccare.",
       "addHost": "Aggiungi un indirizzo",
       "hostPlaceholder": "biblioteca.esempio.org",
-      "hostHint": "Serve per le opere aggiunte con un indirizzo diretto, che non appartengono a nessuna delle biblioteche in elenco.",
       "field": {
         "pauseMinMs": "Pausa minima (ms)",
         "pauseMaxMs": "Pausa massima (ms)",
@@ -616,7 +612,9 @@
         "readTimeoutSecs": "Attesa per leggere (s)",
         "needsViewerWarmup": "Apri prima la pagina del lettore"
       },
-      "hostField": "Indirizzo della biblioteca"
+      "hostField": "Indirizzo della biblioteca",
+      "useOwn": "Usa valori miei per questa biblioteca",
+      "sizeCapHint": "Vale solo per le opere di questa biblioteca, e passa davanti all'impostazione generale."
     },
     "jobsTab": "Lavori",
     "jobs": {

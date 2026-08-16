@@ -47,6 +47,15 @@ const gallica: LibrarySettings = {
   profile: { ...cautious, pauseMinMs: 2_500, pauseMaxMs: 6_000, maxAttempts: 3 },
 };
 
+const vatican: LibrarySettings = {
+  key: 'vatican',
+  label: 'Vatican Library',
+  inRegistry: true,
+  customised: true,
+  sizeCap: '3000',
+  profile: cautious,
+};
+
 const list = vi.mocked(listLibrarySettings);
 const save = vi.mocked(saveLibrarySettings);
 const reset = vi.mocked(resetLibrarySettings);
@@ -54,61 +63,72 @@ const defaults = vi.mocked(cautiousNetworkProfile);
 
 describe('impostazioni delle biblioteche', () => {
   beforeEach(() => {
-    list.mockReset().mockResolvedValue([gallica]);
-    save.mockReset().mockResolvedValue([{ ...gallica, customised: true }]);
-    reset.mockReset().mockResolvedValue([gallica]);
+    list.mockReset().mockResolvedValue([gallica, vatican]);
+    save.mockReset().mockResolvedValue([{ ...gallica, customised: true }, vatican]);
+    reset.mockReset().mockResolvedValue([gallica, vatican]);
     defaults.mockReset().mockResolvedValue(cautious);
   });
 
-  it('elenca le biblioteche del registro', async () => {
+  it('una biblioteca per pulsante, con il nome solo al passaggio del mouse', async () => {
     render(<LibrariesSettingsTab />);
 
-    expect(await screen.findByText('Gallica')).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Gallica' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Vatican Library' })).toBeInTheDocument();
   });
 
-  it('i valori si vedono solo quando si apre la biblioteca', async () => {
-    const user = userEvent.setup();
+  it('apre la prima biblioteca senza doverla scegliere', async () => {
     render(<LibrariesSettingsTab />);
-    expect(screen.queryByLabelText('settings.libraries.field.maxAttempts')).not.toBeInTheDocument();
 
-    await user.click(await screen.findByRole('button', { name: 'settings.libraries.expand' }));
-
-    expect(screen.getByLabelText('settings.libraries.field.maxAttempts')).toHaveValue(3);
+    expect(await screen.findByLabelText('settings.libraries.field.maxAttempts')).toHaveValue(3);
   });
 
-  it('una biblioteca mai toccata non ha niente da ripristinare', async () => {
-    const user = userEvent.setup();
+  it('i valori si vedono ma non si toccano finché non lo si chiede', async () => {
     render(<LibrariesSettingsTab />);
 
-    await user.click(await screen.findByRole('button', { name: 'settings.libraries.expand' }));
-
-    expect(screen.getByRole('button', { name: 'settings.libraries.reset' })).toBeDisabled();
+    expect(await screen.findByLabelText('settings.libraries.field.maxAttempts')).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'settings.libraries.useOwn' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 
-  it('salva i valori cambiati per quella biblioteca', async () => {
+  it('acceso l interruttore, i valori si cambiano e si salvano', async () => {
     const user = userEvent.setup();
     render(<LibrariesSettingsTab />);
-    await user.click(await screen.findByRole('button', { name: 'settings.libraries.expand' }));
+    await user.click(await screen.findByRole('switch', { name: 'settings.libraries.useOwn' }));
+
     const attempts = screen.getByLabelText('settings.libraries.field.maxAttempts');
-
     await user.clear(attempts);
     await user.type(attempts, '4');
     await user.click(screen.getByRole('button', { name: 'settings.libraries.save' }));
 
-    expect(save).toHaveBeenCalledWith(
-      'gallica',
-      null,
-      expect.objectContaining({ maxAttempts: 4 }),
-    );
+    expect(save).toHaveBeenCalledWith('gallica', null, expect.objectContaining({ maxAttempts: 4 }));
+  });
+
+  it('spegnere l interruttore riporta la biblioteca ai valori dell applicazione', async () => {
+    const user = userEvent.setup();
+    render(<LibrariesSettingsTab />);
+    await user.click(await screen.findByRole('tab', { name: 'Vatican Library' }));
+
+    await user.click(screen.getByRole('switch', { name: 'settings.libraries.useOwn' }));
+
+    expect(reset).toHaveBeenCalledWith('vatican');
+  });
+
+  it('una biblioteca mai toccata non ha niente da ripristinare', async () => {
+    render(<LibrariesSettingsTab />);
+
+    await screen.findByRole('tab', { name: 'Gallica' });
+    expect(screen.queryByRole('button', { name: 'settings.libraries.reset' })).not.toBeInTheDocument();
   });
 
   it('un indirizzo fuori dal registro parte dal profilo prudente', async () => {
     const user = userEvent.setup();
     render(<LibrariesSettingsTab />);
-    const host = await screen.findByLabelText('settings.libraries.hostField');
 
-    await user.type(host, 'biblioteca.esempio.org');
-    await user.click(screen.getByRole('button', { name: 'settings.libraries.addHost' }));
+    await user.click(await screen.findByRole('button', { name: 'settings.libraries.addHost' }));
+    await user.type(screen.getByLabelText('settings.libraries.hostField'), 'biblioteca.esempio.org');
+    await user.keyboard('{Enter}');
 
     expect(save).toHaveBeenCalledWith('biblioteca.esempio.org', null, cautious);
   });

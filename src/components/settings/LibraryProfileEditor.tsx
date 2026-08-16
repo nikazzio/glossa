@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Globe, RotateCcw } from 'lucide-react';
-import { IconButton, Select, ToggleRow } from '../ui';
+import { Check, RotateCcw } from 'lucide-react';
+import { IconButton, Select, ToggleRow, Tooltip } from '../ui';
+import { SettingRow } from './DownloadSettingsTab';
 import {
   MAX_HOST_CONCURRENCY,
   MAX_SIZE_CAP,
@@ -39,15 +40,19 @@ interface LibraryProfileEditorProps {
 }
 
 /**
- * I valori di una biblioteca: il tetto di risoluzione e il modo di stare al
- * suo tavolo (D18).
+ * I valori di una biblioteca (D18).
+ *
+ * Arrivano tarati sul campo, e finché l'interruttore è spento si **vedono ma
+ * non si toccano**: sono lì per essere letti, non per essere cambiati per
+ * sbaglio. Accendendolo si sbloccano; spegnendolo la biblioteca torna a quelli
+ * compilati nell'applicazione.
  *
  * Si salva quando si chiede, non a ogni tasto: un campo a metà — «2» mentre si
- * sta scrivendo «250» — non deve diventare la politica verso quella
- * biblioteca.
+ * sta scrivendo «250» — non deve diventare la politica verso una biblioteca.
  */
 export function LibraryProfileEditor({ library, onSave, onReset }: LibraryProfileEditorProps) {
   const { t } = useTranslation();
+  const [custom, setCustom] = useState(library.customised);
   const [sizeCap, setSizeCap] = useState<string>(library.sizeCap ?? '');
   const [profile, setProfile] = useState<NetworkProfile>(library.profile);
   const [busy, setBusy] = useState(false);
@@ -66,7 +71,10 @@ export function LibraryProfileEditor({ library, onSave, onReset }: LibraryProfil
     }
   };
 
-  const reset = async () => {
+  /** Spegnere l'interruttore è il ripristino: sotto restano i valori di fabbrica. */
+  const changeCustom = async (enabled: boolean) => {
+    setCustom(enabled);
+    if (enabled || !library.customised) return;
     setBusy(true);
     try {
       await onReset();
@@ -76,72 +84,94 @@ export function LibraryProfileEditor({ library, onSave, onReset }: LibraryProfil
   };
 
   return (
-    <div className="flex flex-col gap-4 border-t border-editorial-border/60 px-3 py-3">
+    <div className="space-y-4 pt-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-editorial-ink">
-          {t('settings.libraries.sizeCap')}
-        </span>
-        <Select
-          value={sizeCap}
-          onChange={setSizeCap}
-          ariaLabel={t('settings.libraries.sizeCap')}
-          options={[
-            { value: '', label: t('settings.libraries.sizeCapInherited') },
-            ...SIZE_CAPS.map((value) => ({
-              value,
-              label:
-                value === MAX_SIZE_CAP
-                  ? t('settings.download.sizeCapMax')
-                  : t('settings.download.pixels', { value }),
-            })),
-          ]}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-        {FIELDS.map((field) => (
-          <label key={field.key} className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-editorial-muted">
-              {t(`settings.libraries.field.${field.key}`)}
-            </span>
-            <input
-              type="number"
-              min={field.min}
-              max={field.max}
-              value={profile[field.key]}
-              onChange={(event) => changeField(field.key, event.target.value)}
-              className="w-24 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1 text-right text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-          </label>
-        ))}
+        <span className="font-display text-base italic text-editorial-ink">{library.label}</span>
+        <div className="flex items-center gap-2">
+          {library.customised && (
+            <Tooltip label={t('settings.libraries.reset')}>
+              <span>
+                <IconButton
+                  size="sm"
+                  onClick={() => void changeCustom(false)}
+                  disabled={busy}
+                  title={t('settings.libraries.reset')}
+                >
+                  <RotateCcw size={13} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          <IconButton
+            size="sm"
+            onClick={() => void save()}
+            disabled={busy || !custom}
+            title={t('settings.libraries.save')}
+          >
+            <Check size={13} />
+          </IconButton>
+        </div>
       </div>
 
       <ToggleRow
-        icon={<Globe size={13} />}
-        label={t('settings.libraries.field.needsViewerWarmup')}
-        checked={profile.needsViewerWarmup}
-        onChange={() =>
-          setProfile((current) => ({ ...current, needsViewerWarmup: !current.needsViewerWarmup }))
-        }
+        icon={<RotateCcw size={13} />}
+        label={t('settings.libraries.useOwn')}
+        checked={custom}
+        disabled={busy}
+        onChange={() => void changeCustom(!custom)}
       />
 
-      <p className="text-[11px] leading-relaxed text-editorial-muted">
-        {t('settings.libraries.concurrencyHint', { max: MAX_HOST_CONCURRENCY })}
-      </p>
+      <fieldset
+        disabled={!custom}
+        className={`space-y-3 border-t border-editorial-border/70 pt-4 ${custom ? '' : 'opacity-50'}`}
+      >
+        <SettingRow label={t('settings.libraries.sizeCap')} hint={t('settings.libraries.sizeCapHint')}>
+          <Select
+            value={sizeCap}
+            onChange={setSizeCap}
+            disabled={!custom}
+            ariaLabel={t('settings.libraries.sizeCap')}
+            options={[
+              { value: '', label: t('settings.libraries.sizeCapInherited') },
+              ...SIZE_CAPS.map((value) => ({
+                value,
+                label:
+                  value === MAX_SIZE_CAP
+                    ? t('settings.download.sizeCapMax')
+                    : t('settings.download.pixels', { value }),
+              })),
+            ]}
+          />
+        </SettingRow>
 
-      <div className="flex items-center justify-end gap-1">
-        <IconButton
-          size="sm"
-          onClick={() => void reset()}
-          disabled={busy || !library.customised}
-          title={t('settings.libraries.reset')}
-        >
-          <RotateCcw size={13} />
-        </IconButton>
-        <IconButton size="sm" onClick={() => void save()} disabled={busy} title={t('settings.libraries.save')}>
-          <Check size={13} />
-        </IconButton>
-      </div>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+          {FIELDS.map((field) => (
+            <label key={field.key} className="flex items-center justify-between gap-2">
+              <span className="text-xs text-editorial-muted">
+                {t(`settings.libraries.field.${field.key}`)}
+              </span>
+              <input
+                type="number"
+                min={field.min}
+                max={field.max}
+                value={profile[field.key]}
+                onChange={(event) => changeField(field.key, event.target.value)}
+                className="w-24 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1 text-right text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
+              />
+            </label>
+          ))}
+        </div>
+
+        <ToggleRow
+          icon={<Check size={13} />}
+          label={t('settings.libraries.field.needsViewerWarmup')}
+          checked={profile.needsViewerWarmup}
+          disabled={!custom}
+          onChange={() =>
+            setProfile((current) => ({ ...current, needsViewerWarmup: !current.needsViewerWarmup }))
+          }
+        />
+      </fieldset>
     </div>
   );
 }

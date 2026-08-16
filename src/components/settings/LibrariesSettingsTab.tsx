@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { IconButton } from '../ui';
+import { Plus } from 'lucide-react';
+import { IconButton, Tooltip } from '../ui';
 import { LibraryProfileEditor } from './LibraryProfileEditor';
 import {
   cautiousNetworkProfile,
@@ -16,21 +16,24 @@ import {
 /**
  * Le biblioteche e come si sta al loro tavolo (#421, D18).
  *
- * L'elenco è quello del registro compilato nell'applicazione, più le voci
- * aggiunte a mano per un host che nel registro non c'è — che è il caso delle
- * fonti aggiunte per indirizzo diretto. Chi non è stato toccato mostra i
- * valori di fabbrica; chi lo è stato può tornarci.
+ * Stessa forma delle impostazioni dei provider: una fila di pulsanti con la
+ * sola sigla e il nome al passaggio del mouse, e sotto i valori di quella
+ * scelta. Le biblioteche sono undici: un elenco aperto sarebbe una parete di
+ * numeri.
  */
 export function LibrariesSettingsTab() {
   const { t } = useTranslation();
   const [libraries, setLibraries] = useState<LibrarySettings[]>([]);
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
   const [newHost, setNewHost] = useState('');
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        setLibraries(await listLibrarySettings());
+        const listed = await listLibrarySettings();
+        setLibraries(listed);
+        setActiveKey((current) => current ?? listed[0]?.key ?? null);
       } catch (error: unknown) {
         toast.error(t('settings.libraries.loadFailed'), {
           description: error instanceof Error ? error.message : String(error),
@@ -39,6 +42,8 @@ export function LibrariesSettingsTab() {
     };
     void load();
   }, [t]);
+
+  const active = libraries.find((library) => library.key === activeKey) ?? null;
 
   const save = async (key: string, sizeCap: string | null, profile: NetworkProfile) => {
     try {
@@ -72,7 +77,8 @@ export function LibrariesSettingsTab() {
       // usando: aggiungere la voce serve a cambiarlo, non a ripartire da zero.
       setLibraries(await saveLibrarySettings(host, null, await cautiousNetworkProfile()));
       setNewHost('');
-      setOpenKey(host);
+      setAdding(false);
+      setActiveKey(host);
     } catch (error: unknown) {
       toast.error(t('settings.libraries.saveFailed'), {
         description: error instanceof Error ? error.message : String(error),
@@ -85,66 +91,94 @@ export function LibrariesSettingsTab() {
       id="settings-panel-libraries"
       role="tabpanel"
       aria-labelledby="settings-tab-libraries"
-      className="flex flex-col gap-4"
+      className="space-y-4"
     >
-      <ul className="flex flex-col divide-y divide-editorial-border/60 rounded-md border border-editorial-border">
-        {libraries.map((library) => {
-          const open = openKey === library.key;
-          return (
-            <li key={library.key} className="flex flex-col">
-              <div className="flex items-center justify-between gap-3 px-3 py-2">
-                <span className="min-w-0 truncate text-xs font-medium text-editorial-ink">
-                  {library.label}
-                  {library.customised && (
-                    <span className="ml-2 text-[11px] text-editorial-muted">
-                      {t('settings.libraries.changed')}
-                    </span>
-                  )}
-                </span>
-                <IconButton
-                  size="sm"
-                  onClick={() => setOpenKey(open ? null : library.key)}
-                  title={open ? t('settings.libraries.collapse') : t('settings.libraries.expand')}
-                  ariaPressed={open}
-                >
-                  {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                </IconButton>
-              </div>
-              {open && (
-                <LibraryProfileEditor
-                  // Riaprire una biblioteca dopo un salvataggio deve ripartire
-                  // dai valori appena scritti, non da quelli in memoria.
-                  key={`${library.key}:${library.customised}`}
-                  library={library}
-                  onSave={(sizeCap, profile) => save(library.key, sizeCap, profile)}
-                  onReset={() => reset(library.key)}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="flex items-center gap-2 border-t border-editorial-border/60 pt-4">
-        <input
-          value={newHost}
-          onChange={(event) => setNewHost(event.target.value)}
-          placeholder={t('settings.libraries.hostPlaceholder')}
-          aria-label={t('settings.libraries.hostField')}
-          className="min-w-0 flex-1 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        />
-        <IconButton
-          size="sm"
-          onClick={() => void addHost()}
-          disabled={newHost.trim() === ''}
-          title={t('settings.libraries.addHost')}
-        >
-          <Plus size={13} />
-        </IconButton>
-      </div>
-      <p className="text-[11px] leading-relaxed text-editorial-muted">
-        {t('settings.libraries.hostHint')}
+      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+        {t('settings.librariesTab')}
       </p>
+
+      <div className="space-y-4 border-y border-editorial-border/70 py-5">
+        <div role="tablist" aria-label={t('settings.librariesTab')} className="flex flex-wrap gap-2">
+          {libraries.map((library) => {
+            const active = library.key === activeKey;
+            return (
+              <Tooltip key={library.key} label={library.label}>
+                <button
+                  type="button"
+                  onClick={() => setActiveKey(library.key)}
+                  aria-label={library.label}
+                  id={`settings-library-tab-${library.key}`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls="settings-library-panel"
+                  tabIndex={active ? 0 : -1}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    active
+                      ? 'border-editorial-accent bg-editorial-accent text-white'
+                      : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                  }`}
+                >
+                  {monogram(library.label)}
+                  {/* Una biblioteca con valori propri lo dice con un punto, non
+                      con una parola: la fila resta una fila di sigle. */}
+                  {library.customised && (
+                    <span
+                      className={`absolute mb-5 ml-5 h-1.5 w-1.5 rounded-full ${
+                        active ? 'bg-white' : 'bg-editorial-accent'
+                      }`}
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              </Tooltip>
+            );
+          })}
+
+          <span className="mx-1 h-5 w-px self-center bg-editorial-border/60" aria-hidden="true" />
+
+          {adding ? (
+            <input
+              // Il campo compare al clic sul comando: il fuoco ci va da sé,
+              // altrimenti si aprirebbe una casella che nessuno sta usando.
+              ref={(node) => node?.focus()}
+              value={newHost}
+              onChange={(event) => setNewHost(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void addHost();
+                if (event.key === 'Escape') setAdding(false);
+              }}
+              onBlur={() => void addHost()}
+              placeholder={t('settings.libraries.hostPlaceholder')}
+              aria-label={t('settings.libraries.hostField')}
+              className="h-9 min-w-0 flex-1 rounded-full border border-editorial-border bg-editorial-textbox px-3 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            />
+          ) : (
+            <IconButton size="md" onClick={() => setAdding(true)} title={t('settings.libraries.addHost')}>
+              <Plus size={14} />
+            </IconButton>
+          )}
+        </div>
+
+        <div id="settings-library-panel" role="tabpanel" aria-labelledby={`settings-library-tab-${activeKey}`}>
+          {active && (
+            <LibraryProfileEditor
+              // Riaprire una biblioteca dopo un salvataggio deve ripartire dai
+              // valori appena scritti, non da quelli rimasti in memoria.
+              key={`${active.key}:${active.customised}`}
+              library={active}
+              onSave={(sizeCap, profile) => save(active.key, sizeCap, profile)}
+              onReset={() => reset(active.key)}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
+}
+
+/** Le due lettere che stanno in un pulsante tondo. Il nome intero è nel tooltip. */
+function monogram(label: string): string {
+  const words = label.split(/[\s.]+/).filter(Boolean);
+  if (words.length >= 2) return `${words[0][0]}${words[1][0]}`;
+  return label.slice(0, 2);
 }
