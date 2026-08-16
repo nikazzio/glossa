@@ -66,7 +66,7 @@ describe('indicatore dei lavori in barra di stato', () => {
 
     render(<JobsIndicator />);
 
-    expect(screen.getByText(/jobs.waitingResumesIn/)).toBeInTheDocument();
+    expect(screen.getByText(/jobs.retryingIn/)).toBeInTheDocument();
   });
 
   it('apre il pannello sulla scheda dei lavori', async () => {

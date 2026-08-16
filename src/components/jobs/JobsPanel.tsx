@@ -46,7 +46,7 @@ export function JobsPanel({ panelId, labelledBy }: { panelId: string; labelledBy
       {isEmpty ? (
         <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 py-12 text-center">
           <p className="text-sm text-terminal-secondary">{t('jobs.emptyTitle')}</p>
-          <p className="text-xs text-terminal-dim">{t('jobs.emptyDescription')}</p>
+          <p className="text-xs text-terminal-muted">{t('jobs.emptyDescription')}</p>
         </div>
       ) : (
         <>
@@ -97,7 +97,7 @@ function JobRow({ job }: { job: Job }) {
   const waitingToRetry = isWaitingToRetry(job);
   const eta = formatEta(job.etaSeconds);
   const detail = parseJobDetail(job.detail);
-  const description = job.message ?? t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
+  const description = job.message ?? jobTypeLabel(job, t);
 
   return (
     <div className="rounded border border-terminal-line bg-terminal-chrome">
@@ -115,24 +115,24 @@ function JobRow({ job }: { job: Job }) {
             className={`shrink-0 text-terminal-dim motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
             aria-hidden="true"
           />
-          <span className="shrink-0 rounded-sm border border-terminal-line px-1 py-px text-[9px] uppercase tracking-wide text-terminal-secondary">
+          <span className="shrink-0 rounded-sm border border-terminal-line px-1 py-px text-[10px] uppercase tracking-wide text-terminal-secondary">
             {t(`jobs.short.${job.jobType}`, { defaultValue: job.jobType })}
           </span>
           <span className="min-w-0 flex-1 truncate text-xs text-terminal-ink">{description}</span>
           {detail.units && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-terminal-muted">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {detail.units.done}/{detail.units.total}
             </span>
           )}
           {detail.bytes && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-terminal-muted">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {humanSize(detail.bytes.downloaded)}
               {detail.bytes.estimated > 0 && ` / ~${humanSize(detail.bytes.estimated)}`}
             </span>
           )}
         </button>
 
-        <span className="shrink-0 whitespace-nowrap text-[11px] text-terminal-muted">
+        <span className="shrink-0 whitespace-nowrap text-xs text-terminal-muted">
           <JobStateLabel job={job} eta={eta} />
         </span>
         <div className="flex shrink-0 items-center gap-1">
@@ -141,9 +141,22 @@ function JobRow({ job }: { job: Job }) {
               <Pause size={11} />
             </TerminalIconButton>
           )}
-          {(job.status === 'paused' || waitingToRetry) && (
+          {job.status === 'paused' && (
             <TerminalIconButton label={t('jobs.resume')} onClick={() => void resume(job.id)}>
               <Play size={11} />
+            </TerminalIconButton>
+          )}
+          {/* Un lavoro che riproverà da solo **non è in pausa**: finché mostrava
+              lo stesso pulsante sembrava fermo per volontà di chi guarda. Qui
+              il comando serve a non aspettare l'attesa, non a farlo ripartire. */}
+          {waitingToRetry && (
+            <TerminalIconButton label={t('jobs.retryNow')} onClick={() => void resume(job.id)}>
+              <Play size={11} />
+            </TerminalIconButton>
+          )}
+          {waitingToRetry && (
+            <TerminalIconButton label={t('jobs.pause')} onClick={() => void pause(job.id)}>
+              <Pause size={11} />
             </TerminalIconButton>
           )}
           {job.status === 'error' && (
@@ -184,15 +197,68 @@ function JobRow({ job }: { job: Job }) {
   );
 }
 
-/** Una coppia etichetta/valore della scheda dei dettagli. */
-function Field({ label, value }: { label: string; value: string }) {
+/**
+ * Una coppia etichetta/valore.
+ *
+ * L'etichetta ha una **colonna sua**, larga uguale per tutte: allineate a
+ * sinistra del valore, le righe si leggono in verticale come una tabella
+ * invece che come un testo continuo. Un valore lungo — l'elenco delle
+ * risoluzioni, un errore — prende tutta la larghezza e **va a capo**: troncato
+ * nascondeva proprio la parte che si stava cercando.
+ */
+function Field({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  // Un elenco lungo — su alcune biblioteche le misure sono venti — occuperebbe
+  // da solo più spazio di tutto il resto: sta su una riga e si apre se lo si
+  // chiede.
+  const long = wide && value.length > FOLD_AFTER;
+
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
-      <span className="shrink-0 text-[10px] uppercase tracking-wide text-terminal-dim">{label}</span>
-      <span className="min-w-0 truncate font-mono text-[11px] text-terminal-ink">{value}</span>
+    <div className={`flex min-w-0 items-baseline gap-3 ${wide ? 'sm:col-span-2' : ''}`}>
+      <span className="w-28 shrink-0 text-[11px] uppercase leading-5 tracking-wide text-terminal-secondary">
+        {label}
+      </span>
+      <span
+        className={`min-w-0 flex-1 font-mono text-xs leading-5 text-terminal-ink ${
+          wide && (open || !long) ? 'whitespace-normal break-words' : 'truncate'
+        }`}
+      >
+        {value}
+      </span>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="shrink-0 text-[11px] uppercase tracking-wide text-terminal-accent underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+        >
+          {open ? t('jobs.detail.foldLess') : t('jobs.detail.foldMore')}
+        </button>
+      )}
     </div>
   );
 }
+
+/**
+ * Come si chiama un lavoro che non ha un nome proprio.
+ *
+ * La verifica del deposito ne ha due forme — presenza e integrità — che dal
+ * pannello si distinguevano solo aprendo la riga: due lavori con lo stesso
+ * titolo sembrano lo stesso lavoro fatto due volte.
+ */
+function jobTypeLabel(job: Job, t: (key: string, options?: Record<string, unknown>) => string): string {
+  const base = t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
+  if (job.jobType !== 'vault_verification') return base;
+  try {
+    const full = (JSON.parse(job.config ?? '{}') as { full?: boolean }).full === true;
+    return `${base} · ${t(full ? 'jobs.detail.levelValue.full' : 'jobs.detail.levelValue.quick')}`;
+  } catch {
+    return base;
+  }
+}
+
+/** Oltre questa lunghezza un valore sta su una riga sola finché non lo si apre. */
+const FOLD_AFTER = 60;
 
 /**
  * I dettagli veri di un lavoro: quello che serve per capire cosa sta facendo e
@@ -213,57 +279,104 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
         })
       : '—';
 
+  // Due blocchi, perché sono due cose diverse: quello che vale per **tutto il
+  // lavoro** e quello che vale per **l'ultima pagina** passata. Mescolarli
+  // faceva leggere il peso di una pagina come se fosse quello del libro.
+  const work: DetailField[] = [
+    { label: t('jobs.detail.type'), value: t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType }) },
+    {
+      label: t('jobs.detail.phase'),
+      value: job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : '—',
+    },
+    detail.units && {
+      label: t(`jobs.detail.units.${detail.units.label}`, { defaultValue: t('jobs.detail.units.generic') }),
+      value: `${detail.units.done} / ${detail.units.total}`,
+    },
+    detail.bytes && {
+      label: t('jobs.detail.bytes'),
+      value:
+        detail.bytes.estimated > 0
+          ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
+          : humanSize(detail.bytes.downloaded),
+    },
+    detail.size && { label: t('jobs.detail.size'), value: readableSize(detail.size, t) },
+    detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
+    detail.host && { label: t('jobs.detail.host'), value: detail.host },
+    detail.level && {
+      label: t('jobs.detail.level'),
+      value: t(`jobs.detail.levelValue.${detail.level}`, { defaultValue: detail.level }),
+    },
+    detail.intact !== undefined && { label: t('jobs.detail.intact'), value: String(detail.intact) },
+    detail.missing !== undefined && { label: t('jobs.detail.missing'), value: String(detail.missing) },
+    detail.corrupt !== undefined && { label: t('jobs.detail.corrupt'), value: String(detail.corrupt) },
+    detail.orphans && {
+      label: t('jobs.detail.orphans'),
+      value: `${detail.orphans.count} · ${humanSize(detail.orphans.bytes)}`,
+    },
+    { label: t('jobs.detail.attempt'), value: `${job.attemptCount} / ${job.maxAttempts}` },
+    { label: t('jobs.detail.started'), value: time(job.createdAt) },
+    { label: t('jobs.detail.updated'), value: time(job.updatedAt) },
+    detail.available?.length && {
+      label: t('jobs.detail.available'),
+      value: detail.available.join(' · '),
+      wide: true,
+    },
+    job.error && { label: t('jobs.detail.error'), value: job.error, wide: true },
+    { label: t('jobs.detail.id'), value: job.id, wide: true },
+  ].filter((field): field is DetailField => typeof field === 'object' && field !== null);
+
+  const lastUnit: DetailField[] = detail.last
+    ? [
+        { label: t('jobs.detail.lastIndex'), value: String(detail.last.index) },
+        { label: t('jobs.detail.lastBytes'), value: humanSize(detail.last.bytes) },
+      ]
+    : [];
+
   return (
-    <div className="grid grid-cols-1 gap-x-6 gap-y-1 border-t border-terminal-line pt-2 sm:grid-cols-2">
-      <Field label={t('jobs.detail.type')} value={t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })} />
-      <Field
-        label={t('jobs.detail.phase')}
-        value={job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : '—'}
-      />
-      {detail.units && (
-        <Field
-          label={t(`jobs.detail.units.${detail.units.label}`, { defaultValue: t('jobs.detail.units.generic') })}
-          value={`${detail.units.done} / ${detail.units.total}`}
-        />
+    <div className="flex flex-col gap-2 border-t border-terminal-line pt-2">
+      <FieldGroup title={t('jobs.detail.groupWork')} fields={work} />
+      {lastUnit.length > 0 && (
+        <FieldGroup title={t('jobs.detail.groupLast')} fields={lastUnit} />
       )}
-      {detail.bytes && (
-        <Field
-          label={t('jobs.detail.bytes')}
-          value={
-            detail.bytes.estimated > 0
-              ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
-              : humanSize(detail.bytes.downloaded)
-          }
-        />
-      )}
-      {detail.last && (
-        <Field
-          label={t('jobs.detail.last')}
-          value={`${detail.last.index} · ${humanSize(detail.last.bytes)}`}
-        />
-      )}
-      {detail.size && <Field label={t('jobs.detail.size')} value={detail.size} />}
-      {detail.provider && <Field label={t('jobs.detail.provider')} value={detail.provider} />}
-      {detail.host && <Field label={t('jobs.detail.host')} value={detail.host} />}
-      {detail.level && (
-        <Field label={t('jobs.detail.level')} value={t(`jobs.detail.levelValue.${detail.level}`, { defaultValue: detail.level })} />
-      )}
-      {detail.intact !== undefined && <Field label={t('jobs.detail.intact')} value={String(detail.intact)} />}
-      {detail.missing !== undefined && <Field label={t('jobs.detail.missing')} value={String(detail.missing)} />}
-      {detail.corrupt !== undefined && <Field label={t('jobs.detail.corrupt')} value={String(detail.corrupt)} />}
-      {detail.orphans && (
-        <Field
-          label={t('jobs.detail.orphans')}
-          value={`${detail.orphans.count} · ${humanSize(detail.orphans.bytes)}`}
-        />
-      )}
-      <Field label={t('jobs.detail.attempt')} value={`${job.attemptCount} / ${job.maxAttempts}`} />
-      <Field label={t('jobs.detail.started')} value={time(job.createdAt)} />
-      <Field label={t('jobs.detail.updated')} value={time(job.updatedAt)} />
-      {job.error && <Field label={t('jobs.detail.error')} value={job.error} />}
-      <Field label={t('jobs.detail.id')} value={job.id} />
     </div>
   );
+}
+
+/** Un blocco di dettagli con il suo titolo: dice **di cosa** parlano i numeri. */
+function FieldGroup({ title, fields }: { title: string; fields: DetailField[] }) {
+  return (
+    <section>
+      <h4 className="mb-1.5 border-b border-terminal-line pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-terminal-accent">
+        {title}
+      </h4>
+      <div className="grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2">
+        {/* I valori lunghi vanno in fondo, dove possono prendersi tutta la
+            riga senza spezzare l'allineamento di quelli corti. */}
+        {[...fields.filter((field) => !field.wide), ...fields.filter((field) => field.wide)].map(
+          (field) => (
+            <Field key={field.label} label={field.label} value={field.value} wide={field.wide} />
+          ),
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * La misura chiesta al servizio, come si legge: `1285,` è la forma del
+ * parametro IIIF, non una cosa da mostrare a chi guarda.
+ */
+function readableSize(token: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (token === 'max' || token === 'full') return t('jobs.detail.sizeMax');
+  const width = token.replace(/[^0-9]/g, '');
+  return width ? t('jobs.detail.sizePixels', { value: width }) : token;
+}
+
+/** Una riga dei dettagli. `wide` è per i valori che non stanno su una colonna. */
+interface DetailField {
+  label: string;
+  value: string;
+  wide?: boolean;
 }
 
 function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
@@ -277,7 +390,7 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
     const countdown = formatEta(retryCountdownSeconds(job));
     return (
       <span className="text-terminal-warn">
-        {countdown ? t('jobs.waitingResumesIn', { eta: countdown }) : t('jobs.waiting')}
+        {countdown ? t('jobs.retryingIn', { eta: countdown }) : t('jobs.retrying')}
       </span>
     );
   }

@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   Link2,
   List,
+  Loader2,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -24,7 +25,13 @@ import {
   listVersionVaultPaths,
   versionProviderKey,
 } from '../../services/libraryService';
-import { freeVersionPages, summarizeAvailability, verifyFilesPresent } from '../../services/vaultService';
+import {
+  deleteVersionFiles,
+  freeVersionPages,
+  summarizeAvailability,
+  verifyFilesPresent,
+} from '../../services/vaultService';
+import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
 import type { LibraryCatalogEntry } from '../../types';
 
@@ -78,6 +85,13 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               <div key={version.id}><dt className="inline text-editorial-muted">{version.label}</dt><dd className="inline pl-2 text-editorial-ink">{version.sourceUrl}</dd></div>
             ))}
           </dl>
+          {/* La misura con cui si scarica questa opera: l'ultima parola sulla
+              politica generale e su quella della biblioteca (D4). */}
+          <div className="mt-4 flex flex-col gap-2">
+            {detail.versions.map((version) => (
+              <SourceSizeCap key={version.id} versionId={version.id} />
+            ))}
+          </div>
           {workspaces.length > 0 && (
             <div className="mt-6">
               <SectionLabel icon={Link2} label={t('areas.library.linkedWorkspaces')} />
@@ -196,6 +210,13 @@ function CatalogEntryRow({
             done: summary.presentPages,
             total: summary.expectedPages,
           });
+  // Quante pagine ha l'opera si vede **senza aprire niente**: è il dato che
+  // decide se scaricarla o no. Manca solo per le opere aggiunte da una
+  // biblioteca che non lo dichiara, e lì non si inventa.
+  const pageCount =
+    entry.expectedPages !== null && entry.expectedPages > 0
+      ? t('areas.library.pageCount', { count: entry.expectedPages })
+      : null;
 
   /**
    * La chiave con cui questa fonte vive nel deposito: prima quella dei file già
@@ -300,14 +321,41 @@ function CatalogEntryRow({
     }
   };
 
+  /**
+   * Togliere un'opera la toglie **per intero**: scheda, collegamenti e la sua
+   * cartella nel deposito (D6). Lasciare i file dietro produceva cartelle che
+   * nessuna schermata sa più mostrare, e che nemmeno riaggiungendo la stessa
+   * opera tornerebbero utili: la cartella prende il nome da un identificativo
+   * nuovo ogni volta.
+   */
   const askRemoval = async () => {
     const confirmed = await confirm({
       title: t('areas.library.removeTitle', { title: entry.source.title }),
-      message: t('areas.library.removeMessage'),
+      message:
+        entry.localBytes > 0
+          ? t('areas.library.removeMessageWithFiles', { size: humanSize(entry.localBytes) })
+          : t('areas.library.removeMessage'),
       confirmLabel: t('areas.library.removeConfirm'),
       danger: true,
     });
-    if (confirmed) onRemove();
+    if (!confirmed) return;
+
+    setBusy(true);
+    try {
+      if (entry.versionId) {
+        // I file prima delle righe: se la cancellazione fallisce, l'opera resta
+        // in Biblioteca e si può riprovare, invece di sparire lasciando dietro
+        // una cartella che nessuno reclama.
+        await deleteVersionFiles(await providerKey(), entry.versionId);
+      }
+      onRemove();
+    } catch (error: unknown) {
+      toast.error(t('areas.library.removeFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -335,7 +383,9 @@ function CatalogEntryRow({
             {entry.source.title}
           </span>
           {meta && <span className="mt-0.5 block truncate text-xs text-editorial-muted">{meta}</span>}
-          <span className="mt-1 block text-[11px] text-editorial-muted">{availability}</span>
+          <span className="mt-1 block text-[11px] text-editorial-muted">
+            {[pageCount, availability].filter(Boolean).join(' · ')}
+          </span>
         </button>
       </div>
 
@@ -361,9 +411,15 @@ function CatalogEntryRow({
           size="sm"
           onClick={() => void startDownload()}
           disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
-          title={t('areas.library.download')}
+          title={runningJob ? t('areas.library.downloadRunning') : t('areas.library.download')}
         >
-          <Download size={13} />
+          {/* Mentre il lavoro gira il comando lo dice da sé: la percentuale sta
+              altrove, e un pulsante spento senza motivo visibile sembra rotto. */}
+          {runningJob ? (
+            <Loader2 size={13} className="motion-safe:animate-spin" />
+          ) : (
+            <Download size={13} />
+          )}
         </IconButton>
         <IconButton
           size="sm"

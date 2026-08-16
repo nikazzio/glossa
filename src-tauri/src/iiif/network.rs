@@ -15,7 +15,7 @@ use std::time::Duration;
 
 /// Quanto si aspetta fra due richieste allo stesso host, e quante se ne possono
 /// fare in una finestra.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkProfile {
     /// Pausa fra richieste: durata casuale nell'intervallo, per non presentarsi

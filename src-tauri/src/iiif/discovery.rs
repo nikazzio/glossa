@@ -47,6 +47,9 @@ pub struct DiscoveryResult {
     pub language: Option<String>,
     pub volume: Option<String>,
     pub subjects: Vec<String>,
+    /// Quante pagine dichiara la biblioteca, quando lo dichiara: è il dato con
+    /// cui si decide se scaricare un'opera, e va visto prima di aprirla.
+    pub item_count: Option<usize>,
     pub manifest_url: String,
 }
 
@@ -77,6 +80,19 @@ fn text(value: Option<&Value>) -> Option<String> {
         Value::String(value) => Some(value.clone()),
         Value::Array(values) => values.iter().find_map(|item| text(Some(item))),
         Value::Object(values) => values.values().find_map(|value| text(Some(value))),
+        _ => None,
+    }
+}
+
+/// Un conteggio dichiarato dalla biblioteca. Archive.org lo manda a volte come
+/// numero e a volte come stringa, e in qualche record non c'è affatto: in quel
+/// caso resta vuoto invece di diventare zero, che vorrebbe dire «nessuna
+/// pagina».
+fn count(value: Option<&Value>) -> Option<usize> {
+    match value? {
+        Value::Number(number) => number.as_u64().map(|value| value as usize),
+        Value::String(text) => text.trim().parse::<usize>().ok(),
+        Value::Array(values) => values.iter().find_map(|item| count(Some(item))),
         _ => None,
     }
 }
@@ -198,7 +214,16 @@ async fn search_archive(
         .get(base_url)
         .query(&[
             ("q", query),
-            ("fl[]", "identifier,title,creator,year,description,mediatype,collection,language,subject,volume"),
+            // Tutti i campi utili in una richiesta sola: chiederne uno in più
+            // non costa niente, e andarlo a recuperare dopo costerebbe una
+            // richiesta per risultato. `imagecount` è il numero di pagine, che
+            // è il dato con cui si decide se scaricare un'opera.
+            (
+                "fl[]",
+                "identifier,title,creator,year,date,publisher,description,mediatype,collection,\
+                 language,subject,volume,imagecount,downloads,item_size,licenseurl,rights,\
+                 contributor,source,call_number",
+            ),
             ("rows", "20"),
             ("page", &page.to_string()),
             ("output", "json"),
@@ -212,6 +237,14 @@ async fn search_archive(
         .json::<Value>()
         .await
         .map_err(|_| "Internet Archive returned invalid data.".to_string())?;
+
+    // Il servizio risponde 200 anche quando è il suo motore di ricerca a non
+    // rispondere: senza questo, un guasto della biblioteca si legge come
+    // «nessun risultato», che manda a cercare l'errore dalla parte sbagliata.
+    if let Some(error) = value.get("error").and_then(Value::as_str) {
+        log::warn!("discovery archive search failed error={error}");
+        return Err("Internet Archive search is not responding.".to_string());
+    }
 
     let results = value
         .pointer("/response/docs")
@@ -231,6 +264,7 @@ async fn search_archive(
                 language: text(document.get("language")),
                 volume: text(document.get("volume")),
                 subjects: texts(document.get("subject")),
+                item_count: count(document.get("imagecount")),
                 manifest_url: format!("https://iiif.archive.org/iiif/{id}/manifest.json"),
                 id,
             })
@@ -241,6 +275,10 @@ async fn search_archive(
         .and_then(Value::as_u64)
         .unwrap_or(0);
 
+    log::info!(
+        "discovery archive search page={page} found={} total={total}",
+        results.len()
+    );
     Ok(SearchPage {
         has_more: u64::from(page) * 20 < total,
         results,
@@ -316,14 +354,24 @@ pub async fn discover_iiif(
     page: Option<u32>,
 ) -> Result<DiscoveryOutcome, String> {
     let provider = find_provider(&provider_key).ok_or_else(|| "Unknown collection.".to_string())?;
-    discover_with(
-        &client()?,
-        provider,
-        &input,
-        ARCHIVE_SEARCH_URL,
-        page.unwrap_or(1).max(1),
-    )
-    .await
+    let page = page.unwrap_or(1).max(1);
+    log::info!(
+        "discovery requested provider={provider_key} page={page} input_len={}",
+        input.len()
+    );
+    let outcome = discover_with(&client()?, provider, &input, ARCHIVE_SEARCH_URL, page).await;
+    match &outcome {
+        Ok(found) => log::info!(
+            "discovery answered provider={provider_key} status={:?} results={} manifest={}",
+            found.status,
+            found.results.len(),
+            found.manifest.is_some()
+        ),
+        // È il caso che l'utente vede come «non funziona»: senza una riga qui,
+        // di un guasto della biblioteca non resta traccia da nessuna parte.
+        Err(error) => log::warn!("discovery failed provider={provider_key} error={error}"),
+    }
+    outcome
 }
 
 #[cfg(test)]
@@ -391,5 +439,30 @@ mod tests {
             outcome.results[0].manifest_url,
             "https://iiif.archive.org/iiif/ms-1/manifest.json"
         );
+    }
+
+    #[tokio::test]
+    async fn a_broken_search_backend_is_not_an_empty_result() {
+        // Archive.org risponde 200 anche quando è il suo motore di ricerca a
+        // non rispondere: letto come «nessun risultato» manderebbe a cercare
+        // il guasto dalla parte sbagliata.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/advancedsearch.php"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "error": "[BACKEND_ERROR] Invalid or no response from Elasticsearch"
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = search_archive(
+            &Client::new(),
+            "dante",
+            &format!("{}/advancedsearch.php", server.uri()),
+            1,
+        )
+        .await;
+
+        assert!(outcome.is_err(), "un guasto della biblioteca si dice");
     }
 }

@@ -76,7 +76,9 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         materialType: isManifest(card) ? card.materialType : null,
         collection: isManifest(card) ? null : card.collection,
         volume: card.volume,
-        itemCount: isManifest(card) ? card.itemCount : null,
+        // Lo dichiarano entrambe le schede: quella del manifesto lo conta
+        // dai canvas, quella della ricerca lo prende dalla biblioteca.
+        itemCount: card.itemCount,
         workspaceId,
       });
       set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));

@@ -29,7 +29,7 @@ Aprendo una fonte dal catalogo Biblioteca vedi il dettaglio con le versioni regi
 
 ## Scaricare una fonte
 
-Nel catalogo ogni riga dice **quante carte sono davvero sul computer**: *solo online*, *34 pagine su 210 sul computer*, oppure *tutte le pagine sul computer*.
+Nel catalogo ogni riga dice **quante pagine sono davvero sul computer**: *solo online*, *34 pagine su 210 sul computer*, oppure *tutte le pagine sul computer*.
 
 Il comando **scarica** mette in coda il lavoro vero: puoi cambiare schermata, metterlo in pausa, riprenderlo. Mentre gira, al posto del comando compare la percentuale; nel pannello dei lavori in basso trovi la stessa cosa con il nome dell'opera e quanto ha scaricato.
 
@@ -43,12 +43,14 @@ Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Ar
 
 Ogni riga della Biblioteca ha quattro comandi, sempre presenti: **scarica**, **verifica**, **libera spazio**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
 
-**Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le carte già presenti non vengono richieste di nuovo.
+**Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le pagine già presenti non vengono richieste di nuovo.
 
-Da ogni carta che scarica Glossa ricava la sua **miniatura**, senza chiedere niente in più alla biblioteca: servono a sfogliare il libro senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
+Da ogni pagina che scarica Glossa ricava la sua **miniatura**, senza chiedere niente in più alla biblioteca: servono a sfogliare il libro senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
 
-**Libera spazio** cancella le carte scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le carte si riscaricano quando servono. La conferma dice quanto stai liberando.
+**Libera spazio** cancella le pagine scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le pagine si riscaricano quando servono. La conferma dice quanto stai liberando.
 
 ## Togliere una fonte
 
-Il comando di rimozione toglie la scheda dalla Biblioteca e i suoi collegamenti ai workspace. **Le immagini già scaricate restano sul disco**: liberare spazio è un'azione diversa.
+Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando.
+
+Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è un altro: **libera spazio**.

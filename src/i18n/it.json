@@ -573,6 +573,19 @@
     "backupImportConfirmTitle": "Ripristinare il workspace?",
     "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
     "backupImportConfirm": "Ripristina",
+    "downloadTab": "Scaricamento",
+    "download": {
+      "loadFailed": "Impossibile leggere le impostazioni di scaricamento",
+      "saveFailed": "Impossibile salvare le impostazioni di scaricamento",
+      "sizeCap": "Misura delle pagine",
+      "sizeCapMax": "la più grande disponibile",
+      "sizeCapHint": "La misura verso cui puntare sul lato lungo. La biblioteca serve quella dichiarata più vicina, sopra o sotto: la scelta è una politica, non un numero esatto.",
+      "pixels": "{{value}} pixel",
+      "thumbnailEdge": "Misura delle miniature",
+      "thumbnailEdgeHint": "Le miniature si ricavano dalle pagine scaricate, sul computer: non costano nessuna richiesta. Più grandi occupano più spazio e si sfogliano meglio.",
+      "sizes": "Misure"
+    },
+    "librariesTab": "Biblioteche",
     "jobsTab": "Lavori",
     "jobs": {
       "loadFailed": "Impossibile leggere le impostazioni dei lavori",
@@ -585,6 +598,38 @@
         "disk": "Scritture su disco",
         "languageService": "Servizi linguistici",
         "documents": "Generazione documenti"
+      },
+      "limits": "Quanti insieme",
+      "reopening": "Alla riapertura"
+    },
+    "network": {
+      "profiles": "Profili di rete",
+      "libraries": "Biblioteche",
+      "name": "Nome",
+      "newProfile": "Crea un profilo",
+      "newProfileName": "Nuovo profilo",
+      "usedBy_zero": "nessuna biblioteca",
+      "usedBy_one": "una biblioteca",
+      "usedBy_other": "{{count}} biblioteche",
+      "save": "Salva il profilo",
+      "saved": "Profilo salvato",
+      "saveFailed": "Non è stato possibile salvare",
+      "loadFailed": "Non è stato possibile leggere i profili",
+      "delete": "Elimina il profilo",
+      "deleteInUse": "Prima sposta le biblioteche che lo usano",
+      "field": {
+        "pauseMinMs": "Pausa minima (ms)",
+        "pauseMaxMs": "Pausa massima (ms)",
+        "burstRequests": "Richieste a raffica",
+        "burstWindowSecs": "In quanti secondi",
+        "hostConcurrency": "Richieste insieme",
+        "maxAttempts": "Tentativi",
+        "backoffBaseSecs": "Prima attesa (s)",
+        "backoffCapSecs": "Attesa massima (s)",
+        "cooldown403Secs": "Pausa dopo un rifiuto (s)",
+        "cooldown429Secs": "Pausa dopo «rallenta» (s)",
+        "connectTimeoutSecs": "Attesa per connettersi (s)",
+        "readTimeoutSecs": "Attesa per leggere (s)"
       }
     }
   },
@@ -734,7 +779,7 @@
       "downloadRunning": "Scaricamento in corso",
       "remove": "Togli dalla Biblioteca",
       "removeTitle": "Togliere «{{title}}»?",
-      "removeMessage": "Sparisce dalla Biblioteca insieme ai suoi collegamenti. Le immagini già scaricate restano sul disco: per liberare spazio c'è il comando apposta.",
+      "removeMessage": "Sparisce dalla Biblioteca insieme ai suoi collegamenti. Non c'è niente di scaricato da eliminare.",
       "removeConfirm": "Togli",
       "availabilityRemote": "solo online",
       "availabilityComplete": "tutte le pagine sul computer",
@@ -742,17 +787,25 @@
       "verify": "Verifica i file di questa fonte",
       "verifyIntact": "Tutti i {{count}} file sono al loro posto",
       "verifyMissingTitle": "Mancano {{count}} file",
-      "verifyMissingMessage": "Su {{total}} file registrati. Le carte mancanti si riscaricano dalla biblioteca: quelle presenti non vengono richieste di nuovo.",
+      "verifyMissingMessage": "Su {{total}} file registrati. Le pagine mancanti si riscaricano dalla biblioteca: quelle presenti non vengono richieste di nuovo.",
       "verifyDownloadMissing": "Scarica le mancanti",
       "verifyFailed": "Verifica non riuscita",
       "vaultUnreachable": "Deposito non raggiungibile: disco staccato o cartella non montata",
-      "freeSpace": "Libera spazio: cancella le carte scaricate",
+      "freeSpace": "Libera spazio: cancella le pagine scaricate",
       "freeSpaceTitle": "Liberare {{size}}?",
-      "freeSpaceMessage": "Le carte scaricate vengono cancellate subito. Restano scheda, manifesto e miniature, e le carte si riscaricano dalla biblioteca quando servono.",
+      "freeSpaceMessage": "Le pagine scaricate vengono cancellate subito. Restano scheda, manifesto e miniature, e le pagine si riscaricano dalla biblioteca quando servono.",
       "freeSpaceConfirm": "Libera spazio",
       "freeSpaceDone": "Liberati {{size}}",
       "freeSpaceFailed": "Non è stato possibile liberare lo spazio",
-      "verifyNothing": "Questa fonte non ha ancora file registrati nel deposito"
+      "verifyNothing": "Questa fonte non ha ancora file registrati nel deposito",
+      "sizeCap": "Misura delle pagine",
+      "sizeCapInherited": "come dice la biblioteca",
+      "sizeCapLoadFailed": "Impossibile leggere la misura scelta per quest'opera",
+      "sizeCapSaveFailed": "Impossibile salvare la misura per quest'opera",
+      "pageCount_one": "{{count}} pagina",
+      "pageCount_other": "{{count}} pagine",
+      "removeMessageWithFiles": "Sparisce dalla Biblioteca insieme ai suoi collegamenti, e vengono eliminate anche le {{size}} già scaricate. Per tenere l'opera e liberare solo lo spazio c'è il comando apposta.",
+      "removeFailed": "Non è stato possibile togliere l'opera"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -877,7 +930,9 @@
       "addToLibraryFailed": "Aggiunta alla Biblioteca non riuscita. Riprova.",
       "addToWorkspace": "Aggiungi a un workspace",
       "noWorkspaces": "Nessun workspace disponibile. Creane uno prima di collegare una fonte.",
-      "viewOptions": "Visualizzazione"
+      "viewOptions": "Visualizzazione",
+      "pageCount_one": "{{count}} pagina",
+      "pageCount_other": "{{count}} pagine"
     },
     "stats": {
       "projects": "Progetti",
@@ -1492,7 +1547,15 @@
       "jobsControlTitle": "Come si comandano",
       "jobsControlDesc": "Pausa, ripresa, annullamento e nuovo tentativo per ciascun lavoro, o per tutti insieme dai comandi in cima al pannello. La pausa non è istantanea: il lavoro finisce il pezzo in corso, lo salva e si ferma.",
       "downloadTitle": "Scaricare una fonte",
-      "downloadDesc": "In Biblioteca ogni riga dice quante carte sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre; se quella richiesta viene rifiutata, chiede alla biblioteca cosa sa produrre e riprova da sé. Da ogni carta scaricata Glossa ricava la sua miniatura, senza chiedere niente alla biblioteca: servono a sfogliare il libro senza rete.",
+      "downloadDesc": "In Biblioteca ogni riga dice quante pagine sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre; se quella richiesta viene rifiutata, chiede alla biblioteca cosa sa produrre e riprova da sé. Da ogni pagina scaricata Glossa ricava la sua miniatura, senza chiedere niente alla biblioteca: servono a sfogliare il libro senza rete.",
+      "downloadPolicyTitle": "Scegliere la misura delle pagine",
+      "downloadPolicyDesc": "In Impostazioni → Scaricamento scegli quanto grandi vuoi le pagine e quanto grandi le miniature. La misura delle pagine è un obiettivo, non un numero esatto: Glossa chiede alla biblioteca la misura che dichiara più vicina, sopra o sotto. La stessa scelta si può fare sulla singola opera, aprendo la sua scheda in Biblioteca, e lì vince: la misura dipende dal materiale, non da chi conserva il libro. Le pagine già scaricate restano come sono.",
+      "removeTitle": "Togliere un'opera dalla Biblioteca",
+      "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
+      "checkTitle": "Le due verifiche del deposito",
+      "checkDesc": "La verifica rapida guarda soltanto se i file ci sono: è questione di millisecondi. La completa apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato, quindi è l'unica che riconosce un file troncato o marcito sul disco; in cambio è lenta in proporzione ai gigabyte. Se niente è danneggiato i due conteggi coincidono e cambia solo il tempo. Nella coda dei lavori ogni verifica dice quale delle due è.",
+      "librariesTitle": "Come Glossa tratta le biblioteche",
+      "librariesDesc": "Ogni biblioteca ha i suoi tempi: quanto aspettare fra una richiesta e l'altra, quante richieste in un minuto, quanto fermarsi quando chiede di rallentare. Sono pochi ritmi diversi applicati a molte biblioteche, quindi in Impostazioni → Biblioteche si governano come profili. Due arrivano con Glossa, con i valori provati sul campo: Normale, che usano quasi tutte, e Lento, tarato sulla più severa. Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome trovi quante biblioteche lo usano. Sotto, per ogni biblioteca scegli il profilo da un menu. Un profilo in uso non si elimina finché non sposti le biblioteche che lo seguono, e i due che arrivano con l'applicazione non si eliminano affatto. Le richieste insieme non superano mai quattro, qualunque cosa si scriva: il limite dipende dal server della biblioteca e serve a non farsi bloccare.",
       "jobsRestartTitle": "Chiudere e riaprire",
       "jobsRestartDesc": "Chiudendo Glossa i lavori si fermano e viene chiesta conferma. Alla riapertura nessuno riparte da solo: li ritrovi fermi e decidi tu. Solo gli scaricamenti possono ripartire in automatico, se accendi l'opzione in Impostazioni → Lavori.",
       "limitsTitle": "Quanti insieme",
@@ -1858,8 +1921,6 @@
     "failedCount_one": "{{count}} lavoro non riuscito",
     "failedCount_other": "{{count}} lavori non riusciti",
     "etaShort": "~{{eta}}",
-    "waiting": "in attesa",
-    "waitingResumesIn": "in attesa · riprende fra {{eta}}",
     "running": "in corso",
     "queued": "in coda",
     "paused": "in pausa",
@@ -1911,7 +1972,6 @@
       "type": "tipo",
       "phase": "fase",
       "bytes": "scaricato",
-      "last": "ultima",
       "size": "risoluzione",
       "provider": "biblioteca",
       "host": "host",
@@ -1934,7 +1994,19 @@
       "levelValue": {
         "quick": "rapida",
         "full": "completa"
-      }
-    }
+      },
+      "groupWork": "questa opera",
+      "groupLast": "ultima pagina scaricata",
+      "lastIndex": "numero",
+      "lastBytes": "peso",
+      "available": "risoluzioni disponibili",
+      "sizeMax": "la più grande",
+      "sizePixels": "{{value}} px",
+      "foldMore": "mostra",
+      "foldLess": "riduci"
+    },
+    "retryNow": "Riprova adesso",
+    "retryingIn": "riprovo da solo fra {{eta}}",
+    "retrying": "riprovo da solo"
   }
 }

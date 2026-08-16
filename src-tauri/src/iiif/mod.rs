@@ -1,7 +1,9 @@
 use serde::Serialize;
 
+pub mod commands;
 pub mod discovery;
 pub mod network;
+pub mod settings;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]

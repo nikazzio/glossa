@@ -120,10 +120,11 @@ impl JobHandler for VaultVerificationJob {
         let mut report = Report::default();
         let mut checked: HashSet<PathBuf> = HashSet::with_capacity(known.len());
 
-        for (done, relative) in known.iter().enumerate() {
+        for (done, file) in known.iter().enumerate() {
             if stop() {
                 return Ok(stopped(&ctx));
             }
+            let relative = &file.path;
             let Ok(absolute) = absolute_path(&root, relative) else {
                 // Percorso che il layout non produce mai: la riga è storta, non
                 // il file. Si conta come mancante e si va avanti, come fa la
@@ -134,13 +135,27 @@ impl JobHandler for VaultVerificationJob {
             checked.insert(absolute.clone());
 
             if config.full {
-                match integrity::scan_file(&absolute, kind_of(&absolute)).validation {
-                    integrity::Validation::Valid => report.intact += 1,
+                let scan = integrity::scan_file(&absolute, kind_of(&absolute));
+                match scan.validation {
                     integrity::Validation::Missing => report.missing += 1,
                     integrity::Validation::Corrupt(reason) => {
                         log::warn!("vault corrupt path={relative} reason={reason}");
                         report.corrupt += 1;
                     }
+                    // **L'impronta si confronta**, non si ricalcola e basta
+                    // (D5): firma e terminatore intatti non dicono niente su
+                    // quello che c'è in mezzo, e un file marcito dentro —
+                    // un settore andato, una sincronizzazione a metà —
+                    // passerebbe per integro.
+                    integrity::Validation::Valid => match (&file.checksum, &scan.checksum) {
+                        (Some(expected), Some(found)) if expected != found => {
+                            log::warn!(
+                                "vault checksum mismatch path={relative} expected={expected} found={found}"
+                            );
+                            report.corrupt += 1;
+                        }
+                        _ => report.intact += 1,
+                    },
                 }
             } else if absolute.is_file() {
                 report.intact += 1;
@@ -208,16 +223,31 @@ fn kind_of(path: &Path) -> integrity::FileKind {
 }
 
 /// I percorsi che il database dichiara di avere nel deposito.
-async fn registered_paths(ctx: &JobContext) -> Result<Vec<String>, JobError> {
+/// Un file che il database dichiara, con l'impronta scritta quando è arrivato.
+///
+/// L'impronta serve al controllo completo: senza, si può dire soltanto che il
+/// file è **strutturalmente** intatto — firma e terminatore al loro posto — e
+/// un file marcito dentro passerebbe per buono.
+struct Registered {
+    path: String,
+    checksum: Option<String>,
+}
+
+async fn registered_paths(ctx: &JobContext) -> Result<Vec<Registered>, JobError> {
     ctx.with_database(|conn| {
         let mut statement = conn
             .prepare(
-                "SELECT vault_path FROM assets \
+                "SELECT vault_path, checksum FROM assets \
                  WHERE vault_path IS NOT NULL AND locality = 'local' ORDER BY vault_path",
             )
             .map_err(|error| error.to_string())?;
         let rows = statement
-            .query_map([], |row| row.get::<_, String>(0))
+            .query_map([], |row| {
+                Ok(Registered {
+                    path: row.get(0)?,
+                    checksum: row.get::<_, Option<String>>(1)?,
+                })
+            })
             .map_err(|error| error.to_string())?;
         rows.collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|error| error.to_string())
@@ -318,6 +348,38 @@ mod tests {
             report.message(),
             "integri 198 · mancanti 12 · corrotti 1 · orfani 3"
         );
+    }
+
+    #[test]
+    fn a_file_rotten_inside_is_not_intact() {
+        // Firma e terminatore restano al loro posto: solo il confronto con
+        // l'impronta registrata quando il file è arrivato può accorgersene
+        // (D5).
+        let dir = std::env::temp_dir().join("glossa_verification_checksum");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("0001.jpg");
+        let mut bytes = vec![0xFF, 0xD8, 0xFF, 0xE0];
+        bytes.extend_from_slice(&[7u8; 64]);
+        bytes.extend_from_slice(&[0xFF, 0xD9]);
+        std::fs::write(&file, &bytes).unwrap();
+        let arrived = integrity::scan_file(&file, integrity::FileKind::Image)
+            .checksum
+            .unwrap();
+
+        // Un byte cambiato nel mezzo, dove nessun controllo di forma guarda.
+        bytes[30] = 9;
+        std::fs::write(&file, &bytes).unwrap();
+        let now = integrity::scan_file(&file, integrity::FileKind::Image);
+
+        assert_eq!(
+            now.validation,
+            integrity::Validation::Valid,
+            "la forma regge"
+        );
+        assert_ne!(now.checksum.unwrap(), arrived, "l'impronta no");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

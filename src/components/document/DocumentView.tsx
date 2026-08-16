@@ -11,6 +11,11 @@ import { usePricingStore } from '../../stores/pricingStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel, type IconButtonTone } from '../ui';
+import {
+  approveTranslation,
+  withdrawTranslationApproval,
+} from '../../services/translationRevisionsService';
+import { logger } from '../../utils/logger';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { summarizeChunkUsage, formatUsd } from '../../utils/operationLogStats';
@@ -263,8 +268,28 @@ export function DocumentView({
     currentDotRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [currentChunk?.id]);
 
+  /**
+   * Approvare e ritirare l'approvazione sono **fatti** che restano nel
+   * registro (D22): la revisione approvata si conserva anche quando viene
+   * superata, perché «approvata e poi corretta» dice qualcosa che «approvata»
+   * da sola non dice.
+   *
+   * La registrazione non deve poter impedire il gesto: se fallisce, il blocco
+   * si mette lo stesso e il motivo finisce nel registro tecnico.
+   */
   const handleLockToggle = (chunk: typeof currentChunk) => {
-    if (chunk) toggleChunkTranslationLock(chunk.id);
+    if (!chunk) return;
+    const approving = !chunk.translationLocked;
+    toggleChunkTranslationLock(chunk.id);
+    const recorded = approving
+      ? approveTranslation(chunk.id, chunk.translationDisplayText, activeWorkspace?.id ?? null)
+      : withdrawTranslationApproval(chunk.id, activeWorkspace?.id ?? null);
+    void recorded.catch((error: unknown) => {
+      logger.warn('translation.approval.not_recorded', {
+        chunkId: chunk.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   };
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;

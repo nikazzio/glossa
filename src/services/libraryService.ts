@@ -120,7 +120,10 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       thumbnailUrl: metadata.thumbnailUrl,
       creator: metadata.creator,
       date: metadata.date,
-      expectedPages: row.expected_asset_count,
+      // Quante pagine ha l'opera. Lo scaricamento lo scrive leggendo il
+      // manifesto; prima di allora vale quello che la biblioteca aveva
+      // dichiarato all'aggiunta, che è già salvato nei metadati.
+      expectedPages: row.expected_asset_count ?? metadata.itemCount,
       localPages: row.local_pages,
       localBytes: row.local_bytes,
       providerKey: metadata.providerKey,
@@ -139,12 +142,20 @@ interface SourceMetadata {
    * percorso verrebbe rifiutata.
    */
   providerKey: string | null;
+  /** Quante pagine dichiarava la biblioteca quando l'opera è stata aggiunta. */
+  itemCount: number | null;
 }
 
 /** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
  *  ignora il resto, invece di fidarsi della forma. */
 function parseMetadata(raw: string | null): SourceMetadata {
-  const nothing: SourceMetadata = { thumbnailUrl: null, creator: null, date: null, providerKey: null };
+  const nothing: SourceMetadata = {
+    thumbnailUrl: null,
+    creator: null,
+    date: null,
+    providerKey: null,
+    itemCount: null,
+  };
   if (!raw) return nothing;
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -156,6 +167,10 @@ function parseMetadata(raw: string | null): SourceMetadata {
       creator: text(record.creator),
       date: text(record.date),
       providerKey: text(record.providerKey),
+      itemCount:
+        typeof record.itemCount === 'number' && Number.isFinite(record.itemCount)
+          ? record.itemCount
+          : null,
     };
   } catch {
     return nothing;

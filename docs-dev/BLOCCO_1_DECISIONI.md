@@ -332,6 +332,15 @@ sintassi canonica `size=max`.
 Scelta **alla fonte**, non globale, perché dipende dal materiale: una
 cinquecentina a stampa larga si legge a molto meno di una minuscola fitta.
 
+*(Fatto il 2026-08-16, #422. Rivisto lo stesso giorno con l'utente.)* **Due**
+livelli, non tre, e vince quello più vicino all'opera: **la fonte** (scheda in
+Biblioteca) e **l'impostazione generale** (Impostazioni → Scaricamento). Il
+livello per biblioteca è stato tolto: la misura dipende dal materiale, non da
+chi lo conserva — una cinquecentina a stampa larga e una minuscola fitta
+possono stare nella stessa biblioteca. Una misura che non significa niente —
+scritta a mano nel database, o rimasta da una forma precedente — vale come non
+scritta, e si torna al livello sotto.
+
 - **Standard** (predefinita): la misura dichiarata dal servizio **più vicina al
   tetto** — 2000 pixel sul lato lungo, configurabile — sopra o sotto che sia; a
   parità di distanza vince la più grande;
@@ -448,7 +457,10 @@ farebbe ripartire il riscaricamento dell'intera biblioteca.
 Millisecondi anche per un manoscritto grande. Risponde: *"210 attese, 198
 presenti, 12 mancanti"*.
 
-**Completo — integrità.** Ricalcola l'impronta di ogni file. Scopre anche i file
+**Completo — integrità.** Ricalcola l'impronta di ogni file **e la confronta
+con quella registrata quando il file è arrivato** *(precisato il 2026-08-17: la
+prima stesura del codice l'impronta la calcolava e la buttava, quindi un file
+marcito dentro, con firma e terminatore intatti, passava per integro)*. Scopre anche i file
 troncati da uno scaricamento interrotto, che il controllo rapido conta come
 presenti. Lento in proporzione ai gigabyte, e su un deposito sincronizzato in
 streaming (D1-bis) **costringe il client a scaricare tutto**: va avvisato prima
@@ -806,6 +818,10 @@ dal loro server, non dal tuo computer. Configurabile, ma con l'avvertenza
 accanto e un tetto non superabile — non per limitare l'utente, per non farlo
 bandire. Vedi D18.
 
+*(Il tetto è quattro richieste insieme per host, e dal 2026-08-16 vale dove i
+valori si usano e non solo dove si scelgono: un profilo scritto a mano nel
+database viene riportato dentro i limiti prima di scaricare.)*
+
 ### I lavori brevi non si mostrano singolarmente
 
 Lo scaricamento di una singola pagina dura pochi secondi. Se ogni pagina
@@ -874,6 +890,11 @@ e si ferma. Non si interrompe niente a metà.
 **Comporta**: mettere in pausa uno scaricamento richiede il tempo di finire la
 pagina in corso, non è istantaneo. L'interfaccia deve mostrare "in pausa…" e poi
 "in pausa", non fingere che sia immediato.
+
+*(Corretta il 2026-08-16, provandolo.)* La pausa **batte il nuovo tentativo**:
+un errore incassato mentre l'utente premeva pausa faceva programmare comunque
+un tentativo, e il lavoro ripartiva da solo dopo qualche minuto. Chi ha chiesto
+di fermarsi ha ragione anche quando la richiesta era già fallita.
 
 ## D15 — Annullamento
 
@@ -1007,9 +1028,30 @@ opposti, e vanno dette diversamente.
 ### Tempo stimato
 
 **Obbligatorio**, non facoltativo: un lavoro che dura un quarto d'ora senza una
-stima sembra bloccato. Si calcola dalle pagine completate e dalla pausa media
-dichiarata dal profilo, non dalla velocità osservata degli ultimi secondi, che
-con pause di 2,5–6 secondi oscilla troppo per essere utile.
+stima sembra bloccato.
+
+*Corretta il 2026-08-16, dopo averla vista sbagliare.* Si calcola dal **ritmo
+vero del lavoro**: pagine fatte diviso tempo trascorso da quando è partito.
+
+La prima stesura diceva «dalla pausa media dichiarata dal profilo, non dalla
+velocità osservata degli ultimi secondi, che oscilla troppo». La seconda metà
+resta valida, la prima no: quella pausa è **il minimo che aspettiamo noi**, non
+quanto ci mette la biblioteca a rispondere. Su archive.org dice 1,6 secondi a
+pagina dove la realtà misurata va da 1 a 19, e un manoscritto annunciato in sei
+minuti ne prende quaranta.
+
+La media **da inizio lavoro** non oscilla come quella sugli ultimi secondi: si
+assesta e cala mentre il lavoro procede. Finché le pagine fatte sono meno di
+tre resta la pausa dichiarata, che è l'unica cosa che si sa prima di aver
+misurato.
+
+### Fermo per riprovare non è fermo per volontà
+
+*Aggiunta il 2026-08-16.* Un lavoro che ha incassato un errore ritentabile
+aspetta e **riprova da solo** (D16). Nel pannello mostrava lo stesso comando di
+un lavoro in pausa, e si leggeva come fermo per scelta di chi guarda. Sono due
+stati diversi e vanno detti diversamente: «riprovo da solo fra 2 minuti», con
+il comando per non aspettare l'attesa e quello per fermarlo davvero.
 
 ### Movimento ridotto
 
@@ -1095,6 +1137,28 @@ più di quello che il progetto di riferimento dichiara.
 
 Il secondo garantisce che i valori tarati arrivino corretti a chi installa; il
 primo che si possano cambiare senza ricompilare.
+
+*(Fatto il 2026-08-16, #421. Rivisto lo stesso giorno con l'utente.)* La
+modifica dell'utente vive in **profili di rete**: un profilo è un ritmo, non
+una biblioteca. I ritmi tarati sul campo sono due — il prudente e quello di
+Gallica — e si applicano a undici biblioteche: tenerli per biblioteca vorrebbe
+dire ripetere gli stessi numeri nove volte e non sapere più da dove vengono.
+
+Quindi: i profili stanno in `network_profiles` (migrazione `0009`, che sostituisce la forma per biblioteca della `0007` — le migrazioni si aggiungono, non si riscrivono: una già applicata che cambia fa fallire l'avvio), le biblioteche **scelgono** il
+proprio in `library_network_profiles`, e chi non sceglie segue il predefinito.
+Due profili nascono con l'applicazione prendendo i valori **dal registro**, che
+resta l'unico posto dove una biblioteca nuova si compila: si modificano ma non
+si eliminano, e nemmeno si elimina un profilo che qualcuno usa.
+
+Fuori dai profili restano le caratteristiche della singola biblioteca — il
+preriscaldamento del visualizzatore, l'intestazione di provenienza — che non
+sono un ritmo: assegnare un profilo alla Vaticana non deve farle perdere la
+sessione.
+
+Il profilo si rilegge **all'avvio del lavoro**, non alla messa in coda: un
+lavoro ripreso dopo giorni deve rispettare i limiti di adesso. Il tetto sulle
+richieste insieme è applicato **anche nel backend** (D11): prima viveva solo nel
+menu, che è un aiuto e non una difesa.
 
 ### Profilo dal provider, contatori per host
 
@@ -1248,7 +1312,11 @@ proposta e risultato approvato"*.
 
 ## D22 — Storico delle traduzioni
 
-*Approvata con modifiche l'11 agosto 2026.*
+*Approvata con modifiche l'11 agosto 2026. **Fatta il 2026-08-16**: tabella
+`translation_revisions`, `translations.approved_revision_id`, e i fatti di
+approvazione e ritiro scritti dove l'utente blocca e sblocca la traduzione di
+un chunk. Resta da allineare `transcription_revisions`, che ha ancora la
+colonna `status`.*
 
 Nuova tabella `translation_revisions`, simmetrica a `transcription_revisions`.
 
@@ -1452,7 +1520,10 @@ cancellazione".
 
 ## D29 — Quando si accende
 
-*Approvata l'11 agosto 2026.*
+*Approvata l'11 agosto 2026. **Fatta il 2026-08-16 per i lavori**: avvio ed
+esito con la durata li scrive il motore, non i gestori. I percorsi della
+pipeline — provider, modello, token, costo per ogni stadio — restano da
+collegare: le colonne esistono e sono vuote.*
 
 **La registrazione parte con le fondamenta**, l'area Analisi no. Sono due lavori
 diversi e il secondo senza il primo non ha nulla da mostrare.

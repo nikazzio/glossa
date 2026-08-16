@@ -573,6 +573,19 @@
       "invalidProfile": "Enter a valid name and complete address.",
       "testModelRequired": "Enter a model name to test"
     },
+    "downloadTab": "Download",
+    "download": {
+      "loadFailed": "Could not read the download settings",
+      "saveFailed": "Could not save the download settings",
+      "sizeCap": "Page size",
+      "sizeCapMax": "the largest available",
+      "sizeCapHint": "The size to aim for on the long side. The library serves the declared size closest to it, above or below: the choice is a policy, not an exact number.",
+      "pixels": "{{value}} pixels",
+      "thumbnailEdge": "Thumbnail size",
+      "thumbnailEdgeHint": "Thumbnails are derived from the downloaded pages, on your computer: they cost no request. Larger ones take more space and browse better.",
+      "sizes": "Sizes"
+    },
+    "librariesTab": "Libraries",
     "jobsTab": "Jobs",
     "jobs": {
       "loadFailed": "Could not read the job settings",
@@ -585,6 +598,38 @@
         "disk": "Disk writes",
         "languageService": "Language services",
         "documents": "Document generation"
+      },
+      "limits": "How many at once",
+      "reopening": "On reopening"
+    },
+    "network": {
+      "profiles": "Network profiles",
+      "libraries": "Libraries",
+      "name": "Name",
+      "newProfile": "Create a profile",
+      "newProfileName": "New profile",
+      "usedBy_zero": "no libraries",
+      "usedBy_one": "one library",
+      "usedBy_other": "{{count}} libraries",
+      "save": "Save the profile",
+      "saved": "Profile saved",
+      "saveFailed": "Could not save",
+      "loadFailed": "Could not read the profiles",
+      "delete": "Delete the profile",
+      "deleteInUse": "Move the libraries that use it first",
+      "field": {
+        "pauseMinMs": "Minimum pause (ms)",
+        "pauseMaxMs": "Maximum pause (ms)",
+        "burstRequests": "Requests in a burst",
+        "burstWindowSecs": "Within how many seconds",
+        "hostConcurrency": "Requests at a time",
+        "maxAttempts": "Attempts",
+        "backoffBaseSecs": "First wait (s)",
+        "backoffCapSecs": "Longest wait (s)",
+        "cooldown403Secs": "Pause after a refusal (s)",
+        "cooldown429Secs": "Pause after a slow-down (s)",
+        "connectTimeoutSecs": "Wait to connect (s)",
+        "readTimeoutSecs": "Wait to read (s)"
       }
     }
   },
@@ -734,7 +779,7 @@
       "downloadRunning": "Downloading",
       "remove": "Remove from the library",
       "removeTitle": "Remove “{{title}}”?",
-      "removeMessage": "It disappears from the library along with its links. Images already downloaded stay on disk: freeing space is a separate command.",
+      "removeMessage": "It disappears from the Library along with its links. There is nothing downloaded to delete.",
       "removeConfirm": "Remove",
       "availabilityRemote": "online only",
       "availabilityComplete": "all pages on this computer",
@@ -752,7 +797,15 @@
       "freeSpaceConfirm": "Free space",
       "freeSpaceDone": "{{size}} freed",
       "freeSpaceFailed": "Could not free the space",
-      "verifyNothing": "This source has no files registered in the vault yet"
+      "verifyNothing": "This source has no files registered in the vault yet",
+      "sizeCap": "Page size",
+      "sizeCapInherited": "as the library says",
+      "sizeCapLoadFailed": "Could not read the size chosen for this work",
+      "sizeCapSaveFailed": "Could not save the size for this work",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages",
+      "removeMessageWithFiles": "It disappears from the Library along with its links, and the {{size}} already downloaded are deleted too. To keep the work and only free the space, there is a command for that.",
+      "removeFailed": "Could not remove the work"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -877,7 +930,9 @@
       "addToLibraryFailed": "Adding to Library failed. Try again.",
       "addToWorkspace": "Add to a workspace",
       "noWorkspaces": "No workspace available. Create one before linking a source.",
-      "viewOptions": "View"
+      "viewOptions": "View",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages"
     },
     "stats": {
       "projects": "Projects",
@@ -1493,6 +1548,14 @@
       "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
       "downloadTitle": "Downloading a source",
       "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce; if that request is refused, it asks the library what it can produce and retries on its own. From every page it downloads, Glossa derives its thumbnail without asking the library for anything: thumbnails let you browse the book offline.",
+      "downloadPolicyTitle": "Choosing the page size",
+      "downloadPolicyDesc": "In Settings → Download you choose how large you want the pages and how large the thumbnails. The page size is a target, not an exact number: Glossa asks the library for the size it declares closest to it, above or below. The same choice can be made on the single work, by opening its card in the Library, and there it wins: the size depends on the material, not on who keeps the book. Pages already downloaded stay as they are.",
+      "removeTitle": "Removing a work from the Library",
+      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
+      "checkTitle": "The two vault checks",
+      "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is.",
+      "librariesTitle": "How Glossa treats libraries",
+      "librariesDesc": "Every library has its own pace: how long to wait between requests, how many requests in a minute, how long to stop when it asks you to slow down. These are a few different paces applied to many libraries, so Settings → Libraries governs them as profiles. Two ship with Glossa, with values proven in the field: Normal, used by almost all of them, and Slow, tuned on the strictest one. You can change them, create others and name each one; next to the name you see how many libraries use it. Below, for each library you pick its profile from a menu. A profile in use cannot be deleted until you move the libraries that follow it, and the two that ship with the application cannot be deleted at all. Requests at the same time never go above four, whatever you write: the limit depends on the library's server and it keeps you from being blocked.",
       "jobsRestartTitle": "Closing and reopening",
       "jobsRestartDesc": "Closing Glossa stops the jobs and asks for confirmation. On reopening nothing restarts on its own: you find them stopped and decide. Only downloads can restart automatically, if you turn the option on in Settings → Jobs.",
       "limitsTitle": "How many at once",
@@ -1858,8 +1921,6 @@
     "failedCount_one": "{{count}} failed job",
     "failedCount_other": "{{count}} failed jobs",
     "etaShort": "~{{eta}}",
-    "waiting": "waiting",
-    "waitingResumesIn": "waiting · resumes in {{eta}}",
     "running": "running",
     "queued": "queued",
     "paused": "paused",
@@ -1911,7 +1972,6 @@
       "type": "type",
       "phase": "phase",
       "bytes": "downloaded",
-      "last": "last",
       "size": "resolution",
       "provider": "library",
       "host": "host",
@@ -1934,7 +1994,19 @@
       "levelValue": {
         "quick": "quick",
         "full": "full"
-      }
-    }
+      },
+      "groupWork": "this work",
+      "groupLast": "last page downloaded",
+      "lastIndex": "number",
+      "lastBytes": "size on disk",
+      "available": "available resolutions",
+      "sizeMax": "the largest",
+      "sizePixels": "{{value}} px",
+      "foldMore": "show",
+      "foldLess": "collapse"
+    },
+    "retryNow": "Retry now",
+    "retryingIn": "retrying on its own in {{eta}}",
+    "retrying": "retrying on its own"
   }
 }

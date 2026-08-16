@@ -532,6 +532,18 @@ function StorageSection() {
       <SubTitle>{t('help.storage.downloadTitle')}</SubTitle>
       <P>{t('help.storage.downloadDesc')}</P>
 
+      <SubTitle>{t('help.storage.downloadPolicyTitle')}</SubTitle>
+      <P>{t('help.storage.downloadPolicyDesc')}</P>
+
+      <SubTitle>{t('help.storage.removeTitle')}</SubTitle>
+      <P>{t('help.storage.removeDesc')}</P>
+
+      <SubTitle>{t('help.storage.checkTitle')}</SubTitle>
+      <P>{t('help.storage.checkDesc')}</P>
+
+      <SubTitle>{t('help.storage.librariesTitle')}</SubTitle>
+      <P>{t('help.storage.librariesDesc')}</P>
+
       <SubTitle>{t('help.storage.limitsTitle')}</SubTitle>
       <P>{t('help.storage.limitsDesc')}</P>
 

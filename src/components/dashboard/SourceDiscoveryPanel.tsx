@@ -130,10 +130,14 @@ function DataStat({ label, value }: { label: string; value: string }) {
 function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
+  // Quante pagine si legge **senza espandere**: è il dato con cui si decide se
+  // scaricare un'opera, e stava solo nella scheda aperta.
+  const pages = card.itemCount !== null ? t('dashboard.discovery.pageCount', { count: card.itemCount }) : null;
   const metaLine = [
     card.creator ? `${t('dashboard.discovery.by')} ${card.creator}` : null,
     card.date,
     card.volume,
+    pages,
   ].filter(Boolean).join(' · ');
 
   const stats: Array<[string, string]> = [
@@ -144,7 +148,7 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
     !isManifest(card) && card.mediaType && [t('dashboard.discovery.type'), card.mediaType],
     isManifest(card) && card.materialType && [t('dashboard.discovery.type'), card.materialType],
     !isManifest(card) && card.collection && [t('dashboard.discovery.collection'), card.collection],
-    isManifest(card) && card.itemCount !== null && [t('dashboard.discovery.pages'), String(card.itemCount)],
+    card.itemCount !== null && [t('dashboard.discovery.pages'), String(card.itemCount)],
     card.subjects.length > 0 && [t('dashboard.discovery.subjects'), card.subjects.join(' · ')],
   ].filter((entry): entry is [string, string] => Boolean(entry));
 

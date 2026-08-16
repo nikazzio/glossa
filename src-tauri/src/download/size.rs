@@ -48,6 +48,26 @@ pub fn from_info(info: &Value, cap: u32) -> SizeToken {
     }
 }
 
+/// Le misure che il servizio dichiara di saper servire, in ordine crescente e
+/// senza ripetizioni.
+///
+/// Sono le stesse che `from_info` guarda per scegliere: conservarle costa
+/// niente — le abbiamo già in mano in quel momento — e dire **quali erano le
+/// alternative** è ciò che rende leggibile la misura scelta.
+///
+/// Larghezza **e** altezza, non il solo lato lungo: la misura chiesta al
+/// servizio è una larghezza, e un elenco di lati lunghi non conterrebbe il
+/// numero che si legge accanto, facendo sembrare un difetto ciò che non lo è.
+pub fn available_sizes(info: &Value) -> Vec<(u32, u32)> {
+    let mut sizes = declared_sizes(info);
+    // Anche larghezza e altezza nell'ordinamento: due misure diverse possono
+    // avere lo stesso lato lungo, e senza di quelle le uguali non finirebbero
+    // per forza vicine — `dedup` ne lascerebbe passare qualcuna doppia.
+    sizes.sort_unstable_by_key(|(width, height)| ((*width).max(*height), *width, *height));
+    sizes.dedup();
+    sizes
+}
+
 /// Indirizzo del descrittore dell'immagine.
 pub fn info_url(image_service: &str) -> String {
     format!("{}/info.json", image_service.trim_end_matches('/'))
@@ -175,5 +195,23 @@ mod tests {
         // `max` esiste dalla Image API 3.0: a un servizio 2.1 va chiesto `full`.
         assert_eq!(full_size(false), "max");
         assert_eq!(full_size(true), "full");
+    }
+
+    #[test]
+    fn the_declared_sizes_are_kept_as_alternatives() {
+        // Servono a leggere la misura scelta: «1299» da solo non dice se era il
+        // massimo o il minimo che la biblioteca sa servire.
+        let info = info_with_sizes(&[(2598, 3850), (649, 963), (1299, 1925)]);
+
+        assert_eq!(
+            available_sizes(&info),
+            vec![(649, 963), (1299, 1925), (2598, 3850)],
+            "in ordine crescente, qualunque ordine dichiari il servizio"
+        );
+    }
+
+    #[test]
+    fn a_descriptor_that_declares_nothing_offers_no_alternatives() {
+        assert!(available_sizes(&json!({})).is_empty());
     }
 }

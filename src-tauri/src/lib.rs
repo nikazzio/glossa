@@ -7,6 +7,7 @@ mod images;
 mod jobs;
 mod keystore;
 mod llm;
+mod provenance;
 mod storage_config;
 mod vault;
 mod vector;
@@ -74,6 +75,16 @@ pub fn run() {
             // ancora stata creata (D1).
             if let Err(error) = vault::commands::ensure_default_root(app.handle()) {
                 log::error!("default vault not created: {error}");
+            }
+
+            // I ritmi di rete che nascono con l'applicazione, presi dal
+            // registro dei provider (D18). Senza, la prima apertura non
+            // avrebbe nessun profilo da applicare.
+            if let Err(error) = crate::storage_config::db_path(app.handle())
+                .and_then(|path| db::open_connection(&path))
+                .and_then(|conn| iiif::settings::ensure_builtin_profiles(&conn))
+            {
+                log::error!("network profiles not seeded: {error}");
             }
 
             // L'orchestratore dei lavori parte con l'applicazione (D10) e per
@@ -151,6 +162,7 @@ pub fn run() {
             vault::commands::verify_files_present,
             vault::commands::verify_files_integrity,
             vault::commands::free_version_pages,
+            vault::commands::delete_version_files,
             vault::commands::choose_vault_folder,
             vault::commands::use_default_vault_folder,
             vault::commands::enqueue_vault_verification,
@@ -180,6 +192,12 @@ pub fn run() {
             deepl::commands::delete_deepl_glossary,
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
+            iiif::commands::list_network_settings,
+            iiif::commands::save_network_profile,
+            iiif::commands::delete_network_profile,
+            iiif::commands::set_library_network_profile,
+            iiif::commands::get_version_size_cap,
+            iiif::commands::set_version_size_cap,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

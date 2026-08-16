@@ -51,4 +51,6 @@ From every page it downloads, Glossa derives its **thumbnail**, without asking t
 
 ## Removing a source
 
-Removing takes the record out of the Library along with its workspace links. **Images already downloaded stay on disk**: freeing space is a separate action.
+Removing takes the work away **entirely**: the record, its workspace links, and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting.
+
+To keep the work and only get the space back, the command is a different one: **free space**.

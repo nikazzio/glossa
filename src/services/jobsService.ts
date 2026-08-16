@@ -173,6 +173,8 @@ export interface JobDetail {
   bytes?: { downloaded: number; estimated: number };
   last?: { index: number; bytes: number };
   size?: string;
+  /** Le misure che la biblioteca dichiara di saper servire, `larghezza×altezza`. */
+  available?: string[];
   provider?: string;
   host?: string;
   level?: string;
@@ -219,6 +221,9 @@ export function parseJobDetail(raw: string | null): JobDetail {
           ? { index: num(last.index)!, bytes: num(last.bytes) ?? 0 }
           : undefined,
       size: text(record.size),
+      available: Array.isArray(record.available)
+        ? record.available.filter((value): value is string => typeof value === 'string')
+        : undefined,
       provider: text(record.provider),
       host: text(record.host),
       level: text(record.level),

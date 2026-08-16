@@ -15,6 +15,7 @@ import type { PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { buildMemoryInjection } from '../../services/phraseMemoryInjection';
 import { getChunksWithAllMatchesDisabled } from '../../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../../services/pipelineService';
+import { recordModelRevision } from '../../services/translationRevisionsService';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../../models/catalog';
 import { toDeeplCode } from '../../constants';
@@ -149,20 +150,38 @@ function persistPipelineStatus(
   });
 }
 
-function persistChunkCheckpoint(
+/**
+ * Salva il frammento e **poi** registra la proposta del modello nello storico
+ * (D22).
+ *
+ * L'ordine conta: la revisione punta alla riga della traduzione, che alla
+ * prima esecuzione di un frammento nuovo non esiste ancora. Scritta prima,
+ * l'inserimento veniva rifiutato e la proposta del modello non finiva da
+ * nessuna parte.
+ *
+ * Se la registrazione fallisce la traduzione resta: serve a sapere cosa è
+ * successo, non a decidere cosa succede.
+ */
+async function persistChunkCheckpoint(
   projectId: string | null,
   pipelineId: string | null,
   chunk: TranslationChunk | undefined,
   position: number,
 ) {
   if (!projectId || !pipelineId || !chunk) return;
-  void saveChunkCheckpoint(projectId, pipelineId, chunk, position).catch((error: unknown) => {
+  try {
+    await saveChunkCheckpoint(projectId, pipelineId, chunk, position);
+  } catch (error: unknown) {
     warnAsyncFailure('pipeline.checkpoint.persist_failed', error, {
       projectId,
       pipelineId,
       chunkId: chunk.id,
       position,
     });
+    return;
+  }
+  await recordModelRevision(chunk.id, chunk.translationDisplayText).catch((error: unknown) => {
+    warnAsyncFailure('translation.revision.persist_failed', error, { chunkId: chunk.id });
   });
 }
 
@@ -466,7 +485,7 @@ export async function runPipeline(t: Translate): Promise<void> {
         const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
         const position = liveChunks.indexOf(chunk);
         const currentProjectId = useProjectStore.getState().currentProjectId;
-        persistChunkCheckpoint(currentProjectId, activePipelineId, fresh, position);
+        await persistChunkCheckpoint(currentProjectId, activePipelineId, fresh, position);
       }
     }
   } finally {

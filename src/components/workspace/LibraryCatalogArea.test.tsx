@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryCatalogArea } from './LibraryCatalogArea';
+import { deleteVersionFiles } from '../../services/vaultService';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -21,6 +22,20 @@ vi.mock('../../services/libraryService', () => ({
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
 }));
+
+// La conferma vive in un componente montato altrove: qui si dà per data,
+// perché la prova riguarda cosa succede dopo il sì.
+vi.mock('../../stores/confirmStore', () => ({ confirm: vi.fn().mockResolvedValue(true) }));
+
+vi.mock('../../services/vaultService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/vaultService')>();
+  return {
+    ...actual,
+    deleteVersionFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
+    freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0 }),
+    verifyFilesPresent: vi.fn().mockResolvedValue([]),
+  };
+});
 
 vi.mock('../../services/jobsService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/jobsService')>();
@@ -76,13 +91,44 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByText('areas.library.empty')).toBeInTheDocument();
   });
 
-  it('elenca le fonti con quante carte sono davvero sul computer', () => {
+  it('elenca le fonti con quante pagine sono davvero sul computer', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
 
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.getByText('areas.library.availabilityPartial')).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+  });
+
+  it('dice quante pagine ha l opera senza doverla aprire', () => {
+    // È il dato con cui si decide se scaricarla o no.
+    useSourceLibraryStore.setState({ catalog: [entry({ expectedPages: 210 })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.pageCount/)).toBeInTheDocument();
+  });
+
+  it('senza un numero di pagine dichiarato non se ne inventa uno', () => {
+    useSourceLibraryStore.setState({ catalog: [entry({ expectedPages: null })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.queryByText(/areas\.library\.pageCount/)).not.toBeInTheDocument();
+  });
+
+  it('togliendo un opera si eliminano anche le sue immagini', async () => {
+    // Lasciarle dietro produceva cartelle che nessuna schermata sa mostrare, e
+    // che riaggiungendo la stessa opera non tornerebbero comunque utili (D6).
+    const user = userEvent.setup();
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
+    render(<LibraryCatalogArea />);
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+
+    await waitFor(() =>
+      expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
+    );
   });
 
   it('offre lo scaricamento e la rimozione per ogni fonte', () => {

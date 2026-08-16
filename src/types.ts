@@ -62,13 +62,17 @@ export interface IIIFDiscoveryResult {
   language: string | null;
   volume: string | null;
   subjects: string[];
+  /** Quante pagine, quando la biblioteca lo dichiara nella ricerca. */
+  itemCount: number | null;
   manifestUrl: string;
 }
 
 export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
 
 export function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
-  return 'itemCount' in card;
+  // `materialType` esiste solo sulla scheda ricavata dal manifesto. Il numero
+  // di pagine non distingue più niente: adesso lo dichiarano entrambe.
+  return 'materialType' in card;
 }
 
 /** Tentativo automatico (best-effort) di riconoscere il tipo materiale dai metadati

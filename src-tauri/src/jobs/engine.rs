@@ -607,6 +607,17 @@ impl JobEngine {
                     continue;
                 }
                 store::increment_attempt(conn, &job.id)?;
+                // La registrazione è **parte del contratto del motore**, non di
+                // chi scrive un gestore (D29): ogni lavoro registra avvio ed
+                // esito senza che nessuno debba ricordarsene.
+                record_fact(
+                    conn,
+                    &crate::provenance::Event::for_job(
+                        crate::provenance::event_type::JOB_STARTED,
+                        &job.id,
+                        &job.job_type,
+                    ),
+                );
                 self.observer.notify(conn, &job.id);
                 starting.push((job, handler, permit));
             }
@@ -678,6 +689,37 @@ impl JobEngine {
             .map(|current| format!("{:.0}%", current.progress * 100.0))
             .unwrap_or_else(|| "?".to_string());
 
+        // Cosa ha chiesto l'utente mentre il lavoro finiva. Si guarda una
+        // volta sola: la pausa e l'annullamento battono il nuovo tentativo.
+        let control = self.control_of(&job.id);
+        let stop_asked = if control.cancel_requested() {
+            Some(StopAsked::Cancel)
+        } else if control.pause_requested() {
+            Some(StopAsked::Pause)
+        } else {
+            None
+        };
+
+        // Come è andata, deciso **prima** del `match` che consuma l'esito.
+        // `None` significa che il lavoro non è arrivato a un capolinea: una
+        // pausa e un tentativo rimandato non sono la fine di niente, e il
+        // fatto dell'avvio è già scritto.
+        let reached_the_end: Option<(&'static str, Option<String>)> = match (&outcome, stop_asked) {
+            (Ok(Outcome::Done), _) => Some(("completed", None)),
+            (Ok(Outcome::Cancelled), _) | (Err(_), Some(StopAsked::Cancel)) => {
+                Some(("cancelled", None))
+            }
+            (Ok(Outcome::Paused), _) | (Err(_), Some(StopAsked::Pause)) => None,
+            (Err(error), None) => {
+                let attempts = reached
+                    .as_ref()
+                    .map(|current| current.attempt_count)
+                    .unwrap_or(job.attempt_count + 1);
+                let will_retry = error.kind.is_retryable() && attempts < job.max_attempts;
+                (!will_retry).then(|| ("error", Some(error.kind.as_str().to_string())))
+            }
+        };
+
         match outcome {
             Ok(Outcome::Done) => {
                 store::save_progress(conn, &job.id, 1.0, None, Some(0), None, None)?;
@@ -697,8 +739,30 @@ impl JobEngine {
                 let attempts = reached
                     .map(|current| current.attempt_count)
                     .unwrap_or(job.attempt_count + 1);
-                let can_retry = error.kind.is_retryable() && attempts < job.max_attempts;
-                if can_retry {
+                let can_retry = stop_asked.is_none()
+                    && error.kind.is_retryable()
+                    && attempts < job.max_attempts;
+                if let Some(asked) = stop_asked {
+                    // **Chi ha chiesto di fermarsi ha ragione anche quando la
+                    // richiesta era già fallita** (D14): un errore incassato
+                    // mentre l'utente premeva pausa faceva programmare un
+                    // nuovo tentativo, e il lavoro ripartiva da solo dopo
+                    // qualche minuto. In pausa non si riprova.
+                    match asked {
+                        StopAsked::Cancel => {
+                            store::set_status(conn, &job.id, JobStatus::Cancelled)?;
+                            log::info!("job cancelled while failing id={} at={at}", job.id);
+                        }
+                        StopAsked::Pause => {
+                            store::park_as_paused(conn, &job.id, false)?;
+                            log::info!(
+                                "job paused while failing id={} at={at} error={}",
+                                job.id,
+                                error.message
+                            );
+                        }
+                    }
+                } else if can_retry {
                     let wait = self.backoff.wait_for(error, attempts);
                     log::warn!(
                         "job retry id={} attempt={}/{} kind={} wait={}s at={at} error={}",
@@ -723,6 +787,19 @@ impl JobEngine {
                 }
             }
         }
+        if let Some((result, error_kind)) = reached_the_end {
+            let mut fact = crate::provenance::Event::for_job(
+                crate::provenance::event_type::JOB_FINISHED,
+                &job.id,
+                &job.job_type,
+            );
+            fact.outcome = Some(result.to_string());
+            fact.error_kind = error_kind;
+            // Letta **dopo** la scrittura dello stato, che è ciò che segna
+            // l'orario di fine.
+            fact.duration_ms = crate::provenance::job_duration_ms(conn, &job.id);
+            record_fact(conn, &fact);
+        }
         self.observer.notify(conn, &job.id);
         Ok(())
     }
@@ -742,11 +819,30 @@ impl JobEngine {
     }
 }
 
+/// Cosa ha chiesto l'utente mentre il lavoro stava finendo.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StopAsked {
+    Pause,
+    Cancel,
+}
+
+/// Scrive un fatto nel registro (D23, D29).
+///
+/// Un errore qui **non cambia l'esito del lavoro**: la registrazione serve a
+/// sapere cosa è successo, non a decidere cosa succede. Si dice nel log tecnico
+/// e si va avanti.
+fn record_fact(conn: &Connection, event: &crate::provenance::Event) {
+    if let Err(error) = crate::provenance::record(conn, event) {
+        log::warn!("job fact not recorded id={} error={error}", event.entity_id);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::jobs::store::NewJob;
     use crate::jobs::testing::{CounterJob, RestartOnlyJob};
+    use crate::jobs::ErrorKind;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn temp_db(name: &str) -> PathBuf {
@@ -760,6 +856,9 @@ mod tests {
             include_str!("../../migrations/0004_jobs_runtime.sql"),
             include_str!("../../migrations/0005_job_phase.sql"),
             include_str!("../../migrations/0006_job_detail.sql"),
+            include_str!("../../migrations/0007_download_policy.sql"),
+            include_str!("../../migrations/0008_provenance_foundation.sql"),
+            include_str!("../../migrations/0009_network_profiles.sql"),
         ] {
             conn.execute_batch(migration).unwrap();
         }
@@ -811,6 +910,101 @@ mod tests {
         let record = store::get(&conn, "j1").unwrap().unwrap();
         assert_eq!(record.status, JobStatus::Completed);
         assert_eq!(record.progress, 1.0);
+    }
+
+    #[tokio::test]
+    async fn a_job_paused_while_failing_does_not_retry_on_its_own() {
+        // Chi mette in pausa ha ragione anche quando la richiesta era già
+        // fallita: prima il lavoro si programmava un nuovo tentativo e
+        // ripartiva da solo dopo qualche minuto (D14).
+        let path = temp_db("pause_beats_retry");
+        let engine = engine_with(path, Observer::silent());
+        let record = engine
+            .submit(&job("j-pause-fail", r#"{"steps":50,"stepMs":5}"#))
+            .await
+            .unwrap();
+
+        // Il lavoro incassa un errore ritentabile mentre l'utente ha già
+        // chiesto la pausa.
+        engine.control_of("j-pause-fail").request_pause();
+        engine
+            .settle(
+                &record,
+                Err(JobError::new(
+                    ErrorKind::Transport,
+                    "connessione caduta".to_string(),
+                )),
+            )
+            .await
+            .unwrap();
+
+        let conn = engine.connection().unwrap();
+        let record = store::get(&conn, "j-pause-fail").unwrap().unwrap();
+        assert_eq!(record.status, JobStatus::Paused);
+        assert!(
+            record.next_attempt_at.is_none(),
+            "nessun tentativo in programma: {:?}",
+            record.next_attempt_at
+        );
+    }
+
+    #[tokio::test]
+    async fn a_finished_job_leaves_two_facts_in_the_register() {
+        // La registrazione è parte del contratto del motore, non del gestore
+        // (D29): un lavoro che nessuno ha istruito a registrare registra lo
+        // stesso avvio ed esito.
+        let path = temp_db("facts");
+        let engine = engine_with(path, Observer::silent());
+        engine
+            .submit(&job("j-facts", r#"{"steps":2}"#))
+            .await
+            .unwrap();
+
+        settle(&engine).await;
+
+        let conn = engine.connection().unwrap();
+        let facts: Vec<(String, Option<String>)> = conn
+            .prepare("SELECT event_type, outcome FROM provenance_events WHERE job_id = ?1 ORDER BY event_type")
+            .unwrap()
+            .query_map(["j-facts"], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+
+        assert_eq!(
+            facts,
+            vec![
+                ("job.finished".to_string(), Some("completed".to_string())),
+                ("job.started".to_string(), None),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn a_job_run_twice_does_not_duplicate_its_facts() {
+        // Rilanciare un lavoro riesegue lo stesso passo: senza identificativo
+        // derivato, ogni conteggio finirebbe doppio (D27).
+        let path = temp_db("facts_once");
+        let engine = engine_with(path, Observer::silent());
+        engine
+            .submit(&job("j-once", r#"{"steps":1}"#))
+            .await
+            .unwrap();
+        settle(&engine).await;
+
+        engine.retry("j-once", true).await.unwrap();
+        settle(&engine).await;
+
+        let conn = engine.connection().unwrap();
+        let facts: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM provenance_events WHERE job_id = ?1",
+                ["j-once"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(facts, 2, "avvio ed esito, non quattro righe");
     }
 
     #[tokio::test]

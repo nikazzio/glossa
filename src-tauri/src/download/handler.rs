@@ -29,6 +29,10 @@ use super::size;
 
 pub const JOB_TYPE: &str = "source_download";
 
+/// Tetto di riserva quando il tetto configurato non è un numero — cioè quando
+/// è la politica «massima», che non passa mai di qui.
+const DEFAULT_CAP_PIXELS: u32 = 2000;
+
 /// `assets.kind` delle carte: è quello che conta nella disponibilità (D7) ed è
 /// quello che «libera spazio» cancella (D6).
 const PAGE_KIND: &str = "image";
@@ -61,11 +65,8 @@ fn default_thumbnail_edge() -> u32 {
     images::DEFAULT_THUMBNAIL_EDGE
 }
 
-/// Tetto predefinito: 2000 pixel sul lato lungo (D4).
-const DEFAULT_CAP: u32 = 2000;
-
 fn default_size_tag() -> String {
-    DEFAULT_CAP.to_string()
+    crate::iiif::settings::DEFAULT_SIZE_CAP.to_string()
 }
 
 #[derive(Debug, Default, serde::Serialize, Deserialize)]
@@ -138,7 +139,7 @@ impl JobHandler for SourceDownloadJob {
         let config: DownloadConfig = serde_json::from_str(&ctx.config).map_err(|error| {
             JobError::new(ErrorKind::Internal, format!("configurazione: {error}"))
         })?;
-        let profile = profile_for(&config.provider_key);
+        let profile = profile_for(&ctx, &config).await;
         let client = build_client(&profile)?;
 
         let root = ctx
@@ -232,10 +233,16 @@ impl JobHandler for SourceDownloadJob {
             .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
             .map(|saved| saved.done.min(total))
             .unwrap_or(0);
-        // Le misure decise per gruppo di carte valgono per tutto il lavoro.
+        // Le misure decise per gruppo di carte valgono per tutto il lavoro, e
+        // con loro le alternative che la biblioteca ha dichiarato.
         let sizes: SizeCache = Default::default();
+        let declared: DeclaredSizes = Default::default();
         ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
+        // Da qui si misura il ritmo vero: quante pagine sono passate in questo
+        // avvio e in quanto tempo. Una ripresa riparte da zero di misura, che è
+        // giusto — la biblioteca di adesso non è quella di ieri.
+        let started_at = std::time::Instant::now();
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
         // una volta sola evita una somma per ogni carta. Sono le **carte**: le
         // miniature pesano una frazione e conteggiarle renderebbe la stima meno
@@ -249,12 +256,17 @@ impl JobHandler for SourceDownloadJob {
                 return Ok(stopped_outcome(&ctx, &staging));
             }
 
-            let eta = estimated_seconds(total.saturating_sub(done), &profile);
+            let eta = estimated_seconds(
+                total.saturating_sub(done),
+                done.saturating_sub(start),
+                started_at.elapsed(),
+                &profile,
+            );
             let progress = f64::from(done) / f64::from(total.max(1));
             let fetched = self
                 .fetch_page_declaring_long_waits(
-                    &ctx, &client, &profile, &config, &manifest, &sizes, &root, &staging, page,
-                    progress, &title, eta, &signals,
+                    &ctx, &client, &profile, &config, &manifest, &sizes, &declared, &root,
+                    &staging, page, progress, &title, eta, &signals,
                 )
                 .await
                 .inspect_err(|_| discard(&staging))?;
@@ -286,7 +298,12 @@ impl JobHandler for SourceDownloadJob {
             ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
                 Some(&title),
-                Some(estimated_seconds(total.saturating_sub(done), &profile)),
+                Some(estimated_seconds(
+                    total.saturating_sub(done),
+                    done.saturating_sub(start),
+                    started_at.elapsed(),
+                    &profile,
+                )),
                 Some(&progress_detail(
                     done,
                     total,
@@ -294,6 +311,7 @@ impl JobHandler for SourceDownloadJob {
                     page.index,
                     added,
                     &self.requested_size(&sizes, page, &config),
+                    &known_sizes(&declared),
                     &config.provider_key,
                     &host_of(&page.image_service).unwrap_or_default(),
                 )),
@@ -326,6 +344,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         root: &Path,
         staging: &Path,
         page: &Page,
@@ -335,7 +354,7 @@ impl SourceDownloadJob {
         signals: &Signals<'_>,
     ) -> Result<Option<u64>, JobError> {
         let work = self.fetch_page(
-            ctx, client, profile, config, manifest, sizes, root, staging, page, signals,
+            ctx, client, profile, config, manifest, sizes, declared, root, staging, page, signals,
         );
         tokio::pin!(work);
 
@@ -372,6 +391,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         root: &Path,
         staging: &Path,
         page: &Page,
@@ -435,7 +455,9 @@ impl SourceDownloadJob {
         }
 
         let (fetched, url) = match self
-            .fetch_at_best_size(ctx, client, profile, config, manifest, sizes, page, signals)
+            .fetch_at_best_size(
+                ctx, client, profile, config, manifest, sizes, declared, page, signals,
+            )
             .await?
         {
             Some(found) => found,
@@ -624,6 +646,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
@@ -637,7 +660,9 @@ impl SourceDownloadJob {
                 Some(token) => token,
                 None => {
                     let Some(token) = self
-                        .negotiate_size(ctx, client, profile, config, sizes, page, signals)
+                        .negotiate_size(
+                            ctx, client, profile, config, sizes, declared, page, signals,
+                        )
                         .await?
                     else {
                         return Ok(None);
@@ -662,11 +687,12 @@ impl SourceDownloadJob {
         profile: &NetworkProfile,
         config: &DownloadConfig,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Option<size::SizeToken>, JobError> {
         ctx.report_phase(phase::NEGOTIATING).await;
-        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP);
+        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP_PIXELS);
         let info_url = size::info_url(&page.image_service);
         let Some(fetched) = fetch(
             client,
@@ -682,7 +708,10 @@ impl SourceDownloadJob {
         };
 
         let token = match serde_json::from_slice::<serde_json::Value>(&fetched.bytes) {
-            Ok(info) => size::from_info(&info, cap),
+            Ok(info) => {
+                remember_sizes(declared, &size::available_sizes(&info));
+                size::from_info(&info, cap)
+            }
             Err(error) => {
                 // Descrittore illeggibile: si continua con il riquadro, che non
                 // ingrandisce mai, invece di fermare lo scaricamento.
@@ -708,6 +737,36 @@ impl SourceDownloadJob {
         remember(sizes, page, &token);
         Ok(Some(token))
     }
+}
+
+/// Le misure che la biblioteca dichiara di saper servire, raccolte leggendo i
+/// descrittori. Sono le alternative fra cui la scelta è stata fatta: senza,
+/// «1299» da solo non dice se era il massimo o il minimo disponibile.
+type DeclaredSizes = std::sync::Mutex<Vec<(u32, u32)>>;
+
+fn remember_sizes(sizes: &DeclaredSizes, declared: &[(u32, u32)]) {
+    let mut known = match sizes.lock() {
+        Ok(known) => known,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    for size in declared {
+        if !known.contains(size) {
+            known.push(*size);
+        }
+    }
+    known.sort_unstable_by_key(|(width, height)| (*width).max(*height));
+}
+
+/// Le alternative dichiarate, come le legge il pannello: `649×963`.
+fn known_sizes(sizes: &DeclaredSizes) -> Vec<String> {
+    let known = match sizes.lock() {
+        Ok(known) => known.clone(),
+        Err(poisoned) => poisoned.into_inner().clone(),
+    };
+    known
+        .into_iter()
+        .map(|(width, height)| format!("{width}×{height}"))
+        .collect()
 }
 
 /// Misura decisa per ogni gruppo di carte con le stesse dimensioni.
@@ -793,6 +852,7 @@ fn progress_detail(
     last_page: u32,
     last_bytes: u64,
     size_token: &str,
+    available_sizes: &[String],
     provider: &str,
     host: &str,
 ) -> String {
@@ -806,6 +866,9 @@ fn progress_detail(
         "bytes": { "downloaded": bytes, "estimated": estimated },
         "last": { "index": last_page, "bytes": last_bytes },
         "size": size_token,
+        // Le alternative fra cui la scelta è stata fatta: «1299» da solo non
+        // dice se era il massimo o il minimo che la biblioteca sa servire.
+        "available": available_sizes,
         "provider": provider,
         "host": host,
     })
@@ -873,12 +936,33 @@ fn thumbnail_staging_name(page_index: u32) -> String {
     format!("{page_index:04}-thumb.jpg")
 }
 
-/// Profilo del provider, o quello prudente per chi non è nel registro: nessuna
-/// fonte resta senza politica (D18).
-fn profile_for(provider_key: &str) -> NetworkProfile {
-    crate::iiif::find_provider(provider_key)
-        .map(|provider| provider.network)
-        .unwrap_or(CAUTIOUS)
+/// Il profilo **in vigore** per questa biblioteca: prima quello che l'utente ha
+/// cambiato, poi quello compilato nel registro, poi il prudente. Nessuna fonte
+/// resta senza politica (D18).
+///
+/// Si rilegge all'avvio del lavoro e non alla messa in coda: fra le due può
+/// passare tempo, e un lavoro ripreso dopo giorni deve rispettare i limiti di
+/// adesso, non quelli di allora.
+async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> NetworkProfile {
+    let key = config.provider_key.clone();
+    let host = host_of(&config.manifest_url).ok();
+    ctx.with_database(move |conn| {
+        Ok(crate::iiif::settings::effective_profile(
+            conn,
+            &key,
+            host.as_deref(),
+        ))
+    })
+    .await
+    .unwrap_or_else(|error| {
+        // Il database non risponde: si scarica al ritmo più prudente che
+        // conosciamo, non a quello che capita.
+        log::warn!(
+            "job profile not read id={} error={error} (si usa il ritmo prudente)",
+            ctx.id
+        );
+        CAUTIOUS
+    })
 }
 
 /// Scrive nell'area di transito, valida, e **solo allora** promuove (D16-bis).
@@ -1057,11 +1141,36 @@ async fn record_asset(ctx: &JobContext, row: AssetRow) -> Result<(), JobError> {
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
-/// Stima del tempo che manca (D17): si calcola dalla pausa dichiarata dal
-/// profilo, non dalla velocità osservata negli ultimi secondi, che con pause di
-/// 2,5–6 secondi oscilla troppo per essere utile.
-fn estimated_seconds(remaining: u32, profile: &NetworkProfile) -> i64 {
-    let per_page = profile.average_pause() + Duration::from_millis(500);
+/// Quante pagine servono prima di fidarsi del ritmo osservato. Con una o due
+/// la media è quella di un campione, non di un andamento.
+const PACE_SAMPLE: u32 = 3;
+
+/// Stima del tempo che manca *(D17, corretta il 2026-08-16 dopo averla vista
+/// sbagliare)*.
+///
+/// **Dal ritmo vero del lavoro**: pagine fatte diviso tempo trascorso da quando
+/// è partito. La prima stesura la calcolava dalla pausa dichiarata dal profilo,
+/// per non far oscillare il numero con la velocità degli ultimi secondi — ma
+/// quella pausa è il minimo che aspettiamo noi, non quanto ci mette la
+/// biblioteca a rispondere: su archive.org dice 1,6 secondi a pagina dove la
+/// realtà misurata va da 1 a 19, e un manoscritto annunciato in sei minuti ne
+/// prende quaranta.
+///
+/// La media **da inizio lavoro** non oscilla come una media sugli ultimi
+/// secondi, che era il difetto che la prima stesura voleva evitare: si assesta
+/// e cala mentre il lavoro procede. Finché le pagine fatte sono poche resta la
+/// pausa dichiarata, che è l'unica cosa che si sa prima di aver misurato.
+fn estimated_seconds(
+    remaining: u32,
+    done_now: u32,
+    elapsed: Duration,
+    profile: &NetworkProfile,
+) -> i64 {
+    let per_page = if done_now >= PACE_SAMPLE {
+        elapsed / done_now
+    } else {
+        profile.average_pause() + Duration::from_millis(500)
+    };
     (u64::from(remaining) * per_page.as_millis() as u64 / 1000) as i64
 }
 
@@ -1071,25 +1180,36 @@ mod tests {
     use crate::iiif::network::GALLICA;
 
     #[test]
-    fn an_unknown_provider_gets_the_cautious_profile() {
-        // Le fonti aggiunte per indirizzo diretto non hanno voce nel registro.
-        assert_eq!(profile_for("mai-vista"), CAUTIOUS);
-    }
-
-    #[test]
-    fn a_known_provider_brings_its_own_profile() {
-        assert_eq!(profile_for("gallica"), GALLICA);
-    }
-
-    #[test]
-    fn the_estimate_grows_with_the_pages_left() {
-        let quick = estimated_seconds(10, &CAUTIOUS);
-        let long = estimated_seconds(210, &GALLICA);
+    fn before_having_measured_anything_the_estimate_comes_from_the_declared_pause() {
+        let quick = estimated_seconds(10, 0, Duration::ZERO, &CAUTIOUS);
+        let long = estimated_seconds(210, 0, Duration::ZERO, &GALLICA);
 
         assert!(long > quick);
-        // Con i valori di Gallica un manoscritto di 210 carte non scende sotto
+        // Con i valori di Gallica un manoscritto di 210 pagine non scende sotto
         // il quarto d'ora: se la stima dicesse meno, mentirebbe.
         assert!(long >= 900, "stimati {long} secondi");
+    }
+
+    #[test]
+    fn once_it_has_measured_the_estimate_follows_the_real_pace() {
+        // La pausa dichiarata da archive.org è poco più di un secondo, ma il
+        // servizio ci mette dieci volte tanto: la stima deve dire quello che
+        // sta succedendo, non quello che avevamo promesso di aspettare.
+        let measured = estimated_seconds(100, 10, Duration::from_secs(120), &CAUTIOUS);
+
+        assert_eq!(measured, 1_200, "12 secondi a pagina per 100 pagine");
+        assert!(measured > estimated_seconds(100, 0, Duration::ZERO, &CAUTIOUS));
+    }
+
+    #[test]
+    fn two_pages_are_not_a_pace() {
+        // Con un campione così piccolo una pagina lenta falserebbe tutto.
+        let barely_started = estimated_seconds(100, 2, Duration::from_secs(60), &CAUTIOUS);
+
+        assert_eq!(
+            barely_started,
+            estimated_seconds(100, 0, Duration::ZERO, &CAUTIOUS)
+        );
     }
 
     fn config(size_tag: &str) -> DownloadConfig {
@@ -1169,6 +1289,11 @@ mod tests {
             34,
             1_420_000,
             "1299,",
+            &[
+                "649×963".to_string(),
+                "1299×1925".to_string(),
+                "2598×3850".to_string(),
+            ],
             "archive_org",
             "iiif.archive.org",
         );
@@ -1181,11 +1306,15 @@ mod tests {
         assert_eq!(parsed["bytes"]["estimated"], 48_234_496u64 / 34 * 352);
         assert_eq!(parsed["last"]["bytes"], 1_420_000);
         assert_eq!(parsed["size"], "1299,");
+        // Le alternative dichiarate dalla biblioteca: senza, «1299» non dice se
+        // era il massimo o il minimo che sa servire.
+        assert_eq!(parsed["available"][0], "649×963");
+        assert_eq!(parsed["available"][2], "2598×3850");
     }
 
     #[test]
     fn without_a_single_page_done_no_total_is_invented() {
-        let detail = progress_detail(0, 352, 0, 0, 0, "2000,", "gallica", "gallica.bnf.fr");
+        let detail = progress_detail(0, 352, 0, 0, 0, "2000,", &[], "gallica", "gallica.bnf.fr");
         let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
 
         assert_eq!(parsed["bytes"]["estimated"], 0);

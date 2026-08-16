@@ -20,7 +20,14 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type DiscoveryResultsPerRow = 3 | 4 | 'list';
-export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage' | 'jobs';
+export type SettingsTab =
+  | 'translations'
+  | 'provider'
+  | 'typography'
+  | 'storage'
+  | 'jobs'
+  | 'download'
+  | 'libraries';
 
 export interface HLColorSet {
   sourceTerm: string;
