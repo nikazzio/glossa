@@ -55,6 +55,20 @@ const ALLOWED_COLUMNS: Record<BackupTable, ReadonlySet<string>> = {
   library_network_profiles: new Set(['library_key','profile_id']),
 };
 
+/**
+ * Colonne che puntano a righe che il backup **non porta con sé**: l'asset di
+ * un segmento e il lavoro che ha prodotto un fatto.
+ *
+ * Vanno svuotate al ripristino, altrimenti la chiave esterna rifiuta la riga e
+ * `INSERT OR IGNORE` la scarta **in silenzio**: si perderebbero i segmenti di
+ * trascrizione legati a un'immagine e tutti i fatti prodotti da un lavoro,
+ * cioè proprio il registro che il backup serve a salvare.
+ */
+const DANGLING_REFS: Partial<Record<BackupTable, readonly string[]>> = {
+  transcription_segments: ['asset_id'],
+  provenance_events: ['job_id'],
+};
+
 const DELETE_ORDER = [
   'source_phrase_embeddings',
   'phrase_memory',
@@ -175,10 +189,11 @@ export async function importWorkspace(t: (key: string) => string): Promise<Downl
           (c) => allowed.has(c) && SAFE_COL.test(c),
         );
         if (cols.length === 0) continue;
+        const dangling = DANGLING_REFS[table] ?? [];
         const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
         await run(
           `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`,
-          cols.map((c) => row[c]),
+          cols.map((c) => (dangling.includes(c) ? null : row[c])),
         );
       }
     }

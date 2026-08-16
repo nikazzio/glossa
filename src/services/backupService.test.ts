@@ -58,6 +58,41 @@ describe('cosa porta con sé un backup', () => {
   });
 });
 
+describe('riferimenti a cose che il backup non porta', () => {
+  beforeEach(() => {
+    runMock.mockClear();
+    vi.mocked(confirm).mockClear();
+  });
+
+  it('svuota il lavoro che ha prodotto un fatto, invece di perdere il fatto', async () => {
+    // I lavori non stanno nel backup: con il riferimento intatto la chiave
+    // esterna rifiuta la riga e `INSERT OR IGNORE` la scarta in silenzio —
+    // sparirebbe il registro che il backup serve a salvare.
+    fsState.raw = JSON.stringify({
+      glossa_version: '1.2.1',
+      schema_version: 1,
+      exported_at: '2026-07-21T12:00:00.000Z',
+      tables: {
+        ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
+        provenance_events: [
+          { id: 'pev:1', event_type: 'job.finished', entity_type: 'job', entity_id: 'download:v1', actor: 'system', job_id: 'download:v1' },
+        ],
+      },
+    });
+
+    await importWorkspace(t);
+
+    const insert = runMock.mock.calls.find(([query]) =>
+      String(query).includes('INSERT OR IGNORE INTO provenance_events'),
+    );
+    expect(insert).toBeDefined();
+    const [query, params] = insert!;
+    const columns = String(query).match(/\(([^)]+)\) VALUES/)![1].split(', ');
+    expect((params as unknown[])[columns.indexOf('job_id')]).toBeNull();
+    expect((params as unknown[])[columns.indexOf('entity_id')]).toBe('download:v1');
+  });
+});
+
 describe('importWorkspace', () => {
   beforeEach(() => {
     runMock.mockClear();
