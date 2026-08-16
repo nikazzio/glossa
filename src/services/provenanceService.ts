@@ -1,4 +1,5 @@
 import { execute } from './dbService';
+import { logger } from '../utils/logger';
 
 /**
  * Il registro dei fatti (#378, decisioni D23-D29).
@@ -101,6 +102,15 @@ export function factId(fact: Fact): string {
 
 /** Scrive un fatto. Riscriverlo non duplica: sostituisce (D27). */
 export async function recordFact(fact: Fact): Promise<void> {
+  // Il registro dei fatti è invisibile per definizione: senza una riga qui,
+  // «non ha registrato niente» e «non è mai successo» si confondono.
+  logger.info('provenance.fact', {
+    eventType: fact.eventType,
+    entityType: fact.entityType,
+    entityId: fact.entityId,
+    actor: fact.actor,
+    outcome: fact.outcome ?? null,
+  });
   await execute(
     `INSERT INTO provenance_events (
        id, event_type, entity_type, entity_id, workspace_id, actor, job_id,

@@ -1,5 +1,6 @@
 import { execute, select } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
+import { logger } from '../utils/logger';
 
 /**
  * Lo storico delle traduzioni (D22), simmetrico a quello che le trascrizioni
@@ -64,6 +65,16 @@ async function insertRevision(
     derived_from_revision_id: previous?.id ?? null,
     content_hash: contentHash(text),
   };
+  // Ogni revisione lascia una riga nel registro: è l'unico modo di sapere,
+  // dopo, perché uno storico è vuoto — la scrittura è silenziosa per scelta e
+  // senza log un rifiuto del database non si vedrebbe da nessuna parte.
+  logger.info('translation.revision.write', {
+    translationId,
+    revisionNumber,
+    createdBy,
+    derivedFrom: revision.derived_from_revision_id,
+    length: text.length,
+  });
   await execute(
     `INSERT INTO translation_revisions
        (id, translation_id, revision_number, text, created_by, derived_from_revision_id, content_hash)
@@ -92,9 +103,15 @@ export async function recordModelRevision(
   translationId: string,
   text: string,
 ): Promise<TranslationRevision | null> {
-  if (text.trim() === '') return null;
+  if (text.trim() === '') {
+    logger.info('translation.revision.skipped', { translationId, reason: 'empty' });
+    return null;
+  }
   const previous = await latestRevision(translationId);
-  if (previous?.content_hash === contentHash(text)) return previous;
+  if (previous?.content_hash === contentHash(text)) {
+    logger.info('translation.revision.skipped', { translationId, reason: 'unchanged' });
+    return previous;
+  }
   return insertRevision(translationId, text, 'model', previous);
 }
 
@@ -123,6 +140,12 @@ export async function approveTranslation(
     translationId,
     approved.id,
   ]);
+  logger.info('translation.approved', {
+    translationId,
+    revisionId: approved.id,
+    revisionNumber: approved.revision_number,
+    createdBy: approved.created_by,
+  });
   await recordFact({
     eventType: EVENT_APPROVED,
     entityType: 'translation_chunk',
@@ -155,6 +178,7 @@ export async function withdrawTranslationApproval(
   await execute('UPDATE translations SET approved_revision_id = NULL WHERE id = $1', [
     translationId,
   ]);
+  logger.info('translation.approval.withdrawn', { translationId, revisionId: approvedRevisionId });
   await recordFact({
     eventType: EVENT_WITHDRAWN,
     entityType: 'translation_chunk',
