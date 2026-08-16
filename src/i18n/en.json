@@ -1991,7 +1991,9 @@
       "groupLast": "last page downloaded",
       "lastIndex": "number",
       "lastBytes": "size on disk",
-      "available": "available resolutions"
+      "available": "available resolutions",
+      "sizeMax": "the largest",
+      "sizePixels": "{{value}} px"
     },
     "retryNow": "Retry now",
     "retryingIn": "retrying on its own in {{eta}}",

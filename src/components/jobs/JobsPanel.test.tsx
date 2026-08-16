@@ -212,7 +212,8 @@ describe('attesa per i limiti della biblioteca', () => {
 
     await user.click(screen.getByRole('button', { expanded: false }));
 
-    expect(screen.getByText('1299,')).toBeInTheDocument();
+    // La misura si legge in pixel, non nella forma del parametro IIIF.
+    expect(screen.getByText('jobs.detail.sizePixels')).toBeInTheDocument();
     expect(screen.getByText('iiif.archive.org')).toBeInTheDocument();
     expect(screen.getByRole('button', { expanded: true })).toBeInTheDocument();
   });

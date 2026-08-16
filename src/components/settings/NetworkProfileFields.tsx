@@ -1,7 +1,4 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check } from 'lucide-react';
-import { IconButton } from '../ui';
 import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloadSettingsService';
 
 /**
@@ -27,37 +24,24 @@ const FIELDS: Array<{ key: NumericField; min: number; max: number; step?: number
 type NumericField = Exclude<keyof NetworkValues, 'needsViewerWarmup'>;
 
 /**
- * Il nome e i valori di un ritmo.
- *
- * Si salva quando si chiede, non a ogni tasto: un campo a metà — «2» mentre si
- * sta scrivendo «250» — non deve diventare la politica verso una biblioteca.
+ * Il nome e i valori di un ritmo. Li tiene chi sta sopra, insieme al comando
+ * che salva: scrivere in un campo non deve cambiare da solo la politica verso
+ * una biblioteca — un «2» a metà di «250» diventerebbe la regola.
  */
 export function NetworkProfileFields({
   name,
   values,
-  onSave,
+  onChange,
 }: {
   name: string;
   values: NetworkValues;
-  onSave: (name: string, values: NetworkValues) => Promise<void>;
+  onChange: (name: string, values: NetworkValues) => void;
 }) {
   const { t } = useTranslation();
-  const [draftName, setDraftName] = useState(name);
-  const [draft, setDraft] = useState(values);
-  const [busy, setBusy] = useState(false);
 
   const change = (key: NumericField, raw: string) => {
     const parsed = Number.parseInt(raw, 10);
-    setDraft((current) => ({ ...current, [key]: Number.isFinite(parsed) ? parsed : 0 }));
-  };
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      await onSave(draftName.trim(), draft);
-    } finally {
-      setBusy(false);
-    }
+    onChange(name, { ...values, [key]: Number.isFinite(parsed) ? parsed : 0 });
   };
 
   return (
@@ -71,8 +55,8 @@ export function NetworkProfileFields({
         </label>
         <input
           id="settings-network-profile-name"
-          value={draftName}
-          onChange={(event) => setDraftName(event.target.value)}
+          value={name}
+          onChange={(event) => onChange(event.target.value, values)}
           className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 font-display text-sm italic outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
       </div>
@@ -92,18 +76,12 @@ export function NetworkProfileFields({
               min={field.min}
               max={field.max}
               step={field.step ?? 1}
-              value={draft[field.key]}
+              value={values[field.key]}
               onChange={(event) => change(field.key, event.target.value)}
               className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
         ))}
-      </div>
-
-      <div className="flex justify-end">
-        <IconButton size="sm" onClick={() => void save()} disabled={busy || draftName.trim() === ''} title={t('settings.network.save')}>
-          <Check size={13} />
-        </IconButton>
       </div>
     </div>
   );

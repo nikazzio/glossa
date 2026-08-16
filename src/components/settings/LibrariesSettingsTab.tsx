@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Gauge, Landmark, Plus, Trash2 } from 'lucide-react';
-import { IconButton, Select } from '../ui';
+import { Check, Gauge, Landmark, Plus, Trash2 } from 'lucide-react';
+import { IconButton, SegmentedControl, Select } from '../ui';
 import { NetworkProfileFields } from './NetworkProfileFields';
 import {
   deleteNetworkProfile,
@@ -13,6 +13,9 @@ import {
   type NetworkSettings,
   type NetworkValues,
 } from '../../services/downloadSettingsService';
+
+/** Il posto del profilo che si sta creando, prima che abbia un identificativo. */
+const NEW_PROFILE = 'nuovo';
 
 /** I valori di un profilo nuovo: il ritmo prudente, che è quello di partenza. */
 const NEW_PROFILE_VALUES: NetworkValues = {
@@ -44,6 +47,8 @@ export function LibrariesSettingsTab() {
   const [settings, setSettings] = useState<NetworkSettings>({ profiles: [], libraries: [] });
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<{ name: string; values: NetworkValues } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -63,20 +68,38 @@ export function LibrariesSettingsTab() {
   const active = creating
     ? null
     : (settings.profiles.find((profile) => profile.id === activeId) ?? null);
+  // Quello che si sta scrivendo. Finché non si tocca niente sono i valori del
+  // profilo scelto, così cambiando profilo i campi lo seguono.
+  const edited = draft ?? {
+    name: active?.name ?? t('settings.network.newProfileName'),
+    values: active?.values ?? NEW_PROFILE_VALUES,
+  };
 
-  const save = async (name: string, values: NetworkValues) => {
+  const show = (id: string | null) => {
+    setDraft(null);
+    setCreating(id === null);
+    if (id !== null) setActiveId(id);
+  };
+
+  const saveActive = async () => {
+    const { name, values } = edited;
+    if (name.trim() === '') return;
+    setSaving(true);
     try {
-      const saved = await saveNetworkProfile({ id: active?.id ?? null, name, values });
+      const saved = await saveNetworkProfile({ id: active?.id ?? null, name: name.trim(), values });
       setSettings(saved);
+      setDraft(null);
       if (creating) {
         setCreating(false);
-        setActiveId(saved.profiles.find((profile) => profile.name === name)?.id ?? activeId);
+        setActiveId(saved.profiles.find((profile) => profile.name === name.trim())?.id ?? activeId);
       }
       toast.success(t('settings.network.saved'));
     } catch (error: unknown) {
       toast.error(t('settings.network.saveFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -84,6 +107,7 @@ export function LibrariesSettingsTab() {
     try {
       const saved = await deleteNetworkProfile(id);
       setSettings(saved);
+      setDraft(null);
       setActiveId(saved.profiles[0]?.id ?? null);
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -120,78 +144,59 @@ export function LibrariesSettingsTab() {
               {t('settings.network.profiles')}
             </p>
           </div>
-          <IconButton
-            size="sm"
-            tone={creating ? 'accent' : 'default'}
-            onClick={() => setCreating(true)}
-            title={t('settings.network.newProfile')}
-          >
-            <Plus size={13} />
-          </IconButton>
-        </div>
-
-        <div
-          role="radiogroup"
-          aria-label={t('settings.network.profiles')}
-          className="grid grid-cols-2 gap-x-6 border-y border-editorial-border/70"
-        >
-          {settings.profiles.map((profile) => {
-            const isActive = !creating && profile.id === activeId;
-            return (
-              <button
-                key={profile.id}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => {
-                  setCreating(false);
-                  setActiveId(profile.id);
-                }}
-                className={`flex items-center justify-between gap-2 border-l-4 py-3.5 pl-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  isActive
-                    ? 'border-l-editorial-accent text-editorial-accent'
-                    : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:text-editorial-accent'
-                }`}
-              >
-                <span className="min-w-0">
-                  <span className="block font-display text-lg italic">{profile.name}</span>
-                  <span className="mt-0.5 block text-xs text-editorial-muted">
-                    {t('settings.network.usedBy', { count: profile.usedBy })}
-                  </span>
-                </span>
-                {isActive && (
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-editorial-accent"
-                    aria-hidden="true"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <NetworkProfileFields
-          // Cambiando profilo i campi ripartono dai suoi valori, non da quelli
-          // rimasti a schermo.
-          key={active?.id ?? 'nuovo'}
-          name={active?.name ?? t('settings.network.newProfileName')}
-          values={active?.values ?? NEW_PROFILE_VALUES}
-          onSave={save}
-        />
-
-        {active && !active.builtin && (
-          <div className="flex justify-end">
+          {/* I comandi stanno accanto ai profili, dove si sceglie: in fondo
+              alla schermata erano lontani da quello su cui agiscono. */}
+          <div className="flex items-center gap-1">
+            <IconButton
+              size="sm"
+              tone={creating ? 'accent' : 'default'}
+              onClick={() => show(null)}
+              title={t('settings.network.newProfile')}
+            >
+              <Plus size={13} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              onClick={() => void saveActive()}
+              disabled={saving}
+              title={t('settings.network.save')}
+            >
+              <Check size={13} />
+            </IconButton>
             <IconButton
               size="sm"
               tone="danger"
-              onClick={() => void remove(active.id)}
-              disabled={active.usedBy > 0}
-              title={active.usedBy > 0 ? t('settings.network.deleteInUse') : t('settings.network.delete')}
+              onClick={() => active && void remove(active.id)}
+              disabled={!active || active.builtin || active.usedBy > 0}
+              title={
+                active && active.usedBy > 0
+                  ? t('settings.network.deleteInUse')
+                  : t('settings.network.delete')
+              }
             >
               <Trash2 size={13} />
             </IconButton>
           </div>
-        )}
+        </div>
+
+        <SegmentedControl
+          ariaLabel={t('settings.network.profiles')}
+          value={creating ? NEW_PROFILE : (active?.id ?? NEW_PROFILE)}
+          onChange={(id) => show(id === NEW_PROFILE ? null : id)}
+          options={[
+            ...settings.profiles.map((profile) => ({
+              value: profile.id,
+              label: `${profile.name} · ${t('settings.network.usedBy', { count: profile.usedBy })}`,
+            })),
+            ...(creating ? [{ value: NEW_PROFILE, label: t('settings.network.newProfileName') }] : []),
+          ]}
+        />
+
+        <NetworkProfileFields
+          name={edited.name}
+          values={edited.values}
+          onChange={(name, values) => setDraft({ name, values })}
+        />
       </section>
 
       <section className="space-y-4">

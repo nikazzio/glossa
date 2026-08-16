@@ -63,8 +63,8 @@ describe('profili di rete', () => {
     render(<LibrariesSettingsTab />);
 
     expect(await screen.findByRole('radio', { name: /Normale/ })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Lento/ })).toBeInTheDocument();
-    expect(screen.getAllByText('settings.network.usedBy').length).toBe(2);
+    // Il nome porta con sé quante biblioteche lo usano.
+    expect(screen.getByRole('radio', { name: /Lento.*usedBy/ })).toBeInTheDocument();
   });
 
   it('apre il primo profilo con i suoi valori', async () => {

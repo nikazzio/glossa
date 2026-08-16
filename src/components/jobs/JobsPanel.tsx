@@ -197,12 +197,28 @@ function JobRow({ job }: { job: Job }) {
   );
 }
 
-/** Una coppia etichetta/valore della scheda dei dettagli. */
-function Field({ label, value }: { label: string; value: string }) {
+/**
+ * Una coppia etichetta/valore.
+ *
+ * L'etichetta ha una **colonna sua**, larga uguale per tutte: allineate a
+ * sinistra del valore, le righe si leggono in verticale come una tabella
+ * invece che come un testo continuo. Un valore lungo — l'elenco delle
+ * risoluzioni, un errore — prende tutta la larghezza e **va a capo**: troncato
+ * nascondeva proprio la parte che si stava cercando.
+ */
+function Field({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
-      <span className="shrink-0 text-[11px] uppercase tracking-wide text-terminal-secondary">{label}</span>
-      <span className="min-w-0 truncate font-mono text-xs text-terminal-ink">{value}</span>
+    <div className={`flex min-w-0 items-baseline gap-3 ${wide ? 'sm:col-span-2' : ''}`}>
+      <span className="w-28 shrink-0 text-[11px] uppercase leading-5 tracking-wide text-terminal-secondary">
+        {label}
+      </span>
+      <span
+        className={`min-w-0 flex-1 font-mono text-xs leading-5 text-terminal-ink ${
+          wide ? 'whitespace-normal break-words' : 'truncate'
+        }`}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -229,46 +245,54 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
   // Due blocchi, perché sono due cose diverse: quello che vale per **tutto il
   // lavoro** e quello che vale per **l'ultima pagina** passata. Mescolarli
   // faceva leggere il peso di una pagina come se fosse quello del libro.
-  const work = [
-    [t('jobs.detail.type'), t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })],
-    [t('jobs.detail.phase'), job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : '—'],
-    detail.units && [
-      t(`jobs.detail.units.${detail.units.label}`, { defaultValue: t('jobs.detail.units.generic') }),
-      `${detail.units.done} / ${detail.units.total}`,
-    ],
-    detail.bytes && [
-      t('jobs.detail.bytes'),
-      detail.bytes.estimated > 0
-        ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
-        : humanSize(detail.bytes.downloaded),
-    ],
-    detail.size && [t('jobs.detail.size'), detail.size],
-    detail.available?.length && [t('jobs.detail.available'), detail.available.join(' · ')],
-    detail.provider && [t('jobs.detail.provider'), detail.provider],
-    detail.host && [t('jobs.detail.host'), detail.host],
-    detail.level && [
-      t('jobs.detail.level'),
-      t(`jobs.detail.levelValue.${detail.level}`, { defaultValue: detail.level }),
-    ],
-    detail.intact !== undefined && [t('jobs.detail.intact'), String(detail.intact)],
-    detail.missing !== undefined && [t('jobs.detail.missing'), String(detail.missing)],
-    detail.corrupt !== undefined && [t('jobs.detail.corrupt'), String(detail.corrupt)],
-    detail.orphans && [
-      t('jobs.detail.orphans'),
-      `${detail.orphans.count} · ${humanSize(detail.orphans.bytes)}`,
-    ],
-    [t('jobs.detail.attempt'), `${job.attemptCount} / ${job.maxAttempts}`],
-    [t('jobs.detail.started'), time(job.createdAt)],
-    [t('jobs.detail.updated'), time(job.updatedAt)],
-    job.error && [t('jobs.detail.error'), job.error],
-    [t('jobs.detail.id'), job.id],
-  ].filter((entry): entry is [string, string] => Array.isArray(entry));
+  const work: DetailField[] = [
+    { label: t('jobs.detail.type'), value: t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType }) },
+    {
+      label: t('jobs.detail.phase'),
+      value: job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : '—',
+    },
+    detail.units && {
+      label: t(`jobs.detail.units.${detail.units.label}`, { defaultValue: t('jobs.detail.units.generic') }),
+      value: `${detail.units.done} / ${detail.units.total}`,
+    },
+    detail.bytes && {
+      label: t('jobs.detail.bytes'),
+      value:
+        detail.bytes.estimated > 0
+          ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
+          : humanSize(detail.bytes.downloaded),
+    },
+    detail.size && { label: t('jobs.detail.size'), value: readableSize(detail.size, t) },
+    detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
+    detail.host && { label: t('jobs.detail.host'), value: detail.host },
+    detail.level && {
+      label: t('jobs.detail.level'),
+      value: t(`jobs.detail.levelValue.${detail.level}`, { defaultValue: detail.level }),
+    },
+    detail.intact !== undefined && { label: t('jobs.detail.intact'), value: String(detail.intact) },
+    detail.missing !== undefined && { label: t('jobs.detail.missing'), value: String(detail.missing) },
+    detail.corrupt !== undefined && { label: t('jobs.detail.corrupt'), value: String(detail.corrupt) },
+    detail.orphans && {
+      label: t('jobs.detail.orphans'),
+      value: `${detail.orphans.count} · ${humanSize(detail.orphans.bytes)}`,
+    },
+    { label: t('jobs.detail.attempt'), value: `${job.attemptCount} / ${job.maxAttempts}` },
+    { label: t('jobs.detail.started'), value: time(job.createdAt) },
+    { label: t('jobs.detail.updated'), value: time(job.updatedAt) },
+    detail.available?.length && {
+      label: t('jobs.detail.available'),
+      value: detail.available.join(' · '),
+      wide: true,
+    },
+    job.error && { label: t('jobs.detail.error'), value: job.error, wide: true },
+    { label: t('jobs.detail.id'), value: job.id, wide: true },
+  ].filter((field): field is DetailField => typeof field === 'object' && field !== null);
 
-  const lastUnit = detail.last
-    ? ([
-        [t('jobs.detail.lastIndex'), String(detail.last.index)],
-        [t('jobs.detail.lastBytes'), humanSize(detail.last.bytes)],
-      ] as Array<[string, string]>)
+  const lastUnit: DetailField[] = detail.last
+    ? [
+        { label: t('jobs.detail.lastIndex'), value: String(detail.last.index) },
+        { label: t('jobs.detail.lastBytes'), value: humanSize(detail.last.bytes) },
+      ]
     : [];
 
   return (
@@ -282,17 +306,40 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
 }
 
 /** Un blocco di dettagli con il suo titolo: dice **di cosa** parlano i numeri. */
-function FieldGroup({ title, fields }: { title: string; fields: Array<[string, string]> }) {
+function FieldGroup({ title, fields }: { title: string; fields: DetailField[] }) {
   return (
     <section>
-      <h4 className="mb-1 text-[11px] uppercase tracking-wide text-terminal-secondary">{title}</h4>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-        {fields.map(([label, value]) => (
-          <Field key={label} label={label} value={value} />
-        ))}
+      <h4 className="mb-1.5 border-b border-terminal-line pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-terminal-accent">
+        {title}
+      </h4>
+      <div className="grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2">
+        {/* I valori lunghi vanno in fondo, dove possono prendersi tutta la
+            riga senza spezzare l'allineamento di quelli corti. */}
+        {[...fields.filter((field) => !field.wide), ...fields.filter((field) => field.wide)].map(
+          (field) => (
+            <Field key={field.label} label={field.label} value={field.value} wide={field.wide} />
+          ),
+        )}
       </div>
     </section>
   );
+}
+
+/**
+ * La misura chiesta al servizio, come si legge: `1285,` è la forma del
+ * parametro IIIF, non una cosa da mostrare a chi guarda.
+ */
+function readableSize(token: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (token === 'max' || token === 'full') return t('jobs.detail.sizeMax');
+  const width = token.replace(/[^0-9]/g, '');
+  return width ? t('jobs.detail.sizePixels', { value: width }) : token;
+}
+
+/** Una riga dei dettagli. `wide` è per i valori che non stanno su una colonna. */
+interface DetailField {
+  label: string;
+  value: string;
+  wide?: boolean;
 }
 
 function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
