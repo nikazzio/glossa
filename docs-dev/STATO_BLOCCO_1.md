@@ -5,9 +5,8 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-16**: #414-#420 unite in `blocco-1`, miniature
-ricavate in locale, impostazioni di scaricamento e biblioteche, fondazione della
-registrazione del lavoro svolto.
+Ultimo aggiornamento: **2026-08-17**: #423 unita, quattro PR aperte e provate a
+mano, profili di rete al posto dei valori per biblioteca.
 
 ## Come è organizzato il lavoro
 
@@ -369,6 +368,42 @@ log tecnico e si va avanti.
   (#379);
 - backup ed esportazione non portano ancora con sé revisioni e fatti: è lavoro
   della PR 7, che rifà il backup.
+
+## Sessione del 2026-08-16/17: rifiniture nate provando
+
+Quattro PR aperte sopra `blocco-1`, provate a mano una per una. Da quelle prove
+sono uscite le correzioni qui sotto, tutte nella PR delle rifiniture.
+
+**Difetti veri, corretti**
+
+- un lavoro **messo in pausa ripartiva da solo**: se l'errore arrivava mentre
+  l'utente premeva pausa, il motore programmava comunque il tentativo
+  successivo. Adesso pausa e annullamento battono il nuovo tentativo (D14);
+- **il tempo stimato mentiva**: si calcolava dalla pausa dichiarata dal profilo
+  — 1,6 secondi a pagina su archive.org, dove la realtà va da 1 a 19 — e un
+  manoscritto annunciato in sei minuti ne prendeva quaranta. Adesso si misura
+  il ritmo vero del lavoro (D17 corretta);
+- **la verifica completa non verificava l'integrità**: calcolava l'impronta e la
+  buttava, quindi un file marcito dentro passava per integro. Adesso la
+  confronta con quella registrata (D5);
+- **togliere un'opera lasciava i file** nel deposito, invisibili a ogni
+  schermata e inutili anche riaggiungendo la stessa opera. Adesso toglie tutto
+  (D6);
+- **la ricerca non registrava niente**: zero righe di log, e un guasto del
+  motore di ricerca di archive.org si leggeva come «nessun risultato»;
+- il numero di pagine di un'opera era **già salvato e nessuno lo leggeva**.
+
+**Ridisegno delle impostazioni di rete** *(chiesto dall'utente il 2026-08-17)*:
+i valori non stanno più per biblioteca ma in **profili** — un profilo è un
+ritmo, non una biblioteca — e le biblioteche ne scelgono uno. Due nascono con
+l'applicazione prendendo i valori dal registro. La misura delle pagine torna a
+due livelli, opera e generale: chi conserva il libro non c'entra con quanto è
+fitta la scrittura. D18 e D4 riscritte di conseguenza.
+
+**Aspetto**: le quattro schede delle impostazioni seguono ora l'idioma di
+Tipografia e Traduzioni, e il pannello dei lavori usa i toni che il sistema
+visivo prescrive — le etichette stavano in un colore dichiarato decorativo, con
+un contrasto di 2,19:1.
 
 ## Prossima sessione: da dove riprendere
 
