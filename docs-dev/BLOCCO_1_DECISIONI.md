@@ -888,6 +888,11 @@ e si ferma. Non si interrompe niente a metà.
 pagina in corso, non è istantaneo. L'interfaccia deve mostrare "in pausa…" e poi
 "in pausa", non fingere che sia immediato.
 
+*(Corretta il 2026-08-16, provandolo.)* La pausa **batte il nuovo tentativo**:
+un errore incassato mentre l'utente premeva pausa faceva programmare comunque
+un tentativo, e il lavoro ripartiva da solo dopo qualche minuto. Chi ha chiesto
+di fermarsi ha ragione anche quando la richiesta era già fallita.
+
 ## D15 — Annullamento
 
 *Approvata con modifiche il 2026-08-10.*

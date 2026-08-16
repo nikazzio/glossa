@@ -207,6 +207,13 @@ function JobRow({ job }: { job: Job }) {
  * nascondeva proprio la parte che si stava cercando.
  */
 function Field({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  // Un elenco lungo — su alcune biblioteche le misure sono venti — occuperebbe
+  // da solo più spazio di tutto il resto: sta su una riga e si apre se lo si
+  // chiede.
+  const long = wide && value.length > FOLD_AFTER;
+
   return (
     <div className={`flex min-w-0 items-baseline gap-3 ${wide ? 'sm:col-span-2' : ''}`}>
       <span className="w-28 shrink-0 text-[11px] uppercase leading-5 tracking-wide text-terminal-secondary">
@@ -214,14 +221,26 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
       </span>
       <span
         className={`min-w-0 flex-1 font-mono text-xs leading-5 text-terminal-ink ${
-          wide ? 'whitespace-normal break-words' : 'truncate'
+          wide && (open || !long) ? 'whitespace-normal break-words' : 'truncate'
         }`}
       >
         {value}
       </span>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          className="shrink-0 text-[11px] uppercase tracking-wide text-terminal-accent underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+        >
+          {open ? t('jobs.detail.foldLess') : t('jobs.detail.foldMore')}
+        </button>
+      )}
     </div>
   );
 }
+
+/** Oltre questa lunghezza un valore sta su una riga sola finché non lo si apre. */
+const FOLD_AFTER = 60;
 
 /**
  * I dettagli veri di un lavoro: quello che serve per capire cosa sta facendo e

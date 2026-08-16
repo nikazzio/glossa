@@ -1995,7 +1995,9 @@
       "lastBytes": "size on disk",
       "available": "available resolutions",
       "sizeMax": "the largest",
-      "sizePixels": "{{value}} px"
+      "sizePixels": "{{value}} px",
+      "foldMore": "show",
+      "foldLess": "collapse"
     },
     "retryNow": "Retry now",
     "retryingIn": "retrying on its own in {{eta}}",

@@ -689,15 +689,28 @@ impl JobEngine {
             .map(|current| format!("{:.0}%", current.progress * 100.0))
             .unwrap_or_else(|| "?".to_string());
 
+        // Cosa ha chiesto l'utente mentre il lavoro finiva. Si guarda una
+        // volta sola: la pausa e l'annullamento battono il nuovo tentativo.
+        let control = self.control_of(&job.id);
+        let stop_asked = if control.cancel_requested() {
+            Some(StopAsked::Cancel)
+        } else if control.pause_requested() {
+            Some(StopAsked::Pause)
+        } else {
+            None
+        };
+
         // Come è andata, deciso **prima** del `match` che consuma l'esito.
         // `None` significa che il lavoro non è arrivato a un capolinea: una
         // pausa e un tentativo rimandato non sono la fine di niente, e il
         // fatto dell'avvio è già scritto.
-        let reached_the_end: Option<(&'static str, Option<String>)> = match &outcome {
-            Ok(Outcome::Done) => Some(("completed", None)),
-            Ok(Outcome::Cancelled) => Some(("cancelled", None)),
-            Ok(Outcome::Paused) => None,
-            Err(error) => {
+        let reached_the_end: Option<(&'static str, Option<String>)> = match (&outcome, stop_asked) {
+            (Ok(Outcome::Done), _) => Some(("completed", None)),
+            (Ok(Outcome::Cancelled), _) | (Err(_), Some(StopAsked::Cancel)) => {
+                Some(("cancelled", None))
+            }
+            (Ok(Outcome::Paused), _) | (Err(_), Some(StopAsked::Pause)) => None,
+            (Err(error), None) => {
                 let attempts = reached
                     .as_ref()
                     .map(|current| current.attempt_count)
@@ -726,8 +739,30 @@ impl JobEngine {
                 let attempts = reached
                     .map(|current| current.attempt_count)
                     .unwrap_or(job.attempt_count + 1);
-                let can_retry = error.kind.is_retryable() && attempts < job.max_attempts;
-                if can_retry {
+                let can_retry = stop_asked.is_none()
+                    && error.kind.is_retryable()
+                    && attempts < job.max_attempts;
+                if let Some(asked) = stop_asked {
+                    // **Chi ha chiesto di fermarsi ha ragione anche quando la
+                    // richiesta era già fallita** (D14): un errore incassato
+                    // mentre l'utente premeva pausa faceva programmare un
+                    // nuovo tentativo, e il lavoro ripartiva da solo dopo
+                    // qualche minuto. In pausa non si riprova.
+                    match asked {
+                        StopAsked::Cancel => {
+                            store::set_status(conn, &job.id, JobStatus::Cancelled)?;
+                            log::info!("job cancelled while failing id={} at={at}", job.id);
+                        }
+                        StopAsked::Pause => {
+                            store::park_as_paused(conn, &job.id, false)?;
+                            log::info!(
+                                "job paused while failing id={} at={at} error={}",
+                                job.id,
+                                error.message
+                            );
+                        }
+                    }
+                } else if can_retry {
                     let wait = self.backoff.wait_for(error, attempts);
                     log::warn!(
                         "job retry id={} attempt={}/{} kind={} wait={}s at={at} error={}",
@@ -784,6 +819,13 @@ impl JobEngine {
     }
 }
 
+/// Cosa ha chiesto l'utente mentre il lavoro stava finendo.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StopAsked {
+    Pause,
+    Cancel,
+}
+
 /// Scrive un fatto nel registro (D23, D29).
 ///
 /// Un errore qui **non cambia l'esito del lavoro**: la registrazione serve a
@@ -800,6 +842,7 @@ mod tests {
     use super::*;
     use crate::jobs::store::NewJob;
     use crate::jobs::testing::{CounterJob, RestartOnlyJob};
+    use crate::jobs::ErrorKind;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn temp_db(name: &str) -> PathBuf {
@@ -867,6 +910,42 @@ mod tests {
         let record = store::get(&conn, "j1").unwrap().unwrap();
         assert_eq!(record.status, JobStatus::Completed);
         assert_eq!(record.progress, 1.0);
+    }
+
+    #[tokio::test]
+    async fn a_job_paused_while_failing_does_not_retry_on_its_own() {
+        // Chi mette in pausa ha ragione anche quando la richiesta era già
+        // fallita: prima il lavoro si programmava un nuovo tentativo e
+        // ripartiva da solo dopo qualche minuto (D14).
+        let path = temp_db("pause_beats_retry");
+        let engine = engine_with(path, Observer::silent());
+        let record = engine
+            .submit(&job("j-pause-fail", r#"{"steps":50,"stepMs":5}"#))
+            .await
+            .unwrap();
+
+        // Il lavoro incassa un errore ritentabile mentre l'utente ha già
+        // chiesto la pausa.
+        engine.control_of("j-pause-fail").request_pause();
+        engine
+            .settle(
+                &record,
+                Err(JobError::new(
+                    ErrorKind::Transport,
+                    "connessione caduta".to_string(),
+                )),
+            )
+            .await
+            .unwrap();
+
+        let conn = engine.connection().unwrap();
+        let record = store::get(&conn, "j-pause-fail").unwrap().unwrap();
+        assert_eq!(record.status, JobStatus::Paused);
+        assert!(
+            record.next_attempt_at.is_none(),
+            "nessun tentativo in programma: {:?}",
+            record.next_attempt_at
+        );
     }
 
     #[tokio::test]

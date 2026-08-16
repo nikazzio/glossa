@@ -1995,7 +1995,9 @@
       "lastBytes": "peso",
       "available": "risoluzioni disponibili",
       "sizeMax": "la più grande",
-      "sizePixels": "{{value}} px"
+      "sizePixels": "{{value}} px",
+      "foldMore": "mostra",
+      "foldLess": "riduci"
     },
     "retryNow": "Riprova adesso",
     "retryingIn": "riprovo da solo fra {{eta}}",
