@@ -10,12 +10,18 @@ import { pipelineLog } from '../../utils/pipelineLogging';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import type { PromptInfo, TokenUsage, TranslationChunk } from '../../types';
 import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { buildMemoryInjection } from '../../services/phraseMemoryInjection';
 import { getChunksWithAllMatchesDisabled } from '../../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../../services/pipelineService';
 import { recordModelRevision } from '../../services/translationRevisionsService';
+import {
+  recordFailedModelCall,
+  recordJudgement,
+  recordModelCall,
+} from '../../services/pipelineProvenance';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../../models/catalog';
 import { toDeeplCode } from '../../constants';
@@ -180,9 +186,26 @@ async function persistChunkCheckpoint(
     });
     return;
   }
-  await recordModelRevision(chunk.id, chunk.translationDisplayText).catch((error: unknown) => {
-    warnAsyncFailure('translation.revision.persist_failed', error, { chunkId: chunk.id });
-  });
+  const revision = await recordModelRevision(chunk.id, chunk.translationDisplayText).catch(
+    (error: unknown) => {
+      warnAsyncFailure('translation.revision.persist_failed', error, { chunkId: chunk.id });
+      return null;
+    },
+  );
+
+  // Il giudizio si lega alla revisione che ha giudicato (D22): sul frammento
+  // vive in colonne che la riesecuzione successiva sovrascrive, e senza questo
+  // fatto «il giudice l'aveva dato per mediocre» si perde.
+  if (revision && chunk.judgeResult.status === 'completed') {
+    await recordJudgement(
+      chunk.id,
+      revision.id,
+      chunk.judgeResult,
+      useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+    ).catch((error: unknown) => {
+      warnAsyncFailure('provenance.judgement.persist_failed', error, { chunkId: chunk.id });
+    });
+  }
 }
 
 async function computeBlobAssignments(
@@ -356,7 +379,28 @@ export async function executePipelineForChunk(
         ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
         ...(capturedBilledCharacters !== undefined ? { billedCharacters: capturedBilledCharacters } : {}),
       });
-      pipelineLog.stageEnd(chunk.id, stage.id, stage.name, stageRef, Date.now() - stageStartedAt, capturedUsage);
+      const stageDuration = Date.now() - stageStartedAt;
+      pipelineLog.stageEnd(chunk.id, stage.id, stage.name, stageRef, stageDuration, capturedUsage);
+      // Token, costo e durata esistono solo adesso: dopo restano i testi, non
+      // quanto sono costati (D29).
+      void recordModelCall({
+        chunkId: chunk.id,
+        stageId: stage.id,
+        stageName: stage.name,
+        provider: stage.provider,
+        model: stage.model,
+        usage: capturedUsage,
+        durationMs: stageDuration,
+        sourceLanguage: effectiveConfig.sourceLanguage,
+        targetLanguage: effectiveConfig.targetLanguage,
+        input: stageText,
+        output: result,
+      }).catch((error: unknown) => {
+        warnAsyncFailure('provenance.model_call.persist_failed', error, {
+          chunkId: chunk.id,
+          stageId: stage.id,
+        });
+      });
     } catch (error: unknown) {
       const stageDurationMs = Date.now() - stageStartedAt;
       if (isStreamCancelledError(error)) {
@@ -370,6 +414,27 @@ export async function executePipelineForChunk(
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'error', error: msg });
       updateChunkStatus(chunk.id, 'error');
       pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs);
+      // Una chiamata fallita vale quanto una riuscita, e spesso di più: è
+      // quella che spiega perché un documento è rimasto indietro.
+      void recordFailedModelCall(
+        {
+          chunkId: chunk.id,
+          stageId: stage.id,
+          stageName: stage.name,
+          provider: stage.provider,
+          model: stage.model,
+          durationMs: stageDurationMs,
+          sourceLanguage: effectiveConfig.sourceLanguage,
+          targetLanguage: effectiveConfig.targetLanguage,
+          input: stageText,
+        },
+        rawError.slice(0, 120),
+      ).catch((failure: unknown) => {
+        warnAsyncFailure('provenance.model_call.persist_failed', failure, {
+          chunkId: chunk.id,
+          stageId: stage.id,
+        });
+      });
       toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
       return 'failed';
     }

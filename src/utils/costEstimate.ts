@@ -49,6 +49,25 @@ function stageEstimate(
   return { stageId, stageName, provider, model, inputTokens, outputTokens, costUsd };
 }
 
+/**
+ * Il costo **davvero** speso da una chiamata, con i token che il provider ha
+ * dichiarato: la stima serve prima, questo serve dopo. `null` quando il
+ * modello non costa — Ollama gira in locale — o quando il listino non lo
+ * conosce: zero direbbe una cosa diversa da «non lo so».
+ */
+export function actualCost(
+  provider: string,
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  pricingOverrides: Record<string, { input: number; output: number }> = {},
+): number | null {
+  if (provider === 'ollama' || !model) return null;
+  const pricing = pricingOverrides[`${provider}/${model}`] ?? MODEL_PRICING[`${provider}/${model}`];
+  if (!pricing) return null;
+  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
+}
+
 export interface EstimatePipelineCostOptions {
   /** Include la passata di verifica coerenza (azione separata, lanciata a parte dall'esecuzione della pipeline). */
   includeCoherence?: boolean;

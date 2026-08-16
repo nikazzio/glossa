@@ -1367,6 +1367,26 @@ l'accettazione è un giudizio, e per il preference training vale quanto una
 correzione. Registrare solo le correzioni produrrebbe un dataset sbilanciato
 verso gli errori.
 
+### Il giudizio si lega alla revisione
+
+*Aggiunta il 2026-08-17, guardando cosa serve davvero all'area Analisi.*
+
+Il verdetto del giudice — voto e problemi trovati — vive oggi in tre colonne del
+frammento, **sovrascritte a ogni riesecuzione**: è lo stesso difetto che le
+revisioni hanno tolto alla traduzione. Resta solo l'ultimo giudizio, e la frase
+che il costruttore di dataset deve poter dire — *«il modello aveva proposto X, il
+giudice l'aveva dato per mediocre, l'umano ha approvato Y»* — non è
+ricostruibile.
+
+Quindi il giudizio diventa un **fatto legato alla revisione che ha giudicato**.
+Le colonne restano dove sono per la lettura veloce, come `translations` conserva
+il puntatore alla revisione approvata: sono lo stato corrente, non la storia.
+
+Un giudizio dato due volte sulla stessa revisione — riaprendo l'audit senza
+cambiare niente — è lo stesso fatto e si sostituisce (D27). Rieseguire la
+pipeline produce una revisione nuova, quindi un giudizio nuovo: sono due fatti
+distinti, ed è giusto che lo siano.
+
 ### Lo stesso vale per le trascrizioni
 
 `transcription_revisions` ha oggi una colonna `status` con `draft`, `approved`,
@@ -1521,9 +1541,18 @@ cancellazione".
 ## D29 — Quando si accende
 
 *Approvata l'11 agosto 2026. **Fatta il 2026-08-16 per i lavori**: avvio ed
-esito con la durata li scrive il motore, non i gestori. I percorsi della
-pipeline — provider, modello, token, costo per ogni stadio — restano da
-collegare: le colonne esistono e sono vuote.*
+esito con la durata li scrive il motore, non i gestori.*
+
+*Fatta il 2026-08-17 per la pipeline.* **Ogni chiamata a un modello lascia un
+fatto**: stadio, provider, modello, token in ingresso e in uscita, token da
+cache, costo, durata, coppia linguistica, esito e — quando fallisce — il tipo di
+errore. Sono dati che esistono solo mentre la chiamata avviene: non scriverli lì
+significa non averli mai.
+
+L'identità del fatto è **frammento più stadio** (D27): rieseguire la pipeline
+sullo stesso frammento sostituisce il fatto di quello stadio invece di
+accumularne uno per tentativo. Quante volte si è rieseguito è una domanda
+diversa, e la risposta sta nelle revisioni prodotte.
 
 **La registrazione parte con le fondamenta**, l'area Analisi no. Sono due lavori
 diversi e il secondo senza il primo non ha nulla da mostrare.

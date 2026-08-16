@@ -33,7 +33,7 @@ dritta su `main`.
 | 4-ter | Miniature ricavate in locale | #218 | unita (#423) |
 | 4-quater | Profili di rete, registrazione, rifiniture | #421, #422, #378 | unita (#428) |
 | **5** | Risorse condivise e ambito | #213 | **da fare**, indipendente |
-| **6** | Registrazione del lavoro svolto | #378 | **fondazione fatta**, mancano gli eventi delle chiamate ai modelli |
+| 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione e chiamate ai modelli |
 | **7** | Backup, esportazioni e riservatezza | #345, #407 | **da fare** |
 
 **Perché la 6 non va lasciata ultima**: ogni giorno senza registrazione è
@@ -81,8 +81,6 @@ fatti, registro append-only con le colonne che serviranno all'area Analisi.
   a fare. Manca anche il controllo dello spazio libero prima di adottare una
   cartella: si avvisa e si lascia decidere, senza vietare.
 - **Notifiche di sistema** (D21): mai fatte.
-- **Eventi delle chiamate ai modelli** (D29): provider, modello, token, costo e
-  durata per stadio. Le colonne esistono e sono vuote.
 - **`transcription_revisions`** ha ancora la colonna `status`, che D22 vuole
   allineata al modello a eventi.
 - **Backup ed esportazione** non portano con sé revisioni e fatti: è la PR 7. Il
@@ -114,7 +112,7 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
 | **D14** | pausa e annullamento battono il nuovo tentativo: un errore incassato mentre l'utente premeva pausa faceva ripartire il lavoro da solo |
 | **D17** | il tempo stimato viene dal ritmo vero del lavoro, non dalla pausa dichiarata dal profilo |
 | **D18** | i valori di rete sono **profili** — un ritmo, non una biblioteca — e le biblioteche ne scelgono uno |
-| **D22** | le revisioni non hanno stato: approvare e ritirare sono fatti che puntano a una revisione |
+| **D22** | le revisioni non hanno stato: approvare e ritirare sono fatti che puntano a una revisione, e **il giudizio si lega alla revisione** invece di stare in colonne sovrascritte |
 
 ## Cronologia breve
 
