@@ -22,14 +22,6 @@ pub struct Page {
     /// libro **non** hanno tutte la stessa dimensione, e da queste si ricava a
     /// quale gruppo appartiene la carta quando si negozia la misura da chiedere.
     pub size: Option<(u32, u32)>,
-    /// Miniatura **già pronta**, quando la biblioteca la dichiara sul canvas.
-    ///
-    /// È la via più economica per averla: nessun descrittore da leggere e
-    /// nessuna misura da scegliere, si scarica quell'indirizzo. La specifica la
-    /// prevede — «A Canvas *may* have the `thumbnail` property» — ma non tutte
-    /// la mettono: archive.org dichiara solo la copertina dell'opera, e nessuna
-    /// delle 924 carte del libro provato ne aveva una.
-    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,7 +92,6 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         label: label_of(canvas.get("label")),
                         image_service: service_of(body)?,
                         size: canvas_size(canvas),
-                        thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
                 .collect()
@@ -129,7 +120,6 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         // In 2.1 le dimensioni stanno sulla risorsa quando il
                         // canvas non le dichiara.
                         size: canvas_size(canvas).or_else(|| canvas_size(resource)),
-                        thumbnail: first_id(canvas.get("thumbnail")),
                     })
                 })
                 .collect()
@@ -302,9 +292,11 @@ mod tests {
     }
 
     #[test]
-    fn a_canvas_that_declares_its_thumbnail_is_believed() {
-        // È la via più economica: niente descrittore da leggere, niente misura
-        // da scegliere.
+    fn a_thumbnail_declared_by_the_library_is_ignored() {
+        // Le miniature non si chiedono più alla biblioteca: si ricavano dalla
+        // carta scaricata (D6, corretta il 2026-08-16). Un canvas che dichiara
+        // la propria miniatura si legge lo stesso senza inciampi, e quel dato
+        // semplicemente non serve più a nessuno.
         let manifest = parse(
             br#"{"items":[{"width":100,"height":200,
               "thumbnail":[{"id":"https://img/1/full/160,/0/default.jpg"}],
@@ -312,17 +304,8 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            manifest.pages[0].thumbnail.as_deref(),
-            Some("https://img/1/full/160,/0/default.jpg")
-        );
-    }
-
-    #[test]
-    fn without_a_declared_thumbnail_there_is_nothing_to_believe() {
-        let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
-
-        assert_eq!(manifest.pages[0].thumbnail, None);
+        assert_eq!(manifest.pages.len(), 1);
+        assert_eq!(manifest.pages[0].image_service, "https://img/1");
     }
 
     #[test]

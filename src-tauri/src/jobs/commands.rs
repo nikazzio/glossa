@@ -141,23 +141,13 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         crate::vault::resolve_root(app, None)?,
     );
 
-    // I gestori veri. Carte e miniature parlano con le stesse biblioteche,
-    // quindi **condividono i contatori di cortesia**: due contatori separati
-    // sullo stesso host raddoppierebbero il ritmo verso quel server (D18).
+    // I gestori veri. I contatori di cortesia stanno fuori dal gestore perché
+    // valgono **per host** e non per lavoro: due lavori sulla stessa biblioteca
+    // devono sommarsi in un contatore solo, non raddoppiare il ritmo (D18).
     let courtesy = Arc::new(crate::download::courtesy::Courtesy::new());
     engine.register(
         crate::download::handler::JOB_TYPE,
-        Arc::new(crate::download::handler::SourceDownloadJob::new(
-            Arc::clone(&courtesy),
-            crate::download::handler::Target::Pages,
-        )),
-    );
-    engine.register(
-        crate::download::handler::THUMBNAILS_JOB_TYPE,
-        Arc::new(crate::download::handler::SourceDownloadJob::new(
-            Arc::clone(&courtesy),
-            crate::download::handler::Target::Thumbnails,
-        )),
+        Arc::new(crate::download::handler::SourceDownloadJob::new(courtesy)),
     );
 
     // La verifica del deposito: il primo lavoro che pesa sul processore e non

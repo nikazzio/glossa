@@ -350,15 +350,16 @@ a indovinare».
 
 L'ordine è:
 
-1. l'indirizzo che il **manifesto dichiara già pronto**, quando c'è — la
-   specifica prevede che un canvas dichiari la propria miniatura: non c'è niente
-   da scegliere e non costa nessuna richiesta in più;
-2. altrimenti si legge il descrittore e si prende la misura dichiarata più
-   vicina al tetto sul lato lungo;
-3. la scelta vale per tutte le carte con le stesse dimensioni. Le carte di uno
+1. si legge il descrittore e si prende la misura dichiarata più vicina al tetto
+   sul lato lungo;
+2. la scelta vale per tutte le carte con le stesse dimensioni. Le carte di uno
    stesso libro **non** hanno tutte la stessa dimensione — 924 carte e cinque
    formati, nel libro provato — quindi il descrittore si legge una volta per
    gruppo: cinque letture, non una sola e nemmeno 924.
+
+*(Un terzo livello — «l'indirizzo che il manifesto dichiara già pronto» — valeva
+per le sole miniature ed è caduto il 2026-08-16 con D6: le miniature non si
+chiedono più alla biblioteca.)*
 
 **Perché non ci si limita a chiedere il tetto**, che costerebbe zero richieste in
 più: la specifica garantisce le misure elencate in `sizes` — e quelle implicite
@@ -375,7 +376,8 @@ carta. Le due cose divergono di proposito: se la cartella prendesse il nome dai
 pixel, la stessa fonte finirebbe sparsa in cartelle diverse e la ripresa non
 ritroverebbe più ciò che ha già scaricato.
 
-Le miniature si scaricano sempre, in entrambi i casi, insieme al libro (D6).
+Le miniature non entrano in questa scelta: si ricavano dalla carta scaricata,
+qualunque misura abbia (D6, corretta il 2026-08-16).
 
 **Scartato "scarica tutto al minimo"**: produrrebbe una fonte che risulta
 completa ma è illeggibile, peggio di una non scaricata. Il minimo sono già le
@@ -572,31 +574,39 @@ sono documenti a sé. Restano leggibili e modificabili anche senza le immagini.
 Riscaricare in seguito solo le pagine che servono non è una funzione nuova: è
 l'azione per pagina già definita in D4, usata quando non c'è nulla in locale.
 
-### Miniature, insieme allo scaricamento
+### Miniature, ricavate dalle carte
 
-*Corretta il 2026-08-15, dopo averlo provato.*
+*Corretta il 2026-08-15 (quando si scaricano) e di nuovo il 2026-08-16 (che non
+si scaricano affatto), dopo averlo misurato.*
 
-Le miniature si scaricano **quando si scarica il libro**, non quando si aggiunge
-la fonte. Restano tutte, restano fuori da "libera spazio", e rendono il libro
-sfogliabile senza rete: cambia solo il momento.
+Le miniature **non si chiedono alla biblioteca**: si ricavano dalla carta appena
+scaricata, sul computer. Restano tutte, restano fuori da "libera spazio", e
+rendono il libro sfogliabile senza rete.
+
+**Perché.** La pagina la scarichiamo già. Chiederne una seconda copia rimpicciolita
+raddoppia le richieste — su un libro di 924 carte sono 1848 invece di 924 — verso
+servizi che rispondono in modo irregolare: la stessa richiesta ad archive.org,
+misurata, va da 1 a 19 secondi. Ricavarla in locale costa qualche decina di
+millisecondi di processore e zero richieste. È quello che fa Scriptoria
+(`thumbnail_utils.py`).
+
+**Il lato lungo lo decidiamo noi**, e diventa una vera scelta invece di quello
+che la biblioteca dava per ripiego: predefinito **300 px** *(scelto dall'utente
+il 2026-08-16)*, configurabile fra 100 e 800. 160 px erano la misura di ripiego,
+300 è quella giusta per sfogliare.
 
 **Perché la prima stesura non regge.** Diceva «duecento miniature sono circa
 3 MB: trascurabili». Su un libro di 924 carte sono 18 MB e un quarto d'ora di
 rete, e soprattutto contraddicono l'uso normale: si aggiunge una fonte, la si
-legge online, e si scarica solo quello che serve davvero. Scaricare novecento
-miniature per una fonte che forse non si aprirà mai è lavoro fatto a vuoto —
-verso di noi e verso la biblioteca.
+legge online, e si scarica solo quello che serve davvero.
 
 **Finché il libro non si scarica**, le miniature si leggono online come le carte
 (D8). La copertina che la Biblioteca mostra non c'entra: è la miniatura
 dell'opera dichiarata dal manifesto, una sola immagine, che non costa niente.
 
-**Come si chiedono** *(misurato su archive.org)*: prima la miniatura che il
-canvas dichiara, se c'è — la specifica lo prevede e non costa nessuna richiesta
-in più. Altrimenti si legge il descrittore dell'immagine e si chiede la misura
-dichiarata più vicina al tetto, una volta per gruppo di carte con le stesse
-dimensioni. Chiedere una larghezza inventata costringe il servizio a generarla
-sul momento: 23 secondi contro 1, e senza nemmeno tenerla in cache.
+**Conseguenza**: le miniature esistono solo per le carte scaricate. Oggi non
+cambia niente, perché si scarica il libro intero; quando arriverà lo scaricamento
+della singola carta (D4), quel libro avrà le miniature solo di quelle.
 
 # Parte B — Disponibilità e modalità di lettura
 

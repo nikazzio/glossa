@@ -4,6 +4,11 @@
 //! arrivato, si ferma al confine della carta quando glielo si chiede, e non fa
 //! entrare nel deposito niente che non abbia superato la validazione: un file
 //! parziale non esiste mai lì dentro (D16-bis).
+//!
+//! Di ogni carta scaricata **ricava la miniatura** (D6, corretta il
+//! 2026-08-16): è lavoro del processore su byte che abbiamo già in mano, e
+//! costa qualche decina di millisecondi invece di una seconda richiesta a una
+//! biblioteca che risponde fra 1 e 19 secondi.
 
 use async_trait::async_trait;
 use rusqlite::{params, OptionalExtension};
@@ -12,6 +17,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use crate::iiif::network::{NetworkProfile, CAUTIOUS};
+use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
@@ -22,80 +28,13 @@ use super::manifest::{image_url, parse, Page};
 use super::size;
 
 pub const JOB_TYPE: &str = "source_download";
-pub const THUMBNAILS_JOB_TYPE: &str = "source_thumbnails";
 
-/// Cosa scarica questo lavoro. Il giro è lo stesso — manifesto, carte una per
-/// volta, area di transito, punto salvato — cambiano il tetto di risoluzione,
-/// dove finisce il file e come si chiama la riga nel database.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Target {
-    /// Le carte alla risoluzione scelta dalla politica (D4).
-    Pages,
-    /// Le miniature, tutte, **insieme allo scaricamento del libro** (D6,
-    /// corretta il 2026-08-15): rendono il libro sfogliabile senza rete, e
-    /// finché non lo si scarica si leggono online come le carte.
-    Thumbnails,
-}
-
-/// Tetto delle miniature, sul lato lungo. Basso e fisso: servono a sfogliare,
-/// non a leggere.
-const THUMBNAIL_CAP: &str = "256";
-
-impl Target {
-    fn job_type(self) -> &'static str {
-        match self {
-            Target::Pages => JOB_TYPE,
-            Target::Thumbnails => THUMBNAILS_JOB_TYPE,
-        }
-    }
-
-    /// Il tetto di risoluzione da chiedere al servizio.
-    fn cap(self, config: &DownloadConfig) -> &str {
-        match self {
-            Target::Pages => &config.size_tag,
-            Target::Thumbnails => THUMBNAIL_CAP,
-        }
-    }
-
-    /// `assets.kind`: le miniature non contano nella disponibilità delle carte
-    /// (D7), e «libera spazio» non le tocca (D6).
-    fn asset_kind(self) -> &'static str {
-        match self {
-            Target::Pages => "image",
-            Target::Thumbnails => "thumbnail",
-        }
-    }
-
-    /// L'indirizzo che la biblioteca dichiara per questa unità, quando esiste.
-    ///
-    /// È il primo dei tre livelli: la specifica prevede che un canvas possa
-    /// dichiarare la propria miniatura già pronta, e in quel caso non c'è
-    /// nessuna misura da scegliere né nessun descrittore da leggere.
-    fn declared_url(self, page: &Page) -> Option<String> {
-        match self {
-            Target::Pages => None,
-            Target::Thumbnails => page.thumbnail.clone(),
-        }
-    }
-
-    fn relative_path(
-        self,
-        config: &DownloadConfig,
-        page_index: u32,
-    ) -> Result<std::path::PathBuf, String> {
-        match self {
-            Target::Pages => layout::page_path(
-                &config.provider_key,
-                &config.version_id,
-                &config.size_tag,
-                page_index,
-            ),
-            Target::Thumbnails => {
-                layout::thumbnail_path(&config.provider_key, &config.version_id, page_index)
-            }
-        }
-    }
-}
+/// `assets.kind` delle carte: è quello che conta nella disponibilità (D7) ed è
+/// quello che «libera spazio» cancella (D6).
+const PAGE_KIND: &str = "image";
+/// `assets.kind` delle miniature: fuori dal conteggio delle carte e fuori da
+/// «libera spazio».
+const THUMBNAIL_KIND: &str = "thumbnail";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,6 +51,14 @@ pub struct DownloadConfig {
     /// stessa fonte finirebbe sparsa in cartelle diverse.
     #[serde(default = "default_size_tag")]
     pub size_tag: String,
+    /// Lato lungo delle miniature ricavate dalle carte. Lo decide
+    /// l'impostazione alla messa in coda: qui arriva già scelto.
+    #[serde(default = "default_thumbnail_edge")]
+    pub thumbnail_edge: u32,
+}
+
+fn default_thumbnail_edge() -> u32 {
+    images::DEFAULT_THUMBNAIL_EDGE
 }
 
 /// Tetto predefinito: 2000 pixel sul lato lungo (D4).
@@ -150,16 +97,15 @@ mod phase {
 const DECLARE_WAIT_AFTER: Duration = Duration::from_secs(15);
 
 pub struct SourceDownloadJob {
-    /// Condivisa fra i tipi di lavoro che parlano con le stesse biblioteche:
-    /// carte e miniature dello stesso libro vanno sullo stesso host, e due
-    /// contatori separati raddoppierebbero il ritmo verso quel server (D18).
+    /// I contatori di cortesia verso le biblioteche (D18): pause, raffica,
+    /// raffreddamenti. Stanno fuori dal gestore perché sono **per host**, non
+    /// per lavoro.
     courtesy: std::sync::Arc<Courtesy>,
-    target: Target,
 }
 
 impl SourceDownloadJob {
-    pub fn new(courtesy: std::sync::Arc<Courtesy>, target: Target) -> Self {
-        Self { courtesy, target }
+    pub fn new(courtesy: std::sync::Arc<Courtesy>) -> Self {
+        Self { courtesy }
     }
 }
 
@@ -211,17 +157,12 @@ impl JobHandler for SourceDownloadJob {
         // La configurazione arriva dal frontend: la cartella di transito si
         // costruisce dalla componente **già validata** dal layout, altrimenti un
         // identificativo con `..` farebbe creare cartelle fuori dal deposito.
-        // Una transito **per variante**: carte e miniature della stessa
-        // digitalizzazione girano insieme, e chi finisce per primo scarta la
-        // propria cartella. Con una sola, il primo che finisce porterebbe via il
-        // file che l'altro ha appena scritto e non ancora promosso.
-        let staging = root
-            .join(layout::STAGING_DIR)
-            .join(
-                layout::safe_component(&config.version_id)
-                    .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
-            )
-            .join(self.target.asset_kind());
+        // Una sola cartella per digitalizzazione: sulla stessa fonte gira un
+        // lavoro solo, e carta e miniatura hanno nomi diversi lì dentro.
+        let staging = root.join(layout::STAGING_DIR).join(
+            layout::safe_component(&config.version_id)
+                .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
+        );
         std::fs::create_dir_all(&staging).map_err(|error| {
             JobError::new(ErrorKind::Storage, format!("area di transito: {error}"))
         })?;
@@ -267,9 +208,8 @@ impl JobHandler for SourceDownloadJob {
             .unwrap_or_else(|| config.version_id.clone());
         record_manifest(&ctx, &config, total, &manifest).await?;
         log::info!(
-            "job download starting id={} type={} provider={} pages={} resume_from={} cap={}",
+            "job download starting id={} provider={} pages={} resume_from={} cap={} thumb={}",
             ctx.id,
-            self.target.job_type(),
             config.provider_key,
             total,
             ctx.checkpoint
@@ -277,7 +217,8 @@ impl JobHandler for SourceDownloadJob {
                 .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
                 .map(|saved| saved.done)
                 .unwrap_or(0),
-            self.target.cap(&config)
+            config.size_tag,
+            config.thumbnail_edge
         );
 
         // 2. Le carte, una per volta: il confine dove ci si può fermare.
@@ -296,8 +237,10 @@ impl JobHandler for SourceDownloadJob {
         ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
-        // una volta sola evita una somma per ogni carta.
-        let mut bytes = recorded_bytes(&ctx, &config.version_id, self.target.asset_kind()).await;
+        // una volta sola evita una somma per ogni carta. Sono le **carte**: le
+        // miniature pesano una frazione e conteggiarle renderebbe la stima meno
+        // leggibile senza dire niente di più.
+        let mut bytes = recorded_bytes(&ctx, &config.version_id, PAGE_KIND).await;
 
         for page in manifest.pages.iter().skip(start as usize) {
             // Il confine dell'unità di lavoro: qui ci si ferma, mai a metà
@@ -434,10 +377,13 @@ impl SourceDownloadJob {
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Option<u64>, JobError> {
-        let relative = self
-            .target
-            .relative_path(config, page.index)
-            .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
+        let relative = layout::page_path(
+            &config.provider_key,
+            &config.version_id,
+            &config.size_tag,
+            page.index,
+        )
+        .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
         let target = root.join(&relative);
         let vault_path = relative.to_string_lossy().replace('\\', "/");
 
@@ -451,33 +397,41 @@ impl SourceDownloadJob {
             // morta fra la promozione e la scrittura: senza rifarla adesso, il
             // conteggio della disponibilità resterebbe sotto il vero per
             // sempre, perché la ripresa la salterà ogni volta.
-            if is_recorded(ctx, &page_asset_id(config, self.target, page)).await {
-                return Ok(Some(0));
+            let mut added = 0;
+            if !is_recorded(ctx, &page_asset_id(config, page)).await {
+                let scan = integrity::scan_file(&target, integrity::FileKind::Image);
+                let size = std::fs::metadata(&target)
+                    .map(|meta| meta.len())
+                    .unwrap_or(0);
+                added = size;
+                log::debug!(
+                    "job page recovered id={} page={} bytes={} (file sul disco senza riga)",
+                    ctx.id,
+                    page.index,
+                    size
+                );
+                record_asset(
+                    ctx,
+                    AssetRow {
+                        id: page_asset_id(config, page),
+                        version_id: config.version_id.clone(),
+                        kind: PAGE_KIND,
+                        vault_path: vault_path.clone(),
+                        remote_url: Some(self.known_url(sizes, page, manifest)),
+                        byte_size: size as i64,
+                        checksum: scan.checksum.unwrap_or_default(),
+                        page_index: page.index as i64,
+                        page_label: page.label.clone(),
+                        size_tag: config.size_tag.clone(),
+                    },
+                )
+                .await?;
             }
-            let scan = integrity::scan_file(&target, integrity::FileKind::Image);
-            let size = std::fs::metadata(&target)
-                .map(|meta| meta.len())
-                .unwrap_or(0);
-            let checksum = scan.checksum.unwrap_or_default();
-            let url = self.known_url(sizes, page, manifest);
-            log::debug!(
-                "job page recovered id={} page={} bytes={} (file sul disco senza riga)",
-                ctx.id,
-                page.index,
-                size
-            );
-            record_page(
-                ctx,
-                config,
-                self.target,
-                page,
-                &vault_path,
-                &checksum,
-                size as i64,
-                &url,
-            )
-            .await?;
-            return Ok(Some(size));
+            // La carta c'era: la miniatura può non esserci — la si ricava solo
+            // se manca, rileggendo il file una volta sola.
+            self.recover_thumbnail(ctx, config, staging, root, page, &target)
+                .await;
+            return Ok(Some(added));
         }
 
         let (fetched, url) = match self
@@ -488,27 +442,145 @@ impl SourceDownloadJob {
             None => return Ok(None),
         };
         let checksum = stage_and_promote(
-            // La cartella di transito è già una per variante: il nome del file
-            // non deve ripetere la stessa distinzione.
-            &staging.join(format!("{:04}.jpg", page.index)),
+            &staging.join(page_staging_name(page.index)),
             &target,
             &fetched.bytes,
             integrity::FileKind::Image,
         )?;
 
         let size = fetched.bytes.len() as u64;
-        record_page(
+        record_asset(
             ctx,
-            config,
-            self.target,
-            page,
-            &vault_path,
-            &checksum,
-            size as i64,
-            &url,
+            AssetRow {
+                id: page_asset_id(config, page),
+                version_id: config.version_id.clone(),
+                kind: PAGE_KIND,
+                vault_path,
+                remote_url: Some(url),
+                byte_size: size as i64,
+                checksum,
+                page_index: page.index as i64,
+                page_label: page.label.clone(),
+                size_tag: config.size_tag.clone(),
+            },
         )
         .await?;
+
+        // La miniatura si ricava adesso, dai byte che sono già qui: la carta è
+        // al sicuro nel deposito, e se la miniatura non riesce non si perde il
+        // lavoro di rete già fatto.
+        self.store_thumbnail(ctx, config, staging, root, page, fetched.bytes)
+            .await;
         Ok(Some(size))
+    }
+
+    /// Ricava la miniatura di una carta e la mette nel deposito.
+    ///
+    /// **Non fa fallire il lavoro**: una carta senza miniatura è una carta che
+    /// si legge lo stesso, e rinunciare a un libro intero per un'immagine da
+    /// sfogliare sarebbe sproporzionato. Il caso si legge nel registro e la
+    /// verifica del deposito lo riporta come file mancante.
+    async fn store_thumbnail(
+        &self,
+        ctx: &JobContext,
+        config: &DownloadConfig,
+        staging: &Path,
+        root: &Path,
+        page: &Page,
+        page_bytes: Vec<u8>,
+    ) {
+        if let Err(error) = self
+            .write_thumbnail(ctx, config, staging, root, page, page_bytes)
+            .await
+        {
+            log::warn!(
+                "job thumbnail not derived id={} page={} error={}",
+                ctx.id,
+                page.index,
+                error.message
+            );
+        }
+    }
+
+    /// La carta era già nel deposito: se manca la sua miniatura la si ricava
+    /// rileggendo il file. Costa una lettura per carta, e solo per le carte a
+    /// cui la miniatura manca davvero.
+    async fn recover_thumbnail(
+        &self,
+        ctx: &JobContext,
+        config: &DownloadConfig,
+        staging: &Path,
+        root: &Path,
+        page: &Page,
+        page_path: &Path,
+    ) {
+        let Ok(relative) =
+            layout::thumbnail_path(&config.provider_key, &config.version_id, page.index)
+        else {
+            return;
+        };
+        if root.join(&relative).is_file()
+            && is_recorded(ctx, &thumbnail_asset_id(config, page)).await
+        {
+            return;
+        }
+        match std::fs::read(page_path) {
+            Ok(bytes) => {
+                self.store_thumbnail(ctx, config, staging, root, page, bytes)
+                    .await
+            }
+            Err(error) => log::warn!(
+                "job thumbnail source unreadable id={} page={} error={error}",
+                ctx.id,
+                page.index
+            ),
+        }
+    }
+
+    async fn write_thumbnail(
+        &self,
+        ctx: &JobContext,
+        config: &DownloadConfig,
+        staging: &Path,
+        root: &Path,
+        page: &Page,
+        page_bytes: Vec<u8>,
+    ) -> Result<(), JobError> {
+        let relative = layout::thumbnail_path(&config.provider_key, &config.version_id, page.index)
+            .map_err(|error| JobError::new(ErrorKind::Internal, error))?;
+        let target = root.join(&relative);
+
+        // Decodifica e ricodifica pesano sul processore: dentro il filo del
+        // runtime terrebbero fermo tutto il resto della coda mentre lavorano.
+        let edge = config.thumbnail_edge;
+        let bytes = tokio::task::spawn_blocking(move || images::thumbnail(&page_bytes, edge))
+            .await
+            .map_err(|error| JobError::new(ErrorKind::Internal, error.to_string()))?
+            .map_err(|error| JobError::new(ErrorKind::Internal, error.to_string()))?;
+
+        let checksum = stage_and_promote(
+            &staging.join(thumbnail_staging_name(page.index)),
+            &target,
+            &bytes,
+            integrity::FileKind::Image,
+        )?;
+        record_asset(
+            ctx,
+            AssetRow {
+                id: thumbnail_asset_id(config, page),
+                version_id: config.version_id.clone(),
+                kind: THUMBNAIL_KIND,
+                vault_path: relative.to_string_lossy().replace('\\', "/"),
+                // Non arriva da nessun indirizzo: la ricaviamo noi dalla carta.
+                remote_url: None,
+                byte_size: bytes.len() as i64,
+                checksum,
+                page_index: page.index as i64,
+                page_label: page.label.clone(),
+                size_tag: config.thumbnail_edge.to_string(),
+            },
+        )
+        .await
     }
 
     /// La misura davvero chiesta al servizio per questa unità, come la mostra il
@@ -516,15 +588,12 @@ impl SourceDownloadJob {
     /// altrimenti, e la parola per «l'ha dichiarata la biblioteca» quando
     /// l'indirizzo arriva dal manifesto.
     fn requested_size(&self, sizes: &SizeCache, page: &Page, config: &DownloadConfig) -> String {
-        if self.target.declared_url(page).is_some() {
-            return "declared".to_string();
-        }
         cached(sizes, page)
             .map(|token| token.0)
-            .unwrap_or_else(|| self.target.cap(config).to_string())
+            .unwrap_or_else(|| config.size_tag.clone())
     }
 
-    /// L'indirizzo da cui è arrivata un'unità già presente sul disco, per
+    /// L'indirizzo da cui è arrivata una carta già presente sul disco, per
     /// scriverlo nella sua riga.
     fn known_url(
         &self,
@@ -532,19 +601,13 @@ impl SourceDownloadJob {
         page: &Page,
         manifest: &super::manifest::Manifest,
     ) -> String {
-        if let Some(declared) = self.target.declared_url(page) {
-            return declared;
-        }
         let token = cached(sizes, page)
             .unwrap_or_else(|| size::SizeToken(size::full_size(manifest.presentation2)));
         image_url(&page.image_service, token.as_str())
     }
 
-    /// Prende l'unità dall'indirizzo migliore fra quelli previsti.
-    ///
-    /// 1. **quello dichiarato dalla biblioteca**, quando c'è: niente da scegliere;
-    /// 2. **la misura dichiarata dal descrittore** più vicina al tetto, letta una
-    ///    volta per gruppo di unità con le stesse dimensioni.
+    /// Prende la carta alla misura dichiarata dal descrittore più vicina al
+    /// tetto, letta una volta per gruppo di carte con le stesse dimensioni.
     ///
     /// Non si tenta il tetto alla cieca. È quello che dice D4 — «si legge una
     /// volta per digitalizzazione […] senza tentare richieste a indovinare» — ed
@@ -564,16 +627,10 @@ impl SourceDownloadJob {
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
-        if let Some(url) = self.target.declared_url(page) {
-            let fetched =
-                fetch(client, &self.courtesy, profile, &url, ctx.attempt, signals).await?;
-            return Ok(fetched.map(|fetched| (fetched, url)));
-        }
-
         // Politica «massima»: non c'è niente da scegliere, la dimensione piena
         // ha un nome suo nella specifica e il descrittore non aggiungerebbe
         // niente (D4).
-        let token = if self.target.cap(config) == "max" {
+        let token = if config.size_tag == "max" {
             size::SizeToken(size::full_size(manifest.presentation2))
         } else {
             match cached(sizes, page) {
@@ -609,11 +666,7 @@ impl SourceDownloadJob {
         signals: &Signals<'_>,
     ) -> Result<Option<size::SizeToken>, JobError> {
         ctx.report_phase(phase::NEGOTIATING).await;
-        let cap = self
-            .target
-            .cap(config)
-            .parse::<u32>()
-            .unwrap_or(DEFAULT_CAP);
+        let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP);
         let info_url = size::info_url(&page.image_service);
         let Some(fetched) = fetch(
             client,
@@ -798,13 +851,26 @@ async fn is_recorded(ctx: &JobContext, asset_id: &str) -> bool {
 
 /// Identificativo della riga di una carta: digitalizzazione, risoluzione,
 /// numero. La stessa carta a due risoluzioni sono due righe.
-fn page_asset_id(config: &DownloadConfig, target: Target, page: &Page) -> String {
-    format!(
-        "{}:{}:{}",
-        config.version_id,
-        target.cap(config),
-        page.index
-    )
+fn page_asset_id(config: &DownloadConfig, page: &Page) -> String {
+    format!("{}:{}:{}", config.version_id, config.size_tag, page.index)
+}
+
+/// Identificativo della riga di una miniatura. Non porta la misura: di
+/// miniature ce n'è una sola per carta, e se il lato lungo cambia si rifà
+/// quella, non se ne affianca una seconda.
+fn thumbnail_asset_id(config: &DownloadConfig, page: &Page) -> String {
+    format!("{}:{}:{}", config.version_id, THUMBNAIL_KIND, page.index)
+}
+
+/// I due nomi che una carta prende nell'area di transito. Sono diversi perché
+/// la cartella è una sola per digitalizzazione: carta e miniatura ci passano
+/// una dopo l'altra.
+fn page_staging_name(page_index: u32) -> String {
+    format!("{page_index:04}.jpg")
+}
+
+fn thumbnail_staging_name(page_index: u32) -> String {
+    format!("{page_index:04}-thumb.jpg")
 }
 
 /// Profilo del provider, o quello prudente per chi non è nel registro: nessuna
@@ -943,28 +1009,26 @@ async fn record_manifest(
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn record_page(
-    ctx: &JobContext,
-    config: &DownloadConfig,
-    target: Target,
-    page: &Page,
-    vault_path: &str,
-    checksum: &str,
+/// Una riga di `assets`, come la scrive questo lavoro: carta o miniatura.
+///
+/// Sta in una struttura invece che in dieci argomenti perché i due casi
+/// differiscono in sei campi su dieci, e allineare posizioni a mano è il modo
+/// più facile per scambiare due stringhe senza che nessuno se ne accorga.
+struct AssetRow {
+    id: String,
+    version_id: String,
+    kind: &'static str,
+    vault_path: String,
+    /// Assente per ciò che ricaviamo noi: nessun indirizzo l'ha servito.
+    remote_url: Option<String>,
     byte_size: i64,
-    url: &str,
-) -> Result<(), JobError> {
-    let id = page_asset_id(config, target, page);
-    let version_id = config.version_id.clone();
-    let kind = target.asset_kind();
-    let size_tag = target.cap(config).to_string();
-    let (index, label) = (page.index as i64, page.label.clone());
-    let (vault_path, checksum, url) = (
-        vault_path.to_string(),
-        checksum.to_string(),
-        url.to_string(),
-    );
+    checksum: String,
+    page_index: i64,
+    page_label: Option<String>,
+    size_tag: String,
+}
 
+async fn record_asset(ctx: &JobContext, row: AssetRow) -> Result<(), JobError> {
     ctx.with_database(move |conn| {
         conn.execute(
             "INSERT INTO assets (id, source_version_id, kind, locality, availability, vault_path, \
@@ -974,10 +1038,19 @@ async fn record_page(
                availability = 'complete', byte_size = excluded.byte_size, \
                checksum = excluded.checksum, updated_at = CURRENT_TIMESTAMP",
             params![
-                id, version_id, vault_path, url, byte_size, checksum, index, label, size_tag, kind
+                row.id,
+                row.version_id,
+                row.vault_path,
+                row.remote_url,
+                row.byte_size,
+                row.checksum,
+                row.page_index,
+                row.page_label,
+                row.size_tag,
+                row.kind
             ],
         )
-        .map_err(|error| format!("riga della carta: {error}"))?;
+        .map_err(|error| format!("riga dell'immagine: {error}"))?;
         Ok(())
     })
     .await
@@ -1019,22 +1092,56 @@ mod tests {
         assert!(long >= 900, "stimati {long} secondi");
     }
 
-    #[test]
-    fn a_thumbnail_declared_by_the_library_is_taken_as_it_is() {
-        let page = Page {
-            index: 1,
+    fn config(size_tag: &str) -> DownloadConfig {
+        serde_json::from_value(serde_json::json!({
+            "providerKey": "archive_org",
+            "versionId": "sver-1",
+            "manifestUrl": "https://example.org/manifest",
+            "sizeTag": size_tag,
+        }))
+        .unwrap()
+    }
+
+    fn page(index: u32) -> Page {
+        Page {
+            index,
             label: None,
             image_service: "https://img/1".to_string(),
             size: Some((100, 200)),
-            thumbnail: Some("https://img/1/full/160,/0/default.jpg".to_string()),
-        };
+        }
+    }
 
-        assert_eq!(
-            Target::Thumbnails.declared_url(&page).as_deref(),
-            Some("https://img/1/full/160,/0/default.jpg")
+    #[test]
+    fn a_page_and_its_thumbnail_are_two_distinct_rows() {
+        // Se i due identificativi coincidessero, la miniatura sovrascriverebbe
+        // la riga della carta e il conteggio della disponibilità crollerebbe.
+        let config = config("300");
+
+        assert_ne!(
+            page_asset_id(&config, &page(7)),
+            thumbnail_asset_id(&config, &page(7))
         );
-        // La miniatura dichiarata è una miniatura: non è la carta.
-        assert_eq!(Target::Pages.declared_url(&page), None);
+        // Nemmeno quando il tetto delle carte coincide con il lato lungo delle
+        // miniature: l'identificativo della miniatura non porta una misura.
+        assert_eq!(thumbnail_asset_id(&config, &page(7)), "sver-1:thumbnail:7");
+    }
+
+    #[test]
+    fn page_and_thumbnail_do_not_share_a_name_in_the_staging_area() {
+        // La cartella di transito è una sola per digitalizzazione: due nomi
+        // uguali vorrebbero dire che una delle due immagini porta via l'altra
+        // prima della promozione.
+        assert_ne!(page_staging_name(12), thumbnail_staging_name(12));
+    }
+
+    #[test]
+    fn without_a_configured_edge_the_thumbnails_are_the_default_size() {
+        // La configurazione arriva dal frontend: se il campo manca, la
+        // miniatura si ricava lo stesso, alla misura predefinita.
+        assert_eq!(
+            config("2000").thumbnail_edge,
+            images::DEFAULT_THUMBNAIL_EDGE
+        );
     }
 
     #[test]

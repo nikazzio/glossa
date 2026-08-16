@@ -28,11 +28,17 @@ tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-updater = "2"
 reqwest = { version = "0.12", features = ["json"] }
+# Puro Rust: nessuna libreria di sistema da installare, quindi le build per
+# Windows, macOS e Linux restano come sono. Solo i formati che servono davvero:
+# le biblioteche IIIF servono JPEG, e la PNG è l'unica altra che capiti.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 url = "2"
 keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
-tokio = { version = "1", features = ["sync", "macros", "time"] }
+# `rt` serve a `spawn_blocking`: ricavare una miniatura è lavoro del
+# processore, e dentro il filo del runtime terrebbe ferma tutta la coda.
+tokio = { version = "1", features = ["sync", "macros", "time", "rt"] }
 zip = { version = "4", default-features = false, features = ["deflate"] }
 quick-xml = "0.41"
 pdf-extract = "0.12"

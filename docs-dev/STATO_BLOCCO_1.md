@@ -5,7 +5,8 @@ Si aggiorna **a ogni PR unita**. Serve a due cose: riprendere il filo fra una
 sessione e l'altra, e travasare le novità in `STATO_SESSIONE_2.0.md` quando si
 torna sulla postazione fissa.
 
-Ultimo aggiornamento: **2026-08-14**, notte: PR 3, 3-bis e 4 aperte e verdi.
+Ultimo aggiornamento: **2026-08-16**: #414-#420 unite in `blocco-1`, miniature
+ricavate in locale.
 
 ## Come è organizzato il lavoro
 
@@ -26,10 +27,10 @@ dritta su `main`.
 |---|---|---|---|
 | 1 | Deposito dei file e disponibilità reale | #217 | **unita** in `blocco-1` (#414) |
 | 2 | Orchestratore dei lavori, a vuoto | #218 (metà) | **unita** in `blocco-1` (#415) |
-| 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **in revisione** (#417) |
-| 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **in revisione** (#418) |
-| 4 | Scaricamento vero | #218 primo consumatore | **in revisione** (#419) |
-| 4-bis | Catalogo Biblioteca, pulsante scarica, metadati | #217 (interfaccia) | **in revisione** (#420) |
+| 3 | Coda visibile: indicatore in barra e pannello Lavori | #218 (metà), #413 (parte) | **unita** in `blocco-1` (#417) |
+| 3-bis | Impostazioni: deposito, limiti, ripresa automatica | #217, #218 (interfaccia) | **unita** in `blocco-1` (#418) |
+| 4 | Scaricamento vero | #218 primo consumatore | **unita** in `blocco-1` (#419) |
+| 4-bis | Catalogo Biblioteca, pulsante scarica, metadati | #217 (interfaccia) | **unita** in `blocco-1` (#420) |
 | 5 | Risorse condivise e ambito | #213 | da fare, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | da fare — **non lasciare ultima** |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | da fare |
@@ -250,6 +251,39 @@ generare l'immagine sul momento — misurato su archive.org: 23 secondi contro 1
 
 **Aperto da qui**: #421 (profili di rete gestibili dalle impostazioni) e #422
 (tetto di risoluzione configurabile: globale, per biblioteca, per fonte).
+
+## Miniature in locale, 2026-08-16
+
+Le miniature **non si scaricano più**: si ricavano dalla carta appena scaricata,
+sul computer. Ogni libro costava due richieste per carta — 1848 su un libro di
+924 — a servizi che rispondono in modo irregolare: la stessa richiesta ad
+archive.org, misurata, va da 1 a 19 secondi. Ricavarla in locale costa qualche
+decina di millisecondi e nessuna richiesta.
+
+Cosa è cambiato:
+
+- una libreria nuova per le immagini, `image`, **puro Rust** e con i soli formati
+  che servono (`jpeg`, `png`): nessuna dipendenza di sistema, quindi le build per
+  i tre sistemi restano come sono. Vive in `src-tauri/src/images.rs`, funzioni
+  pure, provabili senza rete;
+- il lato lungo è una scelta vera: predefinito **300 px**, ammessi 100-800,
+  letto da `app_settings.thumbnail_long_edge` alla messa in coda. La schermata
+  che lo cambia arriva con la politica di scaricamento (#422);
+- decodifica e ricodifica girano in `spawn_blocking`: sono lavoro del
+  processore, e nel filo del runtime terrebbero ferma tutta la coda;
+- il tipo di lavoro `source_thumbnails` **non esiste più** — variante del
+  gestore, messa in coda, traduzioni e prove comprese. Il pannello torna a una
+  riga per libro;
+- l'area di transito torna **una per digitalizzazione**: la divisione per
+  variante serviva a due lavori che giravano insieme, e i due lavori non ci sono
+  più. Carta e miniatura ci passano con nomi diversi;
+- se la miniatura non riesce, il libro non fallisce: si scrive nel registro e si
+  va avanti. Una carta già sul disco a cui manca la miniatura la fa ricavare
+  rileggendo il file, una volta sola.
+
+D6 aggiornata: diceva «si scaricano», adesso dice come si ricavano. Cade con lei
+il primo dei tre livelli di D4 — «l'indirizzo che il manifesto dichiara già
+pronto» — che valeva per le sole miniature.
 
 ## Prossima sessione: da dove riprendere
 

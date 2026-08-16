@@ -14,19 +14,36 @@ use crate::jobs::commands::JobsState;
 use crate::jobs::store::NewJob;
 use crate::jobs::JobRecord;
 
-/// Mette in coda lo scaricamento di una digitalizzazione: le carte **e le sue
-/// miniature**.
+/// Prefisso dell'identificativo del lavoro: **uno per digitalizzazione**.
+const JOB_ID_PREFIX: &str = "download";
+
+/// È ciò che l'utente ha appena chiesto guardando lo schermo: la coda lo
+/// preferisce alle verifiche di fondo.
+const DOWNLOAD_PRIORITY: i64 = 10;
+
+/// Tetto di risoluzione predefinito, in pixel sul lato lungo (D4).
+const DEFAULT_SIZE_CAP: u32 = 2000;
+
+pub const THUMBNAIL_EDGE_SETTING: &str = "thumbnail_long_edge";
+
+/// Estremi entro cui una miniatura resta una miniatura: sotto i 100 pixel non
+/// si riconosce una carta, sopra gli 800 non è più una miniatura ma una
+/// seconda copia del libro.
+pub const MIN_THUMBNAIL_EDGE: u32 = 100;
+pub const MAX_THUMBNAIL_EDGE: u32 = 800;
+
+/// Mette in coda lo scaricamento di una digitalizzazione: le carte, e da
+/// ognuna la sua miniatura.
 ///
 /// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
 /// priorità è alta perché è ciò che l'utente ha appena chiesto guardando lo
 /// schermo, e la coda deve preferirlo alle verifiche di fondo.
 ///
-/// Le miniature vanno **qui e non all'aggiunta della fonte** *(D6, corretta il
-/// 2026-08-15)*: la stima di «3 MB, trascurabili» era su duecento carte, e su un
-/// libro di novecento diventa un quarto d'ora di rete per qualcosa che serve
-/// solo a chi lavora offline. Finché il libro non si scarica, le miniature si
-/// leggono online come le carte. Sono un lavoro a parte, con priorità più
-/// bassa: si possono fermare senza fermare il libro, e non rallentano le carte.
+/// **Un lavoro solo, non due** *(D6, corretta il 2026-08-16)*: le miniature non
+/// si chiedono più alla biblioteca, si ricavano dalla carta appena scaricata.
+/// Ogni libro costava due richieste per carta a servizi che rispondono fra 1 e
+/// 19 secondi; adesso ne costa una, e la miniatura qualche decina di
+/// millisecondi di processore.
 #[tauri::command]
 pub async fn enqueue_source_download(
     jobs: tauri::State<'_, JobsState>,
@@ -35,47 +52,11 @@ pub async fn enqueue_source_download(
     version_id: Option<String>,
     size_tag: Option<String>,
 ) -> Result<JobRecord, String> {
-    let pages = enqueue(
-        &jobs,
-        handler::JOB_TYPE,
-        "download",
-        10,
-        provider_key.clone(),
-        manifest_url.clone(),
-        version_id.clone(),
-        size_tag,
-    )
-    .await?;
-
-    // Le miniature seguono le carte. Se non si riesce a metterle in coda, il
-    // libro si scarica lo stesso: si dice e si va avanti.
-    if let Err(error) = enqueue(
-        &jobs,
-        handler::THUMBNAILS_JOB_TYPE,
-        "thumbnails",
-        1,
-        provider_key,
-        manifest_url,
-        version_id,
-        None,
-    )
-    .await
-    {
-        log::warn!("job thumbnails not queued error={error}");
-    }
-
-    Ok(pages)
+    enqueue(&jobs, provider_key, manifest_url, version_id, size_tag).await
 }
 
-/// La messa in coda, uguale per carte e miniature: cambiano il tipo di lavoro,
-/// la priorità e il prefisso dell'identificativo, che tiene separati i due
-/// lavori sulla stessa digitalizzazione.
-#[allow(clippy::too_many_arguments)]
 async fn enqueue(
     jobs: &tauri::State<'_, JobsState>,
-    job_type: &str,
-    id_prefix: &str,
-    priority: i64,
     provider_key: String,
     manifest_url: String,
     version_id: Option<String>,
@@ -111,8 +92,13 @@ async fn enqueue(
         Some(explicit) => explicit,
         None => crate::jobs::store::read_setting(&conn, "download_size_cap")?
             .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| "2000".to_string()),
+            .unwrap_or_else(|| DEFAULT_SIZE_CAP.to_string()),
     };
+
+    // Il lato lungo delle miniature: adesso che le ricaviamo noi è una misura
+    // che decidiamo davvero, e non più quella che la biblioteca dava per
+    // ripiego. Si legge alla messa in coda, come il tetto.
+    let thumbnail_edge = thumbnail_edge(&conn)?;
 
     // Il nome dell'opera si scrive già adesso: in coda il pannello mostra
     // questo, e «Scaricamento» da solo non dice quale libro (D20).
@@ -128,7 +114,7 @@ async fn enqueue(
     // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
     // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
     // voleva vedere.
-    let id = format!("{id_prefix}:{version_id}");
+    let id = format!("{JOB_ID_PREFIX}:{version_id}");
     let existing = crate::jobs::store::get(&conn, &id)?;
     drop(conn);
 
@@ -152,13 +138,14 @@ async fn enqueue(
         "versionId": version_id,
         "manifestUrl": manifest_url,
         "sizeTag": size_tag,
+        "thumbnailEdge": thumbnail_edge,
     });
 
     jobs.0
         .submit(&NewJob {
             id,
-            job_type: job_type.to_string(),
-            priority,
+            job_type: handler::JOB_TYPE.to_string(),
+            priority: DOWNLOAD_PRIORITY,
             config: config.to_string(),
             max_attempts: profile.max_attempts,
             depends_on_job_id: None,
@@ -166,4 +153,14 @@ async fn enqueue(
             message: title,
         })
         .await
+}
+
+/// Il lato lungo delle miniature, come lo dice l'impostazione. Un valore
+/// illeggibile o fuori scala non ferma lo scaricamento: si torna al
+/// predefinito, che è una misura che funziona sempre.
+fn thumbnail_edge(conn: &rusqlite::Connection) -> Result<u32, String> {
+    let configured = crate::jobs::store::read_setting(conn, THUMBNAIL_EDGE_SETTING)?
+        .and_then(|value| value.trim().parse::<u32>().ok())
+        .filter(|edge| (MIN_THUMBNAIL_EDGE..=MAX_THUMBNAIL_EDGE).contains(edge));
+    Ok(configured.unwrap_or(crate::images::DEFAULT_THUMBNAIL_EDGE))
 }

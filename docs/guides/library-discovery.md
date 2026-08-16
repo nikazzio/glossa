@@ -45,7 +45,7 @@ Ogni riga della Biblioteca ha quattro comandi, sempre presenti: **scarica**, **v
 
 **Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le carte già presenti non vengono richieste di nuovo.
 
-Insieme alle pagine Glossa scarica anche le **miniature** del libro, come lavoro a parte: servono a sfogliarlo senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
+Da ogni carta che scarica Glossa ricava la sua **miniatura**, senza chiedere niente in più alla biblioteca: servono a sfogliare il libro senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
 
 **Libera spazio** cancella le carte scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le carte si riscaricano quando servono. La conferma dice quanto stai liberando.
 
