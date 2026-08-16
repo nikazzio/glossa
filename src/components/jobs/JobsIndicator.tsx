@@ -46,8 +46,8 @@ export function JobsIndicator() {
         t('jobs.activeCount', { count: summary.activeCount }),
         summary.allWaiting
           ? eta
-            ? t('jobs.waitingResumesIn', { eta })
-            : t('jobs.waiting')
+            ? t('jobs.retryingIn', { eta })
+            : t('jobs.retrying')
           : eta
             ? t('jobs.etaShort', { eta })
             : null,

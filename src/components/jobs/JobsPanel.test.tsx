@@ -87,8 +87,12 @@ describe('pannello dei lavori', () => {
     // Stessa immobilità, significato opposto (D17).
     renderPanel([job({ status: 'queued', nextAttemptAt: '2026-08-13 10:00:00', etaSeconds: 480 })]);
 
-    expect(screen.getByText('jobs.waitingResumesIn')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'jobs.resume' })).toBeInTheDocument();
+    expect(screen.getByText('jobs.retryingIn')).toBeInTheDocument();
+    // Non è in pausa: il comando serve a non aspettare l'attesa, e resta
+    // possibile fermarlo davvero.
+    expect(screen.getByRole('button', { name: 'jobs.retryNow' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'jobs.resume' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'jobs.pause' })).toBeInTheDocument();
   });
 
   it('la barra di un lavoro fermo non è animata', () => {

@@ -239,6 +239,10 @@ impl JobHandler for SourceDownloadJob {
         let declared: DeclaredSizes = Default::default();
         ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
+        // Da qui si misura il ritmo vero: quante pagine sono passate in questo
+        // avvio e in quanto tempo. Una ripresa riparte da zero di misura, che è
+        // giusto — la biblioteca di adesso non è quella di ieri.
+        let started_at = std::time::Instant::now();
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
         // una volta sola evita una somma per ogni carta. Sono le **carte**: le
         // miniature pesano una frazione e conteggiarle renderebbe la stima meno
@@ -252,7 +256,12 @@ impl JobHandler for SourceDownloadJob {
                 return Ok(stopped_outcome(&ctx, &staging));
             }
 
-            let eta = estimated_seconds(total.saturating_sub(done), &profile);
+            let eta = estimated_seconds(
+                total.saturating_sub(done),
+                done.saturating_sub(start),
+                started_at.elapsed(),
+                &profile,
+            );
             let progress = f64::from(done) / f64::from(total.max(1));
             let fetched = self
                 .fetch_page_declaring_long_waits(
@@ -289,7 +298,12 @@ impl JobHandler for SourceDownloadJob {
             ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
                 Some(&title),
-                Some(estimated_seconds(total.saturating_sub(done), &profile)),
+                Some(estimated_seconds(
+                    total.saturating_sub(done),
+                    done.saturating_sub(start),
+                    started_at.elapsed(),
+                    &profile,
+                )),
                 Some(&progress_detail(
                     done,
                     total,
@@ -1125,11 +1139,36 @@ async fn record_asset(ctx: &JobContext, row: AssetRow) -> Result<(), JobError> {
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
-/// Stima del tempo che manca (D17): si calcola dalla pausa dichiarata dal
-/// profilo, non dalla velocità osservata negli ultimi secondi, che con pause di
-/// 2,5–6 secondi oscilla troppo per essere utile.
-fn estimated_seconds(remaining: u32, profile: &NetworkProfile) -> i64 {
-    let per_page = profile.average_pause() + Duration::from_millis(500);
+/// Quante pagine servono prima di fidarsi del ritmo osservato. Con una o due
+/// la media è quella di un campione, non di un andamento.
+const PACE_SAMPLE: u32 = 3;
+
+/// Stima del tempo che manca *(D17, corretta il 2026-08-16 dopo averla vista
+/// sbagliare)*.
+///
+/// **Dal ritmo vero del lavoro**: pagine fatte diviso tempo trascorso da quando
+/// è partito. La prima stesura la calcolava dalla pausa dichiarata dal profilo,
+/// per non far oscillare il numero con la velocità degli ultimi secondi — ma
+/// quella pausa è il minimo che aspettiamo noi, non quanto ci mette la
+/// biblioteca a rispondere: su archive.org dice 1,6 secondi a pagina dove la
+/// realtà misurata va da 1 a 19, e un manoscritto annunciato in sei minuti ne
+/// prende quaranta.
+///
+/// La media **da inizio lavoro** non oscilla come una media sugli ultimi
+/// secondi, che era il difetto che la prima stesura voleva evitare: si assesta
+/// e cala mentre il lavoro procede. Finché le pagine fatte sono poche resta la
+/// pausa dichiarata, che è l'unica cosa che si sa prima di aver misurato.
+fn estimated_seconds(
+    remaining: u32,
+    done_now: u32,
+    elapsed: Duration,
+    profile: &NetworkProfile,
+) -> i64 {
+    let per_page = if done_now >= PACE_SAMPLE {
+        elapsed / done_now
+    } else {
+        profile.average_pause() + Duration::from_millis(500)
+    };
     (u64::from(remaining) * per_page.as_millis() as u64 / 1000) as i64
 }
 
@@ -1153,14 +1192,36 @@ mod tests {
     }
 
     #[test]
-    fn the_estimate_grows_with_the_pages_left() {
-        let quick = estimated_seconds(10, &CAUTIOUS);
-        let long = estimated_seconds(210, &GALLICA);
+    fn before_having_measured_anything_the_estimate_comes_from_the_declared_pause() {
+        let quick = estimated_seconds(10, 0, Duration::ZERO, &CAUTIOUS);
+        let long = estimated_seconds(210, 0, Duration::ZERO, &GALLICA);
 
         assert!(long > quick);
-        // Con i valori di Gallica un manoscritto di 210 carte non scende sotto
+        // Con i valori di Gallica un manoscritto di 210 pagine non scende sotto
         // il quarto d'ora: se la stima dicesse meno, mentirebbe.
         assert!(long >= 900, "stimati {long} secondi");
+    }
+
+    #[test]
+    fn once_it_has_measured_the_estimate_follows_the_real_pace() {
+        // La pausa dichiarata da archive.org è poco più di un secondo, ma il
+        // servizio ci mette dieci volte tanto: la stima deve dire quello che
+        // sta succedendo, non quello che avevamo promesso di aspettare.
+        let measured = estimated_seconds(100, 10, Duration::from_secs(120), &CAUTIOUS);
+
+        assert_eq!(measured, 1_200, "12 secondi a pagina per 100 pagine");
+        assert!(measured > estimated_seconds(100, 0, Duration::ZERO, &CAUTIOUS));
+    }
+
+    #[test]
+    fn two_pages_are_not_a_pace() {
+        // Con un campione così piccolo una pagina lenta falserebbe tutto.
+        let barely_started = estimated_seconds(100, 2, Duration::from_secs(60), &CAUTIOUS);
+
+        assert_eq!(
+            barely_started,
+            estimated_seconds(100, 0, Duration::ZERO, &CAUTIOUS)
+        );
     }
 
     fn config(size_tag: &str) -> DownloadConfig {

@@ -1017,9 +1017,30 @@ opposti, e vanno dette diversamente.
 ### Tempo stimato
 
 **Obbligatorio**, non facoltativo: un lavoro che dura un quarto d'ora senza una
-stima sembra bloccato. Si calcola dalle pagine completate e dalla pausa media
-dichiarata dal profilo, non dalla velocità osservata degli ultimi secondi, che
-con pause di 2,5–6 secondi oscilla troppo per essere utile.
+stima sembra bloccato.
+
+*Corretta il 2026-08-16, dopo averla vista sbagliare.* Si calcola dal **ritmo
+vero del lavoro**: pagine fatte diviso tempo trascorso da quando è partito.
+
+La prima stesura diceva «dalla pausa media dichiarata dal profilo, non dalla
+velocità osservata degli ultimi secondi, che oscilla troppo». La seconda metà
+resta valida, la prima no: quella pausa è **il minimo che aspettiamo noi**, non
+quanto ci mette la biblioteca a rispondere. Su archive.org dice 1,6 secondi a
+pagina dove la realtà misurata va da 1 a 19, e un manoscritto annunciato in sei
+minuti ne prende quaranta.
+
+La media **da inizio lavoro** non oscilla come quella sugli ultimi secondi: si
+assesta e cala mentre il lavoro procede. Finché le pagine fatte sono meno di
+tre resta la pausa dichiarata, che è l'unica cosa che si sa prima di aver
+misurato.
+
+### Fermo per riprovare non è fermo per volontà
+
+*Aggiunta il 2026-08-16.* Un lavoro che ha incassato un errore ritentabile
+aspetta e **riprova da solo** (D16). Nel pannello mostrava lo stesso comando di
+un lavoro in pausa, e si leggeva come fermo per scelta di chi guarda. Sono due
+stati diversi e vanno detti diversamente: «riprovo da solo fra 2 minuti», con
+il comando per non aspettare l'attesa e quello per fermarlo davvero.
 
 ### Movimento ridotto
 

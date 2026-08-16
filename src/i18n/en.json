@@ -1913,8 +1913,6 @@
     "failedCount_one": "{{count}} failed job",
     "failedCount_other": "{{count}} failed jobs",
     "etaShort": "~{{eta}}",
-    "waiting": "waiting",
-    "waitingResumesIn": "waiting · resumes in {{eta}}",
     "running": "running",
     "queued": "queued",
     "paused": "paused",
@@ -1994,6 +1992,9 @@
       "lastIndex": "number",
       "lastBytes": "size on disk",
       "available": "available resolutions"
-    }
+    },
+    "retryNow": "Retry now",
+    "retryingIn": "retrying on its own in {{eta}}",
+    "retrying": "retrying on its own"
   }
 }

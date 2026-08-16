@@ -141,9 +141,22 @@ function JobRow({ job }: { job: Job }) {
               <Pause size={11} />
             </TerminalIconButton>
           )}
-          {(job.status === 'paused' || waitingToRetry) && (
+          {job.status === 'paused' && (
             <TerminalIconButton label={t('jobs.resume')} onClick={() => void resume(job.id)}>
               <Play size={11} />
+            </TerminalIconButton>
+          )}
+          {/* Un lavoro che riproverà da solo **non è in pausa**: finché mostrava
+              lo stesso pulsante sembrava fermo per volontà di chi guarda. Qui
+              il comando serve a non aspettare l'attesa, non a farlo ripartire. */}
+          {waitingToRetry && (
+            <TerminalIconButton label={t('jobs.retryNow')} onClick={() => void resume(job.id)}>
+              <Play size={11} />
+            </TerminalIconButton>
+          )}
+          {waitingToRetry && (
+            <TerminalIconButton label={t('jobs.pause')} onClick={() => void pause(job.id)}>
+              <Pause size={11} />
             </TerminalIconButton>
           )}
           {job.status === 'error' && (
@@ -293,7 +306,7 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
     const countdown = formatEta(retryCountdownSeconds(job));
     return (
       <span className="text-terminal-warn">
-        {countdown ? t('jobs.waitingResumesIn', { eta: countdown }) : t('jobs.waiting')}
+        {countdown ? t('jobs.retryingIn', { eta: countdown }) : t('jobs.retrying')}
       </span>
     );
   }

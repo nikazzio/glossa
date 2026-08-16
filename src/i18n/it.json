@@ -1913,8 +1913,6 @@
     "failedCount_one": "{{count}} lavoro non riuscito",
     "failedCount_other": "{{count}} lavori non riusciti",
     "etaShort": "~{{eta}}",
-    "waiting": "in attesa",
-    "waitingResumesIn": "in attesa · riprende fra {{eta}}",
     "running": "in corso",
     "queued": "in coda",
     "paused": "in pausa",
@@ -1994,6 +1992,9 @@
       "lastIndex": "numero",
       "lastBytes": "peso",
       "available": "risoluzioni disponibili"
-    }
+    },
+    "retryNow": "Riprova adesso",
+    "retryingIn": "riprovo da solo fra {{eta}}",
+    "retrying": "riprovo da solo"
   }
 }
