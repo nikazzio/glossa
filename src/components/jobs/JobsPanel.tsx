@@ -46,7 +46,7 @@ export function JobsPanel({ panelId, labelledBy }: { panelId: string; labelledBy
       {isEmpty ? (
         <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 py-12 text-center">
           <p className="text-sm text-terminal-secondary">{t('jobs.emptyTitle')}</p>
-          <p className="text-xs text-terminal-dim">{t('jobs.emptyDescription')}</p>
+          <p className="text-xs text-terminal-muted">{t('jobs.emptyDescription')}</p>
         </div>
       ) : (
         <>
@@ -115,24 +115,24 @@ function JobRow({ job }: { job: Job }) {
             className={`shrink-0 text-terminal-dim motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
             aria-hidden="true"
           />
-          <span className="shrink-0 rounded-sm border border-terminal-line px-1 py-px text-[9px] uppercase tracking-wide text-terminal-secondary">
+          <span className="shrink-0 rounded-sm border border-terminal-line px-1 py-px text-[10px] uppercase tracking-wide text-terminal-secondary">
             {t(`jobs.short.${job.jobType}`, { defaultValue: job.jobType })}
           </span>
           <span className="min-w-0 flex-1 truncate text-xs text-terminal-ink">{description}</span>
           {detail.units && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-terminal-muted">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {detail.units.done}/{detail.units.total}
             </span>
           )}
           {detail.bytes && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-terminal-muted">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {humanSize(detail.bytes.downloaded)}
               {detail.bytes.estimated > 0 && ` / ~${humanSize(detail.bytes.estimated)}`}
             </span>
           )}
         </button>
 
-        <span className="shrink-0 whitespace-nowrap text-[11px] text-terminal-muted">
+        <span className="shrink-0 whitespace-nowrap text-xs text-terminal-muted">
           <JobStateLabel job={job} eta={eta} />
         </span>
         <div className="flex shrink-0 items-center gap-1">
@@ -188,8 +188,8 @@ function JobRow({ job }: { job: Job }) {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
-      <span className="shrink-0 text-[10px] uppercase tracking-wide text-terminal-dim">{label}</span>
-      <span className="min-w-0 truncate font-mono text-[11px] text-terminal-ink">{value}</span>
+      <span className="shrink-0 text-[11px] uppercase tracking-wide text-terminal-secondary">{label}</span>
+      <span className="min-w-0 truncate font-mono text-xs text-terminal-ink">{value}</span>
     </div>
   );
 }
@@ -213,56 +213,72 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
         })
       : '—';
 
+  // Due blocchi, perché sono due cose diverse: quello che vale per **tutto il
+  // lavoro** e quello che vale per **l'ultima pagina** passata. Mescolarli
+  // faceva leggere il peso di una pagina come se fosse quello del libro.
+  const work = [
+    [t('jobs.detail.type'), t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })],
+    [t('jobs.detail.phase'), job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : '—'],
+    detail.units && [
+      t(`jobs.detail.units.${detail.units.label}`, { defaultValue: t('jobs.detail.units.generic') }),
+      `${detail.units.done} / ${detail.units.total}`,
+    ],
+    detail.bytes && [
+      t('jobs.detail.bytes'),
+      detail.bytes.estimated > 0
+        ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
+        : humanSize(detail.bytes.downloaded),
+    ],
+    detail.size && [t('jobs.detail.size'), detail.size],
+    detail.available?.length && [t('jobs.detail.available'), detail.available.join(' · ')],
+    detail.provider && [t('jobs.detail.provider'), detail.provider],
+    detail.host && [t('jobs.detail.host'), detail.host],
+    detail.level && [
+      t('jobs.detail.level'),
+      t(`jobs.detail.levelValue.${detail.level}`, { defaultValue: detail.level }),
+    ],
+    detail.intact !== undefined && [t('jobs.detail.intact'), String(detail.intact)],
+    detail.missing !== undefined && [t('jobs.detail.missing'), String(detail.missing)],
+    detail.corrupt !== undefined && [t('jobs.detail.corrupt'), String(detail.corrupt)],
+    detail.orphans && [
+      t('jobs.detail.orphans'),
+      `${detail.orphans.count} · ${humanSize(detail.orphans.bytes)}`,
+    ],
+    [t('jobs.detail.attempt'), `${job.attemptCount} / ${job.maxAttempts}`],
+    [t('jobs.detail.started'), time(job.createdAt)],
+    [t('jobs.detail.updated'), time(job.updatedAt)],
+    job.error && [t('jobs.detail.error'), job.error],
+    [t('jobs.detail.id'), job.id],
+  ].filter((entry): entry is [string, string] => Array.isArray(entry));
+
+  const lastUnit = detail.last
+    ? ([
+        [t('jobs.detail.lastIndex'), String(detail.last.index)],
+        [t('jobs.detail.lastBytes'), humanSize(detail.last.bytes)],
+      ] as Array<[string, string]>)
+    : [];
+
   return (
-    <div className="grid grid-cols-1 gap-x-6 gap-y-1 border-t border-terminal-line pt-2 sm:grid-cols-2">
-      <Field label={t('jobs.detail.type')} value={t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })} />
-      <Field
-        label={t('jobs.detail.phase')}
-        value={job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : '—'}
-      />
-      {detail.units && (
-        <Field
-          label={t(`jobs.detail.units.${detail.units.label}`, { defaultValue: t('jobs.detail.units.generic') })}
-          value={`${detail.units.done} / ${detail.units.total}`}
-        />
+    <div className="flex flex-col gap-2 border-t border-terminal-line pt-2">
+      <FieldGroup title={t('jobs.detail.groupWork')} fields={work} />
+      {lastUnit.length > 0 && (
+        <FieldGroup title={t('jobs.detail.groupLast')} fields={lastUnit} />
       )}
-      {detail.bytes && (
-        <Field
-          label={t('jobs.detail.bytes')}
-          value={
-            detail.bytes.estimated > 0
-              ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
-              : humanSize(detail.bytes.downloaded)
-          }
-        />
-      )}
-      {detail.last && (
-        <Field
-          label={t('jobs.detail.last')}
-          value={`${detail.last.index} · ${humanSize(detail.last.bytes)}`}
-        />
-      )}
-      {detail.size && <Field label={t('jobs.detail.size')} value={detail.size} />}
-      {detail.provider && <Field label={t('jobs.detail.provider')} value={detail.provider} />}
-      {detail.host && <Field label={t('jobs.detail.host')} value={detail.host} />}
-      {detail.level && (
-        <Field label={t('jobs.detail.level')} value={t(`jobs.detail.levelValue.${detail.level}`, { defaultValue: detail.level })} />
-      )}
-      {detail.intact !== undefined && <Field label={t('jobs.detail.intact')} value={String(detail.intact)} />}
-      {detail.missing !== undefined && <Field label={t('jobs.detail.missing')} value={String(detail.missing)} />}
-      {detail.corrupt !== undefined && <Field label={t('jobs.detail.corrupt')} value={String(detail.corrupt)} />}
-      {detail.orphans && (
-        <Field
-          label={t('jobs.detail.orphans')}
-          value={`${detail.orphans.count} · ${humanSize(detail.orphans.bytes)}`}
-        />
-      )}
-      <Field label={t('jobs.detail.attempt')} value={`${job.attemptCount} / ${job.maxAttempts}`} />
-      <Field label={t('jobs.detail.started')} value={time(job.createdAt)} />
-      <Field label={t('jobs.detail.updated')} value={time(job.updatedAt)} />
-      {job.error && <Field label={t('jobs.detail.error')} value={job.error} />}
-      <Field label={t('jobs.detail.id')} value={job.id} />
     </div>
+  );
+}
+
+/** Un blocco di dettagli con il suo titolo: dice **di cosa** parlano i numeri. */
+function FieldGroup({ title, fields }: { title: string; fields: Array<[string, string]> }) {
+  return (
+    <section>
+      <h4 className="mb-1 text-[11px] uppercase tracking-wide text-terminal-secondary">{title}</h4>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+        {fields.map(([label, value]) => (
+          <Field key={label} label={label} value={value} />
+        ))}
+      </div>
+    </section>
   );
 }
 

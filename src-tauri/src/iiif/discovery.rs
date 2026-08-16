@@ -47,6 +47,9 @@ pub struct DiscoveryResult {
     pub language: Option<String>,
     pub volume: Option<String>,
     pub subjects: Vec<String>,
+    /// Quante pagine dichiara la biblioteca, quando lo dichiara: è il dato con
+    /// cui si decide se scaricare un'opera, e va visto prima di aprirla.
+    pub item_count: Option<usize>,
     pub manifest_url: String,
 }
 
@@ -77,6 +80,19 @@ fn text(value: Option<&Value>) -> Option<String> {
         Value::String(value) => Some(value.clone()),
         Value::Array(values) => values.iter().find_map(|item| text(Some(item))),
         Value::Object(values) => values.values().find_map(|value| text(Some(value))),
+        _ => None,
+    }
+}
+
+/// Un conteggio dichiarato dalla biblioteca. Archive.org lo manda a volte come
+/// numero e a volte come stringa, e in qualche record non c'è affatto: in quel
+/// caso resta vuoto invece di diventare zero, che vorrebbe dire «nessuna
+/// pagina».
+fn count(value: Option<&Value>) -> Option<usize> {
+    match value? {
+        Value::Number(number) => number.as_u64().map(|value| value as usize),
+        Value::String(text) => text.trim().parse::<usize>().ok(),
+        Value::Array(values) => values.iter().find_map(|item| count(Some(item))),
         _ => None,
     }
 }
@@ -198,7 +214,16 @@ async fn search_archive(
         .get(base_url)
         .query(&[
             ("q", query),
-            ("fl[]", "identifier,title,creator,year,description,mediatype,collection,language,subject,volume"),
+            // Tutti i campi utili in una richiesta sola: chiederne uno in più
+            // non costa niente, e andarlo a recuperare dopo costerebbe una
+            // richiesta per risultato. `imagecount` è il numero di pagine, che
+            // è il dato con cui si decide se scaricare un'opera.
+            (
+                "fl[]",
+                "identifier,title,creator,year,date,publisher,description,mediatype,collection,\
+                 language,subject,volume,imagecount,downloads,item_size,licenseurl,rights,\
+                 contributor,source,call_number",
+            ),
             ("rows", "20"),
             ("page", &page.to_string()),
             ("output", "json"),
@@ -231,6 +256,7 @@ async fn search_archive(
                 language: text(document.get("language")),
                 volume: text(document.get("volume")),
                 subjects: texts(document.get("subject")),
+                item_count: count(document.get("imagecount")),
                 manifest_url: format!("https://iiif.archive.org/iiif/{id}/manifest.json"),
                 id,
             })

@@ -801,7 +801,9 @@
       "sizeCap": "Misura delle carte",
       "sizeCapInherited": "come dice la biblioteca",
       "sizeCapLoadFailed": "Impossibile leggere la misura scelta per quest'opera",
-      "sizeCapSaveFailed": "Impossibile salvare la misura per quest'opera"
+      "sizeCapSaveFailed": "Impossibile salvare la misura per quest'opera",
+      "pageCount_one": "{{count}} pagina",
+      "pageCount_other": "{{count}} pagine"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -926,7 +928,9 @@
       "addToLibraryFailed": "Aggiunta alla Biblioteca non riuscita. Riprova.",
       "addToWorkspace": "Aggiungi a un workspace",
       "noWorkspaces": "Nessun workspace disponibile. Creane uno prima di collegare una fonte.",
-      "viewOptions": "Visualizzazione"
+      "viewOptions": "Visualizzazione",
+      "pageCount_one": "{{count}} pagina",
+      "pageCount_other": "{{count}} pagine"
     },
     "stats": {
       "projects": "Progetti",
@@ -1964,7 +1968,6 @@
       "type": "tipo",
       "phase": "fase",
       "bytes": "scaricato",
-      "last": "ultima",
       "size": "risoluzione",
       "provider": "biblioteca",
       "host": "host",
@@ -1987,7 +1990,12 @@
       "levelValue": {
         "quick": "rapida",
         "full": "completa"
-      }
+      },
+      "groupWork": "questa opera",
+      "groupLast": "ultima pagina scaricata",
+      "lastIndex": "numero",
+      "lastBytes": "peso",
+      "available": "risoluzioni disponibili"
     }
   }
 }

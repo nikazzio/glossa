@@ -133,6 +133,7 @@ describe('classifySourceKind', () => {
     language: null,
     volume: null,
     subjects: [],
+    itemCount: null,
     manifestUrl: 'https://example.test/r1',
     ...overrides,
   });

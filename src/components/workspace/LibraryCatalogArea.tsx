@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   Link2,
   List,
+  Loader2,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -204,6 +205,13 @@ function CatalogEntryRow({
             done: summary.presentPages,
             total: summary.expectedPages,
           });
+  // Quante pagine ha l'opera si vede **senza aprire niente**: è il dato che
+  // decide se scaricarla o no. Manca solo per le opere aggiunte da una
+  // biblioteca che non lo dichiara, e lì non si inventa.
+  const pageCount =
+    entry.expectedPages !== null && entry.expectedPages > 0
+      ? t('areas.library.pageCount', { count: entry.expectedPages })
+      : null;
 
   /**
    * La chiave con cui questa fonte vive nel deposito: prima quella dei file già
@@ -343,7 +351,9 @@ function CatalogEntryRow({
             {entry.source.title}
           </span>
           {meta && <span className="mt-0.5 block truncate text-xs text-editorial-muted">{meta}</span>}
-          <span className="mt-1 block text-[11px] text-editorial-muted">{availability}</span>
+          <span className="mt-1 block text-[11px] text-editorial-muted">
+            {[pageCount, availability].filter(Boolean).join(' · ')}
+          </span>
         </button>
       </div>
 
@@ -369,9 +379,15 @@ function CatalogEntryRow({
           size="sm"
           onClick={() => void startDownload()}
           disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
-          title={t('areas.library.download')}
+          title={runningJob ? t('areas.library.downloadRunning') : t('areas.library.download')}
         >
-          <Download size={13} />
+          {/* Mentre il lavoro gira il comando lo dice da sé: la percentuale sta
+              altrove, e un pulsante spento senza motivo visibile sembra rotto. */}
+          {runningJob ? (
+            <Loader2 size={13} className="motion-safe:animate-spin" />
+          ) : (
+            <Download size={13} />
+          )}
         </IconButton>
         <IconButton
           size="sm"

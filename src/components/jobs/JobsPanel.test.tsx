@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { JobsPanel } from './JobsPanel';
 import { useJobsStore } from '../../stores/jobsStore';
@@ -151,6 +151,26 @@ describe('attesa per i limiti della biblioteca', () => {
     renderPanel([job({ status: 'running', jobType: 'vault_verification', message: 'Beatus' })]);
 
     expect(screen.getByText('jobs.short.vault_verification')).toBeInTheDocument();
+  });
+
+  it('divide quello che vale per l opera da quello che vale per l ultima pagina', () => {
+    // Il peso di una pagina letto come se fosse quello del libro era la
+    // confusione da togliere.
+    renderPanel([
+      job({
+        status: 'running',
+        detail: JSON.stringify({
+          size: '1299,',
+          available: ['649×963', '1299×1925'],
+          last: { index: 34, bytes: 1_420_000 },
+        }),
+      }),
+    ]);
+    fireEvent.click(screen.getByText('Beatus, 34/210'));
+
+    expect(screen.getByText('jobs.detail.groupWork')).toBeInTheDocument();
+    expect(screen.getByText('jobs.detail.groupLast')).toBeInTheDocument();
+    expect(screen.getByText('649×963 · 1299×1925')).toBeInTheDocument();
   });
 
   it('mostra quanto è arrivato e quanto si prevede in tutto', () => {

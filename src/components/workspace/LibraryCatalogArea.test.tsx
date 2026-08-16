@@ -76,13 +76,30 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByText('areas.library.empty')).toBeInTheDocument();
   });
 
-  it('elenca le fonti con quante carte sono davvero sul computer', () => {
+  it('elenca le fonti con quante pagine sono davvero sul computer', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
 
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.getByText('areas.library.availabilityPartial')).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+  });
+
+  it('dice quante pagine ha l opera senza doverla aprire', () => {
+    // È il dato con cui si decide se scaricarla o no.
+    useSourceLibraryStore.setState({ catalog: [entry({ expectedPages: 210 })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.pageCount/)).toBeInTheDocument();
+  });
+
+  it('senza un numero di pagine dichiarato non se ne inventa uno', () => {
+    useSourceLibraryStore.setState({ catalog: [entry({ expectedPages: null })] });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.queryByText(/areas\.library\.pageCount/)).not.toBeInTheDocument();
   });
 
   it('offre lo scaricamento e la rimozione per ogni fonte', () => {

@@ -233,8 +233,10 @@ impl JobHandler for SourceDownloadJob {
             .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
             .map(|saved| saved.done.min(total))
             .unwrap_or(0);
-        // Le misure decise per gruppo di carte valgono per tutto il lavoro.
+        // Le misure decise per gruppo di carte valgono per tutto il lavoro, e
+        // con loro le alternative che la biblioteca ha dichiarato.
         let sizes: SizeCache = Default::default();
+        let declared: DeclaredSizes = Default::default();
         ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
         // Quanto pesa già sul disco: serve al messaggio del pannello, e leggerlo
@@ -254,8 +256,8 @@ impl JobHandler for SourceDownloadJob {
             let progress = f64::from(done) / f64::from(total.max(1));
             let fetched = self
                 .fetch_page_declaring_long_waits(
-                    &ctx, &client, &profile, &config, &manifest, &sizes, &root, &staging, page,
-                    progress, &title, eta, &signals,
+                    &ctx, &client, &profile, &config, &manifest, &sizes, &declared, &root,
+                    &staging, page, progress, &title, eta, &signals,
                 )
                 .await
                 .inspect_err(|_| discard(&staging))?;
@@ -295,6 +297,7 @@ impl JobHandler for SourceDownloadJob {
                     page.index,
                     added,
                     &self.requested_size(&sizes, page, &config),
+                    &known_sizes(&declared),
                     &config.provider_key,
                     &host_of(&page.image_service).unwrap_or_default(),
                 )),
@@ -327,6 +330,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         root: &Path,
         staging: &Path,
         page: &Page,
@@ -336,7 +340,7 @@ impl SourceDownloadJob {
         signals: &Signals<'_>,
     ) -> Result<Option<u64>, JobError> {
         let work = self.fetch_page(
-            ctx, client, profile, config, manifest, sizes, root, staging, page, signals,
+            ctx, client, profile, config, manifest, sizes, declared, root, staging, page, signals,
         );
         tokio::pin!(work);
 
@@ -373,6 +377,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         root: &Path,
         staging: &Path,
         page: &Page,
@@ -436,7 +441,9 @@ impl SourceDownloadJob {
         }
 
         let (fetched, url) = match self
-            .fetch_at_best_size(ctx, client, profile, config, manifest, sizes, page, signals)
+            .fetch_at_best_size(
+                ctx, client, profile, config, manifest, sizes, declared, page, signals,
+            )
             .await?
         {
             Some(found) => found,
@@ -625,6 +632,7 @@ impl SourceDownloadJob {
         config: &DownloadConfig,
         manifest: &super::manifest::Manifest,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Option<(super::fetch::Fetched, String)>, JobError> {
@@ -638,7 +646,9 @@ impl SourceDownloadJob {
                 Some(token) => token,
                 None => {
                     let Some(token) = self
-                        .negotiate_size(ctx, client, profile, config, sizes, page, signals)
+                        .negotiate_size(
+                            ctx, client, profile, config, sizes, declared, page, signals,
+                        )
                         .await?
                     else {
                         return Ok(None);
@@ -663,6 +673,7 @@ impl SourceDownloadJob {
         profile: &NetworkProfile,
         config: &DownloadConfig,
         sizes: &SizeCache,
+        declared: &DeclaredSizes,
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Option<size::SizeToken>, JobError> {
@@ -683,7 +694,10 @@ impl SourceDownloadJob {
         };
 
         let token = match serde_json::from_slice::<serde_json::Value>(&fetched.bytes) {
-            Ok(info) => size::from_info(&info, cap),
+            Ok(info) => {
+                remember_sizes(declared, &size::available_sizes(&info));
+                size::from_info(&info, cap)
+            }
             Err(error) => {
                 // Descrittore illeggibile: si continua con il riquadro, che non
                 // ingrandisce mai, invece di fermare lo scaricamento.
@@ -709,6 +723,36 @@ impl SourceDownloadJob {
         remember(sizes, page, &token);
         Ok(Some(token))
     }
+}
+
+/// Le misure che la biblioteca dichiara di saper servire, raccolte leggendo i
+/// descrittori. Sono le alternative fra cui la scelta è stata fatta: senza,
+/// «1299» da solo non dice se era il massimo o il minimo disponibile.
+type DeclaredSizes = std::sync::Mutex<Vec<(u32, u32)>>;
+
+fn remember_sizes(sizes: &DeclaredSizes, declared: &[(u32, u32)]) {
+    let mut known = match sizes.lock() {
+        Ok(known) => known,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    for size in declared {
+        if !known.contains(size) {
+            known.push(*size);
+        }
+    }
+    known.sort_unstable_by_key(|(width, height)| (*width).max(*height));
+}
+
+/// Le alternative dichiarate, come le legge il pannello: `649×963`.
+fn known_sizes(sizes: &DeclaredSizes) -> Vec<String> {
+    let known = match sizes.lock() {
+        Ok(known) => known.clone(),
+        Err(poisoned) => poisoned.into_inner().clone(),
+    };
+    known
+        .into_iter()
+        .map(|(width, height)| format!("{width}×{height}"))
+        .collect()
 }
 
 /// Misura decisa per ogni gruppo di carte con le stesse dimensioni.
@@ -794,6 +838,7 @@ fn progress_detail(
     last_page: u32,
     last_bytes: u64,
     size_token: &str,
+    available_sizes: &[String],
     provider: &str,
     host: &str,
 ) -> String {
@@ -807,6 +852,9 @@ fn progress_detail(
         "bytes": { "downloaded": bytes, "estimated": estimated },
         "last": { "index": last_page, "bytes": last_bytes },
         "size": size_token,
+        // Le alternative fra cui la scelta è stata fatta: «1299» da solo non
+        // dice se era il massimo o il minimo che la biblioteca sa servire.
+        "available": available_sizes,
         "provider": provider,
         "host": host,
     })
@@ -1192,6 +1240,11 @@ mod tests {
             34,
             1_420_000,
             "1299,",
+            &[
+                "649×963".to_string(),
+                "1299×1925".to_string(),
+                "2598×3850".to_string(),
+            ],
             "archive_org",
             "iiif.archive.org",
         );
@@ -1204,11 +1257,15 @@ mod tests {
         assert_eq!(parsed["bytes"]["estimated"], 48_234_496u64 / 34 * 352);
         assert_eq!(parsed["last"]["bytes"], 1_420_000);
         assert_eq!(parsed["size"], "1299,");
+        // Le alternative dichiarate dalla biblioteca: senza, «1299» non dice se
+        // era il massimo o il minimo che sa servire.
+        assert_eq!(parsed["available"][0], "649×963");
+        assert_eq!(parsed["available"][2], "2598×3850");
     }
 
     #[test]
     fn without_a_single_page_done_no_total_is_invented() {
-        let detail = progress_detail(0, 352, 0, 0, 0, "2000,", "gallica", "gallica.bnf.fr");
+        let detail = progress_detail(0, 352, 0, 0, 0, "2000,", &[], "gallica", "gallica.bnf.fr");
         let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
 
         assert_eq!(parsed["bytes"]["estimated"], 0);

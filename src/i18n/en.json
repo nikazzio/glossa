@@ -801,7 +801,9 @@
       "sizeCap": "Page size",
       "sizeCapInherited": "as the library says",
       "sizeCapLoadFailed": "Could not read the size chosen for this work",
-      "sizeCapSaveFailed": "Could not save the size for this work"
+      "sizeCapSaveFailed": "Could not save the size for this work",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -926,7 +928,9 @@
       "addToLibraryFailed": "Adding to Library failed. Try again.",
       "addToWorkspace": "Add to a workspace",
       "noWorkspaces": "No workspace available. Create one before linking a source.",
-      "viewOptions": "View"
+      "viewOptions": "View",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages"
     },
     "stats": {
       "projects": "Projects",
@@ -1964,7 +1968,6 @@
       "type": "type",
       "phase": "phase",
       "bytes": "downloaded",
-      "last": "last",
       "size": "resolution",
       "provider": "library",
       "host": "host",
@@ -1987,7 +1990,12 @@
       "levelValue": {
         "quick": "quick",
         "full": "full"
-      }
+      },
+      "groupWork": "this work",
+      "groupLast": "last page downloaded",
+      "lastIndex": "number",
+      "lastBytes": "size on disk",
+      "available": "available resolutions"
     }
   }
 }
