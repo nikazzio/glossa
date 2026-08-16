@@ -45,8 +45,8 @@ const ALLOWED_COLUMNS: Record<BackupTable, ReadonlySet<string>> = {
   transcription_documents:  new Set(['id','source_version_id','workspace_id','title','status','trashed_at','created_at','updated_at']),
   // I segmenti puntano a un asset che dopo il ripristino non c'è: il
   // riferimento resta, e torna valido quando l'opera viene riscaricata.
-  transcription_segments:   new Set(['id','document_id','position','label','asset_id']),
-  transcription_revisions:  new Set(['id','segment_id','revision_number','text','status','created_by','created_at']),
+  transcription_segments:   new Set(['id','document_id','position','label','asset_id','approved_revision_id']),
+  transcription_revisions:  new Set(['id','segment_id','revision_number','text','created_by','derived_from_revision_id','content_hash','created_at']),
   translation_origins:      new Set(['project_id','origin_type','transcription_document_id','source_version_id','import_note']),
   translation_revisions:    new Set(['id','translation_id','revision_number','text','created_by','derived_from_revision_id','content_hash','created_at']),
   provenance_events:        new Set(['id','occurred_at','event_type','entity_type','entity_id','workspace_id','actor','job_id','input_ref','output_ref','config','outcome','duration_ms','provider','model','prompt_version','input_tokens','output_tokens','cached_tokens','estimated_cost','source_language','target_language','error_kind','input_hash','output_hash']),

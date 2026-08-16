@@ -342,6 +342,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn transcription_revisions_have_no_status_column() {
+        // L'approvazione è un fatto che punta a una revisione, non uno stato
+        // scritto sulla revisione: uno storico che si modifica non è uno
+        // storico (D22).
+        let pool = migrated_pool().await;
+
+        let columns: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM pragma_table_info('transcription_revisions')")
+                .fetch_all(&pool)
+                .await
+                .expect("colonne delle revisioni");
+
+        assert!(!columns.iter().any(|name| name == "status"));
+        assert!(columns.iter().any(|name| name == "content_hash"));
+        assert!(columns
+            .iter()
+            .any(|name| name == "derived_from_revision_id"));
+
+        let segment: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM pragma_table_info('transcription_segments')")
+                .fetch_all(&pool)
+                .await
+                .expect("colonne dei segmenti");
+        assert!(segment.iter().any(|name| name == "approved_revision_id"));
+    }
+
+    #[tokio::test]
     async fn baseline_migration_seeds_default_workspace_on_a_fresh_database() {
         let pool = migrated_pool().await;
 

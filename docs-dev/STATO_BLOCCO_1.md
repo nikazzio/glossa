@@ -81,8 +81,6 @@ fatti, registro append-only con le colonne che serviranno all'area Analisi.
   a fare. Manca anche il controllo dello spazio libero prima di adottare una
   cartella: si avvisa e si lascia decidere, senza vietare.
 - **Notifiche di sistema** (D21): mai fatte.
-- **`transcription_revisions`** ha ancora la colonna `status`, che D22 vuole
-  allineata al modello a eventi.
 - **I tre livelli di riservatezza** di backup ed esportazioni (D33): aperto,
   solo Glossa, con password. Il terzo richiede una derivazione di chiave da
   password — la libreria per cifrare c'è già, quella per derivare no — e va

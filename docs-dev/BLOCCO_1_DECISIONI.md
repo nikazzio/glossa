@@ -1389,9 +1389,15 @@ distinti, ed è giusto che lo siano.
 
 ### Lo stesso vale per le trascrizioni
 
-`transcription_revisions` ha oggi una colonna `status` con `draft`, `approved`,
+`transcription_revisions` aveva una colonna `status` con `draft`, `approved`,
 `rejected`: stesso difetto, perché l'approvazione che si sposta obbliga a mutare
-lo storico. Va allineata al modello a eventi.
+lo storico.
+
+*Fatto il 2026-08-17.* La tabella ha la stessa forma di quella delle
+traduzioni — testo, chi l'ha scritta, da quale revisione deriva, impronta del
+contenuto — e il segmento porta il puntatore alla revisione approvata adesso.
+Nessun codice aveva ancora scritto una revisione di trascrizione, quindi la
+tabella è stata rifatta invece di rattoppata.
 
 ### Stato del documento
 
