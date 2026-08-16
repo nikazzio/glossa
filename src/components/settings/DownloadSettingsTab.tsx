@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Select } from '../ui';
+import { Info } from 'lucide-react';
+import { Select, Tooltip } from '../ui';
 import {
   DEFAULT_SIZE_CAP,
   DEFAULT_THUMBNAIL_EDGE,
@@ -18,9 +19,12 @@ import {
  * La politica di scaricamento (#422, D4).
  *
  * Il tetto è una **politica, non un pixel**: la misura effettiva è quella che
- * la biblioteca dichiara più vicina al tetto, sopra o sotto. Quello che si
- * sceglie qui vale per tutte le fonti; una biblioteca e una singola fonte
- * possono dire altro, e vincono in quest'ordine.
+ * la biblioteca dichiara più vicina, sopra o sotto. Vale per tutte le opere;
+ * una biblioteca e una singola opera possono dire altro, e vincono in
+ * quest'ordine.
+ *
+ * Le spiegazioni stanno **al passaggio del mouse**, non a schermo: un pannello
+ * di impostazioni si legge per le voci, non per la prosa.
  */
 export function DownloadSettingsTab() {
   const { t } = useTranslation();
@@ -73,13 +77,13 @@ export function DownloadSettingsTab() {
       id="settings-panel-download"
       role="tabpanel"
       aria-labelledby="settings-tab-download"
-      className="flex flex-col gap-6"
+      className="space-y-4"
     >
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-medium text-editorial-ink">
-            {t('settings.download.sizeCap')}
-          </span>
+      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+        {t('settings.download.sizes')}
+      </p>
+      <div className="space-y-3 border-y border-editorial-border/70 py-5">
+        <SettingRow label={t('settings.download.sizeCap')} hint={t('settings.download.sizeCapHint')}>
           <Select
             value={sizeCap}
             onChange={(value) => void changeSizeCap(value)}
@@ -92,17 +96,12 @@ export function DownloadSettingsTab() {
                   : t('settings.download.pixels', { value }),
             }))}
           />
-        </div>
-        <p className="text-[11px] leading-relaxed text-editorial-muted">
-          {t('settings.download.sizeCapHint')}
-        </p>
-      </section>
+        </SettingRow>
 
-      <section className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-medium text-editorial-ink">
-            {t('settings.download.thumbnailEdge')}
-          </span>
+        <SettingRow
+          label={t('settings.download.thumbnailEdge')}
+          hint={t('settings.download.thumbnailEdgeHint')}
+        >
           <Select
             value={String(thumbnailEdge)}
             onChange={(value) => void changeEdge(value)}
@@ -112,11 +111,35 @@ export function DownloadSettingsTab() {
               label: t('settings.download.pixels', { value }),
             }))}
           />
-        </div>
-        <p className="text-[11px] leading-relaxed text-editorial-muted">
-          {t('settings.download.thumbnailEdgeHint')}
-        </p>
-      </section>
+        </SettingRow>
+      </div>
+    </div>
+  );
+}
+
+/** Etichetta, spiegazione al passaggio del mouse, comando. */
+export function SettingRow({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-editorial-ink">
+        {label}
+        {hint && (
+          <Tooltip label={hint}>
+            <span className="text-editorial-muted" aria-label={hint}>
+              <Info size={12} />
+            </span>
+          </Tooltip>
+        )}
+      </span>
+      {children}
     </div>
   );
 }
