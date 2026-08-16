@@ -144,6 +144,26 @@ eliminano affatto.
 Le **richieste insieme non superano mai quattro**, qualunque cosa si scriva: il
 limite dipende dal loro server e serve a non farsi bloccare.
 
+## Il backup
+
+**Impostazioni del workspace → Backup** salva un file con tutto quello che non
+si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro
+storico, glossari, memoria di frasi e il registro del lavoro svolto.
+
+**Le immagini non ci sono, ed è voluto.** Si riprendono dalla biblioteca: un
+backup da 40 GB non lo fa nessuno, uno da pochi megabyte si fa ogni settimana.
+Il file però **sa quali opere erano sul computer e a che misura**, e al
+ripristino Glossa ti propone di riscaricarle. Se vuoi anche le immagini al
+sicuro, la strada è tenere il deposito in una cartella sincronizzata.
+
+Il file è compresso — il contenuto è testo, e si comprime di circa dieci volte
+— e porta con sé un'impronta: un backup interrotto a metà scrittura viene
+riconosciuto **prima** che il ripristino cominci, invece di lasciarti a metà
+strada con i dati già cancellati.
+
+**Il ripristino sostituisce tutto**: quello che c'è adesso viene rimpiazzato da
+quello che c'è nel file. La conferma lo dice, e non si torna indietro.
+
 ## Fermo non vuol dire rotto
 
 Un lavoro può restare immobile per minuti rispettando i limiti di una

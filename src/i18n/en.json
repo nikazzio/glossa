@@ -1027,7 +1027,11 @@
       "markdown": "Markdown detected",
       "docx-markdown": "DOCX to Markdown conversion",
       "footnotes": "Footnotes present"
-    }
+    },
+    "backupRedownloadTitle_one": "Download the work you had again?",
+    "backupRedownloadTitle_other": "Download again the {{count}} works you had?",
+    "backupRedownloadMessage": "The backup does not contain the images, but it knows which works were on your computer and at what size. You can take them back now, or later one by one from the Library.",
+    "backupRedownloadConfirm": "Download again"
   },
   "editor": {
     "write": "Write",
@@ -1554,6 +1558,8 @@
       "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
       "checkTitle": "The two vault checks",
       "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is.",
+      "backupTitle": "The backup",
+      "backupDesc": "Workspace settings → Backup saves a file with everything that cannot be downloaded again: the works' records, notes, transcriptions, translations with their history, glossaries, phrase memory and the record of the work done. The images are not in it on purpose — they come back from the library — but the file knows which works were on your computer and at what size, and on restore Glossa offers to download them again. The file is compressed and carries a fingerprint: a backup interrupted while being written is recognised before the restore starts. Restoring replaces everything that is there now.",
       "librariesTitle": "How Glossa treats libraries",
       "librariesDesc": "Every library has its own pace: how long to wait between requests, how many requests in a minute, how long to stop when it asks you to slow down. These are a few different paces applied to many libraries, so Settings → Libraries governs them as profiles. Two ship with Glossa, with values proven in the field: Normal, used by almost all of them, and Slow, tuned on the strictest one. You can change them, create others and name each one; next to the name you see how many libraries use it. Below, for each library you pick its profile from a menu. A profile in use cannot be deleted until you move the libraries that follow it, and the two that ship with the application cannot be deleted at all. Requests at the same time never go above four, whatever you write: the limit depends on the library's server and it keeps you from being blocked.",
       "jobsRestartTitle": "Closing and reopening",

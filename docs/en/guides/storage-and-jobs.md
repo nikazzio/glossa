@@ -140,6 +140,26 @@ first — and the two that ship with the application cannot be deleted at all.
 **Requests at the same time never go above four**, whatever you write: the
 limit depends on their server and it keeps you from being blocked.
 
+## The backup
+
+**Workspace settings → Backup** saves a file with everything that cannot be
+downloaded again: the works' records, notes, transcriptions, translations with
+their history, glossaries, phrase memory and the record of the work done.
+
+**The images are not in it, on purpose.** They come back from the library: a
+40 GB backup is a backup nobody makes, a few-megabyte one gets made every week.
+The file does know **which works were on your computer and at what size**, and
+on restore Glossa offers to download them again. If you want the images safe
+too, the way is to keep the vault in a synced folder.
+
+The file is compressed — the content is text, and compresses about tenfold —
+and carries a fingerprint: a backup interrupted while being written is
+recognised **before** the restore starts, instead of leaving you halfway with
+your data already cleared.
+
+**Restoring replaces everything**: what is there now is replaced by what is in
+the file. The confirmation says so, and there is no going back.
+
 ## Stopped does not mean broken
 
 A job can sit still for minutes while respecting a library's limits. The

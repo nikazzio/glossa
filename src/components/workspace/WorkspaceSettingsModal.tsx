@@ -4,6 +4,8 @@ import { AlignLeft, Brain, Cpu, Download, HardDrive, Loader2, RefreshCcw, Settin
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
+import { enqueueSourceDownload } from '../../services/jobsService';
+import { confirm } from '../../stores/confirmStore';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, IconButton, DialogConfirmButton, FieldLabel, SectionLabel, Select } from '../ui';
@@ -108,12 +110,37 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     }
   };
 
+  /**
+   * Ripristina, e poi **propone di riprendere le immagini**: nel backup non ci
+   * sono (D31), ma c'è l'elenco di quali opere erano scaricate. Senza questa
+   * proposta l'esclusione delle immagini sarebbe una perdita silenziosa.
+   */
   const handleImportBackup = async () => {
     setIsBackupBusy(true);
     try {
       const restored = await importWorkspace(t);
       if (restored) {
         toast.success(t('files.backupImportSuccess'));
+        if (restored.length > 0) {
+          const redownload = await confirm({
+            title: t('files.backupRedownloadTitle', { count: restored.length }),
+            message: t('files.backupRedownloadMessage'),
+            confirmLabel: t('files.backupRedownloadConfirm'),
+          });
+          if (redownload) {
+            // Uno scaricamento per opera, con la misura che aveva: la coda li
+            // prende uno per volta rispettando i tempi delle biblioteche.
+            for (const source of restored) {
+              if (!source.manifestUrl) continue;
+              await enqueueSourceDownload({
+                providerKey: source.providerKey ?? 'generic',
+                manifestUrl: source.manifestUrl,
+                versionId: source.versionId,
+                sizeTag: source.sizeTag ?? undefined,
+              }).catch(() => undefined);
+            }
+          }
+        }
         setTimeout(() => window.location.reload(), 1500);
       }
     } catch (err: unknown) {

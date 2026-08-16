@@ -34,7 +34,7 @@ dritta su `main`.
 | 4-quater | Profili di rete, registrazione, rifiniture | #421, #422, #378 | unita (#428) |
 | **5** | Risorse condivise e ambito | #213 | **da fare**, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione e chiamate ai modelli |
-| **7** | Backup, esportazioni e riservatezza | #345, #407 | **da fare** |
+| 7 | Backup, esportazioni e riservatezza | #345, #407 | **backup fatto**, restano i tre livelli di riservatezza (D33) |
 
 **Perché la 6 non va lasciata ultima**: ogni giorno senza registrazione è
 materiale perso per sempre, in particolare la coppia proposta/approvata delle
@@ -83,9 +83,13 @@ fatti, registro append-only con le colonne che serviranno all'area Analisi.
 - **Notifiche di sistema** (D21): mai fatte.
 - **`transcription_revisions`** ha ancora la colonna `status`, che D22 vuole
   allineata al modello a eventi.
-- **Backup ed esportazione** non portano con sé revisioni e fatti: è la PR 7. Il
-  puntatore all'approvazione non è nel backup **di proposito**: ripristinato
-  punterebbe a revisioni che il backup non contiene.
+- **I tre livelli di riservatezza** di backup ed esportazioni (D33): aperto,
+  solo Glossa, con password. Il terzo richiede una derivazione di chiave da
+  password — la libreria per cifrare c'è già, quella per derivare no — e va
+  scelta, non improvvisata.
+- **L'import di glossari da CSV** è rimasto l'ultimo punto che legge un file
+  dalla webview: finché c'è, il permesso di lettura non si può restringere
+  (#407, terzo punto).
 - **File orfani**: la verifica li conta e nessuno li cancella. Manca il comando
   «elimina i file orfani» previsto da D5-bis.
 - **Rilevamento vero dei segnaposto** delle cartelle sincronizzate (D1-bis):

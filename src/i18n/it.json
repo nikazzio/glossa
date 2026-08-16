@@ -1027,7 +1027,11 @@
       "markdown": "Markdown rilevato",
       "docx-markdown": "Conversione DOCX in Markdown",
       "footnotes": "Note presenti"
-    }
+    },
+    "backupRedownloadTitle_one": "Riscarico l'opera che avevi?",
+    "backupRedownloadTitle_other": "Riscarico le {{count}} opere che avevi?",
+    "backupRedownloadMessage": "Il backup non contiene le immagini, ma sa quali opere erano sul computer e a che misura. Puoi riprenderle adesso o più tardi, una per una dalla Biblioteca.",
+    "backupRedownloadConfirm": "Riscarica"
   },
   "editor": {
     "write": "Scrivi",
@@ -1554,6 +1558,8 @@
       "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
       "checkTitle": "Le due verifiche del deposito",
       "checkDesc": "La verifica rapida guarda soltanto se i file ci sono: è questione di millisecondi. La completa apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato, quindi è l'unica che riconosce un file troncato o marcito sul disco; in cambio è lenta in proporzione ai gigabyte. Se niente è danneggiato i due conteggi coincidono e cambia solo il tempo. Nella coda dei lavori ogni verifica dice quale delle due è.",
+      "backupTitle": "Il backup",
+      "backupDesc": "Impostazioni del workspace → Backup salva un file con tutto quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto. Le immagini non ci sono ed è voluto — si riprendono dalla biblioteca — ma il file sa quali opere erano sul computer e a che misura, e al ripristino Glossa ti propone di riscaricarle. Il file è compresso e porta un'impronta: un backup interrotto a metà scrittura viene riconosciuto prima che il ripristino cominci. Il ripristino sostituisce tutto quello che c'è adesso.",
       "librariesTitle": "Come Glossa tratta le biblioteche",
       "librariesDesc": "Ogni biblioteca ha i suoi tempi: quanto aspettare fra una richiesta e l'altra, quante richieste in un minuto, quanto fermarsi quando chiede di rallentare. Sono pochi ritmi diversi applicati a molte biblioteche, quindi in Impostazioni → Biblioteche si governano come profili. Due arrivano con Glossa, con i valori provati sul campo: Normale, che usano quasi tutte, e Lento, tarato sulla più severa. Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome trovi quante biblioteche lo usano. Sotto, per ogni biblioteca scegli il profilo da un menu. Un profilo in uso non si elimina finché non sposti le biblioteche che lo seguono, e i due che arrivano con l'applicazione non si eliminano affatto. Le richieste insieme non superano mai quattro, qualunque cosa si scriva: il limite dipende dal server della biblioteca e serve a non farsi bloccare.",
       "jobsRestartTitle": "Chiudere e riaprire",

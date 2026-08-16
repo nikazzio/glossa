@@ -4,6 +4,7 @@ import {
   backupPayloadSchema,
   customProviderProfileSchema,
 } from './externalData';
+import { BACKUP_TABLES } from './externalData';
 import type { BackupPayload } from './externalData';
 
 function validBackup(): BackupPayload {
@@ -11,19 +12,11 @@ function validBackup(): BackupPayload {
     glossa_version: '1.2.1',
     schema_version: 1,
     exported_at: '2026-07-21T12:00:00.000Z',
-    tables: {
-      workspaces: [],
-      glossaries: [],
-      projects: [],
-      app_settings: [],
-      prompt_templates: [],
-      pipelines: [],
-      project_glossaries: [],
-      glossary_entries: [],
-      translations: [],
-      phrase_memory: [],
-      source_phrase_embeddings: [],
-    },
+    // Tutte le tabelle dichiarate, vuote: elencarle a mano voleva dire
+    // aggiornare la prova ogni volta che il backup ne comprende una in più.
+    tables: Object.fromEntries(
+      BACKUP_TABLES.map((table) => [table, []]),
+    ) as BackupPayload['tables'],
   };
 }
 

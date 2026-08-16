@@ -1,17 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const dialogState = vi.hoisted(() => ({ openPath: '/tmp/backup.glossa-backup' }));
-
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-  open: vi.fn(async () => dialogState.openPath),
-  save: vi.fn(async () => '/tmp/backup.glossa-backup'),
-}));
-
+// La scelta del file e la lettura stanno nel backend (#407): qui si finge il
+// comando, non la finestra.
 const fsState = vi.hoisted(() => ({ raw: '{}' }));
 
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  readTextFile: vi.fn(async () => fsState.raw),
-  writeTextFile: vi.fn(async () => undefined),
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(async (command: string) =>
+    command === 'read_backup' ? fsState.raw : null,
+  ),
 }));
 
 vi.mock('../stores/confirmStore', () => ({
@@ -30,6 +26,7 @@ vi.mock('./dbService', () => ({
 }));
 
 import { importWorkspace } from './backupService';
+import { BACKUP_TABLES } from '../schemas/externalData';
 import { confirm } from '../stores/confirmStore';
 
 const t = (key: string) => key;
@@ -39,21 +36,27 @@ function backupWith(appSettings: Array<{ key: string; value: string }>): string 
     glossa_version: '0.9.0',
     schema_version: 1,
     exported_at: '2026-06-08T19:11:42.971Z',
+    // Tutte le tabelle dichiarate, vuote tranne quella in prova.
     tables: {
-      workspaces: [],
-      glossaries: [],
-      projects: [],
+      ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
       app_settings: appSettings,
-      prompt_templates: [],
-      pipelines: [],
-      project_glossaries: [],
-      glossary_entries: [],
-      translations: [],
-      phrase_memory: [],
-      source_phrase_embeddings: [],
     },
   });
 }
+
+describe('cosa porta con sé un backup', () => {
+  it('comprende lo storico del lavoro e le schede delle opere, mai le immagini', () => {
+    // D31: si conserva quello che non si riscarica. Le righe delle immagini
+    // restano fuori: dopo un ripristino quei file non esistono, e dichiararli
+    // presenti sarebbe una bugia.
+    expect(BACKUP_TABLES).toContain('translation_revisions');
+    expect(BACKUP_TABLES).toContain('provenance_events');
+    expect(BACKUP_TABLES).toContain('sources');
+    expect(BACKUP_TABLES).toContain('transcription_revisions');
+    expect(BACKUP_TABLES).not.toContain('assets');
+    expect(BACKUP_TABLES).not.toContain('jobs');
+  });
+});
 
 describe('importWorkspace', () => {
   beforeEach(() => {
