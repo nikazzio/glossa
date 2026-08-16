@@ -535,6 +535,9 @@ function StorageSection() {
       <SubTitle>{t('help.storage.downloadPolicyTitle')}</SubTitle>
       <P>{t('help.storage.downloadPolicyDesc')}</P>
 
+      <SubTitle>{t('help.storage.removeTitle')}</SubTitle>
+      <P>{t('help.storage.removeDesc')}</P>
+
       <SubTitle>{t('help.storage.librariesTitle')}</SubTitle>
       <P>{t('help.storage.librariesDesc')}</P>
 

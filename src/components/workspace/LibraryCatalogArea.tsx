@@ -25,7 +25,12 @@ import {
   listVersionVaultPaths,
   versionProviderKey,
 } from '../../services/libraryService';
-import { freeVersionPages, summarizeAvailability, verifyFilesPresent } from '../../services/vaultService';
+import {
+  deleteVersionFiles,
+  freeVersionPages,
+  summarizeAvailability,
+  verifyFilesPresent,
+} from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
 import type { LibraryCatalogEntry } from '../../types';
@@ -316,14 +321,41 @@ function CatalogEntryRow({
     }
   };
 
+  /**
+   * Togliere un'opera la toglie **per intero**: scheda, collegamenti e la sua
+   * cartella nel deposito (D6). Lasciare i file dietro produceva cartelle che
+   * nessuna schermata sa più mostrare, e che nemmeno riaggiungendo la stessa
+   * opera tornerebbero utili: la cartella prende il nome da un identificativo
+   * nuovo ogni volta.
+   */
   const askRemoval = async () => {
     const confirmed = await confirm({
       title: t('areas.library.removeTitle', { title: entry.source.title }),
-      message: t('areas.library.removeMessage'),
+      message:
+        entry.localBytes > 0
+          ? t('areas.library.removeMessageWithFiles', { size: humanSize(entry.localBytes) })
+          : t('areas.library.removeMessage'),
       confirmLabel: t('areas.library.removeConfirm'),
       danger: true,
     });
-    if (confirmed) onRemove();
+    if (!confirmed) return;
+
+    setBusy(true);
+    try {
+      if (entry.versionId) {
+        // I file prima delle righe: se la cancellazione fallisce, l'opera resta
+        // in Biblioteca e si può riprovare, invece di sparire lasciando dietro
+        // una cartella che nessuno reclama.
+        await deleteVersionFiles(await providerKey(), entry.versionId);
+      }
+      onRemove();
+    } catch (error: unknown) {
+      toast.error(t('areas.library.removeFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

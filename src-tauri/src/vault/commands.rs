@@ -451,6 +451,41 @@ pub async fn choose_vault_folder(
     }))
 }
 
+/// Cancella **tutto** quello che una digitalizzazione ha nel deposito:
+/// manifesto, miniature, pagine (D6).
+///
+/// È quello che serve quando l'opera esce dalla Biblioteca. Finché il cestino
+/// non esiste, togliere un'opera e lasciarne i file sul disco produceva
+/// cartelle che nessuno reclama più e che nessuna schermata sa mostrare:
+/// riaggiungendo la stessa opera nasce un identificativo nuovo, quindi quei
+/// file non sarebbero comunque tornati utili.
+#[tauri::command]
+pub fn delete_version_files(
+    app: tauri::AppHandle,
+    provider_key: String,
+    version_id: String,
+) -> Result<FreedSpace, String> {
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let folder = root.join(super::layout::version_dir(&provider_key, &version_id)?);
+    if !folder.is_dir() {
+        return Ok(FreedSpace {
+            deleted_files: 0,
+            freed_bytes: 0,
+        });
+    }
+    // Una sola camminata per file e byte, prima di cancellare.
+    let stats = directory_stats(&folder);
+    std::fs::remove_dir_all(&folder)
+        .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))?;
+    Ok(FreedSpace {
+        deleted_files: stats.files,
+        freed_bytes: stats.bytes,
+    })
+}
+
 /// Mette in coda la verifica del deposito (D5-bis).
 ///
 /// Un lavoro solo per volta: chiederla due volte non ne apre due, restituisce

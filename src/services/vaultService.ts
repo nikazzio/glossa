@@ -157,6 +157,14 @@ export async function freeVersionPages(providerKey: string, versionId: string): 
   return invoke<FreedSpace>('free_version_pages', { providerKey, versionId });
 }
 
+/**
+ * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
+ * miniature, pagine — quando l'opera esce dalla Biblioteca (D6).
+ */
+export async function deleteVersionFiles(providerKey: string, versionId: string): Promise<FreedSpace> {
+  return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
+}
+
 export type SourceAvailability = 'catalogued' | 'partial' | 'complete';
 
 export interface AvailabilitySummary {

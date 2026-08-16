@@ -102,12 +102,12 @@ generazione documenti. *Automatico* lascia scegliere a Glossa.
 Il limite degli **scaricamenti** non dipende dalla potenza del computer ma dal
 server della biblioteca: alzarlo troppo fa scattare blocchi temporanei.
 
-## Quanto grandi le carte
+## Quanto grandi le pagine
 
-In **Impostazioni → Scaricamento** scegli la misura delle carte e quella delle
+In **Impostazioni → Scaricamento** scegli la misura delle pagine e quella delle
 miniature.
 
-La misura delle carte è un **obiettivo, non un numero esatto**: Glossa chiede
+La misura delle pagine è un **obiettivo, non un numero esatto**: Glossa chiede
 alla biblioteca quella che dichiara più vicina, sopra o sotto. Chiedere una
 misura inventata costringerebbe il servizio a produrla sul momento — misurato:
 ventitré secondi contro uno.
@@ -118,10 +118,10 @@ La stessa scelta si può fare più vicino all'opera, e vince la più vicina:
 2. sulla **singola biblioteca**, in Impostazioni → Biblioteche;
 3. su **tutto**, in Impostazioni → Scaricamento.
 
-Le carte già scaricate restano come sono: la scelta vale per quello che si
+Le pagine già scaricate restano come sono: la scelta vale per quello che si
 scarica da adesso.
 
-Le **miniature** non si chiedono alla biblioteca: Glossa le ricava dalle carte
+Le **miniature** non si chiedono alla biblioteca: Glossa le ricava dalle pagine
 che ha scaricato, sul computer. Più grandi occupano più spazio e si sfogliano
 meglio; non costano nessuna richiesta.
 

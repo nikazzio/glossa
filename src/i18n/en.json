@@ -779,7 +779,7 @@
       "downloadRunning": "Downloading",
       "remove": "Remove from the library",
       "removeTitle": "Remove “{{title}}”?",
-      "removeMessage": "It disappears from the library along with its links. Images already downloaded stay on disk: freeing space is a separate command.",
+      "removeMessage": "It disappears from the Library along with its links. There is nothing downloaded to delete.",
       "removeConfirm": "Remove",
       "availabilityRemote": "online only",
       "availabilityComplete": "all pages on this computer",
@@ -803,7 +803,9 @@
       "sizeCapLoadFailed": "Could not read the size chosen for this work",
       "sizeCapSaveFailed": "Could not save the size for this work",
       "pageCount_one": "{{count}} page",
-      "pageCount_other": "{{count}} pages"
+      "pageCount_other": "{{count}} pages",
+      "removeMessageWithFiles": "It disappears from the Library along with its links, and the {{size}} already downloaded are deleted too. To keep the work and only free the space, there is a command for that.",
+      "removeFailed": "Could not remove the work"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -1548,6 +1550,8 @@
       "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce; if that request is refused, it asks the library what it can produce and retries on its own. From every page it downloads, Glossa derives its thumbnail without asking the library for anything: thumbnails let you browse the book offline.",
       "downloadPolicyTitle": "Choosing the page size",
       "downloadPolicyDesc": "In Settings → Download you choose how large you want the pages and how large the thumbnails. The page size is a target, not an exact number: Glossa asks the library for the size it declares closest to it, above or below. The same choice can be made for a single library, in Settings → Libraries, and for a single work, by opening its card in the Library: the closest one to the work wins. Pages already downloaded stay as they are.",
+      "removeTitle": "Removing a work from the Library",
+      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
       "librariesTitle": "How Glossa treats libraries",
       "librariesDesc": "Every library has its own pace: how long to wait between requests, how many requests in a minute, how long to stop when it asks you to slow down. Glossa ships with these values already tuned in the field. In Settings → Libraries you can change them, and one command restores any library to the values it came with. Requests at the same time never go above four, whatever you write: the limit depends on their server and it keeps you from being blocked. If you download from an address belonging to none of the listed libraries, you can add it and give it its own pace.",
       "jobsRestartTitle": "Closing and reopening",

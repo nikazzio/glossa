@@ -162,6 +162,7 @@ pub fn run() {
             vault::commands::verify_files_present,
             vault::commands::verify_files_integrity,
             vault::commands::free_version_pages,
+            vault::commands::delete_version_files,
             vault::commands::choose_vault_folder,
             vault::commands::use_default_vault_folder,
             vault::commands::enqueue_vault_verification,
