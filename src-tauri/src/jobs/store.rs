@@ -358,6 +358,7 @@ pub(crate) mod test_support {
             include_str!("../../migrations/0006_job_detail.sql"),
             include_str!("../../migrations/0007_download_policy.sql"),
             include_str!("../../migrations/0008_provenance_foundation.sql"),
+            include_str!("../../migrations/0009_network_profiles.sql"),
         ] {
             conn.execute_batch(migration).expect("migration applies");
         }

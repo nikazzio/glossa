@@ -1136,7 +1136,7 @@ una biblioteca. I ritmi tarati sul campo sono due — il prudente e quello di
 Gallica — e si applicano a undici biblioteche: tenerli per biblioteca vorrebbe
 dire ripetere gli stessi numeri nove volte e non sapere più da dove vengono.
 
-Quindi: i profili stanno in `network_profiles`, le biblioteche **scelgono** il
+Quindi: i profili stanno in `network_profiles` (migrazione `0009`, che sostituisce la forma per biblioteca della `0007` — le migrazioni si aggiungono, non si riscrivono: una già applicata che cambia fa fallire l'avvio), le biblioteche **scelgono** il
 proprio in `library_network_profiles`, e chi non sceglie segue il predefinito.
 Due profili nascono con l'applicazione prendendo i valori **dal registro**, che
 resta l'unico posto dove una biblioteca nuova si compila: si modificano ma non
