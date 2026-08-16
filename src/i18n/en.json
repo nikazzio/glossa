@@ -579,10 +579,11 @@
       "saveFailed": "Could not save the download settings",
       "sizeCap": "Page size",
       "sizeCapMax": "the largest available",
-      "sizeCapHint": "Glossa asks for the size the library declares closest to this one, above or below: the exact size is the library's call. A single library or a single work can ask for something else, and that wins.",
+      "sizeCapHint": "The size to aim for on the long side. The library serves the declared size closest to it, above or below: the choice is a policy, not an exact number.",
       "pixels": "{{value}} pixels",
       "thumbnailEdge": "Thumbnail size",
-      "thumbnailEdgeHint": "Thumbnails are derived from the downloaded pages, on your computer: they cost the library no request at all. Larger ones take more space and browse better."
+      "thumbnailEdgeHint": "Thumbnails are derived from the downloaded pages, on your computer: they cost no request. Larger ones take more space and browse better.",
+      "sizes": "Sizes"
     },
     "librariesTab": "Libraries",
     "libraries": {
@@ -590,17 +591,12 @@
       "saveFailed": "Could not save this library's settings",
       "saved": "Library settings saved",
       "resetDone": "Library restored to the application's values",
-      "changed": "changed",
-      "expand": "Open this library's values",
-      "collapse": "Close this library's values",
       "save": "Save this library's values",
       "reset": "Restore the application's values",
       "sizeCap": "Page size",
       "sizeCapInherited": "same as the general setting",
-      "concurrencyHint": "Requests at the same time never go above {{max}}: the limit depends on the library's server, not on your computer, and it is there to keep you from being blocked.",
       "addHost": "Add an address",
       "hostPlaceholder": "library.example.org",
-      "hostHint": "For works added by direct address, which belong to none of the libraries listed above.",
       "field": {
         "pauseMinMs": "Minimum pause (ms)",
         "pauseMaxMs": "Maximum pause (ms)",
@@ -616,7 +612,9 @@
         "readTimeoutSecs": "Wait to read (s)",
         "needsViewerWarmup": "Open the viewer page first"
       },
-      "hostField": "Library address"
+      "hostField": "Library address",
+      "useOwn": "Use my own values for this library",
+      "sizeCapHint": "Applies only to works from this library, and comes before the general setting."
     },
     "jobsTab": "Jobs",
     "jobs": {
