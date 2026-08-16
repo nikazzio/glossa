@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Info } from 'lucide-react';
+import { Info, Ruler } from 'lucide-react';
 import { Select, Tooltip } from '../ui';
 import {
   DEFAULT_SIZE_CAP,
@@ -79,10 +79,13 @@ export function DownloadSettingsTab() {
       aria-labelledby="settings-tab-download"
       className="space-y-4"
     >
-      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-        {t('settings.download.sizes')}
-      </p>
-      <div className="space-y-3 border-y border-editorial-border/70 py-5">
+      <div className="flex items-center gap-1.5">
+        <Ruler size={11} className="shrink-0 text-editorial-accent" />
+        <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+          {t('settings.download.sizes')}
+        </p>
+      </div>
+      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
         <SettingRow label={t('settings.download.sizeCap')} hint={t('settings.download.sizeCapHint')}>
           <Select
             value={sizeCap}
@@ -128,8 +131,8 @@ export function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-1.5 text-xs font-medium text-editorial-ink">
+    <div className="flex items-center justify-between gap-3 py-2.5">
+      <span className="flex items-center gap-1.5 text-sm text-editorial-ink">
         {label}
         {hint && (
           <Tooltip label={hint}>

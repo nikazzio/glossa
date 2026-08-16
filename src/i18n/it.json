@@ -598,7 +598,9 @@
         "disk": "Scritture su disco",
         "languageService": "Servizi linguistici",
         "documents": "Generazione documenti"
-      }
+      },
+      "limits": "Quanti insieme",
+      "reopening": "Alla riapertura"
     },
     "network": {
       "profiles": "Profili di rete",

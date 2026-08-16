@@ -598,7 +598,9 @@
         "disk": "Disk writes",
         "languageService": "Language services",
         "documents": "Document generation"
-      }
+      },
+      "limits": "How many at once",
+      "reopening": "On reopening"
     },
     "network": {
       "profiles": "Network profiles",
