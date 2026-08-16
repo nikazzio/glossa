@@ -595,8 +595,6 @@
       "reset": "Restore the application's values",
       "sizeCap": "Page size",
       "sizeCapInherited": "same as the general setting",
-      "addHost": "Add an address",
-      "hostPlaceholder": "library.example.org",
       "field": {
         "pauseMinMs": "Minimum pause (ms)",
         "pauseMaxMs": "Maximum pause (ms)",
@@ -609,12 +607,11 @@
         "cooldown403Secs": "Pause after a refusal (s)",
         "cooldown429Secs": "Pause after a \"slow down\" (s)",
         "connectTimeoutSecs": "Wait to connect (s)",
-        "readTimeoutSecs": "Wait to read (s)",
-        "needsViewerWarmup": "Open the viewer page first"
+        "readTimeoutSecs": "Wait to read (s)"
       },
-      "hostField": "Library address",
-      "useOwn": "Use my own values for this library",
-      "sizeCapHint": "Applies only to works from this library, and comes before the general setting."
+      "sizeCapHint": "Applies only to works from this library, and comes before the general setting.",
+      "editValues": "Edit this library's values",
+      "editValuesHint": "Turn off to go back to the defaults."
     },
     "jobsTab": "Jobs",
     "jobs": {

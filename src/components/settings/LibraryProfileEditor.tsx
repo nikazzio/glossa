@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, RotateCcw } from 'lucide-react';
+import { Check, Info, Pencil, RotateCcw } from 'lucide-react';
 import { IconButton, Select, ToggleRow, Tooltip } from '../ui';
 import { SettingRow } from './DownloadSettingsTab';
 import {
@@ -113,13 +113,20 @@ export function LibraryProfileEditor({ library, onSave, onReset }: LibraryProfil
         </div>
       </div>
 
-      <ToggleRow
-        icon={<RotateCcw size={13} />}
-        label={t('settings.libraries.useOwn')}
-        checked={custom}
-        disabled={busy}
-        onChange={() => void changeCustom(!custom)}
-      />
+      <div className="flex items-center gap-1.5">
+        <ToggleRow
+          icon={<Pencil size={13} />}
+          label={t('settings.libraries.editValues')}
+          checked={custom}
+          disabled={busy}
+          onChange={() => void changeCustom(!custom)}
+        />
+        <Tooltip label={t('settings.libraries.editValuesHint')}>
+          <span className="text-editorial-muted" aria-label={t('settings.libraries.editValuesHint')}>
+            <Info size={12} />
+          </span>
+        </Tooltip>
+      </div>
 
       <fieldset
         disabled={!custom}
@@ -161,16 +168,6 @@ export function LibraryProfileEditor({ library, onSave, onReset }: LibraryProfil
             </label>
           ))}
         </div>
-
-        <ToggleRow
-          icon={<Check size={13} />}
-          label={t('settings.libraries.field.needsViewerWarmup')}
-          checked={profile.needsViewerWarmup}
-          disabled={!custom}
-          onChange={() =>
-            setProfile((current) => ({ ...current, needsViewerWarmup: !current.needsViewerWarmup }))
-          }
-        />
       </fieldset>
     </div>
   );

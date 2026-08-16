@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
-import { IconButton, Tooltip } from '../ui';
+import { Tooltip } from '../ui';
 import { LibraryProfileEditor } from './LibraryProfileEditor';
 import {
-  cautiousNetworkProfile,
   listLibrarySettings,
   resetLibrarySettings,
   saveLibrarySettings,
@@ -25,8 +23,6 @@ export function LibrariesSettingsTab() {
   const { t } = useTranslation();
   const [libraries, setLibraries] = useState<LibrarySettings[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [newHost, setNewHost] = useState('');
-  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -62,23 +58,6 @@ export function LibrariesSettingsTab() {
     try {
       setLibraries(await resetLibrarySettings(key));
       toast.success(t('settings.libraries.resetDone'));
-    } catch (error: unknown) {
-      toast.error(t('settings.libraries.saveFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const addHost = async () => {
-    const host = newHost.trim();
-    if (host === '') return;
-    try {
-      // Si parte dal profilo prudente, che è quello che quella fonte sta già
-      // usando: aggiungere la voce serve a cambiarlo, non a ripartire da zero.
-      setLibraries(await saveLibrarySettings(host, null, await cautiousNetworkProfile()));
-      setNewHost('');
-      setAdding(false);
-      setActiveKey(host);
     } catch (error: unknown) {
       toast.error(t('settings.libraries.saveFailed'), {
         description: error instanceof Error ? error.message : String(error),
@@ -134,29 +113,6 @@ export function LibrariesSettingsTab() {
             );
           })}
 
-          <span className="mx-1 h-5 w-px self-center bg-editorial-border/60" aria-hidden="true" />
-
-          {adding ? (
-            <input
-              // Il campo compare al clic sul comando: il fuoco ci va da sé,
-              // altrimenti si aprirebbe una casella che nessuno sta usando.
-              ref={(node) => node?.focus()}
-              value={newHost}
-              onChange={(event) => setNewHost(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') void addHost();
-                if (event.key === 'Escape') setAdding(false);
-              }}
-              onBlur={() => void addHost()}
-              placeholder={t('settings.libraries.hostPlaceholder')}
-              aria-label={t('settings.libraries.hostField')}
-              className="h-9 min-w-0 flex-1 rounded-full border border-editorial-border bg-editorial-textbox px-3 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-          ) : (
-            <IconButton size="md" onClick={() => setAdding(true)} title={t('settings.libraries.addHost')}>
-              <Plus size={14} />
-            </IconButton>
-          )}
         </div>
 
         <div id="settings-library-panel" role="tabpanel" aria-labelledby={`settings-library-tab-${activeKey}`}>

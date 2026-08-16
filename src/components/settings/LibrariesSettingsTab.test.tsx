@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LibrariesSettingsTab } from './LibrariesSettingsTab';
 import {
-  cautiousNetworkProfile,
   listLibrarySettings,
   resetLibrarySettings,
   saveLibrarySettings,
@@ -18,7 +17,6 @@ vi.mock('../../services/downloadSettingsService', async (importOriginal) => {
     listLibrarySettings: vi.fn(),
     saveLibrarySettings: vi.fn(),
     resetLibrarySettings: vi.fn(),
-    cautiousNetworkProfile: vi.fn(),
   };
 });
 
@@ -59,14 +57,12 @@ const vatican: LibrarySettings = {
 const list = vi.mocked(listLibrarySettings);
 const save = vi.mocked(saveLibrarySettings);
 const reset = vi.mocked(resetLibrarySettings);
-const defaults = vi.mocked(cautiousNetworkProfile);
 
 describe('impostazioni delle biblioteche', () => {
   beforeEach(() => {
     list.mockReset().mockResolvedValue([gallica, vatican]);
     save.mockReset().mockResolvedValue([{ ...gallica, customised: true }, vatican]);
     reset.mockReset().mockResolvedValue([gallica, vatican]);
-    defaults.mockReset().mockResolvedValue(cautious);
   });
 
   it('una biblioteca per pulsante, con il nome solo al passaggio del mouse', async () => {
@@ -86,7 +82,7 @@ describe('impostazioni delle biblioteche', () => {
     render(<LibrariesSettingsTab />);
 
     expect(await screen.findByLabelText('settings.libraries.field.maxAttempts')).toBeDisabled();
-    expect(screen.getByRole('switch', { name: 'settings.libraries.useOwn' })).toHaveAttribute(
+    expect(screen.getByRole('switch', { name: 'settings.libraries.editValues' })).toHaveAttribute(
       'aria-checked',
       'false',
     );
@@ -95,7 +91,7 @@ describe('impostazioni delle biblioteche', () => {
   it('acceso l interruttore, i valori si cambiano e si salvano', async () => {
     const user = userEvent.setup();
     render(<LibrariesSettingsTab />);
-    await user.click(await screen.findByRole('switch', { name: 'settings.libraries.useOwn' }));
+    await user.click(await screen.findByRole('switch', { name: 'settings.libraries.editValues' }));
 
     const attempts = screen.getByLabelText('settings.libraries.field.maxAttempts');
     await user.clear(attempts);
@@ -110,7 +106,7 @@ describe('impostazioni delle biblioteche', () => {
     render(<LibrariesSettingsTab />);
     await user.click(await screen.findByRole('tab', { name: 'Vatican Library' }));
 
-    await user.click(screen.getByRole('switch', { name: 'settings.libraries.useOwn' }));
+    await user.click(screen.getByRole('switch', { name: 'settings.libraries.editValues' }));
 
     expect(reset).toHaveBeenCalledWith('vatican');
   });
@@ -122,14 +118,4 @@ describe('impostazioni delle biblioteche', () => {
     expect(screen.queryByRole('button', { name: 'settings.libraries.reset' })).not.toBeInTheDocument();
   });
 
-  it('un indirizzo fuori dal registro parte dal profilo prudente', async () => {
-    const user = userEvent.setup();
-    render(<LibrariesSettingsTab />);
-
-    await user.click(await screen.findByRole('button', { name: 'settings.libraries.addHost' }));
-    await user.type(screen.getByLabelText('settings.libraries.hostField'), 'biblioteca.esempio.org');
-    await user.keyboard('{Enter}');
-
-    expect(save).toHaveBeenCalledWith('biblioteca.esempio.org', null, cautious);
-  });
 });

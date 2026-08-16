@@ -595,8 +595,6 @@
       "reset": "Riporta ai valori dell'applicazione",
       "sizeCap": "Misura delle carte",
       "sizeCapInherited": "come l'impostazione generale",
-      "addHost": "Aggiungi un indirizzo",
-      "hostPlaceholder": "biblioteca.esempio.org",
       "field": {
         "pauseMinMs": "Pausa minima (ms)",
         "pauseMaxMs": "Pausa massima (ms)",
@@ -609,12 +607,11 @@
         "cooldown403Secs": "Pausa dopo un rifiuto (s)",
         "cooldown429Secs": "Pausa dopo un «rallenta» (s)",
         "connectTimeoutSecs": "Attesa per connettersi (s)",
-        "readTimeoutSecs": "Attesa per leggere (s)",
-        "needsViewerWarmup": "Apri prima la pagina del lettore"
+        "readTimeoutSecs": "Attesa per leggere (s)"
       },
-      "hostField": "Indirizzo della biblioteca",
-      "useOwn": "Usa valori miei per questa biblioteca",
-      "sizeCapHint": "Vale solo per le opere di questa biblioteca, e passa davanti all'impostazione generale."
+      "sizeCapHint": "Vale solo per le opere di questa biblioteca, e passa davanti all'impostazione generale.",
+      "editValues": "Modifica i valori di questa biblioteca",
+      "editValuesHint": "Spegni per tornare ai predefiniti."
     },
     "jobsTab": "Lavori",
     "jobs": {
