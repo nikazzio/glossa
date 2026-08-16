@@ -77,6 +77,16 @@ pub fn run() {
                 log::error!("default vault not created: {error}");
             }
 
+            // I ritmi di rete che nascono con l'applicazione, presi dal
+            // registro dei provider (D18). Senza, la prima apertura non
+            // avrebbe nessun profilo da applicare.
+            if let Err(error) = crate::storage_config::db_path(app.handle())
+                .and_then(|path| db::open_connection(&path))
+                .and_then(|conn| iiif::settings::ensure_builtin_profiles(&conn))
+            {
+                log::error!("network profiles not seeded: {error}");
+            }
+
             // L'orchestratore dei lavori parte con l'applicazione (D10) e per
             // prima cosa rimette in ordine ciò che una chiusura brusca ha
             // lasciato a metà (D13). Un errore qui non deve impedire l'avvio:
@@ -181,10 +191,10 @@ pub fn run() {
             deepl::commands::delete_deepl_glossary,
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
-            iiif::commands::list_library_settings,
-            iiif::commands::cautious_network_profile,
-            iiif::commands::save_library_settings,
-            iiif::commands::reset_library_settings,
+            iiif::commands::list_network_settings,
+            iiif::commands::save_network_profile,
+            iiif::commands::delete_network_profile,
+            iiif::commands::set_library_network_profile,
             iiif::commands::get_version_size_cap,
             iiif::commands::set_version_size_cap,
         ])

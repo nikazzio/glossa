@@ -586,33 +586,6 @@
       "sizes": "Sizes"
     },
     "librariesTab": "Libraries",
-    "libraries": {
-      "loadFailed": "Could not read the library settings",
-      "saveFailed": "Could not save this library's settings",
-      "saved": "Library settings saved",
-      "resetDone": "Library restored to the application's values",
-      "save": "Save this library's values",
-      "reset": "Restore the application's values",
-      "sizeCap": "Page size",
-      "sizeCapInherited": "same as the general setting",
-      "field": {
-        "pauseMinMs": "Minimum pause (ms)",
-        "pauseMaxMs": "Maximum pause (ms)",
-        "burstRequests": "Requests in a burst",
-        "burstWindowSecs": "Within how many seconds",
-        "hostConcurrency": "Requests at a time",
-        "maxAttempts": "Attempts",
-        "backoffBaseSecs": "First wait (s)",
-        "backoffCapSecs": "Longest wait (s)",
-        "cooldown403Secs": "Pause after a refusal (s)",
-        "cooldown429Secs": "Pause after a \"slow down\" (s)",
-        "connectTimeoutSecs": "Wait to connect (s)",
-        "readTimeoutSecs": "Wait to read (s)"
-      },
-      "sizeCapHint": "Applies only to works from this library, and comes before the general setting.",
-      "editValues": "Edit this library's values",
-      "editValuesHint": "Turn off to go back to the defaults."
-    },
     "jobsTab": "Jobs",
     "jobs": {
       "loadFailed": "Could not read the job settings",
@@ -625,6 +598,36 @@
         "disk": "Disk writes",
         "languageService": "Language services",
         "documents": "Document generation"
+      }
+    },
+    "network": {
+      "profiles": "Network profiles",
+      "libraries": "Libraries",
+      "name": "Name",
+      "newProfile": "Create a profile",
+      "newProfileName": "New profile",
+      "usedBy_zero": "no libraries",
+      "usedBy_one": "one library",
+      "usedBy_other": "{{count}} libraries",
+      "save": "Save the profile",
+      "saved": "Profile saved",
+      "saveFailed": "Could not save",
+      "loadFailed": "Could not read the profiles",
+      "delete": "Delete the profile",
+      "deleteInUse": "Move the libraries that use it first",
+      "field": {
+        "pauseMinMs": "Minimum pause (ms)",
+        "pauseMaxMs": "Maximum pause (ms)",
+        "burstRequests": "Requests in a burst",
+        "burstWindowSecs": "Within how many seconds",
+        "hostConcurrency": "Requests at a time",
+        "maxAttempts": "Attempts",
+        "backoffBaseSecs": "First wait (s)",
+        "backoffCapSecs": "Longest wait (s)",
+        "cooldown403Secs": "Pause after a refusal (s)",
+        "cooldown429Secs": "Pause after a slow-down (s)",
+        "connectTimeoutSecs": "Wait to connect (s)",
+        "readTimeoutSecs": "Wait to read (s)"
       }
     }
   },

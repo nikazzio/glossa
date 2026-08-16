@@ -586,33 +586,6 @@
       "sizes": "Misure"
     },
     "librariesTab": "Biblioteche",
-    "libraries": {
-      "loadFailed": "Impossibile leggere le impostazioni delle biblioteche",
-      "saveFailed": "Impossibile salvare le impostazioni della biblioteca",
-      "saved": "Impostazioni della biblioteca salvate",
-      "resetDone": "Biblioteca riportata ai valori dell'applicazione",
-      "save": "Salva i valori di questa biblioteca",
-      "reset": "Riporta ai valori dell'applicazione",
-      "sizeCap": "Misura delle carte",
-      "sizeCapInherited": "come l'impostazione generale",
-      "field": {
-        "pauseMinMs": "Pausa minima (ms)",
-        "pauseMaxMs": "Pausa massima (ms)",
-        "burstRequests": "Richieste a raffica",
-        "burstWindowSecs": "In quanti secondi",
-        "hostConcurrency": "Richieste insieme",
-        "maxAttempts": "Tentativi",
-        "backoffBaseSecs": "Attesa iniziale (s)",
-        "backoffCapSecs": "Attesa massima (s)",
-        "cooldown403Secs": "Pausa dopo un rifiuto (s)",
-        "cooldown429Secs": "Pausa dopo un «rallenta» (s)",
-        "connectTimeoutSecs": "Attesa per connettersi (s)",
-        "readTimeoutSecs": "Attesa per leggere (s)"
-      },
-      "sizeCapHint": "Vale solo per le opere di questa biblioteca, e passa davanti all'impostazione generale.",
-      "editValues": "Modifica i valori di questa biblioteca",
-      "editValuesHint": "Spegni per tornare ai predefiniti."
-    },
     "jobsTab": "Lavori",
     "jobs": {
       "loadFailed": "Impossibile leggere le impostazioni dei lavori",
@@ -625,6 +598,36 @@
         "disk": "Scritture su disco",
         "languageService": "Servizi linguistici",
         "documents": "Generazione documenti"
+      }
+    },
+    "network": {
+      "profiles": "Profili di rete",
+      "libraries": "Biblioteche",
+      "name": "Nome",
+      "newProfile": "Crea un profilo",
+      "newProfileName": "Nuovo profilo",
+      "usedBy_zero": "nessuna biblioteca",
+      "usedBy_one": "una biblioteca",
+      "usedBy_other": "{{count}} biblioteche",
+      "save": "Salva il profilo",
+      "saved": "Profilo salvato",
+      "saveFailed": "Non è stato possibile salvare",
+      "loadFailed": "Non è stato possibile leggere i profili",
+      "delete": "Elimina il profilo",
+      "deleteInUse": "Prima sposta le biblioteche che lo usano",
+      "field": {
+        "pauseMinMs": "Pausa minima (ms)",
+        "pauseMaxMs": "Pausa massima (ms)",
+        "burstRequests": "Richieste a raffica",
+        "burstWindowSecs": "In quanti secondi",
+        "hostConcurrency": "Richieste insieme",
+        "maxAttempts": "Tentativi",
+        "backoffBaseSecs": "Prima attesa (s)",
+        "backoffCapSecs": "Attesa massima (s)",
+        "cooldown403Secs": "Pausa dopo un rifiuto (s)",
+        "cooldown429Secs": "Pausa dopo «rallenta» (s)",
+        "connectTimeoutSecs": "Attesa per connettersi (s)",
+        "readTimeoutSecs": "Attesa per leggere (s)"
       }
     }
   },

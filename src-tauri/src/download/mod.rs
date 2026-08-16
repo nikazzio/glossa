@@ -97,7 +97,7 @@ async fn enqueue(
         .and_then(crate::iiif::settings::normalise_cap)
     {
         Some(explicit) => explicit,
-        None => crate::iiif::settings::effective_size_cap(&conn, &provider_key, &version_id)?,
+        None => crate::iiif::settings::effective_size_cap(&conn, &version_id)?,
     };
 
     // Il lato lungo delle miniature: adesso che le ricaviamo noi è una misura

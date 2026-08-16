@@ -16,7 +16,7 @@ use serde::Deserialize;
 use std::path::Path;
 use std::time::Duration;
 
-use crate::iiif::network::NetworkProfile;
+use crate::iiif::network::{NetworkProfile, CAUTIOUS};
 use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
@@ -955,11 +955,13 @@ async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> NetworkProfil
     })
     .await
     .unwrap_or_else(|error| {
+        // Il database non risponde: si scarica al ritmo più prudente che
+        // conosciamo, non a quello che capita.
         log::warn!(
-            "job profile not read id={} error={error} (si usa quello del registro)",
+            "job profile not read id={} error={error} (si usa il ritmo prudente)",
             ctx.id
         );
-        crate::iiif::settings::registry_profile(&config.provider_key)
+        CAUTIOUS
     })
 }
 
@@ -1175,21 +1177,7 @@ fn estimated_seconds(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::iiif::network::{CAUTIOUS, GALLICA};
-
-    #[test]
-    fn an_unknown_provider_gets_the_cautious_profile() {
-        // Le fonti aggiunte per indirizzo diretto non hanno voce nel registro.
-        assert_eq!(
-            crate::iiif::settings::registry_profile("mai-vista"),
-            CAUTIOUS
-        );
-    }
-
-    #[test]
-    fn a_known_provider_brings_its_own_profile() {
-        assert_eq!(crate::iiif::settings::registry_profile("gallica"), GALLICA);
-    }
+    use crate::iiif::network::GALLICA;
 
     #[test]
     fn before_having_measured_anything_the_estimate_comes_from_the_declared_pause() {

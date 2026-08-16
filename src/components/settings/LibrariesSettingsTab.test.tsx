@@ -3,24 +3,25 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LibrariesSettingsTab } from './LibrariesSettingsTab';
 import {
-  listLibrarySettings,
-  resetLibrarySettings,
-  saveLibrarySettings,
-  type LibrarySettings,
-  type NetworkProfile,
+  listNetworkSettings,
+  saveNetworkProfile,
+  setLibraryProfile,
+  type NetworkSettings,
+  type NetworkValues,
 } from '../../services/downloadSettingsService';
 
 vi.mock('../../services/downloadSettingsService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/downloadSettingsService')>();
   return {
     ...actual,
-    listLibrarySettings: vi.fn(),
-    saveLibrarySettings: vi.fn(),
-    resetLibrarySettings: vi.fn(),
+    listNetworkSettings: vi.fn(),
+    saveNetworkProfile: vi.fn(),
+    deleteNetworkProfile: vi.fn(),
+    setLibraryProfile: vi.fn(),
   };
 });
 
-const cautious: NetworkProfile = {
+const values: NetworkValues = {
   pauseMinMs: 600,
   pauseMaxMs: 1_600,
   burstRequests: 100,
@@ -36,86 +37,67 @@ const cautious: NetworkProfile = {
   needsViewerWarmup: false,
 };
 
-const gallica: LibrarySettings = {
-  key: 'gallica',
-  label: 'Gallica',
-  inRegistry: true,
-  customised: false,
-  sizeCap: null,
-  profile: { ...cautious, pauseMinMs: 2_500, pauseMaxMs: 6_000, maxAttempts: 3 },
+const settings: NetworkSettings = {
+  profiles: [
+    { id: 'normale', name: 'Normale', builtin: true, values, usedBy: 10 },
+    { id: 'lento', name: 'Lento', builtin: true, values: { ...values, maxAttempts: 3 }, usedBy: 1 },
+  ],
+  libraries: [
+    { key: 'gallica', label: 'Gallica', profileId: 'lento' },
+    { key: 'archive_org', label: 'Internet Archive', profileId: 'normale' },
+  ],
 };
 
-const vatican: LibrarySettings = {
-  key: 'vatican',
-  label: 'Vatican Library',
-  inRegistry: true,
-  customised: true,
-  sizeCap: '3000',
-  profile: cautious,
-};
+const list = vi.mocked(listNetworkSettings);
+const save = vi.mocked(saveNetworkProfile);
+const choose = vi.mocked(setLibraryProfile);
 
-const list = vi.mocked(listLibrarySettings);
-const save = vi.mocked(saveLibrarySettings);
-const reset = vi.mocked(resetLibrarySettings);
-
-describe('impostazioni delle biblioteche', () => {
+describe('profili di rete', () => {
   beforeEach(() => {
-    list.mockReset().mockResolvedValue([gallica, vatican]);
-    save.mockReset().mockResolvedValue([{ ...gallica, customised: true }, vatican]);
-    reset.mockReset().mockResolvedValue([gallica, vatican]);
+    list.mockReset().mockResolvedValue(settings);
+    save.mockReset().mockResolvedValue(settings);
+    choose.mockReset().mockResolvedValue(settings);
   });
 
-  it('una biblioteca per pulsante, con il nome solo al passaggio del mouse', async () => {
+  it('elenca i profili con quante biblioteche li usano', async () => {
     render(<LibrariesSettingsTab />);
 
-    expect(await screen.findByRole('tab', { name: 'Gallica' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Vatican Library' })).toBeInTheDocument();
+    expect(await screen.findByRole('radio', { name: /Normale/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Lento/ })).toBeInTheDocument();
+    expect(screen.getAllByText('settings.network.usedBy').length).toBe(2);
   });
 
-  it('apre la prima biblioteca senza doverla scegliere', async () => {
+  it('apre il primo profilo con i suoi valori', async () => {
     render(<LibrariesSettingsTab />);
 
-    expect(await screen.findByLabelText('settings.libraries.field.maxAttempts')).toHaveValue(3);
+    expect(await screen.findByLabelText('settings.network.field.maxAttempts')).toHaveValue(5);
   });
 
-  it('i valori si vedono ma non si toccano finché non lo si chiede', async () => {
-    render(<LibrariesSettingsTab />);
-
-    expect(await screen.findByLabelText('settings.libraries.field.maxAttempts')).toBeDisabled();
-    expect(screen.getByRole('switch', { name: 'settings.libraries.editValues' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    );
-  });
-
-  it('acceso l interruttore, i valori si cambiano e si salvano', async () => {
+  it('salva i valori cambiati del profilo scelto', async () => {
     const user = userEvent.setup();
     render(<LibrariesSettingsTab />);
-    await user.click(await screen.findByRole('switch', { name: 'settings.libraries.editValues' }));
+    // I campi si rimontano quando arrivano i profili: prima si aspetta
+    // l'elenco, altrimenti si scrive dentro un campo già sostituito.
+    await screen.findByRole('radio', { name: /Normale/ });
+    const attempts = screen.getByLabelText('settings.network.field.maxAttempts');
 
-    const attempts = screen.getByLabelText('settings.libraries.field.maxAttempts');
     await user.clear(attempts);
     await user.type(attempts, '4');
-    await user.click(screen.getByRole('button', { name: 'settings.libraries.save' }));
+    await user.click(screen.getByRole('button', { name: 'settings.network.save' }));
 
-    expect(save).toHaveBeenCalledWith('gallica', null, expect.objectContaining({ maxAttempts: 4 }));
+    expect(save).toHaveBeenCalledWith({
+      id: 'normale',
+      name: 'Normale',
+      values: expect.objectContaining({ maxAttempts: 4 }),
+    });
   });
 
-  it('spegnere l interruttore riporta la biblioteca ai valori dell applicazione', async () => {
+  it('ogni biblioteca sceglie il suo profilo', async () => {
     const user = userEvent.setup();
     render(<LibrariesSettingsTab />);
-    await user.click(await screen.findByRole('tab', { name: 'Vatican Library' }));
 
-    await user.click(screen.getByRole('switch', { name: 'settings.libraries.editValues' }));
+    await user.selectOptions(await screen.findByLabelText('Internet Archive'), 'lento');
 
-    expect(reset).toHaveBeenCalledWith('vatican');
+    expect(choose).toHaveBeenCalledWith('archive_org', 'lento');
   });
-
-  it('una biblioteca mai toccata non ha niente da ripristinare', async () => {
-    render(<LibrariesSettingsTab />);
-
-    await screen.findByRole('tab', { name: 'Gallica' });
-    expect(screen.queryByRole('button', { name: 'settings.libraries.reset' })).not.toBeInTheDocument();
-  });
-
 });

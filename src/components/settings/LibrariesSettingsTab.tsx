@@ -1,37 +1,58 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Tooltip } from '../ui';
-import { LibraryProfileEditor } from './LibraryProfileEditor';
+import { Gauge, Landmark, Plus, Trash2 } from 'lucide-react';
+import { IconButton, Select } from '../ui';
+import { NetworkProfileFields } from './NetworkProfileFields';
 import {
-  listLibrarySettings,
-  resetLibrarySettings,
-  saveLibrarySettings,
-  type LibrarySettings,
-  type NetworkProfile,
+  deleteNetworkProfile,
+  listNetworkSettings,
+  MAX_HOST_CONCURRENCY,
+  saveNetworkProfile,
+  setLibraryProfile,
+  type NetworkSettings,
+  type NetworkValues,
 } from '../../services/downloadSettingsService';
 
+/** I valori di un profilo nuovo: il ritmo prudente, che è quello di partenza. */
+const NEW_PROFILE_VALUES: NetworkValues = {
+  pauseMinMs: 600,
+  pauseMaxMs: 1_600,
+  burstRequests: 100,
+  burstWindowSecs: 60,
+  cooldown403Secs: 120,
+  cooldown429Secs: 120,
+  hostConcurrency: MAX_HOST_CONCURRENCY,
+  maxAttempts: 5,
+  backoffBaseSecs: 15,
+  backoffCapSecs: 300,
+  connectTimeoutSecs: 15,
+  readTimeoutSecs: 30,
+  needsViewerWarmup: false,
+};
+
 /**
- * Le biblioteche e come si sta al loro tavolo (#421, D18).
+ * I profili di rete e le biblioteche che li usano (#421, D18).
  *
- * Stessa forma delle impostazioni dei provider: una fila di pulsanti con la
- * sola sigla e il nome al passaggio del mouse, e sotto i valori di quella
- * scelta. Le biblioteche sono undici: un elenco aperto sarebbe una parete di
- * numeri.
+ * Un profilo è **un ritmo**: quanto aspettare fra una richiesta e l'altra,
+ * quante in un minuto, quanto fermarsi quando la biblioteca chiede di
+ * rallentare. Ogni biblioteca ne sceglie uno; chi non sceglie segue quello
+ * predefinito.
  */
 export function LibrariesSettingsTab() {
   const { t } = useTranslation();
-  const [libraries, setLibraries] = useState<LibrarySettings[]>([]);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [settings, setSettings] = useState<NetworkSettings>({ profiles: [], libraries: [] });
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const listed = await listLibrarySettings();
-        setLibraries(listed);
-        setActiveKey((current) => current ?? listed[0]?.key ?? null);
+        const loaded = await listNetworkSettings();
+        setSettings(loaded);
+        setActiveId((current) => current ?? loaded.profiles[0]?.id ?? null);
       } catch (error: unknown) {
-        toast.error(t('settings.libraries.loadFailed'), {
+        toast.error(t('settings.network.loadFailed'), {
           description: error instanceof Error ? error.message : String(error),
         });
       }
@@ -39,27 +60,46 @@ export function LibrariesSettingsTab() {
     void load();
   }, [t]);
 
-  const active = libraries.find((library) => library.key === activeKey) ?? null;
+  const active = creating
+    ? null
+    : (settings.profiles.find((profile) => profile.id === activeId) ?? null);
 
-  const save = async (key: string, sizeCap: string | null, profile: NetworkProfile) => {
+  const save = async (name: string, values: NetworkValues) => {
     try {
-      // L'elenco che torna è quello **davvero salvato**: se un valore è stato
-      // riportato dentro i limiti, si vede subito quello che vale.
-      setLibraries(await saveLibrarySettings(key, sizeCap, profile));
-      toast.success(t('settings.libraries.saved'));
+      const saved = await saveNetworkProfile({ id: active?.id ?? null, name, values });
+      setSettings(saved);
+      if (creating) {
+        setCreating(false);
+        setActiveId(saved.profiles.find((profile) => profile.name === name)?.id ?? activeId);
+      }
+      toast.success(t('settings.network.saved'));
     } catch (error: unknown) {
-      toast.error(t('settings.libraries.saveFailed'), {
+      toast.error(t('settings.network.saveFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
     }
   };
 
-  const reset = async (key: string) => {
+  const remove = async (id: string) => {
     try {
-      setLibraries(await resetLibrarySettings(key));
-      toast.success(t('settings.libraries.resetDone'));
+      const saved = await deleteNetworkProfile(id);
+      setSettings(saved);
+      setActiveId(saved.profiles[0]?.id ?? null);
     } catch (error: unknown) {
-      toast.error(t('settings.libraries.saveFailed'), {
+      const reason = error instanceof Error ? error.message : String(error);
+      toast.error(
+        reason.includes('profile_in_use')
+          ? t('settings.network.deleteInUse')
+          : t('settings.network.saveFailed'),
+      );
+    }
+  };
+
+  const choose = async (libraryKey: string, profileId: string) => {
+    try {
+      setSettings(await setLibraryProfile(libraryKey, profileId));
+    } catch (error: unknown) {
+      toast.error(t('settings.network.saveFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
     }
@@ -70,71 +110,114 @@ export function LibrariesSettingsTab() {
       id="settings-panel-libraries"
       role="tabpanel"
       aria-labelledby="settings-tab-libraries"
-      className="space-y-4"
+      className="space-y-10"
     >
-      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-        {t('settings.librariesTab')}
-      </p>
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5">
+            <Gauge size={11} className="shrink-0 text-editorial-accent" />
+            <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+              {t('settings.network.profiles')}
+            </p>
+          </div>
+          <IconButton
+            size="sm"
+            tone={creating ? 'accent' : 'default'}
+            onClick={() => setCreating(true)}
+            title={t('settings.network.newProfile')}
+          >
+            <Plus size={13} />
+          </IconButton>
+        </div>
 
-      <div className="space-y-4 border-y border-editorial-border/70 py-5">
-        <div role="tablist" aria-label={t('settings.librariesTab')} className="flex flex-wrap gap-2">
-          {libraries.map((library) => {
-            const active = library.key === activeKey;
+        <div
+          role="radiogroup"
+          aria-label={t('settings.network.profiles')}
+          className="grid grid-cols-2 gap-x-6 border-y border-editorial-border/70"
+        >
+          {settings.profiles.map((profile) => {
+            const isActive = !creating && profile.id === activeId;
             return (
-              <Tooltip key={library.key} label={library.label}>
-                <button
-                  type="button"
-                  onClick={() => setActiveKey(library.key)}
-                  aria-label={library.label}
-                  id={`settings-library-tab-${library.key}`}
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls="settings-library-panel"
-                  tabIndex={active ? 0 : -1}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    active
-                      ? 'border-editorial-accent bg-editorial-accent text-white'
-                      : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                  }`}
-                >
-                  {monogram(library.label)}
-                  {/* Una biblioteca con valori propri lo dice con un punto, non
-                      con una parola: la fila resta una fila di sigle. */}
-                  {library.customised && (
-                    <span
-                      className={`absolute mb-5 ml-5 h-1.5 w-1.5 rounded-full ${
-                        active ? 'bg-white' : 'bg-editorial-accent'
-                      }`}
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              </Tooltip>
+              <button
+                key={profile.id}
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                onClick={() => {
+                  setCreating(false);
+                  setActiveId(profile.id);
+                }}
+                className={`flex items-center justify-between gap-2 border-l-4 py-3.5 pl-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  isActive
+                    ? 'border-l-editorial-accent text-editorial-accent'
+                    : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:text-editorial-accent'
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block font-display text-lg italic">{profile.name}</span>
+                  <span className="mt-0.5 block text-xs text-editorial-muted">
+                    {t('settings.network.usedBy', { count: profile.usedBy })}
+                  </span>
+                </span>
+                {isActive && (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-editorial-accent"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
             );
           })}
-
         </div>
 
-        <div id="settings-library-panel" role="tabpanel" aria-labelledby={`settings-library-tab-${activeKey}`}>
-          {active && (
-            <LibraryProfileEditor
-              // Riaprire una biblioteca dopo un salvataggio deve ripartire dai
-              // valori appena scritti, non da quelli rimasti in memoria.
-              key={`${active.key}:${active.customised}`}
-              library={active}
-              onSave={(sizeCap, profile) => save(active.key, sizeCap, profile)}
-              onReset={() => reset(active.key)}
-            />
-          )}
+        <NetworkProfileFields
+          // Cambiando profilo i campi ripartono dai suoi valori, non da quelli
+          // rimasti a schermo.
+          key={active?.id ?? 'nuovo'}
+          name={active?.name ?? t('settings.network.newProfileName')}
+          values={active?.values ?? NEW_PROFILE_VALUES}
+          onSave={save}
+        />
+
+        {active && !active.builtin && (
+          <div className="flex justify-end">
+            <IconButton
+              size="sm"
+              tone="danger"
+              onClick={() => void remove(active.id)}
+              disabled={active.usedBy > 0}
+              title={active.usedBy > 0 ? t('settings.network.deleteInUse') : t('settings.network.delete')}
+            >
+              <Trash2 size={13} />
+            </IconButton>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-1.5">
+          <Landmark size={11} className="shrink-0 text-editorial-accent" />
+          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            {t('settings.network.libraries')}
+          </p>
         </div>
-      </div>
+        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+          {settings.libraries.map((library) => (
+            <div key={library.key} className="flex items-center justify-between gap-3 py-2.5">
+              <span className="min-w-0 truncate text-sm text-editorial-ink">{library.label}</span>
+              <Select
+                value={library.profileId}
+                onChange={(value) => void choose(library.key, value)}
+                ariaLabel={library.label}
+                options={settings.profiles.map((profile) => ({
+                  value: profile.id,
+                  label: profile.name,
+                }))}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
-}
-
-/** Le due lettere che stanno in un pulsante tondo. Il nome intero è nel tooltip. */
-function monogram(label: string): string {
-  const words = label.split(/[\s.]+/).filter(Boolean);
-  if (words.length >= 2) return `${words[0][0]}${words[1][0]}`;
-  return label.slice(0, 2);
 }

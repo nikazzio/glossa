@@ -2,15 +2,14 @@ import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
 
 /**
- * La politica di scaricamento (#422) e i profili di rete delle biblioteche
- * (#421). Decisioni D4, D11 e D18.
+ * La misura delle pagine (#422) e i profili di rete (#421). Decisioni D4, D11
+ * e D18.
  *
- * Due livelli di scelta e tre di precedenza: **fonte → biblioteca → globale**
- * per la risoluzione, **modifica dell'utente → registro → profilo prudente**
- * per il modo di stare al tavolo di una biblioteca.
+ * **Un profilo è un ritmo, non una biblioteca**: i valori tarati sul campo
+ * sono pochi e si applicano a undici biblioteche, che scelgono quale seguire.
  *
- * Il backend riporta comunque i valori dentro i limiti prima di usarli: qui i
- * limiti servono a non proporre scelte che verrebbero corrette dopo.
+ * La misura ha due livelli: **l'opera**, dove la decisione la vuole perché
+ * dipende dal materiale, e **l'impostazione generale**.
  */
 
 const SIZE_CAP_KEY = 'download_size_cap';
@@ -19,7 +18,7 @@ const THUMBNAIL_EDGE_KEY = 'thumbnail_long_edge';
 /** La politica «massima»: nessun tetto, la dimensione piena del servizio. */
 export const MAX_SIZE_CAP = 'max';
 
-/** I tetti fra cui si sceglie, in pixel sul lato lungo, più «massima». */
+/** Le misure fra cui si sceglie, in pixel sul lato lungo, più «massima». */
 export const SIZE_CAPS = ['1000', '1500', '2000', '3000', MAX_SIZE_CAP] as const;
 
 export const DEFAULT_SIZE_CAP = '2000';
@@ -36,7 +35,7 @@ export const DEFAULT_THUMBNAIL_EDGE = 300;
  */
 export const MAX_HOST_CONCURRENCY = 4;
 
-export interface NetworkProfile {
+export interface NetworkValues {
   pauseMinMs: number;
   pauseMaxMs: number;
   burstRequests: number;
@@ -52,15 +51,25 @@ export interface NetworkProfile {
   needsViewerWarmup: boolean;
 }
 
-export interface LibrarySettings {
+export interface NetworkProfile {
+  id: string;
+  name: string;
+  /** I profili che nascono con l'applicazione: si modificano, non si eliminano. */
+  builtin: boolean;
+  values: NetworkValues;
+  /** Quante biblioteche lo usano. */
+  usedBy: number;
+}
+
+export interface LibraryChoice {
   key: string;
   label: string;
-  /** Falso per le voci aggiunte a mano su un host fuori dal registro. */
-  inRegistry: boolean;
-  /** Vero quando esiste una modifica dell'utente da poter annullare. */
-  customised: boolean;
-  sizeCap: string | null;
-  profile: NetworkProfile;
+  profileId: string;
+}
+
+export interface NetworkSettings {
+  profiles: NetworkProfile[];
+  libraries: LibraryChoice[];
 }
 
 async function readSetting(key: string): Promise<string | null> {
@@ -75,7 +84,7 @@ async function writeSetting(key: string, value: string): Promise<void> {
   );
 }
 
-/** Un tetto scritto nel database che non significa niente vale come assente. */
+/** Una misura scritta nel database che non è fra le scelte vale come assente. */
 function knownSizeCap(value: string | null): string | null {
   return value !== null && (SIZE_CAPS as readonly string[]).includes(value) ? value : null;
 }
@@ -99,41 +108,39 @@ export async function setThumbnailEdge(value: number): Promise<void> {
   await writeSetting(THUMBNAIL_EDGE_KEY, String(chosen));
 }
 
+const emptySettings: NetworkSettings = { profiles: [], libraries: [] };
+
+function asSettings(answer: NetworkSettings | null): NetworkSettings {
+  return answer && Array.isArray(answer.profiles) ? answer : emptySettings;
+}
+
+export async function listNetworkSettings(): Promise<NetworkSettings> {
+  return asSettings(await invoke<NetworkSettings | null>('list_network_settings'));
+}
+
 /**
- * Il profilo prudente, che vale per chi non ha voce nel registro. Lo dichiara
- * il backend: tenerlo anche qui vorrebbe dire due elenchi di valori destinati
- * a divergere.
+ * Salva un profilo, nuovo o esistente, e restituisce lo stato **come è stato
+ * davvero scritto**: un valore riportato dentro i limiti si vede subito.
  */
-export async function cautiousNetworkProfile(): Promise<NetworkProfile> {
-  return invoke<NetworkProfile>('cautious_network_profile');
+export async function saveNetworkProfile(profile: {
+  id: string | null;
+  name: string;
+  values: NetworkValues;
+}): Promise<NetworkSettings> {
+  return asSettings(await invoke<NetworkSettings | null>('save_network_profile', { profile }));
 }
 
-export async function listLibrarySettings(): Promise<LibrarySettings[]> {
-  const answer = await invoke<LibrarySettings[] | null>('list_library_settings');
-  return Array.isArray(answer) ? answer : [];
+export async function deleteNetworkProfile(id: string): Promise<NetworkSettings> {
+  return asSettings(await invoke<NetworkSettings | null>('delete_network_profile', { id }));
 }
 
-/** Salva e restituisce l'elenco **come è stato davvero scritto**. */
-export async function saveLibrarySettings(
-  key: string,
-  sizeCap: string | null,
-  profile: NetworkProfile,
-): Promise<LibrarySettings[]> {
-  const answer = await invoke<LibrarySettings[] | null>('save_library_settings', {
-    key,
-    sizeCap,
-    profile,
-  });
-  return Array.isArray(answer) ? answer : [];
+export async function setLibraryProfile(libraryKey: string, profileId: string): Promise<NetworkSettings> {
+  return asSettings(
+    await invoke<NetworkSettings | null>('set_library_network_profile', { libraryKey, profileId }),
+  );
 }
 
-/** Riporta una biblioteca ai valori compilati nell'applicazione. */
-export async function resetLibrarySettings(key: string): Promise<LibrarySettings[]> {
-  const answer = await invoke<LibrarySettings[] | null>('reset_library_settings', { key });
-  return Array.isArray(answer) ? answer : [];
-}
-
-/** Il tetto scelto sulla singola fonte, quando c'è (D4). */
+/** La misura scelta per la singola opera, quando c'è (D4). */
 export async function getVersionSizeCap(versionId: string): Promise<string | null> {
   return knownSizeCap(await invoke<string | null>('get_version_size_cap', { versionId }));
 }

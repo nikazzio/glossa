@@ -7,7 +7,7 @@ import {
   getGlobalSizeCap,
   getThumbnailEdge,
   getVersionSizeCap,
-  listLibrarySettings,
+  listNetworkSettings,
   setGlobalSizeCap,
   setThumbnailEdge,
 } from './downloadSettingsService';
@@ -56,10 +56,10 @@ describe('politica di scaricamento', () => {
     ]);
   });
 
-  it('un elenco di biblioteche assente non fa cadere la schermata', async () => {
+  it('una risposta assente non fa cadere la schermata', async () => {
     invokeMock.mockResolvedValue(null);
 
-    expect(await listLibrarySettings()).toEqual([]);
+    expect(await listNetworkSettings()).toEqual({ profiles: [], libraries: [] });
   });
 
   it('il tetto della singola fonte può non esserci, ed è il caso normale', async () => {
