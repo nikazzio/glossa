@@ -110,8 +110,16 @@ export async function setThumbnailEdge(value: number): Promise<void> {
 
 const emptySettings: NetworkSettings = { profiles: [], libraries: [] };
 
+/**
+ * Quello che arriva dal backend, controllato prima di usarlo: la schermata
+ * scorre entrambi gli elenchi, e uno solo dei due mancante la farebbe cadere.
+ */
 function asSettings(answer: NetworkSettings | null): NetworkSettings {
-  return answer && Array.isArray(answer.profiles) ? answer : emptySettings;
+  if (!answer) return emptySettings;
+  return {
+    profiles: Array.isArray(answer.profiles) ? answer.profiles : [],
+    libraries: Array.isArray(answer.libraries) ? answer.libraries : [],
+  };
 }
 
 export async function listNetworkSettings(): Promise<NetworkSettings> {

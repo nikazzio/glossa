@@ -457,7 +457,10 @@ farebbe ripartire il riscaricamento dell'intera biblioteca.
 Millisecondi anche per un manoscritto grande. Risponde: *"210 attese, 198
 presenti, 12 mancanti"*.
 
-**Completo — integrità.** Ricalcola l'impronta di ogni file. Scopre anche i file
+**Completo — integrità.** Ricalcola l'impronta di ogni file **e la confronta
+con quella registrata quando il file è arrivato** *(precisato il 2026-08-17: la
+prima stesura del codice l'impronta la calcolava e la buttava, quindi un file
+marcito dentro, con firma e terminatore intatti, passava per integro)*. Scopre anche i file
 troncati da uno scaricamento interrotto, che il controllo rapido conta come
 presenti. Lento in proporzione ai gigabyte, e su un deposito sincronizzato in
 streaming (D1-bis) **costringe il client a scaricare tutto**: va avvisato prima

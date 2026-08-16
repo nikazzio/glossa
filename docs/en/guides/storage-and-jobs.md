@@ -86,7 +86,7 @@ downloads restart automatically.
 
 **Settings → Storage** has two controls.
 
-The **quick check** looks at whether the files Glossa registered are still in place: milliseconds even for a large manuscript. The **full check** opens every file and recomputes its fingerprint, so it also finds the ones truncated by an interrupted download — but it is slow in proportion to the gigabytes, and on a synced folder it forces the service to download everything.
+The **quick check** looks at whether the files Glossa registered are still in place: milliseconds even for a large manuscript. The **full check** opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived: it is the only one that catches a file truncated by an interrupted download or gone rotten on disk. It is slow in proportion to the gigabytes, and on a synced folder it forces the service to download everything. If nothing is damaged the two counts match, and only the time differs.
 
 Both become queued jobs: follow them from the bottom panel, pause them, cancel them. The result is a four-part count — intact, missing, corrupt, orphans — where *orphans* are files left in the vault that no record claims. **Neither one deletes or re-downloads anything on its own.**
 
@@ -109,11 +109,10 @@ the one it declares closest, above or below. Asking for an invented size would
 force the service to produce it on the spot — measured: twenty-three seconds
 against one.
 
-The same choice can be made closer to the work, and the closest one wins:
-
-1. on the **single work**, by opening its card in the Library;
-2. on the **single library**, in Settings → Libraries;
-3. on **everything**, in Settings → Download.
+The same choice can be made on the **single work**, by opening its card in the
+Library, and there it wins: the size depends on the material — a wide-set
+printed book reads at far less than a cramped minuscule — not on who keeps the
+book.
 
 Pages already downloaded stay as they are: the choice applies to what is
 downloaded from now on.
@@ -122,20 +121,24 @@ downloaded from now on.
 it has downloaded, on your computer. Larger ones take more space and browse
 better; they cost no request at all.
 
-## Libraries, one by one
+## The pace towards libraries
 
-**Settings → Libraries** lists the libraries Glossa knows, and for each one its
-pace: how long to wait between requests, how many requests in a minute, how
-long to stop when the library asks you to slow down, how many attempts to make.
+Every library has its own pace: how long to wait between requests, how many
+requests in a minute, how long to stop when it asks you to slow down, how many
+attempts to make. These are a few different paces applied to many libraries, so
+**Settings → Libraries** governs them as **profiles**.
 
-They ship already tuned in the field. They can be changed, and one command
-restores any library to the values it came with.
+Two profiles ship with Glossa, with values proven in the field: **Normal**,
+used by almost all of them, and **Slow**, tuned on Gallica, the strictest one.
+You can change them, create others and name each one; next to the name Glossa
+says how many libraries use it.
+
+Below, the list of libraries: for each one you pick its profile from a menu. A
+profile someone is using cannot be deleted — move the libraries that follow it
+first — and the two that ship with the application cannot be deleted at all.
 
 **Requests at the same time never go above four**, whatever you write: the
 limit depends on their server and it keeps you from being blocked.
-
-If you download from an address belonging to none of the listed libraries, you
-can **add it** and give it its own pace.
 
 ## Stopped does not mean broken
 

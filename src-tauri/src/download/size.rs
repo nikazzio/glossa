@@ -60,7 +60,10 @@ pub fn from_info(info: &Value, cap: u32) -> SizeToken {
 /// numero che si legge accanto, facendo sembrare un difetto ciò che non lo è.
 pub fn available_sizes(info: &Value) -> Vec<(u32, u32)> {
     let mut sizes = declared_sizes(info);
-    sizes.sort_unstable_by_key(|(width, height)| (*width).max(*height));
+    // Anche larghezza e altezza nell'ordinamento: due misure diverse possono
+    // avere lo stesso lato lungo, e senza di quelle le uguali non finirebbero
+    // per forza vicine — `dedup` ne lascerebbe passare qualcuna doppia.
+    sizes.sort_unstable_by_key(|(width, height)| ((*width).max(*height), *width, *height));
     sizes.dedup();
     sizes
 }

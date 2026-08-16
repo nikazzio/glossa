@@ -86,12 +86,15 @@ export function LibrariesSettingsTab() {
     if (name.trim() === '') return;
     setSaving(true);
     try {
+      const known = new Set(settings.profiles.map((profile) => profile.id));
       const saved = await saveNetworkProfile({ id: active?.id ?? null, name: name.trim(), values });
       setSettings(saved);
       setDraft(null);
       if (creating) {
         setCreating(false);
-        setActiveId(saved.profiles.find((profile) => profile.name === name.trim())?.id ?? activeId);
+        // Il profilo appena nato è quello con l'identificativo che prima non
+        // c'era: cercarlo per nome sbaglierebbe fra due profili omonimi.
+        setActiveId(saved.profiles.find((profile) => !known.has(profile.id))?.id ?? activeId);
       }
       toast.success(t('settings.network.saved'));
     } catch (error: unknown) {

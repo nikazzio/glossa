@@ -87,7 +87,7 @@ automaticamente gli scaricamenti interrotti.
 
 In **Impostazioni → Archiviazione** ci sono due controlli.
 
-La **verifica rapida** guarda se i file che Glossa ha registrato sono ancora al loro posto: è questione di millisecondi anche per un manoscritto grande. La **verifica completa** apre ogni file e ne ricontrolla l'impronta, quindi scopre anche quelli troncati da uno scaricamento interrotto — ma è lenta in proporzione ai gigabyte, e su una cartella sincronizzata costringe il servizio a scaricare tutto.
+La **verifica rapida** guarda soltanto se i file che Glossa ha registrato sono ancora al loro posto: è questione di millisecondi anche per un manoscritto grande. La **verifica completa** apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato: è l'unica che riconosce un file troncato da uno scaricamento interrotto o marcito sul disco. È lenta in proporzione ai gigabyte, e su una cartella sincronizzata costringe il servizio a scaricare tutto. Se niente è danneggiato i due conteggi coincidono, e cambia solo il tempo.
 
 Entrambe diventano lavori in coda: le segui dal pannello in basso, le metti in pausa, le annulli. Il risultato è un conteggio in quattro parti — integri, mancanti, corrotti, orfani — dove gli *orfani* sono file rimasti nel deposito che nessuna scheda reclama. **Nessuna delle due cancella o riscarica niente da sola.**
 
@@ -112,11 +112,10 @@ alla biblioteca quella che dichiara più vicina, sopra o sotto. Chiedere una
 misura inventata costringerebbe il servizio a produrla sul momento — misurato:
 ventitré secondi contro uno.
 
-La stessa scelta si può fare più vicino all'opera, e vince la più vicina:
-
-1. sulla **singola opera**, aprendo la sua scheda in Biblioteca;
-2. sulla **singola biblioteca**, in Impostazioni → Biblioteche;
-3. su **tutto**, in Impostazioni → Scaricamento.
+La stessa scelta si può fare sulla **singola opera**, aprendo la sua scheda in
+Biblioteca, e lì vince: la misura dipende dal materiale — una cinquecentina a
+stampa larga si legge a molto meno di una minuscola fitta — non da chi conserva
+il libro.
 
 Le pagine già scaricate restano come sono: la scelta vale per quello che si
 scarica da adesso.
@@ -125,21 +124,25 @@ Le **miniature** non si chiedono alla biblioteca: Glossa le ricava dalle pagine
 che ha scaricato, sul computer. Più grandi occupano più spazio e si sfogliano
 meglio; non costano nessuna richiesta.
 
-## Le biblioteche, una per una
+## Il ritmo verso le biblioteche
 
-In **Impostazioni → Biblioteche** c'è l'elenco delle biblioteche che Glossa
-conosce, e per ognuna i suoi tempi: quanto aspettare fra una richiesta e
-l'altra, quante richieste in un minuto, quanto fermarsi quando la biblioteca
-chiede di rallentare, quanti tentativi fare.
+Ogni biblioteca ha i suoi tempi: quanto aspettare fra una richiesta e l'altra,
+quante richieste in un minuto, quanto fermarsi quando chiede di rallentare,
+quanti tentativi fare. Sono pochi ritmi diversi applicati a molte biblioteche,
+quindi in **Impostazioni → Biblioteche** si governano come **profili**.
 
-Arrivano già tarati sul campo. Si possono cambiare, e un comando riporta ogni
-biblioteca ai valori con cui è arrivata.
+Due profili arrivano con Glossa, con i valori provati sul campo: **Normale**,
+che usano quasi tutte, e **Lento**, tarato su Gallica che è la più severa.
+Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome
+Glossa dice quante biblioteche lo usano.
+
+Sotto, l'elenco delle biblioteche: per ognuna scegli il profilo con un menu.
+Un profilo che qualcuno sta usando non si può eliminare — prima si spostano le
+biblioteche che lo seguono — e i due che arrivano con l'applicazione non si
+eliminano affatto.
 
 Le **richieste insieme non superano mai quattro**, qualunque cosa si scriva: il
 limite dipende dal loro server e serve a non farsi bloccare.
-
-Se scarichi da un indirizzo che non appartiene a nessuna delle biblioteche in
-elenco, puoi **aggiungerlo** e dargli i suoi tempi.
 
 ## Fermo non vuol dire rotto
 

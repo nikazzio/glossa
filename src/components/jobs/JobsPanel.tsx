@@ -97,7 +97,7 @@ function JobRow({ job }: { job: Job }) {
   const waitingToRetry = isWaitingToRetry(job);
   const eta = formatEta(job.etaSeconds);
   const detail = parseJobDetail(job.detail);
-  const description = job.message ?? t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
+  const description = job.message ?? jobTypeLabel(job, t);
 
   return (
     <div className="rounded border border-terminal-line bg-terminal-chrome">
@@ -237,6 +237,24 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
       )}
     </div>
   );
+}
+
+/**
+ * Come si chiama un lavoro che non ha un nome proprio.
+ *
+ * La verifica del deposito ne ha due forme — presenza e integrità — che dal
+ * pannello si distinguevano solo aprendo la riga: due lavori con lo stesso
+ * titolo sembrano lo stesso lavoro fatto due volte.
+ */
+function jobTypeLabel(job: Job, t: (key: string, options?: Record<string, unknown>) => string): string {
+  const base = t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
+  if (job.jobType !== 'vault_verification') return base;
+  try {
+    const full = (JSON.parse(job.config ?? '{}') as { full?: boolean }).full === true;
+    return `${base} · ${t(full ? 'jobs.detail.levelValue.full' : 'jobs.detail.levelValue.quick')}`;
+  } catch {
+    return base;
+  }
 }
 
 /** Oltre questa lunghezza un valore sta su una riga sola finché non lo si apre. */
