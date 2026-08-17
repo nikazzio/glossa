@@ -384,12 +384,17 @@ fn inline_and_tighten(value: Value, definitions: &Map<String, Value>, depth: usi
 /// standard, ma i provider ricevevano `1` e non c'è motivo di cambiarglielo.
 fn canonical_number(number: serde_json::Number) -> Value {
     match number.as_f64() {
-        Some(value) if value.fract() == 0.0 && value.abs() < (i64::MAX as f64) => {
+        Some(value) if value.fract() == 0.0 && value.abs() <= EXACT_INTEGER_LIMIT => {
             Value::Number(serde_json::Number::from(value as i64))
         }
         _ => Value::Number(number),
     }
 }
+
+/// Oltre 2^53 la virgola mobile non rappresenta più ogni intero: convertire
+/// cambierebbe il valore, e uno schema con un vincolo diverso da quello scritto
+/// non è più lo stesso schema. Sopra questa soglia si lascia com'è.
+const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0;
 
 /// Su ogni schema di oggetto: vieta i campi extra ed elenca tutte le proprietà
 /// come obbligatorie. La nullabilità resta espressa dal tipo (`["string",
@@ -458,8 +463,17 @@ pub struct CoherenceResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::audit_json_schema;
+    use super::{audit_json_schema, canonical_number};
     use serde_json::Value;
+
+    #[test]
+    fn a_number_too_big_for_exact_conversion_is_left_alone() {
+        // Oltre 2^53 il passaggio per la virgola mobile cambierebbe il valore:
+        // meglio un vincolo scritto com'era che uno diverso da quello voluto.
+        let huge = serde_json::Number::from_f64(9_007_199_254_740_994.0).unwrap();
+
+        assert_eq!(canonical_number(huge.clone()), Value::Number(huge));
+    }
 
     fn contains_key_anywhere(value: &Value, key: &str) -> bool {
         match value {
