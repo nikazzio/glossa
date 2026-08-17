@@ -480,6 +480,7 @@
     "secretsPanel": "Secrets panel",
     "saveClose": "Save & Close",
     "close": "Close",
+    "editKey": "Edit the key",
     "clickToConfigure": "Click to configure",
     "pasteApiKey": "Paste API key...",
     "save": "Save",

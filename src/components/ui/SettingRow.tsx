@@ -29,10 +29,17 @@ export function SettingRow({
       <span className="flex min-w-0 items-center gap-1.5 text-sm text-editorial-ink">
         <span className="min-w-0 truncate">{label}</span>
         {hint && (
+          // Un pulsante e non un riquadro qualsiasi: la spiegazione si deve
+          // poter raggiungere da tastiera, e su un elemento non attivabile il
+          // suggerimento non si apre mai.
           <Tooltip label={hint}>
-            <span className="shrink-0 text-editorial-muted" aria-label={hint}>
+            <button
+              type="button"
+              aria-label={hint}
+              className="shrink-0 rounded-full text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
               <Info size={12} />
-            </span>
+            </button>
           </Tooltip>
         )}
       </span>

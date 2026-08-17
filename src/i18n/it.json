@@ -480,6 +480,7 @@
     "secretsPanel": "Pannello segreti",
     "saveClose": "Salva e Chiudi",
     "close": "Chiudi",
+    "editKey": "Modifica la chiave",
     "clickToConfigure": "Clicca per configurare",
     "pasteApiKey": "Incolla chiave API...",
     "save": "Salva",

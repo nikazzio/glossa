@@ -117,7 +117,9 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
         <button
           type="button"
           onClick={() => setEditing(true)}
-          aria-label={isConfigured ? t('settings.save') : t('settings.clickToConfigure')}
+          // Il pulsante apre la modifica, non salva: l'etichetta deve dire
+          // quello che succede premendolo.
+          aria-label={isConfigured ? t('settings.editKey') : t('settings.clickToConfigure')}
           className="flex flex-1 items-center gap-3 rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-left transition-colors hover:border-editorial-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Key
