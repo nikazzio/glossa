@@ -428,7 +428,7 @@ export async function executePipelineForChunk(
           targetLanguage: effectiveConfig.targetLanguage,
           input: stageText,
         },
-        rawError.slice(0, 120),
+        rawError,
       ).catch((failure: unknown) => {
         warnAsyncFailure('provenance.model_call.persist_failed', failure, {
           chunkId: chunk.id,
