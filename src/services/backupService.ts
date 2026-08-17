@@ -43,8 +43,6 @@ const ALLOWED_COLUMNS: Record<BackupTable, ReadonlySet<string>> = {
   source_versions:          new Set(['id','source_id','label','version_kind','source_url','metadata','is_primary','created_at','download_policy','image_service_profile','homepage_url','download_allowed','expected_asset_count','size_cap']),
   workspace_sources:        new Set(['workspace_id','source_id','linked_at']),
   transcription_documents:  new Set(['id','source_version_id','workspace_id','title','status','trashed_at','created_at','updated_at']),
-  // I segmenti puntano a un asset che dopo il ripristino non c'è: il
-  // riferimento resta, e torna valido quando l'opera viene riscaricata.
   transcription_segments:   new Set(['id','document_id','position','label','asset_id','approved_revision_id']),
   transcription_revisions:  new Set(['id','segment_id','revision_number','text','created_by','derived_from_revision_id','content_hash','created_at']),
   translation_origins:      new Set(['project_id','origin_type','transcription_document_id','source_version_id','import_note']),

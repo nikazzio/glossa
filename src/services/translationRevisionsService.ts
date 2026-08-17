@@ -189,12 +189,3 @@ export async function withdrawTranslationApproval(
     inputRef: approvedRevisionId,
   });
 }
-
-/** Le revisioni di un chunk, dalla prima all'ultima. */
-export async function listRevisions(translationId: string): Promise<TranslationRevision[]> {
-  return select<TranslationRevision>(
-    `SELECT * FROM translation_revisions WHERE translation_id = $1
-     ORDER BY revision_number ASC`,
-    [translationId],
-  );
-}
