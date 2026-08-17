@@ -256,13 +256,15 @@ async fn registered_paths(ctx: &JobContext) -> Result<Vec<Registered>, JobError>
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
-/// I file che stanno nel deposito e che nessuna riga reclama.
+/// I file che stanno nel deposito e che nessuna riga reclama, con il loro peso.
 ///
 /// Si guarda solo sotto `providers/`: l'area di transito è di passaggio per
 /// definizione, e `derived/` appartiene a chi l'ha prodotta.
-fn orphans(root: &Path, known: &HashSet<PathBuf>) -> (u32, u64) {
-    let mut count = 0;
-    let mut bytes = 0;
+///
+/// Restituisce l'elenco e non solo il conto perché lo usa anche la
+/// cancellazione (D5-bis), che li deve aprire uno per uno.
+pub fn orphan_files(root: &Path, known: &HashSet<PathBuf>) -> Vec<(PathBuf, u64)> {
+    let mut found = Vec::new();
     let mut stack = vec![root.join("providers")];
 
     while let Some(dir) = stack.pop() {
@@ -278,11 +280,19 @@ fn orphans(root: &Path, known: &HashSet<PathBuf>) -> (u32, u64) {
             if known.contains(&path) {
                 continue;
             }
-            count += 1;
-            bytes += entry.metadata().map(|meta| meta.len()).unwrap_or(0);
+            let bytes = entry.metadata().map(|meta| meta.len()).unwrap_or(0);
+            found.push((path, bytes));
         }
     }
-    (count, bytes)
+    found
+}
+
+fn orphans(root: &Path, known: &HashSet<PathBuf>) -> (u32, u64) {
+    let found = orphan_files(root, known);
+    (
+        found.len() as u32,
+        found.iter().map(|(_, bytes)| bytes).sum(),
+    )
 }
 
 /// Mette in coda la verifica, o restituisce quella già in corso.

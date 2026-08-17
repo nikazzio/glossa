@@ -171,8 +171,22 @@ export async function onJobChanged(handler: (job: Job) => void): Promise<() => v
 export interface JobDetail {
   units?: { done: number; total: number; label: string };
   bytes?: { downloaded: number; estimated: number };
-  last?: { index: number; bytes: number };
-  size?: string;
+  /** L'ultima unità passata: qui i dati **veri** di quella pagina. */
+  last?: {
+    index: number;
+    bytes: number;
+    /** L'etichetta che le dà la biblioteca: «f. 17r», «p. 24». */
+    label?: string;
+    /** La misura chiesta per questa pagina, che può non essere il tetto. */
+    size?: string;
+    /** Le dimensioni vere, quando la biblioteca le dichiara. */
+    pixels?: string;
+    /** Ritrovata sul disco invece che scaricata. */
+    recovered?: boolean;
+    url?: string;
+  };
+  /** Il tetto scelto nelle impostazioni, che vale per tutto il lavoro. */
+  cap?: string;
   /** Le misure che la biblioteca dichiara di saper servire, `larghezza×altezza`. */
   available?: string[];
   provider?: string;
@@ -218,9 +232,17 @@ export function parseJobDetail(raw: string | null): JobDetail {
           : undefined,
       last:
         num(last.index) !== undefined
-          ? { index: num(last.index)!, bytes: num(last.bytes) ?? 0 }
+          ? {
+              index: num(last.index)!,
+              bytes: num(last.bytes) ?? 0,
+              label: text(last.label),
+              size: text(last.size),
+              pixels: text(last.pixels),
+              recovered: typeof last.recovered === 'boolean' ? last.recovered : undefined,
+              url: text(last.url),
+            }
           : undefined,
-      size: text(record.size),
+      cap: text(record.cap),
       available: Array.isArray(record.available)
         ? record.available.filter((value): value is string => typeof value === 'string')
         : undefined,

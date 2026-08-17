@@ -299,7 +299,7 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
           ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
           : humanSize(detail.bytes.downloaded),
     },
-    detail.size && { label: t('jobs.detail.size'), value: readableSize(detail.size, t) },
+    detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
     detail.host && { label: t('jobs.detail.host'), value: detail.host },
     detail.level && {
@@ -317,19 +317,40 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
     { label: t('jobs.detail.started'), value: time(job.createdAt) },
     { label: t('jobs.detail.updated'), value: time(job.updatedAt) },
     detail.available?.length && {
-      label: t('jobs.detail.available'),
+      label: t('jobs.detail.available', { count: detail.available.length }),
       value: detail.available.join(' · '),
+      // Un elenco che può contare decine di voci: la riga lo tiene chiuso e
+      // lo apre chi lo chiede.
       wide: true,
     },
     job.error && { label: t('jobs.detail.error'), value: job.error, wide: true },
     { label: t('jobs.detail.id'), value: job.id, wide: true },
   ].filter((field): field is DetailField => typeof field === 'object' && field !== null);
 
+  // Sotto «questo lavoro» ci sono le scelte e i totali; qui i dati **veri**
+  // della pagina appena passata, che possono non coincidere con le scelte.
   const lastUnit: DetailField[] = detail.last
-    ? [
+    ? ([
         { label: t('jobs.detail.lastIndex'), value: String(detail.last.index) },
+        detail.last.label && { label: t('jobs.detail.lastLabel'), value: detail.last.label },
+        detail.last.size && {
+          label: t('jobs.detail.lastSize'),
+          value: readableSize(detail.last.size, t),
+        },
+        detail.last.pixels && { label: t('jobs.detail.lastPixels'), value: detail.last.pixels },
         { label: t('jobs.detail.lastBytes'), value: humanSize(detail.last.bytes) },
-      ]
+        detail.last.recovered !== undefined && {
+          label: t('jobs.detail.lastOrigin'),
+          value: t(
+            detail.last.recovered ? 'jobs.detail.lastFromDisk' : 'jobs.detail.lastDownloaded',
+          ),
+        },
+        detail.last.url && {
+          label: t('jobs.detail.lastUrl'),
+          value: detail.last.url,
+          wide: true,
+        },
+      ].filter((field): field is DetailField => typeof field === 'object' && field !== null))
     : [];
 
   return (

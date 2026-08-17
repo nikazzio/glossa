@@ -21,6 +21,7 @@ type RunFn = (query: string, params?: unknown[]) => Promise<void>;
 const liveSchema = vi.hoisted<Record<string, string[]>>(() => ({
   app_settings: ['key', 'value'],
   glossaries: ['id', 'name', 'workspace_id', 'created_at'],
+  translations: ['id', 'project_id', 'approved_revision_id', 'translation_locked'],
   provenance_events: [
     'id', 'occurred_at', 'event_type', 'entity_type', 'entity_id', 'workspace_id', 'actor', 'job_id',
   ],
@@ -134,6 +135,72 @@ describe('le colonne che il ripristino rimette', () => {
     expect(runMock).not.toHaveBeenCalled();
 
     liveSchema.glossaries = ['id', 'name', 'workspace_id', 'created_at'];
+  });
+});
+
+describe('i puntatori che al momento dell inserimento non possono valere', () => {
+  beforeEach(() => {
+    runMock.mockClear();
+  });
+
+  it('l approvazione di un frammento torna dopo le revisioni, non si perde', async () => {
+    // Il frammento si inserisce prima delle revisioni: lasciare il puntatore
+    // com'è **ferma il ripristino**, perché le chiavi esterne non le salta
+    // nemmeno `INSERT OR IGNORE`. Svuotarlo e basta perdeva l'approvazione.
+    fsState.raw = JSON.stringify({
+      glossa_version: '1.4.0',
+      schema_version: 1,
+      exported_at: '2026-08-17T09:00:00.000Z',
+      tables: {
+        ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
+        translations: [{ id: 'chunk-1', project_id: 'p1', approved_revision_id: 'chunk-1:r2' }],
+      },
+    });
+
+    await restoreBackup(t);
+
+    const insert = runMock.mock.calls.find(([query]) =>
+      String(query).includes('INSERT OR IGNORE INTO translations'),
+    );
+    const [query, params] = insert!;
+    const columns = String(query).match(/\(([^)]+)\) VALUES/)![1].split(', ');
+    expect((params as unknown[])[columns.indexOf('approved_revision_id')]).toBeNull();
+
+    const update = runMock.mock.calls.find(([sql]) =>
+      String(sql).includes('UPDATE translations SET approved_revision_id'),
+    );
+    expect(update).toBeDefined();
+    // Solo se la revisione c'è davvero: un backup da un altro computer può non
+    // averla, e riscriverla comunque fermerebbe tutto.
+    expect(String(update![0])).toContain('EXISTS');
+    expect(update![1]).toEqual(['chunk-1:r2', 'chunk-1']);
+  });
+});
+
+describe('le pagine già sul disco', () => {
+  beforeEach(() => {
+    runMock.mockClear();
+  });
+
+  it('sopravvivono al ripristino, ma solo quelle di un opera che esiste ancora', async () => {
+    // Le righe delle pagine sono appese alle opere: sostituire le opere se le
+    // portava via per cascata, e il programma smetteva di sapere di file che
+    // sul disco ci sono ancora.
+    fsState.raw = backupWith([]);
+
+    await restoreBackup(t);
+
+    const queries = runMock.mock.calls.map(([query]) => String(query));
+    const copy = queries.findIndex((query) => query.includes('CREATE TEMP TABLE kept_assets'));
+    const wipe = queries.findIndex((query) => query.trim() === 'DELETE FROM sources');
+    const back = queries.findIndex((query) => query.includes('INSERT OR IGNORE INTO assets'));
+
+    expect(copy).toBeGreaterThanOrEqual(0);
+    // La copia va fatta **prima** della cancellazione, o non c'è più niente da copiare.
+    expect(copy).toBeLessThan(wipe);
+    expect(back).toBeGreaterThan(wipe);
+    expect(queries[back]).toContain('source_version_id IN (SELECT id FROM source_versions)');
+    expect(queries.some((query) => query.includes('DROP TABLE temp.kept_assets'))).toBe(true);
   });
 });
 

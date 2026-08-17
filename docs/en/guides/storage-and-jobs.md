@@ -90,6 +90,8 @@ The **quick check** looks at whether the files Glossa registered are still in pl
 
 Both become queued jobs: follow them from the bottom panel, pause them, cancel them. The result is a four-part count — intact, missing, corrupt, orphans — where *orphans* are files left in the vault that no record claims. **Neither one deletes or re-downloads anything on its own.**
 
+The outcome of the last check **stays in the settings**, below the two commands, until you run another one: when it ran, which kind, and the four numbers. Next to the files without a work there is the command that deletes them, with a confirmation saying how many they are and how much they take. Glossa looks at the vault again the moment you press — it does not trust the earlier count — and tells you how many it really removed: between the check and the deletion a download may have finished, and those files are no longer unclaimed.
+
 A switch runs the quick check at every startup. It is off by default: it makes opening slower on large or networked vaults.
 
 ## How many jobs at once
@@ -165,6 +167,14 @@ your data already cleared.
 what is in the file. The confirmation says so, and there is no going back.
 Closing the save dialog without choosing a file writes nothing, and Glossa does
 not claim to have saved.
+
+**The pages you had on your computer stay where they were.** The restore keeps
+them, for the works the backup contains, and right after it queues a vault check
+to see whether those files are really there. When the check ends — even much
+later, or on the next launch — Glossa tells you how it went: if nothing is
+missing it says so, and if something is missing it offers to take back **only
+that**, at the size it had. Files left without a work are counted in the
+settings, with the command to remove them.
 
 ## Stopped does not mean broken
 

@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2, PauseCircle } from 'lucide-react';
+import { AlertCircle, Clock, Loader2, PauseCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '../ui';
 import { formatEta } from '../../services/jobsService';
@@ -40,20 +40,30 @@ export function JobsIndicator() {
   const eta = formatEta(summary.etaSeconds);
   const failedOnly = summary.activeCount === 0;
 
+  // Fermo non è una cosa sola: in pausa l'ha deciso l'utente, in attesa dei
+  // limiti l'ha deciso la biblioteca, e solo dopo un errore si riprova da soli.
+  // Dirle tutte «riprova fra…» era falso, e per giunta con il numero sbagliato:
+  // il tempo mostrato era quello che manca a finire, non al tentativo.
+  const still = (): string | null => {
+    switch (summary.stillReason) {
+      case 'paused':
+        return t('jobs.paused');
+      case 'libraryLimits':
+        return t('jobs.waitingForLibrary');
+      case 'retry': {
+        const countdown = formatEta(summary.retrySeconds);
+        return countdown ? t('jobs.retryingIn', { eta: countdown }) : t('jobs.retrying');
+      }
+      case 'queued':
+        return t('jobs.queued');
+      default:
+        return eta ? t('jobs.etaShort', { eta }) : null;
+    }
+  };
+
   const short = failedOnly
     ? t('jobs.failedCount', { count: summary.failedCount })
-    : [
-        t('jobs.activeCount', { count: summary.activeCount }),
-        summary.allWaiting
-          ? eta
-            ? t('jobs.retryingIn', { eta })
-            : t('jobs.retrying')
-          : eta
-            ? t('jobs.etaShort', { eta })
-            : null,
-      ]
-        .filter(Boolean)
-        .join(' · ');
+    : [t('jobs.activeCount', { count: summary.activeCount }), still()].filter(Boolean).join(' · ');
 
   // Il dettaglio sta nel tooltip: in barra ci sta il minimo, e il nome della
   // fonte in lavorazione è lungo quanto vuole senza spostare niente.
@@ -72,8 +82,10 @@ export function JobsIndicator() {
       >
         {failedOnly ? (
           <AlertCircle size={11} className="shrink-0 text-editorial-danger" />
-        ) : summary.allWaiting ? (
+        ) : summary.stillReason === 'paused' ? (
           <PauseCircle size={11} className="shrink-0" />
+        ) : summary.stillReason ? (
+          <Clock size={11} className="shrink-0" />
         ) : (
           <Loader2 size={11} className="shrink-0 animate-spin" />
         )}

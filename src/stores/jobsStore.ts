@@ -6,11 +6,13 @@ import {
   cancelJob,
   clearFinishedJobs,
   isTerminal,
+  isWaitingForLibrary,
   isWaitingToRetry,
   listActiveJobs,
   onJobChanged,
   pauseJob,
   resumeJob,
+  retryCountdownSeconds,
   retryJob,
   type Job,
 } from '../services/jobsService';
@@ -128,6 +130,12 @@ export function isFinishedRecently(job: Job, now: number): boolean {
   return Number.isNaN(finishedAt) ? true : now - finishedAt < FINISHED_WINDOW_MS;
 }
 
+/**
+ * Perché la coda è ferma. Sono immobilità con significati diversi, e dirle
+ * tutte «riprova da sola fra…» era falso in due casi su tre (D17).
+ */
+export type StillReason = 'paused' | 'libraryLimits' | 'retry' | 'queued';
+
 export interface JobsSummary {
   /** Quanti lavori non sono ancora finiti. */
   activeCount: number;
@@ -141,17 +149,47 @@ export interface JobsSummary {
   etaSeconds: number | null;
   /** Nessuno sta girando: sono tutti fermi ad aspettare. */
   allWaiting: boolean;
+  /**
+   * Perché sono fermi, quando lo sono. La pausa viene prima di tutto: se
+   * l'utente ha premuto pausa, quello è il motivo, e non ne esistono altri da
+   * raccontargli.
+   */
+  stillReason: StillReason | null;
+  /**
+   * I secondi che mancano al prossimo tentativo, **non** quelli che mancano a
+   * finire il lavoro: erano due numeri diversi sotto la stessa frase.
+   */
+  retrySeconds: number | null;
   failedCount: number;
+}
+
+/** Perché un lavoro è fermo. `null` se sta girando davvero. */
+export function stillReasonOf(job: Job): StillReason | null {
+  if (job.status === 'paused' || job.status === 'pausing') return 'paused';
+  if (isWaitingForLibrary(job)) return 'libraryLimits';
+  if (isWaitingToRetry(job)) return 'retry';
+  if (job.status === 'queued') return 'queued';
+  return null;
 }
 
 /**
  * Il riassunto che va in barra di stato. Ricavato qui e non nel componente
  * perché lo usano sia l'indicatore sia il pannello.
  */
-export function summarizeJobs(jobs: Job[]): JobsSummary {
+export function summarizeJobs(jobs: Job[], now = Date.now()): JobsSummary {
   const active = jobs.filter((job) => !isTerminal(job));
   const running = active.filter(isRunning);
   const etas = active.map((job) => job.etaSeconds).filter((eta): eta is number => eta !== null);
+
+  // Un lavoro in pausa e uno che aspetta di riprovare sono la stessa
+  // immobilità con significati opposti: si sceglie in ordine di importanza,
+  // perché la barra ha spazio per una frase sola.
+  const reasons = active.map(stillReasonOf).filter((reason): reason is StillReason => reason !== null);
+  const order: StillReason[] = ['paused', 'libraryLimits', 'retry', 'queued'];
+  const stillReason = order.find((reason) => reasons.includes(reason)) ?? null;
+  const retryCountdowns = active
+    .map((job) => retryCountdownSeconds(job, now))
+    .filter((seconds): seconds is number => seconds !== null);
 
   return {
     activeCount: active.length,
@@ -163,6 +201,9 @@ export function summarizeJobs(jobs: Job[]): JobsSummary {
         ? etas.reduce((a, b) => a + b, 0)
         : (running[0]?.etaSeconds ?? null),
     allWaiting: active.length > 0 && running.length === 0,
+    stillReason: running.length === 0 ? stillReason : null,
+    // Il più vicino: è quello che rimetterà in moto la coda.
+    retrySeconds: retryCountdowns.length > 0 ? Math.min(...retryCountdowns) : null,
     failedCount: jobs.filter((job) => job.status === 'error').length,
   };
 }

@@ -11,6 +11,7 @@ import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useJobsFeed } from './hooks/useJobsFeed';
+import { useRestoreFollowUp } from './hooks/useRestoreFollowUp';
 import { useCloseGuard } from './hooks/useCloseGuard';
 import { useUiStore } from './stores/uiStore';
 import type { UiFont, DocumentLineHeight, ColorScheme } from './stores/uiStore';
@@ -419,6 +420,9 @@ export default function App() {
   // risultava vuota, entrando in una traduzione compariva, e uscendo restava
   // l'elenco vecchio senza più nessuno in ascolto.
   useJobsFeed();
+  // Il controllo del deposito messo in coda da un ripristino può finire molto
+  // dopo, anche in una sessione successiva: chi aspetta la sua risposta sta qui.
+  useRestoreFollowUp();
   useCloseGuard();
 
   const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();

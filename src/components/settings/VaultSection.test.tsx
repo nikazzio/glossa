@@ -2,7 +2,13 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { VaultSection } from './VaultSection';
-import { chooseVaultFolder, getVaultStatus, adoptDefaultVaultFolder } from '../../services/vaultService';
+import {
+  chooseVaultFolder,
+  getVaultStatus,
+  adoptDefaultVaultFolder,
+  lastVaultCheck,
+  deleteVaultOrphans,
+} from '../../services/vaultService';
 
 vi.mock('../../services/vaultService', () => ({
   getVaultStatus: vi.fn(),
@@ -10,11 +16,17 @@ vi.mock('../../services/vaultService', () => ({
   adoptDefaultVaultFolder: vi.fn(),
   getVerifyVaultOnStartup: vi.fn().mockResolvedValue(false),
   setVerifyVaultOnStartup: vi.fn().mockResolvedValue(undefined),
+  lastVaultCheck: vi.fn().mockResolvedValue(null),
+  deleteVaultOrphans: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 12_000 }),
 }));
 
 vi.mock('../../services/jobsService', () => ({
   enqueueVaultVerification: vi.fn().mockResolvedValue({ id: 'verification:quick' }),
+  isTerminal: (job: { status: string }) =>
+    job.status === 'completed' || job.status === 'cancelled' || job.status === 'error',
 }));
+
+vi.mock('../../stores/confirmStore', () => ({ confirm: vi.fn().mockResolvedValue(true) }));
 
 const getStatus = vi.mocked(getVaultStatus);
 const choose = vi.mocked(chooseVaultFolder);
@@ -149,6 +161,28 @@ describe('cartella del deposito', () => {
     await user.click(screen.getByRole('button', { name: 'settings.storage.vault.verifyFullTooltip' }));
 
     expect(enqueueVaultVerification).toHaveBeenCalledWith(true);
+  });
+
+  it('mostra l esito dell ultimo controllo e offre di togliere i file senza opera', async () => {
+    // Prima l'esito viveva nella riga del pannello dei Lavori e dopo un giorno
+    // spariva: «com'è andata» non aveva più risposta.
+    const user = userEvent.setup();
+    vi.mocked(lastVaultCheck).mockResolvedValue({
+      at: '2026-08-17 10:20:00',
+      full: false,
+      intact: 198,
+      missing: 12,
+      corrupt: 0,
+      orphans: 3,
+      orphanBytes: 12_000,
+    });
+
+    render(<VaultSection />);
+
+    expect(await screen.findByText('settings.storage.vault.lastCheckCounts')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'settings.storage.vault.deleteOrphans' }));
+
+    await waitFor(() => expect(deleteVaultOrphans).toHaveBeenCalled());
   });
 
   it('con il deposito non raggiungibile non si verifica niente', async () => {

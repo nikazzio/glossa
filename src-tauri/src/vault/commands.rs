@@ -486,6 +486,59 @@ pub fn delete_version_files(
     })
 }
 
+/// Cancella i file che nessuna riga reclama (D5-bis).
+///
+/// **Riguarda il deposito adesso, non il conto dell'ultima verifica.** Fra la
+/// verifica e questo comando può essere finito uno scaricamento: cancellare
+/// sulla fede di un elenco vecchio toglierebbe file appena riconquistati. Per
+/// questo si rilegge cosa il database dichiara e si cammina di nuovo le
+/// cartelle, e si restituisce quanti ne sono stati tolti **davvero**.
+#[tauri::command]
+pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, String> {
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let db_path = crate::storage_config::db_path(&app)?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = crate::db::open_connection(&db_path)?;
+        let mut statement = conn
+            .prepare(
+                "SELECT vault_path FROM assets \
+                 WHERE vault_path IS NOT NULL AND locality = 'local'",
+            )
+            .map_err(|error| error.to_string())?;
+        let known: std::collections::HashSet<std::path::PathBuf> = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|error| error.to_string())?
+            .filter_map(Result::ok)
+            .filter_map(|relative| absolute_path(&root, &relative).ok())
+            .collect();
+
+        let mut deleted_files = 0;
+        let mut freed_bytes = 0;
+        for (path, bytes) in super::verification::orphan_files(&root, &known) {
+            match std::fs::remove_file(&path) {
+                Ok(()) => {
+                    deleted_files += 1;
+                    freed_bytes += bytes;
+                }
+                // Un file che non si riesce a togliere non ferma gli altri: si
+                // dice nel registro e si va avanti, e il conto resta onesto.
+                Err(error) => log::warn!("orphan not deleted path={} {error}", path.display()),
+            }
+        }
+        log::info!("vault orphans deleted files={deleted_files} bytes={freed_bytes}");
+        Ok(FreedSpace {
+            deleted_files,
+            freed_bytes,
+        })
+    })
+    .await
+    .map_err(|error| format!("Deleting the orphan files failed: {error}"))?
+}
+
 /// Mette in coda la verifica del deposito (D5-bis).
 ///
 /// Un lavoro solo per volta: chiederla due volte non ne apre due, restituisce

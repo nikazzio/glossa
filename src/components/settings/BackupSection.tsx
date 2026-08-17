@@ -4,8 +4,8 @@ import { toast } from 'sonner';
 import { AlertTriangle, DatabaseBackup, Download, Upload } from 'lucide-react';
 import { IconButton } from '../ui';
 import { writeBackup, restoreBackup } from '../../services/backupService';
-import { enqueueSourceDownload } from '../../services/jobsService';
-import { confirm } from '../../stores/confirmStore';
+import { enqueueVaultVerification } from '../../services/jobsService';
+import { markRestoreCheck } from '../../services/restoreFollowUp';
 import { logger } from '../../utils/logger';
 
 /**
@@ -45,43 +45,20 @@ export function BackupSection() {
     try {
       const restored = await restoreBackup(t);
       if (restored) {
-        toast.success(t('files.backupImportSuccess'));
-        if (restored.length > 0) {
-          const redownload = await confirm({
-            title: t('files.backupRedownloadTitle', { count: restored.length }),
-            message: t('files.backupRedownloadMessage'),
-            confirmLabel: t('files.backupRedownloadConfirm'),
+        // Il ripristino ha rimesso le pagine che il programma aveva sul disco,
+        // ma non sa se quei file ci sono davvero: il controllo lo dice, e solo
+        // dopo si propone di riprendere quello che manca.
+        try {
+          const check = await enqueueVaultVerification(false);
+          await markRestoreCheck({ jobId: check.id, downloaded: restored });
+          toast.success(t('files.restoreCheckQueued'));
+        } catch (error: unknown) {
+          // Il ripristino è avvenuto: se il controllo non parte lo si dice,
+          // invece di far credere che sia in corso qualcosa che non c'è.
+          logger.warn('restore.check.not_queued', {
+            error: error instanceof Error ? error.message : String(error),
           });
-          if (redownload) {
-            // Uno scaricamento per opera, con la misura che aveva: la coda li
-            // prende uno per volta rispettando i tempi delle biblioteche. Se
-            // qualcuna non parte lo si dice: un'opera che nessuno ha messo in
-            // coda, e nessuno ha detto, si scopre non trovandola.
-            let failed = 0;
-            for (const source of restored) {
-              if (!source.manifestUrl) {
-                failed += 1;
-                continue;
-              }
-              try {
-                await enqueueSourceDownload({
-                  providerKey: source.providerKey ?? 'generic',
-                  manifestUrl: source.manifestUrl,
-                  versionId: source.versionId,
-                  sizeTag: source.sizeTag ?? undefined,
-                });
-              } catch (error: unknown) {
-                failed += 1;
-                logger.warn('backup.redownload.not_queued', {
-                  versionId: source.versionId,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-            }
-            if (failed > 0) {
-              toast.warning(t('files.backupRedownloadPartial', { count: failed }));
-            }
-          }
+          toast.warning(t('files.restoreCheckFailed'));
         }
         setTimeout(() => window.location.reload(), 1500);
       }

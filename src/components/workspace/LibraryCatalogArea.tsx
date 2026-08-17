@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import {
   BookOpenText,
   Check,
+  Clock,
   Download,
   Eraser,
   LayoutGrid,
   Link2,
   List,
   Loader2,
+  PauseCircle,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -17,7 +19,7 @@ import { EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useJobsStore } from '../../stores/jobsStore';
+import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import {
@@ -198,6 +200,10 @@ function CatalogEntryRow({
   // Solo un lavoro **non finito** occupa il posto del pulsante: uno fallito o
   // annullato lasciava la percentuale ferma e toglieva il modo di riprovare.
   const runningJob = jobs.find((job) => job.id === `download:${entry.versionId}` && !isTerminal(job));
+  // La scheda dice **cosa sta facendo** quel lavoro, non solo che esiste: una
+  // rotellina che gira su uno scaricamento in pausa è una bugia, e la pausa
+  // premuta nel pannello non risultava da nessun'altra parte.
+  const jobState = runningJob ? stillReasonOf(runningJob) : null;
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
   const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0);
@@ -411,11 +417,25 @@ function CatalogEntryRow({
           size="sm"
           onClick={() => void startDownload()}
           disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
-          title={runningJob ? t('areas.library.downloadRunning') : t('areas.library.download')}
+          title={
+            jobState === 'paused'
+              ? t('areas.library.downloadPaused')
+              : jobState === 'libraryLimits'
+                ? t('jobs.waitingForLibrary')
+                : jobState
+                  ? t('areas.library.downloadWaiting')
+                  : runningJob
+                    ? t('areas.library.downloadRunning')
+                    : t('areas.library.download')
+          }
         >
           {/* Mentre il lavoro gira il comando lo dice da sé: la percentuale sta
               altrove, e un pulsante spento senza motivo visibile sembra rotto. */}
-          {runningJob ? (
+          {jobState === 'paused' ? (
+            <PauseCircle size={13} />
+          ) : jobState ? (
+            <Clock size={13} />
+          ) : runningJob ? (
             <Loader2 size={13} className="motion-safe:animate-spin" />
           ) : (
             <Download size={13} />

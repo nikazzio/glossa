@@ -1,17 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Archive, AlertTriangle, ScanSearch, ShieldCheck } from 'lucide-react';
+import { Archive, AlertTriangle, ScanSearch, ShieldCheck, Trash2 } from 'lucide-react';
 import { IconButton, Spinner, ToggleRow, Tooltip } from '../ui';
 import {
   chooseVaultFolder,
+  deleteVaultOrphans,
   getVaultStatus,
   getVerifyVaultOnStartup,
+  lastVaultCheck,
   setVerifyVaultOnStartup,
   adoptDefaultVaultFolder,
+  type VaultCheckOutcome,
   type VaultStatus,
 } from '../../services/vaultService';
-import { enqueueVaultVerification } from '../../services/jobsService';
+import { enqueueVaultVerification, isTerminal } from '../../services/jobsService';
+import { useJobsStore } from '../../stores/jobsStore';
+import { confirm } from '../../stores/confirmStore';
+import { humanSize } from '../../utils';
 
 /**
  * La cartella del deposito, distinta dalla cartella dati (D1).
@@ -32,6 +38,7 @@ export function VaultSection() {
   const [busy, setBusy] = useState(false);
   const [syncWarning, setSyncWarning] = useState(false);
   const [verifyOnStartup, setVerifyOnStartup] = useState(false);
+  const [check, setCheck] = useState<VaultCheckOutcome | null>(null);
 
   // `t` cambia identità a ogni render con alcune configurazioni di i18n: se
   // entrasse fra le dipendenze, l'effetto si rilancerebbe all'infinito e lo
@@ -52,10 +59,28 @@ export function VaultSection() {
     }
   }, []);
 
+  const refreshCheck = useCallback(() => {
+    void lastVaultCheck().then(setCheck);
+  }, []);
+
   useEffect(() => {
     void refresh();
     void getVerifyVaultOnStartup().then(setVerifyOnStartup);
-  }, [refresh]);
+    refreshCheck();
+    // L'esito si rilegge **quando un controllo finisce**, non a ogni evento
+    // della coda: chi l'ha appena lanciato sta guardando questa schermata, e
+    // aspettare di riaprirla sarebbe assurdo.
+    let lastSeen = '';
+    return useJobsStore.subscribe((state) => {
+      const finished = state.jobs
+        .filter((job) => job.jobType === 'vault_verification' && isTerminal(job))
+        .map((job) => `${job.id}@${job.updatedAt ?? ''}`)
+        .join('|');
+      if (finished === lastSeen) return;
+      lastSeen = finished;
+      refreshCheck();
+    });
+  }, [refresh, refreshCheck]);
 
   const changeVerifyOnStartup = async (enabled: boolean) => {
     // Ottimistico, ma con il ritorno indietro: un interruttore che resta acceso
@@ -85,6 +110,47 @@ export function VaultSection() {
       toast.success(t('settings.storage.vault.verificationQueued'));
     } catch (error: unknown) {
       toast.error(t('settings.storage.vault.verificationFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Cancella i file che nessuna opera reclama (D5-bis).
+   *
+   * Il conto mostrato è quello dell'ultimo controllo; il backend riguarda il
+   * deposito adesso e dice quanti ne ha tolti davvero, che può essere di meno:
+   * fra il controllo e questo momento uno scaricamento può averne riconquistati.
+   */
+  const removeOrphans = async () => {
+    if (!check || check.orphans === 0) return;
+    const ok = await confirm({
+      title: t('settings.storage.vault.deleteOrphansTitle'),
+      message: t('settings.storage.vault.deleteOrphansMessage', {
+        count: check.orphans,
+        size: humanSize(check.orphanBytes),
+      }),
+      confirmLabel: t('settings.storage.vault.deleteOrphansConfirm'),
+      danger: true,
+    });
+    if (!ok) return;
+
+    setBusy(true);
+    try {
+      const freed = await deleteVaultOrphans();
+      toast.success(
+        t('settings.storage.vault.orphansDeleted', {
+          count: freed.deletedFiles,
+          size: humanSize(freed.freedBytes),
+        }),
+      );
+      // Il conto vecchio non vale più: si azzera invece di lasciarlo lì a
+      // invitare una seconda cancellazione che non ha più niente da togliere.
+      setCheck({ ...check, orphans: 0, orphanBytes: 0 });
+    } catch (error: unknown) {
+      toast.error(t('settings.storage.vault.orphansDeleteFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -227,6 +293,65 @@ export function VaultSection() {
           disabled={busy}
           onChange={() => void changeVerifyOnStartup(!verifyOnStartup)}
         />
+      </div>
+
+      {/* L'esito dell'ultimo controllo resta qui finché non se ne fa un altro:
+          prima viveva nella riga del pannello dei Lavori e dopo un giorno
+          spariva, quindi «com'era andata» non aveva più risposta. */}
+      <div className="flex flex-col gap-2 border-t border-editorial-border/60 pt-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            {t('settings.storage.vault.lastCheck')}
+          </span>
+          <span className="font-mono text-[11px] text-editorial-muted">
+            {check?.at
+              ? `${new Date(check.at.replace(' ', 'T') + 'Z').toLocaleString(undefined, {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                  hour12: false,
+                })} · ${t(check.full ? 'settings.storage.vault.levelFull' : 'settings.storage.vault.levelQuick')}`
+              : t('settings.storage.vault.lastCheckNever')}
+          </span>
+        </div>
+
+        {check && (
+          <>
+            <p
+              className={`text-xs ${
+                check.missing + check.corrupt > 0 ? 'text-editorial-warning' : 'text-editorial-ink'
+              }`}
+            >
+              {t('settings.storage.vault.lastCheckCounts', {
+                intact: check.intact,
+                missing: check.missing,
+                corrupt: check.corrupt,
+              })}
+            </p>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-2 text-xs text-editorial-ink">
+                <span className="text-editorial-accent"><Trash2 size={13} /></span>
+                <span className="truncate">
+                  {check.orphans > 0
+                    ? t('settings.storage.vault.orphanFiles', {
+                        count: check.orphans,
+                        size: humanSize(check.orphanBytes),
+                      })
+                    : t('settings.storage.vault.orphanFilesNone')}
+                </span>
+              </span>
+              <IconButton
+                size="sm"
+                tone="danger"
+                onClick={() => void removeOrphans()}
+                disabled={busy || loading || check.orphans === 0}
+                title={t('settings.storage.vault.deleteOrphans')}
+              >
+                <Trash2 size={13} />
+              </IconButton>
+            </div>
+          </>
+        )}
       </div>
 
       {!status?.isDefault && (

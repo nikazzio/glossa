@@ -46,7 +46,11 @@ traduzioni.
 validazione in una lettura sola, verifica rapida (presenza) e completa (forma e
 confronto dell'impronta registrata), «libera spazio», disponibilità calcolata
 dai file presenti, radice configurabile con marcatore. All'avvio si butta
-quello che una chiusura brusca ha lasciato nell'area di transito.
+quello che una chiusura brusca ha lasciato nell'area di transito. L'esito
+dell'ultimo controllo resta nelle impostazioni finché non se ne fa un altro, con
+accanto il comando che cancella i file che nessuna opera reclama (D5-bis): il
+backend riguarda il deposito nel momento in cui si preme, invece di fidarsi di
+un conto vecchio.
 
 **Lavori** (`src-tauri/src/jobs/`): coda unica con limiti per classe di
 risorsa, pausa e annullamento cooperativi che **battono il nuovo tentativo**,
@@ -81,6 +85,10 @@ fatti, registro append-only con le colonne che serviranno all'area Analisi.
   a fare. Manca anche il controllo dello spazio libero prima di adottare una
   cartella: si avvisa e si lascia decidere, senza vietare.
 - **Notifiche di sistema** (D21): mai fatte.
+- **Il legame fra segmento di trascrizione e pagina** dopo un ripristino resta
+  solo se quella pagina è sul computer: se manca, il segmento sopravvive senza
+  il suo riferimento. Riscaricando l'opera gli identificativi tornano identici,
+  quindi il legame si potrebbe ricucire — nessuno lo fa ancora.
 - **Esportare e importare un singolo workspace** (#434): il backup è del
   programma intero e resta tale. Portare via un workspace solo richiede
   identificatori nuovi a ogni riga e le regole di ambito di #213, quindi viene
@@ -92,8 +100,6 @@ fatti, registro append-only con le colonne che serviranno all'area Analisi.
 - **L'import di glossari da CSV** è rimasto l'ultimo punto che legge un file
   dalla webview: finché c'è, il permesso di lettura non si può restringere
   (#407, terzo punto).
-- **File orfani**: la verifica li conta e nessuno li cancella. Manca il comando
-  «elimina i file orfani» previsto da D5-bis.
 - **Rilevamento vero dei segnaposto** delle cartelle sincronizzate (D1-bis):
   oggi è un riconoscimento per nome di cartella.
 - **Barra di stato unificata e console generale dei log**: restano a #413, che
@@ -119,6 +125,8 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
 | **D17** | il tempo stimato viene dal ritmo vero del lavoro, non dalla pausa dichiarata dal profilo |
 | **D18** | i valori di rete sono **profili** — un ritmo, non una biblioteca — e le biblioteche ne scelgono uno |
 | **D22** | le revisioni non hanno stato: approvare e ritirare sono fatti che puntano a una revisione, e **il giudizio si lega alla revisione** invece di stare in colonne sovrascritte |
+| **D5-bis** | l'esito del controllo non vive più nella riga del pannello, che dopo un giorno spariva: resta nelle impostazioni finché non se ne fa un altro, con accanto il comando che cancella i file senza opera |
+| **D17** | fermo non è una cosa sola: in pausa, in attesa dei limiti di una biblioteca e in attesa di riprovare si dicono diversamente in barra, nella scheda della Biblioteca e nel pannello, e il tempo mostrato è quello del **tentativo**, non quello che manca a finire |
 | **D31** | il backup è del **programma intero**, non di un workspace, e sta nelle impostazioni generali: si chiamava «backup del workspace» ma prendeva tutto. Portare via un solo workspace diventa #434. Le colonne che il ripristino riscrive si chiedono al database, perché l'elenco scritto a mano ne perdeva alcune in silenzio |
 
 ## Cronologia breve

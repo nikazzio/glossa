@@ -169,6 +169,7 @@ pub fn run() {
             vault::commands::choose_vault_folder,
             vault::commands::use_default_vault_folder,
             vault::commands::enqueue_vault_verification,
+            vault::commands::delete_vault_orphans,
             jobs::commands::create_job,
             jobs::commands::list_active_jobs,
             jobs::commands::get_job,

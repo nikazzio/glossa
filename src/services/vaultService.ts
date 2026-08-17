@@ -165,6 +165,64 @@ export async function deleteVersionFiles(providerKey: string, versionId: string)
   return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
 }
 
+/** L'esito di un controllo del deposito, come lo mostrano le impostazioni. */
+export interface VaultCheckOutcome {
+  /** Quando è finito. */
+  at: string | null;
+  full: boolean;
+  intact: number;
+  missing: number;
+  corrupt: number;
+  orphans: number;
+  orphanBytes: number;
+}
+
+/**
+ * L'ultimo controllo del deposito finito.
+ *
+ * Si legge dal registro dei lavori, che è dove l'esito è già scritto: senza,
+ * per sapere com'è andata bisognava guardare il pannello dei Lavori mentre la
+ * riga era ancora lì, e dopo un giorno spariva.
+ */
+export async function lastVaultCheck(): Promise<VaultCheckOutcome | null> {
+  const rows = await select<{ detail: string | null; finished_at: string | null }>(
+    `SELECT detail, finished_at FROM jobs
+      WHERE job_type = 'vault_verification' AND status = 'completed'
+      ORDER BY COALESCE(finished_at, updated_at) DESC
+      LIMIT 1`,
+  );
+  if (rows.length === 0 || !rows[0].detail) return null;
+  try {
+    const parsed: unknown = JSON.parse(rows[0].detail);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const record = parsed as Record<string, unknown>;
+    const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+    const orphans = (record.orphans ?? {}) as Record<string, unknown>;
+    return {
+      at: rows[0].finished_at,
+      full: record.level === 'full',
+      intact: count(record.intact),
+      missing: count(record.missing),
+      corrupt: count(record.corrupt),
+      orphans: count(orphans.count),
+      orphanBytes: count(orphans.bytes),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cancella i file che nessuna riga reclama (D5-bis).
+ *
+ * Il backend riguarda il deposito nel momento in cui si preme, invece di
+ * fidarsi del conto dell'ultimo controllo: fra i due può essere finito uno
+ * scaricamento, e quei file non sono più orfani.
+ */
+export async function deleteVaultOrphans(): Promise<FreedSpace> {
+  return invoke<FreedSpace>('delete_vault_orphans');
+}
+
 export type SourceAvailability = 'catalogued' | 'partial' | 'complete';
 
 export interface AvailabilitySummary {

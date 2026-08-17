@@ -69,6 +69,43 @@ describe('indicatore dei lavori in barra di stato', () => {
     expect(screen.getByText(/jobs.retryingIn/)).toBeInTheDocument();
   });
 
+  it('in pausa dice in pausa, non che riproverà da solo', () => {
+    // Premuta la pausa, la barra continuava a dire «riprova da sola fra 10
+    // minuti»: il nuovo tentativo è per gli errori di rete, e quel numero era
+    // per giunta la stima di quanto mancava a finire.
+    useJobsStore.setState({ jobs: [job({ status: 'paused', etaSeconds: 600 })] });
+
+    render(<JobsIndicator />);
+
+    expect(screen.getByText(/jobs\.paused/)).toBeInTheDocument();
+    expect(screen.queryByText(/jobs\.retrying/)).not.toBeInTheDocument();
+  });
+
+  it('fermo per i limiti di una biblioteca lo dice con il suo nome', () => {
+    useJobsStore.setState({
+      jobs: [job({ status: 'queued', waitingReason: 'libraryLimits', etaSeconds: 300 })],
+    });
+
+    render(<JobsIndicator />);
+
+    expect(screen.getByText(/jobs\.waitingForLibrary/)).toBeInTheDocument();
+  });
+
+  it('aspettando un nuovo tentativo mostra il tempo del tentativo, non quello del lavoro', () => {
+    const inTwoMinutes = new Date(Date.now() + 120_000)
+      .toISOString()
+      .replace('T', ' ')
+      .slice(0, 19);
+    useJobsStore.setState({
+      jobs: [job({ status: 'queued', nextAttemptAt: inTwoMinutes, etaSeconds: 4_000 })],
+    });
+
+    render(<JobsIndicator />);
+
+    // Due minuti, non l'ora e passa che manca alla fine del lavoro.
+    expect(screen.getByText(/jobs\.retryingIn/)).toBeInTheDocument();
+  });
+
   it('apre il pannello sulla scheda dei lavori', async () => {
     const user = userEvent.setup();
     useJobsStore.setState({ jobs: [job()] });

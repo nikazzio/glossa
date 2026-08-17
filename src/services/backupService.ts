@@ -57,17 +57,40 @@ async function liveColumns(table: BackupTable): Promise<ReadonlySet<string>> {
 }
 
 /**
- * Colonne che puntano a righe che il backup **non porta con sé**: l'asset di
- * un segmento e il lavoro che ha prodotto un fatto.
+ * Colonne che puntano a righe che il backup **non porta con sé**: il lavoro che
+ * ha prodotto un fatto.
  *
  * Vanno svuotate al ripristino, altrimenti la chiave esterna rifiuta la riga e
- * `INSERT OR IGNORE` la scarta **in silenzio**: si perderebbero i segmenti di
- * trascrizione legati a un'immagine e tutti i fatti prodotti da un lavoro,
- * cioè proprio il registro che il backup serve a salvare.
+ * **l'intero ripristino si ferma**: `INSERT OR IGNORE` non salva dai vincoli di
+ * chiave esterna — la risoluzione dei conflitti vale per unicità, non nullo e
+ * controlli, non per le chiavi esterne. Senza questo, un registro con dentro un
+ * lavoro che nel backup non c'è farebbe fallire tutto.
  */
 const DANGLING_REFS: Partial<Record<BackupTable, readonly string[]>> = {
-  transcription_segments: ['asset_id'],
   provenance_events: ['job_id'],
+};
+
+/**
+ * Colonne che puntano a righe inserite **più tardi**, o che possono non esserci.
+ *
+ * Un frammento dice quale revisione è approvata, ma le revisioni si inseriscono
+ * dopo di lui; un segmento di trascrizione dice anche a quale pagina appartiene,
+ * e quella pagina può non essere su questo computer. In tutti e tre i casi
+ * lasciare il puntatore com'è **ferma il ripristino**.
+ *
+ * Quindi si inserisce vuoto e si riscrive alla fine, ma solo dove la riga
+ * puntata esiste davvero: così l'approvazione non si perde — prima spariva,
+ * lasciando frammenti bloccati e senza revisione approvata, due indicazioni
+ * dello stesso fatto che si contraddicono.
+ */
+const DEFERRED_REFS: Partial<
+  Record<BackupTable, ReadonlyArray<{ column: string; target: string }>>
+> = {
+  translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
+  transcription_segments: [
+    { column: 'approved_revision_id', target: 'transcription_revisions' },
+    { column: 'asset_id', target: 'assets' },
+  ],
 };
 
 const DELETE_ORDER = [
@@ -189,6 +212,19 @@ export async function restoreBackup(t: (key: string) => string): Promise<Downloa
   }
 
   await runInTransaction(async (run) => {
+    // Le pagine sul disco si mettono da parte **prima** di cancellare.
+    //
+    // Le righe delle pagine sono appese alle opere, e sostituire le opere se le
+    // porta via: il programma smetteva di sapere di file che sul disco ci sono
+    // ancora. Una copia di lavoro le tiene al riparo dalla cancellazione a
+    // catena, e alla fine tornano soltanto quelle delle opere che il backup
+    // contiene — le altre appartengono a qualcosa che non esiste più.
+    //
+    // La copia sta nella memoria della connessione, non nel database: se
+    // qualcosa va storto a metà, non resta niente da pulire.
+    await run(`DROP TABLE IF EXISTS temp.kept_assets`);
+    await run(`CREATE TEMP TABLE kept_assets AS SELECT * FROM assets`);
+
     for (const table of DELETE_ORDER) {
       if (table === 'app_settings') {
         // Never touch the running DB's migration marker — deleting it here
@@ -211,11 +247,43 @@ export async function restoreBackup(t: (key: string) => string): Promise<Downloa
         );
         if (cols.length === 0) continue;
         const dangling = DANGLING_REFS[table] ?? [];
+        const deferred = DEFERRED_REFS[table] ?? [];
+        const emptied = (column: string) =>
+          dangling.includes(column) || deferred.some((ref) => ref.column === column);
         const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
         await run(
           `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`,
-          cols.map((c) => (dangling.includes(c) ? null : row[c])),
+          cols.map((c) => (emptied(c) ? null : row[c])),
         );
+      }
+    }
+
+    // Le pagine tornano al loro posto, ma solo quelle di un'opera che esiste
+    // ancora. Prima le pagine e poi le miniature: una miniatura dichiara da
+    // quale pagina è nata, e una riga che punta a una che non c'è ancora
+    // verrebbe scartata senza dire niente.
+    const keptFor = `SELECT * FROM temp.kept_assets
+                      WHERE source_version_id IN (SELECT id FROM source_versions)`;
+    await run(`INSERT OR IGNORE INTO assets ${keptFor} AND derived_from_asset_id IS NULL`);
+    await run(
+      `INSERT OR IGNORE INTO assets ${keptFor} AND derived_from_asset_id IN (SELECT id FROM assets)`,
+    );
+    await run(`DROP TABLE temp.kept_assets`);
+
+    // I puntatori lasciati vuoti tornano al loro posto, ora che le righe a cui
+    // puntano ci sono. Quelle che non ci sono restano vuote: è il caso del
+    // backup che arriva da un altro computer, dove le pagine non sono mai state.
+    for (const table of INSERT_ORDER) {
+      for (const { column, target } of DEFERRED_REFS[table] ?? []) {
+        for (const row of payload.tables[table] ?? []) {
+          const value = row[column];
+          if (typeof value !== 'string' || !value) continue;
+          await run(
+            `UPDATE ${table} SET ${column} = $1
+              WHERE id = $2 AND EXISTS (SELECT 1 FROM ${target} WHERE id = $1)`,
+            [value, row.id],
+          );
+        }
       }
     }
   });

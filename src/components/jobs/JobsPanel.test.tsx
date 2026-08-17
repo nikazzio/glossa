@@ -203,9 +203,17 @@ describe('attesa per i limiti della biblioteca', () => {
         detail: JSON.stringify({
           units: { done: 2, total: 352, label: 'pages' },
           bytes: { downloaded: 1_000_000, estimated: 176_000_000 },
-          size: '1299,',
+          cap: '2000',
           provider: 'archive_org',
           host: 'iiif.archive.org',
+          last: {
+            index: 2,
+            bytes: 613_040,
+            label: 'f. 2r',
+            size: '1299,',
+            pixels: '1299×1925',
+            recovered: true,
+          },
         }),
       }),
     ]);
@@ -213,9 +221,38 @@ describe('attesa per i limiti della biblioteca', () => {
     await user.click(screen.getByRole('button', { expanded: false }));
 
     // La misura si legge in pixel, non nella forma del parametro IIIF.
-    expect(screen.getByText('jobs.detail.sizePixels')).toBeInTheDocument();
+    expect(screen.getAllByText('jobs.detail.sizePixels').length).toBeGreaterThan(0);
     expect(screen.getByText('iiif.archive.org')).toBeInTheDocument();
     expect(screen.getByRole('button', { expanded: true })).toBeInTheDocument();
+  });
+
+  it('della pagina appena passata dice i dati veri, non le impostazioni', async () => {
+    // La misura mostrata era quella scelta nelle impostazioni anche per una
+    // pagina ritrovata sul disco, che non è stata chiesta a nessuno.
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        status: 'running',
+        detail: JSON.stringify({
+          cap: '2000',
+          last: {
+            index: 49,
+            bytes: 613_040,
+            label: 'f. 25v',
+            size: '1299,',
+            pixels: '1299×1925',
+            recovered: true,
+            url: 'https://iiif.archive.org/image/full/1299,/0/default.jpg',
+          },
+        }),
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('f. 25v')).toBeInTheDocument();
+    expect(screen.getByText('1299×1925')).toBeInTheDocument();
+    expect(screen.getByText('jobs.detail.lastFromDisk')).toBeInTheDocument();
   });
 
   it('un dettaglio malformato non fa sparire la riga', () => {

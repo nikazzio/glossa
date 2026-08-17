@@ -270,9 +270,10 @@ impl JobHandler for SourceDownloadJob {
                 )
                 .await
                 .inspect_err(|_| discard(&staging))?;
-            let Some(added) = fetched else {
+            let Some(last) = fetched else {
                 return Ok(stopped_outcome(&ctx, &staging));
             };
+            let added = last.bytes;
 
             done += 1;
             bytes += added;
@@ -308,12 +309,16 @@ impl JobHandler for SourceDownloadJob {
                     done,
                     total,
                     bytes,
-                    page.index,
-                    added,
-                    &self.requested_size(&sizes, page, &config),
+                    &config.size_tag,
                     &known_sizes(&declared),
                     &config.provider_key,
                     &host_of(&page.image_service).unwrap_or_default(),
+                    LastPage {
+                        index: page.index,
+                        label: page.label.clone(),
+                        outcome: &last,
+                        declared: &known_sizes(&declared),
+                    },
                 )),
             )
             .await;
@@ -352,7 +357,7 @@ impl SourceDownloadJob {
         label: &str,
         eta: i64,
         signals: &Signals<'_>,
-    ) -> Result<Option<u64>, JobError> {
+    ) -> Result<Option<PageOutcome>, JobError> {
         let work = self.fetch_page(
             ctx, client, profile, config, manifest, sizes, declared, root, staging, page, signals,
         );
@@ -396,7 +401,7 @@ impl SourceDownloadJob {
         staging: &Path,
         page: &Page,
         signals: &Signals<'_>,
-    ) -> Result<Option<u64>, JobError> {
+    ) -> Result<Option<PageOutcome>, JobError> {
         let relative = layout::page_path(
             &config.provider_key,
             &config.version_id,
@@ -451,7 +456,14 @@ impl SourceDownloadJob {
             // se manca, rileggendo il file una volta sola.
             self.recover_thumbnail(ctx, config, staging, root, page, &target)
                 .await;
-            return Ok(Some(added));
+            return Ok(Some(PageOutcome {
+                bytes: added,
+                // Ritrovata sul disco: non è stata chiesta a nessuno, e per
+                // questo non c'è una misura negoziata da mostrare.
+                recovered: true,
+                token: self.requested_size(sizes, page, config),
+                url: self.known_url(sizes, page, manifest),
+            }));
         }
 
         let (fetched, url) = match self
@@ -478,7 +490,7 @@ impl SourceDownloadJob {
                 version_id: config.version_id.clone(),
                 kind: PAGE_KIND,
                 vault_path,
-                remote_url: Some(url),
+                remote_url: Some(url.clone()),
                 byte_size: size as i64,
                 checksum,
                 page_index: page.index as i64,
@@ -493,7 +505,12 @@ impl SourceDownloadJob {
         // lavoro di rete già fatto.
         self.store_thumbnail(ctx, config, staging, root, page, fetched.bytes)
             .await;
-        Ok(Some(size))
+        Ok(Some(PageOutcome {
+            bytes: size,
+            recovered: false,
+            token: self.requested_size(sizes, page, config),
+            url,
+        }))
     }
 
     /// Ricava la miniatura di una carta e la mette nel deposito.
@@ -838,6 +855,15 @@ fn discard(staging: &Path) {
     }
 }
 
+/// Com'è andata una pagina: quanto pesa, se è stata scaricata o ritrovata sul
+/// disco, a che misura è stata chiesta e da dove è arrivata.
+struct PageOutcome {
+    bytes: u64,
+    recovered: bool,
+    token: String,
+    url: String,
+}
+
 /// I dettagli dello scaricamento, come li legge il pannello (D20).
 ///
 /// Il **nome** dell'opera sta nel messaggio; qui stanno i numeri, separati,
@@ -849,12 +875,11 @@ fn progress_detail(
     done: u32,
     total: u32,
     bytes: u64,
-    last_page: u32,
-    last_bytes: u64,
-    size_token: &str,
+    cap: &str,
     available_sizes: &[String],
     provider: &str,
     host: &str,
+    last: LastPage<'_>,
 ) -> String {
     let estimated = if done > 0 {
         bytes / u64::from(done) * u64::from(total)
@@ -864,15 +889,51 @@ fn progress_detail(
     serde_json::json!({
         "units": { "done": done, "total": total, "label": "items" },
         "bytes": { "downloaded": bytes, "estimated": estimated },
-        "last": { "index": last_page, "bytes": last_bytes },
-        "size": size_token,
+        // Il tetto **scelto dall'utente**, che è un'altra cosa dalla misura
+        // chiesta per una singola pagina: leggerli sotto la stessa etichetta
+        // faceva sembrare un'impostazione ciò che era il risultato di una
+        // trattativa, e viceversa.
+        "cap": cap,
         // Le alternative fra cui la scelta è stata fatta: «1299» da solo non
         // dice se era il massimo o il minimo che la biblioteca sa servire.
         "available": available_sizes,
         "provider": provider,
         "host": host,
+        "last": {
+            "index": last.index,
+            "label": last.label,
+            "bytes": last.outcome.bytes,
+            // La misura chiesta **per questa pagina**: quella negoziata se c'è
+            // stata una trattativa, il tetto altrimenti.
+            "size": last.outcome.token,
+            "pixels": declared_pixels(last.declared, &last.outcome.token),
+            // Ritrovata sul disco invece che scaricata: spiega da sola perché
+            // non c'è una misura negoziata e perché è arrivata in un istante.
+            "recovered": last.outcome.recovered,
+            "url": last.outcome.url,
+        },
     })
     .to_string()
+}
+
+/// Quello che si sa di una pagina appena passata.
+struct LastPage<'a> {
+    index: u32,
+    label: Option<String>,
+    outcome: &'a PageOutcome,
+    declared: &'a [String],
+}
+
+/// Le dimensioni vere della misura chiesta, se la biblioteca le dichiara.
+///
+/// Il segnaposto IIIF porta la sola larghezza (`2000,`): l'altezza si trova fra
+/// le misure dichiarate, e senza di quelle non si inventa.
+fn declared_pixels(declared: &[String], token: &str) -> Option<String> {
+    let width = token.trim_end_matches(',');
+    declared
+        .iter()
+        .find(|size| size.split('×').next() == Some(width))
+        .cloned()
 }
 
 /// Quanto pesa già nel deposito questa digitalizzazione.
@@ -1282,20 +1343,31 @@ mod tests {
     fn the_detail_says_how_much_is_arrived_and_how_much_is_expected() {
         // Dire solo quanto pesa la carta in corso non dice niente su quanto
         // manca: il totale è una stima ricavata da quelle già arrivate.
+        let declared = [
+            "649×963".to_string(),
+            "1299×1925".to_string(),
+            "2598×3850".to_string(),
+        ];
+        let outcome = PageOutcome {
+            bytes: 1_420_000,
+            recovered: false,
+            token: "1299,".to_string(),
+            url: "https://iiif.archive.org/img/full/1299,/0/default.jpg".to_string(),
+        };
         let detail = progress_detail(
             34,
             352,
             48_234_496,
-            34,
-            1_420_000,
-            "1299,",
-            &[
-                "649×963".to_string(),
-                "1299×1925".to_string(),
-                "2598×3850".to_string(),
-            ],
+            "2000",
+            &declared,
             "archive_org",
             "iiif.archive.org",
+            LastPage {
+                index: 34,
+                label: Some("f. 17r".to_string()),
+                outcome: &outcome,
+                declared: &declared,
+            },
         );
         let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
 
@@ -1304,8 +1376,16 @@ mod tests {
         assert_eq!(parsed["bytes"]["downloaded"], 48_234_496);
         // 48 MB per 34 carte, 352 carte in tutto: mezzo giga scarso.
         assert_eq!(parsed["bytes"]["estimated"], 48_234_496u64 / 34 * 352);
+        // Il tetto scelto e la misura chiesta per **questa** pagina sono due
+        // cose diverse, e stanno in due posti diversi.
+        assert_eq!(parsed["cap"], "2000");
+        assert_eq!(parsed["last"]["size"], "1299,");
         assert_eq!(parsed["last"]["bytes"], 1_420_000);
-        assert_eq!(parsed["size"], "1299,");
+        assert_eq!(parsed["last"]["label"], "f. 17r");
+        assert_eq!(parsed["last"]["recovered"], false);
+        // Le dimensioni vere, prese fra quelle dichiarate: il segnaposto porta
+        // solo la larghezza.
+        assert_eq!(parsed["last"]["pixels"], "1299×1925");
         // Le alternative dichiarate dalla biblioteca: senza, «1299» non dice se
         // era il massimo o il minimo che sa servire.
         assert_eq!(parsed["available"][0], "649×963");
@@ -1313,8 +1393,59 @@ mod tests {
     }
 
     #[test]
+    fn a_page_found_on_disk_says_so_and_invents_no_size() {
+        // È la spiegazione di due cose insieme: perché è arrivata in un istante
+        // e perché la misura mostrata è il tetto invece di una negoziata.
+        let outcome = PageOutcome {
+            bytes: 613_040,
+            recovered: true,
+            token: "2000".to_string(),
+            url: "https://iiif.archive.org/img/full/2000,/0/default.jpg".to_string(),
+        };
+        let detail = progress_detail(
+            2,
+            10,
+            1_000_000,
+            "2000",
+            &[],
+            "archive_org",
+            "iiif.archive.org",
+            LastPage {
+                index: 2,
+                label: None,
+                outcome: &outcome,
+                declared: &[],
+            },
+        );
+        let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
+
+        assert_eq!(parsed["last"]["recovered"], true);
+        assert!(parsed["last"]["pixels"].is_null());
+    }
+
+    #[test]
     fn without_a_single_page_done_no_total_is_invented() {
-        let detail = progress_detail(0, 352, 0, 0, 0, "2000,", &[], "gallica", "gallica.bnf.fr");
+        let outcome = PageOutcome {
+            bytes: 0,
+            recovered: false,
+            token: "2000,".to_string(),
+            url: String::new(),
+        };
+        let detail = progress_detail(
+            0,
+            352,
+            0,
+            "2000",
+            &[],
+            "gallica",
+            "gallica.bnf.fr",
+            LastPage {
+                index: 0,
+                label: None,
+                outcome: &outcome,
+                declared: &[],
+            },
+        );
         let parsed: serde_json::Value = serde_json::from_str(&detail).unwrap();
 
         assert_eq!(parsed["bytes"]["estimated"], 0);

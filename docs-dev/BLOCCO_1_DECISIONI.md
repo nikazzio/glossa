@@ -1639,6 +1639,15 @@ Le colonne che il ripristino riscrive si chiedono al database invece di stare in
 un elenco scritto a mano: quell'elenco restava indietro a ogni colonna aggiunta,
 e le colonne dimenticate sparivano al ripristino **in silenzio**.
 
+**Le pagine già sul disco sopravvivono al ripristino.** Le loro righe sono
+appese alle opere, e sostituire le opere se le portava via: il programma
+smetteva di sapere di file che sul disco ci sono ancora. Si mettono da parte
+prima della cancellazione e tornano quelle delle opere che il backup contiene.
+Subito dopo si mette in coda il controllo del deposito, e **solo quando finisce**
+si propone di riprendere le pagine che mancano davvero — prima si proponeva
+tutto, e uno scaricamento da centinaia di pagine ripartiva per file che c'erano.
+I file che restano senza opera si cancellano dalle impostazioni (D5-bis).
+
 ## D32 — Spazio su disco
 
 *Approvata l'11 agosto 2026.*
