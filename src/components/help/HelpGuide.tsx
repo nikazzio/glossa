@@ -490,6 +490,9 @@ function AuditSection() {
       <P>{t('help.audit.reeval')}</P>
       <Tip title={t('document.insightsAuditIssues')}>{t('help.audit.issuesNav')}</Tip>
 
+      <SubTitle>{t('help.audit.schemaTitle')}</SubTitle>
+      <P>{t('help.audit.schemaDesc')}</P>
+
       <SubTitle>{t('help.audit.coherenceTitle')}</SubTitle>
       <P>{t('help.audit.coherenceDesc')}</P>
     </>

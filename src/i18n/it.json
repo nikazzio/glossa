@@ -214,6 +214,7 @@
     "providerOptions": {
       "stageTitle": "Runtime stage",
       "stageHint": "Controlli di generazione specifici del provider per questa fase di traduzione.",
+      "temperatureIgnored": "Il giudizio arriva in un formato vincolato: per quello la temperatura resta a zero, qualunque valore tu scriva. Vale solo per il giudice, non per le traduzioni.",
       "reviewTitle": "Runtime audit",
       "reviewHint": "Controlli di generazione condivisi tra giudice e verifica di coerenza.",
       "enableOverride": "Override config",
@@ -1447,6 +1448,8 @@
       "consistencyIssue": "Lo stesso termine o struttura è reso in modo incoerente rispetto agli altri chunk del documento.",
       "reeval": "Dopo aver corretto manualmente una traduzione candidata, clicca 'Rivaluta' nel pannello audit per rilanciare il giudice solo su quel chunk. Permette di iterare fino alla qualità desiderata senza rieseguire l'intera pipeline.",
       "issuesNav": "Le schede problema nell'audit aprono direttamente il chunk interessato e — quando il giudice fornisce informazioni testuali — provano a focalizzare la frase rilevante con un'euristica di ricerca.",
+      "schemaTitle": "La forma della risposta",
+      "schemaDesc": "Il giudice deve rispondere in una forma precisa — valutazione, elenco di problemi, tipo e gravità di ognuno — e quella forma è una sola per tutti i provider. Con i modelli locali Glossa la impone mentre la risposta viene generata, così il modello non può nemmeno formularla fuori formato; con i servizi in rete la dichiara nella richiesta. Per lo stesso motivo, al giudizio la temperatura resta a zero sui modelli locali qualunque valore tu imposti: una risposta legata a uno schema dev'essere prevedibile, e due esecuzioni sullo stesso testo non devono dare verdetti diversi per caso. Le traduzioni continuano a usare la temperatura che hai scelto, e l'avviso te lo dice dove il campo si compila.",
       "coherenceTitle": "Audit di coerenza (livello documento)",
       "coherenceDesc": "L'audit di coerenza è un passaggio separato, lanciato manualmente dopo il completamento di tutti i chunk. Analizza un chunk alla volta (con il contesto dei chunk vicini per non perdere la visione d'insieme), non l'intero documento in un'unica soluzione. Usa il Prompt Coerenza dal tab Controllo qualità. Il risultato appare nel tab Coerenza del pannello Insight e identifica incoerenze terminologiche o stilistiche tra chunk diversi — ad esempio lo stesso termine reso in modi diversi in punti diversi del documento."
     },

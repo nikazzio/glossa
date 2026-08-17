@@ -214,6 +214,7 @@
     "providerOptions": {
       "stageTitle": "Stage runtime",
       "stageHint": "Provider-specific generation controls for this translation stage only.",
+      "temperatureIgnored": "The verdict comes back in a constrained format: for that, temperature stays at zero whatever you write here. It applies to the judge only, not to translations.",
       "reviewTitle": "Audit runtime",
       "reviewHint": "Shared provider-specific generation controls for judge and coherence checks.",
       "enableOverride": "Override config",
@@ -1447,6 +1448,8 @@
       "consistencyIssue": "The same term or structure is rendered inconsistently across chunks in the document.",
       "reeval": "After manually fixing a candidate translation, click 'Re-evaluate' in the audit panel to rerun the judge on that chunk only. Lets you iterate to the desired quality without running the full pipeline.",
       "issuesNav": "Issue cards open the affected chunk directly, and — when the judge returns textual cues — try to focus on the relevant sentence with a search heuristic.",
+      "schemaTitle": "The shape of the answer",
+      "schemaDesc": "The judge has to answer in a precise shape — a rating, a list of issues, the type and severity of each — and that shape is a single one for every provider. With local models Glossa enforces it while the answer is generated, so the model cannot even phrase it outside the format; with online services it is declared in the request. For the same reason, at judging time the temperature stays at zero on local models whatever value you set: an answer bound to a schema has to be predictable, and two runs on the same text must not give different verdicts by chance. Translations keep using the temperature you chose, and the note says so where the field is filled in.",
       "coherenceTitle": "Coherence audit (document level)",
       "coherenceDesc": "The coherence audit is a separate pass, launched manually after all chunks are complete. It analyses one chunk at a time (with neighboring chunks as context, so it doesn't lose the bigger picture), not the whole document in a single pass. It uses the Coherence Prompt from the Quality Control tab. Results appear in the Coherence tab of the Insights panel and surface terminological or stylistic inconsistencies between chunks — for example the same term rendered differently in different places."
     },

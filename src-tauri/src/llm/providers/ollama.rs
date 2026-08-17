@@ -6,7 +6,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::translation_audit_schema;
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -407,7 +406,15 @@ pub(crate) fn build_ollama_chat_body(
     json_mode: bool,
     json_schema_strict: bool,
 ) -> Value {
-    let options = build_ollama_options(ollama);
+    let mut options = build_ollama_options(ollama);
+
+    // Strict JSON schema decoding must be deterministic: always force temperature to 0,
+    // overriding any configured value (merge_ollama_config always yields Some, so an
+    // is_none() check here would never fire).
+    if json_schema_strict {
+        options.insert("temperature".to_string(), serde_json::json!(0.0));
+    }
+
     let mut body = serde_json::json!({
         "model": model,
         "messages": [
@@ -425,7 +432,7 @@ pub(crate) fn build_ollama_chat_body(
         body["keep_alive"] = keep_alive;
     }
     if json_schema_strict {
-        body["format"] = translation_audit_schema();
+        body["format"] = crate::llm::types::audit_json_schema().clone();
     } else if json_mode {
         body["format"] = serde_json::json!("json");
     }
@@ -451,6 +458,37 @@ mod structured_output_tests {
 
         assert_eq!(body["format"]["type"], "object");
         assert!(body["format"].get("properties").is_some());
+        assert!(body["format"]["properties"].get("issues").is_some());
+    }
+
+    #[test]
+    fn strict_json_forces_deterministic_temperature() {
+        let mut config = default_ollama_config();
+        config.temperature = Some(0.9);
+
+        let body = build_ollama_chat_body("model", "system", "user", &config, false, true, true);
+
+        assert_eq!(
+            body["options"]["temperature"], 0.0,
+            "il decoding vincolato deve essere deterministico anche con una temperatura configurata"
+        );
+    }
+
+    #[test]
+    fn ordinary_json_mode_keeps_the_configured_temperature() {
+        let mut config = default_ollama_config();
+        config.temperature = Some(0.9);
+
+        let body = build_ollama_chat_body("model", "system", "user", &config, false, true, false);
+
+        // La temperatura viaggia come f32: confrontata come f64 diretta darebbe
+        // 0.8999999761581421.
+        assert_eq!(
+            body["options"]["temperature"]
+                .as_f64()
+                .map(|value| value as f32),
+            Some(0.9)
+        );
     }
 
     #[test]

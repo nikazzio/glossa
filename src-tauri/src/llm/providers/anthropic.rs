@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
 
-use super::{format_api_error, translation_audit_schema, with_retry_after};
+use super::{format_api_error, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -87,7 +87,7 @@ fn build_anthropic_body(req: &LlmRequest<'_>, stream: bool) -> Value {
         body["output_config"] = json!({
             "format": {
                 "type": "json_schema",
-                "schema": translation_audit_schema()
+                "schema": crate::llm::types::audit_json_schema().clone()
             }
         });
     }

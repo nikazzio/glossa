@@ -543,35 +543,87 @@ pub async fn extract_phrase_memory_pairs(
     let client = prov.http_client()?;
     let escaped_source = escape_prompt_markers(&source_text);
     let escaped_target = escape_prompt_markers(&target_text);
-    let structured = crate::llm::types::StructuredPrompt {
+
+    /// Un solo ritentativo: se il modello sbaglia due volte la forma, insistere
+    /// non aiuta e raddoppia soltanto il costo.
+    const MAX_ATTEMPTS: usize = 2;
+
+    let context = format!(
+        "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>"
+    );
+
+    // Costruito una volta e riusato: fra un tentativo e l'altro cambia solo
+    // `user`, il blocco di sistema no.
+    let mut structured = crate::llm::types::StructuredPrompt {
         system: vec![crate::llm::types::PromptBlock {
             text: prompt,
             cacheable: false,
         }],
-        user: format!(
-            "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{escaped_source}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{escaped_target}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
-        ),
-    };
-    let req = LlmRequest {
-        model: &model,
-        structured: &structured,
-        api_key: &api_key,
-        json_mode: true,
-        json_schema_strict: false,
-        provider_options: None,
+        user: format!("{context}\n\nReturn JSON only with key \"pairs\"."),
     };
 
-    let answer = prov.call(&client, &req).await?;
-    let usage = answer.usage;
-    let result_text = answer.content;
-    let sanitized = sanitize_llm_json_output(&result_text);
-    let parsed: serde_json::Value = serde_json::from_str(sanitized)
-        .map_err(|e| format!("Failed to parse phrase memory JSON: {e}"))?;
+    let mut last_error = String::new();
+
+    for _ in 0..MAX_ATTEMPTS {
+        let req = LlmRequest {
+            model: &model,
+            structured: &structured,
+            api_key: &api_key,
+            json_mode: true,
+            json_schema_strict: false,
+            provider_options: None,
+        };
+
+        // Gli errori del provider (chiave non valida, quota esaurita, richiesta
+        // annullata) non migliorano al secondo tentativo: propagano subito.
+        // Si ritenta solo una risposta malformata, che è ciò che il prompt di
+        // recupero può correggere.
+        let answer = prov.call(&client, &req).await?;
+        // I token si prendono dal tentativo che ha risposto: è quello che si
+        // paga, ed è l'unico momento in cui il dato esiste (D29).
+        let usage = answer.usage;
+
+        let sanitized = sanitize_llm_json_output(&answer.content);
+        match parse_memory_extractor_pairs(sanitized, &source_text, &target_text) {
+            Ok(pairs) => {
+                return Ok(MemoryExtractorResponse {
+                    pairs,
+                    input_tokens: usage.as_ref().map(|u| u.input),
+                    output_tokens: usage.as_ref().map(|u| u.output),
+                    cached_input_tokens: usage.as_ref().and_then(|u| u.cached_input),
+                    cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
+                })
+            }
+            Err(error) => {
+                structured.user = format!(
+                    "{context}\n\nPrevious attempt failed with error: {error}.\nPlease return ONLY valid JSON with a \"pairs\" array of verbatim extracted phrases."
+                );
+                last_error = error;
+            }
+        }
+    }
+
+    Err(format!(
+        "Phrase memory extraction failed after {MAX_ATTEMPTS} attempts. Last error: {last_error}"
+    ))
+}
+
+/// Estrae le coppie verbatim dalla risposta del modello. Scarta in silenzio le
+/// singole coppie non valide (vuote o non presenti alla lettera nei testi) e
+/// segnala errore solo quando è la risposta intera a essere inutilizzabile —
+/// distinzione che decide se ritentare.
+fn parse_memory_extractor_pairs(
+    sanitized: &str,
+    source_text: &str,
+    target_text: &str,
+) -> Result<Vec<MemoryExtractorPair>, String> {
+    let parsed: serde_json::Value =
+        serde_json::from_str(sanitized).map_err(|e| format!("JSON parse error: {e}"))?;
     let pairs = parsed["pairs"]
         .as_array()
-        .ok_or_else(|| "Phrase memory extractor returned JSON without a pairs array".to_string())?;
+        .ok_or_else(|| "JSON output missing 'pairs' array".to_string())?;
 
-    let validated = pairs
+    Ok(pairs
         .iter()
         .filter_map(|entry| {
             let source_phrase = entry["sourcePhrase"].as_str()?.trim();
@@ -594,15 +646,7 @@ pub async fn extract_phrase_memory_pairs(
                 confidence,
             })
         })
-        .collect();
-
-    Ok(MemoryExtractorResponse {
-        pairs: validated,
-        input_tokens: usage.as_ref().map(|u| u.input),
-        output_tokens: usage.as_ref().map(|u| u.output),
-        cached_input_tokens: usage.as_ref().and_then(|u| u.cached_input),
-        cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
-    })
+        .collect())
 }
 
 #[tauri::command]

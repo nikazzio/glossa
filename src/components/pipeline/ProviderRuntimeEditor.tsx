@@ -13,6 +13,12 @@ interface ProviderRuntimeEditorProps {
   onChange: (next: ProviderRuntimeConfig | undefined) => void;
   title: string;
   hint: string;
+  /**
+   * La temperatura scritta qui non viene usata: succede al giudice su Ollama,
+   * dove la risposta è vincolata a uno schema e il decoding deve essere
+   * deterministico. Dirlo dove il campo si compila è l'unico posto utile.
+   */
+  temperatureIgnored?: boolean;
 }
 
 function parseOptionalNumber(value: string): number | undefined {
@@ -32,6 +38,7 @@ export function ProviderRuntimeEditor({
   onChange,
   title,
   hint,
+  temperatureIgnored = false,
 }: ProviderRuntimeEditorProps) {
   const { t } = useTranslation();
   const textareaId = useId();
@@ -129,6 +136,12 @@ export function ProviderRuntimeEditor({
                     disabled={advancedEnabled}
                     className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
+                  {temperatureIgnored && (
+                    <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-editorial-warning">
+                      <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                      {t('pipeline.providerOptions.temperatureIgnored')}
+                    </p>
+                  )}
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.topP')}>
                   <input
