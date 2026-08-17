@@ -151,6 +151,9 @@ describe('workspaceService', () => {
         keyRef: 'ws_nuovo',
         workspaceId: 'ws_nuovo',
       }),
+      // Dentro la stessa transazione dello spostamento: o valgono entrambi, o
+      // resterebbe un documento spostato senza la sua storia.
+      expect.any(Function),
     );
   });
 

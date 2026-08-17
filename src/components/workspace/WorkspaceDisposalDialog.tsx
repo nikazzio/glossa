@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { AlertTriangle, FolderInput, Trash2 } from 'lucide-react';
 import {
   Dialog,
@@ -42,12 +43,28 @@ export function WorkspaceDisposalDialog({
   const [target, setTarget] = useState<string>(others[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
 
+  // `t` e i richiami del genitore cambiano identità a ogni render: dentro le
+  // dipendenze rilancerebbero l'effetto all'infinito, azzerando i conteggi
+  // appena letti.
+  const latest = useRef({ t, onClose, others });
+  latest.current = { t, onClose, others };
+
   useEffect(() => {
     if (!open) return;
     setContents(null);
-    void workspaceContents(workspace.id).then(setContents);
-    setTarget(others[0]?.id ?? '');
-  }, [open, workspace.id, others]);
+    setTarget(latest.current.others[0]?.id ?? '');
+    // Se il conteggio non riesce, il dialogo resterebbe fermo su «carico» per
+    // sempre: si dice cos'è successo e si chiude, invece di far aspettare una
+    // risposta che non arriva.
+    void workspaceContents(workspace.id)
+      .then(setContents)
+      .catch((error: unknown) => {
+        toast.error(latest.current.t('workspace.disposal.contentsFailed'), {
+          description: error instanceof Error ? error.message : String(error),
+        });
+        latest.current.onClose();
+      });
+  }, [open, workspace.id]);
 
   const owned = contents
     ? contents.projects + contents.glossaries + contents.phrases + contents.transcriptions

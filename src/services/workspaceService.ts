@@ -219,21 +219,28 @@ export async function moveDocumentToWorkspace(
   const from = rows[0].workspace_id;
   if (from === targetWorkspaceId) return;
 
-  await execute(`UPDATE ${TABLE_OF[kind]} SET workspace_id = $1 WHERE id = $2`, [
-    targetWorkspaceId,
-    documentId,
-  ]);
-  logger.info('workspace.document.moved', { kind, documentId, from, to: targetWorkspaceId });
-  await recordFact({
-    eventType: MOVE_EVENT,
-    entityType: kind === 'project' ? 'project' : 'transcription_document',
-    entityId: documentId,
-    // Due spostamenti diversi sono due fatti; rifare lo stesso non ne aggiunge.
-    keyRef: targetWorkspaceId,
-    actor: 'user',
-    workspaceId: targetWorkspaceId,
-    config: { from, to: targetWorkspaceId },
+  // Lo spostamento e il suo fatto stanno o cadono insieme: se il fatto non si
+  // scrivesse, resterebbe un documento spostato di cui la storia non sa niente.
+  await runInTransaction(async (run) => {
+    await run(`UPDATE ${TABLE_OF[kind]} SET workspace_id = $1 WHERE id = $2`, [
+      targetWorkspaceId,
+      documentId,
+    ]);
+    await recordFact(
+      {
+        eventType: MOVE_EVENT,
+        entityType: kind === 'project' ? 'project' : 'transcription_document',
+        entityId: documentId,
+        // Due spostamenti diversi sono due fatti; rifare lo stesso non ne aggiunge.
+        keyRef: targetWorkspaceId,
+        actor: 'user',
+        workspaceId: targetWorkspaceId,
+        config: { from, to: targetWorkspaceId },
+      },
+      run,
+    );
   });
+  logger.info('workspace.document.moved', { kind, documentId, from, to: targetWorkspaceId });
 }
 
 export async function getActiveWorkspaceId(): Promise<string | null> {
