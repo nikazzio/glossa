@@ -1,6 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { execute } from './dbService';
-import { recordFailedModelCall, recordJudgement, recordModelCall } from './pipelineProvenance';
+import {
+  classify,
+  recordFailedModelCall,
+  recordJudgement,
+  recordModelCall,
+} from './pipelineProvenance';
 import { factId } from './provenanceService';
 import type { JudgeResult } from '../types';
 
@@ -57,12 +62,24 @@ describe('quello che resta di una chiamata a un modello', () => {
     expect(params.filter((value) => value === 0)).toHaveLength(0);
   });
 
-  it('una chiamata fallita resta scritta con il suo motivo', async () => {
-    await recordFailedModelCall(call, 'connessione caduta');
+  it('una chiamata fallita resta scritta con il **tipo** di errore', async () => {
+    // La colonna serve a raggruppare: «quante sono cadute per i limiti del
+    // provider» ha una risposta, «quante volte è comparso questo messaggio»
+    // no, perché il messaggio cambia con il provider e con la giornata.
+    await recordFailedModelCall(call, 'Request failed: 429 Too Many Requests');
 
     const params = written();
     expect(params).toContain('error');
-    expect(params).toContain('connessione caduta');
+    expect(params).toContain('rateLimited');
+    expect(params).not.toContain('Request failed: 429 Too Many Requests');
+  });
+
+  it('classifica gli errori che capitano davvero', () => {
+    expect(classify('fetch failed: ECONNRESET')).toBe('transport');
+    expect(classify('401 Unauthorized: invalid api key')).toBe('auth');
+    expect(classify('Unexpected token < in JSON at position 0')).toBe('format');
+    expect(classify('503 Service Unavailable')).toBe('providerDown');
+    expect(classify('qualcosa di mai visto')).toBe('unknown');
   });
 
   it('rieseguire lo stesso stadio sostituisce il fatto invece di accumularne uno', async () => {

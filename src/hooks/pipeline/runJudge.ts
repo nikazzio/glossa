@@ -8,6 +8,13 @@ import { pipelineLog } from '../../utils/pipelineLogging';
 import { stripFootnoteMarkers } from '../../utils/footnoteExtractor';
 import type { ChunkStatus, JudgeResult, PromptInfo, ResponseInfo, TranslationChunk } from '../../types';
 import type { ChunkOutcome } from './blobContext';
+import { recordFailedModelCall, recordModelCall } from '../../services/pipelineProvenance';
+
+/**
+ * Lo stadio con cui il giudizio entra nel registro. Non è uno stadio della
+ * pipeline: è una chiamata a sé, e come tale va contata.
+ */
+const JUDGE_STAGE_ID = 'judge';
 
 export type JudgeActions = {
   updateChunkJudge: (id: string, result: JudgeResult) => void;
@@ -79,9 +86,41 @@ export async function runJudgeForChunk(
       ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
     } as JudgeResult);
     actions.updateChunkStatus(chunk.id, 'completed');
-    pipelineLog.auditEnd(chunk.id, judgeRef, Date.now() - auditStartedAt, judgeTokenUsage);
+    const auditDuration = Date.now() - auditStartedAt;
+    pipelineLog.auditEnd(chunk.id, judgeRef, auditDuration, judgeTokenUsage);
+    // Anche il giudice è una chiamata a un modello, e costa: senza questa riga
+    // il conto di un documento sarebbe più basso del vero (D29). Il *verdetto*
+    // è un fatto diverso, legato alla revisione giudicata.
+    void recordModelCall({
+      chunkId: chunk.id,
+      stageId: JUDGE_STAGE_ID,
+      stageName: 'Giudizio',
+      provider: judgeRef.provider,
+      model: judgeRef.model,
+      usage: judgeTokenUsage,
+      durationMs: auditDuration,
+      sourceLanguage: config.sourceLanguage,
+      targetLanguage: config.targetLanguage,
+      input: textToAudit,
+    }).catch(() => undefined);
     return 'completed';
   } catch (error: unknown) {
+    if (!isStreamCancelledError(error)) {
+      void recordFailedModelCall(
+        {
+          chunkId: chunk.id,
+          stageId: JUDGE_STAGE_ID,
+          stageName: 'Giudizio',
+          provider: judgeRef.provider,
+          model: judgeRef.model,
+          durationMs: Date.now() - auditStartedAt,
+          sourceLanguage: config.sourceLanguage,
+          targetLanguage: config.targetLanguage,
+          input: textToAudit,
+        },
+        error instanceof Error ? error.message : String(error),
+      ).catch(() => undefined);
+    }
     if (isStreamCancelledError(error)) {
       actions.updateChunkJudge(chunk.id, {
         content: textToAudit,
