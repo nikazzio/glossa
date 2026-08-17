@@ -320,7 +320,9 @@ mod tests {
         for table in [
             "sources",
             "source_versions",
-            "workspace_sources",
+            // I collegamenti fra workspace e item stanno tutti qui: la vecchia
+            // tabella dei soli libri non esiste più (#213).
+            "workspace_items",
             "assets",
             "transcription_documents",
             "transcription_segments",

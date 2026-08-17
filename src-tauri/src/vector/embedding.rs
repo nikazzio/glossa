@@ -138,6 +138,18 @@ pub async fn get_embeddings(
     Ok(parsed.data.into_iter().map(|o| o.embedding).collect())
 }
 
+
+/// Le frasi che un workspace vede (#213).
+///
+/// Una frase nata da una traduzione **segue il suo progetto**: il workspace è
+/// quello del progetto, e spostare il progetto porta con sé migliaia di righe
+/// senza toccarne una. Una frase importata non ha un progetto, e si collega da
+/// sola. Prima la colonna sulla riga diceva entrambe le cose, e si
+/// disallineava al primo spostamento.
+const IN_WORKSPACE: &str = "(pm.project_id IN (SELECT id FROM projects WHERE workspace_id = :ws) \
+     OR EXISTS (SELECT 1 FROM workspace_items wi \
+                 WHERE wi.item_type = 'phrase' AND wi.item_id = pm.id AND wi.workspace_id = :ws))";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PhraseMatchResult {
     pub phrase_memory_id: String,
@@ -175,22 +187,25 @@ pub async fn vec_list_phrase_memory(
     let connection = database.connection().map_err(EmbeddingError::Http)?;
     run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
+        let query = format!(
+            "SELECT pm.id, pm.source_phrase, pm.target_phrase, pm.confidence, pm.source_language, \
+                    pm.target_language, pm.author, pm.work, pm.domain, pm.tags, pm.notes, \
+                    pm.chunk_id, pm.project_id, pm.embedding_model, pm.created_at \
+             FROM phrase_memory pm WHERE {IN_WORKSPACE} \
+             ORDER BY datetime(pm.created_at) DESC, pm.id DESC"
+        );
         let mut statement = conn
-            .prepare(
-                "SELECT id, workspace_id, source_phrase, target_phrase, confidence, source_language, target_language, \
-                        author, work, domain, tags, notes, chunk_id, project_id, embedding_model, created_at \
-                 FROM phrase_memory WHERE workspace_id = ?1 ORDER BY datetime(created_at) DESC, id DESC",
-            )
+            .prepare(&query)
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
         let entries = statement
-            .query_map(rusqlite::params![workspace_id], |row| {
+            .query_map(rusqlite::named_params! { ":ws": workspace_id }, |row| {
                 Ok(PhraseMemoryEntryResult {
-                    id: row.get(0)?, workspace_id: row.get(1)?, source_phrase: row.get(2)?,
-                    target_phrase: row.get(3)?, confidence: row.get(4)?, source_language: row.get(5)?,
-                    target_language: row.get(6)?, author: row.get(7)?, work: row.get(8)?,
-                    domain: row.get(9)?, tags: row.get(10)?, notes: row.get(11)?,
-                    chunk_id: row.get(12)?, project_id: row.get(13)?, embedding_model: row.get(14)?,
-                    created_at: row.get(15)?,
+                    id: row.get(0)?, workspace_id: workspace_id.clone(), source_phrase: row.get(1)?,
+                    target_phrase: row.get(2)?, confidence: row.get(3)?, source_language: row.get(4)?,
+                    target_language: row.get(5)?, author: row.get(6)?, work: row.get(7)?,
+                    domain: row.get(8)?, tags: row.get(9)?, notes: row.get(10)?,
+                    chunk_id: row.get(11)?, project_id: row.get(12)?, embedding_model: row.get(13)?,
+                    created_at: row.get(14)?,
                 })
             })
             .map_err(|error| EmbeddingError::Http(error.to_string()))?
@@ -212,9 +227,15 @@ pub async fn vec_delete_phrase_memory(
     let connection = database.connection().map_err(EmbeddingError::Http)?;
     run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
+        // La frase si cancella solo se **quel** workspace la vede: senza il
+        // controllo, un id indovinato toglierebbe una frase di un altro.
+        let query = format!(
+            "DELETE FROM phrase_memory WHERE id = :id \
+             AND EXISTS (SELECT 1 FROM phrase_memory pm WHERE pm.id = :id AND {IN_WORKSPACE})"
+        );
         conn.execute(
-            "DELETE FROM phrase_memory WHERE id = ?1 AND workspace_id = ?2",
-            rusqlite::params![phrase_memory_id, workspace_id],
+            &query,
+            rusqlite::named_params! { ":id": phrase_memory_id, ":ws": workspace_id },
         )
         .map(|count| count as u32)
         .map_err(|error| EmbeddingError::Http(error.to_string()))
@@ -236,16 +257,21 @@ pub async fn vec_update_phrase_memory(
     let connection = database.connection().map_err(EmbeddingError::Http)?;
     run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
+        let query = format!(
+            "UPDATE phrase_memory SET source_phrase = :source, target_phrase = :target, \
+                    embedding = :embedding \
+             WHERE id = :id \
+               AND EXISTS (SELECT 1 FROM phrase_memory pm WHERE pm.id = :id AND {IN_WORKSPACE})"
+        );
         conn.execute(
-            "UPDATE phrase_memory SET source_phrase = ?1, target_phrase = ?2, embedding = ?3 \
-             WHERE id = ?4 AND workspace_id = ?5",
-            rusqlite::params![
-                source_phrase,
-                target_phrase,
-                floats_to_blob(&embedding),
-                phrase_memory_id,
-                workspace_id
-            ],
+            &query,
+            rusqlite::named_params! {
+                ":source": source_phrase,
+                ":target": target_phrase,
+                ":embedding": floats_to_blob(&embedding),
+                ":id": phrase_memory_id,
+                ":ws": workspace_id,
+            },
         )
         .map(|count| count as u32)
         .map_err(|error| EmbeddingError::Http(error.to_string()))
@@ -267,21 +293,27 @@ pub async fn vec_search_phrase_memory(
     run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
-            .prepare(
+            .prepare(&format!(
                 "WITH ranked AS ( \
                    SELECT pm.id, pm.source_phrase, pm.target_phrase, pm.confidence, \
-                          vec_distance_cosine(pm.embedding, ?1) AS distance \
+                          vec_distance_cosine(pm.embedding, :query) AS distance \
                    FROM phrase_memory pm \
-                   WHERE pm.workspace_id = ?2 \
-                     AND (pm.embedding_model IS NULL OR pm.embedding_model = ?5) \
+                   WHERE {IN_WORKSPACE} \
+                     AND (pm.embedding_model IS NULL OR pm.embedding_model = :model) \
                  ) \
                  SELECT id, source_phrase, target_phrase, confidence, distance FROM ranked \
-                 WHERE distance < ?3 ORDER BY distance ASC LIMIT ?4",
-            )
+                 WHERE distance < :threshold ORDER BY distance ASC LIMIT :limit"
+            ))
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
         let matches = statement
             .query_map(
-                rusqlite::params![blob, workspace_id, threshold, max_results, embedding_model],
+                rusqlite::named_params! {
+                    ":query": blob,
+                    ":ws": workspace_id,
+                    ":threshold": threshold,
+                    ":limit": max_results,
+                    ":model": embedding_model,
+                },
                 |row| {
                     Ok(PhraseMatchResult {
                         phrase_memory_id: row.get(0)?,
@@ -316,7 +348,8 @@ pub struct PhrasePair {
 pub async fn vec_save_locked_phrases(
     database: State<'_, crate::vector::VectorDatabase>,
     write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
-    workspace_id: String,
+    // Il workspace non si passa più: una frase nata da una traduzione sta dove
+    // sta il progetto, e chiederlo due volte era il modo di farli divergere.
     project_id: String,
     chunk_id: String,
     pairs: Vec<PhrasePair>,
@@ -326,7 +359,7 @@ pub async fn vec_save_locked_phrases(
 ) -> Result<u32, EmbeddingError> {
     let save_started = Instant::now();
     log::debug!(
-        "phrase_memory.vec_save_locked_phrases.start workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={}",
+        "phrase_memory.vec_save_locked_phrases.start project_id={project_id} chunk_id={chunk_id} pair_count={}",
         pairs.len()
     );
     if pairs.is_empty() {
@@ -339,18 +372,6 @@ pub async fn vec_save_locked_phrases(
 
     crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
 
-    let workspace_exists: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM workspaces WHERE id = ?1",
-            rusqlite::params![&workspace_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| {
-            log::warn!(
-                "phrase_memory.vec_save_locked_phrases.workspace_check_failed workspace_id={workspace_id} error={e}"
-            );
-            EmbeddingError::Http(e.to_string())
-        })?;
     let project_exists: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM projects WHERE id = ?1",
@@ -364,11 +385,11 @@ pub async fn vec_save_locked_phrases(
             EmbeddingError::Http(e.to_string())
         })?;
     log::debug!(
-        "phrase_memory.vec_save_locked_phrases.refs workspace_id={workspace_id} workspace_exists={workspace_exists} project_id={project_id} project_exists={project_exists}"
+        "phrase_memory.vec_save_locked_phrases.refs project_id={project_id} project_exists={project_exists}"
     );
-    if workspace_exists == 0 || project_exists == 0 {
+    if project_exists == 0 {
         return Err(EmbeddingError::Http(format!(
-            "phrase memory references missing: workspace_id={workspace_id} exists={workspace_exists}, project_id={project_id} exists={project_exists}"
+            "phrase memory references missing: project_id={project_id}"
         )));
     }
 
@@ -399,11 +420,10 @@ pub async fn vec_save_locked_phrases(
         let rows = tx
             .execute(
                 "INSERT OR IGNORE INTO phrase_memory \
-                 (id, workspace_id, project_id, chunk_id, source_phrase, target_phrase, \
+                 (id, project_id, chunk_id, source_phrase, target_phrase, \
                   confidence, source_language, target_language, embedding, embedding_model, created_at) \
-                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'))",
+                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'))",
                 rusqlite::params![
-                    &workspace_id,
                     &project_id,
                     &chunk_id,
                     pair.source_phrase,
@@ -417,7 +437,7 @@ pub async fn vec_save_locked_phrases(
             )
             .map_err(|e| {
                 log::warn!(
-                    "phrase_memory.vec_save_locked_phrases.insert_failed workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_index={index} source_chars={} target_chars={} embedding_dim={} error={e}",
+                    "phrase_memory.vec_save_locked_phrases.insert_failed project_id={project_id} chunk_id={chunk_id} pair_index={index} source_chars={} target_chars={} embedding_dim={} error={e}",
                     pair.source_phrase.len(),
                     pair.target_phrase.len(),
                     pair.source_embedding.len()
@@ -452,7 +472,7 @@ pub async fn vec_save_locked_phrases(
     })?;
 
     log::info!(
-        "phrase_memory.vec_save_locked_phrases.done workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={} attempted={attempted} saved={saved} elapsed_ms={}",
+        "phrase_memory.vec_save_locked_phrases.done project_id={project_id} chunk_id={chunk_id} pair_count={} attempted={attempted} saved={saved} elapsed_ms={}",
         pairs.len(),
         save_started.elapsed().as_millis()
     );
@@ -479,10 +499,12 @@ pub async fn vec_regenerate_all_embeddings(
     let entries: Vec<(String, String)> = run_blocking(Arc::clone(&connection), move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
-            .prepare("SELECT id, source_phrase FROM phrase_memory WHERE workspace_id = ?1")
+            .prepare(&format!(
+                "SELECT pm.id, pm.source_phrase FROM phrase_memory pm WHERE {IN_WORKSPACE}"
+            ))
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
         let entries = statement
-            .query_map(rusqlite::params![query_workspace_id], |row| {
+            .query_map(rusqlite::named_params! { ":ws": query_workspace_id }, |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
             })
             .map_err(|error| EmbeddingError::Http(error.to_string()))?

@@ -257,7 +257,8 @@ export async function addSourceToLibrary(
   if (existing) {
     if (input.workspaceId) {
       await execute(
-        'INSERT OR IGNORE INTO workspace_sources (workspace_id, source_id) VALUES ($1, $2)',
+        `INSERT INTO workspace_items (workspace_id, item_type, item_id) VALUES ($1, 'source', $2)
+         ON CONFLICT(workspace_id, item_type, item_id) DO NOTHING`,
         [input.workspaceId, existing.source_id],
       );
     }
@@ -313,7 +314,7 @@ export async function addSourceToLibrary(
     );
     if (input.workspaceId) {
       await run(
-        'INSERT INTO workspace_sources (workspace_id, source_id) VALUES ($1, $2)',
+        `INSERT INTO workspace_items (workspace_id, item_type, item_id) VALUES ($1, 'source', $2)`,
         [input.workspaceId, sourceId],
       );
     }
@@ -341,7 +342,7 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
       )
     : [];
   const linkRows = await select<{ workspace_id: string }>(
-    'SELECT workspace_id FROM workspace_sources WHERE source_id = $1',
+    `SELECT workspace_id FROM workspace_items WHERE item_type = 'source' AND item_id = $1`,
     [sourceId],
   );
 
@@ -360,12 +361,13 @@ export async function setWorkspaceSourceLink(
 ): Promise<void> {
   if (linked) {
     await execute(
-      'INSERT OR IGNORE INTO workspace_sources (workspace_id, source_id) VALUES ($1, $2)',
+      `INSERT INTO workspace_items (workspace_id, item_type, item_id) VALUES ($1, 'source', $2)
+       ON CONFLICT(workspace_id, item_type, item_id) DO NOTHING`,
       [workspaceId, sourceId],
     );
   } else {
     await execute(
-      'DELETE FROM workspace_sources WHERE workspace_id = $1 AND source_id = $2',
+      `DELETE FROM workspace_items WHERE workspace_id = $1 AND item_type = 'source' AND item_id = $2`,
       [workspaceId, sourceId],
     );
   }

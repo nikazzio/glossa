@@ -297,6 +297,12 @@ export interface GlossaryEntry {
   term: string;
   translation: string;
   notes?: string;
+  /**
+   * La voce è stata corretta **in questo workspace** (#213): quello che si
+   * legge non è il valore del dizionario. Vale solo quando le voci sono state
+   * chieste per un workspace.
+   */
+  overridden?: boolean;
 }
 
 // A hand-picked, already-approved chunk translation used as a few-shot style
@@ -489,6 +495,8 @@ export type Workspace = {
   memoryExtractorModel: string;
   memoryExtractorPrompt: string;
   createdAt: string;
+  /** Messo da parte: resta com'è, ma non compare fra quelli in cui si lavora. */
+  archivedAt?: string;
 };
 
 export type PhraseMatch = {

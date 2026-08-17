@@ -47,7 +47,11 @@ export async function createWorkspace(params: {
   return workspace;
 }
 
-export async function listWorkspaces(): Promise<Workspace[]> {
+/**
+ * I workspace. Gli **archiviati** restano fuori: sono quelli messi da parte, e
+ * ricomparire da soli nel selettore vanificherebbe il gesto (#213).
+ */
+export async function listWorkspaces(includeArchived = false): Promise<Workspace[]> {
   const rows = await select<{
     id: string; name: string; description: string | null;
     icon_key: string | null;
@@ -56,10 +60,13 @@ export async function listWorkspaces(): Promise<Workspace[]> {
     memory_extractor_model: string | null;
     memory_extractor_prompt: string | null;
     created_at: string;
+    archived_at: string | null;
   }>(`SELECT id, name, icon_key, description, embedding_model,
              memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
-             created_at
-      FROM workspaces ORDER BY created_at ASC`);
+             created_at, archived_at
+      FROM workspaces
+      WHERE archived_at IS NULL OR $1 = 1
+      ORDER BY created_at ASC`, [includeArchived ? 1 : 0]);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -70,6 +77,7 @@ export async function listWorkspaces(): Promise<Workspace[]> {
     memoryExtractorModel: r.memory_extractor_model || DEFAULT_MEMORY_EXTRACTOR_MODEL,
     memoryExtractorPrompt: r.memory_extractor_prompt || DEFAULT_MEMORY_EXTRACTOR_PROMPT,
     createdAt: r.created_at,
+    archivedAt: r.archived_at ?? undefined,
   }));
 }
 

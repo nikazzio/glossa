@@ -530,8 +530,9 @@ export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOp
     return 0;
   }
 
+  // Il workspace non si passa: una frase nata da una traduzione sta dove sta il
+  // progetto, e dirlo due volte era il modo di farli divergere (#213).
   const savedCount = await invoke<number>('vec_save_locked_phrases', {
-    workspaceId,
     projectId,
     chunkId,
     pairs,
