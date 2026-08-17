@@ -162,6 +162,13 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
   rimozione che porta via anche i file, i profili di rete al posto dei valori
   per biblioteca, e le quattro schede delle impostazioni riportate nell'idioma
   visivo dell'app.
+- **2026-08-17, sera** — revisione della finestra Impostazioni contro il design
+  system: le sette schede avevano tre generazioni di stile addosso. Nascono tre
+  primitive (intestazione di sezione allineata a 11px, riga di impostazione,
+  trattamento unico dei campi), il colore d'avviso smette di essere identico al
+  grigio secondario, sparisce l'ultimo pulsante testuale, le linguette si
+  cambiano con le frecce e un ritmo di rete a metà non si perde più cambiando
+  scheda.
 
 ## Da provare a mano, per chi rilegge
 

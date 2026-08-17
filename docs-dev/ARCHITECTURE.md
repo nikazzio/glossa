@@ -132,6 +132,8 @@ Finestre modali, tooltip, menu poggiano su **Radix UI** (`@radix-ui/react-dialog
 | `Tooltip` | Tooltip editoriale su Radix (Provider interno, `z-[210]`). |
 | `Menu` | Menu contestuale/tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
 | `IconButton` | Pulsante icona con tipp. CVA: size (`xs`/`sm`/`md`/`lg`), tone (`default`/`accent`/`success`/`charcoal`/`muted`/`running`). **Shell nuova (#291)**: taglia `xs` (`p-1`) per barre compatte (AppStatusBar). |
+| `SectionLabel` / `FieldLabel` | Intestazione di sezione (icona 11px accento + etichetta `text-[11px]` maiuscola) ed etichetta di campo. Obbligatorie: il pattern scritto a mano esisteva in ventisei punti con cinque varianti. |
+| `SettingRow` + `FIELD_CLASSNAME` | Riga di un'impostazione (etichetta `text-sm`, comando a destra, spiegazione nel tooltip) dentro lista `divide-y`/`border-y`, e trattamento unico dei campi nativi (fondo `editorial-textbox`). Nate dalla revisione della finestra Impostazioni (agosto 2026), dove ogni scheda aveva la sua altezza di riga e il suo tipo di campo. Dettagli e regole in `UI_DESIGN_SYSTEM.md`. |
 
 > **Stato 2026-07-03:** `EditorialModalShell` e `useFocusTrap` rimossi. `LibraryPanel`, `ProjectPanel`, `AppDashboard` (ex `WorkspaceHome`), `TranslationsArea` e `DashboardSidebar` usano `Dialog`; conferme usano `AlertDialog`.
 

@@ -15,11 +15,12 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 | `editorial-danger` | #A64E42 | Azioni distruttive, stop, errori bloccanti |
 | `editorial-muted` | #666666 | Testo disabilitato / secondario |
 | `editorial-success` | #3A7A65 | Stato positivo |
+| `editorial-warning` | #7A5A14 | Cautele: cartella irraggiungibile, file corrotti, conseguenza irreversibile |
 | `editorial-running` | #C49B2A | Step pipeline in esecuzione (dot + label gialli con `animate-pulse`) |
 | `editorial-border` | #C2BCB4 | Bordi e separatori |
 | `editorial-textbox` | #EAE5DE | Background input |
 
-> `editorial-warning` (#666666) = grigio, avvisi generici. Stato *in esecuzione* usa `editorial-running` (giallo).
+> `editorial-warning` era #666666, **lo stesso esadecimale di `editorial-muted`**: ogni avviso risultava identico a una nota di aiuto (verificato nelle Impostazioni, agosto 2026 — deposito irraggiungibile, file corrotti, «il ripristino sostituisce tutto»). Adesso è un'ocra profonda: stesso peso del grigio (5.84:1 su `bg`, 5.09:1 su `textbox`; scuro #D7A76A, 8.15:1) ma cromatica, e **più scura di `running`** perché una cautela non è uno stato *in esecuzione*. Il giallo `editorial-running` resta solo per «sta girando adesso», il rosso `editorial-danger` per il danno e l'errore bloccante.
 
 ### Superfici (`bg-surface-*`) — usa questi, non i toni grezzi
 
@@ -226,11 +227,72 @@ import { SectionLabel } from '../ui';
 
 No reintrodurre pattern `<div className="flex items-center gap-1.5">` manuale dove `SectionLabel` basta.
 
+**Misura: `text-[11px]`, icona 11px accento.** Era `text-xs` (13px) mentre ventisei
+punti dell'app scrivevano l'intestazione a mano a 11px: la primitiva si è
+allineata a loro, non il contrario, così adottarla non sposta niente. Il divieto
+del pattern manuale vale anche quando l'intestazione ha un comando accanto —
+in quel caso `SectionLabel` sta dentro un `flex items-center justify-between`.
+
+---
+
+### SettingRow — riga di un'impostazione (OBBLIGATORIO nei pannelli config)
+
+Etichetta a sinistra, comando a destra, spiegazione **al passaggio del mouse**:
+
+```tsx
+import { SettingRow } from '../ui';
+
+<div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+  <SettingRow label={t('chiave.voce')} hint={t('chiave.voceHint')}>
+    <Select … />
+  </SettingRow>
+</div>
+```
+
+Regole:
+- Etichetta `text-sm`, riga `py-2.5`: **una sola** altezza di riga nei pannelli
+  config. Prima ce n'erano quattro (`py-2.5`, `py-3`, `py-3.5`, righe sciolte).
+- Sempre dentro la lista `divide-y` + `border-y`: righe sciolte non si leggono
+  come elenco.
+- **Una sola icona per riga**, dentro il comando a destra. La stessa icona
+  ripetuta a sinistra come decorazione faceva sembrare due comandi uno.
+- Un pannello di impostazioni si legge per le voci: la prosa sta nel `hint`, non
+  a schermo.
+
+---
+
+### Campi nativi — `FIELD_CLASSNAME` / `FIELD_MONO_CLASSNAME`
+
+```tsx
+import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from '../ui';
+
+<FieldLabel htmlFor="id" block>{t('chiave.campo')}</FieldLabel>
+<input id="id" className={FIELD_CLASSNAME} />
+```
+
+Fondo `editorial-textbox` (ruolo di controllo), `rounded-md`, `px-3 py-2`,
+`text-sm`. Alcuni campi usavano `editorial-bg`, che è **lo stesso colore della
+finestra**: si riconoscevano solo dal bordo. Ogni etichetta di campo è
+`FieldLabel`, mai un `<p>`/`<label>` con classi proprie.
+
+---
+
+### Riga-comando — l'unica eccezione a «solo IconButton»
+
+Una riga larga che **è** il comando (scelta della cartella dati, del deposito,
+del font, della chiave di un provider) resta un `<button>` con dentro etichetta e
+valore: non è un controllo icon-only, e un `IconButton` accanto ripeterebbe la
+stessa azione occupando spazio. Vincoli: `border-y` (mai riquadri arrotondati
+grandi), `hover:bg-surface-hover/50`, `Tooltip` o `aria-label` che dice cosa fa.
+Tutto il resto dei comandi resta `IconButton`.
+
 ---
 
 ### ToggleRow — riga con toggle slide
 
 Opzioni on/off in pannelli config, usa `ToggleRow` dentro contenitore `rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4`. Struttura standard: `SectionLabel` sopra box, `ToggleRow` dentro.
+
+> **Dentro una finestra** quel contenitore arrotondato non si usa (vedi § Finestre: niente `rounded-xl/2xl/3xl` nel corpo delle modali). Lì `ToggleRow` sta nella stessa lista `divide-y` + `border-y` delle `SettingRow`, come una riga fra le altre. Le due regole si contraddicevano e questa è la lettura da seguire.
 
 ```tsx
 import { SectionLabel, ToggleRow } from '../ui';
@@ -486,6 +548,35 @@ Dall'alto verso il basso per importanza percepita dall'utente:
 3. Persona
 
 ---
+
+## Finestra Impostazioni — forma comune delle schede
+
+Vale per ogni scheda di `components/settings/` (agosto 2026: le sette schede
+avevano tre generazioni di stile addosso).
+
+- **Radice del pannello**: `space-y-10`, `role="tabpanel"`, `aria-labelledby`.
+  Un solo ritmo verticale: prima erano quattro (`space-y-4`, `gap-6`,
+  `space-y-10`, `space-y-12`).
+- **Sezione**: `<section className="space-y-4">` con `SectionLabel` in cima;
+  comandi di sezione a destra dell'intestazione, non in fondo alla schermata.
+- **Elenchi**: lista `divide-y` + `border-y` di `SettingRow`. Niente riquadri
+  arrotondati, niente pastiglie: i dati di riga sono metadati in `font-mono`
+  separati da `·`.
+- **Scelta fra N opzioni con un nome**: `SegmentedControl`. Fila di `IconButton`
+  con etichetta corsiva solo quando l'icona basta da sola (pattern barra
+  filtri). Erano tre modi diversi nella stessa finestra.
+- **Campi**: `FieldLabel` + `FIELD_CLASSNAME`.
+- **Colori semantici**: `danger` per errori e danni, `success` per il positivo,
+  `warning` per le cautele, accento **solo** per selezione e stato attivo. Verde
+  per «non funziona» era il contrario della palette.
+- **Linguette**: `IconButton role="tab"` con roving tabindex **e frecce**
+  (←/→/↑/↓, Home, End). Con `tabIndex={-1}` sulle inattive e nessun gestore, da
+  tastiera si raggiungeva solo la scheda aperta.
+- **Salvataggio**: le schede scrivono al cambio. Dove il salvataggio è esplicito
+  (profili di rete: un «2» digitato a metà di «250» non deve diventare la
+  politica verso una biblioteca) serve un segno di **non salvato** accanto
+  all'intestazione, un comando per buttare le modifiche, e lo stato tenuto dalla
+  finestra — non dalla scheda, che si smonta cambiando linguetta.
 
 ---
 

@@ -1,7 +1,7 @@
 import { Type, Sun, Moon, Monitor, Palette, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme } from '../../stores/uiStore';
-import { ContrastBadge, SegmentedControl } from '../ui';
+import { ContrastBadge, SectionLabel, SegmentedControl, SettingRow } from '../ui';
 
 /** Sfondo editoriale di riferimento per il controllo contrasto AA dell'accento. */
 const ACCENT_CONTRAST_BG: Record<'light' | 'dark', string> = {
@@ -52,15 +52,17 @@ export function TypographySettingsTab({
       className="space-y-10"
     >
       {/* Font UI */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          <Type size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.uiFont')}
-          </p>
-        </div>
-        <p className="text-xs leading-relaxed text-editorial-muted">{t('settings.uiFontHint')}</p>
-        <div role="radiogroup" aria-label={t('settings.uiFont')} className="grid grid-cols-2 gap-x-6 border-y border-editorial-border/70">
+      <section className="space-y-4">
+        <SectionLabel icon={Type} label={t('settings.uiFont')} />
+        <p className="text-sm leading-relaxed text-editorial-muted">{t('settings.uiFontHint')}</p>
+        {/* Righe come ogni altro elenco della finestra: l'anteprima resta —
+            il nome è reso nel proprio carattere — ma spariscono la barra
+            laterale e l'altezza di riga che aveva solo questa scheda. */}
+        <div
+          role="radiogroup"
+          aria-label={t('settings.uiFont')}
+          className="divide-y divide-editorial-border/60 border-y border-editorial-border/70"
+        >
           {UI_FONT_OPTIONS.map((opt) => {
             const isActive = uiFont === opt.value;
             return (
@@ -70,37 +72,38 @@ export function TypographySettingsTab({
                 role="radio"
                 aria-checked={isActive}
                 onClick={() => setUiFont(opt.value)}
-                className={`flex items-center justify-between gap-2 border-l-4 py-3.5 pl-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                className={`flex w-full items-center justify-between gap-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                   isActive
-                    ? 'border-l-editorial-accent text-editorial-accent'
-                    : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:text-editorial-accent'
+                    ? 'text-editorial-accent'
+                    : 'text-editorial-ink hover:text-editorial-accent'
                 }`}
               >
                 <span className="min-w-0">
-                  <span className="block text-lg" style={{ fontFamily: opt.family }}>
+                  <span className="block text-sm" style={{ fontFamily: opt.family }}>
                     {opt.name}
                   </span>
-                  <span className="mt-0.5 block text-xs text-editorial-muted" style={{ fontFamily: opt.family }}>
+                  <span
+                    className="mt-0.5 block text-xs text-editorial-muted"
+                    style={{ fontFamily: opt.family }}
+                  >
                     AaBbCc 0123 àèéìòù
                   </span>
                 </span>
                 {isActive ? (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-editorial-accent" aria-hidden="true" />
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-editorial-accent"
+                    aria-hidden="true"
+                  />
                 ) : null}
               </button>
             );
           })}
         </div>
-      </div>
+      </section>
 
       {/* Tema colori */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Sun size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.colorScheme')}
-          </p>
-        </div>
+      <section className="space-y-4">
+        <SectionLabel icon={Sun} label={t('settings.colorScheme')} />
         <SegmentedControl
           ariaLabel={t('settings.colorScheme')}
           value={colorScheme}
@@ -111,48 +114,45 @@ export function TypographySettingsTab({
             { value: 'system' as ColorScheme, icon: <Monitor size={14} />, label: t('settings.colorScheme_system') },
           ]}
         />
-      </div>
+      </section>
 
       {/* Accento */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Palette size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.accentColor')}
-          </p>
+      <section className="space-y-4">
+        <SectionLabel icon={Palette} label={t('settings.accentColor')} />
+        {/* Righe, non due riquadri che somigliavano a un selettore: qui non si
+            scegliono due alternative, si impostano due valori. */}
+        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+          {(['light', 'dark'] as const).map((mode) => {
+            const label = t(
+              mode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light',
+            );
+            return (
+              <SettingRow key={mode} label={label} hint={t('settings.accentColorHint')}>
+                <span className="flex items-center gap-2">
+                  <ContrastBadge fg={editorialAccentColor[mode]} bg={ACCENT_CONTRAST_BG[mode]} />
+                  <label className="relative h-5 w-5 shrink-0 cursor-pointer overflow-hidden rounded-full border border-editorial-border">
+                    <span
+                      className="absolute inset-0"
+                      style={{ backgroundColor: editorialAccentColor[mode] }}
+                    />
+                    <input
+                      type="color"
+                      value={editorialAccentColor[mode]}
+                      onChange={(e) => setEditorialAccentColor(mode, e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      aria-label={label}
+                    />
+                  </label>
+                </span>
+              </SettingRow>
+            );
+          })}
         </div>
-        <p className="text-xs leading-relaxed text-editorial-muted">{t('settings.accentColorHint')}</p>
-        <div className="flex gap-2">
-          {(['light', 'dark'] as const).map((mode) => (
-            <label
-              key={mode}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-editorial-border bg-editorial-bg/60 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:border-editorial-accent/40"
-            >
-              <span className="relative h-3.5 w-3.5 shrink-0 overflow-hidden rounded-full">
-                <span className="absolute inset-0" style={{ backgroundColor: editorialAccentColor[mode] }} />
-                <input
-                  type="color"
-                  value={editorialAccentColor[mode]}
-                  onChange={(e) => setEditorialAccentColor(mode, e.target.value)}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  aria-label={t(mode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
-                />
-              </span>
-              {t(mode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
-              <ContrastBadge fg={editorialAccentColor[mode]} bg={ACCENT_CONTRAST_BG[mode]} />
-            </label>
-          ))}
-        </div>
-      </div>
+      </section>
 
       {/* Dimensione testo documento */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Type size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.docFontSize')}
-          </p>
-        </div>
+      <section className="space-y-4">
+        <SectionLabel icon={Type} label={t('settings.docFontSize')} />
         <SegmentedControl
           ariaLabel={t('settings.docFontSize')}
           value={documentFontSize}
@@ -162,16 +162,11 @@ export function TypographySettingsTab({
             label: t(`settings.docFontSize_${size}`),
           }))}
         />
-      </div>
+      </section>
 
       {/* Interlinea documento */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1.5">
-          <SlidersHorizontal size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.docLineHeight')}
-          </p>
-        </div>
+      <section className="space-y-4">
+        <SectionLabel icon={SlidersHorizontal} label={t('settings.docLineHeight')} />
         <SegmentedControl
           ariaLabel={t('settings.docLineHeight')}
           value={documentLineHeight}
@@ -181,7 +176,7 @@ export function TypographySettingsTab({
             label: t(`settings.docLineHeight_${lh}`),
           }))}
         />
-      </div>
+      </section>
     </div>
   );
 }

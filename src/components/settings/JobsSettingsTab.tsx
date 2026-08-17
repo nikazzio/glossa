@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Layers, RotateCw } from 'lucide-react';
-import { Select, ToggleRow } from '../ui';
+import { SectionLabel, Select, SettingRow, ToggleRow } from '../ui';
 import {
   getAutoResumeDownloads,
   getJobLimits,
@@ -72,19 +72,11 @@ export function JobsSettingsTab() {
       className="space-y-10"
     >
       <section className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          <Layers size={11} className="shrink-0 text-editorial-accent" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.jobs.limits')}
-          </p>
-        </div>
+        <SectionLabel icon={Layers} label={t('settings.jobs.limits')} />
         <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
           {limits &&
             RESOURCE_CLASSES.map((resource) => (
-              <div key={resource} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="text-sm text-editorial-ink">
-                  {t(`settings.jobs.resource.${resource}`)}
-                </span>
+              <SettingRow key={resource} label={t(`settings.jobs.resource.${resource}`)}>
                 <Select
                   value={String(limits[resource])}
                   onChange={(value) => changeLimit(resource, value)}
@@ -97,18 +89,13 @@ export function JobsSettingsTab() {
                     })),
                   ]}
                 />
-              </div>
+              </SettingRow>
             ))}
         </div>
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          <RotateCw size={11} className="shrink-0 text-editorial-accent" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.jobs.reopening')}
-          </p>
-        </div>
+        <SectionLabel icon={RotateCw} label={t('settings.jobs.reopening')} />
         <div className="border-y border-editorial-border/70 py-3">
           <ToggleRow
             icon={<RotateCw size={13} />}

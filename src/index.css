@@ -88,7 +88,12 @@
   --color-editorial-border: #C2BCB4;
   --color-editorial-textbox: #EAE5DE;
   --color-editorial-success: #3A7A65;
-  --color-editorial-warning: #666666;
+  /* Ocra profonda: un avviso deve distinguersi da una nota. Prima valeva
+     #666666, cioè lo stesso esadecimale di `muted`, quindi «disco staccato» e
+     «file corrotti» erano tipograficamente identici a un testo di aiuto.
+     Stesso peso del grigio (5.84:1 su bg, 5.09:1 su textbox) ma cromatica, e
+     più scura di `running` per non confondere la cautela con «in esecuzione». */
+  --color-editorial-warning: #7A5A14;
   --color-editorial-running: #C49B2A;
 
   /* ── Surface tokens — usati da DocumentView e sidebar ───────────────────── */
@@ -145,7 +150,8 @@ html.dark {
   --color-editorial-border:       #352d28;
   --color-editorial-textbox:      #251f1b;
   --color-editorial-success:      #5c9e7e;
-  --color-editorial-warning:      #857d77;
+  /* Stessa ocra, schiarita per il fondo scuro: 8.15:1 su bg. */
+  --color-editorial-warning:      #D7A76A;
   --color-editorial-running:      #c49b2a;
   --color-editorial-paper:        #201c18;
   --color-editorial-page:         #231f1b;

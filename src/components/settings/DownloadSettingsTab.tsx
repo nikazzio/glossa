@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Info, Ruler } from 'lucide-react';
-import { Select, Tooltip } from '../ui';
+import { Ruler } from 'lucide-react';
+import { SectionLabel, Select, SettingRow } from '../ui';
 import {
   DEFAULT_SIZE_CAP,
   DEFAULT_THUMBNAIL_EDGE,
@@ -77,72 +77,45 @@ export function DownloadSettingsTab() {
       id="settings-panel-download"
       role="tabpanel"
       aria-labelledby="settings-tab-download"
-      className="space-y-4"
+      className="space-y-10"
     >
-      <div className="flex items-center gap-1.5">
-        <Ruler size={11} className="shrink-0 text-editorial-accent" />
-        <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          {t('settings.download.sizes')}
-        </p>
-      </div>
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
-        <SettingRow label={t('settings.download.sizeCap')} hint={t('settings.download.sizeCapHint')}>
-          <Select
-            value={sizeCap}
-            onChange={(value) => void changeSizeCap(value)}
-            ariaLabel={t('settings.download.sizeCap')}
-            options={SIZE_CAPS.map((value) => ({
-              value,
-              label:
-                value === MAX_SIZE_CAP
-                  ? t('settings.download.sizeCapMax')
-                  : t('settings.download.pixels', { value }),
-            }))}
-          />
-        </SettingRow>
+      <section className="space-y-4">
+        <SectionLabel icon={Ruler} label={t('settings.download.sizes')} />
+        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+          <SettingRow
+            label={t('settings.download.sizeCap')}
+            hint={t('settings.download.sizeCapHint')}
+          >
+            <Select
+              value={sizeCap}
+              onChange={(value) => void changeSizeCap(value)}
+              ariaLabel={t('settings.download.sizeCap')}
+              options={SIZE_CAPS.map((value) => ({
+                value,
+                label:
+                  value === MAX_SIZE_CAP
+                    ? t('settings.download.sizeCapMax')
+                    : t('settings.download.pixels', { value }),
+              }))}
+            />
+          </SettingRow>
 
-        <SettingRow
-          label={t('settings.download.thumbnailEdge')}
-          hint={t('settings.download.thumbnailEdgeHint')}
-        >
-          <Select
-            value={String(thumbnailEdge)}
-            onChange={(value) => void changeEdge(value)}
-            ariaLabel={t('settings.download.thumbnailEdge')}
-            options={THUMBNAIL_EDGES.map((value) => ({
-              value: String(value),
-              label: t('settings.download.pixels', { value }),
-            }))}
-          />
-        </SettingRow>
-      </div>
-    </div>
-  );
-}
-
-/** Etichetta, spiegazione al passaggio del mouse, comando. */
-export function SettingRow({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <span className="flex items-center gap-1.5 text-sm text-editorial-ink">
-        {label}
-        {hint && (
-          <Tooltip label={hint}>
-            <span className="text-editorial-muted" aria-label={hint}>
-              <Info size={12} />
-            </span>
-          </Tooltip>
-        )}
-      </span>
-      {children}
+          <SettingRow
+            label={t('settings.download.thumbnailEdge')}
+            hint={t('settings.download.thumbnailEdgeHint')}
+          >
+            <Select
+              value={String(thumbnailEdge)}
+              onChange={(value) => void changeEdge(value)}
+              ariaLabel={t('settings.download.thumbnailEdge')}
+              options={THUMBNAIL_EDGES.map((value) => ({
+                value: String(value),
+                label: t('settings.download.pixels', { value }),
+              }))}
+            />
+          </SettingRow>
+        </div>
+      </section>
     </div>
   );
 }

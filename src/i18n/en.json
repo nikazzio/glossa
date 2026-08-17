@@ -481,6 +481,7 @@
     "secretsPanel": "Secrets panel",
     "saveClose": "Save & Close",
     "close": "Close",
+    "editKey": "Edit the key",
     "clickToConfigure": "Click to configure",
     "pasteApiKey": "Paste API key...",
     "save": "Save",
@@ -496,6 +497,8 @@
     "deprecatedModelBadge": "deprecated",
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configuration",
+    "eyebrow": "General settings",
+    "tabPlanned": "{{label}} — coming with Glossa 2.0",
     "providerTab": "Provider",
     "storageTab": "Data",
     "storage": {
@@ -636,6 +639,8 @@
       "loadFailed": "Could not read the profiles",
       "delete": "Delete the profile",
       "deleteInUse": "Move the libraries that use it first",
+      "unsaved": "unsaved",
+      "discard": "Discard the unsaved changes",
       "field": {
         "pauseMinMs": "Minimum pause (ms)",
         "pauseMaxMs": "Maximum pause (ms)",
@@ -1736,7 +1741,10 @@
     "pricingOverrides": "Pricing overrides",
     "overrideHint": "Override default pricing for custom deployments or updated rates. Values are USD per 1M tokens.",
     "resetOverride": "Reset",
-    "resetAll": "Reset all"
+    "resetAll": "Reset all",
+    "overrideModel": "Model",
+    "overrideInput": "Input $/1M",
+    "overrideOutput": "Output $/1M"
   },
   "languages": {
     "English": "English",
