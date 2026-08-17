@@ -92,8 +92,16 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
    */
   const toggleLink = async (entry: LibraryCatalogEntry) => {
     if (!activeWorkspace) return;
-    await toggleWorkspaceLink(activeWorkspace.id, entry.source.id, !entry.linkedToWorkspace);
-    await loadCatalog(activeWorkspace.id, scope === 'workspace');
+    try {
+      await toggleWorkspaceLink(activeWorkspace.id, entry.source.id, !entry.linkedToWorkspace);
+      await loadCatalog(activeWorkspace.id, scope === 'workspace');
+    } catch (error: unknown) {
+      // Come gli altri comandi della scheda: un collegamento che non riesce si
+      // dice, invece di lasciare la scheda a mostrare il contrario.
+      toast.error(t('areas.library.linkFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   if (itemId && detail && detail.source.id === itemId) {

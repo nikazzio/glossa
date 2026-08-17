@@ -35,6 +35,9 @@ export type FactEntity =
 
 export type FactActor = 'user' | 'system' | 'model';
 
+/** Chi esegue la scrittura: il database, o la transazione di chi ci sta dentro. */
+type FactWriter = (query: string, params?: unknown[]) => Promise<void>;
+
 export interface Fact {
   eventType: string;
   entityType: FactEntity;
@@ -110,7 +113,12 @@ export function factId(fact: Fact): string {
  * modello lasciava il modello di prima accanto ai token nuovi, e il fatto
  * raccontava una chiamata che non è mai avvenuta.
  */
-export async function recordFact(fact: Fact): Promise<void> {
+/**
+ * Scrive un fatto. Con `run` entra in una transazione già aperta: serve quando
+ * il fatto e il cambiamento che racconta devono valere o cadere insieme —
+ * uno spostamento applicato senza il suo fatto sarebbe una storia con un buco.
+ */
+export async function recordFact(fact: Fact, run: FactWriter = execute): Promise<void> {
   // Il registro dei fatti è invisibile per definizione: senza una riga qui,
   // «non ha registrato niente» e «non è mai successo» si confondono.
   logger.info('provenance.fact', {
@@ -120,7 +128,7 @@ export async function recordFact(fact: Fact): Promise<void> {
     actor: fact.actor,
     outcome: fact.outcome ?? null,
   });
-  await execute(
+  await run(
     `INSERT INTO provenance_events (
        id, event_type, entity_type, entity_id, workspace_id, actor, job_id,
        input_ref, output_ref, config, outcome, duration_ms, provider, model,
