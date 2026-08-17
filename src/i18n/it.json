@@ -1031,7 +1031,11 @@
     "backupRedownloadTitle_one": "Riscarico l'opera che avevi?",
     "backupRedownloadTitle_other": "Riscarico le {{count}} opere che avevi?",
     "backupRedownloadMessage": "Il backup non contiene le immagini, ma sa quali opere erano sul computer e a che misura. Puoi riprenderle adesso o più tardi, una per una dalla Biblioteca.",
-    "backupRedownloadConfirm": "Riscarica"
+    "backupRedownloadConfirm": "Riscarica",
+    "backupTruncated": "Il file di backup è incompleto: si è interrotto mentre veniva scritto.",
+    "backupTooNew": "Questo backup viene da una versione più recente di Glossa.",
+    "backupUnreadable": "Questo file non è un backup di Glossa.",
+    "backupRedownloadPartial": "Alcune opere non sono state messe in coda: le trovi in Biblioteca e puoi scaricarle una per una."
   },
   "editor": {
     "write": "Scrivi",

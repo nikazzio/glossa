@@ -40,13 +40,13 @@ struct Manifest {
 
 const FORMAT_VERSION: u32 = 1;
 
-/// Scrive un backup dove l'utente sceglie. Restituisce il percorso solo per
-/// poterlo dire a schermo — non torna mai indietro come parametro.
+/// Scrive un backup dove l'utente sceglie.
+///
+/// Restituisce **se è stato salvato**, non dove: il percorso non deve tornare
+/// all'interfaccia più di quanto debba arrivarci. È l'unica cosa che chi ha
+/// premuto il comando ha bisogno di sapere.
 #[tauri::command]
-pub async fn write_backup(
-    app: tauri::AppHandle,
-    payload: String,
-) -> Result<Option<String>, String> {
+pub async fn write_backup(app: tauri::AppHandle, payload: String) -> Result<bool, String> {
     let suggested = format!("glossa-backup-{}.{BACKUP_EXTENSION}", today());
     let (sender, receiver) = tokio::sync::oneshot::channel();
     app.dialog()
@@ -62,7 +62,7 @@ pub async fn write_backup(
         .await
         .map_err(|_| "La scelta del file è stata interrotta".to_string())?
     else {
-        return Ok(None);
+        return Ok(false);
     };
     let path = picked
         .into_path()
@@ -74,7 +74,7 @@ pub async fn write_backup(
     std::fs::write(&path, archive)
         .map_err(|error| format!("Scrittura del backup non riuscita: {error}"))?;
     log::info!("backup written path={}", path.display());
-    Ok(Some(path.to_string_lossy().to_string()))
+    Ok(true)
 }
 
 /// Apre un backup e ne restituisce il contenuto. Legge anche i file scritti

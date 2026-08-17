@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { isStreamCancelledError, llmService } from '../../services/llmService';
 import { withRetry, friendlyError } from '../../utils/retry';
 import { qualityDefault, qualityFailure } from '../../utils';
@@ -102,6 +103,7 @@ export async function runJudgeForChunk(
       sourceLanguage: config.sourceLanguage,
       targetLanguage: config.targetLanguage,
       input: textToAudit,
+      workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
     }).catch(() => undefined);
     return 'completed';
   } catch (error: unknown) {
@@ -117,6 +119,7 @@ export async function runJudgeForChunk(
           sourceLanguage: config.sourceLanguage,
           targetLanguage: config.targetLanguage,
           input: textToAudit,
+          workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
         },
         error instanceof Error ? error.message : String(error),
       ).catch(() => undefined);

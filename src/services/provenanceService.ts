@@ -100,7 +100,13 @@ export function factId(fact: Fact): string {
   return `pev:${contentHash(key)}`;
 }
 
-/** Scrive un fatto. Riscriverlo non duplica: sostituisce (D27). */
+/**
+ * Scrive un fatto. Riscriverlo non duplica: **sostituisce** (D27).
+ *
+ * Sostituisce *tutto*, non una parte: rieseguire uno stadio con un altro
+ * modello lasciava il modello di prima accanto ai token nuovi, e il fatto
+ * raccontava una chiamata che non è mai avvenuta.
+ */
 export async function recordFact(fact: Fact): Promise<void> {
   // Il registro dei fatti è invisibile per definizione: senza una riga qui,
   // «non ha registrato niente» e «non è mai successo» si confondono.
@@ -120,12 +126,27 @@ export async function recordFact(fact: Fact): Promise<void> {
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
        $16, $17, $18, $19, $20, $21, $22, $23, $24)
      ON CONFLICT(id) DO UPDATE SET
-       occurred_at    = CURRENT_TIMESTAMP,
-       outcome        = excluded.outcome,
-       duration_ms    = excluded.duration_ms,
-       config         = excluded.config,
-       input_hash     = excluded.input_hash,
-       output_hash    = excluded.output_hash`,
+       occurred_at     = CURRENT_TIMESTAMP,
+       actor           = excluded.actor,
+       workspace_id    = excluded.workspace_id,
+       job_id          = excluded.job_id,
+       input_ref       = excluded.input_ref,
+       output_ref      = excluded.output_ref,
+       config          = excluded.config,
+       outcome         = excluded.outcome,
+       duration_ms     = excluded.duration_ms,
+       provider        = excluded.provider,
+       model           = excluded.model,
+       prompt_version  = excluded.prompt_version,
+       input_tokens    = excluded.input_tokens,
+       output_tokens   = excluded.output_tokens,
+       cached_tokens   = excluded.cached_tokens,
+       estimated_cost  = excluded.estimated_cost,
+       source_language = excluded.source_language,
+       target_language = excluded.target_language,
+       error_kind      = excluded.error_kind,
+       input_hash      = excluded.input_hash,
+       output_hash     = excluded.output_hash`,
     [
       factId(fact),
       fact.eventType,

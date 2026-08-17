@@ -1029,9 +1029,13 @@
       "footnotes": "Footnotes present"
     },
     "backupRedownloadTitle_one": "Download the work you had again?",
-    "backupRedownloadTitle_other": "Download again the {{count}} works you had?",
+    "backupRedownloadTitle_other": "Download the {{count}} works you had again?",
     "backupRedownloadMessage": "The backup does not contain the images, but it knows which works were on your computer and at what size. You can take them back now, or later one by one from the Library.",
-    "backupRedownloadConfirm": "Download again"
+    "backupRedownloadConfirm": "Download again",
+    "backupTruncated": "The backup file is incomplete: it was interrupted while being written.",
+    "backupTooNew": "This backup comes from a newer version of Glossa.",
+    "backupUnreadable": "This file is not a Glossa backup.",
+    "backupRedownloadPartial": "Some works were not queued: you can find them in the Library and download them one by one."
   },
   "editor": {
     "write": "Write",
