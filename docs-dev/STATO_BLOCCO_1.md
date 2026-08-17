@@ -109,6 +109,14 @@ portano il workspace da cui il lavoro è nato.
   oggi è un riconoscimento per nome di cartella.
 - **Barra di stato unificata e console generale dei log**: restano a #413, che
   ha l'elenco di cosa oggi scrive nel registro.
+- **La migrazione delle trascrizioni perde il puntatore che dichiara di
+  conservare**: imposta l'approvazione leggendo il vecchio stato e poi rifà la
+  tabella, e la cancellazione implicita azzera il puntatore appena scritto (le
+  chiavi esterne sono attive su ogni connessione). Oggi non perde niente perché
+  nessuna revisione di trascrizione esiste. **Si corregge al collasso delle
+  migrazioni**, non prima: riscrivere un file già applicato impedisce l'avvio, e
+  il file da correggere sparisce comunque nella baseline. Il commento dentro la
+  migrazione descrive quindi un'intenzione, non il comportamento.
 - **Codice di retrocompatibilità pre-2.0** (`db.rs`, `backfill_legacy_columns`):
   va tolto **insieme al consolidamento delle migrazioni**, non prima.
 - **Artefatti grafici su WSL2**: risolti con `WEBKIT_DISABLE_COMPOSITING_MODE=1`,
