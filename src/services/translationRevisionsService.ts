@@ -116,6 +116,26 @@ export async function recordModelRevision(
 }
 
 /**
+ * La revisione che contiene **esattamente** questo testo, se esiste.
+ *
+ * Serve a legare un giudizio alla revisione che ha giudicato (D22) anche
+ * quando la revisione non l'ha appena scritta chi giudica: rilanciando solo la
+ * revisione, il verdetto arriva su un testo già in archivio.
+ */
+export async function revisionIdForText(
+  translationId: string,
+  text: string,
+): Promise<string | null> {
+  const rows = await select<{ id: string }>(
+    `SELECT id FROM translation_revisions
+      WHERE translation_id = $1 AND content_hash = $2
+      ORDER BY revision_number DESC LIMIT 1`,
+    [translationId, contentHash(text)],
+  );
+  return rows[0]?.id ?? null;
+}
+
+/**
  * L'utente approva la traduzione di un chunk.
  *
  * Se il testo approvato è diverso dall'ultima revisione, quella dell'utente

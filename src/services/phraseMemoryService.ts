@@ -6,6 +6,8 @@ import { logger } from '../utils/logger';
 import type { EmbeddingModel, ModelProvider, PhraseMatch } from '../types';
 import { fetchEmbeddings } from './embeddingService';
 import { useConfigStore } from '../stores/configStore';
+import { useWorkspaceStore } from '../stores/workspaceStore';
+import { recordEmbeddingRun, recordFailedModelCall, recordModelCall } from './pipelineProvenance';
 
 type RawPhraseMatch = {
   phrase_memory_id: string;
@@ -42,7 +44,14 @@ type ExtractedPhrasePair = {
 
 type RawExtractedPairs = {
   pairs: ExtractedPhrasePair[];
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
 };
+
+/** Lo stadio con cui l'estrattore della memoria entra nel registro. */
+const MEMORY_EXTRACTOR_STAGE_ID = 'memory-extractor';
 
 export interface PhraseMemoryEntry {
   id: string;
@@ -183,6 +192,7 @@ export async function extractPhraseMemoryPairs(options: {
     },
   });
 
+  const startedAt = Date.now();
   try {
     const raw = await invoke<RawExtractedPairs>('extract_phrase_memory_pairs', {
       provider: options.provider,
@@ -215,8 +225,51 @@ export async function extractPhraseMemoryPairs(options: {
       },
     });
 
+    // Anche l'estrattore è una chiamata a un modello, e si paga: senza questa
+    // riga il conto di un documento resta più basso del vero (D29).
+    if (options.chunkId) {
+      void recordModelCall({
+        chunkId: options.chunkId,
+        stageId: MEMORY_EXTRACTOR_STAGE_ID,
+        stageName: MEMORY_EXTRACTOR_STAGE_ID,
+        provider: options.provider,
+        model: options.model,
+        usage:
+          raw.inputTokens !== undefined && raw.outputTokens !== undefined
+            ? {
+                inputTokens: raw.inputTokens,
+                outputTokens: raw.outputTokens,
+                cachedInputTokens: raw.cachedInputTokens,
+                cacheMissInputTokens: raw.cacheMissInputTokens,
+              }
+            : undefined,
+        durationMs: Date.now() - startedAt,
+        sourceLanguage: options.sourceLanguage,
+        targetLanguage: options.targetLanguage,
+        input: options.sourceText,
+        workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+      }).catch(() => undefined);
+    }
+
     return validated;
   } catch (error: unknown) {
+    if (options.chunkId) {
+      void recordFailedModelCall(
+        {
+          chunkId: options.chunkId,
+          stageId: MEMORY_EXTRACTOR_STAGE_ID,
+          stageName: MEMORY_EXTRACTOR_STAGE_ID,
+          provider: options.provider,
+          model: options.model,
+          durationMs: Date.now() - startedAt,
+          sourceLanguage: options.sourceLanguage,
+          targetLanguage: options.targetLanguage,
+          input: options.sourceText,
+          workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+        },
+        error instanceof Error ? error.message : String(error),
+      ).catch(() => undefined);
+    }
     logOperation({
       level: 'error',
       scope: 'memory',
@@ -504,7 +557,28 @@ export async function regenerateAllEmbeddings(
   workspaceId: string,
   model: EmbeddingModel,
 ): Promise<number> {
-  return invoke<number>('vec_regenerate_all_embeddings', { workspaceId, model });
+  const startedAt = Date.now();
+  try {
+    const entries = await invoke<number>('vec_regenerate_all_embeddings', { workspaceId, model });
+    void recordEmbeddingRun({
+      workspaceId,
+      model,
+      entries,
+      durationMs: Date.now() - startedAt,
+      outcome: 'completed',
+    }).catch(() => undefined);
+    return entries;
+  } catch (error: unknown) {
+    void recordEmbeddingRun({
+      workspaceId,
+      model,
+      entries: 0,
+      durationMs: Date.now() - startedAt,
+      outcome: 'error',
+      error: error instanceof Error ? error.message : String(error),
+    }).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function getChunkPositions(chunkIds: string[]): Promise<Record<string, number>> {

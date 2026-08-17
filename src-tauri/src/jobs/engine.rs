@@ -616,6 +616,7 @@ impl JobEngine {
                         crate::provenance::event_type::JOB_STARTED,
                         &job.id,
                         &job.job_type,
+                        job.workspace_id.as_deref(),
                     ),
                 );
                 self.observer.notify(conn, &job.id);
@@ -792,6 +793,7 @@ impl JobEngine {
                 crate::provenance::event_type::JOB_FINISHED,
                 &job.id,
                 &job.job_type,
+                job.workspace_id.as_deref(),
             );
             fact.outcome = Some(result.to_string());
             fact.error_kind = error_kind;

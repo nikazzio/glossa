@@ -1063,7 +1063,8 @@
     "backupTruncated": "Il file di backup è incompleto: si è interrotto mentre veniva scritto.",
     "backupTooNew": "Questo backup viene da una versione più recente di Glossa.",
     "backupUnreadable": "Questo file non è un backup di Glossa.",
-    "backupRedownloadPartial": "Alcune opere non sono state messe in coda: le trovi in Biblioteca e puoi scaricarle una per una."
+    "backupRedownloadPartial_one": "Un'opera non è stata messa in coda: la trovi in Biblioteca e puoi scaricarla da lì.",
+    "backupRedownloadPartial_other": "{{count}} opere non sono state messe in coda: le trovi in Biblioteca e puoi scaricarle una per una."
   },
   "editor": {
     "write": "Scrivi",

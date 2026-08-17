@@ -9,7 +9,13 @@ import { pipelineLog } from '../../utils/pipelineLogging';
 import { stripFootnoteMarkers } from '../../utils/footnoteExtractor';
 import type { ChunkStatus, JudgeResult, PromptInfo, ResponseInfo, TranslationChunk } from '../../types';
 import type { ChunkOutcome } from './blobContext';
-import { recordFailedModelCall, recordModelCall } from '../../services/pipelineProvenance';
+import {
+  recordFailedModelCall,
+  recordJudgement,
+  recordModelCall,
+} from '../../services/pipelineProvenance';
+import { revisionIdForText } from '../../services/translationRevisionsService';
+import { contentHash } from '../../services/provenanceService';
 
 /**
  * Lo stadio con cui il giudizio entra nel registro. Non è uno stadio della
@@ -37,6 +43,15 @@ export async function runJudgeForChunk(
   textToAudit: string | undefined,
   actions: JudgeActions,
   effectiveConfig?: ReturnType<typeof usePipelineStore.getState>['config'],
+  /**
+   * Scrivere anche il **verdetto** come fatto.
+   *
+   * La pipeline lo scrive da sé, dopo aver salvato la revisione, così il
+   * giudizio si lega a quella giusta. Rilanciando solo la revisione nessuno lo
+   * faceva: il verdetto sovrascriveva le colonne del frammento e non lasciava
+   * storia, che è il caso che D22 cita per nome.
+   */
+  recordVerdict = false,
 ): Promise<ChunkOutcome> {
   const config = effectiveConfig ?? usePipelineStore.getState().config;
   if (!textToAudit) return 'skipped';
@@ -95,7 +110,7 @@ export async function runJudgeForChunk(
     void recordModelCall({
       chunkId: chunk.id,
       stageId: JUDGE_STAGE_ID,
-      stageName: 'Giudizio',
+      stageName: JUDGE_STAGE_ID,
       provider: judgeRef.provider,
       model: judgeRef.model,
       usage: judgeTokenUsage,
@@ -105,6 +120,27 @@ export async function runJudgeForChunk(
       input: textToAudit,
       workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
     }).catch(() => undefined);
+    if (recordVerdict) {
+      // Il giudizio si lega alla revisione che ha giudicato. Se quel testo non
+      // è in archivio — un frammento corretto a mano e mai riapprovato — si usa
+      // la sua impronta: dice comunque *cosa* è stato giudicato, senza fingere
+      // una revisione che non esiste.
+      void revisionIdForText(chunk.id, textToAudit)
+        .then((revisionId) =>
+          recordJudgement(
+            chunk.id,
+            revisionId ?? `hash:${contentHash(textToAudit)}`,
+            {
+              content: textToAudit,
+              status: 'completed',
+              rating: judgeData.rating,
+              issues: judgeData.issues ?? [],
+            } as JudgeResult,
+            useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+          ),
+        )
+        .catch(() => undefined);
+    }
     return 'completed';
   } catch (error: unknown) {
     if (!isStreamCancelledError(error)) {
@@ -112,7 +148,7 @@ export async function runJudgeForChunk(
         {
           chunkId: chunk.id,
           stageId: JUDGE_STAGE_ID,
-          stageName: 'Giudizio',
+          stageName: JUDGE_STAGE_ID,
           provider: judgeRef.provider,
           model: judgeRef.model,
           durationMs: Date.now() - auditStartedAt,

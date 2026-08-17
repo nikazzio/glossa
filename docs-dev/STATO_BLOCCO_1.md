@@ -33,7 +33,7 @@ dritta su `main`.
 | 4-ter | Miniature ricavate in locale | #218 | unita (#423) |
 | 4-quater | Profili di rete, registrazione, rifiniture | #421, #422, #378 | unita (#428) |
 | **5** | Risorse condivise e ambito | #213 | **da fare**, indipendente |
-| 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione e chiamate ai modelli |
+| 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione, tutte le chiamate ai modelli, costo con i token da cache |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | **backup fatto** e spostato nelle impostazioni generali; restano i tre livelli di riservatezza (D33) e l'esportazione di un workspace (#434) |
 
 **Perché la 6 non va lasciata ultima**: ogni giorno senza registrazione è
@@ -70,6 +70,11 @@ impostazioni di scaricamento e profili di rete.
 **Registrazione** (`src-tauri/src/provenance.rs`, `services/provenanceService.ts`):
 storico delle traduzioni con revisioni immutabili, approvazione e ritiro come
 fatti, registro append-only con le colonne che serviranno all'area Analisi.
+Ogni chiamata a un modello lascia un fatto — stadi, giudice, coerenza,
+riscrittura dopo il giudizio, estrattore della memoria — più la rigenerazione
+degli embedding come fatto del workspace. Il costo tiene conto dei token letti
+da cache, e i caratteri fatturati da DeepL stanno nel fatto. I fatti dei lavori
+portano il workspace da cui il lavoro è nato.
 
 ## Aperti, da non perdere
 
@@ -125,6 +130,7 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
 | **D17** | il tempo stimato viene dal ritmo vero del lavoro, non dalla pausa dichiarata dal profilo |
 | **D18** | i valori di rete sono **profili** — un ritmo, non una biblioteca — e le biblioteche ne scelgono uno |
 | **D22** | le revisioni non hanno stato: approvare e ritirare sono fatti che puntano a una revisione, e **il giudizio si lega alla revisione** invece di stare in colonne sovrascritte |
+| **D29** | «ogni chiamata» comprende coerenza, riscrittura dopo il giudizio, estrattore della memoria ed embedding: la prima stesura ne lasciava fuori proprio quelle che fanno salire il conto. Il costo distingue i token da cache, e il verdetto del giudice si scrive anche rilanciando la sola revisione |
 | **D5-bis** | l'esito del controllo non vive più nella riga del pannello, che dopo un giorno spariva: resta nelle impostazioni finché non se ne fa un altro, con accanto il comando che cancella i file senza opera |
 | **D17** | fermo non è una cosa sola: in pausa, in attesa dei limiti di una biblioteca e in attesa di riprovare si dicono diversamente in barra, nella scheda della Biblioteca e nel pannello, e il tempo mostrato è quello del **tentativo**, non quello che manca a finire |
 | **D31** | il backup è del **programma intero**, non di un workspace, e sta nelle impostazioni generali: si chiamava «backup del workspace» ma prendeva tutto. Portare via un solo workspace diventa #434. Le colonne che il ripristino riscrive si chiedono al database, perché l'elenco scritto a mano ne perdeva alcune in silenzio |

@@ -1549,11 +1549,48 @@ cancellazione".
 *Approvata l'11 agosto 2026. **Fatta il 2026-08-16 per i lavori**: avvio ed
 esito con la durata li scrive il motore, non i gestori.*
 
-*Fatta il 2026-08-17 per la pipeline.* **Ogni chiamata a un modello lascia un
-fatto**: stadio, provider, modello, token in ingresso e in uscita, token da
-cache, costo, durata, coppia linguistica, esito e — quando fallisce — il tipo di
-errore. Sono dati che esistono solo mentre la chiamata avviene: non scriverli lì
-significa non averli mai.
+*Fatta il 2026-08-17 per la pipeline, completata lo stesso giorno.* **Ogni
+chiamata a un modello lascia un fatto**: stadio, provider, modello, token in
+ingresso e in uscita, token da cache, costo, durata, coppia linguistica, esito e
+— quando fallisce — il tipo di errore. Sono dati che esistono solo mentre la
+chiamata avviene: non scriverli lì significa non averli mai.
+
+**Ogni chiamata vuol dire ogni chiamata.** La prima stesura ne registrava solo
+gli stadi e il giudice, e restavano fuori proprio quelle che fanno salire il
+conto: la verifica di coerenza (una chiamata al giudice per frammento), il ciclo
+che riscrive dopo un giudizio negativo (fino a due per frammento), l'estrattore
+della memoria di frasi e la rigenerazione degli embedding. Adesso ci sono tutte.
+Le prime tre come chiamate del frammento, con uno stadio proprio — `coherence`,
+`refine-after-judge`, `memory-extractor` — perché contarle insieme allo stadio
+che traduce le farebbe sostituire a vicenda (D27). La rigenerazione degli
+embedding è un fatto **del workspace**, con quante frasi ha rifatto: i token non
+li dichiara e non si inventano.
+
+**Il costo si calcola come si paga**: i token letti da cache costano una
+frazione dell'ingresso — un decimo su Anthropic — e trattarli come ingresso
+normale sbagliava sempre, e sempre in eccesso, proprio perché il caching del
+prefisso è un invariante del progetto. I provider non li dichiarano allo stesso
+modo: Anthropic tiene quelli da cache **fuori** dal totale d'ingresso, gli altri
+dentro, e il conto lo fa chi ha letto la risposta. Per DeepL, che fattura
+caratteri e non token, nel fatto finisce il numero di caratteri che dichiara: il
+listino a token non lo copre, e senza quel dato di uno stadio DeepL non si
+saprebbe né il costo né il consumo.
+
+**Il verdetto del giudice** è un fatto a sé, legato alla revisione giudicata, e
+si scrive **anche rilanciando solo la revisione**: prima lo scriveva solo il giro
+completo della pipeline, quindi riaprire l'audit sovrascriveva le colonne del
+frammento senza lasciare storia — il caso che D22 cita per nome. Quando il testo
+giudicato non corrisponde a nessuna revisione in archivio, il fatto porta la sua
+impronta invece di un riferimento inventato.
+
+**La riscrittura dopo il giudizio scrive una revisione**, perché cambia il testo:
+senza, la proposta che l'utente poi approva o corregge non entrava nello storico,
+ed è la coppia proposta/approvata che lo storico esiste per salvare (D22). E se
+il modello rifiuta, l'errore si dice: prima il ciclo finiva in silenzio.
+
+**I fatti dei lavori sanno da quale workspace vengono**: il lavoro se lo porta
+dietro da chi lo mette in coda. Senza, D24 non poteva raggrupparli per workspace
+e D28 non poteva cancellarli con lui.
 
 L'identità del fatto è **frammento più stadio** (D27): rieseguire la pipeline
 sullo stesso frammento sostituisce il fatto di quello stadio invece di

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { useWorkspaceStore } from '../stores/workspaceStore';
 
 /**
  * I lavori in background.
@@ -130,7 +131,12 @@ export async function enqueueSourceDownload(request: {
   versionId?: string;
   sizeTag?: string;
 }): Promise<Job> {
-  return invoke<Job>('enqueue_source_download', request);
+  // Da quale workspace parte la richiesta lo sa solo l'interfaccia, e i fatti
+  // del lavoro ci si raggruppano sopra (D24): senza, restavano senza padrone.
+  return invoke<Job>('enqueue_source_download', {
+    ...request,
+    workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+  });
 }
 
 /**

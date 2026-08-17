@@ -77,7 +77,9 @@ export function BackupSection() {
           backup_payload_missing: 'files.backupTruncated',
           backup_schema_unreadable: 'files.backupSchemaUnreadable',
         }[message] ?? 'files.backupInvalidFile';
-      toast.error(t(key), { description: message });
+      // Il codice tecnico non va a schermo: se il motivo è uno di quelli che
+      // sappiamo dire a parole, la frase basta e la descrizione sarebbe rumore.
+      toast.error(t(key), key === 'files.backupInvalidFile' ? { description: message } : undefined);
     } finally {
       setBusy(false);
     }

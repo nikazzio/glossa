@@ -150,13 +150,13 @@ fn pack(payload: &str) -> Result<Vec<u8>, String> {
 
 /// Tira fuori i dati da un archivio, controllando che siano interi.
 ///
-/// Un file che non è un archivio si legge come JSON semplice: sono i backup
-/// scritti prima che il formato fosse compresso.
+/// Un file che non è un archivio si rifiuta. La vecchia strada — leggerlo come
+/// JSON semplice, per i backup scritti prima della compressione — **saltava il
+/// controllo di integrità**: un file troncato passava se restava JSON valido.
+/// Quei file li ha prodotti soltanto un database di prova.
 fn unpack(bytes: &[u8]) -> Result<String, String> {
     let Ok(mut archive) = zip::ZipArchive::new(std::io::Cursor::new(bytes)) else {
-        return String::from_utf8(bytes.to_vec())
-            .map_err(|_| "backup_unreadable".to_string())
-            .map(|text| text.trim().to_string());
+        return Err("backup_unreadable".to_string());
     };
 
     let manifest: Manifest = {
@@ -243,12 +243,12 @@ mod tests {
     }
 
     #[test]
-    fn a_backup_written_before_the_archive_still_opens() {
-        // I file scritti prima erano JSON semplice: rifiutarli vorrebbe dire
-        // buttare i backup fatti finora.
+    fn a_file_that_is_not_an_archive_is_refused() {
+        // Leggerlo come JSON semplice saltava il controllo di integrità: un
+        // file troncato passava purché restasse JSON valido.
         let plain = r#"{"tables":{"workspaces":[]}}"#;
 
-        assert_eq!(unpack(plain.as_bytes()).unwrap(), plain);
+        assert!(unpack(plain.as_bytes()).is_err());
     }
 
     #[test]

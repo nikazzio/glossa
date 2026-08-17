@@ -3,20 +3,52 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
+import { useWorkspaceStore } from '../stores/workspaceStore';
 import { llmService } from '../services/llmService';
+import { recordFailedModelCall, recordModelCall } from '../services/pipelineProvenance';
+import { recordModelRevision } from '../services/translationRevisionsService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { pipelineLog } from '../utils/pipelineLogging';
 import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 import { buildBlobContext } from './pipeline/blobContext';
 import { runJudgeForChunk } from './pipeline/runJudge';
 import type { JudgeActions } from './pipeline/runJudge';
-import type { Issue, PromptInfo, ResponseInfo, PipelineConfig, QualityRating } from '../types';
+import type { Issue, PromptInfo, ResponseInfo, PipelineConfig, QualityRating, TokenUsage } from '../types';
 
 type EnsureProvidersReady = (
   checks: { provider: string; model: string; label: string }[],
 ) => Promise<boolean>;
 
 const RATINGS_BELOW_GOOD: QualityRating[] = ['critical', 'poor', 'fair'];
+
+/**
+ * Lo stadio con cui la riscrittura dopo il giudizio entra nel registro.
+ *
+ * Non è lo stadio della pipeline che porta lo stesso nome: quello traduce, e
+ * questo riscrive su indicazione del giudice. Contarli insieme confonderebbe
+ * due chiamate diverse — e le sostituirebbe a vicenda, perché l'identità di un
+ * fatto è frammento più stadio (D27).
+ */
+const REFINE_AFTER_JUDGE_STAGE_ID = 'refine-after-judge';
+
+/** Lo stadio con cui la verifica di coerenza entra nel registro. */
+const COHERENCE_STAGE_ID = 'coherence';
+
+/** I token dichiarati da una chiamata, quando li dichiara. */
+function tokenUsageOf(result: {
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
+}): TokenUsage | undefined {
+  if (result.inputTokens === undefined || result.outputTokens === undefined) return undefined;
+  return {
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+    cachedInputTokens: result.cachedInputTokens,
+    cacheMissInputTokens: result.cacheMissInputTokens,
+  };
+}
 
 function formatAuditContext(issues: Issue[]): string {
   return issues
@@ -50,8 +82,18 @@ async function runRefineLoopForChunk(
     if (issues.length === 0) break;
 
     const auditContext = formatAuditContext(issues);
+    const workspaceId = useWorkspaceStore.getState().activeWorkspace?.id ?? null;
+    const startedAt = Date.now();
 
-    let refineResult: { content: string } | undefined;
+    let refineResult:
+      | {
+          content: string;
+          inputTokens?: number;
+          outputTokens?: number;
+          cachedInputTokens?: number;
+          cacheMissInputTokens?: number;
+        }
+      | undefined;
     try {
       refineResult = await llmService.runStage(
         chunk.sourceProcessingText,
@@ -60,12 +102,50 @@ async function runRefineLoopForChunk(
         chunk.translationProcessingText,
         auditContext,
       );
-    } catch {
+    } catch (error: unknown) {
+      // Prima usciva in silenzio: il ciclo finiva e non lo sapeva nessuno, né
+      // a schermo né nel registro tecnico né in quello dei fatti.
+      const message = error instanceof Error ? error.message : String(error);
+      pipelineLog.stageError(chunkId, lastRefineStage.id, lastRefineStage.name, message);
+      void recordFailedModelCall(
+        {
+          chunkId,
+          stageId: REFINE_AFTER_JUDGE_STAGE_ID,
+          stageName: lastRefineStage.name,
+          provider: lastRefineStage.provider,
+          model: lastRefineStage.model,
+          durationMs: Date.now() - startedAt,
+          sourceLanguage: config.sourceLanguage,
+          targetLanguage: config.targetLanguage,
+          input: chunk.translationProcessingText,
+          workspaceId,
+        },
+        message,
+      ).catch(() => undefined);
       break;
     }
 
     if (!refineResult) break;
+    // La riscrittura è una chiamata come le altre, e costa (D29).
+    void recordModelCall({
+      chunkId,
+      stageId: REFINE_AFTER_JUDGE_STAGE_ID,
+      stageName: lastRefineStage.name,
+      provider: lastRefineStage.provider,
+      model: lastRefineStage.model,
+      usage: tokenUsageOf(refineResult),
+      durationMs: Date.now() - startedAt,
+      sourceLanguage: config.sourceLanguage,
+      targetLanguage: config.targetLanguage,
+      input: chunk.translationProcessingText,
+      output: refineResult.content,
+      workspaceId,
+    }).catch(() => undefined);
     updateDraft(chunkId, refineResult.content);
+    // Il testo cambia: senza questa riga la proposta che l'utente poi approva o
+    // corregge non entrerebbe nello storico, ed è la coppia proposta/approvata
+    // che lo storico esiste per salvare (D22).
+    void recordModelRevision(chunkId, refineResult.content).catch(() => undefined);
 
     if (useChunksStore.getState().cancelRequested) return true;
 
@@ -77,6 +157,7 @@ async function runRefineLoopForChunk(
       refineResult.content,
       actions,
       config,
+      true,
     );
     if (judgeOutcome === 'cancelled') return true;
     if (judgeOutcome !== 'completed') break;
@@ -126,7 +207,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
         cancelled = true;
         break;
       }
-      const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText, judgeActions);
+      const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText, judgeActions, undefined, true);
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') { errorCount++; continue; }
 
@@ -163,7 +244,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
-    const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText, judgeActions);
+    const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText, judgeActions, undefined, true);
 
     if (outcome === 'completed' && config.judgeRefineLoop) {
       await runRefineLoopForChunk(chunk.id, config, judgeActions, updateChunkDraft);
@@ -262,10 +343,41 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
           result.issues.length,
           tokenUsage,
         );
+        // La verifica di coerenza è una chiamata al modello del giudice su ogni
+        // frammento: senza registrarla, il conto di un documento resta più
+        // basso del vero proprio dove pesa di più (D29).
+        void recordModelCall({
+          chunkId: chunk.id,
+          stageId: COHERENCE_STAGE_ID,
+          stageName: COHERENCE_STAGE_ID,
+          provider: coherenceRef.provider,
+          model: coherenceRef.model,
+          usage: tokenUsage,
+          durationMs: Date.now() - coherenceStartedAt,
+          sourceLanguage: config.sourceLanguage,
+          targetLanguage: config.targetLanguage,
+          input: chunk.translationProcessingText,
+          workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+        }).catch(() => undefined);
       } catch (error: unknown) {
         const msg = friendlyError(error instanceof Error ? error.message : String(error));
         updateChunkCoherence(chunk.id, { status: 'error', issues: [], error: msg });
         pipelineLog.coherenceChunkError(chunk.id, msg, Date.now() - coherenceStartedAt);
+        void recordFailedModelCall(
+          {
+            chunkId: chunk.id,
+            stageId: COHERENCE_STAGE_ID,
+            stageName: COHERENCE_STAGE_ID,
+            provider: coherenceRef.provider,
+            model: coherenceRef.model,
+            durationMs: Date.now() - coherenceStartedAt,
+            sourceLanguage: config.sourceLanguage,
+            targetLanguage: config.targetLanguage,
+            input: chunk.translationProcessingText,
+            workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+          },
+          error instanceof Error ? error.message : String(error),
+        ).catch(() => undefined);
         errorCount++;
       }
     }

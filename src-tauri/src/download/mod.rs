@@ -48,8 +48,17 @@ pub async fn enqueue_source_download(
     manifest_url: String,
     version_id: Option<String>,
     size_tag: Option<String>,
+    workspace_id: Option<String>,
 ) -> Result<JobRecord, String> {
-    enqueue(&jobs, provider_key, manifest_url, version_id, size_tag).await
+    enqueue(
+        &jobs,
+        provider_key,
+        manifest_url,
+        version_id,
+        size_tag,
+        workspace_id,
+    )
+    .await
 }
 
 async fn enqueue(
@@ -58,6 +67,9 @@ async fn enqueue(
     manifest_url: String,
     version_id: Option<String>,
     size_tag: Option<String>,
+    // Da quale workspace è partita la richiesta: i fatti del lavoro ci si
+    // raggruppano sopra (D24), e senza restavano fuori da ogni conto.
+    workspace_id: Option<String>,
 ) -> Result<JobRecord, String> {
     let conn = jobs.0.connection()?;
 
@@ -154,7 +166,7 @@ async fn enqueue(
             config: config.to_string(),
             max_attempts: profile.max_attempts,
             depends_on_job_id: None,
-            workspace_id: None,
+            workspace_id,
             message: title,
         })
         .await

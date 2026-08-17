@@ -141,6 +141,17 @@ pub struct MemoryExtractorPair {
 #[serde(rename_all = "camelCase")]
 pub struct MemoryExtractorResponse {
     pub pairs: Vec<MemoryExtractorPair>,
+    /// I token che la chiamata è costata: anche l'estrattore è una chiamata a
+    /// un modello, e senza questo dato il conto di un documento resta più basso
+    /// del vero (D29).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_miss_input_tokens: Option<u32>,
 }
 
 #[tauri::command]
@@ -550,7 +561,9 @@ pub async fn extract_phrase_memory_pairs(
         provider_options: None,
     };
 
-    let result_text = prov.call(&client, &req).await?.content;
+    let answer = prov.call(&client, &req).await?;
+    let usage = answer.usage;
+    let result_text = answer.content;
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = serde_json::from_str(sanitized)
         .map_err(|e| format!("Failed to parse phrase memory JSON: {e}"))?;
@@ -583,7 +596,13 @@ pub async fn extract_phrase_memory_pairs(
         })
         .collect();
 
-    Ok(MemoryExtractorResponse { pairs: validated })
+    Ok(MemoryExtractorResponse {
+        pairs: validated,
+        input_tokens: usage.as_ref().map(|u| u.input),
+        output_tokens: usage.as_ref().map(|u| u.output),
+        cached_input_tokens: usage.as_ref().and_then(|u| u.cached_input),
+        cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
+    })
 }
 
 #[tauri::command]

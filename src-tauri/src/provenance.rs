@@ -66,12 +66,20 @@ impl Event {
     /// Un fatto del ciclo di vita di un lavoro. È il caso che riguarda tutti i
     /// gestori, e per questo non lo scrive nessuno di loro: lo scrive il
     /// motore (D29).
-    pub fn for_job(event_type: &str, job_id: &str, job_type: &str) -> Self {
+    ///
+    /// Il workspace viene dal lavoro: senza, D24 non potrebbe raggruppare per
+    /// workspace e D28 non potrebbe cancellare quello che gli appartiene.
+    pub fn for_job(
+        event_type: &str,
+        job_id: &str,
+        job_type: &str,
+        workspace_id: Option<&str>,
+    ) -> Self {
         Self {
             event_type: event_type.to_string(),
             entity_type: "job".to_string(),
             entity_id: job_id.to_string(),
-            workspace_id: None,
+            workspace_id: workspace_id.map(str::to_string),
             actor: ACTOR_SYSTEM,
             job_id: Some(job_id.to_string()),
             outcome: None,
@@ -213,7 +221,12 @@ mod tests {
         // manoscritto scaricato dopo tre tentativi risulterebbe scaricato tre
         // volte (D27).
         let conn = database();
-        let mut event = Event::for_job(event_type::JOB_FINISHED, "download:v1", "source_download");
+        let mut event = Event::for_job(
+            event_type::JOB_FINISHED,
+            "download:v1",
+            "source_download",
+            Some("ws1"),
+        );
         event.outcome = Some("error".to_string());
         record(&conn, &event).unwrap();
 
@@ -233,8 +246,18 @@ mod tests {
     fn the_attempt_number_does_not_change_the_identity_of_a_fact() {
         // La chiave si costruisce da lavoro, entità e tipo. Quante volte si è
         // ritentato è un dato del lavoro, non un fatto separato.
-        let first = Event::for_job(event_type::JOB_FINISHED, "download:v1", "source_download");
-        let second = Event::for_job(event_type::JOB_FINISHED, "download:v1", "source_download");
+        let first = Event::for_job(
+            event_type::JOB_FINISHED,
+            "download:v1",
+            "source_download",
+            Some("ws1"),
+        );
+        let second = Event::for_job(
+            event_type::JOB_FINISHED,
+            "download:v1",
+            "source_download",
+            Some("ws1"),
+        );
 
         assert_eq!(event_id(&first), event_id(&second));
     }
@@ -244,12 +267,22 @@ mod tests {
         let conn = database();
         record(
             &conn,
-            &Event::for_job(event_type::JOB_STARTED, "download:v1", "source_download"),
+            &Event::for_job(
+                event_type::JOB_STARTED,
+                "download:v1",
+                "source_download",
+                Some("ws1"),
+            ),
         )
         .unwrap();
         record(
             &conn,
-            &Event::for_job(event_type::JOB_FINISHED, "download:v1", "source_download"),
+            &Event::for_job(
+                event_type::JOB_FINISHED,
+                "download:v1",
+                "source_download",
+                Some("ws1"),
+            ),
         )
         .unwrap();
 

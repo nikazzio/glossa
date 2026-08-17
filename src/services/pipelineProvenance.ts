@@ -34,6 +34,8 @@ export interface ModelCall {
   /** Il testo mandato e quello ricevuto: se ne conserva l'impronta, non il testo. */
   input?: string;
   output?: string;
+  /** I caratteri fatturati, per i servizi che contano quelli invece dei token. */
+  billedCharacters?: number;
   workspaceId?: string | null;
 }
 
@@ -69,6 +71,12 @@ export function classify(error: string): string {
 async function write(call: ModelCall, outcome: string, errorKind: string | null): Promise<void> {
   const inputTokens = call.usage?.inputTokens ?? 0;
   const outputTokens = call.usage?.outputTokens ?? 0;
+  const cachedTokens = call.usage?.cachedInputTokens ?? 0;
+  // Quanti token si pagano per intero. I provider non lo dicono allo stesso
+  // modo — Anthropic tiene quelli da cache fuori dal totale d'ingresso, gli
+  // altri dentro — e il conto giusto lo fa già il backend, che conosce la
+  // risposta che ha letto.
+  const fullPriceInputTokens = call.usage?.cacheMissInputTokens ?? inputTokens;
   await recordFact({
     eventType: EVENT_MODEL_CALL,
     entityType: 'translation_chunk',
@@ -89,9 +97,10 @@ async function write(call: ModelCall, outcome: string, errorKind: string | null)
       ? actualCost(
           call.provider,
           call.model,
-          inputTokens,
+          fullPriceInputTokens,
           outputTokens,
           usePricingStore.getState().overrides,
+          cachedTokens,
         )
       : null,
     sourceLanguage: call.sourceLanguage ?? null,
@@ -100,7 +109,46 @@ async function write(call: ModelCall, outcome: string, errorKind: string | null)
     // e i testi stanno già nelle revisioni (D25).
     inputHash: call.input ? contentHash(call.input) : null,
     outputHash: call.output ? contentHash(call.output) : null,
-    config: { stage: call.stageName },
+    config: {
+      stage: call.stageName,
+      // DeepL fattura **caratteri**, non token, e il listino a token non lo
+      // copre: senza questo numero, di uno stadio DeepL il registro non direbbe
+      // né quanto è costato né quanto ha fatturato.
+      ...(call.billedCharacters !== undefined ? { billedCharacters: call.billedCharacters } : {}),
+    },
+  });
+}
+
+export const EVENT_EMBEDDINGS = 'embeddings.regenerated';
+
+/**
+ * La rigenerazione degli embedding della memoria di frasi.
+ *
+ * Non è una chiamata per frammento ma per workspace, e su un provider a
+ * pagamento **si paga**: senza questa riga sparirebbe dal conto insieme al suo
+ * costo. Quante frasi sono state rifatte è l'unica misura che il comando
+ * restituisce; i token non li dichiara, e non si inventano.
+ */
+export async function recordEmbeddingRun(run: {
+  workspaceId: string;
+  model: string;
+  entries: number;
+  durationMs: number;
+  outcome: 'completed' | 'error';
+  error?: string;
+}): Promise<void> {
+  await recordFact({
+    eventType: EVENT_EMBEDDINGS,
+    entityType: 'workspace',
+    entityId: run.workspaceId,
+    keyRef: run.model,
+    actor: 'model',
+    workspaceId: run.workspaceId,
+    outcome: run.outcome,
+    errorKind: run.error ? classify(run.error) : null,
+    durationMs: run.durationMs,
+    model: run.model,
+    config: { entries: run.entries },
   });
 }
 

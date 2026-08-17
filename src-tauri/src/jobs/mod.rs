@@ -304,6 +304,10 @@ pub struct JobRecord {
     pub next_attempt_at: Option<String>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
+    /// Il workspace da cui il lavoro è nato, quando ne ha uno: il registro dei
+    /// fatti ci raggruppa sopra (D24) e la cancellazione per workspace lo usa
+    /// per sapere cosa portare via (D28).
+    pub workspace_id: Option<String>,
 }
 
 #[cfg(test)]

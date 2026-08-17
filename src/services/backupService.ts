@@ -18,7 +18,15 @@ import {
   type DownloadedSource,
 } from '../schemas/externalData';
 
-const SCHEMA_VERSION = 1;
+/**
+ * La versione del contenuto del backup.
+ *
+ * Si alza quando cambia **cosa** c'è dentro, non quando cambia una colonna: un
+ * ripristino rifiuta i backup che dichiarano più di questo numero, ed è l'unico
+ * modo che una versione vecchia ha di non aprire un file che non capisce.
+ * Alzata a 2 con le dodici tabelle del blocco 1.
+ */
+const SCHEMA_VERSION = 2;
 
 // dbService.ts stores its own DB-migration marker under this app_settings key
 // (unrelated to SCHEMA_VERSION above). Importing an old backup must never

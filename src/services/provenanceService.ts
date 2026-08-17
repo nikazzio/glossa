@@ -28,7 +28,10 @@ export type FactEntity =
   | 'project'
   | 'translation_chunk'
   | 'artifact'
-  | 'job';
+  | 'job'
+  // Non tutto appartiene a un frammento o a un'opera: la memoria di frasi si
+  // rifà per workspace, ed è lì che va contata.
+  | 'workspace';
 
 export type FactActor = 'user' | 'system' | 'model';
 

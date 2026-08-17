@@ -1063,7 +1063,8 @@
     "backupTruncated": "The backup file is incomplete: it was interrupted while being written.",
     "backupTooNew": "This backup comes from a newer version of Glossa.",
     "backupUnreadable": "This file is not a Glossa backup.",
-    "backupRedownloadPartial": "Some works were not queued: you can find them in the Library and download them one by one."
+    "backupRedownloadPartial_one": "One work was not queued: you can find it in the Library and download it from there.",
+    "backupRedownloadPartial_other": "{{count}} works were not queued: you can find them in the Library and download them one by one."
   },
   "editor": {
     "write": "Write",

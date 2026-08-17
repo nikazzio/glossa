@@ -390,6 +390,7 @@ export async function executePipelineForChunk(
         provider: stage.provider,
         model: stage.model,
         usage: capturedUsage,
+        billedCharacters: capturedBilledCharacters,
         durationMs: stageDuration,
         sourceLanguage: effectiveConfig.sourceLanguage,
         targetLanguage: effectiveConfig.targetLanguage,

@@ -52,7 +52,7 @@ const t = (key: string) => key;
 function backupWith(appSettings: Array<{ key: string; value: string }>): string {
   return JSON.stringify({
     glossa_version: '0.9.0',
-    schema_version: 1,
+    schema_version: 2,
     exported_at: '2026-06-08T19:11:42.971Z',
     // Tutte le tabelle dichiarate, vuote tranne quella in prova.
     tables: {
@@ -260,7 +260,7 @@ describe('il ripristino', () => {
   });
 
   it('rejects a backup created by a newer schema before changing data', async () => {
-    fsState.raw = backupWith([]).replace('"schema_version":1', '"schema_version":2');
+    fsState.raw = backupWith([]).replace('"schema_version":2', '"schema_version":99');
 
     await expect(restoreBackup(t)).rejects.toThrow('incompatible_schema_version');
     expect(confirm).not.toHaveBeenCalled();

@@ -11,7 +11,7 @@ use super::{JobError, JobRecord, JobStatus};
 
 const COLUMNS: &str = "id, job_type, status, priority, progress, message, config, checkpoint, \
      attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, phase, \
-     detail, depends_on_job_id, next_attempt_at, created_at, updated_at";
+     detail, depends_on_job_id, next_attempt_at, created_at, updated_at, workspace_id";
 
 /// Cosa serve per mettere un lavoro in coda. Il resto lo mette il database.
 #[derive(Debug, Clone)]
@@ -51,6 +51,7 @@ fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
         next_attempt_at: row.get(17)?,
         created_at: row.get(18)?,
         updated_at: row.get(19)?,
+        workspace_id: row.get(20)?,
     })
 }
 
