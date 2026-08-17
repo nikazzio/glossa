@@ -395,6 +395,7 @@ export async function executePipelineForChunk(
         targetLanguage: effectiveConfig.targetLanguage,
         input: stageText,
         output: result,
+        workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
       }).catch((error: unknown) => {
         warnAsyncFailure('provenance.model_call.persist_failed', error, {
           chunkId: chunk.id,
@@ -427,6 +428,7 @@ export async function executePipelineForChunk(
           sourceLanguage: effectiveConfig.sourceLanguage,
           targetLanguage: effectiveConfig.targetLanguage,
           input: stageText,
+          workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
         },
         rawError,
       ).catch((failure: unknown) => {
