@@ -41,11 +41,14 @@ const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
  * workspace di un dizionario, l'icona del workspace, il formato di un progetto.
  * Chiedendole al database l'elenco non può restare indietro.
  *
- * Il nome della tabella non arriva mai da fuori — è uno dei nomi dichiarati —
- * e le colonne restano comunque filtrate, perché finiscono dentro la query.
+ * Si usa la forma tabellare (`pragma_table_info`) e non `PRAGMA table_info`:
+ * così il nome della tabella è un parametro invece che testo dentro la query,
+ * e torna una colonna sola, di tipo dichiarato. Le righe di `PRAGMA` hanno
+ * colonne senza tipo, che il ponte verso il database non è tenuto a convertire.
+ * I nomi restano comunque filtrati: finiscono dentro l'inserimento.
  */
 async function liveColumns(table: BackupTable): Promise<ReadonlySet<string>> {
-  const rows = await select<{ name: string }>(`PRAGMA table_info(${table})`);
+  const rows = await select<{ name: string }>(`SELECT name FROM pragma_table_info($1)`, [table]);
   const names = rows.map((row) => row.name).filter((name) => SAFE_COL.test(name));
   // Nessuna colonna vuol dire che la tabella non c'è: proseguire la
   // scarterebbe tutta senza dire niente. Si smette **prima** di cancellare.

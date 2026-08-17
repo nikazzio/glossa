@@ -30,8 +30,8 @@ const runMock = vi.fn<RunFn>(async () => undefined);
 const selectMock = vi.mocked(select);
 
 vi.mock('./dbService', () => ({
-  select: vi.fn(async (query: string) => {
-    const table = /^PRAGMA table_info\((\w+)\)$/.exec(String(query).trim())?.[1];
+  select: vi.fn(async (query: string, params?: unknown[]) => {
+    const table = String(query).includes('pragma_table_info') ? String(params?.[0]) : undefined;
     // Le tabelle che una prova non guarda hanno comunque una colonna: zero
     // colonne significa «tabella assente», ed è un caso a sé.
     return table ? (liveSchema[table] ?? ['id']).map((name) => ({ name })) : [];
