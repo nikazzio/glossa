@@ -567,11 +567,14 @@
       "testModelRequired": "Inserisci un modello per testare"
     },
     "backup": "Backup e ripristino",
-    "backupHint": "Esporta l'intero workspace in un file portabile, o ripristina da un backup precedente.",
-    "backupExport": "Esporta backup",
-    "backupImport": "Importa backup",
-    "backupImportConfirmTitle": "Ripristinare il workspace?",
-    "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
+    "backupHint": "Il file contiene i dati, non le immagini: quelle si riscaricano, e al ripristino Glossa propone di riprendere le opere che avevi.",
+    "backupExport": "Salva un backup",
+    "backupExportTooltip": "Salva in un file tutto il contenuto di Glossa",
+    "backupImport": "Ripristina da un backup",
+    "backupImportTooltip": "Rimetti Glossa com'era in un backup salvato",
+    "backupScopeWarning": "Il backup riguarda tutto Glossa, non un workspace solo: il ripristino sostituisce ogni workspace presente adesso.",
+    "backupImportConfirmTitle": "Ripristinare da questo backup?",
+    "backupImportConfirmMessage": "Tutto quello che c'è adesso — ogni workspace, con progetti, traduzioni, trascrizioni, dizionari e impostazioni — viene sostituito dal contenuto del backup. Non si torna indietro.",
     "backupImportConfirm": "Ripristina",
     "downloadTab": "Scaricamento",
     "download": {
@@ -891,8 +894,7 @@
     "settings": {
       "eyebrow": "Impostazioni Workspace",
       "generalTab": "Generale",
-      "memoryTab": "Phrase Memory",
-      "backupTab": "Backup"
+      "memoryTab": "Phrase Memory"
     },
     "translationsArea": {
       "sort": {
@@ -960,9 +962,11 @@
     "imported": "File importato con successo",
     "importError": "Importazione fallita",
     "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
-    "backupExportSuccess": "Backup esportato con successo",
-    "backupImportSuccess": "Workspace ripristinato con successo",
+    "backupExportSuccess": "Backup salvato",
+    "backupImportSuccess": "Ripristino completato",
     "backupInvalidFile": "File di backup non valido",
+    "backupWriteFailed": "Il backup non è stato salvato",
+    "backupSchemaUnreadable": "Glossa non riesce a leggere la struttura del proprio archivio: il ripristino non è partito e i dati non sono stati toccati.",
     "backupIncompatibleVersion": "Il backup è stato creato con una versione più recente di Glossa",
     "pdfScannedError": "Questo PDF non contiene testo selezionabile. Potrebbe essere un documento scansionato.",
     "textEncodingError": "Il file non è codificato in UTF-8. Riaprilo con un editor di testo e salvalo in UTF-8, poi riprova.",
@@ -1435,7 +1439,7 @@
       "autosaveTitle": "Salvataggio automatico",
       "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
       "backupTitle": "Backup e ripristino",
-      "backupDesc": "Nelle Impostazioni del workspace, la scheda Backup esporta o importa lo stato locale tramite un file .glossa-backup. I due comandi sono icone circolari: passa il mouse o raggiungile da tastiera per leggerne la descrizione. Prima di mostrare la conferma e prima di toccare i dati, Glossa verifica che il file sia completo, integro e compatibile: un backup alterato, incompleto o creato da una versione più recente viene rifiutato senza modificare il lavoro corrente."
+      "backupDesc": "In Impostazioni, la scheda Archiviazione salva un backup o ripristina da uno salvato, in un file .glossa-backup. I due comandi sono icone: passa il mouse o raggiungile da tastiera per leggerne la descrizione. Il backup riguarda tutto Glossa, non un workspace solo, e il ripristino sostituisce ogni workspace presente. Prima di chiedere conferma e prima di toccare i dati, Glossa verifica che il file sia completo, integro e compatibile: un backup alterato, incompleto o creato da una versione più recente viene rifiutato senza modificare il lavoro corrente."
     },
     "providers": {
       "title": "Provider LLM",
@@ -1563,7 +1567,7 @@
       "checkTitle": "Le due verifiche del deposito",
       "checkDesc": "La verifica rapida guarda soltanto se i file ci sono: è questione di millisecondi. La completa apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato, quindi è l'unica che riconosce un file troncato o marcito sul disco; in cambio è lenta in proporzione ai gigabyte. Se niente è danneggiato i due conteggi coincidono e cambia solo il tempo. Nella coda dei lavori ogni verifica dice quale delle due è.",
       "backupTitle": "Il backup",
-      "backupDesc": "Impostazioni del workspace → Backup salva un file con tutto quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto. Le immagini non ci sono ed è voluto — si riprendono dalla biblioteca — ma il file sa quali opere erano sul computer e a che misura, e al ripristino Glossa ti propone di riscaricarle. Il file è compresso e porta un'impronta: un backup interrotto a metà scrittura viene riconosciuto prima che il ripristino cominci. Il ripristino sostituisce tutto quello che c'è adesso.",
+      "backupDesc": "Impostazioni → Archiviazione → Backup e ripristino salva un file con tutto quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto. Le immagini non ci sono ed è voluto — si riprendono dalla biblioteca — ma il file sa quali opere erano sul computer e a che misura, e al ripristino Glossa ti propone di riscaricarle. Il file è compresso e porta un'impronta: un backup interrotto a metà scrittura viene riconosciuto prima che il ripristino cominci. Il backup è di tutto Glossa, non di un workspace solo: il ripristino sostituisce ogni workspace presente adesso.",
       "librariesTitle": "Come Glossa tratta le biblioteche",
       "librariesDesc": "Ogni biblioteca ha i suoi tempi: quanto aspettare fra una richiesta e l'altra, quante richieste in un minuto, quanto fermarsi quando chiede di rallentare. Sono pochi ritmi diversi applicati a molte biblioteche, quindi in Impostazioni → Biblioteche si governano come profili. Due arrivano con Glossa, con i valori provati sul campo: Normale, che usano quasi tutte, e Lento, tarato sulla più severa. Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome trovi quante biblioteche lo usano. Sotto, per ogni biblioteca scegli il profilo da un menu. Un profilo in uso non si elimina finché non sposti le biblioteche che lo seguono, e i due che arrivano con l'applicazione non si eliminano affatto. Le richieste insieme non superano mai quattro, qualunque cosa si scriva: il limite dipende dal server della biblioteca e serve a non farsi bloccare.",
       "jobsRestartTitle": "Chiudere e riaprire",

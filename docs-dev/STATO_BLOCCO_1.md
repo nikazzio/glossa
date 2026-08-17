@@ -34,7 +34,7 @@ dritta su `main`.
 | 4-quater | Profili di rete, registrazione, rifiniture | #421, #422, #378 | unita (#428) |
 | **5** | Risorse condivise e ambito | #213 | **da fare**, indipendente |
 | 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione e chiamate ai modelli |
-| 7 | Backup, esportazioni e riservatezza | #345, #407 | **backup fatto**, restano i tre livelli di riservatezza (D33) |
+| 7 | Backup, esportazioni e riservatezza | #345, #407 | **backup fatto** e spostato nelle impostazioni generali; restano i tre livelli di riservatezza (D33) e l'esportazione di un workspace (#434) |
 
 **Perché la 6 non va lasciata ultima**: ogni giorno senza registrazione è
 materiale perso per sempre, in particolare la coppia proposta/approvata delle
@@ -81,6 +81,10 @@ fatti, registro append-only con le colonne che serviranno all'area Analisi.
   a fare. Manca anche il controllo dello spazio libero prima di adottare una
   cartella: si avvisa e si lascia decidere, senza vietare.
 - **Notifiche di sistema** (D21): mai fatte.
+- **Esportare e importare un singolo workspace** (#434): il backup è del
+  programma intero e resta tale. Portare via un workspace solo richiede
+  identificatori nuovi a ogni riga e le regole di ambito di #213, quindi viene
+  dopo la PR 5.
 - **I tre livelli di riservatezza** di backup ed esportazioni (D33): aperto,
   solo Glossa, con password. Il terzo richiede una derivazione di chiave da
   password — la libreria per cifrare c'è già, quella per derivare no — e va
@@ -115,6 +119,7 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
 | **D17** | il tempo stimato viene dal ritmo vero del lavoro, non dalla pausa dichiarata dal profilo |
 | **D18** | i valori di rete sono **profili** — un ritmo, non una biblioteca — e le biblioteche ne scelgono uno |
 | **D22** | le revisioni non hanno stato: approvare e ritirare sono fatti che puntano a una revisione, e **il giudizio si lega alla revisione** invece di stare in colonne sovrascritte |
+| **D31** | il backup è del **programma intero**, non di un workspace, e sta nelle impostazioni generali: si chiamava «backup del workspace» ma prendeva tutto. Portare via un solo workspace diventa #434. Le colonne che il ripristino riscrive si chiedono al database, perché l'elenco scritto a mano ne perdeva alcune in silenzio |
 
 ## Cronologia breve
 

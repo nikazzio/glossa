@@ -5,6 +5,7 @@ import { HardDrive } from 'lucide-react';
 import { getDataDir, chooseDataDirFolder } from '../../services/storageConfigService';
 import { Spinner, Tooltip } from '../ui';
 import { VaultSection } from './VaultSection';
+import { BackupSection } from './BackupSection';
 
 export function StorageSettingsTab() {
   const { t } = useTranslation();
@@ -89,6 +90,8 @@ export function StorageSettingsTab() {
       </Tooltip>
 
       <VaultSection />
+
+      <BackupSection />
     </div>
   );
 }

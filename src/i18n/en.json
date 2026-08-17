@@ -532,11 +532,14 @@
       }
     },
     "backup": "Backup & Restore",
-    "backupHint": "Export the full workspace to a portable file, or restore from a previous backup.",
-    "backupExport": "Export backup",
-    "backupImport": "Import backup",
-    "backupImportConfirmTitle": "Restore workspace?",
-    "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
+    "backupHint": "The file holds the data, not the images: those are downloaded again, and on restore Glossa offers to take back the works you had.",
+    "backupExport": "Save a backup",
+    "backupExportTooltip": "Save everything in Glossa to a file",
+    "backupImport": "Restore from a backup",
+    "backupImportTooltip": "Put Glossa back the way a saved backup had it",
+    "backupScopeWarning": "A backup covers the whole of Glossa, not a single workspace: restoring replaces every workspace you have now.",
+    "backupImportConfirmTitle": "Restore from this backup?",
+    "backupImportConfirmMessage": "Everything there is now — every workspace, with its projects, translations, transcriptions, glossaries and settings — is replaced by the contents of the backup. There is no way back.",
     "backupImportConfirm": "Restore",
     "phraseMemoryTab": "Phrase Memory",
     "phraseMemoryToggle": "Memory",
@@ -891,8 +894,7 @@
     "settings": {
       "eyebrow": "Workspace Settings",
       "generalTab": "General",
-      "memoryTab": "Phrase Memory",
-      "backupTab": "Backup"
+      "memoryTab": "Phrase Memory"
     },
     "translationsArea": {
       "sort": {
@@ -960,9 +962,11 @@
     "imported": "File imported successfully",
     "importError": "Import failed",
     "pipelineSaveAfterImportFailed": "Pipeline config could not be saved",
-    "backupExportSuccess": "Backup exported successfully",
-    "backupImportSuccess": "Workspace restored successfully",
+    "backupExportSuccess": "Backup saved",
+    "backupImportSuccess": "Restore complete",
     "backupInvalidFile": "Invalid backup file",
+    "backupWriteFailed": "The backup was not saved",
+    "backupSchemaUnreadable": "Glossa cannot read the structure of its own store: the restore did not start and no data was touched.",
     "backupIncompatibleVersion": "Backup was created with a newer version of Glossa",
     "pdfScannedError": "This PDF does not contain selectable text. It may be a scanned document.",
     "textEncodingError": "This file is not UTF-8 encoded. Reopen it in a text editor, save it as UTF-8, and try again.",
@@ -1435,7 +1439,7 @@
       "autosaveTitle": "Autosave",
       "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
       "backupTitle": "Backup and restore",
-      "backupDesc": "In Workspace Settings, the Backup tab exports or imports local state through a .glossa-backup file. The two commands are circular icons: hover them or reach them with the keyboard to read their descriptions. Before showing confirmation or touching any data, Glossa verifies that the file is complete, intact, and compatible: an altered, incomplete, or newer-version backup is rejected without changing the current work."
+      "backupDesc": "In Settings, the Storage tab saves a backup or restores from a saved one, through a .glossa-backup file. The two commands are icons: hover them or reach them with the keyboard to read their descriptions. A backup covers the whole of Glossa, not a single workspace, and restoring replaces every workspace you have. Before asking for confirmation and before touching any data, Glossa verifies that the file is complete, intact, and compatible: an altered, incomplete, or newer-version backup is rejected without changing the current work."
     },
     "providers": {
       "title": "LLM providers",
@@ -1563,7 +1567,7 @@
       "checkTitle": "The two vault checks",
       "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is.",
       "backupTitle": "The backup",
-      "backupDesc": "Workspace settings → Backup saves a file with everything that cannot be downloaded again: the works' records, notes, transcriptions, translations with their history, glossaries, phrase memory and the record of the work done. The images are not in it on purpose — they come back from the library — but the file knows which works were on your computer and at what size, and on restore Glossa offers to download them again. The file is compressed and carries a fingerprint: a backup interrupted while being written is recognised before the restore starts. Restoring replaces everything that is there now.",
+      "backupDesc": "Settings → Storage → Backup and restore saves a file with everything that cannot be downloaded again: the works' records, notes, transcriptions, translations with their history, glossaries, phrase memory and the record of the work done. The images are not in it on purpose — they come back from the library — but the file knows which works were on your computer and at what size, and on restore Glossa offers to download them again. The file is compressed and carries a fingerprint: a backup interrupted while being written is recognised before the restore starts. The backup covers the whole of Glossa, not a single workspace: restoring replaces every workspace you have now.",
       "librariesTitle": "How Glossa treats libraries",
       "librariesDesc": "Every library has its own pace: how long to wait between requests, how many requests in a minute, how long to stop when it asks you to slow down. These are a few different paces applied to many libraries, so Settings → Libraries governs them as profiles. Two ship with Glossa, with values proven in the field: Normal, used by almost all of them, and Slow, tuned on the strictest one. You can change them, create others and name each one; next to the name you see how many libraries use it. Below, for each library you pick its profile from a menu. A profile in use cannot be deleted until you move the libraries that follow it, and the two that ship with the application cannot be deleted at all. Requests at the same time never go above four, whatever you write: the limit depends on the library's server and it keeps you from being blocked.",
       "jobsRestartTitle": "Closing and reopening",

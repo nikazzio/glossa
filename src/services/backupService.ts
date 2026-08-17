@@ -1,3 +1,11 @@
+/**
+ * Il backup del programma intero (#345, #407, D31).
+ *
+ * **Non è di un workspace**: prende tutte le tabelle e al ripristino le
+ * sostituisce tutte. Il file serve a rimettere in piedi Glossa dov'era, non a
+ * spostare un lavoro da una macchina all'altra — quello sarà l'esportazione di
+ * un workspace, che ha bisogno di identificatori nuovi e delle regole di ambito.
+ */
 import { invoke } from '@tauri-apps/api/core';
 import { select, runInTransaction } from './dbService';
 import { logger } from '../utils/logger';
@@ -11,7 +19,6 @@ import {
 } from '../schemas/externalData';
 
 const SCHEMA_VERSION = 1;
-const GLOSSA_VERSION = '0.9.0';
 
 // dbService.ts stores its own DB-migration marker under this app_settings key
 // (unrelated to SCHEMA_VERSION above). Importing an old backup must never
@@ -26,32 +33,25 @@ const INSERT_ORDER = BACKUP_TABLES;
 
 const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
-const ALLOWED_COLUMNS: Record<BackupTable, ReadonlySet<string>> = {
-  workspaces:               new Set(['id','name','description','embedding_model','memory_extractor_provider','memory_extractor_model','memory_extractor_prompt','created_at']),
-  glossaries:               new Set(['id','name','description','source_language','target_language','created_at']),
-  projects:                 new Set(['id','name','source_language','target_language','workspace_id','created_at','updated_at','source_display_text']),
-  app_settings:             new Set(['key','value']),
-  prompt_templates:         new Set(['id','name','prompt','default_model','default_provider','created_at','updated_at','context']),
-  pipelines:                new Set(['id','project_id','name','source_language','target_language','pipeline_mode','stages','judge_prompt','judge_model','judge_provider','use_chunking','words_per_chunk','source_display_text','source_processing_text','source_footnotes','review_provider_options','persona','custom_source_language','custom_target_language','blob_budget_tokens','blob_overlap','coherence_prompt','run_status','last_run_config','run_in_progress','created_at','updated_at','use_phrase_memory','auto_search_phrase_memory','phrase_memory_similarity_threshold','phrase_memory_max_results']),
-  project_glossaries:       new Set(['project_id','glossary_id']),
-  glossary_entries:         new Set(['id','glossary_id','term','translation','notes','context','created_at']),
-  translations:             new Set(['id','project_id','source_display_text','source_processing_text','translation_display_text','translation_processing_text','position','chunk_status','stage_results','judge_status','judge_rating','translation_locked','judge_issues','created_at','coherence_result','footnotes','blob_id','blob_order','blob_reference_chunk_ids','pipeline_id','notes']),
-  phrase_memory:            new Set(['id','workspace_id','source_phrase','target_phrase','confidence','source_language','target_language','author','work','domain','tags','notes','chunk_id','project_id','embedding','created_at']),
-  source_phrase_embeddings: new Set(['id','project_id','chunk_id','source_phrase','embedding','created_at']),
-  // La scheda dell'opera si conserva, i suoi file no: si riscaricano (D31).
-  sources:                  new Set(['id','title','kind','primary_language','description','external_ref','status','trashed_at','created_at','updated_at']),
-  source_versions:          new Set(['id','source_id','label','version_kind','source_url','metadata','is_primary','created_at','download_policy','image_service_profile','homepage_url','download_allowed','expected_asset_count','size_cap']),
-  workspace_sources:        new Set(['workspace_id','source_id','linked_at']),
-  transcription_documents:  new Set(['id','source_version_id','workspace_id','title','status','trashed_at','created_at','updated_at']),
-  transcription_segments:   new Set(['id','document_id','position','label','asset_id','approved_revision_id']),
-  transcription_revisions:  new Set(['id','segment_id','revision_number','text','created_by','derived_from_revision_id','content_hash','created_at']),
-  translation_origins:      new Set(['project_id','origin_type','transcription_document_id','source_version_id','import_note']),
-  translation_revisions:    new Set(['id','translation_id','revision_number','text','created_by','derived_from_revision_id','content_hash','created_at']),
-  provenance_events:        new Set(['id','occurred_at','event_type','entity_type','entity_id','workspace_id','actor','job_id','input_ref','output_ref','config','outcome','duration_ms','provider','model','prompt_version','input_tokens','output_tokens','cached_tokens','estimated_cost','source_language','target_language','error_kind','input_hash','output_hash']),
-  derived_metrics:          new Set(['id','metric_key','entity_type','entity_id','workspace_id','value','detail','algorithm_version','input_hash','computed_at']),
-  network_profiles:         new Set(['id','name','builtin','values_json','updated_at']),
-  library_network_profiles: new Set(['library_key','profile_id']),
-};
+/**
+ * Le colonne che una tabella ha **adesso**, chieste al database.
+ *
+ * Prima erano scritte a mano, tabella per tabella, e ogni colonna aggiunta al
+ * programma e dimenticata qui spariva al ripristino **in silenzio**: il
+ * workspace di un dizionario, l'icona del workspace, il formato di un progetto.
+ * Chiedendole al database l'elenco non può restare indietro.
+ *
+ * Il nome della tabella non arriva mai da fuori — è uno dei nomi dichiarati —
+ * e le colonne restano comunque filtrate, perché finiscono dentro la query.
+ */
+async function liveColumns(table: BackupTable): Promise<ReadonlySet<string>> {
+  const rows = await select<{ name: string }>(`PRAGMA table_info(${table})`);
+  const names = rows.map((row) => row.name).filter((name) => SAFE_COL.test(name));
+  // Nessuna colonna vuol dire che la tabella non c'è: proseguire la
+  // scarterebbe tutta senza dire niente. Si smette **prima** di cancellare.
+  if (names.length === 0) throw new Error('backup_schema_unreadable');
+  return new Set(names);
+}
 
 /**
  * Colonne che puntano a righe che il backup **non porta con sé**: l'asset di
@@ -122,7 +122,12 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
   );
 }
 
-export async function exportWorkspace(): Promise<void> {
+/**
+ * Scrive il backup. Restituisce `false` se la finestra di salvataggio è stata
+ * chiusa senza scegliere: annullare non è un errore, ma nemmeno un successo da
+ * annunciare.
+ */
+export async function writeBackup(): Promise<boolean> {
   const now = new Date().toISOString();
 
   const tables: Record<string, Record<string, unknown>[]> = {};
@@ -132,7 +137,7 @@ export async function exportWorkspace(): Promise<void> {
 
   const downloaded = await downloadedSources();
   const payload: BackupPayload = {
-    glossa_version: GLOSSA_VERSION,
+    glossa_version: __APP_VERSION__,
     schema_version: SCHEMA_VERSION,
     exported_at: now,
     tables: tables as BackupPayload['tables'],
@@ -144,18 +149,20 @@ export async function exportWorkspace(): Promise<void> {
   const saved = await invoke<boolean>('write_backup', {
     payload: JSON.stringify(payload),
   });
-  logger.info('backup.exported', {
+  logger.info('backup.written', {
     saved,
     tables: INSERT_ORDER.length,
+    rows: Object.values(tables).reduce((total, rows) => total + rows.length, 0),
     downloadedSources: downloaded.length,
   });
+  return saved;
 }
 
 /**
  * Ripristina un backup. Restituisce le opere che erano scaricate, così la
  * schermata può proporre di riprenderle: le immagini non stanno nel backup.
  */
-export async function importWorkspace(t: (key: string) => string): Promise<DownloadedSource[] | null> {
+export async function restoreBackup(t: (key: string) => string): Promise<DownloadedSource[] | null> {
   // La finestra e la lettura stanno nel backend (#407): una webview
   // compromessa non può farsi leggere un file a sua scelta.
   const raw = await invoke<string | null>('read_backup');
@@ -171,6 +178,13 @@ export async function importWorkspace(t: (key: string) => string): Promise<Downl
   });
   if (!ok) return null;
 
+  // Le colonne si chiedono prima di aprire la transazione: dentro si scrive e
+  // basta, le letture passano da un'altra connessione.
+  const columnsByTable = new Map<BackupTable, ReadonlySet<string>>();
+  for (const table of INSERT_ORDER) {
+    columnsByTable.set(table, await liveColumns(table));
+  }
+
   await runInTransaction(async (run) => {
     for (const table of DELETE_ORDER) {
       if (table === 'app_settings') {
@@ -184,7 +198,7 @@ export async function importWorkspace(t: (key: string) => string): Promise<Downl
     }
     for (const table of INSERT_ORDER) {
       const rows = payload.tables[table] ?? [];
-      const allowed = ALLOWED_COLUMNS[table];
+      const allowed = columnsByTable.get(table) ?? new Set<string>();
       for (const row of rows) {
         if (table === 'app_settings' && row.key === DB_MIGRATION_SETTING_KEY) {
           continue;

@@ -16,17 +16,32 @@ vi.mock('../stores/confirmStore', () => ({
 
 type RunFn = (query: string, params?: unknown[]) => Promise<void>;
 
+// Le colonne che il ripristino può scrivere le chiede al database: qui si
+// finge il database, con lo schema che conta per la prova.
+const liveSchema = vi.hoisted<Record<string, string[]>>(() => ({
+  app_settings: ['key', 'value'],
+  glossaries: ['id', 'name', 'workspace_id', 'created_at'],
+  provenance_events: [
+    'id', 'occurred_at', 'event_type', 'entity_type', 'entity_id', 'workspace_id', 'actor', 'job_id',
+  ],
+}));
+
 const runMock = vi.fn<RunFn>(async () => undefined);
 const selectMock = vi.mocked(select);
 
 vi.mock('./dbService', () => ({
-  select: vi.fn(async () => []),
+  select: vi.fn(async (query: string) => {
+    const table = /^PRAGMA table_info\((\w+)\)$/.exec(String(query).trim())?.[1];
+    // Le tabelle che una prova non guarda hanno comunque una colonna: zero
+    // colonne significa «tabella assente», ed è un caso a sé.
+    return table ? (liveSchema[table] ?? ['id']).map((name) => ({ name })) : [];
+  }),
   runInTransaction: vi.fn(async (callback: (run: RunFn) => Promise<void>) => {
     await callback(runMock);
   }),
 }));
 
-import { exportWorkspace, importWorkspace } from './backupService';
+import { writeBackup, restoreBackup } from './backupService';
 import { BACKUP_TABLES } from '../schemas/externalData';
 import { confirm } from '../stores/confirmStore';
 import { select } from './dbService';
@@ -64,13 +79,61 @@ describe('la misura con cui riscaricare', () => {
   it('sceglie la più grande per numero, non per stringa', async () => {
     // Come stringhe «900» batte «2000», e il ripristino riscaricherebbe a una
     // misura più piccola di quella che c'era.
-    await exportWorkspace();
+    await writeBackup();
     const query = String(
       selectMock.mock.calls.map(([sql]) => sql).find((sql) => String(sql).includes('sizeTag')),
     );
 
     expect(query).toContain('CAST');
     expect(query).not.toMatch(/MAX\(a\.size_tag\)/);
+  });
+});
+
+describe('le colonne che il ripristino rimette', () => {
+  beforeEach(() => {
+    runMock.mockClear();
+  });
+
+  it('rimette anche le colonne aggiunte dopo, perché le chiede al database', async () => {
+    // Prima erano scritte a mano: ogni colonna aggiunta al programma e
+    // dimenticata qui spariva al ripristino in silenzio — fra le altre, il
+    // workspace a cui appartiene un dizionario.
+    fsState.raw = JSON.stringify({
+      glossa_version: '1.4.0',
+      schema_version: 1,
+      exported_at: '2026-08-17T09:00:00.000Z',
+      tables: {
+        ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
+        glossaries: [{ id: 'g1', name: 'Lessico', workspace_id: 'ws1', colonna_sparita: 'x' }],
+      },
+    });
+
+    await restoreBackup(t);
+
+    const insert = runMock.mock.calls.find(([query]) =>
+      String(query).includes('INSERT OR IGNORE INTO glossaries'),
+    );
+    const [query, params] = insert!;
+    const columns = String(query).match(/\(([^)]+)\) VALUES/)![1].split(', ');
+    expect(columns).toContain('workspace_id');
+    expect((params as unknown[])[columns.indexOf('workspace_id')]).toBe('ws1');
+    // Una colonna che il database non ha resta fuori: finirebbe nella query.
+    expect(columns).not.toContain('colonna_sparita');
+  });
+
+  it('se una tabella non c\'è si ferma prima di cancellare, invece di perderla in silenzio', async () => {
+    liveSchema.glossaries = [];
+    fsState.raw = JSON.stringify({
+      glossa_version: '1.4.0',
+      schema_version: 1,
+      exported_at: '2026-08-17T09:00:00.000Z',
+      tables: Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
+    });
+
+    await expect(restoreBackup(t)).rejects.toThrow('backup_schema_unreadable');
+    expect(runMock).not.toHaveBeenCalled();
+
+    liveSchema.glossaries = ['id', 'name', 'workspace_id', 'created_at'];
   });
 });
 
@@ -96,7 +159,7 @@ describe('riferimenti a cose che il backup non porta', () => {
       },
     });
 
-    await importWorkspace(t);
+    await restoreBackup(t);
 
     const insert = runMock.mock.calls.find(([query]) =>
       String(query).includes('INSERT OR IGNORE INTO provenance_events'),
@@ -109,7 +172,7 @@ describe('riferimenti a cose che il backup non porta', () => {
   });
 });
 
-describe('importWorkspace', () => {
+describe('il ripristino', () => {
   beforeEach(() => {
     runMock.mockClear();
     vi.mocked(confirm).mockClear();
@@ -124,7 +187,7 @@ describe('importWorkspace', () => {
       tables: { workspaces: [] },
     });
 
-    await expect(importWorkspace(t)).rejects.toThrow('invalid_backup');
+    await expect(restoreBackup(t)).rejects.toThrow('invalid_backup');
     expect(confirm).not.toHaveBeenCalled();
     expect(runMock).not.toHaveBeenCalled();
   });
@@ -132,7 +195,7 @@ describe('importWorkspace', () => {
   it('rejects a backup created by a newer schema before changing data', async () => {
     fsState.raw = backupWith([]).replace('"schema_version":1', '"schema_version":2');
 
-    await expect(importWorkspace(t)).rejects.toThrow('incompatible_schema_version');
+    await expect(restoreBackup(t)).rejects.toThrow('incompatible_schema_version');
     expect(confirm).not.toHaveBeenCalled();
     expect(runMock).not.toHaveBeenCalled();
   });
@@ -143,7 +206,7 @@ describe('importWorkspace', () => {
       { key: 'active_workspace_id', value: 'ws_orafo' },
     ]);
 
-    await importWorkspace(t);
+    await restoreBackup(t);
 
     const insertedSchemaVersionRow = runMock.mock.calls.find(
       ([query, params]) => query.includes('INTO app_settings') && params?.includes('schema_version'),
@@ -157,7 +220,7 @@ describe('importWorkspace', () => {
       { key: 'active_workspace_id', value: 'ws_orafo' },
     ]);
 
-    await importWorkspace(t);
+    await restoreBackup(t);
 
     const insertedActiveWorkspaceRow = runMock.mock.calls.find(
       ([query, params]) => query.includes('INTO app_settings') && params?.includes('active_workspace_id'),
@@ -176,7 +239,7 @@ describe('importWorkspace', () => {
       { key: 'active_workspace_id', value: 'ws_orafo' },
     ]);
 
-    await importWorkspace(t);
+    await restoreBackup(t);
 
     const unconditionalDelete = runMock.mock.calls.find(
       ([query]) => query.trim() === 'DELETE FROM app_settings',

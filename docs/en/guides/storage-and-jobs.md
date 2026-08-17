@@ -142,9 +142,13 @@ limit depends on their server and it keeps you from being blocked.
 
 ## The backup
 
-**Workspace settings → Backup** saves a file with everything that cannot be
-downloaded again: the works' records, notes, transcriptions, translations with
-their history, glossaries, phrase memory and the record of the work done.
+**Settings → Storage → Backup and restore** saves a file with everything that
+cannot be downloaded again: the works' records, notes, transcriptions,
+translations with their history, glossaries, phrase memory and the record of the
+work done.
+
+**It covers the whole of Glossa, not a single workspace.** The file holds every
+workspace you have, and restoring replaces them all.
 
 **The images are not in it, on purpose.** They come back from the library: a
 40 GB backup is a backup nobody makes, a few-megabyte one gets made every week.
@@ -157,8 +161,10 @@ and carries a fingerprint: a backup interrupted while being written is
 recognised **before** the restore starts, instead of leaving you halfway with
 your data already cleared.
 
-**Restoring replaces everything**: what is there now is replaced by what is in
-the file. The confirmation says so, and there is no going back.
+**Restoring replaces everything**: every workspace there is now is replaced by
+what is in the file. The confirmation says so, and there is no going back.
+Closing the save dialog without choosing a file writes nothing, and Glossa does
+not claim to have saved.
 
 ## Stopped does not mean broken
 

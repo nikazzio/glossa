@@ -1628,6 +1628,17 @@ e impronta, per riconoscere un file troncato prima di tentare il ripristino.
 **La compressione non è la scusa per infilarci le immagini più avanti.** La
 regola resta questa.
 
+**Cambiato implementando (17 agosto 2026)**: il backup è **del programma
+intero**, non di un workspace. Si chiamava «backup del workspace» ma prendeva
+tutte le tabelle e al ripristino le sostituiva tutte, quindi il nome mentiva; ora
+sta nelle impostazioni generali, accanto alla cartella dei dati e al deposito.
+Portare via un **singolo** workspace è un'altra cosa — richiede identificatori
+nuovi per ogni riga e le regole di ambito di #213 — ed è #434.
+
+Le colonne che il ripristino riscrive si chiedono al database invece di stare in
+un elenco scritto a mano: quell'elenco restava indietro a ogni colonna aggiunta,
+e le colonne dimenticate sparivano al ripristino **in silenzio**.
+
 ## D32 — Spazio su disco
 
 *Approvata l'11 agosto 2026.*

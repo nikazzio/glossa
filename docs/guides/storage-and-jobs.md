@@ -146,9 +146,12 @@ limite dipende dal loro server e serve a non farsi bloccare.
 
 ## Il backup
 
-**Impostazioni del workspace → Backup** salva un file con tutto quello che non
-si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro
-storico, glossari, memoria di frasi e il registro del lavoro svolto.
+**Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto
+quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni
+con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto.
+
+**Riguarda tutto Glossa, non un workspace solo.** Il file contiene ogni
+workspace che hai, e il ripristino li sostituisce tutti.
 
 **Le immagini non ci sono, ed è voluto.** Si riprendono dalla biblioteca: un
 backup da 40 GB non lo fa nessuno, uno da pochi megabyte si fa ogni settimana.
@@ -161,8 +164,10 @@ Il file è compresso — il contenuto è testo, e si comprime di circa dieci vol
 riconosciuto **prima** che il ripristino cominci, invece di lasciarti a metà
 strada con i dati già cancellati.
 
-**Il ripristino sostituisce tutto**: quello che c'è adesso viene rimpiazzato da
-quello che c'è nel file. La conferma lo dice, e non si torna indietro.
+**Il ripristino sostituisce tutto**: ogni workspace presente adesso viene
+rimpiazzato da quello che c'è nel file. La conferma lo dice, e non si torna
+indietro. Chiudere la finestra di salvataggio senza scegliere un file non
+scrive niente, e Glossa non dice di aver salvato.
 
 ## Fermo non vuol dire rotto
 
