@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { HardDrive } from 'lucide-react';
 import { getDataDir, chooseDataDirFolder } from '../../services/storageConfigService';
-import { Spinner, Tooltip } from '../ui';
+import { SectionLabel, Spinner, Tooltip } from '../ui';
 import { VaultSection } from './VaultSection';
 import { BackupSection } from './BackupSection';
 
@@ -55,39 +55,41 @@ export function StorageSettingsTab() {
       id="settings-panel-storage"
       role="tabpanel"
       aria-labelledby="settings-tab-storage"
-      className="flex flex-col gap-6"
+      className="space-y-10"
     >
-      <div className="flex items-start gap-3">
-        <HardDrive size={16} className="mt-0.5 shrink-0 text-editorial-muted" />
-        <p className="flex-1 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          {t('settings.storage.title')}
-        </p>
-      </div>
+      <section className="space-y-4">
+        <SectionLabel icon={HardDrive} label={t('settings.storage.title')} />
 
-      {/* Come per il deposito: la scheda è il comando. */}
-      <Tooltip label={t('settings.storage.changeFolder')} side="top">
-        <button
-          type="button"
-          onClick={() => void handleChangeFolder()}
-          disabled={loading || migrating}
-          aria-label={t('settings.storage.changeFolder')}
-          className="w-full rounded-2xl border border-editorial-border bg-surface-panel px-4 py-3 text-left transition-colors hover:border-editorial-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-        >
-        <p className="text-xs font-mono text-editorial-muted">
-          {isOverride ? t('settings.storage.customLocation') : t('settings.storage.defaultLocation')}
-        </p>
-        {loading ? (
-          <div className="mt-2 flex items-center gap-2 text-xs text-editorial-muted">
-            <Spinner size={14} />
-            {t('common.loading')}
-          </div>
-        ) : (
-          <p className="mt-1 break-all font-mono text-sm text-editorial-ink">
-            {migrating ? t('settings.storage.migrating') : path}
-          </p>
-        )}
-        </button>
-      </Tooltip>
+        {/* La riga **è** il comando: cliccarla apre la scelta della cartella. Un
+            pulsante separato ripeterebbe la stessa azione occupando spazio.
+            Riga piatta con bordi orizzontali, come ogni altro elenco delle
+            finestre: i riquadri molto arrotondati qui non si usano. */}
+        <Tooltip label={t('settings.storage.changeFolder')} side="top">
+          <button
+            type="button"
+            onClick={() => void handleChangeFolder()}
+            disabled={loading || migrating}
+            aria-label={t('settings.storage.changeFolder')}
+            className="w-full border-y border-editorial-border/70 py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              {isOverride
+                ? t('settings.storage.customLocation')
+                : t('settings.storage.defaultLocation')}
+            </p>
+            {loading ? (
+              <div className="mt-1.5 flex items-center gap-2 text-sm text-editorial-muted">
+                <Spinner size={14} />
+                {t('common.loading')}
+              </div>
+            ) : (
+              <p className="mt-1 break-all font-mono text-sm text-editorial-ink">
+                {migrating ? t('settings.storage.migrating') : path}
+              </p>
+            )}
+          </button>
+        </Tooltip>
+      </section>
 
       <VaultSection />
 

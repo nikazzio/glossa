@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Check, Gauge, Landmark, Plus, Trash2 } from 'lucide-react';
-import { IconButton, SegmentedControl, Select } from '../ui';
+import { Check, Gauge, Landmark, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { IconButton, SectionLabel, SegmentedControl, Select, SettingRow } from '../ui';
 import { NetworkProfileFields } from './NetworkProfileFields';
 import {
   deleteNetworkProfile,
@@ -35,19 +35,39 @@ const NEW_PROFILE_VALUES: NetworkValues = {
 };
 
 /**
+ * Quello che si sta scrivendo, con il profilo a cui appartiene (`id` nullo = un
+ * profilo nuovo). Lo tiene la finestra, non questa scheda: cambiando scheda la
+ * scheda si smonta, e un ritmo digitato a metà spariva senza dire niente.
+ */
+export interface NetworkProfileDraft {
+  id: string | null;
+  name: string;
+  values: NetworkValues;
+}
+
+interface LibrariesSettingsTabProps {
+  draft: NetworkProfileDraft | null;
+  setDraft: (draft: NetworkProfileDraft | null) => void;
+}
+
+/**
  * I profili di rete e le biblioteche che li usano (#421, D18).
  *
  * Un profilo è **un ritmo**: quanto aspettare fra una richiesta e l'altra,
  * quante in un minuto, quanto fermarsi quando la biblioteca chiede di
  * rallentare. Ogni biblioteca ne sceglie uno; chi non sceglie segue quello
  * predefinito.
+ *
+ * Qui il salvataggio è **esplicito**, al contrario delle altre schede: un «2»
+ * digitato a metà di «250» non deve diventare la politica verso una biblioteca.
+ * Per questo le modifiche non salvate si vedono, e non si perdono cambiando
+ * scheda.
  */
-export function LibrariesSettingsTab() {
+export function LibrariesSettingsTab({ draft, setDraft }: LibrariesSettingsTabProps) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<NetworkSettings>({ profiles: [], libraries: [] });
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState<{ name: string; values: NetworkValues } | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(draft?.id ?? null);
+  const [creating, setCreating] = useState(draft !== null && draft.id === null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -68,9 +88,10 @@ export function LibrariesSettingsTab() {
   const active = creating
     ? null
     : (settings.profiles.find((profile) => profile.id === activeId) ?? null);
-  // Quello che si sta scrivendo. Finché non si tocca niente sono i valori del
-  // profilo scelto, così cambiando profilo i campi lo seguono.
+  // Finché non si tocca niente sono i valori del profilo scelto, così cambiando
+  // profilo i campi lo seguono.
   const edited = draft ?? {
+    id: active?.id ?? null,
     name: active?.name ?? t('settings.network.newProfileName'),
     values: active?.values ?? NEW_PROFILE_VALUES,
   };
@@ -141,11 +162,15 @@ export function LibrariesSettingsTab() {
     >
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5">
-            <Gauge size={11} className="shrink-0 text-editorial-accent" />
-            <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-              {t('settings.network.profiles')}
-            </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <SectionLabel icon={Gauge} label={t('settings.network.profiles')} />
+            {/* Il salvataggio qui è esplicito: se non si vede che c'è qualcosa da
+                salvare, si chiude la finestra credendo di aver salvato. */}
+            {draft && (
+              <span className="shrink-0 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-warning">
+                {t('settings.network.unsaved')}
+              </span>
+            )}
           </div>
           {/* I comandi stanno accanto ai profili, dove si sceglie: in fondo
               alla schermata erano lontani da quello su cui agiscono. */}
@@ -161,10 +186,18 @@ export function LibrariesSettingsTab() {
             <IconButton
               size="sm"
               onClick={() => void saveActive()}
-              disabled={saving}
+              disabled={saving || !draft}
               title={t('settings.network.save')}
             >
               <Check size={13} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              onClick={() => show(creating ? null : activeId)}
+              disabled={!draft}
+              title={t('settings.network.discard')}
+            >
+              <RotateCcw size={13} />
             </IconButton>
             <IconButton
               size="sm"
@@ -198,21 +231,15 @@ export function LibrariesSettingsTab() {
         <NetworkProfileFields
           name={edited.name}
           values={edited.values}
-          onChange={(name, values) => setDraft({ name, values })}
+          onChange={(name, values) => setDraft({ id: creating ? null : activeId, name, values })}
         />
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          <Landmark size={11} className="shrink-0 text-editorial-accent" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.network.libraries')}
-          </p>
-        </div>
+        <SectionLabel icon={Landmark} label={t('settings.network.libraries')} />
         <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
           {settings.libraries.map((library) => (
-            <div key={library.key} className="flex items-center justify-between gap-3 py-2.5">
-              <span className="min-w-0 truncate text-sm text-editorial-ink">{library.label}</span>
+            <SettingRow key={library.key} label={library.label}>
               <Select
                 value={library.profileId}
                 onChange={(value) => void choose(library.key, value)}
@@ -222,7 +249,7 @@ export function LibrariesSettingsTab() {
                   label: profile.name,
                 }))}
               />
-            </div>
+            </SettingRow>
           ))}
         </div>
       </section>

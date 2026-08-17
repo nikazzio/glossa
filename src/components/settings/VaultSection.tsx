@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Archive, AlertTriangle, ScanSearch, ShieldCheck, Trash2 } from 'lucide-react';
-import { IconButton, Spinner, ToggleRow, Tooltip } from '../ui';
+import { Archive, AlertTriangle, FolderTree, ScanSearch, ShieldCheck, Trash2 } from 'lucide-react';
+import { IconButton, SectionLabel, SettingRow, Spinner, ToggleRow, Tooltip } from '../ui';
 import {
   chooseVaultFolder,
   deleteVaultOrphans,
@@ -201,15 +201,25 @@ export function VaultSection() {
   };
 
   return (
-    <section className="flex flex-col gap-3 border-t border-editorial-border/60 pt-5">
-      <div className="flex items-start gap-3">
-        <Archive size={16} className="mt-0.5 shrink-0 text-editorial-muted" />
-        <p className="flex-1 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          {t('settings.storage.vault.title')}
-        </p>
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <SectionLabel icon={Archive} label={t('settings.storage.vault.title')} />
+        {/* «Tieni tutto insieme» è un comando come gli altri: icona e tooltip,
+            accanto alla sezione su cui agisce. Era un pulsante testuale
+            sottolineato, l'unico della finestra. */}
+        {!status?.isDefault && (
+          <IconButton
+            size="sm"
+            onClick={() => void handleDefault()}
+            disabled={busy || loading}
+            title={t('settings.storage.vault.keepTogether')}
+          >
+            <FolderTree size={13} />
+          </IconButton>
+        )}
       </div>
 
-      {/* La scheda **è** il comando: cliccarla apre la scelta della cartella.
+      {/* La riga **è** il comando: cliccarla apre la scelta della cartella.
           Un pulsante separato ripeterebbe la stessa azione occupando spazio. */}
       <Tooltip label={t('settings.storage.vault.chooseFolder')} side="top">
         <button
@@ -217,47 +227,46 @@ export function VaultSection() {
           onClick={() => void handleChoose()}
           disabled={busy || loading}
           aria-label={t('settings.storage.vault.chooseFolder')}
-          className="w-full rounded-2xl border border-editorial-border bg-surface-panel px-4 py-3 text-left transition-colors hover:border-editorial-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full border-y border-editorial-border/70 py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
         >
-        <p className="text-xs font-mono text-editorial-muted">
-          {status?.isDefault
-            ? t('settings.storage.vault.defaultLocation')
-            : t('settings.storage.vault.customLocation')}
-        </p>
-        {loading ? (
-          <div className="mt-2 flex items-center gap-2 text-xs text-editorial-muted">
-            <Spinner size={14} />
-            {t('common.loading')}
-          </div>
-        ) : (
-          <>
-            <p className="mt-1 break-all font-mono text-sm text-editorial-ink">{status?.path}</p>
-            {status && !status.reachable && (
-              // Disco staccato o cartella non ancora sincronizzata: è un caso
-              // diverso da "i file non ci sono" (D1), e va detto così.
-              <p className="mt-2 flex items-center gap-2 text-xs text-editorial-warning">
-                <AlertTriangle size={13} />
-                {t('settings.storage.vault.unreachable')}
-              </p>
-            )}
-          </>
-        )}
+          <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            {status?.isDefault
+              ? t('settings.storage.vault.defaultLocation')
+              : t('settings.storage.vault.customLocation')}
+          </p>
+          {loading ? (
+            <div className="mt-1.5 flex items-center gap-2 text-sm text-editorial-muted">
+              <Spinner size={14} />
+              {t('common.loading')}
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 break-all font-mono text-sm text-editorial-ink">{status?.path}</p>
+              {status && !status.reachable && (
+                // Disco staccato o cartella non ancora sincronizzata: è un caso
+                // diverso da "i file non ci sono" (D1), e va detto così.
+                <p className="mt-2 flex items-center gap-2 text-sm text-editorial-warning">
+                  <AlertTriangle size={13} className="shrink-0" />
+                  {t('settings.storage.vault.unreachable')}
+                </p>
+              )}
+            </>
+          )}
         </button>
       </Tooltip>
 
       {syncWarning && (
-        <p className="flex items-start gap-2 text-xs leading-relaxed text-editorial-warning">
+        <p className="flex items-start gap-2 text-sm leading-relaxed text-editorial-warning">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
           {t('settings.storage.vault.syncWarning')}
         </p>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
-            <span className="text-editorial-accent"><ShieldCheck size={13} /></span>
-            <span>{t('settings.storage.vault.verifyQuick')}</span>
-          </div>
+      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <SettingRow
+          label={t('settings.storage.vault.verifyQuick')}
+          hint={t('settings.storage.vault.verifyHint')}
+        >
           <IconButton
             size="sm"
             onClick={() => void startVerification(false)}
@@ -266,13 +275,12 @@ export function VaultSection() {
           >
             <ShieldCheck size={13} />
           </IconButton>
-        </div>
+        </SettingRow>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
-            <span className="text-editorial-accent"><ScanSearch size={13} /></span>
-            <span>{t('settings.storage.vault.verifyFull')}</span>
-          </div>
+        <SettingRow
+          label={t('settings.storage.vault.verifyFull')}
+          hint={t('settings.storage.vault.verifyHint')}
+        >
           <IconButton
             size="sm"
             onClick={() => void startVerification(true)}
@@ -281,10 +289,7 @@ export function VaultSection() {
           >
             <ScanSearch size={13} />
           </IconButton>
-        </div>
-        <p className="text-[11px] leading-relaxed text-editorial-muted">
-          {t('settings.storage.vault.verifyHint')}
-        </p>
+        </SettingRow>
 
         <ToggleRow
           icon={<ShieldCheck size={13} />}
@@ -298,9 +303,9 @@ export function VaultSection() {
       {/* L'esito dell'ultimo controllo resta qui finché non se ne fa un altro:
           prima viveva nella riga del pannello dei Lavori e dopo un giorno
           spariva, quindi «com'era andata» non aveva più risposta. */}
-      <div className="flex flex-col gap-2 border-t border-editorial-border/60 pt-4">
+      <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
             {t('settings.storage.vault.lastCheck')}
           </span>
           <span className="font-mono text-[11px] text-editorial-muted">
@@ -317,7 +322,7 @@ export function VaultSection() {
         {check && (
           <>
             <p
-              className={`text-xs ${
+              className={`text-sm ${
                 check.missing + check.corrupt > 0 ? 'text-editorial-warning' : 'text-editorial-ink'
               }`}
             >
@@ -328,42 +333,31 @@ export function VaultSection() {
               })}
             </p>
 
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex min-w-0 items-center gap-2 text-xs text-editorial-ink">
-                <span className="text-editorial-accent"><Trash2 size={13} /></span>
-                <span className="truncate">
-                  {check.orphans > 0
+            <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+              <SettingRow
+                label={
+                  check.orphans > 0
                     ? t('settings.storage.vault.orphanFiles', {
                         count: check.orphans,
                         size: humanSize(check.orphanBytes),
                       })
-                    : t('settings.storage.vault.orphanFilesNone')}
-                </span>
-              </span>
-              <IconButton
-                size="sm"
-                tone="danger"
-                onClick={() => void removeOrphans()}
-                disabled={busy || loading || check.orphans === 0}
-                title={t('settings.storage.vault.deleteOrphans')}
+                    : t('settings.storage.vault.orphanFilesNone')
+                }
               >
-                <Trash2 size={13} />
-              </IconButton>
+                <IconButton
+                  size="sm"
+                  tone="danger"
+                  onClick={() => void removeOrphans()}
+                  disabled={busy || loading || check.orphans === 0}
+                  title={t('settings.storage.vault.deleteOrphans')}
+                >
+                  <Trash2 size={13} />
+                </IconButton>
+              </SettingRow>
             </div>
           </>
         )}
       </div>
-
-      {!status?.isDefault && (
-        <button
-          type="button"
-          onClick={() => void handleDefault()}
-          disabled={busy || loading}
-          className="self-start text-xs text-editorial-muted underline-offset-4 transition-colors hover:text-editorial-accent hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-        >
-          {t('settings.storage.vault.keepTogether')}
-        </button>
-      )}
     </section>
   );
 }

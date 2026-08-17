@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from '../ui';
 import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloadSettingsService';
 
 /**
@@ -47,29 +48,23 @@ export function NetworkProfileFields({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <label
-          htmlFor="settings-network-profile-name"
-          className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted"
-        >
+        <FieldLabel htmlFor="settings-network-profile-name" block>
           {t('settings.network.name')}
-        </label>
+        </FieldLabel>
         <input
           id="settings-network-profile-name"
           value={name}
           onChange={(event) => onChange(event.target.value, values)}
-          className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 font-display text-sm italic outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className={FIELD_CLASSNAME}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         {FIELDS.map((field) => (
           <div key={field.key} className="space-y-1.5">
-            <label
-              htmlFor={`settings-network-${field.key}`}
-              className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted"
-            >
+            <FieldLabel htmlFor={`settings-network-${field.key}`} block>
               {t(`settings.network.field.${field.key}`)}
-            </label>
+            </FieldLabel>
             <input
               id={`settings-network-${field.key}`}
               type="number"
@@ -78,7 +73,7 @@ export function NetworkProfileFields({
               step={field.step ?? 1}
               value={values[field.key]}
               onChange={(event) => change(field.key, event.target.value)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={FIELD_MONO_CLASSNAME}
             />
           </div>
         ))}

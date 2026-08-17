@@ -6,6 +6,8 @@ export { Menu, type MenuItem } from './Menu';
 export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';
 export { FieldLabel } from './FieldLabel';
+export { SettingRow } from './SettingRow';
+export { FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from './fieldStyles';
 export { SegmentedControl, type SegmentedControlOption } from './SegmentedControl';
 export { Select, type SelectOption } from './Select';
 export { ToggleRow } from './ToggleRow';

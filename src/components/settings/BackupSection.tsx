@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, DatabaseBackup, Download, Upload } from 'lucide-react';
-import { IconButton } from '../ui';
+import { IconButton, SectionLabel, SettingRow } from '../ui';
 import { writeBackup, restoreBackup } from '../../services/backupService';
 import { enqueueVaultVerification } from '../../services/jobsService';
 import { markRestoreCheck } from '../../services/restoreFollowUp';
@@ -86,47 +86,40 @@ export function BackupSection() {
   };
 
   return (
-    <section className="flex flex-col gap-3 border-t border-editorial-border/60 pt-5">
-      <div className="flex items-start gap-3">
-        <DatabaseBackup size={16} className="mt-0.5 shrink-0 text-editorial-muted" />
-        <p className="flex-1 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          {t('settings.backup')}
-        </p>
+    <section className="space-y-4">
+      <SectionLabel icon={DatabaseBackup} label={t('settings.backup')} />
+
+      {/* Una sola icona per riga, a destra, dove si clicca: la stessa icona
+          ripetuta anche a sinistra faceva sembrare due comandi uno. */}
+      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <SettingRow label={t('settings.backupExport')} hint={t('settings.backupHint')}>
+          <IconButton
+            size="sm"
+            onClick={() => void handleWrite()}
+            disabled={busy}
+            title={t('settings.backupExportTooltip')}
+          >
+            <Download size={13} />
+          </IconButton>
+        </SettingRow>
+
+        {/* Nessun suggerimento al passaggio del mouse: la conseguenza del
+            ripristino sta scritta sotto, a schermo. */}
+        <SettingRow label={t('settings.backupImport')}>
+          <IconButton
+            size="sm"
+            onClick={() => void handleRestore()}
+            disabled={busy}
+            title={t('settings.backupImportTooltip')}
+          >
+            <Upload size={13} />
+          </IconButton>
+        </SettingRow>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
-          <span className="text-editorial-accent"><Download size={13} /></span>
-          <span>{t('settings.backupExport')}</span>
-        </div>
-        <IconButton
-          size="sm"
-          onClick={() => void handleWrite()}
-          disabled={busy}
-          title={t('settings.backupExportTooltip')}
-        >
-          <Download size={13} />
-        </IconButton>
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
-          <span className="text-editorial-accent"><Upload size={13} /></span>
-          <span>{t('settings.backupImport')}</span>
-        </div>
-        <IconButton
-          size="sm"
-          onClick={() => void handleRestore()}
-          disabled={busy}
-          title={t('settings.backupImportTooltip')}
-        >
-          <Upload size={13} />
-        </IconButton>
-      </div>
-
-      <p className="text-[11px] leading-relaxed text-editorial-muted">{t('settings.backupHint')}</p>
-
-      <p className="flex items-start gap-2 text-[11px] leading-relaxed text-editorial-warning">
+      {/* Che il ripristino sostituisca tutto va detto a schermo, non solo al
+          passaggio del mouse: è la conseguenza che non si può scoprire dopo. */}
+      <p className="flex items-start gap-2 text-sm leading-relaxed text-editorial-warning">
         <AlertTriangle size={13} className="mt-0.5 shrink-0" />
         {t('settings.backupScopeWarning')}
       </p>

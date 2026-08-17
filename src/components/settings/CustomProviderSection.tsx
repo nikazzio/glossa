@@ -10,7 +10,7 @@ import {
   testCustomProviderConnection,
 } from '../../services/customProviderService';
 import { customProviderProfileSchema } from '../../schemas/externalData';
-import { IconButton, ToggleRow } from '../ui';
+import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME, IconButton, ToggleRow } from '../ui';
 import type { CustomProviderProfile } from '../../types';
 
 interface ProfileFormState {
@@ -31,12 +31,6 @@ const EMPTY_FORM: ProfileFormState = {
 
 function generateId(): string {
   return `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function FieldLabel({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[11px] uppercase tracking-[0.1em] text-editorial-muted">{children}</p>
-  );
 }
 
 function FormField({ label, children }: { label: string; children: ReactNode }) {
@@ -133,8 +127,6 @@ function ProfileForm({
     }
   };
 
-  const inputCls = 'w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
-
   return (
     <div className="space-y-4 border-y border-editorial-border/70 py-4">
       <FormField label={t('settings.customProvider.name')}>
@@ -143,7 +135,7 @@ function ProfileForm({
           value={form.name}
           onChange={(e) => set({ name: e.target.value })}
           placeholder={t('settings.customProvider.namePlaceholder')}
-          className={inputCls}
+          className={FIELD_CLASSNAME}
         />
       </FormField>
 
@@ -153,11 +145,13 @@ function ProfileForm({
           value={form.baseUrl}
           onChange={(e) => set({ baseUrl: e.target.value })}
           placeholder={t('settings.customProvider.baseUrlPlaceholder')}
-          className={`${inputCls} font-mono`}
+          className={FIELD_MONO_CLASSNAME}
         />
       </FormField>
       {validationError && (
-        <p role="alert" className="text-xs text-editorial-accent">{validationError}</p>
+        <p role="alert" className="text-sm text-editorial-danger">
+          {validationError}
+        </p>
       )}
 
       <div className="border-y border-editorial-border/60 py-3">
@@ -176,7 +170,7 @@ function ProfileForm({
             value={form.apiKey}
             onChange={(e) => set({ apiKey: e.target.value })}
             placeholder={t('settings.pasteApiKey')}
-            className={`${inputCls} font-mono`}
+            className={FIELD_MONO_CLASSNAME}
           />
         </FormField>
       )}
@@ -188,7 +182,7 @@ function ProfileForm({
             value={form.testModel}
             onChange={(e) => set({ testModel: e.target.value })}
             placeholder="llama3.2"
-            className={`${inputCls} flex-1 font-mono`}
+            className={`${FIELD_MONO_CLASSNAME} flex-1`}
           />
           <IconButton
             size="md"
@@ -211,9 +205,11 @@ function ProfileForm({
         >
           <X size={13} />
         </IconButton>
+        {/* Il verde è riservato a selezione e stato attivo: un comando resta
+            neutro, anche quando è quello principale. */}
         <IconButton
           size="md"
-          tone="accent"
+          tone="default"
           onClick={handleSave}
           disabled={saving || !form.name.trim() || !form.baseUrl.trim()}
           title={t('settings.save')}
@@ -265,6 +261,22 @@ export function CustomProviderSection() {
 
   return (
     <div className="space-y-3">
+      {/* Il comando per aggiungere sta in cima, con l'icona e il tooltip: la
+          riga tratteggiata in fondo era l'unico comando testuale della
+          sezione, e occupava una riga per stare lì. */}
+      <div className="flex items-center justify-between gap-3">
+        <FieldLabel>{t('settings.customProvider.add')}</FieldLabel>
+        <IconButton
+          size="sm"
+          tone={showAddForm ? 'accent' : 'default'}
+          onClick={showAddForm ? () => setShowAddForm(false) : openAddForm}
+          title={t('settings.customProvider.add')}
+          ariaPressed={showAddForm}
+        >
+          <Plus size={13} />
+        </IconButton>
+      </div>
+
       {profiles.map((profile) => (
         <div
           key={profile.id}
@@ -297,7 +309,7 @@ export function CustomProviderSection() {
         </div>
       ))}
 
-      {showAddForm ? (
+      {showAddForm && (
         <ProfileForm
           initial={EMPTY_FORM}
           profileId={newProfileId}
@@ -307,15 +319,6 @@ export function CustomProviderSection() {
           }}
           onCancel={() => { setShowAddForm(false); }}
         />
-      ) : (
-        <button
-          type="button"
-          onClick={openAddForm}
-          className="flex w-full items-center justify-center gap-2 border-y border-dashed border-editorial-border py-3 text-xs text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <Plus size={13} />
-          {t('settings.customProvider.add')}
-        </button>
       )}
     </div>
   );

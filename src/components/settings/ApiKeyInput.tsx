@@ -3,7 +3,7 @@ import { Key, CheckCircle2, Save, Loader2, Trash2, Shield, X } from 'lucide-reac
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { settingsService } from '../../services/llmService';
-import { Tooltip } from '../ui';
+import { FieldLabel, FIELD_MONO_CLASSNAME, IconButton } from '../ui';
 
 interface ApiKeyInputProps {
   label: string;
@@ -62,17 +62,20 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
     }
   };
 
+  const fieldId = `settings-api-key-${provider}`;
+
   if (editing) {
     return (
-      <div className="space-y-2">
-        <span className="text-[11px] font-bold uppercase text-editorial-muted">{label}</span>
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor={fieldId} block>{label}</FieldLabel>
         <div className="flex items-center gap-2">
           <input
+            id={fieldId}
             type="password"
             value={keyValue}
             onChange={(e) => setKeyValue(e.target.value)}
             placeholder={t('settings.pasteApiKey')}
-            className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={FIELD_MONO_CLASSNAME}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') { setEditing(false); setKeyValue(''); }
@@ -80,58 +83,62 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (modifica chiave)
             autoFocus
           />
-          <Tooltip label={t('settings.save')}>
-            <button
-              onClick={handleSave}
-              disabled={saving || !keyValue.trim()}
-              className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('settings.save')}
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            </button>
-          </Tooltip>
-          <Tooltip label={t('settings.cancel')}>
-            <button
-              onClick={() => { setEditing(false); setKeyValue(''); }}
-              aria-label={t('settings.cancel')}
-              className="p-1.5 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <X size={14} />
-            </button>
-          </Tooltip>
+          {/* Comandi a icona come nel resto della finestra: erano gli unici
+              pulsanti disegnati a mano, senza bordo e senza tono. */}
+          <IconButton
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || !keyValue.trim()}
+            title={t('settings.save')}
+            className="shrink-0"
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          </IconButton>
+          <IconButton
+            size="sm"
+            onClick={() => { setEditing(false); setKeyValue(''); }}
+            title={t('settings.cancel')}
+            className="shrink-0"
+          >
+            <X size={13} />
+          </IconButton>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <span className="text-[11px] font-bold uppercase text-editorial-muted">{label}</span>
-        {isConfigured && <Shield size={10} className="text-editorial-accent" />}
+        <FieldLabel>{label}</FieldLabel>
+        {isConfigured && <Shield size={10} className="text-editorial-success" />}
       </div>
       <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={() => setEditing(true)}
           aria-label={isConfigured ? t('settings.save') : t('settings.clickToConfigure')}
-          className="flex items-center gap-3 bg-editorial-textbox px-3 py-2 flex-1 text-left hover:bg-editorial-textbox/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex flex-1 items-center gap-3 rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-left transition-colors hover:border-editorial-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <Key size={14} className={isConfigured ? 'text-editorial-accent' : 'text-editorial-muted opacity-20'} />
-          <span className="flex-1 text-xs font-mono truncate">
+          <Key
+            size={14}
+            className={isConfigured ? 'text-editorial-accent' : 'text-editorial-muted opacity-40'}
+          />
+          <span className="flex-1 truncate font-mono text-sm text-editorial-ink">
             {isConfigured ? '••••••••••••••••' : t('settings.clickToConfigure')}
           </span>
-          {isConfigured && <CheckCircle2 size={12} className="text-editorial-ink" />}
+          {isConfigured && <CheckCircle2 size={13} className="text-editorial-success" />}
         </button>
         {isConfigured && (
-          <Tooltip label={t('settings.removeFromKeychain')}>
-            <button
-              onClick={handleDelete}
-              className="p-1.5 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('settings.removeFromKeychain')}
-            >
-              <Trash2 size={14} />
-            </button>
-          </Tooltip>
+          <IconButton
+            size="sm"
+            tone="danger"
+            onClick={handleDelete}
+            title={t('settings.removeFromKeychain')}
+            className="shrink-0"
+          >
+            <Trash2 size={13} />
+          </IconButton>
         )}
       </div>
     </div>

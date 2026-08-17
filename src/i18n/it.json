@@ -495,6 +495,8 @@
     "deprecatedModelBadge": "superato",
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
+    "eyebrow": "Impostazioni generali",
+    "tabPlanned": "{{label}} — in arrivo con Glossa 2.0",
     "providerTab": "Provider",
     "storageTab": "Dati",
     "storage": {
@@ -635,6 +637,8 @@
       "loadFailed": "Non è stato possibile leggere i profili",
       "delete": "Elimina il profilo",
       "deleteInUse": "Prima sposta le biblioteche che lo usano",
+      "unsaved": "non salvato",
+      "discard": "Butta le modifiche non salvate",
       "field": {
         "pauseMinMs": "Pausa minima (ms)",
         "pauseMaxMs": "Pausa massima (ms)",
@@ -1733,7 +1737,10 @@
     "pricingOverrides": "Override prezzi",
     "overrideHint": "Personalizza i prezzi di default per deployment custom o tariffe aggiornate. Valori in USD per 1M di token.",
     "resetOverride": "Ripristina",
-    "resetAll": "Ripristina tutti"
+    "resetAll": "Ripristina tutti",
+    "overrideModel": "Modello",
+    "overrideInput": "Ingresso $/1M",
+    "overrideOutput": "Uscita $/1M"
   },
   "languages": {
     "English": "Inglese",

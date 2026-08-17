@@ -61,7 +61,11 @@ describe('cartella del deposito', () => {
 
     render(<VaultSection />);
 
-    expect(await screen.findByText('settings.storage.vault.keepTogether')).toBeInTheDocument();
+    // È un comando a icona con tooltip, come tutti gli altri: si cerca per
+    // ruolo e nome accessibile, non per testo a schermo.
+    expect(
+      await screen.findByRole('button', { name: 'settings.storage.vault.keepTogether' }),
+    ).toBeInTheDocument();
   });
 
   it('una cartella irraggiungibile viene detta tale, senza dire che i file sono spariti', async () => {
