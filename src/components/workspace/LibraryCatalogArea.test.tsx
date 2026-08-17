@@ -63,6 +63,7 @@ const entry = (
   expectedPages: 210,
   localPages: 0,
   localBytes: 0,
+  linkedToWorkspace: true,
   providerKey: 'gallica',
   ...overrides,
 });
@@ -207,6 +208,54 @@ describe('LibraryCatalogArea', () => {
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
+  });
+
+  it('mostra solo le opere del workspace, e sa mostrarle tutte', async () => {
+    // «Nessuna lettura da un altro workspace senza chiederla» (#213): il
+    // catalogo generale resta il modo di ritrovare un'opera e collegarla.
+    const user = userEvent.setup();
+    useWorkspaceStore.setState({
+      activeWorkspace: {
+        id: 'ws1', name: 'Scherma', iconKey: 'book', embeddingModel: 'text-embedding-3-small',
+        memoryExtractorProvider: 'openai', memoryExtractorModel: 'm', memoryExtractorPrompt: 'p',
+        createdAt: '2026-08-01',
+      },
+      workspaces: [],
+    });
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+    const service = await import('../../services/libraryService');
+
+    render(<LibraryCatalogArea />);
+    await waitFor(() =>
+      expect(vi.mocked(service.listLibraryCatalog)).toHaveBeenCalledWith('ws1', true),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.scopeAll' }));
+
+    await waitFor(() =>
+      expect(vi.mocked(service.listLibraryCatalog)).toHaveBeenCalledWith('ws1', false),
+    );
+  });
+
+  it('collega e scollega un opera dal workspace attivo', async () => {
+    const user = userEvent.setup();
+    const service = await import('../../services/libraryService');
+    useWorkspaceStore.setState({
+      activeWorkspace: {
+        id: 'ws1', name: 'Scherma', iconKey: 'book', embeddingModel: 'text-embedding-3-small',
+        memoryExtractorProvider: 'openai', memoryExtractorModel: 'm', memoryExtractorPrompt: 'p',
+        createdAt: '2026-08-01',
+      },
+      workspaces: [],
+    });
+    useSourceLibraryStore.setState({ catalog: [entry({ linkedToWorkspace: true })] });
+
+    render(<LibraryCatalogArea />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.unlinkFromWorkspace' }));
+
+    await waitFor(() =>
+      expect(vi.mocked(service.setWorkspaceSourceLink)).toHaveBeenCalledWith('ws1', 's1', false),
+    );
   });
 
   it('si può passare dall’elenco alla griglia', () => {

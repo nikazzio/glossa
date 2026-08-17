@@ -87,8 +87,27 @@ dictionary**. You can rename the copy and it becomes independent: editing it
 never changes the original. When the Library is opened from a project, the copy
 is also assigned to that project.
 
-You cannot delete a workspace while it contains projects or dictionaries. Copy
-or explicitly delete them first.
+## Moving a translation to another workspace
+
+On the workspace page, every translation has a command that moves it elsewhere.
+From then on it sees the new workspace's resources — dictionaries, phrase memory,
+linked works. **The work already done stays counted where it was done**:
+yesterday's costs and calls belong to the workspace of that time, and the move
+itself is written into the history. Moving copies nothing and changes not a
+comma of the text.
+
+## Deleting a workspace
+
+The command no longer refuses. It tells you what is inside — how many
+translations, transcriptions, dictionaries and remembered phrases — and lets you
+choose **once for everything**:
+
+- **move everything to another workspace**, then delete the empty one;
+- **delete everything along with the workspace**, with no way back.
+
+The **works in the Library are never touched**: they are unlinked and stay where
+they are, because they may be linked to other workspaces too and because their
+files are worth gigabytes.
 
 ## Naming advice
 

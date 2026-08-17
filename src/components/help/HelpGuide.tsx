@@ -578,6 +578,9 @@ function ProjectsSection() {
       <SubTitle>{t('help.projects.autosaveTitle')}</SubTitle>
       <P>{t('help.projects.autosaveDesc')}</P>
 
+      <SubTitle>{t('help.projects.scopeTitle')}</SubTitle>
+      <P>{t('help.projects.scopeDesc')}</P>
+
       <SubTitle>{t('help.projects.backupTitle')}</SubTitle>
       <P>{t('help.projects.backupDesc')}</P>
     </>

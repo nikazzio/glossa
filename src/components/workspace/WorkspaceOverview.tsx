@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpenText, LibraryBig, Plus, Settings2, Trash2 } from 'lucide-react';
+import { BookOpenText, FolderInput, LibraryBig, Plus, Settings2, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useLibraryStore } from '../../stores/libraryStore';
-import { confirm } from '../../stores/confirmStore';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, Select } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
 import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
+import { WorkspaceDisposalDialog } from './WorkspaceDisposalDialog';
 import { WorkspaceIcon } from './WorkspaceIdentity';
+import {
+  moveDocumentToWorkspace,
+  type WorkspaceDisposal,
+} from '../../services/workspaceService';
 
 /**
  * Pagina del workspace attivo: identità, azioni e contenuto (oggi i progetti
@@ -18,12 +22,20 @@ import { WorkspaceIcon } from './WorkspaceIdentity';
  */
 export function WorkspaceOverview() {
   const { t, i18n } = useTranslation();
-  const { activeWorkspace, removeWorkspace } = useWorkspaceStore();
+  const { activeWorkspace, workspaces, removeWorkspace } = useWorkspaceStore();
   const { projects, loadProjects, openProject } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
 
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
+  const [showDisposal, setShowDisposal] = useState(false);
+  /** Il progetto per cui si sta scegliendo il workspace di destinazione. */
+  const [movingProjectId, setMovingProjectId] = useState<string | null>(null);
+
+  const otherWorkspaces = useMemo(
+    () => workspaces.filter((candidate) => candidate.id !== activeWorkspace?.id),
+    [workspaces, activeWorkspace?.id],
+  );
 
   useEffect(() => { void loadProjects(); }, [activeWorkspace?.id, loadProjects]);
 
@@ -45,30 +57,43 @@ export function WorkspaceOverview() {
     });
   };
 
-  const handleDeleteWorkspace = async () => {
+  /**
+   * Eliminare un workspace non si rifiuta più: si dice cosa c'è dentro e si
+   * lascia scegliere una volta sola — sposta tutto altrove, oppure elimina
+   * tutto (#213).
+   */
+  const handleDisposal = async (disposal: WorkspaceDisposal) => {
     if (!activeWorkspace) return;
-    if (projects.length > 0) {
-      toast.error(t('workspace.deleteBlockedTitle'), {
-        description: t('workspace.deleteBlockedMessage', { count: projects.length }),
-      });
-      return;
-    }
-    const ok = await confirm({
-      title: t('workspace.deleteTitle'),
-      message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
     try {
-      await removeWorkspace(activeWorkspace.id);
+      await removeWorkspace(activeWorkspace.id, disposal);
+      setShowDisposal(false);
+      toast.success(
+        disposal.kind === 'moveTo'
+          ? t('workspace.disposal.moved')
+          : t('workspace.disposal.deleted'),
+      );
     } catch (err: unknown) {
-      const code = err instanceof Error ? err.message : String(err);
-      toast.error(t('workspace.deleteBlockedTitle'), {
-        description: code === 'workspace_has_glossaries'
-          ? t('workspace.deleteBlockedGlossariesMessage')
-          : t('workspace.deleteFailed'),
+      toast.error(t('workspace.deleteFailed'), {
+        description: err instanceof Error ? err.message : String(err),
       });
+    }
+  };
+
+  /**
+   * Spostare una traduzione in un altro workspace: da adesso vede le risorse di
+   * quello, e il lavoro già svolto resta contato dove è stato svolto (#213).
+   */
+  const handleMoveProject = async (projectId: string, targetWorkspaceId: string) => {
+    try {
+      await moveDocumentToWorkspace('project', projectId, targetWorkspaceId);
+      await loadProjects();
+      toast.success(t('workspace.moveDocument.done'));
+    } catch (err: unknown) {
+      toast.error(t('workspace.moveDocument.failed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setMovingProjectId(null);
     }
   };
 
@@ -115,7 +140,7 @@ export function WorkspaceOverview() {
               <IconButton
                 size="md"
                 tone="muted"
-                onClick={() => void handleDeleteWorkspace()}
+                onClick={() => setShowDisposal(true)}
                 title={t('workspace.delete')}
                 tooltipSide="bottom"
                 disabled={!activeWorkspace}
@@ -143,13 +168,18 @@ export function WorkspaceOverview() {
           {sortedProjects.length > 0 ? (
             <div className="space-y-1.5">
               {sortedProjects.map((project) => (
-                <button
+                // Una riga, due azioni: aprire il progetto e spostarlo. Il
+                // contenitore non è un pulsante — un comando dentro un altro
+                // comando non è una cosa che si può cliccare in modo prevedibile.
+                <div
                   key={project.id}
-                  type="button"
-                  onClick={() => handleOpenProject(project.id)}
-                  className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex w-full items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper"
                 >
-                  <span className="flex min-w-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenProject(project.id)}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
                     <WorkspaceIcon iconKey={activeWorkspace?.iconKey} size={17} className="shrink-0 text-editorial-muted" />
                     <span className="truncate font-display text-base italic text-editorial-ink">
                       {project.name}
@@ -157,11 +187,52 @@ export function WorkspaceOverview() {
                     <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
                       {t('workspace.pipelineBadge', { count: project.pipeline_count })}
                     </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-editorial-muted">
-                    {formatSavedAt(project.updated_at)}
-                  </span>
-                </button>
+                  </button>
+
+                  {movingProjectId === project.id ? (
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Select
+                        value=""
+                        onChange={(workspaceId) => {
+                          if (workspaceId) void handleMoveProject(project.id, workspaceId);
+                        }}
+                        className="min-w-40"
+                        ariaLabel={t('workspace.moveDocument.command')}
+                        options={[
+                          { value: '', label: t('workspace.moveDocument.pick') },
+                          ...otherWorkspaces.map((candidate) => ({
+                            value: candidate.id,
+                            label: candidate.name,
+                          })),
+                        ]}
+                      />
+                      <IconButton
+                        size="sm"
+                        tone="muted"
+                        onClick={() => setMovingProjectId(null)}
+                        title={t('common.cancel')}
+                      >
+                        <X size={12} />
+                      </IconButton>
+                    </span>
+                  ) : (
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs text-editorial-muted">
+                        {formatSavedAt(project.updated_at)}
+                      </span>
+                      {otherWorkspaces.length > 0 && (
+                        <IconButton
+                          size="sm"
+                          tone="muted"
+                          onClick={() => setMovingProjectId(project.id)}
+                          title={t('workspace.moveDocument.command')}
+                        >
+                          <FolderInput size={12} />
+                        </IconButton>
+                      )}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -174,6 +245,15 @@ export function WorkspaceOverview() {
         <CreateProjectDialog open={showCreateProject} onClose={() => setShowCreateProject(false)} workspaceId={activeWorkspace.id} />
       )}
       <WorkspaceSettingsModal open={showWorkspaceSettings} onClose={() => setShowWorkspaceSettings(false)} />
+      {activeWorkspace && (
+        <WorkspaceDisposalDialog
+          open={showDisposal}
+          workspace={activeWorkspace}
+          others={otherWorkspaces}
+          onClose={() => setShowDisposal(false)}
+          onConfirm={handleDisposal}
+        />
+      )}
     </main>
   );
 }

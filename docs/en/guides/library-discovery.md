@@ -25,7 +25,11 @@ A source is unique per manifest: adding it again never creates a duplicate — i
 
 ## Personal Library
 
-Opening a source from the Library catalogue shows its detail with recorded versions and the list of all your workspaces: you can link or unlink it from each one independently, without ever duplicating or losing it.
+The catalogue opens on the **works linked to the workspace you are working in**: it answers the question «what am I working on here». Two commands at the top right switch between that and **every work in the Library**, which is how you find a work added elsewhere and link it here too.
+
+Every card carries the command that links or unlinks it from the current workspace, lit when it is linked. **A work can live in several workspaces at once** and is never duplicated: linking it in two places does not make two copies, neither of the data nor of the files.
+
+Opening a source shows its detail with recorded versions and the list of all your workspaces, where you can link or unlink it from each one.
 
 ## Downloading a source
 

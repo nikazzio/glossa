@@ -79,7 +79,17 @@ interface CatalogRow extends SourceRow {
   expected_asset_count: number | null;
   local_pages: number;
   local_bytes: number;
+  linked_here: number;
 }
+
+/**
+ * «Questa opera è collegata al workspace attivo».
+ *
+ * Sta qui una volta sola perché serve in due punti della stessa query — la
+ * colonna e il filtro — e due copie divergerebbero alla prima modifica.
+ */
+const linkedExpression =
+  "(CASE WHEN EXISTS (SELECT 1 FROM workspace_sources ws WHERE ws.source_id = s.id AND ws.workspace_id = $1) THEN 1 ELSE 0 END)";
 
 /**
  * Il catalogo come lo vede la Biblioteca: la fonte con la sua digitalizzazione
@@ -89,7 +99,16 @@ interface CatalogRow extends SourceRow {
  * parte: la disponibilità è un fatto che si osserva, non una bandierina da
  * tenere aggiornata (D7).
  */
-export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
+export async function listLibraryCatalog(
+  /**
+   * Quando c'è, mostra **solo le opere collegate a quel workspace** (#213):
+   * nessuna lettura da un altro workspace senza chiederla. Senza, è il catalogo
+   * generale, che resta il modo di ritrovare un'opera e collegarla.
+   */
+  workspaceId?: string,
+  /** Vero per vedere solo quelle collegate; falso per il catalogo generale. */
+  onlyLinked = false,
+): Promise<LibraryCatalogEntry[]> {
   const rows = await select<CatalogRow>(
     // Un solo passaggio sugli asset: con due subquery per riga la Biblioteca
     // faceva due letture della tabella per ogni fonte.
@@ -100,15 +119,18 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
             -- risoluzione (D4), e contarla due volte darebbe «740 su 374». I
             -- byte invece si sommano tutti, perché lo spazio lo occupano tutti.
             COUNT(DISTINCT a.page_index) AS local_pages,
-            COALESCE(SUM(a.byte_size), 0) AS local_bytes
+            COALESCE(SUM(a.byte_size), 0) AS local_bytes,
+            ${workspaceId ? linkedExpression : '0'} AS linked_here
        FROM sources s
        LEFT JOIN source_versions v
          ON v.source_id = s.id AND v.is_primary = 1
        LEFT JOIN assets a
          ON a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local'
       WHERE s.status = 'active'
+        ${workspaceId && onlyLinked ? `AND ${linkedExpression} = 1` : ''}
       GROUP BY s.id, v.id
       ORDER BY s.title ASC`,
+    workspaceId ? [workspaceId] : [],
   );
 
   return rows.map((row) => {
@@ -127,6 +149,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       localPages: row.local_pages,
       localBytes: row.local_bytes,
       providerKey: metadata.providerKey,
+      linkedToWorkspace: row.linked_here === 1,
     };
   });
 }

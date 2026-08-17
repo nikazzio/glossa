@@ -4,6 +4,8 @@ import {
   DEFAULT_MEMORY_EXTRACTOR_PROMPT,
   DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
 } from '../constants';
+import { logger } from '../utils/logger';
+import { recordFact } from './provenanceService';
 import type { EmbeddingModel, ModelProvider, Workspace } from '../types';
 import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../workspaceIdentity';
 
@@ -37,12 +39,6 @@ export async function createWorkspace(params: {
      workspace.embeddingModel, workspace.memoryExtractorProvider,
      workspace.memoryExtractorModel, workspace.memoryExtractorPrompt,
      workspace.createdAt],
-  );
-  // Backfill projects that existed before workspace support (workspace_id IS NULL).
-  // Only the first workspace creation picks them up; subsequent ones find no orphans.
-  await execute(
-    'UPDATE projects SET workspace_id = $1 WHERE workspace_id IS NULL',
-    [workspace.id],
   );
   return workspace;
 }
@@ -119,17 +115,124 @@ export async function updateWorkspace(
   await execute(`UPDATE workspaces SET ${sets.join(', ')} WHERE id = $${index}`, params);
 }
 
-export async function deleteWorkspace(id: string): Promise<void> {
-  const [projects, glossaries] = await Promise.all([
-    select<{ count: number }>('SELECT COUNT(*) AS count FROM projects WHERE workspace_id = $1', [id]),
-    select<{ count: number }>('SELECT COUNT(*) AS count FROM glossaries WHERE workspace_id = $1', [id]),
+/** Cosa c'è dentro un workspace, prima di decidere che farne (#213). */
+export interface WorkspaceContents {
+  projects: number;
+  glossaries: number;
+  phrases: number;
+  transcriptions: number;
+  /** Opere collegate: non si eliminano mai, si scollegano soltanto. */
+  linkedSources: number;
+}
+
+export async function workspaceContents(id: string): Promise<WorkspaceContents> {
+  const count = async (table: string) => {
+    const rows = await select<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM ${table} WHERE workspace_id = $1`,
+      [id],
+    );
+    return rows[0]?.count ?? 0;
+  };
+  const [projects, glossaries, phrases, transcriptions, linkedSources] = await Promise.all([
+    count('projects'),
+    count('glossaries'),
+    count('phrase_memory'),
+    count('transcription_documents'),
+    count('workspace_sources'),
   ]);
-  if ((projects[0]?.count ?? 0) > 0) throw new Error('workspace_has_projects');
-  if ((glossaries[0]?.count ?? 0) > 0) throw new Error('workspace_has_glossaries');
+  return { projects, glossaries, phrases, transcriptions, linkedSources };
+}
+
+/**
+ * Cosa fare del contenuto quando il workspace se ne va (#213).
+ *
+ * Una scelta sola per tutto, non una per oggetto: su un workspace con venti
+ * documenti la seconda strada diventa un interrogatorio.
+ */
+export type WorkspaceDisposal =
+  | { kind: 'moveTo'; workspaceId: string }
+  | { kind: 'deleteEverything' };
+
+/**
+ * Elimina un workspace insieme a ciò che si è deciso di farne.
+ *
+ * **Le opere della Biblioteca non si toccano mai**: il collegamento cade con il
+ * workspace — se le porta via il database — e l'opera resta dov'è, perché può
+ * essere di più workspace insieme e perché i suoi file valgono gigabyte.
+ */
+export async function deleteWorkspace(id: string, disposal: WorkspaceDisposal): Promise<void> {
+  if (disposal.kind === 'moveTo' && disposal.workspaceId === id) {
+    throw new Error('workspace_move_to_itself');
+  }
+  const owned = ['projects', 'glossaries', 'phrase_memory', 'transcription_documents'];
 
   await runInTransaction(async (run) => {
-    await run('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
+    if (disposal.kind === 'moveTo') {
+      for (const table of owned) {
+        await run(`UPDATE ${table} SET workspace_id = $1 WHERE workspace_id = $2`, [
+          disposal.workspaceId,
+          id,
+        ]);
+      }
+    } else {
+      // In quest'ordine: quello che dipende da un progetto se ne va con lui, ma
+      // la memoria di frasi punta anche ai progetti, e cancellarla dopo
+      // lascerebbe la cancellazione a metà.
+      await run('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
+      await run('DELETE FROM transcription_documents WHERE workspace_id = $1', [id]);
+      await run('DELETE FROM projects WHERE workspace_id = $1', [id]);
+      await run('DELETE FROM glossaries WHERE workspace_id = $1', [id]);
+    }
     await run('DELETE FROM workspaces WHERE id = $1', [id]);
+  });
+  logger.info('workspace.deleted', { workspaceId: id, disposal: disposal.kind });
+}
+
+/** Un documento che può cambiare workspace: una traduzione o una trascrizione. */
+export type MovableDocument = 'project' | 'transcription_document';
+
+const MOVE_EVENT = 'workspace.moved';
+
+const TABLE_OF: Record<MovableDocument, string> = {
+  project: 'projects',
+  transcription_document: 'transcription_documents',
+};
+
+/**
+ * Sposta un documento in un altro workspace (#213).
+ *
+ * **Lo spostamento è esso stesso un fatto**, e i fatti di prima restano dov'erano:
+ * il lavoro svolto ieri è stato svolto in quel workspace, e riscrivere il
+ * passato farebbe cambiare da soli i conti già chiusi. Da adesso in poi il
+ * documento vede le risorse del workspace nuovo.
+ */
+export async function moveDocumentToWorkspace(
+  kind: MovableDocument,
+  documentId: string,
+  targetWorkspaceId: string,
+): Promise<void> {
+  const rows = await select<{ workspace_id: string | null }>(
+    `SELECT workspace_id FROM ${TABLE_OF[kind]} WHERE id = $1`,
+    [documentId],
+  );
+  if (rows.length === 0) throw new Error('document_not_found');
+  const from = rows[0].workspace_id;
+  if (from === targetWorkspaceId) return;
+
+  await execute(`UPDATE ${TABLE_OF[kind]} SET workspace_id = $1 WHERE id = $2`, [
+    targetWorkspaceId,
+    documentId,
+  ]);
+  logger.info('workspace.document.moved', { kind, documentId, from, to: targetWorkspaceId });
+  await recordFact({
+    eventType: MOVE_EVENT,
+    entityType: kind === 'project' ? 'project' : 'transcription_document',
+    entityId: documentId,
+    // Due spostamenti diversi sono due fatti; rifare lo stesso non ne aggiunge.
+    keyRef: targetWorkspaceId,
+    actor: 'user',
+    workspaceId: targetWorkspaceId,
+    config: { from, to: targetWorkspaceId },
   });
 }
 
