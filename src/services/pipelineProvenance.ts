@@ -43,8 +43,27 @@ export async function recordModelCall(call: ModelCall): Promise<void> {
 }
 
 /** Una chiamata fallita: vale quanto una riuscita, e spesso di più. */
-export async function recordFailedModelCall(call: ModelCall, errorKind: string): Promise<void> {
-  await write(call, 'error', errorKind);
+export async function recordFailedModelCall(call: ModelCall, error: string): Promise<void> {
+  await write(call, 'error', classify(error));
+}
+
+/**
+ * Il **tipo** di errore, non il suo testo.
+ *
+ * La colonna serve a raggruppare (D24): «quante chiamate sono cadute per i
+ * limiti del provider questo mese» è una domanda con risposta, «quante volte è
+ * comparso questo messaggio» non lo è, perché il messaggio cambia con il
+ * provider e con la giornata. Il testo intero resta nel registro tecnico.
+ */
+export function classify(error: string): string {
+  const message = error.toLowerCase();
+  if (/429|rate limit|too many requests|quota/.test(message)) return 'rateLimited';
+  if (/401|403|api key|unauthor|forbidden/.test(message)) return 'auth';
+  if (/timeout|timed out|network|fetch|connection|econn|dns/.test(message)) return 'transport';
+  if (/json|parse|schema|malformed|unexpected token/.test(message)) return 'format';
+  if (/cancel|abort/.test(message)) return 'cancelled';
+  if (/5\d\d|server error|unavailable|overload/.test(message)) return 'providerDown';
+  return 'unknown';
 }
 
 async function write(call: ModelCall, outcome: string, errorKind: string | null): Promise<void> {
