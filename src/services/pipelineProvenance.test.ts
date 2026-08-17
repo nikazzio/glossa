@@ -13,10 +13,20 @@ vi.mock('./dbService', () => ({ select: vi.fn(), execute: vi.fn(), runInTransact
 
 const executeMock = vi.mocked(execute);
 
-/** I parametri dell'ultima scrittura, per nome della colonna. */
+/** I parametri dell'ultima scrittura. */
 function written(): unknown[] {
   const [, params] = executeMock.mock.calls[executeMock.mock.calls.length - 1];
   return (params ?? []) as unknown[];
+}
+
+/** Il valore scritto in una colonna, cercato per nome invece che per posizione. */
+function valueOf(column: string): unknown {
+  const [query, params] = executeMock.mock.calls[executeMock.mock.calls.length - 1];
+  const columns = String(query)
+    .match(/\(([^)]+)\) VALUES/)![1]
+    .split(',')
+    .map((name) => name.trim());
+  return (params as unknown[])[columns.indexOf(column)];
 }
 
 const call = {
@@ -33,6 +43,27 @@ const call = {
 describe('quello che resta di una chiamata a un modello', () => {
   beforeEach(() => {
     executeMock.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('rieseguendo con un altro modello, il fatto racconta la chiamata nuova', async () => {
+    // Sostituire solo una parte lasciava il modello di prima accanto ai token
+    // nuovi: un fatto che descrive una chiamata mai avvenuta.
+    await recordModelCall({ ...call, usage: { inputTokens: 10, outputTokens: 5 } });
+    const [query] = executeMock.mock.calls[0];
+    const upsert = String(query).split('DO UPDATE SET')[1];
+
+    for (const column of [
+      'provider',
+      'model',
+      'input_tokens',
+      'output_tokens',
+      'estimated_cost',
+      'source_language',
+      'error_kind',
+      'workspace_id',
+    ]) {
+      expect(upsert).toContain(`${column}`);
+    }
   });
 
   it('registra token, durata, modello e coppia linguistica', async () => {
@@ -58,8 +89,10 @@ describe('quello che resta di una chiamata a un modello', () => {
     // Zero direbbe «non è costato niente», che è un'altra cosa da «non lo so».
     await recordModelCall(call);
 
-    const params = written();
-    expect(params.filter((value) => value === 0)).toHaveLength(0);
+    expect(valueOf('input_tokens')).toBeNull();
+    expect(valueOf('output_tokens')).toBeNull();
+    expect(valueOf('cached_tokens')).toBeNull();
+    expect(valueOf('estimated_cost')).toBeNull();
   });
 
   it('una chiamata fallita resta scritta con il **tipo** di errore', async () => {
