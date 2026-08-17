@@ -17,6 +17,7 @@ vi.mock('../stores/confirmStore', () => ({
 type RunFn = (query: string, params?: unknown[]) => Promise<void>;
 
 const runMock = vi.fn<RunFn>(async () => undefined);
+const selectMock = vi.mocked(select);
 
 vi.mock('./dbService', () => ({
   select: vi.fn(async () => []),
@@ -25,9 +26,10 @@ vi.mock('./dbService', () => ({
   }),
 }));
 
-import { importWorkspace } from './backupService';
+import { exportWorkspace, importWorkspace } from './backupService';
 import { BACKUP_TABLES } from '../schemas/externalData';
 import { confirm } from '../stores/confirmStore';
+import { select } from './dbService';
 
 const t = (key: string) => key;
 
@@ -55,6 +57,20 @@ describe('cosa porta con sé un backup', () => {
     expect(BACKUP_TABLES).toContain('transcription_revisions');
     expect(BACKUP_TABLES).not.toContain('assets');
     expect(BACKUP_TABLES).not.toContain('jobs');
+  });
+});
+
+describe('la misura con cui riscaricare', () => {
+  it('sceglie la più grande per numero, non per stringa', async () => {
+    // Come stringhe «900» batte «2000», e il ripristino riscaricherebbe a una
+    // misura più piccola di quella che c'era.
+    await exportWorkspace();
+    const query = String(
+      selectMock.mock.calls.map(([sql]) => sql).find((sql) => String(sql).includes('sizeTag')),
+    );
+
+    expect(query).toContain('CAST');
+    expect(query).not.toMatch(/MAX\(a\.size_tag\)/);
   });
 });
 

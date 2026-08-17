@@ -108,7 +108,13 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
             s.title                                AS sourceTitle,
             json_extract(v.metadata, '$.providerKey') AS providerKey,
             v.source_url                           AS manifestUrl,
-            MAX(a.size_tag)                        AS sizeTag,
+            -- La misura più grande **per numero**: come stringhe «900» batte
+            -- «2000», e il ripristino riscaricherebbe a una misura diversa da
+            -- quella che c'era. «max» è la più grande di tutte per definizione.
+            COALESCE(
+              MAX(CASE WHEN a.size_tag = 'max' THEN 'max' END),
+              CAST(MAX(CAST(a.size_tag AS INTEGER)) AS TEXT)
+            )                                      AS sizeTag,
             COUNT(DISTINCT a.page_index)           AS pages
        FROM source_versions v
        JOIN sources s ON s.id = v.source_id
@@ -137,11 +143,11 @@ export async function exportWorkspace(): Promise<void> {
 
   // Il percorso non attraversa l'interfaccia: la finestra la apre il backend,
   // che scrive anche il file — compresso, con il suo manifesto (#407, D31).
-  const written = await invoke<string | null>('write_backup', {
+  const saved = await invoke<boolean>('write_backup', {
     payload: JSON.stringify(payload),
   });
   logger.info('backup.exported', {
-    saved: written !== null,
+    saved,
     tables: INSERT_ORDER.length,
     downloadedSources: downloaded.length,
   });

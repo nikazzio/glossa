@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { enqueueSourceDownload } from '../../services/jobsService';
 import { confirm } from '../../stores/confirmStore';
+import { logger } from '../../utils/logger';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, IconButton, DialogConfirmButton, FieldLabel, SectionLabel, Select } from '../ui';
@@ -129,15 +130,32 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
           });
           if (redownload) {
             // Uno scaricamento per opera, con la misura che aveva: la coda li
-            // prende uno per volta rispettando i tempi delle biblioteche.
+            // prende uno per volta rispettando i tempi delle biblioteche. Se
+            // qualcuna non parte lo si dice: un'opera che nessuno ha messo in
+            // coda, e nessuno ha detto, si scopre non trovandola.
+            let failed = 0;
             for (const source of restored) {
-              if (!source.manifestUrl) continue;
-              await enqueueSourceDownload({
-                providerKey: source.providerKey ?? 'generic',
-                manifestUrl: source.manifestUrl,
-                versionId: source.versionId,
-                sizeTag: source.sizeTag ?? undefined,
-              }).catch(() => undefined);
+              if (!source.manifestUrl) {
+                failed += 1;
+                continue;
+              }
+              try {
+                await enqueueSourceDownload({
+                  providerKey: source.providerKey ?? 'generic',
+                  manifestUrl: source.manifestUrl,
+                  versionId: source.versionId,
+                  sizeTag: source.sizeTag ?? undefined,
+                });
+              } catch (error: unknown) {
+                failed += 1;
+                logger.warn('backup.redownload.not_queued', {
+                  versionId: source.versionId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
+            if (failed > 0) {
+              toast.warning(t('files.backupRedownloadPartial', { count: failed }));
             }
           }
         }
@@ -145,10 +163,18 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      // I motivi che il backend distingue si dicono a parole: «backup_truncated»
+      // a schermo non aiuta nessuno.
       const key =
-        msg === 'incompatible_schema_version'
-          ? 'files.backupIncompatibleVersion'
-          : 'files.backupInvalidFile';
+        {
+          incompatible_schema_version: 'files.backupIncompatibleVersion',
+          backup_truncated: 'files.backupTruncated',
+          backup_format_too_new: 'files.backupTooNew',
+          backup_unreadable: 'files.backupUnreadable',
+          backup_manifest_missing: 'files.backupTruncated',
+          backup_manifest_unreadable: 'files.backupTruncated',
+          backup_payload_missing: 'files.backupTruncated',
+        }[msg] ?? 'files.backupInvalidFile';
       toast.error(t(key), { description: msg });
     } finally {
       setIsBackupBusy(false);
