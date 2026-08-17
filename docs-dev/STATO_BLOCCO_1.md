@@ -32,7 +32,7 @@ dritta su `main`.
 | 4-bis | Catalogo Biblioteca | #217 | unita (#420) |
 | 4-ter | Miniature ricavate in locale | #218 | unita (#423) |
 | 4-quater | Profili di rete, registrazione, rifiniture | #421, #422, #378 | unita (#428) |
-| **5** | Risorse condivise e ambito | #213 | **da fare**, indipendente |
+| **5** | Risorse condivise e ambito | #213 | **fatta**: ambito del catalogo, spostamento come fatto, eliminazione con una scelta sola |
 | 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione, tutte le chiamate ai modelli, costo con i token da cache |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | **backup fatto** e spostato nelle impostazioni generali; restano i tre livelli di riservatezza (D33) e l'esportazione di un workspace (#434) |
 
@@ -62,6 +62,15 @@ gestore debba ricordarsene.
 **Scaricamento** (`src-tauri/src/download/`): dal manifesto alle pagine, con i
 tempi della biblioteca, la misura scelta fra quelle dichiarate, le miniature
 ricavate in locale, il tempo stimato dal ritmo vero del lavoro.
+
+**Ambito** (#213): il catalogo si apre sulle opere collegate al workspace e sa
+mostrarle tutte; un'opera sta in più workspace insieme e si collega dalla sua
+scheda; spostare una traduzione in un altro workspace è un fatto, e il lavoro
+già svolto resta contato dove è stato svolto; eliminare un workspace chiede una
+volta sola cosa farne del contenuto — spostalo o eliminalo — e le opere si
+scollegano soltanto. Le quattro regole decise il 2026-08-17: memoria di frasi
+chiusa nel suo workspace, spostamento come fatto senza riscrivere il passato,
+una scelta sola all'eliminazione, workspace del documento **facoltativo**.
 
 **Interfaccia**: catalogo Biblioteca con copertine e pagine sul computer,
 pannello dei lavori con i dettagli divisi fra opera e ultima pagina,

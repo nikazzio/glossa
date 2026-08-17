@@ -20,6 +20,24 @@ export function DialogConfirmButton({ children, className = '', type = 'button',
   );
 }
 
+/**
+ * Pulsante di un'azione che non si può disfare — pieno color allarme.
+ *
+ * Stesso colore della conferma distruttiva del dialogo di allerta: due rossi
+ * diversi per lo stesso significato si leggono come due gravità diverse.
+ */
+export function DialogDangerButton({ children, className = '', type = 'button', ...rest }: DialogButtonProps) {
+  return (
+    <button
+      type={type}
+      className={`${BASE} bg-editorial-danger text-editorial-bg hover:bg-editorial-danger/90 ${className}`.trim()}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** Pulsante secondario "annulla/chiudi" — bordo sobrio. */
 export function DialogCancelButton({ children, className = '', type = 'button', ...rest }: DialogButtonProps) {
   return (

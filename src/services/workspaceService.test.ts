@@ -11,9 +11,12 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
+const { recordFact } = vi.hoisted(() => ({ recordFact: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./provenanceService', () => ({ recordFact }));
+
 const { createWorkspace, listWorkspaces, updateWorkspace, getActiveWorkspaceId, setActiveWorkspaceId } =
   await import('./workspaceService');
-const { deleteWorkspace } = await import('./workspaceService');
+const { deleteWorkspace, moveDocumentToWorkspace } = await import('./workspaceService');
 
 describe('workspaceService', () => {
   beforeEach(() => {
@@ -98,26 +101,65 @@ describe('workspaceService', () => {
     expect(dbMocks.setSetting).toHaveBeenCalledWith('active_workspace_id', 'ws_abc123');
   });
 
-  it('deleteWorkspace removes workspace-scoped memory before deleting the workspace', async () => {
-    await deleteWorkspace('ws_abc123');
+  it('spostando il contenuto, i figli passano al workspace scelto e poi il workspace se ne va', async () => {
+    // Prima il comando si rifiutava: «ci sono dei progetti», e l'unica via
+    // d'uscita era svuotare tutto a mano.
+    await deleteWorkspace('ws_abc123', { kind: 'moveTo', workspaceId: 'ws_altro' });
 
     expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
-      'DELETE FROM phrase_memory WHERE workspace_id = $1',
+      'UPDATE projects SET workspace_id = $1 WHERE workspace_id = $2',
+      'UPDATE glossaries SET workspace_id = $1 WHERE workspace_id = $2',
+      'UPDATE phrase_memory SET workspace_id = $1 WHERE workspace_id = $2',
+      'UPDATE transcription_documents SET workspace_id = $1 WHERE workspace_id = $2',
       'DELETE FROM workspaces WHERE id = $1',
     ]);
   });
 
-  it('deleteWorkspace keeps every child untouched when projects block deletion', async () => {
-    dbMocks.select.mockResolvedValueOnce([{ count: 1 }]).mockResolvedValueOnce([{ count: 0 }]);
+  it('eliminando tutto, il contenuto se ne va prima del workspace', async () => {
+    await deleteWorkspace('ws_abc123', { kind: 'deleteEverything' });
 
-    await expect(deleteWorkspace('ws_abc123')).rejects.toThrow('workspace_has_projects');
+    expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
+      'DELETE FROM phrase_memory WHERE workspace_id = $1',
+      'DELETE FROM transcription_documents WHERE workspace_id = $1',
+      'DELETE FROM projects WHERE workspace_id = $1',
+      'DELETE FROM glossaries WHERE workspace_id = $1',
+      'DELETE FROM workspaces WHERE id = $1',
+    ]);
+  });
+
+  it('non si sposta il contenuto dentro il workspace che si sta eliminando', async () => {
+    await expect(
+      deleteWorkspace('ws_abc123', { kind: 'moveTo', workspaceId: 'ws_abc123' }),
+    ).rejects.toThrow('workspace_move_to_itself');
     expect(dbMocks.execute).not.toHaveBeenCalled();
   });
 
-  it('deleteWorkspace keeps every child untouched when dictionaries block deletion', async () => {
-    dbMocks.select.mockResolvedValueOnce([{ count: 0 }]).mockResolvedValueOnce([{ count: 1 }]);
+  it('spostare un documento lascia un fatto, e i fatti di prima dove erano', async () => {
+    dbMocks.select.mockResolvedValueOnce([{ workspace_id: 'ws_vecchio' }]);
 
-    await expect(deleteWorkspace('ws_abc123')).rejects.toThrow('workspace_has_glossaries');
+    await moveDocumentToWorkspace('project', 'p1', 'ws_nuovo');
+
+    expect(dbMocks.execute).toHaveBeenCalledWith(
+      'UPDATE projects SET workspace_id = $1 WHERE id = $2',
+      ['ws_nuovo', 'p1'],
+    );
+    expect(recordFact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'workspace.moved',
+        entityType: 'project',
+        entityId: 'p1',
+        keyRef: 'ws_nuovo',
+        workspaceId: 'ws_nuovo',
+      }),
+    );
+  });
+
+  it('spostare un documento dove è già non fa niente', async () => {
+    dbMocks.select.mockResolvedValueOnce([{ workspace_id: 'ws_uno' }]);
+
+    await moveDocumentToWorkspace('project', 'p1', 'ws_uno');
+
     expect(dbMocks.execute).not.toHaveBeenCalled();
+    expect(recordFact).not.toHaveBeenCalled();
   });
 });

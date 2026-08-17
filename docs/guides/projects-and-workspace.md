@@ -89,8 +89,27 @@ raccolti altrove, apri la Libreria del workspace di destinazione e scegli
 indipendente: modificarla non modifica mai l'originale. Se apri la Libreria da
 un progetto, la copia viene anche assegnata a quel progetto.
 
-Non puoi eliminare un workspace finché contiene progetti o dizionari: prima
-spostali tramite copia oppure eliminali esplicitamente.
+## Spostare una traduzione in un altro workspace
+
+Nella pagina del workspace, ogni traduzione ha un comando che la sposta altrove.
+Da quel momento vede le risorse del workspace nuovo — dizionari, memoria di
+frasi, opere collegate. **Il lavoro già svolto resta contato dov'è stato svolto**:
+i costi e le chiamate di ieri appartengono al workspace di allora, e lo
+spostamento stesso resta scritto nello storico. Spostare non copia niente e non
+cambia una virgola del testo.
+
+## Eliminare un workspace
+
+Il comando non si rifiuta più. Ti dice cosa c'è dentro — quante traduzioni,
+trascrizioni, dizionari e frasi in memoria — e ti fa scegliere **una volta per
+tutto**:
+
+- **sposta tutto in un altro workspace**, e poi elimina quello vuoto;
+- **elimina tutto insieme al workspace**, senza ritorno.
+
+Le **opere della Biblioteca non si toccano mai**: si scollegano e restano dove
+sono, perché possono essere collegate anche ad altri workspace e perché i loro
+file valgono gigabyte.
 
 ## Consigli sui nomi
 

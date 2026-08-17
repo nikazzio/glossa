@@ -97,6 +97,12 @@ interface UiState {
   drawerTab: 'console' | 'jobs';
   /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
   libraryView: 'list' | 'grid';
+  /**
+   * Di chi sono le opere che il catalogo mostra (#213): quelle collegate al
+   * workspace attivo, o tutte. Non è lo stesso ambito dei dizionari, che
+   * riguarda la Libreria: qui si parla della Biblioteca.
+   */
+  catalogScope: 'workspace' | 'all';
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
@@ -148,6 +154,7 @@ interface UiState {
   setShowConsoleDrawer: (show: boolean) => void;
   setDrawerTab: (tab: 'console' | 'jobs') => void;
   setLibraryView: (view: 'list' | 'grid') => void;
+  setCatalogScope: (scope: 'workspace' | 'all') => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
@@ -295,6 +302,7 @@ export const useUiStore = create<UiState>()(
       showConsoleDrawer: false,
       drawerTab: 'console',
       libraryView: 'list',
+      catalogScope: 'workspace',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
@@ -414,6 +422,7 @@ export const useUiStore = create<UiState>()(
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
       setDrawerTab: (tab) => set({ drawerTab: tab }),
       setLibraryView: (view) => set({ libraryView: view }),
+      setCatalogScope: (scope) => set({ catalogScope: scope }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
@@ -561,6 +570,7 @@ export const useUiStore = create<UiState>()(
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
         libraryView: state.libraryView,
+        catalogScope: state.catalogScope,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
         editorialAccentColor: state.editorialAccentColor,

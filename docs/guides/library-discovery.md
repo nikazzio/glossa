@@ -25,7 +25,11 @@ Una fonte è unica per manifesto: aggiungerla di nuovo non crea un duplicato, co
 
 ## Biblioteca personale
 
-Aprendo una fonte dal catalogo Biblioteca vedi il dettaglio con le versioni registrate e l'elenco di tutti i tuoi workspace: puoi collegarla o scollegarla da ciascuno in modo indipendente, senza mai duplicarla o perderla.
+Il catalogo si apre sulle **opere collegate al workspace in cui stai lavorando**: è la vista che risponde alla domanda «su cosa sto lavorando qui». Due comandi in alto a destra passano da quella a **tutte le opere in Biblioteca**, che è il modo di ritrovare un'opera aggiunta altrove e collegarla anche qui.
+
+Ogni scheda ha il comando che la collega o la scollega dal workspace corrente, acceso quando è collegata. **Un'opera può stare in più workspace insieme** e non viene mai duplicata: collegarla in due posti non fa due copie, né dei dati né dei file.
+
+Aprendo una fonte vedi il dettaglio con le versioni registrate e l'elenco di tutti i tuoi workspace, dove puoi collegarla o scollegarla da ciascuno.
 
 ## Scaricare una fonte
 
