@@ -231,6 +231,26 @@ pub fn increment_attempt(conn: &Connection, id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Azzera il conto dei tentativi.
+///
+/// `max_attempts` conta i tentativi **falliti di fila** (D16): una ripresa o un
+/// rilancio chiesti dall'utente chiudono quel conto e ne aprono uno nuovo. Il
+/// conteggio si alza a ogni avvio, e senza questo ogni ripresa ne consumava
+/// uno: su un libro lungo, dopo cinque pause, il primo errore di rete diventava
+/// definitivo senza che niente fosse mai andato storto.
+///
+/// Va chiamata **dopo** `requeue`: il lavoro fallito è `error`, e la protezione
+/// della terminalità scarterebbe l'aggiornamento.
+pub fn reset_attempts(conn: &Connection, id: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE jobs SET attempt_count = 0, updated_at = CURRENT_TIMESTAMP \
+         WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
+        params![id],
+    )
+    .map_err(|e| format!("Failed to reset the job attempts: {e}"))?;
+    Ok(())
+}
+
 /// Rimette in coda con un'attesa: il tentativo successivo non parte prima
 /// (D16). Resta `queued`, perché per l'utente è ancora un lavoro in corso —
 /// fermo, non fallito.
@@ -389,6 +409,62 @@ mod tests {
             },
         )
         .expect("job queued")
+    }
+
+    #[test]
+    fn resuming_gives_the_attempts_back() {
+        // Il conto si alza a ogni avvio: senza azzerarlo, ogni ripresa di un
+        // libro lungo consumava un tentativo, e dopo cinque pause il primo
+        // errore di rete diventava definitivo senza che niente fosse andato
+        // storto. Sul campo si è visto un lavoro a 3/5 con `error` vuoto.
+        let conn = migrated_connection();
+        queued(&conn, "j-riprende");
+        increment_attempt(&conn, "j-riprende").unwrap();
+        increment_attempt(&conn, "j-riprende").unwrap();
+        park_as_paused(&conn, "j-riprende", false).unwrap();
+
+        requeue(&conn, "j-riprende", false).unwrap();
+        reset_attempts(&conn, "j-riprende").unwrap();
+
+        assert_eq!(get(&conn, "j-riprende").unwrap().unwrap().attempt_count, 0);
+    }
+
+    #[test]
+    fn a_relaunched_job_starts_its_attempts_over() {
+        // Un lavoro fallito ha il conto **pieno**: senza azzerarlo il rilancio
+        // aveva zero tentativi a disposizione e il primo errore lo ributtava
+        // subito fra i falliti. `requeue` va prima, perché la protezione della
+        // terminalità scarta gli aggiornamenti su un lavoro `error`.
+        let conn = migrated_connection();
+        queued(&conn, "j-rilancio");
+        increment_attempt(&conn, "j-rilancio").unwrap();
+        fail(
+            &conn,
+            "j-rilancio",
+            &JobError::new(ErrorKind::Transport, "la biblioteca non risponde"),
+        )
+        .unwrap();
+
+        requeue(&conn, "j-rilancio", true).unwrap();
+        reset_attempts(&conn, "j-rilancio").unwrap();
+
+        let job = get(&conn, "j-rilancio").unwrap().unwrap();
+        assert_eq!(job.attempt_count, 0);
+        assert_eq!(job.status, JobStatus::Queued);
+    }
+
+    #[test]
+    fn a_finished_job_keeps_its_count() {
+        // Il conto di un lavoro completato è storia: nessuno lo riprende, e
+        // riscriverlo vorrebbe dire poter riportare in vita un capolinea.
+        let conn = migrated_connection();
+        queued(&conn, "j-finito");
+        increment_attempt(&conn, "j-finito").unwrap();
+        set_status(&conn, "j-finito", JobStatus::Completed).unwrap();
+
+        reset_attempts(&conn, "j-finito").unwrap();
+
+        assert_eq!(get(&conn, "j-finito").unwrap().unwrap().attempt_count, 1);
     }
 
     #[test]

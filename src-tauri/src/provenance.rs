@@ -46,6 +46,11 @@ pub struct Event {
     pub job_id: Option<String>,
     /// Come è andata: `completed`, `error`, `cancelled`, `paused`.
     pub outcome: Option<String>,
+    /// Quanto è durata l'esecuzione che ha portato a questo esito. Per un lavoro
+    /// ripreso più volte è l'ultima, non la somma: gli orari della tabella dei
+    /// lavori non la saprebbero dire — `started_at` segna il primo avvio e non
+    /// si azzera più, quindi comprenderebbe anche il tempo in cui il lavoro era
+    /// in pausa.
     pub duration_ms: Option<i64>,
     pub error_kind: Option<String>,
     /// Impronta di ciò che l'evento ha visto e di ciò che ha prodotto (D25):
@@ -161,21 +166,6 @@ pub fn record(conn: &Connection, event: &Event) -> Result<(), String> {
     )
     .map_err(|error| format!("registro dei fatti: {error}"))?;
     Ok(())
-}
-
-/// Quanto è durato un lavoro, in millisecondi, letto dagli orari che la tabella
-/// tiene già. `None` quando il lavoro non è ancora partito o non è finito:
-/// inventare una durata sarebbe peggio che non averla.
-pub fn job_duration_ms(conn: &Connection, job_id: &str) -> Option<i64> {
-    conn.query_row(
-        "SELECT CAST((julianday(COALESCE(finished_at, CURRENT_TIMESTAMP)) - julianday(started_at)) \
-             * 86400000 AS INTEGER) FROM jobs WHERE id = ?1 AND started_at IS NOT NULL",
-        params![job_id],
-        |row| row.get::<_, Option<i64>>(0),
-    )
-    .ok()
-    .flatten()
-    .filter(|duration| *duration >= 0)
 }
 
 #[cfg(test)]
