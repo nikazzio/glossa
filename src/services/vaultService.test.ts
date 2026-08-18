@@ -130,6 +130,7 @@ describe('libera spazio', () => {
     invokeMock.mockResolvedValueOnce({
       deletedFiles: 210,
       freedBytes: 3_400_000_000,
+      deleted: ['providers/gallica/v1/pages/2000/0001.jpg'],
       failed: [],
     });
 
@@ -143,7 +144,7 @@ describe('libera spazio', () => {
     // Con la chiave sbagliata la cartella non esisteva, il comando dichiarava
     // zero file liberati senza errore, e le righe se ne andavano comunque: le
     // carte restavano sul disco senza più niente che le reclamasse.
-    invokeMock.mockResolvedValueOnce({ deletedFiles: 1, freedBytes: 10, failed: [] });
+    invokeMock.mockResolvedValueOnce({ deletedFiles: 1, freedBytes: 10, deleted: [], failed: [] });
 
     await freeVersionPages('v1', ['providers/gallica/v1/pages/2000/0001.jpg']);
 
@@ -159,6 +160,7 @@ describe('libera spazio', () => {
     invokeMock.mockResolvedValueOnce({
       deletedFiles: 0,
       freedBytes: 0,
+      deleted: [],
       failed: ['providers/gallica/v1/pages/2000/0001.jpg'],
     });
 

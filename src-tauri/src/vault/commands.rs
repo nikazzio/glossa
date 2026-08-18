@@ -211,11 +211,18 @@ fn scan_one(root: &std::path::Path, vault_path: String) -> FileIntegrity {
 pub struct FreedSpace {
     pub deleted_files: usize,
     pub freed_bytes: u64,
+    /// I percorsi che **sono** stati liberati, compresi quelli che sul disco
+    /// non c'erano già più.
+    ///
+    /// Chi ha chiamato toglie le righe di questi e solo di questi. Guardare il
+    /// solo `failed` non basta: una cancellazione riuscita a metà lasciava le
+    /// righe di tutti, comprese quelle dei file spariti, e la scheda continuava
+    /// a contarli disponibili.
+    pub deleted: Vec<String>,
     /// I percorsi che non è stato possibile cancellare.
     ///
-    /// Finché non è vuoto, chi ha chiamato **non deve** togliere le righe
-    /// corrispondenti: il file è ancora lì, e una riga in meno lo renderebbe
-    /// invisibile a ogni schermata senza liberare un byte.
+    /// Il file è ancora lì: la sua riga deve restare, altrimenti diventa
+    /// invisibile a ogni schermata senza aver liberato un byte.
     pub failed: Vec<String>,
 }
 
@@ -261,11 +268,13 @@ pub fn free_version_pages(
             Ok(()) => {
                 freed.deleted_files += 1;
                 freed.freed_bytes += size;
+                freed.deleted.push(relative.clone());
                 prune_empty_parents(&root, &absolute);
             }
             // Un file che non c'è già più è spazio già libero: la sua riga va
             // via comunque, altrimenti la Biblioteca continua a contarlo.
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                freed.deleted.push(relative.clone());
                 prune_empty_parents(&root, &absolute)
             }
             Err(error) => {

@@ -36,16 +36,21 @@ pub fn full_size(presentation2: bool) -> String {
 /// prende 2200, perché il dettaglio in più non si recupera scaricando di nuovo.
 ///
 /// Si guardano `sizes` e, quando manca, le misure implicite in `tiles`: la
-/// specifica impone di servire entrambe. Se il descrittore non dichiara né l'una
-/// né l'altra si ripiega sul riquadro `!tetto,tetto`, che non ingrandisce mai.
-/// `!w,h` esiste identico nella Image API 2.x e 3.0, quindi il ripiego non
-/// dipende dalla versione del manifesto.
-pub fn from_info(info: &Value, cap: u32) -> SizeToken {
-    let candidates = declared_sizes(info);
-    match closest_to_cap(&candidates, cap) {
-        Some((width, _)) => SizeToken(format!("{width},")),
-        None => SizeToken(format!("!{cap},{cap}")),
-    }
+/// specifica impone di servire entrambe. `None` quando il descrittore non
+/// dichiara né l'una né l'altra: **non c'è niente che siamo autorizzati a
+/// chiedere**, e chi chiama salta la carta.
+///
+/// *(Il ripiego sul riquadro `!tetto,tetto` è caduto il 2026-08-18.)* Sembrava
+/// prudente perché non ingrandisce mai, ma `!w,h` è una funzione di **livello
+/// 2** della Image API — `max` lo è dal livello 0 — e su archive.org le misure
+/// non dichiarate vengono rifiutate: nel registro ci sono un 400 e un 501 su
+/// `full/2000,`. Una misura rifiutata con 400 non è ritentabile, quindi
+/// l'indovinello trasformava una carta mancante in un lavoro fallito. È la
+/// regola di D4, «senza tentare richieste a indovinare», applicata anche al caso
+/// che la violava.
+pub fn from_info(info: &Value, cap: u32) -> Option<SizeToken> {
+    let (width, _) = closest_to_cap(&declared_sizes(info), cap)?;
+    Some(SizeToken(format!("{width},")))
 }
 
 /// Le misure che il servizio dichiara di saper servire, in ordine crescente e
@@ -147,13 +152,13 @@ mod tests {
         // Regola scelta dall'utente il 2026-08-15: si prende la più vicina al
         // tetto, sopra o sotto, non la più grande che ci sta sotto.
         let info = info_with_sizes(&[(1200, 1200), (2100, 2100)]);
-        assert_eq!(from_info(&info, 2000).as_str(), "2100,");
+        assert_eq!(from_info(&info, 2000).unwrap().as_str(), "2100,");
     }
 
     #[test]
     fn when_the_smaller_one_is_closer_it_wins() {
         let info = info_with_sizes(&[(1800, 1800), (2500, 2500)]);
-        assert_eq!(from_info(&info, 2000).as_str(), "1800,");
+        assert_eq!(from_info(&info, 2000).unwrap().as_str(), "1800,");
     }
 
     #[test]
@@ -162,13 +167,13 @@ mod tests {
         // tetto; 2598x3850 lo ha a 3850. Confrontando le larghezze si
         // sceglierebbe 2598, cioè il doppio dei pixel voluti.
         let info = info_with_sizes(&[(650, 963), (1299, 1925), (2598, 3850)]);
-        assert_eq!(from_info(&info, 2000).as_str(), "1299,");
+        assert_eq!(from_info(&info, 2000).unwrap().as_str(), "1299,");
     }
 
     #[test]
     fn a_tie_goes_to_the_larger_size() {
         let info = info_with_sizes(&[(1800, 1800), (2200, 2200)]);
-        assert_eq!(from_info(&info, 2000).as_str(), "2200,");
+        assert_eq!(from_info(&info, 2000).unwrap().as_str(), "2200,");
     }
 
     #[test]
@@ -180,14 +185,15 @@ mod tests {
             "tiles": [{"width": 512, "scaleFactors": [1, 2, 4, 8]}],
         });
         // Lati lunghi: 6000, 3000, 1500, 750. Il più vicino a 2000 è 1500.
-        assert_eq!(from_info(&info, 2000).as_str(), "1000,");
+        assert_eq!(from_info(&info, 2000).unwrap().as_str(), "1000,");
     }
 
     #[test]
-    fn a_descriptor_that_declares_nothing_falls_back_to_a_bounding_box() {
-        // `!w,h` non ingrandisce mai e non chiede una misura precisa: è il
-        // ripiego che ha più probabilità di essere servito.
-        assert_eq!(from_info(&json!({}), 2000).as_str(), "!2000,2000");
+    fn a_descriptor_that_declares_nothing_offers_no_size_to_ask_for() {
+        // Il ripiego sul riquadro sembrava prudente e non lo era: `!w,h` è
+        // livello 2, e archive.org rifiuta le misure non dichiarate. Senza
+        // niente di dichiarato non c'è niente da chiedere, e la carta si salta.
+        assert!(from_info(&json!({}), 2000).is_none());
     }
 
     #[test]

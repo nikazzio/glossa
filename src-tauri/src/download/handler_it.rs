@@ -48,15 +48,38 @@ fn jpeg() -> Vec<u8> {
 /// dimensioni**: un gruppo solo, quindi una lettura sola del descrittore. È la
 /// forma che rende visibile una rinegoziazione di troppo.
 fn manifest(server: &str, pages: u32) -> String {
+    manifest_grouped(server, pages, true)
+}
+
+/// Come `manifest`, ma a scelta con **una dimensione diversa per carta**: così
+/// ogni carta è un gruppo suo e chiede il proprio descrittore. Serve ai casi in
+/// cui il descrittore di *una* carta è quello che va storto — con un gruppo solo
+/// la prima carta negozia per tutte e il caso non si presenta.
+fn manifest_grouped(server: &str, pages: u32, one_group: bool) -> String {
     let canvases: Vec<String> = (1..=pages)
         .map(|index| {
+            let width = if one_group { 2000 } else { 2000 + index * 10 };
+            let height = width * 3 / 2;
             format!(
-                r#"{{"label":{{"none":["c. {index}"]}},"width":2000,"height":3000,
+                r#"{{"label":{{"none":["c. {index}"]}},"width":{width},"height":{height},
                    "items":[{{"items":[{{"body":{{"service":[{{"id":"{server}/img/{index}"}}]}}}}]}}]}}"#
             )
         })
         .collect();
     format!(r#"{{"items":[{}]}}"#, canvases.join(","))
+}
+
+/// Come `mount_manifest`, con una dimensione diversa per carta.
+async fn mount_manifest_per_page_groups(server: &MockServer, pages: u32) {
+    Mock::given(method("GET"))
+        .and(path("/manifest.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(manifest_grouped(
+            &server.uri(),
+            pages,
+            false,
+        )))
+        .mount(server)
+        .await;
 }
 
 /// Descrittore che dichiara due misure: con il tetto a 2000 il lato lungo più
@@ -255,17 +278,23 @@ async fn a_page_the_library_does_not_have_does_not_take_the_book_away() {
 }
 
 #[tokio::test]
-async fn a_descriptor_that_does_not_answer_does_not_take_the_book_away() {
+async fn a_descriptor_that_does_not_answer_skips_that_page_not_the_book() {
     // Il caso visto sul campo: `info.json` di una singola carta non rispondeva e
-    // portava via il libro intero, due volte, al 47% e al 48%. Un descrittore
-    // *illeggibile* ripiegava già sul riquadro; uno *non arrivato* no.
+    // portava via il libro intero, due volte, al 47% e al 48%.
+    //
+    // Il primo rimedio ripiegava sul riquadro `!tetto,tetto`. Era un
+    // indovinello: `!w,h` è livello 2 della Image API, archive.org rifiuta le
+    // misure non dichiarate (400 e 501 nel registro), e finendo fra le misure
+    // ricordate si sarebbe portato dietro tutte le carte del gruppo, anche
+    // attraverso le riprese. Adesso la carta si salta, come una che non c'è.
     let server = MockServer::start().await;
-    mount_manifest(&server, 2).await;
+    mount_manifest_per_page_groups(&server, 3).await;
     Mock::given(method("GET"))
-        .and(path_regex(r"^/img/\d+/info\.json$"))
+        .and(path("/img/2/info.json"))
         .respond_with(ResponseTemplate::new(500))
         .mount(&server)
         .await;
+    mount_descriptors(&server).await;
     Mock::given(method("GET"))
         .and(path_regex(r"^/img/\d+/full/.*"))
         .respond_with(ResponseTemplate::new(200).set_body_bytes(jpeg()))
@@ -280,9 +309,20 @@ async fn a_descriptor_that_does_not_answer_does_not_take_the_book_away() {
     let record = run_until_terminal(&engine).await;
 
     assert_eq!(record.status, JobStatus::Completed, "{:?}", record.error);
-    assert_eq!(recorded_pages(&engine), 2);
-    // Si è ripiegato sul riquadro, che non ingrandisce mai: non su una
-    // larghezza inventata.
+    assert_eq!(
+        recorded_pages(&engine),
+        2,
+        "le due carte con il descrittore"
+    );
+    // Nessuna misura inventata è finita nel punto salvato: solo quella che il
+    // descrittore ha dichiarato davvero.
+    let checkpoint = record.checkpoint.unwrap();
+    assert!(checkpoint.contains(r#""unavailable":1"#), "{checkpoint}");
+    assert!(
+        !checkpoint.contains('!'),
+        "misura inventata salvata: {checkpoint}"
+    );
+    // E niente è stato chiesto al servizio fuori dalle misure dichiarate.
     let asked: Vec<String> = server
         .received_requests()
         .await
@@ -292,9 +332,40 @@ async fn a_descriptor_that_does_not_answer_does_not_take_the_book_away() {
         .filter(|path| path.contains("/full/"))
         .collect();
     assert!(
-        asked.iter().all(|path| path.contains("/full/!2000,2000/")),
+        asked.iter().all(|path| path.contains("/full/1000,/")),
         "misure chieste: {asked:?}"
     );
+
+    let _ = std::fs::remove_dir_all(&vault);
+}
+
+#[tokio::test]
+async fn a_book_whose_pages_all_fail_does_not_call_itself_finished() {
+    // Se la biblioteca ritira l'opera, o smette di servire i descrittori, il
+    // ciclo salta una carta dopo l'altra e arriverebbe in fondo dichiarando
+    // «completato» con il deposito vuoto. È la bugia peggiore delle due, perché
+    // nessuno va a controllare un lavoro riuscito.
+    let server = MockServer::start().await;
+    mount_manifest(&server, 3).await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/img/\d+/info\.json$"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&server)
+        .await;
+
+    let vault = temp_dir("vuoto_vault");
+    let manifest_url = format!("{}/manifest.json", server.uri());
+    let engine = engine_with(temp_db("vuoto", &manifest_url), vault.clone());
+    engine.submit(&download_job(&manifest_url)).await.unwrap();
+
+    let record = run_until_terminal(&engine).await;
+
+    assert_eq!(record.status, JobStatus::Error);
+    assert_eq!(recorded_pages(&engine), 0);
+    // Il conto delle carte saltate sta nel punto salvato, quindi il tentativo
+    // successivo arriva alla stessa conclusione invece di trovare la coda vuota
+    // e dichiararsi riuscito.
+    assert!(record.checkpoint.unwrap().contains(r#""unavailable":3"#));
 
     let _ = std::fs::remove_dir_all(&vault);
 }

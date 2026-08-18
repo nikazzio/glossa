@@ -357,15 +357,16 @@ function CatalogEntryRow({
       // altrove: con la chiave sbagliata non si cancellava niente, il comando
       // non se ne accorgeva, e le righe se ne andavano comunque.
       const freed = await freeVersionPages(entry.versionId, await versionPagePaths(entry.versionId));
-      // Le righe se ne vanno **solo** se i file se ne sono andati: una riga in
-      // meno su un file ancora sul disco lo rende invisibile a tutti senza
-      // liberare un byte.
+      // Le righe seguono i file **uno per uno**: si tolgono quelle dei file
+      // andati, restano quelle dei file ancora sul disco. Tutto o niente
+      // sbagliava in una delle due direzioni — o una carta invisibile che occupa
+      // spazio, o una carta contata come presente che non c'è più.
+      await forgetVersionPages(entry.versionId, freed.deleted);
+      onRefresh();
       if (freed.failed.length > 0) {
         throw new Error(t('areas.library.freeSpacePartial', { count: freed.failed.length }));
       }
-      await forgetVersionPages(entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
-      onRefresh();
     } catch (error: unknown) {
       toast.error(t('areas.library.freeSpaceFailed'), {
         description: error instanceof Error ? error.message : String(error),

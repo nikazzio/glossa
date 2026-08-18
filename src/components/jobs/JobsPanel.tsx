@@ -124,6 +124,16 @@ function JobRow({ job }: { job: Job }) {
               {detail.units.done}/{detail.units.total}
             </span>
           )}
+          {/* Le carte che la biblioteca non ha: senza, «328/328» di un libro che
+              sul disco ne ha 326 si legge come un libro completo. */}
+          {detail.unavailable !== undefined && detail.unavailable > 0 && (
+            <span
+              className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-warn"
+              title={t('jobs.detail.unavailable')}
+            >
+              −{detail.unavailable}
+            </span>
+          )}
           {detail.bytes && (
             <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {humanSize(detail.bytes.downloaded)}
@@ -299,6 +309,11 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
           ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
           : humanSize(detail.bytes.downloaded),
     },
+    detail.unavailable !== undefined &&
+      detail.unavailable > 0 && {
+        label: t('jobs.detail.unavailable'),
+        value: String(detail.unavailable),
+      },
     detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
     detail.host && { label: t('jobs.detail.host'), value: detail.host },

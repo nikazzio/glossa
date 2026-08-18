@@ -34,8 +34,10 @@ vi.mock('../../services/vaultService', async (importOriginal) => {
     ...actual,
     deleteVersionFiles: vi
       .fn()
-      .mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000, failed: [] }),
-    freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0, failed: [] }),
+      .mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000, deleted: [], failed: [] }),
+    freeVersionPages: vi
+      .fn()
+      .mockResolvedValue({ deletedFiles: 0, freedBytes: 0, deleted: [], failed: [] }),
     verifyFilesPresent: vi.fn().mockResolvedValue([]),
   };
 });
@@ -146,6 +148,7 @@ describe('LibraryCatalogArea', () => {
     vi.mocked(deleteVersionFiles).mockResolvedValueOnce({
       deletedFiles: 0,
       freedBytes: 0,
+      deleted: [],
       failed: ['providers/gallica/v1'],
     });
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
@@ -224,6 +227,32 @@ describe('LibraryCatalogArea', () => {
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
+  });
+
+  it('libera spazio toglie le righe delle sole carte davvero cancellate', async () => {
+    // Tutto o niente sbagliava in una delle due direzioni: o una carta ancora
+    // sul disco che nessuna schermata sa più mostrare, o una carta contata come
+    // presente che non c'è più.
+    const user = userEvent.setup();
+    const { forgetVersionPages, versionPagePaths } = await import('../../services/libraryService');
+    const { freeVersionPages } = await import('../../services/vaultService');
+    const andata = 'providers/gallica/v1/pages/2000/0001.jpg';
+    const restata = 'providers/gallica/v1/pages/2000/0002.jpg';
+    vi.mocked(versionPagePaths).mockResolvedValue([andata, restata]);
+    vi.mocked(freeVersionPages).mockResolvedValueOnce({
+      deletedFiles: 1,
+      freedBytes: 700_000,
+      deleted: [andata],
+      failed: [restata],
+    });
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 2, localBytes: 1_400_000 })] });
+    render(<LibraryCatalogArea />);
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.freeSpace' }));
+
+    await waitFor(() =>
+      expect(vi.mocked(forgetVersionPages)).toHaveBeenCalledWith('v1', [andata]),
+    );
   });
 
   it('con carte sul computer verifica e libera spazio si accendono', () => {

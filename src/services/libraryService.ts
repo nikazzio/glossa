@@ -249,15 +249,25 @@ export async function versionPagePaths(versionId: string): Promise<string[]> {
 }
 
 /**
- * Toglie dal database le carte di una digitalizzazione, dopo che i file sono
- * stati cancellati da «libera spazio» (D6).
+ * Toglie dal database le carte di una digitalizzazione **che sono davvero
+ * sparite dal disco** (D6).
  *
  * Senza questo la Biblioteca continuerebbe a dichiarare presenti carte che non
  * ci sono più: il conteggio si legge dalle righe. Miniature e manifesto restano,
  * perché «libera spazio» non li tocca.
+ *
+ * I percorsi arrivano da chi ha cancellato, non si ricavano di nuovo: una
+ * cancellazione riuscita a metà toglieva le righe di tutto o di niente, e in
+ * entrambi i casi il conteggio e il disco finivano in disaccordo.
  */
-export async function forgetVersionPages(versionId: string): Promise<void> {
-  await execute("DELETE FROM assets WHERE source_version_id = $1 AND kind = 'image'", [versionId]);
+export async function forgetVersionPages(versionId: string, vaultPaths: string[]): Promise<void> {
+  if (vaultPaths.length === 0) return;
+  const placeholders = vaultPaths.map((_, index) => `$${index + 2}`).join(', ');
+  await execute(
+    `DELETE FROM assets WHERE source_version_id = $1 AND kind = 'image' \
+      AND vault_path IN (${placeholders})`,
+    [versionId, ...vaultPaths],
+  );
 }
 
 export async function removeSourceFromLibrary(sourceId: string): Promise<void> {

@@ -200,6 +200,12 @@ everything the library actually has, and the count on the card says so — it st
 below the declared page count. The vault check shows you which ones are missing,
 and you can try downloading them later: sometimes they answer.
 
-The same goes for resolution: if the library does not answer when asked which
-sizes it can produce, Glossa asks for one that never enlarges instead of giving
-up on the book.
+The same goes for resolution. Glossa asks **only** for the sizes the library
+declares it can produce: if it does not answer that question, or answers
+unreadably, that page is skipped like the others. It does not guess — an invented
+size gets refused, and once chosen it would be carried over to every similar
+page.
+
+If **no** page arrives at all — the library withdrew the work, or its service is
+down — the download does not call itself successful: it comes out failed, with the
+reason, and you can try again later.

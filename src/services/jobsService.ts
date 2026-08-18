@@ -191,6 +191,12 @@ export interface JobDetail {
     recovered?: boolean;
     url?: string;
   };
+  /**
+   * Le carte che la biblioteca non ha servito. Il conto in `units` le comprende
+   * — sono carte su cui il lavoro è passato — quindi da solo direbbe «328 su
+   * 328» di un libro che sul disco ne ha 326.
+   */
+  unavailable?: number;
   /** Il tetto scelto nelle impostazioni, che vale per tutto il lavoro. */
   cap?: string;
   /** Le misure che la biblioteca dichiara di saper servire, `larghezza×altezza`. */
@@ -248,6 +254,7 @@ export function parseJobDetail(raw: string | null): JobDetail {
               url: text(last.url),
             }
           : undefined,
+      unavailable: num(record.unavailable),
       cap: text(record.cap),
       available: Array.isArray(record.available)
         ? record.available.filter((value): value is string => typeof value === 'string')

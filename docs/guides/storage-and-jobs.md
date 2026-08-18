@@ -102,8 +102,6 @@ Entrambe diventano lavori in coda: le segui dal pannello in basso, le metti in p
 
 L'esito dell'ultimo controllo **resta nelle impostazioni**, sotto i due comandi, finché non ne fai un altro: quando è stato fatto, di che tipo, e i quattro numeri. Accanto ai file senza opera c'è il comando che li cancella, con la conferma che dice quanti sono e quanto occupano. Glossa riguarda il deposito nel momento in cui premi — non si fida del conto di prima — e alla fine ti dice quanti ne ha tolti davvero: fra il controllo e la cancellazione può essere finito uno scaricamento, e quei file non sono più senza padrone.
 
-L'esito dell'ultimo controllo **resta nelle impostazioni**, sotto i due comandi, finché non ne fai un altro: quando è stato fatto, di che tipo, e i quattro numeri. Accanto ai file senza opera c'è il comando che li cancella, con la conferma che dice quanti sono e quanto occupano. Glossa riguarda il deposito nel momento in cui premi — non si fida del conto di prima — e alla fine ti dice quanti ne ha tolti davvero: fra il controllo e la cancellazione può essere finito uno scaricamento, e quei file non sono più senza padrone.
-
 Un interruttore accende la verifica rapida a ogni avvio. È spenta di default: allunga l'apertura su depositi grandi o su una cartella di rete.
 
 ## Quanti lavori insieme
@@ -213,6 +211,12 @@ tutto quello che la biblioteca ha davvero, e il conteggio nella scheda lo dice �
 resta sotto le pagine dichiarate. La verifica del deposito ti mostra quali
 mancano, e puoi riprovare a scaricarle più tardi: a volte rispondono.
 
-Vale anche per la risoluzione: se la biblioteca non risponde quando le si chiede
-quali misure sa produrre, Glossa ne chiede una che non ingrandisce mai invece di
-rinunciare al libro.
+Vale anche per la risoluzione. Glossa chiede **solo** le misure che la biblioteca
+dichiara di saper produrre: se non risponde a quella domanda, o risponde in modo
+illeggibile, quella pagina viene saltata come le altre. Non tira a indovinare —
+una misura inventata viene rifiutata, e una volta scelta se la porterebbe dietro
+per tutte le pagine simili.
+
+Se invece **nessuna** pagina arriva — la biblioteca ha ritirato l'opera, o il suo
+servizio è fermo — lo scaricamento non si dichiara riuscito: risulta fallito, con
+il motivo, e puoi riprovare più tardi.

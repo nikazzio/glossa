@@ -50,9 +50,14 @@ export interface FreedSpace {
   deletedFiles: number;
   freedBytes: number;
   /**
-   * I percorsi che non è stato possibile cancellare. Finché non è vuoto le righe
-   * **non** si toccano: il file è ancora lì, e una riga in meno lo renderebbe
-   * invisibile a ogni schermata senza liberare un byte.
+   * I percorsi che **sono** stati liberati, compresi quelli che sul disco non
+   * c'erano già più. Le righe si tolgono per questi e solo per questi.
+   */
+  deleted: string[];
+  /**
+   * I percorsi che non è stato possibile cancellare. Il file è ancora lì: la sua
+   * riga deve restare, altrimenti diventa invisibile a ogni schermata senza aver
+   * liberato un byte.
    */
   failed: string[];
 }

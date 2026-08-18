@@ -86,6 +86,12 @@ struct Checkpoint {
     /// prevede una lettura per gruppo, non una per gruppo per avvio.
     #[serde(default)]
     sizes: std::collections::BTreeMap<String, String>,
+    /// Quante carte la biblioteca non ha servito. Sta nel punto salvato perché
+    /// il conto deve reggere attraverso le riprese: è quello che decide se un
+    /// lavoro può chiamarsi riuscito, e un lavoro ripreso non deve poter
+    /// dimenticare che il libro è arrivato con dei buchi.
+    #[serde(default)]
+    unavailable: u32,
 }
 
 /// Le fasi dello scaricamento, come le legge il pannello. Ogni tipo di lavoro
@@ -245,13 +251,19 @@ impl JobHandler for SourceDownloadJob {
         // negoziate arrivano dal punto salvato: una ripresa non le richiede.
         let sizes: SizeCache = Default::default();
         seed_sizes(&sizes, &saved.sizes);
+        // La mappa da scrivere nel punto salvato si ricostruisce **solo** quando
+        // una misura nuova è stata negoziata, non a ogni carta: su un libro di
+        // 328 carte i gruppi misurati sono 39, cioè il dato cambia 39 volte e
+        // verrebbe ricostruito 328.
+        let mut point_sizes = saved.sizes.clone();
         let declared: DeclaredSizes = Default::default();
         ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
-        // Le carte che la biblioteca non ha: contate, non fatali. Vanno nel
-        // registro alla fine, perché «328 su 328» con due carte in meno sul
-        // disco sarebbe una mezza verità.
-        let mut unavailable = 0u32;
+        // Le carte che la biblioteca non ha: contate, non fatali. Il conto
+        // riparte da quello salvato, perché «328 su 328» con due carte in meno
+        // sul disco sarebbe una mezza verità, e una ripresa non deve poterla
+        // dire.
+        let mut unavailable = saved.unavailable.min(start);
         // Da qui si misura il ritmo vero: quante pagine sono passate in questo
         // avvio e in quanto tempo. Una ripresa riparte da zero di misura, che è
         // giusto — la biblioteca di adesso non è quella di ieri.
@@ -304,7 +316,8 @@ impl JobHandler for SourceDownloadJob {
                     );
                     unavailable += 1;
                     done += 1;
-                    save_point(&ctx, done, &sizes).await;
+                    refresh_sizes(&sizes, &mut point_sizes);
+                    save_point(&ctx, done, unavailable, &point_sizes).await;
                     continue;
                 }
             };
@@ -323,7 +336,8 @@ impl JobHandler for SourceDownloadJob {
                 added,
                 bytes
             );
-            save_point(&ctx, done, &sizes).await;
+            refresh_sizes(&sizes, &mut point_sizes);
+            save_point(&ctx, done, unavailable, &point_sizes).await;
 
             ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
@@ -337,6 +351,7 @@ impl JobHandler for SourceDownloadJob {
                 Some(&progress_detail(
                     done,
                     total,
+                    unavailable,
                     bytes,
                     &config.size_tag,
                     &known_sizes(&declared),
@@ -353,6 +368,38 @@ impl JobHandler for SourceDownloadJob {
             .await;
         }
 
+        discard(&staging);
+
+        // **Un libro di cui non è arrivata nemmeno una carta non è riuscito.**
+        // Saltare le carte che la biblioteca non ha è giusto per un buco o due;
+        // se la biblioteca ha ritirato l'opera, o non serve più il descrittore
+        // di nessuna carta, il ciclo le salterebbe tutte e chiuderebbe
+        // «completato» con il deposito vuoto. Ritentabile, perché sul campo
+        // questi silenzi sono passeggeri: il motore riprova con le sue attese e
+        // poi si arrende dicendolo.
+        if total > 0 && unavailable >= total {
+            log::error!(
+                "job download empty id={} pages={} unavailable={}",
+                ctx.id,
+                total,
+                unavailable
+            );
+            return Err(JobError {
+                // L'attesa prima del prossimo tentativo la decide il profilo
+                // della biblioteca, non il motore (D16, D18): è la stessa regola
+                // che segue ogni altro errore di questo gestore.
+                retry_after: Some(Duration::from_secs(profile.wait_after(
+                    None,
+                    ctx.attempt,
+                    None,
+                ))),
+                ..JobError::new(
+                    ErrorKind::Transport,
+                    "la biblioteca non ha servito nessuna carta di questa opera".to_string(),
+                )
+            });
+        }
+
         log::info!(
             "job download complete id={} pages={} unavailable={} bytes={}",
             ctx.id,
@@ -360,7 +407,6 @@ impl JobHandler for SourceDownloadJob {
             unavailable,
             bytes
         );
-        discard(&staging);
         Ok(Outcome::Done)
     }
 }
@@ -741,10 +787,6 @@ impl SourceDownloadJob {
         ctx.report_phase(phase::NEGOTIATING).await;
         let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP_PIXELS);
         let info_url = size::info_url(&page.image_service);
-        // Il riquadro non ingrandisce mai e non chiede una misura precisa: è il
-        // ripiego quando il descrittore non si può leggere, **per qualunque
-        // ragione**. `!w,h` esiste identico nella Image API 2.x e 3.0.
-        let bounding_box = || size::SizeToken(format!("!{cap},{cap}"));
 
         let descriptor = match fetch(
             client,
@@ -756,7 +798,7 @@ impl SourceDownloadJob {
         )
         .await
         {
-            Ok(Some(fetched)) => Some(fetched.bytes),
+            Ok(Some(fetched)) => fetched.bytes,
             Ok(None) => return Ok(None),
             // «Rallenta» deve arrivare al motore, che aspetta e ritenta (D16,
             // D18): aggirarlo con un ripiego significherebbe continuare a
@@ -764,42 +806,49 @@ impl SourceDownloadJob {
             Err(error) if matches!(error.kind, ErrorKind::Throttled | ErrorKind::RateLimited) => {
                 return Err(error)
             }
+            // **Il descrittore non è arrivato: si salta la carta, non si
+            // indovina e non si perde il libro.**
+            //
+            // Prima l'errore saliva e portava via il libro intero: sul campo,
+            // due volte lo stesso manoscritto perso al 47% e al 48% perché
+            // `info.json` di una singola carta non rispondeva — quindici
+            // richieste e dieci minuti bruciati per volta, e alla sessione dopo
+            // la stessa carta rispondeva.
+            //
+            // Il primo rimedio era ripiegare sul riquadro `!tetto,tetto`. Era
+            // sbagliato per due ragioni: `!w,h` è una funzione di **livello 2**
+            // della Image API — `max` lo è dal livello 0 — e su archive.org le
+            // misure non dichiarate vengono rifiutate (`full/2000,` → 400 e
+            // 501). Una misura rifiutata con 400 non è ritentabile, quindi il
+            // ripiego trasformava un errore passeggero in un lavoro fallito. E
+            // finendo fra le misure ricordate si sarebbe portato dietro tutte
+            // le carte del gruppo — su archive.org sono 39 gruppi per 328
+            // carte, cioè otto carte a testa — anche attraverso le riprese.
             Err(error) => {
-                // **Il descrittore non è arrivato: si ripiega, non si muore.**
-                // Prima l'errore saliva e portava via il libro intero: sul
-                // campo, due volte lo stesso manoscritto perso al 47% e al 48%
-                // perché `info.json` di una singola carta non rispondeva —
-                // quindici richieste e dieci minuti bruciati per volta, e alla
-                // sessione dopo la stessa carta rispondeva.
-                log::warn!(
-                    "job size descriptor unreachable id={} page={} error={} (si ripiega sul riquadro)",
-                    ctx.id,
-                    page.index,
-                    error.message
-                );
-                None
+                return Err(JobError::new(
+                    ErrorKind::NotFound,
+                    format!(
+                        "la biblioteca non dice quali misure sa produrre per questa carta: {}",
+                        error.message
+                    ),
+                ))
             }
         };
 
-        let parsed = descriptor
-            .as_deref()
-            .map(serde_json::from_slice::<serde_json::Value>);
-        let token = match parsed {
-            Some(Ok(info)) => {
-                remember_sizes(declared, &size::available_sizes(&info));
-                size::from_info(&info, cap)
-            }
-            Some(Err(error)) => {
-                // Descrittore illeggibile: si continua con il riquadro, che non
-                // ingrandisce mai, invece di fermare lo scaricamento.
-                log::warn!(
-                    "job size descriptor unreadable id={} page={} error={error}",
-                    ctx.id,
-                    page.index
-                );
-                bounding_box()
-            }
-            None => bounding_box(),
+        let info: serde_json::Value = serde_json::from_slice(&descriptor).map_err(|error| {
+            // Descrittore illeggibile: non si sa niente più di prima, quindi
+            // vale come non arrivato. Anche qui il ripiego era un indovinello.
+            JobError::new(
+                ErrorKind::NotFound,
+                format!("la biblioteca dichiara misure illeggibili per questa carta: {error}"),
+            )
+        })?;
+        remember_sizes(declared, &size::available_sizes(&info));
+        let Some(token) = size::from_info(&info, cap) else {
+            return Err(JobError::new(
+                ErrorKind::NotFound,
+                "la biblioteca non dichiara nessuna misura per questa carta".to_string(),
+            ));
         };
 
         ctx.report_phase(phase::DOWNLOADING).await;
@@ -888,6 +937,19 @@ fn seed_sizes(sizes: &SizeCache, saved: &std::collections::BTreeMap<String, Stri
     }
 }
 
+/// Aggiorna la mappa da salvare **se** nel frattempo è stato negoziato un
+/// gruppo nuovo. Il conto dei gruppi basta a dirlo: una misura già decisa non
+/// cambia più.
+fn refresh_sizes(sizes: &SizeCache, point: &mut std::collections::BTreeMap<String, String>) {
+    let known = match sizes.lock() {
+        Ok(cache) => cache.len(),
+        Err(poisoned) => poisoned.into_inner().len(),
+    };
+    if known != point.len() {
+        *point = negotiated_sizes(sizes);
+    }
+}
+
 /// Le misure negoziate finora, nella forma che va nel punto salvato.
 fn negotiated_sizes(sizes: &SizeCache) -> std::collections::BTreeMap<String, String> {
     let cache = match sizes.lock() {
@@ -909,10 +971,16 @@ fn parse_group(group: &str) -> Option<(u32, u32)> {
 ///
 /// Senza il punto salvato la ripresa ripartirebbe da più indietro e
 /// rinegozierebbe: non è fatale, ma non deve sparire in silenzio.
-async fn save_point(ctx: &JobContext, done: u32, sizes: &SizeCache) {
+async fn save_point(
+    ctx: &JobContext,
+    done: u32,
+    unavailable: u32,
+    sizes: &std::collections::BTreeMap<String, String>,
+) {
     let point = Checkpoint {
         done,
-        sizes: negotiated_sizes(sizes),
+        sizes: sizes.clone(),
+        unavailable,
     };
     ctx.save_checkpoint(&serde_json::json!(point).to_string())
         .await
@@ -987,6 +1055,7 @@ struct PageOutcome {
 fn progress_detail(
     done: u32,
     total: u32,
+    unavailable: u32,
     bytes: u64,
     cap: &str,
     available_sizes: &[String],
@@ -1001,6 +1070,11 @@ fn progress_detail(
     };
     serde_json::json!({
         "units": { "done": done, "total": total, "label": "items" },
+        // Le carte che la biblioteca non ha servito. Senza questo numero il
+        // pannello diceva «328 su 328» di un libro che sul disco ne ha 326: il
+        // conto delle carte fatte comprende quelle saltate, ed è giusto che lo
+        // faccia, ma da solo mente.
+        "unavailable": unavailable,
         "bytes": { "downloaded": bytes, "estimated": estimated },
         // Il tetto **scelto dall'utente**, che è un'altra cosa dalla misura
         // chiesta per una singola pagina: leggerli sotto la stessa etichetta
@@ -1536,6 +1610,7 @@ mod tests {
         let detail = progress_detail(
             34,
             352,
+            0,
             48_234_496,
             "2000",
             &declared,
@@ -1584,6 +1659,7 @@ mod tests {
         let detail = progress_detail(
             2,
             10,
+            1,
             1_000_000,
             "2000",
             &[],
@@ -1600,6 +1676,9 @@ mod tests {
 
         assert_eq!(parsed["last"]["recovered"], true);
         assert!(parsed["last"]["pixels"].is_null());
+        // E le carte che la biblioteca non ha servito si contano a parte: senza,
+        // «2 su 10» direbbe che ne sono arrivate due.
+        assert_eq!(parsed["unavailable"], 1);
     }
 
     #[test]
@@ -1613,6 +1692,7 @@ mod tests {
         let detail = progress_detail(
             0,
             352,
+            0,
             0,
             "2000",
             &[],

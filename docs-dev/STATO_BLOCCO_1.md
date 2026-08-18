@@ -170,8 +170,12 @@ e il deposito reali. Chiusi in `fix/scaricamento-robustezza`.
 1. **Un `info.json` che non risponde portava via il libro intero.** Lo stesso
    manoscritto perso due volte, al 47% e al 48%: quindici richieste e dieci
    minuti bruciati per volta, e alla sessione dopo la stessa carta rispondeva.
-   Adesso si ripiega sul riquadro, come già si faceva per un descrittore
-   illeggibile (D4).
+   Adesso quella carta si salta. Il primo rimedio ripiegava sul riquadro
+   `!tetto,tetto`, come già si faceva per un descrittore illeggibile: era un
+   indovinello, ed è caduto anche lì — `!w,h` è livello 2 della Image API,
+   archive.org rifiuta le misure non dichiarate (400 e 501 nel registro), e una
+   misura ricordata si sarebbe portata dietro tutte le carte del gruppo, otto in
+   media, anche attraverso le riprese (D4).
 2. **Ogni ripresa consumava un tentativo.** Un libro in pausa tre volte era già
    a 3/5 con la colonna degli errori vuota; alla quinta ripresa il primo errore
    di rete sarebbe stato definitivo. Il conto è dei tentativi falliti **di fila**
@@ -194,12 +198,26 @@ e il deposito reali. Chiusi in `fix/scaricamento-robustezza`.
 lavoro e non una per tentativo. È D27, e il numero del tentativo sta in
 `jobs.attempt_count`.
 
+Aggiunto dopo una rilettura del ramo: **un libro di cui non arriva nemmeno una
+carta non è riuscito.** Saltare le carte mancanti è giusto per un buco o due; se
+la biblioteca ritira l'opera il ciclo le salterebbe tutte e chiuderebbe
+«completato» con il deposito vuoto. Il conto delle carte saltate sta nel punto
+salvato — così regge attraverso le riprese — e si legge nel pannello accanto a
+«fatte su totali», che da solo direbbe «328 su 328» di un libro che sul disco ne
+ha 326.
+
 Verificato sul campo e **non** toccato: la misura scelta (tetto 2000, lato lungo
 reale 2056-2141, costante su tutto il libro), le miniature (288 su 288, 300 px,
-nessun ritardo), i tempi di cortesia (nessun raffreddamento in tre log, gap fra
-carte 2,0-8,0 s, nessuno sotto la pausa minima del profilo — su archive.org il
-collo di bottiglia è il server, non noi), il punto salvato e la ripartenza dopo
-una chiusura brusca.
+nessun ritardo), il punto salvato e la ripartenza dopo una chiusura brusca.
+
+Sui **tempi di cortesia** la prima stesura di questa nota diceva troppo. Dal log
+si verifica che nessun raffreddamento è mai scattato, che non è arrivato nessun
+403 né 429, e che la spaziatura tipica fra due carte è di 2-8 secondi, dominata
+dal tempo di risposta del server. **La pausa fra richieste non si verifica dal
+log**: gli orari hanno risoluzione di un secondo e la pausa prudente è di 600-1600
+millisecondi, quindi 503 intervalli sotto il secondo nel registro del 17 agosto —
+80 su carte con byte aggiunti — non dicono né che la pausa è stata rispettata né
+che è stata violata. Quella parte è coperta dai test, non dal campo.
 
 Resta aperto, misurato ma non affrontato: **ritrovare una carta già sul disco
 costa 2,65 s**, quanto scaricarla, quando le sue righe mancano — rileggere il

@@ -375,15 +375,42 @@ libro hanno quasi tutti dimensioni leggermente diverse (2583×4126, 2583×4112,
 negoziate stanno nel punto salvato insieme al numero di carte fatte, quindi una
 ripresa non rinegozia niente.
 
-*(Aggiunto il 2026-08-18.)* **Se il descrittore non arriva si ripiega, non si
-muore.** Un descrittore *illeggibile* ricadeva già sul riquadro `!tetto,tetto`,
-che non ingrandisce mai; uno *non arrivato* faceva fallire il lavoro. Sul campo
-lo stesso manoscritto è stato perso due volte, al 47% e al 48%, perché
-`info.json` di una singola carta non rispondeva — quindici richieste e dieci
+*(Aggiunto il 2026-08-18.)* **Se il descrittore non si può usare, si salta la
+carta: non si indovina e non si perde il libro.**
+
+Il caso: `info.json` di una singola carta non rispondeva, e l'errore portava via
+il manoscritto intero — due volte, al 47% e al 48%, quindici richieste e dieci
 minuti bruciati per volta, e alla sessione dopo la stessa carta rispondeva.
-Rinunciare al libro intero per una richiesta di servizio è sproporzionato. Un
-403 o un 429 su `info.json` restano invece un errore che deve arrivare al
-motore: quello non si aggira, si aspetta (D16, D18).
+Rinunciare al libro per una richiesta di servizio è sproporzionato.
+
+Il primo rimedio ripiegava sul riquadro `!tetto,tetto`, che è quello che si
+faceva già per un descrittore *illeggibile*. **Sbagliato, e il ripiego è caduto
+anche nel caso in cui c'era già**, per tre ragioni:
+
+- `!w,h` (`sizeByConfinedWh`) è una funzione di **livello 2** della Image API,
+  mentre `max` lo è dal livello 0: come ripiego "prudente" è meno garantito della
+  misura piena;
+- su archive.org le misure non dichiarate vengono rifiutate — nel registro ci
+  sono un `400` e un `501` su `full/2000,` — e un `400` non è ritentabile, quindi
+  l'indovinello trasformava una carta mancante in un lavoro fallito;
+- la misura scelta si ricorda per tutto il gruppo. Un ripiego ricordato si
+  sarebbe portato dietro tutte le carte del gruppo — otto in media su
+  archive.org, l'intero libro dove tutte le carte hanno una dimensione sola — e
+  attraverso le riprese, perché il punto salvato lo conserva. Il pulsante
+  "riprova" del pannello non azzera il punto salvato: ci sarebbe ricascato ogni
+  volta.
+
+Quindi: si chiede **solo** ciò che il descrittore dichiara. Se il descrittore non
+arriva, è illeggibile, o non dichiara niente, la carta si salta come una che non
+c'è. Un 403 o un 429 restano invece un errore che deve arrivare al motore: quello
+non si aggira, si aspetta (D16, D18).
+
+**E un libro di cui non arriva nemmeno una carta non è riuscito.** Saltare vale
+per un buco o due; se la biblioteca ritira l'opera, o smette di servire i
+descrittori, il ciclo le salterebbe tutte e chiuderebbe "completato" con il
+deposito vuoto — la bugia peggiore, perché a un lavoro riuscito nessuno va a
+guardare. Il conto delle carte saltate sta nel punto salvato, così regge
+attraverso le riprese, e si legge nel pannello accanto a "fatte su totali".
 
 *(Un terzo livello — «l'indirizzo che il manifesto dichiara già pronto» — valeva
 per le sole miniature ed è caduto il 2026-08-16 con D6: le miniature non si
@@ -603,10 +630,12 @@ cartelle su dieci, comprese 634 miniature.
 Due regole, da qui in avanti:
 
 1. **"Libera spazio" cancella i percorsi che le righe dichiarano** (`vault_path`
-   è stato scritto quando la carta è entrata nel deposito), e riferisce quali non
-   ha potuto togliere. **Le righe se ne vanno solo se i file se ne sono andati**:
-   una riga in meno su un file ancora sul disco lo rende invisibile a tutti senza
-   liberare un byte.
+   è stato scritto quando la carta è entrata nel deposito), e riferisce quali ha
+   liberato e quali no. **Le righe seguono i file uno per uno**: una riga in meno
+   su un file ancora sul disco lo rende invisibile a tutti senza liberare un
+   byte, e una riga in più su un file già sparito fa contare come presente una
+   carta che non c'è. Tutto-o-niente sbagliava in una delle due direzioni a
+   seconda di come andava.
 2. **Togliere un'opera cerca la sua cartella sotto tutte le biblioteche**, non
    sotto quella che si crede giusta. Se non riesce a cancellarla, l'opera resta
    in Biblioteca e si può riprovare.
