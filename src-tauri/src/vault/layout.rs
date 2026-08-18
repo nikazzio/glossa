@@ -15,7 +15,11 @@ use std::path::{Path, PathBuf};
 /// Radice di ciò che scarichiamo dalle biblioteche. `derived/` (ritagli e
 /// immagini ottimizzate) e `trash/` (in attesa dello svuotamento, D6) arrivano
 /// con le PR che li usano: qui non servono ancora.
-const PROVIDERS_DIR: &str = "providers";
+/// Radice delle cartelle per biblioteca. Pubblica perché la cancellazione deve
+/// poterle attraversare tutte: la stessa digitalizzazione ha lasciato cartelle
+/// sotto più di una chiave, e ricostruire il percorso da una chiave sola non le
+/// ritrovava.
+pub const PROVIDERS_DIR: &str = "providers";
 const PAGES_DIR: &str = "pages";
 const THUMBNAILS_DIR: &str = "thumbnails";
 const MANIFEST_FILE: &str = "manifest.json";
@@ -151,12 +155,6 @@ fn page_file_name(page_index: u32) -> String {
     format!("{page_index:04}.jpg")
 }
 
-/// Cartella che contiene tutte le risoluzioni di una digitalizzazione. È ciò
-/// che "libera spazio" cancella (D6): restano manifesto e miniature.
-pub fn pages_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
-    Ok(version_dir(provider_key, version_id)?.join(PAGES_DIR))
-}
-
 /// Tutti i file che una digitalizzazione completa dovrebbe contenere.
 ///
 /// Esposto perché la verifica (D5) deve sapere **quali** file cercare: se li
@@ -246,7 +244,6 @@ mod tests {
             manifest_path("gallica", "v1").unwrap(),
             page_path("gallica", "v1", "2000", 1).unwrap(),
             thumbnail_path("gallica", "v1", 1).unwrap(),
-            pages_dir("gallica", "v1").unwrap(),
         ] {
             assert!(path.is_relative(), "{path:?} deve essere relativo");
         }
@@ -282,14 +279,6 @@ mod tests {
         let paths = expected_version_paths("gallica", "v1", "2000", 0).unwrap();
         assert_eq!(paths.len(), 1);
         assert!(as_string(paths[0].clone()).ends_with("/manifest.json"));
-    }
-
-    #[test]
-    fn pages_dir_is_what_freeing_space_removes() {
-        assert_eq!(
-            as_string(pages_dir("gallica", "v1").unwrap()),
-            "providers/gallica/v1/pages"
-        );
     }
 
     #[test]

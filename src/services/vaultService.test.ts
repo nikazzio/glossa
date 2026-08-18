@@ -127,12 +127,44 @@ describe('libera spazio', () => {
   });
 
   it('restituisce quanto è stato liberato', async () => {
-    invokeMock.mockResolvedValueOnce({ deletedFiles: 210, freedBytes: 3_400_000_000 });
+    invokeMock.mockResolvedValueOnce({
+      deletedFiles: 210,
+      freedBytes: 3_400_000_000,
+      failed: [],
+    });
 
-    const freed = await freeVersionPages('gallica', 'v1');
+    const freed = await freeVersionPages('v1', ['providers/gallica/v1/pages/2000/0001.jpg']);
 
     expect(freed.deletedFiles).toBe(210);
     expect(freed.freedBytes).toBe(3_400_000_000);
+  });
+
+  it('passa i percorsi delle carte, non la chiave della biblioteca', async () => {
+    // Con la chiave sbagliata la cartella non esisteva, il comando dichiarava
+    // zero file liberati senza errore, e le righe se ne andavano comunque: le
+    // carte restavano sul disco senza più niente che le reclamasse.
+    invokeMock.mockResolvedValueOnce({ deletedFiles: 1, freedBytes: 10, failed: [] });
+
+    await freeVersionPages('v1', ['providers/gallica/v1/pages/2000/0001.jpg']);
+
+    expect(invokeMock).toHaveBeenCalledWith('free_version_pages', {
+      versionId: 'v1',
+      vaultPaths: ['providers/gallica/v1/pages/2000/0001.jpg'],
+    });
+  });
+
+  it('dice quali percorsi non è riuscita a cancellare', async () => {
+    // Chi chiama deve poter tenere le righe: un file ancora sul disco senza la
+    // sua riga è invisibile a ogni schermata e non ha liberato un byte.
+    invokeMock.mockResolvedValueOnce({
+      deletedFiles: 0,
+      freedBytes: 0,
+      failed: ['providers/gallica/v1/pages/2000/0001.jpg'],
+    });
+
+    const freed = await freeVersionPages('v1', ['providers/gallica/v1/pages/2000/0001.jpg']);
+
+    expect(freed.failed).toHaveLength(1);
   });
 });
 

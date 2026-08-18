@@ -49,6 +49,12 @@ export interface VaultFileIntegrity {
 export interface FreedSpace {
   deletedFiles: number;
   freedBytes: number;
+  /**
+   * I percorsi che non è stato possibile cancellare. Finché non è vuoto le righe
+   * **non** si toccano: il file è ancora lì, e una riga in meno lo renderebbe
+   * invisibile a ogni schermata senza liberare un byte.
+   */
+  failed: string[];
 }
 
 async function readSetting(key: string): Promise<string | null> {
@@ -152,17 +158,29 @@ export async function verifyFilesIntegrity(vaultPaths: string[]): Promise<VaultF
  * "Libera spazio" (D6): cancella le carte scaricate subito e per davvero, senza
  * passare dal cestino — spostare gigabyte nel cestino non libera niente.
  * Restano manifesto e miniature, così il libro resta sfogliabile.
+ *
+ * I percorsi arrivano dalle **righe delle carte**, non da una chiave della
+ * biblioteca ricostruita: con la chiave sbagliata la cartella non esisteva, il
+ * comando dichiarava zero file liberati senza errore, e le righe se ne andavano
+ * comunque. Le carte restavano sul disco senza più niente che le reclamasse.
  */
-export async function freeVersionPages(providerKey: string, versionId: string): Promise<FreedSpace> {
-  return invoke<FreedSpace>('free_version_pages', { providerKey, versionId });
+export async function freeVersionPages(
+  versionId: string,
+  vaultPaths: string[],
+): Promise<FreedSpace> {
+  return invoke<FreedSpace>('free_version_pages', { versionId, vaultPaths });
 }
 
 /**
  * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
  * miniature, pagine — quando l'opera esce dalla Biblioteca (D6).
+ *
+ * La chiave della biblioteca non serve: il backend cerca la cartella **sotto
+ * tutte**. La stessa opera ha lasciato cartelle sotto più di una chiave, e
+ * ricostruire il percorso da una chiave sola non le ritrovava.
  */
-export async function deleteVersionFiles(providerKey: string, versionId: string): Promise<FreedSpace> {
-  return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
+export async function deleteVersionFiles(versionId: string): Promise<FreedSpace> {
+  return invoke<FreedSpace>('delete_version_files', { versionId });
 }
 
 /** L'esito di un controllo del deposito, come lo mostrano le impostazioni. */

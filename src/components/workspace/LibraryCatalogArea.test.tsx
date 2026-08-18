@@ -15,6 +15,7 @@ vi.mock('../../services/libraryService', () => ({
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
   listVersionVaultPaths: vi.fn().mockResolvedValue([]),
   forgetVersionPages: vi.fn().mockResolvedValue(undefined),
+  versionPagePaths: vi.fn().mockResolvedValue(['providers/gallica/v1/pages/2000/0001.jpg']),
   // Nessun file registrato: la chiave viene dai metadati, come per una fonte
   // appena aggiunta.
   versionProviderKey: vi.fn().mockResolvedValue(null),
@@ -31,8 +32,10 @@ vi.mock('../../services/vaultService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/vaultService')>();
   return {
     ...actual,
-    deleteVersionFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
-    freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0 }),
+    deleteVersionFiles: vi
+      .fn()
+      .mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000, failed: [] }),
+    freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0, failed: [] }),
     verifyFilesPresent: vi.fn().mockResolvedValue([]),
   };
 });
@@ -127,9 +130,31 @@ describe('LibraryCatalogArea', () => {
 
     await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
 
-    await waitFor(() =>
-      expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
-    );
+    // La chiave della biblioteca non entra più: il deposito viene cercato sotto
+    // tutte, perché la stessa opera ha lasciato cartelle sotto più di una.
+    await waitFor(() => expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('v1'));
+  });
+
+  it('un opera le cui cartelle non si cancellano resta in Biblioteca', async () => {
+    // Toglierla dal database lasciando i file sul disco produce una cartella che
+    // nessuna schermata sa più mostrare e che nessuno reclama.
+    const user = userEvent.setup();
+    const { removeSourceFromLibrary } = await import('../../services/libraryService');
+    // I finti non si azzerano fra un test e l'altro in questo file: qui conta
+    // che **questa** rimozione non arrivi al database.
+    vi.mocked(removeSourceFromLibrary).mockClear();
+    vi.mocked(deleteVersionFiles).mockResolvedValueOnce({
+      deletedFiles: 0,
+      freedBytes: 0,
+      failed: ['providers/gallica/v1'],
+    });
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
+    render(<LibraryCatalogArea />);
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+
+    await waitFor(() => expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalled());
+    expect(vi.mocked(removeSourceFromLibrary)).not.toHaveBeenCalled();
   });
 
   it('offre lo scaricamento e la rimozione per ogni fonte', () => {

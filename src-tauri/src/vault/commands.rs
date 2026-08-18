@@ -206,11 +206,17 @@ fn scan_one(root: &std::path::Path, vault_path: String) -> FileIntegrity {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FreedSpace {
     pub deleted_files: usize,
     pub freed_bytes: u64,
+    /// I percorsi che non è stato possibile cancellare.
+    ///
+    /// Finché non è vuoto, chi ha chiamato **non deve** togliere le righe
+    /// corrispondenti: il file è ancora lì, e una riga in meno lo renderebbe
+    /// invisibile a ogni schermata senza liberare un byte.
+    pub failed: Vec<String>,
 }
 
 /// "Libera spazio" (D6): cancella le pagine scaricate di una digitalizzazione
@@ -219,31 +225,92 @@ pub struct FreedSpace {
 ///
 /// Le miniature restano: sono circa 3 MB e rendono il libro ancora sfogliabile.
 /// Restano anche manifesto e derivati.
+///
+/// **I percorsi arrivano dalle righe, non da una chiave ricostruita.** Prima si
+/// componeva `providers/<biblioteca>/<versione>/pages` da una chiave passata da
+/// fuori: con la chiave sbagliata la cartella non esisteva, il comando
+/// dichiarava zero file liberati *senza errore*, e chi chiamava cancellava le
+/// righe comunque. Le pagine restavano sul disco senza più niente che le
+/// reclamasse — 153 carte in un caso reale, ritrovate una per una allo
+/// scaricamento successivo. `assets.vault_path` sa dove sta ogni carta: è quello
+/// che si cancella.
 #[tauri::command]
 pub fn free_version_pages(
     app: tauri::AppHandle,
-    provider_key: String,
     version_id: String,
+    vault_paths: Vec<String>,
 ) -> Result<FreedSpace, String> {
     let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
-    let pages = root.join(super::layout::pages_dir(&provider_key, &version_id)?);
-    if !pages.is_dir() {
-        return Ok(FreedSpace {
-            deleted_files: 0,
-            freed_bytes: 0,
-        });
+
+    let mut freed = FreedSpace::default();
+    for relative in &vault_paths {
+        // Il comando è raggiungibile dalla webview: accetta solo le pagine
+        // **di questa** digitalizzazione, così non può diventare il modo di
+        // cancellare il manifesto o il libro del vicino.
+        if !is_page_of(relative, &version_id) {
+            return Err(format!("not a page path of {version_id}: {relative}"));
+        }
+        let absolute = absolute_path(&root, relative)?;
+        let size = std::fs::metadata(&absolute)
+            .map(|meta| meta.len())
+            .unwrap_or(0);
+        match std::fs::remove_file(&absolute) {
+            Ok(()) => {
+                freed.deleted_files += 1;
+                freed.freed_bytes += size;
+                prune_empty_parents(&root, &absolute);
+            }
+            // Un file che non c'è già più è spazio già libero: la sua riga va
+            // via comunque, altrimenti la Biblioteca continua a contarlo.
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                prune_empty_parents(&root, &absolute)
+            }
+            Err(error) => {
+                log::warn!("page not freed path={} error={error}", absolute.display());
+                freed.failed.push(relative.clone());
+            }
+        }
     }
-    // Una sola camminata per file e byte, prima di cancellare.
-    let stats = directory_stats(&pages);
-    std::fs::remove_dir_all(&pages)
-        .map_err(|e| format!("Failed to free {}: {e}", pages.display()))?;
-    Ok(FreedSpace {
-        deleted_files: stats.files,
-        freed_bytes: stats.bytes,
-    })
+    log::info!(
+        "vault pages freed version={version_id} files={} bytes={} failed={}",
+        freed.deleted_files,
+        freed.freed_bytes,
+        freed.failed.len()
+    );
+    Ok(freed)
+}
+
+/// Un percorso di pagina appartiene a questa digitalizzazione:
+/// `providers/<qualunque biblioteca>/<versione>/pages/…`.
+fn is_page_of(relative: &str, version_id: &str) -> bool {
+    let mut parts = relative.split('/');
+    parts.next() == Some(super::layout::PROVIDERS_DIR)
+        && parts.next().is_some()
+        && parts.next() == Some(version_id)
+        && parts.next() == Some("pages")
+        && parts.next().is_some()
+}
+
+/// Toglie le cartelle rimaste vuote sopra un file cancellato.
+///
+/// Senza, dopo "libera spazio" restano `pages/2000/` e `pages/` vuote, e la
+/// verifica del deposito le conta come cartelle che nessuno reclama. Si ferma
+/// alla prima cartella non vuota e non risale **mai** oltre la radice.
+fn prune_empty_parents(root: &std::path::Path, from: &std::path::Path) {
+    let mut current = from.parent();
+    while let Some(dir) = current {
+        if dir == root || !dir.starts_with(root) {
+            return;
+        }
+        // `remove_dir` fallisce su una cartella non vuota: è il controllo.
+        if std::fs::remove_dir(dir).is_err() {
+            return;
+        }
+        current = dir.parent();
+    }
 }
 
 /// Scrivere un file di prova è l'unico modo affidabile di sapere se si può
@@ -277,6 +344,92 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
         path
+    }
+
+    #[test]
+    fn only_the_pages_of_the_named_version_can_be_freed() {
+        // Il comando è raggiungibile dalla webview: se accettasse qualunque
+        // percorso, "libera spazio" diventerebbe il modo di cancellare il
+        // manifesto, o il libro di un'altra digitalizzazione.
+        assert!(is_page_of(
+            "providers/archive_org/v1/pages/2000/0001.jpg",
+            "v1"
+        ));
+        // La biblioteca non conta: la stessa opera ha lasciato cartelle sotto
+        // più di una chiave, e le pagine vanno liberate dove sono davvero.
+        assert!(is_page_of("providers/generic/v1/pages/2000/0001.jpg", "v1"));
+
+        assert!(!is_page_of(
+            "providers/archive_org/v2/pages/2000/0001.jpg",
+            "v1"
+        ));
+        assert!(!is_page_of("providers/archive_org/v1/manifest.json", "v1"));
+        assert!(!is_page_of(
+            "providers/archive_org/v1/thumbnails/0001.jpg",
+            "v1"
+        ));
+        assert!(!is_page_of("providers/archive_org/v1/pages", "v1"));
+        assert!(!is_page_of("derived/v1/pages/2000/0001.jpg", "v1"));
+    }
+
+    #[test]
+    fn freeing_space_takes_the_empty_folders_with_it() {
+        // Senza, dopo "libera spazio" restano `pages/2000/` e `pages/` vuote, e
+        // la verifica le conta come cartelle che nessuno reclama.
+        let root = temp_dir("prune");
+        let page = root.join("providers/archive_org/v1/pages/2000/0001.jpg");
+        fs::create_dir_all(page.parent().unwrap()).unwrap();
+        fs::write(&page, b"x").unwrap();
+        fs::write(root.join("providers/archive_org/v1/manifest.json"), b"{}").unwrap();
+        fs::remove_file(&page).unwrap();
+
+        prune_empty_parents(&root, &page);
+
+        assert!(!root.join("providers/archive_org/v1/pages").exists());
+        // Si ferma alla prima cartella non vuota: il manifesto resta, e con lui
+        // la sua cartella.
+        assert!(root
+            .join("providers/archive_org/v1/manifest.json")
+            .is_file());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn pruning_never_climbs_past_the_vault_root() {
+        // La radice del deposito può essere una cartella scelta dall'utente, con
+        // dentro altro: risalire oltre significherebbe cancellargliela.
+        let root = temp_dir("prune_root");
+        let page = root.join("providers/archive_org/v1/pages/2000/0001.jpg");
+        fs::create_dir_all(page.parent().unwrap()).unwrap();
+
+        prune_empty_parents(&root, &page);
+
+        assert!(root.is_dir(), "la radice non si tocca");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_version_is_found_under_whichever_library_holds_it() {
+        // La chiave della biblioteca si deduce da dati che possono essere già
+        // stati cancellati: ricostruire il percorso da quella chiave lasciava le
+        // cartelle sul disco per sempre. Si guarda sotto tutte.
+        let root = temp_dir("folders");
+        fs::create_dir_all(root.join("providers/generic/v1/pages")).unwrap();
+        fs::create_dir_all(root.join("providers/archive_org/v1/thumbnails")).unwrap();
+        fs::create_dir_all(root.join("providers/archive_org/v2")).unwrap();
+
+        let found = version_folders(&root, "v1");
+
+        assert_eq!(found.len(), 2, "trovate {found:?}");
+        assert!(found.iter().all(|folder| folder.ends_with("v1")));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_vault_without_libraries_yet_has_no_folders_to_delete() {
+        let root = temp_dir("folders_empty");
+        assert!(version_folders(&root, "v1").is_empty());
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -459,31 +612,64 @@ pub async fn choose_vault_folder(
 /// cartelle che nessuno reclama più e che nessuna schermata sa mostrare:
 /// riaggiungendo la stessa opera nasce un identificativo nuovo, quindi quei
 /// file non sarebbero comunque tornati utili.
+/// **Si cercano le cartelle, non si ricostruisce il percorso.** La stessa opera
+/// di archive.org ha lasciato cartelle sotto `generic` e sotto `unknown`, perché
+/// la chiave della biblioteca si deduce da dati che possono essere già stati
+/// cancellati. Con la chiave sbagliata questo comando non trovava niente,
+/// dichiarava di essere riuscito, e la cartella restava sul disco per sempre —
+/// nove su dieci, in un deposito reale. Si guarda invece **sotto ogni
+/// biblioteca** se esiste una cartella con questo identificativo.
 #[tauri::command]
 pub fn delete_version_files(
     app: tauri::AppHandle,
-    provider_key: String,
     version_id: String,
 ) -> Result<FreedSpace, String> {
     let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
-    let folder = root.join(super::layout::version_dir(&provider_key, &version_id)?);
-    if !folder.is_dir() {
-        return Ok(FreedSpace {
-            deleted_files: 0,
-            freed_bytes: 0,
-        });
+    super::layout::safe_component(&version_id)?;
+
+    let mut freed = FreedSpace::default();
+    let folders = version_folders(&root, &version_id);
+    for folder in &folders {
+        // Una sola camminata per file e byte, prima di cancellare.
+        let stats = directory_stats(folder);
+        match std::fs::remove_dir_all(folder) {
+            Ok(()) => {
+                freed.deleted_files += stats.files;
+                freed.freed_bytes += stats.bytes;
+            }
+            Err(error) => {
+                log::warn!(
+                    "version folder not deleted path={} error={error}",
+                    folder.display()
+                );
+                freed.failed.push(folder.to_string_lossy().to_string());
+            }
+        }
     }
-    // Una sola camminata per file e byte, prima di cancellare.
-    let stats = directory_stats(&folder);
-    std::fs::remove_dir_all(&folder)
-        .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))?;
-    Ok(FreedSpace {
-        deleted_files: stats.files,
-        freed_bytes: stats.bytes,
-    })
+    log::info!(
+        "vault version deleted version={version_id} folders={} files={} bytes={} failed={}",
+        folders.len(),
+        freed.deleted_files,
+        freed.freed_bytes,
+        freed.failed.len()
+    );
+    Ok(freed)
+}
+
+/// Le cartelle che una digitalizzazione ha nel deposito, sotto qualunque
+/// biblioteca.
+fn version_folders(root: &std::path::Path, version_id: &str) -> Vec<std::path::PathBuf> {
+    let Ok(entries) = std::fs::read_dir(root.join(super::layout::PROVIDERS_DIR)) else {
+        return Vec::new();
+    };
+    entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join(version_id))
+        .filter(|folder| folder.is_dir())
+        .collect()
 }
 
 /// Cancella i file che nessuna riga reclama (D5-bis).
@@ -516,24 +702,32 @@ pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, S
             .filter_map(|relative| absolute_path(&root, &relative).ok())
             .collect();
 
-        let mut deleted_files = 0;
-        let mut freed_bytes = 0;
+        let mut freed = FreedSpace::default();
         for (path, bytes) in super::verification::orphan_files(&root, &known) {
             match std::fs::remove_file(&path) {
                 Ok(()) => {
-                    deleted_files += 1;
-                    freed_bytes += bytes;
+                    freed.deleted_files += 1;
+                    freed.freed_bytes += bytes;
+                    // Le cartelle che restano vuote sono orfane anche loro: un
+                    // deposito reale ne aveva nove, di digitalizzazioni che
+                    // nessuna riga reclamava più.
+                    prune_empty_parents(&root, &path);
                 }
                 // Un file che non si riesce a togliere non ferma gli altri: si
                 // dice nel registro e si va avanti, e il conto resta onesto.
-                Err(error) => log::warn!("orphan not deleted path={} {error}", path.display()),
+                Err(error) => {
+                    log::warn!("orphan not deleted path={} {error}", path.display());
+                    freed.failed.push(path.to_string_lossy().to_string());
+                }
             }
         }
-        log::info!("vault orphans deleted files={deleted_files} bytes={freed_bytes}");
-        Ok(FreedSpace {
-            deleted_files,
-            freed_bytes,
-        })
+        log::info!(
+            "vault orphans deleted files={} bytes={} failed={}",
+            freed.deleted_files,
+            freed.freed_bytes,
+            freed.failed.len()
+        );
+        Ok(freed)
     })
     .await
     .map_err(|error| format!("Deleting the orphan files failed: {error}"))?

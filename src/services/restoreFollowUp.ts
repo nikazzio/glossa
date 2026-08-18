@@ -1,5 +1,6 @@
 import { execute, select } from './dbService';
 import { enqueueSourceDownload } from './jobsService';
+import { versionProviderKey } from './libraryService';
 import { logger } from '../utils/logger';
 import type { DownloadedSource } from '../schemas/externalData';
 
@@ -126,7 +127,13 @@ export async function redownload(works: MissingWork[]): Promise<number> {
     }
     try {
       await enqueueSourceDownload({
-        providerKey: work.providerKey ?? 'generic',
+        // La chiave **come è scritta nel deposito** prima di quella dei
+        // metadati: sono le carte già sul disco a dire dove va il resto. Con
+        // `generic` come primo ripiego la stessa opera finiva in una cartella
+        // nuova, e le carte già scaricate non venivano ritrovate — nel deposito
+        // di prova sono nate così le cartelle sotto `generic` e `unknown`.
+        providerKey:
+          (await versionProviderKey(work.versionId)) ?? work.providerKey ?? 'generic',
         manifestUrl: work.manifestUrl,
         versionId: work.versionId,
         sizeTag: work.sizeTag ?? undefined,

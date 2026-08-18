@@ -221,8 +221,7 @@ export async function listVersionVaultPaths(versionId: string): Promise<string[]
  * Serve perché i metadati e il disco possono non concordare: le fonti aggiunte
  * prima che la provenienza venisse salvata hanno i file sotto una chiave e i
  * metadati vuoti. Chiedere lo scaricamento con la chiave sbagliata farebbe
- * riscaricare tutto in una cartella nuova; cancellare con quella sbagliata
- * lascerebbe i file sul disco e toglierebbe le righe dal database.
+ * riscaricare tutto in una cartella nuova.
  */
 export async function versionProviderKey(versionId: string): Promise<string | null> {
   const [row] = await select<{ vault_path: string }>(
@@ -230,6 +229,23 @@ export async function versionProviderKey(versionId: string): Promise<string | nu
     [versionId],
   );
   return row?.vault_path.split('/')[1] ?? null;
+}
+
+/**
+ * Dove stanno, nel deposito, le carte scaricate di una digitalizzazione.
+ *
+ * È il database a saperlo: `vault_path` è stato scritto quando la carta è
+ * entrata nel deposito. Ricostruire il percorso da una chiave della biblioteca
+ * dedotta altrove è ciò che lasciava le carte sul disco e le righe cancellate.
+ */
+export async function versionPagePaths(versionId: string): Promise<string[]> {
+  const rows = await select<{ vault_path: string }>(
+    "SELECT vault_path FROM assets \
+      WHERE source_version_id = $1 AND kind = 'image' AND vault_path IS NOT NULL \
+      ORDER BY page_index",
+    [versionId],
+  );
+  return rows.map((row) => row.vault_path);
 }
 
 /**

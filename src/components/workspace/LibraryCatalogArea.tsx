@@ -24,6 +24,7 @@ import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import {
   forgetVersionPages,
+  versionPagePaths,
   listVersionVaultPaths,
   versionProviderKey,
 } from '../../services/libraryService';
@@ -260,7 +261,11 @@ function CatalogEntryRow({
   /**
    * La chiave con cui questa fonte vive nel deposito: prima quella dei file già
    * scaricati, poi quella dei metadati. Sbagliarla significa riscaricare tutto
-   * in una cartella nuova, o cancellare la cartella sbagliata.
+   * in una cartella nuova.
+   *
+   * Serve **solo** allo scaricamento, che una cartella la deve creare. Cancellare
+   * non passa più da qui: i percorsi li dicono le righe, e la cartella di
+   * un'opera si cerca sotto tutte le biblioteche.
    */
   const providerKey = async () =>
     (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
@@ -347,7 +352,17 @@ function CatalogEntryRow({
 
     setBusy(true);
     try {
-      const freed = await freeVersionPages(await providerKey(), entry.versionId);
+      // I percorsi li dice il database, che sa dove ogni carta è finita. Prima
+      // si ricostruiva la cartella da una chiave della biblioteca dedotta
+      // altrove: con la chiave sbagliata non si cancellava niente, il comando
+      // non se ne accorgeva, e le righe se ne andavano comunque.
+      const freed = await freeVersionPages(entry.versionId, await versionPagePaths(entry.versionId));
+      // Le righe se ne vanno **solo** se i file se ne sono andati: una riga in
+      // meno su un file ancora sul disco lo rende invisibile a tutti senza
+      // liberare un byte.
+      if (freed.failed.length > 0) {
+        throw new Error(t('areas.library.freeSpacePartial', { count: freed.failed.length }));
+      }
       await forgetVersionPages(entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
       onRefresh();
@@ -384,8 +399,13 @@ function CatalogEntryRow({
       if (entry.versionId) {
         // I file prima delle righe: se la cancellazione fallisce, l'opera resta
         // in Biblioteca e si può riprovare, invece di sparire lasciando dietro
-        // una cartella che nessuno reclama.
-        await deleteVersionFiles(await providerKey(), entry.versionId);
+        // una cartella che nessuno reclama. La chiave della biblioteca non entra
+        // più: il deposito viene cercato sotto tutte, perché la stessa opera ha
+        // lasciato cartelle sotto più di una.
+        const deleted = await deleteVersionFiles(entry.versionId);
+        if (deleted.failed.length > 0) {
+          throw new Error(t('areas.library.removePartial', { count: deleted.failed.length }));
+        }
       }
       onRemove();
     } catch (error: unknown) {
