@@ -152,8 +152,14 @@ export interface LibraryCatalogEntry {
   expectedPages: number | null;
   /** Carte davvero presenti sul computer. */
   localPages: number;
-  /** Quanto occupano quelle carte: serve alla conferma di «libera spazio» (D6). */
+  /** Quanto occupano quelle pagine: serve alla conferma di «libera spazio» (D6). */
   localBytes: number;
+  /**
+   * Le cartelle di misura presenti nel deposito. La principale è quella con cui
+   * il libro è stato scaricato; le altre sono pagine prese a parte (§5.6), e
+   * distinguerle evita di chiamare incompleto un libro che non lo è.
+   */
+  sizes: { sizeTag: string; pages: number; bytes: number; missing: number }[];
   /** I workspace a cui è collegata: un'opera può stare in più posti (#213). */
   workspaces: { workspaceId: string; workspaceName: string; isOrigin: boolean }[];
   /**

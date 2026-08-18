@@ -63,6 +63,7 @@ const entry = (
   expectedPages: 210,
   localPages: 0,
   localBytes: 0,
+  sizes: [],
   workspaces: [],
   providerKey: 'gallica',
   ...overrides,

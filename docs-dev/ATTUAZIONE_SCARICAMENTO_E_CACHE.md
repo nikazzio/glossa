@@ -529,8 +529,8 @@ liberare, ed è irreversibile: va detto.
 | | Ramo | Contenuto | Dipende da |
 |---|---|---|---|
 | PR-A | `fix/jobs-tentativi-e-durata` | il commit `c95d8fa` estratto da #440 | — |
-| PR-B | ramo 1 | cache, copertine, ricerche, politica di sicurezza, `resize_jpeg`, due impostazioni | PR-A no, indipendente |
-| PR-C | ramo 2 | scaricamento, misura, disco come verità, file di lato, inventario | PR-B per `resize_jpeg` |
+| PR-B | ramo 1 | cache, copertine, ricerche, politica di sicurezza, `resize_jpeg`, due impostazioni | **fatta, #442** |
+| PR-C | ramo 2 | scaricamento, misura, disco come verità, file di lato, inventario | **fatta** |
 | PR-D | ramo 3 | ottimizzazione locale | PR-C per il file di lato |
 
 Le rifiniture della fase 4 del piano si sciolgono dentro il ramo che tocca quel codice:

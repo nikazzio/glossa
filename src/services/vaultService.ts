@@ -234,16 +234,25 @@ export interface AvailabilitySummary {
 /**
  * Disponibilità calcolata dai file davvero presenti (D7).
  *
- * `partial` **non è un avviso**: chi scarica tre carte su duecento apposta non
+ * `partial` **non è un avviso**: chi scarica tre pagine su duecento apposta non
  * deve trovarsi una bandierina addosso. Il colore lo mettono altrove i problemi
  * veri — scaricamento fallito, file mancanti o corrotti trovati da una verifica.
+ *
+ * `notServed` sono le pagine che la biblioteca ha dichiarato di non servire
+ * (§5.3): non mancano per colpa nostra e non si recuperano riscaricando, quindi
+ * un libro che le ha tutte tranne quelle è **completo per quanto la biblioteca
+ * serve**, non a metà.
  */
-export function summarizeAvailability(presentPages: number, expectedPages: number): AvailabilitySummary {
+export function summarizeAvailability(
+  presentPages: number,
+  expectedPages: number,
+  notServed = 0,
+): AvailabilitySummary {
   if (expectedPages <= 0 || presentPages <= 0) {
     return { availability: 'catalogued', presentPages, expectedPages };
   }
   return {
-    availability: presentPages >= expectedPages ? 'complete' : 'partial',
+    availability: presentPages + notServed >= expectedPages ? 'complete' : 'partial',
     presentPages,
     expectedPages,
   };

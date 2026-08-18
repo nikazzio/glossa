@@ -7,6 +7,7 @@
  * un workspace, che ha bisogno di identificatori nuovi e delle regole di ambito.
  */
 import { invoke } from '@tauri-apps/api/core';
+import { libraryInventory, principalPages } from './inventoryService';
 import { select, runInTransaction } from './dbService';
 import { logger } from '../utils/logger';
 import { confirm } from '../stores/confirmStore';
@@ -136,25 +137,34 @@ const DELETE_ORDER = [
  * delle pagine, non i file: dopo il ripristino i file non ci sono comunque.
  */
 async function downloadedSources(): Promise<DownloadedSource[]> {
-  return select<DownloadedSource>(
-    `SELECT v.id                                   AS versionId,
-            s.title                                AS sourceTitle,
-            json_extract(v.metadata, '$.providerKey') AS providerKey,
-            v.source_url                           AS manifestUrl,
-            -- La misura più grande **per numero**: come stringhe «900» batte
-            -- «2000», e il ripristino riscaricherebbe a una misura diversa da
-            -- quella che c'era. «max» è la più grande di tutte per definizione.
-            COALESCE(
-              MAX(CASE WHEN a.size_tag = 'max' THEN 'max' END),
-              CAST(MAX(CAST(a.size_tag AS INTEGER)) AS TEXT)
-            )                                      AS sizeTag,
-            COUNT(DISTINCT a.page_index)           AS pages
+  // Cosa c'è scaricato lo dice il **deposito**, non le righe: le pagine non ne
+  // hanno più una a testa (§5.4). Dal database restano solo titolo e indirizzo
+  // del manifesto, che non si ricavano da una cartella.
+  const inventory = await libraryInventory();
+  if (inventory.length === 0) return [];
+  const rows = await select<{ versionId: string; sourceTitle: string; manifestUrl: string | null }>(
+    `SELECT v.id AS versionId, s.title AS sourceTitle, v.source_url AS manifestUrl
        FROM source_versions v
        JOIN sources s ON s.id = v.source_id
-       JOIN assets a  ON a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local'
-      GROUP BY v.id
       ORDER BY s.title`,
   );
+  const byVersion = new Map(rows.map((row) => [row.versionId, row]));
+
+  return inventory
+    .filter((entry) => entry.principal !== null && byVersion.has(entry.versionId))
+    .map((entry) => {
+      const row = byVersion.get(entry.versionId);
+      return {
+        versionId: entry.versionId,
+        sourceTitle: row?.sourceTitle ?? entry.versionId,
+        providerKey: entry.providerKey,
+        manifestUrl: row?.manifestUrl ?? null,
+        // La misura con cui il libro è stato scaricato: è quella che il
+        // ripristino deve richiedere.
+        sizeTag: entry.principal,
+        pages: principalPages(entry),
+      };
+    });
 }
 
 /**

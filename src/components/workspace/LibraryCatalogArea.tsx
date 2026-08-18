@@ -23,7 +23,6 @@ import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import {
-  forgetVersionPages,
   listVersionVaultPaths,
   versionProviderKey,
 } from '../../services/libraryService';
@@ -240,7 +239,10 @@ function CatalogEntryRow({
   const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
-  const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0);
+  // Le pagine che la biblioteca non serve non contano come mancanti: un libro
+  // che le ha tutte tranne quelle è completo per quanto la biblioteca serve.
+  const notServed = entry.sizes.reduce((total, size) => total + size.missing, 0);
+  const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0, notServed);
   const availability =
     summary.availability === 'catalogued'
       ? t('areas.library.availabilityRemote')
@@ -250,6 +252,14 @@ function CatalogEntryRow({
             done: summary.presentPages,
             total: summary.expectedPages,
           });
+  // Le pagine prese a parte a una misura diversa (§5.6): vanno dette come
+  // aggiunta, non come mancanza, altrimenti una cartella `max` con tre file su
+  // 328 sembra un libro a metà.
+  const principal = entry.sizes.find((size) => size.pages === entry.localPages && entry.localPages > 0);
+  const extra = entry.sizes
+    .filter((size) => size !== principal && size.pages > 0)
+    .reduce((total, size) => total + size.pages, 0);
+  const extraNote = extra > 0 ? t('areas.library.extraFullSize', { count: extra }) : null;
   // Quante pagine ha l'opera si vede **senza aprire niente**: è il dato che
   // decide se scaricarla o no. Manca solo per le opere aggiunte da una
   // biblioteca che non lo dichiara, e lì non si inventa.
@@ -333,8 +343,8 @@ function CatalogEntryRow({
 
   /**
    * «Libera spazio» (D6): cancella le carte e basta. Restano scheda, manifesto e
-   * miniature, e le righe delle carte se ne vanno insieme ai file — altrimenti
-   * la Biblioteca continuerebbe a dichiararle presenti.
+   * miniature. Il conteggio della scheda si aggiorna da sé: lo legge dalla
+   * cartella, che dopo questa azione è vuota.
    */
   const freeSpace = async () => {
     if (!entry.versionId) return;
@@ -348,8 +358,9 @@ function CatalogEntryRow({
 
     setBusy(true);
     try {
+      // Nessuna riga da dimenticare: il conteggio lo dà la cartella, e la
+      // cartella non c'è più (§5.4).
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
-      await forgetVersionPages(entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
       onRefresh();
     } catch (error: unknown) {
@@ -425,7 +436,7 @@ function CatalogEntryRow({
           </span>
           {meta && <span className="mt-0.5 block truncate text-xs text-editorial-muted">{meta}</span>}
           <span className="mt-1 block text-[11px] text-editorial-muted">
-            {[pageCount, availability].filter(Boolean).join(' · ')}
+            {[pageCount, availability, extraNote].filter(Boolean).join(' · ')}
           </span>
         </button>
       </div>

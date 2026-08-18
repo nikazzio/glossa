@@ -61,7 +61,7 @@ export interface Job {
    */
   waitingReason: string | null;
   /**
-   * Cosa sta facendo adesso, dentro lo stato: `manifest`, `negotiating`,
+   * Cosa sta facendo adesso, dentro lo stato: `manifest`,
    * `downloading`… Il vocabolario lo decide il tipo di lavoro, l'interfaccia lo
    * traduce e mostra la chiave grezza per quelle che non conosce ancora.
    */

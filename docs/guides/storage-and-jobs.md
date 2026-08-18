@@ -176,6 +176,25 @@ risultati compare da quanto tempo risale quello che stai guardando, e accanto un
 comando che rifà la ricerca davvero, saltando quello che era stato tenuto da
 parte.
 
+## Quante pagine hai davvero
+
+Il numero che leggi in Biblioteca è quello dei file che stanno sul tuo computer:
+Glossa guarda la cartella, non un elenco tenuto da parte. Il vantaggio si vede
+quando qualcosa va storto — un'interruzione, una copia a mano, un disco
+staccato e riattaccato: il conteggio non può raccontare una cosa diversa da
+quella che c'è.
+
+**Le pagine che la biblioteca non serve non contano come mancanti.** Capita che
+un manoscritto dichiari 328 pagine e il server non ne restituisca venti: non è un
+guasto tuo e riscaricarle non le farebbe comparire. Glossa se lo segna, non le
+richiede a ogni ripresa, e considera il libro completo per quanto la biblioteca
+serve. Ogni tanto — una volta a settimana — le riprova, perché le biblioteche
+riparano.
+
+**Le pagine prese a risoluzione piena sono un'aggiunta, non un buco.** Se di tre
+pagine hai voluto anche la versione più grande, la scheda dice «più 3 a
+risoluzione piena» accanto al conteggio, invece di far sembrare il libro a metà.
+
 ## Il backup
 
 **Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto

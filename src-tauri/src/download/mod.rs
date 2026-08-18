@@ -4,11 +4,19 @@
 //! (D18), saltando ciò che è già valido, salvando dove si è arrivati e senza
 //! far entrare nel deposito niente che non sia stato validato (D16-bis).
 
+pub mod catalog;
 pub mod courtesy;
 pub mod fetch;
 pub mod handler;
+#[cfg(test)]
+mod handler_it;
+pub mod inventory;
 pub mod manifest;
-pub mod size;
+pub mod pages;
+pub mod progress;
+pub mod sidecar;
+pub mod sizing;
+pub mod vault_io;
 
 use crate::jobs::commands::JobsState;
 use crate::jobs::store::NewJob;

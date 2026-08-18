@@ -1,10 +1,22 @@
-//! La verifica del deposito come lavoro (D5, D5-bis).
+//! La verifica del deposito come lavoro (D5-bis; D5 modificata dal piano §5.4).
 //!
-//! **Il database è la verità** (D5): non si scandisce il deposito per scoprire
-//! cosa c'è, si prende quello che il database dichiara e si guarda se è ancora
-//! lì. Gli orfani — file sul disco che nessuna riga reclama — sono l'unica cosa
-//! che si trova camminando le cartelle, e si contano solo qui: nell'uso normale
-//! si ignorano, ma occupano spazio e nessuno li reclamerà mai (D5-bis).
+//! **Il disco è la verità**: l'elenco da controllare si ricava camminando le
+//! cartelle di misura, non interrogando il database. Le impronte stanno nel file
+//! di lato di ogni cartella (`download::sidecar`).
+//!
+//! Un file **senza la sua riga** nel file di lato è una pagina presente di cui
+//! non si conosce l'impronta: la verifica rapida la vede, la completa la salta e
+//! **non** la dichiara corrotta. È il caso di un'interruzione fra promozione e
+//! scrittura della riga, e dei depositi riempiti prima che il file di lato
+//! esistesse.
+//!
+//! Miniature e manifesto non hanno impronta registrata: le prime si rigenerano
+//! dalla pagina, il secondo è validato all'arrivo. La completa li controlla
+//! solo strutturalmente.
+//!
+//! Orfano è una **cartella di digitalizzazione che il database non conosce
+//! più** (D5-bis): nell'uso normale si ignora, ma occupa spazio e nessuno la
+//! reclamerà mai.
 //!
 //! Due livelli, perché costano diversamente:
 //!
@@ -23,7 +35,7 @@ use std::path::{Path, PathBuf};
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 
-use super::{absolute_path, integrity};
+use super::integrity;
 
 pub const JOB_TYPE: &str = "vault_verification";
 
@@ -109,7 +121,7 @@ impl JobHandler for VaultVerificationJob {
         }
 
         ctx.report_phase(phase::FILES).await;
-        let known = registered_paths(&ctx).await?;
+        let known = registered_files(&root);
         let total = known.len() as u32;
         log::info!(
             "job verification starting id={} files={total} full={}",
@@ -118,39 +130,31 @@ impl JobHandler for VaultVerificationJob {
         );
 
         let mut report = Report::default();
-        let mut checked: HashSet<PathBuf> = HashSet::with_capacity(known.len());
 
         for (done, file) in known.iter().enumerate() {
             if stop() {
                 return Ok(stopped(&ctx));
             }
-            let relative = &file.path;
-            let Ok(absolute) = absolute_path(&root, relative) else {
-                // Percorso che il layout non produce mai: la riga è storta, non
-                // il file. Si conta come mancante e si va avanti, come fa la
-                // verifica rapida dei comandi.
-                report.missing += 1;
-                continue;
-            };
-            checked.insert(absolute.clone());
+            let absolute = &file.path;
 
             if config.full {
-                let scan = integrity::scan_file(&absolute, kind_of(&absolute));
+                let scan = integrity::scan_file(absolute, kind_of(absolute));
                 match scan.validation {
                     integrity::Validation::Missing => report.missing += 1,
                     integrity::Validation::Corrupt(reason) => {
-                        log::warn!("vault corrupt path={relative} reason={reason}");
+                        log::warn!("vault corrupt path={} reason={reason}", absolute.display());
                         report.corrupt += 1;
                     }
-                    // **L'impronta si confronta**, non si ricalcola e basta
-                    // (D5): firma e terminatore intatti non dicono niente su
-                    // quello che c'è in mezzo, e un file marcito dentro —
-                    // un settore andato, una sincronizzazione a metà —
-                    // passerebbe per integro.
+                    // L'impronta si **confronta**: firma e terminatore intatti
+                    // non dicono niente su quello che c'è in mezzo, e un file
+                    // marcito dentro passerebbe per integro. Senza impronta
+                    // registrata non c'è confronto da fare, e la pagina si
+                    // conta come intatta invece che come corrotta (§5.4).
                     integrity::Validation::Valid => match (&file.checksum, &scan.checksum) {
                         (Some(expected), Some(found)) if expected != found => {
                             log::warn!(
-                                "vault checksum mismatch path={relative} expected={expected} found={found}"
+                                "vault checksum mismatch path={} expected={expected} found={found}",
+                                absolute.display()
                             );
                             report.corrupt += 1;
                         }
@@ -181,7 +185,7 @@ impl JobHandler for VaultVerificationJob {
         }
 
         ctx.report_phase(phase::ORPHANS).await;
-        let (orphans, orphan_bytes) = orphans(&root, &checked);
+        let (orphans, orphan_bytes) = orphans(&root, &known_versions(&ctx).await?);
         report.orphans = orphans;
         report.orphan_bytes = orphan_bytes;
 
@@ -222,73 +226,108 @@ fn kind_of(path: &Path) -> integrity::FileKind {
     }
 }
 
-/// I percorsi che il database dichiara di avere nel deposito.
-/// Un file che il database dichiara, con l'impronta scritta quando è arrivato.
+/// Un file da controllare, con l'impronta scritta quando è arrivato.
 ///
-/// L'impronta serve al controllo completo: senza, si può dire soltanto che il
-/// file è **strutturalmente** intatto — firma e terminatore al loro posto — e
-/// un file marcito dentro passerebbe per buono.
+/// `checksum: None` significa «impronta ignota»: la verifica completa lo salta
+/// invece di dichiararlo corrotto.
 struct Registered {
-    path: String,
+    path: PathBuf,
     checksum: Option<String>,
 }
 
-async fn registered_paths(ctx: &JobContext) -> Result<Vec<Registered>, JobError> {
+/// Tutti i file del deposito che vale la pena controllare, ricavati dalle
+/// cartelle: pagine di ogni cartella di misura, più il manifesto conservato.
+fn registered_files(root: &Path) -> Vec<Registered> {
+    let mut found = Vec::new();
+    for inventory in crate::download::inventory::of_vault(root) {
+        let version_dir = root
+            .join(super::layout::PROVIDERS_DIR)
+            .join(&inventory.provider_key)
+            .join(&inventory.version_id);
+        if inventory.has_manifest {
+            found.push(Registered {
+                path: version_dir.join(super::layout::MANIFEST_FILE),
+                checksum: None,
+            });
+        }
+        for size in &inventory.sizes {
+            let size_dir = version_dir
+                .join(super::layout::PAGES_DIR)
+                .join(&size.size_tag);
+            let records = crate::download::sidecar::read(&size_dir);
+            let Ok(entries) = std::fs::read_dir(&size_dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_file()
+                    || entry.file_name().to_string_lossy() == crate::download::sidecar::SIDECAR_FILE
+                {
+                    continue;
+                }
+                let checksum = page_index_of(&path)
+                    .and_then(|index| records.get(&index))
+                    .and_then(|record| record.checksum.clone());
+                found.push(Registered { path, checksum });
+            }
+        }
+    }
+    found.sort_by(|a, b| a.path.cmp(&b.path));
+    found
+}
+
+/// Il numero di pagina dal nome del file (`0034.jpg` → 34).
+fn page_index_of(path: &Path) -> Option<u32> {
+    path.file_stem()?.to_string_lossy().parse::<u32>().ok()
+}
+
+/// Gli identificativi delle digitalizzazioni che il database conosce.
+async fn known_versions(ctx: &JobContext) -> Result<HashSet<String>, JobError> {
     ctx.with_database(|conn| {
         let mut statement = conn
-            .prepare(
-                "SELECT vault_path, checksum FROM assets \
-                 WHERE vault_path IS NOT NULL AND locality = 'local' ORDER BY vault_path",
-            )
+            .prepare("SELECT id FROM source_versions")
             .map_err(|error| error.to_string())?;
         let rows = statement
-            .query_map([], |row| {
-                Ok(Registered {
-                    path: row.get(0)?,
-                    checksum: row.get::<_, Option<String>>(1)?,
-                })
-            })
+            .query_map([], |row| row.get::<_, String>(0))
             .map_err(|error| error.to_string())?;
-        rows.collect::<rusqlite::Result<Vec<_>>>()
+        rows.collect::<rusqlite::Result<HashSet<_>>>()
             .map_err(|error| error.to_string())
     })
     .await
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
-/// I file che stanno nel deposito e che nessuna riga reclama, con il loro peso.
-///
-/// Si guarda solo sotto `providers/`: l'area di transito è di passaggio per
-/// definizione, e `derived/` appartiene a chi l'ha prodotta.
+/// Le cartelle di digitalizzazioni che il database non conosce più, con il loro
+/// peso. Si guarda solo sotto `providers/`: l'area di transito è di passaggio, e
+/// `derived/` appartiene a chi l'ha prodotta.
 ///
 /// Restituisce l'elenco e non solo il conto perché lo usa anche la
-/// cancellazione (D5-bis), che li deve aprire uno per uno.
-pub fn orphan_files(root: &Path, known: &HashSet<PathBuf>) -> Vec<(PathBuf, u64)> {
+/// cancellazione (D5-bis).
+pub fn orphan_folders(root: &Path, known: &HashSet<String>) -> Vec<(PathBuf, u64)> {
     let mut found = Vec::new();
-    let mut stack = vec![root.join("providers")];
-
-    while let Some(dir) = stack.pop() {
-        let Ok(entries) = std::fs::read_dir(&dir) else {
+    let Ok(providers) = std::fs::read_dir(root.join(super::layout::PROVIDERS_DIR)) else {
+        return found;
+    };
+    for provider in providers.flatten() {
+        let Ok(versions) = std::fs::read_dir(provider.path()) else {
             continue;
         };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
+        for version in versions.flatten() {
+            let path = version.path();
+            if !path.is_dir() {
                 continue;
             }
-            if known.contains(&path) {
+            if known.contains(&version.file_name().to_string_lossy().to_string()) {
                 continue;
             }
-            let bytes = entry.metadata().map(|meta| meta.len()).unwrap_or(0);
-            found.push((path, bytes));
+            found.push((path.clone(), super::directory_stats(&path).bytes));
         }
     }
     found
 }
 
-fn orphans(root: &Path, known: &HashSet<PathBuf>) -> (u32, u64) {
-    let found = orphan_files(root, known);
+fn orphans(root: &Path, known: &HashSet<String>) -> (u32, u64) {
+    let found = orphan_folders(root, known);
     (
         found.len() as u32,
         found.iter().map(|(_, bytes)| bytes).sum(),
@@ -393,19 +432,21 @@ mod tests {
     }
 
     #[test]
-    fn a_file_nobody_claims_is_an_orphan() {
+    fn a_digitisation_the_database_no_longer_knows_is_an_orphan() {
         let root = std::env::temp_dir().join("glossa_verification_orphans");
         let _ = std::fs::remove_dir_all(&root);
-        let pages = root.join("providers/gallica/v1/pages/2000");
-        std::fs::create_dir_all(&pages).unwrap();
-        std::fs::write(pages.join("0001.jpg"), b"conosciuto").unwrap();
-        std::fs::write(pages.join("0002.jpg"), b"orfano").unwrap();
+        for version in ["v1", "v2"] {
+            let pages = root.join(format!("providers/gallica/{version}/pages/2000"));
+            std::fs::create_dir_all(&pages).unwrap();
+            std::fs::write(pages.join("0001.jpg"), b"pagina").unwrap();
+        }
 
-        let known: HashSet<PathBuf> = [pages.join("0001.jpg")].into_iter().collect();
+        // Il database conosce solo v1: la cartella di v2 non la reclama nessuno.
+        let known: HashSet<String> = ["v1".to_string()].into_iter().collect();
         let (count, bytes) = orphans(&root, &known);
 
         assert_eq!(count, 1);
-        assert_eq!(bytes, "orfano".len() as u64);
+        assert_eq!(bytes, "pagina".len() as u64);
 
         let _ = std::fs::remove_dir_all(&root);
     }

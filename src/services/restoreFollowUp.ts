@@ -1,4 +1,5 @@
 import { execute, select } from './dbService';
+import { libraryInventory, principalPages } from './inventoryService';
 import { enqueueSourceDownload } from './jobsService';
 import { logger } from '../utils/logger';
 import type { DownloadedSource } from '../schemas/externalData';
@@ -84,30 +85,32 @@ export async function missingAfterRestore(downloaded: DownloadedSource[]): Promi
     providerKey: string | null;
     manifestUrl: string | null;
     expected: number;
-    present: number;
   }>(
     `SELECT v.id                                      AS versionId,
             s.title                                   AS title,
             json_extract(v.metadata, '$.providerKey') AS providerKey,
             v.source_url                              AS manifestUrl,
-            COALESCE(v.expected_asset_count, 0)       AS expected,
-            COUNT(DISTINCT a.page_index)              AS present
+            COALESCE(v.expected_asset_count, 0)       AS expected
        FROM source_versions v
-       JOIN sources s ON s.id = v.source_id
-       LEFT JOIN assets a
-         ON a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local'
-      GROUP BY v.id`,
+       JOIN sources s ON s.id = v.source_id`,
   );
+  // Quante pagine ci sono davvero lo dice il deposito: il conteggio atteso
+  // resta nel database perché una cartella non sa quante dovrebbero essercene.
+  const inventory = await libraryInventory();
+  const present = new Map(inventory.map((entry) => [entry.versionId, principalPages(entry)]));
 
   return rows
-    .filter((row) => wanted.has(row.versionId) && row.expected > 0 && row.present < row.expected)
+    .filter((row) => {
+      const found = present.get(row.versionId) ?? 0;
+      return wanted.has(row.versionId) && row.expected > 0 && found < row.expected;
+    })
     .map((row) => ({
       versionId: row.versionId,
       title: row.title,
       providerKey: row.providerKey,
       manifestUrl: row.manifestUrl,
       sizeTag: wanted.get(row.versionId)?.sizeTag ?? null,
-      present: row.present,
+      present: present.get(row.versionId) ?? 0,
       expected: row.expected,
     }));
 }

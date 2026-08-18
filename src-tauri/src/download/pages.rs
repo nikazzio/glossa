@@ -1,0 +1,298 @@
+//! Il lavoro su **una** pagina: salta, scarica, o dichiara che la biblioteca
+//! non la serve.
+//!
+//! Sta fuori dal gestore perché il gestore è il ciclo, e questo è il passo. Il
+//! contesto immutabile della pagina — client, profilo, configurazione,
+//! manifesto, cartelle — sta in `PageFetcher`: passarlo pezzo per pezzo faceva
+//! funzioni da quattordici argomenti.
+
+use std::collections::BTreeMap;
+use std::path::Path;
+
+use crate::iiif::network::NetworkProfile;
+use crate::images;
+use crate::jobs::{ErrorKind, JobError};
+use crate::vault::{integrity, layout};
+
+use super::courtesy::{Courtesy, Signals};
+use super::fetch::fetch;
+use super::handler::DownloadConfig;
+use super::manifest::{image_url, Manifest, Page};
+use super::progress::{Progress, Reporter};
+use super::sidecar::{self, Note, PageRecord};
+use super::sizing::{self, SizeCap, SizingRule};
+use super::vault_io::{now_secs, stage_and_promote};
+
+/// Qualità JPEG della riduzione fatta in casa dopo un rifiuto della misura
+/// (§5.1, regola 3). Stesso valore predefinito dell'ottimizzazione locale.
+const DOWNSCALE_QUALITY: u8 = 82;
+
+/// Intervallo minimo prima di richiedere di nuovo una pagina che la biblioteca
+/// ha già dichiarato di non servire (fatto 7, §5.3).
+///
+/// A ogni ripresa costerebbe una richiesta buttata per pagina mancante; mai più
+/// renderebbe permanente un buco che le biblioteche a volte riparano.
+pub(crate) const RETRY_MISSING_AFTER_SECS: i64 = 7 * 24 * 3600;
+
+/// Esito di una singola pagina.
+pub(crate) enum PageOutcome {
+    /// Scritta adesso: byte aggiunti al deposito.
+    Written { bytes: u64 },
+    /// File già presente: nessuna richiesta.
+    Present,
+    /// La biblioteca non l'ha servita (404/410), o l'aveva già dichiarata tale
+    /// entro `RETRY_MISSING_AFTER_SECS`.
+    NotServed,
+    /// Pausa o annullamento durante l'attesa del turno.
+    Stopped,
+}
+
+/// Quello che serve a scaricare una pagina e non cambia da una pagina all'altra.
+pub(crate) struct PageFetcher<'a> {
+    pub courtesy: &'a Courtesy,
+    pub client: &'a reqwest::Client,
+    pub profile: &'a NetworkProfile,
+    pub config: &'a DownloadConfig,
+    pub manifest: &'a Manifest,
+    pub cap: SizeCap,
+    /// `pages/<misura>/` della digitalizzazione.
+    pub size_dir: &'a Path,
+    /// Area di transito del lavoro.
+    pub staging: &'a Path,
+    /// Radice del deposito, per le miniature.
+    pub root: &'a Path,
+    /// Tentativo del **lavoro**: serve al calcolo dell'attesa (D16).
+    pub attempt: u32,
+}
+
+impl PageFetcher<'_> {
+    pub(crate) async fn one(
+        &self,
+        rule: &mut SizingRule,
+        page: &Page,
+        known: &BTreeMap<u32, PageRecord>,
+        signals: &Signals<'_>,
+    ) -> Result<PageOutcome, JobError> {
+        let target = self.size_dir.join(layout::page_file_name(page.index));
+        // Presenza del file = pagina valida: nel deposito entra solo ciò che ha
+        // superato la validazione in transito (D16-bis).
+        if target.is_file() {
+            return Ok(PageOutcome::Present);
+        }
+        if let Some(last_try) = known.get(&page.index).and_then(PageRecord::last_try) {
+            if now_secs() - last_try < RETRY_MISSING_AFTER_SECS {
+                return Ok(PageOutcome::NotServed);
+            }
+        }
+
+        let token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
+        let url = image_url(&page.image_service, token.as_str());
+        let first = match self.get(&url, signals).await {
+            Ok(Some(fetched)) => Some(fetched),
+            Ok(None) => return Ok(PageOutcome::Stopped),
+            Err(error) => match error.kind {
+                // 404/410: la pagina non c'è (fatto 7).
+                ErrorKind::NotFound => None,
+                // 400/501: rifiutata **la misura**. Si smette di calcolare per
+                // il resto del libro (§5.1, regola 3).
+                ErrorKind::SizeRejected => {
+                    log::warn!(
+                        "job size refused page={} token={} — passaggio a max",
+                        page.index,
+                        token.as_str()
+                    );
+                    *rule = SizingRule::Full;
+                    None
+                }
+                // 403/429/5xx e trasporto salgono al motore, che decide attesa e
+                // tentativi dal profilo (D16, D18).
+                _ => return Err(error),
+            },
+        };
+
+        let (bytes, note) = match first {
+            Some(fetched) => (fetched.bytes, None),
+            None if matches!(*rule, SizingRule::Full) => {
+                let full = image_url(
+                    &page.image_service,
+                    &sizing::full_size(self.manifest.presentation2),
+                );
+                match self.get(&full, signals).await {
+                    Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
+                    Ok(None) => return Ok(PageOutcome::Stopped),
+                    // Anche la dimensione piena rifiutata: la pagina si salta.
+                    Err(error) if !error.kind.is_retryable() => return self.not_served(page),
+                    Err(error) => return Err(error),
+                }
+            }
+            None => return self.not_served(page),
+        };
+
+        let staged = self.staging.join(page_staging_name(page.index));
+        let checksum = stage_and_promote(&staged, &target, &bytes, integrity::FileKind::Image)?;
+        sidecar::append(
+            self.size_dir,
+            &PageRecord {
+                index: page.index,
+                label: page.label.clone(),
+                got: image_dimensions(&bytes),
+                bytes: Some(bytes.len() as u64),
+                checksum: Some(checksum),
+                at: now_secs(),
+                note,
+            },
+        )
+        .unwrap_or_else(|error| {
+            // Riga non scritta: la pagina resta presente e conta
+            // nell'inventario, ma non se ne conosce l'impronta (§5.4).
+            log::warn!("job sidecar not written page={} error={error}", page.index);
+        });
+
+        self.store_thumbnail(page.index, &bytes);
+        Ok(PageOutcome::Written {
+            bytes: bytes.len() as u64,
+        })
+    }
+
+    async fn get(
+        &self,
+        url: &str,
+        signals: &Signals<'_>,
+    ) -> Result<Option<super::fetch::Fetched>, JobError> {
+        fetch(
+            self.client,
+            self.courtesy,
+            self.profile,
+            url,
+            self.attempt,
+            signals,
+        )
+        .await
+    }
+
+    /// Registra la pagina come non servita e la conta.
+    fn not_served(&self, page: &Page) -> Result<PageOutcome, JobError> {
+        let _ = sidecar::append(
+            self.size_dir,
+            &PageRecord::not_served(page.index, page.label.clone(), now_secs()),
+        );
+        Ok(PageOutcome::NotServed)
+    }
+
+    /// Riduce al tetto i byte arrivati a dimensione piena e **tiene solo il
+    /// risultato** (decisione 2 del piano): i byte in più sono già stati spesi
+    /// in rete, ma non devono occupare disco, e il deposito resta coerente col
+    /// tetto.
+    ///
+    /// È una ricompressione, quindi va segnata: senza la nota, la pagina è
+    /// indistinguibile da una arrivata già a quella misura.
+    fn reduce_to_cap(&self, bytes: Vec<u8>) -> (Vec<u8>, Option<Note>) {
+        let SizeCap::LongEdge(long_edge) = self.cap else {
+            return (bytes, None);
+        };
+        let from = image_dimensions(&bytes);
+        match images::resize_jpeg(&bytes, long_edge, DOWNSCALE_QUALITY) {
+            Ok(reduced) => (reduced, from.map(|from| Note::Downscaled { from })),
+            Err(error) => {
+                // Riduzione fallita: si conserva l'originale invece di perdere
+                // la pagina. Occupa più del tetto, e l'ottimizzazione locale
+                // sa rimediare.
+                log::warn!("job downscale failed error={error}");
+                (bytes, None)
+            }
+        }
+    }
+
+    /// Miniatura ricavata dai byte già in memoria (D6). Un fallimento non fa
+    /// fallire il libro.
+    fn store_thumbnail(&self, index: u32, bytes: &[u8]) {
+        let Ok(relative) =
+            layout::thumbnail_path(&self.config.provider_key, &self.config.version_id, index)
+        else {
+            return;
+        };
+        let target = self.root.join(relative);
+        if target.is_file() {
+            return;
+        }
+        match images::thumbnail(bytes, self.config.thumbnail_edge) {
+            Ok(thumbnail) => {
+                if let Err(error) = stage_and_promote(
+                    &self.staging.join(thumbnail_staging_name(index)),
+                    &target,
+                    &thumbnail,
+                    integrity::FileKind::Image,
+                ) {
+                    log::warn!(
+                        "job thumbnail not stored page={index} error={}",
+                        error.message
+                    );
+                }
+            }
+            Err(error) => log::warn!("job thumbnail not derived page={index} error={error}"),
+        }
+    }
+}
+
+/// Oltre questa attesa si dichiara che è la **nostra** cortesia a tenere fermo
+/// il lavoro (D17). Più lunga della pausa massima fra due richieste (6 s su
+/// Gallica) e molto più corta del raffreddamento più breve (120 s).
+const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// Come `PageFetcher::one`, ma se l'attesa si allunga dice **perché**: con i
+/// raffreddamenti di D18 un lavoro può restare fermo minuti, e fermo per
+/// cortesia e fermo per errore sono la stessa immobilità con significati
+/// opposti.
+pub(crate) async fn one_declaring_long_waits(
+    fetcher: &PageFetcher<'_>,
+    rule: &mut SizingRule,
+    page: &Page,
+    known: &BTreeMap<u32, PageRecord>,
+    progress: &Progress,
+    reporter: &Reporter<'_>,
+    signals: &Signals<'_>,
+) -> Result<PageOutcome, JobError> {
+    let work = fetcher.one(rule, page, known, signals);
+    tokio::pin!(work);
+
+    tokio::select! {
+        outcome = &mut work => outcome,
+        _ = tokio::time::sleep(DECLARE_WAIT_AFTER) => {
+            // Solo se l'attesa è la nostra: un server lento non è un limite che
+            // stiamo rispettando.
+            if signals.courtesy_wait.load(std::sync::atomic::Ordering::SeqCst) {
+                reporter.waiting(progress, page).await;
+            }
+            work.await
+        }
+    }
+}
+
+/// Dimensioni dell'immagine senza decodificarla per intero.
+fn image_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .ok()?
+        .into_dimensions()
+        .ok()
+}
+
+/// Nomi distinti nell'area di transito: pagina e miniatura ci passano insieme,
+/// e due nomi uguali significherebbero che una porta via l'altra.
+fn page_staging_name(page_index: u32) -> String {
+    format!("{page_index:04}.jpg")
+}
+
+fn thumbnail_staging_name(page_index: u32) -> String {
+    format!("{page_index:04}-thumb.jpg")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_and_thumbnail_do_not_share_a_name_in_the_staging_area() {
+        assert_ne!(page_staging_name(12), thumbnail_staging_name(12));
+    }
+}

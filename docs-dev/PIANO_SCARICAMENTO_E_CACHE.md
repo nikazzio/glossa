@@ -920,13 +920,13 @@ Non alimenta più nessuna impostazione: alimenta la fiducia nella regola.
 
 **Tre rami, in quest'ordine.**
 
-**Primo — la cache.** Le copertine, le ricerche, la consegna dei byte alla finestra, la
+**Primo — la cache.** *(fatto: PR #442, in `blocco-1`.)* Le copertine, le ricerche, la consegna dei byte alla finestra, la
 riga da aggiungere alla politica di sicurezza dell'installato e due impostazioni. Non
 tocca lo scaricamento, è il ramo più piccolo, e **da solo ripara le copertine invisibili
 nell'app installata**, che è un difetto che esiste adesso. Fa anche da collaudo della
 disposizione delle cartelle prima del ramo grande.
 
-**Secondo — lo scaricamento e il disco.** La misura, il ciclo, il disco come verità, il
+**Secondo — lo scaricamento e il disco.** *(fatto: ramo `feat/scaricamento-e-disco`.)* La misura, il ciclo, il disco come verità, il
 file di lato. È il pezzo intrecciato: cambiare dove stanno le pagine cambia come si
 riprende, che cambia il gestore. Diviso in più rami produrrebbe stati intermedi da
 buttare.

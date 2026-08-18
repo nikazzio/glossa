@@ -504,28 +504,26 @@ pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, S
     tauri::async_runtime::spawn_blocking(move || {
         let conn = crate::db::open_connection(&db_path)?;
         let mut statement = conn
-            .prepare(
-                "SELECT vault_path FROM assets \
-                 WHERE vault_path IS NOT NULL AND locality = 'local'",
-            )
+            .prepare("SELECT id FROM source_versions")
             .map_err(|error| error.to_string())?;
-        let known: std::collections::HashSet<std::path::PathBuf> = statement
+        let known: std::collections::HashSet<String> = statement
             .query_map([], |row| row.get::<_, String>(0))
             .map_err(|error| error.to_string())?
             .filter_map(Result::ok)
-            .filter_map(|relative| absolute_path(&root, &relative).ok())
             .collect();
 
         let mut deleted_files = 0;
         let mut freed_bytes = 0;
-        for (path, bytes) in super::verification::orphan_files(&root, &known) {
-            match std::fs::remove_file(&path) {
+        // Si rilegge il deposito adesso e non ci si fida del conto della
+        // verifica: fra il controllo e la cancellazione può essere finito uno
+        // scaricamento, e quella cartella non è più orfana (D5-bis).
+        for (path, bytes) in super::verification::orphan_folders(&root, &known) {
+            match std::fs::remove_dir_all(&path) {
                 Ok(()) => {
                     deleted_files += 1;
                     freed_bytes += bytes;
                 }
-                // Un file che non si riesce a togliere non ferma gli altri: si
-                // dice nel registro e si va avanti, e il conto resta onesto.
+                // Una cartella che non si riesce a togliere non ferma le altre.
                 Err(error) => log::warn!("orphan not deleted path={} {error}", path.display()),
             }
         }

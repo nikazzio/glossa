@@ -15,10 +15,10 @@ use std::path::{Path, PathBuf};
 /// Radice di ciò che scarichiamo dalle biblioteche. `derived/` (ritagli e
 /// immagini ottimizzate) e `trash/` (in attesa dello svuotamento, D6) arrivano
 /// con le PR che li usano: qui non servono ancora.
-const PROVIDERS_DIR: &str = "providers";
+pub(crate) const PROVIDERS_DIR: &str = "providers";
 pub(crate) const PAGES_DIR: &str = "pages";
 const THUMBNAILS_DIR: &str = "thumbnails";
-const MANIFEST_FILE: &str = "manifest.json";
+pub(crate) const MANIFEST_FILE: &str = "manifest.json";
 
 /// Area di transito (D16-bis): ci si scrive, si valida, e solo allora si
 /// promuove. Sta accanto alle radici del layout perché quello che c'è dentro
@@ -52,7 +52,7 @@ const DERIVED_DIR: &str = "derived";
 const ALLOWED_ROOTS: [&str; 2] = [PROVIDERS_DIR, DERIVED_DIR];
 /// Estensioni che il deposito può contenere: carte e miniature, manifesto,
 /// PDF fornito dalla biblioteca (D4-bis).
-const ALLOWED_EXTENSIONS: [&str; 3] = ["jpg", "json", "pdf"];
+const ALLOWED_EXTENSIONS: [&str; 4] = ["jpg", "json", "jsonl", "pdf"];
 
 /// Verifica che un `vault_path` abbia la forma prodotta da questo modulo.
 ///

@@ -4,10 +4,27 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // comando, non la finestra.
 const fsState = vi.hoisted(() => ({ raw: '{}' }));
 
+// L'inventario del deposito arriva dal motore: qui si finge un libro scaricato
+// a 2000 con tre pagine prese a piena risoluzione.
+const inventory = vi.hoisted(() => [
+  {
+    versionId: 'v1',
+    providerKey: 'archive_org',
+    principal: '2000',
+    hasManifest: true,
+    sizes: [
+      { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
+      { sizeTag: 'max', pages: 3, bytes: 500, missing: 0 },
+    ],
+  },
+]);
+
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn(async (command: string) =>
-    command === 'read_backup' ? fsState.raw : null,
-  ),
+  invoke: vi.fn(async (command: string) => {
+    if (command === 'read_backup') return fsState.raw;
+    if (command === 'library_inventory') return inventory;
+    return null;
+  }),
 }));
 
 vi.mock('../stores/confirmStore', () => ({
@@ -32,6 +49,11 @@ const selectMock = vi.mocked(select);
 
 vi.mock('./dbService', () => ({
   select: vi.fn(async (query: string, params?: unknown[]) => {
+    if (String(query).includes('manifestUrl')) {
+      return [
+        { versionId: 'v1', sourceTitle: 'Book of Hours', manifestUrl: 'https://example.org/m.json' },
+      ];
+    }
     const table = String(query).includes('pragma_table_info') ? String(params?.[0]) : undefined;
     // Le tabelle che una prova non guarda hanno comunque una colonna: zero
     // colonne significa «tabella assente», ed è un caso a sé.
@@ -42,6 +64,7 @@ vi.mock('./dbService', () => ({
   }),
 }));
 
+import { invoke } from '@tauri-apps/api/core';
 import { writeBackup, restoreBackup } from './backupService';
 import { BACKUP_TABLES } from '../schemas/externalData';
 import { confirm } from '../stores/confirmStore';
@@ -77,16 +100,16 @@ describe('cosa porta con sé un backup', () => {
 });
 
 describe('la misura con cui riscaricare', () => {
-  it('sceglie la più grande per numero, non per stringa', async () => {
-    // Come stringhe «900» batte «2000», e il ripristino riscaricherebbe a una
-    // misura più piccola di quella che c'era.
+  it('è quella con cui il libro è stato scaricato, non la più grande presente', async () => {
+    // Un libro completo a 2000 con tre pagine prese a piena risoluzione (§5.6)
+    // va riscaricato a 2000: chiedere `max` triplicherebbe il deposito.
     await writeBackup();
-    const query = String(
-      selectMock.mock.calls.map(([sql]) => sql).find((sql) => String(sql).includes('sizeTag')),
-    );
 
-    expect(query).toContain('CAST');
-    expect(query).not.toMatch(/MAX\(a\.size_tag\)/);
+    const call = vi.mocked(invoke).mock.calls.find(([command]) => command === 'write_backup');
+    const payload = JSON.parse(String((call?.[1] as { payload?: string } | undefined)?.payload));
+    expect(payload.downloaded).toEqual([
+      expect.objectContaining({ versionId: 'v1', sizeTag: '2000', pages: 328 }),
+    ]);
   });
 });
 

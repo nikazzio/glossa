@@ -865,7 +865,9 @@
       "pageCount_one": "{{count}} pagina",
       "pageCount_other": "{{count}} pagine",
       "removeMessageWithFiles": "Sparisce dalla Biblioteca insieme ai suoi collegamenti, e vengono eliminate anche le {{size}} già scaricate. Per tenere l'opera e liberare solo lo spazio c'è il comando apposta.",
-      "removeFailed": "Non è stato possibile togliere l'opera"
+      "removeFailed": "Non è stato possibile togliere l'opera",
+      "extraFullSize_one": "più {{count}} a risoluzione piena",
+      "extraFullSize_other": "più {{count}} a risoluzione piena"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1661,6 +1663,8 @@
       "downloadDesc": "In Biblioteca ogni riga dice quante pagine sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre; se quella richiesta viene rifiutata, chiede alla biblioteca cosa sa produrre e riprova da sé. Da ogni pagina scaricata Glossa ricava la sua miniatura, senza chiedere niente alla biblioteca: servono a sfogliare il libro senza rete.",
       "downloadPolicyTitle": "Scegliere la misura delle pagine",
       "downloadPolicyDesc": "In Impostazioni → Scaricamento scegli quanto grandi vuoi le pagine e quanto grandi le miniature. La misura delle pagine è un obiettivo, non un numero esatto: Glossa chiede alla biblioteca la misura che dichiara più vicina, sopra o sotto. La stessa scelta si può fare sulla singola opera, aprendo la sua scheda in Biblioteca, e lì vince: la misura dipende dal materiale, non da chi conserva il libro. Le pagine già scaricate restano come sono.",
+      "countingTitle": "Come si legge «quante pagine ho»",
+      "countingDesc": "Il conteggio che vedi in Biblioteca è quello dei file che stanno davvero sul tuo computer: Glossa guarda la cartella, non un elenco tenuto a parte. Se una pagina la biblioteca non la serve — capita, e non è un guasto tuo — non viene contata come mancante: il libro risulta completo per quanto la biblioteca serve. E se di qualche pagina hai preso anche la versione a risoluzione piena, la scheda lo dice come aggiunta («più 3 a risoluzione piena»), non come un libro a metà.",
       "removeTitle": "Togliere un'opera dalla Biblioteca",
       "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
       "checkTitle": "Le due verifiche del deposito",
@@ -2065,7 +2069,6 @@
     "phase": {
       "starting": "avvio",
       "manifest": "lettura del manifesto",
-      "negotiating": "scelta della risoluzione",
       "downloading": "scaricamento",
       "checking_files": "controllo dei file",
       "looking_for_orphans": "ricerca dei file orfani"
