@@ -64,6 +64,15 @@ export async function clearCache(): Promise<void> {
   await invoke('clear_cache');
 }
 
+/**
+ * Applica il tetto **adesso** e restituisce quanto resta occupato: dopo averlo
+ * abbassato, aspettare che entri qualcosa di nuovo non è quello che chi lo
+ * abbassa si aspetta.
+ */
+export async function applyCacheCap(): Promise<CacheUsage> {
+  return invoke<CacheUsage>('apply_cache_cap');
+}
+
 async function readSetting(key: string): Promise<string | null> {
   const rows = await select<{ value: string }>('SELECT value FROM app_settings WHERE key = $1', [key]);
   return rows[0]?.value ?? null;
@@ -76,9 +85,13 @@ async function writeSetting(key: string, value: string): Promise<void> {
   );
 }
 
+/**
+ * Solo i valori che il motore applica davvero: mostrare un tetto che lui
+ * scarterebbe come assurdo significa dire una cosa falsa a chi guarda.
+ */
 export async function getCacheMaxBytes(): Promise<number> {
   const stored = Number(await readSetting(MAX_BYTES_KEY));
-  return Number.isFinite(stored) && stored > 0 ? stored : DEFAULT_CACHE_MAX_BYTES;
+  return CACHE_CAPS.includes(stored as (typeof CACHE_CAPS)[number]) ? stored : DEFAULT_CACHE_MAX_BYTES;
 }
 
 export async function setCacheMaxBytes(bytes: number): Promise<void> {
@@ -87,7 +100,7 @@ export async function setCacheMaxBytes(bytes: number): Promise<void> {
 
 export async function getSearchTtlHours(): Promise<number> {
   const stored = Number(await readSetting(SEARCH_TTL_KEY));
-  return Number.isFinite(stored) && stored > 0 ? stored : DEFAULT_SEARCH_TTL_HOURS;
+  return SEARCH_TTLS.includes(stored as (typeof SEARCH_TTLS)[number]) ? stored : DEFAULT_SEARCH_TTL_HOURS;
 }
 
 export async function setSearchTtlHours(hours: number): Promise<void> {

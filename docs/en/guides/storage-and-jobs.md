@@ -166,6 +166,10 @@ any time without losing anything. Images, on the other hand, never expire — th
 pixels of a sixteenth-century manuscript do not change — only the size limit
 governs them.
 
+If you want to know **whether something new has appeared in the meantime**, a
+line above the results tells you how old what you are looking at is, and next to
+it a command runs the search for real, skipping what had been kept aside.
+
 ## The backup
 
 **Settings → Storage → Backup and restore** saves a file with everything that

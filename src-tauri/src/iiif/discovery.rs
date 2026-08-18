@@ -62,6 +62,11 @@ pub struct DiscoveryResult {
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveryOutcome {
     pub status: DiscoveryStatus,
+    /// Quando questo risultato è arrivato dalla biblioteca, se non è arrivato
+    /// adesso. Chi guarda deve sapere **di quando** è quello che ha davanti,
+    /// altrimenti non può decidere se vale la pena rifare la ricerca.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cached_at: Option<i64>,
     pub provider_key: String,
     pub manifest: Option<ManifestPreview>,
     pub results: Vec<DiscoveryResult>,
@@ -337,6 +342,7 @@ async fn discover_with(
     let value = input.trim();
     if value.is_empty() {
         return Ok(DiscoveryOutcome {
+            cached_at: None,
             status: DiscoveryStatus::NotFound,
             provider_key: provider.key.to_string(),
             manifest: None,
@@ -349,6 +355,7 @@ async fn discover_with(
         if let Some(identifier) = archive_identifier(value) {
             let manifest_url = format!("https://iiif.archive.org/iiif/{identifier}/manifest.json");
             return Ok(DiscoveryOutcome {
+                cached_at: None,
                 status: DiscoveryStatus::Manifest,
                 provider_key: provider.key.to_string(),
                 manifest: Some(resolve_manifest(client, manifest_url, gate).await?),
@@ -358,6 +365,7 @@ async fn discover_with(
         }
         let search = search_archive(client, value, archive_search_url, page, gate).await?;
         return Ok(DiscoveryOutcome {
+            cached_at: None,
             status: if search.results.is_empty() {
                 DiscoveryStatus::NotFound
             } else {
@@ -372,6 +380,7 @@ async fn discover_with(
 
     if Url::parse(value).is_ok() {
         return Ok(DiscoveryOutcome {
+            cached_at: None,
             status: DiscoveryStatus::Manifest,
             provider_key: provider.key.to_string(),
             manifest: Some(resolve_manifest(client, value.to_string(), gate).await?),
@@ -381,6 +390,7 @@ async fn discover_with(
     }
 
     Ok(DiscoveryOutcome {
+        cached_at: None,
         status: DiscoveryStatus::NotFound,
         provider_key: provider.key.to_string(),
         manifest: None,
@@ -395,6 +405,10 @@ pub async fn discover_iiif(
     provider_key: String,
     input: String,
     page: Option<u32>,
+    // `fresh`: «rifalla davvero». Salta il risultato conservato e ripassa dalla
+    // biblioteca — l'unico modo di sapere se il catalogo è cresciuto prima che
+    // il risultato conservato scada.
+    fresh: Option<bool>,
 ) -> Result<DiscoveryOutcome, String> {
     let provider = find_provider(&provider_key).ok_or_else(|| "Unknown collection.".to_string())?;
     let page = page.unwrap_or(1).max(1);
@@ -412,10 +426,17 @@ pub async fn discover_iiif(
         page,
         filters: Default::default(),
     };
-    if let Some(cached) = crate::httpcache::commands::lookup(&app, &request) {
-        if let Ok(outcome) = serde_json::from_slice::<DiscoveryOutcome>(&cached) {
-            log::info!("discovery answered from cache provider={provider_key} page={page}");
-            return Ok(outcome);
+    if !fresh.unwrap_or(false) {
+        if let Some((cached, stored_at)) =
+            crate::httpcache::commands::lookup_with_age(&app, &request)
+        {
+            if let Ok(outcome) = serde_json::from_slice::<DiscoveryOutcome>(&cached) {
+                log::info!("discovery answered from cache provider={provider_key} page={page}");
+                return Ok(DiscoveryOutcome {
+                    cached_at: stored_at,
+                    ..outcome
+                });
+            }
         }
     }
 

@@ -751,7 +751,22 @@
     "clear": "Clear",
     "optional": "optional",
     "next": "Next",
-    "back": "Back"
+    "back": "Back",
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "weeksAgo_one": "{{count}} week ago",
+      "weeksAgo_other": "{{count}} weeks ago",
+      "monthsAgo_one": "{{count}} month ago",
+      "monthsAgo_other": "{{count}} months ago",
+      "yearsAgo_one": "{{count}} year ago",
+      "yearsAgo_other": "{{count}} years ago"
+    }
   },
   "projects": {
     "title": "Projects",
@@ -1004,7 +1019,9 @@
       "noWorkspaces": "No workspace available. Create one before linking a source.",
       "viewOptions": "View",
       "pageCount_one": "{{count}} page",
-      "pageCount_other": "{{count}} pages"
+      "pageCount_other": "{{count}} pages",
+      "fromCache": "results from {{when}}",
+      "searchAgain": "Search again, skipping the kept results"
     },
     "stats": {
       "projects": "Projects",
@@ -1649,7 +1666,7 @@
       "checkTitle": "The two vault checks",
       "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is. The outcome of the last check stays in the settings until you run another one, and next to the files belonging to no work there is the command to delete them: Glossa looks at the vault again the moment you press and tells you how many it really removed.",
       "cacheTitle": "Network cache",
-      "cacheDesc": "What you look at without downloading it — the covers in search results, the covers in the Library, the search responses themselves — is not requested from the library every time: Glossa keeps it aside. This does two things: covers show up in the installed application too, and repeating a search does not go back to the network. This material **is not yours**: it never counts as downloaded, it is never part of a backup, and it gets dropped when space is needed, starting with whatever has gone unread the longest. The size limit and how long searches are kept live in Settings → Data, along with how much is used right now and the command to empty it. The way to **keep** a book is still to download it.",
+      "cacheDesc": "What you look at without downloading it — the covers in search results, the covers in the Library, the search responses themselves — is not requested from the library every time: Glossa keeps it aside. This does two things: covers show up in the installed application too, and repeating a search does not go back to the network. This material **is not yours**: it never counts as downloaded, it is never part of a backup, and it gets dropped when space is needed, starting with whatever has gone unread the longest. The size limit and how long searches are kept live in Settings → Data, along with how much is used right now and the command to empty it. The way to **keep** a book is still to download it. Above search results you can see how old what you are looking at is, and next to it there is the command to run it again for real.",
       "backupTitle": "The backup",
       "backupDesc": "Settings → Storage → Backup and restore saves a file with everything that cannot be downloaded again: the works' records, notes, transcriptions, translations with their history, glossaries, phrase memory and the record of the work done. The images are not in it on purpose — they come back from the library — but the file knows which works were on your computer and at what size, and on restore Glossa offers to download them again. The file is compressed and carries a fingerprint: a backup interrupted while being written is recognised before the restore starts. The backup covers the whole of Glossa, not a single workspace: restoring replaces every workspace you have now.",
       "librariesTitle": "How Glossa treats libraries",

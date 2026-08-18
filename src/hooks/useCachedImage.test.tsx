@@ -16,12 +16,14 @@ describe('la copertina presa dal motore', () => {
     created.length = 0;
     revoked.length = 0;
     let next = 0;
-    URL.createObjectURL = vi.fn(() => {
+    // `vi.spyOn` e non un'assegnazione diretta: `restoreAllMocks` non
+    // ripristina le assegnazioni, e l'override sopravvivrebbe agli altri test.
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
       const url = `blob:copertina-${(next += 1)}`;
       created.push(url);
       return url;
     });
-    URL.revokeObjectURL = vi.fn((url: string) => {
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation((url: string) => {
       revoked.push(url);
     });
   });

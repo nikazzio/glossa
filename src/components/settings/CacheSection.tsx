@@ -8,6 +8,7 @@ import {
   DEFAULT_CACHE_MAX_BYTES,
   DEFAULT_SEARCH_TTL_HOURS,
   SEARCH_TTLS,
+  applyCacheCap,
   cacheUsage,
   clearCache,
   getCacheMaxBytes,
@@ -40,6 +41,15 @@ export function CacheSection() {
     }
   }, []);
 
+  // L'occupazione cambia mentre guardi altrove: se la finestra torna in primo
+  // piano, la cifra va riletta, altrimenti resta quella di quando hai aperto le
+  // impostazioni e il comando per svuotare sembra spento senza ragione.
+  useEffect(() => {
+    const onFocus = () => void refresh();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refresh]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -61,6 +71,8 @@ export function CacheSection() {
     setMax(next);
     try {
       await setCacheMaxBytes(next);
+      // Il tetto nuovo vale adesso, non alla prossima copertina.
+      setUsed((await applyCacheCap()).bytes);
     } catch (error: unknown) {
       setMax(previous);
       toast.error(t('settings.cache.saveFailed'), {

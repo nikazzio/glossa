@@ -1,6 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
-import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, Search } from 'lucide-react';
+import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ClickPopover, Dialog, IconButton, Select, Spinner } from '../ui';
@@ -11,6 +11,7 @@ import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
+import { relativeDateUnit } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 
 const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org']);
@@ -312,6 +313,9 @@ export function SourceDiscoveryPanel() {
     if (!outcome) return [];
     return outcome.manifest ? [{ ...outcome.manifest, id: outcome.manifest.manifestUrl }] : outcome.results;
   }, [outcome]);
+  // «di quanto tempo fa» si ricalcola a ogni disegno: la finestra resta aperta
+  // per minuti, e una riga che dice «adesso» per mezz'ora è peggio di niente.
+  const cachedUnit = relativeDateUnit((outcome?.cachedAt ?? 0) * 1000);
   const isListView = resultsPerRow === 'list';
   const columns = resultsPerRow === 4 ? 4 : 3;
   const displayCards = useMemo(
@@ -319,8 +323,7 @@ export function SourceDiscoveryPanel() {
     [cards, isListView, columns, expandedId],
   );
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const search = async (fresh: boolean) => {
     if (!input.trim()) return;
     setSearching(true);
     setExpandedId(null);
@@ -328,12 +331,17 @@ export function SourceDiscoveryPanel() {
     setOutcome(null);
     setSearchError(false);
     try {
-      setOutcome(await discoverIIIF(providerKey, input.trim(), 1));
+      setOutcome(await discoverIIIF(providerKey, input.trim(), 1, fresh));
     } catch {
       setSearchError(true);
     } finally {
       setSearching(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void search(false);
   };
 
   const loadMore = async () => {
@@ -408,6 +416,25 @@ export function SourceDiscoveryPanel() {
             <Spinner size={38} className="text-editorial-accent" />
           </motion.div>
         </div>
+      )}
+      {outcome?.cachedAt !== undefined && outcome.cachedAt !== null && (
+        // Un risultato conservato non si distingue da uno appena arrivato, e
+        // senza saperlo non si può decidere se vale la pena rifare la ricerca.
+        <p className="mt-3 flex items-center gap-2 text-[11px] text-editorial-muted">
+          <span>
+            {t('dashboard.discovery.fromCache', {
+              when: t(`common.relative.${cachedUnit.key}`, { count: cachedUnit.count ?? 0 }),
+            })}
+          </span>
+          <IconButton
+            title={t('dashboard.discovery.searchAgain')}
+            onClick={() => void search(true)}
+            disabled={searching}
+            size="xs"
+          >
+            <RefreshCw size={12} />
+          </IconButton>
+        </p>
       )}
       {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
       {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}

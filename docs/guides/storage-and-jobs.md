@@ -171,6 +171,11 @@ In **Impostazioni → Dati** si vede quanto occupa adesso, si sceglie il tetto
 qualsiasi momento senza perdere niente. Le immagini invece non scadono mai — i
 pixel di un manoscritto del Cinquecento non cambiano — le governa solo il tetto.
 
+Se vuoi sapere **se nel frattempo è comparso qualcosa di nuovo**, sopra i
+risultati compare da quanto tempo risale quello che stai guardando, e accanto un
+comando che rifà la ricerca davvero, saltando quello che era stato tenuto da
+parte.
+
 ## Il backup
 
 **Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto

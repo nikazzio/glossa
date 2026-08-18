@@ -225,6 +225,7 @@ pub fn run() {
             iiif::commands::set_version_size_cap,
             httpcache::commands::cached_image,
             httpcache::commands::cache_usage,
+            httpcache::commands::apply_cache_cap,
             httpcache::commands::clear_cache,
         ])
         .run(tauri::generate_context!())

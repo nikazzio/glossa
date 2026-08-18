@@ -751,7 +751,22 @@
     "clear": "Cancella",
     "optional": "opzionale",
     "next": "Avanti",
-    "back": "Indietro"
+    "back": "Indietro",
+    "relative": {
+      "justNow": "adesso",
+      "minutesAgo_one": "{{count}} minuto fa",
+      "minutesAgo_other": "{{count}} minuti fa",
+      "hoursAgo_one": "{{count}} ora fa",
+      "hoursAgo_other": "{{count}} ore fa",
+      "daysAgo_one": "{{count}} giorno fa",
+      "daysAgo_other": "{{count}} giorni fa",
+      "weeksAgo_one": "{{count}} settimana fa",
+      "weeksAgo_other": "{{count}} settimane fa",
+      "monthsAgo_one": "{{count}} mese fa",
+      "monthsAgo_other": "{{count}} mesi fa",
+      "yearsAgo_one": "{{count}} anno fa",
+      "yearsAgo_other": "{{count}} anni fa"
+    }
   },
   "projects": {
     "title": "Progetti",
@@ -1004,7 +1019,9 @@
       "noWorkspaces": "Nessun workspace disponibile. Creane uno prima di collegare una fonte.",
       "viewOptions": "Visualizzazione",
       "pageCount_one": "{{count}} pagina",
-      "pageCount_other": "{{count}} pagine"
+      "pageCount_other": "{{count}} pagine",
+      "fromCache": "risultati di {{when}}",
+      "searchAgain": "Cerca di nuovo, saltando i risultati conservati"
     },
     "stats": {
       "projects": "Progetti",
@@ -1649,7 +1666,7 @@
       "checkTitle": "Le due verifiche del deposito",
       "checkDesc": "La verifica rapida guarda soltanto se i file ci sono: è questione di millisecondi. La completa apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato, quindi è l'unica che riconosce un file troncato o marcito sul disco; in cambio è lenta in proporzione ai gigabyte. Se niente è danneggiato i due conteggi coincidono e cambia solo il tempo. Nella coda dei lavori ogni verifica dice quale delle due è. L'esito dell'ultimo controllo resta nelle impostazioni finché non ne fai un altro, e accanto ai file che non appartengono a nessuna opera c'è il comando per cancellarli: Glossa riguarda il deposito nel momento in cui premi e ti dice quanti ne ha tolti davvero.",
       "cacheTitle": "Cache di rete",
-      "cacheDesc": "Quello che guardi senza scaricarlo — le copertine nei risultati di ricerca, le copertine in Biblioteca, le risposte delle ricerche — non viene chiesto ogni volta alla biblioteca: Glossa lo tiene da parte. Serve a due cose: le copertine si vedono anche nell'applicazione installata, e una ricerca ripetuta non ripassa dalla rete. Questa roba **non è tua**: non conta come scaricata, non entra in un backup e viene buttata quando serve spazio, a partire da quella che non guardi da più tempo. Il tetto e la durata delle ricerche si cambiano in Impostazioni → Dati, dove si vede anche quanto occupa adesso e c'è il comando per svuotarla. Il modo di **tenere** un libro resta scaricarlo.",
+      "cacheDesc": "Quello che guardi senza scaricarlo — le copertine nei risultati di ricerca, le copertine in Biblioteca, le risposte delle ricerche — non viene chiesto ogni volta alla biblioteca: Glossa lo tiene da parte. Serve a due cose: le copertine si vedono anche nell'applicazione installata, e una ricerca ripetuta non ripassa dalla rete. Questa roba **non è tua**: non conta come scaricata, non entra in un backup e viene buttata quando serve spazio, a partire da quella che non guardi da più tempo. Il tetto e la durata delle ricerche si cambiano in Impostazioni → Dati, dove si vede anche quanto occupa adesso e c'è il comando per svuotarla. Il modo di **tenere** un libro resta scaricarlo. Sopra i risultati di una ricerca vedi da quando risale quello che stai guardando, e accanto c'è il comando per rifarla davvero.",
       "backupTitle": "Il backup",
       "backupDesc": "Impostazioni → Archiviazione → Backup e ripristino salva un file con tutto quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto. Le immagini non ci sono ed è voluto — si riprendono dalla biblioteca — ma il file sa quali opere erano sul computer e a che misura, e al ripristino Glossa ti propone di riscaricarle. Il file è compresso e porta un'impronta: un backup interrotto a metà scrittura viene riconosciuto prima che il ripristino cominci. Il backup è di tutto Glossa, non di un workspace solo: il ripristino sostituisce ogni workspace presente adesso.",
       "librariesTitle": "Come Glossa tratta le biblioteche",

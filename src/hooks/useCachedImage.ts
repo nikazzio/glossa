@@ -33,6 +33,10 @@ export function useCachedImage(request: CacheRequest | null): {
     }
     let objectUrl: string | null = null;
     let cancelled = false;
+    // La richiesta è cambiata: l'indirizzo di prima sta per essere rilasciato,
+    // e lasciarlo disegnato mostrerebbe il riquadro dell'immagine rotta al
+    // posto del segnaposto finché la nuova non arriva.
+    setUrl(null);
     setLoading(true);
 
     void (async () => {
