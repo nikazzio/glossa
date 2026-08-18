@@ -40,11 +40,12 @@ interface LibraryState {
 
   // Entries management
   setGlossaryEntries: (id: string, entries: GlossaryEntry[]) => void;
-  loadGlossaryEntries: (id: string) => Promise<void>;
+  /** Con un workspace, le voci arrivano con le sue correzioni (#213). */
+  loadGlossaryEntries: (id: string, workspaceId?: string | null) => Promise<void>;
   markDirty: (id: string) => void;
   clearDirty: (id: string) => void;
   setExpandedGlossaryId: (id: string | null) => void;
-  saveGlossaryEntries: (id: string) => Promise<void>;
+  saveGlossaryEntries: (id: string, workspaceId?: string | null) => Promise<void>;
   saveAllDirty: () => Promise<void>;
 }
 
@@ -129,9 +130,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set((state) => ({ entriesMap: { ...state.entriesMap, [id]: entries } }));
   },
 
-  loadGlossaryEntries: async (id) => {
+  loadGlossaryEntries: async (id, workspaceId) => {
     if (get().entriesMap[id] !== undefined) return;
-    const entries = await getGlossaryEntries(id);
+    // Le voci **come le vede questo workspace**: un dizionario condiviso può
+    // avere qui una correzione che altrove non c'è (#213).
+    const entries = await getGlossaryEntries(id, workspaceId);
     set((state) => ({ entriesMap: { ...state.entriesMap, [id]: entries } }));
   },
 
@@ -149,11 +152,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ expandedGlossaryId: id });
   },
 
-  saveGlossaryEntries: async (id) => {
+  saveGlossaryEntries: async (id, workspaceId) => {
     const entries = get().entriesMap[id] ?? [];
     await upsertGlossaryEntries(id, entries);
-    // Reload from DB so UI reflects actual persisted state
-    const fresh = await getGlossaryEntries(id);
+    const fresh = await getGlossaryEntries(id, workspaceId);
     set((state) => ({
       entriesMap: { ...state.entriesMap, [id]: fresh },
       dirtyIds: state.dirtyIds.filter((d) => d !== id),

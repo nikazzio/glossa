@@ -106,23 +106,24 @@ describe('workspaceService', () => {
     // d'uscita era svuotare tutto a mano.
     await deleteWorkspace('ws_abc123', { kind: 'moveTo', workspaceId: 'ws_altro' });
 
-    expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
-      'UPDATE projects SET workspace_id = $1 WHERE workspace_id = $2',
-      'UPDATE glossaries SET workspace_id = $1 WHERE workspace_id = $2',
-      'UPDATE phrase_memory SET workspace_id = $1 WHERE workspace_id = $2',
+    const queries = dbMocks.execute.mock.calls.map(([query]) => String(query));
+    // I lavori che abitano qui cambiano casa; i collegamenti passano di mano.
+    expect(queries[0]).toBe('UPDATE projects SET workspace_id = $1 WHERE workspace_id = $2');
+    expect(queries[1]).toBe(
       'UPDATE transcription_documents SET workspace_id = $1 WHERE workspace_id = $2',
-      'DELETE FROM workspaces WHERE id = $1',
-    ]);
+    );
+    expect(queries[2]).toContain('INSERT INTO workspace_items');
+    expect(queries[3]).toBe('DELETE FROM workspaces WHERE id = $1');
   });
 
   it('eliminando tutto, il contenuto se ne va prima del workspace', async () => {
     await deleteWorkspace('ws_abc123', { kind: 'deleteEverything' });
 
+    // Se ne vanno solo i lavori che abitavano qui: dizionari, frasi e libri
+    // sono collegati, non posseduti, e restano.
     expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
-      'DELETE FROM phrase_memory WHERE workspace_id = $1',
       'DELETE FROM transcription_documents WHERE workspace_id = $1',
       'DELETE FROM projects WHERE workspace_id = $1',
-      'DELETE FROM glossaries WHERE workspace_id = $1',
       'DELETE FROM workspaces WHERE id = $1',
     ]);
   });

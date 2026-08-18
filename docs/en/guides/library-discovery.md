@@ -25,9 +25,11 @@ A source is unique per manifest: adding it again never creates a duplicate — i
 
 ## Personal Library
 
-The catalogue opens on the **works linked to the workspace you are working in**: it answers the question «what am I working on here». Two commands at the top right switch between that and **every work in the Library**, which is how you find a work added elsewhere and link it here too.
+The Library always shows **every book**: it is a catalogue, not the view of a workspace.
 
-Every card carries the command that links or unlinks it from the current workspace, lit when it is linked. **A work can live in several workspaces at once** and is never duplicated: linking it in two places does not make two copies, neither of the data nor of the files.
+On each card, next to the commands, you see **which workspaces that book belongs to**: one label each. Clicking a label unlinks it from there; the command beside them opens the list of workspaces it is not in yet, to link it. **A work can live in several workspaces at once** and is never duplicated: linking it in two places does not make two copies, neither of the data nor of the files.
+
+The card's commands come in two groups: first what you do to the book — download, check, free space, delete — then where it lives.
 
 Opening a source shows its detail with recorded versions and the list of all your workspaces, where you can link or unlink it from each one.
 

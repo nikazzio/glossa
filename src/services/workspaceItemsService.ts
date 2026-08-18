@@ -124,3 +124,39 @@ export async function itemIdsOf(
   );
   return rows.map((row) => row.item_id);
 }
+
+
+/** Un item collegato, come lo mostra la pagina del workspace. */
+export interface LinkedItem {
+  id: string;
+  label: string;
+}
+
+/**
+ * I libri e i dizionari collegati a un workspace, con il loro nome.
+ *
+ * Due letture invece di una join sola perché sono due tabelle diverse, e
+ * mescolarle in una query costringerebbe a inventare una colonna comune che
+ * non esiste.
+ */
+export async function linkedSources(workspaceId: string): Promise<LinkedItem[]> {
+  return select<LinkedItem>(
+    `SELECT s.id, s.title AS label
+       FROM workspace_items wi
+       JOIN sources s ON s.id = wi.item_id
+      WHERE wi.workspace_id = $1 AND wi.item_type = 'source'
+      ORDER BY s.title ASC`,
+    [workspaceId],
+  );
+}
+
+export async function linkedGlossaries(workspaceId: string): Promise<LinkedItem[]> {
+  return select<LinkedItem>(
+    `SELECT g.id, g.name AS label
+       FROM workspace_items wi
+       JOIN glossaries g ON g.id = wi.item_id
+      WHERE wi.workspace_id = $1 AND wi.item_type = 'glossary'
+      ORDER BY g.name ASC`,
+    [workspaceId],
+  );
+}

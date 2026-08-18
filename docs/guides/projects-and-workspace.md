@@ -81,13 +81,31 @@ riepilogo completo degli stati e degli eventuali conteggi.
 | Glossario assegnato alla pipeline | Progetto / pipeline |
 | Chunk, bozze, audit, note | Progetto / pipeline |
 
-## Riutilizzare un dizionario in un altro workspace
+## Cosa contiene un workspace
 
-Ogni dizionario appartiene a un solo workspace. Se vuoi partire da termini già
-raccolti altrove, apri la Libreria del workspace di destinazione e scegli
-**Copia un dizionario esistente**. La copia può essere rinominata e diventa
-indipendente: modificarla non modifica mai l'originale. Se apri la Libreria da
-un progetto, la copia viene anche assegnata a quel progetto.
+Un workspace è una cartella che raccoglie il tuo materiale, in due modi diversi.
+
+**Ci abitano** le traduzioni e le trascrizioni: ognuna sta in **un solo**
+workspace, ed è da lì che prende le risorse. Se stesse in due, «quali dizionari
+vede questo lavoro» non avrebbe una risposta sola.
+
+**Ci sono collegati** i libri, i dizionari e le frasi importate: le stesse cose
+possono stare in **più workspace insieme**, senza mai essere duplicate. Un libro
+in due workspace è un libro solo, e i suoi file sul disco sono gli stessi.
+
+## Usare un dizionario in più workspace
+
+Collega lo stesso dizionario dove ti serve: resta uno solo, e le voci che
+aggiungi si vedono ovunque sia collegato.
+
+Se in un workspace una voce va tradotta diversamente, **correggila lì**: la
+correzione vale solo in quel workspace e l'originale non cambia. Puoi anche
+nascondere una voce che lì non serve. Chi guarda il dizionario da un altro
+workspace continua a vedere la versione di partenza.
+
+Se invece vuoi prendere le mosse da un dizionario e andare per la tua strada, la
+**copia** è ancora lì: crea un dizionario nuovo, indipendente, che da quel
+momento vive per conto suo.
 
 ## Spostare una traduzione in un altro workspace
 
@@ -98,18 +116,27 @@ i costi e le chiamate di ieri appartengono al workspace di allora, e lo
 spostamento stesso resta scritto nello storico. Spostare non copia niente e non
 cambia una virgola del testo.
 
+Le frasi in memoria nate da quella traduzione la seguono senza che tu debba fare
+niente: appartengono al lavoro da cui vengono.
+
+## Mettere da parte un workspace
+
+Quando un lavoro è finito ma non vuoi buttarlo, **archivialo**: sparisce
+dall'elenco di quelli in cui lavori e tutto quello che contiene resta dov'è. Si
+riapre quando serve.
+
 ## Eliminare un workspace
 
-Il comando non si rifiuta più. Ti dice cosa c'è dentro — quante traduzioni,
-trascrizioni, dizionari e frasi in memoria — e ti fa scegliere **una volta per
-tutto**:
+Il comando non si rifiuta più. Ti dice cosa c'è dentro e ti fa scegliere **una
+volta per tutto**:
 
+- **mettilo da parte** — la strada che non toglie niente;
 - **sposta tutto in un altro workspace**, e poi elimina quello vuoto;
-- **elimina tutto insieme al workspace**, senza ritorno.
+- **elimina** — se ne vanno le traduzioni e le trascrizioni che ci abitavano.
 
-Le **opere della Biblioteca non si toccano mai**: si scollegano e restano dove
-sono, perché possono essere collegate anche ad altri workspace e perché i loro
-file valgono gigabyte.
+**Libri, dizionari e frasi restano sempre**: sono collegati, non posseduti, e
+possono stare anche altrove. Un dizionario che resta senza nessun workspace non
+viene eliminato: lo ritrovi nel catalogo generale della Libreria.
 
 ## Consigli sui nomi
 

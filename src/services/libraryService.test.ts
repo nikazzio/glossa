@@ -112,7 +112,7 @@ describe('libraryService', () => {
       await addSourceToLibrary({ ...baseInput, workspaceId: 'ws-1' });
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT OR IGNORE INTO workspace_sources'),
+        expect.stringContaining('INSERT INTO workspace_items'),
         ['ws-1', 'source-existing'],
       );
       expect(dbMocks.runInTransaction).not.toHaveBeenCalled();
@@ -124,7 +124,7 @@ describe('libraryService', () => {
       await addSourceToLibrary({ ...baseInput, workspaceId: 'ws-1' });
 
       const queries = dbMocks.execute.mock.calls.map(([query]) => query as string);
-      expect(queries.some((q) => q.includes('INSERT INTO workspace_sources'))).toBe(true);
+      expect(queries.some((q) => q.includes('INSERT INTO workspace_items'))).toBe(true);
     });
 
     it('rifiuta un titolo vuoto senza toccare il database', async () => {
@@ -168,7 +168,7 @@ describe('libraryService', () => {
       await setWorkspaceSourceLink('ws-1', 's1', true);
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT OR IGNORE INTO workspace_sources'),
+        expect.stringContaining('INSERT INTO workspace_items'),
         ['ws-1', 's1'],
       );
     });
@@ -177,7 +177,7 @@ describe('libraryService', () => {
       await setWorkspaceSourceLink('ws-1', 's1', false);
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM workspace_sources'),
+        expect.stringContaining('DELETE FROM workspace_items'),
         ['ws-1', 's1'],
       );
     });

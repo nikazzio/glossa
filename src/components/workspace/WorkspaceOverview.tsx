@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { BookOpenText, FolderInput, LibraryBig, Plus, Settings2, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  BookOpenText,
+  FolderInput,
+  LibraryBig,
+  Link2,
+  Plus,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
@@ -11,9 +20,16 @@ import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
 import { WorkspaceDisposalDialog } from './WorkspaceDisposalDialog';
 import { WorkspaceIcon } from './WorkspaceIdentity';
 import {
+  archiveWorkspace,
   moveDocumentToWorkspace,
   type WorkspaceDisposal,
 } from '../../services/workspaceService';
+import {
+  linkedGlossaries,
+  linkedSources,
+  unlinkItem,
+  type LinkedItem,
+} from '../../services/workspaceItemsService';
 
 /**
  * Pagina del workspace attivo: identità, azioni e contenuto (oggi i progetti
@@ -22,7 +38,7 @@ import {
  */
 export function WorkspaceOverview() {
   const { t, i18n } = useTranslation();
-  const { activeWorkspace, workspaces, removeWorkspace } = useWorkspaceStore();
+  const { activeWorkspace, workspaces, removeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const { projects, loadProjects, openProject } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
 
@@ -31,6 +47,40 @@ export function WorkspaceOverview() {
   const [showDisposal, setShowDisposal] = useState(false);
   /** Il progetto per cui si sta scegliendo il workspace di destinazione. */
   const [movingProjectId, setMovingProjectId] = useState<string | null>(null);
+
+  /** Quello che è **collegato** qui: sta anche altrove, e si toglie da qui. */
+  const [books, setBooks] = useState<LinkedItem[]>([]);
+  const [dictionaries, setDictionaries] = useState<LinkedItem[]>([]);
+
+  const loadLinked = useCallback(async () => {
+    if (!activeWorkspace) {
+      setBooks([]);
+      setDictionaries([]);
+      return;
+    }
+    const [sources, glossaries] = await Promise.all([
+      linkedSources(activeWorkspace.id),
+      linkedGlossaries(activeWorkspace.id),
+    ]);
+    setBooks(sources);
+    setDictionaries(glossaries);
+  }, [activeWorkspace]);
+
+  useEffect(() => {
+    void loadLinked();
+  }, [loadLinked]);
+
+  const unlink = async (type: 'source' | 'glossary', id: string) => {
+    if (!activeWorkspace) return;
+    try {
+      await unlinkItem(activeWorkspace.id, type, id);
+      await loadLinked();
+    } catch (err: unknown) {
+      toast.error(t('workspace.linked.unlinkFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 
   const otherWorkspaces = useMemo(
     () => workspaces.filter((candidate) => candidate.id !== activeWorkspace?.id),
@@ -83,6 +133,21 @@ export function WorkspaceOverview() {
    * Spostare una traduzione in un altro workspace: da adesso vede le risorse di
    * quello, e il lavoro già svolto resta contato dove è stato svolto (#213).
    */
+  /** Mette da parte il workspace: niente si perde, sparisce dall'elenco. */
+  const handleArchive = async () => {
+    if (!activeWorkspace) return;
+    try {
+      await archiveWorkspace(activeWorkspace.id, true);
+      setShowDisposal(false);
+      toast.success(t('workspace.disposal.archived'));
+      await loadWorkspaces();
+    } catch (err: unknown) {
+      toast.error(t('workspace.deleteFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
   const handleMoveProject = async (projectId: string, targetWorkspaceId: string) => {
     try {
       await moveDocumentToWorkspace('project', projectId, targetWorkspaceId);
@@ -239,6 +304,39 @@ export function WorkspaceOverview() {
             <p className="px-1 text-sm text-editorial-muted">{t('dashboard.resumeEmpty')}</p>
           )}
         </section>
+
+        {/* Quello che è collegato qui: sta anche altrove, e da qui si toglie
+            soltanto il collegamento (#213). */}
+        {[
+          { type: 'source' as const, icon: LibraryBig, items: books, label: t('areas.library.title') },
+          { type: 'glossary' as const, icon: Link2, items: dictionaries, label: t('library.tabDictionaries') },
+        ]
+          .filter((group) => group.items.length > 0)
+          .map((group) => (
+            <section className="mt-6" key={group.type}>
+              <div className="mb-2 px-1">
+                <SectionLabel icon={group.icon} label={group.label} />
+              </div>
+              <ul className="space-y-1.5">
+                {group.items.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-2.5"
+                  >
+                    <span className="min-w-0 truncate text-sm text-editorial-ink">{item.label}</span>
+                    <IconButton
+                      size="sm"
+                      tone="muted"
+                      onClick={() => void unlink(group.type, item.id)}
+                      title={t('workspace.linked.unlink')}
+                    >
+                      <X size={12} />
+                    </IconButton>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
       </div>
 
       {activeWorkspace && (
@@ -252,6 +350,7 @@ export function WorkspaceOverview() {
           others={otherWorkspaces}
           onClose={() => setShowDisposal(false)}
           onConfirm={handleDisposal}
+          onArchive={handleArchive}
         />
       )}
     </main>

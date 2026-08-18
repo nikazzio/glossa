@@ -24,9 +24,11 @@ function workspace(id: string, name: string): Workspace {
 
 describe('eliminare un workspace', () => {
   const onConfirm = vi.fn().mockResolvedValue(undefined);
+  const onArchive = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     onConfirm.mockClear();
+    onArchive.mockClear();
     vi.mocked(workspaceContents).mockResolvedValue({
       projects: 3,
       glossaries: 1,
@@ -44,6 +46,7 @@ describe('eliminare un workspace', () => {
         others={[workspace('ws2', 'Filologia')]}
         onClose={() => {}}
         onConfirm={onConfirm}
+        onArchive={onArchive}
       />,
     );
 
@@ -55,6 +58,16 @@ describe('eliminare un workspace', () => {
     expect(await screen.findByText('workspace.disposal.message')).toBeInTheDocument();
     // Le opere collegate non sono fra le scelte: si scollegano e restano.
     expect(screen.getByText('workspace.disposal.sourcesStay')).toBeInTheDocument();
+  });
+
+  it('offre prima di metterlo da parte: è l unica strada che non toglie niente', async () => {
+    const user = userEvent.setup();
+    open();
+    await screen.findByText('workspace.disposal.message');
+
+    await user.click(screen.getByRole('button', { name: 'workspace.disposal.archiveConfirm' }));
+
+    expect(onArchive).toHaveBeenCalled();
   });
 
   it('sposta tutto nel workspace scelto', async () => {

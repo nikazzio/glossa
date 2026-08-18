@@ -148,8 +148,8 @@ export interface LibraryCatalogEntry {
   localPages: number;
   /** Quanto occupano quelle carte: serve alla conferma di «libera spazio» (D6). */
   localBytes: number;
-  /** Collegata al workspace attivo (#213): un'opera può stare in più workspace. */
-  linkedToWorkspace: boolean;
+  /** I workspace a cui è collegata: un'opera può stare in più posti (#213). */
+  workspaces: { workspaceId: string; workspaceName: string; isOrigin: boolean }[];
   /**
    * Chiave della biblioteca nel registro dei provider: decide il profilo di rete
    * dello scaricamento (D18) e la cartella nel deposito (D2).

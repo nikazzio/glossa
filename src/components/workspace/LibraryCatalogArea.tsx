@@ -4,8 +4,6 @@ import {
   Check,
   Clock,
   Download,
-  FolderInput,
-  LibraryBig,
   Eraser,
   LayoutGrid,
   Link2,
@@ -17,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
+import { ClickPopover, EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -37,7 +35,7 @@ import {
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
-import type { LibraryCatalogEntry } from '../../types';
+import type { LibraryCatalogEntry, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
   itemId?: string;
@@ -60,12 +58,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const loadDetail = useSourceLibraryStore((state) => state.loadDetail);
   const toggleWorkspaceLink = useSourceLibraryStore((state) => state.toggleWorkspaceLink);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
-  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
-  // Di chi sono le opere che si vedono: quelle collegate al workspace, o tutte
-  // (#213). Nessuna lettura da un altro workspace senza chiederla — ma il
-  // catalogo generale resta il modo di ritrovare un'opera e collegarla.
-  const scope = useUiStore((state) => state.catalogScope);
-  const setScope = useUiStore((state) => state.setCatalogScope);
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
   // Quante carte sono sul computer cambia quando un lavoro finisce: senza
@@ -77,24 +69,24 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   );
 
   useEffect(() => {
-    void loadCatalog(activeWorkspace?.id, scope === 'workspace');
-  }, [loadCatalog, finishedDownloads, activeWorkspace?.id, scope]);
+    void loadCatalog();
+  }, [loadCatalog, finishedDownloads]);
 
   useEffect(() => {
     if (itemId) void loadDetail(itemId);
   }, [itemId, loadDetail]);
 
   /**
-   * Collega o scollega l'opera dal workspace attivo, e rilegge il catalogo:
-   * guardando solo le opere del workspace, quella appena scollegata deve
-   * sparire dall'elenco — altrimenti resta lì a dire il contrario di quello che
-   * è appena stato fatto.
+   * Collega o scollega un'opera da un workspace, e rilegge il catalogo perché
+   * la scheda dica subito dove sta (#213).
+   *
+   * Il workspace si sceglie: la Biblioteca è un catalogo e non appartiene a
+   * nessuno di loro.
    */
-  const toggleLink = async (entry: LibraryCatalogEntry) => {
-    if (!activeWorkspace) return;
+  const toggleLink = async (sourceId: string, workspaceId: string, linked: boolean) => {
     try {
-      await toggleWorkspaceLink(activeWorkspace.id, entry.source.id, !entry.linkedToWorkspace);
-      await loadCatalog(activeWorkspace.id, scope === 'workspace');
+      await toggleWorkspaceLink(workspaceId, sourceId, linked);
+      await loadCatalog();
     } catch (error: unknown) {
       // Come gli altri comandi della scheda: un collegamento che non riesce si
       // dice, invece di lasciare la scheda a mostrare il contrario.
@@ -156,29 +148,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       <div className="flex items-center justify-between gap-3 px-5 pt-5 md:px-6">
         <SectionLabel icon={BookOpenText} label={t('areas.library.title')} />
         <div className="flex items-center gap-1">
-          {activeWorkspace && (
-            <>
-              <IconButton
-                size="sm"
-                tone={scope === 'workspace' ? 'accent' : 'default'}
-                onClick={() => setScope('workspace')}
-                title={t('areas.library.scopeWorkspace', { name: activeWorkspace.name })}
-                ariaPressed={scope === 'workspace'}
-              >
-                <FolderInput size={13} />
-              </IconButton>
-              <IconButton
-                size="sm"
-                tone={scope === 'all' ? 'accent' : 'default'}
-                onClick={() => setScope('all')}
-                title={t('areas.library.scopeAll')}
-                ariaPressed={scope === 'all'}
-              >
-                <LibraryBig size={13} />
-              </IconButton>
-              <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-            </>
-          )}
           <IconButton
             size="sm"
             tone={view === 'list' ? 'accent' : 'default'}
@@ -221,9 +190,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               view={view}
               onOpen={() => void loadDetail(entry.source.id)}
               onRemove={() => void removeSource(entry.source.id)}
-              onRefresh={() => void loadCatalog(activeWorkspace?.id, scope === 'workspace')}
-              workspaceId={activeWorkspace?.id ?? null}
-              onToggleLink={() => void toggleLink(entry)}
+              onRefresh={() => void loadCatalog()}
+              workspaces={workspaces}
+              onToggleLink={(workspaceId, linked) =>
+                void toggleLink(entry.source.id, workspaceId, linked)
+              }
             />
           ))}
         </div>
@@ -238,7 +209,7 @@ function CatalogEntryRow({
   onOpen,
   onRemove,
   onRefresh,
-  workspaceId,
+  workspaces,
   onToggleLink,
 }: {
   entry: LibraryCatalogEntry;
@@ -246,9 +217,9 @@ function CatalogEntryRow({
   onOpen: () => void;
   onRemove: () => void;
   onRefresh: () => void;
-  /** Il workspace attivo: senza, collegare non vuol dire niente. */
-  workspaceId: string | null;
-  onToggleLink: () => void;
+  /** Tutti i workspace, per scegliere dove collegare l'opera. */
+  workspaces: Workspace[];
+  onToggleLink: (workspaceId: string, linked: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -262,6 +233,10 @@ function CatalogEntryRow({
   // rotellina che gira su uno scaricamento in pausa è una bugia, e la pausa
   // premuta nel pannello non risultava da nessun'altra parte.
   const jobState = runningJob ? stillReasonOf(runningJob) : null;
+
+  const [picking, setPicking] = useState(false);
+  const linkedIds = new Set(entry.workspaces.map((link) => link.workspaceId));
+  const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
   const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0);
@@ -453,6 +428,54 @@ function CatalogEntryRow({
         </button>
       </div>
 
+      {/* Dove sta il libro: un'opera può essere collegata a più workspace, e la
+          Biblioteca li mostra invece di filtrare su uno solo (#213). */}
+      <span className="flex min-w-0 shrink-0 flex-wrap items-center gap-1">
+        {entry.workspaces.map((link) => (
+          <Tooltip key={link.workspaceId} label={t('areas.library.unlinkFromWorkspace')} side="top">
+            <button
+              type="button"
+              onClick={() => onToggleLink(link.workspaceId, false)}
+              className="rounded-full border border-editorial-accent/40 bg-editorial-accent/8 px-2 py-0.5 text-[11px] text-editorial-accent transition-colors hover:border-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              {link.workspaceName}
+            </button>
+          </Tooltip>
+        ))}
+        {available.length > 0 && (
+          <ClickPopover
+            open={picking}
+            onOpenChange={setPicking}
+            trigger={
+              <IconButton
+                size="sm"
+                title={t('areas.library.linkToWorkspace')}
+                ariaPressed={picking}
+              >
+                <Link2 size={13} />
+              </IconButton>
+            }
+          >
+            <ul className="flex min-w-40 flex-col py-1">
+              {available.map((workspace) => (
+                <li key={workspace.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPicking(false);
+                      onToggleLink(workspace.id, true);
+                    }}
+                    className="w-full px-3 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {workspace.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </ClickPopover>
+        )}
+      </span>
+
       <div className={`flex shrink-0 items-center gap-1 ${view === 'grid' ? 'justify-end' : ''}`}>
         {/* Lo stato non è un comando: sta prima, e non prende il posto di
             nessun pulsante. I comandi restano tutti al loro posto e si
@@ -499,23 +522,6 @@ function CatalogEntryRow({
             <Download size={13} />
           )}
         </IconButton>
-        {workspaceId && (
-          // Un'opera può stare in più workspace insieme: qui si dice se sta in
-          // questo, e il comando è lo stesso in entrambi i versi (#213).
-          <IconButton
-            size="sm"
-            tone={entry.linkedToWorkspace ? 'accent' : 'default'}
-            onClick={onToggleLink}
-            ariaPressed={entry.linkedToWorkspace}
-            title={
-              entry.linkedToWorkspace
-                ? t('areas.library.unlinkFromWorkspace')
-                : t('areas.library.linkToWorkspace')
-            }
-          >
-            <Link2 size={13} />
-          </IconButton>
-        )}
         <IconButton
           size="sm"
           onClick={() => void verify()}

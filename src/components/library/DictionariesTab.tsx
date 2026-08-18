@@ -59,7 +59,8 @@ export function DictionariesTab() {
       return;
     }
     setExpandedGlossaryId(id);
-    await loadGlossaryEntries(id);
+    // Le voci arrivano con le correzioni di **questo** workspace, quando c'è.
+    await loadGlossaryEntries(id, activeWorkspace?.id ?? null);
   };
 
   const handleEntriesChange = (id: string, entries: GlossaryEntry[]) => {
@@ -69,7 +70,7 @@ export function DictionariesTab() {
 
   const handleSaveEntries = async (id: string) => {
     try {
-      await saveGlossaryEntries(id);
+      await saveGlossaryEntries(id, activeWorkspace?.id ?? null);
       if (config.assignedGlossaryId === id) {
         await assignGlossary(id);
       }

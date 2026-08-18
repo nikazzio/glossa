@@ -30,11 +30,8 @@ interface SourceLibraryState {
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
   catalog: LibraryCatalogEntry[];
-  /**
-   * Il catalogo. Con un workspace e `onlyLinked` mostra solo le opere collegate
-   * a quello (#213); senza, il catalogo generale, che serve a ritrovarle.
-   */
-  loadCatalog: (workspaceId?: string, onlyLinked?: boolean) => Promise<void>;
+  /** Il catalogo: **tutte** le opere, sempre (#213). */
+  loadCatalog: () => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
@@ -102,9 +99,9 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
 
   catalog: [],
 
-  loadCatalog: async (workspaceId, onlyLinked = false) => {
+  loadCatalog: async () => {
     try {
-      set({ catalog: await listLibraryCatalog(workspaceId, onlyLinked) });
+      set({ catalog: await listLibraryCatalog() });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error) });
     }

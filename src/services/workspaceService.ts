@@ -123,6 +123,19 @@ export async function updateWorkspace(
   await execute(`UPDATE workspaces SET ${sets.join(', ')} WHERE id = $${index}`, params);
 }
 
+/**
+ * Mette da parte un workspace: sparisce da dove si sceglie, e tutto quello che
+ * contiene resta dov'è (#213). Si riapre quando serve — è l'alternativa
+ * all'eliminazione per chi ha finito un lavoro ma non vuole buttarlo.
+ */
+export async function archiveWorkspace(id: string, archived: boolean): Promise<void> {
+  await execute(
+    `UPDATE workspaces SET archived_at = ${archived ? 'CURRENT_TIMESTAMP' : 'NULL'} WHERE id = $1`,
+    [id],
+  );
+  logger.info(archived ? 'workspace.archived' : 'workspace.restored', { workspaceId: id });
+}
+
 /** Cosa c'è dentro un workspace, prima di decidere che farne (#213). */
 export interface WorkspaceContents {
   projects: number;
@@ -134,19 +147,28 @@ export interface WorkspaceContents {
 }
 
 export async function workspaceContents(id: string): Promise<WorkspaceContents> {
-  const count = async (table: string) => {
+  /** Gli item che **abitano** qui: la casa sta sulla loro riga. */
+  const atHome = async (table: string) => {
     const rows = await select<{ count: number }>(
       `SELECT COUNT(*) AS count FROM ${table} WHERE workspace_id = $1`,
       [id],
     );
     return rows[0]?.count ?? 0;
   };
-  const [projects, glossaries, phrases, transcriptions, linkedSources] = await Promise.all([
-    count('projects'),
-    count('glossaries'),
-    count('phrase_memory'),
-    count('transcription_documents'),
-    count('workspace_sources'),
+  /** Quelli **collegati**: stanno anche altrove, e restano dove sono. */
+  const linked = async (itemType: string) => {
+    const rows = await select<{ count: number }>(
+      'SELECT COUNT(*) AS count FROM workspace_items WHERE workspace_id = $1 AND item_type = $2',
+      [id, itemType],
+    );
+    return rows[0]?.count ?? 0;
+  };
+  const [projects, transcriptions, glossaries, phrases, linkedSources] = await Promise.all([
+    atHome('projects'),
+    atHome('transcription_documents'),
+    linked('glossary'),
+    linked('phrase'),
+    linked('source'),
   ]);
   return { projects, glossaries, phrases, transcriptions, linkedSources };
 }
@@ -172,25 +194,33 @@ export async function deleteWorkspace(id: string, disposal: WorkspaceDisposal): 
   if (disposal.kind === 'moveTo' && disposal.workspaceId === id) {
     throw new Error('workspace_move_to_itself');
   }
-  const owned = ['projects', 'glossaries', 'phrase_memory', 'transcription_documents'];
+  /** Gli item che abitano qui: traduzioni e trascrizioni. */
+  const homes = ['projects', 'transcription_documents'];
 
   await runInTransaction(async (run) => {
     if (disposal.kind === 'moveTo') {
-      for (const table of owned) {
+      for (const table of homes) {
         await run(`UPDATE ${table} SET workspace_id = $1 WHERE workspace_id = $2`, [
           disposal.workspaceId,
           id,
         ]);
       }
+      // I collegamenti passano al workspace scelto. Senza `DO NOTHING` la prima
+      // risorsa già collegata anche là farebbe fallire tutto.
+      await run(
+        `INSERT INTO workspace_items (workspace_id, item_type, item_id, is_origin)
+         SELECT $1, item_type, item_id, is_origin FROM workspace_items WHERE workspace_id = $2
+         ON CONFLICT(workspace_id, item_type, item_id) DO NOTHING`,
+        [disposal.workspaceId, id],
+      );
     } else {
-      // In quest'ordine: quello che dipende da un progetto se ne va con lui, ma
-      // la memoria di frasi punta anche ai progetti, e cancellarla dopo
-      // lascerebbe la cancellazione a metà.
-      await run('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
+      // Se ne vanno solo i lavori che abitavano qui. Libri, dizionari e frasi
+      // **restano**: sono collegati, non posseduti, possono stare anche altrove
+      // e servono alle analisi comunque.
       await run('DELETE FROM transcription_documents WHERE workspace_id = $1', [id]);
       await run('DELETE FROM projects WHERE workspace_id = $1', [id]);
-      await run('DELETE FROM glossaries WHERE workspace_id = $1', [id]);
     }
+    // I collegamenti di questo workspace cadono con lui, per cascata.
     await run('DELETE FROM workspaces WHERE id = $1', [id]);
   });
   logger.info('workspace.deleted', { workspaceId: id, disposal: disposal.kind });
