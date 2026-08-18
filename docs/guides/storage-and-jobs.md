@@ -195,6 +195,29 @@ riparano.
 pagine hai voluto anche la versione più grande, la scheda dice «più 3 a
 risoluzione piena» accanto al conteggio, invece di far sembrare il libro a metà.
 
+## Ridurre le immagini per liberare spazio
+
+Un libro scaricato alla massima risoluzione occupa il triplo del necessario. Uno
+scaricato mesi fa con un tetto più alto di quello che ti serve adesso tiene
+dettaglio che non guardi. In entrambi i casi **ripulire è meglio che
+riscaricare**, perché la biblioteca non ne paga il prezzo.
+
+Nella scheda dell'opera, in Biblioteca, c'è il comando che rilegge le pagine già
+scaricate, le rimpicciolisce alla misura scelta e le ricomprime, sostituendo
+l'originale.
+
+**È irreversibile, e la conferma lo dice** insieme a quante pagine tocca e a
+quanto occupano adesso. Lavora su **una misura per volta**: quella con cui il
+libro è stato scaricato. Le pagine che avevi preso a risoluzione piena di
+proposito restano come sono.
+
+Su un libro lungo dura minuti, quindi è un lavoro come lo scaricamento: lo segui
+dal pannello in basso a destra, e puoi metterlo in pausa o annullarlo. Le pagine
+già più piccole della misura scelta non vengono toccate, perché ricomprimerle
+perderebbe qualcosa senza liberare niente.
+
+La misura di arrivo e la qualità si scelgono in **Impostazioni → Scaricamento**.
+
 ## Il backup
 
 **Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto

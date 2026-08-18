@@ -940,7 +940,7 @@ progetto vengono già verificate.
 I 47 gruppi misurati diventano un test a tabella con i dati veri: se la regola della
 misura cambia, il test se ne accorge.
 
-**Terzo — l'ottimizzazione locale.** Stava insieme alla cache, e non può: l'ottimizzazione
+**Terzo — l'ottimizzazione locale.** *(fatto: ramo `feat/ottimizzazione-locale`.)* Stava insieme alla cache, e non può: l'ottimizzazione
 **riscrive l'impronta nel file di lato** (§5.7), e il file di lato nasce nel ramo dello
 scaricamento. Tenerli insieme vorrebbe dire o scrivere l'ottimizzazione contro le righe
 del database che stanno per sparire, o fermare la cache ad aspettare il ramo grande. Viene

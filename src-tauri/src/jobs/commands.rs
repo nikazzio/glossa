@@ -156,6 +156,13 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         Arc::new(crate::download::handler::SourceDownloadJob::new(courtesy)),
     );
 
+    // L'ottimizzazione locale: rilegge pagine già scaricate e le ricomprime
+    // (§5.7). Processore, come la verifica.
+    engine.register(
+        crate::optimize::JOB_TYPE,
+        Arc::new(crate::optimize::ImageOptimizationJob),
+    );
+
     // La verifica del deposito: il primo lavoro che pesa sul processore e non
     // sulla rete (D5-bis).
     engine.register(

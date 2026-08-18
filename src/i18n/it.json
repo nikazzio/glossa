@@ -621,7 +621,12 @@
       "pixels": "{{value}} pixel",
       "thumbnailEdge": "Misura delle miniature",
       "thumbnailEdgeHint": "Le miniature si ricavano dalle pagine scaricate, sul computer: non costano nessuna richiesta. Più grandi occupano più spazio e si sfogliano meglio.",
-      "sizes": "Misure"
+      "sizes": "Misure",
+      "optimize": "Ottimizzazione locale",
+      "optimizeLongEdge": "lato lungo di arrivo",
+      "optimizeLongEdgeHint": "A che misura ridurre le pagine già scaricate, quando lanci l'ottimizzazione su un'opera. Si può cambiare al momento di lanciarla: dipende dal materiale, e una stampa larga sopporta molto meno di una minuscola fitta.",
+      "optimizeQuality": "qualità JPEG",
+      "optimizeQualityHint": "Quanto comprimere. Più basso significa file più piccoli e più artefatti; 82 è il valore che si usa di norma per il materiale d'archivio."
     },
     "librariesTab": "Biblioteche",
     "jobsTab": "Lavori",
@@ -867,7 +872,13 @@
       "removeMessageWithFiles": "Sparisce dalla Biblioteca insieme ai suoi collegamenti, e vengono eliminate anche le {{size}} già scaricate. Per tenere l'opera e liberare solo lo spazio c'è il comando apposta.",
       "removeFailed": "Non è stato possibile togliere l'opera",
       "extraFullSize_one": "più {{count}} a risoluzione piena",
-      "extraFullSize_other": "più {{count}} a risoluzione piena"
+      "extraFullSize_other": "più {{count}} a risoluzione piena",
+      "optimizeAction": "Riduci le immagini per liberare spazio",
+      "optimizeTitle": "Ridurre {{count}} pagine a {{edge}} px?",
+      "optimizeMessage": "Le pagine vengono rilette, rimpicciolite e ricompresse: **l'originale viene sostituito e non si torna indietro**. Adesso questa misura occupa {{size}}. Le altre misure di quest'opera non si toccano.",
+      "optimizeConfirm": "Riduci",
+      "optimizeQueued": "Ottimizzazione messa in coda.",
+      "optimizeFailed": "Non è stato possibile avviare l'ottimizzazione."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1665,6 +1676,8 @@
       "downloadPolicyDesc": "In Impostazioni → Scaricamento scegli quanto grandi vuoi le pagine e quanto grandi le miniature. La misura delle pagine è un obiettivo, non un numero esatto: Glossa chiede alla biblioteca la misura che dichiara più vicina, sopra o sotto. La stessa scelta si può fare sulla singola opera, aprendo la sua scheda in Biblioteca, e lì vince: la misura dipende dal materiale, non da chi conserva il libro. Le pagine già scaricate restano come sono.",
       "countingTitle": "Come si legge «quante pagine ho»",
       "countingDesc": "Il conteggio che vedi in Biblioteca è quello dei file che stanno davvero sul tuo computer: Glossa guarda la cartella, non un elenco tenuto a parte. Se una pagina la biblioteca non la serve — capita, e non è un guasto tuo — non viene contata come mancante: il libro risulta completo per quanto la biblioteca serve. E se di qualche pagina hai preso anche la versione a risoluzione piena, la scheda lo dice come aggiunta («più 3 a risoluzione piena»), non come un libro a metà.",
+      "optimizeTitle": "Ridurre le immagini per liberare spazio",
+      "optimizeDesc": "Un libro scaricato alla massima risoluzione occupa il triplo del necessario, e uno scaricato mesi fa con un tetto più alto di quello che ti serve adesso occupa spazio per un dettaglio che non guardi. Nella scheda dell'opera, in Biblioteca, c'è il comando che rilegge le pagine già scaricate, le rimpicciolisce alla misura scelta e le ricomprime. È **irreversibile**: l'originale viene sostituito, e la conferma lo dice insieme a quante pagine tocca e a quanto occupano adesso. Lavora su una misura per volta, quindi le pagine che avevi preso a risoluzione piena di proposito non vengono toccate. Dura minuti su un libro lungo: è un lavoro come lo scaricamento, e lo segui dal pannello in basso, con pausa e annullamento. La misura di arrivo e la qualità si scelgono in Impostazioni → Scaricamento, e ripulire è meglio che riscaricare, perché la biblioteca non ne paga il prezzo.",
       "removeTitle": "Togliere un'opera dalla Biblioteca",
       "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
       "checkTitle": "Le due verifiche del deposito",
@@ -2064,14 +2077,16 @@
       "debug_counter": "Prova di sviluppo",
       "debug_restart_only": "Prova di sviluppo (da rifare)",
       "source_download": "Scaricamento pagine",
-      "vault_verification": "Verifica del deposito"
+      "vault_verification": "Verifica del deposito",
+      "image_optimization": "Ottimizzazione delle immagini"
     },
     "phase": {
       "starting": "avvio",
       "manifest": "lettura del manifesto",
       "downloading": "scaricamento",
       "checking_files": "controllo dei file",
-      "looking_for_orphans": "ricerca dei file orfani"
+      "looking_for_orphans": "ricerca dei file orfani",
+      "optimizing": "riduzione delle immagini"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
@@ -2087,7 +2102,8 @@
       "source_download": "pagine",
       "vault_verification": "verifica",
       "debug_counter": "prova",
-      "debug_restart_only": "prova"
+      "debug_restart_only": "prova",
+      "image_optimization": "ottimizzazione"
     },
     "detail": {
       "type": "tipo",

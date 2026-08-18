@@ -9,6 +9,7 @@ import {
   Link2,
   List,
   Loader2,
+  Minimize2,
   PauseCircle,
   ShieldCheck,
   Trash2,
@@ -35,6 +36,7 @@ import {
 import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
+import { enqueueOptimization, optimizeEstimate } from '../../services/optimizeService';
 import type { LibraryCatalogEntry, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -373,6 +375,41 @@ function CatalogEntryRow({
   };
 
   /**
+   * Ridurre le immagini già scaricate per liberare spazio (§5.7).
+   *
+   * Lavora sulla **misura principale**, cioè quella con cui il libro è stato
+   * scaricato: le pagine prese a risoluzione piena di proposito restano come
+   * sono. È irreversibile, e la conferma lo dice insieme a quante pagine tocca e
+   * a quanto occupano adesso.
+   */
+  const optimise = async () => {
+    const principal = entry.sizes.find((size) => size.pages === entry.localPages);
+    if (!entry.versionId || !principal) return;
+    setBusy(true);
+    try {
+      const estimate = await optimizeEstimate(entry.versionId, principal.sizeTag);
+      const confirmed = await confirm({
+        title: t('areas.library.optimizeTitle', {
+          count: estimate.pages,
+          edge: estimate.longEdge,
+        }),
+        message: t('areas.library.optimizeMessage', { size: humanSize(estimate.bytes) }),
+        confirmLabel: t('areas.library.optimizeConfirm'),
+        danger: true,
+      });
+      if (!confirmed) return;
+      await enqueueOptimization(entry.versionId, principal.sizeTag);
+      toast.success(t('areas.library.optimizeQueued'));
+    } catch (error: unknown) {
+      toast.error(t('areas.library.optimizeFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
    * Togliere un'opera la toglie **per intero**: scheda, collegamenti e la sua
    * cartella nel deposito (D6). Lasciare i file dietro produceva cartelle che
    * nessuna schermata sa più mostrare, e che nemmeno riaggiungendo la stessa
@@ -542,6 +579,14 @@ function CatalogEntryRow({
           title={t('areas.library.verify')}
         >
           <ShieldCheck size={13} />
+        </IconButton>
+        <IconButton
+          size="sm"
+          onClick={() => void optimise()}
+          disabled={busy || entry.localPages === 0}
+          title={t('areas.library.optimizeAction')}
+        >
+          <Minimize2 size={13} />
         </IconButton>
         <IconButton
           size="sm"

@@ -9,6 +9,7 @@ mod images;
 mod jobs;
 mod keystore;
 mod llm;
+mod optimize;
 mod provenance;
 mod storage_config;
 mod vault;
@@ -203,6 +204,8 @@ pub fn run() {
             download::inventory::version_inventory,
             download::inventory::library_inventory,
             download::inventory::version_page_paths,
+            optimize::commands::optimize_estimate,
+            optimize::commands::enqueue_optimization,
             documents::import_document,
             documents::export_markdown_docx,
             vector::vec_ping,
