@@ -8,6 +8,8 @@ import {
   forkGlossary,
   importEntriesFromCsv,
   getGlossaryEntries,
+  isGlossaryHome,
+  saveGlossaryEntriesAsOverrides,
   upsertGlossaryEntries,
 } from '../services/glossaryService';
 
@@ -154,7 +156,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   saveGlossaryEntries: async (id, workspaceId) => {
     const entries = get().entriesMap[id] ?? [];
-    await upsertGlossaryEntries(id, entries);
+    // Chi **ospita** un dizionario non lo riscrive per tutti: le sue modifiche
+    // diventano correzioni valide solo qui (#213). Chi ce l'ha in casa, invece,
+    // sta modificando il dizionario.
+    const home = workspaceId ? await isGlossaryHome(id, workspaceId) : true;
+    if (workspaceId && !home) {
+      await saveGlossaryEntriesAsOverrides(id, workspaceId, entries);
+    } else {
+      await upsertGlossaryEntries(id, entries);
+    }
     const fresh = await getGlossaryEntries(id, workspaceId);
     set((state) => ({
       entriesMap: { ...state.entriesMap, [id]: fresh },

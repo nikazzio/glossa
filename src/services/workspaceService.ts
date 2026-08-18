@@ -205,12 +205,15 @@ export async function deleteWorkspace(id: string, disposal: WorkspaceDisposal): 
           id,
         ]);
       }
-      // I collegamenti passano al workspace scelto. Senza `DO NOTHING` la prima
-      // risorsa già collegata anche là farebbe fallire tutto.
+      // I collegamenti passano al workspace scelto. La risorsa può essere già
+      // collegata anche là: in quel caso la provenienza si somma invece di
+      // perdersi — se nasceva qui, adesso nasce là, altrimenti resterebbe una
+      // risorsa senza nessun posto in cui è nata.
       await run(
         `INSERT INTO workspace_items (workspace_id, item_type, item_id, is_origin)
          SELECT $1, item_type, item_id, is_origin FROM workspace_items WHERE workspace_id = $2
-         ON CONFLICT(workspace_id, item_type, item_id) DO NOTHING`,
+         ON CONFLICT(workspace_id, item_type, item_id) DO UPDATE SET
+           is_origin = MAX(workspace_items.is_origin, excluded.is_origin)`,
         [disposal.workspaceId, id],
       );
     } else {

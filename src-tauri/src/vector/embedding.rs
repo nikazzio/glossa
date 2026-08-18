@@ -138,7 +138,6 @@ pub async fn get_embeddings(
     Ok(parsed.data.into_iter().map(|o| o.embedding).collect())
 }
 
-
 /// Le frasi che un workspace vede (#213).
 ///
 /// Una frase nata da una traduzione **segue il suo progetto**: il workspace è
@@ -200,11 +199,21 @@ pub async fn vec_list_phrase_memory(
         let entries = statement
             .query_map(rusqlite::named_params! { ":ws": workspace_id }, |row| {
                 Ok(PhraseMemoryEntryResult {
-                    id: row.get(0)?, workspace_id: workspace_id.clone(), source_phrase: row.get(1)?,
-                    target_phrase: row.get(2)?, confidence: row.get(3)?, source_language: row.get(4)?,
-                    target_language: row.get(5)?, author: row.get(6)?, work: row.get(7)?,
-                    domain: row.get(8)?, tags: row.get(9)?, notes: row.get(10)?,
-                    chunk_id: row.get(11)?, project_id: row.get(12)?, embedding_model: row.get(13)?,
+                    id: row.get(0)?,
+                    workspace_id: workspace_id.clone(),
+                    source_phrase: row.get(1)?,
+                    target_phrase: row.get(2)?,
+                    confidence: row.get(3)?,
+                    source_language: row.get(4)?,
+                    target_language: row.get(5)?,
+                    author: row.get(6)?,
+                    work: row.get(7)?,
+                    domain: row.get(8)?,
+                    tags: row.get(9)?,
+                    notes: row.get(10)?,
+                    chunk_id: row.get(11)?,
+                    project_id: row.get(12)?,
+                    embedding_model: row.get(13)?,
                     created_at: row.get(14)?,
                 })
             })
@@ -504,9 +513,10 @@ pub async fn vec_regenerate_all_embeddings(
             ))
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
         let entries = statement
-            .query_map(rusqlite::named_params! { ":ws": query_workspace_id }, |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-            })
+            .query_map(
+                rusqlite::named_params! { ":ws": query_workspace_id },
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
             .map_err(|error| EmbeddingError::Http(error.to_string()))?
             .collect::<rusqlite::Result<_>>()
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;

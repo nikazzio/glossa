@@ -59,7 +59,9 @@ export function DictionariesTab() {
       return;
     }
     setExpandedGlossaryId(id);
-    // Le voci arrivano con le correzioni di **questo** workspace, quando c'è.
+    // Le voci arrivano **come le vede questo workspace**: se una è stata
+    // corretta qui, si legge la correzione. Salvando, chi ospita il dizionario
+    // scrive una correzione e chi ce l'ha in casa modifica il dizionario.
     await loadGlossaryEntries(id, activeWorkspace?.id ?? null);
   };
 

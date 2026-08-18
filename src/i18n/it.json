@@ -794,11 +794,9 @@
       "linkWorkspace": "Collega a {{name}}",
       "unlinkWorkspace": "Scollega da {{name}}",
       "linkedWorkspaces": "Workspace collegati",
-      "linkFailed": "Collegamento non riuscito",
-      "linkToWorkspace": "Collega a questo workspace",
+      "linkFailed": "Il collegamento non è andato a buon fine",
+      "linkToWorkspace": "Collega a un workspace",
       "unlinkFromWorkspace": "Scollega da questo workspace",
-      "scopeWorkspace": "Solo le opere di {{name}}",
-      "scopeAll": "Tutte le opere in Biblioteca",
       "viewList": "Elenco",
       "viewGrid": "Griglia",
       "empty": "Nessuna fonte in Biblioteca",
@@ -888,7 +886,8 @@
     },
     "linked": {
       "unlink": "Togli da questo workspace",
-      "unlinkFailed": "Non è stato possibile togliere il collegamento"
+      "unlinkFailed": "Il collegamento non è stato tolto",
+      "loadFailed": "Non è stato possibile leggere cosa è collegato qui"
     },
     "moveDocument": {
       "command": "Sposta in un altro workspace",

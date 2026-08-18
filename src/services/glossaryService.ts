@@ -431,3 +431,80 @@ export async function addGlossaryEntry(
     [entry.id, glossaryId, entry.term, entry.translation ?? '', entry.notes ?? ''],
   );
 }
+
+/** Il dizionario è **nato** in questo workspace, o lo sta soltanto usando? */
+export async function isGlossaryHome(
+  glossaryId: string,
+  workspaceId: string,
+): Promise<boolean> {
+  const rows = await select<{ is_origin: number }>(
+    `SELECT is_origin FROM workspace_items
+      WHERE item_type = 'glossary' AND item_id = $1 AND workspace_id = $2`,
+    [glossaryId, workspaceId],
+  );
+  return rows[0]?.is_origin === 1;
+}
+
+/**
+ * Salva le modifiche di un workspace **ospite**: non tocca il dizionario, ne
+ * corregge la copia che vede lui (#213).
+ *
+ * Il confronto è con le voci originali: quella cambiata diventa una
+ * correzione, quella tolta dall'elenco diventa nascosta, quella riportata al
+ * valore di partenza perde la correzione. Una voce **nuova** entra invece nel
+ * dizionario per tutti: non si può correggere una voce che non esiste, e chi
+ * la aggiunge sta aggiungendo un termine, non correggendone uno.
+ */
+export async function saveGlossaryEntriesAsOverrides(
+  glossaryId: string,
+  workspaceId: string,
+  entries: GlossaryEntry[],
+): Promise<void> {
+  const canonical = await getGlossaryEntries(glossaryId);
+  const byId = new Map(entries.filter((entry) => entry.id).map((entry) => [entry.id!, entry]));
+
+  await runInTransaction(async (run) => {
+    for (const original of canonical) {
+      const edited = original.id ? byId.get(original.id) : undefined;
+      if (!edited) {
+        await run(
+          `INSERT INTO glossary_entry_overrides (workspace_id, entry_id, hidden)
+           VALUES ($1, $2, 1)
+           ON CONFLICT(workspace_id, entry_id) DO UPDATE SET hidden = 1, updated_at = CURRENT_TIMESTAMP`,
+          [workspaceId, original.id],
+        );
+        continue;
+      }
+      const sameTranslation = edited.translation === original.translation;
+      const sameNotes = (edited.notes ?? '') === (original.notes ?? '');
+      if (sameTranslation && sameNotes) {
+        await run(
+          'DELETE FROM glossary_entry_overrides WHERE workspace_id = $1 AND entry_id = $2',
+          [workspaceId, original.id],
+        );
+        continue;
+      }
+      await run(
+        `INSERT INTO glossary_entry_overrides (workspace_id, entry_id, translation, notes, hidden)
+         VALUES ($1, $2, $3, $4, 0)
+         ON CONFLICT(workspace_id, entry_id) DO UPDATE SET
+           translation = excluded.translation,
+           notes       = excluded.notes,
+           hidden      = 0,
+           updated_at  = CURRENT_TIMESTAMP`,
+        [workspaceId, original.id, edited.translation, edited.notes ?? null],
+      );
+    }
+
+    // Termini nuovi: entrano nel dizionario, perché non c'è niente da correggere.
+    const known = new Set(canonical.map((entry) => entry.id));
+    for (const entry of entries) {
+      if (entry.id && known.has(entry.id)) continue;
+      if (!entry.term.trim() || !entry.translation.trim()) continue;
+      await run(
+        'INSERT INTO glossary_entries (id, glossary_id, term, translation, notes) VALUES ($1, $2, $3, $4, $5)',
+        [entry.id ?? generateId('gle'), glossaryId, entry.term, entry.translation, entry.notes ?? ''],
+      );
+    }
+  });
+}

@@ -8,7 +8,8 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { listGlossaries, createGlossary, forkGlossary } = await import('./glossaryService');
+const { listGlossaries, createGlossary, forkGlossary, saveGlossaryEntriesAsOverrides } =
+  await import('./glossaryService');
 
 describe('glossaryService — ambito del workspace (#213)', () => {
   beforeEach(() => {
@@ -67,5 +68,26 @@ describe('glossaryService — ambito del workspace (#213)', () => {
 
     await expect(forkGlossary('gls-missing', 'Copia', 'ws-destination')).rejects.toThrow('glossary_not_found');
     expect(dbMocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('un workspace ospite corregge la voce, non la riscrive per tutti', async () => {
+    // Salvare le voci «come le vede il workspace» dentro il dizionario avrebbe
+    // propagato a tutti una correzione locale, e cancellato le voci nascoste.
+    dbMocks.select.mockResolvedValueOnce([
+      { id: 'e1', glossary_id: 'g1', term: 'spada', translation: 'sword', notes: '' },
+      { id: 'e2', glossary_id: 'g1', term: 'stocco', translation: 'rapier', notes: '' },
+    ]);
+
+    await saveGlossaryEntriesAsOverrides('g1', 'ws-guest', [
+      { id: 'e1', term: 'spada', translation: 'blade' },
+    ]);
+
+    const queries = dbMocks.execute.mock.calls.map(([query]) => String(query));
+    // La prima è cambiata: diventa una correzione di questo workspace.
+    expect(queries[0]).toContain('INSERT INTO glossary_entry_overrides');
+    expect(dbMocks.execute.mock.calls[0][1]).toEqual(['ws-guest', 'e1', 'blade', null]);
+    // La seconda è sparita dall'elenco: qui si nasconde, altrove resta.
+    expect(queries[1]).toContain('hidden');
+    expect(queries.some((query) => query.includes('INSERT INTO glossary_entries'))).toBe(false);
   });
 });

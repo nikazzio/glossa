@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpenText,
   FolderInput,
@@ -38,6 +38,10 @@ import {
  */
 export function WorkspaceOverview() {
   const { t, i18n } = useTranslation();
+  // `t` cambia identità a ogni render: dentro le dipendenze rilancerebbe la
+  // lettura all'infinito.
+  const tRef = useRef(t);
+  tRef.current = t;
   const { activeWorkspace, workspaces, removeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const { projects, loadProjects, openProject } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
@@ -58,12 +62,22 @@ export function WorkspaceOverview() {
       setDictionaries([]);
       return;
     }
-    const [sources, glossaries] = await Promise.all([
-      linkedSources(activeWorkspace.id),
-      linkedGlossaries(activeWorkspace.id),
-    ]);
-    setBooks(sources);
-    setDictionaries(glossaries);
+    try {
+      const [sources, glossaries] = await Promise.all([
+        linkedSources(activeWorkspace.id),
+        linkedGlossaries(activeWorkspace.id),
+      ]);
+      setBooks(sources);
+      setDictionaries(glossaries);
+    } catch (error: unknown) {
+      // Senza questo, un errore di lettura lasciava la pagina a mostrare
+      // l'elenco di prima, che è la bugia peggiore: sembra tutto a posto.
+      setBooks([]);
+      setDictionaries([]);
+      toast.error(tRef.current('workspace.linked.loadFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
   }, [activeWorkspace]);
 
   useEffect(() => {

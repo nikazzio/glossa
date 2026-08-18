@@ -795,10 +795,8 @@
       "unlinkWorkspace": "Unlink from {{name}}",
       "linkedWorkspaces": "Linked workspaces",
       "linkFailed": "The link did not go through",
-      "linkToWorkspace": "Link to this workspace",
+      "linkToWorkspace": "Link to a workspace",
       "unlinkFromWorkspace": "Unlink from this workspace",
-      "scopeWorkspace": "Only the works in {{name}}",
-      "scopeAll": "Every work in the Library",
       "viewList": "List",
       "viewGrid": "Grid",
       "empty": "No sources in the library",
@@ -888,7 +886,8 @@
     },
     "linked": {
       "unlink": "Remove from this workspace",
-      "unlinkFailed": "The link could not be removed"
+      "unlinkFailed": "The link was not removed",
+      "loadFailed": "Could not read what is linked here"
     },
     "moveDocument": {
       "command": "Move to another workspace",
