@@ -7,6 +7,8 @@
 pub mod courtesy;
 pub mod fetch;
 pub mod handler;
+#[cfg(test)]
+mod handler_it;
 pub mod manifest;
 pub mod size;
 

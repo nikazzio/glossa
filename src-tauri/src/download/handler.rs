@@ -76,6 +76,16 @@ struct Checkpoint {
     /// la ripresa salta esattamente quelle, e i due valori divergono appena un
     /// canvas del manifesto non è scaricabile (D13).
     done: u32,
+    /// Le misure già negoziate, per gruppo di dimensioni: `"2583x4126"` →
+    /// `"1292,"`.
+    ///
+    /// Stanno nel punto salvato perché **una ripresa non deve rinegoziarle**.
+    /// Tenendole solo in memoria, ogni riavvio le chiedeva da capo: su un libro
+    /// di archive.org, dove i canvas hanno quasi tutti dimensioni diverse, sono
+    /// state misurate 70 letture del descrittore per 39 gruppi distinti. D4
+    /// prevede una lettura per gruppo, non una per gruppo per avvio.
+    #[serde(default)]
+    sizes: std::collections::BTreeMap<String, String>,
 }
 
 /// Le fasi dello scaricamento, come le legge il pannello. Ogni tipo di lavoro
@@ -208,37 +218,40 @@ impl JobHandler for SourceDownloadJob {
             .await
             .unwrap_or_else(|| config.version_id.clone());
         record_manifest(&ctx, &config, total, &manifest).await?;
-        log::info!(
-            "job download starting id={} provider={} pages={} resume_from={} cap={} thumb={}",
-            ctx.id,
-            config.provider_key,
-            total,
-            ctx.checkpoint
-                .as_deref()
-                .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
-                .map(|saved| saved.done)
-                .unwrap_or(0),
-            config.size_tag,
-            config.thumbnail_edge
-        );
 
         // 2. Le carte, una per volta: il confine dove ci si può fermare.
         //
         // Il punto salvato conta **le carte fatte**, non il numero dell'ultima:
         // se il manifesto dichiara canvas non scaricabili i due valori
         // divergono, e saltare per numero perderebbe carte a ogni ripresa.
-        let start = ctx
+        let saved: Checkpoint = ctx
             .checkpoint
             .as_deref()
-            .and_then(|saved| serde_json::from_str::<Checkpoint>(saved).ok())
-            .map(|saved| saved.done.min(total))
-            .unwrap_or(0);
+            .and_then(|saved| serde_json::from_str(saved).ok())
+            .unwrap_or_default();
+        let start = saved.done.min(total);
+        log::info!(
+            "job download starting id={} provider={} pages={} resume_from={} sizes_known={} cap={} thumb={}",
+            ctx.id,
+            config.provider_key,
+            total,
+            start,
+            saved.sizes.len(),
+            config.size_tag,
+            config.thumbnail_edge
+        );
         // Le misure decise per gruppo di carte valgono per tutto il lavoro, e
-        // con loro le alternative che la biblioteca ha dichiarato.
+        // con loro le alternative che la biblioteca ha dichiarato. Quelle già
+        // negoziate arrivano dal punto salvato: una ripresa non le richiede.
         let sizes: SizeCache = Default::default();
+        seed_sizes(&sizes, &saved.sizes);
         let declared: DeclaredSizes = Default::default();
         ctx.report_phase(phase::DOWNLOADING).await;
         let mut done = start;
+        // Le carte che la biblioteca non ha: contate, non fatali. Vanno nel
+        // registro alla fine, perché «328 su 328» con due carte in meno sul
+        // disco sarebbe una mezza verità.
+        let mut unavailable = 0u32;
         // Da qui si misura il ritmo vero: quante pagine sono passate in questo
         // avvio e in quanto tempo. Una ripresa riparte da zero di misura, che è
         // giusto — la biblioteca di adesso non è quella di ieri.
@@ -263,13 +276,38 @@ impl JobHandler for SourceDownloadJob {
                 &profile,
             );
             let progress = f64::from(done) / f64::from(total.max(1));
-            let fetched = self
+            let attempt = self
                 .fetch_page_declaring_long_waits(
                     &ctx, &client, &profile, &config, &manifest, &sizes, &declared, &root,
                     &staging, page, progress, &title, eta, &signals,
                 )
-                .await
-                .inspect_err(|_| discard(&staging))?;
+                .await;
+            let fetched = match attempt {
+                Ok(fetched) => fetched,
+                Err(error) => {
+                    discard(&staging);
+                    // **Una carta che la biblioteca non ha non è un libro
+                    // perduto.** Un 404 non si ritenta e non si aggira: si
+                    // segna la carta come fatta e si va avanti, altrimenti un
+                    // manoscritto con una pagina mancante non sarebbe
+                    // scaricabile *mai* — ogni ripresa tornerebbe a morire
+                    // sulla stessa carta. È la divergenza fra carte fatte e
+                    // numero dell'ultima che il punto salvato prevede (D13).
+                    if error.kind != ErrorKind::NotFound {
+                        return Err(error);
+                    }
+                    log::warn!(
+                        "job page unavailable id={} page={} error={}",
+                        ctx.id,
+                        page.index,
+                        error.message
+                    );
+                    unavailable += 1;
+                    done += 1;
+                    save_point(&ctx, done, &sizes).await;
+                    continue;
+                }
+            };
             let Some(last) = fetched else {
                 return Ok(stopped_outcome(&ctx, &staging));
             };
@@ -285,16 +323,7 @@ impl JobHandler for SourceDownloadJob {
                 added,
                 bytes
             );
-            ctx.save_checkpoint(&serde_json::json!(Checkpoint { done }).to_string())
-                .await
-                // Senza il punto salvato la ripresa ripartirebbe da più indietro:
-                // non è fatale, ma non deve sparire in silenzio.
-                .unwrap_or_else(|error| {
-                    log::warn!(
-                        "job checkpoint not saved id={} at={done} error={error}",
-                        ctx.id
-                    )
-                });
+            save_point(&ctx, done, &sizes).await;
 
             ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
@@ -325,9 +354,10 @@ impl JobHandler for SourceDownloadJob {
         }
 
         log::info!(
-            "job download complete id={} pages={} bytes={}",
+            "job download complete id={} pages={} unavailable={} bytes={}",
             ctx.id,
             done,
+            unavailable,
             bytes
         );
         discard(&staging);
@@ -711,7 +741,12 @@ impl SourceDownloadJob {
         ctx.report_phase(phase::NEGOTIATING).await;
         let cap = config.size_tag.parse::<u32>().unwrap_or(DEFAULT_CAP_PIXELS);
         let info_url = size::info_url(&page.image_service);
-        let Some(fetched) = fetch(
+        // Il riquadro non ingrandisce mai e non chiede una misura precisa: è il
+        // ripiego quando il descrittore non si può leggere, **per qualunque
+        // ragione**. `!w,h` esiste identico nella Image API 2.x e 3.0.
+        let bounding_box = || size::SizeToken(format!("!{cap},{cap}"));
+
+        let descriptor = match fetch(
             client,
             &self.courtesy,
             profile,
@@ -719,17 +754,42 @@ impl SourceDownloadJob {
             ctx.attempt,
             signals,
         )
-        .await?
-        else {
-            return Ok(None);
+        .await
+        {
+            Ok(Some(fetched)) => Some(fetched.bytes),
+            Ok(None) => return Ok(None),
+            // «Rallenta» deve arrivare al motore, che aspetta e ritenta (D16,
+            // D18): aggirarlo con un ripiego significherebbe continuare a
+            // bussare a chi ha appena chiesto di smettere.
+            Err(error) if matches!(error.kind, ErrorKind::Throttled | ErrorKind::RateLimited) => {
+                return Err(error)
+            }
+            Err(error) => {
+                // **Il descrittore non è arrivato: si ripiega, non si muore.**
+                // Prima l'errore saliva e portava via il libro intero: sul
+                // campo, due volte lo stesso manoscritto perso al 47% e al 48%
+                // perché `info.json` di una singola carta non rispondeva —
+                // quindici richieste e dieci minuti bruciati per volta, e alla
+                // sessione dopo la stessa carta rispondeva.
+                log::warn!(
+                    "job size descriptor unreachable id={} page={} error={} (si ripiega sul riquadro)",
+                    ctx.id,
+                    page.index,
+                    error.message
+                );
+                None
+            }
         };
 
-        let token = match serde_json::from_slice::<serde_json::Value>(&fetched.bytes) {
-            Ok(info) => {
+        let parsed = descriptor
+            .as_deref()
+            .map(serde_json::from_slice::<serde_json::Value>);
+        let token = match parsed {
+            Some(Ok(info)) => {
                 remember_sizes(declared, &size::available_sizes(&info));
                 size::from_info(&info, cap)
             }
-            Err(error) => {
+            Some(Err(error)) => {
                 // Descrittore illeggibile: si continua con il riquadro, che non
                 // ingrandisce mai, invece di fermare lo scaricamento.
                 log::warn!(
@@ -737,8 +797,9 @@ impl SourceDownloadJob {
                     ctx.id,
                     page.index
                 );
-                size::SizeToken(format!("!{cap},{cap}"))
+                bounding_box()
             }
+            None => bounding_box(),
         };
 
         ctx.report_phase(phase::DOWNLOADING).await;
@@ -809,6 +870,58 @@ fn remember(sizes: &SizeCache, page: &Page, token: &size::SizeToken) {
         Err(poisoned) => poisoned.into_inner(),
     };
     cache.insert(key, token.clone());
+}
+
+/// Rimette in memoria le misure che il punto salvato conosce già.
+///
+/// Una voce storta si ignora e si rinegozia: è un valore letto dal database, e
+/// preferire il ripiego a una misura inventata è la stessa regola di D4.
+fn seed_sizes(sizes: &SizeCache, saved: &std::collections::BTreeMap<String, String>) {
+    let mut cache = match sizes.lock() {
+        Ok(cache) => cache,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    for (group, token) in saved {
+        if let Some(key) = parse_group(group) {
+            cache.insert(key, size::SizeToken(token.clone()));
+        }
+    }
+}
+
+/// Le misure negoziate finora, nella forma che va nel punto salvato.
+fn negotiated_sizes(sizes: &SizeCache) -> std::collections::BTreeMap<String, String> {
+    let cache = match sizes.lock() {
+        Ok(cache) => cache.clone(),
+        Err(poisoned) => poisoned.into_inner().clone(),
+    };
+    cache
+        .into_iter()
+        .map(|((width, height), token)| (format!("{width}x{height}"), token.0))
+        .collect()
+}
+
+fn parse_group(group: &str) -> Option<(u32, u32)> {
+    let (width, height) = group.split_once('x')?;
+    Some((width.parse().ok()?, height.parse().ok()?))
+}
+
+/// Salva dove si è arrivati: quante carte, e le misure già negoziate.
+///
+/// Senza il punto salvato la ripresa ripartirebbe da più indietro e
+/// rinegozierebbe: non è fatale, ma non deve sparire in silenzio.
+async fn save_point(ctx: &JobContext, done: u32, sizes: &SizeCache) {
+    let point = Checkpoint {
+        done,
+        sizes: negotiated_sizes(sizes),
+    };
+    ctx.save_checkpoint(&serde_json::json!(point).to_string())
+        .await
+        .unwrap_or_else(|error| {
+            log::warn!(
+                "job checkpoint not saved id={} at={done} error={error}",
+                ctx.id
+            )
+        });
 }
 
 /// Titolo della fonte a cui appartiene la digitalizzazione.
@@ -1283,6 +1396,13 @@ mod tests {
         .unwrap()
     }
 
+    fn page_sized(index: u32, width: u32, height: u32) -> Page {
+        Page {
+            size: Some((width, height)),
+            ..page(index)
+        }
+    }
+
     fn page(index: u32) -> Page {
         Page {
             index,
@@ -1290,6 +1410,65 @@ mod tests {
             image_service: "https://img/1".to_string(),
             size: Some((100, 200)),
         }
+    }
+
+    #[test]
+    fn the_negotiated_sizes_survive_a_pause() {
+        // Tenute solo in memoria, ogni ripresa le richiedeva da capo: sul campo
+        // 70 letture del descrittore per 39 gruppi distinti sullo stesso libro.
+        // D4 prevede una lettura per gruppo, non una per gruppo per avvio.
+        let sizes: SizeCache = Default::default();
+        remember(
+            &sizes,
+            &page_sized(1, 2583, 4126),
+            &size::SizeToken("1292,".into()),
+        );
+        remember(
+            &sizes,
+            &page_sized(2, 2555, 4112),
+            &size::SizeToken("1278,".into()),
+        );
+
+        let saved = negotiated_sizes(&sizes);
+        let ripresa: SizeCache = Default::default();
+        seed_sizes(&ripresa, &saved);
+
+        assert_eq!(
+            cached(&ripresa, &page_sized(9, 2583, 4126)),
+            Some(size::SizeToken("1292,".into())),
+            "la carta di un gruppo già negoziato non chiede più il descrittore"
+        );
+        assert_eq!(cached(&ripresa, &page_sized(9, 2000, 3000)), None);
+    }
+
+    #[test]
+    fn a_checkpoint_from_before_this_change_is_still_readable() {
+        // Il punto salvato è già sul disco degli utenti: se non si leggesse più,
+        // ogni scaricamento in pausa ripartirebbe da zero.
+        let saved: Checkpoint = serde_json::from_str(r#"{"done":288}"#).unwrap();
+
+        assert_eq!(saved.done, 288);
+        assert!(saved.sizes.is_empty());
+    }
+
+    #[test]
+    fn a_crooked_size_group_is_renegotiated_not_guessed() {
+        // Arriva dal database: preferire il ripiego a una misura inventata è la
+        // stessa regola di D4.
+        let sizes: SizeCache = Default::default();
+        seed_sizes(
+            &sizes,
+            &[
+                ("storto".to_string(), "1292,".to_string()),
+                ("2583x".to_string(), "1292,".to_string()),
+                ("2583x4126".to_string(), "1292,".to_string()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+
+        assert_eq!(negotiated_sizes(&sizes).len(), 1);
+        assert!(cached(&sizes, &page_sized(1, 2583, 4126)).is_some());
     }
 
     #[test]
