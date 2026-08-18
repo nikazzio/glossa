@@ -53,10 +53,10 @@ Ogni riga della Biblioteca ha quattro comandi, sempre presenti: **scarica**, **v
 
 Da ogni pagina che scarica Glossa ricava la sua **miniatura**, senza chiedere niente in più alla biblioteca: servono a sfogliare il libro senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
 
-**Libera spazio** cancella le pagine scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le pagine si riscaricano quando servono. La conferma dice quanto stai liberando.
+**Libera spazio** cancella le pagine scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le pagine si riscaricano quando servono. La conferma dice quanto stai liberando. Se qualche pagina non si riesce a cancellare — un disco protetto in scrittura, un file aperto da un altro programma — Glossa te lo dice e **non libera niente**: il conteggio delle pagine e i file sul disco restano d'accordo, invece di dichiarare uno spazio che non hai recuperato.
 
 ## Togliere una fonte
 
-Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando.
+Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando. Se le cartelle non si riescono a cancellare, l'opera **resta in Biblioteca** e puoi riprovare: sparire lasciando indietro i file vorrebbe dire lasciare sul disco gigabyte che nessuna schermata sa più mostrarti.
 
 Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è un altro: **libera spazio**.

@@ -53,10 +53,10 @@ Every row in the Library has four commands, always present: **download**, **chec
 
 From every page it downloads, Glossa derives its **thumbnail**, without asking the library for anything more: thumbnails let you browse the book offline. Until you download, thumbnails are viewed online like the pages.
 
-**Free space** deletes the downloaded pages, right away and for real. The record, the manifest and the thumbnails stay, so the book is still browsable and pages come back when you need them. The confirmation tells you how much you are freeing.
+**Free space** deletes the downloaded pages, right away and for real. The record, the manifest and the thumbnails stay, so the book is still browsable and pages come back when you need them. The confirmation tells you how much you are freeing. If some page cannot be deleted — a write-protected disk, a file held open by another program — Glossa says so and frees **nothing**: the page count and the files on disk stay in agreement, instead of claiming space you did not get back.
 
 ## Removing a source
 
-Removing takes the work away **entirely**: the record, its workspace links, and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting.
+Removing takes the work away **entirely**: the record, its workspace links, and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting. If the folders cannot be deleted, the work **stays in the Library** and you can try again: vanishing while leaving the files behind would mean gigabytes on the disk that no screen can show you any more.
 
 To keep the work and only get the space back, the command is a different one: **free space**.

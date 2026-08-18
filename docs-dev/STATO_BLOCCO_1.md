@@ -162,6 +162,50 @@ Poi `blocco-1` va su `main` come **1.5**.
 - **Scrollbar su Linux**: il rimedio funziona, il risultato non piace.
 - **Livello bibliografico per gli stampati**: #404, fuori dal blocco.
 
+## Trovato indagando lo scaricamento (2026-08-18)
+
+Sei difetti emersi da una lettura del codice confrontata con il database, i log
+e il deposito reali. Chiusi in `fix/scaricamento-robustezza`.
+
+1. **Un `info.json` che non risponde portava via il libro intero.** Lo stesso
+   manoscritto perso due volte, al 47% e al 48%: quindici richieste e dieci
+   minuti bruciati per volta, e alla sessione dopo la stessa carta rispondeva.
+   Adesso si ripiega sul riquadro, come già si faceva per un descrittore
+   illeggibile (D4).
+2. **Ogni ripresa consumava un tentativo.** Un libro in pausa tre volte era già
+   a 3/5 con la colonna degli errori vuota; alla quinta ripresa il primo errore
+   di rete sarebbe stato definitivo. Il conto è dei tentativi falliti **di fila**
+   (D16).
+3. **Un 404 su una carta rendeva il libro non scaricabile mai**: ogni rilancio
+   tornava a morire sulla stessa carta. Ora si salta e si va avanti (D13).
+4. **La misura negoziata non sopravviveva a una pausa**: 70 letture del
+   descrittore per 39 gruppi distinti sullo stesso libro, dove D4 prevede una
+   lettura per gruppo. Ora sta nel punto salvato.
+5. **«Libera spazio» e «togli l'opera» potevano cancellare le righe senza
+   cancellare i file**, e dichiarare di essere riuscite. Nel deposito di prova:
+   153 carte e nove cartelle su dieci senza più niente che le reclamasse. Ora i
+   percorsi li dicono le righe e la cartella si cerca sotto tutte le biblioteche
+   (D6).
+6. **La durata registrata di un lavoro comprendeva le pause**, perché veniva
+   dagli orari della tabella: 22 minuti dichiarati su un lavoro spalmato su due
+   giorni. Ora si misura l'esecuzione.
+
+**Non** era un difetto, e resta com'è: il registro dei fatti tiene una riga per
+lavoro e non una per tentativo. È D27, e il numero del tentativo sta in
+`jobs.attempt_count`.
+
+Verificato sul campo e **non** toccato: la misura scelta (tetto 2000, lato lungo
+reale 2056-2141, costante su tutto il libro), le miniature (288 su 288, 300 px,
+nessun ritardo), i tempi di cortesia (nessun raffreddamento in tre log, gap fra
+carte 2,0-8,0 s, nessuno sotto la pausa minima del profilo — su archive.org il
+collo di bottiglia è il server, non noi), il punto salvato e la ripartenza dopo
+una chiusura brusca.
+
+Resta aperto, misurato ma non affrontato: **ritrovare una carta già sul disco
+costa 2,65 s**, quanto scaricarla, quando le sue righe mancano — rileggere il
+file, ricalcolarne l'impronta e ricavarne di nuovo la miniatura. Su un libro di
+900 carte sono quaranta minuti per «saltare» roba già fatta.
+
 ## Decisioni cambiate implementando
 
 Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
@@ -219,3 +263,10 @@ Scaricare un'opera e guardare il pannello: una riga sola, le due sezioni dei
 dettagli, il tempo stimato che cala mentre va. Metterla in pausa mentre la
 biblioteca dà errore: non deve ripartire da sola. Togliere l'opera: la sua
 cartella nel deposito deve sparire.
+
+Dopo `fix/scaricamento-robustezza`: mettere in pausa e riprendere un libro tre
+o quattro volte di fila e guardare che il numero dei tentativi resti a 1 — prima
+saliva a ogni ripresa. Riprendere un libro già a metà: nel registro non deve
+comparire nessuna riga `job size negotiated` per un gruppo già visto. Liberare
+lo spazio di un'opera e guardare che la cartella `pages` sparisca **e** che il
+conteggio delle carte vada a zero: prima potevano non andare d'accordo.

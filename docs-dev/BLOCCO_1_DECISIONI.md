@@ -366,6 +366,25 @@ L'ordine è:
    formati, nel libro provato — quindi il descrittore si legge una volta per
    gruppo: cinque letture, non una sola e nemmeno 924.
 
+*(Corretto il 2026-08-18, misurando sul campo.)* «Una volta per gruppo» valeva
+solo **dentro un avvio**: le misure negoziate stavano in memoria, e una ripresa
+le richiedeva da capo. Su un libro di 328 carte di archive.org si sono contate
+**70 letture del descrittore per 39 gruppi distinti** — perché i canvas di quel
+libro hanno quasi tutti dimensioni leggermente diverse (2583×4126, 2583×4112,
+2555×4112…), e su cinque formati il conto era ottimistico. Adesso le misure
+negoziate stanno nel punto salvato insieme al numero di carte fatte, quindi una
+ripresa non rinegozia niente.
+
+*(Aggiunto il 2026-08-18.)* **Se il descrittore non arriva si ripiega, non si
+muore.** Un descrittore *illeggibile* ricadeva già sul riquadro `!tetto,tetto`,
+che non ingrandisce mai; uno *non arrivato* faceva fallire il lavoro. Sul campo
+lo stesso manoscritto è stato perso due volte, al 47% e al 48%, perché
+`info.json` di una singola carta non rispondeva — quindici richieste e dieci
+minuti bruciati per volta, e alla sessione dopo la stessa carta rispondeva.
+Rinunciare al libro intero per una richiesta di servizio è sproporzionato. Un
+403 o un 429 su `info.json` restano invece un errore che deve arrivare al
+motore: quello non si aggira, si aspetta (D16, D18).
+
 *(Un terzo livello — «l'indirizzo che il manifesto dichiara già pronto» — valeva
 per le sole miniature ed è caduto il 2026-08-16 con D6: le miniature non si
 chiedono più alla biblioteca.)*
@@ -569,6 +588,31 @@ perché quelle cose non si riscaricano.
 
 **Perché "libera spazio" non passa dal cestino**: spostare 3 GB nel cestino non
 libera niente. Servirebbe una seconda azione per ottenere ciò che si è chiesto.
+
+### Cosa si cancella lo dicono le righe, non una chiave
+
+*(Aggiunto il 2026-08-18, guardando un deposito reale.)* Entrambe le azioni
+componevano il percorso da cancellare a partire dalla **chiave della
+biblioteca**, dedotta da dati che possono essere già stati cancellati. Con la
+chiave sbagliata la cartella non esisteva, il comando dichiarava zero file
+liberati **senza errore**, e chi lo aveva chiamato toglieva le righe comunque.
+Risultato: file sul disco che nessuna riga reclama più, nessuna schermata sa
+mostrare e nessun conteggio vede. Nel deposito di prova erano 153 carte e nove
+cartelle su dieci, comprese 634 miniature.
+
+Due regole, da qui in avanti:
+
+1. **"Libera spazio" cancella i percorsi che le righe dichiarano** (`vault_path`
+   è stato scritto quando la carta è entrata nel deposito), e riferisce quali non
+   ha potuto togliere. **Le righe se ne vanno solo se i file se ne sono andati**:
+   una riga in meno su un file ancora sul disco lo rende invisibile a tutti senza
+   liberare un byte.
+2. **Togliere un'opera cerca la sua cartella sotto tutte le biblioteche**, non
+   sotto quella che si crede giusta. Se non riesce a cancellarla, l'opera resta
+   in Biblioteca e si può riprovare.
+
+Come conseguenza, chi cancella i file orfani **pota anche le cartelle rimaste
+vuote**: sono orfane come i file che contenevano.
 
 ### Il cestino
 
@@ -878,6 +922,16 @@ Un lavoro rimasto in uno stato di transizione — in pausa, in annullamento — 
 riavvio viene portato allo stato stabile corrispondente. È il
 "recovery" della issue, e va scritto una volta sola nell'orchestratore.
 
+*(Precisato il 2026-08-18, dopo averlo visto sul campo.)* «Le pagine già
+complete si saltano» reggeva; «il punto salvato conta le carte fatte, non il
+numero dell'ultima» no, perché niente lo faceva divergere: una carta che la
+biblioteca **non ha** (404) faceva fallire il lavoro, e rilanciarlo tornava a
+morire sulla stessa carta — un manoscritto con una pagina mancante non era
+scaricabile mai. Adesso quella carta si conta come fatta e si va avanti: il
+libro arriva completo di tutto quello che la biblioteca ha davvero, e quante ne
+sono state saltate si legge nel registro. La disponibilità le vede da sola,
+perché le righe sono meno delle carte dichiarate dal manifesto.
+
 ## D14 — Pausa
 
 *Approvata il 2026-08-10.*
@@ -961,6 +1015,17 @@ di grandezza troppo brevi**: i profili tarati usano base 20 secondi e tetto 300.
 Ogni errore porta con sé: se è ritentabile, quanto attendere, cosa mostrare
 all'utente, cosa scrivere nel registro. Senza questo, la tabella qui sopra non è
 applicabile.
+
+### I tentativi si contano di fila
+
+*(Precisato il 2026-08-18, dopo averlo visto sul campo.)* Il numero di tentativi
+del profilo conta i tentativi **falliti di fila**, non gli avvii. Il conto si
+alza a ogni partenza, e senza azzerarlo ogni ripresa ne consumava uno: un libro
+lungo messo in pausa e ripreso tre volte era già a 3/5 con la colonna degli
+errori vuota, e alla quinta ripresa il primo errore di rete diventava definitivo
+senza che niente fosse mai andato storto. Una ripresa e un rilancio chiesti
+dall'utente riaprono il conto; un tentativo programmato dal motore lo consuma,
+che è esattamente ciò per cui esiste.
 
 ## D16-bis — Area di transito e validazione
 

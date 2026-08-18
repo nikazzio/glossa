@@ -73,6 +73,15 @@ downloading — saves it and stops. That is why the state goes from *pausing…*
 A cancelled job is final: it can be repeated from scratch, not resumed. Pages
 already downloaded stay.
 
+**Pausing does not use up attempts.** Attempts count consecutive failures:
+stopping and resuming a long book ten times leaves it at zero, and the number in
+the details starts from one on every resume. Retrying a failed job gives it all
+its attempts back too.
+
+**Resuming does not redo work already done.** The saved point carries the
+resolution already agreed with the library, so a resumed book does not ask for it
+again: it goes straight back to downloading pages.
+
 ## Closing and reopening
 
 Closing Glossa with active jobs brings up a confirmation with the list. The jobs
@@ -182,3 +191,15 @@ A job can sit still for minutes while respecting a library's limits. The
 indicator then reads *waiting · resumes in 8 min* and the bar **does not move**:
 it is not an error, and it resumes by itself. A failed job says so differently,
 with the reason and the option to retry.
+
+## A page the library does not have
+
+Sometimes the manifest declares a page the server then refuses to serve. That
+page is **skipped** and the download carries on: the book arrives complete with
+everything the library actually has, and the count on the card says so — it stays
+below the declared page count. The vault check shows you which ones are missing,
+and you can try downloading them later: sometimes they answer.
+
+The same goes for resolution: if the library does not answer when asked which
+sizes it can produce, Glossa asks for one that never enlarges instead of giving
+up on the book.

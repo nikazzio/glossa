@@ -74,6 +74,15 @@ pagina che sta scaricando — lo salva e si ferma. Per questo lo stato passa da
 Un lavoro annullato è definitivo: si può ripetere da capo, non riprendere. Le
 pagine già scaricate restano.
 
+**Mettere in pausa non consuma tentativi.** I tentativi contano i fallimenti di
+fila: fermare e riprendere un libro lungo dieci volte lo lascia a zero, e il
+numero che vedi nei dettagli riparte da uno a ogni ripresa. Anche riprovare un
+lavoro fallito gli restituisce tutti i tentativi.
+
+**Riprendere non ripete il lavoro già fatto.** Il punto salvato porta con sé
+anche la risoluzione già concordata con la biblioteca, quindi un libro ripreso
+non torna a chiederla: riparte a scaricare pagine.
+
 ## Chiudere e riaprire
 
 Chiudendo Glossa con lavori attivi compare una conferma con l'elenco. I lavori
@@ -195,3 +204,15 @@ Un lavoro può restare immobile per minuti rispettando i limiti di una
 biblioteca. In quel caso l'indicatore dice *in attesa · riprende fra 8 min* e la
 barra **non si muove**: non è un errore, e riprende da solo. Un lavoro fallito
 lo dice diversamente, con il motivo e la possibilità di riprovare.
+
+## Una pagina che la biblioteca non ha
+
+Capita che il manifesto dichiari una pagina che poi il server non serve. Quella
+pagina viene **saltata** e lo scaricamento continua: il libro arriva completo di
+tutto quello che la biblioteca ha davvero, e il conteggio nella scheda lo dice —
+resta sotto le pagine dichiarate. La verifica del deposito ti mostra quali
+mancano, e puoi riprovare a scaricarle più tardi: a volte rispondono.
+
+Vale anche per la risoluzione: se la biblioteca non risponde quando le si chiede
+quali misure sa produrre, Glossa ne chiede una che non ingrandisce mai invece di
+rinunciare al libro.
