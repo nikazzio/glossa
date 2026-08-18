@@ -70,6 +70,22 @@ describe('la copertina presa dal motore', () => {
     await waitFor(() => expect(screen.getByText('niente')).toBeTruthy());
   });
 
+  it('mentre la copertina arriva gira una rotellina accanto al segnaposto', async () => {
+    let resolve: (bytes: Uint8Array) => void = () => {};
+    cachedImage.mockReturnValue(new Promise<Uint8Array>((done) => { resolve = done; }));
+
+    const { container } = render(
+      <CachedThumbnail url="https://gallica.bnf.fr/lenta.jpg" className="c" fallback={<span>niente</span>} />,
+    );
+
+    // Il segnaposto resta quello che si vede: la rotellina gli sta accanto.
+    expect(screen.getByText('niente')).toBeTruthy();
+    await waitFor(() => expect(container.querySelector('.animate-spin')).toBeTruthy());
+
+    resolve(new Uint8Array([1, 2, 3]));
+    await waitFor(() => expect(container.querySelector('.animate-spin')).toBeNull());
+  });
+
   it('senza copertina non chiede niente', () => {
     render(<CachedThumbnail url={null} className="c" fallback={<span>niente</span>} />);
 

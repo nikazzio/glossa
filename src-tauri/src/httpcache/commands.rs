@@ -101,13 +101,21 @@ pub fn lookup(app: &tauri::AppHandle, request: &CacheRequest) -> Option<Vec<u8>>
 }
 
 /// L'immagine chiesta, presa dove è: deposito, cache o biblioteca.
+///
+/// Restituisce byte **grezzi** e non un vettore serializzato: un `Vec<u8>` che
+/// attraversa il ponte diventa un elenco di numeri in JSON — tre o quattro
+/// volte i byte che trasporta, più il costo di rileggerli dall'altra parte. Su
+/// una copertina si sente; su una pagina intera si sentirebbe molto.
 #[tauri::command]
-pub async fn cached_image(app: tauri::AppHandle, request: CacheRequest) -> Result<Vec<u8>, String> {
+pub async fn cached_image(
+    app: tauri::AppHandle,
+    request: CacheRequest,
+) -> Result<tauri::ipc::Response, String> {
     if let Some(bytes) = from_vault(&app, &request)? {
-        return Ok(bytes);
+        return Ok(tauri::ipc::Response::new(bytes));
     }
     if let Some(bytes) = lookup(&app, &request) {
-        return Ok(bytes);
+        return Ok(tauri::ipc::Response::new(bytes));
     }
     let CacheRequest::Remote { url, .. } = &request else {
         // Una pagina che non è nel deposito e non è in cache la chiederà il
@@ -144,7 +152,7 @@ pub async fn cached_image(app: tauri::AppHandle, request: CacheRequest) -> Resul
         &fetched.bytes,
         Some("image/jpeg".to_string()),
     );
-    Ok(fetched.bytes)
+    Ok(tauri::ipc::Response::new(fetched.bytes))
 }
 
 /// Il deposito, che ha la precedenza su tutto: è roba posseduta, e non costa

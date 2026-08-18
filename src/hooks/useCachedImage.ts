@@ -12,18 +12,28 @@ import { cachedImage, type CacheRequest } from '../services/cacheService';
  * L'indirizzo si rilascia allo smontaggio e al cambio di richiesta: senza,
  * ogni scorrimento di una lista lascerebbe dietro di sé i byte di tutte le
  * copertine già viste.
+ *
+ * `loading` esiste perché l'attesa **si vede**: le richieste passano dalle
+ * pause verso la biblioteca, quindi una copertina può metterci qualche secondo
+ * e chi guarda deve capire che sta arrivando, non che non c'è.
  */
-export function useCachedImage(request: CacheRequest | null): string | null {
+export function useCachedImage(request: CacheRequest | null): {
+  url: string | null;
+  loading: boolean;
+} {
   const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const key = request ? JSON.stringify(request) : null;
 
   useEffect(() => {
     if (!key) {
       setUrl(null);
+      setLoading(false);
       return;
     }
     let objectUrl: string | null = null;
     let cancelled = false;
+    setLoading(true);
 
     void (async () => {
       try {
@@ -35,6 +45,8 @@ export function useCachedImage(request: CacheRequest | null): string | null {
         // Una copertina che non arriva non è un errore da mostrare: al suo
         // posto resta il segnaposto, come per un'opera che non ne ha.
         if (!cancelled) setUrl(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
@@ -44,5 +56,5 @@ export function useCachedImage(request: CacheRequest | null): string | null {
     };
   }, [key]);
 
-  return url;
+  return { url, loading };
 }
