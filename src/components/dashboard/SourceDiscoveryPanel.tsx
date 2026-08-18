@@ -11,6 +11,7 @@ import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
+import { CachedThumbnail } from '../common/CachedThumbnail';
 
 const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org']);
 
@@ -102,6 +103,7 @@ function CardActions({ adding, alreadyAdded, onAddToLibrary, onAddToWorkspace }:
 
 interface CardViewProps {
   card: SourceCard;
+  providerKey: string;
   providerLabel: string;
   expanded: boolean;
   width: string;
@@ -127,7 +129,7 @@ function DataStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
+function SourceCardView({ card, providerKey, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
   // Quante pagine si legge **senza espandere**: è il dato con cui si decide se
@@ -172,7 +174,12 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
         className="flex h-40 w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         <span className="flex h-full w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox">
-          {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
+          <CachedThumbnail
+            url={card.thumbnailUrl}
+            providerKey={providerKey}
+            className="h-full w-full object-cover"
+            fallback={<BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
+          />
         </span>
         {expanded ? (
           // A tre o quattro colonne non c'è larghezza per mettere i dati
@@ -201,7 +208,7 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
   );
 }
 
-function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'width'>) {
+function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'width' | 'providerKey'>) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
 
@@ -426,6 +433,7 @@ export function SourceDiscoveryPanel() {
             <div className="mt-4 flex flex-wrap items-start gap-3">
               {displayCards.map((card) => (
                 <SourceCardView
+                  providerKey={providerKey}
                   key={card.id}
                   card={card}
                   providerLabel={selectedProvider?.label ?? ''}

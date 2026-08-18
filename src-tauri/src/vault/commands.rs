@@ -44,7 +44,7 @@ fn configured_root(app: &tauri::AppHandle) -> Result<Option<String>, String> {
 }
 
 /// La radice da usare adesso: quella scelta, se c'è, altrimenti la predefinita.
-fn root_of(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+pub(crate) fn root_of(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     let configured = configured_root(app)?;
     resolve_root(app, configured.as_deref())
 }

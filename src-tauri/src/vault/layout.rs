@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 /// immagini ottimizzate) e `trash/` (in attesa dello svuotamento, D6) arrivano
 /// con le PR che li usano: qui non servono ancora.
 const PROVIDERS_DIR: &str = "providers";
-const PAGES_DIR: &str = "pages";
+pub(crate) const PAGES_DIR: &str = "pages";
 const THUMBNAILS_DIR: &str = "thumbnails";
 const MANIFEST_FILE: &str = "manifest.json";
 
@@ -147,7 +147,7 @@ pub fn thumbnail_path(
         .join(page_file_name(page_index)))
 }
 
-fn page_file_name(page_index: u32) -> String {
+pub(crate) fn page_file_name(page_index: u32) -> String {
     format!("{page_index:04}.jpg")
 }
 

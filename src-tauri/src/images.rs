@@ -41,12 +41,21 @@ pub enum ImageError {
 /// Un'immagine già più piccola del lato chiesto **non viene ingrandita**:
 /// ingrandire aggiunge byte e non aggiunge dettaglio.
 pub fn thumbnail(bytes: &[u8], long_edge: u32) -> Result<Vec<u8>, ImageError> {
+    resize_jpeg(bytes, long_edge, THUMBNAIL_QUALITY)
+}
+
+/// La stessa macchina della miniatura, con la qualità in ingresso.
+///
+/// Serve a due cose che una miniatura non è: rimpicciolire sul momento una
+/// pagina che nel deposito sta a una misura maggiore di quella chiesta, e
+/// l'ottimizzazione locale, dove la qualità la sceglie chi la lancia.
+pub fn resize_jpeg(bytes: &[u8], long_edge: u32, quality: u8) -> Result<Vec<u8>, ImageError> {
     if long_edge == 0 {
         return Err(ImageError::Size(long_edge));
     }
     let decoded =
         image::load_from_memory(bytes).map_err(|error| ImageError::Decode(error.to_string()))?;
-    encode_jpeg(&fit_inside(decoded, long_edge))
+    encode_jpeg_at(&fit_inside(decoded, long_edge), quality)
 }
 
 /// Riporta l'immagine dentro un quadrato di lato `edge` conservando le
@@ -58,12 +67,12 @@ fn fit_inside(image: DynamicImage, edge: u32) -> DynamicImage {
     image.resize(edge, edge, THUMBNAIL_FILTER)
 }
 
-fn encode_jpeg(image: &DynamicImage) -> Result<Vec<u8>, ImageError> {
+fn encode_jpeg_at(image: &DynamicImage, quality: u8) -> Result<Vec<u8>, ImageError> {
     // Il JPEG non ha canale alpha: una PNG con trasparenza va portata a tre
     // canali prima, altrimenti la codifica rifiuta i byte che le passiamo.
     let rgb = image.to_rgb8();
     let mut encoded = Vec::new();
-    JpegEncoder::new_with_quality(&mut encoded, THUMBNAIL_QUALITY)
+    JpegEncoder::new_with_quality(&mut encoded, quality)
         .write_image(
             rgb.as_raw(),
             rgb.width(),
@@ -84,7 +93,7 @@ mod tests {
         for (x, y, pixel) in pixels.enumerate_pixels_mut() {
             *pixel = image::Rgb([(x % 256) as u8, (y % 256) as u8, 128]);
         }
-        encode_jpeg(&DynamicImage::ImageRgb8(pixels)).unwrap()
+        encode_jpeg_at(&DynamicImage::ImageRgb8(pixels), THUMBNAIL_QUALITY).unwrap()
     }
 
     fn dimensions(bytes: &[u8]) -> (u32, u32) {

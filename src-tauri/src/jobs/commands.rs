@@ -144,7 +144,13 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     // I gestori veri. I contatori di cortesia stanno fuori dal gestore perché
     // valgono **per host** e non per lavoro: due lavori sulla stessa biblioteca
     // devono sommarsi in un contatore solo, non raddoppiare il ritmo (D18).
-    let courtesy = Arc::new(crate::download::courtesy::Courtesy::new());
+    //
+    // Sono anche fuori dalla coda: la stessa fila la usa chi chiede una
+    // copertina dalla finestra, che altrimenti scavalcherebbe la cortesia.
+    let courtesy = app
+        .state::<Arc<crate::download::courtesy::Courtesy>>()
+        .inner()
+        .clone();
     engine.register(
         crate::download::handler::JOB_TYPE,
         Arc::new(crate::download::handler::SourceDownloadJob::new(courtesy)),
