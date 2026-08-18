@@ -3,7 +3,7 @@
 Diario delle sette PR decise in `BLOCCO_1_DECISIONI.md`, Parte G. Si aggiorna a
 ogni PR unita, e serve a riprendere il filo fra una sessione e l'altra.
 
-Ultimo aggiornamento: **2026-08-17**.
+Ultimo aggiornamento: **2026-08-18**.
 
 ## Come è organizzato il lavoro
 
@@ -91,6 +91,33 @@ degli embedding come fatto del workspace. Il costo tiene conto dei token letti
 da cache, e i caratteri fatturati da DeepL stanno nel fatto. I fatti dei lavori
 portano il workspace da cui il lavoro è nato.
 
+## Cosa manca al blocco, prima della 1.5
+
+1. **I tre livelli di riservatezza** di backup ed esportazioni (D33): aperto,
+   solo Glossa, con password. Il terzo richiede di scegliere **come derivare la
+   chiave** dalla password — la libreria per cifrare c'è già, quella per
+   derivare no — e va scelta, non improvvisata.
+2. **Collassare le migrazioni** in una baseline sola e buttare i database di
+   sviluppo. Insieme a quello: correggere la migrazione delle trascrizioni (vedi
+   sotto) e togliere il codice di retrocompatibilità pre-2.0, che serve solo a
+   database antecedenti alla baseline.
+
+Poi `blocco-1` va su `main` come **1.5**.
+
+## Scoperto strada facendo, ancora aperto
+
+- **La politica di sicurezza vieta le immagini prese dalla rete**: `img-src`
+  consente solo `self`, `data:` e `blob:`. Nell'app impacchettata le copertine
+  di archive.org **non comparirebbero**; in sviluppo si vedono perché lì la
+  politica non viene applicata. Si risolve con la **cache delle immagini** —
+  decisa in D8 (tetto in `remote_image_cache_mb`, 512 MB predefiniti, scarto dei
+  più vecchi, mai nel deposito) e mai fatta — che serve comunque: oggi ogni
+  disegno di una scheda ripassa dal servizio della biblioteca.
+- **Il «workspace attivo»** decide ancora due cose: cosa mostra la pagina di un
+  workspace, e dove nasce un dizionario nuovo. **Non** decide più cosa si vede
+  in Biblioteca. La seconda si risolverebbe prendendo il workspace dal progetto
+  aperto, che lo sa già.
+
 ## Aperti, da non perdere
 
 - **Divieto dell'istituzione** (D9): la colonna `download_allowed` esiste e non
@@ -111,12 +138,8 @@ portano il workspace da cui il lavoro è nato.
   quindi il legame si potrebbe ricucire — nessuno lo fa ancora.
 - **Esportare e importare un singolo workspace** (#434): il backup è del
   programma intero e resta tale. Portare via un workspace solo richiede
-  identificatori nuovi a ogni riga e le regole di ambito di #213, quindi viene
-  dopo la PR 5.
-- **I tre livelli di riservatezza** di backup ed esportazioni (D33): aperto,
-  solo Glossa, con password. Il terzo richiede una derivazione di chiave da
-  password — la libreria per cifrare c'è già, quella per derivare no — e va
-  scelta, non improvvisata.
+  identificatori nuovi a ogni riga; le regole di ambito che gli mancavano
+  adesso ci sono (#213), quindi è pronta per essere fatta.
 - **L'import di glossari da CSV** è rimasto l'ultimo punto che legge un file
   dalla webview: finché c'è, il permesso di lettura non si può restringere
   (#407, terzo punto).
@@ -172,6 +195,11 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
   fonte, verifica del deposito.
 - **2026-08-16** — miniature ricavate in locale, impostazioni di scaricamento e
   biblioteche, fondazione della registrazione, pulizia dell'area di transito.
+- **2026-08-18** — il workspace diventa un contenitore: una tabella sola per i
+  collegamenti, casa unica per traduzioni e trascrizioni, correzioni locali dei
+  dizionari, archiviazione. La Biblioteca torna a mostrare tutti i libri, con i
+  workspace sulla scheda. Chiusa la prima stesura (#436), che aveva la struttura
+  sbagliata.
 - **2026-08-17** — prove a mano su ogni PR: da lì la pausa che non riprova, il
   tempo stimato dal ritmo vero, la verifica che confronta l'impronta, la
   rimozione che porta via anche i file, i profili di rete al posto dei valori
