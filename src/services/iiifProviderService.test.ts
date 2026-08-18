@@ -24,6 +24,20 @@ describe('discoverIIIF', () => {
       providerKey: 'generic',
       input: 'https://example.org/manifest.json',
       page: 2,
+      fresh: false,
+    });
+  });
+
+  it('chiede alla biblioteca invece di rispondere con quello che ha, quando glielo si dice', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({ status: 'not_found', providerKey: 'generic', manifest: null, results: [], hasMore: false });
+
+    await discoverIIIF('gallica', 'heures', 1, true);
+
+    expect(invoke).toHaveBeenCalledWith('discover_iiif', {
+      providerKey: 'gallica',
+      input: 'heures',
+      page: 1,
+      fresh: true,
     });
   });
 });

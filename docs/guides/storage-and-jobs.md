@@ -148,6 +148,34 @@ eliminano affatto.
 Le **richieste insieme non superano mai quattro**, qualunque cosa si scriva: il
 limite dipende dal loro server e serve a non farsi bloccare.
 
+## Le copertine e le ricerche tenute da parte
+
+Le copertine che vedi nei risultati di ricerca e in Biblioteca non vengono
+chieste alla biblioteca ogni volta che le guardi: Glossa le tiene da parte, e le
+ridisegna da lì. Lo stesso vale per le ricerche — la stessa ricerca fatta due
+volte non ripassa dalla rete.
+
+Serve a due cose. La prima è che le copertine **si vedono**: prima, nella
+versione installata, restavano riquadri vuoti. La seconda è che quaranta
+risultati non sono più quaranta richieste sparate insieme a una biblioteca, ma
+richieste che rispettano le stesse pause di uno scaricamento.
+
+**Questa roba non è tua.** Non conta come scaricata, non compare nel conteggio
+delle pagine di un'opera, non entra in un backup, e viene buttata quando serve
+spazio — a partire da quella che non guardi da più tempo. Il modo di **tenere**
+un libro resta scaricarlo.
+
+In **Impostazioni → Dati** si vede quanto occupa adesso, si sceglie il tetto
+(predefinito 512 MB) e per quanto valgono le ricerche prima di essere rifatte
+(predefinito 24 ore). Accanto c'è il comando per svuotarla: si può fare in
+qualsiasi momento senza perdere niente. Le immagini invece non scadono mai — i
+pixel di un manoscritto del Cinquecento non cambiano — le governa solo il tetto.
+
+Se vuoi sapere **se nel frattempo è comparso qualcosa di nuovo**, sopra i
+risultati compare da quanto tempo risale quello che stai guardando, e accanto un
+comando che rifà la ricerca davvero, saltando quello che era stato tenuto da
+parte.
+
 ## Il backup
 
 **Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto

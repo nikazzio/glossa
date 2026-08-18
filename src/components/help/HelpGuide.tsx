@@ -544,6 +544,9 @@ function StorageSection() {
       <SubTitle>{t('help.storage.checkTitle')}</SubTitle>
       <P>{t('help.storage.checkDesc')}</P>
 
+      <SubTitle>{t('help.storage.cacheTitle')}</SubTitle>
+      <P>{t('help.storage.cacheDesc')}</P>
+
       <SubTitle>{t('help.storage.backupTitle')}</SubTitle>
       <P>{t('help.storage.backupDesc')}</P>
 

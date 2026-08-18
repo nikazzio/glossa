@@ -3,6 +3,7 @@ mod db;
 mod deepl;
 mod documents;
 mod download;
+mod httpcache;
 mod iiif;
 mod images;
 mod jobs;
@@ -86,6 +87,26 @@ pub fn run() {
                 .and_then(|conn| iiif::settings::ensure_builtin_profiles(&conn))
             {
                 log::error!("network profiles not seeded: {error}");
+            }
+
+            // La cortesia verso le biblioteche nasce **prima** della coda e
+            // sta fuori da lei: i contatori valgono per host, e devono essere
+            // gli stessi per uno scaricamento e per una copertina chiesta dalla
+            // finestra. Altrimenti quaranta risultati di ricerca sono quaranta
+            // richieste senza pause verso una biblioteca che bandisce.
+            app.manage(std::sync::Arc::new(download::courtesy::Courtesy::new()));
+
+            // La cache di ciò che viene dalla rete: cartella a sé nella cartella
+            // dati, mai nel deposito (D8). Il deposito conserva ciò che è stato
+            // scaricato di proposito; questa si può cancellare in qualsiasi
+            // momento senza conseguenze.
+            match crate::storage_config::resolve_data_dir(app.handle()) {
+                Ok(data_dir) => {
+                    app.manage(std::sync::Arc::new(httpcache::HttpCache::new(
+                        data_dir.join("cache"),
+                    )));
+                }
+                Err(error) => log::error!("cache not available: {error}"),
             }
 
             // L'orchestratore dei lavori parte con l'applicazione (D10) e per
@@ -202,6 +223,10 @@ pub fn run() {
             iiif::commands::set_library_network_profile,
             iiif::commands::get_version_size_cap,
             iiif::commands::set_version_size_cap,
+            httpcache::commands::cached_image,
+            httpcache::commands::cache_usage,
+            httpcache::commands::apply_cache_cap,
+            httpcache::commands::clear_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

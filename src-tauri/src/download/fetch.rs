@@ -36,6 +36,9 @@ pub fn build_client(profile: &NetworkProfile) -> Result<Client, JobError> {
 #[derive(Debug)]
 pub struct Fetched {
     pub bytes: Vec<u8>,
+    /// Il tipo dichiarato dal servizio. Serve a chi conserva i byte: dire
+    /// «JPEG» per abitudine è una bugia appena una biblioteca serve PNG.
+    pub content_type: Option<String>,
 }
 
 /// Tentativi ravvicinati sulla **singola richiesta** (D16, primo livello):
@@ -70,7 +73,7 @@ pub async fn fetch(
         };
 
         match attempt_once(client, url, profile).await {
-            Ok(bytes) => return Ok(Some(Fetched { bytes })),
+            Ok(fetched) => return Ok(Some(fetched)),
             Err(error) => {
                 // Un rifiuto per eccesso di richieste raffredda **l'host**, non
                 // solo questo lavoro: un secondo scaricamento sullo stesso
@@ -119,7 +122,7 @@ async fn attempt_once(
     client: &Client,
     url: &str,
     profile: &NetworkProfile,
-) -> Result<Vec<u8>, JobError> {
+) -> Result<Fetched, JobError> {
     let response = client
         .get(url)
         // Alcune biblioteche servono le immagini solo a chi le chiede come le
@@ -138,10 +141,18 @@ async fn attempt_once(
 
     let status = response.status();
     if status.is_success() {
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .map(|value| value.split(';').next().unwrap_or(value).trim().to_string());
         return response
             .bytes()
             .await
-            .map(|bytes| bytes.to_vec())
+            .map(|bytes| Fetched {
+                bytes: bytes.to_vec(),
+                content_type,
+            })
             .map_err(|error| {
                 log::warn!("request truncated url={url} error={error}");
                 JobError::new(ErrorKind::Transport, "risposta interrotta a metà")

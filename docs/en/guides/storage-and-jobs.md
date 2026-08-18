@@ -142,6 +142,34 @@ first — and the two that ship with the application cannot be deleted at all.
 **Requests at the same time never go above four**, whatever you write: the
 limit depends on their server and it keeps you from being blocked.
 
+## Covers and searches kept aside
+
+The covers you see in search results and in the Library are not requested from
+the library every time you look at them: Glossa keeps them aside and draws them
+from there. The same goes for searches — running the same search twice does not
+go back to the network.
+
+This does two things. First, the covers **show up**: in the installed version
+they used to be empty boxes. Second, forty results are no longer forty requests
+fired at a library all at once, but requests that respect the same pauses as a
+download.
+
+**This material is not yours.** It never counts as downloaded, it does not
+appear in a work's page count, it is never part of a backup, and it gets dropped
+when space is needed — starting with whatever has gone unread the longest. The
+way to **keep** a book is still to download it.
+
+In **Settings → Data** you can see how much is used right now, choose the size
+limit (512 MB by default) and how long searches are worth before being run again
+(24 hours by default). Next to it is the command to empty it: you can do that at
+any time without losing anything. Images, on the other hand, never expire — the
+pixels of a sixteenth-century manuscript do not change — only the size limit
+governs them.
+
+If you want to know **whether something new has appeared in the meantime**, a
+line above the results tells you how old what you are looking at is, and next to
+it a command runs the search for real, skipping what had been kept aside.
+
 ## The backup
 
 **Settings → Storage → Backup and restore** saves a file with everything that

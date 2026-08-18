@@ -97,6 +97,12 @@ export interface IIIFDiscoveryOutcome {
   manifest: IIIFManifestPreview | null;
   results: IIIFDiscoveryResult[];
   hasMore: boolean;
+  /**
+   * Secondi dall'epoca: quando questo risultato è arrivato dalla biblioteca.
+   * Assente se è arrivato adesso. Serve a dire a chi guarda **di quando** è
+   * quello che ha davanti, e quindi se vale la pena rifare la ricerca.
+   */
+  cachedAt?: number;
 }
 
 export type SourceKind = 'manuscript' | 'print' | 'pdf' | 'iiif' | 'web' | 'other';

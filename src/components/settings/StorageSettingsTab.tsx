@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { HardDrive } from 'lucide-react';
 import { getDataDir, chooseDataDirFolder } from '../../services/storageConfigService';
 import { SectionLabel, Spinner, Tooltip } from '../ui';
+import { CacheSection } from './CacheSection';
 import { VaultSection } from './VaultSection';
 import { BackupSection } from './BackupSection';
 
@@ -92,6 +93,8 @@ export function StorageSettingsTab() {
       </section>
 
       <VaultSection />
+
+      <CacheSection />
 
       <BackupSection />
     </div>

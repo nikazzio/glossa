@@ -35,6 +35,7 @@ import {
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
+import { CachedThumbnail } from '../common/CachedThumbnail';
 import type { LibraryCatalogEntry, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -407,11 +408,12 @@ function CatalogEntryRow({
     >
       <div className={view === 'grid' ? 'flex gap-3' : 'flex min-w-0 flex-1 items-center gap-3'}>
         <span className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-editorial-border bg-editorial-textbox">
-          {entry.thumbnailUrl ? (
-            <img src={entry.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <BookOpenText size={16} className="text-editorial-muted" aria-hidden="true" />
-          )}
+          <CachedThumbnail
+            url={entry.thumbnailUrl}
+            providerKey={entry.providerKey}
+            className="h-full w-full object-cover"
+            fallback={<BookOpenText size={16} className="text-editorial-muted" aria-hidden="true" />}
+          />
         </span>
         <button
           type="button"
