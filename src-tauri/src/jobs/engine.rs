@@ -463,6 +463,8 @@ impl JobEngine {
         let conn = guard.conn()?;
         log::info!("job resumed id={id}");
         store::requeue(conn, id, false)?;
+        // Riprendere non è ritentare: il conto dei tentativi ricomincia (D16).
+        store::reset_attempts(conn, id)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
         Ok(())
@@ -474,6 +476,10 @@ impl JobEngine {
         let conn = guard.conn()?;
         log::info!("job relaunched id={id} from_scratch={from_scratch}");
         store::requeue(conn, id, from_scratch)?;
+        // Un rilancio chiesto dall'utente riparte con tutti i tentativi a
+        // disposizione: senza, un lavoro fallito ne aveva zero e il primo
+        // errore di rete lo ributtava subito fra i falliti.
+        store::reset_attempts(conn, id)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
         Ok(())
@@ -665,9 +671,10 @@ impl JobEngine {
         };
 
         tokio::spawn(async move {
+            let started = Instant::now();
             let outcome = handler.run(context).await;
             let _permit = permit;
-            if let Err(error) = engine.settle(&job, outcome).await {
+            if let Err(error) = engine.settle(&job, outcome, started.elapsed()).await {
                 log::error!("job settle failed id={} error={error}", job.id);
             }
             engine.forget_control(&job.id);
@@ -675,10 +682,15 @@ impl JobEngine {
         });
     }
 
+    /// `elapsed` è quanto è durata **questa** esecuzione. Non si ricava dagli
+    /// orari della tabella: `started_at` segna il primo avvio e non si azzera
+    /// più, quindi su un lavoro messo in pausa la sera e ripreso la mattina
+    /// dichiarava dodici ore di lavoro dove ce n'erano quaranta minuti.
     async fn settle(
         &self,
         job: &JobRecord,
         outcome: Result<Outcome, JobError>,
+        elapsed: Duration,
     ) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
@@ -797,9 +809,7 @@ impl JobEngine {
             );
             fact.outcome = Some(result.to_string());
             fact.error_kind = error_kind;
-            // Letta **dopo** la scrittura dello stato, che è ciò che segna
-            // l'orario di fine.
-            fact.duration_ms = crate::provenance::job_duration_ms(conn, &job.id);
+            fact.duration_ms = Some(elapsed.as_millis() as i64);
             record_fact(conn, &fact);
         }
         self.observer.notify(conn, &job.id);
@@ -937,6 +947,7 @@ mod tests {
                     ErrorKind::Transport,
                     "connessione caduta".to_string(),
                 )),
+                Duration::from_millis(5),
             )
             .await
             .unwrap();
