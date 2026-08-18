@@ -26,6 +26,11 @@ import { humanSize } from '../../utils';
  * non entra in un backup e non conta come «scaricato». Il modo di **fissare**
  * un libro resta scaricarlo (D8).
  */
+/** L'elenco delle scelte, più quella in vigore se non ci fosse già. */
+function withCurrent(options: readonly number[], current: number): number[] {
+  return options.includes(current) ? [...options] : [...options, current].sort((a, b) => a - b);
+}
+
 export function CacheSection() {
   const { t } = useTranslation();
   const [maxBytes, setMax] = useState(DEFAULT_CACHE_MAX_BYTES);
@@ -132,7 +137,12 @@ export function CacheSection() {
             value={String(maxBytes)}
             onChange={(value) => void changeMax(value)}
             ariaLabel={t('settings.cache.cap')}
-            options={CACHE_CAPS.map((value) => ({ value: String(value), label: humanSize(value) }))}
+            // Un valore fuori elenco ma valido resta selezionato invece di
+            // sparire: la tendina deve dire quello che è in vigore.
+            options={withCurrent(CACHE_CAPS, maxBytes).map((value) => ({
+              value: String(value),
+              label: humanSize(value),
+            }))}
           />
         </SettingRow>
 
@@ -141,7 +151,7 @@ export function CacheSection() {
             value={String(ttlHours)}
             onChange={(value) => void changeTtl(value)}
             ariaLabel={t('settings.cache.searchTtl')}
-            options={SEARCH_TTLS.map((value) => ({
+            options={withCurrent(SEARCH_TTLS, ttlHours).map((value) => ({
               value: String(value),
               label: t('settings.cache.hours', { count: value }),
             }))}

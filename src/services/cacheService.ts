@@ -85,13 +85,26 @@ async function writeSetting(key: string, value: string): Promise<void> {
   );
 }
 
+/** Gli stessi estremi che applica il motore: 32 MB - 32 GB. */
+const MIN_CACHE_MAX_BYTES = 32 * 1024 * 1024;
+const MAX_CACHE_MAX_BYTES = 32 * 1024 * 1024 * 1024;
+/** Le stesse ore che accetta il motore. */
+const MIN_SEARCH_TTL_HOURS = 1;
+const MAX_SEARCH_TTL_HOURS = 24 * 30;
+
 /**
- * Solo i valori che il motore applica davvero: mostrare un tetto che lui
- * scarterebbe come assurdo significa dire una cosa falsa a chi guarda.
+ * Solo i valori che il motore applica davvero.
+ *
+ * Gli estremi sono i suoi, non quelli dell'elenco: un valore fuori elenco ma
+ * valido resta quello che è — mostrarne un altro direbbe una cosa falsa nella
+ * direzione opposta — mentre un valore che il motore scarterebbe non va mostrato
+ * come se fosse in vigore.
  */
 export async function getCacheMaxBytes(): Promise<number> {
   const stored = Number(await readSetting(MAX_BYTES_KEY));
-  return CACHE_CAPS.includes(stored as (typeof CACHE_CAPS)[number]) ? stored : DEFAULT_CACHE_MAX_BYTES;
+  return Number.isFinite(stored) && stored >= MIN_CACHE_MAX_BYTES && stored <= MAX_CACHE_MAX_BYTES
+    ? stored
+    : DEFAULT_CACHE_MAX_BYTES;
 }
 
 export async function setCacheMaxBytes(bytes: number): Promise<void> {
@@ -100,7 +113,9 @@ export async function setCacheMaxBytes(bytes: number): Promise<void> {
 
 export async function getSearchTtlHours(): Promise<number> {
   const stored = Number(await readSetting(SEARCH_TTL_KEY));
-  return SEARCH_TTLS.includes(stored as (typeof SEARCH_TTLS)[number]) ? stored : DEFAULT_SEARCH_TTL_HOURS;
+  return Number.isFinite(stored) && stored >= MIN_SEARCH_TTL_HOURS && stored <= MAX_SEARCH_TTL_HOURS
+    ? stored
+    : DEFAULT_SEARCH_TTL_HOURS;
 }
 
 export async function setSearchTtlHours(hours: number): Promise<void> {
