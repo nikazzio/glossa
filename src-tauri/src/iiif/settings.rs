@@ -29,7 +29,7 @@ use super::network::{NetworkProfile, CAUTIOUS, GALLICA};
 pub const SIZE_CAP_SETTING: &str = "download_size_cap";
 
 /// Misura predefinita, in pixel sul lato lungo.
-pub const DEFAULT_SIZE_CAP: &str = "2000";
+pub const DEFAULT_SIZE_CAP: u32 = 2000;
 
 /// La politica «massima»: `size=max` nella specifica, nessun tetto.
 pub const MAX_SIZE_CAP: &str = "max";

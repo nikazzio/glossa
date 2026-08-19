@@ -96,7 +96,7 @@ pub fn ensure_root(root: &Path) -> Result<(), String> {
 ///
 /// Lì dentro c'è **solo** roba non ancora promossa (D16-bis): un file che ha
 /// superato la validazione è già nel deposito, e uno che non l'ha superata non
-/// serve a nessuno. Un lavoro ripreso riscarica quella carta e basta.
+/// serve a nessuno. Un lavoro ripreso riscarica quella pagina e basta.
 ///
 /// Si chiama all'avvio, quando per definizione non c'è nessun lavoro in corso
 /// che possa averci scritto dentro un istante fa. Restituisce quante cartelle
@@ -152,32 +152,11 @@ pub fn classify_folder(candidate: &Path) -> Result<FolderKind, String> {
     }
 }
 
-/// Percorso assoluto di un file del deposito, a partire dal percorso relativo
-/// conservato in `assets.vault_path`.
-///
-/// Rifiuta qualunque percorso che uscirebbe dalla radice **e** qualunque
-/// percorso che non abbia la forma del layout (D2): `vault_path` arriva dal
-/// database, e il database è scrivibile dalla webview.
-pub fn absolute_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
-    let path = Path::new(relative);
-    if path.is_absolute() {
-        return Err("vault_path must be relative to the vault root".to_string());
-    }
-    if path
-        .components()
-        .any(|c| matches!(c, std::path::Component::ParentDir))
-    {
-        return Err("vault_path must not escape the vault root".to_string());
-    }
-    layout::validate_vault_path(relative)?;
-    Ok(root.join(path))
-}
-
 /// Quanti file contiene una cartella e quanto pesano. Serve a dire quanto
 /// spazio libera un'operazione prima di eseguirla (D6, D30).
 ///
 /// File e byte si contano nella **stessa** camminata: su una digitalizzazione
-/// di migliaia di carte, e ancora di più su un deposito di rete, ogni passata
+/// di migliaia di pagine, e ancora di più su un deposito di rete, ogni passata
 /// in più è un giro completo di chiamate al filesystem.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DirectoryStats {
@@ -294,37 +273,6 @@ mod tests {
     }
 
     #[test]
-    fn absolute_path_joins_a_relative_vault_path() {
-        let root = Path::new("/deposito");
-        let joined = absolute_path(root, "providers/gallica/v1/pages/2000/0001.jpg").unwrap();
-        assert!(joined.starts_with(root));
-        assert!(joined.ends_with("0001.jpg"));
-    }
-
-    #[test]
-    fn absolute_path_rejects_escapes_and_absolutes() {
-        let root = Path::new("/deposito");
-        assert!(absolute_path(root, "../../etc/passwd").is_err());
-        assert!(absolute_path(root, "providers/../../fuori").is_err());
-        assert!(absolute_path(root, "/etc/passwd").is_err());
-    }
-
-    #[test]
-    fn absolute_path_rejects_what_the_layout_never_produces() {
-        // I percorsi da verificare arrivano dal frontend: senza questo
-        // controllo i comandi direbbero se un file qualsiasi esiste, dentro una
-        // radice che la webview può scegliere.
-        let root = Path::new("/deposito");
-        assert!(
-            absolute_path(root, "glossa.db").is_err(),
-            "fuori dal layout"
-        );
-        assert!(absolute_path(root, ".glossa-vault").is_err());
-        assert!(absolute_path(root, "providers/gallica/v1/note.txt").is_err());
-        assert!(absolute_path(root, "providers/gallica/v1/manifest.json").is_ok());
-    }
-
-    #[test]
     fn directory_stats_counts_nested_files_and_bytes_together() {
         let root = temp_dir("size");
         fs::create_dir_all(root.join("providers/gallica/v1/pages/2000")).unwrap();
@@ -361,12 +309,12 @@ mod tests {
     #[test]
     fn what_a_brutal_shutdown_left_in_the_staging_area_is_thrown_away() {
         // Lì dentro c'è solo roba mai promossa (D16-bis): tenerla non serve a
-        // nessuno, e un lavoro ripreso riscarica quella carta.
+        // nessuno, e un lavoro ripreso riscarica quella pagina.
         let root = std::env::temp_dir().join("glossa_staging_cleanup");
         let _ = fs::remove_dir_all(&root);
         let leftover = root.join(layout::STAGING_DIR).join("sver-1");
         fs::create_dir_all(&leftover).unwrap();
-        fs::write(leftover.join("0007.jpg"), b"mezza carta").unwrap();
+        fs::write(leftover.join("0007.jpg"), b"mezza pagina").unwrap();
         let kept = root.join("providers");
         fs::create_dir_all(&kept).unwrap();
 

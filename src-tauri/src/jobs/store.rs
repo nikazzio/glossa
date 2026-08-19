@@ -185,7 +185,7 @@ pub fn save_progress(
 ) -> Result<(), String> {
     conn.execute(
         // Il dettaglio viaggia con l'avanzamento: cambia insieme a lui, e una
-        // scrittura separata raddoppierebbe gli aggiornamenti per ogni carta.
+        // scrittura separata raddoppierebbe gli aggiornamenti per ogni pagina.
         // `COALESCE` lascia stare quello vecchio quando il gestore non ne manda
         // uno nuovo, invece di cancellarlo.
         "UPDATE jobs SET progress = ?2, message = ?3, eta_seconds = ?4, waiting_reason = ?5, \
@@ -197,9 +197,10 @@ pub fn save_progress(
     Ok(())
 }
 
-/// Cosa sta facendo adesso: lettura del manifesto, scelta della risoluzione,
-/// scaricamento. La scrive il gestore quando cambia, non a ogni giro, perché il
-/// pannello deve poterla leggere senza aspettare il freno di un secondo.
+/// Cosa sta facendo adesso: avvio, lettura del manifesto, scaricamento. Il
+/// vocabolario lo decide il tipo di lavoro. La scrive il gestore quando cambia,
+/// non a ogni giro, perché il pannello deve poterla leggere senza aspettare il
+/// freno di un secondo.
 pub fn save_phase(conn: &Connection, id: &str, phase: &str) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET phase = ?2, updated_at = CURRENT_TIMESTAMP \

@@ -10,9 +10,10 @@
 //! scrittura della riga, e dei depositi riempiti prima che il file di lato
 //! esistesse.
 //!
-//! Miniature e manifesto non hanno impronta registrata: le prime si rigenerano
-//! dalla pagina, il secondo è validato all'arrivo. La completa li controlla
-//! solo strutturalmente.
+//! **Le miniature non si verificano affatto**: si ricavano dalla pagina, e una
+//! che manca o è rovinata si rigenera. Il manifesto entra nell'elenco ma senza
+//! checksum registrato, quindi la completa lo controlla solo strutturalmente:
+//! quando è arrivato era già stato validato.
 //!
 //! Orfano è una **cartella di digitalizzazione che il database non conosce
 //! più** (D5-bis): nell'uso normale si ignora, ma occupa spazio e nessuno la
@@ -297,14 +298,35 @@ async fn known_versions(ctx: &JobContext) -> Result<HashSet<String>, JobError> {
     .map_err(|error| JobError::new(ErrorKind::Storage, error))
 }
 
-/// Le cartelle di digitalizzazioni che il database non conosce più, con il loro
-/// peso. Si guarda solo sotto `providers/`: l'area di transito è di passaggio, e
-/// `derived/` appartiene a chi l'ha prodotta.
+/// Una cartella orfana: dove sta, quanti file contiene e quanto pesa.
+///
+/// Il conto dei **file** viaggia con la cartella perché è quello che si dice
+/// all'utente: «tre cartelle» non gli dice niente, e annunciare «3 file» quando
+/// sono tremila è una bugia in un messaggio che avverte di un'operazione
+/// irreversibile.
+pub struct Orphan {
+    pub path: PathBuf,
+    pub files: usize,
+    pub bytes: u64,
+}
+
+/// Le cartelle di digitalizzazioni che il database non conosce più. Si guarda
+/// solo sotto `providers/`: l'area di transito è di passaggio, e `derived/`
+/// appartiene a chi l'ha prodotta.
 ///
 /// Restituisce l'elenco e non solo il conto perché lo usa anche la
 /// cancellazione (D5-bis).
-pub fn orphan_folders(root: &Path, known: &HashSet<String>) -> Vec<(PathBuf, u64)> {
+///
+/// **Un elenco vuoto di digitalizzazioni conosciute non rende orfano tutto il
+/// deposito.** Un database appena creato, un ripristino interrotto a metà o una
+/// lettura andata storta lo lascerebbero vuoto, e la conseguenza sarebbe
+/// cancellare l'intero deposito. Nel dubbio non si tocca niente: chi ha davvero
+/// tolto tutte le opere ha già visto sparire le loro cartelle con «togli».
+pub fn orphan_folders(root: &Path, known: &HashSet<String>) -> Vec<Orphan> {
     let mut found = Vec::new();
+    if known.is_empty() {
+        return found;
+    }
     let Ok(providers) = std::fs::read_dir(root.join(super::layout::PROVIDERS_DIR)) else {
         return found;
     };
@@ -320,17 +342,24 @@ pub fn orphan_folders(root: &Path, known: &HashSet<String>) -> Vec<(PathBuf, u64
             if known.contains(&version.file_name().to_string_lossy().to_string()) {
                 continue;
             }
-            found.push((path.clone(), super::directory_stats(&path).bytes));
+            let stats = super::directory_stats(&path);
+            found.push(Orphan {
+                path,
+                files: stats.files,
+                bytes: stats.bytes,
+            });
         }
     }
     found
 }
 
+/// Quanti **file** orfani ci sono e quanto occupano: la cartella è dove stanno,
+/// non l'unità di misura.
 fn orphans(root: &Path, known: &HashSet<String>) -> (u32, u64) {
     let found = orphan_folders(root, known);
     (
-        found.len() as u32,
-        found.iter().map(|(_, bytes)| bytes).sum(),
+        found.iter().map(|orphan| orphan.files).sum::<usize>() as u32,
+        found.iter().map(|orphan| orphan.bytes).sum(),
     )
 }
 
@@ -438,15 +467,40 @@ mod tests {
         for version in ["v1", "v2"] {
             let pages = root.join(format!("providers/gallica/{version}/pages/2000"));
             std::fs::create_dir_all(&pages).unwrap();
-            std::fs::write(pages.join("0001.jpg"), b"pagina").unwrap();
+            // Tre pagine ciascuna: così il conto dei file non coincide con
+            // quello delle cartelle, e contare le cartelle si vede.
+            for index in 1..=3 {
+                std::fs::write(pages.join(format!("000{index}.jpg")), b"pagina").unwrap();
+            }
         }
 
         // Il database conosce solo v1: la cartella di v2 non la reclama nessuno.
         let known: HashSet<String> = ["v1".to_string()].into_iter().collect();
         let (count, bytes) = orphans(&root, &known);
 
-        assert_eq!(count, 1);
-        assert_eq!(bytes, "pagina".len() as u64);
+        // **File, non cartelle**: è il numero che finisce nel messaggio che
+        // avverte dell'operazione irreversibile.
+        assert_eq!(count, 3);
+        assert_eq!(bytes, 3 * "pagina".len() as u64);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn an_empty_library_does_not_make_the_whole_vault_an_orphan() {
+        // Database appena creato, ripristino interrotto a metà, lettura andata
+        // storta: l'elenco delle opere conosciute è vuoto, e senza questa
+        // protezione ogni cartella del deposito risulterebbe da cancellare.
+        let root = std::env::temp_dir().join("glossa_verification_empty_library");
+        let _ = std::fs::remove_dir_all(&root);
+        let pages = root.join("providers/gallica/v1/pages/2000");
+        std::fs::create_dir_all(&pages).unwrap();
+        std::fs::write(pages.join("0001.jpg"), b"pagina").unwrap();
+
+        let (count, bytes) = orphans(&root, &HashSet::new());
+
+        assert_eq!(count, 0);
+        assert_eq!(bytes, 0);
 
         let _ = std::fs::remove_dir_all(&root);
     }
@@ -461,7 +515,10 @@ mod tests {
         std::fs::write(root.join("staging/v1/0001.jpg"), b"in transito").unwrap();
         std::fs::create_dir_all(root.join("providers")).unwrap();
 
-        let (count, _) = orphans(&root, &HashSet::new());
+        // Un'opera conosciuta, altrimenti scatta la protezione sull'elenco
+        // vuoto e il test passerebbe senza aver provato niente.
+        let known: HashSet<String> = ["v1".to_string()].into_iter().collect();
+        let (count, _) = orphans(&root, &known);
 
         assert_eq!(count, 0);
 

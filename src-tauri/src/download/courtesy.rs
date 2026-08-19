@@ -6,7 +6,7 @@
 //! finestra scorrevole e concorrenza per host.
 //!
 //! Non è una gentilezza astratta: con i valori di Gallica un manoscritto di 210
-//! carte richiede un quarto d'ora, e superarli significa farsi bandire — cioè
+//! pagine richiede un quarto d'ora, e superarli significa farsi bandire — cioè
 //! non scaricare più niente, per ore.
 
 use std::collections::{HashMap, VecDeque};
@@ -23,7 +23,7 @@ use crate::iiif::network::NetworkProfile;
 const POLL_SLICE: Duration = Duration::from_millis(250);
 
 /// Sopra questa attesa vale la pena scriverlo nel registro: sotto è la pausa
-/// normale fra due richieste, e ce n'è una per ogni carta.
+/// normale fra due richieste, e ce n'è una per ogni pagina.
 const LONG_WAIT: Duration = Duration::from_secs(5);
 
 /// Stato di un singolo host: chi sta parlando adesso, quando si è parlato

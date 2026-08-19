@@ -139,7 +139,7 @@ mod tests {
 
         assert!(
             thumbnail.len() * 4 < page.len(),
-            "miniatura {} byte, carta {} byte",
+            "miniatura {} byte, pagina {} byte",
             thumbnail.len(),
             page.len()
         );

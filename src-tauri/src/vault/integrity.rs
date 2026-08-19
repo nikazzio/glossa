@@ -9,7 +9,7 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 
 /// Blocchi da 64 KB: un manoscritto scaricato a piena risoluzione può pesare
-/// decine di megabyte a carta, e non va caricato in memoria per essere
+/// decine di megabyte a pagina, e non va caricato in memoria per essere
 /// verificato.
 const CHUNK_BYTES: usize = 64 * 1024;
 
@@ -59,7 +59,7 @@ pub struct FileScan {
 
 /// Legge il file **una volta sola** e ne ricava insieme impronta e validità.
 ///
-/// La verifica completa (D5) gira su gigabyte: leggere ogni carta due volte —
+/// La verifica completa (D5) gira su gigabyte: leggere ogni pagina due volte —
 /// una per validarla, una per l'impronta — raddoppierebbe l'unica operazione
 /// del deposito che l'utente aspetta davvero. Della struttura servono solo i
 /// primi e gli ultimi byte, che si tengono da parte scorrendo.

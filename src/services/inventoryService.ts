@@ -36,10 +36,6 @@ export async function libraryInventory(): Promise<VersionInventory[]> {
   return invoke<VersionInventory[]>('library_inventory');
 }
 
-export async function versionPagePaths(versionId: string): Promise<string[]> {
-  return invoke<string[]>('version_page_paths', { versionId });
-}
-
 /** Le pagine della misura principale: il conteggio che la scheda mostra. */
 export function principalPages(inventory: VersionInventory): number {
   const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);
@@ -49,14 +45,4 @@ export function principalPages(inventory: VersionInventory): number {
 /** Quanto occupa in tutto, tutte le misure comprese. */
 export function inventoryBytes(inventory: VersionInventory): number {
   return inventory.sizes.reduce((total, size) => total + size.bytes, 0);
-}
-
-/**
- * Le misure prese **a parte**: quelle diverse dalla principale.
- *
- * Una cartella `max` con tre file su 328 non è un libro incompleto, è un libro
- * completo a 2000 con tre pagine prese a risoluzione piena di proposito (§5.6).
- */
-export function extraSizes(inventory: VersionInventory): SizeFolder[] {
-  return inventory.sizes.filter((size) => size.sizeTag !== inventory.principal && size.pages > 0);
 }

@@ -3,7 +3,7 @@
 //!
 //! La classificazione è il punto (D16): un 403 su questi servizi significa
 //! "stai correndo troppo" e si ritenta dopo un raffreddamento lungo, un 404
-//! significa che la carta non c'è e insistere è inutile. Senza questa
+//! significa che la pagina non c'è e insistere è inutile. Senza questa
 //! distinzione la tabella delle decisioni non è applicabile.
 
 use reqwest::{Client, StatusCode};
@@ -186,7 +186,7 @@ fn classify(
         429 => JobError::new(ErrorKind::RateLimited, "troppe richieste insieme (429)"),
         404 | 410 => JobError::new(
             ErrorKind::NotFound,
-            format!("carta non disponibile ({code})"),
+            format!("pagina non disponibile ({code})"),
         ),
         // L'unico parametro che facciamo variare è la misura, quindi un rifiuto
         // di questo tipo riguarda quella. Va **prima** dei 5xx, perché 501 sta

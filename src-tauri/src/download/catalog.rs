@@ -1,13 +1,12 @@
 //! Le poche cose che restano nel database dopo il §5.4: conteggio atteso,
-//! licenza, attribuzione, riga del manifesto, titolo dell'opera e profilo di
-//! rete. Tutto il resto lo dice la cartella.
+//! licenza, attribuzione, titolo dell'opera e profilo di rete. Tutto il resto lo
+//! dice la cartella — dove sta il manifesto compreso.
 
 use rusqlite::params;
 
 use crate::iiif::network::{NetworkProfile, CAUTIOUS};
 use crate::jobs::engine::JobContext;
 use crate::jobs::{ErrorKind, JobError};
-use crate::vault::layout;
 
 use super::fetch::host_of;
 use super::handler::DownloadConfig;
@@ -54,10 +53,12 @@ pub(crate) async fn source_title(ctx: &JobContext, version_id: &str) -> Option<S
     .flatten()
 }
 
-/// Conteggio atteso, licenza, attribuzione e riga del manifesto.
+/// Conteggio atteso, licenza e attribuzione: le cose che si leggono dal manifesto
+/// e non si ricavano da una cartella.
 ///
 /// Il conteggio atteso è l'unica cosa che dice quante pagine *dovrebbero*
-/// esserci, e una cartella non lo sa (§5.4).
+/// esserci (§5.4). Dove sta il file del manifesto non si registra: lo dice la
+/// disposizione delle cartelle, e l'inventario risponde già a «c'è o no».
 pub(crate) async fn record_manifest(
     ctx: &JobContext,
     config: &DownloadConfig,
@@ -65,12 +66,7 @@ pub(crate) async fn record_manifest(
     manifest: &Manifest,
 ) -> Result<(), JobError> {
     let homepage = manifest.homepage.clone();
-    let relative = layout::manifest_path(&config.provider_key, &config.version_id)
-        .map_err(|error| JobError::new(ErrorKind::Internal, error))?
-        .to_string_lossy()
-        .replace('\\', "/");
     let version_id = config.version_id.clone();
-    let url = config.manifest_url.clone();
     let rights = manifest.rights.clone();
     let attribution = manifest.attribution.clone();
 
@@ -106,26 +102,6 @@ pub(crate) async fn record_manifest(
                 params![version_id, serde_json::Value::Object(merged).to_string()],
             )
             .map_err(|error| format!("licenza e attribuzione: {error}"))?;
-        }
-
-        // L'aggiunta alla Biblioteca crea già una riga `remote`/`catalogued`:
-        // va aggiornata, non affiancata da una seconda.
-        let updated = conn
-            .execute(
-                "UPDATE assets SET locality = 'local', availability = 'complete', \
-                 vault_path = ?2, updated_at = CURRENT_TIMESTAMP \
-                 WHERE source_version_id = ?1 AND kind = 'manifest'",
-                params![version_id, relative],
-            )
-            .map_err(|error| format!("riga del manifesto: {error}"))?;
-        if updated == 0 {
-            conn.execute(
-                "INSERT INTO assets (id, source_version_id, kind, locality, availability, \
-                     vault_path, remote_url) \
-                 VALUES (?1, ?2, 'manifest', 'local', 'complete', ?3, ?4)",
-                params![format!("{version_id}:manifest"), version_id, relative, url],
-            )
-            .map_err(|error| format!("riga del manifesto: {error}"))?;
         }
         Ok(())
     })

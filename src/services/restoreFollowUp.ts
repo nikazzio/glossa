@@ -1,8 +1,8 @@
 import { execute, select } from './dbService';
-import { libraryInventory, principalPages } from './inventoryService';
+import { libraryInventory } from './inventoryService';
 import { enqueueSourceDownload } from './jobsService';
 import { logger } from '../utils/logger';
-import type { DownloadedSource } from '../schemas/externalData';
+import { downloadedSourcesSchema, type DownloadedSource } from '../schemas/externalData';
 
 /**
  * Cosa succede **dopo** un ripristino (#345, D31, D5-bis).
@@ -26,7 +26,7 @@ export interface PendingRestoreCheck {
   downloaded: DownloadedSource[];
 }
 
-/** Un'opera a cui, dopo il controllo, mancano delle pagine. */
+/** Un'opera a cui, dopo il controllo, mancano pagine della misura principale. */
 export interface MissingWork {
   versionId: string;
   title: string;
@@ -35,6 +35,26 @@ export interface MissingWork {
   sizeTag: string | null;
   present: number;
   expected: number;
+}
+
+/**
+ * Pagine che c'erano a una misura **diversa** dalla principale e adesso non ci
+ * sono: tipicamente le tre prese a piena risoluzione per una trascrizione (§5.6).
+ *
+ * Non si accodano: uno scaricamento del libro a quella misura scaricherebbe
+ * tutte le pagine invece di quelle tre, che è l'opposto di quello che l'utente
+ * aveva scelto. Si dicono, e chi le vuole se le riprende una per una.
+ */
+export interface UnrestorableSize {
+  title: string;
+  sizeTag: string;
+  pages: number;
+}
+
+/** Cosa manca dopo un ripristino: quello che si riscarica, e quello che no. */
+export interface RestoreGap {
+  works: MissingWork[];
+  unrestorable: UnrestorableSize[];
 }
 
 export async function markRestoreCheck(pending: PendingRestoreCheck): Promise<void> {
@@ -59,9 +79,12 @@ export async function pendingRestoreCheck(): Promise<PendingRestoreCheck | null>
     if (typeof parsed !== 'object' || parsed === null) return null;
     const record = parsed as Record<string, unknown>;
     if (typeof record.jobId !== 'string' || !record.jobId) return null;
+    // L'elenco arriva da un file di backup: si valida invece di fidarsi della
+    // forma, e quello che non la rispetta vale come assente.
+    const downloaded = downloadedSourcesSchema.safeParse(record.downloaded);
     return {
       jobId: record.jobId,
-      downloaded: Array.isArray(record.downloaded) ? (record.downloaded as DownloadedSource[]) : [],
+      downloaded: downloaded.success ? downloaded.data : [],
     };
   } catch {
     return null;
@@ -69,15 +92,19 @@ export async function pendingRestoreCheck(): Promise<PendingRestoreCheck | null>
 }
 
 /**
- * Le opere a cui mancano pagine, dopo che il controllo ha detto la sua.
+ * Cosa manca dopo che il controllo del deposito ha detto la sua.
  *
- * Si contano le pagine che il database dichiara adesso — il controllo ha già
- * tolto quelle i cui file non c'erano più — e si confrontano con quante ne ha
- * l'opera. La misura da usare per riprenderle viene dal backup: riscaricarle a
- * una misura diversa da quella che avevano sarebbe una sorpresa.
+ * Le pagine presenti le conta il deposito adesso — il controllo ha già visto
+ * cosa c'è davvero — e si confrontano con quante ne ha l'opera. La misura da
+ * usare per riprenderle viene dal backup: riscaricarle a una misura diversa da
+ * quella che avevano sarebbe una sorpresa.
+ *
+ * Le misure prese a parte si contano separatamente, perché non si riprendono con
+ * un lavoro di scaricamento (`UnrestorableSize`).
  */
-export async function missingAfterRestore(downloaded: DownloadedSource[]): Promise<MissingWork[]> {
-  if (downloaded.length === 0) return [];
+export async function missingAfterRestore(downloaded: DownloadedSource[]): Promise<RestoreGap> {
+  const empty: RestoreGap = { works: [], unrestorable: [] };
+  if (downloaded.length === 0) return empty;
   const wanted = new Map(downloaded.map((source) => [source.versionId, source]));
   const rows = await select<{
     versionId: string;
@@ -97,22 +124,44 @@ export async function missingAfterRestore(downloaded: DownloadedSource[]): Promi
   // Quante pagine ci sono davvero lo dice il deposito: il conteggio atteso
   // resta nel database perché una cartella non sa quante dovrebbero essercene.
   const inventory = await libraryInventory();
-  const present = new Map(inventory.map((entry) => [entry.versionId, principalPages(entry)]));
+  const present = new Map(inventory.map((entry) => [entry.versionId, entry]));
 
-  return rows
-    .filter((row) => {
-      const found = present.get(row.versionId) ?? 0;
-      return wanted.has(row.versionId) && row.expected > 0 && found < row.expected;
-    })
-    .map((row) => ({
-      versionId: row.versionId,
-      title: row.title,
-      providerKey: row.providerKey,
-      manifestUrl: row.manifestUrl,
-      sizeTag: wanted.get(row.versionId)?.sizeTag ?? null,
-      present: present.get(row.versionId) ?? 0,
-      expected: row.expected,
-    }));
+  const gap: RestoreGap = { works: [], unrestorable: [] };
+  for (const row of rows) {
+    const backup = wanted.get(row.versionId);
+    if (!backup) continue;
+    const found = present.get(row.versionId);
+    const pagesAt = (sizeTag: string | null) =>
+      found?.sizes.find((size) => size.sizeTag === sizeTag)?.pages ?? 0;
+
+    // La misura principale è quella che il backup dichiarava, non quella che ha
+    // più pagine adesso: dopo un ripristino a metà sarebbero due cose diverse.
+    const principal = pagesAt(backup.principalSize);
+    if (row.expected > 0 && principal < row.expected) {
+      gap.works.push({
+        versionId: row.versionId,
+        title: row.title,
+        providerKey: row.providerKey,
+        manifestUrl: row.manifestUrl,
+        sizeTag: backup.principalSize,
+        present: principal,
+        expected: row.expected,
+      });
+    }
+
+    for (const size of backup.sizes) {
+      if (size.sizeTag === backup.principalSize) continue;
+      const missing = size.pages - pagesAt(size.sizeTag);
+      if (missing > 0) {
+        gap.unrestorable.push({
+          title: row.title,
+          sizeTag: size.sizeTag,
+          pages: missing,
+        });
+      }
+    }
+  }
+  return gap;
 }
 
 /**

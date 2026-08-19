@@ -122,6 +122,15 @@ function JobRow({ job }: { job: Job }) {
           {detail.units && (
             <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {detail.units.done}/{detail.units.total}
+              {/* Le pagine che la biblioteca non serve stanno **accanto** al
+                  conteggio: da solo direbbe «328 su 328» di un libro che sul
+                  disco ne ha 326, e quella differenza sembrerebbe un difetto. */}
+              {detail.unavailable !== undefined && detail.unavailable > 0 && (
+                <span className="text-terminal-muted">
+                  {' '}
+                  · {t('jobs.detail.unavailableShort', { count: detail.unavailable })}
+                </span>
+              )}
             </span>
           )}
           {detail.bytes && (
@@ -299,6 +308,11 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
           ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
           : humanSize(detail.bytes.downloaded),
     },
+    detail.unavailable !== undefined &&
+      detail.unavailable > 0 && {
+        label: t('jobs.detail.unavailable'),
+        value: String(detail.unavailable),
+      },
     detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
     detail.host && { label: t('jobs.detail.host'), value: detail.host },
@@ -316,13 +330,6 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
     { label: t('jobs.detail.attempt'), value: `${job.attemptCount} / ${job.maxAttempts}` },
     { label: t('jobs.detail.started'), value: time(job.createdAt) },
     { label: t('jobs.detail.updated'), value: time(job.updatedAt) },
-    detail.available?.length && {
-      label: t('jobs.detail.available', { count: detail.available.length }),
-      value: detail.available.join(' · '),
-      // Un elenco che può contare decine di voci: la riga lo tiene chiuso e
-      // lo apre chi lo chiede.
-      wide: true,
-    },
     job.error && { label: t('jobs.detail.error'), value: job.error, wide: true },
     { label: t('jobs.detail.id'), value: job.id, wide: true },
   ].filter((field): field is DetailField => typeof field === 'object' && field !== null);
@@ -338,17 +345,15 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
           value: readableSize(detail.last.size, t),
         },
         detail.last.pixels && { label: t('jobs.detail.lastPixels'), value: detail.last.pixels },
-        { label: t('jobs.detail.lastBytes'), value: humanSize(detail.last.bytes) },
+        detail.last.bytes !== undefined && {
+          label: t('jobs.detail.lastBytes'),
+          value: humanSize(detail.last.bytes),
+        },
         detail.last.recovered !== undefined && {
           label: t('jobs.detail.lastOrigin'),
           value: t(
             detail.last.recovered ? 'jobs.detail.lastFromDisk' : 'jobs.detail.lastDownloaded',
           ),
-        },
-        detail.last.url && {
-          label: t('jobs.detail.lastUrl'),
-          value: detail.last.url,
-          wide: true,
         },
       ].filter((field): field is DetailField => typeof field === 'object' && field !== null))
     : [];
@@ -429,9 +434,8 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   if (job.status === 'queued') return <span>{t('jobs.queued')}</span>;
 
   // In esecuzione si legge **cosa sta facendo**, non un generico «in corso»:
-  // lettura del manifesto, scelta della risoluzione, scaricamento. Le fasi che
-  // l'interfaccia non conosce si mostrano com'è scritta la chiave, invece di
-  // sparire.
+  // lettura del manifesto, scaricamento. Le fasi che l'interfaccia non conosce si
+  // mostrano com'è scritta la chiave, invece di sparire.
   const phase = job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : null;
   const parts = [phase, eta ? t('jobs.etaShort', { eta }) : null].filter(Boolean);
   return <span>{parts.length > 0 ? parts.join(' · ') : t('jobs.running')}</span>;
@@ -452,7 +456,7 @@ function JobProgress({ job }: { job: Job }) {
   return (
     <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-terminal-line">
       <div
-        // Larghezza minima visibile: una carta su trecento è lo 0,3%, che
+        // Larghezza minima visibile: una pagina su trecento è lo 0,3%, che
         // arrotondato sparisce e fa sembrare la barra ferma.
         role="progressbar"
         aria-valuenow={Math.round(job.progress * 100)}

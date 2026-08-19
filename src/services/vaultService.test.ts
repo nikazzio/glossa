@@ -2,13 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 import { select } from './dbService';
 import {
-  expectedVersionPaths,
   freeVersionPages,
   getSourceReadMode,
   getVaultStatus,
   summarizeAvailability,
-  verifyFilesIntegrity,
-  verifyFilesPresent,
 } from './vaultService';
 
 vi.mock('./dbService', () => ({ select: vi.fn(), execute: vi.fn(), runInTransaction: vi.fn() }));
@@ -61,64 +58,6 @@ describe('modalità di lettura', () => {
   });
 });
 
-describe('verifica dei file', () => {
-  beforeEach(() => {
-    invokeMock.mockReset();
-    selectMock.mockReset();
-    settingReturns('');
-  });
-
-  it('chiede al backend i percorsi attesi invece di costruirli qui', async () => {
-    invokeMock.mockResolvedValueOnce(['providers/gallica/v1/manifest.json']);
-
-    await expectedVersionPaths('gallica', 'v1', '2000', 3);
-
-    expect(invokeMock).toHaveBeenCalledWith('expected_version_paths', {
-      providerKey: 'gallica',
-      versionId: 'v1',
-      sizeTag: '2000',
-      pageCount: 3,
-    });
-  });
-
-  it('propaga il deposito irraggiungibile invece di dichiarare tutto mancante', async () => {
-    invokeMock.mockRejectedValueOnce('vault_unreachable');
-
-    await expect(verifyFilesPresent(['providers/gallica/v1/pages/2000/0001.jpg'])).rejects.toBe(
-      'vault_unreachable',
-    );
-  });
-
-  it('segna la riga storta e tiene buone le altre', async () => {
-    invokeMock.mockResolvedValueOnce([
-      { vaultPath: 'providers/gallica/v1/pages/2000/0001.jpg', state: 'present', detail: null },
-      { vaultPath: '../fuori.jpg', state: 'invalid', detail: 'vault_path must not escape the vault root' },
-      { vaultPath: 'providers/gallica/v1/pages/2000/0002.jpg', state: 'missing', detail: null },
-    ]);
-
-    const results = await verifyFilesPresent([
-      'providers/gallica/v1/pages/2000/0001.jpg',
-      '../fuori.jpg',
-      'providers/gallica/v1/pages/2000/0002.jpg',
-    ]);
-
-    expect(results.map((row) => row.state)).toEqual(['present', 'invalid', 'missing']);
-    expect(results[1].detail).toContain('escape');
-  });
-
-  it('riporta lo stato di ogni file nella verifica completa', async () => {
-    invokeMock.mockResolvedValueOnce([
-      { vaultPath: 'a.jpg', state: 'valid', detail: null, checksum: 'abc' },
-      { vaultPath: 'b.jpg', state: 'corrupt', detail: 'JPEG troncato', checksum: null },
-    ]);
-
-    const results = await verifyFilesIntegrity(['a.jpg', 'b.jpg']);
-
-    expect(results[0].state).toBe('valid');
-    expect(results[1].detail).toContain('troncato');
-  });
-});
-
 describe('libera spazio', () => {
   beforeEach(() => {
     invokeMock.mockReset();
@@ -137,28 +76,48 @@ describe('libera spazio', () => {
 });
 
 describe('disponibilità', () => {
-  it('una fonte senza carte in locale è solo online', () => {
+  it('una fonte senza pagine in locale è solo online', () => {
     expect(summarizeAvailability(0, 210).availability).toBe('catalogued');
   });
 
-  it('alcune carte su molte sono uno stato parziale, non un errore', () => {
+  it('alcune pagine su molte sono uno stato parziale, non un errore', () => {
     const summary = summarizeAvailability(12, 210);
     expect(summary.availability).toBe('partial');
     expect(summary.presentPages).toBe(12);
     expect(summary.expectedPages).toBe(210);
   });
 
-  it('tutte le carte presenti significano completa', () => {
+  it('tutte le pagine presenti significano completa', () => {
     expect(summarizeAvailability(210, 210).availability).toBe('complete');
   });
 
   it('più file del previsto contano comunque come completa', () => {
-    // Succede quando alcune carte esistono anche a piena risoluzione.
+    // Succede quando alcune pagine esistono anche a piena risoluzione.
     expect(summarizeAvailability(240, 210).availability).toBe('complete');
   });
 
   it('senza un totale dichiarato non si inventa una percentuale', () => {
     // expected_asset_count nullo significa "non lo sappiamo ancora".
     expect(summarizeAvailability(5, 0).availability).toBe('catalogued');
+  });
+
+  it('le pagine che la biblioteca non serve non rendono il libro incompleto', () => {
+    // 308 pagine sul disco su 328 dichiarate, e le venti che mancano il server
+    // non le ha mai servite: riscaricarle non le farebbe comparire, quindi il
+    // libro è completo per quanto la biblioteca serve (§5.3).
+    const summary = summarizeAvailability(308, 328, 20);
+    expect(summary.availability).toBe('complete');
+    // Il conteggio mostrato resta quello vero: 308, non 328.
+    expect(summary.presentPages).toBe(308);
+  });
+
+  it('una pagina che manca davvero tiene il libro parziale', () => {
+    // Diciannove non servite su venti mancanti: la ventesima è nostra, e va
+    // ancora scaricata.
+    expect(summarizeAvailability(308, 328, 19).availability).toBe('partial');
+  });
+
+  it('senza pagine rifiutate il conto è quello di prima', () => {
+    expect(summarizeAvailability(308, 328).availability).toBe('partial');
   });
 });

@@ -1,6 +1,6 @@
 //! Lo scaricamento delle fonti: il primo gestore di lavoro vero (#218, PR 4).
 //!
-//! Dal manifesto alle carte sul disco, rispettando i limiti della biblioteca
+//! Dal manifesto alle pagine sul disco, rispettando i limiti della biblioteca
 //! (D18), saltando ciò che è già valido, salvando dove si è arrivati e senza
 //! far entrare nel deposito niente che non sia stato validato (D16-bis).
 
@@ -32,12 +32,12 @@ const DOWNLOAD_PRIORITY: i64 = 10;
 pub const THUMBNAIL_EDGE_SETTING: &str = "thumbnail_long_edge";
 
 /// Estremi entro cui una miniatura resta una miniatura: sotto i 100 pixel non
-/// si riconosce una carta, sopra gli 800 non è più una miniatura ma una
+/// si riconosce una pagina, sopra gli 800 non è più una miniatura ma una
 /// seconda copia del libro.
 pub const MIN_THUMBNAIL_EDGE: u32 = 100;
 pub const MAX_THUMBNAIL_EDGE: u32 = 800;
 
-/// Mette in coda lo scaricamento di una digitalizzazione: le carte, e da
+/// Mette in coda lo scaricamento di una digitalizzazione: le pagine, e da
 /// ognuna la sua miniatura.
 ///
 /// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
@@ -45,8 +45,8 @@ pub const MAX_THUMBNAIL_EDGE: u32 = 800;
 /// schermo, e la coda deve preferirlo alle verifiche di fondo.
 ///
 /// **Un lavoro solo, non due** *(D6, corretta il 2026-08-16)*: le miniature non
-/// si chiedono più alla biblioteca, si ricavano dalla carta appena scaricata.
-/// Ogni libro costava due richieste per carta a servizi che rispondono fra 1 e
+/// si chiedono più alla biblioteca, si ricavano dalla pagina appena scaricata.
+/// Ogni libro costava due richieste per pagina a servizi che rispondono fra 1 e
 /// 19 secondi; adesso ne costa una, e la miniatura qualche decina di
 /// millisecondi di processore.
 #[tauri::command]
@@ -148,9 +148,9 @@ async fn enqueue(
             return Ok(job);
         }
         // Un lavoro finito che si rilancia riparte **da capo**: il punto
-        // salvato parla di carte che nel frattempo possono essere state
+        // salvato parla di pagine che nel frattempo possono essere state
         // cancellate per liberare spazio (D6), e riprendendo da lì non
-        // tornerebbero mai più. Le carte ancora sul disco costano un controllo
+        // tornerebbero mai più. Le pagine ancora sul disco costano un controllo
         // a testa e vengono saltate lo stesso.
         jobs.0.retry(&id, true).await?;
         let conn = jobs.0.connection()?;

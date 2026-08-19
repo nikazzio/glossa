@@ -313,15 +313,19 @@ libro, domani qualunque altra cosa metta file nel deposito. Il descrittore si le
    livello 1 della specifica — obbligatoria per chiunque non sia livello 0. Nessuna
    richiesta per pagina, nessuna memoria fra le pagine.
 2. **Una lettura all'avvio del libro, che decide come calcolare.** Si legge il
-   descrittore di **una** pagina e si guardano due cose:
-   - **le misure dichiarate sono i dimezzamenti delle dimensioni del canvas?** Se sì,
-     quella biblioteca tiene pronta la piramide, e per tutto il libro si chiede il
-     dimezzamento con il lato lungo più vicino al tetto invece della larghezza esatta:
-     vale il doppio della velocità (§4). Se no — Gallica non dichiara niente — si
-     chiede la larghezza esatta e si va avanti;
-   - **le dimensioni che il descrittore dichiara sono quelle del canvas?** Se
-     divergono, il manifesto sta mentendo, e il calcolo si fa sulle dimensioni del
-     descrittore invece che su quelle del canvas.
+   descrittore di **una** pagina e si guarda una cosa sola: **le misure dichiarate
+   sono i dimezzamenti delle dimensioni del canvas?** Se sì, quella biblioteca tiene
+   pronta la piramide, e per tutto il libro si chiede il dimezzamento con il lato
+   lungo più vicino al tetto invece della larghezza esatta: vale il doppio della
+   velocità (§4). Se no — Gallica non dichiara niente — si chiede la larghezza esatta
+   e si va avanti.
+
+   **Più vicino vuol dire sopra o sotto che sia** (D4), e va scritto perché la prima
+   attuazione ha inteso il tetto come un minimo. Su un manoscritto di archive.org
+   dichiarato 5850×7667 i dimezzamenti sono 3833 e 1916: prendere sempre quello sopra
+   dava 472 kB a pagina con il tetto a 2000, quattro volte i pixel chiesti. I casi
+   misurati sul campo non distinguono le due letture — danno la stessa risposta — ma
+   il deposito sì.
 
    Costa una richiesta per libro — 4,3 s misurati su un lavoro di ore — e non ci sono
    caselle da compilare a mano. **Se il descrittore non risponde non è un problema**:
@@ -387,11 +391,13 @@ di pagina in pagina — 1323, 1278, 1264 sullo stesso libro. Se la cartella pren
 il nome dalla misura ottenuta, la stessa fonte finirebbe sparsa in cartelle diverse
 e una ripresa non ritroverebbe più quello che ha già scaricato.
 
-**Una pagina per volta, non quattro.** Il profilo dichiara quante richieste insieme
-si possono fare verso un host, ma dentro un libro si resta in fila: il collo di
-bottiglia misurato è il server, e parallelizzare moltiplicherebbe il peso su
-biblioteche che bandiscono. La concorrenza per host resta quello che è oggi — il
-limite fra lavori diversi, non dentro un lavoro.
+**Quante pagine insieme lo dice la biblioteca, e per difetto è una.** Il profilo
+dichiara già quante richieste insieme si possono fare verso un host, e
+l'impostazione esiste per biblioteca in Impostazioni → Biblioteche. Il ciclo però
+resta in fila finché quel valore non viene alzato a mano: il collo di bottiglia
+misurato è il server, e parallelizzare su una biblioteca che bandisce si paga con
+l'accesso. Il predefinito è **1 per tutte**, e si alza solo dove è stato misurato
+(§7, quarto ramo).
 
 ### 5.2 Il ciclo, in sette passi
 
@@ -729,7 +735,15 @@ quella presente, l'interfaccia lo dichiara e offre di scaricarla alla massima
 risoluzione. Il nuovo file **si aggiunge**, non sostituisce» — e la disposizione per
 misura esiste esattamente per questo.
 
-**Come funziona, senza niente di nuovo:**
+**Quando si fa: con il visore, non prima.** *(Deciso il 2026-08-19.)* Il pezzo che
+manca non è il comando — chiedi la dimensione piena, passi dalla cortesia, scrivi in
+`pages/max/` con la sua riga — ma il **posto da cui chiederlo**: si chiede guardando
+una pagina, e il visore non c'è. Scritto adesso sarebbe un comando che nessuno può
+invocare, quindi va nel ramo del visore. Il ripristino, che è l'unico punto che oggi
+ne sentirebbe la mancanza (§5.4), si limita a dire che quelle pagine non sono
+tornate, senza indicare un comando che non esiste.
+
+**Come funziona, quando ci sarà:**
 
 - la pagina si chiede alla dimensione piena e finisce in `pages/max/0034.jpg`, con la
   sua riga nel file di lato di quella cartella;
@@ -837,10 +851,7 @@ della biblioteca» dichiara a mano:
   Coincidono? allora quella biblioteca tiene pronti i dimezzamenti, e lo si sa senza
   che nessuno l'abbia compilato;
 - funziona anche per le biblioteche **mai misurate** e per le fonti aggiunte per
-  indirizzo diretto, che nel registro non hanno voce;
-- **e chiude un rischio che il §5.1 oggi si limita a mitigare**: se le dimensioni
-  dichiarate dal descrittore non sono quelle del canvas, il manifesto sta mentendo, e
-  lo si scopre subito invece di pagarlo con un ricampionamento a ogni pagina.
+  indirizzo diretto, che nel registro non hanno voce.
 
 Costo in codice: qualche decina di righe — chiedi, confronta, decidi — con ripiego sul
 calcolo se non risponde. **Non riporta indietro niente di quello che va via**: la
@@ -918,7 +929,7 @@ Non alimenta più nessuna impostazione: alimenta la fiducia nella regola.
 
 ### Fase 3 — La riscrittura
 
-**Tre rami, in quest'ordine.**
+**Quattro rami, in quest'ordine.**
 
 **Primo — la cache.** *(fatto: PR #442, in `blocco-1`.)* Le copertine, le ricerche, la consegna dei byte alla finestra, la
 riga da aggiungere alla politica di sicurezza dell'installato e due impostazioni. Non
@@ -946,13 +957,43 @@ scaricamento. Tenerli insieme vorrebbe dire o scrivere l'ottimizzazione contro l
 del database che stanno per sparire, o fermare la cache ad aspettare il ramo grande. Viene
 dopo, ed è il ramo più semplice dei tre perché la macchina che ridimensiona esiste già.
 
+**Quarto — le pagine in parallelo.** *(Deciso il 2026-08-19 con l'utente.)* Un ramo
+piccolo, e va da sé dopo il secondo: la struttura c'è già tutta. Il profilo della
+biblioteca dichiara `host_concurrency`, l'impostazione è già in Impostazioni →
+Biblioteche («Richieste insieme»), e la cortesia applica già un semaforo per host a
+ogni richiesta. Manca solo che il ciclo immetta più di una pagina alla volta, entro
+quel semaforo.
+
+Due condizioni, e sono la ragione per cui il ramo è separato:
+
+- **il predefinito è 1 per ogni biblioteca**, e si alza a mano dove serve. Il valore
+  prudente di oggi è 4, scritto per limitare i lavori concorrenti fra loro: se il
+  ciclo cominciasse a usarlo così com'è, ogni biblioteca mai misurata passerebbe da
+  una richiesta in volo a quattro senza che nessuno abbia deciso niente;
+- **la fase 2 viene prima**, perché è lei a dire quali biblioteche lo tollerano.
+
+Cosa rende, misurato sui profili che abbiamo: su archive.org (100 richieste ogni 60 s,
+pausa 600-1600 ms) quattro in volo portano un libro di 328 pagine da un quarto d'ora a
+quattro o cinque minuti; su Gallica (20 ogni 60 s) non cambia quasi niente, perché il
+limite a raffica lega prima della concorrenza. L'impostazione è potente dove è sicura
+e inerte dove sarebbe pericolosa, e questo vale finché i profili dicono la verità.
+
+Quello che il ramo tocca, oltre al fan-out: la regola della misura si declassa da uno
+stato condiviso (con N richieste in volo un rifiuto si paga fino a N volte invece di
+una), i contatori si aggregano in un punto solo, e le righe del file di lato si
+scrivono in append concorrente — una sola scrittura per riga, che è già come si fa, e
+diventa un invariante da dichiarare.
+
 ### Fase 4 — Rifiniture note
 
-- i commenti del codice dicono «carte» dove l'unità si chiama **pagina**;
-- una pagina ritrovata sul disco registra un indirizzo che nessuno ha mai chiesto;
-- la stima del tempo è una media da inizio lavoro: le pagine ritrovate la rendono
-  ottimista, un raffreddamento la rende pessimista per tutto il resto. Una finestra
-  mobile sulle ultime pagine è più onesta.
+*Fatte tutte e tre nel ramo 2.*
+
+- i commenti del codice dicevano «carte» dove l'unità si chiama **pagina**;
+- una pagina ritrovata sul disco registrava un indirizzo che nessuno ha mai chiesto:
+  sparito con il recupero;
+- la stima del tempo era una media da inizio lavoro — le pagine ritrovate la rendevano
+  ottimista, un raffreddamento pessimista per tutto il resto. Adesso guarda le ultime
+  dieci pagine.
 
 ### Cosa si fa della PR #440
 
@@ -996,7 +1037,7 @@ quello che resta è parte del piano quanto delimitare quello che va.
 
 ## 9. Come sappiamo che è andata bene
 
-Sette numeri, misurabili prima e dopo. Se a fine lavoro non sono questi, il lavoro
+Sei numeri, misurabili prima e dopo. Se a fine lavoro non sono questi, il lavoro
 non è finito.
 
 | Misura | Oggi | Obiettivo |
@@ -1006,14 +1047,7 @@ non è finito.
 | argomenti della funzione peggiore | 16 | 8 |
 | deroghe al limite di argomenti | 5 | 0 |
 | richieste di rete per pagina | 1,14 | 1,003 (una per pagina, più una per libro) |
-| tipi e strutture nel modulo dello scaricamento | 23 | sotto 15 |
 | copertine visibili nell'app impacchettata | 0 | tutte |
-
-*(«Concetti da tenere in testa: da 18 a 12» stava qui e ne è uscito: era l'unico
-numero che nessuno poteva verificare tranne chi lo aveva contato, e contandolo per
-davvero non erano diciotto. Al suo posto c'è una cosa che si conta con un comando —
-i tipi e le strutture dichiarati nel modulo — che è un sostituto imperfetto del carico
-concettuale ma è oggettivo. Gli altri sei numeri sono forti proprio per questo.)*
 
 E sette prove a mano, che i test non possono fare. Le ultime quattro vengono dagli
 usi dichiarati nel capitolo 1:

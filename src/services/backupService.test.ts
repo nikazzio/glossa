@@ -100,15 +100,30 @@ describe('cosa porta con sé un backup', () => {
 });
 
 describe('la misura con cui riscaricare', () => {
+  async function exported() {
+    await writeBackup();
+    const call = vi.mocked(invoke).mock.calls.find(([command]) => command === 'write_backup');
+    return JSON.parse(String((call?.[1] as { payload?: string } | undefined)?.payload));
+  }
+
   it('è quella con cui il libro è stato scaricato, non la più grande presente', async () => {
     // Un libro completo a 2000 con tre pagine prese a piena risoluzione (§5.6)
     // va riscaricato a 2000: chiedere `max` triplicherebbe il deposito.
-    await writeBackup();
+    const payload = await exported();
 
-    const call = vi.mocked(invoke).mock.calls.find(([command]) => command === 'write_backup');
-    const payload = JSON.parse(String((call?.[1] as { payload?: string } | undefined)?.payload));
     expect(payload.downloaded).toEqual([
-      expect.objectContaining({ versionId: 'v1', sizeTag: '2000', pages: 328 }),
+      expect.objectContaining({ versionId: 'v1', principalSize: '2000' }),
+    ]);
+  });
+
+  it('il backup ricorda tutte le misure, non solo la principale', async () => {
+    // Le tre pagine a piena risoluzione erano quelle che il backup dimenticava:
+    // dopo un ripristino nessuno sapeva più che c'erano.
+    const payload = await exported();
+
+    expect(payload.downloaded[0].sizes).toEqual([
+      { sizeTag: '2000', pages: 328 },
+      { sizeTag: 'max', pages: 3 },
     ]);
   });
 });
@@ -197,33 +212,6 @@ describe('i puntatori che al momento dell inserimento non possono valere', () =>
     // averla, e riscriverla comunque fermerebbe tutto.
     expect(String(update![0])).toContain('EXISTS');
     expect(update![1]).toEqual(['chunk-1:r2', 'chunk-1']);
-  });
-});
-
-describe('le pagine già sul disco', () => {
-  beforeEach(() => {
-    runMock.mockClear();
-  });
-
-  it('sopravvivono al ripristino, ma solo quelle di un opera che esiste ancora', async () => {
-    // Le righe delle pagine sono appese alle opere: sostituire le opere se le
-    // portava via per cascata, e il programma smetteva di sapere di file che
-    // sul disco ci sono ancora.
-    fsState.raw = backupWith([]);
-
-    await restoreBackup(t);
-
-    const queries = runMock.mock.calls.map(([query]) => String(query));
-    const copy = queries.findIndex((query) => query.includes('CREATE TEMP TABLE kept_assets'));
-    const wipe = queries.findIndex((query) => query.trim() === 'DELETE FROM sources');
-    const back = queries.findIndex((query) => query.includes('INSERT OR IGNORE INTO assets'));
-
-    expect(copy).toBeGreaterThanOrEqual(0);
-    // La copia va fatta **prima** della cancellazione, o non c'è più niente da copiare.
-    expect(copy).toBeLessThan(wipe);
-    expect(back).toBeGreaterThan(wipe);
-    expect(queries[back]).toContain('source_version_id IN (SELECT id FROM source_versions)');
-    expect(queries.some((query) => query.includes('DROP TABLE temp.kept_assets'))).toBe(true);
   });
 });
 

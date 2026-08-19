@@ -125,7 +125,7 @@ export interface AddSourceToLibraryInput {
   materialType: string | null;
   collection: string | null;
   volume: string | null;
-  /** Carte dichiarate dal manifesto, quando la ricerca le ha già lette. */
+  /** Pagine dichiarate dal manifesto, quando la ricerca le ha già lette. */
   itemCount: number | null;
   workspaceId?: string;
 }
@@ -148,9 +148,9 @@ export interface LibraryCatalogEntry {
   thumbnailUrl: string | null;
   creator: string | null;
   date: string | null;
-  /** Carte dichiarate dal manifesto, quando si è già letto. */
+  /** Pagine dichiarate dal manifesto, quando si è già letto. */
   expectedPages: number | null;
-  /** Carte davvero presenti sul computer. */
+  /** Pagine davvero presenti sul computer. */
   localPages: number;
   /** Quanto occupano quelle pagine: serve alla conferma di «libera spazio» (D6). */
   localBytes: number;
@@ -160,6 +160,15 @@ export interface LibraryCatalogEntry {
    * distinguerle evita di chiamare incompleto un libro che non lo è.
    */
   sizes: { sizeTag: string; pages: number; bytes: number; missing: number }[];
+  /**
+   * Quale delle misure è la principale, **come la dichiara il deposito**.
+   *
+   * Non si ricava confrontando i conteggi: due misure con lo stesso numero di
+   * pagine — lo stesso libro scaricato due volte con tetti diversi — renderebbero
+   * la scelta casuale, e da lì sbaglierebbero sia l'aggiunta «più 3 a risoluzione
+   * piena» sia il conto delle pagine che la biblioteca non serve.
+   */
+  principalSize: string | null;
   /** I workspace a cui è collegata: un'opera può stare in più posti (#213). */
   workspaces: { workspaceId: string; workspaceName: string; isOrigin: boolean }[];
   /**
@@ -179,19 +188,9 @@ export interface LibrarySourceVersion {
   createdAt: string;
 }
 
-export interface LibraryAsset {
-  id: string;
-  sourceVersionId: string | null;
-  kind: 'image' | 'pdf' | 'manifest' | 'thumbnail' | 'derived' | 'other';
-  locality: 'remote' | 'local' | 'derived';
-  availability: 'catalogued' | 'partial' | 'complete';
-  remoteUrl: string | null;
-}
-
 export interface LibrarySourceDetail {
   source: LibrarySource;
   versions: LibrarySourceVersion[];
-  assets: LibraryAsset[];
   linkedWorkspaceIds: string[];
 }
 

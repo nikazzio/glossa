@@ -73,29 +73,6 @@ pub(crate) fn stopped_outcome(cancelled: bool, staging: &Path) -> Outcome {
     }
 }
 
-/// Quante pagine ci sono già in una cartella di misura e quanto occupano. Il
-/// file di lato pesa ma non è una pagina.
-pub(crate) fn folder_state(size_dir: &Path) -> (u32, u64) {
-    let Ok(entries) = std::fs::read_dir(size_dir) else {
-        return (0, 0);
-    };
-    let mut pages = 0;
-    let mut bytes = 0;
-    for entry in entries.flatten() {
-        let Ok(metadata) = entry.metadata() else {
-            continue;
-        };
-        if !metadata.is_file() {
-            continue;
-        }
-        bytes += metadata.len();
-        if entry.file_name().to_string_lossy() != super::sidecar::SIDECAR_FILE {
-            pages += 1;
-        }
-    }
-    (pages, bytes)
-}
-
 pub(crate) fn now_secs() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

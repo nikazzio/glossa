@@ -120,9 +120,9 @@ export async function cancelJob(id: string): Promise<void> {
 }
 
 /**
- * Mette in coda lo scaricamento di una digitalizzazione: le carte e le sue
+ * Mette in coda lo scaricamento di una digitalizzazione: le pagine e le sue
  * miniature, che sono due lavori distinti (D6). L'interfaccia non scarica
- * niente: chiede e osserva (D10). Restituisce il lavoro delle carte.
+ * niente: chiede e osserva (D10). Restituisce il lavoro delle pagine.
  */
 export async function enqueueSourceDownload(request: {
   providerKey: string;
@@ -169,7 +169,7 @@ export async function onJobChanged(handler: (job: Job) => void): Promise<() => v
 /**
  * I dettagli che un lavoro sa dire di sé.
  *
- * Le chiavi le decide il gestore: uno scaricamento parla di carte, megabyte e
+ * Le chiavi le decide il gestore: uno scaricamento parla di pagine, megabyte e
  * risoluzione, una verifica di file integri e orfani. Qui si dichiara quello che
  * l'interfaccia sa mostrare — il resto viene ignorato invece di comparire a
  * metà, e un gestore futuro può aggiungere chiavi senza rompere niente.
@@ -180,21 +180,29 @@ export interface JobDetail {
   /** L'ultima unità passata: qui i dati **veri** di quella pagina. */
   last?: {
     index: number;
-    bytes: number;
     /** L'etichetta che le dà la biblioteca: «f. 17r», «p. 24». */
     label?: string;
-    /** La misura chiesta per questa pagina, che può non essere il tetto. */
+    /**
+     * Quanto pesa. Assente per una pagina **ritrovata** sul disco: non è stata
+     * scaricata adesso, e mostrare zero sarebbe peggio che non mostrare niente.
+     */
+    bytes?: number;
+    /** La misura chiesta per questa pagina, che non è il tetto. */
     size?: string;
-    /** Le dimensioni vere, quando la biblioteca le dichiara. */
+    /** Le dimensioni davvero arrivate. */
     pixels?: string;
-    /** Ritrovata sul disco invece che scaricata. */
+    /** Ritrovata sul disco invece che scaricata: nessuna richiesta. */
     recovered?: boolean;
-    url?: string;
   };
+  /**
+   * Pagine che la biblioteca ha dichiarato di non servire in questo avvio.
+   *
+   * Senza questo numero «fatte su totali» direbbe «328 su 328» di un libro che
+   * sul disco ne ha 326, e la differenza sembrerebbe un difetto nostro.
+   */
+  unavailable?: number;
   /** Il tetto scelto nelle impostazioni, che vale per tutto il lavoro. */
   cap?: string;
-  /** Le misure che la biblioteca dichiara di saper servire, `larghezza×altezza`. */
-  available?: string[];
   provider?: string;
   host?: string;
   level?: string;
@@ -240,18 +248,15 @@ export function parseJobDetail(raw: string | null): JobDetail {
         num(last.index) !== undefined
           ? {
               index: num(last.index)!,
-              bytes: num(last.bytes) ?? 0,
               label: text(last.label),
+              bytes: num(last.bytes),
               size: text(last.size),
               pixels: text(last.pixels),
               recovered: typeof last.recovered === 'boolean' ? last.recovered : undefined,
-              url: text(last.url),
             }
           : undefined,
+      unavailable: num(record.unavailable),
       cap: text(record.cap),
-      available: Array.isArray(record.available)
-        ? record.available.filter((value): value is string => typeof value === 'string')
-        : undefined,
       provider: text(record.provider),
       host: text(record.host),
       level: text(record.level),

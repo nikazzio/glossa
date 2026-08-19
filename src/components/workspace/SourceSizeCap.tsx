@@ -16,7 +16,7 @@ import {
  * generale, perché la scelta dipende dal materiale — una cinquecentina a
  * stampa larga si legge a molto meno di una minuscola fitta.
  *
- * Vale per gli scaricamenti che partono da adesso: le carte già sul computer
+ * Vale per gli scaricamenti che partono da adesso: le pagine già sul computer
  * restano dove sono, alla misura con cui sono arrivate.
  */
 export function SourceSizeCap({ versionId }: { versionId: string }) {
