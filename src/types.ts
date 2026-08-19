@@ -188,19 +188,9 @@ export interface LibrarySourceVersion {
   createdAt: string;
 }
 
-export interface LibraryAsset {
-  id: string;
-  sourceVersionId: string | null;
-  kind: 'image' | 'pdf' | 'manifest' | 'thumbnail' | 'derived' | 'other';
-  locality: 'remote' | 'local' | 'derived';
-  availability: 'catalogued' | 'partial' | 'complete';
-  remoteUrl: string | null;
-}
-
 export interface LibrarySourceDetail {
   source: LibrarySource;
   versions: LibrarySourceVersion[];
-  assets: LibraryAsset[];
   linkedWorkspaceIds: string[];
 }
 

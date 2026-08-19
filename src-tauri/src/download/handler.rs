@@ -37,7 +37,7 @@ use super::manifest::{parse, Manifest};
 use super::pages::{one_declaring_long_waits, PageFetcher, PageOutcome};
 use super::progress::{Progress, Reporter};
 use super::sidecar::{self, PageRecord};
-use super::sizing::{self, SizeCap, Sizing, SizingRule};
+use super::sizing::{self, SizeCap, SizingRule};
 use super::vault_io::{discard, folder_state, now_secs, stage_and_promote, stopped_outcome};
 
 pub const JOB_TYPE: &str = "source_download";
@@ -131,13 +131,13 @@ fn finished(
 /// Porta l'esito di una pagina dentro il conto del lavoro e la memoria di ciò
 /// che la biblioteca non serve.
 fn account_for(
-    outcome: PageOutcome,
+    outcome: &PageOutcome,
     page: &super::manifest::Page,
     progress: &mut Progress,
     known: &mut std::collections::BTreeMap<u32, PageRecord>,
 ) {
     match outcome {
-        PageOutcome::Written { bytes } => {
+        PageOutcome::Written { bytes, .. } => {
             progress.present += 1;
             progress.fetched_now += 1;
             progress.bytes += bytes;
@@ -181,7 +181,7 @@ struct Prepared {
     /// Come calcolare la misura per questo libro (§5.9). Decisa qui perché qui
     /// ci sono già client, profilo e manifesto; il ciclo la può solo declassare
     /// a `Full` dopo un rifiuto.
-    sizing: Sizing,
+    rule: SizingRule,
 }
 
 pub struct SourceDownloadJob {
@@ -280,16 +280,14 @@ impl SourceDownloadJob {
                 .join(cap.folder()),
         );
 
-        let sizing = self
-            .decide_sizing(&client, &profile, &manifest, cap, signals)
+        let rule = self
+            .decide_rule(&client, &profile, &manifest, cap, signals)
             .await;
         log::info!(
-            "job download starting id={} provider={} pages={total} cap={} rule={:?} correction={:?}",
+            "job download starting id={} provider={} pages={total} cap={} rule={rule:?}",
             ctx.id,
             config.provider_key,
-            config.size_tag,
-            sizing.rule,
-            sizing.correction
+            config.size_tag
         );
 
         Ok(Some(Prepared {
@@ -302,7 +300,7 @@ impl SourceDownloadJob {
             title,
             cap,
             size_dir,
-            sizing,
+            rule,
         }))
     }
 
@@ -323,13 +321,13 @@ impl SourceDownloadJob {
             title,
             cap,
             size_dir,
-            sizing,
+            rule,
         } = prepared;
 
         // Stato di partenza letto dal disco, non da un punto salvato (§5.3).
         let mut known = sidecar::read(size_dir);
         let (present, bytes) = folder_state(size_dir);
-        let mut sizing = sizing.clone();
+        let mut rule = rule.clone();
 
         ctx.report_phase(phase::DOWNLOADING).await;
         let started_at = std::time::Instant::now();
@@ -366,13 +364,7 @@ impl SourceDownloadJob {
             }
 
             let outcome = one_declaring_long_waits(
-                &fetcher,
-                &mut sizing,
-                page,
-                &known,
-                &progress,
-                &reporter,
-                signals,
+                &fetcher, &mut rule, page, &known, &progress, &reporter, signals,
             )
             .await
             .inspect_err(|_| discard(staging))?;
@@ -380,12 +372,18 @@ impl SourceDownloadJob {
             if matches!(outcome, PageOutcome::Stopped) {
                 return Ok(stopped_outcome(ctx.cancel_requested(), staging));
             }
-            account_for(outcome, page, &mut progress, &mut known);
+            account_for(&outcome, page, &mut progress, &mut known);
 
             reporter
                 .advanced(
                     &progress,
-                    &progress.detail(&config.size_tag, &config.provider_key, &host, page),
+                    &progress.detail(
+                        &config.size_tag,
+                        &config.provider_key,
+                        &host,
+                        page,
+                        &outcome,
+                    ),
                 )
                 .await;
         }
@@ -442,23 +440,19 @@ impl SourceDownloadJob {
 
     /// Legge il descrittore della prima pagina e ne ricava la regola di calcolo
     /// per tutto il libro (§5.9). Costo: una richiesta, 4,3 s misurati.
-    ///
-    /// Serve a due cose, non a una: sapere se la biblioteca tiene pronti i
-    /// dimezzamenti, e sapere se le dimensioni che il manifesto dichiara sono
-    /// quelle vere. La seconda si paga a ogni pagina se non la si scopre qui.
-    async fn decide_sizing(
+    async fn decide_rule(
         &self,
         client: &reqwest::Client,
         profile: &NetworkProfile,
         manifest: &Manifest,
         cap: SizeCap,
         signals: &Signals<'_>,
-    ) -> Sizing {
+    ) -> SizingRule {
         if matches!(cap, SizeCap::Max) {
-            return Sizing::new(SizingRule::Full);
+            return SizingRule::Full;
         }
         let Some(page) = manifest.pages.first() else {
-            return Sizing::new(SizingRule::ExactWidth);
+            return SizingRule::ExactWidth;
         };
         let url = sizing::info_url(&page.image_service);
         let info = match fetch(client, &self.courtesy, profile, &url, 1, signals).await {
@@ -467,6 +461,6 @@ impl SourceDownloadJob {
             // (fatto 6). Non si riprova: il guadagno è di velocità, non di esito.
             _ => None,
         };
-        sizing::from_info(info.as_ref(), Some(page), cap)
+        sizing::rule_from_info(info.as_ref(), cap)
     }
 }

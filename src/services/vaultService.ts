@@ -25,27 +25,6 @@ export interface VaultStatus {
 
 export type VaultFolderKind = 'empty' | 'existingVault' | 'foreign';
 
-/**
- * `invalid` è il percorso rifiutato perché uscirebbe dal deposito: la riga si
- * segna e le altre proseguono, invece di far fallire l'intera verifica.
- */
-export type VaultPresenceState = 'present' | 'missing' | 'invalid';
-
-export interface VaultFileCheck {
-  vaultPath: string;
-  state: VaultPresenceState;
-  detail: string | null;
-}
-
-export type VaultFileState = 'valid' | 'corrupt' | 'missing' | 'invalid';
-
-export interface VaultFileIntegrity {
-  vaultPath: string;
-  state: VaultFileState;
-  detail: string | null;
-  checksum: string | null;
-}
-
 export interface FreedSpace {
   deletedFiles: number;
   freedBytes: number;
@@ -114,38 +93,6 @@ export async function setVerifyVaultOnStartup(enabled: boolean): Promise<void> {
 export async function getSourceReadMode(): Promise<SourceReadMode> {
   const value = await readSetting(READ_MODE_KEY);
   return value === 'local' || value === 'remote' ? value : 'auto';
-}
-
-/**
- * Percorsi attesi di una digitalizzazione completa: manifesto, miniature e
- * carte. Li costruisce il backend perché la disposizione di D2 viva in un posto
- * solo e non venga duplicata qui.
- */
-export async function expectedVersionPaths(
-  providerKey: string,
-  versionId: string,
-  sizeTag: string,
-  pageCount: number,
-): Promise<string[]> {
-  return invoke<string[]>('expected_version_paths', { providerKey, versionId, sizeTag, pageCount });
-}
-
-/**
- * Verifica rapida di presenza (D5): elenca e confronta, non ricalcola le
- * impronte. Solleva `vault_unreachable` se la radice non c'è, invece di
- * dichiarare tutto mancante.
- */
-export async function verifyFilesPresent(vaultPaths: string[]): Promise<VaultFileCheck[]> {
-  return invoke<VaultFileCheck[]>('verify_files_present', { vaultPaths });
-}
-
-/**
- * Verifica completa di integrità (D5): apre ogni file. Lenta in proporzione ai
- * gigabyte, e su un deposito sincronizzato in streaming costringe il client a
- * scaricare tutto (D1-bis): va avvisato prima di partire.
- */
-export async function verifyFilesIntegrity(vaultPaths: string[]): Promise<VaultFileIntegrity[]> {
-  return invoke<VaultFileIntegrity[]>('verify_files_integrity', { vaultPaths });
 }
 
 /**

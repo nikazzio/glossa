@@ -5,10 +5,9 @@ import {
   libraryInventory,
   principalPages,
   versionInventory,
-  versionPagePaths,
 } from './inventoryService';
 import { generateId } from '../utils';
-import type { AddSourceToLibraryInput, LibraryAsset, LibraryCatalogEntry, LibrarySource, LibrarySourceDetail, LibrarySourceVersion } from '../types';
+import type { AddSourceToLibraryInput, LibraryCatalogEntry, LibrarySource, LibrarySourceDetail, LibrarySourceVersion } from '../types';
 
 interface SourceRow {
   id: string;
@@ -27,15 +26,6 @@ interface SourceVersionRow {
   source_url: string | null;
   is_primary: number;
   created_at: string;
-}
-
-interface AssetRow {
-  id: string;
-  source_version_id: string | null;
-  kind: LibraryAsset['kind'];
-  locality: LibraryAsset['locality'];
-  availability: LibraryAsset['availability'];
-  remote_url: string | null;
 }
 
 function rowToSource(row: SourceRow): LibrarySource {
@@ -61,17 +51,6 @@ function rowToVersion(row: SourceVersionRow): LibrarySourceVersion {
   };
 }
 
-function rowToAsset(row: AssetRow): LibraryAsset {
-  return {
-    id: row.id,
-    sourceVersionId: row.source_version_id,
-    kind: row.kind,
-    locality: row.locality,
-    availability: row.availability,
-    remoteUrl: row.remote_url,
-  };
-}
-
 function isValidUrl(value: string): boolean {
   try {
     return ['http:', 'https:'].includes(new URL(value).protocol);
@@ -89,17 +68,14 @@ interface CatalogRow extends SourceRow {
 
 /**
  * Il catalogo come lo vede la Biblioteca: la fonte con la sua digitalizzazione
- * principale, la copertina, e **quante carte sono davvero sul computer**.
+ * principale, la copertina, e **quante pagine sono davvero sul computer**.
  *
- * Le carte presenti si contano dalle righe locali, non da uno stato scritto a
+ * Le pagine presenti si contano guardando il deposito, non uno stato scritto a
  * parte: la disponibilità è un fatto che si osserva, non una bandierina da
- * tenere aggiornata (D7).
- */
-/**
- * Il catalogo mostra **sempre tutti i libri** (#213).
+ * tenere aggiornata (D7, §5.4).
  *
- * La Biblioteca è un catalogo, non la vista di un workspace: filtrarla su un
- * workspace nascondeva libri che ci sono. A quali workspace appartiene un libro
+ * Il catalogo mostra **sempre tutti i libri** (#213): la Biblioteca è un
+ * catalogo, non la vista di un workspace. A quali workspace appartiene un libro
  * si **vede** sulla sua scheda, e da lì si collega o si scollega.
  */
 export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
@@ -211,16 +187,6 @@ function parseMetadata(raw: string | null): SourceMetadata {
  * un'azione diversa e va chiesta a parte, perché qui si sta rinunciando alla
  * scheda, non ai gigabyte.
  */
-/**
- * I percorsi delle pagine di una digitalizzazione, letti dal deposito.
- *
- * Prima venivano dalle righe `assets`: adesso le pagine non hanno una riga a
- * testa, e la cartella è la sola verità (§5.4).
- */
-export async function listVersionVaultPaths(versionId: string): Promise<string[]> {
-  return versionPagePaths(versionId);
-}
-
 /**
  * La chiave della biblioteca **come è scritta nel deposito**
  * (`providers/<chiave>/<versione>/…`).
@@ -339,13 +305,6 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
     'SELECT id, source_id, label, version_kind, source_url, is_primary, created_at FROM source_versions WHERE source_id = $1',
     [sourceId],
   );
-  const versionIds = versionRows.map((row) => row.id);
-  const assetRows = versionIds.length > 0
-    ? await select<AssetRow>(
-        `SELECT id, source_version_id, kind, locality, availability, remote_url FROM assets WHERE source_version_id IN (${versionIds.map((_, i) => `$${i + 1}`).join(', ')})`,
-        versionIds,
-      )
-    : [];
   const linkRows = await select<{ workspace_id: string }>(
     `SELECT workspace_id FROM workspace_items WHERE item_type = 'source' AND item_id = $1`,
     [sourceId],
@@ -354,7 +313,6 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
   return {
     source: rowToSource(source),
     versions: versionRows.map(rowToVersion),
-    assets: assetRows.map(rowToAsset),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
   };
 }

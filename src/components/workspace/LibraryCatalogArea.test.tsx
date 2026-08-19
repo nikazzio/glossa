@@ -13,14 +13,19 @@ vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
-  listVersionVaultPaths: vi.fn().mockResolvedValue([]),
-  forgetVersionPages: vi.fn().mockResolvedValue(undefined),
   // Nessun file registrato: la chiave viene dai metadati, come per una fonte
   // appena aggiunta.
   versionProviderKey: vi.fn().mockResolvedValue(null),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
+}));
+
+// L'inventario del deposito passa dal motore: nelle prove non c'è, e la scheda
+// deve reggere la risposta «niente sul disco».
+vi.mock('../../services/inventoryService', () => ({
+  versionInventory: vi.fn().mockResolvedValue(null),
+  libraryInventory: vi.fn().mockResolvedValue([]),
 }));
 
 // La conferma vive in un componente montato altrove: qui si dà per data,
@@ -33,7 +38,6 @@ vi.mock('../../services/vaultService', async (importOriginal) => {
     ...actual,
     deleteVersionFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
     freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0 }),
-    verifyFilesPresent: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -356,7 +360,6 @@ describe('LibraryCatalogArea', () => {
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [{ id: 'v1', sourceId: 's1', label: 'primary', versionKind: 'iiif_manifest', sourceUrl: 'https://x.test/m.json', isPrimary: true, createdAt: '2026-01-01' }],
-        assets: [],
         linkedWorkspaceIds: [],
       },
     });
@@ -379,7 +382,6 @@ describe('LibraryCatalogArea', () => {
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [],
-        assets: [],
         linkedWorkspaceIds: ['ws-2'],
       },
     });
@@ -402,7 +404,6 @@ describe('LibraryCatalogArea', () => {
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [],
-        assets: [],
         linkedWorkspaceIds: [],
       },
     });

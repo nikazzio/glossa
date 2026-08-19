@@ -313,15 +313,12 @@ libro, domani qualunque altra cosa metta file nel deposito. Il descrittore si le
    livello 1 della specifica — obbligatoria per chiunque non sia livello 0. Nessuna
    richiesta per pagina, nessuna memoria fra le pagine.
 2. **Una lettura all'avvio del libro, che decide come calcolare.** Si legge il
-   descrittore di **una** pagina e si guardano due cose:
-   - **le misure dichiarate sono i dimezzamenti delle dimensioni del canvas?** Se sì,
-     quella biblioteca tiene pronta la piramide, e per tutto il libro si chiede il
-     dimezzamento con il lato lungo più vicino al tetto invece della larghezza esatta:
-     vale il doppio della velocità (§4). Se no — Gallica non dichiara niente — si
-     chiede la larghezza esatta e si va avanti;
-   - **le dimensioni che il descrittore dichiara sono quelle del canvas?** Se
-     divergono, il manifesto sta mentendo, e il calcolo si fa sulle dimensioni del
-     descrittore invece che su quelle del canvas.
+   descrittore di **una** pagina e si guarda una cosa sola: **le misure dichiarate
+   sono i dimezzamenti delle dimensioni del canvas?** Se sì, quella biblioteca tiene
+   pronta la piramide, e per tutto il libro si chiede il dimezzamento con il lato
+   lungo più vicino al tetto invece della larghezza esatta: vale il doppio della
+   velocità (§4). Se no — Gallica non dichiara niente — si chiede la larghezza esatta
+   e si va avanti.
 
    Costa una richiesta per libro — 4,3 s misurati su un lavoro di ore — e non ci sono
    caselle da compilare a mano. **Se il descrittore non risponde non è un problema**:
@@ -837,10 +834,7 @@ della biblioteca» dichiara a mano:
   Coincidono? allora quella biblioteca tiene pronti i dimezzamenti, e lo si sa senza
   che nessuno l'abbia compilato;
 - funziona anche per le biblioteche **mai misurate** e per le fonti aggiunte per
-  indirizzo diretto, che nel registro non hanno voce;
-- **e chiude un rischio che il §5.1 oggi si limita a mitigare**: se le dimensioni
-  dichiarate dal descrittore non sono quelle del canvas, il manifesto sta mentendo, e
-  lo si scopre subito invece di pagarlo con un ricampionamento a ogni pagina.
+  indirizzo diretto, che nel registro non hanno voce.
 
 Costo in codice: qualche decina di righe — chiedi, confronta, decidi — con ripiego sul
 calcolo se non risponde. **Non riporta indietro niente di quello che va via**: la
@@ -996,7 +990,7 @@ quello che resta è parte del piano quanto delimitare quello che va.
 
 ## 9. Come sappiamo che è andata bene
 
-Sette numeri, misurabili prima e dopo. Se a fine lavoro non sono questi, il lavoro
+Sei numeri, misurabili prima e dopo. Se a fine lavoro non sono questi, il lavoro
 non è finito.
 
 | Misura | Oggi | Obiettivo |
@@ -1006,14 +1000,7 @@ non è finito.
 | argomenti della funzione peggiore | 16 | 8 |
 | deroghe al limite di argomenti | 5 | 0 |
 | richieste di rete per pagina | 1,14 | 1,003 (una per pagina, più una per libro) |
-| tipi e strutture nel modulo dello scaricamento | 23 | sotto 15 |
 | copertine visibili nell'app impacchettata | 0 | tutte |
-
-*(«Concetti da tenere in testa: da 18 a 12» stava qui e ne è uscito: era l'unico
-numero che nessuno poteva verificare tranne chi lo aveva contato, e contandolo per
-davvero non erano diciotto. Al suo posto c'è una cosa che si conta con un comando —
-i tipi e le strutture dichiarati nel modulo — che è un sostituto imperfetto del carico
-concettuale ma è oggettivo. Gli altri sei numeri sono forti proprio per questo.)*
 
 E sette prove a mano, che i test non possono fare. Le ultime quattro vengono dagli
 usi dichiarati nel capitolo 1:

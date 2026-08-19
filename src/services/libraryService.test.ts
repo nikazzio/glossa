@@ -147,18 +147,16 @@ describe('libraryService', () => {
       await expect(getLibrarySourceDetail('missing')).rejects.toThrow();
     });
 
-    it('restituisce fonte, versioni, asset e link workspace', async () => {
+    it('restituisce fonte, versioni e link workspace', async () => {
       dbMocks.select
         .mockResolvedValueOnce([{ id: 's1', title: 'Titolo', kind: 'iiif', primary_language: null, external_ref: null, created_at: '2026-01-01' }])
         .mockResolvedValueOnce([{ id: 'v1', source_id: 's1', label: 'primary', version_kind: 'iiif_manifest', source_url: 'https://x.test/m.json', is_primary: 1, created_at: '2026-01-01' }])
-        .mockResolvedValueOnce([{ id: 'a1', source_version_id: 'v1', kind: 'manifest', locality: 'remote', availability: 'catalogued', remote_url: 'https://x.test/m.json' }])
         .mockResolvedValueOnce([{ workspace_id: 'ws-1' }]);
 
       const detail = await getLibrarySourceDetail('s1');
 
       expect(detail.source.id).toBe('s1');
       expect(detail.versions).toHaveLength(1);
-      expect(detail.assets).toHaveLength(1);
       expect(detail.linkedWorkspaceIds).toEqual(['ws-1']);
     });
   });

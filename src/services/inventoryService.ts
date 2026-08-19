@@ -36,10 +36,6 @@ export async function libraryInventory(): Promise<VersionInventory[]> {
   return invoke<VersionInventory[]>('library_inventory');
 }
 
-export async function versionPagePaths(versionId: string): Promise<string[]> {
-  return invoke<string[]>('version_page_paths', { versionId });
-}
-
 /** Le pagine della misura principale: il conteggio che la scheda mostra. */
 export function principalPages(inventory: VersionInventory): number {
   const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);

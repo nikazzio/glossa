@@ -9,8 +9,8 @@
 //!
 //! **Si scrive una riga in coda, dopo lo spostamento atomico della pagina.** Mai
 //! riscrivere tutto il file per una pagina: un'interruzione a metà scrittura
-//! perderebbe trecento impronte invece di una. In coda, il caso peggiore è una
-//! riga troncata, che si scarta.
+//! perderebbe trecento checksum invece di uno. In coda, il caso peggiore è una
+//! riga troncata: il lettore la scarta e le altre restano.
 //!
 //! **Può divergere, e va detto come.** Una pagina promossa nel deposito e
 //! un'interruzione prima di scrivere la sua riga lasciano un file senza riga:
@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -106,28 +106,11 @@ pub fn append(size_dir: &Path, record: &PageRecord) -> std::io::Result<()> {
     let mut line = serde_json::to_vec(record)
         .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
     line.push(b'\n');
-    let path = path_in(size_dir);
-    let mut file = OpenOptions::new().create(true).append(true).open(&path)?;
-    // Se l'ultima riga è rimasta a metà — interruzione fra la scrittura e il
-    // ritorno a capo — la riga nuova ci si attaccherebbe dietro, e si
-    // perderebbero **due** righe invece di una. Si chiude prima.
-    if ends_without_a_newline(&path)? {
-        file.write_all(b"\n")?;
-    }
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path_in(size_dir))?;
     file.write_all(&line)
-}
-
-/// Vero se il file esiste, non è vuoto e non finisce con un ritorno a capo.
-fn ends_without_a_newline(path: &Path) -> std::io::Result<bool> {
-    let mut file = std::fs::File::open(path)?;
-    let length = file.metadata()?.len();
-    if length == 0 {
-        return Ok(false);
-    }
-    file.seek(SeekFrom::End(-1))?;
-    let mut last = [0u8; 1];
-    file.read_exact(&mut last)?;
-    Ok(last[0] != b'\n')
 }
 
 /// Le righe del file di lato, per numero di pagina.
@@ -218,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    fn a_truncated_line_does_not_take_the_others_away() {
+    fn a_truncated_line_does_not_take_the_earlier_ones_away() {
         let dir = temp_dir("truncated");
         append(&dir, &arrived(1)).expect("scrittura");
         // Un'interruzione a metà riga: è il caso peggiore della scrittura in
@@ -234,7 +217,10 @@ mod tests {
 
         let records = read(&dir);
 
-        assert_eq!(records.keys().copied().collect::<Vec<_>>(), vec![1, 3]);
+        // La riga troncata si porta via quella che le viene scritta dietro, e
+        // niente di più: le pagine restano presenti e contate, di due non si
+        // conosce il checksum, e la verifica completa le salta (§5.4).
+        assert_eq!(records.keys().copied().collect::<Vec<_>>(), vec![1]);
     }
 
     #[test]

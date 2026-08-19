@@ -2,13 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 import { select } from './dbService';
 import {
-  expectedVersionPaths,
   freeVersionPages,
   getSourceReadMode,
   getVaultStatus,
   summarizeAvailability,
-  verifyFilesIntegrity,
-  verifyFilesPresent,
 } from './vaultService';
 
 vi.mock('./dbService', () => ({ select: vi.fn(), execute: vi.fn(), runInTransaction: vi.fn() }));
@@ -58,64 +55,6 @@ describe('modalità di lettura', () => {
     expect(await getSourceReadMode()).toBe('local');
     settingReturns('remote');
     expect(await getSourceReadMode()).toBe('remote');
-  });
-});
-
-describe('verifica dei file', () => {
-  beforeEach(() => {
-    invokeMock.mockReset();
-    selectMock.mockReset();
-    settingReturns('');
-  });
-
-  it('chiede al backend i percorsi attesi invece di costruirli qui', async () => {
-    invokeMock.mockResolvedValueOnce(['providers/gallica/v1/manifest.json']);
-
-    await expectedVersionPaths('gallica', 'v1', '2000', 3);
-
-    expect(invokeMock).toHaveBeenCalledWith('expected_version_paths', {
-      providerKey: 'gallica',
-      versionId: 'v1',
-      sizeTag: '2000',
-      pageCount: 3,
-    });
-  });
-
-  it('propaga il deposito irraggiungibile invece di dichiarare tutto mancante', async () => {
-    invokeMock.mockRejectedValueOnce('vault_unreachable');
-
-    await expect(verifyFilesPresent(['providers/gallica/v1/pages/2000/0001.jpg'])).rejects.toBe(
-      'vault_unreachable',
-    );
-  });
-
-  it('segna la riga storta e tiene buone le altre', async () => {
-    invokeMock.mockResolvedValueOnce([
-      { vaultPath: 'providers/gallica/v1/pages/2000/0001.jpg', state: 'present', detail: null },
-      { vaultPath: '../fuori.jpg', state: 'invalid', detail: 'vault_path must not escape the vault root' },
-      { vaultPath: 'providers/gallica/v1/pages/2000/0002.jpg', state: 'missing', detail: null },
-    ]);
-
-    const results = await verifyFilesPresent([
-      'providers/gallica/v1/pages/2000/0001.jpg',
-      '../fuori.jpg',
-      'providers/gallica/v1/pages/2000/0002.jpg',
-    ]);
-
-    expect(results.map((row) => row.state)).toEqual(['present', 'invalid', 'missing']);
-    expect(results[1].detail).toContain('escape');
-  });
-
-  it('riporta lo stato di ogni file nella verifica completa', async () => {
-    invokeMock.mockResolvedValueOnce([
-      { vaultPath: 'a.jpg', state: 'valid', detail: null, checksum: 'abc' },
-      { vaultPath: 'b.jpg', state: 'corrupt', detail: 'JPEG troncato', checksum: null },
-    ]);
-
-    const results = await verifyFilesIntegrity(['a.jpg', 'b.jpg']);
-
-    expect(results[0].state).toBe('valid');
-    expect(results[1].detail).toContain('troncato');
   });
 });
 

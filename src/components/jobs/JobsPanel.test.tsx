@@ -164,9 +164,8 @@ describe('attesa per i limiti della biblioteca', () => {
       job({
         status: 'running',
         detail: JSON.stringify({
-          size: '1299,',
-          available: ['649×963', '1299×1925'],
-          last: { index: 34, bytes: 1_420_000 },
+          cap: '2000',
+          last: { index: 34, bytes: 1_420_000, size: '1299,', pixels: '1299×1925' },
         }),
       }),
     ]);
@@ -174,7 +173,9 @@ describe('attesa per i limiti della biblioteca', () => {
 
     expect(screen.getByText('jobs.detail.groupWork')).toBeInTheDocument();
     expect(screen.getByText('jobs.detail.groupLast')).toBeInTheDocument();
-    expect(screen.getByText('649×963 · 1299×1925')).toBeInTheDocument();
+    // Il tetto sta con l'opera, la misura chiesta per **questa** pagina con la
+    // pagina: sono due cose diverse e vanno lette separate.
+    expect(screen.getByText('1299×1925')).toBeInTheDocument();
   });
 
   it('mostra quanto è arrivato e quanto si prevede in tutto', () => {

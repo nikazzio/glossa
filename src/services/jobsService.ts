@@ -180,16 +180,19 @@ export interface JobDetail {
   /** L'ultima unità passata: qui i dati **veri** di quella pagina. */
   last?: {
     index: number;
-    bytes: number;
     /** L'etichetta che le dà la biblioteca: «f. 17r», «p. 24». */
     label?: string;
-    /** La misura chiesta per questa pagina, che può non essere il tetto. */
+    /**
+     * Quanto pesa. Assente per una pagina **ritrovata** sul disco: non è stata
+     * scaricata adesso, e mostrare zero sarebbe peggio che non mostrare niente.
+     */
+    bytes?: number;
+    /** La misura chiesta per questa pagina, che non è il tetto. */
     size?: string;
-    /** Le dimensioni vere, quando la biblioteca le dichiara. */
+    /** Le dimensioni davvero arrivate. */
     pixels?: string;
-    /** Ritrovata sul disco invece che scaricata. */
+    /** Ritrovata sul disco invece che scaricata: nessuna richiesta. */
     recovered?: boolean;
-    url?: string;
   };
   /**
    * Pagine che la biblioteca ha dichiarato di non servire in questo avvio.
@@ -200,8 +203,6 @@ export interface JobDetail {
   unavailable?: number;
   /** Il tetto scelto nelle impostazioni, che vale per tutto il lavoro. */
   cap?: string;
-  /** Le misure che la biblioteca dichiara di saper servire, `larghezza×altezza`. */
-  available?: string[];
   provider?: string;
   host?: string;
   level?: string;
@@ -247,19 +248,15 @@ export function parseJobDetail(raw: string | null): JobDetail {
         num(last.index) !== undefined
           ? {
               index: num(last.index)!,
-              bytes: num(last.bytes) ?? 0,
               label: text(last.label),
+              bytes: num(last.bytes),
               size: text(last.size),
               pixels: text(last.pixels),
               recovered: typeof last.recovered === 'boolean' ? last.recovered : undefined,
-              url: text(last.url),
             }
           : undefined,
       unavailable: num(record.unavailable),
       cap: text(record.cap),
-      available: Array.isArray(record.available)
-        ? record.available.filter((value): value is string => typeof value === 'string')
-        : undefined,
       provider: text(record.provider),
       host: text(record.host),
       level: text(record.level),

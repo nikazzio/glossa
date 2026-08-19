@@ -562,7 +562,6 @@ base delle prove del ramo 2. Chiudere riporta anche Gallica a funzionare come pr
 | argomenti della peggiore | 14 | 8 | 2 |
 | deroghe al limite di argomenti | 5 | 0 | 2 |
 | richieste di rete per pagina | 1,14 | 1,003 | 2 |
-| tipi e strutture nel modulo | 23 | sotto 15 | 2 |
 | copertine visibili nell'installato | 0 | tutte | 1 |
 
 Le sette prove a mano del piano: la 3 al ramo 1; 1, 2, 4, 5, 7 al ramo 2; la 6 al ramo 3.

@@ -20,7 +20,7 @@ use super::handler::DownloadConfig;
 use super::manifest::{image_url, Manifest, Page};
 use super::progress::{Progress, Reporter};
 use super::sidecar::{self, Note, PageRecord};
-use super::sizing::{self, SizeCap, Sizing, SizingRule};
+use super::sizing::{self, SizeCap, SizingRule};
 use super::vault_io::{now_secs, stage_and_promote};
 
 /// Qualità JPEG della riduzione fatta in casa dopo un rifiuto della misura
@@ -34,10 +34,22 @@ const DOWNSCALE_QUALITY: u8 = 82;
 /// renderebbe permanente un buco che le biblioteche a volte riparano.
 pub(crate) const RETRY_MISSING_AFTER_SECS: i64 = 7 * 24 * 3600;
 
-/// Esito di una singola pagina.
+/// Esito di una singola pagina, con quello che di **quella** pagina si sa.
+///
+/// I fatti stanno qui e non in una struttura a parte perché sono l'esito: il
+/// pannello mostra la misura chiesta, le dimensioni arrivate e il peso della
+/// pagina appena passata, e sono le tre cose che dicono *perché* un libro ci
+/// mette tanto.
 pub(crate) enum PageOutcome {
     /// Scritta adesso: byte aggiunti al deposito.
-    Written { bytes: u64 },
+    Written {
+        bytes: u64,
+        /// La misura chiesta al servizio per questa pagina, che varia di pagina
+        /// in pagina e **non** è il tetto.
+        token: String,
+        /// Le dimensioni davvero arrivate, lette dai byte.
+        pixels: Option<(u32, u32)>,
+    },
     /// File già presente: nessuna richiesta.
     Present,
     /// La biblioteca non l'ha servita (404/410), o l'aveva già dichiarata tale
@@ -68,7 +80,7 @@ pub(crate) struct PageFetcher<'a> {
 impl PageFetcher<'_> {
     pub(crate) async fn one(
         &self,
-        sizing: &mut Sizing,
+        rule: &mut SizingRule,
         page: &Page,
         known: &BTreeMap<u32, PageRecord>,
         signals: &Signals<'_>,
@@ -85,8 +97,8 @@ impl PageFetcher<'_> {
             }
         }
 
-        let token = sizing::token_for(sizing, page, self.cap, self.manifest.presentation2);
-        let url = image_url(&page.image_service, token.as_str());
+        let token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
+        let url = image_url(&page.image_service, &token);
         let first = match self.get(&url, signals).await {
             Ok(Some(fetched)) => Some(fetched),
             Ok(None) => return Ok(PageOutcome::Stopped),
@@ -97,11 +109,10 @@ impl PageFetcher<'_> {
                 // il resto del libro (§5.1, regola 3).
                 ErrorKind::SizeRejected => {
                     log::warn!(
-                        "job size refused page={} token={} — passaggio a max",
-                        page.index,
-                        token.as_str()
+                        "job size refused page={} token={token} — passaggio a max",
+                        page.index
                     );
-                    sizing.rule = SizingRule::Full;
+                    *rule = SizingRule::Full;
                     None
                 }
                 // 403/429/5xx e trasporto salgono al motore, che decide attesa e
@@ -116,11 +127,11 @@ impl PageFetcher<'_> {
         // ogni pagina che la biblioteca non serve, verso biblioteche che
         // bandiscono.
         let full_token = sizing::full_size(self.manifest.presentation2);
-        let already_asked_full = token.as_str() == full_token;
+        let already_asked_full = token == full_token;
 
         let (bytes, note) = match first {
             Some(fetched) => (fetched.bytes, None),
-            None if matches!(sizing.rule, SizingRule::Full) && !already_asked_full => {
+            None if matches!(*rule, SizingRule::Full) && !already_asked_full => {
                 let full = image_url(&page.image_service, &full_token);
                 match self.get(&full, signals).await {
                     Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
@@ -135,12 +146,13 @@ impl PageFetcher<'_> {
 
         let staged = self.staging.join(page_staging_name(page.index));
         let checksum = stage_and_promote(&staged, &target, &bytes, integrity::FileKind::Image)?;
+        let got = image_dimensions(&bytes);
         sidecar::append(
             self.size_dir,
             &PageRecord {
                 index: page.index,
                 label: page.label.clone(),
-                got: image_dimensions(&bytes),
+                got,
                 bytes: Some(bytes.len() as u64),
                 checksum: Some(checksum),
                 at: now_secs(),
@@ -156,6 +168,8 @@ impl PageFetcher<'_> {
         self.store_thumbnail(page.index, &bytes);
         Ok(PageOutcome::Written {
             bytes: bytes.len() as u64,
+            token,
+            pixels: got,
         })
     }
 
@@ -250,14 +264,14 @@ const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(1
 /// opposti.
 pub(crate) async fn one_declaring_long_waits(
     fetcher: &PageFetcher<'_>,
-    sizing: &mut Sizing,
+    rule: &mut SizingRule,
     page: &Page,
     known: &BTreeMap<u32, PageRecord>,
     progress: &Progress,
     reporter: &Reporter<'_>,
     signals: &Signals<'_>,
 ) -> Result<PageOutcome, JobError> {
-    let work = fetcher.one(sizing, page, known, signals);
+    let work = fetcher.one(rule, page, known, signals);
     tokio::pin!(work);
 
     tokio::select! {

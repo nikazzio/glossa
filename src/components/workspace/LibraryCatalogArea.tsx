@@ -22,15 +22,12 @@ import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import {
-  listVersionVaultPaths,
-  versionProviderKey,
-} from '../../services/libraryService';
+import { versionProviderKey } from '../../services/libraryService';
+import { versionInventory } from '../../services/inventoryService';
 import {
   deleteVersionFiles,
   freeVersionPages,
   summarizeAvailability,
-  verifyFilesPresent,
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
@@ -307,30 +304,33 @@ function CatalogEntryRow({
   };
 
   /**
-   * Verifica rapida (D5): si prende quello che il database dichiara e si guarda
-   * se è ancora sul disco. Non corregge niente da sola — propone di scaricare
-   * quello che manca, che è un lavoro come gli altri.
+   * Verifica rapida (D5, §5.4): le pagine che ci sono nella cartella della misura
+   * principale contro il conteggio atteso, che viene dal manifesto ed è l'unica
+   * cosa che dice quante *dovrebbero* essere.
+   *
+   * L'inventario si rilegge adesso invece di fidarsi del catalogo in memoria: fra
+   * l'apertura della schermata e questo momento possono essere spariti dei file.
+   * Le pagine che la biblioteca non serve non contano come mancanti.
    */
   const verify = async () => {
     if (!entry.versionId) return;
     setBusy(true);
     try {
-      const paths = await listVersionVaultPaths(entry.versionId);
-      if (paths.length === 0) {
-        // Nessun file registrato: non c'è niente da confrontare, e dire «tutto
-        // a posto» sarebbe una risposta su zero file.
+      const inventory = await versionInventory(entry.versionId);
+      const principal = inventory?.sizes.find((size) => size.sizeTag === inventory.principal);
+      if (!principal) {
         toast.info(t('areas.library.verifyNothing'));
         return;
       }
-      const checks = await verifyFilesPresent(paths);
-      const missing = checks.filter((check) => check.state !== 'present').length;
+      const expected = entry.expectedPages ?? 0;
+      const missing = Math.max(0, expected - principal.pages - principal.missing);
       if (missing === 0) {
-        toast.success(t('areas.library.verifyIntact', { count: checks.length }));
+        toast.success(t('areas.library.verifyIntact', { count: principal.pages }));
         return;
       }
       const confirmed = await confirm({
         title: t('areas.library.verifyMissingTitle', { count: missing }),
-        message: t('areas.library.verifyMissingMessage', { total: checks.length }),
+        message: t('areas.library.verifyMissingMessage', { total: expected }),
         confirmLabel: t('areas.library.verifyDownloadMissing'),
       });
       if (confirmed) await startDownload();

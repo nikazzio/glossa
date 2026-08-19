@@ -97,33 +97,6 @@ pub fn of_vault(root: &Path) -> Vec<VersionInventory> {
     found
 }
 
-/// I percorsi **relativi alla radice** delle pagine di una digitalizzazione: è
-/// quello che serve a chi le cancella.
-pub fn page_paths(root: &Path, version_id: &str) -> Vec<String> {
-    let mut paths = Vec::new();
-    for (provider_key, folder) in version_folders(root, version_id) {
-        let pages = folder.join(crate::vault::layout::PAGES_DIR);
-        let Ok(sizes) = std::fs::read_dir(&pages) else {
-            continue;
-        };
-        for size in sizes.flatten() {
-            let Ok(files) = std::fs::read_dir(size.path()) else {
-                continue;
-            };
-            let size_tag = size.file_name().to_string_lossy().to_string();
-            for file in files.flatten() {
-                let name = file.file_name().to_string_lossy().to_string();
-                paths.push(format!(
-                    "{}/{provider_key}/{version_id}/{}/{size_tag}/{name}",
-                    crate::vault::layout::PROVIDERS_DIR,
-                    crate::vault::layout::PAGES_DIR
-                ));
-            }
-        }
-    }
-    paths
-}
-
 fn version_folders(root: &Path, version_id: &str) -> Vec<(String, PathBuf)> {
     let Ok(providers) = std::fs::read_dir(root.join(crate::vault::layout::PROVIDERS_DIR)) else {
         return Vec::new();
@@ -219,17 +192,6 @@ pub fn version_inventory(
 pub fn library_inventory(app: tauri::AppHandle) -> Result<Vec<VersionInventory>, String> {
     let root = crate::vault::commands::root_of(&app)?;
     Ok(of_vault(&root))
-}
-
-/// I percorsi relativi delle pagine di una digitalizzazione: è quello che serve
-/// a «libera spazio», che li cancella uno per uno.
-#[tauri::command]
-pub fn version_page_paths(
-    app: tauri::AppHandle,
-    version_id: String,
-) -> Result<Vec<String>, String> {
-    let root = crate::vault::commands::root_of(&app)?;
-    Ok(page_paths(&root, &version_id))
 }
 
 #[cfg(test)]
@@ -363,15 +325,5 @@ mod tests {
         let all = of_vault(&root);
 
         assert_eq!(all.len(), 2);
-    }
-
-    #[test]
-    fn the_paths_of_the_pages_are_relative_to_the_root() {
-        let root = temp_vault("paths");
-        put_page(&root, "gallica", "v1", "2000", 1);
-
-        let paths = page_paths(&root, "v1");
-
-        assert_eq!(paths, vec!["providers/gallica/v1/pages/2000/0001.jpg"]);
     }
 }

@@ -152,27 +152,6 @@ pub fn classify_folder(candidate: &Path) -> Result<FolderKind, String> {
     }
 }
 
-/// Percorso assoluto di un file del deposito, a partire dal percorso relativo
-/// conservato in `assets.vault_path`.
-///
-/// Rifiuta qualunque percorso che uscirebbe dalla radice **e** qualunque
-/// percorso che non abbia la forma del layout (D2): `vault_path` arriva dal
-/// database, e il database è scrivibile dalla webview.
-pub fn absolute_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
-    let path = Path::new(relative);
-    if path.is_absolute() {
-        return Err("vault_path must be relative to the vault root".to_string());
-    }
-    if path
-        .components()
-        .any(|c| matches!(c, std::path::Component::ParentDir))
-    {
-        return Err("vault_path must not escape the vault root".to_string());
-    }
-    layout::validate_vault_path(relative)?;
-    Ok(root.join(path))
-}
-
 /// Quanti file contiene una cartella e quanto pesano. Serve a dire quanto
 /// spazio libera un'operazione prima di eseguirla (D6, D30).
 ///
@@ -291,37 +270,6 @@ mod tests {
         assert!(classify_folder(&path).is_err());
 
         let _ = fs::remove_file(&path);
-    }
-
-    #[test]
-    fn absolute_path_joins_a_relative_vault_path() {
-        let root = Path::new("/deposito");
-        let joined = absolute_path(root, "providers/gallica/v1/pages/2000/0001.jpg").unwrap();
-        assert!(joined.starts_with(root));
-        assert!(joined.ends_with("0001.jpg"));
-    }
-
-    #[test]
-    fn absolute_path_rejects_escapes_and_absolutes() {
-        let root = Path::new("/deposito");
-        assert!(absolute_path(root, "../../etc/passwd").is_err());
-        assert!(absolute_path(root, "providers/../../fuori").is_err());
-        assert!(absolute_path(root, "/etc/passwd").is_err());
-    }
-
-    #[test]
-    fn absolute_path_rejects_what_the_layout_never_produces() {
-        // I percorsi da verificare arrivano dal frontend: senza questo
-        // controllo i comandi direbbero se un file qualsiasi esiste, dentro una
-        // radice che la webview può scegliere.
-        let root = Path::new("/deposito");
-        assert!(
-            absolute_path(root, "glossa.db").is_err(),
-            "fuori dal layout"
-        );
-        assert!(absolute_path(root, ".glossa-vault").is_err());
-        assert!(absolute_path(root, "providers/gallica/v1/note.txt").is_err());
-        assert!(absolute_path(root, "providers/gallica/v1/manifest.json").is_ok());
     }
 
     #[test]
