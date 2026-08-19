@@ -51,7 +51,7 @@ Some libraries are slow on purpose: see [Storage and jobs](/en/guides/storage-an
 
 ## Checking and freeing space
 
-Every row in the Library has four commands, always present: **download**, **check**, **free space**, **remove**. The ones that do not apply right now stay in place, disabled — so you always know what can be done.
+Every row in the Library has five commands, always present: **download**, **check**, **shrink images**, **free space**, **remove**. The ones that do not apply right now stay in place, disabled — so you always know what can be done.
 
 **Check** compares what Glossa registered with what is actually on disk. If something is missing it says so and offers to download it again: pages already there are not requested twice.
 

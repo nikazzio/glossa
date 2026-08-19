@@ -395,22 +395,34 @@ function CatalogEntryRow({
    * a quanto occupano adesso.
    */
   const optimise = async () => {
-    const principal = entry.sizes.find((size) => size.pages === entry.localPages);
-    if (!entry.versionId || !principal) return;
+    // La misura principale la dichiara il deposito, non la si indovina dai
+    // conteggi: sullo stesso libro scaricato due volte a tetti diversi due
+    // cartelle hanno lo stesso numero di pagine (§5.4).
+    if (!entry.versionId || !entry.principalSize) return;
+    const sizeTag = entry.principalSize;
     setBusy(true);
     try {
-      const estimate = await optimizeEstimate(entry.versionId, principal.sizeTag);
+      const estimate = await optimizeEstimate(entry.versionId, sizeTag);
+      if (estimate.shrinking === 0) {
+        // Niente da ridurre: dirlo è meglio che chiedere una conferma per un
+        // lavoro che non farebbe niente.
+        toast.info(t('areas.library.optimizeNothing', { edge: estimate.longEdge }));
+        return;
+      }
       const confirmed = await confirm({
         title: t('areas.library.optimizeTitle', {
-          count: estimate.pages,
+          count: estimate.shrinking,
           edge: estimate.longEdge,
         }),
-        message: t('areas.library.optimizeMessage', { size: humanSize(estimate.bytes) }),
+        message: t('areas.library.optimizeMessage', {
+          size: humanSize(estimate.bytes),
+          freeing: humanSize(estimate.freeing),
+        }),
         confirmLabel: t('areas.library.optimizeConfirm'),
         danger: true,
       });
       if (!confirmed) return;
-      await enqueueOptimization(entry.versionId, principal.sizeTag);
+      await enqueueOptimization(entry.versionId, sizeTag);
       toast.success(t('areas.library.optimizeQueued'));
     } catch (error: unknown) {
       toast.error(t('areas.library.optimizeFailed'), {

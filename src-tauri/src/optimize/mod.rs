@@ -62,6 +62,14 @@ pub struct OptimizeConfig {
     pub size_tag: String,
     pub long_edge: u32,
     pub quality: u8,
+    /// Lato lungo delle miniature, come lo dicono le impostazioni: le miniature
+    /// si rifanno, e devono venire della misura scelta dall'utente.
+    #[serde(default = "default_thumbnail_edge")]
+    pub thumbnail_edge: u32,
+}
+
+fn default_thumbnail_edge() -> u32 {
+    images::DEFAULT_THUMBNAIL_EDGE
 }
 
 mod phase {
@@ -116,8 +124,15 @@ impl JobHandler for ImageOptimizationJob {
                         .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
                 ),
         );
+        // Area di transito **di questo lavoro**, non della digitalizzazione: lo
+        // scaricamento usa quella col nome della versione, e ognuno butta la
+        // propria quando esce. Condividerla significava che l'ottimizzazione
+        // cancellava i file a metà di uno scaricamento in corso sullo stesso
+        // libro — cosa che accade, perché uno occupa la rete e l'altro il
+        // processore, e la coda li fa girare insieme.
+        let area = format!("{}-optimize-{}", config.version_id, config.size_tag);
         let staging = root.join(layout::STAGING_DIR).join(
-            layout::safe_component(&config.version_id)
+            layout::safe_component(&area)
                 .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
         );
         std::fs::create_dir_all(&staging).map_err(|error| {
@@ -179,6 +194,39 @@ impl JobHandler for ImageOptimizationJob {
         );
         Ok(Outcome::Done)
     }
+}
+
+/// Quante pagine verrebbero ridotte e quanto spazio ne verrebbe fuori.
+///
+/// Le dimensioni si leggono dall'intestazione dei file, senza decodificarli: una
+/// lettura piccola per pagina, e l'utente sta aspettando una conferma. La
+/// previsione dei byte è il rapporto delle **aree**: un JPEG non scende
+/// esattamente come i pixel, ma è la stima più onesta che si può fare senza
+/// ricomprimere davvero — che è il lavoro stesso.
+pub(crate) fn forecast(size_dir: &Path, long_edge: u32) -> (u32, u64) {
+    let mut shrinking = 0;
+    let mut freeing = 0u64;
+    for (_, path) in pages_in(size_dir) {
+        let Ok(reader) = image::ImageReader::open(&path) else {
+            continue;
+        };
+        let Ok((width, height)) = reader.into_dimensions() else {
+            continue;
+        };
+        let Ok(now) = std::fs::metadata(&path).map(|meta| meta.len()) else {
+            continue;
+        };
+        let longest = width.max(height);
+        if longest <= long_edge {
+            continue;
+        }
+        shrinking += 1;
+        let area_now = u64::from(width) * u64::from(height);
+        let scale = f64::from(long_edge) / f64::from(longest);
+        let area_after = (area_now as f64 * scale * scale) as u64;
+        freeing += now.saturating_sub(now * area_after / area_now.max(1));
+    }
+    (shrinking, freeing)
 }
 
 /// Le pagine di una cartella di misura, in ordine, file di lato escluso.
@@ -282,7 +330,7 @@ fn refresh_thumbnail(
     else {
         return;
     };
-    match images::thumbnail(bytes, images::DEFAULT_THUMBNAIL_EDGE) {
+    match images::thumbnail(bytes, config.thumbnail_edge) {
         Ok(thumbnail) => {
             if let Err(error) = stage_and_promote(
                 &staging.join(format!("{index:04}-thumb.jpg")),
@@ -360,6 +408,38 @@ mod tests {
             "quality": 82,
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn the_forecast_counts_only_the_pages_that_would_shrink() {
+        // La conferma deve dire quante pagine tocca e quanto libera (§5.7):
+        // contare tutta la cartella prometteva un lavoro su pagine che il lavoro
+        // stesso avrebbe saltato.
+        let dir = temp_dir("forecast");
+        std::fs::write(dir.join("0001.jpg"), jpeg(1600, 2000)).unwrap();
+        std::fs::write(dir.join("0002.jpg"), jpeg(400, 500)).unwrap();
+        std::fs::write(dir.join("pages.jsonl"), b"{}\n").unwrap();
+
+        let (shrinking, freeing) = forecast(&dir, 800);
+
+        assert_eq!(shrinking, 1, "solo la pagina oltre gli 800 px");
+        let big = std::fs::metadata(dir.join("0001.jpg")).unwrap().len();
+        assert!(
+            freeing > 0 && freeing < big,
+            "una previsione, non tutto il file"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_forecast_says_nothing_to_do_when_every_page_is_small_enough() {
+        let dir = temp_dir("forecast-nulla");
+        std::fs::write(dir.join("0001.jpg"), jpeg(400, 500)).unwrap();
+
+        assert_eq!(forecast(&dir, 800), (0, 0));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

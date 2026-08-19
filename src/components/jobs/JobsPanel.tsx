@@ -314,6 +314,13 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
         value: String(detail.unavailable),
       },
     detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
+    // Quanto ha liberato è il motivo per cui si lancia l'ottimizzazione: il
+    // lavoro lo conta, e senza queste due righe non lo diceva a nessuno.
+    detail.shrunk !== undefined && {
+      label: t('jobs.detail.shrunk'),
+      value: String(detail.shrunk),
+    },
+    detail.freed !== undefined && { label: t('jobs.detail.freed'), value: humanSize(detail.freed) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
     detail.host && { label: t('jobs.detail.host'), value: detail.host },
     detail.level && {

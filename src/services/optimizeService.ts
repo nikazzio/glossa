@@ -15,7 +15,11 @@ import type { Job } from './jobsService';
 
 export interface OptimizeEstimate {
   pages: number;
+  /** Quante verrebbero davvero ridotte: le altre sono già abbastanza piccole. */
+  shrinking: number;
   bytes: number;
+  /** Quanto si prevede di liberare: è una previsione, non una misura. */
+  freeing: number;
   longEdge: number;
   quality: number;
 }

@@ -808,10 +808,16 @@ una cartella che già esiste — se è quello che si vuole, si cancella `max`.
 (predefinito 2000, lo stesso tetto delle pagine) e qualità JPEG (predefinito 82,
 come Scriptoria). Estremi accettati 512-12000 e 40-100.
 
-Quei valori sono i **predefiniti**, e si possono cambiare al momento di lanciare
-l'ottimizzazione su quel libro: la scelta dipende dal materiale — una stampa larga
-sopporta molto meno di una minuscola fitta — ed è la stessa ragione per cui il tetto
-delle pagine è per fonte e non solo generale (D4).
+La scelta dipende dal materiale — una stampa larga sopporta molto meno di una
+minuscola fitta — ed è la stessa ragione per cui il tetto delle pagine è per fonte e
+non solo generale (D4). Per questo i due valori si cambiano nelle impostazioni prima
+di lanciare l'ottimizzazione su un libro diverso dagli altri.
+
+**Non al lancio** *(2026-08-19)*: la prima stesura diceva «scavalcabile al lancio», e
+il ramo ha attuato tutto tranne quello — la conferma è un avviso, non un modulo, e
+metterci due scelte è una schermata a sé. Il comando accetta già i due valori come
+parametri, quindi il giorno che quella schermata serve non c'è niente da rifare nel
+motore. Nel frattempo i testi non promettono una scelta che non c'è.
 
 **Non è automatica.** Nessuna ricompressione alle spalle dell'utente: è
 un'operazione che perde informazione, e la si chiede.
@@ -827,8 +833,8 @@ Tutto in due schede che esistono già.
 |---|---|---|---|
 | tetto della misura delle pagine | Scaricamento | 2000 px sul lato lungo | scavalcabile per fonte (D4); vale solo per lo scaricamento (§5.0), e `max` è una scelta valida |
 | lato lungo delle miniature | Scaricamento | 300 px | |
-| lato lungo dell'ottimizzazione locale | Scaricamento | 2000 px | scavalcabile al lancio |
-| qualità JPEG dell'ottimizzazione locale | Scaricamento | 82 | scavalcabile al lancio |
+| lato lungo dell'ottimizzazione locale | Scaricamento | 2000 px | si cambia qui, non al lancio (§5.7) |
+| qualità JPEG dell'ottimizzazione locale | Scaricamento | 82 | si cambia qui, non al lancio (§5.7) |
 | tetto della cache | Archiviazione | 512 MB | va alzato se si sfoglia molto online |
 | scadenza delle ricerche in cache | Archiviazione | 24 ore | le immagini non scadono, solo il tetto |
 

@@ -183,7 +183,10 @@ async fn enqueue(
 /// Il lato lungo delle miniature, come lo dice l'impostazione. Un valore
 /// illeggibile o fuori scala non ferma lo scaricamento: si torna al
 /// predefinito, che è una misura che funziona sempre.
-fn thumbnail_edge(conn: &rusqlite::Connection) -> Result<u32, String> {
+/// Il lato lungo delle miniature scelto nelle impostazioni. Lo legge anche
+/// l'ottimizzazione locale: rifà le miniature, e devono venire della misura che
+/// l'utente ha scelto, non di quella predefinita.
+pub fn thumbnail_edge(conn: &rusqlite::Connection) -> Result<u32, String> {
     let configured = crate::jobs::store::read_setting(conn, THUMBNAIL_EDGE_SETTING)?
         .and_then(|value| value.trim().parse::<u32>().ok())
         .filter(|edge| (MIN_THUMBNAIL_EDGE..=MAX_THUMBNAIL_EDGE).contains(edge));

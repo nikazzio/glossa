@@ -203,6 +203,10 @@ export interface JobDetail {
   unavailable?: number;
   /** Il tetto scelto nelle impostazioni, che vale per tutto il lavoro. */
   cap?: string;
+  /** Pagine davvero ridotte dall'ottimizzazione: le altre erano già piccole. */
+  shrunk?: number;
+  /** Byte liberati finora dall'ottimizzazione. */
+  freed?: number;
   provider?: string;
   host?: string;
   level?: string;
@@ -256,6 +260,8 @@ export function parseJobDetail(raw: string | null): JobDetail {
             }
           : undefined,
       unavailable: num(record.unavailable),
+      shrunk: num(record.shrunk),
+      freed: num(record.freed),
       cap: text(record.cap),
       provider: text(record.provider),
       host: text(record.host),

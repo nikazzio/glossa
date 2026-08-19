@@ -51,7 +51,7 @@ Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Ar
 
 ## Controllare e liberare spazio
 
-Ogni riga della Biblioteca ha quattro comandi, sempre presenti: **scarica**, **verifica**, **libera spazio**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
+Ogni riga della Biblioteca ha cinque comandi, sempre presenti: **scarica**, **verifica**, **riduci le immagini**, **libera spazio**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
 
 **Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le pagine già presenti non vengono richieste di nuovo.
 

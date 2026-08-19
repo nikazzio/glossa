@@ -27,8 +27,15 @@ pub const QUALITY_SETTING: &str = "optimize_jpeg_quality";
 pub struct OptimizeEstimate {
     /// Pagine nella cartella di misura.
     pub pages: u32,
+    /// Quante di quelle verrebbero davvero ridotte: le altre sono già dentro il
+    /// lato lungo scelto e non si toccano.
+    pub shrinking: u32,
     /// Quanto occupa adesso quella cartella.
     pub bytes: u64,
+    /// Quanto si prevede di liberare. È una previsione: i byte di un JPEG non
+    /// scendono esattamente come i pixel, e il rapporto delle aree è la
+    /// approssimazione più onesta che si può fare senza ricomprimere davvero.
+    pub freeing: u64,
     /// Il lato lungo di arrivo che verrebbe usato.
     pub long_edge: u32,
     pub quality: u8,
@@ -42,19 +49,25 @@ fn setting(conn: &rusqlite::Connection, key: &str) -> Option<u64> {
 }
 
 /// I predefiniti configurati, riportati dentro gli estremi accettati.
+///
+/// La conversione è **controllata**: troncare prima di guardare gli estremi
+/// faceva passare una qualità 300 come 44, cioè un valore fuori scala che
+/// diventava valido cambiando significato.
 pub fn configured(conn: &rusqlite::Connection) -> (u32, u8) {
     let long_edge = setting(conn, LONG_EDGE_SETTING)
-        .map(|value| value as u32)
+        .and_then(|value| u32::try_from(value).ok())
         .filter(|value| (MIN_LONG_EDGE..=MAX_LONG_EDGE).contains(value))
         .unwrap_or(DEFAULT_LONG_EDGE);
     let quality = setting(conn, QUALITY_SETTING)
-        .map(|value| value as u8)
+        .and_then(|value| u8::try_from(value).ok())
         .filter(|value| (MIN_QUALITY..=MAX_QUALITY).contains(value))
         .unwrap_or(DEFAULT_QUALITY);
     (long_edge, quality)
 }
 
-/// Quante pagine e quanto spazio ci sono in ballo, prima di chiedere conferma.
+/// Quante pagine e quanto spazio ci sono in ballo, prima di chiedere conferma
+/// (§5.7: la conferma dichiara quante pagine, da quale misura a quale, e quanto
+/// si prevede di liberare).
 #[tauri::command]
 pub fn optimize_estimate(
     app: tauri::AppHandle,
@@ -62,19 +75,27 @@ pub fn optimize_estimate(
     size_tag: String,
 ) -> Result<OptimizeEstimate, String> {
     let root = crate::vault::commands::root_of(&app)?;
-    let found = inventory::of_version(&root, &version_id)
-        .and_then(|entry| {
-            entry
-                .sizes
-                .into_iter()
-                .find(|size| size.size_tag == size_tag)
-        })
+    let entry = inventory::of_version(&root, &version_id)
+        .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
+    let found = entry
+        .sizes
+        .iter()
+        .find(|size| size.size_tag == size_tag)
         .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
     let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
     let (long_edge, quality) = configured(&conn);
+    let size_dir = root
+        .join(crate::vault::layout::pages_dir(
+            &entry.provider_key,
+            &version_id,
+        )?)
+        .join(crate::vault::layout::safe_component(&size_tag)?);
+    let (shrinking, freeing) = super::forecast(&size_dir, long_edge);
     Ok(OptimizeEstimate {
         pages: found.pages,
+        shrinking,
         bytes: found.bytes,
+        freeing,
         long_edge,
         quality,
     })
@@ -100,6 +121,7 @@ pub async fn enqueue_optimization(
     }
     let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
     let (default_edge, default_quality) = configured(&conn);
+    let thumbnail_edge = crate::download::thumbnail_edge(&conn)?;
     drop(conn);
 
     let config = serde_json::json!({
@@ -108,6 +130,9 @@ pub async fn enqueue_optimization(
         "sizeTag": size_tag,
         "longEdge": long_edge.unwrap_or(default_edge).clamp(MIN_LONG_EDGE, MAX_LONG_EDGE),
         "quality": quality.unwrap_or(default_quality).clamp(MIN_QUALITY, MAX_QUALITY),
+        // Le miniature si rifanno, e vanno della misura scelta nelle
+        // impostazioni: la stessa che usa lo scaricamento.
+        "thumbnailEdge": thumbnail_edge,
     })
     .to_string();
 
