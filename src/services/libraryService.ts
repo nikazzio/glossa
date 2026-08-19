@@ -238,7 +238,6 @@ export async function addSourceToLibrary(
 
   const sourceId = generateId('source');
   const versionId = generateId('sver');
-  const assetId = generateId('asset');
   // Si salva tutto quello che il catalogo ha detto, anche ciò che oggi nessuna
   // schermata mostra: rifare la ricerca per recuperare un dato che avevamo già
   // in mano è lavoro sprecato, e alcune di queste informazioni la biblioteca
@@ -278,10 +277,6 @@ export async function addSourceToLibrary(
     await run(
       'INSERT INTO source_versions (id, source_id, label, version_kind, source_url, metadata, is_primary) VALUES ($1, $2, $3, $4, $5, $6, $7)',
       [versionId, sourceId, 'primary', 'iiif_manifest', input.manifestUrl, metadata, 1],
-    );
-    await run(
-      'INSERT INTO assets (id, source_version_id, kind, locality, availability, remote_url) VALUES ($1, $2, $3, $4, $5, $6)',
-      [assetId, versionId, 'manifest', 'remote', 'catalogued', input.manifestUrl],
     );
     if (input.workspaceId) {
       await run(

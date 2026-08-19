@@ -7,7 +7,7 @@
  * un workspace, che ha bisogno di identificatori nuovi e delle regole di ambito.
  */
 import { invoke } from '@tauri-apps/api/core';
-import { libraryInventory, principalPages } from './inventoryService';
+import { libraryInventory } from './inventoryService';
 import { select, runInTransaction } from './dbService';
 import { logger } from '../utils/logger';
 import { confirm } from '../stores/confirmStore';
@@ -161,8 +161,13 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
         manifestUrl: row?.manifestUrl ?? null,
         // La misura con cui il libro è stato scaricato: è quella che il
         // ripristino deve richiedere.
-        sizeTag: entry.principal,
-        pages: principalPages(entry),
+        principalSize: entry.principal,
+        // **Tutte** le misure che c'erano, non solo la principale: le pagine
+        // prese a piena risoluzione di proposito (§5.6) sono le più costose da
+        // riottenere, ed erano quelle che il backup dimenticava.
+        sizes: entry.sizes
+          .filter((size) => size.pages > 0)
+          .map((size) => ({ sizeTag: size.sizeTag, pages: size.pages })),
       };
     });
 }
@@ -231,19 +236,6 @@ export async function restoreBackup(t: (key: string) => string): Promise<Downloa
   }
 
   await runInTransaction(async (run) => {
-    // Le pagine sul disco si mettono da parte **prima** di cancellare.
-    //
-    // Le righe delle pagine sono appese alle opere, e sostituire le opere se le
-    // porta via: il programma smetteva di sapere di file che sul disco ci sono
-    // ancora. Una copia di lavoro le tiene al riparo dalla cancellazione a
-    // catena, e alla fine tornano soltanto quelle delle opere che il backup
-    // contiene — le altre appartengono a qualcosa che non esiste più.
-    //
-    // La copia sta nella memoria della connessione, non nel database: se
-    // qualcosa va storto a metà, non resta niente da pulire.
-    await run(`DROP TABLE IF EXISTS temp.kept_assets`);
-    await run(`CREATE TEMP TABLE kept_assets AS SELECT * FROM assets`);
-
     for (const table of DELETE_ORDER) {
       if (table === 'app_settings') {
         // Never touch the running DB's migration marker — deleting it here
@@ -276,18 +268,6 @@ export async function restoreBackup(t: (key: string) => string): Promise<Downloa
         );
       }
     }
-
-    // Le pagine tornano al loro posto, ma solo quelle di un'opera che esiste
-    // ancora. Prima le pagine e poi le miniature: una miniatura dichiara da
-    // quale pagina è nata, e una riga che punta a una che non c'è ancora
-    // verrebbe scartata senza dire niente.
-    const keptFor = `SELECT * FROM temp.kept_assets
-                      WHERE source_version_id IN (SELECT id FROM source_versions)`;
-    await run(`INSERT OR IGNORE INTO assets ${keptFor} AND derived_from_asset_id IS NULL`);
-    await run(
-      `INSERT OR IGNORE INTO assets ${keptFor} AND derived_from_asset_id IN (SELECT id FROM assets)`,
-    );
-    await run(`DROP TABLE temp.kept_assets`);
 
     // I puntatori lasciati vuoti tornano al loro posto, ora che le righe a cui
     // puntano ci sono. Quelle che non ci sono restano vuote: è il caso del

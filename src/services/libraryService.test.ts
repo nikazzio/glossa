@@ -90,7 +90,9 @@ describe('libraryService', () => {
       const queries = dbMocks.execute.mock.calls.map(([query]) => query as string);
       expect(queries.some((q) => q.includes('INSERT INTO sources'))).toBe(true);
       expect(queries.some((q) => q.includes('INSERT INTO source_versions'))).toBe(true);
-      expect(queries.some((q) => q.includes('INSERT INTO assets'))).toBe(true);
+      // Nessuna riga negli asset: dove sta il manifesto lo dice la disposizione
+      // delle cartelle, e non c'è nessuno che terrebbe vera quella riga (§5.4).
+      expect(queries.some((q) => q.includes('INSERT INTO assets'))).toBe(false);
     });
 
     it('non duplica una fonte gia\' presente per lo stesso manifestUrl', async () => {

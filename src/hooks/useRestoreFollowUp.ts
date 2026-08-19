@@ -36,22 +36,39 @@ export function useRestoreFollowUp() {
       if (!pending || pending.jobId !== jobId) return;
       await clearRestoreCheck();
 
-      const missing = await missingAfterRestore(pending.downloaded);
-      logger.info('restore.check.done', { jobId, incompleteWorks: missing.length });
-      if (missing.length === 0) {
-        toast.success(i18next.t('files.restoreAllPresent'));
+      const { works, unrestorable } = await missingAfterRestore(pending.downloaded);
+      logger.info('restore.check.done', {
+        jobId,
+        incompleteWorks: works.length,
+        unrestorableSizes: unrestorable.length,
+      });
+
+      // Le pagine prese a parte a un'altra misura non si riaccodano: uno
+      // scaricamento le prenderebbe tutte invece di quelle poche (§5.6). Si
+      // dicono, e restano da riprendere una per una.
+      if (unrestorable.length > 0) {
+        const pages = unrestorable.reduce((total, size) => total + size.pages, 0);
+        toast.info(i18next.t('files.restoreExtraSizes', { count: pages }), {
+          description: unrestorable
+            .map((size) => `${size.title} · ${size.sizeTag} · ${size.pages}`)
+            .join('\n'),
+        });
+      }
+
+      if (works.length === 0) {
+        if (unrestorable.length === 0) toast.success(i18next.t('files.restoreAllPresent'));
         return;
       }
 
-      const pages = missing.reduce((total, work) => total + (work.expected - work.present), 0);
+      const pages = works.reduce((total, work) => total + (work.expected - work.present), 0);
       const wanted = await confirm({
-        title: i18next.t('files.restoreMissingTitle', { count: missing.length }),
+        title: i18next.t('files.restoreMissingTitle', { count: works.length }),
         message: i18next.t('files.restoreMissingMessage', { count: pages }),
         confirmLabel: i18next.t('files.backupRedownloadConfirm'),
       });
       if (!wanted) return;
 
-      const failed = await redownload(missing);
+      const failed = await redownload(works);
       if (failed > 0) toast.warning(i18next.t('files.backupRedownloadPartial', { count: failed }));
     };
 

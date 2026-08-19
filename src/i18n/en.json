@@ -1059,6 +1059,8 @@
     "restoreCheckQueued": "Restore complete. Checking the vault: when it ends, Glossa will tell you what is missing.",
     "restoreCheckFailed": "Restore complete, but the vault check did not start. You can run it from the settings.",
     "restoreAllPresent": "Check finished: every page you had is in place.",
+    "restoreExtraSizes_one": "One page you had at a different size was not restored: you can fetch it again from the work's card.",
+    "restoreExtraSizes_other": "{{count}} pages you had at different sizes were not restored: you can fetch them again from the work's card.",
     "restoreMissingTitle_one": "One work is missing pages",
     "restoreMissingTitle_other": "{{count}} works are missing pages",
     "restoreMissingMessage_one": "1 page is missing, and Glossa can take it back now at the size it had. Or you can do it later, work by work, from the Library.",

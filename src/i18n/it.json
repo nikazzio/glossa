@@ -1059,6 +1059,8 @@
     "restoreCheckQueued": "Ripristino completato. Controllo del deposito in corso: quando finisce ti dico cosa manca.",
     "restoreCheckFailed": "Ripristino completato, ma il controllo del deposito non è partito. Puoi lanciarlo dalle impostazioni.",
     "restoreAllPresent": "Controllo finito: tutte le pagine che avevi sono al loro posto.",
+    "restoreExtraSizes_one": "Una pagina che avevi a una misura diversa non è stata ripristinata: puoi riprenderla dalla scheda dell'opera.",
+    "restoreExtraSizes_other": "{{count}} pagine che avevi a misure diverse non sono state ripristinate: puoi riprenderle dalla scheda dell'opera.",
     "restoreMissingTitle_one": "A un'opera mancano delle pagine",
     "restoreMissingTitle_other": "A {{count}} opere mancano delle pagine",
     "restoreMissingMessage_one": "Manca 1 pagina, e Glossa può riprenderla adesso alla misura che aveva. Oppure lo fai più tardi, opera per opera, dalla Biblioteca.",
