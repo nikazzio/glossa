@@ -198,17 +198,18 @@ library does not pay the price for it.
 On the work's record, in the Library, a command reads the downloaded pages again,
 shrinks them to the chosen size and recompresses them, replacing the original.
 
-**It is irreversible, and the confirmation says so**, along with how many pages it
-touches and how much they take. It works on **one size at a time**: the one the
-book was downloaded at. Pages you deliberately took at full resolution are left
-as they are.
+**It is irreversible, and the confirmation says so**, along with how many pages
+would actually shrink, how much they take now and how much room you should get
+back. Pages already small enough are not counted, because they will not be
+touched. It works on **one size at a time**: the one the book was downloaded at.
+Pages you deliberately took at full resolution are left as they are.
 
 On a long book it runs for minutes, so it is a job like a download: you follow it
 from the panel at the bottom right, and you can pause or cancel it. Pages already
 smaller than the chosen size are not touched, because recompressing them would
 lose something without freeing anything.
 
-Target size and quality are chosen in **Settings → Downloads**.
+While it runs, the panel says how many pages it has shrunk and how much room it has freed. Target size and quality are chosen in **Settings → Downloads**.
 
 ## The backup
 

@@ -1,6 +1,6 @@
 //! Gestore del lavoro `source_download`: il ciclo, e nient'altro.
 //!
-//! Sette passi (piano §5.2), nessun ramo oltre a quelli del §5.1:
+//! Sette passi (§5.2), nessun ramo oltre a quelli del §5.1:
 //!
 //! 1. manifesto — dal deposito se c'è, altrimenti dalla rete, conservato com'è
 //!    arrivato (D2-bis);

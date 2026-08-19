@@ -1,5 +1,5 @@
 //! Quale misura chiedere alla biblioteca, e come deciderlo **una volta per
-//! libro** (D4 sostituita, piano §5.1 e §5.9).
+//! libro** (D4 sostituita, §5.1 e §5.9 di `docs-dev/SCARICAMENTO_E_DEPOSITO.md`).
 //!
 //! Il tetto è una **politica, non un pixel**: dice quanto grande vogliamo la
 //! pagina, non cosa il servizio sa produrre. Da lì in poi la misura si

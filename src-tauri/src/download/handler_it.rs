@@ -2,7 +2,7 @@
 //!
 //! I test in `handler.rs`, `sizing.rs` e `sidecar.rs` guardano le funzioni una
 //! per una. Qui gira il lavoro vero — coda, manifesto, deposito, file di lato —
-//! perché i comportamenti che il piano §5.1-§5.4 descrive vivono nel *ciclo*:
+//! perché i comportamenti che il §5.1-§5.4 del disegno descrive vivono nel *ciclo*:
 //! una pagina che manca, una misura rifiutata, una ripresa che non richiede
 //! quello che c'è già.
 

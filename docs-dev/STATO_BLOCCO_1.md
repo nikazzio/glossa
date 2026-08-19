@@ -3,7 +3,7 @@
 Diario delle sette PR decise in `BLOCCO_1_DECISIONI.md`, Parte G. Si aggiorna a
 ogni PR unita, e serve a riprendere il filo fra una sessione e l'altra.
 
-Ultimo aggiornamento: **2026-08-18**.
+Ultimo aggiornamento: **2026-08-20**.
 
 ## Come è organizzato il lavoro
 
@@ -33,6 +33,7 @@ dritta su `main`.
 | 4-ter | Miniature ricavate in locale | #218 | unita (#423) |
 | 4-quater | Profili di rete, registrazione, rifiniture | #421, #422, #378 | unita (#428) |
 | **5** | Risorse condivise e ambito | #213 | **fatta**: struttura dei contenitori, override, archiviazione |
+| 4-quinquies | Scaricamento, cache e spazio su disco — riscrittura | #218 | **fatta**: cache (#442), disco come verità e misura calcolata (#443), ottimizzazione locale (#444) |
 | 6 | Registrazione del lavoro svolto | #378 | **fatta**: fondazione, tutte le chiamate ai modelli, costo con i token da cache |
 | 7 | Backup, esportazioni e riservatezza | #345, #407 | **backup fatto** e spostato nelle impostazioni generali; restano i tre livelli di riservatezza (D33) e l'esportazione di un workspace (#434) |
 
@@ -60,8 +61,27 @@ lavoro registra avvio ed esito nel registro dei fatti senza che chi scrive il
 gestore debba ricordarsene.
 
 **Scaricamento** (`src-tauri/src/download/`): dal manifesto alle pagine, con i
-tempi della biblioteca, la misura scelta fra quelle dichiarate, le miniature
-ricavate in locale, il tempo stimato dal ritmo vero del lavoro.
+limiti della biblioteca rispettati per host. **Il disco è la verità** (piano
+§5.4): nessuna riga per pagina nel database, il conteggio lo dà la cartella, e
+checksum, dimensioni e byte di ogni pagina stanno in un file di lato dentro la
+cartella di misura. La misura **si calcola** dalle dimensioni del manifesto — una
+sola lettura del descrittore per libro, che dice solo se quella biblioteca tiene
+pronti i dimezzamenti — e il tetto è una politica: vince il dimezzamento più
+vicino, sopra o sotto. Riprendere significa rileggere la cartella; una pagina che
+la biblioteca dichiara di non servire lascia la sua riga e si riprova a scadenza,
+un guasto no. Se la biblioteca rifiuta la misura si prende la dimensione piena e
+**si conserva com'è**: ridurre è una scelta che si fa a freddo.
+
+**Cache di tutto ciò che viene dalla rete** (`src-tauri/src/httpcache/`, #442):
+copertine, miniature remote e risposte delle ricerche passano dalla cortesia e da
+un magazzino solo, un file per richiesta. Le copertine si vedono anche nell'app
+impacchettata, che era il difetto che questa parte doveva chiudere.
+
+**Ottimizzazione locale** (`src-tauri/src/optimize/`, #444): un lavoro della coda
+che rilegge una cartella di misura, riduce le pagine oltre il lato lungo scelto e
+le ricomprime, riscrivendo checksum e miniature. È **l'unica cosa che riduce**, e
+la si chiede: la conferma dice quante pagine tocca e quanto si prevede di
+liberare.
 
 **Workspace come contenitore** (#213): due forme di appartenenza. **Casa** — una
 traduzione e una trascrizione stanno in un solo workspace, e da lì prendono le
@@ -93,26 +113,36 @@ portano il workspace da cui il lavoro è nato.
 
 ## Cosa manca al blocco, prima della 1.5
 
+Due cose sole sono **obbligatorie** per chiudere:
+
 1. **I tre livelli di riservatezza** di backup ed esportazioni (D33): aperto,
    solo Glossa, con password. Il terzo richiede di scegliere **come derivare la
    chiave** dalla password — la libreria per cifrare c'è già, quella per
    derivare no — e va scelta, non improvvisata.
 2. **Collassare le migrazioni** in una baseline sola e buttare i database di
    sviluppo. Insieme a quello: correggere la migrazione delle trascrizioni (vedi
-   sotto) e togliere il codice di retrocompatibilità pre-2.0, che serve solo a
-   database antecedenti alla baseline.
+   sotto), togliere il codice di retrocompatibilità pre-2.0 — che serve solo a
+   database antecedenti alla baseline — e la colonna
+   `transcription_segments.asset_id`, che doveva legare un segmento al file di
+   una pagina: nessuno la scrive, e il §5.4 del piano ha deciso che quel legame
+   si fa sulla digitalizzazione più il numero di pagina.
 
 Poi `blocco-1` va su `main` come **1.5**.
 
+### Del sottosistema scaricamento, resta fuori questo
+
+Nessuna di queste blocca la 1.5. Il piano
+`SCARICAMENTO_E_DEPOSITO.md` le tiene con il loro perché.
+
+| | Cosa | Quando |
+|---|---|---|
+| **Fase 2** | misurare le undici biblioteche: dichiarano i dimezzamenti? con che livello di conformità? e la prova della sessione del lettore su un manoscritto vaticano (fatto 12, l'unica cosa ancora aperta del piano) | quando si vuole: non è un prerequisito di niente |
+| **Pagine in parallelo** | il ciclo immette più di una pagina alla volta entro `host_concurrency`, che il profilo dichiara già e l'impostazione per biblioteca espone già. **Predefinito 1 per tutte**: il 4 di oggi limita i lavori concorrenti fra loro, e usarlo così porterebbe ogni biblioteca mai misurata a quattro richieste in volo senza che nessuno l'abbia deciso | dopo la fase 2, che dice quali biblioteche lo tollerano |
+| **Una pagina alla massima risoluzione** (§5.6) | il comando c'è nella specifica e non nel codice: una pagina si chiede guardandola, e il visore non c'è. Scriverlo adesso sarebbe un comando che nessuno può invocare | col visore |
+| **I due valori dell'ottimizzazione per opera** | lato lungo e qualità nella scheda di Biblioteca, accanto al tetto per fonte. Il motore li accetta già come parametri; alla stima va aggiunto il lato lungo | con la fase 2 |
+
 ## Scoperto strada facendo, ancora aperto
 
-- **La politica di sicurezza vieta le immagini prese dalla rete**: `img-src`
-  consente solo `self`, `data:` e `blob:`. Nell'app impacchettata le copertine
-  di archive.org **non comparirebbero**; in sviluppo si vedono perché lì la
-  politica non viene applicata. Si risolve con la **cache delle immagini** —
-  decisa in D8 (tetto in `remote_image_cache_mb`, 512 MB predefiniti, scarto dei
-  più vecchi, mai nel deposito) e mai fatta — che serve comunque: oggi ogni
-  disegno di una scheda ripassa dal servizio della biblioteca.
 - **Il «workspace attivo»** decide ancora due cose: cosa mostra la pagina di un
   workspace, e dove nasce un dizionario nuovo. **Non** decide più cosa si vede
   in Biblioteca. La seconda si risolverebbe prendendo il workspace dal progetto
@@ -168,7 +198,9 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
 
 | Decisione | Cosa è cambiato |
 |---|---|
-| **D4** | il tetto è una politica, non un pixel: si legge il descrittore e si prende la misura dichiarata più vicina, senza tentare niente alla cieca. Due livelli di scelta — opera e generale — non tre |
+| **D4** | **sostituita** dal piano §5.1: la misura non si negozia, si **calcola** dalle dimensioni del manifesto. Il descrittore si legge una volta per libro e serve solo a sapere se quella biblioteca tiene pronti i dimezzamenti. Il tetto resta una politica, e vince il dimezzamento più vicino **sopra o sotto** — prenderlo sempre sopra dava pagine al doppio del tetto |
+| **D2 · D5 · D7** | **il disco è la verità** (§5.4): le pagine non hanno più una riga a testa, checksum e dimensioni stanno in un file di lato dentro la cartella di misura, e la disponibilità si legge contando i file. Un file senza riga è una pagina presente di checksum ignoto: si conta, e la verifica completa la salta |
+| **decisione 2 del piano** | **sostituita il 2026-08-19**: il ripiego non rimpicciolisce più. Se la biblioteca rifiuta la misura, la pagina arriva a dimensione piena e si conserva com'è — nessuna ricompressione alle spalle dell'utente, che è la regola che il §5.7 dichiarava già per l'ottimizzazione |
 | **D5** | la verifica completa **confronta** l'impronta registrata, non la ricalcola e basta |
 | **D6** | le miniature non si scaricano: si **ricavano** dalla pagina appena scaricata, a 300 px sul lato lungo |
 | **D13** | «da rifare» significa fermo in attesa dell'utente, non rimesso in coda |
@@ -205,6 +237,14 @@ Tutte riportate in `BLOCCO_1_DECISIONI.md` accanto alla decisione originale.
   rimozione che porta via anche i file, i profili di rete al posto dei valori
   per biblioteca, e le quattro schede delle impostazioni riportate nell'idioma
   visivo dell'app.
+- **2026-08-18/20** — riscrittura del sottosistema scaricamento contro
+  `SCARICAMENTO_E_DEPOSITO.md`, in tre rami: la cache (#442), il disco come
+  verità con la misura calcolata (#443), l'ottimizzazione locale (#444). Il
+  gestore da 1424 righe diventa dodici file, le righe per pagina nel database
+  spariscono, e da tre revisioni esterne più le prove sul campo escono le
+  correzioni che contano: la riga «non servita» solo per i rifiuti dichiarati
+  della biblioteca e non per un guasto, il tetto che è una politica e non un
+  minimo, il ripiego che conserva invece di ricomprimere.
 - **2026-08-17, sera** — revisione della finestra Impostazioni contro il design
   system: le sette schede avevano tre generazioni di stile addosso. Nascono tre
   primitive (intestazione di sezione allineata a 11px, riga di impostazione,
@@ -219,3 +259,25 @@ Scaricare un'opera e guardare il pannello: una riga sola, le due sezioni dei
 dettagli, il tempo stimato che cala mentre va. Metterla in pausa mentre la
 biblioteca dà errore: non deve ripartire da sola. Togliere l'opera: la sua
 cartella nel deposito deve sparire.
+
+Del sottosistema riscritto, le prove che i test non possono fare:
+
+1. **Staccare la rete a metà scaricamento**, lasciare che il lavoro esaurisca i
+   tentativi, riattaccarla e riprovare: il libro riparte da dove era. Se dice «non
+   ha servito nessuna pagina» e non riprende più, la riga «non servita» è stata
+   scritta per un guasto.
+2. **Un libro di archive.org dall'inizio alla fine**, con una pausa in mezzo: nel
+   registro **una sola** lettura del descrittore, e la ripresa non richiede quello
+   che è già sul disco.
+3. **Un manoscritto di Gallica**, che non dichiara misure: larghezza esatta, lato
+   lungo esattamente al tetto, nessun raffreddamento nel registro.
+4. **La verifica di un'opera**, tre casi: completa, con file cancellati a mano,
+   e senza conteggio atteso dichiarato dalla biblioteca.
+5. **«Cancella i file senza opera»**: il numero annunciato è quello dei file, e
+   con la Biblioteca vuota non propone di cancellare niente.
+6. **Backup e ripristino** di un libro che ha anche pagine a risoluzione piena: il
+   ripristino riscarica la misura principale e **dice** che le altre non tornano.
+7. **L'ottimizzazione locale** su un libro scaricato a dimensione piena: la
+   conferma dice quante pagine tocca e quanto libera, il pannello dice quanto ha
+   liberato, la verifica completa dopo non trova niente di corrotto — è la prova
+   che i checksum sono stati riscritti.

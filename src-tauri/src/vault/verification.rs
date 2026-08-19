@@ -1,4 +1,4 @@
-//! La verifica del deposito come lavoro (D5-bis; D5 modificata dal piano §5.4).
+//! La verifica del deposito come lavoro (D5-bis; D5 modificata dal §5.4).
 //!
 //! **Il disco è la verità**: l'elenco da controllare si ricava camminando le
 //! cartelle di misura, non interrogando il database. Le impronte stanno nel file

@@ -1,101 +1,28 @@
-# Piano — scaricamento, cache e spazio su disco
+# Scaricamento, cache e spazio su disco
 
-Riscrittura del sottosistema che porta le pagine dalla biblioteca al disco, della
-cache che serve a mostrarle, e dell'ottimizzazione locale che decide quanto
-spazio occupano.
+Come funziona il sottosistema che porta le pagine dalla biblioteca al disco, la
+cache che serve a mostrarle, e l'ottimizzazione locale che decide quanto spazio
+occupano. **Il codice cita i paragrafi di questo documento**: è il riferimento del
+disegno, non un piano da eseguire.
 
-Scritto il 2026-08-18, dopo un'indagine su codice, database, registri e deposito
-reali. **Sostituisce D4, corregge D6 e D8, e prepara la modifica di D2, D5 e D7.**
+Nato come piano il 2026-08-18, dopo un'indagine su codice, database, registri e
+deposito reali, e attuato fra il 18 e il 20 agosto in tre PR: la cache (#442), il
+disco come verità con la misura calcolata (#443), l'ottimizzazione locale (#444).
+Sostituisce D4, corregge D6 e D8, e modifica D2, D5 e D7.
 
-Cinque decisioni prese con l'utente lo stesso giorno stanno nel capitolo 10 e sono già
-riportate dentro il disegno — la quinta ne ha fatta decadere una. Una cosa resta
-aperta e si risolve nella fase 2.
+I capitoli che servivano a decidere se farlo e in che ordine sono stati tolti quando
+il lavoro è finito. Restano le tre cose che non scadono:
 
-Il documento è stato riletto tre volte contro la discussione che lo ha prodotto, e due
-volte da una revisione esterna. La prima ha trovato cinque buchi (chiusi), un'alternativa
-che ha cambiato il disegno (§5.9) e un errore di fatto sulla politica di sicurezza, che
-questo documento aveva respinto a torto: la seconda rilettura ha guardato i file di
-configurazione e ha dato ragione alla revisione (§5.5). La stessa rilettura ha spostato
-l'ottimizzazione locale in un ramo suo (§7) e aggiunto due precisazioni al §5.4.
+- **capitolo 3** — i fatti pagati sul campo, che sono costati una settimana di prove
+  e non stanno scritti da nessun'altra parte;
+- **capitolo 4** — le misure con richieste vere, da cui viene il disegno;
+- **capitolo 5** — il disegno, paragrafo per paragrafo, che è quello che il codice
+  cita.
 
----
-
-## 1. Perché
-
-Il blocco 1 ha costruito l'infrastruttura — deposito, coda dei lavori,
-registrazione — e per scelta non ha ancora nessuno che legga i libri scaricati:
-il visore viene dopo. La parte dello scaricamento però è cresciuta oltre il suo
-problema, e non è più leggibile.
-
-I numeri, misurati:
-
-| | valore | regola del progetto |
-|---|---|---|
-| righe di codice del gestore | 1425 | 400-800 per file |
-| funzione più lunga | 273 righe | — |
-| argomenti della funzione peggiore | 16 | — |
-| deroghe al limite di argomenti | 5 | 0 |
-
-E la causa è concentrata in un punto. **Un quarto del codice, e cinque delle
-ventitré strutture dichiarate nel modulo, esistono per rispondere a una domanda —
-quale misura chiedere alla biblioteca — che si risponde con una divisione.** Da quella
-zona vengono tre dei sei difetti trovati nell'indagine del 18 agosto.
-
-Nella settimana passata sono stati corretti sei difetti in quella zona. Correggerne
-altri lì dentro costa più che riscriverla: Glossa non ha utenti, le migrazioni
-vengono collassate prima della 1.5, e nessuna schermata dipende ancora dalla
-disposizione dei file. È la finestra giusta.
-
-### Gli usi che questo deve sostenere
-
-Dichiarati dall'utente il 2026-08-18, e il disegno va letto contro di loro. Non sono
-funzioni da fare adesso: sono i modi in cui il lavoro verrà fatto, e servono a capire
-se la disposizione regge.
-
-1. **Sfogliare online è il caso normale.** Non «scarico il libro e poi lo leggo», ma
-   «guardo le pagine dalla biblioteca, e scarico quando mi serve». Dipenderà dalla
-   biblioteca, ma la previsione è questa.
-2. **Una pagina alla massima risoluzione, quando serve.** Nelle trascrizioni capita
-   una pagina ostica di cui serve tutto il dettaglio disponibile. Vale sia sfogliando
-   online sia avendo il libro scaricato, e riguarda **quella** pagina, non il libro.
-3. **Sapere sempre cosa si ha e a che misura.** Per ogni libro: quali versioni sono
-   in locale, a che risoluzione, quali libri sono soltanto online. Non per curiosità:
-   per poter decidere cosa comprimere, cosa ridimensionare e cosa buttare.
-
-Il terzo è quello che pesa di più sul disegno, perché è un requisito
-sull'**inventario**, non sullo scaricamento: lo scaricamento è il mezzo, e quale
-strada prenda è quasi un dettaglio. È anche il caso che ha corretto due punti di
-questo piano — §5.4 e §5.5.
-
----
-
-## 2. Cosa va e cosa resta
-
-Righe di **codice di produzione**, commenti e test esclusi.
-
-### Da riscrivere
-
-| | righe |
-|---|---|
-| il gestore dello scaricamento | 1425 |
-| la scelta della misura | 138 |
-| le righe per pagina nel database, sparse fra backend e interfaccia | ~200 |
-
-**Circa 1750 righe.** Ci si aspetta di sostituirle con 500-700.
-
-### Da tenere, senza toccarle
-
-| | righe | perché |
-|---|---|---|
-| cortesia verso le biblioteche | 229 | Gallica bandisce, i valori sono tarati sul campo, i test coprono pause, raffica, concorrenza e raffreddamenti |
-| lettura dei manifesti | 198 | Presentation 2 e 3 sono due formati veri, molte biblioteche non hanno migrato |
-| singola richiesta e classificazione degli errori | 227 | un 403 significa «rallenta»: quella tabella è stata pagata sul campo |
-| validazione dei file | 175 | i file troncati esistono, e la firma più il terminatore li coglie a memoria costante |
-| la coda dei lavori | 1744 | non è dello scaricamento: la usano anche le verifiche e la useranno il riconoscimento testo e le esportazioni |
-| disposizione dei percorsi nel deposito | 181 | componenti validate contro la risalita, percorsi sempre relativi |
-
-**Circa 2750 righe restano.** Non è «buttare tutto»: è riscrivere la terza parte
-che è diventata illeggibile, tenendo le due che funzionano.
+**Cosa resta da fare** sta in `STATO_BLOCCO_1.md`, non qui: la fase 2 (misurare le
+undici biblioteche, e la prova della sessione del lettore sui manoscritti vaticani),
+le pagine in parallelo, la pagina singola a piena risoluzione che aspetta il visore,
+e i due valori dell'ottimizzazione per opera.
 
 ---
 
@@ -407,7 +334,7 @@ l'impostazione esiste per biblioteca in Impostazioni → Biblioteche. Il ciclo p
 resta in fila finché quel valore non viene alzato a mano: il collo di bottiglia
 misurato è il server, e parallelizzare su una biblioteca che bandisce si paga con
 l'accesso. Il predefinito è **1 per tutte**, e si alza solo dove è stato misurato
-(§7, quarto ramo).
+(`STATO_BLOCCO_1.md`, «resta fuori questo»).
 
 ### 5.2 Il ciclo, in sette passi
 
@@ -798,12 +725,25 @@ lungo di arrivo e il fatto che il risultato sostituisce l'originale.
 - **si scrive in transito e si sostituisce con uno spostamento atomico**, come per
   ogni file che entra nel deposito: un'ottimizzazione interrotta non deve lasciare
   una pagina a metà dove prima ce n'era una intera;
-- **è irreversibile e va detto**: la conferma dichiara quante pagine, da quale
-  misura a quale, e quanto si prevede di liberare;
+- **è irreversibile e va detto**: la conferma dichiara quante pagine verrebbero
+  davvero ridotte — non quante ce ne sono nella cartella, perché quelle già dentro il
+  lato lungo scelto non si toccano — da quale misura a quale, e quanto si prevede di
+  liberare. La previsione è il rapporto delle aree, letto dalle intestazioni dei file
+  senza decodificarli: un JPEG non scende esattamente come i pixel, e più preciso di
+  così si può essere solo ricomprimendo davvero, che è il lavoro stesso. Se non c'è
+  niente da ridurre lo si dice, invece di chiedere conferma per un lavoro vuoto;
 - **l'impronta va riscritta** nel file di lato, altrimenti la verifica completa
   dichiara corrotto tutto il libro;
 - **la misura d'origine resta scritta** nello stesso file di lato, così di quella
-  pagina si sa che è arrivata più grande e che è stata ridotta qui;
+  pagina si sa che è arrivata più grande e che è stata ridotta qui. Dopo la decisione
+  del 2026-08-19 l'ottimizzazione è **l'unica** cosa che riduce: lo scaricamento
+  conserva quello che arriva, quindi quella misura è davvero quella d'origine;
+- **le miniature si rifanno alla misura scelta nelle impostazioni**, la stessa che usa
+  lo scaricamento: rifarle a quella predefinita le rimpiccioliva alle spalle di chi
+  l'aveva alzata;
+- **l'area di transito è del lavoro, non della digitalizzazione**: scaricamento e
+  ottimizzazione girano insieme — uno occupa la rete, l'altro il processore — e con
+  un'area sola ognuno cancellava i file a metà dell'altro;
 - **le miniature si rifanno**, perché derivano dalle pagine;
 - **non tocca chi è già più piccolo** del lato lungo scelto: non si ricomprime per
   niente, perché ogni ricompressione perde qualcosa.
@@ -823,11 +763,23 @@ minuscola fitta — ed è la stessa ragione per cui il tetto delle pagine è per
 non solo generale (D4). Per questo i due valori si cambiano nelle impostazioni prima
 di lanciare l'ottimizzazione su un libro diverso dagli altri.
 
-**Non al lancio** *(2026-08-19)*: la prima stesura diceva «scavalcabile al lancio», e
-il ramo ha attuato tutto tranne quello — la conferma è un avviso, non un modulo, e
-metterci due scelte è una schermata a sé. Il comando accetta già i due valori come
-parametri, quindi il giorno che quella schermata serve non c'è niente da rifare nel
-motore. Nel frattempo i testi non promettono una scelta che non c'è.
+**Per opera, non al lancio, e non adesso** *(deciso il 2026-08-19)*. La prima stesura
+diceva «scavalcabile al lancio»: la conferma però è un avviso, non un modulo, e
+metterci due scelte è una schermata a sé — con una complicazione vera, perché cambiando
+il lato lungo cambiano anche quante pagine si toccano e quanto si libera, quindi i due
+numeri andrebbero ricalcolati mentre si scelgono.
+
+Il posto giusto non è una finestra al lancio: è la **scheda dell'opera in Biblioteca**,
+accanto al tetto per fonte che sta già lì (D4). Due valori per opera, che governano
+l'ottimizzazione di quel libro come il tetto governa il suo scaricamento, e la conferma
+resta un avviso.
+
+Si fa **con la fase 2**, non prima: la fase 2 misura le undici biblioteche, ed è lì che
+si scopre quali materiali vogliono valori diversi dai predefiniti — cioè l'unica cosa
+che dice se due valori per opera servono davvero e con che estremi. Nel motore non c'è
+niente da rifare: il comando accetta già lato lungo e qualità come parametri; alla
+stima andrà aggiunto il lato lungo come parametro, perché oggi usa quello configurato.
+Nel frattempo i testi non promettono una scelta che non c'è.
 
 **Non è automatica.** Nessuna ricompressione alle spalle dell'utente: è
 un'operazione che perde informazione, e la si chiede.
@@ -843,8 +795,8 @@ Tutto in due schede che esistono già.
 |---|---|---|---|
 | tetto della misura delle pagine | Scaricamento | 2000 px sul lato lungo | scavalcabile per fonte (D4); vale solo per lo scaricamento (§5.0), e `max` è una scelta valida |
 | lato lungo delle miniature | Scaricamento | 300 px | |
-| lato lungo dell'ottimizzazione locale | Scaricamento | 2000 px | si cambia qui, non al lancio (§5.7) |
-| qualità JPEG dell'ottimizzazione locale | Scaricamento | 82 | si cambia qui, non al lancio (§5.7) |
+| lato lungo dell'ottimizzazione locale | Scaricamento | 2000 px | per opera nella scheda, con la fase 2 (§5.7) |
+| qualità JPEG dell'ottimizzazione locale | Scaricamento | 82 | per opera nella scheda, con la fase 2 (§5.7) |
 | tetto della cache | Archiviazione | 512 MB | va alzato se si sfoglia molto online |
 | scadenza delle ricerche in cache | Archiviazione | 24 ore | le immagini non scadono, solo il tetto |
 
@@ -907,190 +859,10 @@ dice cosa fa senza gergo di formato immagine.
 
 ---
 
-## 7. Le fasi
-
-Quattro, e le prime due non toccano una riga di codice.
-
-### Fase 1 — I fatti, per iscritto
-
-Il capitolo 3 di questo documento. **Già fatto**: è la condizione per poter
-cancellare il resto senza perdere quello che è costato una settimana.
-
-### Fase 2 — Misurare le undici biblioteche
-
-Per ognuna delle undici del registro, il descrittore di una pagina: dichiara
-misure? sono dimezzamenti? che livello di conformità?
-
-**Due o tre libri per biblioteca, non uno.** Il costo è identico — sono richieste
-minuscole — e una digitalizzazione sola ripeterebbe in piccolo l'errore che questo
-piano si rimprovera: le collezioni dentro la stessa biblioteca sono state
-digitalizzate in epoche diverse, con strumenti diversi, e non c'è ragione di
-aspettarsi che si comportino tutte allo stesso modo.
-
-**Non è più un prerequisito.** Con la decisione del §5.9 — il descrittore si legge una
-volta per libro — non c'è nessuna casella da compilare, quindi il codice può partire
-prima. Questa fase resta comunque da fare, per tre ragioni che valgono da sole:
-
-- **verificare che la regola dei dimezzamenti valga oltre archive.org e Bodleian**, e
-  scoprire per tempo la biblioteca che si comporta in un terzo modo che non abbiamo
-  previsto;
-- **provare la sessione del lettore** su un manoscritto vaticano: è l'unica cosa
-  ancora aperta di questo piano (fatto 12);
-- **sapere con quali livelli di conformità abbiamo a che fare**, perché il ripiego su
-  `max` è l'unica cosa garantita a livello 0 e vale la pena sapere se qualcuno ci
-  costringe a usarlo sempre.
-
-Prodotto: una tabella nel documento delle decisioni, con quello che si è trovato.
-Non alimenta più nessuna impostazione: alimenta la fiducia nella regola.
-
-### Fase 3 — La riscrittura
-
-**Quattro rami, in quest'ordine.**
-
-**Primo — la cache.** *(fatto: PR #442, in `blocco-1`.)* Le copertine, le ricerche, la consegna dei byte alla finestra, la
-riga da aggiungere alla politica di sicurezza dell'installato e due impostazioni. Non
-tocca lo scaricamento, è il ramo più piccolo, e **da solo ripara le copertine invisibili
-nell'app installata**, che è un difetto che esiste adesso. Fa anche da collaudo della
-disposizione delle cartelle prima del ramo grande.
-
-**Secondo — lo scaricamento e il disco.** *(fatto: ramo `feat/scaricamento-e-disco`.)* La misura, il ciclo, il disco come verità, il
-file di lato. È il pezzo intrecciato: cambiare dove stanno le pagine cambia come si
-riprende, che cambia il gestore. Diviso in più rami produrrebbe stati intermedi da
-buttare.
-
-Un ramo solo per questo pezzo, e non quattro, perché: non c'è nessun utente da non
-rompere, le migrazioni si collassano comunque, nessuna schermata legge ancora quei
-percorsi, e un diff da 1750 righe cancellate non si controlla leggendolo — si
-controlla contro una specifica approvata prima, che è il modo in cui le PR di questo
-progetto vengono già verificate.
-
-I 47 gruppi misurati diventano un test a tabella con i dati veri: se la regola della
-misura cambia, il test se ne accorge.
-
-**Terzo — l'ottimizzazione locale.** *(fatto: ramo `feat/ottimizzazione-locale`.)* Stava insieme alla cache, e non può: l'ottimizzazione
-**riscrive l'impronta nel file di lato** (§5.7), e il file di lato nasce nel ramo dello
-scaricamento. Tenerli insieme vorrebbe dire o scrivere l'ottimizzazione contro le righe
-del database che stanno per sparire, o fermare la cache ad aspettare il ramo grande. Viene
-dopo, ed è il ramo più semplice dei tre perché la macchina che ridimensiona esiste già.
-
-**Quarto — le pagine in parallelo.** *(Deciso il 2026-08-19 con l'utente.)* Un ramo
-piccolo, e va da sé dopo il secondo: la struttura c'è già tutta. Il profilo della
-biblioteca dichiara `host_concurrency`, l'impostazione è già in Impostazioni →
-Biblioteche («Richieste insieme»), e la cortesia applica già un semaforo per host a
-ogni richiesta. Manca solo che il ciclo immetta più di una pagina alla volta, entro
-quel semaforo.
-
-Due condizioni, e sono la ragione per cui il ramo è separato:
-
-- **il predefinito è 1 per ogni biblioteca**, e si alza a mano dove serve. Il valore
-  prudente di oggi è 4, scritto per limitare i lavori concorrenti fra loro: se il
-  ciclo cominciasse a usarlo così com'è, ogni biblioteca mai misurata passerebbe da
-  una richiesta in volo a quattro senza che nessuno abbia deciso niente;
-- **la fase 2 viene prima**, perché è lei a dire quali biblioteche lo tollerano.
-
-Cosa rende, misurato sui profili che abbiamo: su archive.org (100 richieste ogni 60 s,
-pausa 600-1600 ms) quattro in volo portano un libro di 328 pagine da un quarto d'ora a
-quattro o cinque minuti; su Gallica (20 ogni 60 s) non cambia quasi niente, perché il
-limite a raffica lega prima della concorrenza. L'impostazione è potente dove è sicura
-e inerte dove sarebbe pericolosa, e questo vale finché i profili dicono la verità.
-
-Quello che il ramo tocca, oltre al fan-out: la regola della misura si declassa da uno
-stato condiviso (con N richieste in volo un rifiuto si paga fino a N volte invece di
-una), i contatori si aggregano in un punto solo, e le righe del file di lato si
-scrivono in append concorrente — una sola scrittura per riga, che è già come si fa, e
-diventa un invariante da dichiarare.
-
-### Fase 4 — Rifiniture note
-
-*Fatte tutte e tre nel ramo 2.*
-
-- i commenti del codice dicevano «carte» dove l'unità si chiama **pagina**;
-- una pagina ritrovata sul disco registrava un indirizzo che nessuno ha mai chiesto:
-  sparito con il recupero;
-- la stima del tempo era una media da inizio lavoro — le pagine ritrovate la rendevano
-  ottimista, un raffreddamento pessimista per tutto il resto. Adesso guarda le ultime
-  dieci pagine.
-
-### Cosa si fa della PR #440
-
-Le sei correzioni della settimana stanno su un ramo di cui metà del codice sta per
-essere cancellato, e che introduce un difetto su Gallica — togliendo il ripiego sul
-riquadro senza accorgersi che era la cosa che faceva funzionare le biblioteche che
-non dichiarano misure.
-
-- **Si porta avanti la correzione della coda** — i tentativi che si azzerano alla
-  ripresa, la durata misurata sull'esecuzione — su una PR sua. Vive in un modulo
-  che resta, è indipendente da tutto il resto, e sono due difetti veri.
-  *Fatto il 2026-08-18: è la #441.*
-- **Si chiude il resto.** Le correzioni allo scaricamento e alla cancellazione
-  sono superate da questo piano; chiudere il ramo riporta anche Gallica a
-  funzionare come prima. *Fatto: la #440 è chiusa senza fondere, e il ramo resta.*
-- **Si tiene tutto quello che ha scoperto**: il capitolo 3 di questo documento e i
-  casi di prova, che diventano i test della fase 3.
-
----
-
-## 8. Cosa non tocchiamo, e perché
-
-Metà di questo sottosistema è complicato perché il problema lo è. Delimitare
-quello che resta è parte del piano quanto delimitare quello che va.
-
-- **I profili di cortesia.** Gallica bandisce, e i valori vengono dalle prove sul
-  campo. Pausa, raffica, concorrenza per host e raffreddamenti stanno in 229
-  righe: è il prezzo giusto. **Con la cache la cortesia copre anche le copertine e
-  le ricerche**, che oggi la scavalcano.
-- **Transito, validazione, spostamento atomico.** I file troncati esistono. Un file
-  a metà non deve poter entrare nel deposito, e la sola presenza del file è ciò di
-  cui una ripresa si fida.
-- **La coda dei lavori.** Un libro dura ore. E non è dello scaricamento: la usano
-  le verifiche, e la useranno il riconoscimento testo e le esportazioni.
-- **La lettura dei manifesti.** Presentation 2 e 3 sono due formati veri.
-- **La disposizione dei percorsi nel deposito.** Componenti validate contro la
-  risalita, percorsi sempre relativi alla radice: è ciò che permette di spostare il
-  deposito.
-
----
-
-## 9. Come sappiamo che è andata bene
-
-Sei numeri, misurabili prima e dopo. Se a fine lavoro non sono questi, il lavoro
-non è finito.
-
-| Misura | Oggi | Obiettivo |
-|---|---|---|
-| righe di codice del gestore | 1425 | quattro file sotto 500 |
-| funzione più lunga | 273 righe | sotto 80 |
-| argomenti della funzione peggiore | 16 | 8 |
-| deroghe al limite di argomenti | 5 | 0 |
-| richieste di rete per pagina | 1,14 | 1,003 (una per pagina, più una per libro) |
-| copertine visibili nell'app impacchettata | 0 | tutte |
-
-E sette prove a mano, che i test non possono fare. Le ultime quattro vengono dagli
-usi dichiarati nel capitolo 1:
-
-1. un libro di archive.org, dall'inizio alla fine, con una pausa e una ripresa in
-   mezzo;
-2. un manoscritto di Gallica, che è la biblioteca che non dichiara misure e che
-   bandisce;
-3. una ricerca con quaranta risultati, guardando i registri: le copertine devono
-   passare dalla cortesia, e la seconda ricerca uguale non deve toccare la rete;
-4. **una pagina alla massima risoluzione**, una volta su un libro sfogliato online e
-   una su un libro scaricato: finisce in `pages/max/`, la scheda dice «completo a
-   2000, più una a piena risoluzione» e **non** la chiama incompleta;
-5. **sfogliare online e poi guardare la scheda**: la cache si riempie, e il conteggio
-   del libro resta a zero pagine possedute. Se la scheda conta la cache, è sbagliata;
-6. **l'ottimizzazione locale su `pages/2000/`** di un libro che ha anche `pages/max/`:
-   la cartella `max` non viene toccata;
-7. **il tetto messo a `max`**, e poi si scarica una pagina sola e si sfoglia il resto
-   online: la pagina scaricata è a piena risoluzione, e lo sfogliare non è diventato
-   più pesante di prima. Se lo è diventato, il tetto sta influenzando qualcosa che
-   non è lo scaricamento (§5.0).
-
----
-
 ## 10. Decisioni prese
 
-Cinque, il 2026-08-18, con l'utente. La quinta ne ha fatta decadere una.
+Cinque il 2026-08-18 con l'utente, di cui una decaduta e una sostituita, più le tre
+prese attuando (in fondo).
 
 1. ~~**La casella per biblioteca si chiama «Misure pronte della biblioteca».**~~
    **Decaduta** poche ore dopo, con la decisione 5: la casella non esiste più, perché
@@ -1114,6 +886,24 @@ Cinque, il 2026-08-18, con l'utente. La quinta ne ha fatta decadere una.
    dimensioni dichiarate dal manifesto sono attendibili. Costa 4,3 s su un lavoro di
    ore. In cambio spariscono un'impostazione, il suo modo silenzioso di essere
    sbagliata, e la fase 2 come prerequisito. Sostituisce la decisione 1 (§5.9).
+
+### Prese attuando, fra il 18 e il 20 agosto
+
+6. **Il tetto è una politica, non un minimo.** Fra i due dimezzamenti che stanno a
+   cavallo del tetto vince il **più vicino**, sopra o sotto che sia (D4). Prendere
+   sempre quello sopra sembrava prudente: su un manoscritto di archive.org dichiarato
+   5850×7667 dava 3833 px e 472 kB a pagina con il tetto a 2000, cioè quattro volte i
+   pixel chiesti. I casi misurati sul campo non distinguono le due letture — danno la
+   stessa risposta — il deposito sì.
+7. **La riga «non servita» è per i rifiuti dichiarati**, 404 e 410, e per il rifiuto
+   anche a dimensione piena. Un guasto salta la pagina per quel giro e non scrive
+   niente: scriverla rendeva un libro irraggiungibile per una settimana ogni volta
+   che cadeva la rete, e la stessa trappola scattava con una biblioteca in
+   manutenzione che risponde 503 a tutto.
+8. **Una pagina malata non tronca il libro.** Un guasto che non passa nemmeno
+   all'ultimo tentativo fa saltare quella pagina e il ciclo continua: prima l'errore
+   saliva, il lavoro moriva lì, e alla ripresa ricadeva sulla stessa pagina, quindi le
+   successive non venivano mai richieste.
 
 ### Ancora da decidere, nella fase 2
 

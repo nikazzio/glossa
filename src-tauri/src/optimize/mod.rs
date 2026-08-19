@@ -1,13 +1,13 @@
 //! Ottimizzazione locale delle immagini: rilegge le pagine di una cartella di
 //! misura, le rimpicciolisce al lato lungo scelto e le ricomprime, sostituendo
-//! l'originale (piano §5.7).
+//! l'originale (§5.7 di `docs-dev/SCARICAMENTO_E_DEPOSITO.md`).
 //!
-//! **È un lavoro della coda** (decisione 3 del piano) e non un'azione immediata:
+//! **È un lavoro della coda** (decisione 3 del disegno) e non un'azione immediata:
 //! su 900 pagine dura minuti, e va potuto seguire, mettere in pausa e annullare
 //! come ogni altro lavoro lungo. Classe **processore**: non chiede niente a
 //! nessuno.
 //!
-//! Regole che il piano impone e che questo modulo attua:
+//! Regole che il disegno impone e che questo modulo attua:
 //!
 //! - si scrive in transito e si sostituisce con uno spostamento atomico
 //!   (`vault_io`): un'ottimizzazione interrotta non deve lasciare una pagina a

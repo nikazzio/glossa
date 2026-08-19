@@ -5,7 +5,7 @@
 //! insieme alle pagine che descrive — e non in una riga per pagina nel
 //! database. È il sostituto di 328 righe, ma in un posto solo e **appoggiato ai
 //! file stessi**: cancelli la cartella e se ne va con loro, copi la cartella e
-//! viene dietro (piano §5.4).
+//! viene dietro (§5.4).
 //!
 //! **Si scrive una riga in coda, dopo lo spostamento atomico della pagina.** Mai
 //! riscrivere tutto il file per una pagina: un'interruzione a metà scrittura

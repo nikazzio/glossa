@@ -5,7 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
  * che misure, e quanto occupano.
  *
  * Sostituisce il conteggio sulle righe `assets`, che non esistono più per le
- * pagine (piano §5.4): la cartella è la sola verità, e queste funzioni la
+ * pagine (§5.4): la cartella è la sola verità, e queste funzioni la
  * leggono attraverso il motore, che è l'unico a conoscere la radice del
  * deposito.
  */

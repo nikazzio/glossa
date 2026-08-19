@@ -1,6 +1,6 @@
 //! Le cartelle di misura **sono** l'inventario, e si leggono da sole.
 //!
-//! È la cosa che il deposito sa dire meglio del database (piano §5.4). Le
+//! È la cosa che il deposito sa dire meglio del database (§5.4). Le
 //! domande che l'interfaccia deve poter fare hanno tutte risposta guardando il
 //! disco, senza nessuna interrogazione e senza nessun accordo da mantenere:
 //!
