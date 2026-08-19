@@ -59,6 +59,24 @@ pub(crate) enum PageOutcome {
     Stopped,
 }
 
+/// Cosa ha risposto la biblioteca per questa pagina, prima che qualcosa finisca
+/// sul disco.
+enum Asked {
+    Got {
+        bytes: Vec<u8>,
+        /// La misura davvero chiesta: quella calcolata, o la dimensione piena se
+        /// è servito il ripiego.
+        token: String,
+        /// Da scrivere accanto alla pagina quando è arrivata più grande ed è
+        /// stata ridotta in casa.
+        note: Option<Note>,
+    },
+    /// La biblioteca non la serve, o non la serve più nemmeno a dimensione piena.
+    NotServed,
+    /// Pausa o annullamento durante l'attesa del turno.
+    Stopped,
+}
+
 /// Quello che serve a scaricare una pagina e non cambia da una pagina all'altra.
 pub(crate) struct PageFetcher<'a> {
     pub courtesy: &'a Courtesy,
@@ -99,13 +117,56 @@ impl PageFetcher<'_> {
             }
         }
 
+        let (bytes, token, note) = match self.ask(rule, page, signals).await? {
+            Asked::Got { bytes, token, note } => (bytes, token, note),
+            Asked::NotServed => return self.not_served(page),
+            Asked::Stopped => return Ok(PageOutcome::Stopped),
+        };
+
+        let staged = self.staging.join(page_staging_name(page.index));
+        let checksum = stage_and_promote(&staged, &target, &bytes, integrity::FileKind::Image)?;
+        let got = image_dimensions(&bytes);
+        sidecar::append(
+            self.size_dir,
+            &PageRecord {
+                index: page.index,
+                label: page.label.clone(),
+                got,
+                bytes: Some(bytes.len() as u64),
+                checksum: Some(checksum),
+                at: now_secs(),
+                note,
+            },
+        )
+        .unwrap_or_else(|error| {
+            // Riga non scritta: la pagina resta presente e conta
+            // nell'inventario, ma non se ne conosce l'impronta (§5.4).
+            log::warn!("job sidecar not written page={} error={error}", page.index);
+        });
+
+        self.store_thumbnail(page.index, &bytes);
+        Ok(PageOutcome::Written {
+            bytes: bytes.len() as u64,
+            token,
+            pixels: got,
+        })
+    }
+
+    /// Chiede la pagina alla biblioteca, con i due ripieghi del §5.1: la misura
+    /// rifiutata e il guasto che non passa. Non scrive niente sul disco.
+    async fn ask(
+        &self,
+        rule: &mut SizingRule,
+        page: &Page,
+        signals: &Signals<'_>,
+    ) -> Result<Asked, JobError> {
         let token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
         let url = image_url(&page.image_service, &token);
         // Vero quando vale la pena chiedere la stessa pagina a dimensione piena.
         let mut try_full = false;
         let first = match self.get(&url, signals).await {
             Ok(Some(fetched)) => Some(fetched),
-            Ok(None) => return Ok(PageOutcome::Stopped),
+            Ok(None) => return Ok(Asked::Stopped),
             Err(error) => match error.kind {
                 // 404/410: la pagina non c'è (fatto 7).
                 ErrorKind::NotFound => None,
@@ -138,8 +199,8 @@ impl PageFetcher<'_> {
                     try_full = true;
                     None
                 }
-                // 403/429/5xx e trasporto salgono al motore, che decide attesa e
-                // tentativi dal profilo (D16, D18).
+                // 403/429 e i guasti prima dell'ultimo tentativo salgono al
+                // motore, che decide attesa e tentativi dal profilo (D16, D18).
                 _ => return Err(error),
             },
         };
@@ -155,52 +216,25 @@ impl PageFetcher<'_> {
         let (bytes, note) = match first {
             Some(fetched) => (fetched.bytes, None),
             None if try_full && !already_asked_full => {
-                let full = image_url(&page.image_service, &full_token);
-                match self.get(&full, signals).await {
+                match self
+                    .get(&image_url(&page.image_service, &full_token), signals)
+                    .await
+                {
                     Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
-                    Ok(None) => return Ok(PageOutcome::Stopped),
-                    // Anche la dimensione piena rifiutata: la pagina si salta.
-                    Err(error) if !error.kind.is_retryable() => return self.not_served(page),
-                    // Un guasto che non passa nemmeno sulla dimensione piena, e
-                    // siamo all'ultimo tentativo: si salta questa e si va avanti
-                    // con le altre. «Stai correndo troppo» invece sale sempre,
-                    // perché non è la pagina a mancare (fatto 1).
+                    Ok(None) => return Ok(Asked::Stopped),
+                    // Rifiutata anche a dimensione piena, o guasta all'ultimo
+                    // tentativo: si salta e si va avanti. «Stai correndo troppo»
+                    // invece sale sempre, perché non è la pagina a mancare.
+                    Err(error) if !error.kind.is_retryable() => return Ok(Asked::NotServed),
                     Err(error) if error.kind == ErrorKind::Transport && self.last_attempt() => {
-                        return self.not_served(page)
+                        return Ok(Asked::NotServed)
                     }
                     Err(error) => return Err(error),
                 }
             }
-            None => return self.not_served(page),
+            None => return Ok(Asked::NotServed),
         };
-
-        let staged = self.staging.join(page_staging_name(page.index));
-        let checksum = stage_and_promote(&staged, &target, &bytes, integrity::FileKind::Image)?;
-        let got = image_dimensions(&bytes);
-        sidecar::append(
-            self.size_dir,
-            &PageRecord {
-                index: page.index,
-                label: page.label.clone(),
-                got,
-                bytes: Some(bytes.len() as u64),
-                checksum: Some(checksum),
-                at: now_secs(),
-                note,
-            },
-        )
-        .unwrap_or_else(|error| {
-            // Riga non scritta: la pagina resta presente e conta
-            // nell'inventario, ma non se ne conosce l'impronta (§5.4).
-            log::warn!("job sidecar not written page={} error={error}", page.index);
-        });
-
-        self.store_thumbnail(page.index, &bytes);
-        Ok(PageOutcome::Written {
-            bytes: bytes.len() as u64,
-            token,
-            pixels: got,
-        })
+        Ok(Asked::Got { bytes, token, note })
     }
 
     async fn get(
