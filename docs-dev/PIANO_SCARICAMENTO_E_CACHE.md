@@ -320,6 +320,13 @@ libro, domani qualunque altra cosa metta file nel deposito. Il descrittore si le
    velocità (§4). Se no — Gallica non dichiara niente — si chiede la larghezza esatta
    e si va avanti.
 
+   **Più vicino vuol dire sopra o sotto che sia** (D4), e va scritto perché la prima
+   attuazione ha inteso il tetto come un minimo. Su un manoscritto di archive.org
+   dichiarato 5850×7667 i dimezzamenti sono 3833 e 1916: prendere sempre quello sopra
+   dava 472 kB a pagina con il tetto a 2000, quattro volte i pixel chiesti. I casi
+   misurati sul campo non distinguono le due letture — danno la stessa risposta — ma
+   il deposito sì.
+
    Costa una richiesta per libro — 4,3 s misurati su un lavoro di ore — e non ci sono
    caselle da compilare a mano. **Se il descrittore non risponde non è un problema**:
    si calcola dalle dimensioni del canvas, che è la regola generale, e si va avanti

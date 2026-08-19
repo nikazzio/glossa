@@ -18,7 +18,8 @@
 //! - dove la biblioteca tiene pronti i **dimezzamenti** (archive.org, Bodleian)
 //!   chiederne uno costa **2,6 s e 0,53 MB** contro 5,9 s e 1,20 MB per una
 //!   larghezza arbitraria: una misura non pronta il servizio la genera sul
-//!   momento, e non la tiene da parte;
+//!   momento, e non la tiene da parte. Si prende quello con il lato lungo più
+//!   vicino al tetto, sopra o sotto che sia (D4);
 //! - dove non li tiene (Gallica non dichiara niente) la larghezza esatta costa
 //!   **1,5 s** ed è anche più fedele: agganciarsi a un dimezzamento darebbe una
 //!   pagina con il 16% di dettaglio in meno di quello chiesto.
@@ -167,19 +168,28 @@ fn width_for_cap(width: u32, height: u32, cap: u32) -> u32 {
     (scaled.max(1)) as u32
 }
 
-/// Il dimezzamento con il lato lungo più vicino al tetto **senza scendere sotto
-/// il necessario**: si dimezza finché il lato lungo resta sopra il tetto.
+/// Il dimezzamento con il lato lungo **più vicino al tetto, sopra o sotto che
+/// sia** (D4).
 ///
-/// Fermarsi al primo che scende sotto darebbe una pagina più piccola di quella
-/// chiesta; fermarsi prima ne darebbe una più grande del necessario. Si prende
-/// quella immediatamente sopra il tetto, che è ciò che il tetto significa: non
-/// meno dettaglio di così.
+/// I candidati sono due: l'ultimo che resta sopra il tetto e il primo che scende
+/// sotto. Prendere sempre quello sopra sembra prudente e non lo è: dove i
+/// dimezzamenti cadono a metà strada dal tetto dà una pagina fino al doppio di
+/// quella chiesta — misurato su un manoscritto di archive.org dichiarato
+/// 5850×7667, dove col tetto a 2000 arrivavano 3833 px e 472 kB a pagina invece
+/// di 1916 px, cioè un quarto dei pixel. Il tetto è una politica, non un minimo.
 fn halving_for_cap(width: u32, long_edge: u32, cap: u32) -> u32 {
     let mut divisor = 1u32;
     while long_edge / (divisor * 2) >= cap && divisor < 1 << 16 {
         divisor *= 2;
     }
-    (width / divisor).max(1)
+    let above = long_edge / divisor;
+    let below = long_edge / (divisor * 2);
+    let closest = if below > 0 && cap.abs_diff(below) < above.abs_diff(cap) {
+        divisor * 2
+    } else {
+        divisor
+    };
+    (width / closest).max(1)
 }
 
 /// Vero quando le misure dichiarate sono i dimezzamenti dell'originale.
@@ -349,9 +359,10 @@ mod tests {
     }
 
     #[test]
-    fn the_halving_stays_above_the_cap_instead_of_falling_under_it() {
-        // archive.org, pagina 2646×4112, tetto 2000: il dimezzamento è 1323
-        // (lato lungo 2056, sopra il tetto). Il quarto sarebbe 1028, sotto.
+    fn the_halving_closest_to_the_cap_wins_above_or_below() {
+        // archive.org, pagina 2646×4112, tetto 2000: il dimezzamento dà 2056 px
+        // di lato lungo (56 dal tetto), il quarto 1028 (972). Vince il primo,
+        // che è anche la misura che la negoziazione otteneva sul campo.
         assert_eq!(
             token_for(
                 &SizingRule::Halvings,
@@ -360,6 +371,18 @@ mod tests {
                 false
             ),
             "1323,"
+        );
+        // Stessa regola, esito opposto: 5850×7667 dà 3833 px col dimezzamento
+        // (1833 dal tetto) e 1916 col quarto (84). Vince il quarto: il tetto è
+        // una politica, non un minimo (D4).
+        assert_eq!(
+            token_for(
+                &SizingRule::Halvings,
+                &page(5850, 7667),
+                SizeCap::LongEdge(2000),
+                false
+            ),
+            "1462,"
         );
     }
 
@@ -416,8 +439,14 @@ mod tests {
             (2646, 4112, 2000, SizingRule::Halvings, "1323,"),
             (2583, 4126, 2000, SizingRule::Halvings, "1291,"),
             (2583, 4112, 2000, SizingRule::Halvings, "1291,"),
-            // Una pagina dove il dimezzamento non basta e serve il quarto.
-            (8000, 12000, 2000, SizingRule::Halvings, "2000,"),
+            // Una pagina dove il dimezzamento non basta e serve l'ottavo: fra
+            // 3000 e 1500 px di lato lungo, il tetto 2000 è più vicino al
+            // secondo. Questa riga non viene dal campo.
+            (8000, 12000, 2000, SizingRule::Halvings, "1000,"),
+            // Marin Sanuto su archive.org, 225 pagine dichiarate 5850×7667: i
+            // dimezzamenti cadono a metà strada dal tetto, e prendere quello
+            // sopra dava 3833 px con il tetto a 2000.
+            (5850, 7667, 2000, SizingRule::Halvings, "1462,"),
             // Un tetto piccolo di una richiesta vecchia: serve il sedicesimo.
             (2646, 4112, 256, SizingRule::Halvings, "165,"),
             // Gallica, larghezza esatta.

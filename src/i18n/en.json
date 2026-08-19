@@ -2100,7 +2100,7 @@
       "unavailable": "not served by the library",
       "unavailableShort_one": "{{count}} not served",
       "unavailableShort_other": "{{count}} not served",
-      "cap": "largest size asked for",
+      "cap": "chosen size",
       "provider": "library",
       "host": "host",
       "level": "level",

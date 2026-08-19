@@ -2100,7 +2100,7 @@
       "unavailable": "non servite dalla biblioteca",
       "unavailableShort_one": "{{count}} non servita",
       "unavailableShort_other": "{{count}} non servite",
-      "cap": "misura massima chiesta",
+      "cap": "misura scelta",
       "provider": "biblioteca",
       "host": "host",
       "level": "livello",
