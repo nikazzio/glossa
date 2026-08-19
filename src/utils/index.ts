@@ -535,7 +535,7 @@ export function formatDateTime(value: string | number | Date): string {
 /**
  * Dimensione in forma leggibile.
  *
- * Le carte di un manoscritto stanno fra i decimi di megabyte e la decina, e un
+ * Le pagine di un manoscritto stanno fra i decimi di megabyte e la decina, e un
  * codice intero arriva ai gigabyte: sotto il megabyte si scrive in kB, sopra in
  * MB, e solo oltre il gigabyte si tengono i decimali.
  */

@@ -139,8 +139,8 @@ fn account_for(
     match outcome {
         PageOutcome::Written { bytes, .. } => {
             progress.present += 1;
-            progress.fetched_now += 1;
             progress.bytes += bytes;
+            progress.fetched(std::time::Instant::now());
             // La riga appena scritta vale per il resto del lavoro: una pagina
             // prima dichiarata mancante non lo è più.
             known.remove(&page.index);
@@ -330,7 +330,6 @@ impl SourceDownloadJob {
         let mut rule = rule.clone();
 
         ctx.report_phase(phase::DOWNLOADING).await;
-        let started_at = std::time::Instant::now();
         let host = host_of(&config.manifest_url).unwrap_or_default();
         let fetcher = PageFetcher {
             courtesy: &self.courtesy,
@@ -343,11 +342,11 @@ impl SourceDownloadJob {
             staging,
             root,
             attempt: ctx.attempt,
+            max_attempts: ctx.max_attempts,
         };
         let reporter = Reporter {
             ctx,
             title,
-            started_at,
             profile,
         };
         let mut progress = Progress {
@@ -355,7 +354,7 @@ impl SourceDownloadJob {
             total: manifest.pages.len() as u32,
             bytes,
             unavailable: 0,
-            fetched_now: 0,
+            recent: std::collections::VecDeque::new(),
         };
 
         for page in &manifest.pages {

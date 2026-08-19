@@ -265,6 +265,48 @@ async fn a_page_the_library_does_not_have_does_not_take_the_book_away() {
 }
 
 #[tokio::test]
+async fn a_page_that_keeps_failing_does_not_leave_the_book_truncated() {
+    // Un 5xx che non passa nemmeno all'ultimo tentativo: prima si pagano le
+    // attese del profilo, poi si prova la dimensione piena per quella pagina, e
+    // se non basta si salta e si va avanti. Senza questo il ciclo ricadeva sulla
+    // stessa pagina a ogni ripresa e le successive non arrivavano mai (§5.1).
+    let server = MockServer::start().await;
+    mount_manifest(&server, 3).await;
+    mount_descriptors(&server).await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/img/2/full/.*"))
+        .respond_with(ResponseTemplate::new(503))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/img/\d+/full/.*"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(jpeg()))
+        .mount(&server)
+        .await;
+
+    let vault = temp_dir("testarda_vault");
+    let manifest_url = format!("{}/manifest.json", server.uri());
+    let engine = engine_with(temp_db("testarda", &manifest_url), vault.clone());
+    engine.submit(&download_job(&manifest_url)).await.unwrap();
+
+    let record = run_until_terminal(&engine).await;
+
+    assert_eq!(record.status, JobStatus::Completed, "{:?}", record.error);
+    // Prima di saltarla il lavoro ha speso tutti i suoi tentativi: la pagina si
+    // salta perché non c'è più nessuna ripresa, non al primo singhiozzo.
+    assert_eq!(record.attempt_count, 2);
+    assert_eq!(pages_on_disk(&vault), 3, "due pagine più il file di lato");
+    let records = sidecar_records(&vault);
+    assert!(
+        records[&2].is_missing(),
+        "la pagina malata lascia la sua riga"
+    );
+    assert!(records[&3].checksum.is_some(), "e quella dopo è arrivata");
+
+    let _ = std::fs::remove_dir_all(&vault);
+}
+
+#[tokio::test]
 async fn a_book_the_library_serves_no_page_of_is_not_a_success() {
     let server = MockServer::start().await;
     mount_manifest(&server, 2).await;

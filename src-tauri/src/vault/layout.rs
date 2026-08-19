@@ -72,7 +72,7 @@ pub fn manifest_path(provider_key: &str, version_id: &str) -> Result<PathBuf, St
 
 /// Le miniature si scaricano tutte all'aggiunta della fonte (D6): circa 3 MB
 /// per un codice, e rendono il libro sfogliabile senza rete e senza pagine.
-/// Non hanno livello di dimensione: ne esiste una sola per carta.
+/// Non hanno livello di dimensione: ne esiste una sola per pagina.
 pub fn thumbnail_path(
     provider_key: &str,
     version_id: &str,

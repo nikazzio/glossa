@@ -384,11 +384,13 @@ di pagina in pagina — 1323, 1278, 1264 sullo stesso libro. Se la cartella pren
 il nome dalla misura ottenuta, la stessa fonte finirebbe sparsa in cartelle diverse
 e una ripresa non ritroverebbe più quello che ha già scaricato.
 
-**Una pagina per volta, non quattro.** Il profilo dichiara quante richieste insieme
-si possono fare verso un host, ma dentro un libro si resta in fila: il collo di
-bottiglia misurato è il server, e parallelizzare moltiplicherebbe il peso su
-biblioteche che bandiscono. La concorrenza per host resta quello che è oggi — il
-limite fra lavori diversi, non dentro un lavoro.
+**Quante pagine insieme lo dice la biblioteca, e per difetto è una.** Il profilo
+dichiara già quante richieste insieme si possono fare verso un host, e
+l'impostazione esiste per biblioteca in Impostazioni → Biblioteche. Il ciclo però
+resta in fila finché quel valore non viene alzato a mano: il collo di bottiglia
+misurato è il server, e parallelizzare su una biblioteca che bandisce si paga con
+l'accesso. Il predefinito è **1 per tutte**, e si alza solo dove è stato misurato
+(§7, quarto ramo).
 
 ### 5.2 Il ciclo, in sette passi
 
@@ -912,7 +914,7 @@ Non alimenta più nessuna impostazione: alimenta la fiducia nella regola.
 
 ### Fase 3 — La riscrittura
 
-**Tre rami, in quest'ordine.**
+**Quattro rami, in quest'ordine.**
 
 **Primo — la cache.** *(fatto: PR #442, in `blocco-1`.)* Le copertine, le ricerche, la consegna dei byte alla finestra, la
 riga da aggiungere alla politica di sicurezza dell'installato e due impostazioni. Non
@@ -940,13 +942,43 @@ scaricamento. Tenerli insieme vorrebbe dire o scrivere l'ottimizzazione contro l
 del database che stanno per sparire, o fermare la cache ad aspettare il ramo grande. Viene
 dopo, ed è il ramo più semplice dei tre perché la macchina che ridimensiona esiste già.
 
+**Quarto — le pagine in parallelo.** *(Deciso il 2026-08-19 con l'utente.)* Un ramo
+piccolo, e va da sé dopo il secondo: la struttura c'è già tutta. Il profilo della
+biblioteca dichiara `host_concurrency`, l'impostazione è già in Impostazioni →
+Biblioteche («Richieste insieme»), e la cortesia applica già un semaforo per host a
+ogni richiesta. Manca solo che il ciclo immetta più di una pagina alla volta, entro
+quel semaforo.
+
+Due condizioni, e sono la ragione per cui il ramo è separato:
+
+- **il predefinito è 1 per ogni biblioteca**, e si alza a mano dove serve. Il valore
+  prudente di oggi è 4, scritto per limitare i lavori concorrenti fra loro: se il
+  ciclo cominciasse a usarlo così com'è, ogni biblioteca mai misurata passerebbe da
+  una richiesta in volo a quattro senza che nessuno abbia deciso niente;
+- **la fase 2 viene prima**, perché è lei a dire quali biblioteche lo tollerano.
+
+Cosa rende, misurato sui profili che abbiamo: su archive.org (100 richieste ogni 60 s,
+pausa 600-1600 ms) quattro in volo portano un libro di 328 pagine da un quarto d'ora a
+quattro o cinque minuti; su Gallica (20 ogni 60 s) non cambia quasi niente, perché il
+limite a raffica lega prima della concorrenza. L'impostazione è potente dove è sicura
+e inerte dove sarebbe pericolosa, e questo vale finché i profili dicono la verità.
+
+Quello che il ramo tocca, oltre al fan-out: la regola della misura si declassa da uno
+stato condiviso (con N richieste in volo un rifiuto si paga fino a N volte invece di
+una), i contatori si aggregano in un punto solo, e le righe del file di lato si
+scrivono in append concorrente — una sola scrittura per riga, che è già come si fa, e
+diventa un invariante da dichiarare.
+
 ### Fase 4 — Rifiniture note
 
-- i commenti del codice dicono «carte» dove l'unità si chiama **pagina**;
-- una pagina ritrovata sul disco registra un indirizzo che nessuno ha mai chiesto;
-- la stima del tempo è una media da inizio lavoro: le pagine ritrovate la rendono
-  ottimista, un raffreddamento la rende pessimista per tutto il resto. Una finestra
-  mobile sulle ultime pagine è più onesta.
+*Fatte tutte e tre nel ramo 2.*
+
+- i commenti del codice dicevano «carte» dove l'unità si chiama **pagina**;
+- una pagina ritrovata sul disco registrava un indirizzo che nessuno ha mai chiesto:
+  sparito con il recupero;
+- la stima del tempo era una media da inizio lavoro — le pagine ritrovate la rendevano
+  ottimista, un raffreddamento pessimista per tutto il resto. Adesso guarda le ultime
+  dieci pagine.
 
 ### Cosa si fa della PR #440
 

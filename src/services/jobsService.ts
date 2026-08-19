@@ -120,9 +120,9 @@ export async function cancelJob(id: string): Promise<void> {
 }
 
 /**
- * Mette in coda lo scaricamento di una digitalizzazione: le carte e le sue
+ * Mette in coda lo scaricamento di una digitalizzazione: le pagine e le sue
  * miniature, che sono due lavori distinti (D6). L'interfaccia non scarica
- * niente: chiede e osserva (D10). Restituisce il lavoro delle carte.
+ * niente: chiede e osserva (D10). Restituisce il lavoro delle pagine.
  */
 export async function enqueueSourceDownload(request: {
   providerKey: string;
@@ -169,7 +169,7 @@ export async function onJobChanged(handler: (job: Job) => void): Promise<() => v
 /**
  * I dettagli che un lavoro sa dire di sé.
  *
- * Le chiavi le decide il gestore: uno scaricamento parla di carte, megabyte e
+ * Le chiavi le decide il gestore: uno scaricamento parla di pagine, megabyte e
  * risoluzione, una verifica di file integri e orfani. Qui si dichiara quello che
  * l'interfaccia sa mostrare — il resto viene ignorato invece di comparire a
  * metà, e un gestore futuro può aggiungere chiavi senza rompere niente.

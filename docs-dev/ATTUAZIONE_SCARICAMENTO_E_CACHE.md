@@ -532,11 +532,13 @@ liberare, ed è irreversibile: va detto.
 | PR-B | ramo 1 | cache, copertine, ricerche, politica di sicurezza, `resize_jpeg`, due impostazioni | **fatta, #442** |
 | PR-C | ramo 2 | scaricamento, misura, disco come verità, file di lato, inventario | **fatta** |
 | PR-D | ramo 3 | ottimizzazione locale | PR-C per il file di lato |
+| PR-E | ramo 4 | pagine in parallelo entro `host_concurrency`, predefinito 1 per biblioteca | PR-C per il ciclo; la fase 2 per i valori |
 
-Le rifiniture della fase 4 del piano si sciolgono dentro il ramo che tocca quel codice:
-«carte» → «pagine» nei commenti del ramo 2, l'indirizzo mai chiesto sparisce con il
-recupero, la stima del tempo a finestra mobile sta in `handler.rs::estimated_seconds`
-(`:1411`), ramo 2.
+L'ordine fra PR-D e PR-E è indifferente: toccano file diversi.
+
+Le rifiniture della fase 4 del piano si sono sciolte dentro il ramo 2, come previsto:
+«carte» → «pagine» nei commenti, l'indirizzo mai chiesto sparito con il recupero, la
+stima del tempo a finestra mobile in `progress.rs::eta`.
 
 ### 5.2 Cosa si fa della PR #440
 

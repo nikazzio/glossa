@@ -76,23 +76,23 @@ describe('libera spazio', () => {
 });
 
 describe('disponibilità', () => {
-  it('una fonte senza carte in locale è solo online', () => {
+  it('una fonte senza pagine in locale è solo online', () => {
     expect(summarizeAvailability(0, 210).availability).toBe('catalogued');
   });
 
-  it('alcune carte su molte sono uno stato parziale, non un errore', () => {
+  it('alcune pagine su molte sono uno stato parziale, non un errore', () => {
     const summary = summarizeAvailability(12, 210);
     expect(summary.availability).toBe('partial');
     expect(summary.presentPages).toBe(12);
     expect(summary.expectedPages).toBe(210);
   });
 
-  it('tutte le carte presenti significano completa', () => {
+  it('tutte le pagine presenti significano completa', () => {
     expect(summarizeAvailability(210, 210).availability).toBe('complete');
   });
 
   it('più file del previsto contano comunque come completa', () => {
-    // Succede quando alcune carte esistono anche a piena risoluzione.
+    // Succede quando alcune pagine esistono anche a piena risoluzione.
     expect(summarizeAvailability(240, 210).availability).toBe('complete');
   });
 

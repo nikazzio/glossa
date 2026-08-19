@@ -295,7 +295,7 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
   });
 
-  it('con carte sul computer verifica e libera spazio si accendono', () => {
+  it('con pagine sul computer verifica e libera spazio si accendono', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 48_234_496 })] });
 
     render(<LibraryCatalogArea />);

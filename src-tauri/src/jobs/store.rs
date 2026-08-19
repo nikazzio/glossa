@@ -185,7 +185,7 @@ pub fn save_progress(
 ) -> Result<(), String> {
     conn.execute(
         // Il dettaglio viaggia con l'avanzamento: cambia insieme a lui, e una
-        // scrittura separata raddoppierebbe gli aggiornamenti per ogni carta.
+        // scrittura separata raddoppierebbe gli aggiornamenti per ogni pagina.
         // `COALESCE` lascia stare quello vecchio quando il gestore non ne manda
         // uno nuovo, invece di cancellarlo.
         "UPDATE jobs SET progress = ?2, message = ?3, eta_seconds = ?4, waiting_reason = ?5, \

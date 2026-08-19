@@ -7,7 +7,7 @@ import { TerminalIconButton } from './TerminalIconButton';
 /**
  * Metti in pausa tutto / riprendi tutto.
  *
- * Con uno scaricamento da un quarto d'ora e una coda di carte, fermare a mano
+ * Con uno scaricamento da un quarto d'ora e una coda di pagine, fermare a mano
  * dieci righe una per una non è un'operazione: è una punizione. Compaiono solo
  * quando c'è davvero qualcosa da fermare o da riprendere.
  */

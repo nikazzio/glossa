@@ -456,7 +456,7 @@ function JobProgress({ job }: { job: Job }) {
   return (
     <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-terminal-line">
       <div
-        // Larghezza minima visibile: una carta su trecento è lo 0,3%, che
+        // Larghezza minima visibile: una pagina su trecento è lo 0,3%, che
         // arrotondato sparisce e fa sembrare la barra ferma.
         role="progressbar"
         aria-valuenow={Math.round(job.progress * 100)}

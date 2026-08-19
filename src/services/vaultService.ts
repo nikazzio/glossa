@@ -96,7 +96,7 @@ export async function getSourceReadMode(): Promise<SourceReadMode> {
 }
 
 /**
- * "Libera spazio" (D6): cancella le carte scaricate subito e per davvero, senza
+ * "Libera spazio" (D6): cancella le pagine scaricate subito e per davvero, senza
  * passare dal cestino — spostare gigabyte nel cestino non libera niente.
  * Restano manifesto e miniature, così il libro resta sfogliabile.
  */

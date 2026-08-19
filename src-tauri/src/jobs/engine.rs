@@ -19,7 +19,7 @@
 //!   rimandato, misura rifiutata dal servizio, punto non salvato, raffreddamento;
 //! - `info`: il ciclo di vita — messo in coda, avviato, in pausa, ripreso,
 //!   annullato, finito, recupero all'avvio, limiti letti;
-//! - `debug`: il dettaglio per carta e le attese di cortesia, che in produzione
+//! - `debug`: il dettaglio per pagina e le attese di cortesia, che in produzione
 //!   sarebbero centinaia di righe per libro.
 //!
 //! Il taglio fra `debug` e `info` è lo stesso che separa la build di sviluppo da
@@ -68,6 +68,9 @@ pub struct JobContext {
     /// Tentativo in corso, a partire da 1. Serve ai gestori che calcolano
     /// l'attesa prima del prossimo tentativo con i valori del loro profilo.
     pub attempt: u32,
+    /// Quanti tentativi ha questo lavoro in tutto. Serve a sapere quando salire
+    /// con l'errore non porta a nessuna ripresa.
+    pub max_attempts: u32,
     control: Arc<JobControl>,
     db_path: PathBuf,
     last_progress: Mutex<Option<Instant>>,
@@ -79,8 +82,8 @@ pub struct JobContext {
     default_vault_root: PathBuf,
     /// Connessione tenuta aperta per la durata del lavoro.
     ///
-    /// Uno scaricamento di duecento carte scrive avanzamento, punto raggiunto e
-    /// riga dell'asset per ogni carta: aprire ogni volta una connessione nuova
+    /// Uno scaricamento di duecento pagine scrive avanzamento, punto raggiunto e
+    /// riga dell'asset per ogni pagina: aprire ogni volta una connessione nuova
     /// significa seicento aperture e altrettante raffiche di PRAGMA, per un
     /// database che è sempre lo stesso file.
     database: tokio::sync::Mutex<Option<Connection>>,
@@ -115,7 +118,7 @@ impl JobContext {
     }
 
     /// Come `report_progress`, con i **dettagli** che il tipo di lavoro sa dire:
-    /// carte fatte, byte arrivati e previsti, risoluzione chiesta, host. È JSON,
+    /// pagine fatte, byte arrivati e previsti, risoluzione chiesta, host. È JSON,
     /// e l'interfaccia mostra le chiavi che conosce.
     pub async fn report(
         &self,
@@ -660,6 +663,7 @@ impl JobEngine {
             // `attempt_count` è stato incrementato alla partenza, sul record
             // che qui è ancora quello letto prima.
             attempt: job.attempt_count + 1,
+            max_attempts: job.max_attempts,
             control,
             db_path: self.db_path.clone(),
             last_progress: Mutex::new(None),

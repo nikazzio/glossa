@@ -179,7 +179,7 @@ describe('attesa per i limiti della biblioteca', () => {
   });
 
   it('mostra quanto è arrivato e quanto si prevede in tutto', () => {
-    // Il peso della sola carta in corso non dice niente su quanto manca.
+    // Il peso della sola pagina in corso non dice niente su quanto manca.
     renderPanel([
       job({
         status: 'running',

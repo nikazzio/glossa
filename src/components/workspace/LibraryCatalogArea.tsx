@@ -42,9 +42,9 @@ interface LibraryCatalogAreaProps {
  * Il catalogo delle fonti. La ricerca vive nella Dashboard: qui si guarda
  * quello che si ha, si scarica, si toglie.
  *
- * Quante carte sono davvero sul computer si legge dai file presenti, non da uno
+ * Quante pagine sono davvero sul computer si legge dai file presenti, non da uno
  * stato tenuto a parte (D7): «parziale» è una condizione normale, non un
- * avviso — chi salva la scheda e scarica tre carte su duecento lo fa apposta.
+ * avviso — chi salva la scheda e scarica tre pagine su duecento lo fa apposta.
  */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const { t } = useTranslation();
@@ -57,7 +57,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
-  // Quante carte sono sul computer cambia quando un lavoro finisce: senza
+  // Quante pagine sono sul computer cambia quando un lavoro finisce: senza
   // guardare la coda, la riga continuerebbe a dire quello che diceva
   // all'apertura della schermata, anche dopo un manoscritto intero.
   const finishedDownloads = useJobsStore(
@@ -348,7 +348,7 @@ function CatalogEntryRow({
   };
 
   /**
-   * «Libera spazio» (D6): cancella le carte e basta. Restano scheda, manifesto e
+   * «Libera spazio» (D6): cancella le pagine e basta. Restano scheda, manifesto e
    * miniature. Il conteggio della scheda si aggiorna da sé: lo legge dalla
    * cartella, che dopo questa azione è vuota.
    */

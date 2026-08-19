@@ -125,7 +125,7 @@ export interface AddSourceToLibraryInput {
   materialType: string | null;
   collection: string | null;
   volume: string | null;
-  /** Carte dichiarate dal manifesto, quando la ricerca le ha già lette. */
+  /** Pagine dichiarate dal manifesto, quando la ricerca le ha già lette. */
   itemCount: number | null;
   workspaceId?: string;
 }
@@ -148,9 +148,9 @@ export interface LibraryCatalogEntry {
   thumbnailUrl: string | null;
   creator: string | null;
   date: string | null;
-  /** Carte dichiarate dal manifesto, quando si è già letto. */
+  /** Pagine dichiarate dal manifesto, quando si è già letto. */
   expectedPages: number | null;
-  /** Carte davvero presenti sul computer. */
+  /** Pagine davvero presenti sul computer. */
   localPages: number;
   /** Quanto occupano quelle pagine: serve alla conferma di «libera spazio» (D6). */
   localBytes: number;
