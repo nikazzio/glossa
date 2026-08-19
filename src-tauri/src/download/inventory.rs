@@ -291,6 +291,23 @@ mod tests {
     }
 
     #[test]
+    fn two_sizes_with_the_same_number_of_pages_still_have_one_principal() {
+        // Lo stesso libro scaricato due volte con tetti diversi. La finestra si
+        // fida di questa dichiarazione invece di confrontare i conteggi, quindi
+        // qui la risposta deve essere una sola e sempre la stessa.
+        let root = temp_vault("tie");
+        for index in 1..=10 {
+            put_page(&root, "archive_org", "v1", "2000", index);
+            put_page(&root, "archive_org", "v1", "max", index);
+        }
+
+        let inventory = of_version(&root, "v1").expect("la digitalizzazione c'è");
+
+        assert_eq!(inventory.principal.as_deref(), Some("2000"));
+        assert_eq!(inventory.principal_pages(), 10);
+    }
+
+    #[test]
     fn a_book_that_is_only_online_has_no_folder() {
         let root = temp_vault("remote-only");
         std::fs::create_dir_all(root.join(crate::vault::layout::PROVIDERS_DIR)).expect("radice");

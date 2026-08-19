@@ -37,7 +37,7 @@ use super::manifest::{parse, Manifest};
 use super::pages::{one_declaring_long_waits, PageFetcher, PageOutcome};
 use super::progress::{Progress, Reporter};
 use super::sidecar::{self, PageRecord};
-use super::sizing::{self, SizeCap, SizingRule};
+use super::sizing::{self, SizeCap, Sizing, SizingRule};
 use super::vault_io::{discard, folder_state, now_secs, stage_and_promote, stopped_outcome};
 
 pub const JOB_TYPE: &str = "source_download";
@@ -181,7 +181,7 @@ struct Prepared {
     /// Come calcolare la misura per questo libro (§5.9). Decisa qui perché qui
     /// ci sono già client, profilo e manifesto; il ciclo la può solo declassare
     /// a `Full` dopo un rifiuto.
-    rule: SizingRule,
+    sizing: Sizing,
 }
 
 pub struct SourceDownloadJob {
@@ -280,14 +280,16 @@ impl SourceDownloadJob {
                 .join(cap.folder()),
         );
 
-        let rule = self
-            .decide_rule(&client, &profile, &manifest, cap, signals)
+        let sizing = self
+            .decide_sizing(&client, &profile, &manifest, cap, signals)
             .await;
         log::info!(
-            "job download starting id={} provider={} pages={total} cap={} rule={rule:?}",
+            "job download starting id={} provider={} pages={total} cap={} rule={:?} correction={:?}",
             ctx.id,
             config.provider_key,
-            config.size_tag
+            config.size_tag,
+            sizing.rule,
+            sizing.correction
         );
 
         Ok(Some(Prepared {
@@ -300,7 +302,7 @@ impl SourceDownloadJob {
             title,
             cap,
             size_dir,
-            rule,
+            sizing,
         }))
     }
 
@@ -321,13 +323,13 @@ impl SourceDownloadJob {
             title,
             cap,
             size_dir,
-            rule,
+            sizing,
         } = prepared;
 
         // Stato di partenza letto dal disco, non da un punto salvato (§5.3).
         let mut known = sidecar::read(size_dir);
         let (present, bytes) = folder_state(size_dir);
-        let mut rule = rule.clone();
+        let mut sizing = sizing.clone();
 
         ctx.report_phase(phase::DOWNLOADING).await;
         let started_at = std::time::Instant::now();
@@ -364,7 +366,13 @@ impl SourceDownloadJob {
             }
 
             let outcome = one_declaring_long_waits(
-                &fetcher, &mut rule, page, &known, &progress, &reporter, signals,
+                &fetcher,
+                &mut sizing,
+                page,
+                &known,
+                &progress,
+                &reporter,
+                signals,
             )
             .await
             .inspect_err(|_| discard(staging))?;
@@ -434,19 +442,23 @@ impl SourceDownloadJob {
 
     /// Legge il descrittore della prima pagina e ne ricava la regola di calcolo
     /// per tutto il libro (§5.9). Costo: una richiesta, 4,3 s misurati.
-    async fn decide_rule(
+    ///
+    /// Serve a due cose, non a una: sapere se la biblioteca tiene pronti i
+    /// dimezzamenti, e sapere se le dimensioni che il manifesto dichiara sono
+    /// quelle vere. La seconda si paga a ogni pagina se non la si scopre qui.
+    async fn decide_sizing(
         &self,
         client: &reqwest::Client,
         profile: &NetworkProfile,
         manifest: &Manifest,
         cap: SizeCap,
         signals: &Signals<'_>,
-    ) -> SizingRule {
+    ) -> Sizing {
         if matches!(cap, SizeCap::Max) {
-            return SizingRule::Full;
+            return Sizing::new(SizingRule::Full);
         }
         let Some(page) = manifest.pages.first() else {
-            return SizingRule::ExactWidth;
+            return Sizing::new(SizingRule::ExactWidth);
         };
         let url = sizing::info_url(&page.image_service);
         let info = match fetch(client, &self.courtesy, profile, &url, 1, signals).await {
@@ -455,6 +467,6 @@ impl SourceDownloadJob {
             // (fatto 6). Non si riprova: il guadagno è di velocità, non di esito.
             _ => None,
         };
-        sizing::rule_from_info(info.as_ref(), cap)
+        sizing::from_info(info.as_ref(), Some(page), cap)
     }
 }

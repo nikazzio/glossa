@@ -50,13 +50,3 @@ export function principalPages(inventory: VersionInventory): number {
 export function inventoryBytes(inventory: VersionInventory): number {
   return inventory.sizes.reduce((total, size) => total + size.bytes, 0);
 }
-
-/**
- * Le misure prese **a parte**: quelle diverse dalla principale.
- *
- * Una cartella `max` con tre file su 328 non è un libro incompleto, è un libro
- * completo a 2000 con tre pagine prese a risoluzione piena di proposito (§5.6).
- */
-export function extraSizes(inventory: VersionInventory): SizeFolder[] {
-  return inventory.sizes.filter((size) => size.sizeTag !== inventory.principal && size.pages > 0);
-}

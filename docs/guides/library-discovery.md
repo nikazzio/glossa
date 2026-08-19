@@ -41,7 +41,11 @@ Il comando **scarica** mette in coda il lavoro vero: puoi cambiare schermata, me
 
 Quando una fonte è tutta sul computer il comando **sparisce**, e al suo posto resta un segno di spunta: non c'è niente da chiedere alla biblioteca, e con i limiti di cortesia un manoscritto intero può costare un quarto d'ora di rete.
 
-**A che risoluzione** — Glossa chiede la misura più vicina a 2000 pixel sul lato lungo fra quelle che la biblioteca dichiara di saper produrre. Se la biblioteca rifiuta quella richiesta, Glossa le chiede cosa sa produrre e riprova con la misura più vicina: non è un errore e non richiede niente da parte tua.
+**A che risoluzione** — Glossa **calcola** la misura da chiedere: dalle dimensioni della pagina, che il manifesto della biblioteca dichiara, ricava la larghezza che porta il lato lungo a 2000 pixel, e chiede quella. Non c'è nessuna trattativa e nessuna richiesta in più per pagina.
+
+All'avvio di ogni libro fa una domanda sola alla biblioteca, che costa qualche secondo su un lavoro di ore, e serve a due cose: capire se quella biblioteca tiene già pronte le misure ridotte — se le tiene, chiedergliene una vale il doppio della velocità — e verificare che le dimensioni dichiarate dal manifesto siano quelle vere. Se la domanda non riceve risposta non è un problema: si va avanti col calcolo, che funziona ovunque.
+
+Se la biblioteca rifiuta la misura chiesta, Glossa prende la pagina alla sua dimensione piena, la rimpicciolisce sul tuo computer e conserva solo il risultato — così il libro resta coerente col tetto che hai scelto. Il rifiuto si paga **una volta per libro**, non a ogni pagina: dalla successiva Glossa sa già come comportarsi.
 
 Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Archiviazione e lavori](/guides/storage-and-jobs).
 

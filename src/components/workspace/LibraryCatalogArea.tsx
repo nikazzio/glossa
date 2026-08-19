@@ -239,9 +239,16 @@ function CatalogEntryRow({
   const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
+  // Quale misura è la principale lo dice il deposito (§5.4): confrontare i
+  // conteggi sbaglierebbe sullo stesso libro scaricato due volte con tetti
+  // diversi, dove due cartelle hanno lo stesso numero di pagine.
+  const principal = entry.sizes.find((size) => size.sizeTag === entry.principalSize);
   // Le pagine che la biblioteca non serve non contano come mancanti: un libro
   // che le ha tutte tranne quelle è completo per quanto la biblioteca serve.
-  const notServed = entry.sizes.reduce((total, size) => total + size.missing, 0);
+  // **Solo quelle della misura principale**: il conteggio a cui vengono
+  // confrontate è il suo, e sommare anche le altre dichiarerebbe completo un
+  // libro incompleto.
+  const notServed = principal?.missing ?? 0;
   const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0, notServed);
   const availability =
     summary.availability === 'catalogued'
@@ -255,9 +262,8 @@ function CatalogEntryRow({
   // Le pagine prese a parte a una misura diversa (§5.6): vanno dette come
   // aggiunta, non come mancanza, altrimenti una cartella `max` con tre file su
   // 328 sembra un libro a metà.
-  const principal = entry.sizes.find((size) => size.pages === entry.localPages && entry.localPages > 0);
   const extra = entry.sizes
-    .filter((size) => size !== principal && size.pages > 0)
+    .filter((size) => size.sizeTag !== entry.principalSize && size.pages > 0)
     .reduce((total, size) => total + size.pages, 0);
   const extraNote = extra > 0 ? t('areas.library.extraFullSize', { count: extra }) : null;
   // Quante pagine ha l'opera si vede **senza aprire niente**: è il dato che

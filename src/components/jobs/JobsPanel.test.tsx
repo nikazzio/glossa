@@ -194,6 +194,38 @@ describe('attesa per i limiti della biblioteca', () => {
     expect(screen.getByText(/46 MB \/ ~476 MB/)).toBeInTheDocument();
   });
 
+  it('dice quante pagine la biblioteca non ha servito, accanto al conteggio', () => {
+    // Senza questo numero il conteggio direbbe «328 su 328» di un libro che sul
+    // disco ne ha 326, e la differenza sembrerebbe un difetto nostro.
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.99,
+        detail: JSON.stringify({
+          units: { done: 326, total: 328, label: 'pages' },
+          unavailable: 2,
+        }),
+      }),
+    ]);
+
+    expect(screen.getByText(/jobs\.detail\.unavailableShort/)).toBeInTheDocument();
+  });
+
+  it('quando la biblioteca ha servito tutto non compare nessun avviso', () => {
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.5,
+        detail: JSON.stringify({
+          units: { done: 164, total: 328, label: 'pages' },
+          unavailable: 0,
+        }),
+      }),
+    ]);
+
+    expect(screen.queryByText(/jobs\.detail\.unavailableShort/)).not.toBeInTheDocument();
+  });
+
   it('la riga si apre e mostra i dettagli veri', async () => {
     const user = userEvent.setup();
     renderPanel([

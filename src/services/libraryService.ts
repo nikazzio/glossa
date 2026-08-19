@@ -146,6 +146,8 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       // Le misure presenti: servono a distinguere «completo a 2000, più tre a
       // piena risoluzione» da «libro incompleto» (§5.4, §5.6).
       sizes: found?.sizes ?? [],
+      // Quale è la principale lo dice il deposito: la finestra non la indovina.
+      principalSize: found?.principal ?? null,
       // La chiave scritta nel deposito vince su quella nei metadati: le fonti
       // aggiunte prima che la provenienza venisse salvata hanno i file sotto
       // una chiave e i metadati vuoti.

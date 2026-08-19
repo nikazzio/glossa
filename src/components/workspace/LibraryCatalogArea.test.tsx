@@ -64,6 +64,7 @@ const entry = (
   localPages: 0,
   localBytes: 0,
   sizes: [],
+  principalSize: null,
   workspaces: [],
   providerKey: 'gallica',
   ...overrides,
@@ -100,6 +101,94 @@ describe('LibraryCatalogArea', () => {
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
     expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+  });
+
+  it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
+    // 308 sul disco su 328 dichiarate, venti che il server non ha mai servito:
+    // non è un lavoro a metà, e riscaricarle non le farebbe comparire (§5.3).
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 308,
+          expectedPages: 328,
+          principalSize: '2000',
+          sizes: [{ sizeTag: '2000', pages: 308, bytes: 1_000, missing: 20 }],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+  });
+
+  it('le pagine rifiutate di un altra misura non fanno sembrare completo un libro che non lo è', () => {
+    // Capita a chi ha scaricato lo stesso libro due volte con tetti diversi: le
+    // venti rifiutate stanno nella cartella `max`, e il conteggio a cui vengono
+    // confrontate è quello della misura principale.
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 308,
+          expectedPages: 328,
+          principalSize: '2000',
+          sizes: [
+            { sizeTag: '2000', pages: 308, bytes: 1_000, missing: 0 },
+            { sizeTag: 'max', pages: 3, bytes: 900, missing: 20 },
+          ],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+  });
+
+  it('le pagine prese a risoluzione piena sono un aggiunta, non un buco', () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 328,
+          expectedPages: 328,
+          principalSize: '2000',
+          sizes: [
+            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
+            { sizeTag: 'max', pages: 3, bytes: 900, missing: 0 },
+          ],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+  });
+
+  it('due misure con lo stesso numero di pagine non rendono casuale quale sia la principale', () => {
+    // Lo stesso libro scaricato due volte con tetti diversi. Quale sia la
+    // principale lo dichiara il deposito: senza quel dato, confrontare i
+    // conteggi qui sceglierebbe la prima delle due e l'altra diventerebbe
+    // «un'aggiunta» — ma l'aggiunta va detta una volta, non a caso.
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 328,
+          expectedPages: 328,
+          principalSize: 'max',
+          sizes: [
+            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
+            { sizeTag: 'max', pages: 328, bytes: 3_000, missing: 0 },
+          ],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    // L'aggiunta è la cartella `2000`, cioè quella che **non** è principale.
+    expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
   });
 
   it('dice quante pagine ha l opera senza doverla aprire', () => {

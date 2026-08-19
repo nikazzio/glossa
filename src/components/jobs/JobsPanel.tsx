@@ -122,6 +122,15 @@ function JobRow({ job }: { job: Job }) {
           {detail.units && (
             <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {detail.units.done}/{detail.units.total}
+              {/* Le pagine che la biblioteca non serve stanno **accanto** al
+                  conteggio: da solo direbbe «328 su 328» di un libro che sul
+                  disco ne ha 326, e quella differenza sembrerebbe un difetto. */}
+              {detail.unavailable !== undefined && detail.unavailable > 0 && (
+                <span className="text-terminal-dim">
+                  {' '}
+                  · {t('jobs.detail.unavailableShort', { count: detail.unavailable })}
+                </span>
+              )}
             </span>
           )}
           {detail.bytes && (
@@ -298,6 +307,10 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
         detail.bytes.estimated > 0
           ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
           : humanSize(detail.bytes.downloaded),
+    },
+    detail.unavailable !== undefined && {
+      label: t('jobs.detail.unavailable'),
+      value: String(detail.unavailable),
     },
     detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },

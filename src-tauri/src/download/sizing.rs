@@ -100,9 +100,38 @@ pub fn info_url(image_service: &str) -> String {
     format!("{}/info.json", image_service.trim_end_matches('/'))
 }
 
-/// La regola che vale per questo libro, decisa guardando **un** descrittore.
+/// Come calcolare la misura per questo libro: la regola, e la correzione da
+/// applicare alle dimensioni del manifesto quando il descrittore le smentisce.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Sizing {
+    pub rule: SizingRule,
+    /// `(dimensione vera, dimensione dichiarata)` sul lato lungo della pagina
+    /// campionata: le dimensioni del manifesto si moltiplicano per questo
+    /// rapporto prima di calcolare.
+    ///
+    /// Un rapporto e non due numeri assoluti perché le pagine di un libro hanno
+    /// dimensioni diverse fra loro: quello che si scopre leggendo **una** pagina
+    /// non è quanto è grande ogni pagina, è di quanto il manifesto sbaglia.
+    pub correction: Option<(u32, u32)>,
+}
+
+impl Sizing {
+    pub fn new(rule: SizingRule) -> Self {
+        Self {
+            rule,
+            correction: None,
+        }
+    }
+}
+
+/// Quanto le due misure possono divergere prima di chiamarla una bugia: sotto
+/// questa soglia è arrotondamento, e correggerlo non cambierebbe niente.
+const CORRECTION_TOLERANCE_PCT: u64 = 1;
+
+/// Come calcolare la misura per questo libro, deciso guardando **un**
+/// descrittore.
 ///
-/// Due domande sole:
+/// Due domande:
 ///
 /// 1. le misure dichiarate sono i dimezzamenti delle dimensioni dell'originale?
 ///    Se sì, la biblioteca tiene pronta la piramide e ci si aggancia;
@@ -114,18 +143,59 @@ pub fn info_url(image_service: &str) -> String {
 /// generale, che è quella che funziona ovunque. Il silenzio di `info.json` è
 /// passeggero (la stessa pagina che non rispondeva ha risposto alla sessione
 /// dopo), ma inseguirlo per un guadagno di velocità non vale la pena.
-pub fn rule_from_info(info: Option<&Value>, cap: SizeCap) -> SizingRule {
+pub fn from_info(info: Option<&Value>, page: Option<&Page>, cap: SizeCap) -> Sizing {
     if matches!(cap, SizeCap::Max) {
-        return SizingRule::Full;
+        return Sizing::new(SizingRule::Full);
     }
     let Some(info) = info else {
-        return SizingRule::ExactWidth;
+        return Sizing::new(SizingRule::ExactWidth);
     };
-    if declares_halvings(info) {
+    let rule = if declares_halvings(info) {
         SizingRule::Halvings
     } else {
         SizingRule::ExactWidth
+    };
+    Sizing {
+        rule,
+        correction: page.and_then(|page| correction_for(info, page)),
     }
+}
+
+/// Di quanto il manifesto sbaglia sulle dimensioni, misurato sulla pagina di cui
+/// abbiamo letto il descrittore.
+///
+/// Due condizioni, entrambe necessarie:
+///
+/// - **le proporzioni devono coincidere.** Se non coincidono, il descrittore non
+///   sta descrivendo la stessa immagine, e un rapporto ricavato da lì
+///   sballerebbe tutte le pagine invece di raddrizzarne una;
+/// - **lo scarto deve superare la tolleranza.** Un pixel di differenza è
+///   arrotondamento, e correggerlo non cambia niente (sbagliare il dimezzamento
+///   di un pixel è misurato: 2,5 s contro 2,6 s).
+///
+/// Senza questa correzione una pagina che il manifesto dichiara più piccola del
+/// tetto verrebbe chiesta a dimensione piena, che è il caso peggiore: massimo
+/// peso e massimo tempo su una pagina che si voleva ridotta.
+fn correction_for(info: &Value, page: &Page) -> Option<(u32, u32)> {
+    let (real_width, real_height) = pair(info)?;
+    let (declared_width, declared_height) = page.size?;
+    if declared_width == 0 || declared_height == 0 {
+        return None;
+    }
+    // Proporzioni: si confrontano incrociando i prodotti, così non serve
+    // dividere e non si perde niente per strada.
+    let crossed = (real_width as u64 * declared_height as u64)
+        .abs_diff(real_height as u64 * declared_width as u64);
+    let scale = real_width as u64 * declared_height as u64;
+    if crossed * 100 > scale.max(1) * CORRECTION_TOLERANCE_PCT {
+        return None;
+    }
+    let real_long = real_width.max(real_height) as u64;
+    let declared_long = declared_width.max(declared_height) as u64;
+    if real_long.abs_diff(declared_long) * 100 <= declared_long * CORRECTION_TOLERANCE_PCT {
+        return None;
+    }
+    Some((real_long as u32, declared_long as u32))
 }
 
 /// Il token da chiedere per questa pagina. Nessuna richiesta, nessuna memoria
@@ -134,7 +204,7 @@ pub fn rule_from_info(info: Option<&Value>, cap: SizeCap) -> SizingRule {
 /// Una pagina di cui il manifesto non dichiara le dimensioni non ha niente da
 /// calcolare: si chiede la dimensione piena, che è garantita a ogni livello di
 /// conformità.
-pub fn token_for(rule: &SizingRule, page: &Page, cap: SizeCap, presentation2: bool) -> SizeToken {
+pub fn token_for(sizing: &Sizing, page: &Page, cap: SizeCap, presentation2: bool) -> SizeToken {
     let full = || SizeToken(full_size(presentation2));
     let SizeCap::LongEdge(cap) = cap else {
         return full();
@@ -145,17 +215,36 @@ pub fn token_for(rule: &SizingRule, page: &Page, cap: SizeCap, presentation2: bo
     if width == 0 || height == 0 {
         return full();
     }
+    // Il manifesto smentito dal descrittore si raddrizza qui, prima di ogni
+    // decisione: sia il tetto sia il dimezzamento vanno calcolati sulle
+    // dimensioni vere, non su quelle dichiarate.
+    let (width, height) = corrected(width, height, sizing.correction);
     let long_edge = width.max(height);
     // Già dentro il tetto: chiedere di ridurla non ha senso, e chiedere una
     // larghezza uguale alla sua fa lavorare il servizio per niente.
     if long_edge <= cap {
         return full();
     }
-    match rule {
+    match sizing.rule {
         SizingRule::Full => full(),
         SizingRule::ExactWidth => SizeToken(format!("{},", width_for_cap(width, height, cap))),
         SizingRule::Halvings => SizeToken(format!("{},", halving_for_cap(width, long_edge, cap))),
     }
+}
+
+/// Le dimensioni vere: quelle del manifesto, portate in scala dal rapporto che
+/// il descrittore ha rivelato.
+fn corrected(width: u32, height: u32, correction: Option<(u32, u32)>) -> (u32, u32) {
+    let Some((real, declared)) = correction else {
+        return (width, height);
+    };
+    if declared == 0 {
+        return (width, height);
+    }
+    let scale = |value: u32| {
+        ((value as u64 * real as u64 + declared as u64 / 2) / declared as u64).max(1) as u32
+    };
+    (scale(width), scale(height))
 }
 
 /// La larghezza che porta il **lato lungo** al tetto.
@@ -296,7 +385,7 @@ mod tests {
     #[test]
     fn a_library_that_keeps_the_halvings_ready_is_recognised() {
         assert_eq!(
-            rule_from_info(Some(&archive_info()), SizeCap::LongEdge(2000)),
+            from_info(Some(&archive_info()), None, SizeCap::LongEdge(2000)).rule,
             SizingRule::Halvings
         );
     }
@@ -304,7 +393,7 @@ mod tests {
     #[test]
     fn a_library_that_declares_nothing_gets_the_general_rule() {
         assert_eq!(
-            rule_from_info(Some(&gallica_info()), SizeCap::LongEdge(2000)),
+            from_info(Some(&gallica_info()), None, SizeCap::LongEdge(2000)).rule,
             SizingRule::ExactWidth
         );
     }
@@ -313,7 +402,7 @@ mod tests {
     fn a_descriptor_that_does_not_answer_is_not_a_problem() {
         // Si torna alla regola generale, che funziona ovunque.
         assert_eq!(
-            rule_from_info(None, SizeCap::LongEdge(2000)),
+            from_info(None, None, SizeCap::LongEdge(2000)).rule,
             SizingRule::ExactWidth
         );
     }
@@ -321,11 +410,17 @@ mod tests {
     #[test]
     fn the_max_cap_has_nothing_to_calculate() {
         assert_eq!(
-            rule_from_info(Some(&archive_info()), SizeCap::Max),
+            from_info(Some(&archive_info()), None, SizeCap::Max).rule,
             SizingRule::Full
         );
         assert_eq!(
-            token_for(&SizingRule::Full, &page(2646, 4112), SizeCap::Max, false).as_str(),
+            token_for(
+                &Sizing::new(SizingRule::Full),
+                &page(2646, 4112),
+                SizeCap::Max,
+                false
+            )
+            .as_str(),
             "max"
         );
     }
@@ -335,7 +430,13 @@ mod tests {
         // Chiedere `max` a un servizio della vecchia Presentation 2.1 fa
         // rispondere 400: è un fatto pagato sul campo.
         assert_eq!(
-            token_for(&SizingRule::Full, &page(2646, 4112), SizeCap::Max, true).as_str(),
+            token_for(
+                &Sizing::new(SizingRule::Full),
+                &page(2646, 4112),
+                SizeCap::Max,
+                true
+            )
+            .as_str(),
             "full"
         );
     }
@@ -346,7 +447,7 @@ mod tests {
         // campo è 1513.
         assert_eq!(
             token_for(
-                &SizingRule::ExactWidth,
+                &Sizing::new(SizingRule::ExactWidth),
                 &page(5078, 6711),
                 SizeCap::LongEdge(2000),
                 false
@@ -362,7 +463,7 @@ mod tests {
         // (lato lungo 2056, sopra il tetto). Il quarto sarebbe 1028, sotto.
         assert_eq!(
             token_for(
-                &SizingRule::Halvings,
+                &Sizing::new(SizingRule::Halvings),
                 &page(2646, 4112),
                 SizeCap::LongEdge(2000),
                 false
@@ -378,7 +479,7 @@ mod tests {
         // per niente, e la dimensione piena è la misura più garantita di tutte.
         assert_eq!(
             token_for(
-                &SizingRule::ExactWidth,
+                &Sizing::new(SizingRule::ExactWidth),
                 &page(1200, 1600),
                 SizeCap::LongEdge(2000),
                 false
@@ -398,7 +499,7 @@ mod tests {
         };
         assert_eq!(
             token_for(
-                &SizingRule::ExactWidth,
+                &Sizing::new(SizingRule::ExactWidth),
                 &unknown,
                 SizeCap::LongEdge(2000),
                 false
@@ -406,6 +507,57 @@ mod tests {
             .as_str(),
             "max"
         );
+    }
+
+    #[test]
+    fn a_manifest_that_agrees_with_the_descriptor_needs_no_correction() {
+        let sizing = from_info(
+            Some(&archive_info()),
+            Some(&page(2646, 4112)),
+            SizeCap::LongEdge(2000),
+        );
+        assert_eq!(sizing.correction, None);
+    }
+
+    #[test]
+    fn a_manifest_that_lies_about_the_dimensions_is_corrected() {
+        // Il manifesto dichiara la pagina a metà delle sue dimensioni vere: il
+        // descrittore, che descrive l'immagine servita, dice 2646×4112.
+        let sizing = from_info(
+            Some(&archive_info()),
+            Some(&page(1323, 2056)),
+            SizeCap::LongEdge(2000),
+        );
+
+        assert_eq!(sizing.correction, Some((4112, 2056)));
+        // Senza correzione questa pagina sembrerebbe già dentro il tetto e
+        // verrebbe chiesta a dimensione piena — il caso più costoso di tutti.
+        assert_eq!(
+            token_for(&sizing, &page(1323, 2056), SizeCap::LongEdge(2000), false).as_str(),
+            "1323,"
+        );
+    }
+
+    #[test]
+    fn a_descriptor_with_different_proportions_is_not_trusted() {
+        // Proporzioni diverse significano che non è la stessa immagine: un
+        // rapporto ricavato da lì sballerebbe tutte le pagine del libro.
+        let sizing = from_info(
+            Some(&archive_info()),
+            Some(&page(2000, 2000)),
+            SizeCap::LongEdge(2000),
+        );
+        assert_eq!(sizing.correction, None);
+    }
+
+    #[test]
+    fn a_pixel_of_difference_is_rounding_and_not_a_lie() {
+        let sizing = from_info(
+            Some(&archive_info()),
+            Some(&page(2645, 4111)),
+            SizeCap::LongEdge(2000),
+        );
+        assert_eq!(sizing.correction, None);
     }
 
     #[test]
@@ -437,7 +589,12 @@ mod tests {
             (900, 1200, 2000, SizingRule::Halvings, "max"),
         ];
         for (width, height, cap, rule, expected) in cases {
-            let got = token_for(rule, &page(*width, *height), SizeCap::LongEdge(*cap), false);
+            let got = token_for(
+                &Sizing::new(rule.clone()),
+                &page(*width, *height),
+                SizeCap::LongEdge(*cap),
+                false,
+            );
             assert_eq!(
                 got.as_str(),
                 *expected,

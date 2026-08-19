@@ -191,6 +191,13 @@ export interface JobDetail {
     recovered?: boolean;
     url?: string;
   };
+  /**
+   * Pagine che la biblioteca ha dichiarato di non servire in questo avvio.
+   *
+   * Senza questo numero «fatte su totali» direbbe «328 su 328» di un libro che
+   * sul disco ne ha 326, e la differenza sembrerebbe un difetto nostro.
+   */
+  unavailable?: number;
   /** Il tetto scelto nelle impostazioni, che vale per tutto il lavoro. */
   cap?: string;
   /** Le misure che la biblioteca dichiara di saper servire, `larghezza×altezza`. */
@@ -248,6 +255,7 @@ export function parseJobDetail(raw: string | null): JobDetail {
               url: text(last.url),
             }
           : undefined,
+      unavailable: num(record.unavailable),
       cap: text(record.cap),
       available: Array.isArray(record.available)
         ? record.available.filter((value): value is string => typeof value === 'string')

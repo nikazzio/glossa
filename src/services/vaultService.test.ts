@@ -161,4 +161,24 @@ describe('disponibilità', () => {
     // expected_asset_count nullo significa "non lo sappiamo ancora".
     expect(summarizeAvailability(5, 0).availability).toBe('catalogued');
   });
+
+  it('le pagine che la biblioteca non serve non rendono il libro incompleto', () => {
+    // 308 pagine sul disco su 328 dichiarate, e le venti che mancano il server
+    // non le ha mai servite: riscaricarle non le farebbe comparire, quindi il
+    // libro è completo per quanto la biblioteca serve (§5.3).
+    const summary = summarizeAvailability(308, 328, 20);
+    expect(summary.availability).toBe('complete');
+    // Il conteggio mostrato resta quello vero: 308, non 328.
+    expect(summary.presentPages).toBe(308);
+  });
+
+  it('una pagina che manca davvero tiene il libro parziale', () => {
+    // Diciannove non servite su venti mancanti: la ventesima è nostra, e va
+    // ancora scaricata.
+    expect(summarizeAvailability(308, 328, 19).availability).toBe('partial');
+  });
+
+  it('senza pagine rifiutate il conto è quello di prima', () => {
+    expect(summarizeAvailability(308, 328).availability).toBe('partial');
+  });
 });

@@ -517,14 +517,19 @@ pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, S
         // Si rilegge il deposito adesso e non ci si fida del conto della
         // verifica: fra il controllo e la cancellazione può essere finito uno
         // scaricamento, e quella cartella non è più orfana (D5-bis).
-        for (path, bytes) in super::verification::orphan_folders(&root, &known) {
-            match std::fs::remove_dir_all(&path) {
+        for orphan in super::verification::orphan_folders(&root, &known) {
+            match std::fs::remove_dir_all(&orphan.path) {
                 Ok(()) => {
-                    deleted_files += 1;
-                    freed_bytes += bytes;
+                    // I **file** cancellati, non le cartelle: è il numero che
+                    // l'interfaccia mostra, e «3» al posto di tremila fa
+                    // sembrare innocua un'operazione che non lo è.
+                    deleted_files += orphan.files;
+                    freed_bytes += orphan.bytes;
                 }
                 // Una cartella che non si riesce a togliere non ferma le altre.
-                Err(error) => log::warn!("orphan not deleted path={} {error}", path.display()),
+                Err(error) => {
+                    log::warn!("orphan not deleted path={} {error}", orphan.path.display())
+                }
             }
         }
         log::info!("vault orphans deleted files={deleted_files} bytes={freed_bytes}");

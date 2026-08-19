@@ -20,7 +20,7 @@ use super::handler::DownloadConfig;
 use super::manifest::{image_url, Manifest, Page};
 use super::progress::{Progress, Reporter};
 use super::sidecar::{self, Note, PageRecord};
-use super::sizing::{self, SizeCap, SizingRule};
+use super::sizing::{self, SizeCap, Sizing, SizingRule};
 use super::vault_io::{now_secs, stage_and_promote};
 
 /// Qualità JPEG della riduzione fatta in casa dopo un rifiuto della misura
@@ -68,7 +68,7 @@ pub(crate) struct PageFetcher<'a> {
 impl PageFetcher<'_> {
     pub(crate) async fn one(
         &self,
-        rule: &mut SizingRule,
+        sizing: &mut Sizing,
         page: &Page,
         known: &BTreeMap<u32, PageRecord>,
         signals: &Signals<'_>,
@@ -85,7 +85,7 @@ impl PageFetcher<'_> {
             }
         }
 
-        let token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
+        let token = sizing::token_for(sizing, page, self.cap, self.manifest.presentation2);
         let url = image_url(&page.image_service, token.as_str());
         let first = match self.get(&url, signals).await {
             Ok(Some(fetched)) => Some(fetched),
@@ -101,7 +101,7 @@ impl PageFetcher<'_> {
                         page.index,
                         token.as_str()
                     );
-                    *rule = SizingRule::Full;
+                    sizing.rule = SizingRule::Full;
                     None
                 }
                 // 403/429/5xx e trasporto salgono al motore, che decide attesa e
@@ -110,13 +110,18 @@ impl PageFetcher<'_> {
             },
         };
 
+        // Quando la regola è già la dimensione piena, il token appena chiesto
+        // **è** la dimensione piena: ripeterla sarebbe la stessa richiesta due
+        // volte, e con il tetto a «massima» sarebbe una richiesta buttata per
+        // ogni pagina che la biblioteca non serve, verso biblioteche che
+        // bandiscono.
+        let full_token = sizing::full_size(self.manifest.presentation2);
+        let already_asked_full = token.as_str() == full_token;
+
         let (bytes, note) = match first {
             Some(fetched) => (fetched.bytes, None),
-            None if matches!(*rule, SizingRule::Full) => {
-                let full = image_url(
-                    &page.image_service,
-                    &sizing::full_size(self.manifest.presentation2),
-                );
+            None if matches!(sizing.rule, SizingRule::Full) && !already_asked_full => {
+                let full = image_url(&page.image_service, &full_token);
                 match self.get(&full, signals).await {
                     Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
                     Ok(None) => return Ok(PageOutcome::Stopped),
@@ -245,14 +250,14 @@ const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(1
 /// opposti.
 pub(crate) async fn one_declaring_long_waits(
     fetcher: &PageFetcher<'_>,
-    rule: &mut SizingRule,
+    sizing: &mut Sizing,
     page: &Page,
     known: &BTreeMap<u32, PageRecord>,
     progress: &Progress,
     reporter: &Reporter<'_>,
     signals: &Signals<'_>,
 ) -> Result<PageOutcome, JobError> {
-    let work = fetcher.one(rule, page, known, signals);
+    let work = fetcher.one(sizing, page, known, signals);
     tokio::pin!(work);
 
     tokio::select! {
