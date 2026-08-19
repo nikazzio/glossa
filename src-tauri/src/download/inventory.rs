@@ -69,10 +69,17 @@ impl VersionInventory {
 /// L'inventario di una digitalizzazione, cercata **sotto tutte le biblioteche**:
 /// la chiave si deduce da dati che possono essere già stati cancellati.
 pub fn of_version(root: &Path, version_id: &str) -> Option<VersionInventory> {
+    // La più fornita vince; a pari conteggio vince il nome della biblioteca,
+    // così la risposta non dipende dall'ordine in cui il sistema elenca le
+    // cartelle — che non è lo stesso su due macchine.
     version_folders(root, version_id)
         .into_iter()
         .map(|(provider_key, folder)| read_folder(&provider_key, version_id, &folder))
-        .max_by_key(|inventory| inventory.principal_pages())
+        .max_by(|a, b| {
+            a.principal_pages()
+                .cmp(&b.principal_pages())
+                .then_with(|| b.provider_key.cmp(&a.provider_key))
+        })
 }
 
 /// L'inventario di tutto il deposito, una voce per digitalizzazione trovata.
@@ -145,7 +152,11 @@ fn read_folder(provider_key: &str, version_id: &str, folder: &Path) -> VersionIn
     }
 }
 
-fn read_size_folder(size_tag: String, dir: &Path) -> SizeFolder {
+/// Quante pagine ci sono in una cartella di misura, quanto occupano e quante la
+/// biblioteca ha dichiarato di non servire. **Il file di lato pesa ma non è una
+/// pagina**: la regola sta qui e in nessun altro posto, perché il ciclo dello
+/// scaricamento chiede a questa funzione il suo stato di partenza.
+pub(crate) fn read_size_folder(size_tag: String, dir: &Path) -> SizeFolder {
     let mut pages = 0;
     let mut bytes = 0;
     if let Ok(entries) = std::fs::read_dir(dir) {
@@ -314,6 +325,22 @@ mod tests {
         let inventory = of_version(&root, "v1").expect("la digitalizzazione c'è");
         assert_eq!(inventory.provider_key, "archive_org");
         assert_eq!(inventory.principal_pages(), 5);
+    }
+
+    #[test]
+    fn two_libraries_with_the_same_number_of_pages_answer_the_same_way_every_time() {
+        // Senza un criterio a pari conteggio la risposta dipende dall'ordine in
+        // cui il sistema elenca le cartelle, che non è lo stesso su due macchine.
+        let root = temp_vault("two-providers-tie");
+        for provider in ["gallica", "archive_org"] {
+            for index in 1..=3 {
+                put_page(&root, provider, "v1", "2000", index);
+            }
+        }
+
+        let inventory = of_version(&root, "v1").expect("la digitalizzazione c'è");
+
+        assert_eq!(inventory.provider_key, "archive_org");
     }
 
     #[test]

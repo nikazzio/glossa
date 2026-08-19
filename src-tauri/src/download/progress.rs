@@ -35,6 +35,9 @@ pub(crate) struct Progress {
     /// Pagine che la biblioteca non ha servito **in questo avvio**: il totale
     /// storico lo dà la differenza fra cartella e conteggio atteso (§5.2).
     pub unavailable: u32,
+    /// Vero se almeno una pagina è stata saltata per un **guasto** e non per un
+    /// rifiuto: cambia come si dichiara un lavoro che non ha portato niente.
+    pub faulty: bool,
     /// Quando sono arrivate le ultime pagine scaricate: è la base della stima.
     pub recent: VecDeque<Instant>,
 }
@@ -123,7 +126,7 @@ impl Progress {
                 PageOutcome::Present => {
                     map.insert("recovered".into(), true.into());
                 }
-                PageOutcome::NotServed | PageOutcome::Stopped => {}
+                PageOutcome::NotServed | PageOutcome::Faulty | PageOutcome::Stopped => {}
             }
         }
         serde_json::json!({
@@ -196,6 +199,7 @@ mod tests {
             total: 100,
             bytes: 2_000_000,
             unavailable: 0,
+            faulty: false,
             recent,
         }
     }

@@ -197,9 +197,10 @@ pub fn save_progress(
     Ok(())
 }
 
-/// Cosa sta facendo adesso: lettura del manifesto, scelta della risoluzione,
-/// scaricamento. La scrive il gestore quando cambia, non a ogni giro, perché il
-/// pannello deve poterla leggere senza aspettare il freno di un secondo.
+/// Cosa sta facendo adesso: avvio, lettura del manifesto, scaricamento. Il
+/// vocabolario lo decide il tipo di lavoro. La scrive il gestore quando cambia,
+/// non a ogni giro, perché il pannello deve poterla leggere senza aspettare il
+/// freno di un secondo.
 pub fn save_phase(conn: &Connection, id: &str, phase: &str) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET phase = ?2, updated_at = CURRENT_TIMESTAMP \

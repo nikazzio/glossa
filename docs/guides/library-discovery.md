@@ -43,7 +43,7 @@ Quando una fonte è tutta sul computer il comando **sparisce**, e al suo posto r
 
 **A che risoluzione** — Glossa **calcola** la misura da chiedere: dalle dimensioni della pagina, che il manifesto della biblioteca dichiara, ricava la larghezza che porta il lato lungo a 2000 pixel, e chiede quella. Non c'è nessuna trattativa e nessuna richiesta in più per pagina.
 
-All'avvio di ogni libro fa una domanda sola alla biblioteca, che costa qualche secondo su un lavoro di ore, e serve a due cose: capire se quella biblioteca tiene già pronte le misure ridotte — se le tiene, chiedergliene una vale il doppio della velocità — e verificare che le dimensioni dichiarate dal manifesto siano quelle vere. Se la domanda non riceve risposta non è un problema: si va avanti col calcolo, che funziona ovunque.
+All'avvio di ogni libro fa una domanda sola alla biblioteca, che costa qualche secondo su un lavoro di ore, e serve a sapere se quella biblioteca tiene già pronte le misure ridotte: se le tiene, chiedergliene una vale il doppio della velocità. Se la domanda non riceve risposta non è un problema: si va avanti col calcolo, che funziona ovunque.
 
 Se la biblioteca rifiuta la misura chiesta, Glossa prende la pagina alla sua dimensione piena, la rimpicciolisce sul tuo computer e conserva solo il risultato — così il libro resta coerente col tetto che hai scelto. Il rifiuto si paga **una volta per libro**, non a ogni pagina: dalla successiva Glossa sa già come comportarsi.
 

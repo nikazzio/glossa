@@ -323,6 +323,12 @@ function CatalogEntryRow({
         return;
       }
       const expected = entry.expectedPages ?? 0;
+      if (expected <= 0) {
+        // Senza il conteggio atteso non c'è niente contro cui confrontare, e
+        // «tutte al loro posto» sarebbe una risposta su zero confronti.
+        toast.info(t('areas.library.verifyNoExpected', { count: principal.pages }));
+        return;
+      }
       const missing = Math.max(0, expected - principal.pages - principal.missing);
       if (missing === 0) {
         toast.success(t('areas.library.verifyIntact', { count: principal.pages }));

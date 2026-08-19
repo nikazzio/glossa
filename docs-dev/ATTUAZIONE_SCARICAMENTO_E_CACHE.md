@@ -445,7 +445,7 @@ ripristino non ha niente in più da preservare — anzi, il travaso in tabella t
 
 `integrity.rs` non cambia: continua a validare forma e impronta in un passaggio solo.
 
-### 3.10 La pagina singola a piena risoluzione (§5.6)
+### 3.10 La pagina singola a piena risoluzione (§5.6) — **rinviata al visore**
 
 Non è un lavoro della coda: è un comando.
 
@@ -454,8 +454,13 @@ download_single_page(version_id, index) -> Result<(), String>
 ```
 
 Chiede la dimensione piena, passa dalla cortesia, scrive in `pages/max/<indice>.jpg` con
-la sua riga nel file di lato di quella cartella. Vale identico su un libro sfogliato
-online, dove diventa la prima cosa che quel libro ha nel deposito.
+la sua riga nel file di lato di quella cartella.
+
+**Non nel ramo 2** *(2026-08-19)*: una pagina si chiede guardandola, e il visore non
+c'è. Il comando sarebbe scritto e mai invocato. Quello che il ramo 2 fa è tenere pronto
+tutto il resto — la cartella per misura, il file di lato, l'inventario che distingue la
+misura principale dalle pagine prese a parte — e non promettere il comando nei testi:
+il ripristino dice che quelle pagine non sono tornate, e basta.
 
 ### 3.11 Prove del ramo 2
 

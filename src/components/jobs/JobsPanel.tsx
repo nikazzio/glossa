@@ -126,7 +126,7 @@ function JobRow({ job }: { job: Job }) {
                   conteggio: da solo direbbe «328 su 328» di un libro che sul
                   disco ne ha 326, e quella differenza sembrerebbe un difetto. */}
               {detail.unavailable !== undefined && detail.unavailable > 0 && (
-                <span className="text-terminal-dim">
+                <span className="text-terminal-muted">
                   {' '}
                   · {t('jobs.detail.unavailableShort', { count: detail.unavailable })}
                 </span>
@@ -308,10 +308,11 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
           ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
           : humanSize(detail.bytes.downloaded),
     },
-    detail.unavailable !== undefined && {
-      label: t('jobs.detail.unavailable'),
-      value: String(detail.unavailable),
-    },
+    detail.unavailable !== undefined &&
+      detail.unavailable > 0 && {
+        label: t('jobs.detail.unavailable'),
+        value: String(detail.unavailable),
+      },
     detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
     detail.host && { label: t('jobs.detail.host'), value: detail.host },
@@ -433,9 +434,8 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   if (job.status === 'queued') return <span>{t('jobs.queued')}</span>;
 
   // In esecuzione si legge **cosa sta facendo**, non un generico «in corso»:
-  // lettura del manifesto, scelta della risoluzione, scaricamento. Le fasi che
-  // l'interfaccia non conosce si mostrano com'è scritta la chiave, invece di
-  // sparire.
+  // lettura del manifesto, scaricamento. Le fasi che l'interfaccia non conosce si
+  // mostrano com'è scritta la chiave, invece di sparire.
   const phase = job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : null;
   const parts = [phase, eta ? t('jobs.etaShort', { eta }) : null].filter(Boolean);
   return <span>{parts.length > 0 ? parts.join(' · ') : t('jobs.running')}</span>;

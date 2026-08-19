@@ -55,6 +55,8 @@ pub(crate) enum PageOutcome {
     /// La biblioteca non l'ha servita (404/410), o l'aveva già dichiarata tale
     /// entro `RETRY_MISSING_AFTER_SECS`.
     NotServed,
+    /// Saltata per un guasto che non è passato: si conta, non si registra.
+    Faulty,
     /// Pausa o annullamento durante l'attesa del turno.
     Stopped,
 }
@@ -71,8 +73,15 @@ enum Asked {
         /// stata ridotta in casa.
         note: Option<Note>,
     },
-    /// La biblioteca non la serve, o non la serve più nemmeno a dimensione piena.
+    /// La biblioteca ha **dichiarato** di non servirla: 404 o 410, o un rifiuto
+    /// anche a dimensione piena. Lascia la sua riga nel file di lato.
     NotServed,
+    /// Un guasto che non è passato nemmeno all'ultimo tentativo: la pagina si
+    /// salta per questo giro e **non** lascia nessuna riga. Un silenzio della
+    /// rete o una manutenzione non sono la biblioteca che dichiara di non avere
+    /// quella pagina, e scriverlo la renderebbe irraggiungibile per una
+    /// settimana (§5.3: la riga è per i rifiuti dichiarati).
+    Faulty,
     /// Pausa o annullamento durante l'attesa del turno.
     Stopped,
 }
@@ -120,6 +129,7 @@ impl PageFetcher<'_> {
         let (bytes, token, note) = match self.ask(rule, page, signals).await? {
             Asked::Got { bytes, token, note } => (bytes, token, note),
             Asked::NotServed => return self.not_served(page),
+            Asked::Faulty => return Ok(PageOutcome::Faulty),
             Asked::Stopped => return Ok(PageOutcome::Stopped),
         };
 
@@ -160,10 +170,13 @@ impl PageFetcher<'_> {
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Asked, JobError> {
-        let token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
+        let mut token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
         let url = image_url(&page.image_service, &token);
         // Vero quando vale la pena chiedere la stessa pagina a dimensione piena.
         let mut try_full = false;
+        // Vero quando il motivo è un guasto e non un rifiuto dichiarato: cambia
+        // cosa si scrive nel file di lato, cioè niente.
+        let mut faulty = false;
         let first = match self.get(&url, signals).await {
             Ok(Some(fetched)) => Some(fetched),
             Ok(None) => return Ok(Asked::Stopped),
@@ -197,6 +210,7 @@ impl PageFetcher<'_> {
                         page.index
                     );
                     try_full = true;
+                    faulty = true;
                     None
                 }
                 // 403/429 e i guasti prima dell'ultimo tentativo salgono al
@@ -216,22 +230,28 @@ impl PageFetcher<'_> {
         let (bytes, note) = match first {
             Some(fetched) => (fetched.bytes, None),
             None if try_full && !already_asked_full => {
-                match self
+                let asked_full = self
                     .get(&image_url(&page.image_service, &full_token), signals)
-                    .await
-                {
+                    .await;
+                // La misura riportata è quella davvero chiesta: la dimensione
+                // piena, non quella calcolata che il servizio ha rifiutato.
+                token = full_token.clone();
+                match asked_full {
                     Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
                     Ok(None) => return Ok(Asked::Stopped),
-                    // Rifiutata anche a dimensione piena, o guasta all'ultimo
-                    // tentativo: si salta e si va avanti. «Stai correndo troppo»
-                    // invece sale sempre, perché non è la pagina a mancare.
+                    // Rifiutata anche a dimensione piena: la biblioteca ha detto
+                    // di non averla, e lascia la sua riga.
                     Err(error) if !error.kind.is_retryable() => return Ok(Asked::NotServed),
+                    // Guasta anche a dimensione piena: si salta senza riga.
+                    // «Stai correndo troppo» invece sale sempre, perché non è la
+                    // pagina a mancare (fatto 1).
                     Err(error) if error.kind == ErrorKind::Transport && self.last_attempt() => {
-                        return Ok(Asked::NotServed)
+                        return Ok(Asked::Faulty)
                     }
                     Err(error) => return Err(error),
                 }
             }
+            None if faulty => return Ok(Asked::Faulty),
             None => return Ok(Asked::NotServed),
         };
         Ok(Asked::Got { bytes, token, note })

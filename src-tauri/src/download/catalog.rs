@@ -1,6 +1,6 @@
 //! Le poche cose che restano nel database dopo il §5.4: conteggio atteso,
-//! licenza, attribuzione, riga del manifesto, titolo dell'opera e profilo di
-//! rete. Tutto il resto lo dice la cartella.
+//! licenza, attribuzione, titolo dell'opera e profilo di rete. Tutto il resto lo
+//! dice la cartella — dove sta il manifesto compreso.
 
 use rusqlite::params;
 

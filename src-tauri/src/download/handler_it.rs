@@ -297,11 +297,48 @@ async fn a_page_that_keeps_failing_does_not_leave_the_book_truncated() {
     assert_eq!(record.attempt_count, 2);
     assert_eq!(pages_on_disk(&vault), 3, "due pagine più il file di lato");
     let records = sidecar_records(&vault);
+    // **Nessuna riga per la pagina guasta**: «non servita dalla biblioteca» è una
+    // dichiarazione della biblioteca, e un guasto non è quello. Con la riga, la
+    // ripresa l'avrebbe saltata per una settimana.
     assert!(
-        records[&2].is_missing(),
-        "la pagina malata lascia la sua riga"
+        !records.contains_key(&2),
+        "un guasto non lascia niente scritto"
     );
     assert!(records[&3].checksum.is_some(), "e quella dopo è arrivata");
+
+    let _ = std::fs::remove_dir_all(&vault);
+}
+
+#[tokio::test]
+async fn a_network_that_is_down_does_not_make_a_book_unreachable_for_a_week() {
+    // La rete cade a metà lavoro: **nessuna** pagina arriva. Se ognuna lasciasse
+    // la sua riga «non servita», per sette giorni ogni ripresa le salterebbe
+    // tutte e morirebbe subito, e l'unica via d'uscita sarebbe «libera spazio»,
+    // che porta via anche le pagine buone.
+    let server = MockServer::start().await;
+    mount_manifest(&server, 3).await;
+    mount_descriptors(&server).await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/img/\d+/full/.*"))
+        .respond_with(ResponseTemplate::new(503))
+        .mount(&server)
+        .await;
+
+    let vault = temp_dir("rete_giu_vault");
+    let manifest_url = format!("{}/manifest.json", server.uri());
+    let engine = engine_with(temp_db("rete_giu", &manifest_url), vault.clone());
+    engine.submit(&download_job(&manifest_url)).await.unwrap();
+
+    let record = run_until_terminal(&engine).await;
+
+    assert_eq!(record.status, JobStatus::Error);
+    // Un guasto è ritentabile: dichiararlo «la biblioteca non ha servito nessuna
+    // pagina» lo rendeva definitivo.
+    assert_eq!(record.error_kind.as_deref(), Some("transport"));
+    assert!(
+        sidecar_records(&vault).is_empty(),
+        "niente da saltare alla prossima ripresa"
+    );
 
     let _ = std::fs::remove_dir_all(&vault);
 }

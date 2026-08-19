@@ -70,9 +70,10 @@ pub fn manifest_path(provider_key: &str, version_id: &str) -> Result<PathBuf, St
     Ok(version_dir(provider_key, version_id)?.join(MANIFEST_FILE))
 }
 
-/// Le miniature si scaricano tutte all'aggiunta della fonte (D6): circa 3 MB
-/// per un codice, e rendono il libro sfogliabile senza rete e senza pagine.
-/// Non hanno livello di dimensione: ne esiste una sola per pagina.
+/// Le miniature si **ricavano dalla pagina scaricata** (D6, corretta il
+/// 2026-08-16): non costano nessuna richiesta alla biblioteca, e se manca o si
+/// rovina si rigenera. Non hanno livello di dimensione: ne esiste una sola per
+/// pagina.
 pub fn thumbnail_path(
     provider_key: &str,
     version_id: &str,

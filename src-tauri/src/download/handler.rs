@@ -33,12 +33,13 @@ use crate::vault::{integrity, layout};
 use super::catalog::{profile_for, record_manifest, source_title};
 use super::courtesy::{Courtesy, Signals};
 use super::fetch::{build_client, fetch, host_of};
+use super::inventory;
 use super::manifest::{parse, Manifest};
 use super::pages::{one_declaring_long_waits, PageFetcher, PageOutcome};
 use super::progress::{Progress, Reporter};
-use super::sidecar::{self, PageRecord};
+use super::sidecar;
 use super::sizing::{self, SizeCap, SizingRule};
-use super::vault_io::{discard, folder_state, now_secs, stage_and_promote, stopped_outcome};
+use super::vault_io::{discard, stage_and_promote, stopped_outcome};
 
 pub const JOB_TYPE: &str = "source_download";
 
@@ -117,42 +118,45 @@ fn finished(
         progress.bytes
     );
     if progress.present == 0 {
+        // Cartella vuota per un guasto o cartella vuota per un rifiuto sono due
+        // esiti diversi: il primo si ritenta, il secondo no. Dichiararli allo
+        // stesso modo faceva finire in errore definitivo una rete caduta.
+        let (kind, message) = if progress.faulty {
+            (ErrorKind::Transport, "nessuna pagina è arrivata")
+        } else {
+            (
+                ErrorKind::NotFound,
+                "la biblioteca non ha servito nessuna pagina",
+            )
+        };
         return Err(JobError {
             retry_after: Some(Duration::from_secs(profile.wait_after(None, attempt, None))),
-            ..JobError::new(
-                ErrorKind::NotFound,
-                "la biblioteca non ha servito nessuna pagina".to_string(),
-            )
+            ..JobError::new(kind, message.to_string())
         });
     }
     Ok(Outcome::Done)
 }
 
-/// Porta l'esito di una pagina dentro il conto del lavoro e la memoria di ciò
-/// che la biblioteca non serve.
-fn account_for(
-    outcome: &PageOutcome,
-    page: &super::manifest::Page,
-    progress: &mut Progress,
-    known: &mut std::collections::BTreeMap<u32, PageRecord>,
-) {
+/// Porta l'esito di una pagina dentro il conto del lavoro.
+///
+/// Le righe già note non si aggiornano: il ciclo passa su ogni pagina **una
+/// volta sola**, quindi quello che si scriverebbe qui non lo rileggerebbe
+/// nessuno.
+fn account_for(outcome: &PageOutcome, progress: &mut Progress) {
     match outcome {
         PageOutcome::Written { bytes, .. } => {
             progress.present += 1;
             progress.bytes += bytes;
             progress.fetched(std::time::Instant::now());
-            // La riga appena scritta vale per il resto del lavoro: una pagina
-            // prima dichiarata mancante non lo è più.
-            known.remove(&page.index);
         }
         PageOutcome::Present => progress.present += 1,
-        PageOutcome::NotServed => {
+        // Un guasto si conta come le altre non arrivate, ma non lascia niente
+        // sul disco: la ripresa la richiede di nuovo.
+        PageOutcome::Faulty => {
             progress.unavailable += 1;
-            known.insert(
-                page.index,
-                PageRecord::not_served(page.index, page.label.clone(), now_secs()),
-            );
+            progress.faulty = true;
         }
+        PageOutcome::NotServed => progress.unavailable += 1,
         // Il ciclo esce prima: qui non arriva.
         PageOutcome::Stopped => {}
     }
@@ -325,8 +329,8 @@ impl SourceDownloadJob {
         } = prepared;
 
         // Stato di partenza letto dal disco, non da un punto salvato (§5.3).
-        let mut known = sidecar::read(size_dir);
-        let (present, bytes) = folder_state(size_dir);
+        let known = sidecar::read(size_dir);
+        let start = inventory::read_size_folder(cap.folder(), size_dir);
         let mut rule = rule.clone();
 
         ctx.report_phase(phase::DOWNLOADING).await;
@@ -350,10 +354,11 @@ impl SourceDownloadJob {
             profile,
         };
         let mut progress = Progress {
-            present,
+            present: start.pages,
             total: manifest.pages.len() as u32,
-            bytes,
+            bytes: start.bytes,
             unavailable: 0,
+            faulty: false,
             recent: std::collections::VecDeque::new(),
         };
 
@@ -371,7 +376,7 @@ impl SourceDownloadJob {
             if matches!(outcome, PageOutcome::Stopped) {
                 return Ok(stopped_outcome(ctx.cancel_requested(), staging));
             }
-            account_for(&outcome, page, &mut progress, &mut known);
+            account_for(&outcome, &mut progress);
 
             reporter
                 .advanced(

@@ -10,9 +10,10 @@
 //! scrittura della riga, e dei depositi riempiti prima che il file di lato
 //! esistesse.
 //!
-//! Miniature e manifesto non hanno impronta registrata: le prime si rigenerano
-//! dalla pagina, il secondo è validato all'arrivo. La completa li controlla
-//! solo strutturalmente.
+//! **Le miniature non si verificano affatto**: si ricavano dalla pagina, e una
+//! che manca o è rovinata si rigenera. Il manifesto entra nell'elenco ma senza
+//! checksum registrato, quindi la completa lo controlla solo strutturalmente:
+//! quando è arrivato era già stato validato.
 //!
 //! Orfano è una **cartella di digitalizzazione che il database non conosce
 //! più** (D5-bis): nell'uso normale si ignora, ma occupa spazio e nessuno la

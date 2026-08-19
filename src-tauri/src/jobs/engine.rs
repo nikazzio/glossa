@@ -82,10 +82,10 @@ pub struct JobContext {
     default_vault_root: PathBuf,
     /// Connessione tenuta aperta per la durata del lavoro.
     ///
-    /// Uno scaricamento di duecento pagine scrive avanzamento, punto raggiunto e
-    /// riga dell'asset per ogni pagina: aprire ogni volta una connessione nuova
-    /// significa seicento aperture e altrettante raffiche di PRAGMA, per un
-    /// database che è sempre lo stesso file.
+    /// Un lavoro lungo scrive avanzamento a ogni unità, e ce ne sono centinaia:
+    /// aprire ogni volta una connessione nuova significa centinaia di aperture e
+    /// altrettante raffiche di PRAGMA, per un database che è sempre lo stesso
+    /// file.
     database: tokio::sync::Mutex<Option<Connection>>,
 }
 

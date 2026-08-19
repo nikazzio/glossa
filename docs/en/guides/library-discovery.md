@@ -43,7 +43,7 @@ When a source is entirely on your computer the command **disappears** and a tick
 
 **At what resolution** — Glossa **computes** the size to ask for: from the page dimensions declared in the library's manifest it works out the width that brings the long side to 2000 pixels, and asks for that. There is no negotiation and no extra request per page.
 
-At the start of every book it asks the library one single question, which costs a few seconds on a job that lasts hours, and it serves two purposes: finding out whether that library keeps reduced sizes ready — if it does, asking for one is twice as fast — and checking that the dimensions declared in the manifest are the real ones. If the question goes unanswered it is not a problem: the computation carries on, and it works everywhere.
+At the start of every book it asks the library one single question, which costs a few seconds on a job that lasts hours, and it serves one purpose: finding out whether that library keeps reduced sizes ready — if it does, asking for one is twice as fast. If the question goes unanswered it is not a problem: the computation carries on, and it works everywhere.
 
 If the library refuses the size asked for, Glossa takes the page at its full size, shrinks it on your computer and keeps only the result — so the book stays consistent with the ceiling you chose. That refusal is paid **once per book**, not on every page: from the next one on, Glossa already knows what to do.
 

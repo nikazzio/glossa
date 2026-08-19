@@ -728,7 +728,15 @@ quella presente, l'interfaccia lo dichiara e offre di scaricarla alla massima
 risoluzione. Il nuovo file **si aggiunge**, non sostituisce» — e la disposizione per
 misura esiste esattamente per questo.
 
-**Come funziona, senza niente di nuovo:**
+**Quando si fa: con il visore, non prima.** *(Deciso il 2026-08-19.)* Il pezzo che
+manca non è il comando — chiedi la dimensione piena, passi dalla cortesia, scrivi in
+`pages/max/` con la sua riga — ma il **posto da cui chiederlo**: si chiede guardando
+una pagina, e il visore non c'è. Scritto adesso sarebbe un comando che nessuno può
+invocare, quindi va nel ramo del visore. Il ripristino, che è l'unico punto che oggi
+ne sentirebbe la mancanza (§5.4), si limita a dire che quelle pagine non sono
+tornate, senza indicare un comando che non esiste.
+
+**Come funziona, quando ci sarà:**
 
 - la pagina si chiede alla dimensione piena e finisce in `pages/max/0034.jpg`, con la
   sua riga nel file di lato di quella cartella;
