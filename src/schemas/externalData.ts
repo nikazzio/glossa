@@ -48,20 +48,34 @@ const backupTablesShape = Object.fromEntries(
   BACKUP_TABLES.map((table) => [table, backupTableSchema]),
 ) as Record<BackupTable, typeof backupTableSchema>;
 
+/** Una cartella di misura che c'era, con quante pagine conteneva. */
+const downloadedSizeSchema = z.object({
+  sizeTag: z.string(),
+  pages: z.number().int().nonnegative(),
+});
+
 /**
- * Le opere che erano scaricate quando il backup è stato fatto, con la misura
- * usata (D31). Le immagini non ci sono: questo elenco è ciò che permette al
- * ripristino di proporre «riscarico le dodici opere che avevi?».
+ * Le opere che erano scaricate quando il backup è stato fatto, con **tutte** le
+ * misure che avevano (D31). Le immagini non ci sono: questo elenco è ciò che
+ * permette al ripristino di proporre «riscarico le dodici opere che avevi?».
+ *
+ * Le misure sono più di una perché lo sono nel deposito: un libro può essere
+ * completo a 2000 e avere tre pagine prese a piena risoluzione di proposito
+ * (§5.6). Registrarne una sola le faceva sparire dal ripristino senza dirlo.
  */
 const downloadedSourceSchema = z.object({
   versionId: z.string(),
   sourceTitle: z.string(),
   providerKey: z.string().nullable(),
   manifestUrl: z.string().nullable(),
-  sizeTag: z.string().nullable(),
-  pages: z.number().int().nonnegative(),
+  /** La misura con cui il libro era stato scaricato: quella con più pagine. */
+  principalSize: z.string().nullable(),
+  sizes: z.array(downloadedSizeSchema),
 });
 
+export const downloadedSourcesSchema = z.array(downloadedSourceSchema);
+
+export type DownloadedSize = z.infer<typeof downloadedSizeSchema>;
 export type DownloadedSource = z.infer<typeof downloadedSourceSchema>;
 
 export const backupPayloadSchema = z.object({

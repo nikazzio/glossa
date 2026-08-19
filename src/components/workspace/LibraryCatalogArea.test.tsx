@@ -13,14 +13,19 @@ vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
-  listVersionVaultPaths: vi.fn().mockResolvedValue([]),
-  forgetVersionPages: vi.fn().mockResolvedValue(undefined),
   // Nessun file registrato: la chiave viene dai metadati, come per una fonte
   // appena aggiunta.
   versionProviderKey: vi.fn().mockResolvedValue(null),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
+}));
+
+// L'inventario del deposito passa dal motore: nelle prove non c'è, e la scheda
+// deve reggere la risposta «niente sul disco».
+vi.mock('../../services/inventoryService', () => ({
+  versionInventory: vi.fn().mockResolvedValue(null),
+  libraryInventory: vi.fn().mockResolvedValue([]),
 }));
 
 // La conferma vive in un componente montato altrove: qui si dà per data,
@@ -33,7 +38,6 @@ vi.mock('../../services/vaultService', async (importOriginal) => {
     ...actual,
     deleteVersionFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
     freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0 }),
-    verifyFilesPresent: vi.fn().mockResolvedValue([]),
   };
 });
 
@@ -63,6 +67,8 @@ const entry = (
   expectedPages: 210,
   localPages: 0,
   localBytes: 0,
+  sizes: [],
+  principalSize: null,
   workspaces: [],
   providerKey: 'gallica',
   ...overrides,
@@ -99,6 +105,94 @@ describe('LibraryCatalogArea', () => {
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
     expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+  });
+
+  it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
+    // 308 sul disco su 328 dichiarate, venti che il server non ha mai servito:
+    // non è un lavoro a metà, e riscaricarle non le farebbe comparire (§5.3).
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 308,
+          expectedPages: 328,
+          principalSize: '2000',
+          sizes: [{ sizeTag: '2000', pages: 308, bytes: 1_000, missing: 20 }],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+  });
+
+  it('le pagine rifiutate di un altra misura non fanno sembrare completo un libro che non lo è', () => {
+    // Capita a chi ha scaricato lo stesso libro due volte con tetti diversi: le
+    // venti rifiutate stanno nella cartella `max`, e il conteggio a cui vengono
+    // confrontate è quello della misura principale.
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 308,
+          expectedPages: 328,
+          principalSize: '2000',
+          sizes: [
+            { sizeTag: '2000', pages: 308, bytes: 1_000, missing: 0 },
+            { sizeTag: 'max', pages: 3, bytes: 900, missing: 20 },
+          ],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+  });
+
+  it('le pagine prese a risoluzione piena sono un aggiunta, non un buco', () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 328,
+          expectedPages: 328,
+          principalSize: '2000',
+          sizes: [
+            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
+            { sizeTag: 'max', pages: 3, bytes: 900, missing: 0 },
+          ],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+  });
+
+  it('due misure con lo stesso numero di pagine non rendono casuale quale sia la principale', () => {
+    // Lo stesso libro scaricato due volte con tetti diversi. Quale sia la
+    // principale lo dichiara il deposito: senza quel dato, confrontare i
+    // conteggi qui sceglierebbe la prima delle due e l'altra diventerebbe
+    // «un'aggiunta» — ma l'aggiunta va detta una volta, non a caso.
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 328,
+          expectedPages: 328,
+          principalSize: 'max',
+          sizes: [
+            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
+            { sizeTag: 'max', pages: 328, bytes: 3_000, missing: 0 },
+          ],
+        }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    // L'aggiunta è la cartella `2000`, cioè quella che **non** è principale.
+    expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
   });
 
   it('dice quante pagine ha l opera senza doverla aprire', () => {
@@ -201,7 +295,7 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
   });
 
-  it('con carte sul computer verifica e libera spazio si accendono', () => {
+  it('con pagine sul computer verifica e libera spazio si accendono', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 48_234_496 })] });
 
     render(<LibraryCatalogArea />);
@@ -266,7 +360,6 @@ describe('LibraryCatalogArea', () => {
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [{ id: 'v1', sourceId: 's1', label: 'primary', versionKind: 'iiif_manifest', sourceUrl: 'https://x.test/m.json', isPrimary: true, createdAt: '2026-01-01' }],
-        assets: [],
         linkedWorkspaceIds: [],
       },
     });
@@ -289,7 +382,6 @@ describe('LibraryCatalogArea', () => {
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [],
-        assets: [],
         linkedWorkspaceIds: ['ws-2'],
       },
     });
@@ -312,7 +404,6 @@ describe('LibraryCatalogArea', () => {
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [],
-        assets: [],
         linkedWorkspaceIds: [],
       },
     });

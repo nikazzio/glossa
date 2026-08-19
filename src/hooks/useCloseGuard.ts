@@ -16,7 +16,7 @@ import { isRunning, useJobsStore } from '../stores/jobsStore';
  */
 /**
  * Quanto si aspetta che i lavori si fermino davvero prima di chiudere. Oltre
- * questo si chiude comunque: niente va perduto — le carte a metà non entrano nel
+ * questo si chiude comunque: niente va perduto — le pagine a metà non entrano nel
  * deposito (D16-bis) — e una finestra che non si chiude è peggio.
  */
 const PAUSE_GRACE_MS = 5_000;
@@ -62,7 +62,7 @@ export function useCloseGuard() {
           const { pause } = useJobsStore.getState();
           await Promise.all(active.filter(isRunning).map((job) => pause(job.id).catch(() => {})));
           // La pausa è cooperativa (D14): chiedere non è fermare. Si dà ai
-          // lavori il tempo di finire la carta in corso, altrimenti la finestra
+          // lavori il tempo di finire la pagina in corso, altrimenti la finestra
           // muore con lo stato «in pausa…» sul database, e a rimetterlo a posto
           // sarebbe il riavvio successivo.
           await waitUntilStopped();

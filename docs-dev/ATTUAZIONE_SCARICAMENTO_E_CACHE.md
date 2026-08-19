@@ -445,7 +445,7 @@ ripristino non ha niente in più da preservare — anzi, il travaso in tabella t
 
 `integrity.rs` non cambia: continua a validare forma e impronta in un passaggio solo.
 
-### 3.10 La pagina singola a piena risoluzione (§5.6)
+### 3.10 La pagina singola a piena risoluzione (§5.6) — **rinviata al visore**
 
 Non è un lavoro della coda: è un comando.
 
@@ -454,8 +454,13 @@ download_single_page(version_id, index) -> Result<(), String>
 ```
 
 Chiede la dimensione piena, passa dalla cortesia, scrive in `pages/max/<indice>.jpg` con
-la sua riga nel file di lato di quella cartella. Vale identico su un libro sfogliato
-online, dove diventa la prima cosa che quel libro ha nel deposito.
+la sua riga nel file di lato di quella cartella.
+
+**Non nel ramo 2** *(2026-08-19)*: una pagina si chiede guardandola, e il visore non
+c'è. Il comando sarebbe scritto e mai invocato. Quello che il ramo 2 fa è tenere pronto
+tutto il resto — la cartella per misura, il file di lato, l'inventario che distingue la
+misura principale dalle pagine prese a parte — e non promettere il comando nei testi:
+il ripristino dice che quelle pagine non sono tornate, e basta.
 
 ### 3.11 Prove del ramo 2
 
@@ -529,14 +534,16 @@ liberare, ed è irreversibile: va detto.
 | | Ramo | Contenuto | Dipende da |
 |---|---|---|---|
 | PR-A | `fix/jobs-tentativi-e-durata` | il commit `c95d8fa` estratto da #440 | — |
-| PR-B | ramo 1 | cache, copertine, ricerche, politica di sicurezza, `resize_jpeg`, due impostazioni | PR-A no, indipendente |
-| PR-C | ramo 2 | scaricamento, misura, disco come verità, file di lato, inventario | PR-B per `resize_jpeg` |
+| PR-B | ramo 1 | cache, copertine, ricerche, politica di sicurezza, `resize_jpeg`, due impostazioni | **fatta, #442** |
+| PR-C | ramo 2 | scaricamento, misura, disco come verità, file di lato, inventario | **fatta** |
 | PR-D | ramo 3 | ottimizzazione locale | PR-C per il file di lato |
+| PR-E | ramo 4 | pagine in parallelo entro `host_concurrency`, predefinito 1 per biblioteca | PR-C per il ciclo; la fase 2 per i valori |
 
-Le rifiniture della fase 4 del piano si sciolgono dentro il ramo che tocca quel codice:
-«carte» → «pagine» nei commenti del ramo 2, l'indirizzo mai chiesto sparisce con il
-recupero, la stima del tempo a finestra mobile sta in `handler.rs::estimated_seconds`
-(`:1411`), ramo 2.
+L'ordine fra PR-D e PR-E è indifferente: toccano file diversi.
+
+Le rifiniture della fase 4 del piano si sono sciolte dentro il ramo 2, come previsto:
+«carte» → «pagine» nei commenti, l'indirizzo mai chiesto sparito con il recupero, la
+stima del tempo a finestra mobile in `progress.rs::eta`.
 
 ### 5.2 Cosa si fa della PR #440
 
@@ -562,7 +569,6 @@ base delle prove del ramo 2. Chiudere riporta anche Gallica a funzionare come pr
 | argomenti della peggiore | 14 | 8 | 2 |
 | deroghe al limite di argomenti | 5 | 0 | 2 |
 | richieste di rete per pagina | 1,14 | 1,003 | 2 |
-| tipi e strutture nel modulo | 23 | sotto 15 | 2 |
 | copertine visibili nell'installato | 0 | tutte | 1 |
 
 Le sette prove a mano del piano: la 3 al ramo 1; 1, 2, 4, 5, 7 al ramo 2; la 6 al ramo 3.

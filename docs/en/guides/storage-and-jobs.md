@@ -170,6 +170,24 @@ If you want to know **whether something new has appeared in the meantime**, a
 line above the results tells you how old what you are looking at is, and next to
 it a command runs the search for real, skipping what had been kept aside.
 
+## How many pages you actually have
+
+The number you read in the Library is the files on your computer: Glossa looks at
+the folder, not at a list kept aside. The benefit shows when something goes wrong
+— an interruption, a copy made by hand, a disk unplugged and plugged back in: the
+count cannot tell a different story from what is there.
+
+**Pages the library does not serve do not count as missing.** A manuscript may
+declare 328 pages and the server return twenty fewer: that is not your fault, and
+downloading again would not conjure them up. Glossa notes it, stops asking for
+them at every resume, and reads the book as complete for as much as the library
+serves. Every now and then — about once a week — it tries them again, because
+libraries do fix things.
+
+**Pages taken at full resolution are an addition, not a gap.** If you wanted the
+larger version of three pages, the record says «plus 3 at full resolution» next to
+the count, instead of making the book look half-finished.
+
 ## The backup
 
 **Settings → Storage → Backup and restore** saves a file with everything that

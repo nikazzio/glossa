@@ -60,7 +60,7 @@ pub const CAUTIOUS: NetworkProfile = NetworkProfile {
 };
 
 /// Gallica è la più severa delle biblioteche provate: con questi valori un
-/// manoscritto di 210 carte richiede almeno un quarto d'ora, ed è il motivo per
+/// manoscritto di 210 pagine richiede almeno un quarto d'ora, ed è il motivo per
 /// cui pausa, ripresa e tempo stimato non sono ornamenti (D18).
 pub const GALLICA: NetworkProfile = NetworkProfile {
     pause_min_ms: 2_500,

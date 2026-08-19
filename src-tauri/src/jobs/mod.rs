@@ -153,6 +153,10 @@ pub enum ErrorKind {
     Throttled,
     /// 404, risorsa che non esiste.
     NotFound,
+    /// 400 o 501: **la misura chiesta** non si può servire. Non è un guasto e
+    /// non è la pagina a mancare: è l'unico parametro che facciamo variare, e
+    /// riprovare la stessa misura darebbe la stessa risposta.
+    SizeRejected,
     /// Spazio esaurito, permesso negato.
     Storage,
     /// Formato non riconoscibile.
@@ -175,6 +179,7 @@ impl ErrorKind {
             ErrorKind::RateLimited => "rateLimited",
             ErrorKind::Throttled => "throttled",
             ErrorKind::NotFound => "notFound",
+            ErrorKind::SizeRejected => "sizeRejected",
             ErrorKind::Storage => "storage",
             ErrorKind::Format => "format",
             ErrorKind::Internal => "internal",

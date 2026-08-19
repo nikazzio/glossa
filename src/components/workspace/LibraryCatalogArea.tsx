@@ -22,16 +22,12 @@ import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import {
-  forgetVersionPages,
-  listVersionVaultPaths,
-  versionProviderKey,
-} from '../../services/libraryService';
+import { versionProviderKey } from '../../services/libraryService';
+import { versionInventory } from '../../services/inventoryService';
 import {
   deleteVersionFiles,
   freeVersionPages,
   summarizeAvailability,
-  verifyFilesPresent,
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
 import { humanSize } from '../../utils';
@@ -46,9 +42,9 @@ interface LibraryCatalogAreaProps {
  * Il catalogo delle fonti. La ricerca vive nella Dashboard: qui si guarda
  * quello che si ha, si scarica, si toglie.
  *
- * Quante carte sono davvero sul computer si legge dai file presenti, non da uno
+ * Quante pagine sono davvero sul computer si legge dai file presenti, non da uno
  * stato tenuto a parte (D7): «parziale» è una condizione normale, non un
- * avviso — chi salva la scheda e scarica tre carte su duecento lo fa apposta.
+ * avviso — chi salva la scheda e scarica tre pagine su duecento lo fa apposta.
  */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const { t } = useTranslation();
@@ -61,7 +57,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
-  // Quante carte sono sul computer cambia quando un lavoro finisce: senza
+  // Quante pagine sono sul computer cambia quando un lavoro finisce: senza
   // guardare la coda, la riga continuerebbe a dire quello che diceva
   // all'apertura della schermata, anche dopo un manoscritto intero.
   const finishedDownloads = useJobsStore(
@@ -240,7 +236,17 @@ function CatalogEntryRow({
   const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
-  const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0);
+  // Quale misura è la principale lo dice il deposito (§5.4): confrontare i
+  // conteggi sbaglierebbe sullo stesso libro scaricato due volte con tetti
+  // diversi, dove due cartelle hanno lo stesso numero di pagine.
+  const principal = entry.sizes.find((size) => size.sizeTag === entry.principalSize);
+  // Le pagine che la biblioteca non serve non contano come mancanti: un libro
+  // che le ha tutte tranne quelle è completo per quanto la biblioteca serve.
+  // **Solo quelle della misura principale**: il conteggio a cui vengono
+  // confrontate è il suo, e sommare anche le altre dichiarerebbe completo un
+  // libro incompleto.
+  const notServed = principal?.missing ?? 0;
+  const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0, notServed);
   const availability =
     summary.availability === 'catalogued'
       ? t('areas.library.availabilityRemote')
@@ -250,6 +256,13 @@ function CatalogEntryRow({
             done: summary.presentPages,
             total: summary.expectedPages,
           });
+  // Le pagine prese a parte a una misura diversa (§5.6): vanno dette come
+  // aggiunta, non come mancanza, altrimenti una cartella `max` con tre file su
+  // 328 sembra un libro a metà.
+  const extra = entry.sizes
+    .filter((size) => size.sizeTag !== entry.principalSize && size.pages > 0)
+    .reduce((total, size) => total + size.pages, 0);
+  const extraNote = extra > 0 ? t('areas.library.extraFullSize', { count: extra }) : null;
   // Quante pagine ha l'opera si vede **senza aprire niente**: è il dato che
   // decide se scaricarla o no. Manca solo per le opere aggiunte da una
   // biblioteca che non lo dichiara, e lì non si inventa.
@@ -291,30 +304,39 @@ function CatalogEntryRow({
   };
 
   /**
-   * Verifica rapida (D5): si prende quello che il database dichiara e si guarda
-   * se è ancora sul disco. Non corregge niente da sola — propone di scaricare
-   * quello che manca, che è un lavoro come gli altri.
+   * Verifica rapida (D5, §5.4): le pagine che ci sono nella cartella della misura
+   * principale contro il conteggio atteso, che viene dal manifesto ed è l'unica
+   * cosa che dice quante *dovrebbero* essere.
+   *
+   * L'inventario si rilegge adesso invece di fidarsi del catalogo in memoria: fra
+   * l'apertura della schermata e questo momento possono essere spariti dei file.
+   * Le pagine che la biblioteca non serve non contano come mancanti.
    */
   const verify = async () => {
     if (!entry.versionId) return;
     setBusy(true);
     try {
-      const paths = await listVersionVaultPaths(entry.versionId);
-      if (paths.length === 0) {
-        // Nessun file registrato: non c'è niente da confrontare, e dire «tutto
-        // a posto» sarebbe una risposta su zero file.
+      const inventory = await versionInventory(entry.versionId);
+      const principal = inventory?.sizes.find((size) => size.sizeTag === inventory.principal);
+      if (!principal) {
         toast.info(t('areas.library.verifyNothing'));
         return;
       }
-      const checks = await verifyFilesPresent(paths);
-      const missing = checks.filter((check) => check.state !== 'present').length;
+      const expected = entry.expectedPages ?? 0;
+      if (expected <= 0) {
+        // Senza il conteggio atteso non c'è niente contro cui confrontare, e
+        // «tutte al loro posto» sarebbe una risposta su zero confronti.
+        toast.info(t('areas.library.verifyNoExpected', { count: principal.pages }));
+        return;
+      }
+      const missing = Math.max(0, expected - principal.pages - principal.missing);
       if (missing === 0) {
-        toast.success(t('areas.library.verifyIntact', { count: checks.length }));
+        toast.success(t('areas.library.verifyIntact', { count: principal.pages }));
         return;
       }
       const confirmed = await confirm({
         title: t('areas.library.verifyMissingTitle', { count: missing }),
-        message: t('areas.library.verifyMissingMessage', { total: checks.length }),
+        message: t('areas.library.verifyMissingMessage', { total: expected }),
         confirmLabel: t('areas.library.verifyDownloadMissing'),
       });
       if (confirmed) await startDownload();
@@ -332,9 +354,9 @@ function CatalogEntryRow({
   };
 
   /**
-   * «Libera spazio» (D6): cancella le carte e basta. Restano scheda, manifesto e
-   * miniature, e le righe delle carte se ne vanno insieme ai file — altrimenti
-   * la Biblioteca continuerebbe a dichiararle presenti.
+   * «Libera spazio» (D6): cancella le pagine e basta. Restano scheda, manifesto e
+   * miniature. Il conteggio della scheda si aggiorna da sé: lo legge dalla
+   * cartella, che dopo questa azione è vuota.
    */
   const freeSpace = async () => {
     if (!entry.versionId) return;
@@ -348,8 +370,9 @@ function CatalogEntryRow({
 
     setBusy(true);
     try {
+      // Nessuna riga da dimenticare: il conteggio lo dà la cartella, e la
+      // cartella non c'è più (§5.4).
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
-      await forgetVersionPages(entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
       onRefresh();
     } catch (error: unknown) {
@@ -425,7 +448,7 @@ function CatalogEntryRow({
           </span>
           {meta && <span className="mt-0.5 block truncate text-xs text-editorial-muted">{meta}</span>}
           <span className="mt-1 block text-[11px] text-editorial-muted">
-            {[pageCount, availability].filter(Boolean).join(' · ')}
+            {[pageCount, availability, extraNote].filter(Boolean).join(' · ')}
           </span>
         </button>
       </div>

@@ -41,7 +41,11 @@ The **download** command queues the real job: you can switch screen, pause it, r
 
 When a source is entirely on your computer the command **disappears** and a tick takes its place: there is nothing left to ask the library, and with courtesy limits a whole manuscript can cost a quarter of an hour of network time.
 
-**At what resolution** — Glossa asks for the size closest to 2000 pixels on the long side among those the library declares it can produce. If the library refuses that request, Glossa asks what it can produce and retries with the closest size: this is not an error and needs nothing from you.
+**At what resolution** — Glossa **computes** the size to ask for: from the page dimensions declared in the library's manifest it works out the width that brings the long side to 2000 pixels, and asks for that. There is no negotiation and no extra request per page.
+
+At the start of every book it asks the library one single question, which costs a few seconds on a job that lasts hours, and it serves one purpose: finding out whether that library keeps reduced sizes ready — if it does, asking for one is twice as fast. If the question goes unanswered it is not a problem: the computation carries on, and it works everywhere.
+
+If the library refuses the size asked for, Glossa takes the page at its full size, shrinks it on your computer and keeps only the result — so the book stays consistent with the ceiling you chose. That refusal is paid **once per book**, not on every page: from the next one on, Glossa already knows what to do.
 
 Some libraries are slow on purpose: see [Storage and jobs](/en/guides/storage-and-jobs).
 

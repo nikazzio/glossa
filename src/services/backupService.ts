@@ -7,6 +7,7 @@
  * un workspace, che ha bisogno di identificatori nuovi e delle regole di ambito.
  */
 import { invoke } from '@tauri-apps/api/core';
+import { libraryInventory } from './inventoryService';
 import { select, runInTransaction } from './dbService';
 import { logger } from '../utils/logger';
 import { confirm } from '../stores/confirmStore';
@@ -136,25 +137,39 @@ const DELETE_ORDER = [
  * delle pagine, non i file: dopo il ripristino i file non ci sono comunque.
  */
 async function downloadedSources(): Promise<DownloadedSource[]> {
-  return select<DownloadedSource>(
-    `SELECT v.id                                   AS versionId,
-            s.title                                AS sourceTitle,
-            json_extract(v.metadata, '$.providerKey') AS providerKey,
-            v.source_url                           AS manifestUrl,
-            -- La misura più grande **per numero**: come stringhe «900» batte
-            -- «2000», e il ripristino riscaricherebbe a una misura diversa da
-            -- quella che c'era. «max» è la più grande di tutte per definizione.
-            COALESCE(
-              MAX(CASE WHEN a.size_tag = 'max' THEN 'max' END),
-              CAST(MAX(CAST(a.size_tag AS INTEGER)) AS TEXT)
-            )                                      AS sizeTag,
-            COUNT(DISTINCT a.page_index)           AS pages
+  // Cosa c'è scaricato lo dice il **deposito**, non le righe: le pagine non ne
+  // hanno più una a testa (§5.4). Dal database restano solo titolo e indirizzo
+  // del manifesto, che non si ricavano da una cartella.
+  const inventory = await libraryInventory();
+  if (inventory.length === 0) return [];
+  const rows = await select<{ versionId: string; sourceTitle: string; manifestUrl: string | null }>(
+    `SELECT v.id AS versionId, s.title AS sourceTitle, v.source_url AS manifestUrl
        FROM source_versions v
        JOIN sources s ON s.id = v.source_id
-       JOIN assets a  ON a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local'
-      GROUP BY v.id
       ORDER BY s.title`,
   );
+  const byVersion = new Map(rows.map((row) => [row.versionId, row]));
+
+  return inventory
+    .filter((entry) => entry.principal !== null && byVersion.has(entry.versionId))
+    .map((entry) => {
+      const row = byVersion.get(entry.versionId);
+      return {
+        versionId: entry.versionId,
+        sourceTitle: row?.sourceTitle ?? entry.versionId,
+        providerKey: entry.providerKey,
+        manifestUrl: row?.manifestUrl ?? null,
+        // La misura con cui il libro è stato scaricato: è quella che il
+        // ripristino deve richiedere.
+        principalSize: entry.principal,
+        // **Tutte** le misure che c'erano, non solo la principale: le pagine
+        // prese a piena risoluzione di proposito (§5.6) sono le più costose da
+        // riottenere, ed erano quelle che il backup dimenticava.
+        sizes: entry.sizes
+          .filter((size) => size.pages > 0)
+          .map((size) => ({ sizeTag: size.sizeTag, pages: size.pages })),
+      };
+    });
 }
 
 /**
@@ -221,19 +236,6 @@ export async function restoreBackup(t: (key: string) => string): Promise<Downloa
   }
 
   await runInTransaction(async (run) => {
-    // Le pagine sul disco si mettono da parte **prima** di cancellare.
-    //
-    // Le righe delle pagine sono appese alle opere, e sostituire le opere se le
-    // porta via: il programma smetteva di sapere di file che sul disco ci sono
-    // ancora. Una copia di lavoro le tiene al riparo dalla cancellazione a
-    // catena, e alla fine tornano soltanto quelle delle opere che il backup
-    // contiene — le altre appartengono a qualcosa che non esiste più.
-    //
-    // La copia sta nella memoria della connessione, non nel database: se
-    // qualcosa va storto a metà, non resta niente da pulire.
-    await run(`DROP TABLE IF EXISTS temp.kept_assets`);
-    await run(`CREATE TEMP TABLE kept_assets AS SELECT * FROM assets`);
-
     for (const table of DELETE_ORDER) {
       if (table === 'app_settings') {
         // Never touch the running DB's migration marker — deleting it here
@@ -266,18 +268,6 @@ export async function restoreBackup(t: (key: string) => string): Promise<Downloa
         );
       }
     }
-
-    // Le pagine tornano al loro posto, ma solo quelle di un'opera che esiste
-    // ancora. Prima le pagine e poi le miniature: una miniatura dichiara da
-    // quale pagina è nata, e una riga che punta a una che non c'è ancora
-    // verrebbe scartata senza dire niente.
-    const keptFor = `SELECT * FROM temp.kept_assets
-                      WHERE source_version_id IN (SELECT id FROM source_versions)`;
-    await run(`INSERT OR IGNORE INTO assets ${keptFor} AND derived_from_asset_id IS NULL`);
-    await run(
-      `INSERT OR IGNORE INTO assets ${keptFor} AND derived_from_asset_id IN (SELECT id FROM assets)`,
-    );
-    await run(`DROP TABLE temp.kept_assets`);
 
     // I puntatori lasciati vuoti tornano al loro posto, ora che le righe a cui
     // puntano ci sono. Quelle che non ci sono restano vuote: è il caso del

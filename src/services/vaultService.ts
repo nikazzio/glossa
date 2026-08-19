@@ -25,27 +25,6 @@ export interface VaultStatus {
 
 export type VaultFolderKind = 'empty' | 'existingVault' | 'foreign';
 
-/**
- * `invalid` è il percorso rifiutato perché uscirebbe dal deposito: la riga si
- * segna e le altre proseguono, invece di far fallire l'intera verifica.
- */
-export type VaultPresenceState = 'present' | 'missing' | 'invalid';
-
-export interface VaultFileCheck {
-  vaultPath: string;
-  state: VaultPresenceState;
-  detail: string | null;
-}
-
-export type VaultFileState = 'valid' | 'corrupt' | 'missing' | 'invalid';
-
-export interface VaultFileIntegrity {
-  vaultPath: string;
-  state: VaultFileState;
-  detail: string | null;
-  checksum: string | null;
-}
-
 export interface FreedSpace {
   deletedFiles: number;
   freedBytes: number;
@@ -117,39 +96,7 @@ export async function getSourceReadMode(): Promise<SourceReadMode> {
 }
 
 /**
- * Percorsi attesi di una digitalizzazione completa: manifesto, miniature e
- * carte. Li costruisce il backend perché la disposizione di D2 viva in un posto
- * solo e non venga duplicata qui.
- */
-export async function expectedVersionPaths(
-  providerKey: string,
-  versionId: string,
-  sizeTag: string,
-  pageCount: number,
-): Promise<string[]> {
-  return invoke<string[]>('expected_version_paths', { providerKey, versionId, sizeTag, pageCount });
-}
-
-/**
- * Verifica rapida di presenza (D5): elenca e confronta, non ricalcola le
- * impronte. Solleva `vault_unreachable` se la radice non c'è, invece di
- * dichiarare tutto mancante.
- */
-export async function verifyFilesPresent(vaultPaths: string[]): Promise<VaultFileCheck[]> {
-  return invoke<VaultFileCheck[]>('verify_files_present', { vaultPaths });
-}
-
-/**
- * Verifica completa di integrità (D5): apre ogni file. Lenta in proporzione ai
- * gigabyte, e su un deposito sincronizzato in streaming costringe il client a
- * scaricare tutto (D1-bis): va avvisato prima di partire.
- */
-export async function verifyFilesIntegrity(vaultPaths: string[]): Promise<VaultFileIntegrity[]> {
-  return invoke<VaultFileIntegrity[]>('verify_files_integrity', { vaultPaths });
-}
-
-/**
- * "Libera spazio" (D6): cancella le carte scaricate subito e per davvero, senza
+ * "Libera spazio" (D6): cancella le pagine scaricate subito e per davvero, senza
  * passare dal cestino — spostare gigabyte nel cestino non libera niente.
  * Restano manifesto e miniature, così il libro resta sfogliabile.
  */
@@ -234,16 +181,25 @@ export interface AvailabilitySummary {
 /**
  * Disponibilità calcolata dai file davvero presenti (D7).
  *
- * `partial` **non è un avviso**: chi scarica tre carte su duecento apposta non
+ * `partial` **non è un avviso**: chi scarica tre pagine su duecento apposta non
  * deve trovarsi una bandierina addosso. Il colore lo mettono altrove i problemi
  * veri — scaricamento fallito, file mancanti o corrotti trovati da una verifica.
+ *
+ * `notServed` sono le pagine che la biblioteca ha dichiarato di non servire
+ * (§5.3): non mancano per colpa nostra e non si recuperano riscaricando, quindi
+ * un libro che le ha tutte tranne quelle è **completo per quanto la biblioteca
+ * serve**, non a metà.
  */
-export function summarizeAvailability(presentPages: number, expectedPages: number): AvailabilitySummary {
+export function summarizeAvailability(
+  presentPages: number,
+  expectedPages: number,
+  notServed = 0,
+): AvailabilitySummary {
   if (expectedPages <= 0 || presentPages <= 0) {
     return { availability: 'catalogued', presentPages, expectedPages };
   }
   return {
-    availability: presentPages >= expectedPages ? 'complete' : 'partial',
+    availability: presentPages + notServed >= expectedPages ? 'complete' : 'partial',
     presentPages,
     expectedPages,
   };

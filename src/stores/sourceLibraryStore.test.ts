@@ -78,7 +78,6 @@ describe('sourceLibraryStore', () => {
     vi.mocked(service.getLibrarySourceDetail).mockResolvedValue({
       source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
       versions: [],
-      assets: [],
       linkedWorkspaceIds: [],
     });
 
@@ -92,14 +91,12 @@ describe('sourceLibraryStore', () => {
     vi.mocked(service.getLibrarySourceDetail).mockResolvedValue({
       source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
       versions: [],
-      assets: [],
       linkedWorkspaceIds: ['ws-1'],
     });
     useSourceLibraryStore.setState({
       detail: {
         source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [],
-        assets: [],
         linkedWorkspaceIds: [],
       },
     });

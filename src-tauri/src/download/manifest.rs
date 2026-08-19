@@ -1,7 +1,7 @@
 //! Lettura del manifesto IIIF.
 //!
 //! Si rispetta lo standard, non lo si reinterpreta (D2-bis): l'ordine delle
-//! carte è quello dichiarato dal manifesto, l'etichetta è quella dichiarata, e
+//! pagine è quello dichiarato dal manifesto, l'etichetta è quella dichiarata, e
 //! le immagini si chiedono al servizio con i parametri della Image API invece
 //! di indovinare indirizzi.
 
@@ -18,9 +18,9 @@ pub struct Page {
     pub label: Option<String>,
     /// Radice del servizio immagini, senza parametri.
     pub image_service: String,
-    /// Dimensioni dell'originale dichiarate dal canvas. Le carte di uno stesso
-    /// libro **non** hanno tutte la stessa dimensione, e da queste si ricava a
-    /// quale gruppo appartiene la carta quando si negozia la misura da chiedere.
+    /// Dimensioni dell'originale dichiarate dal canvas. Le pagine di uno stesso
+    /// libro **non** hanno tutte la stessa dimensione, ed è da queste che si
+    /// calcola la misura da chiedere per ognuna (§5.1).
     pub size: Option<(u32, u32)>,
 }
 
@@ -54,7 +54,7 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
     if pages.is_empty() {
         return Err(JobError::new(
             ErrorKind::Format,
-            "il manifesto non dichiara nessuna carta".to_string(),
+            "il manifesto non dichiara nessuna pagina".to_string(),
         ));
     }
 
@@ -186,11 +186,11 @@ fn attribution_of(root: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Indirizzo di una carta secondo la Image API: `/full/<size>/0/default.jpg`.
+/// Indirizzo di una pagina secondo la Image API: `/full/<size>/0/default.jpg`.
 ///
-/// `size_token` è la stessa etichetta che nomina la cartella nel deposito, resa
-/// nella forma che il servizio capisce (`Manifest::size_token`): così quello che
-/// si è chiesto e quello che si è salvato non possono divergere.
+/// `size_token` è la misura calcolata per **questa** pagina (`sizing::token_for`),
+/// che varia di pagina in pagina e non è il nome della cartella: quello lo dà il
+/// tetto (§5.1).
 pub fn image_url(image_service: &str, size_token: &str) -> String {
     format!("{image_service}/full/{size_token}/0/default.jpg")
 }
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn a_thumbnail_declared_by_the_library_is_ignored() {
         // Le miniature non si chiedono più alla biblioteca: si ricavano dalla
-        // carta scaricata (D6, corretta il 2026-08-16). Un canvas che dichiara
+        // pagina scaricata (D6, corretta il 2026-08-16). Un canvas che dichiara
         // la propria miniatura si legge lo stesso senza inciampi, e quel dato
         // semplicemente non serve più a nessuno.
         let manifest = parse(
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn the_declared_page_size_is_read() {
-        // Serve a scegliere la misura da chiedere: le carte di uno stesso libro
+        // Serve a scegliere la misura da chiedere: le pagine di uno stesso libro
         // non hanno tutte la stessa dimensione, quindi nemmeno le misure che il
         // servizio tiene pronte sono le stesse.
         let manifest = parse(PRESENTATION_3.as_bytes()).unwrap();
@@ -339,7 +339,7 @@ mod tests {
 
         assert_eq!(manifest.pages.len(), 1);
         assert_eq!(manifest.pages[0].image_service, "https://img/2");
-        // La numerazione resta quella del manifesto: la carta è la seconda.
+        // La numerazione resta quella del manifesto: la pagina è la seconda.
         assert_eq!(manifest.pages[0].index, 2);
     }
 }

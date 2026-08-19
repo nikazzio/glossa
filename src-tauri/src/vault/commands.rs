@@ -3,9 +3,8 @@
 //! Sottili di proposito: la logica sta nei moduli `layout` e `integrity`, che
 //! sono funzioni pure e testabili senza un'app in esecuzione.
 
-use super::{absolute_path, classify_folder, directory_stats, integrity, resolve_root, status};
+use super::{classify_folder, directory_stats, resolve_root, status};
 use super::{FolderKind, VaultStatus};
-use integrity::FileKind;
 use serde::Serialize;
 use tauri_plugin_dialog::DialogExt;
 
@@ -56,24 +55,6 @@ pub fn get_vault_status(app: tauri::AppHandle) -> Result<VaultStatus, String> {
     status(&app, configured.as_deref())
 }
 
-/// Percorsi attesi di una digitalizzazione completa (D2), da passare poi alla
-/// verifica. Costruirli qui invece che nel frontend tiene la disposizione in un
-/// posto solo.
-#[tauri::command]
-pub fn expected_version_paths(
-    provider_key: String,
-    version_id: String,
-    size_tag: String,
-    page_count: u32,
-) -> Result<Vec<String>, String> {
-    Ok(
-        super::layout::expected_version_paths(&provider_key, &version_id, &size_tag, page_count)?
-            .into_iter()
-            .map(|path| path.to_string_lossy().replace('\\', "/"))
-            .collect(),
-    )
-}
-
 /// Crea la radice e il marcatore, se mancano. Idempotente.
 ///
 /// Rifiuta una cartella che contiene altro (D1): l'unico modo di adottare un
@@ -86,124 +67,6 @@ pub fn initialize_vault(app: tauri::AppHandle) -> Result<(), String> {
         return Err("vault_folder_not_empty".to_string());
     }
     super::ensure_root(&root)
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileCheck {
-    pub vault_path: String,
-    /// `present` | `missing` | `invalid`
-    pub state: String,
-    /// Perché il percorso è stato rifiutato, quando lo stato è `invalid`.
-    pub detail: Option<String>,
-}
-
-/// Verifica **rapida** di presenza (D5): elenca e confronta, non ricalcola le
-/// impronte. Millisecondi anche per un manoscritto grande.
-///
-/// Se la radice non è raggiungibile risponde con un errore invece di dichiarare
-/// tutto mancante: radice assente e file mancante sono casi diversi (D1), e
-/// confonderli farebbe riscaricare l'intera biblioteca.
-///
-/// Un percorso malformato in una riga **non** interrompe il controllo delle
-/// altre: si segna quella riga come non valida e si va avanti. La verifica di
-/// un manoscritto di duecento carte non può fermarsi tutta per un dato storto.
-#[tauri::command]
-pub fn verify_files_present(
-    app: tauri::AppHandle,
-    vault_paths: Vec<String>,
-) -> Result<Vec<FileCheck>, String> {
-    let root = root_of(&app)?;
-    if !root.is_dir() {
-        return Err("vault_unreachable".to_string());
-    }
-    Ok(vault_paths
-        .into_iter()
-        .map(|vault_path| check_one(&root, vault_path))
-        .collect())
-}
-
-fn check_one(root: &std::path::Path, vault_path: String) -> FileCheck {
-    match absolute_path(root, &vault_path) {
-        Ok(absolute) => FileCheck {
-            state: if absolute.is_file() {
-                "present".to_string()
-            } else {
-                "missing".to_string()
-            },
-            detail: None,
-            vault_path,
-        },
-        Err(reason) => FileCheck {
-            state: "invalid".to_string(),
-            detail: Some(reason),
-            vault_path,
-        },
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileIntegrity {
-    pub vault_path: String,
-    /// `valid` | `corrupt` | `missing` | `invalid`
-    pub state: String,
-    pub detail: Option<String>,
-    pub checksum: Option<String>,
-}
-
-/// Verifica **completa** di integrità (D5): apre ogni file, lo valida e ne
-/// ricalcola l'impronta in una lettura sola. Lenta in proporzione ai gigabyte,
-/// e su un deposito sincronizzato in streaming costringe il client a scaricare
-/// tutto (D1-bis) — chi chiama deve avvisare prima di partire.
-///
-/// Come la verifica rapida, un percorso malformato non ferma le altre righe.
-#[tauri::command]
-pub fn verify_files_integrity(
-    app: tauri::AppHandle,
-    vault_paths: Vec<String>,
-) -> Result<Vec<FileIntegrity>, String> {
-    let root = root_of(&app)?;
-    if !root.is_dir() {
-        return Err("vault_unreachable".to_string());
-    }
-    Ok(vault_paths
-        .into_iter()
-        .map(|vault_path| scan_one(&root, vault_path))
-        .collect())
-}
-
-fn scan_one(root: &std::path::Path, vault_path: String) -> FileIntegrity {
-    let absolute = match absolute_path(root, &vault_path) {
-        Ok(absolute) => absolute,
-        Err(reason) => {
-            return FileIntegrity {
-                vault_path,
-                state: "invalid".to_string(),
-                detail: Some(reason),
-                checksum: None,
-            }
-        }
-    };
-    // Il manifesto si riconosce dall'estensione: è l'unico file JSON che il
-    // deposito contiene (D2).
-    let kind = if absolute.extension().is_some_and(|ext| ext == "json") {
-        FileKind::Manifest
-    } else {
-        FileKind::Image
-    };
-    let scan = integrity::scan_file(&absolute, kind);
-    let (state, detail) = match scan.validation {
-        integrity::Validation::Valid => ("valid", None),
-        integrity::Validation::Corrupt(reason) => ("corrupt", Some(reason)),
-        integrity::Validation::Missing => ("missing", None),
-    };
-    FileIntegrity {
-        vault_path,
-        state: state.to_string(),
-        detail,
-        checksum: scan.checksum,
-    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -310,61 +173,6 @@ mod tests {
             "la prova di scrittura non deve lasciare file"
         );
         let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn a_malformed_path_is_marked_invalid_without_stopping_the_others() {
-        // Una riga storta nel database non deve far fallire il controllo
-        // dell'intera digitalizzazione.
-        let root = temp_dir("batch");
-        fs::create_dir_all(root.join("providers/gallica/v1/pages/2000")).unwrap();
-        fs::write(root.join("providers/gallica/v1/pages/2000/0001.jpg"), b"x").unwrap();
-
-        let checks: Vec<FileCheck> = [
-            "providers/gallica/v1/pages/2000/0001.jpg",
-            "../fuori.jpg",
-            "providers/gallica/v1/pages/2000/0002.jpg",
-        ]
-        .into_iter()
-        .map(|path| check_one(&root, path.to_string()))
-        .collect();
-
-        assert_eq!(checks[0].state, "present");
-        assert_eq!(checks[1].state, "invalid");
-        assert!(checks[1].detail.is_some());
-        assert_eq!(checks[2].state, "missing");
-
-        let _ = fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn the_full_check_marks_a_malformed_path_invalid_too() {
-        let root = temp_dir("batch_integrity");
-
-        let result = scan_one(&root, "/etc/passwd".to_string());
-
-        assert_eq!(result.state, "invalid");
-        assert_eq!(result.checksum, None);
-
-        let _ = fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn the_manifest_is_recognised_by_its_extension() {
-        let root = temp_dir("kinds");
-        fs::create_dir_all(root.join("providers/gallica/v1")).unwrap();
-        fs::write(
-            root.join("providers/gallica/v1/manifest.json"),
-            br#"{"items":[]}"#,
-        )
-        .unwrap();
-
-        let manifest = scan_one(&root, "providers/gallica/v1/manifest.json".to_string());
-
-        assert_eq!(manifest.state, "valid", "un JSON valido non è un'immagine");
-        assert!(manifest.checksum.is_some());
-
-        let _ = fs::remove_dir_all(&root);
     }
 }
 
@@ -504,29 +312,32 @@ pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, S
     tauri::async_runtime::spawn_blocking(move || {
         let conn = crate::db::open_connection(&db_path)?;
         let mut statement = conn
-            .prepare(
-                "SELECT vault_path FROM assets \
-                 WHERE vault_path IS NOT NULL AND locality = 'local'",
-            )
+            .prepare("SELECT id FROM source_versions")
             .map_err(|error| error.to_string())?;
-        let known: std::collections::HashSet<std::path::PathBuf> = statement
+        let known: std::collections::HashSet<String> = statement
             .query_map([], |row| row.get::<_, String>(0))
             .map_err(|error| error.to_string())?
             .filter_map(Result::ok)
-            .filter_map(|relative| absolute_path(&root, &relative).ok())
             .collect();
 
         let mut deleted_files = 0;
         let mut freed_bytes = 0;
-        for (path, bytes) in super::verification::orphan_files(&root, &known) {
-            match std::fs::remove_file(&path) {
+        // Si rilegge il deposito adesso e non ci si fida del conto della
+        // verifica: fra il controllo e la cancellazione può essere finito uno
+        // scaricamento, e quella cartella non è più orfana (D5-bis).
+        for orphan in super::verification::orphan_folders(&root, &known) {
+            match std::fs::remove_dir_all(&orphan.path) {
                 Ok(()) => {
-                    deleted_files += 1;
-                    freed_bytes += bytes;
+                    // I **file** cancellati, non le cartelle: è il numero che
+                    // l'interfaccia mostra, e «3» al posto di tremila fa
+                    // sembrare innocua un'operazione che non lo è.
+                    deleted_files += orphan.files;
+                    freed_bytes += orphan.bytes;
                 }
-                // Un file che non si riesce a togliere non ferma gli altri: si
-                // dice nel registro e si va avanti, e il conto resta onesto.
-                Err(error) => log::warn!("orphan not deleted path={} {error}", path.display()),
+                // Una cartella che non si riesce a togliere non ferma le altre.
+                Err(error) => {
+                    log::warn!("orphan not deleted path={} {error}", orphan.path.display())
+                }
             }
         }
         log::info!("vault orphans deleted files={deleted_files} bytes={freed_bytes}");

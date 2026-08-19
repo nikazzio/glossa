@@ -1,7 +1,13 @@
 import { select, execute, runInTransaction } from './dbService';
 import { workspacesOfMany } from './workspaceItemsService';
+import {
+  inventoryBytes,
+  libraryInventory,
+  principalPages,
+  versionInventory,
+} from './inventoryService';
 import { generateId } from '../utils';
-import type { AddSourceToLibraryInput, LibraryAsset, LibraryCatalogEntry, LibrarySource, LibrarySourceDetail, LibrarySourceVersion } from '../types';
+import type { AddSourceToLibraryInput, LibraryCatalogEntry, LibrarySource, LibrarySourceDetail, LibrarySourceVersion } from '../types';
 
 interface SourceRow {
   id: string;
@@ -20,15 +26,6 @@ interface SourceVersionRow {
   source_url: string | null;
   is_primary: number;
   created_at: string;
-}
-
-interface AssetRow {
-  id: string;
-  source_version_id: string | null;
-  kind: LibraryAsset['kind'];
-  locality: LibraryAsset['locality'];
-  availability: LibraryAsset['availability'];
-  remote_url: string | null;
 }
 
 function rowToSource(row: SourceRow): LibrarySource {
@@ -54,17 +51,6 @@ function rowToVersion(row: SourceVersionRow): LibrarySourceVersion {
   };
 }
 
-function rowToAsset(row: AssetRow): LibraryAsset {
-  return {
-    id: row.id,
-    sourceVersionId: row.source_version_id,
-    kind: row.kind,
-    locality: row.locality,
-    availability: row.availability,
-    remoteUrl: row.remote_url,
-  };
-}
-
 function isValidUrl(value: string): boolean {
   try {
     return ['http:', 'https:'].includes(new URL(value).protocol);
@@ -78,46 +64,37 @@ interface CatalogRow extends SourceRow {
   manifest_url: string | null;
   metadata: string | null;
   expected_asset_count: number | null;
-  local_pages: number;
-  local_bytes: number;
 }
 
 /**
  * Il catalogo come lo vede la Biblioteca: la fonte con la sua digitalizzazione
- * principale, la copertina, e **quante carte sono davvero sul computer**.
+ * principale, la copertina, e **quante pagine sono davvero sul computer**.
  *
- * Le carte presenti si contano dalle righe locali, non da uno stato scritto a
+ * Le pagine presenti si contano guardando il deposito, non uno stato scritto a
  * parte: la disponibilità è un fatto che si osserva, non una bandierina da
- * tenere aggiornata (D7).
- */
-/**
- * Il catalogo mostra **sempre tutti i libri** (#213).
+ * tenere aggiornata (D7, §5.4).
  *
- * La Biblioteca è un catalogo, non la vista di un workspace: filtrarla su un
- * workspace nascondeva libri che ci sono. A quali workspace appartiene un libro
+ * Il catalogo mostra **sempre tutti i libri** (#213): la Biblioteca è un
+ * catalogo, non la vista di un workspace. A quali workspace appartiene un libro
  * si **vede** sulla sua scheda, e da lì si collega o si scollega.
  */
 export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   const rows = await select<CatalogRow>(
-    // Un solo passaggio sugli asset: con due subquery per riga la Biblioteca
-    // faceva due letture della tabella per ogni fonte.
     `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref, s.created_at,
             v.id AS version_id, v.source_url AS manifest_url, v.metadata,
-            v.expected_asset_count,
-            -- Carte distinte, non righe: la stessa carta esiste anche a piena
-            -- risoluzione (D4), e contarla due volte darebbe «740 su 374». I
-            -- byte invece si sommano tutti, perché lo spazio lo occupano tutti.
-            COUNT(DISTINCT a.page_index) AS local_pages,
-            COALESCE(SUM(a.byte_size), 0) AS local_bytes
+            v.expected_asset_count
        FROM sources s
        LEFT JOIN source_versions v
          ON v.source_id = s.id AND v.is_primary = 1
-       LEFT JOIN assets a
-         ON a.source_version_id = v.id AND a.kind = 'image' AND a.locality = 'local'
       WHERE s.status = 'active'
-      GROUP BY s.id, v.id
       ORDER BY s.title ASC`,
   );
+
+  // Quante pagine ci sono e quanto occupano lo dice il **deposito**, non il
+  // database: le pagine non hanno più una riga a testa (§5.4). Una lettura
+  // sola per tutta la Biblioteca.
+  const inventory = await libraryInventory();
+  const byVersion = new Map(inventory.map((entry) => [entry.versionId, entry]));
 
   // I workspace di tutte le opere in **una lettura sola**: una per riga
   // significherebbe una query per scheda.
@@ -128,6 +105,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
 
   return rows.map((row) => {
     const metadata = parseMetadata(row.metadata);
+    const found = row.version_id ? byVersion.get(row.version_id) : undefined;
     return {
       source: rowToSource(row),
       versionId: row.version_id,
@@ -139,9 +117,17 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       // manifesto; prima di allora vale quello che la biblioteca aveva
       // dichiarato all'aggiunta, che è già salvato nei metadati.
       expectedPages: row.expected_asset_count ?? metadata.itemCount,
-      localPages: row.local_pages,
-      localBytes: row.local_bytes,
-      providerKey: metadata.providerKey,
+      localPages: found ? principalPages(found) : 0,
+      localBytes: found ? inventoryBytes(found) : 0,
+      // Le misure presenti: servono a distinguere «completo a 2000, più tre a
+      // piena risoluzione» da «libro incompleto» (§5.4, §5.6).
+      sizes: found?.sizes ?? [],
+      // Quale è la principale lo dice il deposito: la finestra non la indovina.
+      principalSize: found?.principal ?? null,
+      // La chiave scritta nel deposito vince su quella nei metadati: le fonti
+      // aggiunte prima che la provenienza venisse salvata hanno i file sotto
+      // una chiave e i metadati vuoti.
+      providerKey: found?.providerKey ?? metadata.providerKey,
       workspaces: workspacesBySource.get(row.id) ?? [],
     };
   });
@@ -202,46 +188,15 @@ function parseMetadata(raw: string | null): SourceMetadata {
  * scheda, non ai gigabyte.
  */
 /**
- * I percorsi che il database dichiara di avere nel deposito per questa
- * digitalizzazione. La verifica confronta questi con quello che c'è davvero: il
- * database è la verità, il disco si controlla (D5).
- */
-export async function listVersionVaultPaths(versionId: string): Promise<string[]> {
-  const rows = await select<{ vault_path: string }>(
-    "SELECT vault_path FROM assets WHERE source_version_id = $1 AND vault_path IS NOT NULL AND locality = 'local' ORDER BY vault_path",
-    [versionId],
-  );
-  return rows.map((row) => row.vault_path);
-}
-
-/**
- * La chiave della biblioteca **come è scritta nel deposito**, ricavata dal
- * percorso di un file già registrato (`providers/<chiave>/<versione>/…`).
+ * La chiave della biblioteca **come è scritta nel deposito**
+ * (`providers/<chiave>/<versione>/…`).
  *
- * Serve perché i metadati e il disco possono non concordare: le fonti aggiunte
- * prima che la provenienza venisse salvata hanno i file sotto una chiave e i
- * metadati vuoti. Chiedere lo scaricamento con la chiave sbagliata farebbe
- * riscaricare tutto in una cartella nuova; cancellare con quella sbagliata
- * lascerebbe i file sul disco e toglierebbe le righe dal database.
+ * Serve perché metadati e disco possono non concordare: chiedere lo
+ * scaricamento con la chiave sbagliata riscaricherebbe tutto in una cartella
+ * nuova, e cancellare con quella sbagliata lascerebbe i file sul disco.
  */
 export async function versionProviderKey(versionId: string): Promise<string | null> {
-  const [row] = await select<{ vault_path: string }>(
-    "SELECT vault_path FROM assets WHERE source_version_id = $1 AND vault_path LIKE 'providers/%' LIMIT 1",
-    [versionId],
-  );
-  return row?.vault_path.split('/')[1] ?? null;
-}
-
-/**
- * Toglie dal database le carte di una digitalizzazione, dopo che i file sono
- * stati cancellati da «libera spazio» (D6).
- *
- * Senza questo la Biblioteca continuerebbe a dichiarare presenti carte che non
- * ci sono più: il conteggio si legge dalle righe. Miniature e manifesto restano,
- * perché «libera spazio» non li tocca.
- */
-export async function forgetVersionPages(versionId: string): Promise<void> {
-  await execute("DELETE FROM assets WHERE source_version_id = $1 AND kind = 'image'", [versionId]);
+  return (await versionInventory(versionId))?.providerKey ?? null;
 }
 
 export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
@@ -283,7 +238,6 @@ export async function addSourceToLibrary(
 
   const sourceId = generateId('source');
   const versionId = generateId('sver');
-  const assetId = generateId('asset');
   // Si salva tutto quello che il catalogo ha detto, anche ciò che oggi nessuna
   // schermata mostra: rifare la ricerca per recuperare un dato che avevamo già
   // in mano è lavoro sprecato, e alcune di queste informazioni la biblioteca
@@ -324,10 +278,6 @@ export async function addSourceToLibrary(
       'INSERT INTO source_versions (id, source_id, label, version_kind, source_url, metadata, is_primary) VALUES ($1, $2, $3, $4, $5, $6, $7)',
       [versionId, sourceId, 'primary', 'iiif_manifest', input.manifestUrl, metadata, 1],
     );
-    await run(
-      'INSERT INTO assets (id, source_version_id, kind, locality, availability, remote_url) VALUES ($1, $2, $3, $4, $5, $6)',
-      [assetId, versionId, 'manifest', 'remote', 'catalogued', input.manifestUrl],
-    );
     if (input.workspaceId) {
       await run(
         `INSERT INTO workspace_items (workspace_id, item_type, item_id) VALUES ($1, 'source', $2)`,
@@ -350,13 +300,6 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
     'SELECT id, source_id, label, version_kind, source_url, is_primary, created_at FROM source_versions WHERE source_id = $1',
     [sourceId],
   );
-  const versionIds = versionRows.map((row) => row.id);
-  const assetRows = versionIds.length > 0
-    ? await select<AssetRow>(
-        `SELECT id, source_version_id, kind, locality, availability, remote_url FROM assets WHERE source_version_id IN (${versionIds.map((_, i) => `$${i + 1}`).join(', ')})`,
-        versionIds,
-      )
-    : [];
   const linkRows = await select<{ workspace_id: string }>(
     `SELECT workspace_id FROM workspace_items WHERE item_type = 'source' AND item_id = $1`,
     [sourceId],
@@ -365,7 +308,6 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
   return {
     source: rowToSource(source),
     versions: versionRows.map(rowToVersion),
-    assets: assetRows.map(rowToAsset),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
   };
 }
