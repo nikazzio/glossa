@@ -23,10 +23,6 @@ use super::sidecar::{self, Note, PageRecord};
 use super::sizing::{self, SizeCap, SizingRule};
 use super::vault_io::{now_secs, stage_and_promote};
 
-/// Qualità JPEG della riduzione fatta in casa dopo un rifiuto della misura
-/// (§5.1, regola 3). Stesso valore predefinito dell'ottimizzazione locale.
-const DOWNSCALE_QUALITY: u8 = 82;
-
 /// Intervallo minimo prima di richiedere di nuovo una pagina che la biblioteca
 /// ha già dichiarato di non servire (fatto 7, §5.3).
 ///
@@ -69,8 +65,8 @@ enum Asked {
         /// La misura davvero chiesta: quella calcolata, o la dimensione piena se
         /// è servito il ripiego.
         token: String,
-        /// Da scrivere accanto alla pagina quando è arrivata più grande ed è
-        /// stata ridotta in casa.
+        /// Sempre vuota da qui: lo scaricamento non ricomprime niente. La usa
+        /// l'ottimizzazione locale, che è l'unica a ridurre (§5.7).
         note: Option<Note>,
     },
     /// La biblioteca ha **dichiarato** di non servirla: 404 o 410, o un rifiuto
@@ -237,7 +233,13 @@ impl PageFetcher<'_> {
                 // piena, non quella calcolata che il servizio ha rifiutato.
                 token = full_token.clone();
                 match asked_full {
-                    Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
+                    // **Si conserva come è arrivata** (decisione del 2026-08-19):
+                    // rimpicciolirla qui sarebbe una ricompressione alle spalle
+                    // dell'utente, e ridurre è una scelta che si fa a freddo con
+                    // l'ottimizzazione locale (§5.7). Le dimensioni finiscono nel
+                    // file di lato, quindi una pagina più grande del tetto si
+                    // riconosce guardando la sua riga.
+                    Ok(Some(fetched)) => (fetched.bytes, None),
                     Ok(None) => return Ok(Asked::Stopped),
                     // Rifiutata anche a dimensione piena: la biblioteca ha detto
                     // di non averla, e lascia la sua riga.
@@ -287,30 +289,6 @@ impl PageFetcher<'_> {
             &PageRecord::not_served(page.index, page.label.clone(), now_secs()),
         );
         Ok(PageOutcome::NotServed)
-    }
-
-    /// Riduce al tetto i byte arrivati a dimensione piena e **tiene solo il
-    /// risultato** (decisione 2 del piano): i byte in più sono già stati spesi
-    /// in rete, ma non devono occupare disco, e il deposito resta coerente col
-    /// tetto.
-    ///
-    /// È una ricompressione, quindi va segnata: senza la nota, la pagina è
-    /// indistinguibile da una arrivata già a quella misura.
-    fn reduce_to_cap(&self, bytes: Vec<u8>) -> (Vec<u8>, Option<Note>) {
-        let SizeCap::LongEdge(long_edge) = self.cap else {
-            return (bytes, None);
-        };
-        let from = image_dimensions(&bytes);
-        match images::resize_jpeg(&bytes, long_edge, DOWNSCALE_QUALITY) {
-            Ok(reduced) => (reduced, from.map(|from| Note::Downscaled { from })),
-            Err(error) => {
-                // Riduzione fallita: si conserva l'originale invece di perdere
-                // la pagina. Occupa più del tetto, e l'ottimizzazione locale
-                // sa rimediare.
-                log::warn!("job downscale failed error={error}");
-                (bytes, None)
-            }
-        }
     }
 
     /// Miniatura ricavata dai byte già in memoria (D6). Un fallimento non fa

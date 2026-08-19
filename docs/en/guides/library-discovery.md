@@ -45,7 +45,7 @@ When a source is entirely on your computer the command **disappears** and a tick
 
 At the start of every book it asks the library one single question, which costs a few seconds on a job that lasts hours, and it serves one purpose: finding out whether that library keeps reduced sizes ready — if it does, asking for one is twice as fast. If the question goes unanswered it is not a problem: the computation carries on, and it works everywhere.
 
-If the library refuses the size asked for, Glossa takes the page at its full size, shrinks it on your computer and keeps only the result — so the book stays consistent with the ceiling you chose. That refusal is paid **once per book**, not on every page: from the next one on, Glossa already knows what to do.
+If the library refuses the size asked for, Glossa takes the page at its full size and **keeps it exactly as it is**: it never shrinks anything on its own, because shrinking an image loses something and that must not happen behind your back. That book will take more room, and you get it back whenever you want with the command that shrinks images, which tells you how many pages it touches and how much it frees. That refusal is paid **once per book**, not on every page: from the next one on, Glossa already knows what to do.
 
 Some libraries are slow on purpose: see [Storage and jobs](/en/guides/storage-and-jobs).
 

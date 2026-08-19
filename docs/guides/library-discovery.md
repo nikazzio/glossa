@@ -45,7 +45,7 @@ Quando una fonte è tutta sul computer il comando **sparisce**, e al suo posto r
 
 All'avvio di ogni libro fa una domanda sola alla biblioteca, che costa qualche secondo su un lavoro di ore, e serve a sapere se quella biblioteca tiene già pronte le misure ridotte: se le tiene, chiedergliene una vale il doppio della velocità. Se la domanda non riceve risposta non è un problema: si va avanti col calcolo, che funziona ovunque.
 
-Se la biblioteca rifiuta la misura chiesta, Glossa prende la pagina alla sua dimensione piena, la rimpicciolisce sul tuo computer e conserva solo il risultato — così il libro resta coerente col tetto che hai scelto. Il rifiuto si paga **una volta per libro**, non a ogni pagina: dalla successiva Glossa sa già come comportarsi.
+Se la biblioteca rifiuta la misura chiesta, Glossa prende la pagina alla sua dimensione piena e **la conserva così com'è**: non rimpicciolisce niente da sé, perché ridurre un'immagine le fa perdere qualcosa e non è una cosa che deve succedere alle tue spalle. Quel libro occuperà più spazio, e quando vuoi lo recuperi con il comando che riduce le immagini, che ti dice quante pagine tocca e quanto libera. Il rifiuto si paga **una volta per libro**, non a ogni pagina: dalla successiva Glossa sa già come comportarsi.
 
 Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Archiviazione e lavori](/guides/storage-and-jobs).
 

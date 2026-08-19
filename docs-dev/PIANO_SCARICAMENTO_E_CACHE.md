@@ -333,9 +333,19 @@ libro, domani qualunque altra cosa metta file nel deposito. Il descrittore si le
    senza riprovare (fatto 6: il silenzio è passeggero, ma non vale la pena inseguirlo
    per un guadagno di velocità).
 3. **Ripiego.** Al primo rifiuto **della misura** si smette di calcolare e si passa a
-   `max` **per il resto del libro**, rimpicciolendo in casa e conservando solo il
-   risultato. Un rifiuto buttato invece di trecento. Se anche `max` viene rifiutato,
-   la pagina si salta.
+   `max` **per il resto del libro**, conservando le pagine **come arrivano**. Un
+   rifiuto buttato invece di trecento. Se anche `max` viene rifiutato, la pagina si
+   salta.
+
+   **Non si rimpicciolisce niente qui** *(deciso il 2026-08-19; sostituisce la
+   decisione 2 del capitolo 10)*. Ridurre è una ricompressione, e il §5.7 dice già che
+   una ricompressione non si fa alle spalle dell'utente: si chiede. Quindi la pagina
+   rifiutata arriva a dimensione piena e resta così, e ridurla è una scelta che si fa
+   a freddo, quando si vuole, con l'ottimizzazione locale. Costa spazio — un libro
+   così occupa il triplo finché non lo si ottimizza — e in cambio non si perde
+   dettaglio senza averlo deciso. Le dimensioni di ogni pagina stanno nel file di
+   lato, quindi le pagine più grandi del tetto si riconoscono guardando la cartella, e
+   la conferma dell'ottimizzazione dice quante sono.
 
 **Quale rifiuto, però, va detto con precisione**, perché è il punto in cui questa
 regola può annullare un fatto pagato sul campo. Solo `400` e `501` sono rifiuti
@@ -372,18 +382,18 @@ garantite di `max`, e archive.org rifiuta le misure non dichiarate.
   `full` prima: a un servizio dichiarato nella vecchia Presentation 2.1 va chiesto
   `full`, altrimenti risponde `400`. È un fatto già pagato, e va portato dentro la
   riscrittura;
-- **il rimpicciolimento del ripiego è una ricompressione**, e come tale perde
-  qualcosa (§5.7). Va segnato nel file di lato accanto alla pagina, altrimenti quella
-  pagina è indistinguibile da una arrivata già a quella misura — e chi guarderà
-  l'inventario non saprà perché è diversa dalle altre;
+- **una pagina arrivata a dimensione piena per il ripiego non si tocca**, e non serve
+  segnarlo con una nota: le sue dimensioni sono già nel file di lato, e un lato lungo
+  più grande del nome della cartella dice tutto da sé;
 - **la politica «massima» resta, e salta tutto.** Quando il tetto è `max` non c'è
   niente da calcolare, niente da negoziare e niente da rimpicciolire: si chiede la
   dimensione piena e si conserva com'è arrivata. È il modo di non avere questo
   problema, e per lo **scaricamento** è una scelta sensata per chi scarica poche
   pagine di proposito. Va detto cosa costa: da due a cinque volte il tempo e da tre a
   otto volte i byte, quindi su un libro intero triplica il deposito — recuperabile
-  con l'ottimizzazione locale (§5.7), ma da sapere prima. È una scelta diversa dal
-  ripiego, che invece rimpicciolisce.
+  con l'ottimizzazione locale (§5.7), ma da sapere prima. Dopo la decisione del
+  2026-08-19 il ripiego si comporta allo stesso modo: prende la dimensione piena e la
+  conserva com'è.
 
 **La cartella prende il nome dal tetto, non dai pixel ottenuti.** Le pagine di uno
 stesso libro hanno dimensioni diverse fra loro, quindi la larghezza chiesta varia
@@ -1086,11 +1096,12 @@ Cinque, il 2026-08-18, con l'utente. La quinta ne ha fatta decadere una.
    **Decaduta** poche ore dopo, con la decisione 5: la casella non esiste più, perché
    quello che dichiarava lo scopre la lettura del descrittore all'avvio del libro
    (§5.9). Il nome resta scritto perché era quello giusto, se un giorno servisse.
-2. **L'originale del ripiego si butta.** Quando la misura calcolata viene rifiutata
-   si chiede la dimensione piena, si rimpicciolisce al tetto e si conserva solo il
-   risultato. I byte in più sono già stati spesi in rete, ma non occupano disco, e
-   il deposito resta coerente con il tetto scelto. Chi vuole la copia integrale ha
-   la politica «massima».
+2. ~~**L'originale del ripiego si butta.**~~ **Sostituita il 2026-08-19**: quando la
+   misura calcolata viene rifiutata si chiede la dimensione piena e **si conserva
+   com'è arrivata**. Nessuna ricompressione senza che l'utente l'abbia chiesta — che è
+   la regola che il §5.7 dichiarava già per l'ottimizzazione, e che il ripiego
+   contraddiceva. Si paga in spazio, e lo spazio si recupera quando si vuole con
+   l'ottimizzazione locale; il dettaglio buttato invece non torna.
 3. **L'ottimizzazione locale è un lavoro della coda.** Su 900 pagine dura minuti: va
    seguita dal pannello, messa in pausa e annullata come ogni altro lavoro lungo.
 4. **Il file di lato è uno per cartella di misura.** Sta dentro `pages/2000/`

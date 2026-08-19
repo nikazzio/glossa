@@ -33,10 +33,14 @@ pub const SIDECAR_FILE: &str = "pages.jsonl";
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Note {
-    /// Arrivata più grande e **ridotta in casa** dopo un rifiuto della misura
-    /// (§5.1, regola del ripiego). È una ricompressione, quindi quella pagina
-    /// non è come è arrivata, e senza scriverlo sarebbe indistinguibile da una
-    /// arrivata già a quella misura.
+    /// **Ridotta dall'ottimizzazione locale** (§5.7), con le dimensioni che aveva
+    /// prima. È una ricompressione, quindi quella pagina non è più come è
+    /// arrivata, e senza scriverlo sarebbe indistinguibile da una arrivata già a
+    /// quella misura.
+    ///
+    /// Lo scaricamento non la scrive mai: non ricomprime niente, nemmeno quando
+    /// la biblioteca rifiuta la misura e la pagina arriva a dimensione piena.
+    /// Ridurre è una scelta che si fa a freddo (decisione del 2026-08-19).
     #[serde(rename_all = "camelCase")]
     Downscaled { from: (u32, u32) },
     /// La biblioteca non l'ha servita. Esiste per due ragioni: l'inventario può
