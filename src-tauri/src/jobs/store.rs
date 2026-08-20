@@ -184,11 +184,15 @@ pub fn save_progress(
     detail: Option<&str>,
 ) -> Result<(), String> {
     conn.execute(
-        // Il dettaglio viaggia con l'avanzamento: cambia insieme a lui, e una
-        // scrittura separata raddoppierebbe gli aggiornamenti per ogni pagina.
-        // `COALESCE` lascia stare quello vecchio quando il gestore non ne manda
-        // uno nuovo, invece di cancellarlo.
-        "UPDATE jobs SET progress = ?2, message = ?3, eta_seconds = ?4, waiting_reason = ?5, \
+        // Nome e dettaglio viaggiano con l'avanzamento: cambiano insieme a lui, e
+        // una scrittura separata raddoppierebbe gli aggiornamenti per ogni pagina.
+        // `COALESCE` su entrambi lascia stare quello vecchio quando il gestore non
+        // ne manda uno nuovo, invece di cancellarlo — e il nome non ne manda uno
+        // nuovo alla fine, quindi senza questo ogni lavoro finito perdeva il
+        // titolo e la sezione «terminati oggi» diventava un elenco di righe
+        // identiche.
+        "UPDATE jobs SET progress = ?2, message = COALESCE(?3, message), \
+         eta_seconds = ?4, waiting_reason = ?5, \
          detail = COALESCE(?6, detail), updated_at = CURRENT_TIMESTAMP \
          WHERE id = ?1 AND status NOT IN ('completed', 'cancelled', 'error')",
         params![id, progress, message, eta_seconds, waiting_reason, detail],
@@ -540,6 +544,21 @@ mod tests {
 
         let job = get(&conn, "j-detail").unwrap().unwrap();
         assert_eq!(job.detail.as_deref(), Some(r#"{"units":{"done":1}}"#));
+    }
+
+    #[test]
+    fn a_finished_job_keeps_the_name_it_had() {
+        // La chiusura scrive l'avanzamento a 1.0 senza nome, e senza COALESCE
+        // cancellava il titolo dell'opera: la sezione «terminati oggi» diventava
+        // un elenco di righe identiche, che è il difetto che D20 nomina.
+        let conn = migrated_connection();
+        queued(&conn, "j-nome");
+        save_progress(&conn, "j-nome", 0.5, Some("Beatus"), None, None, None).unwrap();
+
+        save_progress(&conn, "j-nome", 1.0, None, Some(0), None, None).unwrap();
+
+        let job = get(&conn, "j-nome").unwrap().unwrap();
+        assert_eq!(job.message.as_deref(), Some("Beatus"));
     }
 
     #[test]

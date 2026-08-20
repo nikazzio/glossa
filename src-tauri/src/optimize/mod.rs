@@ -26,10 +26,14 @@
 //! Non è automatica: è un'operazione che perde informazione, e la si chiede.
 
 pub mod commands;
+#[cfg(test)]
+mod job_it;
 
 use async_trait::async_trait;
 use serde::Deserialize;
+use std::collections::VecDeque;
 use std::path::Path;
+use std::time::Instant;
 
 use crate::download::sidecar::{self, Note, PageRecord};
 use crate::download::vault_io::{discard, now_secs, stage_and_promote, stopped_outcome};
@@ -37,6 +41,7 @@ use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
+use std::collections::BTreeMap;
 
 pub const JOB_TYPE: &str = "image_optimization";
 
@@ -75,6 +80,12 @@ fn default_thumbnail_edge() -> u32 {
 mod phase {
     pub const OPTIMIZING: &str = "optimizing";
 }
+
+/// Misure da avere prima di fidarsi del ritmo osservato, e quante pagine guarda.
+/// Gli stessi valori dello scaricamento: con una o due la media è quella di un
+/// campione, e una finestra corta si dimentica di una pagina lenta isolata.
+const PACE_SAMPLE: usize = 3;
+const PACE_WINDOW: usize = 10;
 
 /// Cosa è successo a una pagina.
 enum PageResult {
@@ -141,12 +152,17 @@ impl JobHandler for ImageOptimizationJob {
 
         let pages = pages_in(&size_dir);
         let total = pages.len() as u32;
+        let started_at = Instant::now();
+        // Le pagine già ridotte in una esecuzione precedente non entrano nel
+        // ritmo: sono istantanee, e ne farebbero una stima ottimista.
+        let mut recent: VecDeque<Instant> = VecDeque::new();
         ctx.report_phase(phase::OPTIMIZING).await;
         log::info!(
             "job optimize starting id={} pages={total} long_edge={long_edge} quality={quality}",
             ctx.id
         );
 
+        let known = sidecar::read(&size_dir);
         let work = Workspace {
             root: &root,
             config: &config,
@@ -154,6 +170,7 @@ impl JobHandler for ImageOptimizationJob {
             staging: &staging,
             long_edge,
             quality,
+            known: &known,
         };
         let mut done = 0u32;
         let mut shrunk = 0u32;
@@ -164,23 +181,35 @@ impl JobHandler for ImageOptimizationJob {
                 return Ok(stopped_outcome(ctx.cancel_requested(), &staging));
             }
 
-            match optimise_one(&work, index, &path) {
+            let outcome = optimise_one(&work, index, &path);
+            let last = match &outcome {
                 Ok(PageResult::Shrunk { before, after }) => {
                     shrunk += 1;
-                    freed += before.saturating_sub(after);
+                    freed += before.saturating_sub(*after);
+                    recent.push_back(Instant::now());
+                    while recent.len() > PACE_WINDOW + 1 {
+                        recent.pop_front();
+                    }
+                    Some(*after)
                 }
-                Ok(PageResult::Untouched) => {}
+                Ok(PageResult::Untouched) => None,
                 // Una pagina che non si riesce a ricomprimere resta quella di
                 // prima: si scrive nel registro e si va avanti.
-                Err(error) => log::warn!("job optimize skipped page={index} error={error}"),
-            }
+                Err(error) => {
+                    log::warn!("job optimize skipped page={index} error={error}");
+                    None
+                }
+            };
             done += 1;
 
             ctx.report(
                 f64::from(done) / f64::from(total.max(1)),
+                // Il nome dell'opera sta nella riga del lavoro dalla messa in
+                // coda, e la scrittura dell'avanzamento lo conserva: qui non si
+                // manda, e non si cancella.
                 None,
-                None,
-                Some(&detail(done, total, shrunk, freed)),
+                Some(eta_seconds(&recent, total - done, started_at)),
+                Some(&detail(done, total, shrunk, freed, index, last)),
             )
             .await;
             // Un lavoro tutto processore non deve tenersi il filo.
@@ -256,6 +285,10 @@ struct Workspace<'a> {
     staging: &'a Path,
     long_edge: u32,
     quality: u8,
+    /// Le righe di `pages.jsonl` come stavano all'avvio del lavoro, lette una
+    /// volta sola: servono a non perdere l'etichetta che la biblioteca dà alla
+    /// pagina quando la riga si riscrive.
+    known: &'a BTreeMap<u32, PageRecord>,
 }
 
 /// Una pagina: rilegge, decide, ricomprime, sostituisce, riscrive la riga.
@@ -267,6 +300,7 @@ fn optimise_one(work: &Workspace<'_>, index: u32, path: &Path) -> Result<PageRes
         staging,
         long_edge,
         quality,
+        known,
     } = *work;
     let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
     let before = bytes.len() as u64;
@@ -294,24 +328,36 @@ fn optimise_one(work: &Workspace<'_>, index: u32, path: &Path) -> Result<PageRes
     )
     .map_err(|error| error.message)?;
 
-    // L'impronta nuova e la misura d'origine: senza la prima la verifica
-    // completa dichiara corrotta la pagina, senza la seconda non si sa più che
-    // era arrivata più grande.
-    sidecar::append(
-        size_dir,
-        &PageRecord {
-            index,
-            label: None,
-            got: dimensions(&reduced),
-            bytes: Some(after),
-            checksum: Some(checksum),
-            at: now_secs(),
-            note: Some(Note::Downscaled {
-                from: (width, height),
-            }),
-        },
-    )
-    .map_err(|error| error.to_string())?;
+    // La riga nuova con l'impronta dei byte nuovi. Senza, la verifica completa
+    // confronta l'impronta di byte che non esistono più e dichiara corrotta una
+    // pagina integra. L'etichetta della biblioteca si porta avanti da quella
+    // vecchia: la riga si riscrive, non si ricomincia.
+    let record = PageRecord {
+        index,
+        label: known.get(&index).and_then(|row| row.label.clone()),
+        got: dimensions(&reduced),
+        bytes: Some(after),
+        checksum: Some(checksum),
+        at: now_secs(),
+        note: Some(Note::Downscaled {
+            from: (width, height),
+        }),
+    };
+    if let Err(error) = sidecar::append(size_dir, &record) {
+        // La pagina sul disco è già quella nuova: se la riga non si scrive, la
+        // vecchia resta quella che vince, con l'impronta sbagliata. Si prova
+        // allora una riga **senza impronta**, che è uno stato che il disegno
+        // prevede — pagina presente di cui non si conosce l'impronta, e la
+        // verifica completa la salta invece di dichiararla corrotta.
+        log::warn!("job optimize row not written page={index} error={error}");
+        let unknown = PageRecord {
+            checksum: None,
+            ..record
+        };
+        if let Err(error) = sidecar::append(size_dir, &unknown) {
+            return Err(format!("riga non scritta: {error}"));
+        }
+    }
 
     refresh_thumbnail(root, config, staging, index, &reduced);
     Ok(PageResult::Shrunk { before, after })
@@ -357,13 +403,37 @@ fn dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
 }
 
 /// Dettaglio letto dal pannello: quante pagine, quante ridotte, quanto liberato.
-fn detail(done: u32, total: u32, shrunk: u32, freed: u64) -> String {
+fn detail(done: u32, total: u32, shrunk: u32, freed: u64, page: u32, bytes: Option<u64>) -> String {
+    let mut last = serde_json::json!({ "index": page });
+    if let (Some(map), Some(bytes)) = (last.as_object_mut(), bytes) {
+        map.insert("bytes".into(), bytes.into());
+    }
     serde_json::json!({
         "units": { "done": done, "total": total, "label": "items" },
         "shrunk": shrunk,
         "freed": freed,
+        "last": last,
     })
     .to_string()
+}
+
+/// Quante pagine al secondo va, guardando le ultime `PACE_WINDOW` ridotte.
+///
+/// Le pagine lasciate stare non contano: sono istantanee, e mescolarle al ritmo
+/// darebbe una stima che cala mentre il lavoro non avanza. Con meno di
+/// `PACE_SAMPLE` misure si usa il tempo medio dall'avvio, che è tutto quello che
+/// si sa.
+fn eta_seconds(recent: &VecDeque<Instant>, remaining: u32, started_at: Instant) -> i64 {
+    let per_page = if recent.len() >= PACE_SAMPLE {
+        let first = recent.front().copied().unwrap_or(started_at);
+        let last = recent.back().copied().unwrap_or(started_at);
+        (last - first) / (recent.len() - 1) as u32
+    } else if let Some(last) = recent.back() {
+        (*last - started_at) / recent.len().max(1) as u32
+    } else {
+        return -1;
+    };
+    (u64::from(remaining) * per_page.as_millis() as u64 / 1000) as i64
 }
 
 #[cfg(test)]
@@ -454,6 +524,7 @@ mod tests {
         let before = std::fs::metadata(&page).unwrap().len();
 
         let config = config();
+        let known = sidecar::read(&size_dir);
         let work = Workspace {
             root: &root,
             config: &config,
@@ -461,6 +532,7 @@ mod tests {
             staging: &staging,
             long_edge: 800,
             quality: 82,
+            known: &known,
         };
         let result = optimise_one(&work, 1, &page).unwrap();
 
@@ -490,6 +562,7 @@ mod tests {
         let before = std::fs::read(&page).unwrap();
 
         let config = config();
+        let known = sidecar::read(&size_dir);
         let work = Workspace {
             root: &root,
             config: &config,
@@ -497,6 +570,7 @@ mod tests {
             staging: &staging,
             long_edge: 800,
             quality: 82,
+            known: &known,
         };
         let result = optimise_one(&work, 1, &page).unwrap();
 

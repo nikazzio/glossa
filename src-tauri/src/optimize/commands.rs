@@ -25,6 +25,9 @@ pub const QUALITY_SETTING: &str = "optimize_jpeg_quality";
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptimizeEstimate {
+    /// La cartella su cui si lavora: è la metà «da quale misura» che la conferma
+    /// deve dichiarare.
+    pub size_tag: String,
     /// Pagine nella cartella di misura.
     pub pages: u32,
     /// Quante di quelle verrebbero davvero ridotte: le altre sono già dentro il
@@ -38,7 +41,6 @@ pub struct OptimizeEstimate {
     pub freeing: u64,
     /// Il lato lungo di arrivo che verrebbe usato.
     pub long_edge: u32,
-    pub quality: u8,
 }
 
 fn setting(conn: &rusqlite::Connection, key: &str) -> Option<u64> {
@@ -65,40 +67,70 @@ pub fn configured(conn: &rusqlite::Connection) -> (u32, u8) {
     (long_edge, quality)
 }
 
-/// Quante pagine e quanto spazio ci sono in ballo, prima di chiedere conferma
-/// (§5.7: la conferma dichiara quante pagine, da quale misura a quale, e quanto
-/// si prevede di liberare).
+/// Cosa c'è in ballo, prima di chiedere conferma: quante pagine ci sono, quante
+/// verrebbero davvero ridotte, quanto occupano adesso e quanto si prevede di
+/// liberare.
+///
+/// Gira su un **filo di lavoro**: apre l'intestazione di ogni pagina della
+/// cartella, e su 900 pagine — o su un deposito di rete — sul filo
+/// dell'interfaccia bloccherebbe la finestra prima che la conferma compaia.
 #[tauri::command]
-pub fn optimize_estimate(
+pub async fn optimize_estimate(
     app: tauri::AppHandle,
     version_id: String,
     size_tag: String,
 ) -> Result<OptimizeEstimate, String> {
     let root = crate::vault::commands::root_of(&app)?;
-    let entry = inventory::of_version(&root, &version_id)
-        .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
-    let found = entry
-        .sizes
-        .iter()
-        .find(|size| size.size_tag == size_tag)
-        .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
-    let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
-    let (long_edge, quality) = configured(&conn);
-    let size_dir = root
-        .join(crate::vault::layout::pages_dir(
-            &entry.provider_key,
-            &version_id,
-        )?)
-        .join(crate::vault::layout::safe_component(&size_tag)?);
-    let (shrinking, freeing) = super::forecast(&size_dir, long_edge);
-    Ok(OptimizeEstimate {
-        pages: found.pages,
-        shrinking,
-        bytes: found.bytes,
-        freeing,
-        long_edge,
-        quality,
+    let db_path = crate::storage_config::db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let entry = inventory::of_version(&root, &version_id)
+            .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
+        let found = entry
+            .sizes
+            .iter()
+            .find(|size| size.size_tag == size_tag)
+            .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
+        let conn = crate::db::open_connection(&db_path)?;
+        let (long_edge, _) = configured(&conn);
+        let size_dir = root
+            .join(crate::vault::layout::pages_dir(
+                &entry.provider_key,
+                &version_id,
+            )?)
+            .join(crate::vault::layout::safe_component(&size_tag)?);
+        let (shrinking, freeing) = super::forecast(&size_dir, long_edge);
+        Ok(OptimizeEstimate {
+            size_tag,
+            pages: found.pages,
+            shrinking,
+            bytes: found.bytes,
+            freeing,
+            long_edge,
+        })
     })
+    .await
+    .map_err(|error| format!("previsione non riuscita: {error}"))?
+}
+
+/// Rifiuta se uno scaricamento di quest'opera non è ancora finito.
+///
+/// I due lavori scriverebbero nella stessa cartella e aggiungerebbero righe allo
+/// stesso `pages.jsonl`: se l'ottimizzazione sostituisce una pagina fra la
+/// promozione di quella pagina e la scrittura della sua riga, a vincere resta la
+/// riga dello scaricamento, con l'impronta di byte che non esistono più — e la
+/// verifica completa dichiara corrotta una pagina integra.
+///
+/// Non si usa la dipendenza fra lavori perché si sblocca solo su un lavoro
+/// **completato**: con uno scaricamento in pausa l'ottimizzazione resterebbe in
+/// coda per sempre, senza dirlo a nessuno.
+fn refuse_while_downloading(app: &tauri::AppHandle, version_id: &str) -> Result<(), String> {
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
+    let downloading = crate::jobs::store::get(&conn, &crate::download::job_id(version_id))?
+        .is_some_and(|job| !job.status.is_terminal());
+    if downloading {
+        return Err("download_in_corso".to_string());
+    }
+    Ok(())
 }
 
 /// Mette in coda l'ottimizzazione di **una cartella di misura**.
@@ -116,12 +148,21 @@ pub async fn enqueue_optimization(
     let root = crate::vault::commands::root_of(&app)?;
     let inventory = inventory::of_version(&root, &version_id)
         .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
+    refuse_while_downloading(&app, &version_id)?;
     if !inventory.sizes.iter().any(|size| size.size_tag == size_tag) {
         return Err("Questa misura non è nel deposito.".to_string());
     }
     let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
     let (default_edge, default_quality) = configured(&conn);
     let thumbnail_edge = crate::download::thumbnail_edge(&conn)?;
+    let title = conn
+        .query_row(
+            "SELECT s.title FROM sources s \
+             JOIN source_versions v ON v.source_id = s.id WHERE v.id = ?1",
+            rusqlite::params![&version_id],
+            |row| row.get::<_, String>(0),
+        )
+        .ok();
     drop(conn);
 
     let config = serde_json::json!({
@@ -146,7 +187,11 @@ pub async fn enqueue_optimization(
             max_attempts: 1,
             depends_on_job_id: None,
             workspace_id: None,
-            message: None,
+            // Il titolo dell'opera nella riga del lavoro **già in coda**: senza,
+            // il pannello mostrerebbe «Ottimizzazione delle immagini» per ogni
+            // libro, che è il difetto che D20 nomina. La scrittura
+            // dell'avanzamento lo conserva, quindi si scrive una volta sola.
+            message: title,
         })
         .await
         .map_err(|error| error.to_string())

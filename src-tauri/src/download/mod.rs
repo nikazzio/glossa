@@ -25,6 +25,12 @@ use crate::jobs::JobRecord;
 /// Prefisso dell'identificativo del lavoro: **uno per digitalizzazione**.
 const JOB_ID_PREFIX: &str = "download";
 
+/// L'identificativo del lavoro che scarica una digitalizzazione: uno solo per
+/// opera, e chi deve sapere se quell'opera è in scaricamento lo cerca con questo.
+pub fn job_id(version_id: &str) -> String {
+    format!("{JOB_ID_PREFIX}:{version_id}")
+}
+
 /// È ciò che l'utente ha appena chiesto guardando lo schermo: la coda lo
 /// preferisce alle verifiche di fondo.
 const DOWNLOAD_PRIORITY: i64 = 10;
@@ -139,7 +145,7 @@ async fn enqueue(
     // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
     // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
     // voleva vedere.
-    let id = format!("{JOB_ID_PREFIX}:{version_id}");
+    let id = job_id(&version_id);
     let existing = crate::jobs::store::get(&conn, &id)?;
     drop(conn);
 

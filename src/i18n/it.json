@@ -876,12 +876,13 @@
       "extraFullSize_one": "più {{count}} a risoluzione piena",
       "extraFullSize_other": "più {{count}} a risoluzione piena",
       "optimizeAction": "Riduci le immagini per liberare spazio",
-      "optimizeTitle": "Ridurre {{count}} pagine a {{edge}} px?",
-      "optimizeMessage": "Le pagine vengono rilette, rimpicciolite e ricompresse. L'originale viene sostituito e non si torna indietro. Adesso questa misura occupa {{size}}, e dovresti liberarne circa {{freeing}}. Le altre misure di quest'opera non si toccano.",
+      "optimizeTitle": "Ridurre {{count}} pagine su {{total}} da {{from}} a {{edge}} px?",
+      "optimizeMessage": "Le pagine vengono rilette, rimpicciolite e ricompresse. L'originale viene sostituito e non si torna indietro. Le pagine già più piccole non si toccano, e nemmeno le altre misure di quest'opera. La cartella occupa {{size}} in tutto, e dovresti liberare circa {{freeing}}.",
       "optimizeConfirm": "Riduci",
       "optimizeNothing": "Le pagine sono già tutte dentro {{edge}} px: non c'è niente da ridurre.",
       "optimizeQueued": "Ottimizzazione messa in coda.",
-      "optimizeFailed": "Non è stato possibile avviare l'ottimizzazione."
+      "optimizeFailed": "Non è stato possibile avviare l'ottimizzazione.",
+      "optimizeWhileDownloading": "Prima finisce lo scaricamento di quest'opera: i due lavori scriverebbero sulle stesse pagine."
     },
     "transcriptions": {
       "title": "Trascrizioni",

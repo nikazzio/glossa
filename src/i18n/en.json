@@ -876,12 +876,13 @@
       "extraFullSize_one": "plus {{count}} at full resolution",
       "extraFullSize_other": "plus {{count}} at full resolution",
       "optimizeAction": "Shrink the images to free up space",
-      "optimizeTitle": "Reduce {{count}} pages to {{edge}} px?",
-      "optimizeMessage": "The pages are read again, shrunk and recompressed. The original is replaced and there is no going back. This size currently takes {{size}}, and you should get about {{freeing}} back. The other sizes of this work are left alone.",
+      "optimizeTitle": "Reduce {{count}} of {{total}} pages from {{from}} to {{edge}} px?",
+      "optimizeMessage": "The pages are read again, shrunk and recompressed. The original is replaced and there is no going back. Pages already smaller are left alone, and so are the other sizes of this work. The folder takes {{size}} in all, and you should get about {{freeing}} back.",
       "optimizeConfirm": "Reduce",
       "optimizeNothing": "Every page is already within {{edge}} px: there is nothing to shrink.",
       "optimizeQueued": "Optimisation queued.",
-      "optimizeFailed": "The optimisation could not be started."
+      "optimizeFailed": "The optimisation could not be started.",
+      "optimizeWhileDownloading": "This work has to finish downloading first: the two jobs would write over the same pages."
     },
     "transcriptions": {
       "title": "Transcriptions",

@@ -14,6 +14,8 @@ import type { Job } from './jobsService';
  */
 
 export interface OptimizeEstimate {
+  /** La cartella su cui si lavora: `2000`, `max`… */
+  sizeTag: string;
   pages: number;
   /** Quante verrebbero davvero ridotte: le altre sono già abbastanza piccole. */
   shrinking: number;
@@ -21,7 +23,6 @@ export interface OptimizeEstimate {
   /** Quanto si prevede di liberare: è una previsione, non una misura. */
   freeing: number;
   longEdge: number;
-  quality: number;
 }
 
 export const DEFAULT_OPTIMIZE_LONG_EDGE = 2000;

@@ -31,6 +31,7 @@ import {
   summarizeAvailability,
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
+import { MAX_SIZE_CAP } from '../../services/downloadSettingsService';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { enqueueOptimization, optimizeEstimate } from '../../services/optimizeService';
@@ -412,6 +413,11 @@ function CatalogEntryRow({
       const confirmed = await confirm({
         title: t('areas.library.optimizeTitle', {
           count: estimate.shrinking,
+          total: estimate.pages,
+          from:
+            estimate.sizeTag === MAX_SIZE_CAP
+              ? t('settings.download.sizeCapMax')
+              : t('settings.download.pixels', { value: estimate.sizeTag }),
           edge: estimate.longEdge,
         }),
         message: t('areas.library.optimizeMessage', {
@@ -425,9 +431,14 @@ function CatalogEntryRow({
       await enqueueOptimization(entry.versionId, sizeTag);
       toast.success(t('areas.library.optimizeQueued'));
     } catch (error: unknown) {
-      toast.error(t('areas.library.optimizeFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
+      const reason = error instanceof Error ? error.message : String(error);
+      // Il motore rifiuta finché uno scaricamento di quest'opera è in piedi: i
+      // due lavori scriverebbero sulle stesse pagine e nello stesso registro.
+      if (reason.includes('download_in_corso')) {
+        toast.info(t('areas.library.optimizeWhileDownloading'));
+        return;
+      }
+      toast.error(t('areas.library.optimizeFailed'), { description: reason });
     } finally {
       setBusy(false);
     }
