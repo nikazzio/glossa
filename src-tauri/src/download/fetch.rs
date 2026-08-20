@@ -1,7 +1,7 @@
 //! La singola richiesta verso una biblioteca: attesa del turno, invio,
 //! classificazione della risposta.
 //!
-//! La classificazione è il punto (D16): un 403 su questi servizi significa
+//! La classificazione è il punto: un 403 su questi servizi significa
 //! "stai correndo troppo" e si ritenta dopo un raffreddamento lungo, un 404
 //! significa che la pagina non c'è e insistere è inutile. Senza questa
 //! distinzione la tabella delle decisioni non è applicabile.
@@ -15,7 +15,7 @@ use crate::jobs::{ErrorKind, JobError};
 use super::courtesy::{Courtesy, Signals};
 
 /// Come si presenta Glossa alle biblioteche. Identificarsi è buona pratica
-/// IIIF, ed è la parte non tecnica dell'aderenza allo standard (D18).
+/// IIIF, ed è la parte non tecnica dell'aderenza allo standard.
 pub fn user_agent() -> String {
     format!(
         "Glossa/{} (+https://github.com/nikazzio/glossa)",
@@ -55,7 +55,7 @@ const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 ///
 /// `job_attempt` è il tentativo del **lavoro**, non della richiesta: serve a
 /// calcolare l'attesa esponenziale con la base e il tetto del profilo della
-/// biblioteca (D16), invece che con costanti del motore.
+/// biblioteca, invece che con costanti del motore.
 pub async fn fetch(
     client: &Client,
     courtesy: &Courtesy,
@@ -77,7 +77,7 @@ pub async fn fetch(
             Err(error) => {
                 // Un rifiuto per eccesso di richieste raffredda **l'host**, non
                 // solo questo lavoro: un secondo scaricamento sullo stesso
-                // server deve rallentare anche lui (D18).
+                // server deve rallentare anche lui.
                 if matches!(error.kind, ErrorKind::Throttled | ErrorKind::RateLimited) {
                     let declared = error.retry_after.map(|wait| wait.as_secs());
                     let code = if error.kind == ErrorKind::Throttled {
@@ -162,7 +162,7 @@ async fn attempt_once(
     Err(classify(status, retry_after_secs(&response), url, profile))
 }
 
-/// L'attesa la decide il **profilo della biblioteca** (D18), non una costante
+/// L'attesa la decide il **profilo della biblioteca**, non una costante
 /// del motore: dopo un 403 Gallica vuole dieci minuti, le altre due. Il tempo
 /// dichiarato dal servizio, quando c'è, vince su tutto.
 fn classify(

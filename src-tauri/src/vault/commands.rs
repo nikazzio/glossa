@@ -12,7 +12,7 @@ use tauri_plugin_dialog::DialogExt;
 ///
 /// Senza questo, la cartella `vault/` dentro la cartella dati non esiste finché
 /// non arriva il primo scaricamento, e lo stato del deposito risulterebbe
-/// "non raggiungibile" — che è il messaggio del disco staccato (D1), non della
+/// "non raggiungibile" — che è il messaggio del disco staccato, non della
 /// cartella mai creata. Una radice **scelta dall'utente** invece non si crea
 /// mai da soli: se non c'è, è perché il disco non è collegato.
 pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
@@ -21,7 +21,7 @@ pub fn ensure_default_root(app: &tauri::AppHandle) -> Result<(), String> {
     let chosen = configured.filter(|value| !value.trim().is_empty());
     // Quello che una chiusura brusca ha lasciato nell'area di transito si
     // butta adesso: all'avvio non c'è nessun lavoro in corso, e lì dentro c'è
-    // solo roba mai promossa (D16-bis).
+    // solo roba mai promossa.
     super::discard_stale_staging(&resolve_root(app, chosen.as_deref())?);
     if chosen.is_some() {
         // Una radice scelta dall'utente non si crea mai da soli: se non c'è, è
@@ -48,7 +48,7 @@ pub(crate) fn root_of(app: &tauri::AppHandle) -> Result<std::path::PathBuf, Stri
     resolve_root(app, configured.as_deref())
 }
 
-/// Stato del deposito, senza scandire niente (D5).
+/// Stato del deposito, senza scandire niente.
 #[tauri::command]
 pub fn get_vault_status(app: tauri::AppHandle) -> Result<VaultStatus, String> {
     let configured = configured_root(&app)?;
@@ -57,7 +57,7 @@ pub fn get_vault_status(app: tauri::AppHandle) -> Result<VaultStatus, String> {
 
 /// Crea la radice e il marcatore, se mancano. Idempotente.
 ///
-/// Rifiuta una cartella che contiene altro (D1): l'unico modo di adottare un
+/// Rifiuta una cartella che contiene altro: l'unico modo di adottare un
 /// deposito è passare dalla finestra aperta dal backend, che classifica prima
 /// di scrivere.
 #[tauri::command]
@@ -76,7 +76,7 @@ pub struct FreedSpace {
     pub freed_bytes: u64,
 }
 
-/// "Libera spazio" (D6): cancella le pagine scaricate di una digitalizzazione
+/// "Libera spazio": cancella le pagine scaricate di una digitalizzazione
 /// **subito e per davvero**, senza passare dal cestino — spostare gigabyte nel
 /// cestino non libera niente.
 ///
@@ -184,7 +184,7 @@ pub struct VaultChoice {
     pub writable: bool,
     /// Vero quando la cartella è stata davvero adottata come deposito.
     pub adopted: bool,
-    /// La cartella sembra dentro un servizio di sincronizzazione (D1-bis). In
+    /// La cartella sembra dentro un servizio di sincronizzazione. In
     /// modalità streaming i file risultano presenti ma occupano zero byte, e la
     /// modalità di lettura "solo locale" diventerebbe una bugia.
     pub sync_folder: bool,
@@ -213,7 +213,7 @@ fn looks_like_a_sync_folder(path: &std::path::Path) -> bool {
 /// Il percorso non attraversa la webview e nessun comando lo accetta come
 /// parametro, come per l'import documenti dopo #405: il frontend riceve solo
 /// l'esito. Rifiuta una cartella con altro contenuto e una dove non si può
-/// scrivere (D1).
+/// scrivere.
 #[tauri::command]
 pub async fn choose_vault_folder(
     app: tauri::AppHandle,
@@ -260,7 +260,7 @@ pub async fn choose_vault_folder(
 }
 
 /// Cancella **tutto** quello che una digitalizzazione ha nel deposito:
-/// manifesto, miniature, pagine (D6).
+/// manifesto, miniature, pagine.
 ///
 /// È quello che serve quando l'opera esce dalla Biblioteca. Finché il cestino
 /// non esiste, togliere un'opera e lasciarne i file sul disco produceva
@@ -294,7 +294,7 @@ pub fn delete_version_files(
     })
 }
 
-/// Cancella i file che nessuna riga reclama (D5-bis).
+/// Cancella i file che nessuna riga reclama.
 ///
 /// **Riguarda il deposito adesso, non il conto dell'ultima verifica.** Fra la
 /// verifica e questo comando può essere finito uno scaricamento: cancellare
@@ -324,7 +324,7 @@ pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, S
         let mut freed_bytes = 0;
         // Si rilegge il deposito adesso e non ci si fida del conto della
         // verifica: fra il controllo e la cancellazione può essere finito uno
-        // scaricamento, e quella cartella non è più orfana (D5-bis).
+        // scaricamento, e quella cartella non è più orfana.
         for orphan in super::verification::orphan_folders(&root, &known) {
             match std::fs::remove_dir_all(&orphan.path) {
                 Ok(()) => {
@@ -350,12 +350,12 @@ pub async fn delete_vault_orphans(app: tauri::AppHandle) -> Result<FreedSpace, S
     .map_err(|error| format!("Deleting the orphan files failed: {error}"))?
 }
 
-/// Mette in coda la verifica del deposito (D5-bis).
+/// Mette in coda la verifica del deposito.
 ///
 /// Un lavoro solo per volta: chiederla due volte non ne apre due, restituisce
 /// quella in corso. Rapida di default; completa su richiesta esplicita, perché
 /// apre ogni file e su un deposito sincronizzato costringe il client a
-/// scaricare tutto (D1-bis).
+/// scaricare tutto.
 #[tauri::command]
 pub async fn enqueue_vault_verification(
     jobs: tauri::State<'_, crate::jobs::commands::JobsState>,
@@ -364,7 +364,7 @@ pub async fn enqueue_vault_verification(
     super::verification::enqueue(&jobs.0, full.unwrap_or(false)).await
 }
 
-/// "Tieni tutto insieme" (D1): deposito dentro la cartella dati, che è la
+/// "Tieni tutto insieme": deposito dentro la cartella dati, che è la
 /// scelta predefinita e quella di chi non vuole pensarci.
 #[tauri::command]
 pub async fn use_default_vault_folder(

@@ -1,8 +1,8 @@
 //! Lo scaricamento delle fonti: il primo gestore di lavoro vero (#218, PR 4).
 //!
 //! Dal manifesto alle pagine sul disco, rispettando i limiti della biblioteca
-//! (D18), saltando ciò che è già valido, salvando dove si è arrivati e senza
-//! far entrare nel deposito niente che non sia stato validato (D16-bis).
+//!, saltando ciò che è già valido, salvando dove si è arrivati e senza
+//! far entrare nel deposito niente che non sia stato validato.
 
 pub mod catalog;
 pub mod courtesy;
@@ -46,7 +46,7 @@ pub const MAX_THUMBNAIL_EDGE: u32 = 800;
 /// Mette in coda lo scaricamento di una digitalizzazione: le pagine, e da
 /// ognuna la sua miniatura.
 ///
-/// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
+/// L'interfaccia non scarica niente: chiede un lavoro e poi osserva. La
 /// priorità è alta perché è ciò che l'utente ha appena chiesto guardando lo
 /// schermo, e la coda deve preferirlo alle verifiche di fondo.
 ///
@@ -82,13 +82,13 @@ async fn enqueue(
     version_id: Option<String>,
     size_tag: Option<String>,
     // Da quale workspace è partita la richiesta: i fatti del lavoro ci si
-    // raggruppano sopra (D24), e senza restavano fuori da ogni conto.
+    // raggruppano sopra, e senza restavano fuori da ogni conto.
     workspace_id: Option<String>,
 ) -> Result<JobRecord, String> {
     let conn = jobs.0.connection()?;
 
     // Tentativi e attese sono del profilo della biblioteca, non costanti nostre
-    // (D16, D18): Gallica ne concede tre, le altre cinque. Il profilo è quello
+    // Gallica ne concede tre, le altre cinque. Il profilo è quello
     // **in vigore**, cioè con dentro le modifiche dell'utente (#421).
     let profile = crate::iiif::settings::effective_profile(
         &conn,
@@ -115,7 +115,7 @@ async fn enqueue(
     };
 
     // Il tetto lo decide la fonte, poi la biblioteca, poi l'impostazione
-    // generale (D4). Un valore chiesto esplicitamente — «scarica questa alla
+    // generale. Un valore chiesto esplicitamente — «scarica questa alla
     // massima risoluzione» — passa davanti a tutti, ma deve comunque essere un
     // tetto che significa qualcosa.
     let size_tag = match size_tag
@@ -132,7 +132,7 @@ async fn enqueue(
     let thumbnail_edge = thumbnail_edge(&conn)?;
 
     // Il nome dell'opera si scrive già adesso: in coda il pannello mostra
-    // questo, e «Scaricamento» da solo non dice quale libro (D20).
+    // questo, e «Scaricamento» da solo non dice quale libro.
     let title: Option<String> = conn
         .query_row(
             "SELECT s.title FROM sources s \
@@ -155,7 +155,7 @@ async fn enqueue(
         }
         // Un lavoro finito che si rilancia riparte **da capo**: il punto
         // salvato parla di pagine che nel frattempo possono essere state
-        // cancellate per liberare spazio (D6), e riprendendo da lì non
+        // cancellate per liberare spazio, e riprendendo da lì non
         // tornerebbero mai più. Le pagine ancora sul disco costano un controllo
         // a testa e vengono saltate lo stesso.
         jobs.0.retry(&id, true).await?;

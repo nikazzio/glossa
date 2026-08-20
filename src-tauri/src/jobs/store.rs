@@ -24,7 +24,7 @@ pub struct NewJob {
     pub depends_on_job_id: Option<String>,
     pub workspace_id: Option<String>,
     /// Come si chiama il lavoro nel pannello, già in coda: chi lo ha messo in
-    /// fila sa dire cos'è, il gestore lo saprà solo quando parte (D20).
+    /// fila sa dire cos'è, il gestore lo saprà solo quando parte.
     pub message: Option<String>,
 }
 
@@ -86,7 +86,7 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<JobRecord>, String> {
 }
 
 /// I lavori che il pannello mostra: quelli non ancora finiti **e quelli
-/// terminati oggi** (D20).
+/// terminati oggi**.
 ///
 /// I terminati servono: senza, la sezione «terminati oggi» si svuotava a ogni
 /// riavvio dell'applicazione, perché l'elenco iniziale li escludeva e nessun
@@ -105,7 +105,7 @@ pub fn list_active(conn: &Connection) -> Result<Vec<JobRecord>, String> {
     )
 }
 
-/// I lavori pronti a partire: in coda, senza un'attesa ancora in corso (D16), e
+/// I lavori pronti a partire: in coda, senza un'attesa ancora in corso, e
 /// con la dipendenza già completata se ne hanno una.
 pub fn claimable(conn: &Connection) -> Result<Vec<JobRecord>, String> {
     query_many(
@@ -123,7 +123,7 @@ pub fn claimable(conn: &Connection) -> Result<Vec<JobRecord>, String> {
 }
 
 /// I lavori rimasti a metà da una chiusura brusca: in esecuzione o dentro una
-/// transizione che nessuno ha portato a termine (D13).
+/// transizione che nessuno ha portato a termine.
 pub fn interrupted(conn: &Connection) -> Result<Vec<JobRecord>, String> {
     query_many(
         conn,
@@ -170,7 +170,7 @@ pub fn set_status(conn: &Connection, id: &str, status: JobStatus) -> Result<bool
     Ok(changed > 0)
 }
 
-/// Avanzamento, messaggio, stima e motivo dell'attesa (D17). Il gestore chiama
+/// Avanzamento, messaggio, stima e motivo dell'attesa. Il gestore chiama
 /// al massimo una volta al secondo: il limite sta in `JobContext`, qui si
 /// scrive e basta.
 #[allow(clippy::too_many_arguments)]
@@ -215,7 +215,7 @@ pub fn save_phase(conn: &Connection, id: &str, phase: &str) -> Result<(), String
     Ok(())
 }
 
-/// A che punto era (D13). Senza, una ripresa ripartirebbe da zero.
+/// A che punto era. Senza, una ripresa ripartirebbe da zero.
 pub fn save_checkpoint(conn: &Connection, id: &str, checkpoint: &str) -> Result<(), String> {
     conn.execute(
         "UPDATE jobs SET checkpoint = ?2, updated_at = CURRENT_TIMESTAMP \
@@ -238,7 +238,7 @@ pub fn increment_attempt(conn: &Connection, id: &str) -> Result<(), String> {
 
 /// Azzera il conto dei tentativi.
 ///
-/// `max_attempts` conta i tentativi **falliti di fila** (D16): una ripresa o un
+/// `max_attempts` conta i tentativi **falliti di fila**: una ripresa o un
 /// rilancio chiesti dall'utente chiudono quel conto e ne aprono uno nuovo. Il
 /// conteggio si alza a ogni avvio, e senza questo ogni ripresa ne consumava
 /// uno: su un libro lungo, dopo cinque pause, il primo errore di rete diventava
@@ -257,7 +257,7 @@ pub fn reset_attempts(conn: &Connection, id: &str) -> Result<(), String> {
 }
 
 /// Rimette in coda con un'attesa: il tentativo successivo non parte prima
-/// (D16). Resta `queued`, perché per l'utente è ancora un lavoro in corso —
+/// Resta `queued`, perché per l'utente è ancora un lavoro in corso —
 /// fermo, non fallito.
 pub fn schedule_retry(
     conn: &Connection,
@@ -269,7 +269,7 @@ pub fn schedule_retry(
         // `eta_seconds` diventa **l'attesa prima del prossimo tentativo**: è
         // quello che l'interfaccia scrive accanto a «riprende fra…», e finché
         // conteneva la stima dello scaricamento diceva un numero vero al posto
-        // sbagliato (D17). Alla ripartenza il gestore lo riscrive con la stima.
+        // sbagliato. Alla ripartenza il gestore lo riscrive con la stima.
         "UPDATE jobs SET status = 'queued', \
          next_attempt_at = datetime('now', ?3), \
          error = ?2, error_kind = ?4, \
@@ -317,7 +317,7 @@ pub fn requeue(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), 
     Ok(())
 }
 
-/// Mette da parte un lavoro interrotto, in attesa che l'utente decida (D13).
+/// Mette da parte un lavoro interrotto, in attesa che l'utente decida.
 ///
 /// `reset_progress` serve a chi non sa riprendere: il progresso rimasto sul
 /// database non corrisponde a niente di riutilizzabile, e mostrarlo sarebbe una
@@ -338,7 +338,7 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
 
 /// Toglie dall'elenco i lavori finiti: completati, annullati, falliti.
 ///
-/// Sono righe di storico che il pannello mostra per la giornata (D20); quando
+/// Sono righe di storico che il pannello mostra per la giornata; quando
 /// diventano rumore si buttano. `id` limita la pulizia a un lavoro solo.
 pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
     let removed = match id {

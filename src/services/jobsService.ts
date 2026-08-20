@@ -6,9 +6,9 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
  * I lavori in background.
  * Decisioni in `docs-dev/BLOCCO_1_DECISIONI.md`, parte C.
  *
- * L'interfaccia **non esegue niente di lungo** (D10): chiede la creazione di un
+ * L'interfaccia **non esegue niente di lungo**: chiede la creazione di un
  * lavoro all'orchestratore e poi ascolta. Non interroga il database a
- * intervalli: ogni cambio arriva come evento (D17).
+ * intervalli: ogni cambio arriva come evento.
  */
 
 /** Evento emesso dall'orchestratore a ogni cambiamento di un lavoro. */
@@ -16,7 +16,7 @@ const JOB_EVENT = 'jobs:updated';
 
 /**
  * `pausing` e `cancelling` esistono perché pausa e annullamento sono
- * cooperativi (D14, D15): il lavoro si ferma al confine dell'unità di lavoro
+ * cooperativi: il lavoro si ferma al confine dell'unità di lavoro
  * successiva, non all'istante. L'interfaccia deve mostrare "in pausa…" e poi
  * "in pausa", senza fingere che sia immediato.
  */
@@ -30,7 +30,7 @@ export type JobStatus =
   | 'completed'
   | 'error';
 
-/** Classificazione degli errori (D16): decide se e quando si ritenta. */
+/** Classificazione degli errori: decide se e quando si ritenta. */
 export type JobErrorKind =
   | 'transport'
   | 'rateLimited'
@@ -56,7 +56,7 @@ export interface Job {
   etaSeconds: number | null;
   /**
    * Perché è fermo pur essendo in corso: sta rispettando i limiti della
-   * biblioteca, non è fallito (D17). Immobilità con due significati opposti,
+   * biblioteca, non è fallito. Immobilità con due significati opposti,
    * da dire in modo diverso.
    */
   waitingReason: string | null;
@@ -109,20 +109,20 @@ export async function pauseJob(id: string): Promise<void> {
   await invoke('pause_job', { id });
 }
 
-/** Riparte dal punto salvato, non da capo (D13). */
+/** Riparte dal punto salvato, non da capo. */
 export async function resumeJob(id: string): Promise<void> {
   await invoke('resume_job', { id });
 }
 
-/** Un lavoro annullato è terminale: si ripete da capo, non si riprende (D15). */
+/** Un lavoro annullato è terminale: si ripete da capo, non si riprende. */
 export async function cancelJob(id: string): Promise<void> {
   await invoke('cancel_job', { id });
 }
 
 /**
  * Mette in coda lo scaricamento di una digitalizzazione: le pagine e le sue
- * miniature, che sono due lavori distinti (D6). L'interfaccia non scarica
- * niente: chiede e osserva (D10). Restituisce il lavoro delle pagine.
+ * miniature, che sono due lavori distinti. L'interfaccia non scarica
+ * niente: chiede e osserva. Restituisce il lavoro delle pagine.
  */
 export async function enqueueSourceDownload(request: {
   providerKey: string;
@@ -132,7 +132,7 @@ export async function enqueueSourceDownload(request: {
   sizeTag?: string;
 }): Promise<Job> {
   // Da quale workspace parte la richiesta lo sa solo l'interfaccia, e i fatti
-  // del lavoro ci si raggruppano sopra (D24): senza, restavano senza padrone.
+  // del lavoro ci si raggruppano sopra: senza, restavano senza padrone.
   return invoke<Job>('enqueue_source_download', {
     ...request,
     workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
@@ -140,7 +140,7 @@ export async function enqueueSourceDownload(request: {
 }
 
 /**
- * Mette in coda la verifica del deposito (D5-bis). Rapida di default; completa
+ * Mette in coda la verifica del deposito. Rapida di default; completa
  * su richiesta esplicita, perché apre ogni file.
  */
 export async function enqueueVaultVerification(full = false): Promise<Job> {
@@ -281,7 +281,7 @@ export function parseJobDetail(raw: string | null): JobDetail {
 
 /**
  * Un lavoro è fermo in attesa di poter riprovare: non è fallito, e la barra non
- * deve fingere di avanzare (D17). Con i limiti delle biblioteche l'attesa può
+ * deve fingere di avanzare. Con i limiti delle biblioteche l'attesa può
  * durare minuti.
  */
 export function isWaitingToRetry(job: Job): boolean {
@@ -305,7 +305,7 @@ export function retryCountdownSeconds(job: Job, now = Date.now()): number | null
 
 /**
  * Il lavoro sta girando ma è fermo per rispettare i limiti della biblioteca
- * (D18): con i profili tarati può restare immobile per minuti. È la stessa
+ *: con i profili tarati può restare immobile per minuti. È la stessa
  * immobilità di un errore con il significato opposto, e va detta diversamente.
  */
 export function isWaitingForLibrary(job: Job): boolean {

@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 import { downloadedSourcesSchema, type DownloadedSource } from '../schemas/externalData';
 
 /**
- * Cosa succede **dopo** un ripristino (#345, D31, D5-bis).
+ * Cosa succede **dopo** un ripristino (#345).
  *
  * Il ripristino rimette le pagine che erano sul disco, ma non può sapere se
  * quei file ci sono davvero: il backup arriva da un'altra macchina, o il disco
@@ -39,7 +39,7 @@ export interface MissingWork {
 
 /**
  * Pagine che c'erano a una misura **diversa** dalla principale e adesso non ci
- * sono: tipicamente le tre prese a piena risoluzione per una trascrizione (§5.6).
+ * sono: tipicamente le tre prese a piena risoluzione per una trascrizione.
  *
  * Non si accodano: uno scaricamento del libro a quella misura scaricherebbe
  * tutte le pagine invece di quelle tre, che è l'opposto di quello che l'utente

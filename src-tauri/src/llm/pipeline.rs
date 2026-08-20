@@ -143,7 +143,7 @@ pub struct MemoryExtractorResponse {
     pub pairs: Vec<MemoryExtractorPair>,
     /// I token che la chiamata è costata: anche l'estrattore è una chiamata a
     /// un modello, e senza questo dato il conto di un documento resta più basso
-    /// del vero (D29).
+    /// del vero.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -580,7 +580,7 @@ pub async fn extract_phrase_memory_pairs(
         // recupero può correggere.
         let answer = prov.call(&client, &req).await?;
         // I token si prendono dal tentativo che ha risposto: è quello che si
-        // paga, ed è l'unico momento in cui il dato esiste (D29).
+        // paga, ed è l'unico momento in cui il dato esiste.
         let usage = answer.usage;
 
         let sanitized = sanitize_llm_json_output(&answer.content);

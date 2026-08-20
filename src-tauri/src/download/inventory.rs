@@ -1,6 +1,6 @@
 //! Le cartelle di misura **sono** l'inventario, e si leggono da sole.
 //!
-//! È la cosa che il deposito sa dire meglio del database (§5.4). Le
+//! È la cosa che il deposito sa dire meglio del database. Le
 //! domande che l'interfaccia deve poter fare hanno tutte risposta guardando il
 //! disco, senza nessuna interrogazione e senza nessun accordo da mantenere:
 //!
@@ -15,7 +15,7 @@
 //! **La misura principale è quella con più pagine.** Serve a non chiamare
 //! incompleto ciò che non lo è: una cartella `max` con tre file su 328 non è un
 //! libro a metà, è un libro completo a 2000 con tre pagine prese a risoluzione
-//! piena di proposito (§5.6).
+//! piena di proposito.
 
 use std::path::{Path, PathBuf};
 

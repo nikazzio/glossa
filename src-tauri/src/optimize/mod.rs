@@ -20,7 +20,7 @@
 //! - **non tocca chi è già più piccolo** del lato lungo scelto: ogni
 //!   ricompressione perde qualcosa, e ricomprimere per niente è perdita secca;
 //! - lavora su **una cartella di misura per volta**, mai «il libro»: le pagine
-//!   prese a risoluzione piena di proposito (§5.6) non devono essere schiacciate
+//! prese a risoluzione piena di proposito non devono essere schiacciate
 //!   da un'ottimizzazione che puntava ad altro.
 //!
 //! Non è automatica: è un'operazione che perde informazione, e la si chiede.
@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn the_forecast_counts_only_the_pages_that_would_shrink() {
-        // La conferma deve dire quante pagine tocca e quanto libera (§5.7):
+        // La conferma deve dire quante pagine tocca e quanto libera:
         // contare tutta la cartella prometteva un lavoro su pagine che il lavoro
         // stesso avrebbe saltato.
         let dir = temp_dir("forecast");

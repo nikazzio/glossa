@@ -33,7 +33,7 @@ pub(crate) struct Progress {
     /// Byte nella cartella di misura.
     pub bytes: u64,
     /// Pagine che la biblioteca non ha servito **in questo avvio**: il totale
-    /// storico lo dà la differenza fra cartella e conteggio atteso (§5.2).
+    /// storico lo dà la differenza fra cartella e conteggio atteso.
     pub unavailable: u32,
     /// Vero se almeno una pagina è stata saltata per un **guasto** e non per un
     /// rifiuto: cambia come si dichiara un lavoro che non ha portato niente.
@@ -59,7 +59,7 @@ impl Progress {
         }
     }
 
-    /// Stima del tempo restante dal ritmo delle **ultime** pagine (D17).
+    /// Stima del tempo restante dal ritmo delle **ultime** pagine.
     ///
     /// Finché non ce ne sono abbastanza si somma la pausa dichiarata dal profilo
     /// al tempo di risposta misurato sul campo: la pausa da sola è il minimo che
@@ -151,7 +151,7 @@ pub(crate) struct Reporter<'a> {
 }
 
 impl Reporter<'_> {
-    /// Dichiara che il lavoro è fermo per i limiti della biblioteca (D17).
+    /// Dichiara che il lavoro è fermo per i limiti della biblioteca.
     pub(crate) async fn waiting(&self, progress: &Progress, page: &Page) {
         log::info!(
             "job waiting id={} reason={} page={}",

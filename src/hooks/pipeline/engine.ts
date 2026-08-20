@@ -157,8 +157,7 @@ function persistPipelineStatus(
 }
 
 /**
- * Salva il frammento e **poi** registra la proposta del modello nello storico
- * (D22).
+ * Salva il frammento e **poi** registra la proposta del modello nello storico.
  *
  * L'ordine conta: la revisione punta alla riga della traduzione, che alla
  * prima esecuzione di un frammento nuovo non esiste ancora. Scritta prima,
@@ -193,7 +192,7 @@ async function persistChunkCheckpoint(
     },
   );
 
-  // Il giudizio si lega alla revisione che ha giudicato (D22): sul frammento
+  // Il giudizio si lega alla revisione che ha giudicato: sul frammento
   // vive in colonne che la riesecuzione successiva sovrascrive, e senza questo
   // fatto «il giudice l'aveva dato per mediocre» si perde.
   if (revision && chunk.judgeResult.status === 'completed') {
@@ -382,7 +381,7 @@ export async function executePipelineForChunk(
       const stageDuration = Date.now() - stageStartedAt;
       pipelineLog.stageEnd(chunk.id, stage.id, stage.name, stageRef, stageDuration, capturedUsage);
       // Token, costo e durata esistono solo adesso: dopo restano i testi, non
-      // quanto sono costati (D29).
+      // quanto sono costati.
       void recordModelCall({
         chunkId: chunk.id,
         stageId: stage.id,

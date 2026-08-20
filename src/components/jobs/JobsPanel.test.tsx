@@ -84,7 +84,7 @@ describe('pannello dei lavori', () => {
   });
 
   it('un lavoro fermo in attesa di riprovare non è mostrato come errore', () => {
-    // Stessa immobilità, significato opposto (D17).
+    // Stessa immobilità, significato opposto.
     renderPanel([job({ status: 'queued', nextAttemptAt: '2026-08-13 10:00:00', etaSeconds: 480 })]);
 
     expect(screen.getByText('jobs.retryingIn')).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe('attesa per i limiti della biblioteca', () => {
   });
 
   it('un lavoro fermo per i limiti non è un errore e non anima la barra', () => {
-    // Con i profili tarati può restare immobile per minuti (D18): dirlo
+    // Con i profili tarati può restare immobile per minuti: dirlo
     // «errore» farebbe rinunciare a uno scaricamento che sta procedendo.
     renderPanel([job({ status: 'running', waitingReason: 'libraryLimits', progress: 0.4 })]);
 

@@ -107,7 +107,7 @@ describe('la misura con cui riscaricare', () => {
   }
 
   it('è quella con cui il libro è stato scaricato, non la più grande presente', async () => {
-    // Un libro completo a 2000 con tre pagine prese a piena risoluzione (§5.6)
+    // Un libro completo a 2000 con tre pagine prese a piena risoluzione
     // va riscaricato a 2000: chiedere `max` triplicherebbe il deposito.
     const payload = await exported();
 

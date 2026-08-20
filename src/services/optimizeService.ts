@@ -3,7 +3,7 @@ import { execute, select } from './dbService';
 import type { Job } from './jobsService';
 
 /**
- * L'ottimizzazione locale delle immagini (§5.7): rilegge le pagine di una
+ * L'ottimizzazione locale delle immagini: rilegge le pagine di una
  * cartella di misura già scaricata, le rimpicciolisce al lato lungo scelto e le
  * ricomprime, sostituendo l'originale.
  *

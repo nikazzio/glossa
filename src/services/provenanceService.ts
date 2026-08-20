@@ -6,9 +6,9 @@ import { logger } from '../utils/logger';
  *
  * Qui si scrive **cosa è successo**, non cosa c'è adesso: lo stato corrente
  * vive nelle tabelle di dominio, la provenienza in un registro append-only che
- * non si modifica e non si cancella automaticamente (D28).
+ * non si modifica e non si cancella automaticamente.
  *
- * Cosa entra e cosa no (D26): chiamate ai modelli con il loro esito, decisioni
+ * Cosa entra e cosa no: chiamate ai modelli con il loro esito, decisioni
  * umane su una proposta, ciclo di vita dei lavori, import, scaricamenti,
  * esportazioni. **Non** navigazione, clic, scorrimento, battiture, tempo
  * passato su una schermata. E **niente lascia la macchina**: nessuna
@@ -67,12 +67,12 @@ export interface Fact {
   outputRef?: string | null;
   inputHash?: string | null;
   outputHash?: string | null;
-  /** Il resto, in JSON: i dettagli propri di quel tipo di evento (D24). */
+  /** Il resto, in JSON: i dettagli propri di quel tipo di evento. */
   config?: Record<string, unknown> | null;
 }
 
 /**
- * Impronta stabile del contenuto (D25): il riferimento dice cosa c'è
+ * Impronta stabile del contenuto: il riferimento dice cosa c'è
  * **adesso**, l'impronta cosa c'era **allora**.
  *
  * FNV-1a a 64 bit, la stessa del backend: non è crittografica e non deve
@@ -89,7 +89,7 @@ export function contentHash(text: string): string {
 }
 
 /**
- * L'identificativo di un fatto, **derivato in modo deterministico** (D27):
+ * L'identificativo di un fatto, **derivato in modo deterministico**:
  * riscrivere lo stesso fatto non duplica, sostituisce.
  *
  * Stessa formula del backend, perché i due scrivono nella stessa tabella e due
@@ -107,7 +107,7 @@ export function factId(fact: Fact): string {
 }
 
 /**
- * Scrive un fatto. Riscriverlo non duplica: **sostituisce** (D27).
+ * Scrive un fatto. Riscriverlo non duplica: **sostituisce**.
  *
  * Sostituisce *tutto*, non una parte: rieseguire uno stadio con un altro
  * modello lasciava il modello di prima accanto ai token nuovi, e il fatto

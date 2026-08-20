@@ -109,7 +109,7 @@ describe('LibraryCatalogArea', () => {
 
   it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
     // 308 sul disco su 328 dichiarate, venti che il server non ha mai servito:
-    // non è un lavoro a metà, e riscaricarle non le farebbe comparire (§5.3).
+    // non è un lavoro a metà, e riscaricarle non le farebbe comparire.
     useSourceLibraryStore.setState({
       catalog: [
         entry({
@@ -214,7 +214,7 @@ describe('LibraryCatalogArea', () => {
 
   it('togliendo un opera si eliminano anche le sue immagini', async () => {
     // Lasciarle dietro produceva cartelle che nessuna schermata sa mostrare, e
-    // che riaggiungendo la stessa opera non tornerebbero comunque utili (D6).
+    // che riaggiungendo la stessa opera non tornerebbero comunque utili.
     const user = userEvent.setup();
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
@@ -258,7 +258,7 @@ describe('LibraryCatalogArea', () => {
   });
 
   it('una fonte senza chiave della biblioteca usa il profilo prudente', async () => {
-    // Nessuna fonte resta senza politica di rete (D18): `generic` è nel
+    // Nessuna fonte resta senza politica di rete: `generic` è nel
     // registro e porta il profilo prudente.
     const { enqueueSourceDownload } = await import('../../services/jobsService');
     vi.mocked(enqueueSourceDownload).mockResolvedValue({ id: 'download:v1' } as never);

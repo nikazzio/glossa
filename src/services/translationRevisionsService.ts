@@ -3,7 +3,7 @@ import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
 
 /**
- * Lo storico delle traduzioni (D22), simmetrico a quello che le trascrizioni
+ * Lo storico delle traduzioni, simmetrico a quello che le trascrizioni
  * hanno già.
  *
  * **Non una revisione per salvataggio**: si scriverebbero centinaia di righe
@@ -118,7 +118,7 @@ export async function recordModelRevision(
 /**
  * La revisione che contiene **esattamente** questo testo, se esiste.
  *
- * Serve a legare un giudizio alla revisione che ha giudicato (D22) anche
+ * Serve a legare un giudizio alla revisione che ha giudicato anche
  * quando la revisione non l'ha appena scritta chi giudica: rilanciando solo la
  * revisione, il verdetto arriva su un testo già in archivio.
  */

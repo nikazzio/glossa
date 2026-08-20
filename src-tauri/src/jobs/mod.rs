@@ -1,6 +1,6 @@
 //! I lavori in background (#218, parte C delle decisioni).
 //!
-//! Un solo orchestratore dentro l'applicazione (D10): tiene la coda, scrive lo
+//! Un solo orchestratore dentro l'applicazione: tiene la coda, scrive lo
 //! stato sul database e affida l'esecuzione a un gestore registrato per tipo.
 //! L'interfaccia non esegue mai niente di lungo — chiede la creazione di un
 //! lavoro e osserva.
@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 /// Gli otto stati della baseline. `pausing` e `cancelling` esistono perché
-/// pausa e annullamento sono **cooperativi** (D14, D15): la richiesta si segna,
+/// pausa e annullamento sono **cooperativi**: la richiesta si segna,
 /// il gestore la vede al confine dell'unità di lavoro successiva.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -72,7 +72,7 @@ impl JobStatus {
     }
 }
 
-/// Le cinque classi di risorsa (D11). Hanno limiti separati perché saturano
+/// Le cinque classi di risorsa. Hanno limiti separati perché saturano
 /// cose diverse: il collo di bottiglia della rete è il server della biblioteca,
 /// quello del disco è il disco.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -119,7 +119,7 @@ impl ResourceClass {
     }
 }
 
-/// Cosa sa fare un tipo di lavoro quando l'applicazione si riapre (D13).
+/// Cosa sa fare un tipo di lavoro quando l'applicazione si riapre.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Recovery {
     /// Sa dire a che punto era e ripartire da lì: torna **in pausa**.
@@ -138,7 +138,7 @@ pub enum Outcome {
     Cancelled,
 }
 
-/// Classificazione degli errori (D16). Decide **da sola** se ritentare: la
+/// Classificazione degli errori. Decide **da sola** se ritentare: la
 /// tabella delle decisioni non sarebbe applicabile se l'errore fosse una
 /// stringa.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -188,12 +188,12 @@ impl ErrorKind {
 }
 
 /// Motivo per cui un lavoro è fermo pur essendo in esecuzione: sta rispettando
-/// i limiti della biblioteca (D17, D18). L'interfaccia lo scrive in modo
+/// i limiti della biblioteca. L'interfaccia lo scrive in modo
 /// diverso da un errore e **non anima** la barra.
 pub const WAITING_LIBRARY_LIMITS: &str = "libraryLimits";
 
 /// Un errore di lavoro porta con sé tutto quello che serve a decidere: se
-/// ritentare, quanto attendere, cosa mostrare (D16).
+/// ritentare, quanto attendere, cosa mostrare.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JobError {
     pub kind: ErrorKind,
@@ -213,7 +213,7 @@ impl JobError {
     }
 }
 
-/// Attesa prima del tentativo successivo (D16).
+/// Attesa prima del tentativo successivo.
 ///
 /// Esponenziale con base e tetto **espliciti**, perché in PR 4 arrivano dal
 /// profilo del provider e non da costanti sparse nel codice. I valori qui sono
@@ -253,7 +253,7 @@ impl BackoffProfile {
     }
 }
 
-/// Interruttori cooperativi di un lavoro in esecuzione (D14, D15). Il gestore
+/// Interruttori cooperativi di un lavoro in esecuzione. Il gestore
 /// li guarda al confine dell'unità di lavoro successiva: non si interrompe
 /// niente a metà, e un file parziale non entra mai nel deposito.
 #[derive(Debug, Default)]
@@ -298,7 +298,7 @@ pub struct JobRecord {
     pub error_kind: Option<String>,
     pub eta_seconds: Option<i64>,
     /// Perché è fermo pur essendo in esecuzione: attesa per rispettare i limiti
-    /// della biblioteca, non un errore (D17).
+    /// della biblioteca, non un errore.
     pub waiting_reason: Option<String>,
     /// Cosa sta facendo adesso, dentro lo stato: chiave breve decisa dal tipo
     /// di lavoro e tradotta dall'interfaccia (`manifest`, `downloading`, …).
@@ -310,8 +310,8 @@ pub struct JobRecord {
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
     /// Il workspace da cui il lavoro è nato, quando ne ha uno: il registro dei
-    /// fatti ci raggruppa sopra (D24) e la cancellazione per workspace lo usa
-    /// per sapere cosa portare via (D28).
+    /// fatti ci raggruppa sopra e la cancellazione per workspace lo usa
+    /// per sapere cosa portare via.
     pub workspace_id: Option<String>,
 }
 
@@ -415,7 +415,7 @@ mod tests {
     #[test]
     fn the_disk_runs_one_job_at_a_time() {
         // Due lavori che scrivono gigabyte insieme sono più lenti di due in
-        // fila (D11).
+        // fila.
         assert_eq!(ResourceClass::Disk.automatic_limit(), 1);
     }
 }

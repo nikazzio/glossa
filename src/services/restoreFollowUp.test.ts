@@ -89,7 +89,7 @@ describe('cosa manca dopo un ripristino', () => {
 
   it('le pagine prese a un altra misura si dicono, non si riscaricano', async () => {
     // Un lavoro di scaricamento a `max` prenderebbe tutte le 328 pagine a piena
-    // risoluzione invece delle tre che l'utente aveva scelto (§5.6).
+    // risoluzione invece delle tre che l'utente aveva scelto.
     inventoryMock.mockResolvedValue(inventory([{ sizeTag: '2000', pages: 328 }]) as never);
 
     const gap = await missingAfterRestore(backup);

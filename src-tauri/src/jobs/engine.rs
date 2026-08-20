@@ -1,9 +1,9 @@
-//! L'orchestratore: una coda sola, dentro l'applicazione (D10).
+//! L'orchestratore: una coda sola, dentro l'applicazione.
 //!
-//! Tiene i limiti per classe di risorsa (D11), porta pausa e annullamento ai
-//! gestori in modo cooperativo (D14, D15), conta i tentativi e le attese (D16),
+//! Tiene i limiti per classe di risorsa, porta pausa e annullamento ai
+//! gestori in modo cooperativo, conta i tentativi e le attese,
 //! e alla riapertura rimette in ordine ciò che una chiusura brusca ha lasciato
-//! a metà (D13).
+//! a metà.
 //!
 //! Non sa niente di rete, di immagini o di documenti: quello è il mestiere dei
 //! gestori, che si registrano per tipo di lavoro.
@@ -50,10 +50,10 @@ const IDLE_TICK: Duration = Duration::from_millis(500);
 /// Un tipo di lavoro. La logica lunga sta qui dentro, non nell'interfaccia.
 #[async_trait]
 pub trait JobHandler: Send + Sync {
-    /// Con quale limite compete (D11).
+    /// Con quale limite compete.
     fn resource_class(&self) -> ResourceClass;
 
-    /// Cosa deve succedergli quando l'applicazione si riapre (D13).
+    /// Cosa deve succedergli quando l'applicazione si riapre.
     fn recovery(&self) -> Recovery;
 
     async fn run(&self, ctx: JobContext) -> Result<Outcome, JobError>;
@@ -89,14 +89,14 @@ pub struct JobContext {
     database: tokio::sync::Mutex<Option<Connection>>,
 }
 
-/// Distanza minima fra due scritture di avanzamento (D17): aggiornare a ogni
+/// Distanza minima fra due scritture di avanzamento: aggiornare a ogni
 /// byte scriverebbe sul database centinaia di volte al secondo.
 const PROGRESS_INTERVAL: Duration = Duration::from_secs(1);
 
 impl JobContext {
     /// Da guardare al confine di ogni unità di lavoro — la pagina corrente, il
     /// file corrente. Pausa e annullamento sono cooperativi: niente si
-    /// interrompe a metà (D14, D15).
+    /// interrompe a metà.
     pub fn pause_requested(&self) -> bool {
         self.control.pause_requested()
     }
@@ -105,7 +105,7 @@ impl JobContext {
         self.control.cancel_requested()
     }
 
-    /// Avanzamento, messaggio e stima del tempo che manca — obbligatoria (D17).
+    /// Avanzamento, messaggio e stima del tempo che manca — obbligatoria.
     /// Le chiamate più fitte di un secondo vengono scartate, tranne quella che
     /// porta il lavoro a termine e quella che lo fa ripartire da un'attesa.
     pub async fn report_progress(
@@ -139,7 +139,7 @@ impl JobContext {
         .await;
     }
 
-    /// Fermo per rispettare i limiti della biblioteca (D17, D18): non è un
+    /// Fermo per rispettare i limiti della biblioteca: non è un
     /// errore, ed è la stessa immobilità con il significato opposto — va detta
     /// diversamente, e la barra non deve fingere di avanzare.
     pub async fn report_waiting(
@@ -228,7 +228,7 @@ impl JobContext {
     }
 
     /// La radice del deposito: quella scelta dall'utente, se c'è, altrimenti
-    /// quella predefinita risolta all'avvio (D1).
+    /// quella predefinita risolta all'avvio.
     pub async fn vault_root(&self) -> Result<PathBuf, String> {
         let configured = self
             .with_database(|conn| store::read_setting(conn, "vault_root"))
@@ -259,7 +259,7 @@ impl JobContext {
             .await;
     }
 
-    /// A che punto è arrivato, per la ripresa (D13).
+    /// A che punto è arrivato, per la ripresa.
     pub async fn save_checkpoint(&self, checkpoint: &str) -> Result<(), String> {
         let id = self.id.clone();
         let checkpoint = checkpoint.to_string();
@@ -365,7 +365,7 @@ impl JobEngine {
         self.handlers.insert(job_type.to_string(), handler);
     }
 
-    /// Legge i limiti dalle impostazioni (D11). `0` significa automatico.
+    /// Legge i limiti dalle impostazioni. `0` significa automatico.
     pub fn load_limits(&mut self) -> Result<(), String> {
         let conn = open(&self.db_path)?;
         for class in ResourceClass::ALL {
@@ -414,7 +414,7 @@ impl JobEngine {
         Ok(record)
     }
 
-    /// Pausa (D14). Su un lavoro in esecuzione segna la richiesta e passa per
+    /// Pausa. Su un lavoro in esecuzione segna la richiesta e passa per
     /// `pausing`: il gestore si ferma al confine, non subito.
     pub async fn request_pause(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
@@ -437,7 +437,7 @@ impl JobEngine {
         Ok(())
     }
 
-    /// Annullamento (D15). Cooperativo come la pausa; un lavoro annullato è
+    /// Annullamento. Cooperativo come la pausa; un lavoro annullato è
     /// terminale — si può ripetere da capo, non riprendere.
     pub async fn request_cancel(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
@@ -466,7 +466,7 @@ impl JobEngine {
         let conn = guard.conn()?;
         log::info!("job resumed id={id}");
         store::requeue(conn, id, false)?;
-        // Riprendere non è ritentare: il conto dei tentativi ricomincia (D16).
+        // Riprendere non è ritentare: il conto dei tentativi ricomincia.
         store::reset_attempts(conn, id)?;
         self.observer.notify(conn, id);
         self.wake.notify_one();
@@ -514,7 +514,7 @@ impl JobEngine {
         controls.remove(id);
     }
 
-    /// Rimette in ordine ciò che una chiusura brusca ha lasciato a metà (D13).
+    /// Rimette in ordine ciò che una chiusura brusca ha lasciato a metà.
     ///
     /// **Nessun lavoro riparte da solo**, con una sola eccezione a richiesta
     /// esplicita: gli scaricamenti, se l'impostazione è accesa.
@@ -617,7 +617,7 @@ impl JobEngine {
                 }
                 store::increment_attempt(conn, &job.id)?;
                 // La registrazione è **parte del contratto del motore**, non di
-                // chi scrive un gestore (D29): ogni lavoro registra avvio ed
+                // chi scrive un gestore: ogni lavoro registra avvio ed
                 // esito senza che nessuno debba ricordarsene.
                 record_fact(
                     conn,
@@ -761,7 +761,7 @@ impl JobEngine {
                     && attempts < job.max_attempts;
                 if let Some(asked) = stop_asked {
                     // **Chi ha chiesto di fermarsi ha ragione anche quando la
-                    // richiesta era già fallita** (D14): un errore incassato
+                    // richiesta era già fallita**: un errore incassato
                     // mentre l'utente premeva pausa faceva programmare un
                     // nuovo tentativo, e il lavoro ripartiva da solo dopo
                     // qualche minuto. In pausa non si riprova.
@@ -842,7 +842,7 @@ enum StopAsked {
     Cancel,
 }
 
-/// Scrive un fatto nel registro (D23, D29).
+/// Scrive un fatto nel registro.
 ///
 /// Un errore qui **non cambia l'esito del lavoro**: la registrazione serve a
 /// sapere cosa è successo, non a decidere cosa succede. Si dice nel log tecnico
@@ -933,7 +933,7 @@ mod tests {
     async fn a_job_paused_while_failing_does_not_retry_on_its_own() {
         // Chi mette in pausa ha ragione anche quando la richiesta era già
         // fallita: prima il lavoro si programmava un nuovo tentativo e
-        // ripartiva da solo dopo qualche minuto (D14).
+        // ripartiva da solo dopo qualche minuto.
         let path = temp_db("pause_beats_retry");
         let engine = engine_with(path, Observer::silent());
         let record = engine
@@ -969,7 +969,7 @@ mod tests {
     #[tokio::test]
     async fn a_finished_job_leaves_two_facts_in_the_register() {
         // La registrazione è parte del contratto del motore, non del gestore
-        // (D29): un lavoro che nessuno ha istruito a registrare registra lo
+        // un lavoro che nessuno ha istruito a registrare registra lo
         // stesso avvio ed esito.
         let path = temp_db("facts");
         let engine = engine_with(path, Observer::silent());
@@ -1001,7 +1001,7 @@ mod tests {
     #[tokio::test]
     async fn a_job_run_twice_does_not_duplicate_its_facts() {
         // Rilanciare un lavoro riesegue lo stesso passo: senza identificativo
-        // derivato, ogni conteggio finirebbe doppio (D27).
+        // derivato, ogni conteggio finirebbe doppio.
         let path = temp_db("facts_once");
         let engine = engine_with(path, Observer::silent());
         engine
@@ -1159,7 +1159,7 @@ mod tests {
     async fn only_one_job_per_lane_when_the_lane_allows_one() {
         let path = temp_db("lane");
         let engine = engine_with(path, Observer::silent());
-        // CounterJob è di classe disco, che sta a 1 (D11).
+        // CounterJob è di classe disco, che sta a 1.
         engine
             .submit(&job("a", r#"{"steps":30,"stepMs":5}"#))
             .await

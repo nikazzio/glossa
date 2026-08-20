@@ -65,7 +65,7 @@ pub struct ProviderFilter {
 #[serde(rename_all = "camelCase")]
 pub struct IIIFProvider {
     pub key: &'static str,
-    /// Come si sta al tavolo di questa biblioteca (D18). Sta qui e non in una
+    /// Come si sta al tavolo di questa biblioteca. Sta qui e non in una
     /// tabella a parte: due elenchi indicizzati per la stessa chiave prima o poi
     /// divergono, e aggiungere una biblioteca deve significare compilare **un**
     /// record.

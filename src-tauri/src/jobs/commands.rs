@@ -1,7 +1,7 @@
 //! Comandi Tauri dei lavori.
 //!
 //! Sottili di proposito: l'interfaccia crea un lavoro e lo osserva, non esegue
-//! niente di lungo (D10). Tutta la logica sta nell'orchestratore.
+//! niente di lungo. Tutta la logica sta nell'orchestratore.
 
 use std::sync::Arc;
 use tauri::{Emitter, Manager, State};
@@ -11,7 +11,7 @@ use super::store::{self, NewJob};
 use super::JobRecord;
 
 /// Nome dell'evento con cui l'orchestratore avvisa l'interfaccia. Un evento per
-/// ogni cambio: l'interfaccia non interroga il database a intervalli (D17).
+/// ogni cambio: l'interfaccia non interroga il database a intervalli.
 pub const JOB_EVENT: &str = "jobs:updated";
 
 pub struct JobsState(pub Arc<JobEngine>);
@@ -70,7 +70,7 @@ pub async fn get_job(jobs: State<'_, JobsState>, id: String) -> Result<Option<Jo
     store::get(&conn, &id)
 }
 
-/// Pausa cooperativa (D14): il lavoro passa per `pausing` e si ferma al confine
+/// Pausa cooperativa: il lavoro passa per `pausing` e si ferma al confine
 /// dell'unità di lavoro successiva. L'interfaccia mostra "in pausa…" e poi "in
 /// pausa", non finge che sia immediato.
 #[tauri::command]
@@ -83,7 +83,7 @@ pub async fn resume_job(jobs: State<'_, JobsState>, id: String) -> Result<(), St
     jobs.0.resume(&id).await
 }
 
-/// Annullamento cooperativo (D15). Terminale: si può ripetere da capo, non
+/// Annullamento cooperativo. Terminale: si può ripetere da capo, non
 /// riprendere.
 #[tauri::command]
 pub async fn cancel_job(jobs: State<'_, JobsState>, id: String) -> Result<(), String> {
@@ -125,7 +125,7 @@ async fn verify_on_startup(engine: &Arc<JobEngine>) -> Result<(), String> {
 }
 
 /// Avvia l'orchestratore all'apertura dell'applicazione: registra i gestori,
-/// legge i limiti, rimette in ordine i lavori interrotti (D13) e mette in moto
+/// legge i limiti, rimette in ordine i lavori interrotti e mette in moto
 /// il giro della coda.
 pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     let db_path = crate::storage_config::db_path(app)?;
@@ -143,7 +143,7 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
 
     // I gestori veri. I contatori di cortesia stanno fuori dal gestore perché
     // valgono **per host** e non per lavoro: due lavori sulla stessa biblioteca
-    // devono sommarsi in un contatore solo, non raddoppiare il ritmo (D18).
+    // devono sommarsi in un contatore solo, non raddoppiare il ritmo.
     //
     // Sono anche fuori dalla coda: la stessa fila la usa chi chiede una
     // copertina dalla finestra, che altrimenti scavalcherebbe la cortesia.
@@ -157,14 +157,14 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     );
 
     // L'ottimizzazione locale: rilegge pagine già scaricate e le ricomprime
-    // (§5.7). Processore, come la verifica.
+    // Processore, come la verifica.
     engine.register(
         crate::optimize::JOB_TYPE,
         Arc::new(crate::optimize::ImageOptimizationJob),
     );
 
     // La verifica del deposito: il primo lavoro che pesa sul processore e non
-    // sulla rete (D5-bis).
+    // sulla rete.
     engine.register(
         crate::vault::verification::JOB_TYPE,
         Arc::new(crate::vault::verification::VaultVerificationJob),
@@ -190,7 +190,7 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         if let Err(error) = starting.recover_interrupted().await {
             log::error!("queue recovery failed error={error}");
         }
-        // Controllo rapido all'avvio, **spento di default** (D5): chi lo accende
+        // Controllo rapido all'avvio, **spento di default**: chi lo accende
         // trova le segnalazioni pronte, chi non lo accende non paga niente.
         if let Err(error) = verify_on_startup(&starting).await {
             log::warn!("queue startup verification failed error={error}");

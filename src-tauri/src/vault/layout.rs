@@ -1,4 +1,4 @@
-//! Disposizione dei file nel deposito (D2).
+//! Disposizione dei file nel deposito.
 //!
 //! Il disco riflette **solo la provenienza**: chi ha digitalizzato e chi
 //! possiede l'esemplare sono fatti che non cambiano mai, mentre l'attribuzione
@@ -8,19 +8,19 @@
 //!
 //! Tutte le funzioni qui sono pure e restituiscono percorsi **relativi** alla
 //! radice del deposito: `assets.vault_path` non contiene mai un percorso
-//! assoluto, così spostare il deposito (D30) non invalida il database.
+//! assoluto, così spostare il deposito non invalida il database.
 
 use std::path::{Path, PathBuf};
 
 /// Radice di ciò che scarichiamo dalle biblioteche. `derived/` (ritagli e
-/// immagini ottimizzate) e `trash/` (in attesa dello svuotamento, D6) arrivano
+/// immagini ottimizzate) e `trash/` (in attesa dello svuotamento) arrivano
 /// con le PR che li usano: qui non servono ancora.
 pub(crate) const PROVIDERS_DIR: &str = "providers";
 pub(crate) const PAGES_DIR: &str = "pages";
 const THUMBNAILS_DIR: &str = "thumbnails";
 pub(crate) const MANIFEST_FILE: &str = "manifest.json";
 
-/// Area di transito (D16-bis): ci si scrive, si valida, e solo allora si
+/// Area di transito: ci si scrive, si valida, e solo allora si
 /// promuove. Sta accanto alle radici del layout perché quello che c'è dentro
 /// **non** è ancora nel deposito.
 pub const STAGING_DIR: &str = "staging";
@@ -51,7 +51,7 @@ fn is_safe_component(value: &str) -> bool {
 ///
 /// `provider_key` è la chiave del registry (#214), non il nome esteso
 /// dell'istituzione; `version_id` è l'identificativo interno della
-/// `source_version`, non un titolo (D2).
+/// `source_version`, non un titolo.
 pub fn version_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
     if !is_safe_component(provider_key) {
         return Err(format!(
@@ -64,7 +64,7 @@ pub fn version_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, Stri
     Ok(Path::new(PROVIDERS_DIR).join(provider_key).join(version_id))
 }
 
-/// Il manifesto si conserva com'è, byte per byte (D2-bis): la normalizzazione
+/// Il manifesto si conserva com'è, byte per byte: la normalizzazione
 /// vive in memoria e nel database, l'originale resta la verità.
 pub fn manifest_path(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
     Ok(version_dir(provider_key, version_id)?.join(MANIFEST_FILE))
@@ -89,7 +89,7 @@ pub(crate) fn page_file_name(page_index: u32) -> String {
 }
 
 /// Cartella che contiene tutte le risoluzioni di una digitalizzazione. È ciò
-/// che "libera spazio" cancella (D6): restano manifesto e miniature.
+/// che "libera spazio" cancella: restano manifesto e miniature.
 pub fn pages_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
     Ok(version_dir(provider_key, version_id)?.join(PAGES_DIR))
 }
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn the_same_page_at_two_resolutions_does_not_collide() {
         // È il motivo per cui la cartella prende il nome dal tetto: una pagina
-        // presa a piena risoluzione non sovrascrive quella standard (D4, §5.6).
+        // presa a piena risoluzione non sovrascrive quella standard.
         assert_ne!(
             page_path("vatican", "v1", "2000", 12),
             page_path("vatican", "v1", "max", 12)
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn every_path_is_relative_to_the_vault_root() {
         // Un percorso assoluto invaliderebbe il database appena il deposito
-        // viene spostato (D30).
+        // viene spostato.
         for path in [
             version_dir("gallica", "v1").unwrap(),
             manifest_path("gallica", "v1").unwrap(),

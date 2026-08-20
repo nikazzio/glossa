@@ -415,7 +415,7 @@ export default function App() {
   useEffect(() => { void initLogger(); }, []);
 
   // I lavori in background non appartengono a una schermata: l'ascolto sta qui,
-  // nel componente radice, e vale per tutta l'applicazione (D19). Stava dentro
+  // nel componente radice, e vale per tutta l'applicazione. Stava dentro
   // `EditorView`, montato solo con un progetto aperto: in Dashboard la coda
   // risultava vuota, entrando in una traduzione compariva, e uscendo restava
   // l'elenco vecchio senza più nessuno in ascolto.

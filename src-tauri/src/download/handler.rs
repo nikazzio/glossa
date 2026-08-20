@@ -1,9 +1,9 @@
 //! Gestore del lavoro `source_download`: il ciclo, e nient'altro.
 //!
-//! Sette passi (§5.2), nessun ramo oltre a quelli del §5.1:
+//! Sette passi, nessun ramo oltre a quelli del §5.1:
 //!
 //! 1. manifesto — dal deposito se c'è, altrimenti dalla rete, conservato com'è
-//!    arrivato (D2-bis);
+//! arrivato;
 //! 2. per ogni pagina nell'ordine dichiarato: salta se il file c'è già, calcola
 //!    la larghezza, aspetta il turno verso l'host, chiedi, valida, promuovi,
 //!    ricava la miniatura, riferisci (`pages::PageFetcher`);
@@ -11,12 +11,12 @@
 //!
 //! Due invarianti che il resto del modulo presuppone:
 //!
-//! - **il disco è la verità** (§5.4): nessuna riga per pagina nel database. Il
+//! - **il disco è la verità**: nessuna riga per pagina nel database. Il
 //!   conteggio lo dà la cartella, l'impronta il file di lato (`sidecar`);
 //! - **nel deposito entra solo ciò che ha superato la validazione** (D16-bis,
 //!   `vault_io`). Da qui la ripresa può fidarsi della sola presenza del file.
 //!
-//! Non esiste più un punto di ripresa salvato (§5.3): riprendere significa
+//! Non esiste più un punto di ripresa salvato: riprendere significa
 //! rileggere la cartella.
 
 use async_trait::async_trait;
@@ -46,14 +46,14 @@ pub const JOB_TYPE: &str = "source_download";
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadConfig {
-    /// Chiave del registro dei provider: determina il profilo di rete (D18).
+    /// Chiave del registro dei provider: determina il profilo di rete.
     pub provider_key: String,
     /// Identificativo della digitalizzazione; nomina la cartella nel deposito.
     pub version_id: String,
     pub manifest_url: String,
     /// Tetto della misura: `max`, oppure il lato lungo in pixel. Nomina la
     /// cartella; la larghezza chiesta al servizio varia di pagina in pagina e
-    /// **non** entra nel nome (D4, §5.1).
+    /// **non** entra nel nome.
     #[serde(default = "default_size_tag")]
     pub size_tag: String,
     /// Lato lungo delle miniature, scelto alla messa in coda.
@@ -70,7 +70,7 @@ fn default_size_tag() -> String {
 }
 
 /// Fasi riportate al pannello. `negotiating` non esiste più: la misura si
-/// calcola, non si negozia (§5.1).
+/// calcola, non si negozia.
 mod phase {
     pub const STARTING: &str = "starting";
     pub const MANIFEST: &str = "manifest";
@@ -79,7 +79,7 @@ mod phase {
 
 /// Radice raggiungibile e area di transito pronta.
 ///
-/// Radice assente ≠ file mancante (D1): un disco staccato non si "ripara"
+/// Radice assente ≠ file mancante: un disco staccato non si "ripara"
 /// creando una cartella locale che ne prende il posto e si riempie di gigabyte
 /// fuori posto.
 ///
@@ -104,7 +104,7 @@ fn open_staging(root: &Path, version_id: &str) -> Result<PathBuf, JobError> {
 
 /// L'esito del lavoro, letto sulla **cartella** e non su questo avvio: una
 /// ripresa in cui le ultime venti pagine mancano non ha scaricato niente, ma il
-/// libro c'è (§5.2).
+/// libro c'è.
 fn finished(
     id: &str,
     progress: &Progress,
@@ -182,14 +182,14 @@ struct Prepared {
     title: String,
     cap: SizeCap,
     size_dir: PathBuf,
-    /// Come calcolare la misura per questo libro (§5.9). Decisa qui perché qui
+    /// Come calcolare la misura per questo libro. Decisa qui perché qui
     /// ci sono già client, profilo e manifesto; il ciclo la può solo declassare
     /// a `Full` dopo un rifiuto.
     rule: SizingRule,
 }
 
 pub struct SourceDownloadJob {
-    /// Contatori di cortesia per host (D18): pause, raffica, raffreddamenti.
+    /// Contatori di cortesia per host: pause, raffica, raffreddamenti.
     courtesy: std::sync::Arc<Courtesy>,
 }
 
@@ -206,14 +206,14 @@ impl JobHandler for SourceDownloadJob {
     }
 
     fn recovery(&self) -> Recovery {
-        // Riprendere = rileggere la cartella e saltare i file presenti (§5.3).
+        // Riprendere = rileggere la cartella e saltare i file presenti.
         Recovery::Resumable
     }
 
     async fn run(&self, ctx: JobContext) -> Result<Outcome, JobError> {
         let stop = || ctx.pause_requested() || ctx.cancel_requested();
         // Alzato dalla cortesia mentre è lei a imporre l'attesa: distingue
-        // «fermo per i limiti della biblioteca» da «server lento» (D17).
+        // «fermo per i limiti della biblioteca» da «server lento».
         let courtesy_wait = std::sync::atomic::AtomicBool::new(false);
         let signals = Signals {
             stop: &stop,
@@ -328,7 +328,7 @@ impl SourceDownloadJob {
             rule,
         } = prepared;
 
-        // Stato di partenza letto dal disco, non da un punto salvato (§5.3).
+        // Stato di partenza letto dal disco, non da un punto salvato.
         let known = sidecar::read(size_dir);
         let start = inventory::read_size_folder(cap.folder(), size_dir);
         let mut rule = rule.clone();
@@ -397,7 +397,7 @@ impl SourceDownloadJob {
     }
 
     /// Manifesto dal deposito, o dalla rete conservandolo com'è arrivato
-    /// (D2-bis). `Ok(None)` = fermato mentre aspettava il turno.
+    /// `Ok(None)` = fermato mentre aspettava il turno.
     async fn read_or_fetch_manifest(
         &self,
         ctx: &JobContext,
@@ -443,7 +443,7 @@ impl SourceDownloadJob {
     }
 
     /// Legge il descrittore della prima pagina e ne ricava la regola di calcolo
-    /// per tutto il libro (§5.9). Costo: una richiesta, 4,3 s misurati.
+    /// per tutto il libro. Costo: una richiesta, 4,3 s misurati.
     async fn decide_rule(
         &self,
         client: &reqwest::Client,

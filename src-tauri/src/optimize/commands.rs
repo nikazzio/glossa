@@ -21,7 +21,7 @@ pub const LONG_EDGE_SETTING: &str = "optimize_long_edge";
 pub const QUALITY_SETTING: &str = "optimize_jpeg_quality";
 
 /// Cosa succederebbe lanciandola: serve alla conferma, che deve dichiarare
-/// quante pagine tocca e da quale misura a quale (§5.7).
+/// quante pagine tocca e da quale misura a quale.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptimizeEstimate {

@@ -17,7 +17,7 @@ import {
 /**
  * Impostazioni dei lavori in background.
  *
- * I limiti sono **per classe di risorsa** (D11): il numero giusto lo sa chi ha
+ * I limiti sono **per classe di risorsa**: il numero giusto lo sa chi ha
  * la macchina davanti, tranne per la rete, dove il collo di bottiglia è il
  * server della biblioteca e non il computer — lì il tetto non è superabile, per
  * non farsi bandire.

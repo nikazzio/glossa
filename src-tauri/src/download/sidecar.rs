@@ -5,7 +5,7 @@
 //! insieme alle pagine che descrive — e non in una riga per pagina nel
 //! database. È il sostituto di 328 righe, ma in un posto solo e **appoggiato ai
 //! file stessi**: cancelli la cartella e se ne va con loro, copi la cartella e
-//! viene dietro (§5.4).
+//! viene dietro.
 //!
 //! **Si scrive una riga in coda, dopo lo spostamento atomico della pagina.** Mai
 //! riscrivere tutto il file per una pagina: un'interruzione a metà scrittura
@@ -33,7 +33,7 @@ pub const SIDECAR_FILE: &str = "pages.jsonl";
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Note {
-    /// **Ridotta dall'ottimizzazione locale** (§5.7), con le dimensioni che aveva
+    /// **Ridotta dall'ottimizzazione locale**, con le dimensioni che aveva
     /// prima. È una ricompressione, quindi quella pagina non è più come è
     /// arrivata, e senza scriverlo sarebbe indistinguibile da una arrivata già a
     /// quella misura.
@@ -64,7 +64,7 @@ pub struct PageRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bytes: Option<u64>,
     /// L'impronta registrata all'arrivo: è l'unica cosa che una cartella non sa
-    /// dire, e serve alla verifica completa (D5).
+    /// dire, e serve alla verifica completa.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checksum: Option<String>,
     pub at: i64,
@@ -223,7 +223,7 @@ mod tests {
 
         // La riga troncata si porta via quella che le viene scritta dietro, e
         // niente di più: le pagine restano presenti e contate, di due non si
-        // conosce il checksum, e la verifica completa le salta (§5.4).
+        // conosce il checksum, e la verifica completa le salta.
         assert_eq!(records.keys().copied().collect::<Vec<_>>(), vec![1]);
     }
 

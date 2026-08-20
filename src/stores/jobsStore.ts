@@ -21,14 +21,14 @@ import {
  * I lavori in background, per l'interfaccia.
  *
  * Stato globale vero: uno scaricamento parte dalla Biblioteca e continua mentre
- * lavori altrove (D19), quindi l'indicatore non può appartenere a una schermata.
+ * lavori altrove, quindi l'indicatore non può appartenere a una schermata.
  *
- * L'elenco arriva una volta all'avvio e poi si aggiorna **per eventi** (D17):
+ * L'elenco arriva una volta all'avvio e poi si aggiorna **per eventi**:
  * niente letture a intervalli, che con un lavoro fermo dieci minuti dopo un 403
  * sarebbero centinaia di interrogazioni inutili.
  */
 
-/** Quanto resta visibile un lavoro finito nel pannello: la giornata (D20). */
+/** Quanto resta visibile un lavoro finito nel pannello: la giornata. */
 const FINISHED_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 interface JobsState {
@@ -116,13 +116,13 @@ export function isRunning(job: Job): boolean {
 
 /**
  * Fermo in attesa: aspetta di poter riprovare, oppure aspetta una decisione
- * dell'utente. Non è un errore, e va detto diversamente (D17).
+ * dell'utente. Non è un errore, e va detto diversamente.
  */
 export function isWaiting(job: Job): boolean {
   return isWaitingToRetry(job) || job.status === 'paused' || job.status === 'queued';
 }
 
-/** Finito oggi: resta visibile per la giornata, poi sparisce (D20). */
+/** Finito oggi: resta visibile per la giornata, poi sparisce. */
 export function isFinishedRecently(job: Job, now: number): boolean {
   if (!isTerminal(job)) return false;
   if (!job.updatedAt) return true;
@@ -132,7 +132,7 @@ export function isFinishedRecently(job: Job, now: number): boolean {
 
 /**
  * Perché la coda è ferma. Sono immobilità con significati diversi, e dirle
- * tutte «riprova da sola fra…» era falso in due casi su tre (D17).
+ * tutte «riprova da sola fra…» era falso in due casi su tre.
  */
 export type StillReason = 'paused' | 'libraryLimits' | 'retry' | 'queued';
 
@@ -144,7 +144,7 @@ export interface JobsSummary {
   /**
    * Quanto manca, in secondi. La somma di tutti gli attivi quando ognuno sa
    * dire la sua; altrimenti la stima del lavoro in corso, che è comunque un
-   * dato vero — meglio del nulla, che fa sembrare la coda bloccata (D17).
+   * dato vero — meglio del nulla, che fa sembrare la coda bloccata.
    */
   etaSeconds: number | null;
   /** Nessuno sta girando: sono tutti fermi ad aspettare. */

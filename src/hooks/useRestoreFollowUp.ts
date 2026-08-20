@@ -14,7 +14,7 @@ import {
 
 /**
  * Aspetta il controllo del deposito messo in coda da un ripristino, e solo
- * allora propone di riprendere quello che manca (#345, D31).
+ * allora propone di riprendere quello che manca (#345).
  *
  * **Dopo il controllo, non prima**: proporre subito voleva dire proporre tutto,
  * comprese le pagine che sul disco c'erano già — ed è così che uno scaricamento
@@ -44,7 +44,7 @@ export function useRestoreFollowUp() {
       });
 
       // Le pagine prese a parte a un'altra misura non si riaccodano: uno
-      // scaricamento le prenderebbe tutte invece di quelle poche (§5.6). Si
+      // scaricamento le prenderebbe tutte invece di quelle poche. Si
       // dicono, e restano da riprendere una per una.
       if (unrestorable.length > 0) {
         const pages = unrestorable.reduce((total, size) => total + size.pages, 0);

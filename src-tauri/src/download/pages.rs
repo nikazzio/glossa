@@ -24,7 +24,7 @@ use super::sizing::{self, SizeCap, SizingRule};
 use super::vault_io::{now_secs, stage_and_promote};
 
 /// Intervallo minimo prima di richiedere di nuovo una pagina che la biblioteca
-/// ha già dichiarato di non servire (fatto 7, §5.3).
+/// ha già dichiarato di non servire (fatto 7).
 ///
 /// A ogni ripresa costerebbe una richiesta buttata per pagina mancante; mai più
 /// renderebbe permanente un buco che le biblioteche a volte riparano.
@@ -66,7 +66,7 @@ enum Asked {
         /// è servito il ripiego.
         token: String,
         /// Sempre vuota da qui: lo scaricamento non ricomprime niente. La usa
-        /// l'ottimizzazione locale, che è l'unica a ridurre (§5.7).
+        /// l'ottimizzazione locale, che è l'unica a ridurre.
         note: Option<Note>,
     },
     /// La biblioteca ha **dichiarato** di non servirla: 404 o 410, o un rifiuto
@@ -96,7 +96,7 @@ pub(crate) struct PageFetcher<'a> {
     pub staging: &'a Path,
     /// Radice del deposito, per le miniature.
     pub root: &'a Path,
-    /// Tentativo del **lavoro**: serve al calcolo dell'attesa (D16) e a sapere
+    /// Tentativo del **lavoro**: serve al calcolo dell'attesa e a sapere
     /// se dopo questo ce ne sarà un altro.
     pub attempt: u32,
     pub max_attempts: u32,
@@ -112,7 +112,7 @@ impl PageFetcher<'_> {
     ) -> Result<PageOutcome, JobError> {
         let target = self.size_dir.join(layout::page_file_name(page.index));
         // Presenza del file = pagina valida: nel deposito entra solo ciò che ha
-        // superato la validazione in transito (D16-bis).
+        // superato la validazione in transito.
         if target.is_file() {
             return Ok(PageOutcome::Present);
         }
@@ -146,7 +146,7 @@ impl PageFetcher<'_> {
         )
         .unwrap_or_else(|error| {
             // Riga non scritta: la pagina resta presente e conta
-            // nell'inventario, ma non se ne conosce l'impronta (§5.4).
+            // nell'inventario, ma non se ne conosce l'impronta.
             log::warn!("job sidecar not written page={} error={error}", page.index);
         });
 
@@ -194,7 +194,7 @@ impl PageFetcher<'_> {
                 // tentativo è ambiguo: potrebbe essere la misura, perché ci sono
                 // servizi che rispondono 500 dove altri rispondono 400. Si prova
                 // la dimensione piena per **questa pagina sola**, e il libro non
-                // si declassa (§5.1).
+                // si declassa.
                 //
                 // Solo all'ultimo tentativo: prima ci sono le attese del profilo,
                 // che sono la cura giusta per un guasto passeggero. Dopo, salire
@@ -210,7 +210,7 @@ impl PageFetcher<'_> {
                     None
                 }
                 // 403/429 e i guasti prima dell'ultimo tentativo salgono al
-                // motore, che decide attesa e tentativi dal profilo (D16, D18).
+                // motore, che decide attesa e tentativi dal profilo.
                 _ => return Err(error),
             },
         };
@@ -236,7 +236,7 @@ impl PageFetcher<'_> {
                     // **Si conserva come è arrivata** (decisione del 2026-08-19):
                     // rimpicciolirla qui sarebbe una ricompressione alle spalle
                     // dell'utente, e ridurre è una scelta che si fa a freddo con
-                    // l'ottimizzazione locale (§5.7). Le dimensioni finiscono nel
+                    // l'ottimizzazione locale. Le dimensioni finiscono nel
                     // file di lato, quindi una pagina più grande del tetto si
                     // riconosce guardando la sua riga.
                     Ok(Some(fetched)) => (fetched.bytes, None),
@@ -291,7 +291,7 @@ impl PageFetcher<'_> {
         Ok(PageOutcome::NotServed)
     }
 
-    /// Miniatura ricavata dai byte già in memoria (D6). Un fallimento non fa
+    /// Miniatura ricavata dai byte già in memoria. Un fallimento non fa
     /// fallire il libro.
     fn store_thumbnail(&self, index: u32, bytes: &[u8]) {
         let Ok(relative) =
@@ -323,7 +323,7 @@ impl PageFetcher<'_> {
 }
 
 /// Oltre questa attesa si dichiara che è la **nostra** cortesia a tenere fermo
-/// il lavoro (D17). Più lunga della pausa massima fra due richieste (6 s su
+/// il lavoro. Più lunga della pausa massima fra due richieste (6 s su
 /// Gallica) e molto più corta del raffreddamento più breve (120 s).
 const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(15);
 

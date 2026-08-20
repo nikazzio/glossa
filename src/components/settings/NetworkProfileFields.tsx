@@ -3,7 +3,7 @@ import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from '../ui';
 import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloadSettingsService';
 
 /**
- * I campi di un ritmo, con gli estremi che il backend applica comunque (D11).
+ * I campi di un ritmo, con gli estremi che il backend applica comunque.
  * Un elenco invece di dodici blocchi uguali: aggiungere un valore al profilo
  * vuol dire aggiungere una riga qui.
  */

@@ -46,7 +46,7 @@ interface LibraryCatalogAreaProps {
  * quello che si ha, si scarica, si toglie.
  *
  * Quante pagine sono davvero sul computer si legge dai file presenti, non da uno
- * stato tenuto a parte (D7): «parziale» è una condizione normale, non un
+ * stato tenuto a parte: «parziale» è una condizione normale, non un
  * avviso — chi salva la scheda e scarica tre pagine su duecento lo fa apposta.
  */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
@@ -108,7 +108,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
             ))}
           </dl>
           {/* La misura con cui si scarica questa opera: l'ultima parola sulla
-              politica generale e su quella della biblioteca (D4). */}
+              politica generale e su quella della biblioteca. */}
           <div className="mt-4 flex flex-col gap-2">
             {detail.versions.map((version) => (
               <SourceSizeCap key={version.id} versionId={version.id} />
@@ -239,7 +239,7 @@ function CatalogEntryRow({
   const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
-  // Quale misura è la principale lo dice il deposito (§5.4): confrontare i
+  // Quale misura è la principale lo dice il deposito: confrontare i
   // conteggi sbaglierebbe sullo stesso libro scaricato due volte con tetti
   // diversi, dove due cartelle hanno lo stesso numero di pagine.
   const principal = entry.sizes.find((size) => size.sizeTag === entry.principalSize);
@@ -259,7 +259,7 @@ function CatalogEntryRow({
             done: summary.presentPages,
             total: summary.expectedPages,
           });
-  // Le pagine prese a parte a una misura diversa (§5.6): vanno dette come
+  // Le pagine prese a parte a una misura diversa: vanno dette come
   // aggiunta, non come mancanza, altrimenti una cartella `max` con tre file su
   // 328 sembra un libro a metà.
   const extra = entry.sizes
@@ -290,7 +290,7 @@ function CatalogEntryRow({
     try {
       const job = await enqueueSourceDownload({
         // La chiave della biblioteca, non `external_ref`: quella è chiave più
-        // identificativo e come nome di cartella verrebbe rifiutata (D2, D18).
+        // identificativo e come nome di cartella verrebbe rifiutata.
         providerKey: await providerKey(),
         manifestUrl: entry.manifestUrl,
         versionId: entry.versionId ?? undefined,
@@ -307,7 +307,7 @@ function CatalogEntryRow({
   };
 
   /**
-   * Verifica rapida (D5, §5.4): le pagine che ci sono nella cartella della misura
+   * Verifica rapida: le pagine che ci sono nella cartella della misura
    * principale contro il conteggio atteso, che viene dal manifesto ed è l'unica
    * cosa che dice quante *dovrebbero* essere.
    *
@@ -357,7 +357,7 @@ function CatalogEntryRow({
   };
 
   /**
-   * «Libera spazio» (D6): cancella le pagine e basta. Restano scheda, manifesto e
+   * «Libera spazio»: cancella le pagine e basta. Restano scheda, manifesto e
    * miniature. Il conteggio della scheda si aggiorna da sé: lo legge dalla
    * cartella, che dopo questa azione è vuota.
    */
@@ -374,7 +374,7 @@ function CatalogEntryRow({
     setBusy(true);
     try {
       // Nessuna riga da dimenticare: il conteggio lo dà la cartella, e la
-      // cartella non c'è più (§5.4).
+      // cartella non c'è più.
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
       onRefresh();
@@ -388,7 +388,7 @@ function CatalogEntryRow({
   };
 
   /**
-   * Ridurre le immagini già scaricate per liberare spazio (§5.7).
+   * Ridurre le immagini già scaricate per liberare spazio.
    *
    * Lavora sulla **misura principale**, cioè quella con cui il libro è stato
    * scaricato: le pagine prese a risoluzione piena di proposito restano come
@@ -398,7 +398,7 @@ function CatalogEntryRow({
   const optimise = async () => {
     // La misura principale la dichiara il deposito, non la si indovina dai
     // conteggi: sullo stesso libro scaricato due volte a tetti diversi due
-    // cartelle hanno lo stesso numero di pagine (§5.4).
+    // cartelle hanno lo stesso numero di pagine.
     if (!entry.versionId || !entry.principalSize) return;
     const sizeTag = entry.principalSize;
     setBusy(true);
@@ -446,7 +446,7 @@ function CatalogEntryRow({
 
   /**
    * Togliere un'opera la toglie **per intero**: scheda, collegamenti e la sua
-   * cartella nel deposito (D6). Lasciare i file dietro produceva cartelle che
+   * cartella nel deposito. Lasciare i file dietro produceva cartelle che
    * nessuna schermata sa più mostrare, e che nemmeno riaggiungendo la stessa
    * opera tornerebbero utili: la cartella prende il nome da un identificativo
    * nuovo ogni volta.

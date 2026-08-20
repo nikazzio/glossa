@@ -1,6 +1,6 @@
 //! Lettura del manifesto IIIF.
 //!
-//! Si rispetta lo standard, non lo si reinterpreta (D2-bis): l'ordine delle
+//! Si rispetta lo standard, non lo si reinterpreta: l'ordine delle
 //! pagine è quello dichiarato dal manifesto, l'etichetta è quella dichiarata, e
 //! le immagini si chiedono al servizio con i parametri della Image API invece
 //! di indovinare indirizzi.
@@ -12,7 +12,7 @@ use crate::jobs::{ErrorKind, JobError};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Page {
     /// Posizione nella sequenza dichiarata: è questa a ordinare, non
-    /// l'etichetta, che può essere `12r`, `[iv]` o mancare (D2).
+    /// l'etichetta, che può essere `12r`, `[iv]` o mancare.
     pub index: u32,
     /// Etichetta della biblioteca, da mostrare così com'è.
     pub label: Option<String>,
@@ -20,17 +20,17 @@ pub struct Page {
     pub image_service: String,
     /// Dimensioni dell'originale dichiarate dal canvas. Le pagine di uno stesso
     /// libro **non** hanno tutte la stessa dimensione, ed è da queste che si
-    /// calcola la misura da chiedere per ognuna (§5.1).
+    /// calcola la misura da chiedere per ognuna.
     pub size: Option<(u32, u32)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     pub pages: Vec<Page>,
-    /// Collegamento umano all'originale, quando il manifesto lo dichiara (D8-bis).
+    /// Collegamento umano all'originale, quando il manifesto lo dichiara.
     pub homepage: Option<String>,
     /// Licenza e attribuzione: materiale d'archivio senza attribuzione è un
-    /// problema, non un dettaglio (D2-bis).
+    /// problema, non un dettaglio.
     pub rights: Option<String>,
     pub attribution: Option<String>,
     /// Manifesto nella vecchia Presentation 2.1. Cambia il nome della
@@ -190,7 +190,7 @@ fn attribution_of(root: &Value) -> Option<String> {
 ///
 /// `size_token` è la misura calcolata per **questa** pagina (`sizing::token_for`),
 /// che varia di pagina in pagina e non è il nome della cartella: quello lo dà il
-/// tetto (§5.1).
+/// tetto.
 pub fn image_url(image_service: &str, size_token: &str) -> String {
     format!("{image_service}/full/{size_token}/0/default.jpg")
 }

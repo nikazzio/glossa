@@ -91,7 +91,7 @@ describe('libraryService', () => {
       expect(queries.some((q) => q.includes('INSERT INTO sources'))).toBe(true);
       expect(queries.some((q) => q.includes('INSERT INTO source_versions'))).toBe(true);
       // Nessuna riga negli asset: dove sta il manifesto lo dice la disposizione
-      // delle cartelle, e non c'è nessuno che terrebbe vera quella riga (§5.4).
+      // delle cartelle, e non c'è nessuno che terrebbe vera quella riga.
       expect(queries.some((q) => q.includes('INSERT INTO assets'))).toBe(false);
     });
 

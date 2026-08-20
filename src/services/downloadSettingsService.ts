@@ -29,7 +29,7 @@ export const THUMBNAIL_EDGES = [200, 300, 400, 600] as const;
 export const DEFAULT_THUMBNAIL_EDGE = 300;
 
 /**
- * Il tetto non superabile sulle richieste insieme verso una biblioteca (D11):
+ * Il tetto non superabile sulle richieste insieme verso una biblioteca:
  * dipende dal loro server, non dalla potenza del computer. Il backend lo
  * applica di nuovo dove i valori si usano — questo è solo il menu.
  */
@@ -148,7 +148,7 @@ export async function setLibraryProfile(libraryKey: string, profileId: string): 
   );
 }
 
-/** La misura scelta per la singola opera, quando c'è (D4). */
+/** La misura scelta per la singola opera, quando c'è. */
 export async function getVersionSizeCap(versionId: string): Promise<string | null> {
   return knownSizeCap(await invoke<string | null>('get_version_size_cap', { versionId }));
 }

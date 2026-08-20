@@ -347,7 +347,7 @@ mod tests {
     async fn transcription_revisions_have_no_status_column() {
         // L'approvazione è un fatto che punta a una revisione, non uno stato
         // scritto sulla revisione: uno storico che si modifica non è uno
-        // storico (D22).
+        // storico.
         let pool = migrated_pool().await;
 
         let columns: Vec<String> =

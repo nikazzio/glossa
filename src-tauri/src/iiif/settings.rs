@@ -4,20 +4,20 @@
 //! sono pochi — nel registro ce ne sono due — e si applicano a undici
 //! biblioteche: tenerli per biblioteca vorrebbe dire ripetere gli stessi
 //! numeri nove volte e non sapere più da dove vengono. Le biblioteche
-//! *scelgono* un profilo (D18).
+//! *scelgono* un profilo.
 //!
 //! Quello che resta compilato nel registro e **non** entra nei profili sono le
 //! caratteristiche della singola biblioteca — il preriscaldamento del
 //! visualizzatore, l'intestazione di provenienza — che non sono un ritmo:
 //! assegnare un profilo alla Vaticana non deve farle perdere la sessione.
 //!
-//! La misura delle pagine ha due livelli e non tre (D4): **l'opera**, che è
+//! La misura delle pagine ha due livelli e non tre: **l'opera**, che è
 //! dove la decisione la vuole perché dipende dal materiale, e **l'impostazione
 //! generale**. Chi conserva il libro non c'entra con quanto è fitta la sua
 //! scrittura.
 //!
 //! Il backend **riporta sempre i valori dentro i limiti** prima di usarli
-//! (D11): il tetto sulle richieste insieme non serve a limitare l'utente,
+//! il tetto sulle richieste insieme non serve a limitare l'utente,
 //! serve a non farlo bandire, e un menu che si comporta bene non è una difesa.
 
 use rusqlite::{params, Connection, OptionalExtension};
@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 
 use super::network::{NetworkProfile, CAUTIOUS, GALLICA};
 
-/// Impostazione generale della misura delle pagine (D4).
+/// Impostazione generale della misura delle pagine.
 pub const SIZE_CAP_SETTING: &str = "download_size_cap";
 
 /// Misura predefinita, in pixel sul lato lungo.
@@ -39,8 +39,7 @@ pub const MAX_SIZE_CAP: &str = "max";
 const MIN_CAP_PIXELS: u32 = 200;
 const MAX_CAP_PIXELS: u32 = 10_000;
 
-/// **Il tetto non superabile** sulle richieste insieme verso una biblioteca
-/// (D11, D18).
+/// **Il tetto non superabile** sulle richieste insieme verso una biblioteca.
 pub const MAX_HOST_CONCURRENCY: usize = 4;
 
 /// Il profilo che vale per chi non ne ha scelto un altro.
@@ -86,7 +85,7 @@ pub struct ProfileInput {
 ///
 /// I valori vengono dal registro e non da un file di migrazione: il registro è
 /// l'unico posto dove una biblioteca nuova si compila, e due elenchi degli
-/// stessi numeri prima o poi divergono (D18).
+/// stessi numeri prima o poi divergono.
 pub fn ensure_builtin_profiles(conn: &Connection) -> Result<(), String> {
     write_profile(conn, DEFAULT_PROFILE_ID, "Normale", true, &CAUTIOUS)?;
     write_profile(conn, SLOW_PROFILE_ID, "Lento", true, &GALLICA)?;
@@ -125,7 +124,7 @@ fn write_profile(
     Ok(())
 }
 
-/// Il profilo di rete in vigore per una biblioteca (D18).
+/// Il profilo di rete in vigore per una biblioteca.
 ///
 /// Prima il profilo scelto per quella chiave, poi quello scelto per il suo
 /// host — le opere aggiunte per indirizzo diretto non hanno voce nel registro
@@ -386,7 +385,7 @@ pub fn set_library_profile(
 }
 
 /// La misura delle pagine in vigore per una digitalizzazione: quella scelta
-/// sull'opera, altrimenti l'impostazione generale (D4).
+/// sull'opera, altrimenti l'impostazione generale.
 pub fn effective_size_cap(conn: &Connection, version_id: &str) -> Result<String, String> {
     if let Some(cap) = version_size_cap(conn, version_id)? {
         return Ok(cap);
@@ -440,7 +439,7 @@ pub fn within_limits(values: NetworkProfile) -> NetworkProfile {
         burst_window_secs: values.burst_window_secs.clamp(1, 3_600),
         cooldown_403_secs: values.cooldown_403_secs.min(86_400),
         cooldown_429_secs: values.cooldown_429_secs.min(86_400),
-        // Il tetto che non si supera (D11).
+        // Il tetto che non si supera.
         host_concurrency: values.host_concurrency.clamp(1, MAX_HOST_CONCURRENCY),
         max_attempts: values.max_attempts.clamp(1, 10),
         backoff_base_secs: values.backoff_base_secs.clamp(1, 600),
@@ -514,7 +513,7 @@ mod tests {
 
     #[test]
     fn a_source_added_by_address_is_recognised_by_its_host() {
-        // Nel registro non ha voce: l'host è l'unica cosa che la identifica (D18).
+        // Nel registro non ha voce: l'host è l'unica cosa che la identifica.
         let conn = database();
         set_library_profile(&conn, "biblioteca.example.org", SLOW_PROFILE_ID).unwrap();
 
@@ -527,7 +526,7 @@ mod tests {
     #[test]
     fn the_concurrency_cap_holds_even_written_by_hand_in_the_database() {
         // Il menu ne offre al massimo quattro, ma il menu è un aiuto e non una
-        // difesa: il tetto vale dove i valori si usano (D11).
+        // difesa: il tetto vale dove i valori si usano.
         let conn = database();
         save_profile(
             &conn,
@@ -574,7 +573,7 @@ mod tests {
 
     #[test]
     fn the_work_has_the_last_word_on_the_page_size() {
-        // «Scelta alla fonte, non globale» (D4): dipende dal materiale.
+        // «Scelta alla fonte, non globale»: dipende dal materiale.
         let conn = database();
         conn.execute(
             "INSERT INTO app_settings (key, value) VALUES ('download_size_cap', '1000')",

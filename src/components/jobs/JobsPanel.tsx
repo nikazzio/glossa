@@ -15,7 +15,7 @@ import { parseJobDetail, type JobDetail } from '../../services/jobsService';
 import { humanSize } from '../../utils';
 
 /**
- * La scheda Lavori del pannello in basso (D20).
+ * La scheda Lavori del pannello in basso.
  *
  * Tre sezioni — in corso, in attesa, terminati oggi — e per ciascun lavoro solo
  * i comandi ammessi dal suo stato, come icone neutre con spiegazione al
@@ -416,7 +416,7 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   const { t } = useTranslation();
 
   // Fermo in attesa di riprovare e fermo perché fallito sono la stessa
-  // immobilità con significati opposti (D17): vanno dette diversamente.
+  // immobilità con significati opposti: vanno dette diversamente.
   if (isWaitingToRetry(job)) {
     // Il tempo mostrato è quello che manca al tentativo, non la stima dello
     // scaricamento: erano due numeri diversi sotto la stessa etichetta.
@@ -449,7 +449,7 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
 }
 
 /**
- * La barra si muove con continuità fra un valore e il successivo (D17), ma
+ * La barra si muove con continuità fra un valore e il successivo, ma
  * **mai** quando il lavoro è fermo: lì resta immobile, perché interpolare un
  * avanzamento che non esiste significa far aspettare fidandosi di un numero
  * falso. La transizione rispetta anche la preferenza di sistema per il

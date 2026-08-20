@@ -153,7 +153,7 @@ describe('pannello dei lavori dalla barra di stato', () => {
 
   it('si apre anche fuori da un progetto, dove la console non esiste', async () => {
     // Il bug: il pannello si apriva solo dentro una traduzione, mentre i
-    // lavori vanno guardati da qualunque sezione (D19).
+    // lavori vanno guardati da qualunque sezione.
     const user = userEvent.setup();
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue(workspaceBar);
 

@@ -20,7 +20,7 @@ describe('registro dei fatti', () => {
 
   it('lo stesso fatto ha sempre lo stesso identificativo', async () => {
     // Riscriverlo sostituisce invece di duplicare: senza, un lavoro ritentato
-    // conterebbe tre volte quello che ha fatto una sola (D27).
+    // conterebbe tre volte quello che ha fatto una sola.
     expect(factId(fact)).toBe(factId({ ...fact }));
   });
 
@@ -30,7 +30,7 @@ describe('registro dei fatti', () => {
   });
 
   it('l impronta del contenuto è stabile e cambia con il testo', () => {
-    // Il riferimento dice cosa c'è adesso, l'impronta cosa c'era allora (D25).
+    // Il riferimento dice cosa c'è adesso, l'impronta cosa c'era allora.
     expect(contentHash('Beatus vir')).toBe(contentHash('Beatus vir'));
     expect(contentHash('Beatus vir')).not.toBe(contentHash('Beatus vir.'));
     expect(contentHash('')).toHaveLength(16);

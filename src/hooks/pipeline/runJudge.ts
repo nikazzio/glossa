@@ -105,7 +105,7 @@ export async function runJudgeForChunk(
     const auditDuration = Date.now() - auditStartedAt;
     pipelineLog.auditEnd(chunk.id, judgeRef, auditDuration, judgeTokenUsage);
     // Anche il giudice è una chiamata a un modello, e costa: senza questa riga
-    // il conto di un documento sarebbe più basso del vero (D29). Il *verdetto*
+    // il conto di un documento sarebbe più basso del vero. Il *verdetto*
     // è un fatto diverso, legato alla revisione giudicata.
     void recordModelCall({
       chunkId: chunk.id,

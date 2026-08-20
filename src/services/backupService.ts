@@ -1,5 +1,5 @@
 /**
- * Il backup del programma intero (#345, #407, D31).
+ * Il backup del programma intero (#345, #407).
  *
  * **Non è di un workspace**: prende tutte le tabelle e al ripristino le
  * sostituisce tutte. Il file serve a rimettere in piedi Glossa dov'era, non a
@@ -130,7 +130,7 @@ const DELETE_ORDER = [
 ] as const;
 
 /**
- * Le opere che erano scaricate, con la misura usata (D31).
+ * Le opere che erano scaricate, con la misura usata.
  *
  * È ciò che rende indolore l'esclusione delle immagini: al ripristino Glossa
  * può proporre «riscarico le dodici opere che avevi?». Si guardano le righe
@@ -138,7 +138,7 @@ const DELETE_ORDER = [
  */
 async function downloadedSources(): Promise<DownloadedSource[]> {
   // Cosa c'è scaricato lo dice il **deposito**, non le righe: le pagine non ne
-  // hanno più una a testa (§5.4). Dal database restano solo titolo e indirizzo
+  // hanno più una a testa. Dal database restano solo titolo e indirizzo
   // del manifesto, che non si ricavano da una cartella.
   const inventory = await libraryInventory();
   if (inventory.length === 0) return [];
@@ -163,7 +163,7 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
         // ripristino deve richiedere.
         principalSize: entry.principal,
         // **Tutte** le misure che c'erano, non solo la principale: le pagine
-        // prese a piena risoluzione di proposito (§5.6) sono le più costose da
+        // prese a piena risoluzione di proposito sono le più costose da
         // riottenere, ed erano quelle che il backup dimenticava.
         sizes: entry.sizes
           .filter((size) => size.pages > 0)
@@ -195,7 +195,7 @@ export async function writeBackup(): Promise<boolean> {
   };
 
   // Il percorso non attraversa l'interfaccia: la finestra la apre il backend,
-  // che scrive anche il file — compresso, con il suo manifesto (#407, D31).
+  // che scrive anche il file — compresso, con il suo manifesto (#407).
   const saved = await invoke<boolean>('write_backup', {
     payload: JSON.stringify(payload),
   });

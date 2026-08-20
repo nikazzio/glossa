@@ -4,14 +4,14 @@ import { usePricingStore } from '../stores/pricingStore';
 import type { JudgeResult, TokenUsage } from '../types';
 
 /**
- * Quello che resta scritto di una chiamata a un modello (#378, D29).
+ * Quello che resta scritto di una chiamata a un modello (#378).
  *
  * Token, costo e durata **esistono solo mentre la chiamata avviene**: sono
  * l'unica parte del lavoro che non si può ricostruire dopo guardando i testi.
  * Da qui vengono i confronti fra modelli, il costo per lingua e per periodo, e
  * la risposta alla domanda «perché questo documento è costato tanto».
  *
- * L'identità del fatto è **frammento più stadio** (D27): rieseguire la
+ * L'identità del fatto è **frammento più stadio**: rieseguire la
  * pipeline sostituisce il fatto di quello stadio invece di accumularne uno per
  * tentativo. Quante volte si è rieseguito lo dicono le revisioni prodotte.
  */
@@ -52,7 +52,7 @@ export async function recordFailedModelCall(call: ModelCall, error: string): Pro
 /**
  * Il **tipo** di errore, non il suo testo.
  *
- * La colonna serve a raggruppare (D24): «quante chiamate sono cadute per i
+ * La colonna serve a raggruppare: «quante chiamate sono cadute per i
  * limiti del provider questo mese» è una domanda con risposta, «quante volte è
  * comparso questo messaggio» non lo è, perché il messaggio cambia con il
  * provider e con la giornata. Il testo intero resta nel registro tecnico.
@@ -106,7 +106,7 @@ async function write(call: ModelCall, outcome: string, errorKind: string | null)
     sourceLanguage: call.sourceLanguage ?? null,
     targetLanguage: call.targetLanguage ?? null,
     // Le impronte, non i testi: il registro dice **cosa ha visto** la chiamata,
-    // e i testi stanno già nelle revisioni (D25).
+    // e i testi stanno già nelle revisioni.
     inputHash: call.input ? contentHash(call.input) : null,
     outputHash: call.output ? contentHash(call.output) : null,
     config: {
@@ -153,7 +153,7 @@ export async function recordEmbeddingRun(run: {
 }
 
 /**
- * Il verdetto del giudice, **legato alla revisione che ha giudicato** (D22).
+ * Il verdetto del giudice, **legato alla revisione che ha giudicato**.
  *
  * Le colonne del frammento restano dove sono per la lettura veloce, ma vengono
  * sovrascritte a ogni riesecuzione: senza questo fatto, «il modello aveva

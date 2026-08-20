@@ -12,7 +12,7 @@ use super::fetch::host_of;
 use super::handler::DownloadConfig;
 use super::manifest::Manifest;
 
-/// Profilo di rete in vigore per questa biblioteca (D18), riletto all'avvio del
+/// Profilo di rete in vigore per questa biblioteca, riletto all'avvio del
 /// lavoro e non alla messa in coda: un lavoro ripreso dopo giorni deve
 /// rispettare i limiti di adesso.
 pub(crate) async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> NetworkProfile {
@@ -57,7 +57,7 @@ pub(crate) async fn source_title(ctx: &JobContext, version_id: &str) -> Option<S
 /// e non si ricavano da una cartella.
 ///
 /// Il conteggio atteso è l'unica cosa che dice quante pagine *dovrebbero*
-/// esserci (§5.4). Dove sta il file del manifesto non si registra: lo dice la
+/// esserci. Dove sta il file del manifesto non si registra: lo dice la
 /// disposizione delle cartelle, e l'inventario risponde già a «c'è o no».
 pub(crate) async fn record_manifest(
     ctx: &JobContext,
@@ -79,7 +79,7 @@ pub(crate) async fn record_manifest(
         .map_err(|error| format!("conteggio pagine: {error}"))?;
 
         // Licenza e attribuzione si aggiungono ai metadati del catalogo invece
-        // di sostituirli (D2-bis).
+        // di sostituirli.
         if rights.is_some() || attribution.is_some() {
             let existing: Option<String> = conn
                 .query_row(

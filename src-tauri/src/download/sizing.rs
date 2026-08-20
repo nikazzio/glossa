@@ -19,7 +19,7 @@
 //!   chiederne uno costa **2,6 s e 0,53 MB** contro 5,9 s e 1,20 MB per una
 //!   larghezza arbitraria: una misura non pronta il servizio la genera sul
 //!   momento, e non la tiene da parte. Si prende quello con il lato lungo più
-//!   vicino al tetto, sopra o sotto che sia (D4);
+//! vicino al tetto, sopra o sotto che sia;
 //! - dove non li tiene (Gallica non dichiara niente) la larghezza esatta costa
 //!   **1,5 s** ed è anche più fedele: agganciarsi a un dimezzamento darebbe una
 //!   pagina con il 16% di dettaglio in meno di quello chiesto.
@@ -102,7 +102,7 @@ pub fn info_url(image_service: &str) -> String {
 ///
 /// Una domanda sola: le misure dichiarate sono i dimezzamenti delle dimensioni
 /// dell'originale? Se sì, la biblioteca tiene pronta la piramide e ci si aggancia
-/// — vale il doppio della velocità (§4). Se no, si calcola la larghezza esatta.
+/// — vale il doppio della velocità. Se no, si calcola la larghezza esatta.
 ///
 /// Il descrittore che non risponde **non è un problema**: si torna alla regola
 /// generale, che è quella che funziona ovunque. Il silenzio di `info.json` è
@@ -169,7 +169,7 @@ fn width_for_cap(width: u32, height: u32, cap: u32) -> u32 {
 }
 
 /// Il dimezzamento con il lato lungo **più vicino al tetto, sopra o sotto che
-/// sia** (D4).
+/// sia**.
 ///
 /// I candidati sono due: l'ultimo che resta sopra il tetto e il primo che scende
 /// sotto. Prendere sempre quello sopra sembra prudente e non lo è: dove i
@@ -374,7 +374,7 @@ mod tests {
         );
         // Stessa regola, esito opposto: 5850×7667 dà 3833 px col dimezzamento
         // (1833 dal tetto) e 1916 col quarto (84). Vince il quarto: il tetto è
-        // una politica, non un minimo (D4).
+        // una politica, non un minimo.
         assert_eq!(
             token_for(
                 &SizingRule::Halvings,

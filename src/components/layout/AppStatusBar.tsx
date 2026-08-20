@@ -117,7 +117,7 @@ function DrawerTab({
 }
 
 /**
- * Il pannello in basso (D20). Log e lavori sono schede della stessa area — le
+ * Il pannello in basso. Log e lavori sono schede della stessa area — le
  * due facce della domanda "cosa sta facendo il programma" — sul modello del
  * pannello di VS Code. Una destinazione sola: al passaggio del mouse un
  * riepilogo, al clic il pannello.
