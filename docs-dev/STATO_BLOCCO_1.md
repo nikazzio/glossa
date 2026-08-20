@@ -148,6 +148,52 @@ Nessuna di queste blocca la 1.5. Il piano
   in Biblioteca. La seconda si risolverebbe prendendo il workspace dal progetto
   aperto, che lo sa già.
 
+## Trovati rileggendo la #444 contro il piano, il 2026-08-20
+
+L'ottimizzazione locale attua il §5.7 per intero. Quello che segue sono buchi mai
+coperti, non regressioni della PR.
+
+- **«Libera spazio» e «togli l'opera» non guardano la coda.** Cancellano le
+  pagine di una digitalizzazione mentre uno scaricamento o un'ottimizzazione le
+  sta scrivendo: il lavoro continua su una cartella che non esiste più, e il file
+  di lato resta con impronte di file spariti. La guardia esiste solo nel senso
+  opposto (`refuse_while_downloading`), e il rimedio è lo stesso: rifiutare alla
+  pressione e dirlo. **È il più serio dei quattro.**
+- **La misura d'origine si perde al secondo giro.** `Note::Downscaled { from }`
+  prende le dimensioni del file sul disco, non quelle della riga precedente:
+  ottimizzando una seconda volta a un lato lungo più basso, l'origine registrata
+  diventa la misura intermedia. Il §5.7 promette la misura d'arrivo dalla
+  biblioteca.
+- **La previsione conta pagine che il lavoro poi non tocca.** `forecast` esclude
+  chi è già dentro il lato lungo, ma non chi ricomprimendo non guadagnerebbe
+  byte — che il lavoro lascia stare. La conferma può quindi promettere qualche
+  pagina in più di quelle davvero ridotte.
+- **Una pagina che non si ricomprime viene saltata in silenzio.** Finisce in un
+  `log::warn`: il pannello non la conta e l'esito resta `Done` come se il libro
+  fosse stato ottimizzato per intero.
+- **Da chiudere col visore**: l'aiuto dice che le pagine prese a piena
+  risoluzione di proposito non si toccano. Vero oggi, perché l'interfaccia lancia
+  sulla misura principale; su un libro che ha **solo** `pages/max/` — ripiego
+  della biblioteca — il comando lavora proprio su quella. Quando il §5.6
+  esisterà, il caso va distinto.
+
+## Debito di documentazione, aperto
+
+- **Il sito non descrive niente del blocco.** La guida su spazio e lavori non
+  nomina l'ottimizzazione locale, «libera spazio», la cache delle copertine né il
+  fatto che la misura delle pagine si calcola invece di scegliersi. Va scritta in
+  `docs/` e in `docs/en/`.
+- **I commenti citano ancora il piano per sigla.** Il commit `9c1175c` ha tolto
+  le citazioni fra parentesi; restano 36 rimandi annegati nelle frasi («il
+  difetto che D20 nomina»), 11 rimandi ai paragrafi del disegno e 7 rimandi per
+  nome ai file di `docs-dev/`. Il commento deve dire il vincolo, non dove il
+  vincolo è stato deciso.
+- **`docs-dev/` va rivisto.** I documenti nascono come piano — cosa avremmo
+  fatto — e sono stati trattati come specifica vincolante, citata nel codice a
+  giustificazione di scelte prese in autonomia. Da separare: cosa è architettura
+  stabile e resta, cosa era piano già eseguito e si butta, cosa era una decisione
+  presa senza chiedere e torna all'utente.
+
 ## Aperti, da non perdere
 
 - **Divieto dell'istituzione** (D9): la colonna `download_allowed` esiste e non
