@@ -14,17 +14,7 @@ import { isFinishedRecently, isRunning, useJobsStore } from '../../stores/jobsSt
 import { parseJobDetail, type JobDetail } from '../../services/jobsService';
 import { humanSize } from '../../utils';
 
-/**
- * La scheda Lavori del pannello in basso.
- *
- * Tre sezioni — in corso, in attesa, terminati oggi — e per ciascun lavoro solo
- * i comandi ammessi dal suo stato, come icone neutre con spiegazione al
- * passaggio del mouse.
- *
- * Sta dentro il pannello scuro insieme ai messaggi, quindi usa **solo** i token
- * `terminal-*`: infiltrare l'accento dell'interfaccia chiara romperebbe il
- * principio del terminale come versione scura degli stessi toni.
- */
+/** Lavori in corso, in attesa e terminati oggi. */
 export function JobsPanel({ panelId, labelledBy }: { panelId: string; labelledBy: string }) {
   const { t } = useTranslation();
   const jobs = useJobsStore((state) => state.jobs);
@@ -76,15 +66,6 @@ function JobsSection({ title, jobs }: { title: string; jobs: Job[] }) {
   );
 }
 
-/**
- * Una riga del pannello.
- *
- * Chiusa dice le cose che servono a colpo d'occhio: **di che tipo di lavoro si
- * tratta**, su cosa, a che punto è e quanto pesa — quello che è arrivato e
- * quanto si prevede in tutto, perché il peso della sola unità in corso non dice
- * niente su quanto manca. Aperta mostra i dettagli veri: risoluzione chiesta,
- * host, tentativi, orari.
- */
 function JobRow({ job }: { job: Job }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -102,8 +83,6 @@ function JobRow({ job }: { job: Job }) {
   return (
     <div className="rounded border border-terminal-line bg-terminal-chrome">
       <div className="flex items-center gap-2 px-2.5 py-2">
-        {/* Il riepilogo è il comando che apre: il resto della riga resta libero
-            per i comandi veri, che non devono aprire niente per sbaglio. */}
         <button
           type="button"
           onClick={() => setOpen((current) => !current)}
@@ -122,9 +101,6 @@ function JobRow({ job }: { job: Job }) {
           {detail.units && (
             <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {detail.units.done}/{detail.units.total}
-              {/* Le pagine che la biblioteca non serve stanno **accanto** al
-                  conteggio: da solo direbbe «328 su 328» di un libro che sul
-                  disco ne ha 326, e quella differenza sembrerebbe un difetto. */}
               {detail.unavailable !== undefined && detail.unavailable > 0 && (
                 <span className="text-terminal-muted">
                   {' '}
@@ -155,9 +131,6 @@ function JobRow({ job }: { job: Job }) {
               <Play size={11} />
             </TerminalIconButton>
           )}
-          {/* Un lavoro che riproverà da solo **non è in pausa**: finché mostrava
-              lo stesso pulsante sembrava fermo per volontà di chi guarda. Qui
-              il comando serve a non aspettare l'attesa, non a farlo ripartire. */}
           {waitingToRetry && (
             <TerminalIconButton label={t('jobs.retryNow')} onClick={() => void resume(job.id)}>
               <Play size={11} />
@@ -190,37 +163,20 @@ function JobRow({ job }: { job: Job }) {
         <JobProgress job={job} />
       </div>
 
-      {/* La riga cresce invece di scattare: due righe di griglia da 0fr a 1fr,
-          che è l'unico modo di animare un'altezza che non si conosce. */}
       <div
         className={`grid px-2.5 motion-safe:transition-[grid-template-rows] motion-safe:duration-200 ${
           open ? 'grid-rows-[1fr] pb-2' : 'grid-rows-[0fr]'
         }`}
       >
-        {/* Montata solo da aperta: lasciarla nel documento raddoppierebbe ogni
-            valore — l'errore, i byte — anche per chi legge con la tastiera o
-            con un lettore di schermo. */}
         <div className="overflow-hidden">{open && <JobDetails job={job} detail={detail} />}</div>
       </div>
     </div>
   );
 }
 
-/**
- * Una coppia etichetta/valore.
- *
- * L'etichetta ha una **colonna sua**, larga uguale per tutte: allineate a
- * sinistra del valore, le righe si leggono in verticale come una tabella
- * invece che come un testo continuo. Un valore lungo — l'elenco delle
- * risoluzioni, un errore — prende tutta la larghezza e **va a capo**: troncato
- * nascondeva proprio la parte che si stava cercando.
- */
 function Field({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  // Un elenco lungo — su alcune biblioteche le misure sono venti — occuperebbe
-  // da solo più spazio di tutto il resto: sta su una riga e si apre se lo si
-  // chiede.
   const long = wide && value.length > FOLD_AFTER;
 
   return (
@@ -248,13 +204,6 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
   );
 }
 
-/**
- * Come si chiama un lavoro che non ha un nome proprio.
- *
- * La verifica del deposito ne ha due forme — presenza e integrità — che dal
- * pannello si distinguevano solo aprendo la riga: due lavori con lo stesso
- * titolo sembrano lo stesso lavoro fatto due volte.
- */
 function jobTypeLabel(job: Job, t: (key: string, options?: Record<string, unknown>) => string): string {
   const base = t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
   if (job.jobType !== 'vault_verification') return base;
@@ -269,12 +218,6 @@ function jobTypeLabel(job: Job, t: (key: string, options?: Record<string, unknow
 /** Oltre questa lunghezza un valore sta su una riga sola finché non lo si apre. */
 const FOLD_AFTER = 60;
 
-/**
- * I dettagli veri di un lavoro: quello che serve per capire cosa sta facendo e
- * perché ci mette tanto. Le chiavi le decide il gestore, qui si mostrano quelle
- * che ci sono — un lavoro futuro che ne manda di nuove non rompe niente, e
- * quelle che non conosciamo restano fuori invece di comparire a metà.
- */
 function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
   const { t } = useTranslation();
   // Sempre su 24 ore: un registro tecnico non si legge con AM e PM.
@@ -288,9 +231,6 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
         })
       : '—';
 
-  // Due blocchi, perché sono due cose diverse: quello che vale per **tutto il
-  // lavoro** e quello che vale per **l'ultima pagina** passata. Mescolarli
-  // faceva leggere il peso di una pagina come se fosse quello del libro.
   const work: DetailField[] = [
     { label: t('jobs.detail.type'), value: t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType }) },
     {
@@ -314,12 +254,15 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
         value: String(detail.unavailable),
       },
     detail.cap && { label: t('jobs.detail.cap'), value: readableSize(detail.cap, t) },
-    // Quanto ha liberato è il motivo per cui si lancia l'ottimizzazione: il
-    // lavoro lo conta, e senza queste due righe non lo diceva a nessuno.
     detail.shrunk !== undefined && {
       label: t('jobs.detail.shrunk'),
       value: String(detail.shrunk),
     },
+    detail.skipped !== undefined &&
+      detail.skipped > 0 && {
+        label: t('jobs.detail.skipped'),
+        value: String(detail.skipped),
+      },
     detail.freed !== undefined && { label: t('jobs.detail.freed'), value: humanSize(detail.freed) },
     detail.provider && { label: t('jobs.detail.provider'), value: detail.provider },
     detail.host && { label: t('jobs.detail.host'), value: detail.host },
@@ -337,12 +280,18 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
     { label: t('jobs.detail.attempt'), value: `${job.attemptCount} / ${job.maxAttempts}` },
     { label: t('jobs.detail.started'), value: time(job.createdAt) },
     { label: t('jobs.detail.updated'), value: time(job.updatedAt) },
-    job.error && { label: t('jobs.detail.error'), value: job.error, wide: true },
+    job.error && {
+      label: t('jobs.detail.error'),
+      value: job.error.startsWith('optimization_incomplete:')
+        ? t('jobs.error.optimizationIncomplete', {
+            count: Number(job.error.split(':')[1]) || detail.skipped || 1,
+          })
+        : job.error,
+      wide: true,
+    },
     { label: t('jobs.detail.id'), value: job.id, wide: true },
   ].filter((field): field is DetailField => typeof field === 'object' && field !== null);
 
-  // Sotto «questo lavoro» ci sono le scelte e i totali; qui i dati **veri**
-  // della pagina appena passata, che possono non coincidere con le scelte.
   const lastUnit: DetailField[] = detail.last
     ? ([
         { label: t('jobs.detail.lastIndex'), value: String(detail.last.index) },
@@ -375,7 +324,6 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
   );
 }
 
-/** Un blocco di dettagli con il suo titolo: dice **di cosa** parlano i numeri. */
 function FieldGroup({ title, fields }: { title: string; fields: DetailField[] }) {
   return (
     <section>
@@ -383,8 +331,6 @@ function FieldGroup({ title, fields }: { title: string; fields: DetailField[] })
         {title}
       </h4>
       <div className="grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2">
-        {/* I valori lunghi vanno in fondo, dove possono prendersi tutta la
-            riga senza spezzare l'allineamento di quelli corti. */}
         {[...fields.filter((field) => !field.wide), ...fields.filter((field) => field.wide)].map(
           (field) => (
             <Field key={field.label} label={field.label} value={field.value} wide={field.wide} />
@@ -395,10 +341,6 @@ function FieldGroup({ title, fields }: { title: string; fields: DetailField[] })
   );
 }
 
-/**
- * La misura chiesta al servizio, come si legge: `1285,` è la forma del
- * parametro IIIF, non una cosa da mostrare a chi guarda.
- */
 function readableSize(token: string, t: (key: string, options?: Record<string, unknown>) => string): string {
   if (token === 'max' || token === 'full') return t('jobs.detail.sizeMax');
   const width = token.replace(/[^0-9]/g, '');
@@ -415,11 +357,7 @@ interface DetailField {
 function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   const { t } = useTranslation();
 
-  // Fermo in attesa di riprovare e fermo perché fallito sono la stessa
-  // immobilità con significati opposti: vanno dette diversamente.
   if (isWaitingToRetry(job)) {
-    // Il tempo mostrato è quello che manca al tentativo, non la stima dello
-    // scaricamento: erano due numeri diversi sotto la stessa etichetta.
     const countdown = formatEta(retryCountdownSeconds(job));
     return (
       <span className="text-terminal-warn">
@@ -440,21 +378,11 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   if (job.status === 'paused') return <span>{t('jobs.paused')}</span>;
   if (job.status === 'queued') return <span>{t('jobs.queued')}</span>;
 
-  // In esecuzione si legge **cosa sta facendo**, non un generico «in corso»:
-  // lettura del manifesto, scaricamento. Le fasi che l'interfaccia non conosce si
-  // mostrano com'è scritta la chiave, invece di sparire.
   const phase = job.phase ? t(`jobs.phase.${job.phase}`, { defaultValue: job.phase }) : null;
   const parts = [phase, eta ? t('jobs.etaShort', { eta }) : null].filter(Boolean);
   return <span>{parts.length > 0 ? parts.join(' · ') : t('jobs.running')}</span>;
 }
 
-/**
- * La barra si muove con continuità fra un valore e il successivo, ma
- * **mai** quando il lavoro è fermo: lì resta immobile, perché interpolare un
- * avanzamento che non esiste significa far aspettare fidandosi di un numero
- * falso. La transizione rispetta anche la preferenza di sistema per il
- * movimento ridotto.
- */
 function JobProgress({ job }: { job: Job }) {
   if (isTerminal(job) || job.progress <= 0) return null;
 
@@ -463,8 +391,6 @@ function JobProgress({ job }: { job: Job }) {
   return (
     <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-terminal-line">
       <div
-        // Larghezza minima visibile: una pagina su trecento è lo 0,3%, che
-        // arrotondato sparisce e fa sembrare la barra ferma.
         role="progressbar"
         aria-valuenow={Math.round(job.progress * 100)}
         aria-valuemin={0}

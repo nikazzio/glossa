@@ -10,6 +10,7 @@ import {
   listActiveJobs,
   onJobChanged,
   pauseJob,
+  parseJobDetail,
   resumeJob,
   retryCountdownSeconds,
   retryJob,
@@ -153,6 +154,13 @@ describe('tempo stimato', () => {
 });
 
 describe('risposte inattese dal backend', () => {
+  it('legge le pagine non elaborate dal dettaglio di ottimizzazione', () => {
+    expect(parseJobDetail('{"shrunk":3,"skipped":2}')).toMatchObject({
+      shrunk: 3,
+      skipped: 2,
+    });
+  });
+
   it('fuori da Tauri l’elenco vuoto non rompe l’interfaccia', async () => {
     // Nel browser il comando non esiste: la risposta non è un elenco, e darla
     // per buona farebbe cadere tutta l'applicazione.

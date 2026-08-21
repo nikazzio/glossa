@@ -83,6 +83,24 @@ describe('pannello dei lavori', () => {
     expect(screen.getByText('connessione caduta')).toBeInTheDocument();
   });
 
+  it('un’ottimizzazione parziale mostra il conteggio e un errore leggibile', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        jobType: 'image_optimization',
+        status: 'error',
+        error: 'optimization_incomplete:2',
+        detail: '{"shrunk":3,"skipped":2}',
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('jobs.detail.skipped')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('jobs.error.optimizationIncomplete')).toBeInTheDocument();
+  });
+
   it('un lavoro fermo in attesa di riprovare non è mostrato come errore', () => {
     // Stessa immobilità, significato opposto.
     renderPanel([job({ status: 'queued', nextAttemptAt: '2026-08-13 10:00:00', etaSeconds: 480 })]);

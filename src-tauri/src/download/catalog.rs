@@ -1,4 +1,4 @@
-//! Le poche cose che restano nel database dopo il §5.4: conteggio atteso,
+//! Metadati della digitalizzazione conservati nel database: conteggio atteso,
 //! licenza, attribuzione, titolo dell'opera e profilo di rete. Tutto il resto lo
 //! dice la cartella — dove sta il manifesto compreso.
 

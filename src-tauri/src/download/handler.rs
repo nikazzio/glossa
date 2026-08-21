@@ -1,9 +1,9 @@
 //! Gestore del lavoro `source_download`: il ciclo, e nient'altro.
 //!
-//! Sette passi, nessun ramo oltre a quelli del §5.1:
+//! Ciclo di scaricamento:
 //!
 //! 1. manifesto — dal deposito se c'è, altrimenti dalla rete, conservato com'è
-//! arrivato;
+//!    arrivato;
 //! 2. per ogni pagina nell'ordine dichiarato: salta se il file c'è già, calcola
 //!    la larghezza, aspetta il turno verso l'host, chiedi, valida, promuovi,
 //!    ricava la miniatura, riferisci (`pages::PageFetcher`);
@@ -13,8 +13,7 @@
 //!
 //! - **il disco è la verità**: nessuna riga per pagina nel database. Il
 //!   conteggio lo dà la cartella, l'impronta il file di lato (`sidecar`);
-//! - **nel deposito entra solo ciò che ha superato la validazione** (D16-bis,
-//!   `vault_io`). Da qui la ripresa può fidarsi della sola presenza del file.
+//! - nel deposito entra solo ciò che ha superato la validazione (`vault_io`).
 //!
 //! Non esiste più un punto di ripresa salvato: riprendere significa
 //! rileggere la cartella.

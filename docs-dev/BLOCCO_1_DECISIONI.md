@@ -1,10 +1,14 @@
-# Blocco 1 — Decisioni da approvare prima di scrivere codice
+# Blocco 1 — archivio delle decisioni
 
 Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-12. **Tutte le decisioni D1-D33 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Nessuna domanda aperta. L'unica correzione successiva all'approvazione riguarda l'appendice tecnica: come si arriva alla forma finale dello schema, emersa implementando la PR 1 (#414).
+Ultimo aggiornamento: 2026-08-22. Tutte le decisioni D1-D33 sono state
+approvate. Il documento conserva il percorso decisionale; non descrive lo stato
+corrente del codice. Le sostituzioni emerse durante l'implementazione sono
+riepilogate in `STATO_BLOCCO_1.md`. D33 resta il riferimento per la riservatezza
+ancora da implementare.
 
 ## Come si legge
 
@@ -15,8 +19,8 @@ erano nella prima stesura.
 **Tutte approvate** fra il 9 e l'11 agosto 2026, nessuna domanda aperta. In
 fondo l'appendice tecnica con schema, comandi e struttura delle cartelle.
 
-**Niente di questo documento è ancora implementato.** La suddivisione in PR è
-nella Parte G.
+Lo stato implementativo e il lavoro residuo sono in `STATO_BLOCCO_1.md` e
+`ROADMAP_2_0.md`.
 
 ### Fonti
 

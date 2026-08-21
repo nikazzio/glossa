@@ -211,6 +211,15 @@ lose something without freeing anything.
 
 While it runs, the panel says how many pages it has shrunk and how much room it has freed. Target size and quality are chosen in **Settings → Downloads**.
 
+The confirmation counts only pages that will actually free space. If a page
+cannot be read or rewritten, the job ends in error instead of hiding it: its
+details keep the number of unprocessed pages, while successful pages remain
+safely stored.
+
+While a download or optimisation can still change a work, commands that free
+its space or remove it are refused. Let the job finish or cancel it first;
+pausing is not enough.
+
 ## The backup
 
 **Settings → Storage → Backup and restore** saves a file with everything that

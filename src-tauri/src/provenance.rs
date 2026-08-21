@@ -1,4 +1,4 @@
-//! Il registro dei fatti (#378, decisioni D23-D29).
+//! Registro append-only dei fatti e delle metriche derivate.
 //!
 //! Tre registri con tre nature diverse, e la regola per smistarli:
 //!
@@ -72,8 +72,7 @@ impl Event {
     /// gestori, e per questo non lo scrive nessuno di loro: lo scrive il
     /// motore.
     ///
-    /// Il workspace viene dal lavoro: senza, D24 non potrebbe raggruppare per
-    /// workspace e D28 non potrebbe cancellare quello che gli appartiene.
+    /// Il workspace associato al lavoro al momento dell'evento.
     pub fn for_job(
         event_type: &str,
         job_id: &str,

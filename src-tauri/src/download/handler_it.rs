@@ -1,10 +1,7 @@
 //! Prove sul ciclo completo dello scaricamento, contro una biblioteca finta.
 //!
-//! I test in `handler.rs`, `sizing.rs` e `sidecar.rs` guardano le funzioni una
-//! per una. Qui gira il lavoro vero — coda, manifesto, deposito, file di lato —
-//! perché i comportamenti che il §5.1-§5.4 del disegno descrive vivono nel *ciclo*:
-//! una pagina che manca, una misura rifiutata, una ripresa che non richiede
-//! quello che c'è già.
+//! Copre coda, manifesto, deposito, file laterale, pagine mancanti, rifiuto
+//! della misura e ripresa.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

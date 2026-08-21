@@ -1,10 +1,4 @@
-//! La singola richiesta verso una biblioteca: attesa del turno, invio,
-//! classificazione della risposta.
-//!
-//! La classificazione è il punto: un 403 su questi servizi significa
-//! "stai correndo troppo" e si ritenta dopo un raffreddamento lungo, un 404
-//! significa che la pagina non c'è e insistere è inutile. Senza questa
-//! distinzione la tabella delle decisioni non è applicabile.
+//! Richieste alle biblioteche, con cortesia e classificazione degli errori.
 
 use reqwest::{Client, StatusCode};
 use std::time::Duration;
@@ -14,8 +8,7 @@ use crate::jobs::{ErrorKind, JobError};
 
 use super::courtesy::{Courtesy, Signals};
 
-/// Come si presenta Glossa alle biblioteche. Identificarsi è buona pratica
-/// IIIF, ed è la parte non tecnica dell'aderenza allo standard.
+/// Identificativo inviato alle biblioteche.
 pub fn user_agent() -> String {
     format!(
         "Glossa/{} (+https://github.com/nikazzio/glossa)",
@@ -36,15 +29,11 @@ pub fn build_client(profile: &NetworkProfile) -> Result<Client, JobError> {
 #[derive(Debug)]
 pub struct Fetched {
     pub bytes: Vec<u8>,
-    /// Il tipo dichiarato dal servizio. Serve a chi conserva i byte: dire
-    /// «JPEG» per abitudine è una bugia appena una biblioteca serve PNG.
+    /// Tipo dichiarato dal servizio.
     pub content_type: Option<String>,
 }
 
-/// Tentativi ravvicinati sulla **singola richiesta** (D16, primo livello):
-/// una connessione che cade o un 5xx passeggero si riprovano subito, senza
-/// disturbare il lavoro. Quando anche questi finiscono, l'errore sale al
-/// secondo livello, dove le attese sono lunghe e le decide il profilo.
+/// Tentativi ravvicinati prima di applicare l'attesa del lavoro.
 const TRANSPORT_ATTEMPTS: u32 = 3;
 const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 
@@ -177,8 +166,7 @@ fn classify(
     log::warn!("request refused url={url} status={code}");
 
     let error = match code {
-        // "Stai correndo troppo", non "vietato per sempre": correzione
-        // esplicita di D16 dopo le prove su Gallica.
+        // Alcune biblioteche usano 403 per chiedere di rallentare.
         403 => JobError::new(
             ErrorKind::Throttled,
             "la biblioteca ha chiesto di rallentare (403)",
@@ -328,8 +316,6 @@ mod tests {
 
     #[tokio::test]
     async fn the_wait_between_job_attempts_comes_from_the_library_profile() {
-        // D16: base e tetto dell'attesa esponenziale sono del profilo, non
-        // costanti del motore. Gallica parte da 20 s e raddoppia.
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/page.jpg"))
@@ -393,9 +379,6 @@ mod tests {
 
     #[tokio::test]
     async fn a_passing_server_failure_is_retried_without_disturbing_the_job() {
-        // Primo livello di D16: pochi tentativi ravvicinati sulla singola
-        // richiesta, invisibili al lavoro. Senza, un 503 di un secondo
-        // costerebbe venti secondi di attesa al livello del lavoro.
         let server = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/page.jpg"))

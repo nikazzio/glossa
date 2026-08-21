@@ -1,16 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
 
-/**
- * La misura delle pagine (#422) e i profili di rete (#421). Decisioni D4, D11
- * e D18.
- *
- * **Un profilo è un ritmo, non una biblioteca**: i valori tarati sul campo
- * sono pochi e si applicano a undici biblioteche, che scelgono quale seguire.
- *
- * La misura ha due livelli: **l'opera**, dove la decisione la vuole perché
- * dipende dal materiale, e **l'impostazione generale**.
- */
+/** Impostazioni per dimensioni delle immagini e profili di rete. */
 
 const SIZE_CAP_KEY = 'download_size_cap';
 const THUMBNAIL_EDGE_KEY = 'thumbnail_long_edge';

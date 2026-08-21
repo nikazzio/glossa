@@ -6,6 +6,7 @@
 use super::{classify_folder, directory_stats, resolve_root, status};
 use super::{FolderKind, VaultStatus};
 use serde::Serialize;
+use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 
 /// Crea il deposito predefinito all'avvio, se nessuno ne ha scelto un altro.
@@ -76,6 +77,15 @@ pub struct FreedSpace {
     pub freed_bytes: u64,
 }
 
+/// Impedisce cancellazioni concorrenti con lavori sulla digitalizzazione.
+fn refuse_while_version_working(app: &tauri::AppHandle, version_id: &str) -> Result<(), String> {
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
+    if crate::jobs::store::has_active_version_work(&conn, version_id)? {
+        return Err("version_work_in_progress".to_string());
+    }
+    Ok(())
+}
+
 /// "Libera spazio": cancella le pagine scaricate di una digitalizzazione
 /// **subito e per davvero**, senza passare dal cestino — spostare gigabyte nel
 /// cestino non libera niente.
@@ -83,11 +93,14 @@ pub struct FreedSpace {
 /// Le miniature restano: sono circa 3 MB e rendono il libro ancora sfogliabile.
 /// Restano anche manifesto e derivati.
 #[tauri::command]
-pub fn free_version_pages(
+pub async fn free_version_pages(
     app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
     provider_key: String,
     version_id: String,
 ) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
     let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
@@ -259,20 +272,16 @@ pub async fn choose_vault_folder(
     }))
 }
 
-/// Cancella **tutto** quello che una digitalizzazione ha nel deposito:
-/// manifesto, miniature, pagine.
-///
-/// È quello che serve quando l'opera esce dalla Biblioteca. Finché il cestino
-/// non esiste, togliere un'opera e lasciarne i file sul disco produceva
-/// cartelle che nessuno reclama più e che nessuna schermata sa mostrare:
-/// riaggiungendo la stessa opera nasce un identificativo nuovo, quindi quei
-/// file non sarebbero comunque tornati utili.
+/// Cancella manifesto, miniature e pagine di una digitalizzazione.
 #[tauri::command]
-pub fn delete_version_files(
+pub async fn delete_version_files(
     app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
     provider_key: String,
     version_id: String,
 ) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
     let root = root_of(&app)?;
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());

@@ -93,8 +93,6 @@ Entrambe diventano lavori in coda: le segui dal pannello in basso, le metti in p
 
 L'esito dell'ultimo controllo **resta nelle impostazioni**, sotto i due comandi, finché non ne fai un altro: quando è stato fatto, di che tipo, e i quattro numeri. Accanto ai file senza opera c'è il comando che li cancella, con la conferma che dice quanti sono e quanto occupano. Glossa riguarda il deposito nel momento in cui premi — non si fida del conto di prima — e alla fine ti dice quanti ne ha tolti davvero: fra il controllo e la cancellazione può essere finito uno scaricamento, e quei file non sono più senza padrone.
 
-L'esito dell'ultimo controllo **resta nelle impostazioni**, sotto i due comandi, finché non ne fai un altro: quando è stato fatto, di che tipo, e i quattro numeri. Accanto ai file senza opera c'è il comando che li cancella, con la conferma che dice quanti sono e quanto occupano. Glossa riguarda il deposito nel momento in cui premi — non si fida del conto di prima — e alla fine ti dice quanti ne ha tolti davvero: fra il controllo e la cancellazione può essere finito uno scaricamento, e quei file non sono più senza padrone.
-
 Un interruttore accende la verifica rapida a ogni avvio. È spenta di default: allunga l'apertura su depositi grandi o su una cartella di rete.
 
 ## Quanti lavori insieme
@@ -221,6 +219,15 @@ Mentre gira, il pannello dice quante pagine ha ridotto e quanto spazio ha
 liberato. La misura di arrivo e la qualità si scelgono in **Impostazioni →
 Scaricamento**.
 
+La conferma conta solo le pagine che libereranno davvero spazio. Se una pagina
+non può essere letta o riscritta, il lavoro termina in errore senza nasconderla:
+nel dettaglio resta il numero delle pagine non elaborate e quelle riuscite
+restano correttamente salvate.
+
+Finché uno scaricamento o un'ottimizzazione può modificare un'opera, i comandi
+per liberarne lo spazio o eliminarla vengono rifiutati. Prima il lavoro deve
+concludersi o essere annullato; metterlo in pausa non basta.
+
 ## Il backup
 
 **Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto
@@ -245,14 +252,6 @@ strada con i dati già cancellati.
 rimpiazzato da quello che c'è nel file. La conferma lo dice, e non si torna
 indietro. Chiudere la finestra di salvataggio senza scegliere un file non
 scrive niente, e Glossa non dice di aver salvato.
-
-**Le pagine che avevi sul computer restano dov'erano.** Il ripristino se le
-tiene, per le opere che il backup contiene, e subito dopo mette in coda un
-controllo del deposito per vedere se quei file ci sono davvero. Quando il
-controllo finisce — anche molto dopo, o alla riapertura successiva — Glossa ti
-dice com'è andata: se non manca niente lo dice e basta, se manca qualcosa ti
-propone di riprendere **solo quello**, alla misura che aveva. I file rimasti
-senza opera li trovi contati nelle impostazioni, con il comando per toglierli.
 
 **Le pagine che avevi sul computer restano dov'erano.** Il ripristino se le
 tiene, per le opere che il backup contiene, e subito dopo mette in coda un

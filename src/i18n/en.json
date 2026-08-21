@@ -864,6 +864,7 @@
       "freeSpaceConfirm": "Free space",
       "freeSpaceDone": "{{size}} freed",
       "freeSpaceFailed": "Could not free the space",
+      "filesBusy": "The active job on this work must finish or be cancelled first.",
       "verifyNothing": "None of this source's pages are on your computer yet",
       "sizeCap": "Page size",
       "sizeCapInherited": "as the library says",
@@ -1683,9 +1684,9 @@
       "countingTitle": "How «how many pages do I have» is read",
       "countingDesc": "The count you see in the Library is the files actually on your computer: Glossa looks at the folder, not at a list kept aside. If the library does not serve a page — it happens, and it is not your fault — it is not counted as missing: the book reads as complete for as much as the library serves. And if you took the full-resolution version of a few pages, the record says so as an addition («plus 3 at full resolution»), not as a half-finished book.",
       "optimizeTitle": "Shrinking images to free up space",
-      "optimizeDesc": "A book downloaded at full resolution takes three times more room than it needs, and one downloaded months ago with a higher cap than you need now holds detail you never look at. On the work's record, in the Library, a command reads the downloaded pages again, shrinks them to the chosen size and recompresses them. It is irreversible: the original is replaced, and the confirmation says so along with how many pages it touches and how much they take. It works on one size at a time, so pages you deliberately took at full resolution are left alone. It runs for minutes on a long book: it is a job like a download, followed from the panel at the bottom, with pause and cancel. Target size and quality are chosen in Settings → Downloads, and cleaning up beats downloading again, because the library does not pay the price for it.",
+      "optimizeDesc": "A book downloaded at full resolution takes three times more room than it needs, and one downloaded months ago with a higher cap than you need now holds detail you never look at. On the work's record, in the Library, a command reads the downloaded pages again, shrinks them to the chosen size and recompresses them. It is irreversible: the original is replaced, and the confirmation counts only pages that will actually free space. It works on one size at a time, so pages you deliberately took at full resolution are left alone. It runs for minutes on a long book: it is a job like a download, followed from the panel at the bottom, with pause and cancel. If a page cannot be processed, the job reports an error and shows how many pages failed. Target size and quality are chosen in Settings → Downloads.",
       "removeTitle": "Removing a work from the Library",
-      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
+      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. If a download or optimisation is still active, let it finish or cancel it first. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
       "checkTitle": "The two vault checks",
       "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is. The outcome of the last check stays in the settings until you run another one, and next to the files belonging to no work there is the command to delete them: Glossa looks at the vault again the moment you press and tells you how many it really removed.",
       "cacheTitle": "Network cache",
@@ -2111,12 +2112,17 @@
       "debug_restart_only": "test",
       "image_optimization": "optimisation"
     },
+    "error": {
+      "optimizationIncomplete_one": "One page could not be optimised.",
+      "optimizationIncomplete_other": "{{count}} pages could not be optimised."
+    },
     "detail": {
       "type": "type",
       "phase": "phase",
       "bytes": "downloaded",
       "unavailable": "not served by the library",
       "shrunk": "pages shrunk",
+      "skipped": "pages not processed",
       "freed": "space freed",
       "unavailableShort_one": "{{count}} not served",
       "unavailableShort_other": "{{count}} not served",

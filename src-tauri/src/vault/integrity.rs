@@ -2,7 +2,7 @@
 //!
 //! L'impronta serve a **una cosa sola**: verificare che un file sia arrivato
 //! intero. Non si usa per riconoscere duplicati — quel caso, con la
-//! disposizione per provenienza di D2, non si presenta.
+//! disposizione per provenienza del deposito, non si presenta.
 
 use std::fs::File;
 use std::io::{BufReader, Read};

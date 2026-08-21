@@ -565,12 +565,7 @@ impl JobEngine {
                                 store::park_as_paused(conn, &job.id, false)?;
                             }
                         }
-                        // Chi non sa riprendere va rifatto da capo, ma **non da
-                        // solo**: rimetterlo in coda con l'orchestratore in moto
-                        // lo farebbe ripartire al giro successivo, che è
-                        // esattamente ciò che D13 esclude. Resta da parte, con il
-                        // progresso azzerato perché non corrisponde più a niente,
-                        // finché l'utente non lo rilancia.
+                        // I lavori non ripristinabili attendono un riavvio manuale.
                         Recovery::Restart => {
                             parked += 1;
                             store::park_as_paused(conn, &job.id, true)?
@@ -1181,7 +1176,6 @@ mod tests {
 
     #[tokio::test]
     async fn an_interrupted_job_comes_back_paused_not_running() {
-        // D13: nessun lavoro riparte da solo alla riapertura.
         let path = temp_db("recovery");
         let engine = engine_with(path.clone(), Observer::silent());
         engine.submit(&job("j8", r#"{"steps":10}"#)).await.unwrap();
@@ -1216,10 +1210,6 @@ mod tests {
 
     #[tokio::test]
     async fn a_job_that_cannot_resume_waits_for_the_user_with_no_progress() {
-        // L'altro ramo di D13: senza punti intermedi affidabili va rifatto da
-        // capo — ma **non da solo**, altrimenti riaprire l'app farebbe
-        // ripartire lavori che nessuno ha chiesto. Il progresso torna a zero
-        // perché non corrisponde più a niente.
         let path = temp_db("recovery_restart");
         let engine = engine_with(path, Observer::silent());
         let conn = engine.connection().unwrap();

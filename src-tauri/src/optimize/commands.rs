@@ -20,8 +20,7 @@ const PRIORITY: i64 = 5;
 pub const LONG_EDGE_SETTING: &str = "optimize_long_edge";
 pub const QUALITY_SETTING: &str = "optimize_jpeg_quality";
 
-/// Cosa succederebbe lanciandola: serve alla conferma, che deve dichiarare
-/// quante pagine tocca e da quale misura a quale.
+/// Dati mostrati prima della conferma.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptimizeEstimate {
@@ -35,9 +34,7 @@ pub struct OptimizeEstimate {
     pub shrinking: u32,
     /// Quanto occupa adesso quella cartella.
     pub bytes: u64,
-    /// Quanto si prevede di liberare. È una previsione: i byte di un JPEG non
-    /// scendono esattamente come i pixel, e il rapporto delle aree è la
-    /// approssimazione più onesta che si può fare senza ricomprimere davvero.
+    /// Byte liberabili con i parametri correnti.
     pub freeing: u64,
     /// Il lato lungo di arrivo che verrebbe usato.
     pub long_edge: u32,
@@ -67,13 +64,7 @@ pub fn configured(conn: &rusqlite::Connection) -> (u32, u8) {
     (long_edge, quality)
 }
 
-/// Cosa c'è in ballo, prima di chiedere conferma: quante pagine ci sono, quante
-/// verrebbero davvero ridotte, quanto occupano adesso e quanto si prevede di
-/// liberare.
-///
-/// Gira su un **filo di lavoro**: apre l'intestazione di ogni pagina della
-/// cartella, e su 900 pagine — o su un deposito di rete — sul filo
-/// dell'interfaccia bloccherebbe la finestra prima che la conferma compaia.
+/// Analizza la cartella su un thread dedicato e restituisce la stima.
 #[tauri::command]
 pub async fn optimize_estimate(
     app: tauri::AppHandle,
@@ -91,14 +82,14 @@ pub async fn optimize_estimate(
             .find(|size| size.size_tag == size_tag)
             .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
         let conn = crate::db::open_connection(&db_path)?;
-        let (long_edge, _) = configured(&conn);
+        let (long_edge, quality) = configured(&conn);
         let size_dir = root
             .join(crate::vault::layout::pages_dir(
                 &entry.provider_key,
                 &version_id,
             )?)
             .join(crate::vault::layout::safe_component(&size_tag)?);
-        let (shrinking, freeing) = super::forecast(&size_dir, long_edge);
+        let (shrinking, freeing) = super::forecast(&size_dir, long_edge, quality);
         Ok(OptimizeEstimate {
             size_tag,
             pages: found.pages,
@@ -112,17 +103,7 @@ pub async fn optimize_estimate(
     .map_err(|error| format!("previsione non riuscita: {error}"))?
 }
 
-/// Rifiuta se uno scaricamento di quest'opera non è ancora finito.
-///
-/// I due lavori scriverebbero nella stessa cartella e aggiungerebbero righe allo
-/// stesso `pages.jsonl`: se l'ottimizzazione sostituisce una pagina fra la
-/// promozione di quella pagina e la scrittura della sua riga, a vincere resta la
-/// riga dello scaricamento, con l'impronta di byte che non esistono più — e la
-/// verifica completa dichiara corrotta una pagina integra.
-///
-/// Non si usa la dipendenza fra lavori perché si sblocca solo su un lavoro
-/// **completato**: con uno scaricamento in pausa l'ottimizzazione resterebbe in
-/// coda per sempre, senza dirlo a nessuno.
+/// Evita scritture concorrenti nella stessa cartella di misura.
 fn refuse_while_downloading(app: &tauri::AppHandle, version_id: &str) -> Result<(), String> {
     let conn = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
     let downloading = crate::jobs::store::get(&conn, &crate::download::job_id(version_id))?
@@ -187,10 +168,7 @@ pub async fn enqueue_optimization(
             max_attempts: 1,
             depends_on_job_id: None,
             workspace_id: None,
-            // Il titolo dell'opera nella riga del lavoro **già in coda**: senza,
-            // il pannello mostrerebbe «Ottimizzazione delle immagini» per ogni
-            // libro, che è il difetto che D20 nomina. La scrittura
-            // dell'avanzamento lo conserva, quindi si scrive una volta sola.
+            // Identifica l'opera nel pannello dei lavori.
             message: title,
         })
         .await

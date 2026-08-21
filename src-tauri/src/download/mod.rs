@@ -50,11 +50,7 @@ pub const MAX_THUMBNAIL_EDGE: u32 = 800;
 /// priorità è alta perché è ciò che l'utente ha appena chiesto guardando lo
 /// schermo, e la coda deve preferirlo alle verifiche di fondo.
 ///
-/// **Un lavoro solo, non due** *(D6, corretta il 2026-08-16)*: le miniature non
-/// si chiedono più alla biblioteca, si ricavano dalla pagina appena scaricata.
-/// Ogni libro costava due richieste per pagina a servizi che rispondono fra 1 e
-/// 19 secondi; adesso ne costa una, e la miniatura qualche decina di
-/// millisecondi di processore.
+/// Le miniature vengono ricavate dalle pagine nello stesso lavoro.
 #[tauri::command]
 pub async fn enqueue_source_download(
     jobs: tauri::State<'_, JobsState>,

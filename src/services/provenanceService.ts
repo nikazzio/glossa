@@ -2,7 +2,7 @@ import { execute } from './dbService';
 import { logger } from '../utils/logger';
 
 /**
- * Il registro dei fatti (#378, decisioni D23-D29).
+ * Registro append-only dei fatti rilevanti.
  *
  * Qui si scrive **cosa è successo**, non cosa c'è adesso: lo stato corrente
  * vive nelle tabelle di dominio, la provenienza in un registro append-only che

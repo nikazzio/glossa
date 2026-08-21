@@ -129,11 +129,7 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
 
 /// La radice del servizio immagini.
 ///
-/// Solo il servizio, mai l'indirizzo diretto dell'immagine: quello è già un URL
-/// completo di parametri, e attaccargli in coda `/full/2000,/0/default.jpg`
-/// produrrebbe un indirizzo inventato che nessuno serve (D2-bis: niente
-/// indirizzi indovinati). Un canvas senza servizio non è scaricabile a una
-/// risoluzione scelta, e si salta.
+/// Restituisce il servizio immagini, non l'indirizzo di una singola immagine.
 fn service_of(body: &Value) -> Option<String> {
     let from_service = match body.get("service") {
         Some(Value::Array(entries)) => entries.first().and_then(id_of),
@@ -293,10 +289,6 @@ mod tests {
 
     #[test]
     fn a_thumbnail_declared_by_the_library_is_ignored() {
-        // Le miniature non si chiedono più alla biblioteca: si ricavano dalla
-        // pagina scaricata (D6, corretta il 2026-08-16). Un canvas che dichiara
-        // la propria miniatura si legge lo stesso senza inciampi, e quel dato
-        // semplicemente non serve più a nessuno.
         let manifest = parse(
             br#"{"items":[{"width":100,"height":200,
               "thumbnail":[{"id":"https://img/1/full/160,/0/default.jpg"}],

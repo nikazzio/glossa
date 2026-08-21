@@ -1,4 +1,4 @@
-//! La verifica del deposito come lavoro (D5-bis; D5 modificata dal §5.4).
+//! Verifica rapida e completa del deposito come lavoro persistente.
 //!
 //! **Il disco è la verità**: l'elenco da controllare si ricava camminando le
 //! cartelle di misura, non interrogando il database. Le impronte stanno nel file
@@ -24,7 +24,7 @@
 //! - **rapido**: il file c'è o non c'è. Millisecondi anche per un manoscritto;
 //! - **completo**: si apre ogni file, si valida e si ricalcola l'impronta. Lento
 //!   in proporzione ai gigabyte, e su un deposito sincronizzato in streaming
-//! costringe il client a scaricare tutto.
+//!   costringe il client a scaricare tutto.
 //!
 //! **Non corregge niente da solo**: constata e riferisce.
 
@@ -92,9 +92,6 @@ pub struct VaultVerificationJob;
 #[async_trait]
 impl JobHandler for VaultVerificationJob {
     fn resource_class(&self) -> ResourceClass {
-        // Il primo lavoro pesante per il processore e non per la rete: è anche
-        // il motivo per cui D5-bis lo vuole, perché prova che i limiti separati
-        // di D11 funzionano davvero.
         ResourceClass::Cpu
     }
 
@@ -412,8 +409,6 @@ mod tests {
 
     #[test]
     fn the_report_says_all_four_categories() {
-        // D5-bis vuole le quattro categorie insieme: dirne tre lascia credere
-        // che la quarta sia zero.
         let report = Report {
             intact: 198,
             missing: 12,

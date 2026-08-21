@@ -74,7 +74,13 @@ fn size_dir(root: &Path) -> PathBuf {
 
 fn temp_db(name: &str) -> PathBuf {
     let path = std::env::temp_dir().join(format!("glossa_optimize_it_{name}.db"));
-    let _ = std::fs::remove_file(&path);
+    for candidate in [
+        path.clone(),
+        PathBuf::from(format!("{}-wal", path.display())),
+        PathBuf::from(format!("{}-shm", path.display())),
+    ] {
+        let _ = std::fs::remove_file(candidate);
+    }
     let conn = Connection::open(&path).expect("database");
     conn.execute_batch("PRAGMA foreign_keys=ON;")
         .expect("chiavi");
@@ -218,6 +224,23 @@ async fn running_it_twice_does_nothing_the_second_time() {
     // E nessuna riga in più: una pagina lasciata stare non ne scrive.
     let rows = crate::download::sidecar::read(&size_dir(&root));
     assert_eq!(rows.len(), 2);
+
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[tokio::test]
+async fn an_unreadable_page_is_visible_and_the_job_does_not_claim_success() {
+    let root = vault_with("pagina-illeggibile", 1);
+    std::fs::write(size_dir(&root).join("0002.jpg"), b"not an image").unwrap();
+    let engine = engine_with(temp_db("pagina-illeggibile"), root.clone());
+    engine.submit(&optimize_job(800)).await.expect("in coda");
+
+    let record = run_until_terminal(&engine).await;
+
+    assert_eq!(record.status, JobStatus::Error);
+    let detail: serde_json::Value =
+        serde_json::from_str(record.detail.as_deref().unwrap()).unwrap();
+    assert_eq!(detail["skipped"], 1);
 
     let _ = std::fs::remove_dir_all(&root);
 }

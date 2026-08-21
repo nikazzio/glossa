@@ -43,14 +43,7 @@ export async function runJudgeForChunk(
   textToAudit: string | undefined,
   actions: JudgeActions,
   effectiveConfig?: ReturnType<typeof usePipelineStore.getState>['config'],
-  /**
-   * Scrivere anche il **verdetto** come fatto.
-   *
-   * La pipeline lo scrive da sé, dopo aver salvato la revisione, così il
-   * giudizio si lega a quella giusta. Rilanciando solo la revisione nessuno lo
-   * faceva: il verdetto sovrascriveva le colonne del frammento e non lasciava
-   * storia, che è il caso che D22 cita per nome.
-   */
+  /** Registra il verdetto nei flussi di sola revisione. */
   recordVerdict = false,
 ): Promise<ChunkOutcome> {
   const config = effectiveConfig ?? usePipelineStore.getState().config;

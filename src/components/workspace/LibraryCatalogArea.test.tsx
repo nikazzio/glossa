@@ -3,11 +3,20 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryCatalogArea } from './LibraryCatalogArea';
 import { deleteVersionFiles } from '../../services/vaultService';
+import { toast } from 'sonner';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import '../../test/i18n-mock';
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
@@ -76,6 +85,7 @@ const entry = (
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
+    vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     // La coda è globale: un lavoro lasciato da un altro test farebbe comparire
@@ -224,6 +234,17 @@ describe('LibraryCatalogArea', () => {
     await waitFor(() =>
       expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
     );
+  });
+
+  it('non rimuove i file mentre un lavoro li sta modificando', async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteVersionFiles).mockRejectedValue(new Error('version_work_in_progress'));
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
+    render(<LibraryCatalogArea />);
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith('areas.library.filesBusy'));
   });
 
   it('offre lo scaricamento e la rimozione per ogni fonte', () => {

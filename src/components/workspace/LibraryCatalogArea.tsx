@@ -41,14 +41,7 @@ interface LibraryCatalogAreaProps {
   itemId?: string;
 }
 
-/**
- * Il catalogo delle fonti. La ricerca vive nella Dashboard: qui si guarda
- * quello che si ha, si scarica, si toglie.
- *
- * Quante pagine sono davvero sul computer si legge dai file presenti, non da uno
- * stato tenuto a parte: «parziale» è una condizione normale, non un
- * avviso — chi salva la scheda e scarica tre pagine su duecento lo fa apposta.
- */
+/** Catalogo delle fonti salvate in Biblioteca. */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const { t } = useTranslation();
   const catalog = useSourceLibraryStore((state) => state.catalog);
@@ -60,9 +53,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
-  // Quante pagine sono sul computer cambia quando un lavoro finisce: senza
-  // guardare la coda, la riga continuerebbe a dire quello che diceva
-  // all'apertura della schermata, anche dopo un manoscritto intero.
   const finishedDownloads = useJobsStore(
     (state) =>
       state.jobs.filter((job) => job.jobType === 'source_download' && isTerminal(job)).length,
@@ -76,20 +66,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     if (itemId) void loadDetail(itemId);
   }, [itemId, loadDetail]);
 
-  /**
-   * Collega o scollega un'opera da un workspace, e rilegge il catalogo perché
-   * la scheda dica subito dove sta (#213).
-   *
-   * Il workspace si sceglie: la Biblioteca è un catalogo e non appartiene a
-   * nessuno di loro.
-   */
   const toggleLink = async (sourceId: string, workspaceId: string, linked: boolean) => {
     try {
       await toggleWorkspaceLink(workspaceId, sourceId, linked);
       await loadCatalog();
     } catch (error: unknown) {
-      // Come gli altri comandi della scheda: un collegamento che non riesce si
-      // dice, invece di lasciare la scheda a mostrare il contrario.
       toast.error(t('areas.library.linkFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
@@ -107,8 +88,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               <div key={version.id}><dt className="inline text-editorial-muted">{version.label}</dt><dd className="inline pl-2 text-editorial-ink">{version.sourceUrl}</dd></div>
             ))}
           </dl>
-          {/* La misura con cui si scarica questa opera: l'ultima parola sulla
-              politica generale e su quella della biblioteca. */}
           <div className="mt-4 flex flex-col gap-2">
             {detail.versions.map((version) => (
               <SourceSizeCap key={version.id} versionId={version.id} />
@@ -217,7 +196,6 @@ function CatalogEntryRow({
   onOpen: () => void;
   onRemove: () => void;
   onRefresh: () => void;
-  /** Tutti i workspace, per scegliere dove collegare l'opera. */
   workspaces: Workspace[];
   onToggleLink: (workspaceId: string, linked: boolean) => void;
 }) {
@@ -226,12 +204,7 @@ function CatalogEntryRow({
   const jobs = useJobsStore((state) => state.jobs);
   const applyChange = useJobsStore((state) => state.applyChange);
 
-  // Solo un lavoro **non finito** occupa il posto del pulsante: uno fallito o
-  // annullato lasciava la percentuale ferma e toglieva il modo di riprovare.
   const runningJob = jobs.find((job) => job.id === `download:${entry.versionId}` && !isTerminal(job));
-  // La scheda dice **cosa sta facendo** quel lavoro, non solo che esiste: una
-  // rotellina che gira su uno scaricamento in pausa è una bugia, e la pausa
-  // premuta nel pannello non risultava da nessun'altra parte.
   const jobState = runningJob ? stillReasonOf(runningJob) : null;
 
   const [picking, setPicking] = useState(false);
@@ -239,15 +212,7 @@ function CatalogEntryRow({
   const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
   const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
-  // Quale misura è la principale lo dice il deposito: confrontare i
-  // conteggi sbaglierebbe sullo stesso libro scaricato due volte con tetti
-  // diversi, dove due cartelle hanno lo stesso numero di pagine.
   const principal = entry.sizes.find((size) => size.sizeTag === entry.principalSize);
-  // Le pagine che la biblioteca non serve non contano come mancanti: un libro
-  // che le ha tutte tranne quelle è completo per quanto la biblioteca serve.
-  // **Solo quelle della misura principale**: il conteggio a cui vengono
-  // confrontate è il suo, e sommare anche le altre dichiarerebbe completo un
-  // libro incompleto.
   const notServed = principal?.missing ?? 0;
   const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0, notServed);
   const availability =
@@ -259,26 +224,15 @@ function CatalogEntryRow({
             done: summary.presentPages,
             total: summary.expectedPages,
           });
-  // Le pagine prese a parte a una misura diversa: vanno dette come
-  // aggiunta, non come mancanza, altrimenti una cartella `max` con tre file su
-  // 328 sembra un libro a metà.
   const extra = entry.sizes
     .filter((size) => size.sizeTag !== entry.principalSize && size.pages > 0)
     .reduce((total, size) => total + size.pages, 0);
   const extraNote = extra > 0 ? t('areas.library.extraFullSize', { count: extra }) : null;
-  // Quante pagine ha l'opera si vede **senza aprire niente**: è il dato che
-  // decide se scaricarla o no. Manca solo per le opere aggiunte da una
-  // biblioteca che non lo dichiara, e lì non si inventa.
   const pageCount =
     entry.expectedPages !== null && entry.expectedPages > 0
       ? t('areas.library.pageCount', { count: entry.expectedPages })
       : null;
 
-  /**
-   * La chiave con cui questa fonte vive nel deposito: prima quella dei file già
-   * scaricati, poi quella dei metadati. Sbagliarla significa riscaricare tutto
-   * in una cartella nuova, o cancellare la cartella sbagliata.
-   */
   const providerKey = async () =>
     (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
     entry.providerKey ??
@@ -289,8 +243,6 @@ function CatalogEntryRow({
     setBusy(true);
     try {
       const job = await enqueueSourceDownload({
-        // La chiave della biblioteca, non `external_ref`: quella è chiave più
-        // identificativo e come nome di cartella verrebbe rifiutata.
         providerKey: await providerKey(),
         manifestUrl: entry.manifestUrl,
         versionId: entry.versionId ?? undefined,
@@ -306,15 +258,6 @@ function CatalogEntryRow({
     }
   };
 
-  /**
-   * Verifica rapida: le pagine che ci sono nella cartella della misura
-   * principale contro il conteggio atteso, che viene dal manifesto ed è l'unica
-   * cosa che dice quante *dovrebbero* essere.
-   *
-   * L'inventario si rilegge adesso invece di fidarsi del catalogo in memoria: fra
-   * l'apertura della schermata e questo momento possono essere spariti dei file.
-   * Le pagine che la biblioteca non serve non contano come mancanti.
-   */
   const verify = async () => {
     if (!entry.versionId) return;
     setBusy(true);
@@ -327,8 +270,6 @@ function CatalogEntryRow({
       }
       const expected = entry.expectedPages ?? 0;
       if (expected <= 0) {
-        // Senza il conteggio atteso non c'è niente contro cui confrontare, e
-        // «tutte al loro posto» sarebbe una risposta su zero confronti.
         toast.info(t('areas.library.verifyNoExpected', { count: principal.pages }));
         return;
       }
@@ -356,11 +297,6 @@ function CatalogEntryRow({
     }
   };
 
-  /**
-   * «Libera spazio»: cancella le pagine e basta. Restano scheda, manifesto e
-   * miniature. Il conteggio della scheda si aggiorna da sé: lo legge dalla
-   * cartella, che dopo questa azione è vuota.
-   */
   const freeSpace = async () => {
     if (!entry.versionId) return;
     const confirmed = await confirm({
@@ -373,40 +309,30 @@ function CatalogEntryRow({
 
     setBusy(true);
     try {
-      // Nessuna riga da dimenticare: il conteggio lo dà la cartella, e la
-      // cartella non c'è più.
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
       onRefresh();
     } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason.includes('version_work_in_progress')) {
+        toast.info(t('areas.library.filesBusy'));
+        return;
+      }
       toast.error(t('areas.library.freeSpaceFailed'), {
-        description: error instanceof Error ? error.message : String(error),
+        description: reason,
       });
     } finally {
       setBusy(false);
     }
   };
 
-  /**
-   * Ridurre le immagini già scaricate per liberare spazio.
-   *
-   * Lavora sulla **misura principale**, cioè quella con cui il libro è stato
-   * scaricato: le pagine prese a risoluzione piena di proposito restano come
-   * sono. È irreversibile, e la conferma lo dice insieme a quante pagine tocca e
-   * a quanto occupano adesso.
-   */
   const optimise = async () => {
-    // La misura principale la dichiara il deposito, non la si indovina dai
-    // conteggi: sullo stesso libro scaricato due volte a tetti diversi due
-    // cartelle hanno lo stesso numero di pagine.
     if (!entry.versionId || !entry.principalSize) return;
     const sizeTag = entry.principalSize;
     setBusy(true);
     try {
       const estimate = await optimizeEstimate(entry.versionId, sizeTag);
       if (estimate.shrinking === 0) {
-        // Niente da ridurre: dirlo è meglio che chiedere una conferma per un
-        // lavoro che non farebbe niente.
         toast.info(t('areas.library.optimizeNothing', { edge: estimate.longEdge }));
         return;
       }
@@ -432,8 +358,6 @@ function CatalogEntryRow({
       toast.success(t('areas.library.optimizeQueued'));
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);
-      // Il motore rifiuta finché uno scaricamento di quest'opera è in piedi: i
-      // due lavori scriverebbero sulle stesse pagine e nello stesso registro.
       if (reason.includes('download_in_corso')) {
         toast.info(t('areas.library.optimizeWhileDownloading'));
         return;
@@ -444,13 +368,6 @@ function CatalogEntryRow({
     }
   };
 
-  /**
-   * Togliere un'opera la toglie **per intero**: scheda, collegamenti e la sua
-   * cartella nel deposito. Lasciare i file dietro produceva cartelle che
-   * nessuna schermata sa più mostrare, e che nemmeno riaggiungendo la stessa
-   * opera tornerebbero utili: la cartella prende il nome da un identificativo
-   * nuovo ogni volta.
-   */
   const askRemoval = async () => {
     const confirmed = await confirm({
       title: t('areas.library.removeTitle', { title: entry.source.title }),
@@ -466,15 +383,17 @@ function CatalogEntryRow({
     setBusy(true);
     try {
       if (entry.versionId) {
-        // I file prima delle righe: se la cancellazione fallisce, l'opera resta
-        // in Biblioteca e si può riprovare, invece di sparire lasciando dietro
-        // una cartella che nessuno reclama.
         await deleteVersionFiles(await providerKey(), entry.versionId);
       }
       onRemove();
     } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason.includes('version_work_in_progress')) {
+        toast.info(t('areas.library.filesBusy'));
+        return;
+      }
       toast.error(t('areas.library.removeFailed'), {
-        description: error instanceof Error ? error.message : String(error),
+        description: reason,
       });
     } finally {
       setBusy(false);
@@ -513,8 +432,6 @@ function CatalogEntryRow({
         </button>
       </div>
 
-      {/* Dove sta il libro: un'opera può essere collegata a più workspace, e la
-          Biblioteca li mostra invece di filtrare su uno solo (#213). */}
       <span className="flex min-w-0 shrink-0 flex-wrap items-center gap-1">
         {entry.workspaces.map((link) => (
           <Tooltip key={link.workspaceId} label={t('areas.library.unlinkFromWorkspace')} side="top">
@@ -562,9 +479,6 @@ function CatalogEntryRow({
       </span>
 
       <div className={`flex shrink-0 items-center gap-1 ${view === 'grid' ? 'justify-end' : ''}`}>
-        {/* Lo stato non è un comando: sta prima, e non prende il posto di
-            nessun pulsante. I comandi restano tutti al loro posto e si
-            disattivano quando non si possono usare. */}
         <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
           {runningJob ? (
             <Tooltip label={t('areas.library.downloadRunning')} side="top">

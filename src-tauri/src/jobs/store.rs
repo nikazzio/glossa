@@ -85,6 +85,22 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<JobRecord>, String> {
     .map_err(|e| format!("Failed to read the job: {e}"))
 }
 
+/// Indica se un lavoro può ancora scrivere i file della digitalizzazione.
+pub fn has_active_version_work(conn: &Connection, version_id: &str) -> Result<bool, String> {
+    conn.query_row(
+        "SELECT EXISTS(\
+             SELECT 1 FROM jobs \
+             WHERE status NOT IN ('completed', 'cancelled', 'error') \
+               AND job_type IN ('source_download', 'image_optimization') \
+               AND CASE WHEN json_valid(config) \
+                        THEN json_extract(config, '$.versionId') END = ?1\
+         )",
+        params![version_id],
+        |row| row.get::<_, bool>(0),
+    )
+    .map_err(|e| format!("Failed to inspect active jobs: {e}"))
+}
+
 /// I lavori che il pannello mostra: quelli non ancora finiti **e quelli
 /// terminati oggi**.
 ///
@@ -417,6 +433,39 @@ mod tests {
     }
 
     #[test]
+    fn active_download_or_optimization_blocks_changes_to_the_same_version() {
+        let conn = migrated_connection();
+        let version_id = "versione-prova";
+        for (id, job_type) in [
+            (
+                "download:versione-prova",
+                crate::download::handler::JOB_TYPE,
+            ),
+            ("optimize:versione-prova:2000", crate::optimize::JOB_TYPE),
+        ] {
+            create(
+                &conn,
+                &NewJob {
+                    id: id.to_string(),
+                    job_type: job_type.to_string(),
+                    priority: 0,
+                    config: serde_json::json!({ "versionId": version_id }).to_string(),
+                    max_attempts: 1,
+                    depends_on_job_id: None,
+                    workspace_id: None,
+                    message: None,
+                },
+            )
+            .expect("lavoro creato");
+
+            assert!(has_active_version_work(&conn, version_id).unwrap());
+            set_status(&conn, id, JobStatus::Completed).unwrap();
+        }
+
+        assert!(!has_active_version_work(&conn, version_id).unwrap());
+    }
+
+    #[test]
     fn resuming_gives_the_attempts_back() {
         // Il conto si alza a ogni avvio: senza azzerarlo, ogni ripresa di un
         // libro lungo consumava un tentativo, e dopo cinque pause il primo
@@ -548,9 +597,6 @@ mod tests {
 
     #[test]
     fn a_finished_job_keeps_the_name_it_had() {
-        // La chiusura scrive l'avanzamento a 1.0 senza nome, e senza COALESCE
-        // cancellava il titolo dell'opera: la sezione «terminati oggi» diventava
-        // un elenco di righe identiche, che è il difetto che D20 nomina.
         let conn = migrated_connection();
         queued(&conn, "j-nome");
         save_progress(&conn, "j-nome", 0.5, Some("Beatus"), None, None, None).unwrap();

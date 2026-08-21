@@ -353,8 +353,6 @@ mod tests {
 
     #[test]
     fn a_403_is_retryable_with_a_long_cooldown() {
-        // Correzione esplicita di D16: trattarlo come definitivo farebbe
-        // fallire scaricamenti legittimi.
         assert!(ErrorKind::Throttled.is_retryable());
         let profile = BackoffProfile::default();
         let wait = profile.wait_for(&JobError::new(ErrorKind::Throttled, "403"), 1);

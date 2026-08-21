@@ -21,7 +21,7 @@ const MARKER_CONTENT: &str = "glossa-vault v1\n";
 /// Nome della cartella predefinita, dentro la cartella dati.
 const DEFAULT_DIR: &str = "vault";
 
-/// Cosa può contenere una cartella candidata a diventare deposito (D1, punto 3).
+/// Classificazione di una cartella candidata a deposito.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FolderKind {

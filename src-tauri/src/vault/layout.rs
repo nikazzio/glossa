@@ -70,10 +70,7 @@ pub fn manifest_path(provider_key: &str, version_id: &str) -> Result<PathBuf, St
     Ok(version_dir(provider_key, version_id)?.join(MANIFEST_FILE))
 }
 
-/// Le miniature si **ricavano dalla pagina scaricata** (D6, corretta il
-/// 2026-08-16): non costano nessuna richiesta alla biblioteca, e se manca o si
-/// rovina si rigenera. Non hanno livello di dimensione: ne esiste una sola per
-/// pagina.
+/// Percorso della miniatura derivata dalla pagina scaricata.
 pub fn thumbnail_path(
     provider_key: &str,
     version_id: &str,

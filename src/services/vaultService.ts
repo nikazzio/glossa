@@ -1,10 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
 
-/**
- * Il deposito: dove vivono i file scaricati dalle biblioteche.
- * Decisioni in `docs-dev/BLOCCO_1_DECISIONI.md`, parti A e B.
- */
+/** Accesso al deposito dei file scaricati dalle biblioteche. */
 
 /** Radice del deposito. Vuota = dentro la cartella dati. */
 /** Modalità di lettura globale. */

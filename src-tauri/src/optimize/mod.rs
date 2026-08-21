@@ -1,29 +1,8 @@
-//! Ottimizzazione locale delle immagini: rilegge le pagine di una cartella di
-//! misura, le rimpicciolisce al lato lungo scelto e le ricomprime, sostituendo
-//! l'originale (§5.7 di `docs-dev/SCARICAMENTO_E_DEPOSITO.md`).
+//! Ottimizzazione locale delle pagine già scaricate.
 //!
-//! **È un lavoro della coda** (decisione 3 del disegno) e non un'azione immediata:
-//! su 900 pagine dura minuti, e va potuto seguire, mettere in pausa e annullare
-//! come ogni altro lavoro lungo. Classe **processore**: non chiede niente a
-//! nessuno.
-//!
-//! Regole che il disegno impone e che questo modulo attua:
-//!
-//! - si scrive in transito e si sostituisce con uno spostamento atomico
-//!   (`vault_io`): un'ottimizzazione interrotta non deve lasciare una pagina a
-//!   metà dove prima ce n'era una intera;
-//! - **l'impronta va riscritta** nel file di lato, altrimenti la verifica
-//!   completa dichiara corrotto tutto il libro;
-//! - **la misura d'origine resta scritta** nello stesso file di lato
-//!   (`Note::Downscaled`), così di quella pagina si sa che è arrivata più grande;
-//! - le miniature si rifanno, perché derivano dalle pagine;
-//! - **non tocca chi è già più piccolo** del lato lungo scelto: ogni
-//!   ricompressione perde qualcosa, e ricomprimere per niente è perdita secca;
-//! - lavora su **una cartella di misura per volta**, mai «il libro»: le pagine
-//! prese a risoluzione piena di proposito non devono essere schiacciate
-//!   da un'ottimizzazione che puntava ad altro.
-//!
-//! Non è automatica: è un'operazione che perde informazione, e la si chiede.
+//! Ogni lavoro opera su una sola cartella di misura. Sostituisce i file in modo
+//! atomico, aggiorna impronte e miniature e conserva le dimensioni ricevute
+//! dalla biblioteca. L'operazione parte solo su richiesta dell'utente.
 
 pub mod commands;
 #[cfg(test)]
@@ -91,7 +70,8 @@ const PACE_WINDOW: usize = 10;
 enum PageResult {
     /// Ricompressa: byte prima e dopo.
     Shrunk { before: u64, after: u64 },
-    /// Già dentro il lato lungo scelto, o illeggibile: lasciata com'è.
+    /// Già dentro il lato lungo scelto, oppure senza alcun risparmio: lasciata
+    /// com'è senza perdere qualità.
     Untouched,
 }
 
@@ -135,12 +115,7 @@ impl JobHandler for ImageOptimizationJob {
                         .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
                 ),
         );
-        // Area di transito **di questo lavoro**, non della digitalizzazione: lo
-        // scaricamento usa quella col nome della versione, e ognuno butta la
-        // propria quando esce. Condividerla significava che l'ottimizzazione
-        // cancellava i file a metà di uno scaricamento in corso sullo stesso
-        // libro — cosa che accade, perché uno occupa la rete e l'altro il
-        // processore, e la coda li fa girare insieme.
+        // Scaricamento e ottimizzazione non devono condividere file temporanei.
         let area = format!("{}-optimize-{}", config.version_id, config.size_tag);
         let staging = root.join(layout::STAGING_DIR).join(
             layout::safe_component(&area)
@@ -174,6 +149,7 @@ impl JobHandler for ImageOptimizationJob {
         };
         let mut done = 0u32;
         let mut shrunk = 0u32;
+        let mut skipped = 0u32;
         let mut freed: u64 = 0;
 
         for (index, path) in pages {
@@ -196,6 +172,7 @@ impl JobHandler for ImageOptimizationJob {
                 // Una pagina che non si riesce a ricomprimere resta quella di
                 // prima: si scrive nel registro e si va avanti.
                 Err(error) => {
+                    skipped += 1;
                     log::warn!("job optimize skipped page={index} error={error}");
                     None
                 }
@@ -209,7 +186,7 @@ impl JobHandler for ImageOptimizationJob {
                 // manda, e non si cancella.
                 None,
                 Some(eta_seconds(&recent, total - done, started_at)),
-                Some(&detail(done, total, shrunk, freed, index, last)),
+                Some(&detail(done, total, shrunk, skipped, freed, index, last)),
             )
             .await;
             // Un lavoro tutto processore non deve tenersi il filo.
@@ -218,42 +195,44 @@ impl JobHandler for ImageOptimizationJob {
 
         discard(&staging);
         log::info!(
-            "job optimize complete id={} shrunk={shrunk}/{total} freed={freed}",
+            "job optimize complete id={} shrunk={shrunk}/{total} skipped={skipped} freed={freed}",
             ctx.id
         );
+        if skipped > 0 {
+            return Err(JobError::new(
+                ErrorKind::Format,
+                format!("optimization_incomplete:{skipped}"),
+            ));
+        }
         Ok(Outcome::Done)
     }
 }
 
-/// Quante pagine verrebbero ridotte e quanto spazio ne verrebbe fuori.
-///
-/// Le dimensioni si leggono dall'intestazione dei file, senza decodificarli: una
-/// lettura piccola per pagina, e l'utente sta aspettando una conferma. La
-/// previsione dei byte è il rapporto delle **aree**: un JPEG non scende
-/// esattamente come i pixel, ma è la stima più onesta che si può fare senza
-/// ricomprimere davvero — che è il lavoro stesso.
-pub(crate) fn forecast(size_dir: &Path, long_edge: u32) -> (u32, u64) {
+/// Calcola pagine modificabili e byte liberabili con i parametri correnti.
+pub(crate) fn forecast(size_dir: &Path, long_edge: u32, quality: u8) -> (u32, u64) {
     let mut shrinking = 0;
     let mut freeing = 0u64;
     for (_, path) in pages_in(size_dir) {
-        let Ok(reader) = image::ImageReader::open(&path) else {
+        let Ok(bytes) = std::fs::read(&path) else {
             continue;
         };
-        let Ok((width, height)) = reader.into_dimensions() else {
-            continue;
-        };
-        let Ok(now) = std::fs::metadata(&path).map(|meta| meta.len()) else {
+        let Some((width, height)) = dimensions(&bytes) else {
             continue;
         };
         let longest = width.max(height);
         if longest <= long_edge {
             continue;
         }
+        let Ok(reduced) = images::resize_jpeg(&bytes, long_edge, quality) else {
+            continue;
+        };
+        let now = bytes.len() as u64;
+        let after = reduced.len() as u64;
+        if after >= now {
+            continue;
+        }
         shrinking += 1;
-        let area_now = u64::from(width) * u64::from(height);
-        let scale = f64::from(long_edge) / f64::from(longest);
-        let area_after = (area_now as f64 * scale * scale) as u64;
-        freeing += now.saturating_sub(now * area_after / area_now.max(1));
+        freeing += now - after;
     }
     (shrinking, freeing)
 }
@@ -304,9 +283,8 @@ fn optimise_one(work: &Workspace<'_>, index: u32, path: &Path) -> Result<PageRes
     } = *work;
     let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
     let before = bytes.len() as u64;
-    let Some((width, height)) = dimensions(&bytes) else {
-        return Ok(PageResult::Untouched);
-    };
+    let (width, height) =
+        dimensions(&bytes).ok_or_else(|| "formato immagine non riconoscibile".to_string())?;
     // Già dentro il lato lungo scelto: ricomprimerla perderebbe qualcosa senza
     // liberare niente.
     if width.max(height) <= long_edge {
@@ -328,10 +306,14 @@ fn optimise_one(work: &Workspace<'_>, index: u32, path: &Path) -> Result<PageRes
     )
     .map_err(|error| error.message)?;
 
-    // La riga nuova con l'impronta dei byte nuovi. Senza, la verifica completa
-    // confronta l'impronta di byte che non esistono più e dichiara corrotta una
-    // pagina integra. L'etichetta della biblioteca si porta avanti da quella
-    // vecchia: la riga si riscrive, non si ricomincia.
+    // La riga più recente sostituisce i metadati precedenti della pagina.
+    let original_dimensions = known
+        .get(&index)
+        .and_then(|row| match row.note {
+            Some(Note::Downscaled { from }) => Some(from),
+            _ => None,
+        })
+        .unwrap_or((width, height));
     let record = PageRecord {
         index,
         label: known.get(&index).and_then(|row| row.label.clone()),
@@ -340,15 +322,12 @@ fn optimise_one(work: &Workspace<'_>, index: u32, path: &Path) -> Result<PageRes
         checksum: Some(checksum),
         at: now_secs(),
         note: Some(Note::Downscaled {
-            from: (width, height),
+            from: original_dimensions,
         }),
     };
     if let Err(error) = sidecar::append(size_dir, &record) {
-        // La pagina sul disco è già quella nuova: se la riga non si scrive, la
-        // vecchia resta quella che vince, con l'impronta sbagliata. Si prova
-        // allora una riga **senza impronta**, che è uno stato che il disegno
-        // prevede — pagina presente di cui non si conosce l'impronta, e la
-        // verifica completa la salta invece di dichiararla corrotta.
+        // Dopo la sostituzione del file, una riga senza impronta è più sicura
+        // di una riga con l'impronta ormai obsoleta.
         log::warn!("job optimize row not written page={index} error={error}");
         let unknown = PageRecord {
             checksum: None,
@@ -403,7 +382,15 @@ fn dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
 }
 
 /// Dettaglio letto dal pannello: quante pagine, quante ridotte, quanto liberato.
-fn detail(done: u32, total: u32, shrunk: u32, freed: u64, page: u32, bytes: Option<u64>) -> String {
+fn detail(
+    done: u32,
+    total: u32,
+    shrunk: u32,
+    skipped: u32,
+    freed: u64,
+    page: u32,
+    bytes: Option<u64>,
+) -> String {
     let mut last = serde_json::json!({ "index": page });
     if let (Some(map), Some(bytes)) = (last.as_object_mut(), bytes) {
         map.insert("bytes".into(), bytes.into());
@@ -411,6 +398,7 @@ fn detail(done: u32, total: u32, shrunk: u32, freed: u64, page: u32, bytes: Opti
     serde_json::json!({
         "units": { "done": done, "total": total, "label": "items" },
         "shrunk": shrunk,
+        "skipped": skipped,
         "freed": freed,
         "last": last,
     })
@@ -469,6 +457,22 @@ mod tests {
         .unwrap()
     }
 
+    fn png(width: u32, height: u32) -> Vec<u8> {
+        let image = image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
+            width,
+            height,
+            image::Rgb([128, 128, 128]),
+        ));
+        let mut bytes = Vec::new();
+        image
+            .write_to(
+                &mut std::io::Cursor::new(&mut bytes),
+                image::ImageFormat::Png,
+            )
+            .unwrap();
+        bytes
+    }
+
     fn config() -> OptimizeConfig {
         serde_json::from_value(serde_json::json!({
             "providerKey": "gallica",
@@ -490,7 +494,7 @@ mod tests {
         std::fs::write(dir.join("0002.jpg"), jpeg(400, 500)).unwrap();
         std::fs::write(dir.join("pages.jsonl"), b"{}\n").unwrap();
 
-        let (shrinking, freeing) = forecast(&dir, 800);
+        let (shrinking, freeing) = forecast(&dir, 800, 82);
 
         assert_eq!(shrinking, 1, "solo la pagina oltre gli 800 px");
         let big = std::fs::metadata(dir.join("0001.jpg")).unwrap().len();
@@ -507,7 +511,17 @@ mod tests {
         let dir = temp_dir("forecast-nulla");
         std::fs::write(dir.join("0001.jpg"), jpeg(400, 500)).unwrap();
 
-        assert_eq!(forecast(&dir, 800), (0, 0));
+        assert_eq!(forecast(&dir, 800, 82), (0, 0));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_forecast_excludes_a_page_that_would_not_free_space() {
+        let dir = temp_dir("forecast-senza-guadagno");
+        std::fs::write(dir.join("0001.jpg"), png(801, 1)).unwrap();
+
+        assert_eq!(forecast(&dir, 800, 100), (0, 0));
 
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -541,6 +555,50 @@ mod tests {
         // L'impronta nuova e la misura d'origine stanno nel file di lato.
         let records = sidecar::read(&size_dir);
         assert!(records[&1].checksum.is_some());
+        assert_eq!(
+            records[&1].note,
+            Some(Note::Downscaled { from: (2000, 3000) })
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_second_optimization_keeps_the_dimensions_received_from_the_library() {
+        let root = temp_dir("origine");
+        let size_dir = root.join("providers/gallica/v1/pages/max");
+        let staging = root.join("staging/v1");
+        std::fs::create_dir_all(&size_dir).unwrap();
+        std::fs::create_dir_all(&staging).unwrap();
+        let page = size_dir.join("0001.jpg");
+        std::fs::write(&page, jpeg(2000, 3000)).unwrap();
+
+        let config = config();
+        let known = sidecar::read(&size_dir);
+        let first = Workspace {
+            root: &root,
+            config: &config,
+            size_dir: &size_dir,
+            staging: &staging,
+            long_edge: 1200,
+            quality: 82,
+            known: &known,
+        };
+        optimise_one(&first, 1, &page).unwrap();
+
+        let known = sidecar::read(&size_dir);
+        let second = Workspace {
+            root: &root,
+            config: &config,
+            size_dir: &size_dir,
+            staging: &staging,
+            long_edge: 800,
+            quality: 82,
+            known: &known,
+        };
+        optimise_one(&second, 1, &page).unwrap();
+
+        let records = sidecar::read(&size_dir);
         assert_eq!(
             records[&1].note,
             Some(Note::Downscaled { from: (2000, 3000) })

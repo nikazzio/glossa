@@ -327,10 +327,7 @@ impl PageFetcher<'_> {
 /// Gallica) e molto più corta del raffreddamento più breve (120 s).
 const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(15);
 
-/// Come `PageFetcher::one`, ma se l'attesa si allunga dice **perché**: con i
-/// raffreddamenti di D18 un lavoro può restare fermo minuti, e fermo per
-/// cortesia e fermo per errore sono la stessa immobilità con significati
-/// opposti.
+/// Segnala le attese di cortesia abbastanza lunghe da essere visibili.
 pub(crate) async fn one_declaring_long_waits(
     fetcher: &PageFetcher<'_>,
     rule: &mut SizingRule,

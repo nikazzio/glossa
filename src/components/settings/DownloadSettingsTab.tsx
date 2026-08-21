@@ -25,17 +25,7 @@ import {
   setOptimizeQuality,
 } from '../../services/optimizeService';
 
-/**
- * La politica di scaricamento (#422, D4).
- *
- * Il tetto è una **politica, non un pixel**: la misura effettiva è quella che
- * la biblioteca dichiara più vicina, sopra o sotto. Vale per tutte le opere;
- * una biblioteca e una singola opera possono dire altro, e vincono in
- * quest'ordine.
- *
- * Le spiegazioni stanno **al passaggio del mouse**, non a schermo: un pannello
- * di impostazioni si legge per le voci, non per la prosa.
- */
+/** Impostazioni globali per scaricamento e ottimizzazione delle immagini. */
 export function DownloadSettingsTab() {
   const { t } = useTranslation();
   const [sizeCap, setSizeCap] = useState(DEFAULT_SIZE_CAP);
