@@ -29,6 +29,14 @@ import {
  */
 const SCHEMA_VERSION = 2;
 
+export type BackupPrivacy = 'glossaOnly' | 'password';
+
+export interface BackupOptions {
+  privacy: BackupPrivacy;
+  password?: string;
+  recoveryCode?: string;
+}
+
 // dbService.ts stores its own DB-migration marker under this app_settings key
 // (unrelated to SCHEMA_VERSION above). Importing an old backup must never
 // overwrite it — doing so makes the running app's next startup check think
@@ -177,7 +185,7 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
  * chiusa senza scegliere: annullare non è un errore, ma nemmeno un successo da
  * annunciare.
  */
-export async function writeBackup(): Promise<boolean> {
+export async function writeBackup(options: BackupOptions = { privacy: 'glossaOnly' }): Promise<boolean> {
   const now = new Date().toISOString();
 
   const tables: Record<string, Record<string, unknown>[]> = {};
@@ -198,6 +206,7 @@ export async function writeBackup(): Promise<boolean> {
   // che scrive anche il file — compresso, con il suo manifesto (#407).
   const saved = await invoke<boolean>('write_backup', {
     payload: JSON.stringify(payload),
+    options,
   });
   logger.info('backup.written', {
     saved,
@@ -212,10 +221,13 @@ export async function writeBackup(): Promise<boolean> {
  * Ripristina un backup. Restituisce le opere che erano scaricate, così la
  * schermata può proporre di riprenderle: le immagini non stanno nel backup.
  */
-export async function restoreBackup(t: (key: string) => string): Promise<DownloadedSource[] | null> {
+export async function restoreBackup(
+  t: (key: string) => string,
+  password?: string,
+): Promise<DownloadedSource[] | null> {
   // La finestra e la lettura stanno nel backend (#407): una webview
   // compromessa non può farsi leggere un file a sua scelta.
-  const raw = await invoke<string | null>('read_backup');
+  const raw = await invoke<string | null>('read_backup', { password: password || null });
   if (raw === null) return null;
 
   const payload = validateBackup(JSON.parse(raw));

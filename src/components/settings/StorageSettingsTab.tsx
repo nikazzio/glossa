@@ -6,7 +6,6 @@ import { getDataDir, chooseDataDirFolder } from '../../services/storageConfigSer
 import { SectionLabel, Spinner, Tooltip } from '../ui';
 import { CacheSection } from './CacheSection';
 import { VaultSection } from './VaultSection';
-import { BackupSection } from './BackupSection';
 
 export function StorageSettingsTab() {
   const { t } = useTranslation();
@@ -96,7 +95,6 @@ export function StorageSettingsTab() {
 
       <CacheSection />
 
-      <BackupSection />
     </div>
   );
 }

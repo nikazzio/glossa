@@ -7,6 +7,7 @@ import {
   Type,
   Server,
   HardDrive,
+  DatabaseBackup,
   ListChecks,
   Download,
   Landmark,
@@ -28,6 +29,7 @@ import { TranslationsSettingsTab } from './TranslationsSettingsTab';
 import { TypographySettingsTab } from './TypographySettingsTab';
 import { ProviderSettingsTab } from './ProviderSettingsTab';
 import { StorageSettingsTab } from './StorageSettingsTab';
+import { BackupSection } from './BackupSection';
 import { JobsSettingsTab } from './JobsSettingsTab';
 import { DownloadSettingsTab } from './DownloadSettingsTab';
 import { LibrariesSettingsTab, type NetworkProfileDraft } from './LibrariesSettingsTab';
@@ -119,6 +121,7 @@ export function SettingsModal() {
     { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
     { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
+    { id: 'backup',       icon: <DatabaseBackup size={14} />,    label: t('settings.backup') },
     { id: 'jobs',         icon: <ListChecks size={14} />,        label: t('settings.jobsTab') },
     { id: 'download',     icon: <Download size={14} />,          label: t('settings.downloadTab') },
     { id: 'libraries',    icon: <Landmark size={14} />,          label: t('settings.librariesTab') },
@@ -281,6 +284,12 @@ export function SettingsModal() {
       )}
 
       {activeTab === 'storage' && <StorageSettingsTab />}
+
+      {activeTab === 'backup' && (
+        <div id="settings-panel-backup" role="tabpanel" aria-labelledby="settings-tab-backup" className="space-y-10">
+          <BackupSection />
+        </div>
+      )}
 
       {activeTab === 'jobs' && <JobsSettingsTab />}
 
