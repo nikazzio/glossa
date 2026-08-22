@@ -3,7 +3,7 @@
 //! Sottili: la logica — precedenza, validazione, limiti — sta in `settings.rs`,
 //! che si prova senza un'app in esecuzione. Passano dal backend e non dalla SQL
 //! del frontend perché **il tetto sulle richieste insieme va applicato dove i
-//! valori si usano** (D11), non solo dove si scelgono.
+//! valori si usano**, non solo dove si scelgono.
 
 use super::settings::{self, Library, Profile, ProfileInput};
 
@@ -73,7 +73,7 @@ pub async fn set_library_network_profile(
     snapshot(&conn)
 }
 
-/// La misura scelta per la singola opera (D4), quando c'è.
+/// La misura scelta per la singola opera, quando c'è.
 #[tauri::command]
 pub fn get_version_size_cap(
     app: tauri::AppHandle,

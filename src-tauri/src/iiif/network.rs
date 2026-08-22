@@ -1,4 +1,4 @@
-//! Profilo di rete dei provider (D18).
+//! Profilo di rete dei provider.
 //!
 //! Ogni biblioteca dichiara **come si sta al suo tavolo**: quanto aspettare fra
 //! una richiesta e l'altra, quante richieste in un minuto, quanto raffreddarsi
@@ -61,7 +61,7 @@ pub const CAUTIOUS: NetworkProfile = NetworkProfile {
 
 /// Gallica è la più severa delle biblioteche provate: con questi valori un
 /// manoscritto di 210 pagine richiede almeno un quarto d'ora, ed è il motivo per
-/// cui pausa, ripresa e tempo stimato non sono ornamenti (D18).
+/// cui pausa, ripresa e tempo stimato non sono ornamenti.
 pub const GALLICA: NetworkProfile = NetworkProfile {
     pause_min_ms: 2_500,
     pause_max_ms: 6_000,
@@ -111,7 +111,7 @@ impl NetworkProfile {
     }
 
     /// Tempo medio di una richiesta, usato per la stima del tempo che manca
-    /// (D17): si calcola dalla pausa dichiarata, non dalla velocità osservata
+    /// si calcola dalla pausa dichiarata, non dalla velocità osservata
     /// negli ultimi secondi, che con pause di 2,5–6 secondi oscilla troppo.
     pub fn average_pause(&self) -> Duration {
         Duration::from_millis((self.pause_min_ms + self.pause_max_ms) / 2)

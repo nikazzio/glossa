@@ -27,7 +27,7 @@ const RATINGS_BELOW_GOOD: QualityRating[] = ['critical', 'poor', 'fair'];
  * Non è lo stadio della pipeline che porta lo stesso nome: quello traduce, e
  * questo riscrive su indicazione del giudice. Contarli insieme confonderebbe
  * due chiamate diverse — e le sostituirebbe a vicenda, perché l'identità di un
- * fatto è frammento più stadio (D27).
+ * fatto è frammento più stadio.
  */
 const REFINE_AFTER_JUDGE_STAGE_ID = 'refine-after-judge';
 
@@ -126,7 +126,7 @@ async function runRefineLoopForChunk(
     }
 
     if (!refineResult) break;
-    // La riscrittura è una chiamata come le altre, e costa (D29).
+    // La riscrittura è una chiamata come le altre, e costa.
     void recordModelCall({
       chunkId,
       stageId: REFINE_AFTER_JUDGE_STAGE_ID,
@@ -144,7 +144,7 @@ async function runRefineLoopForChunk(
     updateDraft(chunkId, refineResult.content);
     // Il testo cambia: senza questa riga la proposta che l'utente poi approva o
     // corregge non entrerebbe nello storico, ed è la coppia proposta/approvata
-    // che lo storico esiste per salvare (D22).
+    // che lo storico esiste per salvare.
     void recordModelRevision(chunkId, refineResult.content).catch(() => undefined);
 
     if (useChunksStore.getState().cancelRequested) return true;
@@ -345,7 +345,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
         );
         // La verifica di coerenza è una chiamata al modello del giudice su ogni
         // frammento: senza registrarla, il conto di un documento resta più
-        // basso del vero proprio dove pesa di più (D29).
+        // basso del vero proprio dove pesa di più.
         void recordModelCall({
           chunkId: chunk.id,
           stageId: COHERENCE_STAGE_ID,

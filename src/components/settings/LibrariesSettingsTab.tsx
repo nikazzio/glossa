@@ -50,19 +50,7 @@ interface LibrariesSettingsTabProps {
   setDraft: (draft: NetworkProfileDraft | null) => void;
 }
 
-/**
- * I profili di rete e le biblioteche che li usano (#421, D18).
- *
- * Un profilo è **un ritmo**: quanto aspettare fra una richiesta e l'altra,
- * quante in un minuto, quanto fermarsi quando la biblioteca chiede di
- * rallentare. Ogni biblioteca ne sceglie uno; chi non sceglie segue quello
- * predefinito.
- *
- * Qui il salvataggio è **esplicito**, al contrario delle altre schede: un «2»
- * digitato a metà di «250» non deve diventare la politica verso una biblioteca.
- * Per questo le modifiche non salvate si vedono, e non si perdono cambiando
- * scheda.
- */
+/** Profili di rete e associazioni alle biblioteche. */
 export function LibrariesSettingsTab({ draft, setDraft }: LibrariesSettingsTabProps) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<NetworkSettings>({ profiles: [], libraries: [] });

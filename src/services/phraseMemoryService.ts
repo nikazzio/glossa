@@ -226,7 +226,7 @@ export async function extractPhraseMemoryPairs(options: {
     });
 
     // Anche l'estrattore è una chiamata a un modello, e si paga: senza questa
-    // riga il conto di un documento resta più basso del vero (D29).
+    // riga il conto di un documento resta più basso del vero.
     if (options.chunkId) {
       void recordModelCall({
         chunkId: options.chunkId,

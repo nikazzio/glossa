@@ -1,169 +1,97 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-08-09
+Ultimo aggiornamento: 2026-08-22.
 
-## Principio guida
+## Stato generale
 
-Glossa 2.0 evolve da workspace di traduzione documentale a research workbench locale per acquisizione, studio, trascrizione, traduzione, revisione ed export.
+La foundation 2.0 e il blocco 1 hanno introdotto cataloghi globali, workspace
+operativi, deposito, scaricamento IIIF, coda persistente, cache, registrazione e
+backup di base. Il prossimo rilascio intermedio è la 1.5.
 
-Scriptoria è il riferimento principale per codice e funzionalità nei domini
-IIIF, fonti, asset, job, trascrizione ed export. I pattern utili vengono
-adattati nativamente all'architettura React/Tauri/Rust di Glossa e alla sua
-shell di prodotto.
+## Prima della 1.5
 
-Pattern da portare da Scriptoria:
+### PR #444
 
-- separazione chiara tra logica core e interfaccia;
-- UI che orchestra, core che implementa;
-- provider registry per discovery e capability;
-- path runtime gestiti da configurazione, non hardcoded;
-- policy esplicite per sorgenti locali/remoti;
-- job persistenti per download, OCR/export e lavori lunghi;
-- storage locale tracciabile per record, asset, derivati e artifact;
-- nessuna mini-app parallela dentro Glossa.
+Rifiniture funzionali, lint e suite automatica completati. Restano prove manuali
+e CI.
 
-## Milestone GitHub
+### Riservatezza di backup ed esportazioni
 
-- `v2.0 research workbench`: solo core release 2.0.
-- `v2.x backlog`: idee utili post-2.0, non bloccanti.
+Implementare i tre livelli stabiliti da D33:
 
-## Ordine implementativo
+- aperto;
+- formato leggibile solo da Glossa, dichiarato come offuscamento;
+- cifrato con password, Argon2id e AES-256-GCM a blocchi.
 
-### Fase 0 - Architecture gate
+Il formato cifrato deve conservare in chiaro versione e parametri di derivazione,
+distinguere password errata da archivio danneggiato e non includere le chiavi dei
+provider.
 
-- #180 - architettura di prodotto e shell UI unificata.
+### Consolidamento dello schema
 
-Obiettivo: definire confini di prodotto, information architecture, domini
-principali e regole di integrazione con la pipeline esistente.
+- sostituire le migrazioni del blocco con una baseline leggibile;
+- correggere il puntatore della revisione di trascrizione approvata;
+- rimuovere `transcription_segments.asset_id`;
+- rimuovere la retrocompatibilità pre-2.0;
+- decidere la forma finale della tabella `assets`;
+- ricreare i database di sviluppo;
+- eseguire test di primo avvio, backup e ripristino.
 
-Decisione architetturale:
-[`PRODUCT_ARCHITECTURE_2_0.md`](PRODUCT_ARCHITECTURE_2_0.md). Le aree
-Biblioteca, Trascrizioni, Traduzioni e Analisi sono cataloghi globali; i
-workspace sono raccolte operative trasversali degli stessi oggetti canonici.
+### Integrazione
 
-### Fase 1 - Foundation, data model, shell
+Aggiornare la PR #429, eseguire CI sul branch integrato e unire `blocco-1` in
+`main` come Glossa 1.5.
 
-- #181 - epic modello dati 2.0.
-- #211 - modello dati 2.0 operativo.
-- #212 - piano di migrazione 1.x -> 2.0.
-- #207 - epic research workspace multi-testo.
-- #213 - risorse condivise e regole di scope.
-- #210 - shell 2.0 Library / Studio / Translation.
-- #390 - identità visiva workspace completata: segni storico-editoriali preset,
-  distinti dalle icone delle aree globali.
-- #186 - interoperabilità e migrazione graduale da Scriptoria.
+## Dopo la 1.5
 
-Obiettivo: prima dati e shell, poi feature. Nessuna discovery, viewer o OCR avanzato prima che workspace, item, asset, documenti e progetti siano modellati.
+### Biblioteca e acquisizione
 
-### Fase 2 - Library e IIIF
+- applicare il divieto di scaricamento dichiarato dalle istituzioni;
+- inserire la scelta del deposito nel primo avvio;
+- controllare lo spazio libero prima di adottare una cartella;
+- riconoscere realmente i segnaposto delle cartelle sincronizzate;
+- misurare le undici biblioteche e verificare la sessione del lettore per la
+  Biblioteca Vaticana;
+- abilitare più pagine in parallelo solo per le biblioteche misurate;
+- aggiungere il visore e il recupero della singola pagina a piena risoluzione;
+- permettere valori di ottimizzazione specifici per opera.
 
-- #184 - epic discovery biblioteche e import IIIF.
-- #214 - registry provider IIIF e capability model.
-- #215 - discovery resolve/search normalizzata.
-- #216 - add-to-library e persistenza metadati.
-- #397 - rollout verificato delle biblioteche/provider: Internet Archive e URL
-  generico già usabili; poi Biblissima+ e Digital Scriptorium come aggregatori
-  ad alta copertura, quindi Vaticana, Gallica, e-codices, Estense,
-  e-manuscripta/e-rara e Wellcome. Gli altri provider del registry solo dopo
-  verifica di endpoint, metadati e capability reali.
-- #395 - ricerca globale multi-provider, solo quando esistono almeno più
-  provider realmente usabili e fonti persistibili.
-- #187 - catalogazione, metadati e gestione library/workspace.
+### Workspace e portabilità
 
-Obiettivo: portare in Glossa il modello di discovery di Scriptoria senza copiare la UI. Direct resolve, search e provider capabilities devono produrre risultati normalizzati.
+- esportare e importare un singolo workspace (#434);
+- completare il flusso di spostamento del deposito;
+- ricucire il legame pagina-segmento dopo un nuovo scaricamento;
+- spostare l'import CSV dei glossari interamente nel backend.
 
-Il registry non abilita automaticamente un archivio: #397 conserva lista,
-priorità e riferimenti Scriptoria; ogni provider richiede un handler reale e
-verifica aggiornata prima di comparire nella ricerca.
+### Shell e osservabilità
 
-### Fase 3 - Asset e job
+- unificare la barra di stato;
+- completare la console generale dei log (#413);
+- aggiungere notifiche di sistema per i lavori lunghi;
+- risolvere scrollbar e artefatti grafici Linux senza workaround globali.
 
-- #183 - epic acquisizione asset locali.
-- #217 - inventory asset e source policy runtime.
-- #218 - sistema condiviso di job asincroni persistenti; download come primo
-  consumatore.
+### Studio immagini e trascrizione
 
-Obiettivo: introdurre una sola infrastruttura asincrona per download, OCR/HTR,
-export, analisi e altri lavori lunghi. Scans, manifest, thumbnail, derivati e
-artifact devono vivere in un modello tracciabile; progresso, pausa, ripresa,
-retry e cancellazione devono essere stati persistenti, non chiamate
-fire-and-forget.
+- visore pagine e selezione intervalli;
+- snippet e corpus di immagini;
+- OCR/HTR come lavori persistenti;
+- bridge da trascrizione approvata a traduzione;
+- livello bibliografico per gli stampati (#404).
 
-### Fase 4 - Studio immagini, snippet, corpus
+### Export e Analisi
 
-- #208 - epic image workbench.
-- #221 - viewer, filtri visuali e source switching.
-- #222 - cropper dal viewer e salvataggio snippet.
-- #209 - epic snippet corpus.
-- #223 - snippet corpus con metadata, listing e riuso comparativo.
-- #227 - corpus `historical_techniques` e suggerimenti contestuali.
+- Export Studio contestuale e artifact tracciati;
+- metriche derivate e area Analisi;
+- dataset versionati;
+- registro di modelli e adapter;
+- valutazione semantica sorgente-traduzione.
 
-Obiettivo: lo Studio deve diventare superficie di lavoro, non preview decorativa. Viewer, crop, snippet e corpus devono collegarsi a item, pagine e workspace.
+## Regole di avanzamento
 
-### Fase 5 - Trascrizione, OCR/HTR, bridge traduzione
-
-- #182 - epic transcription studio.
-- #219 - transcription document nativo.
-- #185 - epic OCR/HTR orchestration.
-- #220 - provider OCR/HTR e job orchestration.
-- #189 - epic pipeline linguistica 2.0.
-- #224 - bridge da trascrizione approvata a progetto di traduzione.
-
-Obiettivo: la trascrizione approvata diventa ingresso strutturato della pipeline Glossa. OCR/HTR e correzione umana devono essere job e stati, non una singola chiamata opaca.
-
-### Fase 6 - Export studio
-
-- #188 - epic export studio.
-- #225 - export studio con profili PDF/immagini e output selettivi.
-
-Obiettivo: Export Studio come azione contestuale di fonte, trascrizione,
-traduzione o workspace, non come area primaria. Profili nelle impostazioni,
-esecuzione tramite il sistema condiviso di job, artifact history sull'oggetto e
-nel workspace, vista globale di servizio per job e output.
-
-### Filone trasversale - Analisi, dataset e modelli
-
-- #377 - epic area Analisi.
-- #378 - provenance e metriche dei workflow.
-- #379 - dashboard, esplorazione e confronti.
-- #380 - dataset builder versionato.
-- #381 - model registry e adapter locali.
-- #382 - allineamento semantico sorgente-traduzione.
-
-La raccolta di provenance e metriche (#378) comincia con la foundation, così i
-workflow successivi producono dati analizzabili fin dall'inizio. Le superfici
-Analisi e i dataset arrivano per incrementi quando esistono abbastanza dati
-reali; l'addestramento resta esterno a Glossa nella 2.0.
-
-### Filone trasversale - Acquisizione documenti e sicurezza dell'import
-
-- #371 - import ancorato al file scelto nel dialog (chiuso da #405).
-- #192 - nuovi formati di importazione: PPTX, XLSX, HTML, EPub, RTF, ODT, DOC.
-- #407 - stessa impostazione per backup e ripristino.
-
-Con #405 la finestra di scelta file viene aperta dal backend: nessun comando
-accetta piu' un percorso dal frontend, il percorso scelto non attraversa il
-confine IPC e l'import non ha piu' vincoli di cartella. Sostituisce
-l'allowlist di #367 e la preferenza opzionale che ne derivava.
-
-Il ripristino da backup usa ancora lo schema vecchio (#407): finche' non lo
-segue, i permessi filesystem in `capabilities/default.json` non si possono
-restringere.
-
-Le estensioni non riconosciute vengono lette come testo semplice. Per i formati
-con marcatura interna questo produce testo sporco invece di un errore: #192
-raccoglie i lettori dedicati da scrivere.
-
-## Fuori dal core 2.0
-
-Spostate in `v2.x backlog`:
-
-- #12 - documenti di riferimento nel contesto LLM.
-- #17 - prompt versioning con storico e rollback.
-- #24 - batch file processing.
-- #52 - Google Docs import/export.
-- #141 - history e rollback per glossario, note e azioni manuali.
-- #167 - traduzione parallela di chunk multipli selezionati.
-- #287 - DeepL Pro API style rules e translation memory.
-
-Queste restano valide, ma vanno implementate dopo che il workbench locale ha fondamenta stabili.
+- una funzione utente aggiorna guida interna e documentazione pubblica IT/EN;
+- una modifica a flussi, comandi, store o schema aggiorna `ARCHITECTURE.md`;
+- una modifica alla composizione dei prompt aggiorna la sezione Pipeline di
+  `ARCHITECTURE.md`;
+- lo stato di sessione viene aggiornato alla fine di ogni task;
+- i piani implementativi completati vengono rimossi dopo aver trasferito
+  invarianti, decisioni e lavoro residuo nei documenti permanenti.

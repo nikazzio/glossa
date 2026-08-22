@@ -621,7 +621,12 @@
       "pixels": "{{value}} pixels",
       "thumbnailEdge": "Thumbnail size",
       "thumbnailEdgeHint": "Thumbnails are derived from the downloaded pages, on your computer: they cost no request. Larger ones take more space and browse better.",
-      "sizes": "Sizes"
+      "sizes": "Sizes",
+      "optimize": "Local optimisation",
+      "optimizeLongEdge": "target long side",
+      "optimizeLongEdgeHint": "What size to reduce already-downloaded pages to when you run optimisation on a work. It depends on the material: a wide print takes much less than a tight, tiny one, so it is worth changing it here before running it on a book unlike the others.",
+      "optimizeQuality": "JPEG quality",
+      "optimizeQualityHint": "How much to compress. Lower means smaller files and more artefacts; 82 is the usual value for archival material."
     },
     "librariesTab": "Libraries",
     "jobsTab": "Jobs",
@@ -859,6 +864,7 @@
       "freeSpaceConfirm": "Free space",
       "freeSpaceDone": "{{size}} freed",
       "freeSpaceFailed": "Could not free the space",
+      "filesBusy": "The active job on this work must finish or be cancelled first.",
       "verifyNothing": "None of this source's pages are on your computer yet",
       "sizeCap": "Page size",
       "sizeCapInherited": "as the library says",
@@ -869,7 +875,11 @@
       "removeMessageWithFiles": "It disappears from the Library along with its links, and the {{size}} already downloaded are deleted too. To keep the work and only free the space, there is a command for that.",
       "removeFailed": "Could not remove the work",
       "extraFullSize_one": "plus {{count}} at full resolution",
-      "extraFullSize_other": "plus {{count}} at full resolution"
+      "extraFullSize_other": "plus {{count}} at full resolution",
+      "optimizeAction": "Shrink the images to free up space",
+      "optimizeQueued": "Optimisation queued.",
+      "optimizeFailed": "The optimisation could not be started.",
+      "optimizeWhileDownloading": "This work has to finish downloading first: the two jobs would write over the same pages."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -1542,7 +1552,7 @@
       "autosaveTitle": "Autosave",
       "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
       "scopeTitle": "What a workspace holds",
-      "scopeDesc": "A workspace gathers your material in two ways. Translations and transcriptions **live** in it: each one belongs to a single workspace, and that is where it takes its dictionaries and phrase memory from. Books, dictionaries and imported phrases are **linked** to it, and can sit in several workspaces at once without ever being duplicated. The same dictionary is used wherever you need it, and if one workspace needs an entry translated differently you correct it there: the correction applies only in that workspace and the original does not change. The Library always shows every book, with the workspaces it belongs to on its card. A finished workspace can be set aside instead of deleted; deleting it takes away only the translations and transcriptions that lived there, while books, dictionaries and phrases stay.",
+      "scopeDesc": "A workspace gathers your material in two ways. Translations and transcriptions live in it: each one belongs to a single workspace, and that is where it takes its dictionaries and phrase memory from. Books, dictionaries and imported phrases are linked to it, and can sit in several workspaces at once without ever being duplicated. The same dictionary is used wherever you need it, and if one workspace needs an entry translated differently you correct it there: the correction applies only in that workspace and the original does not change. The Library always shows every book, with the workspaces it belongs to on its card. A finished workspace can be set aside instead of deleted; deleting it takes away only the translations and transcriptions that lived there, while books, dictionaries and phrases stay.",
       "backupTitle": "Backup and restore",
       "backupDesc": "In Settings, the Storage tab saves a backup or restores from a saved one, through a .glossa-backup file. The two commands are icons: hover them or reach them with the keyboard to read their descriptions. A backup covers the whole of Glossa, not a single workspace, and restoring replaces every workspace you have. Before asking for confirmation and before touching any data, Glossa verifies that the file is complete, intact, and compatible: an altered, incomplete, or newer-version backup is rejected without changing the current work."
     },
@@ -1664,17 +1674,19 @@
       "jobsControlTitle": "How to control them",
       "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
       "downloadTitle": "Downloading a source",
-      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa works out the size to ask for on its own: from the page dimensions declared in the manifest it derives the width that brings the long side to the chosen size, and asks for that — one request per page, no negotiation. At the start of every book it asks the library a single question, to find out whether it keeps reduced sizes ready: where it does, asking for one is twice as fast. If the size is refused, it takes the whole page, shrinks it on your computer and keeps only the result: that refusal is paid once per book, not on every page. From every page it downloads, Glossa derives its thumbnail without asking the library for anything: thumbnails let you browse the book offline.",
+      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa works out the size to ask for on its own: from the page dimensions declared in the manifest it derives the width that brings the long side to the chosen size, and asks for that — one request per page, no negotiation. At the start of every book it asks the library a single question, to find out whether it keeps reduced sizes ready: where it does, asking for one is twice as fast. If the size is refused, it takes the whole page and keeps it exactly as it is: it never shrinks anything on its own, because shrinking an image loses something and that must not happen behind your back. That book takes more room, and you get it back whenever you want with the command that shrinks images. That refusal is paid once per book, not on every page. From every page it downloads, Glossa derives its thumbnail without asking the library for anything: thumbnails let you browse the book offline.",
       "downloadPolicyTitle": "Choosing the page size",
       "downloadPolicyDesc": "In Settings → Download you choose how large you want the pages and how large the thumbnails. The page size is a ceiling: for every page Glossa computes the width that brings its long side to that number, and pages already smaller than it are taken as they are. If you choose \"maximum\" there is nothing to compute, and all the available detail is kept: a whole book takes about three times the space. The same choice can be made on the single work, by opening its card in the Library, and there it wins: the size depends on the material, not on who keeps the book. Pages already downloaded stay as they are.",
       "countingTitle": "How «how many pages do I have» is read",
       "countingDesc": "The count you see in the Library is the files actually on your computer: Glossa looks at the folder, not at a list kept aside. If the library does not serve a page — it happens, and it is not your fault — it is not counted as missing: the book reads as complete for as much as the library serves. And if you took the full-resolution version of a few pages, the record says so as an addition («plus 3 at full resolution»), not as a half-finished book.",
+      "optimizeTitle": "Shrinking images to free up space",
+      "optimizeDesc": "A book downloaded at full resolution takes three times more room than it needs, and one downloaded months ago with a higher cap than you need now holds detail you never look at. On the work's record, in the Library, the command immediately queues shrinking the downloaded pages to the chosen size. It is irreversible: the original is replaced. It works on one size at a time, so pages you deliberately took at full resolution are left alone. It runs for minutes on a long book: it is a job like a download, followed from the panel at the bottom, with pause and cancel. When it finishes, the job shows how much space it freed. If a page cannot be processed, the job reports an error and shows how many pages failed. Target size and quality are chosen in Settings → Downloads.",
       "removeTitle": "Removing a work from the Library",
-      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
+      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. If a download or optimisation is still active, let it finish or cancel it first. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
       "checkTitle": "The two vault checks",
       "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is. The outcome of the last check stays in the settings until you run another one, and next to the files belonging to no work there is the command to delete them: Glossa looks at the vault again the moment you press and tells you how many it really removed.",
       "cacheTitle": "Network cache",
-      "cacheDesc": "What you look at without downloading it — the covers in search results, the covers in the Library, the search responses themselves — is not requested from the library every time: Glossa keeps it aside. This does two things: covers show up in the installed application too, and repeating a search does not go back to the network. This material **is not yours**: it never counts as downloaded, it is never part of a backup, and it gets dropped when space is needed, starting with whatever has gone unread the longest. The size limit and how long searches are kept live in Settings → Data, along with how much is used right now and the command to empty it. The way to **keep** a book is still to download it. Above search results you can see how old what you are looking at is, and next to it there is the command to run it again for real.",
+      "cacheDesc": "What you look at without downloading it — the covers in search results, the covers in the Library, the search responses themselves — is not requested from the library every time: Glossa keeps it aside. This does two things: covers show up in the installed application too, and repeating a search does not go back to the network. This material is not yours: it never counts as downloaded, it is never part of a backup, and it gets dropped when space is needed, starting with whatever has gone unread the longest. The size limit and how long searches are kept live in Settings → Data, along with how much is used right now and the command to empty it. The way to keep a book is still to download it. Above search results you can see how old what you are looking at is, and next to it there is the command to run it again for real.",
       "backupTitle": "The backup",
       "backupDesc": "Settings → Storage → Backup and restore saves a file with everything that cannot be downloaded again: the works' records, notes, transcriptions, translations with their history, glossaries, phrase memory and the record of the work done. The images are not in it on purpose — they come back from the library — but the file knows which works were on your computer and at what size, and on restore Glossa offers to download them again. The file is compressed and carries a fingerprint: a backup interrupted while being written is recognised before the restore starts. The backup covers the whole of Glossa, not a single workspace: restoring replaces every workspace you have now.",
       "librariesTitle": "How Glossa treats libraries",
@@ -2068,14 +2080,16 @@
       "debug_counter": "Development test",
       "debug_restart_only": "Development test (restart only)",
       "source_download": "Page download",
-      "vault_verification": "Vault check"
+      "vault_verification": "Vault check",
+      "image_optimization": "Image optimisation"
     },
     "phase": {
       "starting": "starting",
       "manifest": "reading the manifest",
       "downloading": "downloading",
       "checking_files": "checking files",
-      "looking_for_orphans": "looking for orphans"
+      "looking_for_orphans": "looking for orphans",
+      "optimizing": "shrinking the images"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",
@@ -2091,13 +2105,21 @@
       "source_download": "pages",
       "vault_verification": "check",
       "debug_counter": "test",
-      "debug_restart_only": "test"
+      "debug_restart_only": "test",
+      "image_optimization": "optimisation"
+    },
+    "error": {
+      "optimizationIncomplete_one": "One page could not be optimised.",
+      "optimizationIncomplete_other": "{{count}} pages could not be optimised."
     },
     "detail": {
       "type": "type",
       "phase": "phase",
       "bytes": "downloaded",
       "unavailable": "not served by the library",
+      "shrunk": "pages shrunk",
+      "skipped": "pages not processed",
+      "freed": "space freed",
       "unavailableShort_one": "{{count}} not served",
       "unavailableShort_other": "{{count}} not served",
       "cap": "chosen size",

@@ -1,6 +1,6 @@
 //! Lettura del manifesto IIIF.
 //!
-//! Si rispetta lo standard, non lo si reinterpreta (D2-bis): l'ordine delle
+//! Si rispetta lo standard, non lo si reinterpreta: l'ordine delle
 //! pagine è quello dichiarato dal manifesto, l'etichetta è quella dichiarata, e
 //! le immagini si chiedono al servizio con i parametri della Image API invece
 //! di indovinare indirizzi.
@@ -12,7 +12,7 @@ use crate::jobs::{ErrorKind, JobError};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Page {
     /// Posizione nella sequenza dichiarata: è questa a ordinare, non
-    /// l'etichetta, che può essere `12r`, `[iv]` o mancare (D2).
+    /// l'etichetta, che può essere `12r`, `[iv]` o mancare.
     pub index: u32,
     /// Etichetta della biblioteca, da mostrare così com'è.
     pub label: Option<String>,
@@ -20,17 +20,17 @@ pub struct Page {
     pub image_service: String,
     /// Dimensioni dell'originale dichiarate dal canvas. Le pagine di uno stesso
     /// libro **non** hanno tutte la stessa dimensione, ed è da queste che si
-    /// calcola la misura da chiedere per ognuna (§5.1).
+    /// calcola la misura da chiedere per ognuna.
     pub size: Option<(u32, u32)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     pub pages: Vec<Page>,
-    /// Collegamento umano all'originale, quando il manifesto lo dichiara (D8-bis).
+    /// Collegamento umano all'originale, quando il manifesto lo dichiara.
     pub homepage: Option<String>,
     /// Licenza e attribuzione: materiale d'archivio senza attribuzione è un
-    /// problema, non un dettaglio (D2-bis).
+    /// problema, non un dettaglio.
     pub rights: Option<String>,
     pub attribution: Option<String>,
     /// Manifesto nella vecchia Presentation 2.1. Cambia il nome della
@@ -129,11 +129,7 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
 
 /// La radice del servizio immagini.
 ///
-/// Solo il servizio, mai l'indirizzo diretto dell'immagine: quello è già un URL
-/// completo di parametri, e attaccargli in coda `/full/2000,/0/default.jpg`
-/// produrrebbe un indirizzo inventato che nessuno serve (D2-bis: niente
-/// indirizzi indovinati). Un canvas senza servizio non è scaricabile a una
-/// risoluzione scelta, e si salta.
+/// Restituisce il servizio immagini, non l'indirizzo di una singola immagine.
 fn service_of(body: &Value) -> Option<String> {
     let from_service = match body.get("service") {
         Some(Value::Array(entries)) => entries.first().and_then(id_of),
@@ -190,7 +186,7 @@ fn attribution_of(root: &Value) -> Option<String> {
 ///
 /// `size_token` è la misura calcolata per **questa** pagina (`sizing::token_for`),
 /// che varia di pagina in pagina e non è il nome della cartella: quello lo dà il
-/// tetto (§5.1).
+/// tetto.
 pub fn image_url(image_service: &str, size_token: &str) -> String {
     format!("{image_service}/full/{size_token}/0/default.jpg")
 }
@@ -293,10 +289,6 @@ mod tests {
 
     #[test]
     fn a_thumbnail_declared_by_the_library_is_ignored() {
-        // Le miniature non si chiedono più alla biblioteca: si ricavano dalla
-        // pagina scaricata (D6, corretta il 2026-08-16). Un canvas che dichiara
-        // la propria miniatura si legge lo stesso senza inciampi, e quel dato
-        // semplicemente non serve più a nessuno.
         let manifest = parse(
             br#"{"items":[{"width":100,"height":200,
               "thumbnail":[{"id":"https://img/1/full/160,/0/default.jpg"}],

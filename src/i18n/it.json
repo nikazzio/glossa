@@ -621,7 +621,12 @@
       "pixels": "{{value}} pixel",
       "thumbnailEdge": "Misura delle miniature",
       "thumbnailEdgeHint": "Le miniature si ricavano dalle pagine scaricate, sul computer: non costano nessuna richiesta. Più grandi occupano più spazio e si sfogliano meglio.",
-      "sizes": "Misure"
+      "sizes": "Misure",
+      "optimize": "Ottimizzazione locale",
+      "optimizeLongEdge": "lato lungo di arrivo",
+      "optimizeLongEdgeHint": "A che misura ridurre le pagine già scaricate, quando lanci l'ottimizzazione su un'opera. Dipende dal materiale: una stampa larga sopporta molto meno di una minuscola fitta, quindi vale la pena cambiarla qui prima di lanciarla su un libro diverso dagli altri.",
+      "optimizeQuality": "qualità JPEG",
+      "optimizeQualityHint": "Quanto comprimere. Più basso significa file più piccoli e più artefatti; 82 è il valore che si usa di norma per il materiale d'archivio."
     },
     "librariesTab": "Biblioteche",
     "jobsTab": "Lavori",
@@ -859,6 +864,7 @@
       "freeSpaceConfirm": "Libera spazio",
       "freeSpaceDone": "Liberati {{size}}",
       "freeSpaceFailed": "Non è stato possibile liberare lo spazio",
+      "filesBusy": "Prima il lavoro in corso su quest'opera deve concludersi o essere annullato.",
       "verifyNothing": "Di questa fonte non c'è ancora nessuna pagina sul computer",
       "sizeCap": "Misura delle pagine",
       "sizeCapInherited": "come dice la biblioteca",
@@ -869,7 +875,11 @@
       "removeMessageWithFiles": "Sparisce dalla Biblioteca insieme ai suoi collegamenti, e vengono eliminate anche le {{size}} già scaricate. Per tenere l'opera e liberare solo lo spazio c'è il comando apposta.",
       "removeFailed": "Non è stato possibile togliere l'opera",
       "extraFullSize_one": "più {{count}} a risoluzione piena",
-      "extraFullSize_other": "più {{count}} a risoluzione piena"
+      "extraFullSize_other": "più {{count}} a risoluzione piena",
+      "optimizeAction": "Riduci le immagini per liberare spazio",
+      "optimizeQueued": "Ottimizzazione messa in coda.",
+      "optimizeFailed": "Non è stato possibile avviare l'ottimizzazione.",
+      "optimizeWhileDownloading": "Prima finisce lo scaricamento di quest'opera: i due lavori scriverebbero sulle stesse pagine."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1542,7 +1552,7 @@
       "autosaveTitle": "Salvataggio automatico",
       "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
       "scopeTitle": "Cosa contiene un workspace",
-      "scopeDesc": "Un workspace raccoglie il tuo materiale in due modi. Ci **abitano** le traduzioni e le trascrizioni: ognuna sta in un solo workspace, ed è da lì che prende dizionari e memoria di frasi. Ci sono **collegati** i libri, i dizionari e le frasi importate, che possono stare in più workspace insieme senza mai essere duplicati. Lo stesso dizionario si usa dove serve, e se in un workspace una voce va tradotta diversamente la correggi lì: la correzione vale solo in quel workspace e l'originale non cambia. La Biblioteca mostra sempre tutti i libri, con i workspace a cui appartengono sulla scheda. Un workspace finito si può mettere da parte invece di eliminarlo; eliminandolo se ne vanno solo le traduzioni e le trascrizioni che ci abitavano, mentre libri, dizionari e frasi restano.",
+      "scopeDesc": "Un workspace raccoglie il tuo materiale in due modi. Ci abitano le traduzioni e le trascrizioni: ognuna sta in un solo workspace, ed è da lì che prende dizionari e memoria di frasi. Ci sono collegati i libri, i dizionari e le frasi importate, che possono stare in più workspace insieme senza mai essere duplicati. Lo stesso dizionario si usa dove serve, e se in un workspace una voce va tradotta diversamente la correggi lì: la correzione vale solo in quel workspace e l'originale non cambia. La Biblioteca mostra sempre tutti i libri, con i workspace a cui appartengono sulla scheda. Un workspace finito si può mettere da parte invece di eliminarlo; eliminandolo se ne vanno solo le traduzioni e le trascrizioni che ci abitavano, mentre libri, dizionari e frasi restano.",
       "backupTitle": "Backup e ripristino",
       "backupDesc": "In Impostazioni, la scheda Archiviazione salva un backup o ripristina da uno salvato, in un file .glossa-backup. I due comandi sono icone: passa il mouse o raggiungile da tastiera per leggerne la descrizione. Il backup riguarda tutto Glossa, non un workspace solo, e il ripristino sostituisce ogni workspace presente. Prima di chiedere conferma e prima di toccare i dati, Glossa verifica che il file sia completo, integro e compatibile: un backup alterato, incompleto o creato da una versione più recente viene rifiutato senza modificare il lavoro corrente."
     },
@@ -1664,17 +1674,19 @@
       "jobsControlTitle": "Come si comandano",
       "jobsControlDesc": "Pausa, ripresa, annullamento e nuovo tentativo per ciascun lavoro, o per tutti insieme dai comandi in cima al pannello. La pausa non è istantanea: il lavoro finisce il pezzo in corso, lo salva e si ferma.",
       "downloadTitle": "Scaricare una fonte",
-      "downloadDesc": "In Biblioteca ogni riga dice quante pagine sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa calcola da sé la misura da chiedere: dalle dimensioni della pagina dichiarate dal manifesto ricava la larghezza che porta il lato lungo alla misura scelta, e chiede quella — una richiesta per pagina, nessuna trattativa. All'avvio di ogni libro fa una domanda sola alla biblioteca, per sapere se tiene già pronte le misure ridotte: dove le tiene, chiederne una è il doppio più veloce. Se la misura viene rifiutata, prende la pagina intera, la rimpicciolisce sul tuo computer e conserva solo il risultato: il rifiuto si paga una volta per libro, non a ogni pagina. Da ogni pagina scaricata Glossa ricava la sua miniatura, senza chiedere niente alla biblioteca: servono a sfogliare il libro senza rete.",
+      "downloadDesc": "In Biblioteca ogni riga dice quante pagine sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa calcola da sé la misura da chiedere: dalle dimensioni della pagina dichiarate dal manifesto ricava la larghezza che porta il lato lungo alla misura scelta, e chiede quella — una richiesta per pagina, nessuna trattativa. All'avvio di ogni libro fa una domanda sola alla biblioteca, per sapere se tiene già pronte le misure ridotte: dove le tiene, chiederne una è il doppio più veloce. Se la misura viene rifiutata, prende la pagina intera e la conserva così com'è: non rimpicciolisce niente da sé, perché ridurre un'immagine le fa perdere qualcosa e non deve succedere alle tue spalle. Quel libro occupa più spazio, e lo recuperi quando vuoi con il comando che riduce le immagini. Il rifiuto si paga una volta per libro, non a ogni pagina. Da ogni pagina scaricata Glossa ricava la sua miniatura, senza chiedere niente alla biblioteca: servono a sfogliare il libro senza rete.",
       "downloadPolicyTitle": "Scegliere la misura delle pagine",
       "downloadPolicyDesc": "In Impostazioni → Scaricamento scegli quanto grandi vuoi le pagine e quanto grandi le miniature. La misura delle pagine è un tetto: Glossa calcola per ogni pagina la larghezza che porta il suo lato lungo a quel numero, e le pagine già più piccole le prende come sono. Se scegli «massima» non c'è niente da calcolare, si prende tutto il dettaglio disponibile: un libro intero occupa circa il triplo dello spazio. La stessa scelta si può fare sulla singola opera, aprendo la sua scheda in Biblioteca, e lì vince: la misura dipende dal materiale, non da chi conserva il libro. Le pagine già scaricate restano come sono.",
       "countingTitle": "Come si legge «quante pagine ho»",
       "countingDesc": "Il conteggio che vedi in Biblioteca è quello dei file che stanno davvero sul tuo computer: Glossa guarda la cartella, non un elenco tenuto a parte. Se una pagina la biblioteca non la serve — capita, e non è un guasto tuo — non viene contata come mancante: il libro risulta completo per quanto la biblioteca serve. E se di qualche pagina hai preso anche la versione a risoluzione piena, la scheda lo dice come aggiunta («più 3 a risoluzione piena»), non come un libro a metà.",
+      "optimizeTitle": "Ridurre le immagini per liberare spazio",
+      "optimizeDesc": "Un libro scaricato alla massima risoluzione occupa il triplo del necessario, e uno scaricato mesi fa con un tetto più alto di quello che ti serve adesso occupa spazio per un dettaglio che non guardi. Nella scheda dell'opera, in Biblioteca, il comando mette subito in coda la riduzione delle pagine già scaricate alla misura scelta. È irreversibile: l'originale viene sostituito. Lavora su una misura per volta, quindi le pagine che avevi preso a risoluzione piena di proposito non vengono toccate. Dura minuti su un libro lungo: è un lavoro come lo scaricamento, e lo segui dal pannello in basso, con pausa e annullamento. Alla fine il lavoro indica quanto spazio ha liberato. Se una pagina non può essere elaborata, il lavoro lo segnala come errore e mostra quante pagine non sono riuscite. La misura di arrivo e la qualità si scelgono in Impostazioni → Scaricamento.",
       "removeTitle": "Togliere un'opera dalla Biblioteca",
-      "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
+      "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. Se uno scaricamento o un'ottimizzazione è ancora attivo, prima deve concludersi o essere annullato. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
       "checkTitle": "Le due verifiche del deposito",
       "checkDesc": "La verifica rapida guarda soltanto se i file ci sono: è questione di millisecondi. La completa apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato, quindi è l'unica che riconosce un file troncato o marcito sul disco; in cambio è lenta in proporzione ai gigabyte. Se niente è danneggiato i due conteggi coincidono e cambia solo il tempo. Nella coda dei lavori ogni verifica dice quale delle due è. L'esito dell'ultimo controllo resta nelle impostazioni finché non ne fai un altro, e accanto ai file che non appartengono a nessuna opera c'è il comando per cancellarli: Glossa riguarda il deposito nel momento in cui premi e ti dice quanti ne ha tolti davvero.",
       "cacheTitle": "Cache di rete",
-      "cacheDesc": "Quello che guardi senza scaricarlo — le copertine nei risultati di ricerca, le copertine in Biblioteca, le risposte delle ricerche — non viene chiesto ogni volta alla biblioteca: Glossa lo tiene da parte. Serve a due cose: le copertine si vedono anche nell'applicazione installata, e una ricerca ripetuta non ripassa dalla rete. Questa roba **non è tua**: non conta come scaricata, non entra in un backup e viene buttata quando serve spazio, a partire da quella che non guardi da più tempo. Il tetto e la durata delle ricerche si cambiano in Impostazioni → Dati, dove si vede anche quanto occupa adesso e c'è il comando per svuotarla. Il modo di **tenere** un libro resta scaricarlo. Sopra i risultati di una ricerca vedi da quando risale quello che stai guardando, e accanto c'è il comando per rifarla davvero.",
+      "cacheDesc": "Quello che guardi senza scaricarlo — le copertine nei risultati di ricerca, le copertine in Biblioteca, le risposte delle ricerche — non viene chiesto ogni volta alla biblioteca: Glossa lo tiene da parte. Serve a due cose: le copertine si vedono anche nell'applicazione installata, e una ricerca ripetuta non ripassa dalla rete. Questa roba non è tua: non conta come scaricata, non entra in un backup e viene buttata quando serve spazio, a partire da quella che non guardi da più tempo. Il tetto e la durata delle ricerche si cambiano in Impostazioni → Dati, dove si vede anche quanto occupa adesso e c'è il comando per svuotarla. Il modo di tenere un libro resta scaricarlo. Sopra i risultati di una ricerca vedi da quando risale quello che stai guardando, e accanto c'è il comando per rifarla davvero.",
       "backupTitle": "Il backup",
       "backupDesc": "Impostazioni → Archiviazione → Backup e ripristino salva un file con tutto quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto. Le immagini non ci sono ed è voluto — si riprendono dalla biblioteca — ma il file sa quali opere erano sul computer e a che misura, e al ripristino Glossa ti propone di riscaricarle. Il file è compresso e porta un'impronta: un backup interrotto a metà scrittura viene riconosciuto prima che il ripristino cominci. Il backup è di tutto Glossa, non di un workspace solo: il ripristino sostituisce ogni workspace presente adesso.",
       "librariesTitle": "Come Glossa tratta le biblioteche",
@@ -2068,14 +2080,16 @@
       "debug_counter": "Prova di sviluppo",
       "debug_restart_only": "Prova di sviluppo (da rifare)",
       "source_download": "Scaricamento pagine",
-      "vault_verification": "Verifica del deposito"
+      "vault_verification": "Verifica del deposito",
+      "image_optimization": "Ottimizzazione delle immagini"
     },
     "phase": {
       "starting": "avvio",
       "manifest": "lettura del manifesto",
       "downloading": "scaricamento",
       "checking_files": "controllo dei file",
-      "looking_for_orphans": "ricerca dei file orfani"
+      "looking_for_orphans": "ricerca dei file orfani",
+      "optimizing": "riduzione delle immagini"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
@@ -2091,13 +2105,21 @@
       "source_download": "pagine",
       "vault_verification": "verifica",
       "debug_counter": "prova",
-      "debug_restart_only": "prova"
+      "debug_restart_only": "prova",
+      "image_optimization": "ottimizzazione"
+    },
+    "error": {
+      "optimizationIncomplete_one": "Non è stato possibile ottimizzare una pagina.",
+      "optimizationIncomplete_other": "Non è stato possibile ottimizzare {{count}} pagine."
     },
     "detail": {
       "type": "tipo",
       "phase": "fase",
       "bytes": "scaricato",
       "unavailable": "non servite dalla biblioteca",
+      "shrunk": "pagine ridotte",
+      "skipped": "pagine non riuscite",
+      "freed": "spazio liberato",
       "unavailableShort_one": "{{count}} non servita",
       "unavailableShort_other": "{{count}} non servite",
       "cap": "misura scelta",

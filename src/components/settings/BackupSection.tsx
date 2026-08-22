@@ -9,14 +9,14 @@ import { markRestoreCheck } from '../../services/restoreFollowUp';
 import { logger } from '../../utils/logger';
 
 /**
- * Il backup del programma intero (#345, #407, D31).
+ * Il backup del programma intero (#345, #407).
  *
  * Sta qui, accanto alla cartella dei dati e al deposito, perché è dello stesso
  * genere: dove stanno le cose e come si rimettono a posto. Prima era dentro le
  * impostazioni del workspace, e diceva di salvare quel workspace mentre in
  * realtà salvava tutto.
  *
- * Il file non contiene le immagini (D31): al ripristino si propone di
+ * Il file non contiene le immagini: al ripristino si propone di
  * riprendere le opere che c'erano, altrimenti l'esclusione sarebbe una perdita
  * silenziosa.
  */

@@ -57,7 +57,7 @@ describe('limiti dei lavori', () => {
   });
 
   it('la rete ha un tetto più basso delle altre risorse', () => {
-    // Non per limitare l'utente: per non farlo bandire dalla biblioteca (D11).
+    // Non per limitare l'utente: per non farlo bandire dalla biblioteca.
     expect(limitCap('network')).toBeLessThan(limitCap('cpu'));
   });
 

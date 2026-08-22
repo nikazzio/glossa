@@ -306,7 +306,7 @@ export function SourceDiscoveryPanel() {
       })
       .catch(() => setProviders([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [setProviderKey]);
 
   const selectedProvider = providers.find((provider) => provider.key === providerKey);
   const cards = useMemo<SourceCard[]>(() => {

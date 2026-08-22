@@ -21,7 +21,7 @@
 //!
 //! Quello che sta qui **non è posseduto**: può sparire al prossimo giro di
 //! scarto, non è mai contato nella scheda di Biblioteca e non entra in un
-//! backup. Il modo di fissare una cosa è scaricarla nel deposito (D8).
+//! backup. Il modo di fissare una cosa è scaricarla nel deposito.
 
 pub mod commands;
 pub mod request;
@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 
 pub use request::CacheKey;
 
-/// Tetto predefinito, in byte (D8). Un manoscritto guardato a fondo lo esaurisce
+/// Tetto predefinito, in byte. Un manoscritto guardato a fondo lo esaurisce
 /// in una sessione: è voluto, e la schermata deve dire quanto occupa.
 pub const DEFAULT_MAX_BYTES: u64 = 512 * 1024 * 1024;
 /// Scadenza predefinita delle ricerche, in ore.

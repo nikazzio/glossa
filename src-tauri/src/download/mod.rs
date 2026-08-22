@@ -1,8 +1,8 @@
 //! Lo scaricamento delle fonti: il primo gestore di lavoro vero (#218, PR 4).
 //!
 //! Dal manifesto alle pagine sul disco, rispettando i limiti della biblioteca
-//! (D18), saltando ciò che è già valido, salvando dove si è arrivati e senza
-//! far entrare nel deposito niente che non sia stato validato (D16-bis).
+//!, saltando ciò che è già valido, salvando dove si è arrivati e senza
+//! far entrare nel deposito niente che non sia stato validato.
 
 pub mod catalog;
 pub mod courtesy;
@@ -25,6 +25,12 @@ use crate::jobs::JobRecord;
 /// Prefisso dell'identificativo del lavoro: **uno per digitalizzazione**.
 const JOB_ID_PREFIX: &str = "download";
 
+/// L'identificativo del lavoro che scarica una digitalizzazione: uno solo per
+/// opera, e chi deve sapere se quell'opera è in scaricamento lo cerca con questo.
+pub fn job_id(version_id: &str) -> String {
+    format!("{JOB_ID_PREFIX}:{version_id}")
+}
+
 /// È ciò che l'utente ha appena chiesto guardando lo schermo: la coda lo
 /// preferisce alle verifiche di fondo.
 const DOWNLOAD_PRIORITY: i64 = 10;
@@ -40,15 +46,11 @@ pub const MAX_THUMBNAIL_EDGE: u32 = 800;
 /// Mette in coda lo scaricamento di una digitalizzazione: le pagine, e da
 /// ognuna la sua miniatura.
 ///
-/// L'interfaccia non scarica niente: chiede un lavoro e poi osserva (D10). La
+/// L'interfaccia non scarica niente: chiede un lavoro e poi osserva. La
 /// priorità è alta perché è ciò che l'utente ha appena chiesto guardando lo
 /// schermo, e la coda deve preferirlo alle verifiche di fondo.
 ///
-/// **Un lavoro solo, non due** *(D6, corretta il 2026-08-16)*: le miniature non
-/// si chiedono più alla biblioteca, si ricavano dalla pagina appena scaricata.
-/// Ogni libro costava due richieste per pagina a servizi che rispondono fra 1 e
-/// 19 secondi; adesso ne costa una, e la miniatura qualche decina di
-/// millisecondi di processore.
+/// Le miniature vengono ricavate dalle pagine nello stesso lavoro.
 #[tauri::command]
 pub async fn enqueue_source_download(
     jobs: tauri::State<'_, JobsState>,
@@ -76,13 +78,13 @@ async fn enqueue(
     version_id: Option<String>,
     size_tag: Option<String>,
     // Da quale workspace è partita la richiesta: i fatti del lavoro ci si
-    // raggruppano sopra (D24), e senza restavano fuori da ogni conto.
+    // raggruppano sopra, e senza restavano fuori da ogni conto.
     workspace_id: Option<String>,
 ) -> Result<JobRecord, String> {
     let conn = jobs.0.connection()?;
 
     // Tentativi e attese sono del profilo della biblioteca, non costanti nostre
-    // (D16, D18): Gallica ne concede tre, le altre cinque. Il profilo è quello
+    // Gallica ne concede tre, le altre cinque. Il profilo è quello
     // **in vigore**, cioè con dentro le modifiche dell'utente (#421).
     let profile = crate::iiif::settings::effective_profile(
         &conn,
@@ -109,7 +111,7 @@ async fn enqueue(
     };
 
     // Il tetto lo decide la fonte, poi la biblioteca, poi l'impostazione
-    // generale (D4). Un valore chiesto esplicitamente — «scarica questa alla
+    // generale. Un valore chiesto esplicitamente — «scarica questa alla
     // massima risoluzione» — passa davanti a tutti, ma deve comunque essere un
     // tetto che significa qualcosa.
     let size_tag = match size_tag
@@ -126,7 +128,7 @@ async fn enqueue(
     let thumbnail_edge = thumbnail_edge(&conn)?;
 
     // Il nome dell'opera si scrive già adesso: in coda il pannello mostra
-    // questo, e «Scaricamento» da solo non dice quale libro (D20).
+    // questo, e «Scaricamento» da solo non dice quale libro.
     let title: Option<String> = conn
         .query_row(
             "SELECT s.title FROM sources s \
@@ -139,7 +141,7 @@ async fn enqueue(
     // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
     // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
     // voleva vedere.
-    let id = format!("{JOB_ID_PREFIX}:{version_id}");
+    let id = job_id(&version_id);
     let existing = crate::jobs::store::get(&conn, &id)?;
     drop(conn);
 
@@ -149,7 +151,7 @@ async fn enqueue(
         }
         // Un lavoro finito che si rilancia riparte **da capo**: il punto
         // salvato parla di pagine che nel frattempo possono essere state
-        // cancellate per liberare spazio (D6), e riprendendo da lì non
+        // cancellate per liberare spazio, e riprendendo da lì non
         // tornerebbero mai più. Le pagine ancora sul disco costano un controllo
         // a testa e vengono saltate lo stesso.
         jobs.0.retry(&id, true).await?;
@@ -183,7 +185,10 @@ async fn enqueue(
 /// Il lato lungo delle miniature, come lo dice l'impostazione. Un valore
 /// illeggibile o fuori scala non ferma lo scaricamento: si torna al
 /// predefinito, che è una misura che funziona sempre.
-fn thumbnail_edge(conn: &rusqlite::Connection) -> Result<u32, String> {
+/// Il lato lungo delle miniature scelto nelle impostazioni. Lo legge anche
+/// l'ottimizzazione locale: rifà le miniature, e devono venire della misura che
+/// l'utente ha scelto, non di quella predefinita.
+pub fn thumbnail_edge(conn: &rusqlite::Connection) -> Result<u32, String> {
     let configured = crate::jobs::store::read_setting(conn, THUMBNAIL_EDGE_SETTING)?
         .and_then(|value| value.trim().parse::<u32>().ok())
         .filter(|edge| (MIN_THUMBNAIL_EDGE..=MAX_THUMBNAIL_EDGE).contains(edge));

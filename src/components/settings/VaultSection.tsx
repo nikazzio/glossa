@@ -20,7 +20,7 @@ import { confirm } from '../../stores/confirmStore';
 import { humanSize } from '../../utils';
 
 /**
- * La cartella del deposito, distinta dalla cartella dati (D1).
+ * La cartella del deposito, distinta dalla cartella dati.
  *
  * Il database resta dov'è; le immagini e i documenti possono andare su un'altra
  * partizione, un disco esterno o una cartella sincronizzata. Separarli protegge
@@ -98,9 +98,9 @@ export function VaultSection() {
   };
 
   /**
-   * La verifica del deposito è un lavoro (D5-bis): si mette in coda e si guarda
+   * La verifica del deposito è un lavoro: si mette in coda e si guarda
    * nel pannello, come tutto il resto. Quella completa apre ogni file, quindi su
-   * un deposito sincronizzato costringe il client a scaricare tutto (D1-bis) —
+   * un deposito sincronizzato costringe il client a scaricare tutto —
    * per questo è una voce a parte e non il comportamento predefinito.
    */
   const startVerification = async (full: boolean) => {
@@ -118,7 +118,7 @@ export function VaultSection() {
   };
 
   /**
-   * Cancella i file che nessuna opera reclama (D5-bis).
+   * Cancella i file che nessuna opera reclama.
    *
    * Il conto mostrato è quello dell'ultimo controllo; il backend riguarda il
    * deposito adesso e dice quanti ne ha tolti davvero, che può essere di meno:
@@ -165,7 +165,7 @@ export function VaultSection() {
       if (!choice) return;
       if (!choice.adopted) {
         // Cartella con altro contenuto o non scrivibile: si rifiuta, invece di
-        // riversarci dentro migliaia di file (D1).
+        // riversarci dentro migliaia di file.
         toast.error(
           choice.writable
             ? t('settings.storage.vault.folderNotEmpty')
@@ -244,7 +244,7 @@ export function VaultSection() {
               <p className="mt-1 break-all font-mono text-sm text-editorial-ink">{status?.path}</p>
               {status && !status.reachable && (
                 // Disco staccato o cartella non ancora sincronizzata: è un caso
-                // diverso da "i file non ci sono" (D1), e va detto così.
+                // diverso da "i file non ci sono", e va detto così.
                 <p className="mt-2 flex items-center gap-2 text-sm text-editorial-warning">
                   <AlertTriangle size={13} className="shrink-0" />
                   {t('settings.storage.vault.unreachable')}

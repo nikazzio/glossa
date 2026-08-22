@@ -3,11 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryCatalogArea } from './LibraryCatalogArea';
 import { deleteVersionFiles } from '../../services/vaultService';
+import { toast } from 'sonner';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
+import { enqueueOptimization } from '../../services/optimizeService';
 import '../../test/i18n-mock';
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
@@ -46,6 +56,10 @@ vi.mock('../../services/jobsService', async (importOriginal) => {
   return { ...actual, enqueueSourceDownload: vi.fn() };
 });
 
+vi.mock('../../services/optimizeService', () => ({
+  enqueueOptimization: vi.fn(),
+}));
+
 const entry = (
   overrides: Partial<import('../../types').LibraryCatalogEntry> = {},
 ): import('../../types').LibraryCatalogEntry => ({
@@ -76,6 +90,8 @@ const entry = (
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
+    vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
+    vi.mocked(enqueueOptimization).mockReset();
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     // La coda è globale: un lavoro lasciato da un altro test farebbe comparire
@@ -109,7 +125,7 @@ describe('LibraryCatalogArea', () => {
 
   it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
     // 308 sul disco su 328 dichiarate, venti che il server non ha mai servito:
-    // non è un lavoro a metà, e riscaricarle non le farebbe comparire (§5.3).
+    // non è un lavoro a metà, e riscaricarle non le farebbe comparire.
     useSourceLibraryStore.setState({
       catalog: [
         entry({
@@ -124,6 +140,31 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+  });
+
+  it('accoda subito l’ottimizzazione e mostra il lavoro', async () => {
+    vi.mocked(enqueueOptimization).mockResolvedValue({
+      id: 'optimize:v1:2000',
+      jobType: 'image_optimization',
+      status: 'queued',
+      priority: 5,
+    } as never);
+    useSourceLibraryStore.setState({
+      catalog: [entry({
+        localPages: 34,
+        localBytes: 48_234_496,
+        principalSize: '2000',
+        sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0 }],
+      })],
+    });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.optimizeAction' }));
+
+    await waitFor(() => expect(enqueueOptimization).toHaveBeenCalledWith('v1', '2000'));
+    expect(useJobsStore.getState().jobs).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'optimize:v1:2000' })]),
+    );
   });
 
   it('le pagine rifiutate di un altra misura non fanno sembrare completo un libro che non lo è', () => {
@@ -214,7 +255,7 @@ describe('LibraryCatalogArea', () => {
 
   it('togliendo un opera si eliminano anche le sue immagini', async () => {
     // Lasciarle dietro produceva cartelle che nessuna schermata sa mostrare, e
-    // che riaggiungendo la stessa opera non tornerebbero comunque utili (D6).
+    // che riaggiungendo la stessa opera non tornerebbero comunque utili.
     const user = userEvent.setup();
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
@@ -224,6 +265,17 @@ describe('LibraryCatalogArea', () => {
     await waitFor(() =>
       expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
     );
+  });
+
+  it('non rimuove i file mentre un lavoro li sta modificando', async () => {
+    const user = userEvent.setup();
+    vi.mocked(deleteVersionFiles).mockRejectedValue(new Error('version_work_in_progress'));
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
+    render(<LibraryCatalogArea />);
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith('areas.library.filesBusy'));
   });
 
   it('offre lo scaricamento e la rimozione per ogni fonte', () => {
@@ -258,7 +310,7 @@ describe('LibraryCatalogArea', () => {
   });
 
   it('una fonte senza chiave della biblioteca usa il profilo prudente', async () => {
-    // Nessuna fonte resta senza politica di rete (D18): `generic` è nel
+    // Nessuna fonte resta senza politica di rete: `generic` è nel
     // registro e porta il profilo prudente.
     const { enqueueSourceDownload } = await import('../../services/jobsService');
     vi.mocked(enqueueSourceDownload).mockResolvedValue({ id: 'download:v1' } as never);

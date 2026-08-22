@@ -90,7 +90,7 @@ interface UiState {
   /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
   showConsoleDrawer: boolean;
   /**
-   * Quale scheda mostra il pannello in basso (D20): i messaggi dell'app o i
+   * Quale scheda mostra il pannello in basso: i messaggi dell'app o i
    * lavori in background. Log e lavori sono le due facce della stessa domanda,
    * "cosa sta facendo il programma", quindi stanno nello stesso posto.
    */

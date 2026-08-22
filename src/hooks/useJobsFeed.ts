@@ -3,11 +3,11 @@ import { useJobsStore } from '../stores/jobsStore';
 
 /**
  * Collega l'interfaccia all'orchestratore: l'elenco arriva una volta
- * all'apertura, poi ogni cambiamento arriva come evento (D17).
+ * all'apertura, poi ogni cambiamento arriva come evento.
  *
  * Va montato una sola volta, in cima all'applicazione: i lavori non
  * appartengono a nessuna schermata — uno scaricamento parte dalla Biblioteca e
- * continua mentre lavori altrove (D19).
+ * continua mentre lavori altrove.
  */
 export function useJobsFeed() {
   useEffect(() => {

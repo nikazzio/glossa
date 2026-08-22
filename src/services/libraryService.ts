@@ -72,7 +72,7 @@ interface CatalogRow extends SourceRow {
  *
  * Le pagine presenti si contano guardando il deposito, non uno stato scritto a
  * parte: la disponibilità è un fatto che si osserva, non una bandierina da
- * tenere aggiornata (D7, §5.4).
+ * tenere aggiornata.
  *
  * Il catalogo mostra **sempre tutti i libri** (#213): la Biblioteca è un
  * catalogo, non la vista di un workspace. A quali workspace appartiene un libro
@@ -91,7 +91,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   );
 
   // Quante pagine ci sono e quanto occupano lo dice il **deposito**, non il
-  // database: le pagine non hanno più una riga a testa (§5.4). Una lettura
+  // database: le pagine non hanno più una riga a testa. Una lettura
   // sola per tutta la Biblioteca.
   const inventory = await libraryInventory();
   const byVersion = new Map(inventory.map((entry) => [entry.versionId, entry]));
@@ -120,7 +120,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       localPages: found ? principalPages(found) : 0,
       localBytes: found ? inventoryBytes(found) : 0,
       // Le misure presenti: servono a distinguere «completo a 2000, più tre a
-      // piena risoluzione» da «libro incompleto» (§5.4, §5.6).
+      // piena risoluzione» da «libro incompleto».
       sizes: found?.sizes ?? [],
       // Quale è la principale lo dice il deposito: la finestra non la indovina.
       principalSize: found?.principal ?? null,
@@ -139,7 +139,7 @@ interface SourceMetadata {
   date: string | null;
   /**
    * Chiave della biblioteca nel registro dei provider: porta con sé il profilo
-   * di rete (D18) e nomina la cartella nel deposito (D2). **Non** è
+   * di rete e nomina la cartella nel deposito. **Non** è
    * `external_ref`, che è chiave *e* identificativo insieme e come componente di
    * percorso verrebbe rifiutata.
    */
@@ -183,7 +183,7 @@ function parseMetadata(raw: string | null): SourceMetadata {
  * Toglie una fonte dalla Biblioteca. Le versioni, gli asset e i collegamenti ai
  * workspace se ne vanno con lei (il database li lega in cascata).
  *
- * **I file sul disco non li tocca**: cancellarli è "libera spazio" (D6), che è
+ * **I file sul disco non li tocca**: cancellarli è "libera spazio", che è
  * un'azione diversa e va chiesta a parte, perché qui si sta rinunciando alla
  * scheda, non ai gigabyte.
  */

@@ -116,7 +116,7 @@ describe('quello che resta di una chiamata a un modello', () => {
   });
 
   it('rieseguire lo stesso stadio sostituisce il fatto invece di accumularne uno', async () => {
-    // L'identità è frammento più stadio (D27): i tentativi non si contano qui.
+    // L'identità è frammento più stadio: i tentativi non si contano qui.
     const first = factId({
       eventType: 'model.call',
       entityType: 'translation_chunk',

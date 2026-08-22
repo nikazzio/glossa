@@ -83,8 +83,43 @@ describe('pannello dei lavori', () => {
     expect(screen.getByText('connessione caduta')).toBeInTheDocument();
   });
 
+  it('un’ottimizzazione parziale mostra il conteggio e un errore leggibile', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        jobType: 'image_optimization',
+        status: 'error',
+        error: 'optimization_incomplete:2',
+        detail: '{"shrunk":3,"skipped":2}',
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('jobs.detail.skipped')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('jobs.error.optimizationIncomplete')).toBeInTheDocument();
+  });
+
+  it('un’ottimizzazione conclusa mostra lo spazio liberato', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        jobType: 'image_optimization',
+        status: 'completed',
+        progress: 1,
+        detail: '{"units":{"done":3,"total":3,"label":"items"},"shrunk":3,"skipped":0,"freed":8200000}',
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('jobs.detail.freed')).toBeInTheDocument();
+    expect(screen.getByText('8 MB')).toBeInTheDocument();
+  });
+
   it('un lavoro fermo in attesa di riprovare non è mostrato come errore', () => {
-    // Stessa immobilità, significato opposto (D17).
+    // Stessa immobilità, significato opposto.
     renderPanel([job({ status: 'queued', nextAttemptAt: '2026-08-13 10:00:00', etaSeconds: 480 })]);
 
     expect(screen.getByText('jobs.retryingIn')).toBeInTheDocument();
@@ -126,7 +161,7 @@ describe('attesa per i limiti della biblioteca', () => {
   });
 
   it('un lavoro fermo per i limiti non è un errore e non anima la barra', () => {
-    // Con i profili tarati può restare immobile per minuti (D18): dirlo
+    // Con i profili tarati può restare immobile per minuti: dirlo
     // «errore» farebbe rinunciare a uno scaricamento che sta procedendo.
     renderPanel([job({ status: 'running', waitingReason: 'libraryLimits', progress: 0.4 })]);
 

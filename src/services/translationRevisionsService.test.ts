@@ -79,7 +79,7 @@ describe('storico delle traduzioni', () => {
 
   it('approvando senza cambiare niente il fatto si registra lo stesso', async () => {
     // Accettare è un giudizio: registrare solo le correzioni produrrebbe un
-    // insieme sbilanciato verso gli errori (D22).
+    // insieme sbilanciato verso gli errori.
     selectMock.mockResolvedValue([modelRevision]);
 
     await approveTranslation('c1', 'Beato l uomo', 'w1');
@@ -91,7 +91,7 @@ describe('storico delle traduzioni', () => {
 
   it('approvare due revisioni diverse lascia due fatti distinti', async () => {
     // Senza la revisione nell'identità, approvare la seconda sostituirebbe la
-    // storia della prima invece di continuarla (D27).
+    // storia della prima invece di continuarla.
     const first = factId({
       eventType: EVENT_APPROVED,
       entityType: 'translation_chunk',

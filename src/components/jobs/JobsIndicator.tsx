@@ -6,7 +6,7 @@ import { summarizeJobs, useJobsStore } from '../../stores/jobsStore';
 import { useUiStore } from '../../stores/uiStore';
 
 /**
- * Lo stato dei lavori in barra (D19).
+ * Lo stato dei lavori in barra.
  *
  * **Non è un pulsante**: nella barra di stato gli elementi sono testo e icone
  * cliccabili, senza contorno — il contorno lo hanno solo i comandi veri, e qui
@@ -17,7 +17,7 @@ import { useUiStore } from '../../stores/uiStore';
  * sta girando — arriva al passaggio del mouse.
  *
  * Quando tutto è fermo per rispettare i limiti di una biblioteca l'icona **non
- * gira**: animare un'attesa la farebbe leggere come avanzamento (D17).
+ * gira**: animare un'attesa la farebbe leggere come avanzamento.
  */
 export function JobsIndicator() {
   const { t } = useTranslation();

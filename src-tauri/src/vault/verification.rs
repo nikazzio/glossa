@@ -1,4 +1,4 @@
-//! La verifica del deposito come lavoro (D5-bis; D5 modificata dal piano §5.4).
+//! Verifica rapida e completa del deposito come lavoro persistente.
 //!
 //! **Il disco è la verità**: l'elenco da controllare si ricava camminando le
 //! cartelle di misura, non interrogando il database. Le impronte stanno nel file
@@ -16,7 +16,7 @@
 //! quando è arrivato era già stato validato.
 //!
 //! Orfano è una **cartella di digitalizzazione che il database non conosce
-//! più** (D5-bis): nell'uso normale si ignora, ma occupa spazio e nessuno la
+//! più**: nell'uso normale si ignora, ma occupa spazio e nessuno la
 //! reclamerà mai.
 //!
 //! Due livelli, perché costano diversamente:
@@ -24,9 +24,9 @@
 //! - **rapido**: il file c'è o non c'è. Millisecondi anche per un manoscritto;
 //! - **completo**: si apre ogni file, si valida e si ricalcola l'impronta. Lento
 //!   in proporzione ai gigabyte, e su un deposito sincronizzato in streaming
-//!   costringe il client a scaricare tutto (D1-bis).
+//!   costringe il client a scaricare tutto.
 //!
-//! **Non corregge niente da solo** (D5, D5-bis): constata e riferisce.
+//! **Non corregge niente da solo**: constata e riferisce.
 
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -64,7 +64,7 @@ pub struct Report {
 }
 
 impl Report {
-    /// Il resoconto in quattro categorie (D5-bis), come lo legge il pannello.
+    /// Il resoconto in quattro categorie, come lo legge il pannello.
     pub fn message(&self) -> String {
         format!(
             "integri {} · mancanti {} · corrotti {} · orfani {}",
@@ -92,9 +92,6 @@ pub struct VaultVerificationJob;
 #[async_trait]
 impl JobHandler for VaultVerificationJob {
     fn resource_class(&self) -> ResourceClass {
-        // Il primo lavoro pesante per il processore e non per la rete: è anche
-        // il motivo per cui D5-bis lo vuole, perché prova che i limiti separati
-        // di D11 funzionano davvero.
         ResourceClass::Cpu
     }
 
@@ -112,7 +109,7 @@ impl JobHandler for VaultVerificationJob {
             .vault_root()
             .await
             .map_err(|error| JobError::new(ErrorKind::Storage, error))?;
-        // Radice assente non è «tutti i file mancanti» (D1): si dichiara il
+        // Radice assente non è «tutti i file mancanti»: si dichiara il
         // deposito non raggiungibile e non si tocca nessuno stato.
         if !root.is_dir() {
             return Err(JobError::new(
@@ -150,7 +147,7 @@ impl JobHandler for VaultVerificationJob {
                     // non dicono niente su quello che c'è in mezzo, e un file
                     // marcito dentro passerebbe per integro. Senza impronta
                     // registrata non c'è confronto da fare, e la pagina si
-                    // conta come intatta invece che come corrotta (§5.4).
+                    // conta come intatta invece che come corrotta.
                     integrity::Validation::Valid => match (&file.checksum, &scan.checksum) {
                         (Some(expected), Some(found)) if expected != found => {
                             log::warn!(
@@ -315,7 +312,7 @@ pub struct Orphan {
 /// appartiene a chi l'ha prodotta.
 ///
 /// Restituisce l'elenco e non solo il conto perché lo usa anche la
-/// cancellazione (D5-bis).
+/// cancellazione.
 ///
 /// **Un elenco vuoto di digitalizzazioni conosciute non rende orfano tutto il
 /// deposito.** Un database appena creato, un ripristino interrotto a metà o una
@@ -412,8 +409,6 @@ mod tests {
 
     #[test]
     fn the_report_says_all_four_categories() {
-        // D5-bis vuole le quattro categorie insieme: dirne tre lascia credere
-        // che la quarta sia zero.
         let report = Report {
             intact: 198,
             missing: 12,
@@ -431,8 +426,7 @@ mod tests {
     #[test]
     fn a_file_rotten_inside_is_not_intact() {
         // Firma e terminatore restano al loro posto: solo il confronto con
-        // l'impronta registrata quando il file è arrivato può accorgersene
-        // (D5).
+        // l'impronta registrata quando il file è arrivato può accorgersene.
         let dir = std::env::temp_dir().join("glossa_verification_checksum");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();

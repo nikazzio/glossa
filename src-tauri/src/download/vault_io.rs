@@ -1,6 +1,6 @@
 //! Le tre operazioni che portano un file dentro il deposito, e nient'altro.
 //!
-//! Transito → validazione → spostamento atomico (D16-bis): un file parziale non
+//! Transito → validazione → spostamento atomico: un file parziale non
 //! entra mai nel deposito, quindi l'annullamento non deve ripulire niente e una
 //! ripresa può fidarsi della sola presenza del file senza rileggerlo.
 
@@ -52,7 +52,7 @@ pub(crate) fn stage_and_promote(
 }
 
 /// Butta l'area di transito. Si chiama su **ogni** uscita, non solo a lavoro
-/// finito (D15): lì dentro c'è solo roba mai promossa.
+/// finito: lì dentro c'è solo roba mai promossa.
 pub(crate) fn discard(staging: &Path) {
     if let Err(error) = std::fs::remove_dir_all(staging) {
         if error.kind() != std::io::ErrorKind::NotFound {

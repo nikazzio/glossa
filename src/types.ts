@@ -117,7 +117,7 @@ export interface AddSourceToLibraryInput {
   thumbnailUrl: string | null;
   language: string | null;
   subjects: string[];
-  /** Da quale biblioteca viene: è un fatto che non cambia mai (D2). */
+  /** Da quale biblioteca viene: è un fatto che non cambia mai. */
   providerKey: string | null;
   /** Identificativo dell'opera presso quella biblioteca. */
   externalId: string | null;
@@ -152,11 +152,11 @@ export interface LibraryCatalogEntry {
   expectedPages: number | null;
   /** Pagine davvero presenti sul computer. */
   localPages: number;
-  /** Quanto occupano quelle pagine: serve alla conferma di «libera spazio» (D6). */
+  /** Quanto occupano quelle pagine: serve alla conferma di «libera spazio». */
   localBytes: number;
   /**
    * Le cartelle di misura presenti nel deposito. La principale è quella con cui
-   * il libro è stato scaricato; le altre sono pagine prese a parte (§5.6), e
+   * il libro è stato scaricato; le altre sono pagine prese a parte, e
    * distinguerle evita di chiamare incompleto un libro che non lo è.
    */
   sizes: { sizeTag: string; pages: number; bytes: number; missing: number }[];
@@ -173,7 +173,7 @@ export interface LibraryCatalogEntry {
   workspaces: { workspaceId: string; workspaceName: string; isOrigin: boolean }[];
   /**
    * Chiave della biblioteca nel registro dei provider: decide il profilo di rete
-   * dello scaricamento (D18) e la cartella nel deposito (D2).
+   * dello scaricamento e la cartella nel deposito.
    */
   providerKey: string | null;
 }

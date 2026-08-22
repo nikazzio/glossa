@@ -1,16 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
 
-/**
- * La misura delle pagine (#422) e i profili di rete (#421). Decisioni D4, D11
- * e D18.
- *
- * **Un profilo è un ritmo, non una biblioteca**: i valori tarati sul campo
- * sono pochi e si applicano a undici biblioteche, che scelgono quale seguire.
- *
- * La misura ha due livelli: **l'opera**, dove la decisione la vuole perché
- * dipende dal materiale, e **l'impostazione generale**.
- */
+/** Impostazioni per dimensioni delle immagini e profili di rete. */
 
 const SIZE_CAP_KEY = 'download_size_cap';
 const THUMBNAIL_EDGE_KEY = 'thumbnail_long_edge';
@@ -29,7 +20,7 @@ export const THUMBNAIL_EDGES = [200, 300, 400, 600] as const;
 export const DEFAULT_THUMBNAIL_EDGE = 300;
 
 /**
- * Il tetto non superabile sulle richieste insieme verso una biblioteca (D11):
+ * Il tetto non superabile sulle richieste insieme verso una biblioteca:
  * dipende dal loro server, non dalla potenza del computer. Il backend lo
  * applica di nuovo dove i valori si usano — questo è solo il menu.
  */
@@ -148,7 +139,7 @@ export async function setLibraryProfile(libraryKey: string, profileId: string): 
   );
 }
 
-/** La misura scelta per la singola opera, quando c'è (D4). */
+/** La misura scelta per la singola opera, quando c'è. */
 export async function getVersionSizeCap(versionId: string): Promise<string | null> {
   return knownSizeCap(await invoke<string | null>('get_version_size_cap', { versionId }));
 }

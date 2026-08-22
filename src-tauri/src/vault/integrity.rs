@@ -1,8 +1,8 @@
-//! Impronte e validazione dei file del deposito (D3, D16-bis).
+//! Impronte e validazione dei file del deposito.
 //!
 //! L'impronta serve a **una cosa sola**: verificare che un file sia arrivato
 //! intero. Non si usa per riconoscere duplicati — quel caso, con la
-//! disposizione per provenienza di D2, non si presenta.
+//! disposizione per provenienza del deposito, non si presenta.
 
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -24,7 +24,7 @@ const HEAD_BYTES: usize = 8;
 const TAIL_BYTES: usize = 8;
 
 /// Esito della validazione di un file appena scaricato, prima della promozione
-/// dall'area di transito al deposito (D16-bis).
+/// dall'area di transito al deposito.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Validation {
     Valid,
@@ -59,12 +59,12 @@ pub struct FileScan {
 
 /// Legge il file **una volta sola** e ne ricava insieme impronta e validità.
 ///
-/// La verifica completa (D5) gira su gigabyte: leggere ogni pagina due volte —
+/// La verifica completa gira su gigabyte: leggere ogni pagina due volte —
 /// una per validarla, una per l'impronta — raddoppierebbe l'unica operazione
 /// del deposito che l'utente aspetta davvero. Della struttura servono solo i
 /// primi e gli ultimi byte, che si tengono da parte scorrendo.
 ///
-/// La validazione è **per decodifica, non per dimensione** (D16-bis): un file
+/// La validazione è **per decodifica, non per dimensione**: un file
 /// troncato ha la dimensione dichiarata dai metadati HTTP e fallisce qui.
 /// È la verifica strutturale minima — firma riconosciuta e terminatore al posto
 /// giusto — che coglie il troncamento, il caso reale prodotto da uno

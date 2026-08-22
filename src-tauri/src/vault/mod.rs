@@ -1,9 +1,9 @@
-//! Il deposito: dove vivono i file scaricati dalle biblioteche (D1, D2).
+//! Il deposito: dove vivono i file scaricati dalle biblioteche.
 //!
 //! Il database resta nella cartella dati; il deposito è configurabile a parte,
 //! così i gigabyte possono stare su un'altra partizione, un disco esterno o una
 //! cartella sincronizzata senza portarci anche SQLite, che su una cartella
-//! sincronizzata si corrompe (D1-bis).
+//! sincronizzata si corrompe.
 
 pub mod commands;
 pub mod integrity;
@@ -15,13 +15,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Riconosce un deposito Glossa e impedisce di riversare migliaia di file in
-/// una cartella scelta per errore (D1).
+/// una cartella scelta per errore.
 const MARKER_FILE: &str = ".glossa-vault";
 const MARKER_CONTENT: &str = "glossa-vault v1\n";
 /// Nome della cartella predefinita, dentro la cartella dati.
 const DEFAULT_DIR: &str = "vault";
 
-/// Cosa può contenere una cartella candidata a diventare deposito (D1, punto 3).
+/// Classificazione di una cartella candidata a deposito.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FolderKind {
@@ -40,7 +40,7 @@ pub struct VaultStatus {
     pub path: String,
     /// Falso quando la radice non esiste: disco staccato, condivisione non
     /// montata, cartella cloud non ancora sincronizzata. **Caso diverso da
-    /// singolo file mancante** (D1, D5): con la radice assente gli stati non si
+    /// singolo file mancante**: con la radice assente gli stati non si
     /// toccano e nessuno riscarica niente.
     pub reachable: bool,
     /// Vero quando il deposito sta dentro la cartella dati, cioè nessuno ha
@@ -66,7 +66,7 @@ pub fn resolve_root(app: &tauri::AppHandle, configured: Option<&str>) -> Result<
 }
 
 /// Stato del deposito. Non scandisce niente: una sola chiamata al filesystem,
-/// perché all'avvio serve sapere solo se la radice c'è (D5).
+/// perché all'avvio serve sapere solo se la radice c'è.
 pub fn status(app: &tauri::AppHandle, configured: Option<&str>) -> Result<VaultStatus, String> {
     let root = resolve_root(app, configured)?;
     let is_default = configured
@@ -94,7 +94,7 @@ pub fn ensure_root(root: &Path) -> Result<(), String> {
 
 /// Butta quello che una chiusura brusca ha lasciato nell'area di transito.
 ///
-/// Lì dentro c'è **solo** roba non ancora promossa (D16-bis): un file che ha
+/// Lì dentro c'è **solo** roba non ancora promossa: un file che ha
 /// superato la validazione è già nel deposito, e uno che non l'ha superata non
 /// serve a nessuno. Un lavoro ripreso riscarica quella pagina e basta.
 ///
@@ -131,7 +131,7 @@ pub fn discard_stale_staging(root: &Path) -> usize {
     discarded
 }
 
-/// Classifica una cartella candidata (D1). Il marcatore distingue un deposito
+/// Classifica una cartella candidata. Il marcatore distingue un deposito
 /// da ricollegare da una cartella qualunque piena di roba altrui.
 pub fn classify_folder(candidate: &Path) -> Result<FolderKind, String> {
     if !candidate.exists() {
@@ -153,7 +153,7 @@ pub fn classify_folder(candidate: &Path) -> Result<FolderKind, String> {
 }
 
 /// Quanti file contiene una cartella e quanto pesano. Serve a dire quanto
-/// spazio libera un'operazione prima di eseguirla (D6, D30).
+/// spazio libera un'operazione prima di eseguirla.
 ///
 /// File e byte si contano nella **stessa** camminata: su una digitalizzazione
 /// di migliaia di pagine, e ancora di più su un deposito di rete, ogni passata
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn what_a_brutal_shutdown_left_in_the_staging_area_is_thrown_away() {
-        // Lì dentro c'è solo roba mai promossa (D16-bis): tenerla non serve a
+        // Lì dentro c'è solo roba mai promossa: tenerla non serve a
         // nessuno, e un lavoro ripreso riscarica quella pagina.
         let root = std::env::temp_dir().join("glossa_staging_cleanup");
         let _ = fs::remove_dir_all(&root);

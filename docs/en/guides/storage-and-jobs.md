@@ -188,6 +188,35 @@ libraries do fix things.
 larger version of three pages, the record says «plus 3 at full resolution» next to
 the count, instead of making the book look half-finished.
 
+## Shrinking images to free up space
+
+A book downloaded at full resolution takes three times more room than it needs.
+One downloaded months ago with a higher cap than you need now holds detail you
+never look at. In both cases **cleaning up beats downloading again**, because the
+library does not pay the price for it.
+
+On the work's record, in the Library, a command reads the downloaded pages again,
+shrinks them to the chosen size and recompresses them, replacing the original.
+
+**It is irreversible: the original is replaced.** The command queues the job
+immediately. It works on **one size at a time**: the one the book was downloaded at.
+Pages you deliberately took at full resolution are left as they are.
+
+On a long book it runs for minutes, so it is a job like a download: you follow it
+from the panel at the bottom right, and you can pause or cancel it. Pages already
+smaller than the chosen size are not touched, because recompressing them would
+lose something without freeing anything.
+
+While it runs, the panel says how many pages it has shrunk and how much room it has freed; the value remains on the completed job. Target size and quality are chosen in **Settings → Downloads**.
+
+If a page cannot be read or rewritten, the job ends in error instead of hiding it: its
+details keep the number of unprocessed pages, while successful pages remain
+safely stored.
+
+While a download or optimisation can still change a work, commands that free
+its space or remove it are refused. Let the job finish or cancel it first;
+pausing is not enough.
+
 ## The backup
 
 **Settings → Storage → Backup and restore** saves a file with everything that

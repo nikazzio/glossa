@@ -105,7 +105,7 @@ impl JobHandler for CounterJob {
 }
 
 /// Un tipo di lavoro **senza punti intermedi affidabili**: alla riapertura
-/// torna in coda da capo, non in pausa (D13). Serve a provare l'altro ramo del
+/// torna in coda da capo, non in pausa. Serve a provare l'altro ramo del
 /// recupero, che lo scaricamento non userà ma la generazione di documenti sì.
 pub struct RestartOnlyJob;
 

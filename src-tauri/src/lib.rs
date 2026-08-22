@@ -9,6 +9,7 @@ mod images;
 mod jobs;
 mod keystore;
 mod llm;
+mod optimize;
 mod provenance;
 mod storage_config;
 mod vault;
@@ -74,13 +75,13 @@ pub fn run() {
 
             // Il deposito predefinito esiste dal primo avvio: altrimenti la
             // sua cartella risulterebbe "non raggiungibile" solo perché non è
-            // ancora stata creata (D1).
+            // ancora stata creata.
             if let Err(error) = vault::commands::ensure_default_root(app.handle()) {
                 log::error!("default vault not created: {error}");
             }
 
             // I ritmi di rete che nascono con l'applicazione, presi dal
-            // registro dei provider (D18). Senza, la prima apertura non
+            // registro dei provider. Senza, la prima apertura non
             // avrebbe nessun profilo da applicare.
             if let Err(error) = crate::storage_config::db_path(app.handle())
                 .and_then(|path| db::open_connection(&path))
@@ -97,7 +98,7 @@ pub fn run() {
             app.manage(std::sync::Arc::new(download::courtesy::Courtesy::new()));
 
             // La cache di ciò che viene dalla rete: cartella a sé nella cartella
-            // dati, mai nel deposito (D8). Il deposito conserva ciò che è stato
+            // dati, mai nel deposito. Il deposito conserva ciò che è stato
             // scaricato di proposito; questa si può cancellare in qualsiasi
             // momento senza conseguenze.
             match crate::storage_config::resolve_data_dir(app.handle()) {
@@ -109,9 +110,9 @@ pub fn run() {
                 Err(error) => log::error!("cache not available: {error}"),
             }
 
-            // L'orchestratore dei lavori parte con l'applicazione (D10) e per
+            // L'orchestratore dei lavori parte con l'applicazione e per
             // prima cosa rimette in ordine ciò che una chiusura brusca ha
-            // lasciato a metà (D13). Un errore qui non deve impedire l'avvio:
+            // lasciato a metà. Un errore qui non deve impedire l'avvio:
             // senza coda l'app resta usabile, senza finestra no.
             if let Err(error) = jobs::commands::start(app.handle()) {
                 log::error!("jobs engine did not start: {error}");
@@ -199,6 +200,7 @@ pub fn run() {
             download::enqueue_source_download,
             download::inventory::version_inventory,
             download::inventory::library_inventory,
+            optimize::commands::enqueue_optimization,
             documents::import_document,
             documents::export_markdown_docx,
             vector::vec_ping,

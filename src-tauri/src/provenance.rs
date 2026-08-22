@@ -1,4 +1,4 @@
-//! Il registro dei fatti (#378, decisioni D23-D29).
+//! Registro append-only dei fatti e delle metriche derivate.
 //!
 //! Tre registri con tre nature diverse, e la regola per smistarli:
 //!
@@ -9,9 +9,9 @@
 //! | è un valore calcolato dopo, ricalcolabile | `derived_metrics` |
 //!
 //! Qui si scrive il primo: **append-only, mai cancellato automaticamente**
-//! (D28). Un fatto non si modifica — è successo.
+//! Un fatto non si modifica — è successo.
 //!
-//! **Niente lascia la macchina** (D26): nessuna telemetria esterna, nemmeno
+//! **Niente lascia la macchina**: nessuna telemetria esterna, nemmeno
 //! anonima, nemmeno facoltativa.
 
 use rusqlite::{params, Connection};
@@ -32,7 +32,7 @@ pub mod event_type {
 /// Un fatto da registrare.
 ///
 /// I campi che l'area Analisi raggrupperà — momento, tipo, entità, esito,
-/// durata, modello, token, costo — sono colonne e non JSON (D24): dentro un
+/// durata, modello, token, costo — sono colonne e non JSON: dentro un
 /// campo JSON quelle interrogazioni funzionano ma non si indicizzano, e un
 /// pannello che legge decine di migliaia di righe diventa lento proprio quando
 /// finalmente ci sono abbastanza dati per essere interessante.
@@ -53,7 +53,7 @@ pub struct Event {
     /// in pausa.
     pub duration_ms: Option<i64>,
     pub error_kind: Option<String>,
-    /// Impronta di ciò che l'evento ha visto e di ciò che ha prodotto (D25):
+    /// Impronta di ciò che l'evento ha visto e di ciò che ha prodotto:
     /// il riferimento dice cosa c'è **adesso**, l'impronta cosa c'era
     /// **allora**.
     pub input_hash: Option<String>,
@@ -63,17 +63,16 @@ pub struct Event {
     /// Che cosa rende **distinto** questo fatto dagli altri dello stesso tipo
     /// sulla stessa entità, quando il tipo da solo non basta: la revisione
     /// approvata, per esempio. Vuoto per i fatti dei lavori, dove il tipo è
-    /// già l'unica cosa che li distingue (D27).
+    /// già l'unica cosa che li distingue.
     pub key_ref: Option<String>,
 }
 
 impl Event {
     /// Un fatto del ciclo di vita di un lavoro. È il caso che riguarda tutti i
     /// gestori, e per questo non lo scrive nessuno di loro: lo scrive il
-    /// motore (D29).
+    /// motore.
     ///
-    /// Il workspace viene dal lavoro: senza, D24 non potrebbe raggruppare per
-    /// workspace e D28 non potrebbe cancellare quello che gli appartiene.
+    /// Il workspace associato al lavoro al momento dell'evento.
     pub fn for_job(
         event_type: &str,
         job_id: &str,
@@ -99,7 +98,7 @@ impl Event {
 }
 
 /// L'identificativo di un evento, **derivato in modo deterministico** da
-/// lavoro, entità e tipo (D27).
+/// lavoro, entità e tipo.
 ///
 /// Serve perché un lavoro ritentato riesegue lo stesso passo: senza, un
 /// manoscritto scaricato dopo tre tentativi risulterebbe scaricato tre volte e
@@ -122,7 +121,7 @@ pub fn event_id(event: &Event) -> String {
 }
 
 /// Impronta stabile fra un'esecuzione e l'altra: FNV-1a a 64 bit, non
-/// crittografica (D3). Serve a dire «era questo» e a riconoscere che qualcosa
+/// crittografica. Serve a dire «era questo» e a riconoscere che qualcosa
 /// è cambiato, non a resistere a una manomissione.
 pub fn fnv1a_hex(text: &str) -> String {
     const FNV_PRIME: u64 = 0x0000_0100_0000_01B3;
@@ -133,8 +132,7 @@ pub fn fnv1a_hex(text: &str) -> String {
     format!("{hash:016x}")
 }
 
-/// Scrive un fatto. Riscrivere lo stesso evento **non duplica: sostituisce**
-/// (D27).
+/// Scrive un fatto. Riscrivere lo stesso evento **non duplica: sostituisce**.
 ///
 /// Un errore qui non deve fermare il lavoro che stava registrando: la
 /// registrazione serve a sapere cosa è successo, non a decidere cosa succede.
@@ -209,7 +207,7 @@ mod tests {
     fn the_same_fact_written_twice_stays_one_row() {
         // Un lavoro ritentato riesegue lo stesso passo: senza questa regola un
         // manoscritto scaricato dopo tre tentativi risulterebbe scaricato tre
-        // volte (D27).
+        // volte.
         let conn = database();
         let mut event = Event::for_job(
             event_type::JOB_FINISHED,
@@ -282,7 +280,7 @@ mod tests {
     #[test]
     fn the_fingerprint_is_stable_between_runs() {
         // Se cambiasse fra un'esecuzione e l'altra, «era questo» non
-        // significherebbe niente (D25).
+        // significherebbe niente.
         assert_eq!(fnv1a_hex("Beatus vir"), fnv1a_hex("Beatus vir"));
         assert_ne!(fnv1a_hex("Beatus vir"), fnv1a_hex("Beatus vir."));
         assert_eq!(fnv1a_hex("").len(), 16);

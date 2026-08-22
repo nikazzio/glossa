@@ -4,7 +4,7 @@ import { z } from 'zod';
  * Le tabelle che il backup porta con sé, **in ordine di dipendenza**: i padri
  * prima dei figli.
  *
- * Ci sta tutto quello che non si riscarica (D31): schede delle opere, note,
+ * Ci sta tutto quello che non si riscarica: schede delle opere, note,
  * trascrizioni, traduzioni con il loro storico, glossari, memoria di frasi, e
  * il registro del lavoro svolto. **Non** ci stanno le immagini, che si
  * riprendono dalla biblioteca, né le righe che le descrivono: dopo un
@@ -56,12 +56,12 @@ const downloadedSizeSchema = z.object({
 
 /**
  * Le opere che erano scaricate quando il backup è stato fatto, con **tutte** le
- * misure che avevano (D31). Le immagini non ci sono: questo elenco è ciò che
+ * misure che avevano. Le immagini non ci sono: questo elenco è ciò che
  * permette al ripristino di proporre «riscarico le dodici opere che avevi?».
  *
  * Le misure sono più di una perché lo sono nel deposito: un libro può essere
  * completo a 2000 e avere tre pagine prese a piena risoluzione di proposito
- * (§5.6). Registrarne una sola le faceva sparire dal ripristino senza dirlo.
+ *. Registrarne una sola le faceva sparire dal ripristino senza dirlo.
  */
 const downloadedSourceSchema = z.object({
   versionId: z.string(),

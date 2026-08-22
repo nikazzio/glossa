@@ -93,8 +93,6 @@ Entrambe diventano lavori in coda: le segui dal pannello in basso, le metti in p
 
 L'esito dell'ultimo controllo **resta nelle impostazioni**, sotto i due comandi, finché non ne fai un altro: quando è stato fatto, di che tipo, e i quattro numeri. Accanto ai file senza opera c'è il comando che li cancella, con la conferma che dice quanti sono e quanto occupano. Glossa riguarda il deposito nel momento in cui premi — non si fida del conto di prima — e alla fine ti dice quanti ne ha tolti davvero: fra il controllo e la cancellazione può essere finito uno scaricamento, e quei file non sono più senza padrone.
 
-L'esito dell'ultimo controllo **resta nelle impostazioni**, sotto i due comandi, finché non ne fai un altro: quando è stato fatto, di che tipo, e i quattro numeri. Accanto ai file senza opera c'è il comando che li cancella, con la conferma che dice quanti sono e quanto occupano. Glossa riguarda il deposito nel momento in cui premi — non si fida del conto di prima — e alla fine ti dice quanti ne ha tolti davvero: fra il controllo e la cancellazione può essere finito uno scaricamento, e quei file non sono più senza padrone.
-
 Un interruttore accende la verifica rapida a ogni avvio. È spenta di default: allunga l'apertura su depositi grandi o su una cartella di rete.
 
 ## Quanti lavori insieme
@@ -195,6 +193,39 @@ riparano.
 pagine hai voluto anche la versione più grande, la scheda dice «più 3 a
 risoluzione piena» accanto al conteggio, invece di far sembrare il libro a metà.
 
+## Ridurre le immagini per liberare spazio
+
+Un libro scaricato alla massima risoluzione occupa il triplo del necessario. Uno
+scaricato mesi fa con un tetto più alto di quello che ti serve adesso tiene
+dettaglio che non guardi. In entrambi i casi **ripulire è meglio che
+riscaricare**, perché la biblioteca non ne paga il prezzo.
+
+Nella scheda dell'opera, in Biblioteca, c'è il comando che rilegge le pagine già
+scaricate, le rimpicciolisce alla misura scelta e le ricomprime, sostituendo
+l'originale.
+
+**È irreversibile: l'originale viene sostituito.** Il comando mette subito il
+lavoro in coda. Lavora su **una misura per volta**: quella con cui il libro è
+stato scaricato. Le pagine che
+avevi preso a risoluzione piena di proposito restano come sono.
+
+Su un libro lungo dura minuti, quindi è un lavoro come lo scaricamento: lo segui
+dal pannello in basso a destra, e puoi metterlo in pausa o annullarlo. Le pagine
+già più piccole della misura scelta non vengono toccate, perché ricomprimerle
+perderebbe qualcosa senza liberare niente.
+
+Mentre gira, il pannello dice quante pagine ha ridotto e quanto spazio ha
+liberato; il valore resta nel lavoro concluso. La misura di arrivo e la qualità si scelgono in **Impostazioni →
+Scaricamento**.
+
+Se una pagina non può essere letta o riscritta, il lavoro termina in errore senza nasconderla:
+nel dettaglio resta il numero delle pagine non elaborate e quelle riuscite
+restano correttamente salvate.
+
+Finché uno scaricamento o un'ottimizzazione può modificare un'opera, i comandi
+per liberarne lo spazio o eliminarla vengono rifiutati. Prima il lavoro deve
+concludersi o essere annullato; metterlo in pausa non basta.
+
 ## Il backup
 
 **Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto
@@ -219,14 +250,6 @@ strada con i dati già cancellati.
 rimpiazzato da quello che c'è nel file. La conferma lo dice, e non si torna
 indietro. Chiudere la finestra di salvataggio senza scegliere un file non
 scrive niente, e Glossa non dice di aver salvato.
-
-**Le pagine che avevi sul computer restano dov'erano.** Il ripristino se le
-tiene, per le opere che il backup contiene, e subito dopo mette in coda un
-controllo del deposito per vedere se quei file ci sono davvero. Quando il
-controllo finisce — anche molto dopo, o alla riapertura successiva — Glossa ti
-dice com'è andata: se non manca niente lo dice e basta, se manca qualcosa ti
-propone di riprendere **solo quello**, alla misura che aveva. I file rimasti
-senza opera li trovi contati nelle impostazioni, con il comando per toglierli.
 
 **Le pagine che avevi sul computer restano dov'erano.** Il ripristino se le
 tiene, per le opere che il backup contiene, e subito dopo mette in coda un

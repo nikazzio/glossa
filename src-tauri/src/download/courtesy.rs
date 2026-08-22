@@ -1,4 +1,4 @@
-//! Le buone maniere verso le biblioteche (D18).
+//! Le buone maniere verso le biblioteche.
 //!
 //! Il profilo lo dichiara il provider, ma i contatori si tengono **per host**:
 //! un provider può servire ricerca e immagini da macchine diverse, e quella che
@@ -44,7 +44,7 @@ struct Timeline {
     /// Fino a quando questo host è in raffreddamento. Dopo un 403 o un 429 non
     /// basta far aspettare il lavoro che l'ha preso: **tutto** ciò che parla con
     /// quell'host deve rallentare, altrimenti un secondo scaricamento in corso
-    /// continua a bussare mentre il primo aspetta (D18).
+    /// continua a bussare mentre il primo aspetta.
     cooldown_until: Option<Instant>,
 }
 
@@ -58,7 +58,7 @@ pub struct Signals<'a> {
     ///
     /// Serve a non chiamare «limite della biblioteca» un server semplicemente
     /// lento: sono due immobilità con cause opposte, e chi guarda deve sapere se
-    /// stiamo rispettando un limite o stiamo aspettando loro (D17).
+    /// stiamo rispettando un limite o stiamo aspettando loro.
     pub courtesy_wait: &'a AtomicBool,
 }
 
@@ -132,7 +132,7 @@ impl Courtesy {
         Arc::clone(hosts.entry(host.to_string()).or_insert_with(|| {
             Arc::new(HostGate {
                 // La concorrenza la dichiara il profilo della biblioteca: due
-                // verso Gallica, quattro verso chi regge di più (D18).
+                // verso Gallica, quattro verso chi regge di più.
                 permits: Arc::new(Semaphore::new(profile.host_concurrency.max(1))),
                 timeline: Mutex::new(Timeline::default()),
             })
@@ -332,7 +332,7 @@ mod tests {
     #[tokio::test]
     async fn the_profile_decides_how_many_talk_to_a_host_at_once() {
         // Gallica ne regge due, chi regge di più ne ha quattro: il numero è
-        // della biblioteca, non una costante nostra (D18).
+        // della biblioteca, non una costante nostra.
         let courtesy = Courtesy::new();
         let strict = NetworkProfile {
             host_concurrency: 1,

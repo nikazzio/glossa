@@ -145,7 +145,6 @@ describe('cartella del deposito', () => {
 
 
   it('la verifica del deposito si avvia da qui e diventa un lavoro', async () => {
-    // D5-bis: è un lavoro, non un'operazione istantanea — si segue dal pannello.
     const { enqueueVaultVerification } = await import('../../services/jobsService');
     const user = userEvent.setup();
     render(<VaultSection />);

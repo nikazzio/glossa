@@ -24,7 +24,7 @@ import { humanSize } from '../../utils';
  *
  * Non è il deposito: si può svuotare in qualsiasi momento senza perdere niente,
  * non entra in un backup e non conta come «scaricato». Il modo di **fissare**
- * un libro resta scaricarlo (D8).
+ * un libro resta scaricarlo.
  */
 /** L'elenco delle scelte, più quella in vigore se non ci fosse già. */
 function withCurrent(options: readonly number[], current: number): number[] {

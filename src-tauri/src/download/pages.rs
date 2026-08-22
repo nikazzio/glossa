@@ -23,12 +23,8 @@ use super::sidecar::{self, Note, PageRecord};
 use super::sizing::{self, SizeCap, SizingRule};
 use super::vault_io::{now_secs, stage_and_promote};
 
-/// Qualità JPEG della riduzione fatta in casa dopo un rifiuto della misura
-/// (§5.1, regola 3). Stesso valore predefinito dell'ottimizzazione locale.
-const DOWNSCALE_QUALITY: u8 = 82;
-
 /// Intervallo minimo prima di richiedere di nuovo una pagina che la biblioteca
-/// ha già dichiarato di non servire (fatto 7, §5.3).
+/// ha già dichiarato di non servire (fatto 7).
 ///
 /// A ogni ripresa costerebbe una richiesta buttata per pagina mancante; mai più
 /// renderebbe permanente un buco che le biblioteche a volte riparano.
@@ -69,8 +65,8 @@ enum Asked {
         /// La misura davvero chiesta: quella calcolata, o la dimensione piena se
         /// è servito il ripiego.
         token: String,
-        /// Da scrivere accanto alla pagina quando è arrivata più grande ed è
-        /// stata ridotta in casa.
+        /// Sempre vuota da qui: lo scaricamento non ricomprime niente. La usa
+        /// l'ottimizzazione locale, che è l'unica a ridurre.
         note: Option<Note>,
     },
     /// La biblioteca ha **dichiarato** di non servirla: 404 o 410, o un rifiuto
@@ -100,7 +96,7 @@ pub(crate) struct PageFetcher<'a> {
     pub staging: &'a Path,
     /// Radice del deposito, per le miniature.
     pub root: &'a Path,
-    /// Tentativo del **lavoro**: serve al calcolo dell'attesa (D16) e a sapere
+    /// Tentativo del **lavoro**: serve al calcolo dell'attesa e a sapere
     /// se dopo questo ce ne sarà un altro.
     pub attempt: u32,
     pub max_attempts: u32,
@@ -116,7 +112,7 @@ impl PageFetcher<'_> {
     ) -> Result<PageOutcome, JobError> {
         let target = self.size_dir.join(layout::page_file_name(page.index));
         // Presenza del file = pagina valida: nel deposito entra solo ciò che ha
-        // superato la validazione in transito (D16-bis).
+        // superato la validazione in transito.
         if target.is_file() {
             return Ok(PageOutcome::Present);
         }
@@ -150,7 +146,7 @@ impl PageFetcher<'_> {
         )
         .unwrap_or_else(|error| {
             // Riga non scritta: la pagina resta presente e conta
-            // nell'inventario, ma non se ne conosce l'impronta (§5.4).
+            // nell'inventario, ma non se ne conosce l'impronta.
             log::warn!("job sidecar not written page={} error={error}", page.index);
         });
 
@@ -198,7 +194,7 @@ impl PageFetcher<'_> {
                 // tentativo è ambiguo: potrebbe essere la misura, perché ci sono
                 // servizi che rispondono 500 dove altri rispondono 400. Si prova
                 // la dimensione piena per **questa pagina sola**, e il libro non
-                // si declassa (§5.1).
+                // si declassa.
                 //
                 // Solo all'ultimo tentativo: prima ci sono le attese del profilo,
                 // che sono la cura giusta per un guasto passeggero. Dopo, salire
@@ -214,7 +210,7 @@ impl PageFetcher<'_> {
                     None
                 }
                 // 403/429 e i guasti prima dell'ultimo tentativo salgono al
-                // motore, che decide attesa e tentativi dal profilo (D16, D18).
+                // motore, che decide attesa e tentativi dal profilo.
                 _ => return Err(error),
             },
         };
@@ -237,7 +233,13 @@ impl PageFetcher<'_> {
                 // piena, non quella calcolata che il servizio ha rifiutato.
                 token = full_token.clone();
                 match asked_full {
-                    Ok(Some(fetched)) => self.reduce_to_cap(fetched.bytes),
+                    // **Si conserva come è arrivata** (decisione del 2026-08-19):
+                    // rimpicciolirla qui sarebbe una ricompressione alle spalle
+                    // dell'utente, e ridurre è una scelta che si fa a freddo con
+                    // l'ottimizzazione locale. Le dimensioni finiscono nel
+                    // file di lato, quindi una pagina più grande del tetto si
+                    // riconosce guardando la sua riga.
+                    Ok(Some(fetched)) => (fetched.bytes, None),
                     Ok(None) => return Ok(Asked::Stopped),
                     // Rifiutata anche a dimensione piena: la biblioteca ha detto
                     // di non averla, e lascia la sua riga.
@@ -289,31 +291,7 @@ impl PageFetcher<'_> {
         Ok(PageOutcome::NotServed)
     }
 
-    /// Riduce al tetto i byte arrivati a dimensione piena e **tiene solo il
-    /// risultato** (decisione 2 del piano): i byte in più sono già stati spesi
-    /// in rete, ma non devono occupare disco, e il deposito resta coerente col
-    /// tetto.
-    ///
-    /// È una ricompressione, quindi va segnata: senza la nota, la pagina è
-    /// indistinguibile da una arrivata già a quella misura.
-    fn reduce_to_cap(&self, bytes: Vec<u8>) -> (Vec<u8>, Option<Note>) {
-        let SizeCap::LongEdge(long_edge) = self.cap else {
-            return (bytes, None);
-        };
-        let from = image_dimensions(&bytes);
-        match images::resize_jpeg(&bytes, long_edge, DOWNSCALE_QUALITY) {
-            Ok(reduced) => (reduced, from.map(|from| Note::Downscaled { from })),
-            Err(error) => {
-                // Riduzione fallita: si conserva l'originale invece di perdere
-                // la pagina. Occupa più del tetto, e l'ottimizzazione locale
-                // sa rimediare.
-                log::warn!("job downscale failed error={error}");
-                (bytes, None)
-            }
-        }
-    }
-
-    /// Miniatura ricavata dai byte già in memoria (D6). Un fallimento non fa
+    /// Miniatura ricavata dai byte già in memoria. Un fallimento non fa
     /// fallire il libro.
     fn store_thumbnail(&self, index: u32, bytes: &[u8]) {
         let Ok(relative) =
@@ -345,14 +323,11 @@ impl PageFetcher<'_> {
 }
 
 /// Oltre questa attesa si dichiara che è la **nostra** cortesia a tenere fermo
-/// il lavoro (D17). Più lunga della pausa massima fra due richieste (6 s su
+/// il lavoro. Più lunga della pausa massima fra due richieste (6 s su
 /// Gallica) e molto più corta del raffreddamento più breve (120 s).
 const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(15);
 
-/// Come `PageFetcher::one`, ma se l'attesa si allunga dice **perché**: con i
-/// raffreddamenti di D18 un lavoro può restare fermo minuti, e fermo per
-/// cortesia e fermo per errore sono la stessa immobilità con significati
-/// opposti.
+/// Segnala le attese di cortesia abbastanza lunghe da essere visibili.
 pub(crate) async fn one_declaring_long_waits(
     fetcher: &PageFetcher<'_>,
     rule: &mut SizingRule,

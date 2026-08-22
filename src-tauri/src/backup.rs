@@ -1,11 +1,11 @@
-//! Il file di backup: sceglierlo, scriverlo, rileggerlo (#345, #407, D31).
+//! Il file di backup: sceglierlo, scriverlo, rileggerlo (#345, #407).
 //!
 //! **Il percorso non attraversa mai l'interfaccia.** La finestra la apre il
 //! backend, come per l'import dei documenti dopo #405: una webview compromessa
 //! non può far leggere né scrivere un file a sua scelta. Il frontend manda il
 //! contenuto e riceve il contenuto, mai un percorso.
 //!
-//! **Dentro c'è solo il database, mai le immagini** (D31): quelle si
+//! **Dentro c'è solo il database, mai le immagini**: quelle si
 //! riscaricano dalla biblioteca, tutto il resto no. Un backup da 40 GB non lo
 //! fa nessuno; uno da pochi megabyte si fa ogni settimana.
 //!

@@ -1,10 +1,7 @@
 //! Prove sul ciclo completo dello scaricamento, contro una biblioteca finta.
 //!
-//! I test in `handler.rs`, `sizing.rs` e `sidecar.rs` guardano le funzioni una
-//! per una. Qui gira il lavoro vero — coda, manifesto, deposito, file di lato —
-//! perché i comportamenti che il piano §5.1-§5.4 descrive vivono nel *ciclo*:
-//! una pagina che manca, una misura rifiutata, una ripresa che non richiede
-//! quello che c'è già.
+//! Copre coda, manifesto, deposito, file laterale, pagine mancanti, rifiuto
+//! della misura e ripresa.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -35,7 +32,7 @@ const INSTANT_PROFILE: &str = r#"{
 }"#;
 
 /// Un JPEG minimo ma **intero**: inizio e fine ci sono, quindi la validazione
-/// dell'area di transito lo promuove (D16-bis). Non si decodifica, e va bene:
+/// dell'area di transito lo promuove. Non si decodifica, e va bene:
 /// la miniatura che non si ricava è un avviso, non un errore.
 fn jpeg() -> Vec<u8> {
     let mut bytes = vec![0xFF, 0xD8, 0xFF, 0xE0];
@@ -195,7 +192,7 @@ async fn mount_descriptors(server: &MockServer) {
 }
 
 /// Quante volte è stato chiesto un descrittore: uno per libro, non uno per
-/// pagina (§5.9).
+/// pagina.
 async fn descriptor_requests(server: &MockServer) -> usize {
     server
         .received_requests()
@@ -269,7 +266,7 @@ async fn a_page_that_keeps_failing_does_not_leave_the_book_truncated() {
     // Un 5xx che non passa nemmeno all'ultimo tentativo: prima si pagano le
     // attese del profilo, poi si prova la dimensione piena per quella pagina, e
     // se non basta si salta e si va avanti. Senza questo il ciclo ricadeva sulla
-    // stessa pagina a ogni ripresa e le successive non arrivavano mai (§5.1).
+    // stessa pagina a ogni ripresa e le successive non arrivavano mai.
     let server = MockServer::start().await;
     mount_manifest(&server, 3).await;
     mount_descriptors(&server).await;
@@ -369,7 +366,7 @@ async fn a_book_the_library_serves_no_page_of_is_not_a_success() {
 
 #[tokio::test]
 async fn a_refused_size_switches_the_rest_of_the_book_to_the_full_size() {
-    // 400 e 501 sono rifiuti **della misura** (§5.1): si smette di calcolare e
+    // 400 e 501 sono rifiuti **della misura**: si smette di calcolare e
     // si passa alla dimensione piena, riducendo in casa. Un rifiuto buttato
     // invece di trecento.
     let server = MockServer::start().await;
@@ -415,8 +412,7 @@ async fn a_refused_size_switches_the_rest_of_the_book_to_the_full_size() {
 
 #[tokio::test]
 async fn a_resumed_download_does_not_ask_again_for_what_is_already_on_disk() {
-    // Non c'è più un punto salvato: riprendere significa rileggere la cartella
-    // (§5.3).
+    // Non c'è più un punto salvato: riprendere significa rileggere la cartella.
     let server = MockServer::start().await;
     mount_manifest(&server, 3).await;
     mount_descriptors(&server).await;
@@ -456,7 +452,7 @@ async fn a_resumed_download_does_not_ask_again_for_what_is_already_on_disk() {
 #[tokio::test]
 async fn the_descriptor_is_read_once_for_the_whole_book() {
     // La misura si calcola; il descrittore serve solo a decidere **come**
-    // calcolarla, e una lettura per libro basta (§5.9).
+    // calcolarla, e una lettura per libro basta.
     let server = MockServer::start().await;
     mount_manifest(&server, 5).await;
     mount_descriptors(&server).await;

@@ -13,7 +13,7 @@ import { execute, select } from './dbService';
  *
  * Il motore le prende con le sue pause, le conserva e ne restituisce i byte.
  * Quello che sta qui **non è posseduto**: può sparire al prossimo giro di
- * scarto, e non è mai contato come scaricato (D8).
+ * scarto, e non è mai contato come scaricato.
  */
 
 export type CacheRequest =
@@ -32,7 +32,7 @@ export interface CacheUsage {
   files: number;
 }
 
-/** Tetto predefinito: 512 MB (D8). */
+/** Tetto predefinito: 512 MB. */
 export const DEFAULT_CACHE_MAX_BYTES = 512 * 1024 * 1024;
 /** Scadenza predefinita delle ricerche, in ore. */
 export const DEFAULT_SEARCH_TTL_HOURS = 24;

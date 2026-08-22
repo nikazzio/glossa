@@ -5,7 +5,7 @@
 //! insieme alle pagine che descrive — e non in una riga per pagina nel
 //! database. È il sostituto di 328 righe, ma in un posto solo e **appoggiato ai
 //! file stessi**: cancelli la cartella e se ne va con loro, copi la cartella e
-//! viene dietro (piano §5.4).
+//! viene dietro.
 //!
 //! **Si scrive una riga in coda, dopo lo spostamento atomico della pagina.** Mai
 //! riscrivere tutto il file per una pagina: un'interruzione a metà scrittura
@@ -33,10 +33,14 @@ pub const SIDECAR_FILE: &str = "pages.jsonl";
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Note {
-    /// Arrivata più grande e **ridotta in casa** dopo un rifiuto della misura
-    /// (§5.1, regola del ripiego). È una ricompressione, quindi quella pagina
-    /// non è come è arrivata, e senza scriverlo sarebbe indistinguibile da una
-    /// arrivata già a quella misura.
+    /// **Ridotta dall'ottimizzazione locale**, con le dimensioni che aveva
+    /// prima. È una ricompressione, quindi quella pagina non è più come è
+    /// arrivata, e senza scriverlo sarebbe indistinguibile da una arrivata già a
+    /// quella misura.
+    ///
+    /// Lo scaricamento non la scrive mai: non ricomprime niente, nemmeno quando
+    /// la biblioteca rifiuta la misura e la pagina arriva a dimensione piena.
+    /// Ridurre è una scelta che si fa a freddo (decisione del 2026-08-19).
     #[serde(rename_all = "camelCase")]
     Downscaled { from: (u32, u32) },
     /// La biblioteca non l'ha servita. Esiste per due ragioni: l'inventario può
@@ -60,7 +64,7 @@ pub struct PageRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bytes: Option<u64>,
     /// L'impronta registrata all'arrivo: è l'unica cosa che una cartella non sa
-    /// dire, e serve alla verifica completa (D5).
+    /// dire, e serve alla verifica completa.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checksum: Option<String>,
     pub at: i64,
@@ -219,7 +223,7 @@ mod tests {
 
         // La riga troncata si porta via quella che le viene scritta dietro, e
         // niente di più: le pagine restano presenti e contate, di due non si
-        // conosce il checksum, e la verifica completa le salta (§5.4).
+        // conosce il checksum, e la verifica completa le salta.
         assert_eq!(records.keys().copied().collect::<Vec<_>>(), vec![1]);
     }
 

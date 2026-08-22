@@ -104,7 +104,7 @@ describe('disponibilità', () => {
   it('le pagine che la biblioteca non serve non rendono il libro incompleto', () => {
     // 308 pagine sul disco su 328 dichiarate, e le venti che mancano il server
     // non le ha mai servite: riscaricarle non le farebbe comparire, quindi il
-    // libro è completo per quanto la biblioteca serve (§5.3).
+    // libro è completo per quanto la biblioteca serve.
     const summary = summarizeAvailability(308, 328, 20);
     expect(summary.availability).toBe('complete');
     // Il conteggio mostrato resta quello vero: 308, non 328.

@@ -43,14 +43,7 @@ export async function runJudgeForChunk(
   textToAudit: string | undefined,
   actions: JudgeActions,
   effectiveConfig?: ReturnType<typeof usePipelineStore.getState>['config'],
-  /**
-   * Scrivere anche il **verdetto** come fatto.
-   *
-   * La pipeline lo scrive da sé, dopo aver salvato la revisione, così il
-   * giudizio si lega a quella giusta. Rilanciando solo la revisione nessuno lo
-   * faceva: il verdetto sovrascriveva le colonne del frammento e non lasciava
-   * storia, che è il caso che D22 cita per nome.
-   */
+  /** Registra il verdetto nei flussi di sola revisione. */
   recordVerdict = false,
 ): Promise<ChunkOutcome> {
   const config = effectiveConfig ?? usePipelineStore.getState().config;
@@ -105,7 +98,7 @@ export async function runJudgeForChunk(
     const auditDuration = Date.now() - auditStartedAt;
     pipelineLog.auditEnd(chunk.id, judgeRef, auditDuration, judgeTokenUsage);
     // Anche il giudice è una chiamata a un modello, e costa: senza questa riga
-    // il conto di un documento sarebbe più basso del vero (D29). Il *verdetto*
+    // il conto di un documento sarebbe più basso del vero. Il *verdetto*
     // è un fatto diverso, legato alla revisione giudicata.
     void recordModelCall({
       chunkId: chunk.id,

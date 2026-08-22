@@ -10,7 +10,7 @@ import {
 } from '../../services/downloadSettingsService';
 
 /**
- * La misura con cui si scarica **questa** opera (D4).
+ * La misura con cui si scarica **questa** opera.
  *
  * È l'ultima parola: passa davanti a quella della biblioteca e a quella
  * generale, perché la scelta dipende dal materiale — una cinquecentina a

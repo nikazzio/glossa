@@ -45,8 +45,6 @@ const liveSchema = vi.hoisted<Record<string, string[]>>(() => ({
 }));
 
 const runMock = vi.fn<RunFn>(async () => undefined);
-const selectMock = vi.mocked(select);
-
 vi.mock('./dbService', () => ({
   select: vi.fn(async (query: string, params?: unknown[]) => {
     if (String(query).includes('manifestUrl')) {
@@ -68,7 +66,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { writeBackup, restoreBackup } from './backupService';
 import { BACKUP_TABLES } from '../schemas/externalData';
 import { confirm } from '../stores/confirmStore';
-import { select } from './dbService';
 
 const t = (key: string) => key;
 
@@ -87,7 +84,7 @@ function backupWith(appSettings: Array<{ key: string; value: string }>): string 
 
 describe('cosa porta con sé un backup', () => {
   it('comprende lo storico del lavoro e le schede delle opere, mai le immagini', () => {
-    // D31: si conserva quello che non si riscarica. Le righe delle immagini
+    // Si conserva quello che non si riscarica. Le righe delle immagini
     // restano fuori: dopo un ripristino quei file non esistono, e dichiararli
     // presenti sarebbe una bugia.
     expect(BACKUP_TABLES).toContain('translation_revisions');
@@ -107,7 +104,7 @@ describe('la misura con cui riscaricare', () => {
   }
 
   it('è quella con cui il libro è stato scaricato, non la più grande presente', async () => {
-    // Un libro completo a 2000 con tre pagine prese a piena risoluzione (§5.6)
+    // Un libro completo a 2000 con tre pagine prese a piena risoluzione
     // va riscaricato a 2000: chiedere `max` triplicherebbe il deposito.
     const payload = await exported();
 

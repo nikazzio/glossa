@@ -1,7 +1,7 @@
 import { execute, select } from './dbService';
 
 /**
- * Le impostazioni dei lavori in background (D11, D13).
+ * Le impostazioni dei lavori in background.
  *
  * I limiti dicono quanti lavori girano insieme **per classe di risorsa**: non
  * c'è un numero solo, perché saturano cose diverse. `0` significa automatico.
@@ -21,7 +21,7 @@ const LIMIT_KEY: Record<ResourceClass, string> = {
 const AUTO_RESUME_KEY = 'auto_resume_downloads';
 
 /**
- * Tetto non superabile sui lavori di rete (D11, D18): il limite verso una
+ * Tetto non superabile sui lavori di rete: il limite verso una
  * biblioteca dipende dal loro server, non dalla potenza del computer. Non serve
  * a limitare l'utente, serve a non farlo bandire.
  */

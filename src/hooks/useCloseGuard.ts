@@ -6,10 +6,10 @@ import { isTerminal } from '../services/jobsService';
 import { isRunning, useJobsStore } from '../stores/jobsStore';
 
 /**
- * Chiusura dell'applicazione con lavori attivi (D12).
+ * Chiusura dell'applicazione con lavori attivi.
  *
  * Chiudendo Glossa i lavori si fermano — non esiste un processo che continui a
- * lavorare ad app chiusa (D10) — quindi prima si chiede conferma, con l'elenco,
+ * lavorare ad app chiusa — quindi prima si chiede conferma, con l'elenco,
  * e poi si mettono in pausa salvando il punto raggiunto. Annullarli sarebbe
  * inaccettabile: perdere venti minuti di scaricamento perché hai chiuso la
  * finestra.
@@ -17,7 +17,7 @@ import { isRunning, useJobsStore } from '../stores/jobsStore';
 /**
  * Quanto si aspetta che i lavori si fermino davvero prima di chiudere. Oltre
  * questo si chiude comunque: niente va perduto — le pagine a metà non entrano nel
- * deposito (D16-bis) — e una finestra che non si chiude è peggio.
+ * deposito — e una finestra che non si chiude è peggio.
  */
 const PAUSE_GRACE_MS = 5_000;
 const PAUSE_POLL_MS = 200;
@@ -58,10 +58,10 @@ export function useCloseGuard() {
           if (!confirmed) return;
 
           // In pausa, non annullati: il punto raggiunto resta e alla riapertura
-          // si riprende da lì (D13).
+          // si riprende da lì.
           const { pause } = useJobsStore.getState();
           await Promise.all(active.filter(isRunning).map((job) => pause(job.id).catch(() => {})));
-          // La pausa è cooperativa (D14): chiedere non è fermare. Si dà ai
+          // La pausa è cooperativa: chiedere non è fermare. Si dà ai
           // lavori il tempo di finire la pagina in corso, altrimenti la finestra
           // muore con lo stato «in pausa…» sul database, e a rimetterlo a posto
           // sarebbe il riavvio successivo.

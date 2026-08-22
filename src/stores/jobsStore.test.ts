@@ -119,7 +119,7 @@ describe('riassunto per la barra di stato', () => {
 
   it('se qualcuno non sa dire quanto manca, mostra la stima del lavoro in corso', () => {
     // Sommare stime parziali darebbe un totale più basso del vero; non dire
-    // niente farebbe sembrare la coda bloccata (D17).
+    // niente farebbe sembrare la coda bloccata.
     const partial = summarizeJobs([
       job({ id: 'in-corso', status: 'running', etaSeconds: 60 }),
       job({ id: 'in-coda', status: 'queued', etaSeconds: null }),

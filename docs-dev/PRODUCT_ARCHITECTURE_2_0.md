@@ -1,7 +1,7 @@
 # Architettura di prodotto Glossa 2.0
 
 Stato: decisione architetturale per #180  
-Ultimo aggiornamento: 2026-07-25
+Ultimo aggiornamento: 2026-08-22
 
 ## 1. Scopo
 
@@ -343,9 +343,13 @@ reali lo renderanno necessario.
 
 ### Asset
 
-Il record canonico resta separato dalle famiglie di asset. La disponibilità
-non è binaria: un oggetto può essere catalogato, parziale o completo, e la
-lettura può usare esplicitamente una sorgente remota o locale.
+Il record canonico della fonte resta separato dai file locali. Per le pagine
+IIIF il disco è la fonte di verità: cartelle e file laterali descrivono ciò che
+è presente, senza una riga database per ogni pagina. Manifesti, documenti,
+derivati e futuri artifact mantengono identità e metadati nel database quando
+serve un riferimento stabile. Cache e deposito restano distinti: la cache è
+riproducibile e si può eliminare, il deposito rappresenta materiale acquisito
+esplicitamente.
 
 ### Analisi
 

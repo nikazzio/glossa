@@ -1,13 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
 
-/**
- * Il deposito: dove vivono i file scaricati dalle biblioteche.
- * Decisioni in `docs-dev/BLOCCO_1_DECISIONI.md`, parti A e B.
- */
+/** Accesso al deposito dei file scaricati dalle biblioteche. */
 
-/** Radice del deposito. Vuota = dentro la cartella dati (D1). */
-/** Modalità di lettura globale (D8, D9). */
+/** Radice del deposito. Vuota = dentro la cartella dati. */
+/** Modalità di lettura globale. */
 const READ_MODE_KEY = 'source_read_mode';
 
 export type SourceReadMode = 'auto' | 'local' | 'remote';
@@ -17,7 +14,7 @@ export interface VaultStatus {
   /**
    * Falso quando la radice non esiste: disco staccato, condivisione non
    * montata, cartella cloud non sincronizzata. È un caso **diverso** da file
-   * mancante (D1): con la radice assente gli stati non si toccano.
+   * mancante: con la radice assente gli stati non si toccano.
    */
   reachable: boolean;
   isDefault: boolean;
@@ -48,7 +45,7 @@ export interface VaultChoice {
   /** La cartella è stata davvero adottata come deposito. */
   adopted: boolean;
   /**
-   * La cartella sembra dentro un servizio di sincronizzazione (D1-bis): in
+   * La cartella sembra dentro un servizio di sincronizzazione: in
    * modalità streaming i file risultano presenti ma occupano zero byte.
    */
   syncFolder: boolean;
@@ -63,7 +60,7 @@ export async function chooseVaultFolder(): Promise<VaultChoice | null> {
   return invoke<VaultChoice | null>('choose_vault_folder');
 }
 
-/** "Tieni tutto insieme": deposito dentro la cartella dati (D1). */
+/** "Tieni tutto insieme": deposito dentro la cartella dati. */
 export async function adoptDefaultVaultFolder(): Promise<VaultStatus> {
   return invoke<VaultStatus>('use_default_vault_folder');
 }
@@ -75,7 +72,7 @@ export async function initializeVault(): Promise<void> {
 const VERIFY_ON_STARTUP_KEY = 'verify_vault_on_startup';
 
 /**
- * Controllo rapido del deposito all'apertura (D5), **spento di default**:
+ * Controllo rapido del deposito all'apertura, **spento di default**:
  * allunga l'avvio su depositi grandi o su una condivisione di rete, quindi lo
  * accende chi vuole trovare le segnalazioni già pronte.
  */
@@ -96,7 +93,7 @@ export async function getSourceReadMode(): Promise<SourceReadMode> {
 }
 
 /**
- * "Libera spazio" (D6): cancella le pagine scaricate subito e per davvero, senza
+ * "Libera spazio": cancella le pagine scaricate subito e per davvero, senza
  * passare dal cestino — spostare gigabyte nel cestino non libera niente.
  * Restano manifesto e miniature, così il libro resta sfogliabile.
  */
@@ -106,7 +103,7 @@ export async function freeVersionPages(providerKey: string, versionId: string): 
 
 /**
  * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
- * miniature, pagine — quando l'opera esce dalla Biblioteca (D6).
+ * miniature, pagine — quando l'opera esce dalla Biblioteca.
  */
 export async function deleteVersionFiles(providerKey: string, versionId: string): Promise<FreedSpace> {
   return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
@@ -160,7 +157,7 @@ export async function lastVaultCheck(): Promise<VaultCheckOutcome | null> {
 }
 
 /**
- * Cancella i file che nessuna riga reclama (D5-bis).
+ * Cancella i file che nessuna riga reclama.
  *
  * Il backend riguarda il deposito nel momento in cui si preme, invece di
  * fidarsi del conto dell'ultimo controllo: fra i due può essere finito uno
@@ -179,14 +176,14 @@ export interface AvailabilitySummary {
 }
 
 /**
- * Disponibilità calcolata dai file davvero presenti (D7).
+ * Disponibilità calcolata dai file davvero presenti.
  *
  * `partial` **non è un avviso**: chi scarica tre pagine su duecento apposta non
  * deve trovarsi una bandierina addosso. Il colore lo mettono altrove i problemi
  * veri — scaricamento fallito, file mancanti o corrotti trovati da una verifica.
  *
  * `notServed` sono le pagine che la biblioteca ha dichiarato di non servire
- * (§5.3): non mancano per colpa nostra e non si recuperano riscaricando, quindi
+ *: non mancano per colpa nostra e non si recuperano riscaricando, quindi
  * un libro che le ha tutte tranne quelle è **completo per quanto la biblioteca
  * serve**, non a metà.
  */

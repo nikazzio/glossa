@@ -117,7 +117,7 @@ function DrawerTab({
 }
 
 /**
- * Il pannello in basso (D20). Log e lavori sono schede della stessa area — le
+ * Il pannello in basso. Log e lavori sono schede della stessa area — le
  * due facce della domanda "cosa sta facendo il programma" — sul modello del
  * pannello di VS Code. Una destinazione sola: al passaggio del mouse un
  * riepilogo, al clic il pannello.
@@ -434,19 +434,12 @@ export function AppStatusBar() {
       {showConsoleDrawer && (data.kind === 'project' || drawerTab === 'jobs') && (
         <BottomDrawer showConsoleTab={data.kind === 'project'} />
       )}
-      {/* Tre zone fisse, sempre nello stesso ordine e con le stesse larghezze
-          (le due colonne laterali sono `1fr`, quindi il centro è davvero al
-          centro in ogni sezione). Cambia **cosa** mostrano, mai **dove** stanno:
-          una stessa informazione non deve spostarsi passando da una schermata
-          all'altra. Modifica a D19 chiesta dall'utente il 2026-08-14:
-          l'indicatore dei lavori sta a destra insieme agli altri comandi
-          globali, non al centro. */}
+      {/* Zone stabili: contesto, stato, comandi globali. */}
       <div
         role="status"
         aria-live="polite"
         className="grid h-8 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
       >
-        {/* 1 — Dove sono: sempre, in ogni sezione. */}
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <LocationLabel data={data} />
         </div>

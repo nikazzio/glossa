@@ -270,7 +270,7 @@ export function DocumentView({
 
   /**
    * Approvare e ritirare l'approvazione sono **fatti** che restano nel
-   * registro (D22): la revisione approvata si conserva anche quando viene
+   * registro: la revisione approvata si conserva anche quando viene
    * superata, perché «approvata e poi corretta» dice qualcosa che «approvata»
    * da sola non dice.
    *
