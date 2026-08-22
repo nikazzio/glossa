@@ -200,7 +200,6 @@ pub fn run() {
             download::enqueue_source_download,
             download::inventory::version_inventory,
             download::inventory::library_inventory,
-            optimize::commands::optimize_estimate,
             optimize::commands::enqueue_optimization,
             documents::import_document,
             documents::export_markdown_docx,

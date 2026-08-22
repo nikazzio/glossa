@@ -208,35 +208,6 @@ impl JobHandler for ImageOptimizationJob {
     }
 }
 
-/// Calcola pagine modificabili e byte liberabili con i parametri correnti.
-pub(crate) fn forecast(size_dir: &Path, long_edge: u32, quality: u8) -> (u32, u64) {
-    let mut shrinking = 0;
-    let mut freeing = 0u64;
-    for (_, path) in pages_in(size_dir) {
-        let Ok(bytes) = std::fs::read(&path) else {
-            continue;
-        };
-        let Some((width, height)) = dimensions(&bytes) else {
-            continue;
-        };
-        let longest = width.max(height);
-        if longest <= long_edge {
-            continue;
-        }
-        let Ok(reduced) = images::resize_jpeg(&bytes, long_edge, quality) else {
-            continue;
-        };
-        let now = bytes.len() as u64;
-        let after = reduced.len() as u64;
-        if after >= now {
-            continue;
-        }
-        shrinking += 1;
-        freeing += now - after;
-    }
-    (shrinking, freeing)
-}
-
 /// Le pagine di una cartella di misura, in ordine, file di lato escluso.
 fn pages_in(size_dir: &Path) -> Vec<(u32, std::path::PathBuf)> {
     let Ok(entries) = std::fs::read_dir(size_dir) else {
@@ -457,22 +428,6 @@ mod tests {
         .unwrap()
     }
 
-    fn png(width: u32, height: u32) -> Vec<u8> {
-        let image = image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
-            width,
-            height,
-            image::Rgb([128, 128, 128]),
-        ));
-        let mut bytes = Vec::new();
-        image
-            .write_to(
-                &mut std::io::Cursor::new(&mut bytes),
-                image::ImageFormat::Png,
-            )
-            .unwrap();
-        bytes
-    }
-
     fn config() -> OptimizeConfig {
         serde_json::from_value(serde_json::json!({
             "providerKey": "gallica",
@@ -482,48 +437,6 @@ mod tests {
             "quality": 82,
         }))
         .unwrap()
-    }
-
-    #[test]
-    fn the_forecast_counts_only_the_pages_that_would_shrink() {
-        // La conferma deve dire quante pagine tocca e quanto libera:
-        // contare tutta la cartella prometteva un lavoro su pagine che il lavoro
-        // stesso avrebbe saltato.
-        let dir = temp_dir("forecast");
-        std::fs::write(dir.join("0001.jpg"), jpeg(1600, 2000)).unwrap();
-        std::fs::write(dir.join("0002.jpg"), jpeg(400, 500)).unwrap();
-        std::fs::write(dir.join("pages.jsonl"), b"{}\n").unwrap();
-
-        let (shrinking, freeing) = forecast(&dir, 800, 82);
-
-        assert_eq!(shrinking, 1, "solo la pagina oltre gli 800 px");
-        let big = std::fs::metadata(dir.join("0001.jpg")).unwrap().len();
-        assert!(
-            freeing > 0 && freeing < big,
-            "una previsione, non tutto il file"
-        );
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn the_forecast_says_nothing_to_do_when_every_page_is_small_enough() {
-        let dir = temp_dir("forecast-nulla");
-        std::fs::write(dir.join("0001.jpg"), jpeg(400, 500)).unwrap();
-
-        assert_eq!(forecast(&dir, 800, 82), (0, 0));
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn the_forecast_excludes_a_page_that_would_not_free_space() {
-        let dir = temp_dir("forecast-senza-guadagno");
-        std::fs::write(dir.join("0001.jpg"), png(801, 1)).unwrap();
-
-        assert_eq!(forecast(&dir, 800, 100), (0, 0));
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

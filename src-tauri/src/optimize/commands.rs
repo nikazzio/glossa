@@ -1,6 +1,5 @@
-//! Mettere in coda l'ottimizzazione, e sapere prima quanto costa.
+//! Mettere in coda l'ottimizzazione.
 
-use serde::Serialize;
 use tauri::Manager;
 
 use crate::download::inventory;
@@ -19,26 +18,6 @@ const PRIORITY: i64 = 5;
 
 pub const LONG_EDGE_SETTING: &str = "optimize_long_edge";
 pub const QUALITY_SETTING: &str = "optimize_jpeg_quality";
-
-/// Dati mostrati prima della conferma.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OptimizeEstimate {
-    /// La cartella su cui si lavora: è la metà «da quale misura» che la conferma
-    /// deve dichiarare.
-    pub size_tag: String,
-    /// Pagine nella cartella di misura.
-    pub pages: u32,
-    /// Quante di quelle verrebbero davvero ridotte: le altre sono già dentro il
-    /// lato lungo scelto e non si toccano.
-    pub shrinking: u32,
-    /// Quanto occupa adesso quella cartella.
-    pub bytes: u64,
-    /// Byte liberabili con i parametri correnti.
-    pub freeing: u64,
-    /// Il lato lungo di arrivo che verrebbe usato.
-    pub long_edge: u32,
-}
 
 fn setting(conn: &rusqlite::Connection, key: &str) -> Option<u64> {
     crate::jobs::store::read_setting(conn, key)
@@ -62,45 +41,6 @@ pub fn configured(conn: &rusqlite::Connection) -> (u32, u8) {
         .filter(|value| (MIN_QUALITY..=MAX_QUALITY).contains(value))
         .unwrap_or(DEFAULT_QUALITY);
     (long_edge, quality)
-}
-
-/// Analizza la cartella su un thread dedicato e restituisce la stima.
-#[tauri::command]
-pub async fn optimize_estimate(
-    app: tauri::AppHandle,
-    version_id: String,
-    size_tag: String,
-) -> Result<OptimizeEstimate, String> {
-    let root = crate::vault::commands::root_of(&app)?;
-    let db_path = crate::storage_config::db_path(&app)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let entry = inventory::of_version(&root, &version_id)
-            .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
-        let found = entry
-            .sizes
-            .iter()
-            .find(|size| size.size_tag == size_tag)
-            .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
-        let conn = crate::db::open_connection(&db_path)?;
-        let (long_edge, quality) = configured(&conn);
-        let size_dir = root
-            .join(crate::vault::layout::pages_dir(
-                &entry.provider_key,
-                &version_id,
-            )?)
-            .join(crate::vault::layout::safe_component(&size_tag)?);
-        let (shrinking, freeing) = super::forecast(&size_dir, long_edge, quality);
-        Ok(OptimizeEstimate {
-            size_tag,
-            pages: found.pages,
-            shrinking,
-            bytes: found.bytes,
-            freeing,
-            long_edge,
-        })
-    })
-    .await
-    .map_err(|error| format!("previsione non riuscita: {error}"))?
 }
 
 /// Evita scritture concorrenti nella stessa cartella di misura.

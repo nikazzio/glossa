@@ -13,18 +13,6 @@ import type { Job } from './jobsService';
  * altro.
  */
 
-export interface OptimizeEstimate {
-  /** La cartella su cui si lavora: `2000`, `max`… */
-  sizeTag: string;
-  pages: number;
-  /** Quante verrebbero davvero ridotte: le altre sono già abbastanza piccole. */
-  shrinking: number;
-  bytes: number;
-  /** Quanto si prevede di liberare: è una previsione, non una misura. */
-  freeing: number;
-  longEdge: number;
-}
-
 export const DEFAULT_OPTIMIZE_LONG_EDGE = 2000;
 export const DEFAULT_OPTIMIZE_QUALITY = 82;
 
@@ -41,10 +29,6 @@ const MIN_LONG_EDGE = 512;
 const MAX_LONG_EDGE = 12_000;
 const MIN_QUALITY = 40;
 const MAX_QUALITY = 100;
-
-export async function optimizeEstimate(versionId: string, sizeTag: string): Promise<OptimizeEstimate> {
-  return invoke<OptimizeEstimate>('optimize_estimate', { versionId, sizeTag });
-}
 
 export async function enqueueOptimization(
   versionId: string,

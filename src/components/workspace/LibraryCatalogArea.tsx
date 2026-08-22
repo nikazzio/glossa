@@ -34,7 +34,7 @@ import { SourceSizeCap } from './SourceSizeCap';
 import { MAX_SIZE_CAP } from '../../services/downloadSettingsService';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
-import { enqueueOptimization, optimizeEstimate } from '../../services/optimizeService';
+import { enqueueOptimization } from '../../services/optimizeService';
 import type { LibraryCatalogEntry, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -328,33 +328,10 @@ function CatalogEntryRow({
 
   const optimise = async () => {
     if (!entry.versionId || !entry.principalSize) return;
-    const sizeTag = entry.principalSize;
     setBusy(true);
     try {
-      const estimate = await optimizeEstimate(entry.versionId, sizeTag);
-      if (estimate.shrinking === 0) {
-        toast.info(t('areas.library.optimizeNothing', { edge: estimate.longEdge }));
-        return;
-      }
-      const confirmed = await confirm({
-        title: t('areas.library.optimizeTitle', {
-          count: estimate.shrinking,
-          total: estimate.pages,
-          from:
-            estimate.sizeTag === MAX_SIZE_CAP
-              ? t('settings.download.sizeCapMax')
-              : t('settings.download.pixels', { value: estimate.sizeTag }),
-          edge: estimate.longEdge,
-        }),
-        message: t('areas.library.optimizeMessage', {
-          size: humanSize(estimate.bytes),
-          freeing: humanSize(estimate.freeing),
-        }),
-        confirmLabel: t('areas.library.optimizeConfirm'),
-        danger: true,
-      });
-      if (!confirmed) return;
-      await enqueueOptimization(entry.versionId, sizeTag);
+      const job = await enqueueOptimization(entry.versionId, entry.principalSize);
+      applyChange(job);
       toast.success(t('areas.library.optimizeQueued'));
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);

@@ -204,10 +204,9 @@ Nella scheda dell'opera, in Biblioteca, c'è il comando che rilegge le pagine gi
 scaricate, le rimpicciolisce alla misura scelta e le ricomprime, sostituendo
 l'originale.
 
-**È irreversibile, e la conferma lo dice** insieme a quante pagine verrebbero
-davvero ridotte, quanto occupano adesso e quanto spazio dovresti riavere. Le
-pagine già abbastanza piccole non le conta, perché non le toccherà. Lavora su
-**una misura per volta**: quella con cui il libro è stato scaricato. Le pagine che
+**È irreversibile: l'originale viene sostituito.** Il comando mette subito il
+lavoro in coda. Lavora su **una misura per volta**: quella con cui il libro è
+stato scaricato. Le pagine che
 avevi preso a risoluzione piena di proposito restano come sono.
 
 Su un libro lungo dura minuti, quindi è un lavoro come lo scaricamento: lo segui
@@ -216,11 +215,10 @@ già più piccole della misura scelta non vengono toccate, perché ricomprimerle
 perderebbe qualcosa senza liberare niente.
 
 Mentre gira, il pannello dice quante pagine ha ridotto e quanto spazio ha
-liberato. La misura di arrivo e la qualità si scelgono in **Impostazioni →
+liberato; il valore resta nel lavoro concluso. La misura di arrivo e la qualità si scelgono in **Impostazioni →
 Scaricamento**.
 
-La conferma conta solo le pagine che libereranno davvero spazio. Se una pagina
-non può essere letta o riscritta, il lavoro termina in errore senza nasconderla:
+Se una pagina non può essere letta o riscritta, il lavoro termina in errore senza nasconderla:
 nel dettaglio resta il numero delle pagine non elaborate e quelle riuscite
 restano correttamente salvate.
 
