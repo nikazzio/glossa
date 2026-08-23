@@ -2041,7 +2041,7 @@ diverse. La copia è il manifesto IIIF, il PDF o altra incarnazione della fonte;
 la pagina è una vista ordinata e stabile della copia; un file è una sua
 rappresentazione concreta, remota, locale o derivata.
 
-La baseline consolidata introduce una pagina logica con copia di appartenenza,
+La migrazione numerata introduce una pagina logica con copia di appartenenza,
 posizione, etichetta e identificativo IIIF del canvas. Le rappresentazioni file
 mantengono invece formato, dimensioni, impronta, URL, percorso relativo nel
 deposito, risoluzione e, per i derivati, il file di origine. Manifest e PDF
@@ -2054,8 +2054,8 @@ disco resta la fonte di verità per presenza e integrità. Trascrizione, OCR e
 annotazioni future si ancorano alla pagina logica o a una sua area, mai a una
 specifica rappresentazione file.
 
-La decisione viene applicata una sola volta nel consolidamento della baseline:
-fino ad allora non si modifica una migrazione già applicata.
+Il consolidamento assorbirà questa migrazione nella baseline unica; fino ad
+allora non si modifica una migrazione già applicata.
 
 ## Contratto del gestore di lavoro
 

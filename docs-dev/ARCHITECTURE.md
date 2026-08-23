@@ -159,7 +159,7 @@ Il disco è la fonte di verità per le pagine. Ogni cartella
 etichetta, dimensioni, byte, impronta e note. Un file senza riga resta valido ma
 ha impronta ignota, quindi la verifica completa non lo dichiara corrotto.
 
-Nel consolidamento dello schema, l'indice distingue tre livelli: copia digitale,
+Lo schema distingue tre livelli: copia digitale,
 pagina logica e rappresentazione file. La pagina conserva posizione, etichetta
 e canvas IIIF; il file conserva URL o percorso relativo, formato, dimensioni,
 impronta, risoluzione e provenienza. Il file laterale resta l'inventario

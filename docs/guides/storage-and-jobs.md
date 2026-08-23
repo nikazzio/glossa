@@ -249,7 +249,8 @@ strada con i dati già cancellati.
 Puoi salvare un file che apre solo Glossa: evita aperture casuali, ma non
 protegge materiale riservato. Per dati riservati usa il lucchetto: chiede una
 password e, dopo il salvataggio, mostra un codice di recupero una sola volta.
-Conserva il codice fuori dall'app: password o codice aprono il backup cifrato,
+Puoi selezionarlo oppure usare il pulsante di copia accanto. Conserva il codice
+fuori dall'app: password o codice aprono il backup cifrato,
 ma se perdi entrambi non si può recuperare il contenuto.
 
 **Il ripristino sostituisce tutto**: ogni workspace presente adesso viene

@@ -241,7 +241,8 @@ your data already cleared.
 You can save a file that only Glossa opens: it prevents accidental opening but
 does not protect sensitive material. For sensitive data use the lock: it asks
 for a password and, after saving, shows a recovery code once. Keep that code
-outside the app: either the password or code opens the encrypted backup, but
+outside the app: you can select it or use the copy button beside it. Either the
+password or code opens the encrypted backup, but
 losing both makes its contents unrecoverable.
 
 **Restoring replaces everything**: every workspace there is now is replaced by

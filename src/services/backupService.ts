@@ -25,9 +25,9 @@ import {
  * Si alza quando cambia **cosa** c'è dentro, non quando cambia una colonna: un
  * ripristino rifiuta i backup che dichiarano più di questo numero, ed è l'unico
  * modo che una versione vecchia ha di non aprire un file che non capisce.
- * Alzata a 2 con le dodici tabelle del blocco 1.
+ * Alzata a 3 con le pagine logiche delle fonti.
  */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export type BackupPrivacy = 'glossaOnly' | 'password';
 
@@ -91,7 +91,7 @@ const DANGLING_REFS: Partial<Record<BackupTable, readonly string[]>> = {
  * Colonne che puntano a righe inserite **più tardi**, o che possono non esserci.
  *
  * Un frammento dice quale revisione è approvata, ma le revisioni si inseriscono
- * dopo di lui; un segmento di trascrizione dice anche a quale pagina appartiene,
+ * dopo di lui; un segmento di trascrizione dice anche a quale pagina logica appartiene,
  * e quella pagina può non essere su questo computer. In tutti e tre i casi
  * lasciare il puntatore com'è **ferma il ripristino**.
  *
@@ -106,7 +106,7 @@ const DEFERRED_REFS: Partial<
   translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
   transcription_segments: [
     { column: 'approved_revision_id', target: 'transcription_revisions' },
-    { column: 'asset_id', target: 'assets' },
+    { column: 'source_page_id', target: 'source_pages' },
   ],
 };
 
@@ -121,6 +121,7 @@ const DELETE_ORDER = [
   'transcription_revisions',
   'transcription_segments',
   'transcription_documents',
+  'source_pages',
   'library_network_profiles',
   'network_profiles',
   'workspace_items',

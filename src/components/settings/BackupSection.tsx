@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertTriangle, DatabaseBackup, Download, KeyRound, LockKeyhole, Upload } from 'lucide-react';
+import { AlertTriangle, Check, Copy, DatabaseBackup, Download, KeyRound, LockKeyhole, Upload } from 'lucide-react';
 import {
   Dialog,
   DialogCancelButton,
@@ -18,10 +18,38 @@ import { logger } from '../../utils/logger';
 
 type BackupDialog = 'create' | 'restore' | 'recovery' | null;
 
+const MINIMUM_PASSWORD_LENGTH = 12;
+
 function createRecoveryCode(): string {
   const values = new Uint32Array(4);
   crypto.getRandomValues(values);
   return Array.from(values, (value) => value.toString(16).padStart(8, '0')).join('-');
+}
+
+async function copyText(text: string): Promise<void> {
+  if (window.navigator.clipboard?.writeText) {
+    try {
+      await window.navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // WebKit può esporre l'API ma rifiutarla: sotto si usa il metodo locale.
+    }
+  }
+
+  const temporaryInput = window.document.createElement('textarea');
+  temporaryInput.value = text;
+  temporaryInput.setAttribute('readonly', '');
+  temporaryInput.style.position = 'fixed';
+  temporaryInput.style.opacity = '0';
+  window.document.body.appendChild(temporaryInput);
+  let copied = false;
+  try {
+    temporaryInput.select();
+    copied = window.document.execCommand('copy');
+  } finally {
+    temporaryInput.remove();
+  }
+  if (!copied) throw new Error('clipboard_unavailable');
 }
 
 /** Backup completo dell'applicazione, distinto dalle esportazioni di lavoro. */
@@ -33,7 +61,31 @@ export function BackupSection() {
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [restoreSecret, setRestoreSecret] = useState('');
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
-  const passwordValid = password.length >= 12 && password === passwordConfirmation;
+  const [recoveryCodeCopied, setRecoveryCodeCopied] = useState(false);
+  const passwordTooShort = password.length > 0 && password.length < MINIMUM_PASSWORD_LENGTH;
+  const passwordsDiffer = passwordConfirmation.length > 0 && password !== passwordConfirmation;
+  const passwordValid = password.length >= MINIMUM_PASSWORD_LENGTH
+    && passwordConfirmation.length > 0
+    && !passwordsDiffer;
+
+  const updatePassword = (event: FormEvent<HTMLInputElement>) => {
+    setPassword(event.currentTarget.value);
+  };
+
+  const updatePasswordConfirmation = (event: FormEvent<HTMLInputElement>) => {
+    setPasswordConfirmation(event.currentTarget.value);
+  };
+
+  const copyRecoveryCode = async () => {
+    if (!recoveryCode) return;
+    try {
+      await copyText(recoveryCode);
+      setRecoveryCodeCopied(true);
+      toast.success(t('settings.backupRecoveryCodeCopied'));
+    } catch {
+      toast.error(t('errors.clipboardFailed'));
+    }
+  };
 
   const closeDialog = () => {
     if (busy || dialog === 'recovery') return;
@@ -69,6 +121,7 @@ export function BackupSection() {
       setPassword('');
       setPasswordConfirmation('');
       if (code) {
+        setRecoveryCodeCopied(false);
         setRecoveryCode(code);
         setDialog('recovery');
       } else {
@@ -155,8 +208,10 @@ export function BackupSection() {
         footer={<div className="flex justify-end gap-3"><DialogCancelButton onClick={closeDialog} disabled={busy}>{t('common.cancel')}</DialogCancelButton><DialogConfirmButton onClick={() => void handleWrite(true)} disabled={busy || !passwordValid}>{t('settings.backupSaveEncrypted')}</DialogConfirmButton></div>}
       >
         <div className="grid gap-3">
-          <input aria-label={t('settings.backupPasswordPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} onChange={(event) => setPassword(event.target.value)} placeholder={t('settings.backupPasswordPlaceholder')} type="password" value={password} />
-          <input aria-label={t('settings.backupPasswordConfirmationPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} onChange={(event) => setPasswordConfirmation(event.target.value)} placeholder={t('settings.backupPasswordConfirmationPlaceholder')} type="password" value={passwordConfirmation} />
+          <input aria-describedby={passwordTooShort ? 'backup-password-error' : undefined} aria-invalid={passwordTooShort} aria-label={t('settings.backupPasswordPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} onInput={updatePassword} placeholder={t('settings.backupPasswordPlaceholder')} type="password" value={password} />
+          {passwordTooShort && <p id="backup-password-error" role="alert" className="text-xs text-editorial-danger">{t('settings.backupPasswordTooShort')}</p>}
+          <input aria-describedby={passwordsDiffer ? 'backup-password-confirmation-error' : undefined} aria-invalid={passwordsDiffer} aria-label={t('settings.backupPasswordConfirmationPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} onInput={updatePasswordConfirmation} placeholder={t('settings.backupPasswordConfirmationPlaceholder')} type="password" value={passwordConfirmation} />
+          {passwordsDiffer && <p id="backup-password-confirmation-error" role="alert" className="text-xs text-editorial-danger">{t('settings.backupPasswordMismatch')}</p>}
         </div>
       </Dialog>
 
@@ -183,9 +238,14 @@ export function BackupSection() {
         widthClassName="max-w-md"
         bodyClassName="px-6 py-5"
         closeDisabled
-        footer={<div className="flex justify-end"><DialogConfirmButton onClick={() => { setRecoveryCode(null); setDialog(null); }}>{t('settings.backupRecoveryCodeSaved')}</DialogConfirmButton></div>}
+        footer={<div className="flex justify-end"><DialogConfirmButton onClick={() => { setRecoveryCodeCopied(false); setRecoveryCode(null); setDialog(null); }}>{t('settings.backupRecoveryCodeSaved')}</DialogConfirmButton></div>}
       >
-        <code className="block select-all break-all rounded border border-editorial-border bg-editorial-textbox px-3 py-2 font-mono text-sm text-editorial-ink">{recoveryCode}</code>
+        <div className="flex items-center gap-2">
+          <input aria-label={t('settings.backupShowRecoveryCode')} className="min-w-0 flex-1 rounded border border-editorial-border bg-editorial-textbox px-3 py-2 font-mono text-sm text-editorial-ink" onFocus={(event) => event.currentTarget.select()} readOnly value={recoveryCode ?? ''} />
+          <IconButton size="sm" title={t('settings.backupCopyRecoveryCode')} onClick={() => void copyRecoveryCode()}>
+            {recoveryCodeCopied ? <Check size={13} /> : <Copy size={13} />}
+          </IconButton>
+        </div>
       </Dialog>
     </section>
   );

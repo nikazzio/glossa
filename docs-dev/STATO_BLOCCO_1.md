@@ -48,9 +48,8 @@ prova manuale e CI prima del merge.
 
 1. Verificare e unire la PR #445: backup solo Glossa e cifrato con password o codice di recupero.
 2. Consolidare le migrazioni del blocco in una baseline.
-3. Inserire nella baseline il modello deciso: copia digitale, pagina logica e
-   rappresentazione file; rimuovere il collegamento diretto fra frammento
-   trascritto e file.
+3. Assorbire nella baseline il modello già introdotto: copia digitale, pagina
+   logica e rappresentazione file.
 4. Aggiornare e verificare la PR #429.
 
 ## Non bloccante

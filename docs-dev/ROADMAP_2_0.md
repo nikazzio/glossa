@@ -30,8 +30,8 @@ provider.
 ### Consolidamento dello schema
 
 - sostituire le migrazioni del blocco con una baseline leggibile;
-- introdurre nella baseline pagine logiche e rappresentazioni file, rimuovendo
-  il collegamento diretto fra frammento trascritto e file;
+- assorbire nella baseline pagine logiche e rappresentazioni file, già introdotte
+  dalla migrazione numerata;
 - ricreare i database di sviluppo;
 - eseguire test di primo avvio, backup e ripristino.
 

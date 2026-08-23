@@ -257,6 +257,7 @@ mod tests {
         for table in [
             "sources",
             "source_versions",
+            "source_pages",
             // I collegamenti fra workspace e item stanno tutti qui: la vecchia
             // tabella dei soli libri non esiste più (#213).
             "workspace_items",
@@ -305,6 +306,24 @@ mod tests {
                 .await
                 .expect("colonne dei segmenti");
         assert!(segment.iter().any(|name| name == "approved_revision_id"));
+        assert!(segment.iter().any(|name| name == "source_page_id"));
+        assert!(!segment.iter().any(|name| name == "asset_id"));
+
+        let page: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM pragma_table_info('source_pages')")
+                .fetch_all(&pool)
+                .await
+                .expect("colonne delle pagine logiche");
+        assert!(page.iter().any(|name| name == "canvas_url"));
+        assert!(page.iter().any(|name| name == "position"));
+
+        let asset: Vec<String> = sqlx::query_scalar("SELECT name FROM pragma_table_info('assets')")
+            .fetch_all(&pool)
+            .await
+            .expect("colonne delle rappresentazioni file");
+        assert!(asset.iter().any(|name| name == "source_page_id"));
+        assert!(asset.iter().any(|name| name == "origin"));
+        assert!(!asset.iter().any(|name| name == "availability"));
     }
 
     #[tokio::test]
