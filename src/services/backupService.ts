@@ -106,7 +106,6 @@ const DEFERRED_REFS: Partial<
   translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
   transcription_segments: [
     { column: 'approved_revision_id', target: 'transcription_revisions' },
-    { column: 'asset_id', target: 'assets' },
   ],
 };
 
@@ -223,11 +222,14 @@ export async function writeBackup(options: BackupOptions = { privacy: 'glossaOnl
  */
 export async function restoreBackup(
   t: (key: string) => string,
-  password?: string,
+  secret?: string,
 ): Promise<DownloadedSource[] | null> {
   // La finestra e la lettura stanno nel backend (#407): una webview
   // compromessa non può farsi leggere un file a sua scelta.
-  const raw = await invoke<string | null>('read_backup', { password: password || null });
+  // Password e codice di recupero sbloccano lo stesso archivio. Il backend
+  // prova entrambe le derivazioni senza dover sapere quale dei due è stato
+  // digitato, quindi non si rivela quale chiave l'utente conserva.
+  const raw = await invoke<string | null>('read_backup', { password: secret || null });
   if (raw === null) return null;
 
   const payload = validateBackup(JSON.parse(raw));

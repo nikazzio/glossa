@@ -250,8 +250,11 @@ del deposito. L'archivio compresso include versione, dimensione e impronta del
 contenuto. Il ripristino conserva le pagine presenti, avvia una verifica del
 deposito e propone solo gli scaricamenti mancanti.
 
-Le chiavi dei provider restano nel portachiavi di sistema. I tre livelli di
-riservatezza del formato di backup non sono ancora implementati.
+Le chiavi dei provider restano nel portachiavi di sistema. Il backup offre un
+formato solo Glossa, dichiarato come offuscamento, e un formato cifrato con
+password. Ogni backup cifrato genera un codice di recupero casuale equivalente
+alla password: è mostrato una sola volta, non viene conservato da Glossa e può
+aprire lo stesso archivio. I backup precedenti non sono supportati.
 
 ## Sicurezza
 

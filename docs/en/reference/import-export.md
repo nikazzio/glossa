@@ -49,7 +49,7 @@ source notes and annotations created during review.
 
 ## Backups
 
-The backup lives in **Settings → Storage** and covers the whole of Glossa, not a
+The backup lives in **Settings → Backup** and covers the whole of Glossa, not a
 single workspace.
 
 Before asking to replace local data, Glossa checks that a backup is complete and

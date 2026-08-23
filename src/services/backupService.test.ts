@@ -125,6 +125,28 @@ describe('la misura con cui riscaricare', () => {
   });
 });
 
+describe('la chiave di un backup cifrato', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockClear();
+  });
+
+  it('manda password e codice di recupero solo per il backup cifrato', async () => {
+    await writeBackup({
+      privacy: 'password',
+      password: 'una password lunga',
+      recoveryCode: 'c1a2-b3c4-d5e6-f7a8-0123-4567-89ab-cdef',
+    });
+
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith('write_backup', expect.objectContaining({
+      options: {
+        privacy: 'password',
+        password: 'una password lunga',
+        recoveryCode: 'c1a2-b3c4-d5e6-f7a8-0123-4567-89ab-cdef',
+      },
+    }));
+  });
+});
+
 describe('le colonne che il ripristino rimette', () => {
   beforeEach(() => {
     runMock.mockClear();

@@ -1757,8 +1757,12 @@ grafiche. È l'unica libreria nuova: **AES-256-GCM è già nel progetto**, usato
   macchina, ma **mostrata e confermata alla creazione**: se il computer muore, il
   portachiavi muore con lui.
 
-**Nessun recupero password.** Qualunque via di recupero è una seconda chiave e
-vanifica la cifratura.
+**Codice di recupero.** Ogni backup cifrato genera una seconda chiave casuale,
+mostrata una sola volta a chi crea il file. Serve a recuperare il backup quando
+la password non è più disponibile; Glossa non la conserva e chi perde sia
+password sia codice perde il backup. È una decisione di prodotto aggiornata il
+23 agosto 2026: il codice è una via deliberata di recupero, non un recupero
+della password custodito dall'app.
 
 **Spento di default**, con la conseguenza scritta a chiare lettere al momento
 della scelta: password dimenticata, backup perduto. Il backup è ciò a cui si

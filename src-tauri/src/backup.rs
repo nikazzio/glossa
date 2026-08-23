@@ -133,8 +133,8 @@ pub async fn read_backup(
 
 fn pack(payload: &str, options: &BackupOptions) -> Result<Vec<u8>, String> {
     if options.privacy == BackupPrivacy::Password
-        && (options.password.as_deref().is_none_or(str::is_empty)
-            || options.recovery_code.as_deref().is_none_or(str::is_empty))
+        && (options.password.as_deref().map_or(true, str::is_empty)
+            || options.recovery_code.as_deref().map_or(true, str::is_empty))
     {
         return Err("backup_password_required".to_string());
     }
@@ -523,29 +523,48 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn options(privacy: BackupPrivacy, password: Option<&str>) -> BackupOptions {
+    fn options(
+        privacy: BackupPrivacy,
+        password: Option<&str>,
+        recovery_code: Option<&str>,
+    ) -> BackupOptions {
         BackupOptions {
             privacy,
             password: password.map(str::to_owned),
-            recovery_code: password.map(|_| "recovery-code-12345".to_string()),
+            recovery_code: recovery_code.map(str::to_owned),
         }
     }
     #[test]
     fn every_privacy_level_round_trips() {
-        for (privacy, password) in [
-            (BackupPrivacy::GlossaOnly, None),
+        for (privacy, password, recovery_code) in [
+            (BackupPrivacy::GlossaOnly, None, None),
             (
                 BackupPrivacy::Password,
                 Some("correct horse battery staple"),
+                Some("c1a2-b3c4-d5e6-f7a8-0123-4567-89ab-cdef"),
             ),
         ] {
-            let archive = pack(r#"{"tables":{}}"#, &options(privacy, password)).unwrap();
+            let archive = pack(
+                r#"{"tables":{}}"#,
+                &options(privacy, password, recovery_code),
+            )
+            .unwrap();
             assert_eq!(unpack(&archive, password).unwrap(), r#"{"tables":{}}"#);
+            if let Some(recovery_code) = recovery_code {
+                assert_eq!(
+                    unpack(&archive, Some(recovery_code)).unwrap(),
+                    r#"{"tables":{}}"#
+                );
+            }
         }
     }
     #[test]
     fn wrong_password_is_not_reported_as_corruption() {
-        let archive = pack("{}", &options(BackupPrivacy::Password, Some("one"))).unwrap();
+        let archive = pack(
+            "{}",
+            &options(BackupPrivacy::Password, Some("one"), Some("recovery")),
+        )
+        .unwrap();
         assert_eq!(
             unpack(&archive, Some("two")).unwrap_err(),
             "backup_wrong_password"
@@ -553,7 +572,11 @@ mod tests {
     }
     #[test]
     fn damaged_encrypted_block_is_reported_as_corruption() {
-        let mut archive = pack("{}", &options(BackupPrivacy::Password, Some("one"))).unwrap();
+        let mut archive = pack(
+            "{}",
+            &options(BackupPrivacy::Password, Some("one"), Some("recovery")),
+        )
+        .unwrap();
         *archive.last_mut().unwrap() ^= 1;
         assert_eq!(unpack(&archive, Some("one")).unwrap_err(), "backup_corrupt");
     }
@@ -564,5 +587,10 @@ mod tests {
             unpack(&archive, None).unwrap_err(),
             "backup_format_unsupported"
         );
+    }
+    #[test]
+    fn encrypted_backup_requires_both_ways_back_in() {
+        let result = pack("{}", &options(BackupPrivacy::Password, Some("one"), None));
+        assert_eq!(result.unwrap_err(), "backup_password_required");
     }
 }

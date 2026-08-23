@@ -328,7 +328,6 @@ CREATE TABLE IF NOT EXISTS transcription_segments (
   document_id TEXT NOT NULL REFERENCES transcription_documents(id) ON DELETE CASCADE,
   position INTEGER NOT NULL,
   label TEXT,
-  asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
   UNIQUE (document_id, position)
 );
 

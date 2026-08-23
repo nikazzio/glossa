@@ -1,6 +1,6 @@
 # Stato del blocco 1
 
-Ultimo aggiornamento: 2026-08-22.
+Ultimo aggiornamento: 2026-08-23.
 
 Branch di integrazione: `blocco-1`. PR finale: #429, ancora in bozza. Le PR del
 blocco confluiscono qui; `main` riceverà un solo merge per la 1.5.
@@ -21,6 +21,7 @@ blocco confluiscono qui; `main` riceverà un solo merge per la 1.5.
 | Workspace come contesto operativo | completato (#439) |
 | Registrazione di revisioni, chiamate e costi | completata |
 | Backup completo del database | completato |
+| Backup riservato | completamento in corso (#445) |
 
 ## PR #444 — ottimizzazione locale
 
@@ -45,12 +46,10 @@ prova manuale e CI prima del merge.
 
 ## Obbligatorio prima della 1.5
 
-1. Implementare i tre livelli di riservatezza di backup ed esportazioni (D33).
+1. Verificare e unire la PR #445: backup solo Glossa e cifrato con password o codice di recupero.
 2. Consolidare le migrazioni del blocco in una baseline.
-3. Correggere il puntatore di approvazione delle trascrizioni.
-4. Rimuovere `transcription_segments.asset_id` e la retrocompatibilità pre-2.0.
-5. Decidere la forma finale della tabella `assets`.
-6. Aggiornare e verificare la PR #429.
+3. Decidere la forma finale della tabella `assets`.
+4. Aggiornare e verificare la PR #429.
 
 ## Non bloccante
 
