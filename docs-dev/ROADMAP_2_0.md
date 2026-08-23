@@ -30,6 +30,7 @@ provider.
 ### Consolidamento dello schema
 
 - sostituire le migrazioni del blocco con una baseline leggibile;
+- rimuovere `transcription_segments.asset_id` durante il consolidamento;
 - decidere la forma finale della tabella `assets`;
 - ricreare i database di sviluppo;
 - eseguire test di primo avvio, backup e ripristino.

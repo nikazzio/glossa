@@ -106,6 +106,7 @@ const DEFERRED_REFS: Partial<
   translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
   transcription_segments: [
     { column: 'approved_revision_id', target: 'transcription_revisions' },
+    { column: 'asset_id', target: 'assets' },
   ],
 };
 

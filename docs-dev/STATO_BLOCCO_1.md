@@ -48,8 +48,9 @@ prova manuale e CI prima del merge.
 
 1. Verificare e unire la PR #445: backup solo Glossa e cifrato con password o codice di recupero.
 2. Consolidare le migrazioni del blocco in una baseline.
-3. Decidere la forma finale della tabella `assets`.
-4. Aggiornare e verificare la PR #429.
+3. Rimuovere il collegamento diretto fra frammento trascritto e immagine nel consolidamento dello schema.
+4. Decidere la forma finale della tabella `assets`.
+5. Aggiornare e verificare la PR #429.
 
 ## Non bloccante
 

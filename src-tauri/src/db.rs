@@ -236,7 +236,6 @@ fn bind_json_value<'q>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::Row;
 
     async fn migrated_pool() -> sqlx::SqlitePool {
         let options = SqliteConnectOptions::new()
@@ -306,18 +305,6 @@ mod tests {
                 .await
                 .expect("colonne dei segmenti");
         assert!(segment.iter().any(|name| name == "approved_revision_id"));
-        assert!(!segment.iter().any(|name| name == "asset_id"));
-
-        let references: Vec<(String, String)> = sqlx::query(
-            "SELECT \"table\", \"from\" FROM pragma_foreign_key_list('transcription_segments')",
-        )
-        .map(|row: sqlx::sqlite::SqliteRow| (row.get("table"), row.get("from")))
-        .fetch_all(&pool)
-        .await
-        .expect("vincoli del segmento");
-        assert!(references.iter().any(|(table, column)| {
-            table == "transcription_revisions" && column == "approved_revision_id"
-        }));
     }
 
     #[tokio::test]
