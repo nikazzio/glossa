@@ -105,12 +105,30 @@ introducono un secondo albero di dati.
 | Workspace | Globale | Collega fonti; è home operativa di trascrizioni e traduzioni; possiede risorse condivise |
 | Fonte | Globale, anche non assegnata | Può appartenere a più workspace; espone versioni, metadati e asset |
 | Versione/manifestazione | Parte di una fonte | Edizione, copia, manifest IIIF, PDF o altro accesso alla stessa fonte |
-| Asset | Globale, gestito dal vault | Immagine, PDF, manifest, thumbnail, derivato; registra origine e stato locale/remoto |
+| Pagina logica | Parte ordinata di una copia digitale | Conserva posizione, etichetta e identità IIIF; è indipendente dai file disponibili |
+| Rappresentazione file | Parte di una copia o di una pagina, gestita dal vault | Manifest, PDF, immagine, miniatura o derivato; registra origine, posizione e integrità |
 | Documento di trascrizione | Globale con home workspace | Deriva normalmente da una fonte; contiene pagine/segmenti e revisioni |
 | Progetto di traduzione | Globale con home workspace | Deriva da trascrizione approvata, testo di una fonte o import autonomo |
 | Artifact | Globale, prodotto da un workflow | Export, dataset, report, indice o output intermedio |
 | Job | Globale, attribuito al suo oggetto | Download, OCR/HTR, elaborazione, export, calcolo analitico |
 | Evento di provenance | Append-only | Registra trasformazione, input, output, attore, configurazione e tempi |
+
+### Pagine e file allegati
+
+Una copia digitale può avere pagine ordinate; una pagina può avere più
+rappresentazioni concrete, per esempio l'immagine remota, una copia locale a
+2000 pixel, quella a piena risoluzione, una miniatura o un ritaglio prodotto da
+Glossa. Manifest e PDF appartengono direttamente alla copia, non a una pagina.
+
+La pagina logica conserva l'ordine, l'etichetta leggibile e l'identificativo
+IIIF del canvas. I file conservano invece formato, dimensioni, impronta, URL,
+percorso relativo nel deposito, risoluzione e derivazione. La disponibilità
+complessiva (catalogata, parziale o completa) appartiene alla copia digitale,
+non a un singolo file.
+
+Trascrizioni, OCR e annotazioni si ancorano alla pagina logica o a una sua area,
+mai a un file particolare: sostituire, riscaricare o ottimizzare un'immagine non
+deve cambiare il riferimento editoriale.
 
 ### Origine del testo
 

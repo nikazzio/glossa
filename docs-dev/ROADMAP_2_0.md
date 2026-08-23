@@ -1,6 +1,6 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-08-22.
+Ultimo aggiornamento: 2026-08-23.
 
 ## Stato generale
 
@@ -30,8 +30,8 @@ provider.
 ### Consolidamento dello schema
 
 - sostituire le migrazioni del blocco con una baseline leggibile;
-- rimuovere `transcription_segments.asset_id` durante il consolidamento;
-- decidere la forma finale della tabella `assets`;
+- introdurre nella baseline pagine logiche e rappresentazioni file, rimuovendo
+  il collegamento diretto fra frammento trascritto e file;
 - ricreare i database di sviluppo;
 - eseguire test di primo avvio, backup e ripristino.
 
