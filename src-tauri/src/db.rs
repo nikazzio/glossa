@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
-use sqlx::{Acquire, Row, SqlitePool};
+use sqlx::Acquire;
 use std::fs;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -236,6 +236,7 @@ fn bind_json_value<'q>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Row;
 
     async fn migrated_pool() -> sqlx::SqlitePool {
         let options = SqliteConnectOptions::new()
