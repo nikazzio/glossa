@@ -1,23 +1,9 @@
--- Baseline migration for schema ownership moving from TypeScript to Rust/sqlx.
---
--- This file is the single DDL owner for glossa.db going forward (see #211).
--- It intentionally uses `CREATE TABLE IF NOT EXISTS` for every 1.x table:
--- existing databases (including the author's own test database) already
--- have these tables created directly by the old TypeScript-owned schema, so
--- this migration must be a no-op on them while still producing the full
--- schema on a brand-new database. No retrocompatibility shims are needed —
--- 1.x tables keep their exact shape; only the ownership mechanism changes.
+-- Baseline unica dello schema 2.0/1.5. Si applica esclusivamente a database
+-- nuovi: i database precedenti al consolidamento non sono supportati.
 
 PRAGMA foreign_keys = ON;
 
--- Deprecated tables from earlier betas, superseded before their features
--- shipped. Dropped once here instead of on every app start.
-DROP TABLE IF EXISTS technique_tags;
-DROP TABLE IF EXISTS historical_techniques;
-DROP TABLE IF EXISTS phrase_memory_presets;
-DROP TABLE IF EXISTS macro_blocks;
-
--- ── 1.x tables (unchanged shape) ─────────────────────────────────────
+-- ── Tabelle applicative ────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS workspaces (
   id TEXT PRIMARY KEY,
@@ -27,6 +13,8 @@ CREATE TABLE IF NOT EXISTS workspaces (
   memory_extractor_provider TEXT NOT NULL DEFAULT 'openai',
   memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5.4-nano',
   memory_extractor_prompt TEXT NOT NULL DEFAULT '',
+  icon_key TEXT NOT NULL DEFAULT 'book',
+  archived_at DATETIME,
   created_at TEXT NOT NULL
 );
 
@@ -97,7 +85,6 @@ CREATE TABLE IF NOT EXISTS glossaries (
   description TEXT DEFAULT '',
   source_language TEXT DEFAULT '',
   target_language TEXT DEFAULT '',
-  workspace_id TEXT DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -139,6 +126,7 @@ CREATE TABLE IF NOT EXISTS translations (
   blob_order INTEGER DEFAULT 0,
   blob_reference_chunk_ids TEXT DEFAULT NULL,
   pipeline_id TEXT DEFAULT NULL,
+  approved_revision_id TEXT REFERENCES translation_revisions(id) ON DELETE SET NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -190,7 +178,6 @@ CREATE INDEX IF NOT EXISTS idx_operation_logs_pipeline_id ON operation_logs(proj
 
 CREATE TABLE IF NOT EXISTS phrase_memory (
   id TEXT PRIMARY KEY,
-  workspace_id TEXT NOT NULL REFERENCES workspaces(id),
   source_phrase TEXT NOT NULL,
   target_phrase TEXT NOT NULL,
   confidence REAL NOT NULL DEFAULT 1.0,
@@ -208,7 +195,6 @@ CREATE TABLE IF NOT EXISTS phrase_memory (
   created_at TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_phrase_memory_workspace_id ON phrase_memory(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_phrase_memory_chunk_project ON phrase_memory(chunk_id, project_id);
 
 CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
@@ -271,40 +257,57 @@ CREATE TABLE IF NOT EXISTS source_versions (
   source_url TEXT,
   metadata TEXT,
   is_primary INTEGER NOT NULL DEFAULT 0,
+  download_policy TEXT NOT NULL DEFAULT 'standard',
+  image_service_profile TEXT,
+  homepage_url TEXT,
+  download_allowed INTEGER NOT NULL DEFAULT 1,
+  expected_asset_count INTEGER,
+  size_cap TEXT,
+  availability TEXT NOT NULL DEFAULT 'catalogued'
+    CHECK (availability IN ('catalogued', 'partial', 'complete')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (source_id, label)
 );
 
--- N-N fonte <-> workspace. Cascade here removes only the link row, never the
--- source itself or the workspace — deleting a source or a workspace is a
--- separate, explicit operation (see `sources.status`/`trashed_at`).
-CREATE TABLE IF NOT EXISTS workspace_sources (
-  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-  linked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (workspace_id, source_id)
+CREATE TABLE IF NOT EXISTS source_pages (
+  id TEXT PRIMARY KEY,
+  source_version_id TEXT NOT NULL REFERENCES source_versions(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  label TEXT,
+  canvas_url TEXT,
+  homepage_url TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (source_version_id, position),
+  UNIQUE (source_version_id, canvas_url)
 );
 
-CREATE INDEX IF NOT EXISTS idx_workspace_sources_source ON workspace_sources(source_id);
+CREATE INDEX IF NOT EXISTS idx_source_pages_version_position
+  ON source_pages(source_version_id, position);
 
--- Detailed asset inventory / runtime source policy is #217; this is the
--- minimal skeleton other 2.0 tables need to reference.
+-- Manifest e PDF appartengono alla copia; immagini, miniature e derivati
+-- possono appartenere a una pagina logica.
 CREATE TABLE IF NOT EXISTS assets (
   id TEXT PRIMARY KEY,
   source_version_id TEXT REFERENCES source_versions(id) ON DELETE CASCADE,
   kind TEXT NOT NULL CHECK (kind IN ('image', 'pdf', 'manifest', 'thumbnail', 'derived', 'other')),
-  locality TEXT NOT NULL CHECK (locality IN ('remote', 'local', 'derived')),
-  availability TEXT NOT NULL DEFAULT 'catalogued' CHECK (availability IN ('catalogued', 'partial', 'complete')),
+  origin TEXT NOT NULL CHECK (origin IN ('remote', 'local', 'derived')),
+  source_page_id TEXT REFERENCES source_pages(id) ON DELETE CASCADE,
   vault_path TEXT,
   remote_url TEXT,
   derived_from_asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
   byte_size INTEGER,
   checksum TEXT,
+  size_tag TEXT,
+  mime_type TEXT,
+  width INTEGER,
+  height INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_assets_source_version ON assets(source_version_id);
+CREATE INDEX IF NOT EXISTS idx_assets_page_size ON assets(source_page_id, size_tag);
 
 -- Trascrizioni
 
@@ -328,7 +331,8 @@ CREATE TABLE IF NOT EXISTS transcription_segments (
   document_id TEXT NOT NULL REFERENCES transcription_documents(id) ON DELETE CASCADE,
   position INTEGER NOT NULL,
   label TEXT,
-  asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
+  source_page_id TEXT REFERENCES source_pages(id) ON DELETE SET NULL,
+  approved_revision_id TEXT REFERENCES transcription_revisions(id) ON DELETE SET NULL,
   UNIQUE (document_id, position)
 );
 
@@ -340,11 +344,15 @@ CREATE TABLE IF NOT EXISTS transcription_revisions (
   segment_id TEXT NOT NULL REFERENCES transcription_segments(id) ON DELETE CASCADE,
   revision_number INTEGER NOT NULL,
   text TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'rejected')),
   created_by TEXT NOT NULL DEFAULT 'user' CHECK (created_by IN ('user', 'ocr', 'import')),
+  derived_from_revision_id TEXT REFERENCES transcription_revisions(id) ON DELETE SET NULL,
+  content_hash TEXT NOT NULL DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (segment_id, revision_number)
 );
+
+CREATE INDEX IF NOT EXISTS idx_transcription_revisions_segment
+  ON transcription_revisions(segment_id, revision_number);
 
 -- Origine testo traduzione: satellite 1:1 opzionale su projects. Assenza di
 -- riga = import autonomo (comportamento di default per ogni progetto 1.x
@@ -385,6 +393,13 @@ CREATE TABLE IF NOT EXISTS jobs (
   attempt_count INTEGER NOT NULL DEFAULT 0,
   max_attempts INTEGER NOT NULL DEFAULT 3,
   error TEXT,
+  checkpoint TEXT,
+  error_kind TEXT,
+  next_attempt_at DATETIME,
+  eta_seconds INTEGER,
+  waiting_reason TEXT,
+  phase TEXT,
+  detail TEXT,
   requested_by TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -404,6 +419,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_owner_source ON jobs(owner_source_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_owner_transcription_document ON jobs(owner_transcription_document_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_owner_project ON jobs(owner_project_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_owner_asset ON jobs(owner_asset_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_queue ON jobs(status, priority DESC, created_at);
 
 -- Artifact / export
 
@@ -451,17 +467,116 @@ CREATE TABLE IF NOT EXISTS provenance_events (
   job_id TEXT REFERENCES jobs(id) ON DELETE SET NULL,
   input_ref TEXT,
   output_ref TEXT,
-  config TEXT
+  config TEXT,
+  outcome TEXT,
+  duration_ms INTEGER,
+  provider TEXT,
+  model TEXT,
+  prompt_version TEXT,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  cached_tokens INTEGER,
+  estimated_cost REAL,
+  source_language TEXT,
+  target_language TEXT,
+  error_kind TEXT,
+  input_hash TEXT,
+  output_hash TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_provenance_entity ON provenance_events(entity_type, entity_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_provenance_workspace ON provenance_events(workspace_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_provenance_type_time ON provenance_events(event_type, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_provenance_model ON provenance_events(model, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_provenance_job ON provenance_events(job_id);
+
+CREATE TABLE IF NOT EXISTS translation_revisions (
+  id TEXT PRIMARY KEY,
+  translation_id TEXT NOT NULL REFERENCES translations(id) ON DELETE CASCADE,
+  revision_number INTEGER NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  created_by TEXT NOT NULL CHECK (created_by IN ('model', 'human')),
+  derived_from_revision_id TEXT REFERENCES translation_revisions(id) ON DELETE SET NULL,
+  content_hash TEXT NOT NULL DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (translation_id, revision_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_translation_revisions_chunk
+  ON translation_revisions(translation_id, revision_number);
+
+CREATE TABLE IF NOT EXISTS derived_metrics (
+  id TEXT PRIMARY KEY,
+  metric_key TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  workspace_id TEXT REFERENCES workspaces(id) ON DELETE SET NULL,
+  value REAL,
+  detail TEXT,
+  algorithm_version TEXT NOT NULL DEFAULT '1',
+  input_hash TEXT,
+  computed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (metric_key, entity_type, entity_id, algorithm_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_derived_metrics_entity
+  ON derived_metrics(entity_type, entity_id);
+
+CREATE TABLE IF NOT EXISTS network_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  builtin INTEGER NOT NULL DEFAULT 0,
+  values_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS library_network_profiles (
+  library_key TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS workspace_items (
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  item_type TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  is_origin INTEGER NOT NULL DEFAULT 0,
+  linked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (workspace_id, item_type, item_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_items_item
+  ON workspace_items(item_type, item_id);
+
+CREATE TABLE IF NOT EXISTS glossary_entry_overrides (
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  entry_id TEXT NOT NULL REFERENCES glossary_entries(id) ON DELETE CASCADE,
+  translation TEXT,
+  notes TEXT,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (workspace_id, entry_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_glossary_overrides_entry
+  ON glossary_entry_overrides(entry_id);
 
 -- ── Bootstrap defaults (first-run only, mirrors former dbService.ts seed) ──
 
 INSERT INTO app_settings (key, value)
 SELECT 'active_workspace_id', ''
 WHERE NOT EXISTS (SELECT 1 FROM app_settings WHERE key = 'active_workspace_id');
+
+INSERT OR IGNORE INTO app_settings (key, value) VALUES
+  ('vault_root', ''),
+  ('source_read_mode', 'auto'),
+  ('download_size_cap', '2000'),
+  ('verify_vault_on_startup', '0'),
+  ('jobs_limit_network', '2'),
+  ('jobs_limit_cpu', '0'),
+  ('jobs_limit_disk', '1'),
+  ('jobs_limit_language_service', '1'),
+  ('jobs_limit_documents', '1'),
+  ('auto_resume_downloads', '0');
 
 INSERT OR IGNORE INTO workspaces (
   id, name, description, embedding_model,

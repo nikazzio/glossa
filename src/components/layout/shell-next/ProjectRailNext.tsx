@@ -28,7 +28,7 @@ import { useLibraryStore } from '../../../stores/libraryStore';
 import { useConfigStore } from '../../../stores/configStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { indexPad } from '../../../utils';
-import { ClickPopover, IconButton } from '../../ui';
+import { ClickPopover, IconButton, Tooltip } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
 import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
@@ -40,6 +40,72 @@ export interface ProjectRailNextProps {
   onRetranslateChunk?: (chunkId: string) => void;
   onReauditChunk?: (chunkId: string) => void;
   onImportDocument?: () => void;
+}
+
+
+/**
+ * Nome del progetto, rinominabile sul posto.
+ *
+ * Dentro una traduzione il progetto non compariva da nessuna parte se non nella
+ * riga in testata, che è testo e basta: il nome si poteva dare alla creazione e
+ * mai più correggere.
+ */
+function ProjectNameField() {
+  const { t } = useTranslation();
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
+  const projectName = useProjectStore(
+    (s) => s.projects.find((project) => project.id === s.currentProjectId)?.name ?? '',
+  );
+  const renameCurrentProject = useProjectStore((s) => s.renameCurrentProject);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(projectName);
+
+  if (!currentProjectId) return null;
+
+  const commit = () => {
+    setEditing(false);
+    if (draft.trim() && draft.trim() !== projectName) void renameCurrentProject(draft);
+  };
+
+  if (editing) {
+    return (
+      <input
+        // Il campo compare solo dopo un clic esplicito sul nome: mettere a
+        // fuoco quello che l'utente ha appena chiesto di modificare è il
+        // comportamento atteso, non un dirottamento.
+        // eslint-disable-next-line jsx-a11y/no-autofocus
+        autoFocus
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commit();
+          if (event.key === 'Escape') {
+            setDraft(projectName);
+            setEditing(false);
+          }
+        }}
+        aria-label={t('projects.rename')}
+        className="w-full rounded border border-editorial-accent/50 bg-editorial-textbox px-1.5 py-0.5 font-display text-2xl italic leading-tight text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      />
+    );
+  }
+
+  return (
+    <Tooltip label={t('projects.rename')} side="right">
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(projectName);
+          setEditing(true);
+        }}
+        className="block w-full truncate text-left font-display text-2xl italic leading-tight text-editorial-accent transition-colors hover:text-editorial-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      >
+        {projectName || t('projects.untitled')}
+      </button>
+    </Tooltip>
+  );
 }
 
 function PipelineNameSlot({ children }: { children?: ReactNode }) {
@@ -72,11 +138,17 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
 
   return (
     <div className="border-b border-editorial-border/70 px-4 pt-5 pb-4">
-      <span className="block min-w-0 truncate font-display text-2xl italic leading-tight text-editorial-ink">
-        {activeName}
-      </span>
-      <div className="mt-6 flex min-w-0 items-center justify-between gap-3">
-        <ChunkRailNavigator collapsed={false} />
+      {/* Il progetto sta sopra la pipeline: è il contenitore, e finora non
+          compariva da nessuna parte dentro la traduzione — solo in testata, dove
+          non si poteva nemmeno rinominare. */}
+      <ProjectNameField />
+      <div className="mt-2.5 flex min-w-0 items-center justify-between gap-3">
+        <span className="block min-w-0 truncate text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
+          {activeName}
+        </span>
+        {/* Il comando che cambia pipeline sta accanto al nome della pipeline:
+            prima era una riga più in basso, accanto ai frammenti, e sembrava
+            appartenere a quelli. */}
         {pipelines.length > 0 && (
           <ClickPopover
             open={popoverOpen}
@@ -85,15 +157,15 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
             align="start"
             trigger={
               <IconButton
-                size="md"
+                size="sm"
                 tone={popoverOpen ? 'accent' : 'default'}
                 title={t('pipeline.changePipeline')}
                 ariaLabel={t('pipeline.changePipeline')}
                 ariaPressed={popoverOpen}
                 tooltipSide="right"
-                className={`h-9 w-9 shrink-0 ${popoverOpen ? '' : 'bg-editorial-bg'}`}
+                className={`h-7 w-7 shrink-0 ${popoverOpen ? '' : 'bg-editorial-bg'}`}
               >
-                <ArrowLeftRight size={14} />
+                <ArrowLeftRight size={12} />
               </IconButton>
             }
           >
@@ -155,6 +227,9 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
             )}
           </ClickPopover>
         )}
+      </div>
+      <div className="mt-5">
+        <ChunkRailNavigator collapsed={false} />
       </div>
       {children ? <div className="mt-4 border-t border-editorial-border/50 pt-4">{children}</div> : null}
     </div>

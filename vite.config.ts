@@ -50,10 +50,40 @@ export default defineConfig(() => {
     },
     test: {
       globals: true,
-      environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],
-      include: ['src/**/*.test.{ts,tsx}'],
       css: false,
+      // Thread invece di processi: avviarli costa una frazione, e le prove non
+      // hanno bisogno di stare in processi separati.
+      pool: 'threads',
+      // Il finto browser costa più di tutto il resto messo insieme: montarlo
+      // per una prova che non tocca lo schermo è tempo buttato a ogni giro.
+      // Le prove dei componenti e degli hook lo hanno, le altre no.
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'node',
+            environment: 'node',
+            include: ['src/**/*.test.ts'],
+            exclude: ['src/hooks/**', 'src/components/**', 'src/stores/**'],
+            setupFiles: ['./src/test/setup.ts'],
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: 'dom',
+            environment: 'jsdom',
+            include: [
+              'src/**/*.test.tsx',
+              'src/hooks/**/*.test.ts',
+              'src/components/**/*.test.ts',
+              'src/stores/**/*.test.ts',
+            ],
+            setupFiles: ['./src/test/setup.ts'],
+          },
+        },
+      ],
     },
   };
 });

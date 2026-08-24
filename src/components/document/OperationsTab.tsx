@@ -163,7 +163,10 @@ export function OperationsTab({
         memoryProgress={memoryProgress}
         processingChunkIndex={processingChunkIndex}
         chunksCount={chunks.length}
-        rowCount={entries.length}
+        // Il conteggio deve contare **quello che si vede**: con un frammento
+        // selezionato la lista mostra solo i suoi messaggi, e annunciarne sei
+        // sopra una lista vuota fa sembrare la console rotta.
+        rowCount={filteredEntries.length}
         onClose={onClose}
       />
 

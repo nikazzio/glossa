@@ -269,6 +269,15 @@ export async function getProjectSource(projectId: string): Promise<ProjectSource
   };
 }
 
+/** Rinomina un progetto. Il nome è l'unico dato del progetto che l'utente
+ *  scrive a mano, e finora si poteva dare solo alla creazione. */
+export async function renameProject(projectId: string, name: string): Promise<void> {
+  await execute('UPDATE projects SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
+    name,
+    projectId,
+  ]);
+}
+
 export async function saveProjectSource(
   projectId: string,
   inputText: string,

@@ -1,10 +1,17 @@
 import { create } from 'zustand';
-import { classifySourceKind, type LibrarySource, type LibrarySourceDetail, type SourceCard } from '../types';
+import {
+  classifySourceKind,
+  isManifest,
+  type LibraryCatalogEntry,
+  type LibrarySourceDetail,
+  type SourceCard,
+} from '../types';
 import {
   addSourceToLibrary as addSourceToLibraryService,
   getLibrarySourceDetail,
-  listLibrarySources,
+  listLibraryCatalog,
   listLibrarySourceUrls,
+  removeSourceFromLibrary as removeSourceFromLibraryService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
 import { logger } from '../utils/logger';
@@ -15,32 +22,28 @@ function getErrorMessage(error: unknown): string {
 }
 
 interface SourceLibraryState {
-  sources: LibrarySource[];
   detail: LibrarySourceDetail | null;
   addingUrls: Set<string>;
   addedManifestUrls: Set<string>;
   libraryManifestUrls: Set<string>;
   error: string | null;
-  loadSources: () => Promise<void>;
   loadLibraryManifestUrls: () => Promise<void>;
-  addFromDiscovery: (card: SourceCard, workspaceId?: string) => Promise<void>;
+  addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
+  catalog: LibraryCatalogEntry[];
+  /** Il catalogo: **tutte** le opere, sempre (#213). */
+  loadCatalog: () => Promise<void>;
+  removeSource: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   clearError: () => void;
 }
 
 export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
-  sources: [],
   detail: null,
   addingUrls: new Set(),
   addedManifestUrls: new Set(),
   libraryManifestUrls: new Set(),
   error: null,
-
-  loadSources: async () => {
-    const sources = await listLibrarySources();
-    set({ sources });
-  },
 
   loadLibraryManifestUrls: async () => {
     try {
@@ -51,7 +54,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     }
   },
 
-  addFromDiscovery: async (card, workspaceId) => {
+  addFromDiscovery: async (card, workspaceId, providerKey) => {
     const manifestUrl = card.manifestUrl;
     set((state) => ({
       addingUrls: new Set(state.addingUrls).add(manifestUrl),
@@ -68,10 +71,21 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         thumbnailUrl: card.thumbnailUrl,
         language: card.language,
         subjects: card.subjects,
+        providerKey: providerKey ?? null,
+        externalId: isManifest(card) ? null : card.id,
+        mediaType: isManifest(card) ? null : card.mediaType,
+        materialType: isManifest(card) ? card.materialType : null,
+        collection: isManifest(card) ? null : card.collection,
+        volume: card.volume,
+        // Lo dichiarano entrambe le schede: quella del manifesto lo conta
+        // dai canvas, quella della ricerca lo prende dalla biblioteca.
+        itemCount: card.itemCount,
         workspaceId,
       });
       set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));
-      await get().loadSources();
+      // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
+      // Biblioteca senza riaprire la schermata.
+      await get().loadCatalog();
     } catch (error: unknown) {
       set({ error: getErrorMessage(error) });
     } finally {
@@ -80,6 +94,26 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         addingUrls.delete(manifestUrl);
         return { addingUrls };
       });
+    }
+  },
+
+  catalog: [],
+
+  loadCatalog: async () => {
+    try {
+      set({ catalog: await listLibraryCatalog() });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error) });
+    }
+  },
+
+  removeSource: async (sourceId) => {
+    try {
+      await removeSourceFromLibraryService(sourceId);
+      await get().loadCatalog();
+      await get().loadLibraryManifestUrls();
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error) });
     }
   },
 

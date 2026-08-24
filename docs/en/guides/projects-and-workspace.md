@@ -79,16 +79,62 @@ and any related counts.
 | Glossary assigned to pipeline | Project / pipeline |
 | Chunks, drafts, audit output, notes | Project / pipeline |
 
-## Reusing a dictionary in another workspace
+## What a workspace holds
 
-Every dictionary belongs to one workspace. To start from terms collected
-elsewhere, open the destination workspace Library and choose **Copy an existing
-dictionary**. You can rename the copy and it becomes independent: editing it
-never changes the original. When the Library is opened from a project, the copy
-is also assigned to that project.
+A workspace is a folder that gathers your material, in two different ways.
 
-You cannot delete a workspace while it contains projects or dictionaries. Copy
-or explicitly delete them first.
+**Living there** are translations and transcriptions: each one belongs to **a
+single** workspace, and that is where it takes its resources from. If it lived
+in two, «which dictionaries does this work see» would have no single answer.
+
+**Linked to it** are books, dictionaries and imported phrases: the same things
+can sit in **several workspaces at once**, and are never duplicated. A book in
+two workspaces is one book, and its files on disk are the same ones.
+
+## Using a dictionary in several workspaces
+
+Link the same dictionary wherever you need it: it stays one dictionary, and the
+entries you add show up everywhere it is linked.
+
+If one workspace needs an entry translated differently, **correct it there**:
+the correction applies only in that workspace and the original does not change.
+You can also hide an entry that does not belong there. Anyone looking at the
+dictionary from another workspace still sees the original version.
+
+If instead you want to take a dictionary as a starting point and go your own
+way, the **copy** is still there: it creates a new, independent dictionary that
+lives on its own from then on.
+
+## Moving a translation to another workspace
+
+On the workspace page, every translation has a command that moves it elsewhere.
+From then on it sees the new workspace's resources — dictionaries, phrase memory,
+linked works. **The work already done stays counted where it was done**:
+yesterday's costs and calls belong to the workspace of that time, and the move
+itself is written into the history. Moving copies nothing and changes not a
+comma of the text.
+
+Phrases remembered from that translation follow it without you doing anything:
+they belong to the work they came from.
+
+## Setting a workspace aside
+
+When a job is done but you do not want to throw it away, **archive it**: it
+leaves the list of workspaces you work in and everything it holds stays where it
+is. Reopen it when you need it.
+
+## Deleting a workspace
+
+The command no longer refuses. It tells you what is inside and lets you choose
+**once for everything**:
+
+- **set it aside** — the road that takes nothing away;
+- **move everything to another workspace**, then delete the empty one;
+- **delete** — the translations and transcriptions that lived there go with it.
+
+**Books, dictionaries and phrases always stay**: they are linked, not owned, and
+may live elsewhere too. A dictionary left without any workspace is not deleted:
+you find it in the Library's general catalogue.
 
 ## Naming advice
 

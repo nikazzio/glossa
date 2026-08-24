@@ -10,6 +10,9 @@ import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useJobsFeed } from './hooks/useJobsFeed';
+import { useRestoreFollowUp } from './hooks/useRestoreFollowUp';
+import { useCloseGuard } from './hooks/useCloseGuard';
 import { useUiStore } from './stores/uiStore';
 import type { UiFont, DocumentLineHeight, ColorScheme } from './stores/uiStore';
 import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
@@ -430,6 +433,17 @@ export default function App() {
     // l'utente ha già "Aggiorna" in Impostazioni per un check esplicito.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // I lavori in background non appartengono a una schermata: l'ascolto sta qui,
+  // nel componente radice, e vale per tutta l'applicazione. Stava dentro
+  // `EditorView`, montato solo con un progetto aperto: in Dashboard la coda
+  // risultava vuota, entrando in una traduzione compariva, e uscendo restava
+  // l'elenco vecchio senza più nessuno in ascolto.
+  useJobsFeed();
+  // Il controllo del deposito messo in coda da un ripristino può finire molto
+  // dopo, anche in una sessione successiva: chi aspetta la sua risposta sta qui.
+  useRestoreFollowUp();
+  useCloseGuard();
 
   const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const currentProjectId = useProjectStore((s) => s.currentProjectId);

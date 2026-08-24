@@ -1,6 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
-import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, Search } from 'lucide-react';
+import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ClickPopover, Dialog, IconButton, Select, Spinner } from '../ui';
@@ -11,6 +11,8 @@ import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
+import { relativeDateUnit } from '../../utils';
+import { CachedThumbnail } from '../common/CachedThumbnail';
 
 const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org']);
 
@@ -25,6 +27,18 @@ function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
   return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
 }
 
+
+/** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del
+ * catalogo, e riordinarlo per deduplicare cambierebbe quello che l'utente
+ * vede. */
+function dedupeById<T extends { id: string }>(cards: T[]): T[] {
+  const seen = new Set<string>();
+  return cards.filter((card) => {
+    if (seen.has(card.id)) return false;
+    seen.add(card.id);
+    return true;
+  });
+}
 
 /** Riordina la lista SOLO per la visualizzazione (chiavi card.id restano stabili,
  * Framer Motion anima lo spostamento, nessun remount): la scheda espansa tiene con
@@ -90,6 +104,7 @@ function CardActions({ adding, alreadyAdded, onAddToLibrary, onAddToWorkspace }:
 
 interface CardViewProps {
   card: SourceCard;
+  providerKey: string;
   providerLabel: string;
   expanded: boolean;
   width: string;
@@ -115,13 +130,17 @@ function DataStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
+function SourceCardView({ card, providerKey, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
+  // Quante pagine si legge **senza espandere**: è il dato con cui si decide se
+  // scaricare un'opera, e stava solo nella scheda aperta.
+  const pages = card.itemCount !== null ? t('dashboard.discovery.pageCount', { count: card.itemCount }) : null;
   const metaLine = [
     card.creator ? `${t('dashboard.discovery.by')} ${card.creator}` : null,
     card.date,
     card.volume,
+    pages,
   ].filter(Boolean).join(' · ');
 
   const stats: Array<[string, string]> = [
@@ -132,7 +151,7 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
     !isManifest(card) && card.mediaType && [t('dashboard.discovery.type'), card.mediaType],
     isManifest(card) && card.materialType && [t('dashboard.discovery.type'), card.materialType],
     !isManifest(card) && card.collection && [t('dashboard.discovery.collection'), card.collection],
-    isManifest(card) && card.itemCount !== null && [t('dashboard.discovery.pages'), String(card.itemCount)],
+    card.itemCount !== null && [t('dashboard.discovery.pages'), String(card.itemCount)],
     card.subjects.length > 0 && [t('dashboard.discovery.subjects'), card.subjects.join(' · ')],
   ].filter((entry): entry is [string, string] => Boolean(entry));
 
@@ -156,15 +175,26 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
         className="flex h-40 w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         <span className="flex h-full w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox">
-          {card.thumbnailUrl ? <img src={card.thumbnailUrl} alt="" className="h-full w-full object-cover" /> : <BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
+          <CachedThumbnail
+            url={card.thumbnailUrl}
+            providerKey={providerKey}
+            className="h-full w-full object-cover"
+            fallback={<BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
+          />
         </span>
         {expanded ? (
-          <span className="flex h-full min-w-0 flex-1 gap-6">
-            <span className="flex h-full min-w-0 shrink-0 basis-56 flex-col overflow-hidden">
+          // A tre o quattro colonne non c'è larghezza per mettere i dati
+          // accanto al titolo: affiancarli taglia gli uni e gli altri. La
+          // scheda cresce in altezza e i dati vanno sotto. (In vista elenco la
+          // scheda è un'altra, e lì lo spazio c'è.)
+          <span className="mt-3 flex min-w-0 flex-1 flex-col gap-3">
+            <span className="flex min-w-0 flex-col overflow-hidden">
               <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
               {card.description && <span className="mt-1.5 block line-clamp-2 text-xs leading-relaxed text-editorial-ink/70">{card.description}</span>}
             </span>
-            <span className="grid min-w-0 flex-1 auto-rows-min grid-cols-2 content-start gap-x-4 gap-y-1 overflow-hidden">
+            <span
+              className="grid min-w-0 flex-1 auto-rows-min grid-cols-1 content-start gap-x-4 gap-y-1 overflow-hidden" 
+            >
               {stats.map(([label, value]) => <DataStat key={label} label={label} value={value} />)}
             </span>
           </span>
@@ -179,7 +209,7 @@ function SourceCardView({ card, providerLabel, expanded, width, onToggle, onAddT
   );
 }
 
-function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'width'>) {
+function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'width' | 'providerKey'>) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
 
@@ -276,13 +306,16 @@ export function SourceDiscoveryPanel() {
       })
       .catch(() => setProviders([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [setProviderKey]);
 
   const selectedProvider = providers.find((provider) => provider.key === providerKey);
   const cards = useMemo<SourceCard[]>(() => {
     if (!outcome) return [];
     return outcome.manifest ? [{ ...outcome.manifest, id: outcome.manifest.manifestUrl }] : outcome.results;
   }, [outcome]);
+  // «di quanto tempo fa» si ricalcola a ogni disegno: la finestra resta aperta
+  // per minuti, e una riga che dice «adesso» per mezz'ora è peggio di niente.
+  const cachedUnit = relativeDateUnit((outcome?.cachedAt ?? 0) * 1000);
   const isListView = resultsPerRow === 'list';
   const columns = resultsPerRow === 4 ? 4 : 3;
   const displayCards = useMemo(
@@ -290,8 +323,7 @@ export function SourceDiscoveryPanel() {
     [cards, isListView, columns, expandedId],
   );
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const search = async (fresh: boolean) => {
     if (!input.trim()) return;
     setSearching(true);
     setExpandedId(null);
@@ -299,12 +331,17 @@ export function SourceDiscoveryPanel() {
     setOutcome(null);
     setSearchError(false);
     try {
-      setOutcome(await discoverIIIF(providerKey, input.trim(), 1));
+      setOutcome(await discoverIIIF(providerKey, input.trim(), 1, fresh));
     } catch {
       setSearchError(true);
     } finally {
       setSearching(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void search(false);
   };
 
   const loadMore = async () => {
@@ -314,7 +351,10 @@ export function SourceDiscoveryPanel() {
     setSearchError(false);
     try {
       const next = await discoverIIIF(providerKey, input.trim(), nextPage);
-      setOutcome(outcome ? { ...next, results: [...outcome.results, ...next.results] } : next);
+      // Alcuni cataloghi — Internet Archive fra questi — restituiscono lo
+      // stesso identificativo su due pagine diverse. Concatenare e basta
+      // produce schede doppie con la stessa chiave.
+      setOutcome(outcome ? { ...next, results: dedupeById([...outcome.results, ...next.results]) } : next);
       setPage(nextPage);
     } catch {
       setSearchError(true);
@@ -377,6 +417,25 @@ export function SourceDiscoveryPanel() {
           </motion.div>
         </div>
       )}
+      {outcome?.cachedAt !== undefined && outcome.cachedAt !== null && (
+        // Un risultato conservato non si distingue da uno appena arrivato, e
+        // senza saperlo non si può decidere se vale la pena rifare la ricerca.
+        <p className="mt-3 flex items-center gap-2 text-[11px] text-editorial-muted">
+          <span>
+            {t('dashboard.discovery.fromCache', {
+              when: t(`common.relative.${cachedUnit.key}`, { count: cachedUnit.count ?? 0 }),
+            })}
+          </span>
+          <IconButton
+            title={t('dashboard.discovery.searchAgain')}
+            onClick={() => void search(true)}
+            disabled={searching}
+            size="xs"
+          >
+            <RefreshCw size={12} />
+          </IconButton>
+        </p>
+      )}
       {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
       {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}
       {cards.length > 0 && (
@@ -390,7 +449,7 @@ export function SourceDiscoveryPanel() {
                   providerLabel={selectedProvider?.label ?? ''}
                   expanded={expandedId === card.id}
                   onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
                   onAddToWorkspace={() => setWorkspacePickerCard(card)}
                   adding={addingUrls.has(card.manifestUrl)}
                   alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -401,13 +460,14 @@ export function SourceDiscoveryPanel() {
             <div className="mt-4 flex flex-wrap items-start gap-3">
               {displayCards.map((card) => (
                 <SourceCardView
+                  providerKey={providerKey}
                   key={card.id}
                   card={card}
                   providerLabel={selectedProvider?.label ?? ''}
                   expanded={expandedId === card.id}
                   width={cardWidth(expandedId === card.id, columns)}
                   onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card)}
+                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
                   onAddToWorkspace={() => setWorkspacePickerCard(card)}
                   adding={addingUrls.has(card.manifestUrl)}
                   alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -444,7 +504,7 @@ export function SourceDiscoveryPanel() {
                   key={workspace.id}
                   type="button"
                   onClick={() => {
-                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id);
+                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, providerKey);
                     setWorkspacePickerCard(null);
                   }}
                   className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

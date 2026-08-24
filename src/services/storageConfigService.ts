@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
 
 export interface DataDirStatus {
   path: string;
@@ -10,12 +9,12 @@ export async function getDataDir(): Promise<DataDirStatus> {
   return invoke<DataDirStatus>('get_data_dir');
 }
 
-export async function setDataDir(newPath: string): Promise<void> {
-  await invoke('set_data_dir', { newPath });
-}
-
-/** Opens a native folder picker; returns null if the user cancels. */
-export async function pickDataDirFolder(): Promise<string | null> {
-  const selected = await open({ directory: true, multiple: false });
-  return typeof selected === 'string' ? selected : null;
+/**
+ * Apre la finestra di scelta cartella **dal backend** e sposta lì la cartella
+ * dati, come già fanno l'import documenti (#405) e la cartella del deposito: il
+ * percorso non attraversa l'interfaccia e nessun comando lo accetta come
+ * parametro. Restituisce `null` se la scelta viene annullata.
+ */
+export async function chooseDataDirFolder(): Promise<DataDirStatus | null> {
+  return invoke<DataDirStatus | null>('choose_data_dir_folder');
 }

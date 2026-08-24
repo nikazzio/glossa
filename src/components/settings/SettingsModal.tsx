@@ -1,6 +1,18 @@
-import type { ReactNode } from 'react';
-import { useState } from 'react';
-import { LibraryBig, BookOpen, FileText, Type, Server, HardDrive } from 'lucide-react';
+import type { KeyboardEvent, ReactNode } from 'react';
+import { useRef, useState } from 'react';
+import {
+  LibraryBig,
+  BookOpen,
+  FileText,
+  Type,
+  Server,
+  HardDrive,
+  DatabaseBackup,
+  ListChecks,
+  Download,
+  Landmark,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
@@ -17,6 +29,10 @@ import { TranslationsSettingsTab } from './TranslationsSettingsTab';
 import { TypographySettingsTab } from './TypographySettingsTab';
 import { ProviderSettingsTab } from './ProviderSettingsTab';
 import { StorageSettingsTab } from './StorageSettingsTab';
+import { BackupSection } from './BackupSection';
+import { JobsSettingsTab } from './JobsSettingsTab';
+import { DownloadSettingsTab } from './DownloadSettingsTab';
+import { LibrariesSettingsTab, type NetworkProfileDraft } from './LibrariesSettingsTab';
 
 export function SettingsModal() {
   const {
@@ -65,6 +81,9 @@ export function SettingsModal() {
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
+  // Il ritmo che si sta scrivendo vive qui e non nella scheda: la scheda si
+  // smonta cambiando linguetta, e un profilo digitato a metà spariva in silenzio.
+  const [networkDraft, setNetworkDraft] = useState<NetworkProfileDraft | null>(null);
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
   const hlMode: 'light' | 'dark' = (() => {
@@ -103,12 +122,42 @@ export function SettingsModal() {
     { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
     { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
+    { id: 'backup',       icon: <DatabaseBackup size={14} />,    label: t('settings.backup') },
+    { id: 'jobs',         icon: <ListChecks size={14} />,        label: t('settings.jobsTab') },
+    { id: 'download',     icon: <Download size={14} />,          label: t('settings.downloadTab') },
+    { id: 'libraries',    icon: <Landmark size={14} />,          label: t('settings.librariesTab') },
   ];
 
   const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
     { icon: <LibraryBig size={14} />,  label: t('areas.library.title') },
     { icon: <BookOpen size={14} />,    label: t('areas.transcriptions.title') },
   ];
+
+  // Le linguette inattive stanno fuori dal percorso di tabulazione, come vuole
+  // il modello ARIA: senza le frecce, però, con la tastiera si arrivava soltanto
+  // a quella aperta e non si potevano cambiare schede.
+  const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
+
+  const goToTab = (id: SettingsTab) => {
+    setActiveTab(id);
+    tabRefs.current[id]?.focus();
+  };
+
+  const handleTabKeys = (current: SettingsTab, event: KeyboardEvent<HTMLButtonElement>) => {
+    const index = activeTabConfig.findIndex((tab) => tab.id === current);
+    const last = activeTabConfig.length - 1;
+    let next: SettingsTab | null = null;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
+      next = activeTabConfig[(index - 1 + activeTabConfig.length) % activeTabConfig.length].id;
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
+      next = activeTabConfig[(index + 1) % activeTabConfig.length].id;
+    else if (event.key === 'Home') next = activeTabConfig[0].id;
+    else if (event.key === 'End') next = activeTabConfig[last].id;
+    if (next) {
+      event.preventDefault();
+      goToTab(next);
+    }
+  };
 
   const tabBar = (
     <div role="tablist" aria-label={t('settings.panelTitle')} className="flex items-center gap-2">
@@ -117,9 +166,13 @@ export function SettingsModal() {
         return (
           <IconButton
             key={tab.id}
+            ref={(element) => {
+              tabRefs.current[tab.id] = element;
+            }}
             size="md"
             tone={isActive ? 'accent' : 'default'}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(event) => handleTabKeys(tab.id, event)}
             title={tab.label}
             id={`settings-tab-${tab.id}`}
             role="tab"
@@ -137,7 +190,7 @@ export function SettingsModal() {
           key={tab.label}
           size="md"
           tone="default"
-          title={`${tab.label} — Glossa 2.0`}
+          title={t('settings.tabPlanned', { label: tab.label })}
           disabled
         >
           {tab.icon}
@@ -158,6 +211,8 @@ export function SettingsModal() {
       }}
       title={t('settings.panelTitle')}
       closeLabel={t('settings.close')}
+      eyebrow={t('settings.eyebrow')}
+      icon={<SlidersHorizontal size={20} />}
       widthClassName="max-w-3xl"
       bodyClassName="px-6 py-6 md:px-8"
       panelClassName="h-[85vh]"
@@ -230,6 +285,20 @@ export function SettingsModal() {
       )}
 
       {activeTab === 'storage' && <StorageSettingsTab />}
+
+      {activeTab === 'backup' && (
+        <div id="settings-panel-backup" role="tabpanel" aria-labelledby="settings-tab-backup" className="space-y-10">
+          <BackupSection />
+        </div>
+      )}
+
+      {activeTab === 'jobs' && <JobsSettingsTab />}
+
+      {activeTab === 'download' && <DownloadSettingsTab />}
+
+      {activeTab === 'libraries' && (
+        <LibrariesSettingsTab draft={networkDraft} setDraft={setNetworkDraft} />
+      )}
 
     </Dialog>
   );

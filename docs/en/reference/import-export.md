@@ -47,11 +47,14 @@ in real translations they often need different wording and position.
 See also [Annotations](../guides/annotations) for the distinction between imported
 source notes and annotations created during review.
 
-## Workspace backups
+## Backups
+
+The backup lives in **Settings → Backup** and covers the whole of Glossa, not a
+single workspace.
 
 Before asking to replace local data, Glossa checks that a backup is complete and
 compatible. An incomplete or altered file, or one made by a newer version, is
-rejected without changing the current workspace.
+rejected without changing anything.
 
 ## Data location
 

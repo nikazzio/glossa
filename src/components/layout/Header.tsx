@@ -6,7 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { translationsLocation } from '../../navigation/appLocation';
+import { translationsLocation, workspaceLocation } from '../../navigation/appLocation';
 import { EASE_EDITORIAL } from './motion';
 import { ShellNavFooter } from './ShellNav';
 import { Tooltip } from '../ui';
@@ -56,9 +56,19 @@ export function Header() {
   const showContextBreadcrumb = Boolean(currentProjectId || location.area !== 'dashboard');
   const backToContextLabel = t(projectWithoutWorkspace ? 'sidebar.backToTranslations' : 'sidebar.backToWorkspace');
 
-  const handleReturnToProjectContext = () => {
-    closeProject();
-    if (projectWithoutWorkspace) navigate(translationsLocation());
+  /**
+   * Un segmento del breadcrumb porta **dove dice di portare**: cliccando il
+   * workspace si va alla sua home, non "indietro" da dove si veniva. Prima
+   * chiudeva il progetto e basta, lasciando l'utente nella posizione
+   * precedente — dalla dashboard si tornava in dashboard.
+   */
+  const handleContextClick = () => {
+    if (currentProjectId) closeProject();
+    if (isTranslationsContext) {
+      navigate(translationsLocation());
+      return;
+    }
+    if (projectWorkspace) navigate(workspaceLocation(projectWorkspace.id));
   };
 
   return (
@@ -74,23 +84,26 @@ export function Header() {
                   <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
                     //
                   </span>
-                  {currentProjectId ? (
-                    <Tooltip label={backToContextLabel}>
-                      <button
-                        type="button"
-                        onClick={handleReturnToProjectContext}
-                        disabled={isProcessing}
-                        className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
-                      >
-                        {contextLabel}
-                      </button>
-                    </Tooltip>
-                  ) : (
-                    <span className="flex min-w-0 items-center gap-2 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-                      {!isTranslationsContext && projectWorkspace && <WorkspaceIcon iconKey={projectWorkspace.iconKey} size={16} className="shrink-0 text-editorial-accent" />}
+                  {/* Sempre la stessa forma, con o senza progetto aperto:
+                      icona del workspace quando il segmento è un workspace, poi
+                      l'etichetta, e in entrambi i casi si può cliccare. */}
+                  <Tooltip label={backToContextLabel}>
+                    <button
+                      type="button"
+                      onClick={handleContextClick}
+                      disabled={isProcessing}
+                      className="flex min-w-0 items-center gap-2 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                    >
+                      {!isTranslationsContext && projectWorkspace && (
+                        <WorkspaceIcon
+                          iconKey={projectWorkspace.iconKey}
+                          size={16}
+                          className="shrink-0 text-editorial-accent"
+                        />
+                      )}
                       <span className="truncate">{contextLabel}</span>
-                    </span>
-                  )}
+                    </button>
+                  </Tooltip>
                 </>
               )}
               <AnimatePresence mode="popLayout">

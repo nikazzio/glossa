@@ -1,5 +1,6 @@
+import { Fragment, useRef, type KeyboardEvent } from 'react';
 import {
-  Server, RefreshCw, ChevronDown, ChevronUp, Globe, History, Zap,
+  Server, RefreshCw, ChevronDown, ChevronUp, DollarSign, Globe, History, RotateCcw, Zap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ApiKeyInput } from './ApiKeyInput';
@@ -7,11 +8,21 @@ import { CustomProviderSection } from './CustomProviderSection';
 import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { ProviderLogo } from '../common';
-import { IconButton, Tooltip, ToggleRow } from '../ui';
+import {
+  FieldLabel,
+  FIELD_MONO_CLASSNAME,
+  IconButton,
+  SectionLabel,
+  Tooltip,
+  ToggleRow,
+} from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { OllamaStatus } from '../../types';
+
+/** Le linguette: i provider del registro, più quello personalizzato in coda. */
+const PROVIDER_TABS: ModelProvider[] = [...MODEL_PROVIDER_ORDER, 'custom'];
 
 const PROVIDER_LABELS: Record<ModelProvider, string> = {
   gemini: 'Gemini',
@@ -131,71 +142,84 @@ export function ProviderSettingsTab({
       : ollamaStatus === 'disconnected'
         ? 'bg-editorial-danger'
         : 'bg-editorial-running';
+  const providerRefs = useRef<Partial<Record<ModelProvider, HTMLButtonElement | null>>>({});
+
+  const handleProviderKeys = (
+    current: ModelProvider,
+    event: KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    const index = PROVIDER_TABS.indexOf(current);
+    let next: ModelProvider | null = null;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
+      next = PROVIDER_TABS[(index - 1 + PROVIDER_TABS.length) % PROVIDER_TABS.length];
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
+      next = PROVIDER_TABS[(index + 1) % PROVIDER_TABS.length];
+    else if (event.key === 'Home') next = PROVIDER_TABS[0];
+    else if (event.key === 'End') next = PROVIDER_TABS[PROVIDER_TABS.length - 1];
+    if (next) {
+      event.preventDefault();
+      setActiveProviderTab(next);
+      providerRefs.current[next]?.focus();
+    }
+  };
 
   return (
     <div
       id="settings-panel-provider"
       role="tabpanel"
       aria-labelledby="settings-tab-provider"
-      className="space-y-12"
+      className="space-y-10"
     >
       {/* Provider workspace */}
-      <div className="space-y-4">
-        <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          {t('settings.providerConfig')}
-        </p>
+      <section className="space-y-4">
+        <SectionLabel icon={Server} label={t('settings.providerConfig')} />
         <div className="space-y-4 border-y border-editorial-border/70 py-5">
+          {/* Le linguette dei provider sono `IconButton` come quelle della
+              finestra: prima erano cerchi verdi pieni fatti a mano, l'unico
+              elemento attivo dell'app disegnato per conto suo. Le frecce
+              spostano la scelta, altrimenti da tastiera si raggiungeva soltanto
+              la linguetta aperta. */}
           <div
             role="tablist"
             aria-label={t('settings.providerConfig')}
-            className="flex flex-wrap gap-2"
+            className="flex flex-wrap items-center gap-2"
           >
-            {MODEL_PROVIDER_ORDER.map((provider) => {
+            {PROVIDER_TABS.map((provider) => {
               const active = provider === activeProviderTab;
               return (
-                <Tooltip key={provider} label={PROVIDER_LABELS[provider]}>
-                <button
-                  type="button"
-                  onClick={() => setActiveProviderTab(provider)}
-                  aria-label={PROVIDER_LABELS[provider]}
-                  id={`settings-provider-tab-${provider}`}
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls={`settings-provider-panel-${provider}`}
-                  tabIndex={active ? 0 : -1}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    active
-                      ? 'border-editorial-accent bg-editorial-accent text-white'
-                      : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                  }`}
-                >
-                  <ProviderLogo provider={provider} size={18} />
-                </button>
-                </Tooltip>
+                <Fragment key={provider}>
+                  {/* Il provider personalizzato resta staccato dagli altri:
+                      separatore canonico, non un margine inventato. */}
+                  {provider === 'custom' && (
+                    <span
+                      className="mx-1 h-4 w-px self-center bg-editorial-border/70"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <IconButton
+                    ref={(element) => {
+                      providerRefs.current[provider] = element;
+                    }}
+                    size="lg"
+                    tone={active ? 'accent' : 'default'}
+                    onClick={() => setActiveProviderTab(provider)}
+                    onKeyDown={(event) => handleProviderKeys(provider, event)}
+                    title={PROVIDER_LABELS[provider]}
+                    id={`settings-provider-tab-${provider}`}
+                    role="tab"
+                    aria-selected={active}
+                    aria-controls={`settings-provider-panel-${provider}`}
+                    tabIndex={active ? 0 : -1}
+                  >
+                    {provider === 'custom' ? (
+                      <Globe size={16} />
+                    ) : (
+                      <ProviderLogo provider={provider} size={18} />
+                    )}
+                  </IconButton>
+                </Fragment>
               );
             })}
-
-            {/* Separatore + tab Custom */}
-            <span className="mx-1 self-center w-px h-5 bg-editorial-border/60" aria-hidden="true" />
-            <Tooltip label={PROVIDER_LABELS['custom']}>
-            <button
-              type="button"
-              onClick={() => setActiveProviderTab('custom')}
-              aria-label={PROVIDER_LABELS['custom']}
-              id="settings-provider-tab-custom"
-              role="tab"
-              aria-selected={activeProviderTab === 'custom'}
-              aria-controls="settings-provider-panel-custom"
-              tabIndex={activeProviderTab === 'custom' ? 0 : -1}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                activeProviderTab === 'custom'
-                  ? 'border-editorial-accent bg-editorial-accent text-white'
-                  : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-              }`}
-            >
-              <Globe size={16} />
-            </button>
-            </Tooltip>
           </div>
 
           <div
@@ -208,11 +232,14 @@ export function ProviderSettingsTab({
               {activeProviderTab === 'custom' ? (
                 <CustomProviderSection />
               ) : activeProviderTab === 'ollama' ? (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Server size={16} className="text-editorial-muted" />
+                <div className="space-y-4 border-y border-editorial-border/70 py-4">
+                  <div className="space-y-1.5">
+                    <FieldLabel htmlFor="settings-ollama-url" block>
+                      {t('ollama.baseUrl')}
+                    </FieldLabel>
+                    <div className="flex items-center gap-2">
                       <input
+                        id="settings-ollama-url"
                         type="url"
                         value={urlDraft}
                         onChange={(e) => {
@@ -229,23 +256,28 @@ export function ProviderSettingsTab({
                             void refreshOllama();
                           }
                         }}
-                        className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
+                        className={FIELD_MONO_CLASSNAME}
                         placeholder="http://localhost:11434"
                         aria-label={t('ollama.baseUrl')}
                       />
-                      {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
                       <Tooltip label={ollamaStatusLabel}>
                         <span className={`h-2 w-2 shrink-0 rounded-full ${ollamaDotClass}`} aria-label={ollamaStatusLabel} />
                       </Tooltip>
+                      <IconButton
+                        onClick={() => void refreshOllama()}
+                        disabled={refreshing}
+                        title={t('ollama.refresh')}
+                        size="sm"
+                        className="shrink-0"
+                      >
+                        <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+                      </IconButton>
                     </div>
-                    <IconButton
-                      onClick={() => void refreshOllama()}
-                      disabled={refreshing}
-                      title={t('ollama.refresh')}
-                      size="sm"
-                    >
-                      <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-                    </IconButton>
+                    {urlError && (
+                      <p role="alert" className="text-sm text-editorial-danger">
+                        {urlError}
+                      </p>
+                    )}
                   </div>
 
                   <ToggleRow
@@ -256,13 +288,10 @@ export function ProviderSettingsTab({
                   />
 
                   {ollamaModels.length > 0 && (
-                    <div className="space-y-1.5">
+                    <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
                       {ollamaModels.map((modelId) => (
-                        <div
-                          key={modelId}
-                          className="flex items-center gap-2 border-b border-editorial-border/60 py-2"
-                        >
-                          <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
+                        <div key={modelId} className="py-2.5">
+                          <span className="font-mono text-sm text-editorial-ink">{modelId}</span>
                         </div>
                       ))}
                     </div>
@@ -279,9 +308,7 @@ export function ProviderSettingsTab({
               )}
 
               {activeProviderTab !== 'ollama' && activeProviderTab !== 'custom' && !(keyStatuses as Partial<Record<string, boolean>>)[activeProviderTab] && (
-                <p className="text-xs text-editorial-muted italic">
-                  {t('settings.configureKeyToUse')}
-                </p>
+                <p className="text-sm text-editorial-muted">{t('settings.configureKeyToUse')}</p>
               )}
             </div>
 
@@ -301,52 +328,63 @@ export function ProviderSettingsTab({
                   />
                   {groups.map(({ label, ids }) => (
                     <div key={label || '_all'} className="space-y-1.5">
-                      {label && (
-                        <p className="px-1 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-                          {label}
-                        </p>
-                      )}
-                      {ids.map((modelId) => {
-                        const entry = getModelEntry(activeProviderTab, modelId);
-                        return (
-                          <div
-                            key={modelId}
-                            className={`flex items-start gap-3 border-b border-editorial-border/60 py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
-                          >
-                            <div className="min-w-0 flex-1">
+                      {label && <FieldLabel>{label}</FieldLabel>}
+                      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+                        {ids.map((modelId) => {
+                          const entry = getModelEntry(activeProviderTab, modelId);
+                          // I dati del modello sono metadati, non pastiglie: erano
+                          // fino a quattro contenitori arrotondati per riga, e le
+                          // pastiglie in questa applicazione non si usano.
+                          const meta = [
+                            entry?.contextWindow
+                              ? entry.contextWindow >= 1_000_000
+                                ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
+                                : `${Math.round(entry.contextWindow / 1_000)}K`
+                              : null,
+                            entry?.pricing
+                              ? `$${entry.pricing.input}/$${entry.pricing.output}`
+                              : null,
+                          ].filter(Boolean);
+                          const state =
+                            entry?.status === 'preview'
+                              ? 'preview'
+                              : entry?.status === 'deprecated'
+                                ? t('settings.deprecatedModelBadge')
+                                : null;
+                          return (
+                            <div
+                              key={modelId}
+                              className={`py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
+                            >
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
-                                <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
-                                {entry?.contextWindow && (
-                                  <span className="rounded-full border border-editorial-border px-2 py-0.5 text-xs font-mono text-editorial-muted">
-                                    {entry.contextWindow >= 1_000_000
-                                      ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
-                                      : `${Math.round(entry.contextWindow / 1_000)}K`}
+                                <span className="font-mono text-sm text-editorial-ink">
+                                  {modelId}
+                                </span>
+                                <ModelCapabilityHint
+                                  provider={activeProviderTab}
+                                  model={modelId}
+                                  iconOnly
+                                />
+                                {meta.length > 0 && (
+                                  <span className="font-mono text-xs text-editorial-muted">
+                                    {meta.join(' · ')}
                                   </span>
                                 )}
-                                {entry?.pricing && (
-                                  <span className="rounded-full border border-editorial-border px-2 py-0.5 text-xs font-mono text-editorial-muted">
-                                    ${entry.pricing.input}/${entry.pricing.output}
-                                  </span>
-                                )}
-                                {entry?.status === 'preview' && (
-                                  <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-xs font-mono text-editorial-warning">
-                                    preview
-                                  </span>
-                                )}
-                                {entry?.status === 'deprecated' && (
-                                  <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-xs font-mono text-editorial-warning">
-                                    {t('settings.deprecatedModelBadge')}
+                                {state && (
+                                  <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-warning">
+                                    {state}
                                   </span>
                                 )}
                               </div>
                               {entry?.description && (
-                                <p className="mt-0.5 text-xs text-editorial-muted">{entry.description}</p>
+                                <p className="mt-0.5 text-xs text-editorial-muted">
+                                  {entry.description}
+                                </p>
                               )}
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -354,73 +392,103 @@ export function ProviderSettingsTab({
             })()}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Pricing Overrides */}
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setShowPricingOverrides(!showPricingOverrides)}
-          className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-expanded={showPricingOverrides}
-        >
-          {showPricingOverrides ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          {t('cost.pricingOverrides')}
-        </button>
+      {/* Listino personale. Le due sezioni a scomparsa si aprono nello stesso
+          modo: intestazione canonica e comando a icona a destra. Prima una era
+          un'etichetta cliccabile e l'altra una riga larga con il chevron. */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <SectionLabel icon={DollarSign} label={t('cost.pricingOverrides')} />
+          <div className="flex items-center gap-1">
+            {Object.keys(overrides).length > 0 && (
+              <IconButton size="sm" onClick={resetAll} title={t('cost.resetAll')}>
+                <RotateCcw size={13} />
+              </IconButton>
+            )}
+            <IconButton
+              size="sm"
+              onClick={() => setShowPricingOverrides(!showPricingOverrides)}
+              title={t('cost.pricingOverrides')}
+              ariaPressed={showPricingOverrides}
+            >
+              {showPricingOverrides ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </IconButton>
+          </div>
+        </div>
         {showPricingOverrides && (
-          <div className="space-y-3 border-y border-editorial-border/70 py-5">
-            <p className="text-xs text-editorial-muted italic">{t('cost.overrideHint')}</p>
-            <div className="border-y border-editorial-border overflow-x-auto">
-              <table className="w-full text-xs font-mono">
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed text-editorial-muted">{t('cost.overrideHint')}</p>
+            <div className="overflow-x-auto border-y border-editorial-border/70">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-editorial-border bg-editorial-textbox/30">
-                    <th className="text-left px-3 py-2 font-bold uppercase tracking-[0.16em] text-editorial-muted">Model</th>
-                    <th className="text-right px-3 py-2 font-bold uppercase tracking-[0.16em] text-editorial-muted">Input $/1M</th>
-                    <th className="text-right px-3 py-2 font-bold uppercase tracking-[0.16em] text-editorial-muted">Output $/1M</th>
-                    <th className="px-3 py-2" />
+                  <tr className="border-b border-editorial-border/70">
+                    <th className="px-1 py-2 text-left">
+                      <FieldLabel>{t('cost.overrideModel')}</FieldLabel>
+                    </th>
+                    <th className="px-1 py-2 text-right">
+                      <FieldLabel>{t('cost.overrideInput')}</FieldLabel>
+                    </th>
+                    <th className="px-1 py-2 text-right">
+                      <FieldLabel>{t('cost.overrideOutput')}</FieldLabel>
+                    </th>
+                    <th className="px-1 py-2" />
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-editorial-border/60">
                   {MODEL_CATALOG.filter((e) => e.pricing).map((entry) => {
                     const key = `${entry.provider}/${entry.id}`;
                     const current = overrides[key] ?? MODEL_PRICING[key] ?? entry.pricing!;
                     const isOverridden = !!overrides[key];
                     return (
-                      <tr key={key} className="border-t border-editorial-border/40 hover:bg-editorial-textbox/20">
-                        <td className="px-3 py-2">
-                          <span className={isOverridden ? 'text-editorial-ink font-bold' : 'text-editorial-muted'}>
+                      <tr key={key}>
+                        <td className="px-1 py-2">
+                          <span
+                            className={`font-mono text-sm ${
+                              isOverridden ? 'text-editorial-ink' : 'text-editorial-muted'
+                            }`}
+                          >
                             {entry.provider}/{entry.id}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-1 py-2 text-right">
                           <input
                             type="number"
                             step="0.001"
                             min="0"
                             value={current.input}
-                            onChange={(e) => setOverride(key, { ...current, input: parseFloat(e.target.value) || 0 })}
-                            className="w-20 bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-right outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                            aria-label={`${key} — ${t('cost.overrideInput')}`}
+                            onChange={(e) =>
+                              setOverride(key, { ...current, input: parseFloat(e.target.value) || 0 })
+                            }
+                            className={`${FIELD_MONO_CLASSNAME} w-24 text-right`}
                           />
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-1 py-2 text-right">
                           <input
                             type="number"
                             step="0.001"
                             min="0"
                             value={current.output}
-                            onChange={(e) => setOverride(key, { ...current, output: parseFloat(e.target.value) || 0 })}
-                            className="w-20 bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-right outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                            aria-label={`${key} — ${t('cost.overrideOutput')}`}
+                            onChange={(e) =>
+                              setOverride(key, {
+                                ...current,
+                                output: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className={`${FIELD_MONO_CLASSNAME} w-24 text-right`}
                           />
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-1 py-2 text-right">
                           {isOverridden && (
-                            <button
-                              type="button"
+                            <IconButton
+                              size="sm"
                               onClick={() => resetOverride(key)}
-                              className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+                              title={t('cost.resetOverride')}
                             >
-                              {t('cost.resetOverride')}
-                            </button>
+                              <RotateCcw size={13} />
+                            </IconButton>
                           )}
                         </td>
                       </tr>
@@ -429,20 +497,9 @@ export function ProviderSettingsTab({
                 </tbody>
               </table>
             </div>
-            {Object.keys(overrides).length > 0 && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  {t('cost.resetAll')}
-                </button>
-              </div>
-            )}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

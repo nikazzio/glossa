@@ -241,7 +241,7 @@ export function MarkdownEditor({
     }
     syncHighlightLayer();
     return () => {
-      pendingScrollRestoreRef.current = textareaRef.current?.scrollTop ?? null;
+      pendingScrollRestoreRef.current = element?.scrollTop ?? null;
     };
   }, [resolvedHighlightHtml]);
 

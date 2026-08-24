@@ -8,7 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
-use super::{format_api_error, translation_audit_schema, with_retry_after};
+use super::{format_api_error, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -227,7 +227,7 @@ fn generation_config(req: &LlmRequest<'_>) -> Value {
             "responseFormat": {
                 "text": {
                     "mimeType": "application/json",
-                    "schema": translation_audit_schema()
+                    "schema": crate::llm::types::audit_json_schema().clone()
                 }
             }
         });

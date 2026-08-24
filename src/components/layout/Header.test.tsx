@@ -95,3 +95,22 @@ describe('Header', () => {
     expect(closeProject).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('breadcrumb: un segmento porta dove dice', () => {
+  it('il workspace apre la sua home, non torna indietro', () => {
+    // Prima chiudeva il progetto e lasciava l'utente dov'era: dalla dashboard
+    // si tornava in dashboard, che non è dove il segmento dice di portare.
+    useProjectStore.setState({ currentProjectId: null, projects: [] });
+    useChunksStore.setState({ isProcessing: false });
+    useWorkspaceStore.setState({
+      activeWorkspace: { id: 'ws-1', name: 'Archivio' } as never,
+      workspaces: [{ id: 'ws-1', name: 'Archivio' } as never],
+    });
+    useUiStore.setState({ location: { area: 'library' } });
+
+    render(<Header />);
+    fireEvent.click(screen.getByRole('button', { name: /Archivio/ }));
+
+    expect(useUiStore.getState().location).toEqual({ area: 'workspace', workspaceId: 'ws-1' });
+  });
+});

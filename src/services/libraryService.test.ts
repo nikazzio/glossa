@@ -8,7 +8,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { addSourceToLibrary, listLibrarySources, getLibrarySourceDetail, setWorkspaceSourceLink } =
+const { addSourceToLibrary, getLibrarySourceDetail, setWorkspaceSourceLink } =
   await import('./libraryService');
 
 const baseInput = {
@@ -21,7 +21,53 @@ const baseInput = {
   thumbnailUrl: null,
   language: null,
   subjects: [],
+  providerKey: null,
+  externalId: null,
+  mediaType: null,
+  materialType: null,
+  collection: null,
+  volume: null,
+  itemCount: null,
 };
+
+describe('metadati della fonte', () => {
+  const recorded: unknown[][] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    recorded.length = 0;
+    dbMocks.select.mockResolvedValue([]);
+    dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.runInTransaction.mockImplementation(
+      async (callback: (run: (query: string, params?: unknown[]) => Promise<void>) => Promise<void>) => {
+        await callback(async (query, params) => {
+          recorded.push([query, params]);
+        });
+      },
+    );
+  });
+
+  it('salva anche i dati che oggi nessuna schermata mostra', async () => {
+    // Rifare la ricerca per recuperare un dato che avevamo gia' in mano e'
+    // lavoro sprecato, e la biblioteca potrebbe non ridarlo uguale domani.
+    await addSourceToLibrary({
+      ...baseInput,
+      providerKey: 'gallica',
+      externalId: 'btv1b84260335',
+      mediaType: 'text',
+      collection: 'manuscrits',
+      volume: 'II',
+      itemCount: 210,
+    });
+
+    const written = JSON.stringify(recorded);
+    // La provenienza sulla fonte, il resto nei metadati della digitalizzazione.
+    expect(written).toContain('gallica:btv1b84260335');
+    expect(written).toContain('providerKey');
+    expect(written).toContain('manuscrits');
+    expect(written).toContain('210');
+  });
+});
 
 describe('libraryService', () => {
   beforeEach(() => {
@@ -44,7 +90,9 @@ describe('libraryService', () => {
       const queries = dbMocks.execute.mock.calls.map(([query]) => query as string);
       expect(queries.some((q) => q.includes('INSERT INTO sources'))).toBe(true);
       expect(queries.some((q) => q.includes('INSERT INTO source_versions'))).toBe(true);
-      expect(queries.some((q) => q.includes('INSERT INTO assets'))).toBe(true);
+      // Nessuna riga negli asset: dove sta il manifesto lo dice la disposizione
+      // delle cartelle, e non c'è nessuno che terrebbe vera quella riga.
+      expect(queries.some((q) => q.includes('INSERT INTO assets'))).toBe(false);
     });
 
     it('non duplica una fonte gia\' presente per lo stesso manifestUrl', async () => {
@@ -66,7 +114,7 @@ describe('libraryService', () => {
       await addSourceToLibrary({ ...baseInput, workspaceId: 'ws-1' });
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT OR IGNORE INTO workspace_sources'),
+        expect.stringContaining('INSERT INTO workspace_items'),
         ['ws-1', 'source-existing'],
       );
       expect(dbMocks.runInTransaction).not.toHaveBeenCalled();
@@ -78,7 +126,7 @@ describe('libraryService', () => {
       await addSourceToLibrary({ ...baseInput, workspaceId: 'ws-1' });
 
       const queries = dbMocks.execute.mock.calls.map(([query]) => query as string);
-      expect(queries.some((q) => q.includes('INSERT INTO workspace_sources'))).toBe(true);
+      expect(queries.some((q) => q.includes('INSERT INTO workspace_items'))).toBe(true);
     });
 
     it('rifiuta un titolo vuoto senza toccare il database', async () => {
@@ -94,21 +142,6 @@ describe('libraryService', () => {
     });
   });
 
-  describe('listLibrarySources', () => {
-    it('mappa le righe DB in LibrarySource, catalogo globale senza filtro workspace', async () => {
-      dbMocks.select.mockResolvedValueOnce([
-        { id: 's1', title: 'Titolo', kind: 'iiif', primary_language: 'la', external_ref: null, created_at: '2026-01-01' },
-      ]);
-
-      const result = await listLibrarySources();
-
-      expect(result).toEqual([
-        { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: 'la', externalRef: null, createdAt: '2026-01-01' },
-      ]);
-      expect(dbMocks.select).toHaveBeenCalledWith(expect.not.stringContaining('workspace_sources'));
-    });
-  });
-
   describe('getLibrarySourceDetail', () => {
     it('rigetta se la fonte non esiste', async () => {
       dbMocks.select.mockResolvedValueOnce([]);
@@ -116,18 +149,16 @@ describe('libraryService', () => {
       await expect(getLibrarySourceDetail('missing')).rejects.toThrow();
     });
 
-    it('restituisce fonte, versioni, asset e link workspace', async () => {
+    it('restituisce fonte, versioni e link workspace', async () => {
       dbMocks.select
         .mockResolvedValueOnce([{ id: 's1', title: 'Titolo', kind: 'iiif', primary_language: null, external_ref: null, created_at: '2026-01-01' }])
         .mockResolvedValueOnce([{ id: 'v1', source_id: 's1', label: 'primary', version_kind: 'iiif_manifest', source_url: 'https://x.test/m.json', is_primary: 1, created_at: '2026-01-01' }])
-        .mockResolvedValueOnce([{ id: 'a1', source_version_id: 'v1', kind: 'manifest', locality: 'remote', availability: 'catalogued', remote_url: 'https://x.test/m.json' }])
         .mockResolvedValueOnce([{ workspace_id: 'ws-1' }]);
 
       const detail = await getLibrarySourceDetail('s1');
 
       expect(detail.source.id).toBe('s1');
       expect(detail.versions).toHaveLength(1);
-      expect(detail.assets).toHaveLength(1);
       expect(detail.linkedWorkspaceIds).toEqual(['ws-1']);
     });
   });
@@ -137,7 +168,7 @@ describe('libraryService', () => {
       await setWorkspaceSourceLink('ws-1', 's1', true);
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT OR IGNORE INTO workspace_sources'),
+        expect.stringContaining('INSERT INTO workspace_items'),
         ['ws-1', 's1'],
       );
     });
@@ -146,7 +177,7 @@ describe('libraryService', () => {
       await setWorkspaceSourceLink('ws-1', 's1', false);
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM workspace_sources'),
+        expect.stringContaining('DELETE FROM workspace_items'),
         ['ws-1', 's1'],
       );
     });

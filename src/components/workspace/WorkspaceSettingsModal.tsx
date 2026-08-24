@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AlignLeft, Brain, Cpu, Download, HardDrive, Loader2, RefreshCcw, Settings2, Type, Upload } from 'lucide-react';
+import { AlignLeft, Brain, Cpu, Loader2, RefreshCcw, Settings2, Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, DialogConfirmButton, FieldLabel, SectionLabel, Select } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../../workspaceIdentity';
 import { WorkspaceIcon, WorkspaceIconPicker } from './WorkspaceIdentity';
 
-type WorkspaceSettingsTab = 'general' | 'memory' | 'backup';
+type WorkspaceSettingsTab = 'general' | 'memory';
 
 interface Props {
   open: boolean;
@@ -32,7 +31,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5.4-nano');
   const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
   const [saving, setSaving] = useState(false);
-  const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
@@ -94,44 +92,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     }
   };
 
-  const handleExportBackup = async () => {
-    setIsBackupBusy(true);
-    try {
-      await exportWorkspace();
-      toast.success(t('files.backupExportSuccess'));
-    } catch (err: unknown) {
-      toast.error(t('files.backupInvalidFile'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setIsBackupBusy(false);
-    }
-  };
-
-  const handleImportBackup = async () => {
-    setIsBackupBusy(true);
-    try {
-      const restored = await importWorkspace(t);
-      if (restored) {
-        toast.success(t('files.backupImportSuccess'));
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const key =
-        msg === 'incompatible_schema_version'
-          ? 'files.backupIncompatibleVersion'
-          : 'files.backupInvalidFile';
-      toast.error(t(key), { description: msg });
-    } finally {
-      setIsBackupBusy(false);
-    }
-  };
-
   const tabConfig: Array<{ id: WorkspaceSettingsTab; icon: ReactNode; label: string }> = [
     { id: 'general', icon: <Settings2 size={14} />, label: t('workspace.settings.generalTab') },
     { id: 'memory', icon: <Brain size={14} />, label: t('workspace.settings.memoryTab') },
-    { id: 'backup', icon: <HardDrive size={14} />, label: t('workspace.settings.backupTab') },
   ];
 
   const tabBar = (
@@ -176,16 +139,14 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       panelClassName="h-[80vh]"
       tabBar={tabBar}
       footer={
-        activeTab === 'general' || activeTab === 'memory' ? (
-          <div className="flex justify-end">
-            <DialogConfirmButton
-              onClick={() => void handleSave()}
-              disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
-            >
-              {saving ? t('workspace.saving') : t('common.save')}
-            </DialogConfirmButton>
-          </div>
-        ) : null
+        <div className="flex justify-end">
+          <DialogConfirmButton
+            onClick={() => void handleSave()}
+            disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
+          >
+            {saving ? t('workspace.saving') : t('common.save')}
+          </DialogConfirmButton>
+        </div>
       }
     >
       {activeTab === 'general' && (
@@ -277,42 +238,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     onModelChange={setMemoryExtractorModel}
                     onPromptChange={setMemoryExtractorPrompt}
                   />
-                </div>
-              )}
-
-              {activeTab === 'backup' && (
-                <div
-                  id="workspace-settings-panel-backup"
-                  role="tabpanel"
-                  aria-labelledby="workspace-settings-tab-backup"
-                  className="space-y-6"
-                >
-                  <div className="space-y-2">
-                    <SectionLabel icon={HardDrive} label={t('settings.backup')} />
-                    <p className="mt-2 text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
-                      {t('settings.backupHint')}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <IconButton
-                      size="lg"
-                      tone="default"
-                      onClick={() => void handleExportBackup()}
-                      disabled={isBackupBusy}
-                      title={t('settings.backupExport')}
-                    >
-                      <Download size={16} />
-                    </IconButton>
-                    <IconButton
-                      size="lg"
-                      tone="default"
-                      onClick={() => void handleImportBackup()}
-                      disabled={isBackupBusy}
-                      title={t('settings.backupImport')}
-                    >
-                      <Upload size={16} />
-                    </IconButton>
-                  </div>
                 </div>
               )}
     </Dialog>
