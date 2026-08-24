@@ -105,6 +105,11 @@ export function ShellNavFooter({
 
   const toggleLang = () => i18n.changeLanguage(i18n.language === 'en' ? 'it' : 'en');
 
+  // In testata i comandi stanno in fila orizzontale: un tooltip laterale
+  // coprirebbe i pulsanti vicini. Nel rail verticale il lato giusto resta
+  // destra.
+  const tooltipSide = variant === 'header' ? ('bottom' as const) : ('right' as const);
+
   return (
     <div
       className={
@@ -121,7 +126,7 @@ export function ShellNavFooter({
         onClick={() => void handleSave()}
         title={`${t('header.saveAll')} (Ctrl+S)`}
         ariaLabel={t('header.saveAll')}
-        tooltipSide="right"
+        tooltipSide={tooltipSide}
         aria-busy={savingAll}
       >
         <Save size={15} />
@@ -131,7 +136,7 @@ export function ShellNavFooter({
         tone="muted"
         onClick={() => setShowLibraryPanel(true, undefined, 'global')}
         title={t('library.openLibraryGlobal')}
-        tooltipSide="right"
+        tooltipSide={tooltipSide}
       >
         <Library size={15} />
       </IconButton>
@@ -140,7 +145,7 @@ export function ShellNavFooter({
         tone="muted"
         onClick={() => setShowSettings(true)}
         title={t('header.settings')}
-        tooltipSide="right"
+        tooltipSide={tooltipSide}
       >
         <Settings size={15} />
       </IconButton>
@@ -150,11 +155,11 @@ export function ShellNavFooter({
         onClick={() => setShowHelp(true)}
         title={`${t('help.title')} (Ctrl+H)`}
         ariaLabel={t('help.title')}
-        tooltipSide="right"
+        tooltipSide={tooltipSide}
       >
         <HelpCircle size={15} />
       </IconButton>
-      <Tooltip label={`${t('language.label')} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`} side="right">
+      <Tooltip label={`${t('language.label')} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`} side={tooltipSide}>
         <button
           type="button"
           onClick={toggleLang}

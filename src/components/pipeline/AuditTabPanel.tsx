@@ -220,6 +220,9 @@ export function AuditTabPanel({
           onChange={(reviewProviderOptions) => setConfig((prev) => ({ ...prev, reviewProviderOptions }))}
           title={t('pipeline.providerOptions.reviewTitle')}
           hint={t('pipeline.providerOptions.reviewHint')}
+          // Il giudizio arriva in un formato vincolato, e lì il decoding deve
+          // essere deterministico: la temperatura scritta qui non viene usata.
+          temperatureIgnored={config.judgeProvider === 'ollama'}
         />
         {config.judgeProvider === 'anthropic' && (
           <AnthropicCacheConfig

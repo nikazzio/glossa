@@ -16,7 +16,24 @@ explains the general principle.
 - Overall quality rating
 - Structured issues
 - Suggested fixes
-- Terminology, accuracy, grammar, fluency, and consistency concerns
+- Terminology, accuracy, grammar and fluency concerns
+
+**Consistency across segments** comes from the coherence check instead, which is
+a separate pass with its own prompt.
+
+### The shape of the answer is the same for everyone
+
+The judge has to answer in a precise shape — a rating, a list of issues, the
+type and severity of each — and that shape is **a single one**, valid for every
+provider. With local models Glossa enforces it while the answer is generated, so
+the model cannot even phrase an answer outside the format; with cloud providers
+it is declared in the request.
+
+For the same reason, **at judging time the temperature stays at zero** on local
+models, whatever value is set: an answer bound to a schema has to be
+predictable, and two runs on the same text must not give different verdicts by
+chance. Translations keep using the temperature you chose, and a note in the
+judge's settings says so where the field is filled in.
 
 ## What to do after an audit pass
 

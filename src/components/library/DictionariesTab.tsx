@@ -59,7 +59,10 @@ export function DictionariesTab() {
       return;
     }
     setExpandedGlossaryId(id);
-    await loadGlossaryEntries(id);
+    // Le voci arrivano **come le vede questo workspace**: se una è stata
+    // corretta qui, si legge la correzione. Salvando, chi ospita il dizionario
+    // scrive una correzione e chi ce l'ha in casa modifica il dizionario.
+    await loadGlossaryEntries(id, activeWorkspace?.id ?? null);
   };
 
   const handleEntriesChange = (id: string, entries: GlossaryEntry[]) => {
@@ -69,7 +72,7 @@ export function DictionariesTab() {
 
   const handleSaveEntries = async (id: string) => {
     try {
-      await saveGlossaryEntries(id);
+      await saveGlossaryEntries(id, activeWorkspace?.id ?? null);
       if (config.assignedGlossaryId === id) {
         await assignGlossary(id);
       }

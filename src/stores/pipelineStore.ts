@@ -9,6 +9,7 @@ import type {
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
 import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { getGlossaryEntries } from '../services/glossaryService';
+import { useWorkspaceStore } from './workspaceStore';
 import type { FootnoteDefinition } from '../types';
 import { deriveSourceDocumentState } from '../utils/documentState';
 
@@ -140,7 +141,13 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       }));
       return;
     }
-    const entries = await getGlossaryEntries(glossaryId);
+    // Il glossario che finisce nel prompt è quello **come lo vede questo
+    // workspace**: se una voce è stata corretta qui, la traduzione usa la
+    // correzione — è il motivo per cui le correzioni esistono (#213).
+    const entries = await getGlossaryEntries(
+      glossaryId,
+      useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+    );
     set((state) => ({
       config: { ...state.config, assignedGlossaryId: glossaryId, glossary: entries },
     }));

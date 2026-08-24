@@ -16,7 +16,25 @@ spiega il principio generale.
 - Valutazione complessiva di qualità
 - Issue strutturate
 - Correzioni suggerite
-- Problemi di terminologia, accuratezza, grammatica, fluidità e coerenza
+- Problemi di terminologia, accuratezza, grammatica e fluidità
+
+I problemi di **coerenza fra frammenti** arrivano invece dalla verifica di
+coerenza, che è un passaggio a parte con un suo prompt.
+
+### La forma della risposta è la stessa per tutti
+
+Il giudice deve rispondere in una forma precisa — valutazione, elenco di
+problemi, tipo e gravità di ognuno — e quella forma è **una sola**, valida per
+ogni provider. Con i modelli locali Glossa la impone al momento della
+generazione, così il modello non può nemmeno formulare una risposta fuori
+formato; con i provider cloud la dichiara nella richiesta.
+
+Per lo stesso motivo, **al giudizio la temperatura resta a zero** sui modelli
+locali, qualunque valore sia impostato: una risposta vincolata a uno schema deve
+essere prevedibile, e due esecuzioni sullo stesso testo non devono dare verdetti
+diversi per caso. Le traduzioni continuano a usare la temperatura che hai
+scelto, e nelle impostazioni del giudice un avviso lo dice dove il campo si
+compila.
 
 ## Cosa fare dopo un passaggio di audit
 

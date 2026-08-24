@@ -1,0 +1,331 @@
+import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { JobsPanel } from './JobsPanel';
+import { useJobsStore } from '../../stores/jobsStore';
+import type { Job } from '../../services/jobsService';
+
+vi.mock('../../services/jobsService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/jobsService')>();
+  return {
+    ...actual,
+    listActiveJobs: vi.fn(async () => []),
+    onJobChanged: vi.fn(async () => () => {}),
+    pauseJob: vi.fn(async () => {}),
+    resumeJob: vi.fn(async () => {}),
+    cancelJob: vi.fn(async () => {}),
+    retryJob: vi.fn(async () => {}),
+  };
+});
+
+function job(overrides: Partial<Job> = {}): Job {
+  return {
+    id: 'j1',
+    jobType: 'debug_counter',
+    status: 'running',
+    priority: 0,
+    progress: 0.34,
+    message: 'Beatus, 34/210',
+    config: '{}',
+    checkpoint: null,
+    attemptCount: 1,
+    maxAttempts: 3,
+    error: null,
+    errorKind: null,
+    etaSeconds: 720,
+    waitingReason: null,
+    phase: null,
+    detail: null,
+    dependsOnJobId: null,
+    nextAttemptAt: null,
+    createdAt: null,
+    updatedAt: null,
+    ...overrides,
+  };
+}
+
+function renderPanel(jobs: Job[]) {
+  useJobsStore.setState({ jobs, isLoaded: true });
+  return render(<JobsPanel panelId="p" labelledBy="l" />);
+}
+
+describe('pannello dei lavori', () => {
+  beforeEach(() => {
+    useJobsStore.setState({ jobs: [], isLoaded: false });
+  });
+
+  it('senza lavori spiega cosa comparirà lì', () => {
+    renderPanel([]);
+
+    expect(screen.getByText('jobs.emptyTitle')).toBeInTheDocument();
+  });
+
+  it('mostra il lavoro in corso con la sua descrizione', () => {
+    renderPanel([job()]);
+
+    expect(screen.getByText('Beatus, 34/210')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '34');
+  });
+
+  it('di un lavoro in corso offre pausa e annullamento, non ripresa', () => {
+    renderPanel([job()]);
+
+    expect(screen.getByRole('button', { name: 'jobs.pause' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'jobs.cancel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'jobs.resume' })).not.toBeInTheDocument();
+  });
+
+  it('di un lavoro fallito offre solo un nuovo tentativo', () => {
+    renderPanel([job({ status: 'error', error: 'connessione caduta' })]);
+
+    expect(screen.getByRole('button', { name: 'jobs.retry' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'jobs.pause' })).not.toBeInTheDocument();
+    expect(screen.getByText('connessione caduta')).toBeInTheDocument();
+  });
+
+  it('un’ottimizzazione parziale mostra il conteggio e un errore leggibile', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        jobType: 'image_optimization',
+        status: 'error',
+        error: 'optimization_incomplete:2',
+        detail: '{"shrunk":3,"skipped":2}',
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('jobs.detail.skipped')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('jobs.error.optimizationIncomplete')).toBeInTheDocument();
+  });
+
+  it('un’ottimizzazione conclusa mostra lo spazio liberato', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        jobType: 'image_optimization',
+        status: 'completed',
+        progress: 1,
+        detail: '{"units":{"done":3,"total":3,"label":"items"},"shrunk":3,"skipped":0,"freed":8200000}',
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('jobs.detail.freed')).toBeInTheDocument();
+    expect(screen.getByText('8 MB')).toBeInTheDocument();
+  });
+
+  it('un lavoro fermo in attesa di riprovare non è mostrato come errore', () => {
+    // Stessa immobilità, significato opposto.
+    renderPanel([job({ status: 'queued', nextAttemptAt: '2026-08-13 10:00:00', etaSeconds: 480 })]);
+
+    expect(screen.getByText('jobs.retryingIn')).toBeInTheDocument();
+    // Non è in pausa: il comando serve a non aspettare l'attesa, e resta
+    // possibile fermarlo davvero.
+    expect(screen.getByRole('button', { name: 'jobs.retryNow' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'jobs.resume' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'jobs.pause' })).toBeInTheDocument();
+  });
+
+  it('la barra di un lavoro fermo non è animata', () => {
+    renderPanel([job({ status: 'paused', progress: 0.5 })]);
+
+    expect(screen.getByRole('progressbar').className).not.toContain('transition');
+  });
+
+  it('chiedendo la pausa la inoltra all’orchestratore', async () => {
+    const user = userEvent.setup();
+    const pause = vi.fn(async () => {});
+    renderPanel([job()]);
+    useJobsStore.setState({ pause });
+
+    await user.click(screen.getByRole('button', { name: 'jobs.pause' }));
+
+    expect(pause).toHaveBeenCalledWith('j1');
+  });
+
+  it('un lavoro annullato non offre più comandi', () => {
+    renderPanel([job({ status: 'cancelled', updatedAt: null })]);
+
+    expect(screen.queryByRole('button', { name: 'jobs.cancel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'jobs.pause' })).not.toBeInTheDocument();
+  });
+});
+
+describe('attesa per i limiti della biblioteca', () => {
+  beforeEach(() => {
+    useJobsStore.setState({ jobs: [], isLoaded: false });
+  });
+
+  it('un lavoro fermo per i limiti non è un errore e non anima la barra', () => {
+    // Con i profili tarati può restare immobile per minuti: dirlo
+    // «errore» farebbe rinunciare a uno scaricamento che sta procedendo.
+    renderPanel([job({ status: 'running', waitingReason: 'libraryLimits', progress: 0.4 })]);
+
+    expect(screen.getByText('jobs.waitingForLibrary')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar').className).not.toContain('transition');
+  });
+
+  it('mentre gira dice cosa sta facendo, non un generico «in corso»', () => {
+    renderPanel([job({ status: 'running', phase: 'manifest', progress: 0.01 })]);
+
+    expect(screen.getByText(/jobs\.phase\.manifest/)).toBeInTheDocument();
+  });
+
+  it('una fase che l\u2019interfaccia non conosce si legge com\u2019\u00e8 scritta', () => {
+    // Ogni tipo di lavoro ha il suo vocabolario: quelli futuri non devono
+    // sparire dalla riga solo perché la traduzione non c'è ancora.
+    renderPanel([job({ status: 'running', phase: 'ocr_pass_2', progress: 0.5 })]);
+
+    expect(screen.getByText(/ocr_pass_2/)).toBeInTheDocument();
+  });
+
+
+  it('la riga dice di che tipo di lavoro si tratta', () => {
+    // Scaricare un libro e verificare il deposito sono due cose diverse, e
+    // finché la riga diceva solo il nome dell'opera non si distinguevano.
+    renderPanel([job({ status: 'running', jobType: 'vault_verification', message: 'Beatus' })]);
+
+    expect(screen.getByText('jobs.short.vault_verification')).toBeInTheDocument();
+  });
+
+  it('divide quello che vale per l opera da quello che vale per l ultima pagina', () => {
+    // Il peso di una pagina letto come se fosse quello del libro era la
+    // confusione da togliere.
+    renderPanel([
+      job({
+        status: 'running',
+        detail: JSON.stringify({
+          cap: '2000',
+          last: { index: 34, bytes: 1_420_000, size: '1299,', pixels: '1299×1925' },
+        }),
+      }),
+    ]);
+    fireEvent.click(screen.getByText('Beatus, 34/210'));
+
+    expect(screen.getByText('jobs.detail.groupWork')).toBeInTheDocument();
+    expect(screen.getByText('jobs.detail.groupLast')).toBeInTheDocument();
+    // Il tetto sta con l'opera, la misura chiesta per **questa** pagina con la
+    // pagina: sono due cose diverse e vanno lette separate.
+    expect(screen.getByText('1299×1925')).toBeInTheDocument();
+  });
+
+  it('mostra quanto è arrivato e quanto si prevede in tutto', () => {
+    // Il peso della sola pagina in corso non dice niente su quanto manca.
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.1,
+        detail: JSON.stringify({
+          units: { done: 34, total: 352, label: 'pages' },
+          bytes: { downloaded: 48_234_496, estimated: 499_122_176 },
+        }),
+      }),
+    ]);
+
+    expect(screen.getByText('34/352')).toBeInTheDocument();
+    expect(screen.getByText(/46 MB \/ ~476 MB/)).toBeInTheDocument();
+  });
+
+  it('dice quante pagine la biblioteca non ha servito, accanto al conteggio', () => {
+    // Senza questo numero il conteggio direbbe «328 su 328» di un libro che sul
+    // disco ne ha 326, e la differenza sembrerebbe un difetto nostro.
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.99,
+        detail: JSON.stringify({
+          units: { done: 326, total: 328, label: 'pages' },
+          unavailable: 2,
+        }),
+      }),
+    ]);
+
+    expect(screen.getByText(/jobs\.detail\.unavailableShort/)).toBeInTheDocument();
+  });
+
+  it('quando la biblioteca ha servito tutto non compare nessun avviso', () => {
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.5,
+        detail: JSON.stringify({
+          units: { done: 164, total: 328, label: 'pages' },
+          unavailable: 0,
+        }),
+      }),
+    ]);
+
+    expect(screen.queryByText(/jobs\.detail\.unavailableShort/)).not.toBeInTheDocument();
+  });
+
+  it('la riga si apre e mostra i dettagli veri', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        status: 'running',
+        progress: 0.1,
+        detail: JSON.stringify({
+          units: { done: 2, total: 352, label: 'pages' },
+          bytes: { downloaded: 1_000_000, estimated: 176_000_000 },
+          cap: '2000',
+          provider: 'archive_org',
+          host: 'iiif.archive.org',
+          last: {
+            index: 2,
+            bytes: 613_040,
+            label: 'f. 2r',
+            size: '1299,',
+            pixels: '1299×1925',
+            recovered: true,
+          },
+        }),
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    // La misura si legge in pixel, non nella forma del parametro IIIF.
+    expect(screen.getAllByText('jobs.detail.sizePixels').length).toBeGreaterThan(0);
+    expect(screen.getByText('iiif.archive.org')).toBeInTheDocument();
+    expect(screen.getByRole('button', { expanded: true })).toBeInTheDocument();
+  });
+
+  it('della pagina appena passata dice i dati veri, non le impostazioni', async () => {
+    // La misura mostrata era quella scelta nelle impostazioni anche per una
+    // pagina ritrovata sul disco, che non è stata chiesta a nessuno.
+    const user = userEvent.setup();
+    renderPanel([
+      job({
+        status: 'running',
+        detail: JSON.stringify({
+          cap: '2000',
+          last: {
+            index: 49,
+            bytes: 613_040,
+            label: 'f. 25v',
+            size: '1299,',
+            pixels: '1299×1925',
+            recovered: true,
+            url: 'https://iiif.archive.org/image/full/1299,/0/default.jpg',
+          },
+        }),
+      }),
+    ]);
+
+    await user.click(screen.getByRole('button', { expanded: false }));
+
+    expect(screen.getByText('f. 25v')).toBeInTheDocument();
+    expect(screen.getByText('1299×1925')).toBeInTheDocument();
+    expect(screen.getByText('jobs.detail.lastFromDisk')).toBeInTheDocument();
+  });
+
+  it('un dettaglio malformato non fa sparire la riga', () => {
+    renderPanel([job({ status: 'running', message: 'Beatus', detail: 'non è json' })]);
+
+    expect(screen.getByText('Beatus')).toBeInTheDocument();
+  });
+});

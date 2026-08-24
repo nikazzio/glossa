@@ -7,7 +7,7 @@ export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'gl
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
 export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references' | 'promptPreview';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
-export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
+export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'storage' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
@@ -20,7 +20,15 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type DiscoveryResultsPerRow = 3 | 4 | 'list';
-export type SettingsTab = 'translations' | 'provider' | 'typography' | 'storage';
+export type SettingsTab =
+  | 'translations'
+  | 'provider'
+  | 'typography'
+  | 'storage'
+  | 'backup'
+  | 'jobs'
+  | 'download'
+  | 'libraries';
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -82,6 +90,14 @@ interface UiState {
   chunkRailTab: ChunkRailTab;
   /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
   showConsoleDrawer: boolean;
+  /**
+   * Quale scheda mostra il pannello in basso: i messaggi dell'app o i
+   * lavori in background. Log e lavori sono le due facce della stessa domanda,
+   * "cosa sta facendo il programma", quindi stanno nello stesso posto.
+   */
+  drawerTab: 'console' | 'jobs';
+  /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
+  libraryView: 'list' | 'grid';
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
@@ -131,6 +147,8 @@ interface UiState {
   setShowInsightPanel: (show: boolean) => void;
   setChunkRailTab: (tab: ChunkRailTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
+  setDrawerTab: (tab: 'console' | 'jobs') => void;
+  setLibraryView: (view: 'list' | 'grid') => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
@@ -276,6 +294,8 @@ export const useUiStore = create<UiState>()(
       showInsightPanel: false,
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
+      drawerTab: 'console',
+      libraryView: 'list',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
@@ -393,6 +413,8 @@ export const useUiStore = create<UiState>()(
       setShowInsightPanel: (show) => set({ showInsightPanel: show }),
       setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
+      setDrawerTab: (tab) => set({ drawerTab: tab }),
+      setLibraryView: (view) => set({ libraryView: view }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
@@ -538,6 +560,8 @@ export const useUiStore = create<UiState>()(
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         consoleDrawerHeight: state.consoleDrawerHeight,
+        drawerTab: state.drawerTab,
+        libraryView: state.libraryView,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
         editorialAccentColor: state.editorialAccentColor,

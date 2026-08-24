@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { classifySourceKind, type IIIFDiscoveryResult, type IIIFManifestPreview } from '../types';
 
 vi.mock('../services/libraryService', () => ({
-  listLibrarySources: vi.fn().mockResolvedValue([]),
+  listLibraryCatalog: vi.fn().mockResolvedValue([]),
+  removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
@@ -30,22 +31,12 @@ const manifestCard: IIIFManifestPreview & { id: string } = {
 describe('sourceLibraryStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useSourceLibraryStore.setState({ sources: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
-  });
-
-  it('loadSources popola lo stato dal service', async () => {
-    vi.mocked(service.listLibrarySources).mockResolvedValue([
-      { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
-    ]);
-
-    await useSourceLibraryStore.getState().loadSources();
-
-    expect(useSourceLibraryStore.getState().sources).toHaveLength(1);
+    useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
   });
 
   it('addFromDiscovery deriva il payload da un manifest e chiama il service', async () => {
     vi.mocked(service.addSourceToLibrary).mockResolvedValue({ sourceId: 's1', wasCreated: true });
-    vi.mocked(service.listLibrarySources).mockResolvedValue([]);
+    vi.mocked(service.listLibraryCatalog).mockResolvedValue([]);
 
     await useSourceLibraryStore.getState().addFromDiscovery(manifestCard, 'ws-1');
 
@@ -87,7 +78,6 @@ describe('sourceLibraryStore', () => {
     vi.mocked(service.getLibrarySourceDetail).mockResolvedValue({
       source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
       versions: [],
-      assets: [],
       linkedWorkspaceIds: [],
     });
 
@@ -101,14 +91,12 @@ describe('sourceLibraryStore', () => {
     vi.mocked(service.getLibrarySourceDetail).mockResolvedValue({
       source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
       versions: [],
-      assets: [],
       linkedWorkspaceIds: ['ws-1'],
     });
     useSourceLibraryStore.setState({
       detail: {
         source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
         versions: [],
-        assets: [],
         linkedWorkspaceIds: [],
       },
     });
@@ -142,6 +130,7 @@ describe('classifySourceKind', () => {
     language: null,
     volume: null,
     subjects: [],
+    itemCount: null,
     manifestUrl: 'https://example.test/r1',
     ...overrides,
   });

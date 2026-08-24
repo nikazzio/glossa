@@ -2,7 +2,13 @@ import type { ReactNode } from 'react';
 import { Scissors, Layers, LayoutTemplate, Palette, Sparkles, Columns2, BookOpen, ChevronsLeft, Copy, RotateCcw, Sun, Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { HLColorSet } from '../../stores/uiStore';
-import { IconButton } from '../ui';
+import {
+  FieldLabel,
+  FIELD_MONO_CLASSNAME,
+  SectionLabel,
+  SegmentedControl,
+  SettingRow,
+} from '../ui';
 
 const LAYOUT_OPTIONS: Array<{ value: 'auto' | 'standard' | 'book'; labelKey: string; icon: ReactNode }> = [
   { value: 'auto',     labelKey: 'document.layoutAuto',     icon: <Sparkles size={14} /> },
@@ -33,47 +39,6 @@ function applyHexToColor(existing: string | undefined, hex: string): string {
     return `rgba(${r},${g},${b},${m[1]})`;
   }
   return hex;
-}
-
-function NavSelector<T extends string>({
-  options,
-  value,
-  onChange,
-  getLabel,
-  ariaLabel,
-}: {
-  options: Array<{ value: T; icon: ReactNode; labelKey: string }>;
-  value: T;
-  onChange: (v: T) => void;
-  getLabel: (labelKey: string) => string;
-  ariaLabel?: string;
-}) {
-  const active = options.find((o) => o.value === value);
-  return (
-    <div role="radiogroup" aria-label={ariaLabel} className="flex items-center gap-2">
-      {options.map((opt) => {
-        const isActive = value === opt.value;
-        const label = getLabel(opt.labelKey);
-        return (
-          <IconButton
-            key={opt.value}
-            size="md"
-            tone={isActive ? 'accent' : 'default'}
-            onClick={() => onChange(opt.value)}
-            title={label}
-            role="radio"
-            aria-checked={isActive}
-          >
-            {opt.icon}
-          </IconButton>
-        );
-      })}
-      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-      <span className="self-center font-display text-sm italic text-editorial-ink">
-        {active ? getLabel(active.labelKey) : ''}
-      </span>
-    </div>
-  );
 }
 
 interface TranslationsSettingsTabProps {
@@ -114,21 +79,16 @@ export function TranslationsSettingsTab({
       id="settings-panel-translations"
       role="tabpanel"
       aria-labelledby="settings-tab-translations"
-      className="space-y-12"
+      className="space-y-10"
     >
       {/* Segmentazione */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1.5">
-          <Scissors size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.segmentation')}
-          </p>
-        </div>
+      <section className="space-y-4">
+        <SectionLabel icon={Scissors} label={t('settings.segmentation')} />
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="settings-chunk-preset-short" className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            <FieldLabel htmlFor="settings-chunk-preset-short" block>
               {t('settings.chunkPresetShort')}
-            </label>
+            </FieldLabel>
             <input
               id="settings-chunk-preset-short"
               type="number"
@@ -137,13 +97,13 @@ export function TranslationsSettingsTab({
               step={50}
               value={chunkPresetShort}
               onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={FIELD_MONO_CLASSNAME}
             />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="settings-chunk-preset-medium" className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            <FieldLabel htmlFor="settings-chunk-preset-medium" block>
               {t('settings.chunkPresetMedium')}
-            </label>
+            </FieldLabel>
             <input
               id="settings-chunk-preset-medium"
               type="number"
@@ -152,13 +112,13 @@ export function TranslationsSettingsTab({
               step={50}
               value={chunkPresetMedium}
               onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={FIELD_MONO_CLASSNAME}
             />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="settings-chunk-preset-long" className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            <FieldLabel htmlFor="settings-chunk-preset-long" block>
               {t('settings.chunkPresetLong')}
-            </label>
+            </FieldLabel>
             <input
               id="settings-chunk-preset-long"
               type="number"
@@ -166,56 +126,51 @@ export function TranslationsSettingsTab({
               step={50}
               value={chunkPresetLong}
               onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
-              className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={FIELD_MONO_CLASSNAME}
             />
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Inizializzazione nuova pipeline */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          <Layers size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('settings.newPipelineInit')}
-          </p>
-        </div>
-        <NavSelector
-          options={PIPELINE_INIT_OPTIONS}
+      <section className="space-y-4">
+        <SectionLabel icon={Layers} label={t('settings.newPipelineInit')} />
+        {/* Lo stesso controllo del tema e dell'interlinea: le opzioni hanno un
+            nome, quindi il nome si legge senza passare il mouse. */}
+        <SegmentedControl
+          ariaLabel={t('settings.newPipelineInit')}
           value={newPipelineInit}
           onChange={setNewPipelineInit}
-          getLabel={(key) => t(key)}
-          ariaLabel={t('settings.newPipelineInit')}
+          options={PIPELINE_INIT_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: t(opt.labelKey),
+            icon: opt.icon,
+          }))}
         />
-      </div>
+      </section>
 
       {/* Layout lettura */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-1.5">
-          <LayoutTemplate size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-            {t('header.readerLayout')}
-          </p>
-        </div>
-        <NavSelector
-          options={LAYOUT_OPTIONS}
+      <section className="space-y-4">
+        <SectionLabel icon={LayoutTemplate} label={t('header.readerLayout')} />
+        <SegmentedControl
+          ariaLabel={t('header.readerLayout')}
           value={documentLayout}
           onChange={setDocumentLayout}
-          getLabel={(key) => t(key)}
-          ariaLabel={t('header.readerLayout')}
+          options={LAYOUT_OPTIONS.map((opt) => ({
+            value: opt.value,
+            label: t(opt.labelKey),
+            icon: opt.icon,
+          }))}
         />
-      </div>
+      </section>
 
       {/* Evidenziazioni */}
-      <div className="space-y-4">
+      <section className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <Palette size={11} className="text-editorial-accent shrink-0" />
-            <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-              {t('settings.highlights')}
-            </p>
-          </div>
-          <span className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-xs font-sans text-editorial-muted">
+          <SectionLabel icon={Palette} label={t('settings.highlights')} />
+          {/* Quale tema si sta modificando: una didascalia, non una pastiglia —
+              non è cliccabile e non deve sembrarlo. */}
+          <span className="flex items-center gap-1 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
             {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
             {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
           </span>
@@ -239,33 +194,38 @@ export function TranslationsSettingsTab({
           },
         ]).map(({ groupLabel, items }) => (
           <div key={groupLabel} className="space-y-1.5">
-            <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
-              {groupLabel}
-            </p>
-            <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
+            <FieldLabel>{groupLabel}</FieldLabel>
+            <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
               {items.map(({ key, label }) => (
-                <label
-                  key={key}
-                  className="flex cursor-pointer items-center gap-3 py-3.5 transition-colors hover:text-editorial-accent"
-                >
-                  <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
-                    <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
+                // La pastiglia del colore sta a destra come ogni altro comando
+                // di riga, e l'etichetta ha il corpo delle altre etichette:
+                // prima era la sola riga della finestra in corsivo a 18px.
+                <SettingRow key={key} label={label}>
+                  <label className="relative h-5 w-5 shrink-0 cursor-pointer overflow-hidden rounded-full border border-editorial-border">
+                    <span
+                      className="absolute inset-0"
+                      style={{ backgroundColor: activeHlColors[key] }}
+                    />
                     <input
                       type="color"
                       value={colorToHex(activeHlColors[key])}
-                      onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
+                      onChange={(e) =>
+                        setHighlightColor(
+                          hlMode,
+                          key,
+                          applyHexToColor(activeHlColors[key], e.target.value),
+                        )
+                      }
                       className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                       aria-label={label}
                     />
-                  </div>
-                  <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
-                  <span className="font-display text-lg italic text-editorial-ink">{label}</span>
-                </label>
+                  </label>
+                </SettingRow>
               ))}
             </div>
           </div>
         ))}
-      </div>
+      </section>
     </div>
   );
 }

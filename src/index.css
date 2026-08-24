@@ -88,7 +88,12 @@
   --color-editorial-border: #C2BCB4;
   --color-editorial-textbox: #EAE5DE;
   --color-editorial-success: #3A7A65;
-  --color-editorial-warning: #666666;
+  /* Ocra profonda: un avviso deve distinguersi da una nota. Prima valeva
+     #666666, cioè lo stesso esadecimale di `muted`, quindi «disco staccato» e
+     «file corrotti» erano tipograficamente identici a un testo di aiuto.
+     Stesso peso del grigio (5.84:1 su bg, 5.09:1 su textbox) ma cromatica, e
+     più scura di `running` per non confondere la cautela con «in esecuzione». */
+  --color-editorial-warning: #7A5A14;
   --color-editorial-running: #C49B2A;
 
   /* ── Surface tokens — usati da DocumentView e sidebar ───────────────────── */
@@ -108,24 +113,30 @@
   /* ── Dark mode — token overrides attivi su html.dark ────────────────────── */
   /* Vedi ThemeSync in App.tsx */
 
-  /* ── Terminal — versione scura della palette editoriale ──────────────────── */
-  /* Sfondo: nero caldo (non freddo) che armonizza con editorial-bg #F8F5F0    */
-  --color-terminal-bg:        #0d0b09;
-  --color-terminal-chrome:    #131008;
-  --color-terminal-border:    #2a2218;
-  --color-terminal-line:      #1e1810;
+  /* ── Terminal — palette del pannello in basso (console + lavori) ─────────── */
+  /* Valori di *tema chiaro*: carta calda, non nero. La variante scura vive in
+     html.dark più sotto. Il pannello resta della stessa famiglia editoriale in
+     entrambi i temi — cambia il verso, non i toni.                            */
+  --color-terminal-bg:        #F7F3EC;
+  --color-terminal-chrome:    #EFE8DC;
+  --color-terminal-border:    #C6BEB0;
+  --color-terminal-line:      #DED5C6;
 
-  --color-terminal-ink:       #d8cfc5;
-  --color-terminal-secondary: #8a7a6e;
-  --color-terminal-muted:     #908070;
-  --color-terminal-dim:       #3a3028;
+  --color-terminal-ink:       #2F2A23;
+  --color-terminal-secondary: #665748;
+  --color-terminal-muted:     #6D5D50;
+  --color-terminal-dim:       #B0A597;
 
-  --color-terminal-error:     #c07060;
-  --color-terminal-warn:      #c49b2a;
-  --color-terminal-success:   #5a9a7a;
-  --color-terminal-info:      #7898aa;
+  /* I quattro livelli sono scuriti rispetto ai toni editoriali omologhi: su
+     carta chiara servono ≥4.5:1, e diversi componenti li usano con opacità
+     ridotta (/70, /80) — il margine extra serve a non far cadere sotto AA
+     nemmeno quei casi. */
+  --color-terminal-error:     #862E1E;
+  --color-terminal-warn:      #6F5410;
+  --color-terminal-success:   #275B4A;
+  --color-terminal-info:      #315B72;
 
-  --color-terminal-accent:    #c49b2a;
+  --color-terminal-accent:    #6F5410;
 }
 
 /* Dark mode — warm dark palette, harmonizza con la palette editoriale */
@@ -139,7 +150,8 @@ html.dark {
   --color-editorial-border:       #352d28;
   --color-editorial-textbox:      #251f1b;
   --color-editorial-success:      #5c9e7e;
-  --color-editorial-warning:      #857d77;
+  /* Stessa ocra, schiarita per il fondo scuro: 8.15:1 su bg. */
+  --color-editorial-warning:      #D7A76A;
   --color-editorial-running:      #c49b2a;
   --color-editorial-paper:        #201c18;
   --color-editorial-page:         #231f1b;
@@ -161,6 +173,25 @@ html.dark {
   --shadow-warm-sm:     0 16px 50px rgba(0,0,0,0.20);
   --shadow-warm-md:     0 8px 24px rgba(0,0,0,0.40);
   --shadow-page-card:   0 18px 45px rgba(0,0,0,0.28);
+
+  /* Terminal — versione scura, nero caldo (non freddo) che armonizza con la
+     palette editoriale. Valori storici del pannello, invariati. */
+  --color-terminal-bg:        #0d0b09;
+  --color-terminal-chrome:    #131008;
+  --color-terminal-border:    #2a2218;
+  --color-terminal-line:      #1e1810;
+
+  --color-terminal-ink:       #d8cfc5;
+  --color-terminal-secondary: #8a7a6e;
+  --color-terminal-muted:     #908070;
+  --color-terminal-dim:       #3a3028;
+
+  --color-terminal-error:     #c07060;
+  --color-terminal-warn:      #c49b2a;
+  --color-terminal-success:   #5a9a7a;
+  --color-terminal-info:      #7898aa;
+
+  --color-terminal-accent:    #c49b2a;
 }
 
 /* Consistent focus-visible ring across the app */

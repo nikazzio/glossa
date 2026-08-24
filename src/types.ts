@@ -62,13 +62,17 @@ export interface IIIFDiscoveryResult {
   language: string | null;
   volume: string | null;
   subjects: string[];
+  /** Quante pagine, quando la biblioteca lo dichiara nella ricerca. */
+  itemCount: number | null;
   manifestUrl: string;
 }
 
 export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
 
 export function isManifest(card: SourceCard): card is IIIFManifestPreview & { id: string } {
-  return 'itemCount' in card;
+  // `materialType` esiste solo sulla scheda ricavata dal manifesto. Il numero
+  // di pagine non distingue più niente: adesso lo dichiarano entrambe.
+  return 'materialType' in card;
 }
 
 /** Tentativo automatico (best-effort) di riconoscere il tipo materiale dai metadati
@@ -93,6 +97,12 @@ export interface IIIFDiscoveryOutcome {
   manifest: IIIFManifestPreview | null;
   results: IIIFDiscoveryResult[];
   hasMore: boolean;
+  /**
+   * Secondi dall'epoca: quando questo risultato è arrivato dalla biblioteca.
+   * Assente se è arrivato adesso. Serve a dire a chi guarda **di quando** è
+   * quello che ha davanti, e quindi se vale la pena rifare la ricerca.
+   */
+  cachedAt?: number;
 }
 
 export type SourceKind = 'manuscript' | 'print' | 'pdf' | 'iiif' | 'web' | 'other';
@@ -107,6 +117,16 @@ export interface AddSourceToLibraryInput {
   thumbnailUrl: string | null;
   language: string | null;
   subjects: string[];
+  /** Da quale biblioteca viene: è un fatto che non cambia mai. */
+  providerKey: string | null;
+  /** Identificativo dell'opera presso quella biblioteca. */
+  externalId: string | null;
+  mediaType: string | null;
+  materialType: string | null;
+  collection: string | null;
+  volume: string | null;
+  /** Pagine dichiarate dal manifesto, quando la ricerca le ha già lette. */
+  itemCount: number | null;
   workspaceId?: string;
 }
 
@@ -119,6 +139,45 @@ export interface LibrarySource {
   createdAt: string;
 }
 
+/** Una riga del catalogo della Biblioteca: la fonte più ciò che serve a
+ *  mostrarla senza aprirla. */
+export interface LibraryCatalogEntry {
+  source: LibrarySource;
+  versionId: string | null;
+  manifestUrl: string | null;
+  thumbnailUrl: string | null;
+  creator: string | null;
+  date: string | null;
+  /** Pagine dichiarate dal manifesto, quando si è già letto. */
+  expectedPages: number | null;
+  /** Pagine davvero presenti sul computer. */
+  localPages: number;
+  /** Quanto occupano quelle pagine: serve alla conferma di «libera spazio». */
+  localBytes: number;
+  /**
+   * Le cartelle di misura presenti nel deposito. La principale è quella con cui
+   * il libro è stato scaricato; le altre sono pagine prese a parte, e
+   * distinguerle evita di chiamare incompleto un libro che non lo è.
+   */
+  sizes: { sizeTag: string; pages: number; bytes: number; missing: number }[];
+  /**
+   * Quale delle misure è la principale, **come la dichiara il deposito**.
+   *
+   * Non si ricava confrontando i conteggi: due misure con lo stesso numero di
+   * pagine — lo stesso libro scaricato due volte con tetti diversi — renderebbero
+   * la scelta casuale, e da lì sbaglierebbero sia l'aggiunta «più 3 a risoluzione
+   * piena» sia il conto delle pagine che la biblioteca non serve.
+   */
+  principalSize: string | null;
+  /** I workspace a cui è collegata: un'opera può stare in più posti (#213). */
+  workspaces: { workspaceId: string; workspaceName: string; isOrigin: boolean }[];
+  /**
+   * Chiave della biblioteca nel registro dei provider: decide il profilo di rete
+   * dello scaricamento e la cartella nel deposito.
+   */
+  providerKey: string | null;
+}
+
 export interface LibrarySourceVersion {
   id: string;
   sourceId: string;
@@ -129,19 +188,9 @@ export interface LibrarySourceVersion {
   createdAt: string;
 }
 
-export interface LibraryAsset {
-  id: string;
-  sourceVersionId: string | null;
-  kind: 'image' | 'pdf' | 'manifest' | 'thumbnail' | 'derived' | 'other';
-  locality: 'remote' | 'local' | 'derived';
-  availability: 'catalogued' | 'partial' | 'complete';
-  remoteUrl: string | null;
-}
-
 export interface LibrarySourceDetail {
   source: LibrarySource;
   versions: LibrarySourceVersion[];
-  assets: LibraryAsset[];
   linkedWorkspaceIds: string[];
 }
 
@@ -261,6 +310,12 @@ export interface GlossaryEntry {
   term: string;
   translation: string;
   notes?: string;
+  /**
+   * La voce è stata corretta **in questo workspace** (#213): quello che si
+   * legge non è il valore del dizionario. Vale solo quando le voci sono state
+   * chieste per un workspace.
+   */
+  overridden?: boolean;
 }
 
 // A hand-picked, already-approved chunk translation used as a few-shot style
@@ -453,6 +508,8 @@ export type Workspace = {
   memoryExtractorModel: string;
   memoryExtractorPrompt: string;
   createdAt: string;
+  /** Messo da parte: resta com'è, ma non compare fra quelli in cui si lavora. */
+  archivedAt?: string;
 };
 
 export type PhraseMatch = {

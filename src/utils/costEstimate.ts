@@ -49,6 +49,46 @@ function stageEstimate(
   return { stageId, stageName, provider, model, inputTokens, outputTokens, costUsd };
 }
 
+/**
+ * Il costo **davvero** speso da una chiamata, con i token che il provider ha
+ * dichiarato: la stima serve prima, questo serve dopo. `null` quando il
+ * modello non costa — Ollama gira in locale — o quando il listino non lo
+ * conosce: zero direbbe una cosa diversa da «non lo so».
+ */
+export function actualCost(
+  provider: string,
+  model: string,
+  /** I token d'ingresso **pagati per intero**, cioè quelli non letti da cache. */
+  fullPriceInputTokens: number,
+  outputTokens: number,
+  pricingOverrides: Record<string, { input: number; output: number }> = {},
+  /** I token letti dalla cache, che costano una frazione. */
+  cachedInputTokens = 0,
+): number | null {
+  if (provider === 'ollama' || !model) return null;
+  const pricing = pricingOverrides[`${provider}/${model}`] ?? MODEL_PRICING[`${provider}/${model}`];
+  if (!pricing) return null;
+  const cached = Math.max(0, cachedInputTokens);
+  const cachedCost = cached * pricing.input * (CACHE_READ_FACTOR[provider] ?? 1);
+  return (
+    (fullPriceInputTokens * pricing.input + cachedCost + outputTokens * pricing.output) / 1_000_000
+  );
+}
+
+/**
+ * Quanto costa **rileggere** dalla cache, in frazione del prezzo d'ingresso.
+ *
+ * Il caching del prefisso è un invariante del progetto, quindi trattare quei
+ * token come ingresso normale non sbagliava per caso: sbagliava sempre, e
+ * sempre in eccesso. Un provider che non conosciamo si paga per intero: meglio
+ * un conto prudente di uno inventato.
+ */
+const CACHE_READ_FACTOR: Record<string, number> = {
+  anthropic: 0.1,
+  openai: 0.5,
+  google: 0.25,
+};
+
 export interface EstimatePipelineCostOptions {
   /** Include la passata di verifica coerenza (azione separata, lanciata a parte dall'esecuzione della pipeline). */
   includeCoherence?: boolean;

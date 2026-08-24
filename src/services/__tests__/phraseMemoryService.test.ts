@@ -242,8 +242,8 @@ describe('saveApprovedPhrasePairs', () => {
     });
 
     expect(mockFetchEmbeddings).toHaveBeenCalledWith(['Ciao mondo'], 'text-embedding-3-small');
+    // Il workspace non si passa: la frase sta dove sta il progetto (#213).
     expect(mockInvoke).toHaveBeenCalledWith('vec_save_locked_phrases', {
-      workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',

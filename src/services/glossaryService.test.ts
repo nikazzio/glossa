@@ -8,9 +8,10 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { listGlossaries, createGlossary, forkGlossary } = await import('./glossaryService');
+const { listGlossaries, createGlossary, forkGlossary, saveGlossaryEntriesAsOverrides } =
+  await import('./glossaryService');
 
-describe('glossaryService — ownership del workspace (#213)', () => {
+describe('glossaryService — ambito del workspace (#213)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.execute.mockResolvedValue(undefined);
@@ -20,31 +21,33 @@ describe('glossaryService — ownership del workspace (#213)', () => {
     });
   });
 
-  it('listGlossaries(workspaceId) filtra solo quel workspace, senza piu\' includere quelli senza padrone', async () => {
+  it('con un workspace elenca i dizionari **collegati** a quello', async () => {
+    // Il legame non sta più sulla riga del dizionario: lo stesso dizionario può
+    // essere usato in più workspace senza copiarlo.
     await listGlossaries('ws-1');
-    expect(dbMocks.select).toHaveBeenCalledWith(
-      expect.stringContaining('WHERE workspace_id = $1'),
-      ['ws-1'],
-    );
-    const [query] = dbMocks.select.mock.calls[0];
-    expect(query).not.toContain('OR workspace_id IS NULL');
+
+    const [query, params] = dbMocks.select.mock.calls[0];
+    expect(query).toContain('JOIN workspace_items');
+    expect(query).toContain("wi.item_type = 'glossary'");
+    expect(params).toEqual(['ws-1']);
   });
 
-  it('listGlossaries() senza argomenti resta uno sfoglio globale, non filtrato', async () => {
+  it('senza workspace resta il catalogo generale, con la provenienza di ognuno', async () => {
     await listGlossaries();
+
     const [query, params] = dbMocks.select.mock.calls[0];
-    expect(query).not.toContain('WHERE');
+    expect(query).not.toContain('JOIN workspace_items');
+    expect(query).toContain('is_origin = 1');
     expect(params).toBeUndefined();
   });
 
-  it('createGlossary scrive sempre il workspaceId passato, nessun default a null', async () => {
+  it('creare un dizionario lo collega al workspace, e segna che è nato lì', async () => {
     await createGlossary('Termini', '', '', '', 'ws-2');
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO glossaries'),
-      expect.arrayContaining(['ws-2']),
-    );
-    const [, params] = dbMocks.execute.mock.calls[0];
-    expect(params).not.toContain(null);
+
+    const queries = dbMocks.execute.mock.calls.map(([query]) => String(query));
+    expect(queries[0]).toContain('INSERT INTO glossaries');
+    expect(queries[1]).toContain('INSERT INTO workspace_items');
+    expect(dbMocks.execute.mock.calls[1][1]).toEqual(['ws-2', expect.any(String)]);
   });
 
   it('forkGlossary assegna la copia al workspace scelto, non al proprietario sorgente', async () => {
@@ -52,10 +55,12 @@ describe('glossaryService — ownership del workspace (#213)', () => {
       id: 'gls-source', name: 'Termini', description: '', source_language: 'IT', target_language: 'EN', created_at: '2026-01-01', workspace_id: 'ws-source',
     }]).mockResolvedValueOnce([]);
     await forkGlossary('gls-source', 'Termini (copia)', 'ws-destination');
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('VALUES ($1, $2, $3, $4, $5, $6)'),
-      expect.arrayContaining(['Termini (copia)', 'ws-destination']),
-    );
+
+    const queries = dbMocks.execute.mock.calls.map(([query]) => String(query));
+    expect(queries[0]).toContain('INSERT INTO glossaries');
+    // La copia nasce nel workspace scelto: è lì la sua provenienza.
+    expect(queries[1]).toContain('INSERT INTO workspace_items');
+    expect(dbMocks.execute.mock.calls[1][1]).toEqual(['ws-destination', expect.any(String)]);
   });
 
   it('forkGlossary rifiuta una sorgente eliminata senza creare una copia fantasma', async () => {
@@ -63,5 +68,26 @@ describe('glossaryService — ownership del workspace (#213)', () => {
 
     await expect(forkGlossary('gls-missing', 'Copia', 'ws-destination')).rejects.toThrow('glossary_not_found');
     expect(dbMocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('un workspace ospite corregge la voce, non la riscrive per tutti', async () => {
+    // Salvare le voci «come le vede il workspace» dentro il dizionario avrebbe
+    // propagato a tutti una correzione locale, e cancellato le voci nascoste.
+    dbMocks.select.mockResolvedValueOnce([
+      { id: 'e1', glossary_id: 'g1', term: 'spada', translation: 'sword', notes: '' },
+      { id: 'e2', glossary_id: 'g1', term: 'stocco', translation: 'rapier', notes: '' },
+    ]);
+
+    await saveGlossaryEntriesAsOverrides('g1', 'ws-guest', [
+      { id: 'e1', term: 'spada', translation: 'blade' },
+    ]);
+
+    const queries = dbMocks.execute.mock.calls.map(([query]) => String(query));
+    // La prima è cambiata: diventa una correzione di questo workspace.
+    expect(queries[0]).toContain('INSERT INTO glossary_entry_overrides');
+    expect(dbMocks.execute.mock.calls[0][1]).toEqual(['ws-guest', 'e1', 'blade', null]);
+    // La seconda è sparita dall'elenco: qui si nasconde, altrove resta.
+    expect(queries[1]).toContain('hidden');
+    expect(queries.some((query) => query.includes('INSERT INTO glossary_entries'))).toBe(false);
   });
 });

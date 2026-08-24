@@ -3,6 +3,7 @@ import type { Workspace } from '../types';
 import {
   createWorkspace,
   deleteWorkspace,
+  type WorkspaceDisposal,
   getActiveWorkspaceId,
   listWorkspaces,
   setActiveWorkspaceId,
@@ -25,7 +26,8 @@ type WorkspaceStore = {
     'iconKey' |
     'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
   >>) => Promise<void>;
-  removeWorkspace: (workspaceId: string) => Promise<void>;
+  /** Eliminare un workspace richiede di dire cosa farne del contenuto (#213). */
+  removeWorkspace: (workspaceId: string, disposal: WorkspaceDisposal) => Promise<void>;
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
@@ -82,8 +84,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
     }));
   },
 
-  removeWorkspace: async (workspaceId) => {
-    await deleteWorkspace(workspaceId);
+  removeWorkspace: async (workspaceId, disposal) => {
+    await deleteWorkspace(workspaceId, disposal);
     await useWorkspaceStore.getState().loadWorkspaces();
   },
 }));

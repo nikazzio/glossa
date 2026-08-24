@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
 
-use super::{format_api_error, translation_audit_schema, with_retry_after};
+use super::{format_api_error, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -87,7 +87,7 @@ fn build_anthropic_body(req: &LlmRequest<'_>, stream: bool) -> Value {
         body["output_config"] = json!({
             "format": {
                 "type": "json_schema",
-                "schema": translation_audit_schema()
+                "schema": crate::llm::types::audit_json_schema().clone()
             }
         });
     }
@@ -181,9 +181,11 @@ impl LlmProvider for AnthropicProvider {
                     state.latest_cached_input = json["message"]["usage"]["cache_read_input_tokens"]
                         .as_u64()
                         .map(|n| n as u32);
-                    state.latest_cache_miss_input = state
-                        .pending_input
-                        .map(|input| input.saturating_sub(state.latest_cached_input.unwrap_or(0)));
+                    // `input_tokens` di Anthropic **non comprende** i token letti
+                    // dalla cache: quelli stanno in `cache_read_input_tokens`.
+                    // Sottrarli li toglieva due volte, e il conto dei token non
+                    // in cache risultava più basso del vero.
+                    state.latest_cache_miss_input = state.pending_input;
                 }
                 Some("message_delta") => {
                     if let Some(out) = json["usage"]["output_tokens"].as_u64() {
@@ -262,9 +264,9 @@ impl LlmProvider for AnthropicProvider {
                 cached_input: json["usage"]["cache_read_input_tokens"]
                     .as_u64()
                     .map(|n| n as u32),
-                cache_miss_input: json["usage"]["cache_read_input_tokens"]
-                    .as_u64()
-                    .map(|cached| (i as u32).saturating_sub(cached as u32)),
+                // Non è `input - cached`: i token letti dalla cache Anthropic
+                // li dichiara a parte e non li conta in `input_tokens`.
+                cache_miss_input: Some(i as u32),
             }),
             _ => None,
         };

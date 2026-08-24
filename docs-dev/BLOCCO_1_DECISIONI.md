@@ -1,10 +1,14 @@
-# Blocco 1 — Decisioni da approvare prima di scrivere codice
+# Blocco 1 — archivio delle decisioni
 
 Documento di lavoro per #217 (inventario asset e regole sulle sorgenti) e #218
 (sistema unico di lavori in background), più l'aggancio dello scaricamento
 reale che li unisce.
 
-Ultimo aggiornamento: 2026-08-12. **Tutte le decisioni D1-D33 approvate**, con D1-bis, D2-bis, D4-bis, D5-bis, D8-bis e D16-bis. Nessuna domanda aperta. L'unica correzione successiva all'approvazione riguarda l'appendice tecnica: come si arriva alla forma finale dello schema, emersa implementando la PR 1 (#414).
+Ultimo aggiornamento: 2026-08-22. Tutte le decisioni D1-D33 sono state
+approvate. Il documento conserva il percorso decisionale; non descrive lo stato
+corrente del codice. Le sostituzioni emerse durante l'implementazione sono
+riepilogate in `STATO_BLOCCO_1.md`. D33 resta il riferimento per la riservatezza
+ancora da implementare.
 
 ## Come si legge
 
@@ -12,11 +16,12 @@ Le decisioni sono numerate `D1`, `D2`, … e riportano cosa si è scelto, cosa s
 scartato e perché, e cosa comporta. Le voci `-bis` sono emerse discutendo e non
 erano nella prima stesura.
 
-**Tutte approvate** fra il 9 e l'11 agosto 2026, nessuna domanda aperta. In
+**Tutte approvate** fra il 9 e l'11 agosto 2026, con l'integrazione D34 del 23
+agosto, nessuna domanda aperta. In
 fondo l'appendice tecnica con schema, comandi e struttura delle cartelle.
 
-**Niente di questo documento è ancora implementato.** La suddivisione in PR è
-nella Parte G.
+Lo stato implementativo e il lavoro residuo sono in `STATO_BLOCCO_1.md` e
+`ROADMAP_2_0.md`.
 
 ### Fonti
 
@@ -107,6 +112,13 @@ fragile. Una schermata, due scelte:
    contenuto → si rifiuta;
 4. controllo sincronizzazione in streaming (D1-bis);
 5. parte il lavoro di migrazione.
+
+**La finestra di scelta cartella la apre il backend** *(vincolo aggiunto il
+2026-08-13, materia della PR 3)*, come già fa l'import documenti dopo #405: il
+percorso scelto non attraversa la webview e nessun comando accetta un percorso
+grezzo dal frontend. Nella PR 1 i comandi del deposito ricevono ancora la
+cartella come parametro, perché la schermata non esiste; con la schermata, la
+scelta passa dal dialogo nativo e quella superficie si chiude.
 
 ### Il marcatore
 
@@ -291,6 +303,15 @@ migrazione del deposito di D1.
 
 Non serve, e non si usa, per riconoscere duplicati.
 
+**Quale impronta** *(deciso il 2026-08-12, implementando la PR 1)*: FNV-1a a 64
+bit, non crittografica, calcolata a blocchi durante la lettura. La proprietà che
+serve è accorgersi di una corruzione **accidentale** — troncamento, bit rot,
+sincronizzazione a metà — e per quella basta. La resistenza a collisioni
+costruite apposta non aggiungerebbe niente: chi può scrivere nel deposito può
+scrivere anche nel database dove le impronte stanno, e nessuna biblioteca IIIF
+dichiara un digest con cui confrontarsi. Se un giorno servisse davvero, si
+sostituisce la funzione: il resto non cambia.
+
 ## D4 — Quali immagini si scaricano
 
 *Approvata con modifiche il 2026-08-10.*
@@ -316,11 +337,61 @@ sintassi canonica `size=max`.
 Scelta **alla fonte**, non globale, perché dipende dal materiale: una
 cinquecentina a stampa larga si legge a molto meno di una minuscola fitta.
 
-- **Standard** (predefinita): la massima disponibile entro il tetto —
-  **2000 pixel sul lato lungo**, configurabile;
+*(Fatto il 2026-08-16, #422. Rivisto lo stesso giorno con l'utente.)* **Due**
+livelli, non tre, e vince quello più vicino all'opera: **la fonte** (scheda in
+Biblioteca) e **l'impostazione generale** (Impostazioni → Scaricamento). Il
+livello per biblioteca è stato tolto: la misura dipende dal materiale, non da
+chi lo conserva — una cinquecentina a stampa larga e una minuscola fitta
+possono stare nella stessa biblioteca. Una misura che non significa niente —
+scritta a mano nel database, o rimasta da una forma precedente — vale come non
+scritta, e si torna al livello sotto.
+
+- **Standard** (predefinita): la misura dichiarata dal servizio **più vicina al
+  tetto** — 2000 pixel sul lato lungo, configurabile — sopra o sotto che sia; a
+  parità di distanza vince la più grande;
 - **Massima**: `size=max`, nessun tetto.
 
-Le miniature si scaricano sempre, in entrambi i casi.
+*(Regola precisata dall'utente il 2026-08-15. La prima stesura diceva «la massima
+disponibile entro il tetto»: con misure 1200 e 2100 e tetto 2000 avrebbe scelto
+1200, cioè metà dei pixel voluti per stare sotto una soglia che è un obiettivo,
+non un divieto.)*
+
+**Come si sceglie, in pratica** *(precisato il 2026-08-16, misurando su
+archive.org)*: il tetto è una **politica**, non un pixel. La misura effettiva la
+dichiara il descrittore dell'immagine, e **non si tenta niente alla cieca** — che
+è quello che questa decisione diceva già dal 10 agosto: «senza tentare richieste
+a indovinare».
+
+L'ordine è:
+
+1. si legge il descrittore e si prende la misura dichiarata più vicina al tetto
+   sul lato lungo;
+2. la scelta vale per tutte le carte con le stesse dimensioni. Le carte di uno
+   stesso libro **non** hanno tutte la stessa dimensione — 924 carte e cinque
+   formati, nel libro provato — quindi il descrittore si legge una volta per
+   gruppo: cinque letture, non una sola e nemmeno 924.
+
+*(Un terzo livello — «l'indirizzo che il manifesto dichiara già pronto» — valeva
+per le sole miniature ed è caduto il 2026-08-16 con D6: le miniature non si
+chiedono più alla biblioteca.)*
+
+**Perché non ci si limita a chiedere il tetto**, che costerebbe zero richieste in
+più: la specifica garantisce le misure elencate in `sizes` — e quelle implicite
+in `tiles` — a **qualunque** livello di conformità, mentre la larghezza
+arbitraria (`sizeByW`) solo dal livello 1 in su, e il livello dichiarato non è
+affidabile. Archive.org dichiara `level2`; su una pagina risponde `500` a
+`/full/2000,/`, su un'altra la genera sul momento in **26 secondi** contro 2 per
+una misura dichiarata, e non la tiene nemmeno in cache. La richiesta risparmiata
+ne costa venti di attesa.
+
+**Conseguenza sul deposito**: la cartella continua a chiamarsi con il tetto
+(`pages/2000/`), che è la politica, mentre i pixel ottenuti variano da carta a
+carta. Le due cose divergono di proposito: se la cartella prendesse il nome dai
+pixel, la stessa fonte finirebbe sparsa in cartelle diverse e la ripresa non
+ritroverebbe più ciò che ha già scaricato.
+
+Le miniature non entrano in questa scelta: si ricavano dalla carta scaricata,
+qualunque misura abbia (D6, corretta il 2026-08-16).
 
 **Scartato "scarica tutto al minimo"**: produrrebbe una fonte che risulta
 completa ma è illeggibile, peggio di una non scaricata. Il minimo sono già le
@@ -391,7 +462,10 @@ farebbe ripartire il riscaricamento dell'intera biblioteca.
 Millisecondi anche per un manoscritto grande. Risponde: *"210 attese, 198
 presenti, 12 mancanti"*.
 
-**Completo — integrità.** Ricalcola l'impronta di ogni file. Scopre anche i file
+**Completo — integrità.** Ricalcola l'impronta di ogni file **e la confronta
+con quella registrata quando il file è arrivato** *(precisato il 2026-08-17: la
+prima stesura del codice l'impronta la calcolava e la buttava, quindi un file
+marcito dentro, con firma e terminatore intatti, passava per integro)*. Scopre anche i file
 troncati da uno scaricamento interrotto, che il controllo rapido conta come
 presenti. Lento in proporzione ai gigabyte, e su un deposito sincronizzato in
 streaming (D1-bis) **costringe il client a scaricare tutto**: va avvisato prima
@@ -517,11 +591,39 @@ sono documenti a sé. Restano leggibili e modificabili anche senza le immagini.
 Riscaricare in seguito solo le pagine che servono non è una funzione nuova: è
 l'azione per pagina già definita in D4, usata quando non c'è nulla in locale.
 
-### Miniature all'aggiunta
+### Miniature, ricavate dalle carte
 
-Aggiungendo una fonte si scaricano **tutte le miniature**. Duecento miniature
-sono circa 3 MB: trascurabili, e rendono il libro sfogliabile anche senza rete e
-senza pagine scaricate. Le miniature non vengono rimosse da "libera spazio".
+*Corretta il 2026-08-15 (quando si scaricano) e di nuovo il 2026-08-16 (che non
+si scaricano affatto), dopo averlo misurato.*
+
+Le miniature **non si chiedono alla biblioteca**: si ricavano dalla carta appena
+scaricata, sul computer. Restano tutte, restano fuori da "libera spazio", e
+rendono il libro sfogliabile senza rete.
+
+**Perché.** La pagina la scarichiamo già. Chiederne una seconda copia rimpicciolita
+raddoppia le richieste — su un libro di 924 carte sono 1848 invece di 924 — verso
+servizi che rispondono in modo irregolare: la stessa richiesta ad archive.org,
+misurata, va da 1 a 19 secondi. Ricavarla in locale costa qualche decina di
+millisecondi di processore e zero richieste. È quello che fa Scriptoria
+(`thumbnail_utils.py`).
+
+**Il lato lungo lo decidiamo noi**, e diventa una vera scelta invece di quello
+che la biblioteca dava per ripiego: predefinito **300 px** *(scelto dall'utente
+il 2026-08-16)*, configurabile fra 100 e 800. 160 px erano la misura di ripiego,
+300 è quella giusta per sfogliare.
+
+**Perché la prima stesura non regge.** Diceva «duecento miniature sono circa
+3 MB: trascurabili». Su un libro di 924 carte sono 18 MB e un quarto d'ora di
+rete, e soprattutto contraddicono l'uso normale: si aggiunge una fonte, la si
+legge online, e si scarica solo quello che serve davvero.
+
+**Finché il libro non si scarica**, le miniature si leggono online come le carte
+(D8). La copertina che la Biblioteca mostra non c'entra: è la miniatura
+dell'opera dichiarata dal manifesto, una sola immagine, che non costa niente.
+
+**Conseguenza**: le miniature esistono solo per le carte scaricate. Oggi non
+cambia niente, perché si scarica il libro intero; quando arriverà lo scaricamento
+della singola carta (D4), quel libro avrà le miniature solo di quelle.
 
 # Parte B — Disponibilità e modalità di lettura
 
@@ -721,6 +823,10 @@ dal loro server, non dal tuo computer. Configurabile, ma con l'avvertenza
 accanto e un tetto non superabile — non per limitare l'utente, per non farlo
 bandire. Vedi D18.
 
+*(Il tetto è quattro richieste insieme per host, e dal 2026-08-16 vale dove i
+valori si usano e non solo dove si scelgono: un profilo scritto a mano nel
+database viene riportato dentro i limiti prima di scaricare.)*
+
 ### I lavori brevi non si mostrano singolarmente
 
 Lo scaricamento di una singola pagina dura pochi secondi. Se ogni pagina
@@ -751,8 +857,12 @@ Due categorie, dichiarate da ogni tipo di lavoro:
   scaricamento lo è: le pagine già complete e verificate si saltano. Alla
   riapertura questi lavori tornano **in pausa**, non ripartono da soli.
 - **Da rifare**: il lavoro non ha punti intermedi affidabili. Alla riapertura
-  torna **in coda** con il progresso azzerato, o viene segnalato come
-  interrotto se ripeterlo costa denaro.
+  resta **fermo in attesa di una decisione**, con il progresso azzerato perché
+  non corrisponde più a niente di riutilizzabile. *(Precisato il 2026-08-13,
+  implementando la PR 2: la prima stesura diceva "torna in coda", che con
+  l'orchestratore in moto significa ripartire al giro successivo — cioè
+  l'opposto della regola qui sotto. Rifare da capo sì, ma quando lo chiede
+  l'utente.)*
 
 **Nessun lavoro riparte da solo alla riapertura.** L'utente vede "3 lavori
 interrotti" e decide.
@@ -761,8 +871,16 @@ interrotti" e decide.
 scaricamenti che non ricordavi è ostile, e per i lavori che costano soldi è
 peggio.
 
-**Comporta**: un lavoro rimasto in uno stato di transizione — in pausa, in
-annullamento — al riavvio viene portato allo stato stabile corrispondente. È il
+**Un'eccezione, a richiesta esplicita** *(aggiunta il 2026-08-13, implementando
+la PR 2; era stata chiesta il 10 agosto e non era finita nella prima stesura)*:
+un'impostazione, **spenta di default**, fa tornare in coda alla riapertura i
+soli scaricamenti interrotti — lavori di rete che sanno riprendere dal punto
+salvato. Accesa, evita di dover rimettere in moto a mano ogni sera un lavoro che
+dura ore. Non vale per i lavori che costano denaro, che restano fermi comunque.
+
+**Comporta**: nessuno dei due rami rimette un lavoro nella coda attiva da solo.
+Un lavoro rimasto in uno stato di transizione — in pausa, in annullamento — al
+riavvio viene portato allo stato stabile corrispondente. È il
 "recovery" della issue, e va scritto una volta sola nell'orchestratore.
 
 ## D14 — Pausa
@@ -777,6 +895,11 @@ e si ferma. Non si interrompe niente a metà.
 **Comporta**: mettere in pausa uno scaricamento richiede il tempo di finire la
 pagina in corso, non è istantaneo. L'interfaccia deve mostrare "in pausa…" e poi
 "in pausa", non fingere che sia immediato.
+
+*(Corretta il 2026-08-16, provandolo.)* La pausa **batte il nuovo tentativo**:
+un errore incassato mentre l'utente premeva pausa faceva programmare comunque
+un tentativo, e il lavoro ripartiva da solo dopo qualche minuto. Chi ha chiesto
+di fermarsi ha ragione anche quando la richiesta era già fallita.
 
 ## D15 — Annullamento
 
@@ -856,6 +979,14 @@ promosso nella sua posizione definitiva.
 verifica che sia leggibile. Un file troncato ha la dimensione giusta nei
 metadati HTTP ma non si apre — un controllo di dimensione non lo vedrebbe.
 
+**Quanto a fondo** *(deciso il 2026-08-12, implementando la PR 1)*: firma
+iniziale e terminatore, senza decomprimere i pixel. Coglie i due casi reali — il
+download troncato e la pagina di errore HTML servita con stato 200 — a memoria
+costante e senza una libreria di immagini. Non coglie la corruzione interna con
+gli estremi intatti, che è rara e ha comunque lo stesso rimedio: riscaricare la
+carta. Le immagini sono copie sostituibili, non originali: un controllo più
+severo si aggiunge quando servirà, non prima.
+
 Conseguenze:
 
 - un file parziale **non esiste mai** nel deposito: non serve pulirlo
@@ -902,9 +1033,30 @@ opposti, e vanno dette diversamente.
 ### Tempo stimato
 
 **Obbligatorio**, non facoltativo: un lavoro che dura un quarto d'ora senza una
-stima sembra bloccato. Si calcola dalle pagine completate e dalla pausa media
-dichiarata dal profilo, non dalla velocità osservata degli ultimi secondi, che
-con pause di 2,5–6 secondi oscilla troppo per essere utile.
+stima sembra bloccato.
+
+*Corretta il 2026-08-16, dopo averla vista sbagliare.* Si calcola dal **ritmo
+vero del lavoro**: pagine fatte diviso tempo trascorso da quando è partito.
+
+La prima stesura diceva «dalla pausa media dichiarata dal profilo, non dalla
+velocità osservata degli ultimi secondi, che oscilla troppo». La seconda metà
+resta valida, la prima no: quella pausa è **il minimo che aspettiamo noi**, non
+quanto ci mette la biblioteca a rispondere. Su archive.org dice 1,6 secondi a
+pagina dove la realtà misurata va da 1 a 19, e un manoscritto annunciato in sei
+minuti ne prende quaranta.
+
+La media **da inizio lavoro** non oscilla come quella sugli ultimi secondi: si
+assesta e cala mentre il lavoro procede. Finché le pagine fatte sono meno di
+tre resta la pausa dichiarata, che è l'unica cosa che si sa prima di aver
+misurato.
+
+### Fermo per riprovare non è fermo per volontà
+
+*Aggiunta il 2026-08-16.* Un lavoro che ha incassato un errore ritentabile
+aspetta e **riprova da solo** (D16). Nel pannello mostrava lo stesso comando di
+un lavoro in pausa, e si leggeva come fermo per scelta di chi guarda. Sono due
+stati diversi e vanno detti diversamente: «riprovo da solo fra 2 minuti», con
+il comando per non aspettare l'attesa e quello per fermarlo davvero.
 
 ### Movimento ridotto
 
@@ -961,6 +1113,27 @@ connettersi, 30 s per leggere.
 La Vaticana richiede il **preriscaldamento del visualizzatore**. Tutte inviano
 l'header di provenienza.
 
+**Stato dell'implementazione** *(aggiornato il 2026-08-14 dopo la rilettura
+esterna)*: pause, raffica, concorrenza per host, raffreddamenti, tentativi di
+trasporto e identificazione dell'applicazione ci sono. Dalla rilettura sono
+arrivati anche **tentativi del lavoro, base e tetto dell'attesa esponenziale dal
+profilo** — prima erano costanti del motore, cioè i valori di Gallica applicati a
+tutti — e la pausa fra richieste **sorteggiata una volta sola**: veniva
+riestratta a ogni controllo, e uscire al primo numero basso portava la media
+sotto quella dichiarata, cioè più veloci di quanto promesso alla biblioteca.
+
+**Mancano ancora**, dichiarati: il preriscaldamento del visualizzatore con
+l'header di provenienza che ne consegue — va provato sul campo con la Vaticana,
+perché senza sessione le immagini non arrivano — e i *worker per lavoro*
+(Scriptoria ne usa 1 su Gallica e 2 altrove; qui le carte si scaricano una per
+volta, cioè sempre al ritmo più prudente). Nessuna delle due rende scortesi: la
+prima impedisce di scaricare da una biblioteca, la seconda rallenta e basta.
+
+**Nota su Scriptoria**: la pausa fra richieste lì è configurata e mostrata nelle
+impostazioni ma **nessun consumatore la applica** — il ritmo lo impone la sola
+finestra a raffica. Qui viene applicata davvero; è l'unico punto in cui Glossa fa
+più di quello che il progetto di riferimento dichiara.
+
 ### Precedenza, tre livelli
 
 1. **modifica dell'utente**, salvata nel database per chiave provider o per host;
@@ -969,6 +1142,28 @@ l'header di provenienza.
 
 Il secondo garantisce che i valori tarati arrivino corretti a chi installa; il
 primo che si possano cambiare senza ricompilare.
+
+*(Fatto il 2026-08-16, #421. Rivisto lo stesso giorno con l'utente.)* La
+modifica dell'utente vive in **profili di rete**: un profilo è un ritmo, non
+una biblioteca. I ritmi tarati sul campo sono due — il prudente e quello di
+Gallica — e si applicano a undici biblioteche: tenerli per biblioteca vorrebbe
+dire ripetere gli stessi numeri nove volte e non sapere più da dove vengono.
+
+Quindi: i profili stanno in `network_profiles` (migrazione `0009`, che sostituisce la forma per biblioteca della `0007` — le migrazioni si aggiungono, non si riscrivono: una già applicata che cambia fa fallire l'avvio), le biblioteche **scelgono** il
+proprio in `library_network_profiles`, e chi non sceglie segue il predefinito.
+Due profili nascono con l'applicazione prendendo i valori **dal registro**, che
+resta l'unico posto dove una biblioteca nuova si compila: si modificano ma non
+si eliminano, e nemmeno si elimina un profilo che qualcuno usa.
+
+Fuori dai profili restano le caratteristiche della singola biblioteca — il
+preriscaldamento del visualizzatore, l'intestazione di provenienza — che non
+sono un ritmo: assegnare un profilo alla Vaticana non deve farle perdere la
+sessione.
+
+Il profilo si rilegge **all'avvio del lavoro**, non alla messa in coda: un
+lavoro ripreso dopo giorni deve rispettare i limiti di adesso. Il tetto sulle
+richieste insieme è applicato **anche nel backend** (D11): prima viveva solo nel
+menu, che è un aiuto e non una difesa.
 
 ### Profilo dal provider, contatori per host
 
@@ -1012,8 +1207,11 @@ non questo blocco. Qui restano le scelte che toccano i lavori.
 *Approvata con modifiche il 2026-08-10.*
 
 **Uguale in ogni sezione**, tre zone fisse: a sinistra il contesto (l'unica parte
-che cambia), al centro l'indicatore lavori, a destra lo stato di salvataggio e
-la maniglia del pannello.
+che cambia), al centro i numeri della schermata, a destra i comandi e lo stato
+globali. *(Modifica chiesta dall'utente il 2026-08-14, provando la PR 3:
+l'indicatore dei lavori sta **a destra** insieme al pannello e allo stato di
+salvataggio, non al centro — tre elementi affiancati per due funzioni facevano
+rumore. La prima stesura diceva "al centro l'indicatore lavori".)*
 
 L'indicatore è **sempre presente**, non solo dove il lavoro è stato avviato: uno
 scaricamento parte dalla Biblioteca e prosegue mentre si lavora altrove.
@@ -1119,7 +1317,11 @@ proposta e risultato approvato"*.
 
 ## D22 — Storico delle traduzioni
 
-*Approvata con modifiche l'11 agosto 2026.*
+*Approvata con modifiche l'11 agosto 2026. **Fatta il 2026-08-16**: tabella
+`translation_revisions`, `translations.approved_revision_id`, e i fatti di
+approvazione e ritiro scritti dove l'utente blocca e sblocca la traduzione di
+un chunk. Resta da allineare `transcription_revisions`, che ha ancora la
+colonna `status`.*
 
 Nuova tabella `translation_revisions`, simmetrica a `transcription_revisions`.
 
@@ -1170,11 +1372,37 @@ l'accettazione è un giudizio, e per il preference training vale quanto una
 correzione. Registrare solo le correzioni produrrebbe un dataset sbilanciato
 verso gli errori.
 
+### Il giudizio si lega alla revisione
+
+*Aggiunta il 2026-08-17, guardando cosa serve davvero all'area Analisi.*
+
+Il verdetto del giudice — voto e problemi trovati — vive oggi in tre colonne del
+frammento, **sovrascritte a ogni riesecuzione**: è lo stesso difetto che le
+revisioni hanno tolto alla traduzione. Resta solo l'ultimo giudizio, e la frase
+che il costruttore di dataset deve poter dire — *«il modello aveva proposto X, il
+giudice l'aveva dato per mediocre, l'umano ha approvato Y»* — non è
+ricostruibile.
+
+Quindi il giudizio diventa un **fatto legato alla revisione che ha giudicato**.
+Le colonne restano dove sono per la lettura veloce, come `translations` conserva
+il puntatore alla revisione approvata: sono lo stato corrente, non la storia.
+
+Un giudizio dato due volte sulla stessa revisione — riaprendo l'audit senza
+cambiare niente — è lo stesso fatto e si sostituisce (D27). Rieseguire la
+pipeline produce una revisione nuova, quindi un giudizio nuovo: sono due fatti
+distinti, ed è giusto che lo siano.
+
 ### Lo stesso vale per le trascrizioni
 
-`transcription_revisions` ha oggi una colonna `status` con `draft`, `approved`,
+`transcription_revisions` aveva una colonna `status` con `draft`, `approved`,
 `rejected`: stesso difetto, perché l'approvazione che si sposta obbliga a mutare
-lo storico. Va allineata al modello a eventi.
+lo storico.
+
+*Fatto il 2026-08-17.* La tabella ha la stessa forma di quella delle
+traduzioni — testo, chi l'ha scritta, da quale revisione deriva, impronta del
+contenuto — e il segmento porta il puntatore alla revisione approvata adesso.
+Nessun codice aveva ancora scritto una revisione di trascrizione, quindi la
+tabella è stata rifatta invece di rattoppata.
 
 ### Stato del documento
 
@@ -1323,7 +1551,56 @@ cancellazione".
 
 ## D29 — Quando si accende
 
-*Approvata l'11 agosto 2026.*
+*Approvata l'11 agosto 2026. **Fatta il 2026-08-16 per i lavori**: avvio ed
+esito con la durata li scrive il motore, non i gestori.*
+
+*Fatta il 2026-08-17 per la pipeline, completata lo stesso giorno.* **Ogni
+chiamata a un modello lascia un fatto**: stadio, provider, modello, token in
+ingresso e in uscita, token da cache, costo, durata, coppia linguistica, esito e
+— quando fallisce — il tipo di errore. Sono dati che esistono solo mentre la
+chiamata avviene: non scriverli lì significa non averli mai.
+
+**Ogni chiamata vuol dire ogni chiamata.** La prima stesura ne registrava solo
+gli stadi e il giudice, e restavano fuori proprio quelle che fanno salire il
+conto: la verifica di coerenza (una chiamata al giudice per frammento), il ciclo
+che riscrive dopo un giudizio negativo (fino a due per frammento), l'estrattore
+della memoria di frasi e la rigenerazione degli embedding. Adesso ci sono tutte.
+Le prime tre come chiamate del frammento, con uno stadio proprio — `coherence`,
+`refine-after-judge`, `memory-extractor` — perché contarle insieme allo stadio
+che traduce le farebbe sostituire a vicenda (D27). La rigenerazione degli
+embedding è un fatto **del workspace**, con quante frasi ha rifatto: i token non
+li dichiara e non si inventano.
+
+**Il costo si calcola come si paga**: i token letti da cache costano una
+frazione dell'ingresso — un decimo su Anthropic — e trattarli come ingresso
+normale sbagliava sempre, e sempre in eccesso, proprio perché il caching del
+prefisso è un invariante del progetto. I provider non li dichiarano allo stesso
+modo: Anthropic tiene quelli da cache **fuori** dal totale d'ingresso, gli altri
+dentro, e il conto lo fa chi ha letto la risposta. Per DeepL, che fattura
+caratteri e non token, nel fatto finisce il numero di caratteri che dichiara: il
+listino a token non lo copre, e senza quel dato di uno stadio DeepL non si
+saprebbe né il costo né il consumo.
+
+**Il verdetto del giudice** è un fatto a sé, legato alla revisione giudicata, e
+si scrive **anche rilanciando solo la revisione**: prima lo scriveva solo il giro
+completo della pipeline, quindi riaprire l'audit sovrascriveva le colonne del
+frammento senza lasciare storia — il caso che D22 cita per nome. Quando il testo
+giudicato non corrisponde a nessuna revisione in archivio, il fatto porta la sua
+impronta invece di un riferimento inventato.
+
+**La riscrittura dopo il giudizio scrive una revisione**, perché cambia il testo:
+senza, la proposta che l'utente poi approva o corregge non entrava nello storico,
+ed è la coppia proposta/approvata che lo storico esiste per salvare (D22). E se
+il modello rifiuta, l'errore si dice: prima il ciclo finiva in silenzio.
+
+**I fatti dei lavori sanno da quale workspace vengono**: il lavoro se lo porta
+dietro da chi lo mette in coda. Senza, D24 non poteva raggrupparli per workspace
+e D28 non poteva cancellarli con lui.
+
+L'identità del fatto è **frammento più stadio** (D27): rieseguire la pipeline
+sullo stesso frammento sostituisce il fatto di quello stadio invece di
+accumularne uno per tentativo. Quante volte si è rieseguito è una domanda
+diversa, e la risposta sta nelle revisioni prodotte.
 
 **La registrazione parte con le fondamenta**, l'area Analisi no. Sono due lavori
 diversi e il secondo senza il primo non ha nulla da mostrare.
@@ -1393,6 +1670,26 @@ e impronta, per riconoscere un file troncato prima di tentare il ripristino.
 **La compressione non è la scusa per infilarci le immagini più avanti.** La
 regola resta questa.
 
+**Cambiato implementando (17 agosto 2026)**: il backup è **del programma
+intero**, non di un workspace. Si chiamava «backup del workspace» ma prendeva
+tutte le tabelle e al ripristino le sostituiva tutte, quindi il nome mentiva; ora
+sta nelle impostazioni generali, accanto alla cartella dei dati e al deposito.
+Portare via un **singolo** workspace è un'altra cosa — richiede identificatori
+nuovi per ogni riga e le regole di ambito di #213 — ed è #434.
+
+Le colonne che il ripristino riscrive si chiedono al database invece di stare in
+un elenco scritto a mano: quell'elenco restava indietro a ogni colonna aggiunta,
+e le colonne dimenticate sparivano al ripristino **in silenzio**.
+
+**Le pagine già sul disco sopravvivono al ripristino.** Le loro righe sono
+appese alle opere, e sostituire le opere se le portava via: il programma
+smetteva di sapere di file che sul disco ci sono ancora. Si mettono da parte
+prima della cancellazione e tornano quelle delle opere che il backup contiene.
+Subito dopo si mette in coda il controllo del deposito, e **solo quando finisce**
+si propone di riprendere le pagine che mancano davvero — prima si proponeva
+tutto, e uno scaricamento da centinaia di pagine ripartiva per file che c'erano.
+I file che restano senza opera si cancellano dalle impostazioni (D5-bis).
+
 ## D32 — Spazio su disco
 
 *Approvata l'11 agosto 2026.*
@@ -1461,8 +1758,12 @@ grafiche. È l'unica libreria nuova: **AES-256-GCM è già nel progetto**, usato
   macchina, ma **mostrata e confermata alla creazione**: se il computer muore, il
   portachiavi muore con lui.
 
-**Nessun recupero password.** Qualunque via di recupero è una seconda chiave e
-vanifica la cifratura.
+**Codice di recupero.** Ogni backup cifrato genera una seconda chiave casuale,
+mostrata una sola volta a chi crea il file. Serve a recuperare il backup quando
+la password non è più disponibile; Glossa non la conserva e chi perde sia
+password sia codice perde il backup. È una decisione di prodotto aggiornata il
+23 agosto 2026: il codice è una via deliberata di recupero, non un recupero
+della password custodito dall'app.
 
 **Spento di default**, con la conseguenza scritta a chiare lettere al momento
 della scelta: password dimenticata, backup perduto. Il backup è ciò a cui si
@@ -1730,6 +2031,31 @@ alla revisione, non al chunk.
 
 `assets.vault_path` è **relativo** alla radice del deposito, mai assoluto: così
 spostare la cartella dati non invalida il database.
+
+## D34 — Pagine logiche e rappresentazioni file
+
+*Approvata il 2026-08-23.*
+
+Una copia digitale, la sua pagina e il file che la rappresenta sono tre cose
+diverse. La copia è il manifesto IIIF, il PDF o altra incarnazione della fonte;
+la pagina è una vista ordinata e stabile della copia; un file è una sua
+rappresentazione concreta, remota, locale o derivata.
+
+La migrazione numerata introduce una pagina logica con copia di appartenenza,
+posizione, etichetta e identificativo IIIF del canvas. Le rappresentazioni file
+mantengono invece formato, dimensioni, impronta, URL, percorso relativo nel
+deposito, risoluzione e, per i derivati, il file di origine. Manifest e PDF
+appartengono direttamente alla copia; immagini, miniature e derivati possono
+appartenere a una pagina.
+
+La disponibilità `catalogued` / `partial` / `complete` descrive la copia, non il
+singolo file. Il file laterale del deposito resta l'inventario operativo e il
+disco resta la fonte di verità per presenza e integrità. Trascrizione, OCR e
+annotazioni future si ancorano alla pagina logica o a una sua area, mai a una
+specifica rappresentazione file.
+
+Il consolidamento assorbirà questa migrazione nella baseline unica; fino ad
+allora non si modifica una migrazione già applicata.
 
 ## Contratto del gestore di lavoro
 

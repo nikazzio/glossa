@@ -1,15 +1,20 @@
-import { CheckCircle2, AlertCircle, Highlighter, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, Search, ShieldAlert, Terminal } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ListChecks, MinusCircle, Loader2, NotebookText, PanelBottom, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { getWorkspaceFilter } from '../../navigation/appLocation';
 import { useUiStore } from '../../stores/uiStore';
-import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
+import { JobsIndicator } from '../jobs/JobsIndicator';
+import { TerminalIconButton } from '../jobs/TerminalIconButton';
+import { JobsPanel } from '../jobs/JobsPanel';
+import { JobsBulkControls } from '../jobs/JobsBulkControls';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -30,7 +35,14 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   if (state === 'idle') return null;
 
   const tooltipLabel = lastSavedAt
-    ? t('statusBar.lastSavedTooltip', { time: new Date(lastSavedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) })
+    ? t('statusBar.lastSavedTooltip', {
+        // Sempre su 24 ore, come nel pannello dei lavori.
+        time: new Date(lastSavedAt).toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }),
+      })
     : t('statusBar.neverSavedTooltip');
 
   if (state === 'saving') {
@@ -65,13 +77,64 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   );
 }
 
-function ConsoleDrawer() {
+
+/** Scheda del pannello in basso: stessa palette scura della console. */
+function DrawerTab({
+  children,
+  label,
+  id,
+  controls,
+  selected,
+  onSelect,
+}: {
+  children: React.ReactNode;
+  label: string;
+  id: string;
+  controls: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Tooltip label={label} side="top">
+      <button
+        type="button"
+        id={id}
+        role="tab"
+        aria-selected={selected}
+        aria-controls={controls}
+        aria-label={label}
+        onClick={onSelect}
+        className={`flex h-6.5 w-6.5 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent ${
+          selected
+            ? 'border-terminal-accent/60 text-terminal-accent'
+            : 'border-terminal-border text-terminal-secondary hover:border-terminal-accent/60 hover:text-terminal-accent'
+        }`}
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * Il pannello in basso. Log e lavori sono schede della stessa area — le
+ * due facce della domanda "cosa sta facendo il programma" — sul modello del
+ * pannello di VS Code. Una destinazione sola: al passaggio del mouse un
+ * riepilogo, al clic il pannello.
+ */
+function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
+  const { t } = useTranslation();
   const chunks = useChunksStore((s) => s.chunks);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
   const setShowConsoleDrawer = useUiStore((s) => s.setShowConsoleDrawer);
   const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
   const height = useUiStore((s) => s.consoleDrawerHeight);
   const setHeight = useUiStore((s) => s.setConsoleDrawerHeight);
+  const drawerTab = useUiStore((s) => s.drawerTab);
+  const setDrawerTab = useUiStore((s) => s.setDrawerTab);
+  // Fuori da un progetto i messaggi della pipeline non esistono: resta la
+  // scheda dei lavori, che invece vale ovunque.
+  const activeTab = showConsoleTab ? drawerTab : 'jobs';
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
@@ -106,15 +169,52 @@ function ConsoleDrawer() {
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>
+      <div
+        role="tablist"
+        aria-label={t('jobs.drawerTabs')}
+        className="flex shrink-0 items-center gap-1 border-b border-terminal-border bg-terminal-chrome px-2 py-1"
+      >
+        {showConsoleTab && (
+          <DrawerTab
+            label={t('console.toggle')}
+            id="drawer-tab-console"
+            controls="console-drawer-panel"
+            selected={activeTab === 'console'}
+            onSelect={() => setDrawerTab('console')}
+          >
+            <Terminal size={12} />
+          </DrawerTab>
+        )}
+        <DrawerTab
+          label={t('jobs.tab')}
+          id="drawer-tab-jobs"
+          controls="jobs-drawer-panel"
+          selected={activeTab === 'jobs'}
+          onSelect={() => setDrawerTab('jobs')}
+        >
+          <ListChecks size={12} />
+        </DrawerTab>
+        <div className="flex-1" />
+        {activeTab === 'jobs' && <JobsBulkControls />}
+        {/* Separato dai comandi dei lavori: chiudere il pannello per sbaglio
+            mentre si voleva mettere in pausa sarebbe fastidioso. */}
+        <span className="mx-1.5 h-4 w-px bg-terminal-border" aria-hidden="true" />
+        <TerminalIconButton label={t('common.close')} onClick={() => setShowConsoleDrawer(false)}>
+          <X size={12} />
+        </TerminalIconButton>
+      </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <OperationsTab
-          panelId="console-drawer-panel"
-          labelledBy="console-drawer-label"
-          currentChunkId={selectedChunkId}
-          chunks={chunks}
-          onSelectChunk={setSelectedChunkId}
-          onClose={() => setShowConsoleDrawer(false)}
-        />
+        {activeTab === 'console' ? (
+          <OperationsTab
+            panelId="console-drawer-panel"
+            labelledBy="console-drawer-label"
+            currentChunkId={selectedChunkId}
+            chunks={chunks}
+            onSelectChunk={setSelectedChunkId}
+          />
+        ) : (
+          <JobsPanel panelId="jobs-drawer-panel" labelledBy="drawer-tab-jobs" />
+        )}
       </div>
     </div>
   );
@@ -247,155 +347,138 @@ function DiscoveryCenterStats() {
   );
 }
 
+
+/**
+ * Dove sono. Prima zona della barra, **sempre compilata**.
+ *
+ * Segue il contratto di navigazione di `PRODUCT_ARCHITECTURE_2_0.md` §6:
+ * posizione e workspace sono concetti **distinti**. Le aree — Biblioteca,
+ * Traduzioni, Trascrizioni, Analisi — sono globali: aprire un workspace non le
+ * trasforma in aree di quel workspace, applica al massimo un **filtro visibile
+ * e rimovibile**. Scrivere «Default / Biblioteca» direbbe quindi una cosa falsa
+ * sul prodotto, oltre a leggersi male.
+ *
+ * Un solo trattamento visivo in tutte le sezioni: l'ultimo segmento in
+ * evidenza, il resto smorzato. Niente verde: qui non c'è niente di attivo da
+ * segnalare, e il verde è riservato a schede e stati attivi.
+ */
+function LocationLabel({ data }: { data: ReturnType<typeof useStatusBarData> }) {
+  const { t } = useTranslation();
+  const location = useUiStore((state) => state.location);
+  const workspaces = useWorkspaceStore((state) => state.workspaces);
+
+  const filterId = getWorkspaceFilter(location);
+  const filterName = filterId ? workspaces.find((w) => w.id === filterId)?.name : undefined;
+
+  // Dentro un progetto la posizione è area → oggetto: qui il contenimento è
+  // vero, il progetto sta davvero dentro Traduzioni.
+  if (data.kind === 'project') {
+    return (
+      <>
+        <span className={data.projectName ? 'truncate' : 'truncate font-medium text-editorial-ink'}>
+          {t(AREA_KEY.translations)}
+        </span>
+        {/* Nessun separatore senza qualcosa da separare. */}
+        {data.projectName && (
+          <>
+            <span className="text-editorial-border">/</span>
+            <span className="truncate font-medium text-editorial-ink">{data.projectName}</span>
+          </>
+        )}
+      </>
+    );
+  }
+
+  if (location.area === 'dashboard') {
+    return <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>;
+  }
+
+  if (location.area === 'workspace') {
+    return (
+      <>
+        <span className="truncate font-medium text-editorial-ink">
+          {data.kind === 'workspace' ? data.workspaceName : ''}
+        </span>
+        {data.kind === 'workspace' && (
+          <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span className="truncate font-medium text-editorial-ink">
+        {t(AREA_KEY[location.area] ?? location.area)}
+      </span>
+      {filterName && (
+        // Il filtro è un aggiunta all'area, non il suo contenitore.
+        <span className="truncate">{t('statusBar.workspaceFilter', { name: filterName })}</span>
+      )}
+    </>
+  );
+}
+
 export function AppStatusBar() {
   const { t } = useTranslation();
   const data = useStatusBarData();
-  const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
-  const setSyncScrollEnabled = useUiStore((state) => state.setSyncScrollEnabled);
-  const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
-  const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
-  const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
-  const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
-  const hasGlossary = usePipelineStore((state) => state.config.glossary.length > 0);
+  const drawerTab = useUiStore((state) => state.drawerTab);
+  const setDrawerTab = useUiStore((state) => state.setDrawerTab);
 
   if (data.kind === 'idle') return null;
 
-  const showPaneControls = data.kind === 'project' && data.totalChunks > 0;
-  const syncDisabled = documentPaneFocus !== 'both';
-  const syncOn = syncScrollEnabled && !syncDisabled;
-
   return (
     <div className="relative shrink-0">
-      {showConsoleDrawer && data.kind === 'project' && <ConsoleDrawer />}
+      {showConsoleDrawer && (data.kind === 'project' || drawerTab === 'jobs') && (
+        <BottomDrawer showConsoleTab={data.kind === 'project'} />
+      )}
+      {/* Zone stabili: contesto, stato, comandi globali. */}
       <div
         role="status"
         aria-live="polite"
-        className="flex h-8 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
+        className="grid h-8 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
       >
-        {/* Left: pannello attivo */}
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-          {data.kind === 'workspace' &&
-            (data.areaName === 'dashboard' ? (
-              // La Dashboard è app-level: nessun prefisso workspace nel breadcrumb.
-              <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>
-            ) : data.areaName === 'workspace' ? (
-              <>
-                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-              </>
-            ) : (
-              <>
-                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-                <span className="text-editorial-border">/</span>
-                <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
-                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-              </>
-            ))}
-          {data.kind === 'project' && data.activePanel && (
-            <span className="text-editorial-accent">
-              {t(`statusBar.panel.${data.activePanel}`)}
-            </span>
-          )}
+          <LocationLabel data={data} />
         </div>
 
-        {/* Center: stats chunk corrente / risultati discovery in dashboard */}
-        {data.kind === 'project' && data.totalChunks > 0 && (
-          <div className="hidden items-center sm:flex">
-            <ChunkCenterStats />
-          </div>
-        )}
-        {data.kind === 'workspace' && data.areaName === 'dashboard' && (
-          <div className="hidden min-w-0 items-center sm:flex">
-            <DiscoveryCenterStats />
-          </div>
-        )}
+        {/* 2 — Il contesto della schermata: l'unica zona che può restare
+            vuota, perché non tutte le schermate hanno numeri da dire. */}
+        <div className="hidden min-w-0 items-center justify-center sm:flex">
+          {data.kind === 'project' && data.totalChunks > 0 && <ChunkCenterStats />}
+          {data.kind === 'workspace' && data.areaName === 'dashboard' && <DiscoveryCenterStats />}
+        </div>
 
-        {/* Right: console toggle + controlli vista + salvataggio */}
-        <div className="flex shrink-0 items-center gap-2">
-          {data.kind === 'project' && (
-            <IconButton
-              size="xs"
-              tone={showConsoleDrawer ? 'accent' : 'default'}
-              onClick={() => setShowConsoleDrawer(!showConsoleDrawer)}
-              title={t('console.toggle')}
-              ariaPressed={showConsoleDrawer}
-              tooltipSide="top"
-            >
-              <Terminal size={11} />
-            </IconButton>
-          )}
-          {showPaneControls ? (
-            <>
-              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-              <div className="flex items-center gap-1">
-                <IconButton
-                  size="xs"
-                  tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
-                  onClick={() => setDocumentPaneFocus('both')}
-                  title={t('document.focusBoth')}
-                  ariaPressed={documentPaneFocus === 'both'}
-                  tooltipSide="top"
-                >
-                  <Columns2 size={11} />
-                </IconButton>
-                <IconButton
-                  size="xs"
-                  tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
-                  onClick={() => setDocumentPaneFocus('source')}
-                  title={t('document.focusSource')}
-                  ariaPressed={documentPaneFocus === 'source'}
-                  tooltipSide="top"
-                >
-                  <PanelLeft size={11} />
-                </IconButton>
-                <IconButton
-                  size="xs"
-                  tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
-                  onClick={() => setDocumentPaneFocus('translation')}
-                  title={t('document.focusTranslation')}
-                  ariaPressed={documentPaneFocus === 'translation'}
-                  tooltipSide="top"
-                >
-                  <PanelRight size={11} />
-                </IconButton>
-                <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-                <IconButton
-                  size="xs"
-                  tone={syncOn ? 'accent' : 'default'}
-                  onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-                  disabled={syncDisabled}
-                  title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-                  ariaPressed={syncOn}
-                  tooltipSide="top"
-                >
-                  {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
-                </IconButton>
-                {hasGlossary && (
-                  <>
-                    <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-                    <IconButton
-                      size="xs"
-                      tone={highlightsEnabled ? 'accent' : 'default'}
-                      onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-                      title={t('library.glossaryHighlightToggle')}
-                      ariaPressed={highlightsEnabled}
-                      tooltipSide="top"
-                    >
-                      <Highlighter size={11} />
-                    </IconButton>
-                  </>
-                )}
-              </div>
-            </>
-          ) : null}
-          {data.kind === 'project' && (
-            <>
-              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+        {/* 3 — Comandi e stato globali, ordine invariabile:
+            lavori · pannello · controlli vista · salvataggio. */}
+        <div className="flex shrink-0 items-center justify-end gap-2">
+          <JobsIndicator />
+          <IconButton
+            size="xs"
+            tone={showConsoleDrawer ? 'accent' : 'default'}
+            onClick={() => {
+              // Aprendolo da qui si va sui messaggi dove esistono — dentro una
+              // traduzione — e sui lavori altrove, che è l'unica cosa che c'è.
+              if (!showConsoleDrawer) setDrawerTab(data.kind === 'project' ? 'console' : 'jobs');
+              setShowConsoleDrawer(!showConsoleDrawer);
+            }}
+            title={t('statusBar.panelToggle')}
+            ariaPressed={showConsoleDrawer}
+            tooltipSide="top"
+          >
+            <PanelBottom size={11} />
+          </IconButton>
+          {/* Lo spazio del salvataggio è riservato anche dove non c'è niente
+              da salvare: senza, tutto il gruppo scivolerebbe a destra cambiando
+              sezione. Generalizzarlo a trascrizioni e fonti è lavoro di #413. */}
+          <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+          <div className="flex min-w-[5.5rem] justify-end">
+            {data.kind === 'project' && (
               <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} />
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

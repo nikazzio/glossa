@@ -1,6 +1,9 @@
 use serde::Serialize;
 
+pub mod commands;
 pub mod discovery;
+pub mod network;
+pub mod settings;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -62,6 +65,11 @@ pub struct ProviderFilter {
 #[serde(rename_all = "camelCase")]
 pub struct IIIFProvider {
     pub key: &'static str,
+    /// Come si sta al tavolo di questa biblioteca. Sta qui e non in una
+    /// tabella a parte: due elenchi indicizzati per la stessa chiave prima o poi
+    /// divergono, e aggiungere una biblioteca deve significare compilare **un**
+    /// record.
+    pub network: network::NetworkProfile,
     pub label: &'static str,
     pub aliases: &'static [&'static str],
     pub placeholder: &'static str,
@@ -88,6 +96,7 @@ const GALLICA_FILTERS: &[ProviderFilter] = &[ProviderFilter {
 pub const PROVIDERS: &[IIIFProvider] = &[
     IIIFProvider {
         key: "vatican",
+        network: network::VATICAN,
         label: "Vatican Library",
         aliases: &["vaticana", "bav", "vatican"],
         placeholder: "e.g. Urb.lat.1779",
@@ -101,6 +110,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "gallica",
+        network: network::GALLICA,
         label: "Gallica",
         aliases: &["bnf", "gallica"],
         placeholder: "e.g. btv1b84260335",
@@ -114,6 +124,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "institut",
+        network: network::CAUTIOUS,
         label: "Institut de France",
         aliases: &["bibnum", "institut"],
         placeholder: "e.g. 17837",
@@ -127,6 +138,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "bodleian",
+        network: network::CAUTIOUS,
         label: "Bodleian Libraries",
         aliases: &["oxford", "bodleian"],
         placeholder: "e.g. 080f88f5-7586-4b8a-8064-63ab3495393c",
@@ -140,6 +152,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "heidelberg",
+        network: network::CAUTIOUS,
         label: "Heidelberg University Library",
         aliases: &["heidelberg"],
         placeholder: "e.g. cpg123",
@@ -153,6 +166,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "cambridge",
+        network: network::CAUTIOUS,
         label: "Cambridge University Digital Library",
         aliases: &["cudl", "cambridge"],
         placeholder: "e.g. MS-ADD-03996",
@@ -166,6 +180,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "ecodices",
+        network: network::CAUTIOUS,
         label: "e-codices",
         aliases: &["e-codices", "ecodices"],
         placeholder: "e.g. csg-0001",
@@ -179,6 +194,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "estense",
+        network: network::CAUTIOUS,
         label: "Biblioteca Estense",
         aliases: &["estense", "edl", "modena"],
         placeholder: "e.g. A.M.02.12.A",
@@ -192,6 +208,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "harvard",
+        network: network::CAUTIOUS,
         label: "Harvard Library",
         aliases: &["harvard"],
         placeholder: "e.g. DRS ID or IIIF URL",
@@ -205,6 +222,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "loc",
+        network: network::CAUTIOUS,
         label: "Library of Congress",
         aliases: &["loc", "library of congress"],
         placeholder: "e.g. https://www.loc.gov/item/...",
@@ -218,6 +236,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "archive_org",
+        network: network::CAUTIOUS,
         label: "Internet Archive",
         aliases: &["archive", "archive.org", "internet archive"],
         placeholder: "e.g. https://archive.org/details/...",
@@ -231,6 +250,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
     },
     IIIFProvider {
         key: "generic",
+        network: network::CAUTIOUS,
         label: "Direct IIIF URL",
         aliases: &["generic", "unknown"],
         placeholder: "e.g. https://example.org/manifest.json",

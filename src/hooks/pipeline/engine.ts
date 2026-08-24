@@ -10,11 +10,18 @@ import { pipelineLog } from '../../utils/pipelineLogging';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import type { PromptInfo, TokenUsage, TranslationChunk } from '../../types';
 import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { buildMemoryInjection } from '../../services/phraseMemoryInjection';
 import { getChunksWithAllMatchesDisabled } from '../../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../../services/pipelineService';
+import { recordModelRevision } from '../../services/translationRevisionsService';
+import {
+  recordFailedModelCall,
+  recordJudgement,
+  recordModelCall,
+} from '../../services/pipelineProvenance';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../../models/catalog';
 import { toDeeplCode } from '../../constants';
@@ -149,21 +156,55 @@ function persistPipelineStatus(
   });
 }
 
-function persistChunkCheckpoint(
+/**
+ * Salva il frammento e **poi** registra la proposta del modello nello storico.
+ *
+ * L'ordine conta: la revisione punta alla riga della traduzione, che alla
+ * prima esecuzione di un frammento nuovo non esiste ancora. Scritta prima,
+ * l'inserimento veniva rifiutato e la proposta del modello non finiva da
+ * nessuna parte.
+ *
+ * Se la registrazione fallisce la traduzione resta: serve a sapere cosa è
+ * successo, non a decidere cosa succede.
+ */
+async function persistChunkCheckpoint(
   projectId: string | null,
   pipelineId: string | null,
   chunk: TranslationChunk | undefined,
   position: number,
 ) {
   if (!projectId || !pipelineId || !chunk) return;
-  void saveChunkCheckpoint(projectId, pipelineId, chunk, position).catch((error: unknown) => {
+  try {
+    await saveChunkCheckpoint(projectId, pipelineId, chunk, position);
+  } catch (error: unknown) {
     warnAsyncFailure('pipeline.checkpoint.persist_failed', error, {
       projectId,
       pipelineId,
       chunkId: chunk.id,
       position,
     });
-  });
+    return;
+  }
+  const revision = await recordModelRevision(chunk.id, chunk.translationDisplayText).catch(
+    (error: unknown) => {
+      warnAsyncFailure('translation.revision.persist_failed', error, { chunkId: chunk.id });
+      return null;
+    },
+  );
+
+  // Il giudizio si lega alla revisione che ha giudicato: sul frammento
+  // vive in colonne che la riesecuzione successiva sovrascrive, e senza questo
+  // fatto «il giudice l'aveva dato per mediocre» si perde.
+  if (revision && chunk.judgeResult.status === 'completed') {
+    await recordJudgement(
+      chunk.id,
+      revision.id,
+      chunk.judgeResult,
+      useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+    ).catch((error: unknown) => {
+      warnAsyncFailure('provenance.judgement.persist_failed', error, { chunkId: chunk.id });
+    });
+  }
 }
 
 async function computeBlobAssignments(
@@ -337,7 +378,30 @@ export async function executePipelineForChunk(
         ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
         ...(capturedBilledCharacters !== undefined ? { billedCharacters: capturedBilledCharacters } : {}),
       });
-      pipelineLog.stageEnd(chunk.id, stage.id, stage.name, stageRef, Date.now() - stageStartedAt, capturedUsage);
+      const stageDuration = Date.now() - stageStartedAt;
+      pipelineLog.stageEnd(chunk.id, stage.id, stage.name, stageRef, stageDuration, capturedUsage);
+      // Token, costo e durata esistono solo adesso: dopo restano i testi, non
+      // quanto sono costati.
+      void recordModelCall({
+        chunkId: chunk.id,
+        stageId: stage.id,
+        stageName: stage.name,
+        provider: stage.provider,
+        model: stage.model,
+        usage: capturedUsage,
+        billedCharacters: capturedBilledCharacters,
+        durationMs: stageDuration,
+        sourceLanguage: effectiveConfig.sourceLanguage,
+        targetLanguage: effectiveConfig.targetLanguage,
+        input: stageText,
+        output: result,
+        workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+      }).catch((error: unknown) => {
+        warnAsyncFailure('provenance.model_call.persist_failed', error, {
+          chunkId: chunk.id,
+          stageId: stage.id,
+        });
+      });
     } catch (error: unknown) {
       const stageDurationMs = Date.now() - stageStartedAt;
       if (isStreamCancelledError(error)) {
@@ -351,6 +415,28 @@ export async function executePipelineForChunk(
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'error', error: msg });
       updateChunkStatus(chunk.id, 'error');
       pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs);
+      // Una chiamata fallita vale quanto una riuscita, e spesso di più: è
+      // quella che spiega perché un documento è rimasto indietro.
+      void recordFailedModelCall(
+        {
+          chunkId: chunk.id,
+          stageId: stage.id,
+          stageName: stage.name,
+          provider: stage.provider,
+          model: stage.model,
+          durationMs: stageDurationMs,
+          sourceLanguage: effectiveConfig.sourceLanguage,
+          targetLanguage: effectiveConfig.targetLanguage,
+          input: stageText,
+          workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+        },
+        rawError,
+      ).catch((failure: unknown) => {
+        warnAsyncFailure('provenance.model_call.persist_failed', failure, {
+          chunkId: chunk.id,
+          stageId: stage.id,
+        });
+      });
       toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
       return 'failed';
     }
@@ -466,7 +552,7 @@ export async function runPipeline(t: Translate): Promise<void> {
         const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
         const position = liveChunks.indexOf(chunk);
         const currentProjectId = useProjectStore.getState().currentProjectId;
-        persistChunkCheckpoint(currentProjectId, activePipelineId, fresh, position);
+        await persistChunkCheckpoint(currentProjectId, activePipelineId, fresh, position);
       }
     }
   } finally {

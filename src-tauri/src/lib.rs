@@ -1,10 +1,18 @@
+mod backup;
 mod db;
 mod deepl;
 mod documents;
+mod download;
+mod httpcache;
 mod iiif;
+mod images;
+mod jobs;
 mod keystore;
 mod llm;
+mod optimize;
+mod provenance;
 mod storage_config;
+mod vault;
 mod vector;
 
 use tauri::Manager;
@@ -64,6 +72,51 @@ pub fn run() {
 
             let vector_database = vector::VectorDatabase::initialize(app.handle());
             app.manage(vector_database);
+
+            // Il deposito predefinito esiste dal primo avvio: altrimenti la
+            // sua cartella risulterebbe "non raggiungibile" solo perché non è
+            // ancora stata creata.
+            if let Err(error) = vault::commands::ensure_default_root(app.handle()) {
+                log::error!("default vault not created: {error}");
+            }
+
+            // I ritmi di rete che nascono con l'applicazione, presi dal
+            // registro dei provider. Senza, la prima apertura non
+            // avrebbe nessun profilo da applicare.
+            if let Err(error) = crate::storage_config::db_path(app.handle())
+                .and_then(|path| db::open_connection(&path))
+                .and_then(|conn| iiif::settings::ensure_builtin_profiles(&conn))
+            {
+                log::error!("network profiles not seeded: {error}");
+            }
+
+            // La cortesia verso le biblioteche nasce **prima** della coda e
+            // sta fuori da lei: i contatori valgono per host, e devono essere
+            // gli stessi per uno scaricamento e per una copertina chiesta dalla
+            // finestra. Altrimenti quaranta risultati di ricerca sono quaranta
+            // richieste senza pause verso una biblioteca che bandisce.
+            app.manage(std::sync::Arc::new(download::courtesy::Courtesy::new()));
+
+            // La cache di ciò che viene dalla rete: cartella a sé nella cartella
+            // dati, mai nel deposito. Il deposito conserva ciò che è stato
+            // scaricato di proposito; questa si può cancellare in qualsiasi
+            // momento senza conseguenze.
+            match crate::storage_config::resolve_data_dir(app.handle()) {
+                Ok(data_dir) => {
+                    app.manage(std::sync::Arc::new(httpcache::HttpCache::new(
+                        data_dir.join("cache"),
+                    )));
+                }
+                Err(error) => log::error!("cache not available: {error}"),
+            }
+
+            // L'orchestratore dei lavori parte con l'applicazione e per
+            // prima cosa rimette in ordine ciò che una chiusura brusca ha
+            // lasciato a metà. Un errore qui non deve impedire l'avvio:
+            // senza coda l'app resta usabile, senza finestra no.
+            if let Err(error) = jobs::commands::start(app.handle()) {
+                log::error!("jobs engine did not start: {error}");
+            }
             #[allow(unused_mut)]
             let mut log_targets: Vec<tauri_plugin_log::Target> =
                 vec![tauri_plugin_log::Target::new(
@@ -102,9 +155,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             db::backup_database_file,
+            backup::write_backup,
+            backup::read_backup,
             db::execute_transaction,
             storage_config::get_data_dir,
-            storage_config::set_data_dir,
+            storage_config::choose_data_dir_folder,
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,
@@ -126,6 +181,26 @@ pub fn run() {
             llm::providers::ollama::list_ollama_models,
             llm::providers::ollama::check_ollama_status,
             llm::providers::ollama::check_ollama_preflight,
+            vault::commands::get_vault_status,
+            vault::commands::initialize_vault,
+            vault::commands::free_version_pages,
+            vault::commands::delete_version_files,
+            vault::commands::choose_vault_folder,
+            vault::commands::use_default_vault_folder,
+            vault::commands::enqueue_vault_verification,
+            vault::commands::delete_vault_orphans,
+            jobs::commands::create_job,
+            jobs::commands::list_active_jobs,
+            jobs::commands::get_job,
+            jobs::commands::pause_job,
+            jobs::commands::resume_job,
+            jobs::commands::cancel_job,
+            jobs::commands::retry_job,
+            jobs::commands::clear_finished_jobs,
+            download::enqueue_source_download,
+            download::inventory::version_inventory,
+            download::inventory::library_inventory,
+            optimize::commands::enqueue_optimization,
             documents::import_document,
             documents::export_markdown_docx,
             vector::vec_ping,
@@ -143,6 +218,16 @@ pub fn run() {
             deepl::commands::delete_deepl_glossary,
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
+            iiif::commands::list_network_settings,
+            iiif::commands::save_network_profile,
+            iiif::commands::delete_network_profile,
+            iiif::commands::set_library_network_profile,
+            iiif::commands::get_version_size_cap,
+            iiif::commands::set_version_size_cap,
+            httpcache::commands::cached_image,
+            httpcache::commands::cache_usage,
+            httpcache::commands::apply_cache_cap,
+            httpcache::commands::clear_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

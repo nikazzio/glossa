@@ -22,6 +22,8 @@ Sviluppo attivo (pre-1.0). Priorità assoluta modalità documento/editoriale. UI
 - **Prefix Caching (CRITICO)**: Ordine blocchi system prompt (`static → blob → stage-instructions`) **mai cambia**. Inversione spezza cache provider, moltiplica costi.
 
 ## Documentazione e Stato
+- **Lettura selettiva**: Parti da `docs-dev/README.md` e apri solo i documenti
+  pertinenti al task; non leggere tutta `docs-dev` per default.
 - **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche flussi, comandi Tauri, schemi DB, store Zustand.
 - **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di ogni modifica visiva.
 - **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` inizio sessione, aggiorna obbligatorio fine task/feature. Aggiorna help in-app per modifiche funzionali.
@@ -57,7 +59,7 @@ Per prevenire esaurimento finestra contesto, **ogni comando terminale deve inizi
 ### Economia di tempo e token
 
 - **Comunicazione**: usa il skill `caveman` nelle attività operative, salvo casi in cui la chiarezza o la sicurezza richiedano prosa normale.
-- **Verifica proporzionata**: esegui soltanto test direttamente pertinenti ai file o contratti modificati. Suite complete solo se l'utente le richiede, un rischio cross-cutting lo giustifica, o la CI fallisce.
+- **Verifica proporzionata**: esegui soltanto test direttamente pertinenti ai file o contratti modificati — `npx vitest run <percorso>`, `cargo test <modulo>`. Suite complete **una sola volta, prima del commit**, e solo se il commit tocca più aree; mai fra una modifica e l'altra, mai per confermare qualcosa che il compilatore ha già detto. Vale anche per `clippy` e `tsc`: si lanciano quando servono, non a ogni passo.
 - **Build**: non eseguire build dell'app, build Tauri, build della documentazione, E2E o installazioni di dipendenze salvo richiesta esplicita dell'utente o necessità indispensabile per diagnosticare un errore.
 - **Esplorazione**: preferisci `rtk rg`, letture mirate e repomix compresso; evita scansioni o output completi non necessari al task.
 

@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { isStreamCancelledError, llmService } from '../../services/llmService';
 import { withRetry, friendlyError } from '../../utils/retry';
 import { qualityDefault, qualityFailure } from '../../utils';
@@ -8,6 +9,19 @@ import { pipelineLog } from '../../utils/pipelineLogging';
 import { stripFootnoteMarkers } from '../../utils/footnoteExtractor';
 import type { ChunkStatus, JudgeResult, PromptInfo, ResponseInfo, TranslationChunk } from '../../types';
 import type { ChunkOutcome } from './blobContext';
+import {
+  recordFailedModelCall,
+  recordJudgement,
+  recordModelCall,
+} from '../../services/pipelineProvenance';
+import { revisionIdForText } from '../../services/translationRevisionsService';
+import { contentHash } from '../../services/provenanceService';
+
+/**
+ * Lo stadio con cui il giudizio entra nel registro. Non è uno stadio della
+ * pipeline: è una chiamata a sé, e come tale va contata.
+ */
+const JUDGE_STAGE_ID = 'judge';
 
 export type JudgeActions = {
   updateChunkJudge: (id: string, result: JudgeResult) => void;
@@ -29,6 +43,8 @@ export async function runJudgeForChunk(
   textToAudit: string | undefined,
   actions: JudgeActions,
   effectiveConfig?: ReturnType<typeof usePipelineStore.getState>['config'],
+  /** Registra il verdetto nei flussi di sola revisione. */
+  recordVerdict = false,
 ): Promise<ChunkOutcome> {
   const config = effectiveConfig ?? usePipelineStore.getState().config;
   if (!textToAudit) return 'skipped';
@@ -79,9 +95,64 @@ export async function runJudgeForChunk(
       ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
     } as JudgeResult);
     actions.updateChunkStatus(chunk.id, 'completed');
-    pipelineLog.auditEnd(chunk.id, judgeRef, Date.now() - auditStartedAt, judgeTokenUsage);
+    const auditDuration = Date.now() - auditStartedAt;
+    pipelineLog.auditEnd(chunk.id, judgeRef, auditDuration, judgeTokenUsage);
+    // Anche il giudice è una chiamata a un modello, e costa: senza questa riga
+    // il conto di un documento sarebbe più basso del vero. Il *verdetto*
+    // è un fatto diverso, legato alla revisione giudicata.
+    void recordModelCall({
+      chunkId: chunk.id,
+      stageId: JUDGE_STAGE_ID,
+      stageName: JUDGE_STAGE_ID,
+      provider: judgeRef.provider,
+      model: judgeRef.model,
+      usage: judgeTokenUsage,
+      durationMs: auditDuration,
+      sourceLanguage: config.sourceLanguage,
+      targetLanguage: config.targetLanguage,
+      input: textToAudit,
+      workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+    }).catch(() => undefined);
+    if (recordVerdict) {
+      // Il giudizio si lega alla revisione che ha giudicato. Se quel testo non
+      // è in archivio — un frammento corretto a mano e mai riapprovato — si usa
+      // la sua impronta: dice comunque *cosa* è stato giudicato, senza fingere
+      // una revisione che non esiste.
+      void revisionIdForText(chunk.id, textToAudit)
+        .then((revisionId) =>
+          recordJudgement(
+            chunk.id,
+            revisionId ?? `hash:${contentHash(textToAudit)}`,
+            {
+              content: textToAudit,
+              status: 'completed',
+              rating: judgeData.rating,
+              issues: judgeData.issues ?? [],
+            } as JudgeResult,
+            useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+          ),
+        )
+        .catch(() => undefined);
+    }
     return 'completed';
   } catch (error: unknown) {
+    if (!isStreamCancelledError(error)) {
+      void recordFailedModelCall(
+        {
+          chunkId: chunk.id,
+          stageId: JUDGE_STAGE_ID,
+          stageName: JUDGE_STAGE_ID,
+          provider: judgeRef.provider,
+          model: judgeRef.model,
+          durationMs: Date.now() - auditStartedAt,
+          sourceLanguage: config.sourceLanguage,
+          targetLanguage: config.targetLanguage,
+          input: textToAudit,
+          workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+        },
+        error instanceof Error ? error.message : String(error),
+      ).catch(() => undefined);
+    }
     if (isStreamCancelledError(error)) {
       actions.updateChunkJudge(chunk.id, {
         content: textToAudit,
