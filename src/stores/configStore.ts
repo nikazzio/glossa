@@ -21,6 +21,12 @@ interface ConfigState {
   ollamaBaseUrl: string;
   setOllamaBaseUrl: (url: string) => void;
 
+  /** Se attivo, all'avvio dell'app prova a raggiungere il server Ollama e a
+   * leggere i modelli installati (senza attendere che l'utente lo faccia a
+   * mano in Impostazioni) — sola verifica locale (localhost), nessun invio. */
+  ollamaAutoDiscover: boolean;
+  setOllamaAutoDiscover: (value: boolean) => void;
+
   newPipelineInit: 'copy-first' | 'copy-previous' | 'defaults';
   setNewPipelineInit: (value: 'copy-first' | 'copy-previous' | 'defaults') => void;
 
@@ -60,6 +66,9 @@ export const useConfigStore = create<ConfigState>()(
       ollamaBaseUrl: 'http://localhost:11434',
       setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
 
+      ollamaAutoDiscover: false,
+      setOllamaAutoDiscover: (value) => set({ ollamaAutoDiscover: value }),
+
       newPipelineInit: 'copy-first',
       setNewPipelineInit: (value) => set({ newPipelineInit: value }),
 
@@ -90,6 +99,7 @@ export const useConfigStore = create<ConfigState>()(
         chunkPresetShort: state.chunkPresetShort,
         chunkPresetMedium: state.chunkPresetMedium,
         chunkPresetLong: state.chunkPresetLong,
+        ollamaAutoDiscover: state.ollamaAutoDiscover,
       }),
     },
   ),

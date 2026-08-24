@@ -708,7 +708,9 @@
     "unchecked": "Stato Ollama non verificato",
     "uncheckedHint": "Stato non verificato. Clicca «Aggiorna» per controllare la connessione e caricare i modelli locali.",
     "baseUrl": "URL base di Ollama",
-    "urlInvalid": "L'URL deve iniziare con http:// o https://"
+    "urlInvalid": "L'URL deve iniziare con http:// o https://",
+    "autoDiscover": "Rileva automaticamente all'avvio",
+    "autoDiscoverHint": "All'avvio di Glossa controlla se Ollama è raggiungibile e carica i modelli installati, senza dover cliccare «Aggiorna» a mano."
   },
   "preflight": {
     "title": "Controllo pre-avvio",

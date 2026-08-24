@@ -127,7 +127,7 @@ function DocumentPage({
   ) : null;
 
   return (
-    <section className={`relative bg-editorial-bg px-12 py-8 flex flex-col flex-1 min-h-0 ${
+    <section className={`relative bg-editorial-bg px-12 py-8 flex flex-col flex-1 min-h-0 min-w-0 ${
       highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''
     }`}>
       {/* Header: riga unica allineata al titolo — controlli pagina + pulsante menu testo a destra. */}
@@ -602,12 +602,15 @@ export function DocumentView({
                 <Lock size={13} />
               </IconButton>
             );
+            const hasStageContent = (s: (typeof enabledStages)[number]) =>
+              s.id === lastStageId
+                ? !!currentChunk.translationDisplayText.trim()
+                : !!currentChunk.stageResults[s.id]?.content;
+            const hasAnyStageContent = enabledStages.some(hasStageContent);
             const stageButtons = enabledStages.map((s) => {
               const Icon = s.role === 'refine' ? Wand2 : s.role === 'format' ? FileText : Languages;
               const isActive = effectiveSelectedStageId === s.id;
-              const hasContent = s.id === lastStageId
-                ? true
-                : !!(currentChunk.stageResults[s.id]?.content);
+              const hasContent = hasStageContent(s);
               return (
                 <IconButton
                   key={s.id}
@@ -658,6 +661,7 @@ export function DocumentView({
                     setShowDiffMode(!showDiffMode);
                   }}
                   title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
+                  disabled={!hasAnyStageContent}
                   ariaPressed={showDiffMode}
                 >
                   <GitCompare size={14} />
@@ -686,7 +690,7 @@ export function DocumentView({
                 scrollRef={scrollTranslationRef}
               >
                 <div
-                  className="flex flex-col flex-1 min-h-0"
+                  className="flex flex-col flex-1 min-h-0 min-w-0"
                   onContextMenu={(e) => {
                     const text = window.getSelection()?.toString().trim() ?? '';
                     if (!text) return;
@@ -695,7 +699,7 @@ export function DocumentView({
                   }}
                 >
                   {showDiffMode ? (
-                    <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                    <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 min-w-0 overflow-y-auto custom-scrollbar">
                       <HighlightedText
                         html={stageDiff.html}
                         className="doc-content text-editorial-ink min-h-[280px]"

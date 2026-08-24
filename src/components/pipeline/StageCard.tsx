@@ -265,7 +265,9 @@ export function StageCard({
               ...LLM_PROVIDER_ORDER.map((p) => ({
                 value: p,
                 label: p,
-                disabled: p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false,
+                disabled: p === 'ollama'
+                  ? ollamaModels.length === 0
+                  : (keyStatuses as Partial<Record<string, boolean>>)[p] === false,
               })),
               { value: 'custom', label: 'custom' },
             ]}
