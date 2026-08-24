@@ -1164,6 +1164,7 @@
     "backupTruncated": "The backup file is incomplete: it was interrupted while being written.",
     "backupTooNew": "This backup comes from a newer version of Glossa.",
     "backupUnreadable": "This file is not a Glossa backup.",
+    "backupUnsupported": "This backup uses an older format that is no longer supported.",
     "backupWrongPassword": "This password or recovery code does not open the backup.",
     "backupCorrupt": "The encrypted backup is damaged.",
     "backupPasswordRequired": "This backup needs a password or recovery code.",

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BackupSection } from './BackupSection';
-import { writeBackup } from '../../services/backupService';
+import { restoreBackup, writeBackup } from '../../services/backupService';
+import { toast } from 'sonner';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
@@ -60,6 +61,18 @@ describe('BackupSection', () => {
       recoveryCode: expect.any(String),
     }));
     expect(await screen.findByText('settings.backupShowRecoveryCode')).toBeInTheDocument();
+  });
+
+  it('spiega quando il formato del backup non è più supportato', async () => {
+    vi.mocked(restoreBackup).mockRejectedValue(new Error('backup_format_unsupported'));
+    const user = userEvent.setup();
+    render(<BackupSection />);
+
+    await user.click(screen.getByRole('button', { name: 'settings.backupImportTooltip' }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('files.backupUnsupported', undefined);
+    });
   });
 
   it('rende il codice selezionabile e offre il comando dedicato per copiarlo', async () => {

@@ -29,13 +29,9 @@ import {
  */
 const SCHEMA_VERSION = 3;
 
-export type BackupPrivacy = 'glossaOnly' | 'password';
-
-export interface BackupOptions {
-  privacy: BackupPrivacy;
-  password?: string;
-  recoveryCode?: string;
-}
+export type BackupOptions =
+  | { privacy: 'glossaOnly' }
+  | { privacy: 'password'; password: string; recoveryCode: string };
 
 // dbService.ts stores its own DB-migration marker under this app_settings key
 // (unrelated to SCHEMA_VERSION above). Importing an old backup must never

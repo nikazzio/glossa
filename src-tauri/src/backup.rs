@@ -1,8 +1,8 @@
 //! Creazione e lettura dei backup dell'applicazione.
 //!
 //! Il percorso viene scelto dal backend. Il contenuto contiene il database, mai
-//! le immagini del deposito. Il formato 2 aggiunge tre livelli espliciti:
-//! aperto, solo Glossa (offuscamento documentato) e cifrato con password.
+//! le immagini del deposito. Il formato 2 offre due livelli: solo Glossa
+//! (offuscamento documentato) e cifrato con password.
 
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};

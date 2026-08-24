@@ -153,6 +153,7 @@ export function BackupSection() {
         backup_manifest_unreadable: 'files.backupTruncated',
         backup_payload_missing: 'files.backupTruncated',
         backup_schema_unreadable: 'files.backupSchemaUnreadable',
+        backup_format_unsupported: 'files.backupUnsupported',
         backup_wrong_password: 'files.backupWrongPassword',
         backup_corrupt: 'files.backupCorrupt',
         backup_password_required: 'files.backupPasswordRequired',
