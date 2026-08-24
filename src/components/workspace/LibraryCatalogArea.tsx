@@ -31,7 +31,6 @@ import {
   summarizeAvailability,
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
-import { MAX_SIZE_CAP } from '../../services/downloadSettingsService';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { enqueueOptimization } from '../../services/optimizeService';

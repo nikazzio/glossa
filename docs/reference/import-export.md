@@ -50,7 +50,7 @@ importate e annotazioni create durante la revisione.
 
 ## Backup
 
-Il backup si trova in **Impostazioni → Archiviazione** e riguarda tutto Glossa,
+Il backup si trova in **Impostazioni → Backup** e riguarda tutto Glossa,
 non un workspace solo.
 
 Prima di chiederti di sostituire i dati locali, Glossa controlla che il backup sia

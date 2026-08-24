@@ -72,7 +72,7 @@ const t = (key: string) => key;
 function backupWith(appSettings: Array<{ key: string; value: string }>): string {
   return JSON.stringify({
     glossa_version: '0.9.0',
-    schema_version: 2,
+    schema_version: 3,
     exported_at: '2026-06-08T19:11:42.971Z',
     // Tutte le tabelle dichiarate, vuote tranne quella in prova.
     tables: {
@@ -90,6 +90,7 @@ describe('cosa porta con sé un backup', () => {
     expect(BACKUP_TABLES).toContain('translation_revisions');
     expect(BACKUP_TABLES).toContain('provenance_events');
     expect(BACKUP_TABLES).toContain('sources');
+    expect(BACKUP_TABLES).toContain('source_pages');
     expect(BACKUP_TABLES).toContain('transcription_revisions');
     expect(BACKUP_TABLES).not.toContain('assets');
     expect(BACKUP_TABLES).not.toContain('jobs');
@@ -122,6 +123,28 @@ describe('la misura con cui riscaricare', () => {
       { sizeTag: '2000', pages: 328 },
       { sizeTag: 'max', pages: 3 },
     ]);
+  });
+});
+
+describe('la chiave di un backup cifrato', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockClear();
+  });
+
+  it('manda password e codice di recupero solo per il backup cifrato', async () => {
+    await writeBackup({
+      privacy: 'password',
+      password: 'una password lunga',
+      recoveryCode: 'c1a2-b3c4-d5e6-f7a8-0123-4567-89ab-cdef',
+    });
+
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith('write_backup', expect.objectContaining({
+      options: {
+        privacy: 'password',
+        password: 'una password lunga',
+        recoveryCode: 'c1a2-b3c4-d5e6-f7a8-0123-4567-89ab-cdef',
+      },
+    }));
   });
 });
 
@@ -268,7 +291,7 @@ describe('il ripristino', () => {
   });
 
   it('rejects a backup created by a newer schema before changing data', async () => {
-    fsState.raw = backupWith([]).replace('"schema_version":2', '"schema_version":99');
+    fsState.raw = backupWith([]).replace('"schema_version":3', '"schema_version":99');
 
     await expect(restoreBackup(t)).rejects.toThrow('incompatible_schema_version');
     expect(confirm).not.toHaveBeenCalled();

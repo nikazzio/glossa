@@ -1,6 +1,6 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-08-22.
+Ultimo aggiornamento: 2026-08-23.
 
 ## Stato generale
 
@@ -17,11 +17,11 @@ e CI.
 
 ### Riservatezza di backup ed esportazioni
 
-Implementare i tre livelli stabiliti da D33:
-
-- aperto;
-- formato leggibile solo da Glossa, dichiarato come offuscamento;
-- cifrato con password, Argon2id e AES-256-GCM a blocchi.
+Completati i backup privati: formato solo Glossa, dichiarato come
+offuscamento, e formato cifrato con password e codice di recupero. Non c'è
+retrocompatibilità con i formati precedenti. Le esportazioni di workspace e
+pipeline non esistono ancora e definiranno il loro formato quando verranno
+introdotte.
 
 Il formato cifrato deve conservare in chiaro versione e parametri di derivazione,
 distinguere password errata da archivio danneggiato e non includere le chiavi dei
@@ -30,10 +30,8 @@ provider.
 ### Consolidamento dello schema
 
 - sostituire le migrazioni del blocco con una baseline leggibile;
-- correggere il puntatore della revisione di trascrizione approvata;
-- rimuovere `transcription_segments.asset_id`;
-- rimuovere la retrocompatibilità pre-2.0;
-- decidere la forma finale della tabella `assets`;
+- assorbire nella baseline pagine logiche e rappresentazioni file, già introdotte
+  dalla migrazione numerata;
 - ricreare i database di sviluppo;
 - eseguire test di primo avvio, backup e ripristino.
 

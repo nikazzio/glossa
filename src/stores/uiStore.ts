@@ -25,6 +25,7 @@ export type SettingsTab =
   | 'provider'
   | 'typography'
   | 'storage'
+  | 'backup'
   | 'jobs'
   | 'download'
   | 'libraries';

@@ -219,7 +219,7 @@ pausing is not enough.
 
 ## The backup
 
-**Settings → Storage → Backup and restore** saves a file with everything that
+**Settings → Backup** saves a file with everything that
 cannot be downloaded again: the works' records, notes, transcriptions,
 translations with their history, glossaries, phrase memory and the record of the
 work done.
@@ -237,6 +237,13 @@ The file is compressed — the content is text, and compresses about tenfold —
 and carries a fingerprint: a backup interrupted while being written is
 recognised **before** the restore starts, instead of leaving you halfway with
 your data already cleared.
+
+You can save a file that only Glossa opens: it prevents accidental opening but
+does not protect sensitive material. For sensitive data use the lock: it asks
+for a password and, after saving, shows a recovery code once. Keep that code
+outside the app: you can select it or use the copy button beside it. Either the
+password or code opens the encrypted backup, but
+losing both makes its contents unrecoverable.
 
 **Restoring replaces everything**: every workspace there is now is replaced by
 what is in the file. The confirmation says so, and there is no going back.

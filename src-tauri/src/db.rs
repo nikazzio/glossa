@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
-use sqlx::{Acquire, Row, SqlitePool};
+use sqlx::Acquire;
 use std::fs;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -9,71 +9,10 @@ use tauri::State;
 use tauri_plugin_sql::{DbInstances, DbPool};
 use tokio::sync::Mutex;
 
-/// Rust/sqlx owns the schema (see #211): this baseline runs once against a
-/// fresh or pre-2.0 glossa.db (existing 1.x tables are created idempotently,
-/// so it is a no-op on an already-populated database) and every later change
-/// ships as a new file here, tracked by sqlx in `_sqlx_migrations`.
+/// Rust/sqlx owns the schema (see #211): this baseline runs on a fresh 2.0
+/// glossa.db and every later change ships as a new file here, tracked by sqlx
+/// in `_sqlx_migrations`.
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
-
-/// Columns the old TypeScript-owned schema added to a pre-existing table via
-/// `ensureColumn` rather than including in its original `CREATE TABLE`. The
-/// baseline migration's `CREATE TABLE IF NOT EXISTS` is a no-op on a database
-/// that already has these tables, so any column missing from an older shape
-/// (a beta predating the corresponding `ensureColumn` call) must be backfilled
-/// here — otherwise later `CREATE INDEX`/query statements referencing it
-/// fail with "no such column".
-const LEGACY_COLUMN_BACKFILLS: &[(&str, &str, &str)] = &[
-    ("projects", "workspace_id", "TEXT REFERENCES workspaces(id)"),
-    (
-        "pipelines",
-        "few_shot_examples",
-        "TEXT NOT NULL DEFAULT '[]'",
-    ),
-    ("phrase_memory", "embedding_model", "TEXT"),
-];
-
-async fn table_exists(pool: &SqlitePool, table: &str) -> Result<bool, String> {
-    let count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?")
-            .bind(table)
-            .fetch_one(pool)
-            .await
-            .map_err(|error| error.to_string())?;
-    Ok(count > 0)
-}
-
-async fn has_column(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
-    let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
-        .fetch_all(pool)
-        .await
-        .map_err(|error| error.to_string())?;
-    Ok(rows
-        .iter()
-        .any(|row| row.get::<String, _>("name") == column))
-}
-
-/// Backfills columns the baseline migration's `CREATE TABLE IF NOT EXISTS`
-/// cannot add to an already-existing table, so the baseline's own indexes and
-/// queries against those columns succeed regardless of which pre-2.0 shape
-/// the database is currently in. Runs before `MIGRATOR.run` since it operates
-/// on tables the migration assumes already have their final shape.
-async fn backfill_legacy_columns(pool: &SqlitePool) -> Result<(), String> {
-    for (table, column, definition) in LEGACY_COLUMN_BACKFILLS {
-        if !table_exists(pool, table).await? {
-            continue;
-        }
-        if has_column(pool, table, column).await? {
-            continue;
-        }
-        sqlx::query(&format!(
-            "ALTER TABLE {table} ADD COLUMN {column} {definition}"
-        ))
-        .execute(pool)
-        .await
-        .map_err(|error| error.to_string())?;
-    }
-    Ok(())
-}
 
 /// Runs before any Tauri command or frontend `Database.load()` call, so the
 /// schema is guaranteed to exist by the time the UI or the native vector
@@ -100,8 +39,6 @@ pub async fn run_startup_migrations(app: &tauri::AppHandle) -> Result<(), String
         .connect_with(options)
         .await
         .map_err(|error| error.to_string())?;
-
-    backfill_legacy_columns(&pool).await?;
 
     MIGRATOR
         .run(&pool)
@@ -320,6 +257,7 @@ mod tests {
         for table in [
             "sources",
             "source_versions",
+            "source_pages",
             // I collegamenti fra workspace e item stanno tutti qui: la vecchia
             // tabella dei soli libri non esiste più (#213).
             "workspace_items",
@@ -368,6 +306,24 @@ mod tests {
                 .await
                 .expect("colonne dei segmenti");
         assert!(segment.iter().any(|name| name == "approved_revision_id"));
+        assert!(segment.iter().any(|name| name == "source_page_id"));
+        assert!(!segment.iter().any(|name| name == "asset_id"));
+
+        let page: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM pragma_table_info('source_pages')")
+                .fetch_all(&pool)
+                .await
+                .expect("colonne delle pagine logiche");
+        assert!(page.iter().any(|name| name == "canvas_url"));
+        assert!(page.iter().any(|name| name == "position"));
+
+        let asset: Vec<String> = sqlx::query_scalar("SELECT name FROM pragma_table_info('assets')")
+            .fetch_all(&pool)
+            .await
+            .expect("colonne delle rappresentazioni file");
+        assert!(asset.iter().any(|name| name == "source_page_id"));
+        assert!(asset.iter().any(|name| name == "origin"));
+        assert!(!asset.iter().any(|name| name == "availability"));
     }
 
     #[tokio::test]
@@ -386,156 +342,6 @@ mod tests {
                 .await
                 .expect("active_workspace_id row");
         assert_eq!(active_workspace, "ws_default");
-    }
-
-    #[tokio::test]
-    async fn baseline_migration_is_idempotent_on_a_database_that_already_has_1x_tables() {
-        // Simulates the author's existing test database: 1.x tables already
-        // created directly (not via sqlx), no #211 tables yet.
-        let options = SqliteConnectOptions::new()
-            .filename(":memory:")
-            .foreign_keys(true);
-        let pool = SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect_with(options)
-            .await
-            .expect("in-memory sqlite connection");
-        sqlx::query(
-            "CREATE TABLE workspaces (
-              id TEXT PRIMARY KEY,
-              name TEXT NOT NULL,
-              description TEXT,
-              embedding_model TEXT NOT NULL DEFAULT 'text-embedding-3-small',
-              memory_extractor_provider TEXT NOT NULL DEFAULT 'openai',
-              memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5.4-nano',
-              memory_extractor_prompt TEXT NOT NULL DEFAULT '',
-              created_at TEXT NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await
-        .expect("pre-existing workspaces table matching the real 1.x shape");
-        sqlx::query(
-            "INSERT INTO workspaces (id, name, embedding_model, memory_extractor_provider, memory_extractor_model, memory_extractor_prompt, created_at)
-             VALUES ('ws_mine', 'Scherma', 'text-embedding-3-small', 'openai', 'gpt-5.4-nano', '', datetime('now'))",
-        )
-        .execute(&pool)
-        .await
-        .expect("pre-existing workspace row");
-
-        MIGRATOR
-            .run(&pool)
-            .await
-            .expect("migration must not fail against a pre-2.0 database");
-
-        let preserved: String =
-            sqlx::query_scalar("SELECT name FROM workspaces WHERE id = 'ws_mine'")
-                .fetch_one(&pool)
-                .await
-                .expect("existing workspace row survives the migration untouched");
-        assert_eq!(preserved, "Scherma");
-
-        let sources_exists: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'sources'",
-        )
-        .fetch_one(&pool)
-        .await
-        .expect("sqlite_master query");
-        assert_eq!(sources_exists, 1);
-    }
-
-    #[tokio::test]
-    async fn backfills_columns_missing_from_older_beta_shapes_before_migrating() {
-        // Simulates a database from before the corresponding `ensureColumn`
-        // calls existed in the old TypeScript-owned schema: `projects` has no
-        // `workspace_id`, `pipelines` has no `few_shot_examples`,
-        // `phrase_memory` has no `embedding_model`. Without the backfill, the
-        // baseline migration's own `CREATE INDEX idx_projects_workspace` and
-        // any query touching these columns would fail with "no such column".
-        let options = SqliteConnectOptions::new()
-            .filename(":memory:")
-            .foreign_keys(true);
-        let pool = SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect_with(options)
-            .await
-            .expect("in-memory sqlite connection");
-
-        sqlx::query("CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT NOT NULL)")
-            .execute(&pool)
-            .await
-            .expect("pre-existing projects table without workspace_id");
-        sqlx::query("INSERT INTO projects (id, name) VALUES ('proj_1', 'Old project')")
-            .execute(&pool)
-            .await
-            .expect("pre-existing project row");
-
-        sqlx::query(
-            "CREATE TABLE pipelines (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, stages TEXT NOT NULL DEFAULT '[]')",
-        )
-        .execute(&pool)
-        .await
-        .expect("pre-existing pipelines table without few_shot_examples");
-
-        sqlx::query(
-            "CREATE TABLE phrase_memory (
-              id TEXT PRIMARY KEY,
-              workspace_id TEXT NOT NULL,
-              source_phrase TEXT NOT NULL,
-              target_phrase TEXT NOT NULL,
-              confidence REAL NOT NULL DEFAULT 1.0,
-              source_language TEXT NOT NULL,
-              target_language TEXT NOT NULL,
-              chunk_id TEXT,
-              project_id TEXT,
-              embedding BLOB NOT NULL,
-              created_at TEXT NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await
-        .expect("pre-existing phrase_memory table without embedding_model");
-
-        backfill_legacy_columns(&pool)
-            .await
-            .expect("backfill succeeds against every legacy shape");
-        MIGRATOR
-            .run(&pool)
-            .await
-            .expect("migration succeeds once legacy columns are backfilled");
-
-        for (table, column) in [
-            ("projects", "workspace_id"),
-            ("pipelines", "few_shot_examples"),
-            ("phrase_memory", "embedding_model"),
-        ] {
-            assert!(
-                has_column(&pool, table, column).await.unwrap(),
-                "{table}.{column} should exist after backfill"
-            );
-        }
-
-        let preserved: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = 'proj_1'")
-            .fetch_one(&pool)
-            .await
-            .expect("existing project row survives the backfill untouched");
-        assert_eq!(preserved, "Old project");
-    }
-
-    #[tokio::test]
-    async fn backfill_is_a_no_op_when_tables_do_not_exist_yet() {
-        let options = SqliteConnectOptions::new()
-            .filename(":memory:")
-            .foreign_keys(true);
-        let pool = SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect_with(options)
-            .await
-            .expect("in-memory sqlite connection");
-
-        backfill_legacy_columns(&pool)
-            .await
-            .expect("backfill is a no-op on a brand-new database with no tables yet");
     }
 
     #[test]

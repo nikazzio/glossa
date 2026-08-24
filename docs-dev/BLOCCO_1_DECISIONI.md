@@ -16,7 +16,8 @@ Le decisioni sono numerate `D1`, `D2`, … e riportano cosa si è scelto, cosa s
 scartato e perché, e cosa comporta. Le voci `-bis` sono emerse discutendo e non
 erano nella prima stesura.
 
-**Tutte approvate** fra il 9 e l'11 agosto 2026, nessuna domanda aperta. In
+**Tutte approvate** fra il 9 e l'11 agosto 2026, con l'integrazione D34 del 23
+agosto, nessuna domanda aperta. In
 fondo l'appendice tecnica con schema, comandi e struttura delle cartelle.
 
 Lo stato implementativo e il lavoro residuo sono in `STATO_BLOCCO_1.md` e
@@ -1757,8 +1758,12 @@ grafiche. È l'unica libreria nuova: **AES-256-GCM è già nel progetto**, usato
   macchina, ma **mostrata e confermata alla creazione**: se il computer muore, il
   portachiavi muore con lui.
 
-**Nessun recupero password.** Qualunque via di recupero è una seconda chiave e
-vanifica la cifratura.
+**Codice di recupero.** Ogni backup cifrato genera una seconda chiave casuale,
+mostrata una sola volta a chi crea il file. Serve a recuperare il backup quando
+la password non è più disponibile; Glossa non la conserva e chi perde sia
+password sia codice perde il backup. È una decisione di prodotto aggiornata il
+23 agosto 2026: il codice è una via deliberata di recupero, non un recupero
+della password custodito dall'app.
 
 **Spento di default**, con la conseguenza scritta a chiare lettere al momento
 della scelta: password dimenticata, backup perduto. Il backup è ciò a cui si
@@ -2026,6 +2031,31 @@ alla revisione, non al chunk.
 
 `assets.vault_path` è **relativo** alla radice del deposito, mai assoluto: così
 spostare la cartella dati non invalida il database.
+
+## D34 — Pagine logiche e rappresentazioni file
+
+*Approvata il 2026-08-23.*
+
+Una copia digitale, la sua pagina e il file che la rappresenta sono tre cose
+diverse. La copia è il manifesto IIIF, il PDF o altra incarnazione della fonte;
+la pagina è una vista ordinata e stabile della copia; un file è una sua
+rappresentazione concreta, remota, locale o derivata.
+
+La migrazione numerata introduce una pagina logica con copia di appartenenza,
+posizione, etichetta e identificativo IIIF del canvas. Le rappresentazioni file
+mantengono invece formato, dimensioni, impronta, URL, percorso relativo nel
+deposito, risoluzione e, per i derivati, il file di origine. Manifest e PDF
+appartengono direttamente alla copia; immagini, miniature e derivati possono
+appartenere a una pagina.
+
+La disponibilità `catalogued` / `partial` / `complete` descrive la copia, non il
+singolo file. Il file laterale del deposito resta l'inventario operativo e il
+disco resta la fonte di verità per presenza e integrità. Trascrizione, OCR e
+annotazioni future si ancorano alla pagina logica o a una sua area, mai a una
+specifica rappresentazione file.
+
+Il consolidamento assorbirà questa migrazione nella baseline unica; fino ad
+allora non si modifica una migrazione già applicata.
 
 ## Contratto del gestore di lavoro
 

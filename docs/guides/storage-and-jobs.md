@@ -228,7 +228,7 @@ concludersi o essere annullato; metterlo in pausa non basta.
 
 ## Il backup
 
-**Impostazioni → Archiviazione → Backup e ripristino** salva un file con tutto
+**Impostazioni → Backup** salva un file con tutto
 quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni
 con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto.
 
@@ -245,6 +245,13 @@ Il file è compresso — il contenuto è testo, e si comprime di circa dieci vol
 — e porta con sé un'impronta: un backup interrotto a metà scrittura viene
 riconosciuto **prima** che il ripristino cominci, invece di lasciarti a metà
 strada con i dati già cancellati.
+
+Puoi salvare un file che apre solo Glossa: evita aperture casuali, ma non
+protegge materiale riservato. Per dati riservati usa il lucchetto: chiede una
+password e, dopo il salvataggio, mostra un codice di recupero una sola volta.
+Puoi selezionarlo oppure usare il pulsante di copia accanto. Conserva il codice
+fuori dall'app: password o codice aprono il backup cifrato,
+ma se perdi entrambi non si può recuperare il contenuto.
 
 **Il ripristino sostituisce tutto**: ogni workspace presente adesso viene
 rimpiazzato da quello che c'è nel file. La conferma lo dice, e non si torna

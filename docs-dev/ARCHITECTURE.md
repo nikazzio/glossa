@@ -154,11 +154,20 @@ sotto. Se la misura viene rifiutata, la pagina a piena risoluzione viene
 conservata senza ricompressione. Un errore di rete non diventa una pagina “non
 servita”; solo i rifiuti definitivi 404/410 producono quella nota.
 
-Il disco è la fonte di verità per le pagine. Non esistono righe database per
-ogni file. Ogni cartella `pages/<misura>/` contiene `pages.jsonl`, dove l'ultima
-riga per indice registra etichetta, dimensioni, byte, impronta e note. Un file
-senza riga resta valido ma ha impronta ignota, quindi la verifica completa non
-lo dichiara corrotto.
+Il disco è la fonte di verità per le pagine. Ogni cartella
+`pages/<misura>/` contiene `pages.jsonl`, dove l'ultima riga per indice registra
+etichetta, dimensioni, byte, impronta e note. Un file senza riga resta valido ma
+ha impronta ignota, quindi la verifica completa non lo dichiara corrotto.
+
+Lo schema distingue tre livelli: copia digitale,
+pagina logica e rappresentazione file. La pagina conserva posizione, etichetta
+e canvas IIIF; il file conserva URL o percorso relativo, formato, dimensioni,
+impronta, risoluzione e provenienza. Il file laterale resta l'inventario
+operativo del disco; l'indice non sostituisce la verifica del deposito.
+
+Manifest e PDF appartengono alla copia; immagini, miniature e derivati possono
+appartenere a una pagina. La disponibilità complessiva resta sulla copia.
+Trascrizioni e annotazioni future puntano alla pagina logica, non al file.
 
 Layout:
 
@@ -250,8 +259,11 @@ del deposito. L'archivio compresso include versione, dimensione e impronta del
 contenuto. Il ripristino conserva le pagine presenti, avvia una verifica del
 deposito e propone solo gli scaricamenti mancanti.
 
-Le chiavi dei provider restano nel portachiavi di sistema. I tre livelli di
-riservatezza del formato di backup non sono ancora implementati.
+Le chiavi dei provider restano nel portachiavi di sistema. Il backup offre un
+formato solo Glossa, dichiarato come offuscamento, e un formato cifrato con
+password. Ogni backup cifrato genera un codice di recupero casuale equivalente
+alla password: è mostrato una sola volta, non viene conservato da Glossa e può
+aprire lo stesso archivio. I backup precedenti non sono supportati.
 
 ## Sicurezza
 

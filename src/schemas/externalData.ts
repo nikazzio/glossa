@@ -21,6 +21,7 @@ export const BACKUP_TABLES = [
   'glossary_entries',
   'sources',
   'source_versions',
+  'source_pages',
   'workspace_items',
   'glossary_entry_overrides',
   'transcription_documents',

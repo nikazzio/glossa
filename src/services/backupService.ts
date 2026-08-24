@@ -25,9 +25,13 @@ import {
  * Si alza quando cambia **cosa** c'è dentro, non quando cambia una colonna: un
  * ripristino rifiuta i backup che dichiarano più di questo numero, ed è l'unico
  * modo che una versione vecchia ha di non aprire un file che non capisce.
- * Alzata a 2 con le dodici tabelle del blocco 1.
+ * Alzata a 3 con le pagine logiche delle fonti.
  */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
+
+export type BackupOptions =
+  | { privacy: 'glossaOnly' }
+  | { privacy: 'password'; password: string; recoveryCode: string };
 
 // dbService.ts stores its own DB-migration marker under this app_settings key
 // (unrelated to SCHEMA_VERSION above). Importing an old backup must never
@@ -83,7 +87,7 @@ const DANGLING_REFS: Partial<Record<BackupTable, readonly string[]>> = {
  * Colonne che puntano a righe inserite **più tardi**, o che possono non esserci.
  *
  * Un frammento dice quale revisione è approvata, ma le revisioni si inseriscono
- * dopo di lui; un segmento di trascrizione dice anche a quale pagina appartiene,
+ * dopo di lui; un segmento di trascrizione dice anche a quale pagina logica appartiene,
  * e quella pagina può non essere su questo computer. In tutti e tre i casi
  * lasciare il puntatore com'è **ferma il ripristino**.
  *
@@ -98,7 +102,7 @@ const DEFERRED_REFS: Partial<
   translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
   transcription_segments: [
     { column: 'approved_revision_id', target: 'transcription_revisions' },
-    { column: 'asset_id', target: 'assets' },
+    { column: 'source_page_id', target: 'source_pages' },
   ],
 };
 
@@ -113,6 +117,7 @@ const DELETE_ORDER = [
   'transcription_revisions',
   'transcription_segments',
   'transcription_documents',
+  'source_pages',
   'library_network_profiles',
   'network_profiles',
   'workspace_items',
@@ -177,7 +182,7 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
  * chiusa senza scegliere: annullare non è un errore, ma nemmeno un successo da
  * annunciare.
  */
-export async function writeBackup(): Promise<boolean> {
+export async function writeBackup(options: BackupOptions = { privacy: 'glossaOnly' }): Promise<boolean> {
   const now = new Date().toISOString();
 
   const tables: Record<string, Record<string, unknown>[]> = {};
@@ -198,6 +203,7 @@ export async function writeBackup(): Promise<boolean> {
   // che scrive anche il file — compresso, con il suo manifesto (#407).
   const saved = await invoke<boolean>('write_backup', {
     payload: JSON.stringify(payload),
+    options,
   });
   logger.info('backup.written', {
     saved,
@@ -212,10 +218,16 @@ export async function writeBackup(): Promise<boolean> {
  * Ripristina un backup. Restituisce le opere che erano scaricate, così la
  * schermata può proporre di riprenderle: le immagini non stanno nel backup.
  */
-export async function restoreBackup(t: (key: string) => string): Promise<DownloadedSource[] | null> {
+export async function restoreBackup(
+  t: (key: string) => string,
+  secret?: string,
+): Promise<DownloadedSource[] | null> {
   // La finestra e la lettura stanno nel backend (#407): una webview
   // compromessa non può farsi leggere un file a sua scelta.
-  const raw = await invoke<string | null>('read_backup');
+  // Password e codice di recupero sbloccano lo stesso archivio. Il backend
+  // prova entrambe le derivazioni senza dover sapere quale dei due è stato
+  // digitato, quindi non si rivela quale chiave l'utente conserva.
+  const raw = await invoke<string | null>('read_backup', { password: secret || null });
   if (raw === null) return null;
 
   const payload = validateBackup(JSON.parse(raw));
