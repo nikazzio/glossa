@@ -1,6 +1,6 @@
 # Stato del blocco 1
 
-Ultimo aggiornamento: 2026-08-23.
+Ultimo aggiornamento: 2026-08-24.
 
 Branch di integrazione: `blocco-1`. PR finale: #429, ancora in bozza. Le PR del
 blocco confluiscono qui; `main` riceverà un solo merge per la 1.5.
@@ -21,7 +21,7 @@ blocco confluiscono qui; `main` riceverà un solo merge per la 1.5.
 | Workspace come contesto operativo | completato (#439) |
 | Registrazione di revisioni, chiamate e costi | completata |
 | Backup completo del database | completato |
-| Backup riservato | completamento in corso (#445) |
+| Backup riservato | completato (#445) |
 
 ## PR #444 — ottimizzazione locale
 
@@ -46,11 +46,9 @@ prova manuale e CI prima del merge.
 
 ## Obbligatorio prima della 1.5
 
-1. Verificare e unire la PR #445: backup solo Glossa e cifrato con password o codice di recupero.
-2. Consolidare le migrazioni del blocco in una baseline.
-3. Assorbire nella baseline il modello già introdotto: copia digitale, pagina
-   logica e rappresentazione file.
-4. Aggiornare e verificare la PR #429.
+1. Ricreare i database di sviluppo dalla baseline ed eseguire le prove di
+   avvio, backup e ripristino.
+2. Aggiornare e verificare la PR #429.
 
 ## Non bloccante
 

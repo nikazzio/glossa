@@ -30,8 +30,9 @@ attraversano la webview: i dialoghi nativi vengono aperti dal backend.
    le operazioni già protette dai servizi esistenti.
 
 SQLite usa chiavi esterne, WAL, `synchronous=NORMAL` e un timeout di 10 secondi.
-Le migrazioni applicate non si modificano: ogni cambiamento riceve un file nuovo.
-Prima della 1.5 le migrazioni del blocco 1 verranno consolidate in una baseline.
+La baseline 2.0/1.5 definisce lo schema completo per i database nuovi. Le
+migrazioni applicate non si modificano: ogni cambiamento successivo riceve un
+file nuovo.
 
 ## Modello di prodotto
 

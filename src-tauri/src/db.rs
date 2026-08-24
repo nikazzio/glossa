@@ -327,6 +327,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn baseline_contains_the_final_block_one_fields() {
+        let pool = migrated_pool().await;
+
+        for (table, expected) in [
+            ("workspaces", "icon_key"),
+            ("workspaces", "archived_at"),
+            ("source_versions", "availability"),
+            ("source_versions", "download_policy"),
+            ("source_versions", "size_cap"),
+            ("assets", "mime_type"),
+            ("assets", "width"),
+            ("assets", "height"),
+            ("jobs", "checkpoint"),
+            ("jobs", "error_kind"),
+            ("jobs", "phase"),
+            ("jobs", "detail"),
+            ("provenance_events", "estimated_cost"),
+            ("translations", "approved_revision_id"),
+        ] {
+            let columns: Vec<String> =
+                sqlx::query_scalar(&format!("SELECT name FROM pragma_table_info('{table}')"))
+                    .fetch_all(&pool)
+                    .await
+                    .unwrap_or_else(|error| panic!("columns for {table}: {error}"));
+            assert!(columns.iter().any(|column| column == expected));
+        }
+    }
+
+    #[tokio::test]
     async fn baseline_migration_seeds_default_workspace_on_a_fresh_database() {
         let pool = migrated_pool().await;
 

@@ -84,19 +84,7 @@ fn temp_db(name: &str) -> PathBuf {
     let conn = Connection::open(&path).expect("database");
     conn.execute_batch("PRAGMA foreign_keys=ON;")
         .expect("chiavi");
-    for migration in [
-        include_str!("../../migrations/0001_baseline_2_0.sql"),
-        include_str!("../../migrations/0002_workspace_icon_key.sql"),
-        include_str!("../../migrations/0003_vault_and_read_mode.sql"),
-        include_str!("../../migrations/0004_jobs_runtime.sql"),
-        include_str!("../../migrations/0005_job_phase.sql"),
-        include_str!("../../migrations/0006_job_detail.sql"),
-        include_str!("../../migrations/0007_download_policy.sql"),
-        include_str!("../../migrations/0008_provenance_foundation.sql"),
-        include_str!("../../migrations/0009_network_profiles.sql"),
-        include_str!("../../migrations/0010_transcription_revisions_events.sql"),
-        include_str!("../../migrations/0011_workspace_items.sql"),
-    ] {
+    for migration in [include_str!("../../migrations/0001_baseline_2_0.sql")] {
         conn.execute_batch(migration).expect("migrazione");
     }
     conn.execute(
