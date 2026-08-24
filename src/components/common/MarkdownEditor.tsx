@@ -235,6 +235,7 @@ export function MarkdownEditor({
   // che React applichi il prossimo highlightHtml, il run successivo lo
   // ripristina esplicitamente invece di fidarsi che il browser lo preservi.
   useLayoutEffect(() => {
+    if (!usesHighlightOverlay) return;
     const element = textareaRef.current;
     if (element && pendingScrollRestoreRef.current !== null) {
       element.scrollTop = pendingScrollRestoreRef.current;
@@ -243,7 +244,7 @@ export function MarkdownEditor({
     return () => {
       pendingScrollRestoreRef.current = element?.scrollTop ?? null;
     };
-  }, [resolvedHighlightHtml]);
+  }, [resolvedHighlightHtml, usesHighlightOverlay]);
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -577,8 +578,8 @@ export function MarkdownEditor({
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
-              // Stessa classe scrollbar del livello colorato sopra (custom-scrollbar
-              // su entrambi): gutter identico su entrambi, niente più disallineamento
+              // Stesse regole scrollbar del livello colorato sopra: gutter identico,
+              // niente più disallineamento
               // fra le due righe di testo. Il click passa attraverso l'overlay
               // (pointer-events-none), quindi resta questa la barra trascinabile.
               className={`${textareaClassName} absolute inset-0 h-full w-full resize-none`}

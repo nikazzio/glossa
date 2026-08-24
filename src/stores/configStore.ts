@@ -66,7 +66,7 @@ export const useConfigStore = create<ConfigState>()(
       ollamaBaseUrl: 'http://localhost:11434',
       setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
 
-      ollamaAutoDiscover: true,
+      ollamaAutoDiscover: false,
       setOllamaAutoDiscover: (value) => set({ ollamaAutoDiscover: value }),
 
       newPipelineInit: 'copy-first',
