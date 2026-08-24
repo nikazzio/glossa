@@ -112,10 +112,10 @@ export function BackupSection() {
     if (encrypted && !passwordValid) return;
     setBusy(true);
     try {
-      const code = encrypted ? createRecoveryCode() : undefined;
-      const saved = await writeBackup(encrypted
-        ? { privacy: 'password', password, recoveryCode: code }
-        : { privacy: 'glossaOnly' });
+      const code = encrypted ? createRecoveryCode() : null;
+      const saved = code
+        ? await writeBackup({ privacy: 'password', password, recoveryCode: code })
+        : await writeBackup({ privacy: 'glossaOnly' });
       if (!saved) return;
       toast.success(t('files.backupExportSuccess'));
       setPassword('');
