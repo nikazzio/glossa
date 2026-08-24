@@ -18,7 +18,9 @@ prodotto in `PRODUCT_ARCHITECTURE_2_0.md`; regole visive in
 
 Le viste orchestrano i casi d'uso. La logica che accede a rete, filesystem,
 credenziali o database risiede nel backend. I percorsi scelti dall'utente non
-attraversano la webview: i dialoghi nativi vengono aperti dal backend.
+attraversano la webview: i dialoghi nativi vengono aperti dal backend. Su Linux
+passano dal portale del desktop, così lingua e tastiera restano quelle della
+sessione di sistema, indipendenti dalla lingua dell'app.
 
 ## Avvio e database
 

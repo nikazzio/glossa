@@ -34,7 +34,7 @@ reqwest = { version = "0.12", features = ["json"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 url = "2"
 keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
-tauri-plugin-dialog = "2"
+tauri-plugin-dialog = { version = "2", default-features = false, features = ["xdg-portal"] }
 tauri-plugin-fs = "2"
 # `rt` serve a `spawn_blocking`: ricavare una miniatura è lavoro del
 # processore, e dentro il filo del runtime terrebbe ferma tutta la coda.
