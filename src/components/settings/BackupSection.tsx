@@ -209,9 +209,9 @@ export function BackupSection() {
         footer={<div className="flex justify-end gap-3"><DialogCancelButton onClick={closeDialog} disabled={busy}>{t('common.cancel')}</DialogCancelButton><DialogConfirmButton onClick={() => void handleWrite(true)} disabled={busy || !passwordValid}>{t('settings.backupSaveEncrypted')}</DialogConfirmButton></div>}
       >
         <div className="grid gap-3">
-          <input aria-describedby={passwordTooShort ? 'backup-password-error' : undefined} aria-invalid={passwordTooShort} aria-label={t('settings.backupPasswordPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} onInput={updatePassword} placeholder={t('settings.backupPasswordPlaceholder')} type="password" value={password} />
+          <input aria-describedby={passwordTooShort ? 'backup-password-error' : undefined} aria-invalid={passwordTooShort} aria-label={t('settings.backupPasswordPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} lang={navigator.language} onInput={updatePassword} placeholder={t('settings.backupPasswordPlaceholder')} type="password" value={password} />
           {passwordTooShort && <p id="backup-password-error" role="alert" className="text-xs text-editorial-danger">{t('settings.backupPasswordTooShort')}</p>}
-          <input aria-describedby={passwordsDiffer ? 'backup-password-confirmation-error' : undefined} aria-invalid={passwordsDiffer} aria-label={t('settings.backupPasswordConfirmationPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} onInput={updatePasswordConfirmation} placeholder={t('settings.backupPasswordConfirmationPlaceholder')} type="password" value={passwordConfirmation} />
+          <input aria-describedby={passwordsDiffer ? 'backup-password-confirmation-error' : undefined} aria-invalid={passwordsDiffer} aria-label={t('settings.backupPasswordConfirmationPlaceholder')} autoComplete="new-password" className={FIELD_CLASSNAME} lang={navigator.language} onInput={updatePasswordConfirmation} placeholder={t('settings.backupPasswordConfirmationPlaceholder')} type="password" value={passwordConfirmation} />
           {passwordsDiffer && <p id="backup-password-confirmation-error" role="alert" className="text-xs text-editorial-danger">{t('settings.backupPasswordMismatch')}</p>}
         </div>
       </Dialog>
@@ -227,7 +227,7 @@ export function BackupSection() {
         closeDisabled={busy}
         footer={<div className="flex justify-end gap-3"><DialogCancelButton onClick={closeDialog} disabled={busy}>{t('common.cancel')}</DialogCancelButton><DialogConfirmButton onClick={() => void handleRestore(restoreSecret)} disabled={busy || !restoreSecret}>{t('settings.backupChooseFile')}</DialogConfirmButton></div>}
       >
-        <input aria-label={t('settings.backupSecretPlaceholder')} autoComplete="current-password" className={FIELD_CLASSNAME} onChange={(event) => setRestoreSecret(event.target.value)} placeholder={t('settings.backupSecretPlaceholder')} type="password" value={restoreSecret} />
+        <input aria-label={t('settings.backupSecretPlaceholder')} autoComplete="current-password" className={FIELD_CLASSNAME} lang={navigator.language} onChange={(event) => setRestoreSecret(event.target.value)} placeholder={t('settings.backupSecretPlaceholder')} type="password" value={restoreSecret} />
       </Dialog>
 
       <Dialog

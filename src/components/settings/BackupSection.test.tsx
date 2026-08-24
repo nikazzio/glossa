@@ -26,6 +26,8 @@ describe('BackupSection', () => {
     const password = screen.getByLabelText('settings.backupPasswordPlaceholder');
     const confirmation = screen.getByLabelText('settings.backupPasswordConfirmationPlaceholder');
 
+    expect(password).toHaveAttribute('lang', navigator.language);
+    expect(confirmation).toHaveAttribute('lang', navigator.language);
     expect(save).toBeDisabled();
     await user.type(password, 'corta');
     expect(screen.getByText('settings.backupPasswordTooShort')).toBeInTheDocument();
@@ -40,6 +42,10 @@ describe('BackupSection', () => {
     await user.clear(confirmation);
     await user.type(confirmation, 'una password molto lunga');
     expect(save).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'common.cancel' }));
+    await user.click(screen.getByRole('button', { name: 'settings.backupEncryptedImportTooltip' }));
+    expect(screen.getByLabelText('settings.backupSecretPlaceholder')).toHaveAttribute('lang', navigator.language);
   });
 
   it('chiede due volte la password prima di creare un backup cifrato', async () => {
