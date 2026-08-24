@@ -72,9 +72,8 @@ fn temp_db(name: &str, manifest_url: &str) -> PathBuf {
     let _ = std::fs::remove_file(&path);
     let conn = Connection::open(&path).unwrap();
     conn.execute_batch("PRAGMA foreign_keys=ON;").unwrap();
-    for migration in [include_str!("../../migrations/0001_baseline_2_0.sql")] {
-        conn.execute_batch(migration).expect("migration applies");
-    }
+    conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))
+        .expect("migration applies");
     conn.execute(
         "INSERT INTO sources (id, title, kind) VALUES ('src-prova', 'Opera di prova', 'print')",
         [],

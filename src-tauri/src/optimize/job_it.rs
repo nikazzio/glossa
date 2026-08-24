@@ -84,9 +84,8 @@ fn temp_db(name: &str) -> PathBuf {
     let conn = Connection::open(&path).expect("database");
     conn.execute_batch("PRAGMA foreign_keys=ON;")
         .expect("chiavi");
-    for migration in [include_str!("../../migrations/0001_baseline_2_0.sql")] {
-        conn.execute_batch(migration).expect("migrazione");
-    }
+    conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))
+        .expect("migrazione");
     conn.execute(
         "INSERT INTO sources (id, title, kind) VALUES ('src-prova', 'Opera di prova', 'print')",
         [],

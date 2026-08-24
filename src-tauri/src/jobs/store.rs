@@ -391,9 +391,8 @@ pub(crate) mod test_support {
     pub fn migrated_connection() -> Connection {
         let conn = Connection::open_in_memory().expect("in-memory database");
         conn.execute_batch("PRAGMA foreign_keys=ON;").unwrap();
-        for migration in [include_str!("../../migrations/0001_baseline_2_0.sql")] {
-            conn.execute_batch(migration).expect("migration applies");
-        }
+        conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))
+            .expect("migration applies");
         conn
     }
 }

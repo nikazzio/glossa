@@ -860,9 +860,8 @@ mod tests {
         let path = std::env::temp_dir().join(format!("glossa_jobs_{name}.db"));
         let _ = std::fs::remove_file(&path);
         let conn = Connection::open(&path).unwrap();
-        for migration in [include_str!("../../migrations/0001_baseline_2_0.sql")] {
-            conn.execute_batch(migration).unwrap();
-        }
+        conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))
+            .unwrap();
         path
     }
 
