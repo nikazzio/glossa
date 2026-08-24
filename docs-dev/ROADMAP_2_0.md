@@ -27,15 +27,10 @@ Il formato cifrato deve conservare in chiaro versione e parametri di derivazione
 distinguere password errata da archivio danneggiato e non includere le chiavi dei
 provider.
 
-### Consolidamento dello schema
-
-- ricreare i database di sviluppo;
-- eseguire test di primo avvio, backup e ripristino.
-
 ### Integrazione
 
-Aggiornare la PR #429, eseguire CI sul branch integrato e unire `blocco-1` in
-`main` come Glossa 1.5.
+La PR #429 è pronta: baseline, CI e ripristino del backup su database ricreato
+sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 
 ## Dopo la 1.5
 

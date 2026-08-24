@@ -46,9 +46,9 @@ prova manuale e CI prima del merge.
 
 ## Obbligatorio prima della 1.5
 
-1. Ricreare i database di sviluppo dalla baseline ed eseguire le prove di
-   avvio, backup e ripristino.
-2. Aggiornare e verificare la PR #429.
+Nessun lavoro residuo nel blocco. La baseline è stata verificata su un
+database di sviluppo ricreato e il backup cifrato è stato ripristinato
+correttamente.
 
 ## Non bloccante
 
