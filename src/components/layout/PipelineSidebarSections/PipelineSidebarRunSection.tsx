@@ -1,111 +1,68 @@
 import {
-  CircleDollarSign,
-  Coins,
+  FileText,
   Languages,
   Loader2,
   Minus,
+  Pencil,
   Play,
   Plus,
   Repeat,
+  ScanLine,
   Square,
 } from 'lucide-react';
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type RefObject,
-} from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { usePipelineStore } from '../../../stores/pipelineStore';
-import { usePricingStore } from '../../../stores/pricingStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useConfigStore } from '../../../stores/configStore';
-import { useOperationLogStore } from '../../../stores/operationLogStore';
-import { estimatePipelineCost } from '../../../utils/costEstimate';
-import { summarizeChunkUsage, formatUsd } from '../../../utils/operationLogStats';
-import { CostBreakdownPanel, formatCost } from '../../pipeline/CostBadge';
-import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel } from '../../ui';
+import type { PipelineConfig } from '../../../types';
+import { STAGE_TONE_MAP } from '../../document/pipelineStageTone';
+import { IconButton, Tooltip } from '../../ui';
 
-const COST_PANEL_OFFSET = 12;
-const COST_PANEL_WIDTH = 256;
-const VIEWPORT_MARGIN = 12;
+/**
+ * Spie di stato delle fasi pipeline (bozza/rifinitura/formattazione/audit) sul
+ * frammento corrente — stanno accanto al pulsante di traduzione perché
+ * parlano della stessa cosa: cosa succede quando lo premi.
+ */
+function PipelineStageStatusRow({ config }: { config: PipelineConfig }) {
+  const { t } = useTranslation();
+  const chunks = useChunksStore((state) => state.chunks);
+  const selectedChunkId = useUiStore((state) => state.selectedChunkId);
+  const traceStageId = useUiStore((state) => state.traceStageId);
+  const setTraceStageId = useUiStore((state) => state.setTraceStageId);
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
+  const currentChunk = chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
+  if (!currentChunk) return null;
 
-function SidebarCostPanel({
-  anchorRef,
-  estimate,
-  open,
-  onMouseEnter,
-  onMouseLeave,
-}: {
-  anchorRef: RefObject<HTMLDivElement | null>;
-  estimate: ReturnType<typeof estimatePipelineCost>;
-  open: boolean;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-}) {
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const [style, setStyle] = useState<CSSProperties | null>(null);
+  const enabledStages = config.stages.filter((stage) => stage.enabled);
 
-  const updatePosition = useCallback(() => {
-    if (!anchorRef.current) return;
-    const anchorRect = anchorRef.current.getBoundingClientRect();
-    const panelHeight = panelRef.current?.offsetHeight ?? 220;
-    const left = Math.min(
-      anchorRect.right + COST_PANEL_OFFSET,
-      window.innerWidth - VIEWPORT_MARGIN - COST_PANEL_WIDTH,
-    );
-    const top = clamp(
-      anchorRect.top + anchorRect.height / 2,
-      VIEWPORT_MARGIN + panelHeight / 2,
-      window.innerHeight - VIEWPORT_MARGIN - panelHeight / 2,
-    );
-    setStyle({
-      left,
-      top,
-      width: COST_PANEL_WIDTH,
-      transform: 'translateY(-50%)',
-    });
-  }, [anchorRef]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-  }, [estimate, open, updatePosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    window.addEventListener('scroll', updatePosition, true);
-    window.addEventListener('resize', updatePosition);
-    return () => {
-      window.removeEventListener('scroll', updatePosition, true);
-      window.removeEventListener('resize', updatePosition);
-    };
-  }, [open, updatePosition]);
-
-  if (!open || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      ref={panelRef}
-      className="fixed z-[160]"
-      style={style ?? undefined}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      <CostBreakdownPanel estimate={estimate} />
-    </div>,
-    document.body,
+  return (
+    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1.5">
+      {enabledStages.map((stage) => {
+        const Icon = stage.role === 'refine' ? Pencil : stage.role === 'format' ? FileText : Languages;
+        const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
+        return (
+          <IconButton
+            key={stage.id}
+            size="sm"
+            tone={stageTone}
+            title={stage.name}
+            onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
+          >
+            <Icon size={12} strokeWidth={1.9} />
+          </IconButton>
+        );
+      })}
+      <IconButton
+        size="sm"
+        tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
+        title={t('pipeline.audit')}
+        onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
+      >
+        <ScanLine size={12} strokeWidth={1.9} />
+      </IconButton>
+    </div>
   );
 }
 
@@ -124,7 +81,6 @@ export function PipelineSidebarRunSection({
   const config = usePipelineStore((state) => state.config);
   const workMode = useConfigStore((state) => state.workMode);
   const setWorkMode = useConfigStore((state) => state.setWorkMode);
-  const pricingOverrides = usePricingStore((state) => state.overrides);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const cancelRequested = useChunksStore((state) => state.cancelRequested);
@@ -155,9 +111,6 @@ export function PipelineSidebarRunSection({
   const runActionLabel = isLimitedRun
     ? t('pipeline.executeLimited', { count: runChunkCount })
     : t('pipeline.executeAll');
-  const costChunkTexts = useChunksStore(
-    useShallow((state) => state.chunks.map((chunk) => chunk.sourceProcessingText)),
-  );
   const currentChunk = useChunksStore(
     useShallow((state) => {
       const chunk = state.chunks.find((entry) => entry.id === selectedChunkId);
@@ -166,70 +119,8 @@ export function PipelineSidebarRunSection({
         : null;
     }),
   );
-  const operationLogEntries = useOperationLogStore((state) => state.entries);
-  // Consumo reale del frammento aperto (token dichiarati dal fornitore, non
-  // stimati) — riga separata dalla stima: sono due unità di misura diverse,
-  // non hanno senso affiancate come se fossero comparabili 1:1.
-  const currentChunkUsage = currentChunk
-    ? summarizeChunkUsage(operationLogEntries, currentChunk.id, pricingOverrides)
-    : null;
-  const currentChunkTokens = currentChunkUsage
-    ? currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput
-    : 0;
-  const hasCurrentChunkUsage = !!currentChunkUsage
-    && (currentChunkTokens > 0 || currentChunkUsage.total.totalUsd !== null);
-
-  const [showCostPanel, setShowCostPanel] = useState(false);
-  const costButtonRef = useRef<HTMLDivElement | null>(null);
-  const costPanelCloseTimer = useRef<number | null>(null);
 
   const hasDocument = totalChunks > 0;
-  // Preventivo per l'azione "esegui" in modalità Blocchi multipli: si ferma
-  // al numero impostato, non all'intero documento se è più corto/lungo.
-  const pipelineCostEstimate = useMemo(
-    () => estimatePipelineCost(
-      costChunkTexts.slice(0, runChunkCount).map((sourceText) => ({ sourceText })),
-      config,
-      pricingOverrides,
-    ),
-    [costChunkTexts, runChunkCount, config, pricingOverrides],
-  );
-  // Preventivo per l'azione "traduci solo il chunk corrente" (modalità 'chunk').
-  const chunkCostEstimate = useMemo(
-    () => estimatePipelineCost(
-      currentChunk?.hasSourceText ? [{ sourceText: currentChunk.sourceText }] : [],
-      config,
-      pricingOverrides,
-    ),
-    [currentChunk, config, pricingOverrides],
-  );
-  const runActionCostEstimate = workMode === 'chunk' ? chunkCostEstimate : pipelineCostEstimate;
-
-  const openCostPanel = useCallback(() => {
-    if (costPanelCloseTimer.current !== null) {
-      window.clearTimeout(costPanelCloseTimer.current);
-      costPanelCloseTimer.current = null;
-    }
-    setShowCostPanel(true);
-  }, []);
-
-  const scheduleCloseCostPanel = useCallback(() => {
-    if (costPanelCloseTimer.current !== null) {
-      window.clearTimeout(costPanelCloseTimer.current);
-    }
-    costPanelCloseTimer.current = window.setTimeout(() => {
-      setShowCostPanel(false);
-      costPanelCloseTimer.current = null;
-    }, 120);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (costPanelCloseTimer.current !== null) {
-        window.clearTimeout(costPanelCloseTimer.current);
-      }
-    };
-  }, []);
 
   if (collapsed) {
     return (
@@ -317,55 +208,9 @@ export function PipelineSidebarRunSection({
             <Play size={22} fill="currentColor" />
           </IconButton>
         )}
-        <SidebarCostPanel
-          anchorRef={costButtonRef}
-          estimate={runActionCostEstimate}
-          open={showCostPanel && runActionCostEstimate.stages.length > 0}
-          onMouseEnter={openCostPanel}
-          onMouseLeave={scheduleCloseCostPanel}
-        />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 text-xs">
-        {runActionCostEstimate.stages.length > 0 && (
-          <div
-            ref={costButtonRef}
-            className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-muted"
-            onMouseEnter={openCostPanel}
-            onMouseLeave={scheduleCloseCostPanel}
-          >
-            <CircleDollarSign size={12} className="shrink-0" />
-            <span className="truncate">
-              {runActionCostEstimate.isFree
-                ? t('cost.free')
-                : runActionCostEstimate.totalUsd === null
-                  ? t('cost.unknown')
-                  : formatCost(runActionCostEstimate.totalUsd)}
-            </span>
-          </div>
-        )}
-        {hasCurrentChunkUsage && currentChunkUsage && (
-          <Popover
-            side="bottom"
-            align="start"
-            className="w-72 px-3"
-            trigger={
-              <div className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-accent">
-                <Coins size={12} className="shrink-0" />
-                <span className="truncate">
-                  {currentChunkTokens.toLocaleString()} · {formatUsd(currentChunkUsage.total.totalUsd)}
-                </span>
-              </div>
-            }
-          >
-            {currentChunkUsage.scopeBreakdown.length > 0 ? (
-              <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
-            ) : (
-              <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
-            )}
-          </Popover>
-        )}
-      </div>
+      <PipelineStageStatusRow config={config} />
 
       <div className="flex min-w-0 shrink-0 flex-col items-end gap-1.5">
         {/* Altezza fissa: sempre presente per non spostare il pulsante

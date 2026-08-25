@@ -6,13 +6,9 @@ import {
   ChevronRight,
   ChevronUp,
   FileOutput,
-  FileText,
-  Languages,
   LibraryBig,
   PanelLeftClose,
-  Pencil,
   Plus,
-  ScanLine,
   Settings2,
   Trash2,
   Upload,
@@ -20,6 +16,7 @@ import {
 import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ChunkCostPanel,
   PipelineSidebarExportDialogHost,
   PipelineSidebarRunSection,
 } from '../PipelineSidebarSections';
@@ -34,7 +31,6 @@ import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { indexPad } from '../../../utils';
 import { ClickPopover, IconButton, Tooltip } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
-import { STAGE_TONE_MAP } from '../../document/pipelineStageTone';
 import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
 
@@ -110,53 +106,6 @@ function ProjectNameField() {
         {projectName || t('projects.untitled')}
       </button>
     </Tooltip>
-  );
-}
-
-/**
- * Spie di stato delle fasi pipeline (bozza/rifinitura/formattazione/audit) sul
- * frammento corrente — vivevano sopra le pagine sorgente/traduzione, spostate
- * qui accanto alla navigazione fra frammenti perché parlano della stessa cosa.
- */
-function PipelineStageStatusRow() {
-  const { t } = useTranslation();
-  const chunks = useChunksStore((state) => state.chunks);
-  const selectedChunkId = useUiStore((state) => state.selectedChunkId);
-  const traceStageId = useUiStore((state) => state.traceStageId);
-  const setTraceStageId = useUiStore((state) => state.setTraceStageId);
-  const { config } = usePipelineStore();
-
-  const currentChunk = chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
-  if (!currentChunk) return null;
-
-  const enabledStages = config.stages.filter((stage) => stage.enabled);
-
-  return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-      {enabledStages.map((stage) => {
-        const Icon = stage.role === 'refine' ? Pencil : stage.role === 'format' ? FileText : Languages;
-        const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
-        return (
-          <IconButton
-            key={stage.id}
-            size="sm"
-            tone={stageTone}
-            title={stage.name}
-            onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
-          >
-            <Icon size={12} strokeWidth={1.9} />
-          </IconButton>
-        );
-      })}
-      <IconButton
-        size="sm"
-        tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
-        title={t('pipeline.audit')}
-        onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
-      >
-        <ScanLine size={12} strokeWidth={1.9} />
-      </IconButton>
-    </div>
   );
 }
 
@@ -278,7 +227,7 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <ChunkRailNavigator collapsed={false} />
-        <PipelineStageStatusRow />
+        <ChunkCostPanel />
       </div>
       {children ? <div className="mt-4">{children}</div> : null}
     </div>
