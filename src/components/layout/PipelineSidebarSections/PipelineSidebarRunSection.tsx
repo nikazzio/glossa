@@ -1,5 +1,6 @@
 import {
-  Info,
+  CircleDollarSign,
+  Coins,
   Languages,
   Loader2,
   Minus,
@@ -26,9 +27,11 @@ import { usePipelineStore } from '../../../stores/pipelineStore';
 import { usePricingStore } from '../../../stores/pricingStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useConfigStore } from '../../../stores/configStore';
+import { useOperationLogStore } from '../../../stores/operationLogStore';
 import { estimatePipelineCost } from '../../../utils/costEstimate';
-import { CostBreakdownPanel } from '../../pipeline/CostBadge';
-import { IconButton, Tooltip } from '../../ui';
+import { summarizeChunkUsage, formatUsd } from '../../../utils/operationLogStats';
+import { CostBreakdownPanel, formatCost } from '../../pipeline/CostBadge';
+import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel } from '../../ui';
 
 const COST_PANEL_OFFSET = 12;
 const COST_PANEL_WIDTH = 256;
@@ -163,6 +166,18 @@ export function PipelineSidebarRunSection({
         : null;
     }),
   );
+  const operationLogEntries = useOperationLogStore((state) => state.entries);
+  // Consumo reale del frammento aperto (token dichiarati dal fornitore, non
+  // stimati) — riga separata dalla stima: sono due unità di misura diverse,
+  // non hanno senso affiancate come se fossero comparabili 1:1.
+  const currentChunkUsage = currentChunk
+    ? summarizeChunkUsage(operationLogEntries, currentChunk.id, pricingOverrides)
+    : null;
+  const currentChunkTokens = currentChunkUsage
+    ? currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput
+    : 0;
+  const hasCurrentChunkUsage = !!currentChunkUsage
+    && (currentChunkTokens > 0 || currentChunkUsage.total.totalUsd !== null);
 
   const [showCostPanel, setShowCostPanel] = useState(false);
   const costButtonRef = useRef<HTMLDivElement | null>(null);
@@ -302,27 +317,6 @@ export function PipelineSidebarRunSection({
             <Play size={22} fill="currentColor" />
           </IconButton>
         )}
-        {runActionCostEstimate.stages.length > 0 && (
-          <div
-            ref={costButtonRef}
-            className="absolute -bottom-1 -right-1"
-            onMouseEnter={openCostPanel}
-            onMouseLeave={scheduleCloseCostPanel}
-          >
-            <IconButton
-              size="sm"
-              tone="charcoal"
-              onFocus={openCostPanel}
-              onBlur={scheduleCloseCostPanel}
-              title=""
-              ariaLabel={t('cost.breakdown')}
-              tooltipSide="bottom"
-              className="h-5 w-5 bg-editorial-bg p-0"
-            >
-              <Info size={9} />
-            </IconButton>
-          </div>
-        )}
         <SidebarCostPanel
           anchorRef={costButtonRef}
           estimate={runActionCostEstimate}
@@ -332,7 +326,48 @@ export function PipelineSidebarRunSection({
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 text-xs">
+        {runActionCostEstimate.stages.length > 0 && (
+          <div
+            ref={costButtonRef}
+            className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-muted"
+            onMouseEnter={openCostPanel}
+            onMouseLeave={scheduleCloseCostPanel}
+          >
+            <CircleDollarSign size={12} className="shrink-0" />
+            <span className="truncate">
+              {runActionCostEstimate.isFree
+                ? t('cost.free')
+                : runActionCostEstimate.totalUsd === null
+                  ? t('cost.unknown')
+                  : formatCost(runActionCostEstimate.totalUsd)}
+            </span>
+          </div>
+        )}
+        {hasCurrentChunkUsage && currentChunkUsage && (
+          <Popover
+            side="bottom"
+            align="start"
+            className="w-72 px-3"
+            trigger={
+              <div className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-accent">
+                <Coins size={12} className="shrink-0" />
+                <span className="truncate">
+                  {currentChunkTokens.toLocaleString()} · {formatUsd(currentChunkUsage.total.totalUsd)}
+                </span>
+              </div>
+            }
+          >
+            {currentChunkUsage.scopeBreakdown.length > 0 ? (
+              <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
+            ) : (
+              <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
+            )}
+          </Popover>
+        )}
+      </div>
+
+      <div className="flex min-w-0 shrink-0 flex-col items-end gap-1.5">
         {/* Altezza fissa: sempre presente per non spostare il pulsante
             principale quando si accende/spegne il toggle sopra. */}
         <div className="flex h-7 items-center gap-1.5">
