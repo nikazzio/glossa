@@ -70,6 +70,11 @@ Usare per ogni comando icon-only. Include tooltip, focus e varianti canoniche.
 - `size`: `xs | sm | md | lg`.
 - Toggle: `ariaPressed`.
 - Tab: `role="tab"`, `aria-selected`, `aria-controls`; niente `ariaPressed`.
+- Tab disattivato per fase/stato: resta visibile e raggiungibile col focus,
+  ma `disabled` e il motivo va nel tooltip (`label` include il motivo, non
+  solo il nome — sennò lo screen reader perde l'identità del comando). La
+  navigazione da tastiera (freccie/Home/End) salta i tab disattivati invece
+  di poterli attivare.
 - In righe flex può richiedere `className="shrink-0"`.
 - Nessun `<button>` raw per comandi visivi dell'app.
 

@@ -86,11 +86,13 @@ mode over changing the whole pipeline.
 
 ## Cost estimate
 
-Hovering over the info icon next to the estimated cost (in the pipeline settings panel, and next to the translate/run button in the document view) shows a per-stage breakdown with the approximate cost in dollars.
+In the pipeline settings panel, hovering over the info icon next to the estimated cost shows a per-stage breakdown with the approximate cost in dollars.
+
+In the document view's left rail, next to chunk navigation, a panel always shows two rows: the estimate for whatever action you're about to run, and — once the open chunk has already been translated — its real usage (actual tokens and cost, read after the call completes). Hovering over the real-usage row shows the per-stage breakdown when available.
 
 - In the pipeline settings panel the estimate always covers **the whole document**, including the coherence check if configured.
-- Next to the run button in the document view, the estimate follows whatever is about to happen: in "translate chunk" mode it covers only the selected chunk, in "run all" mode it covers the whole document.
-- This is an approximation based on word count and the chosen model's per-token price: the real cost may vary slightly.
+- In the document view's left rail, the estimate follows whatever is about to happen: in "translate chunk" mode it covers only the selected chunk, in "run all" mode it covers the whole document.
+- This is an approximation based on word count and the chosen model's per-token price: the real cost (shown in the row below, after translation) may vary slightly.
 - DeepL stages are measured in billed characters by DeepL: Glossa can show those after the run, but the dollar estimate remains based on token-priced LLM providers.
 
 ## Temperature for stages and the judge
