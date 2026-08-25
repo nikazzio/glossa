@@ -38,7 +38,7 @@ function PipelineStageStatusRow({ config }: { config: PipelineConfig }) {
   const enabledStages = config.stages.filter((stage) => stage.enabled);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-1.5">
+    <div className="flex min-w-0 flex-1 flex-wrap items-end justify-center gap-1.5 self-end">
       {enabledStages.map((stage) => {
         const Icon = stage.role === 'refine' ? Pencil : stage.role === 'format' ? FileText : Languages;
         const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';

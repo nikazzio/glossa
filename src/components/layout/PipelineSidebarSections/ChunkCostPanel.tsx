@@ -202,7 +202,7 @@ export function ChunkCostPanel() {
       {runActionCostEstimate.stages.length > 0 && (
         <div
           ref={costButtonRef}
-          className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-muted"
+          className="ml-auto flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-muted"
           onMouseEnter={openCostPanel}
           onMouseLeave={scheduleCloseCostPanel}
         >
@@ -223,7 +223,7 @@ export function ChunkCostPanel() {
           className="w-72 px-3"
           trigger={
             <div
-              className={`flex w-fit min-w-0 cursor-default items-center gap-1.5 ${
+              className={`ml-auto flex w-fit min-w-0 cursor-default items-center gap-1.5 ${
                 hasCurrentChunkUsage ? 'text-editorial-accent' : 'text-editorial-muted'
               }`}
             >
