@@ -441,7 +441,7 @@ export function DocumentView({
               destra token/costo del frammento corrente e il menu opzioni vista
               (stati pipeline e navigazione manuale sono nella rail sinistra). */}
           <div className="w-full h-20 flex items-center gap-5 border-b border-editorial-border bg-editorial-page px-6">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-visible custom-scrollbar">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-visible custom-scrollbar py-1.5">
               {chunkMinimapDots}
             </div>
             <div className="flex shrink-0 items-center gap-3 border-l border-editorial-border pl-5">
