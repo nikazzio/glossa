@@ -29,7 +29,12 @@ import { NotesTab } from './tabs/NotesTab';
 import { GlossaryTab } from './tabs/GlossaryTab';
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory', 'references', 'promptPreview'];
+// Ordine visivo: prima quello che serve preparando la traduzione (Riferimenti,
+// Anteprima), poi quello che ha senso solo su un frammento già tradotto
+// (Audit, Memoria); Note è slegata dal ciclo e sta a parte, in coda.
+const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['references', 'promptPreview', 'audit', 'memory', 'notes'];
+const CHUNK_RAIL_TABS_BEFORE_TRANSLATION: ChunkRailTab[] = ['references', 'promptPreview'];
+const CHUNK_RAIL_TABS_AFTER_TRANSLATION: ChunkRailTab[] = ['audit', 'memory'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -129,24 +134,42 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
     ? `${t('document.chunkPanelTitle')} ${currentChunkIndex + 1}/${chunks.length}`
     : t('document.chunkPanelTitle');
 
+  // Audit e Memoria hanno senso solo su un frammento già tradotto: restano
+  // visibili ma attenuati/disattivati prima, con un motivo nel tooltip.
+  const isChunkTranslated = !!currentChunk?.translationLocked;
+  const tabDisabledReason: Partial<Record<ChunkRailTab, string>> = {
+    audit: !isChunkTranslated ? t('document.chunkTabLockedForAudit') : undefined,
+    memory: !isChunkTranslated ? t('document.chunkTabLockedForMemory') : undefined,
+  };
+
+  const renderTab = (tab: ChunkRailTab) => (
+    <TabButton
+      key={tab}
+      buttonId={CHUNK_RAIL_TAB_BUTTON_IDS[tab]}
+      active={chunkRailTab === tab}
+      activeTone="success"
+      disabled={!!tabDisabledReason[tab]}
+      onClick={() => activateTab(tab)}
+      onKeyDown={(e) => handleTabKeyDown(tab, e)}
+      label={
+        tabDisabledReason[tab]
+          ? `${CHUNK_RAIL_TAB_LABEL[tab]} — ${tabDisabledReason[tab]}`
+          : CHUNK_RAIL_TAB_LABEL[tab]
+      }
+      icon={CHUNK_RAIL_TAB_ICON[tab]}
+      controls={CHUNK_RAIL_TAB_PANEL_IDS[tab]}
+      buttonRef={(el) => { tabButtonRefs.current[tab] = el; }}
+    />
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col" role="region" aria-label={chunkLabel}>
       <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
-        <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex gap-1">
-          {CHUNK_RAIL_TAB_ORDER.map((tab) => (
-            <TabButton
-              key={tab}
-              buttonId={CHUNK_RAIL_TAB_BUTTON_IDS[tab]}
-              active={chunkRailTab === tab}
-              activeTone="success"
-              onClick={() => activateTab(tab)}
-              onKeyDown={(e) => handleTabKeyDown(tab, e)}
-              label={CHUNK_RAIL_TAB_LABEL[tab]}
-              icon={CHUNK_RAIL_TAB_ICON[tab]}
-              controls={CHUNK_RAIL_TAB_PANEL_IDS[tab]}
-              buttonRef={(el) => { tabButtonRefs.current[tab] = el; }}
-            />
-          ))}
+        <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex flex-1 items-center gap-1">
+          {CHUNK_RAIL_TABS_BEFORE_TRANSLATION.map(renderTab)}
+          <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+          {CHUNK_RAIL_TABS_AFTER_TRANSLATION.map(renderTab)}
+          <div className="ml-auto">{renderTab('notes')}</div>
         </div>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
         <span className="font-display text-sm italic text-editorial-ink">{CHUNK_RAIL_TAB_LABEL[chunkRailTab]}</span>

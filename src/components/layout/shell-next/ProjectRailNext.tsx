@@ -6,9 +6,13 @@ import {
   ChevronRight,
   ChevronUp,
   FileOutput,
+  FileText,
+  Languages,
   LibraryBig,
   PanelLeftClose,
+  Pencil,
   Plus,
+  ScanLine,
   Settings2,
   Trash2,
   Upload,
@@ -30,6 +34,7 @@ import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { indexPad } from '../../../utils';
 import { ClickPopover, IconButton, Tooltip } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
+import { STAGE_TONE_MAP } from '../../document/pipelineStageTone';
 import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
 
@@ -108,6 +113,53 @@ function ProjectNameField() {
   );
 }
 
+/**
+ * Spie di stato delle fasi pipeline (bozza/rifinitura/formattazione/audit) sul
+ * frammento corrente — vivevano sopra le pagine sorgente/traduzione, spostate
+ * qui accanto alla navigazione fra frammenti perché parlano della stessa cosa.
+ */
+function PipelineStageStatusRow() {
+  const { t } = useTranslation();
+  const chunks = useChunksStore((state) => state.chunks);
+  const selectedChunkId = useUiStore((state) => state.selectedChunkId);
+  const traceStageId = useUiStore((state) => state.traceStageId);
+  const setTraceStageId = useUiStore((state) => state.setTraceStageId);
+  const { config } = usePipelineStore();
+
+  const currentChunk = chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
+  if (!currentChunk) return null;
+
+  const enabledStages = config.stages.filter((stage) => stage.enabled);
+
+  return (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+      {enabledStages.map((stage) => {
+        const Icon = stage.role === 'refine' ? Pencil : stage.role === 'format' ? FileText : Languages;
+        const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
+        return (
+          <IconButton
+            key={stage.id}
+            size="sm"
+            tone={stageTone}
+            title={stage.name}
+            onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
+          >
+            <Icon size={12} strokeWidth={1.9} />
+          </IconButton>
+        );
+      })}
+      <IconButton
+        size="sm"
+        tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
+        title={t('pipeline.audit')}
+        onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
+      >
+        <ScanLine size={12} strokeWidth={1.9} />
+      </IconButton>
+    </div>
+  );
+}
+
 function PipelineNameSlot({ children }: { children?: ReactNode }) {
   const { t } = useTranslation();
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -137,12 +189,8 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
   }, [deletePipeline, t]);
 
   return (
-    <div className="border-b border-editorial-border/70 px-4 pt-5 pb-4">
-      {/* Il progetto sta sopra la pipeline: è il contenitore, e finora non
-          compariva da nessuna parte dentro la traduzione — solo in testata, dove
-          non si poteva nemmeno rinominare. */}
-      <ProjectNameField />
-      <div className="mt-2.5 flex min-w-0 items-center justify-between gap-3">
+    <div className="border-b border-editorial-border/70 px-4 pt-4 pb-4">
+      <div className="flex min-w-0 items-center justify-between gap-3">
         <span className="block min-w-0 truncate text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
           {activeName}
         </span>
@@ -228,10 +276,11 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
           </ClickPopover>
         )}
       </div>
-      <div className="mt-5">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <ChunkRailNavigator collapsed={false} />
+        <PipelineStageStatusRow />
       </div>
-      {children ? <div className="mt-4 border-t border-editorial-border/50 pt-4">{children}</div> : null}
+      {children ? <div className="mt-4">{children}</div> : null}
     </div>
   );
 }
@@ -462,8 +511,12 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: solo controllo della rail; titolo e navigazione hanno fasce dedicate sotto. */}
-      <div className="flex h-20 shrink-0 items-center justify-end px-3">
+      {/* Header: titolo progetto e controllo della rail sulla stessa riga;
+          la navigazione fra frammenti ha una fascia dedicata sotto. */}
+      <div className="flex h-20 shrink-0 items-center gap-3 px-3">
+        <div className="min-w-0 flex-1">
+          <ProjectNameField />
+        </div>
         <IconButton
           size="md"
           tone="default"

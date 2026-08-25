@@ -1,5 +1,4 @@
-import { AlertTriangle, CircleDollarSign, FileText, GitCompare, Hash, Languages, Lock, Pencil, ScanLine, Search, SlidersHorizontal, SquareStack, Wand2 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { AlertTriangle, CircleDollarSign, FileText, GitCompare, Hash, Languages, Lock, Pencil, Search, SlidersHorizontal, SquareStack, Wand2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -10,7 +9,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
-import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel, type IconButtonTone } from '../ui';
+import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel } from '../ui';
 import {
   approveTranslation,
   withdrawTranslationApproval,
@@ -26,7 +25,7 @@ import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
 import { AnnotationContextMenu } from './AnnotationContextMenu';
 import { PaneSearch } from './PaneSearch';
-import { ChunkMetric, DocumentViewControls } from './DocumentViewControls';
+import { ChunkMetric, DocumentViewOptionsMenu } from './DocumentViewControls';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
 const NOOP_CHANGE = () => {};
@@ -35,14 +34,6 @@ interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
   onImportDocument: () => void;
 }
-
-const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
-  completed: 'success',
-  processing: 'running',
-  retrying: 'running',
-  error: 'danger',
-  idle: 'muted',
-};
 
 function buildChunkMinimapLabel(
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -428,38 +419,6 @@ export function DocumentView({
   const currentChunkTokens = currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput;
   const hasCurrentChunkUsage = currentChunkTokens > 0 || currentChunkUsage.total.totalUsd !== null;
 
-  // Stati pipeline (icone con tone di stato) — condivisi fra shell vecchia e nuova.
-  const stageStatusButtons = (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {enabledStages.map((stage) => {
-        const Icon: LucideIcon =
-          stage.role === 'refine' ? Pencil
-          : stage.role === 'format' ? FileText
-          : Languages;
-        const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
-        return (
-          <IconButton
-            key={stage.id}
-            size="md"
-            tone={stageTone}
-            title={stage.name}
-            onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
-          >
-            <Icon size={12} strokeWidth={1.9} />
-          </IconButton>
-        );
-      })}
-      <IconButton
-        size="md"
-        tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
-        title={t('pipeline.audit')}
-        onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
-      >
-        <ScanLine size={12} strokeWidth={1.9} />
-      </IconButton>
-    </div>
-  );
-
   // Pulsante unico che apre il menu controlli testo, in fila con le azioni pagina.
   const renderTextMenuButton = (open: boolean, toggle: () => void) => (
     <IconButton
@@ -477,25 +436,15 @@ export function DocumentView({
     <section className="w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col bg-editorial-page">
       <div className="@container mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="shrink-0">
-          {/* Barra di navigazione a filo (border-b, allineata alle testate dei pannelli
-              laterali). Stati del chunk sopra, minimap pallini sotto; a destra token/costo
-              del frammento corrente (spazio altrimenti vuoto — #296 follow-up). */}
-          <div className="w-full h-28 flex items-stretch gap-5 border-b border-editorial-border bg-editorial-page px-6 py-2">
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-              {stageStatusButtons}
-              {chunkMinimapDots ? (
-                <div className="flex items-center gap-2 overflow-x-auto overflow-y-visible custom-scrollbar py-1.5">
-                  {chunkMinimapDots}
-                </div>
-              ) : null}
+          {/* Barra di navigazione a filo (border-b, h-20 come le testate dei
+              pannelli laterali). Minimap pallini dei frammenti a sinistra; a
+              destra token/costo del frammento corrente e il menu opzioni vista
+              (stati pipeline e navigazione manuale sono nella rail sinistra). */}
+          <div className="w-full h-20 flex items-center gap-5 border-b border-editorial-border bg-editorial-page px-6">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-visible custom-scrollbar">
+              {chunkMinimapDots}
             </div>
-            {/* Comandi di vista del testo, prima dei numeri: agiscono su ciò
-                che hanno sotto. */}
-            {/* Ultima colonna, in due righe: sopra i numeri del frammento —
-                icona e valore, etichetta al passaggio del mouse — sotto i
-                comandi di vista del testo. In colonna sola stanno nell'altezza
-                della barra e non allargano la riga dei frammenti. */}
-            <div className="flex shrink-0 flex-col justify-center gap-3 self-stretch border-l border-editorial-border py-2 pl-5">
+            <div className="flex shrink-0 items-center gap-3 border-l border-editorial-border pl-5">
               {hasCurrentChunkUsage ? (
                 <Popover
                   side="bottom"
@@ -529,9 +478,7 @@ export function DocumentView({
                   )}
                 </Popover>
               ) : null}
-              <div className="flex items-center justify-end">
-                <DocumentViewControls />
-              </div>
+              <DocumentViewOptionsMenu />
             </div>
           </div>
         </div>

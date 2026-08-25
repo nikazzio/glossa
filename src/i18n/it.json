@@ -1354,7 +1354,10 @@
     "watchdogCancel": "Annulla e riprova",
     "insightsTabMemory": "Memoria",
     "insightsTabReferences": "Riferimenti",
-    "insightsTabPromptPreview": "Anteprima"
+    "insightsTabPromptPreview": "Anteprima",
+    "viewOptions": "Opzioni vista",
+    "chunkTabLockedForAudit": "Disponibile dopo la traduzione del frammento",
+    "chunkTabLockedForMemory": "Disponibile dopo la traduzione del frammento"
   },
   "promptPreview": {
     "title": "Anteprima messaggio",
