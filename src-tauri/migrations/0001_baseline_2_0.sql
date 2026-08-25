@@ -171,7 +171,13 @@ CREATE TABLE IF NOT EXISTS operation_logs (
   level TEXT NOT NULL,
   scope TEXT NOT NULL,
   message TEXT NOT NULL,
-  chunk_id TEXT REFERENCES translations(id) ON DELETE CASCADE,
+  -- SET NULL, non CASCADE: il salvataggio dei frammenti fa una DELETE di
+  -- pulizia sugli id non più presenti (anche in un normale salvataggio, non
+  -- solo in un re-split) — con CASCADE quella pulizia di routine si
+  -- porterebbe dietro tutta la cronologia log del frammento rimosso. Con
+  -- SET NULL il log resta (utile per analisi a livello progetto/modello),
+  -- solo perde il collegamento al frammento specifico che non esiste più.
+  chunk_id TEXT REFERENCES translations(id) ON DELETE SET NULL,
   stage_id TEXT DEFAULT NULL,
   meta TEXT DEFAULT NULL,
   detail TEXT DEFAULT NULL,

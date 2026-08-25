@@ -79,6 +79,7 @@ describe('operationLogStore', () => {
         'proj-1',
         'pipe-1',
         expect.objectContaining({ message: 'run started' }),
+        undefined,
       );
     });
 

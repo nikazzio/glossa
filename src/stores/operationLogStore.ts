@@ -4,6 +4,7 @@ import {
   loadOperationLogs,
   clearOperationLogs,
   type PersistedLogEntry,
+  type ChunkUsageBump,
 } from '../services/dbService';
 import { logger } from '../utils/logger';
 
@@ -54,7 +55,7 @@ interface OperationLogState {
   currentProjectId: string | null;
   currentPipelineId: string | null;
   setContext: (projectId: string | null, pipelineId: string | null) => void;
-  append: (entry: Omit<OperationLogEntry, 'id' | 'at'>) => void;
+  append: (entry: Omit<OperationLogEntry, 'id' | 'at'>, chunkUsageBump?: ChunkUsageBump) => void;
   loadFromDb: (projectId: string, pipelineId: string) => Promise<void>;
   clearChunk: (chunkId: string) => void;
   clear: () => void;
@@ -94,7 +95,7 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     }
   },
 
-  append: (entry) => {
+  append: (entry, chunkUsageBump) => {
     const full: OperationLogEntry = {
       id: `op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       at: new Date().toISOString(),
@@ -105,7 +106,7 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     }));
     const { currentProjectId, currentPipelineId } = get();
     if (currentProjectId && currentPipelineId) {
-      void saveOperationLogEntry(currentProjectId, currentPipelineId, full as PersistedLogEntry).catch(
+      void saveOperationLogEntry(currentProjectId, currentPipelineId, full as PersistedLogEntry, chunkUsageBump).catch(
         (error: unknown) => {
           logger.warn('operationLog.persist_failed', {
             projectId: currentProjectId,
@@ -148,6 +149,9 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   },
 }));
 
-export function logOperation(entry: Omit<OperationLogEntry, 'id' | 'at'>): void {
-  useOperationLogStore.getState().append(entry);
+export function logOperation(
+  entry: Omit<OperationLogEntry, 'id' | 'at'>,
+  chunkUsageBump?: ChunkUsageBump,
+): void {
+  useOperationLogStore.getState().append(entry, chunkUsageBump);
 }

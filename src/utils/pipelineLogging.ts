@@ -1,8 +1,8 @@
 import { logOperation, type OperationLogEntry } from '../stores/operationLogStore';
 import { usePricingStore } from '../stores/pricingStore';
+import { useChunksStore } from '../stores/chunksStore';
 import { costForEntry } from './operationLogStats';
-import { incrementChunkUsageTotals } from '../services/pipelineService';
-import { logger } from './logger';
+import type { ChunkUsageBump } from '../services/dbService';
 import type { TokenUsage } from '../types';
 
 interface ProviderRef {
@@ -56,23 +56,28 @@ function usageFields(ref: ProviderRef, usage?: TokenUsage): UsageFields {
 /**
  * Accumula sul frammento il contatore ridondante (fonte robusta per il
  * numero semplice mostrato in UI, non dipende dal collegamento coi log di
- * dettaglio). Scrittura fire-and-forget come il resto del logging operazioni
- * — un fallimento qui non deve bloccare la pipeline, solo finire nei log
- * tecnici.
+ * dettaglio). Aggiorna subito lo stato in memoria — altrimenti il pannello
+ * resterebbe fermo al valore vecchio finché il progetto non viene ricaricato
+ * — e restituisce lo stesso delta da passare a `logOperation`, che lo scrive
+ * nella STESSA transazione della riga di log: le due scritture non possono
+ * più divergere, o vanno a buon fine insieme o nessuna delle due.
  */
-function bumpChunkUsageTotals(chunkId: string, usage: TokenUsage | undefined, costUsd: number | null | undefined, durationMs: number): void {
-  if (!usage) return;
-  void incrementChunkUsageTotals(chunkId, {
+function bumpChunkUsageTotals(
+  chunkId: string,
+  usage: TokenUsage | undefined,
+  costUsd: number | null | undefined,
+  durationMs: number,
+): ChunkUsageBump | undefined {
+  if (!usage) return undefined;
+  const delta = {
+    chunkId,
     inputTokens: usage.inputTokens,
     outputTokens: usage.outputTokens,
     usd: costUsd ?? 0,
     durationMs,
-  }).catch((error: unknown) => {
-    logger.warn('operationLog.chunkUsageTotals_failed', {
-      chunkId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  });
+  };
+  useChunksStore.getState().bumpChunkUsageTotals(chunkId, delta);
+  return delta;
 }
 
 function promptDetail(systemPrompt: string, userPrompt: string): string {
@@ -235,6 +240,7 @@ export const pipelineLog = {
 
   stageEnd(chunkId: string, stageId: string, stageName: string, ref: ProviderRef, durationMs: number, usage?: TokenUsage): void {
     const fields = usageFields(ref, usage);
+    const bump = bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
     logOperation({
       level: 'success',
       scope: 'stage',
@@ -245,8 +251,7 @@ export const pipelineLog = {
       durationMs,
       meta: { stageName, provider: ref.provider, model: ref.model, ...usageMeta(usage) },
       ...fields,
-    });
-    bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
+    }, bump);
   },
 
   stageRetry(chunkId: string, stageId: string, attempt: number, total: number, error: string, delayMs: number): void {
@@ -361,6 +366,7 @@ export const pipelineLog = {
 
   auditEnd(chunkId: string, ref: ProviderRef, durationMs: number, usage?: TokenUsage): void {
     const fields = usageFields(ref, usage);
+    const bump = bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
     logOperation({
       level: 'success',
       scope: 'audit',
@@ -370,8 +376,7 @@ export const pipelineLog = {
       durationMs,
       meta: { provider: ref.provider, model: ref.model, ...usageMeta(usage) },
       ...fields,
-    });
-    bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
+    }, bump);
   },
 
   auditRetry(chunkId: string, attempt: number, total: number, error: string, delayMs: number): void {
@@ -466,6 +471,7 @@ export const pipelineLog = {
 
   coherenceChunkEnd(chunkId: string, ref: ProviderRef, durationMs: number, issueCount: number, usage?: TokenUsage): void {
     const fields = usageFields(ref, usage);
+    const bump = bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
     logOperation({
       level: 'success',
       scope: 'coherence',
@@ -475,8 +481,7 @@ export const pipelineLog = {
       durationMs,
       meta: { provider: ref.provider, model: ref.model, issues: issueCount, ...usageMeta(usage) },
       ...fields,
-    });
-    bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
+    }, bump);
   },
 
   coherenceRetry(chunkId: string, attempt: number, total: number, error: string, delayMs: number): void {

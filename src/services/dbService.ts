@@ -165,43 +165,78 @@ export interface PersistedLogEntry {
   maxAttempts?: number;
 }
 
+export interface ChunkUsageBump {
+  chunkId: string;
+  inputTokens: number;
+  outputTokens: number;
+  usd: number;
+  durationMs: number;
+}
+
+/**
+ * `chunkUsageBump` viene scritto nella STESSA transazione del log — se una
+ * delle due scritture andasse persa, il numero ridondante sul frammento e il
+ * dettaglio nei log divergerebbero senza nessun segnale. Un'unica
+ * transazione le rende indivisibili: o vanno a buon fine insieme, o nessuna
+ * delle due.
+ */
 export async function saveOperationLogEntry(
   projectId: string,
   pipelineId: string,
   entry: PersistedLogEntry,
+  chunkUsageBump?: ChunkUsageBump,
 ): Promise<void> {
-  await execute(
-    `INSERT OR IGNORE INTO operation_logs
-       (id, project_id, pipeline_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind,
-        provider, model, input_tokens, output_tokens, cached_input_tokens, cache_miss_input_tokens, cost_usd, is_free, attempt_number, max_attempts)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
-    [
-      entry.id,
-      projectId,
-      pipelineId,
-      entry.at,
-      entry.level,
-      entry.scope,
-      entry.message,
-      entry.chunkId ?? null,
-      entry.stageId ?? null,
-      entry.meta ? JSON.stringify(entry.meta) : null,
-      entry.detail ? entry.detail.slice(0, MAX_DETAIL_LENGTH) : null,
-      entry.phase ?? null,
-      entry.durationMs ?? null,
-      entry.detailKind ?? null,
-      entry.provider ?? null,
-      entry.model ?? null,
-      entry.inputTokens ?? null,
-      entry.outputTokens ?? null,
-      entry.cachedInputTokens ?? null,
-      entry.cacheMissInputTokens ?? null,
-      entry.costUsd ?? null,
-      entry.isFree == null ? null : entry.isFree ? 1 : 0,
-      entry.attemptNumber ?? null,
-      entry.maxAttempts ?? null,
-    ],
-  );
+  await runInTransaction(async (run) => {
+    await run(
+      `INSERT OR IGNORE INTO operation_logs
+         (id, project_id, pipeline_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind,
+          provider, model, input_tokens, output_tokens, cached_input_tokens, cache_miss_input_tokens, cost_usd, is_free, attempt_number, max_attempts)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+      [
+        entry.id,
+        projectId,
+        pipelineId,
+        entry.at,
+        entry.level,
+        entry.scope,
+        entry.message,
+        entry.chunkId ?? null,
+        entry.stageId ?? null,
+        entry.meta ? JSON.stringify(entry.meta) : null,
+        entry.detail ? entry.detail.slice(0, MAX_DETAIL_LENGTH) : null,
+        entry.phase ?? null,
+        entry.durationMs ?? null,
+        entry.detailKind ?? null,
+        entry.provider ?? null,
+        entry.model ?? null,
+        entry.inputTokens ?? null,
+        entry.outputTokens ?? null,
+        entry.cachedInputTokens ?? null,
+        entry.cacheMissInputTokens ?? null,
+        entry.costUsd ?? null,
+        entry.isFree == null ? null : entry.isFree ? 1 : 0,
+        entry.attemptNumber ?? null,
+        entry.maxAttempts ?? null,
+      ],
+    );
+    if (chunkUsageBump) {
+      await run(
+        `UPDATE translations
+         SET total_input_tokens  = total_input_tokens  + $1,
+             total_output_tokens = total_output_tokens + $2,
+             total_usd           = total_usd           + $3,
+             total_duration_ms   = total_duration_ms   + $4
+         WHERE id = $5`,
+        [
+          chunkUsageBump.inputTokens,
+          chunkUsageBump.outputTokens,
+          chunkUsageBump.usd,
+          chunkUsageBump.durationMs,
+          chunkUsageBump.chunkId,
+        ],
+      );
+    }
+  });
 }
 
 export async function loadOperationLogs(projectId: string, pipelineId: string): Promise<PersistedLogEntry[]> {
