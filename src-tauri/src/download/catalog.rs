@@ -11,6 +11,7 @@ use crate::jobs::{ErrorKind, JobError};
 use super::fetch::host_of;
 use super::handler::DownloadConfig;
 use super::manifest::Manifest;
+use crate::provenance::fnv1a_hex;
 
 /// Profilo di rete in vigore per questa biblioteca, riletto all'avvio del
 /// lavoro e non alla messa in coda: un lavoro ripreso dopo giorni deve
@@ -102,6 +103,52 @@ pub(crate) async fn record_manifest(
                 params![version_id, serde_json::Value::Object(merged).to_string()],
             )
             .map_err(|error| format!("licenza e attribuzione: {error}"))?;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|error| JobError::new(ErrorKind::Storage, error))
+}
+
+/// Identità della pagina logica, non del file. L'ordine, l'etichetta e il
+/// canvas dichiarati dal manifesto: quello a cui una futura trascrizione
+/// punterà, indipendentemente da quali misure sono state scaricate.
+///
+/// L'id è derivato da copia e posizione: rileggere lo stesso manifesto
+/// aggiorna la riga invece di duplicarla, e la posizione resta stabile fra
+/// una verifica e l'altra.
+pub(crate) async fn record_pages(
+    ctx: &JobContext,
+    version_id: &str,
+    manifest: &Manifest,
+) -> Result<(), JobError> {
+    let version_id = version_id.to_string();
+    let pages: Vec<(String, i64, Option<String>, Option<String>)> = manifest
+        .pages
+        .iter()
+        .map(|page| {
+            let id = format!("spg:{}", fnv1a_hex(&format!("{version_id}|{}", page.index)));
+            (
+                id,
+                page.index as i64,
+                page.label.clone(),
+                page.canvas_id.clone(),
+            )
+        })
+        .collect();
+
+    ctx.with_database(move |conn| {
+        for (id, position, label, canvas_url) in &pages {
+            conn.execute(
+                "INSERT INTO source_pages (id, source_version_id, position, label, canvas_url) \
+                 VALUES (?1, ?2, ?3, ?4, ?5) \
+                 ON CONFLICT(id) DO UPDATE SET \
+                   label = excluded.label, \
+                   canvas_url = excluded.canvas_url, \
+                   updated_at = CURRENT_TIMESTAMP",
+                params![id, version_id, position, label, canvas_url],
+            )
+            .map_err(|error| format!("pagina logica {position}: {error}"))?;
         }
         Ok(())
     })

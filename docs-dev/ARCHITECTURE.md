@@ -214,6 +214,14 @@ Manifest e PDF appartengono alla copia; immagini, miniature e derivati possono
 appartenere a una pagina. La disponibilità complessiva resta sulla copia.
 Trascrizioni e annotazioni future puntano alla pagina logica, non al file.
 
+La riga di pagina logica (`source_pages`) è l'unica eccezione al principio
+"nessuna riga per file": registra solo l'identità della pagina (ordine,
+etichetta, canvas), letta dal manifesto a ogni lavoro di scaricamento e scritta
+in modo idempotente (id derivato da copia e posizione). Non registra file: la
+rappresentazione fisica resta solo su disco e nel file laterale, com'è per
+tutto il resto del deposito. Riscaricare o ottimizzare una pagina non tocca
+questa riga.
+
 Layout:
 
 ```text

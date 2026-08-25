@@ -22,6 +22,10 @@ pub struct Page {
     /// libro **non** hanno tutte la stessa dimensione, ed è da queste che si
     /// calcola la misura da chiedere per ognuna.
     pub size: Option<(u32, u32)>,
+    /// Identificativo del canvas dichiarato dal manifesto (`id` in
+    /// Presentation 3, `@id` in 2.1). È il riferimento stabile della pagina
+    /// logica: una futura trascrizione punta a questo, non a un file.
+    pub canvas_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -92,6 +96,7 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         label: label_of(canvas.get("label")),
                         image_service: service_of(body)?,
                         size: canvas_size(canvas),
+                        canvas_id: id_of(canvas),
                     })
                 })
                 .collect()
@@ -120,6 +125,7 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         // In 2.1 le dimensioni stanno sulla risorsa quando il
                         // canvas non le dichiara.
                         size: canvas_size(canvas).or_else(|| canvas_size(resource)),
+                        canvas_id: id_of(canvas),
                     })
                 })
                 .collect()
@@ -229,6 +235,44 @@ mod tests {
         assert_eq!(manifest.pages[0].index, 1);
         assert_eq!(manifest.pages[0].label.as_deref(), Some("12r"));
         assert_eq!(manifest.pages[0].image_service, "https://img/1");
+    }
+
+    #[test]
+    fn the_canvas_id_is_kept_as_the_page_s_stable_reference() {
+        let p3 = parse(PRESENTATION_3.as_bytes()).unwrap();
+        // La prima pagina non dichiara un `id` sul canvas: resta assente
+        // invece di essere inventato dal servizio immagini.
+        assert_eq!(p3.pages[0].canvas_id, None);
+
+        let p2 = parse(PRESENTATION_2.as_bytes()).unwrap();
+        assert_eq!(p2.pages[0].canvas_id, None);
+    }
+
+    #[test]
+    fn a_declared_canvas_id_is_read_in_both_presentation_versions() {
+        let p3 = parse(
+            br#"{"items":[
+              {"id":"https://example.org/canvas/1","width":100,"height":200,
+               "items":[{"items":[{"body":{"service":[{"id":"https://img/1"}]}}]}]}
+            ]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            p3.pages[0].canvas_id.as_deref(),
+            Some("https://example.org/canvas/1")
+        );
+
+        let p2 = parse(
+            br#"{"sequences":[{"canvases":[
+              {"@id":"https://example.org/canvas/1","width":100,"height":200,
+               "images":[{"resource":{"service":{"@id":"https://img/1"}}}]}
+            ]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            p2.pages[0].canvas_id.as_deref(),
+            Some("https://example.org/canvas/1")
+        );
     }
 
     #[test]
