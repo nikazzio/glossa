@@ -371,6 +371,27 @@ export async function saveChunkCheckpoint(
   );
 }
 
+/**
+ * Contatore ridondante sul frammento: si accumula qui, non si sovrascrive,
+ * così resta la fonte robusta del numero semplice mostrato in UI anche se il
+ * collegamento coi log di dettaglio si disconnette (frammento ri-suddiviso
+ * con una configurazione diversa, log persi, ecc.).
+ */
+export async function incrementChunkUsageTotals(
+  chunkId: string,
+  usage: { inputTokens: number; outputTokens: number; usd: number; durationMs: number },
+): Promise<void> {
+  await execute(
+    `UPDATE translations
+     SET total_input_tokens  = total_input_tokens  + $1,
+         total_output_tokens = total_output_tokens + $2,
+         total_usd           = total_usd           + $3,
+         total_duration_ms   = total_duration_ms   + $4
+     WHERE id = $5`,
+    [usage.inputTokens, usage.outputTokens, usage.usd, usage.durationMs, chunkId],
+  );
+}
+
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
 
 async function saveTranslationsInternal(
@@ -480,6 +501,10 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       stageResults,
       judgeResult,
       translationLocked: row.translation_locked === 1,
+      totalInputTokens: row.total_input_tokens ?? 0,
+      totalOutputTokens: row.total_output_tokens ?? 0,
+      totalUsd: row.total_usd ?? 0,
+      totalDurationMs: row.total_duration_ms ?? 0,
       ...(coherenceResult ? { coherenceResult } : {}),
       ...(footnotes?.length ? { footnotes } : {}),
       ...(row.blob_id ? {

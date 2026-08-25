@@ -125,9 +125,16 @@ CREATE TABLE IF NOT EXISTS translations (
   blob_id TEXT DEFAULT NULL,
   blob_order INTEGER DEFAULT 0,
   blob_reference_chunk_ids TEXT DEFAULT NULL,
-  pipeline_id TEXT DEFAULT NULL,
+  pipeline_id TEXT REFERENCES pipelines(id) ON DELETE CASCADE,
   approved_revision_id TEXT REFERENCES translation_revisions(id) ON DELETE SET NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  -- Contatori ridondanti: fonte robusta per il numero semplice mostrato in UI,
+  -- non dipendono dal collegamento coi log di dettaglio (che può disconnettersi
+  -- se il frammento viene ri-suddiviso con una nuova configurazione).
+  total_input_tokens INTEGER NOT NULL DEFAULT 0,
+  total_output_tokens INTEGER NOT NULL DEFAULT 0,
+  total_usd REAL NOT NULL DEFAULT 0,
+  total_duration_ms INTEGER NOT NULL DEFAULT 0
 );
 
 -- translations are unique per (pipeline_id, chunk_id) so two pipelines
@@ -159,22 +166,40 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context_workflow
 CREATE TABLE IF NOT EXISTS operation_logs (
   id TEXT PRIMARY KEY,
   project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
-  pipeline_id TEXT DEFAULT NULL,
+  pipeline_id TEXT REFERENCES pipelines(id) ON DELETE CASCADE,
   at TEXT NOT NULL,
   level TEXT NOT NULL,
   scope TEXT NOT NULL,
   message TEXT NOT NULL,
-  chunk_id TEXT DEFAULT NULL,
+  chunk_id TEXT REFERENCES translations(id) ON DELETE CASCADE,
   stage_id TEXT DEFAULT NULL,
   meta TEXT DEFAULT NULL,
   detail TEXT DEFAULT NULL,
   phase TEXT DEFAULT NULL,
   duration_ms INTEGER DEFAULT NULL,
-  detail_kind TEXT DEFAULT NULL
+  detail_kind TEXT DEFAULT NULL,
+  -- Campi tipizzati per analisi (costo/token per modello nel tempo, qualità
+  -- ed errori per modello/fase, efficacia cache): prima esistevano solo
+  -- dentro `meta` come JSON libero, non aggregabile in SQL in modo affidabile.
+  -- `cost_usd` è il costo già calcolato al momento della scrittura, con il
+  -- listino prezzi in vigore in quel momento — non va ricalcolato a posteriori,
+  -- altrimenti un'analisi storica dei costi userebbe il listino di oggi anche
+  -- per chiamate fatte con prezzi diversi.
+  provider TEXT DEFAULT NULL,
+  model TEXT DEFAULT NULL,
+  input_tokens INTEGER DEFAULT NULL,
+  output_tokens INTEGER DEFAULT NULL,
+  cached_input_tokens INTEGER DEFAULT NULL,
+  cache_miss_input_tokens INTEGER DEFAULT NULL,
+  cost_usd REAL DEFAULT NULL,
+  is_free INTEGER DEFAULT NULL,
+  attempt_number INTEGER DEFAULT NULL,
+  max_attempts INTEGER DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_operation_logs_project_id ON operation_logs(project_id, at);
 CREATE INDEX IF NOT EXISTS idx_operation_logs_pipeline_id ON operation_logs(project_id, pipeline_id, at);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_model_at ON operation_logs(model, at);
 
 CREATE TABLE IF NOT EXISTS phrase_memory (
   id TEXT PRIMARY KEY,

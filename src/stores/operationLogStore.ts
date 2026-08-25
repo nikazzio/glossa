@@ -33,6 +33,20 @@ export interface OperationLogEntry {
   phase?: OperationLogPhase;
   durationMs?: number;
   detailKind?: OperationLogDetailKind;
+  // Campi tipizzati per analisi (costo/token per modello nel tempo, qualità
+  // per modello/fase, efficacia cache) — `costUsd` è congelato al momento
+  // della scrittura con il listino prezzi allora in vigore, non va
+  // ricalcolato in lettura con il listino attuale.
+  provider?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
+  costUsd?: number;
+  isFree?: boolean;
+  attemptNumber?: number;
+  maxAttempts?: number;
 }
 
 interface OperationLogState {

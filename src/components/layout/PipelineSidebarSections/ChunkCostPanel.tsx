@@ -124,25 +124,30 @@ export function ChunkCostPanel() {
     useShallow((state) => {
       const chunk = state.chunks.find((entry) => entry.id === selectedChunkId);
       return chunk
-        ? { id: chunk.id, hasSourceText: chunk.sourceProcessingText.trim().length > 0, sourceText: chunk.sourceProcessingText }
+        ? {
+            id: chunk.id,
+            hasSourceText: chunk.sourceProcessingText.trim().length > 0,
+            sourceText: chunk.sourceProcessingText,
+            totalInputTokens: chunk.totalInputTokens ?? 0,
+            totalOutputTokens: chunk.totalOutputTokens ?? 0,
+            totalUsd: chunk.totalUsd ?? 0,
+          }
         : null;
     }),
   );
   const operationLogEntries = useOperationLogStore((state) => state.entries);
+  // Il numero mostrato viene dal contatore ridondante sul frammento (sempre
+  // presente, aggiornato ad ogni chiamata riuscita) — non dal join coi log,
+  // che serve solo per il dettaglio nel popover e può disconnettersi se il
+  // frammento viene ri-suddiviso.
   const currentChunkUsage = currentChunk
     ? summarizeChunkUsage(operationLogEntries, currentChunk.id, pricingOverrides)
     : null;
-  const currentChunkTokens = currentChunkUsage
-    ? currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput
+  const currentChunkTokens = currentChunk
+    ? currentChunk.totalInputTokens + currentChunk.totalOutputTokens
     : 0;
-  // "totalUsd" parte da 0 (non da null) quando un frammento non è mai stato
-  // elaborato: un confronto con null lascia il pannello sempre visibile,
-  // anche a "0 token · $0". Il segnale giusto è se è mai avvenuta una vera
-  // elaborazione (traduzione/audit/coerenza), non l'importo risultante.
-  const hasCurrentChunkUsage = !!currentChunkUsage
-    && (currentChunkUsage.translationRuns > 0
-      || currentChunkUsage.auditRuns > 0
-      || currentChunkUsage.coherenceRuns > 0);
+  const currentChunkUsd = currentChunk?.totalUsd ?? 0;
+  const hasCurrentChunkUsage = currentChunkTokens > 0 || currentChunkUsd > 0;
 
   const [showCostPanel, setShowCostPanel] = useState(false);
   const costButtonRef = useRef<HTMLDivElement | null>(null);
@@ -211,7 +216,7 @@ export function ChunkCostPanel() {
           </span>
         </div>
       )}
-      {currentChunk && currentChunkUsage && (
+      {currentChunk && (
         <Popover
           side="bottom"
           align="start"
@@ -224,12 +229,12 @@ export function ChunkCostPanel() {
             >
               <Coins size={12} className="shrink-0" />
               <span className="truncate">
-                {currentChunkTokens.toLocaleString()} · {formatUsd(currentChunkUsage.total.totalUsd)}
+                {currentChunkTokens.toLocaleString()} · {formatUsd(currentChunkUsd)}
               </span>
             </div>
           }
         >
-          {currentChunkUsage.scopeBreakdown.length > 0 ? (
+          {currentChunkUsage && currentChunkUsage.scopeBreakdown.length > 0 ? (
             <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
           ) : (
             <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
