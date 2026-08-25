@@ -136,7 +136,9 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
 
   // Audit e Memoria hanno senso solo su un frammento già tradotto: restano
   // visibili ma attenuati/disattivati prima, con un motivo nel tooltip.
-  const isChunkTranslated = !!currentChunk?.translationLocked;
+  // `translationLocked` è un'approvazione manuale separata (si attiva solo
+  // quando l'utente blocca/approva) — non equivale ad "è stato tradotto".
+  const isChunkTranslated = currentChunk?.status === 'completed';
   const tabDisabledReason: Partial<Record<ChunkRailTab, string>> = {
     audit: !isChunkTranslated ? t('document.chunkTabLockedForAudit') : undefined,
     memory: !isChunkTranslated ? t('document.chunkTabLockedForMemory') : undefined,

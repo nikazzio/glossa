@@ -211,13 +211,17 @@ export function ChunkCostPanel() {
           </span>
         </div>
       )}
-      {hasCurrentChunkUsage && currentChunkUsage && (
+      {currentChunk && currentChunkUsage && (
         <Popover
           side="bottom"
           align="start"
           className="w-72 px-3"
           trigger={
-            <div className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-accent">
+            <div
+              className={`flex w-fit min-w-0 cursor-default items-center gap-1.5 ${
+                hasCurrentChunkUsage ? 'text-editorial-accent' : 'text-editorial-muted'
+              }`}
+            >
               <Coins size={12} className="shrink-0" />
               <span className="truncate">
                 {currentChunkTokens.toLocaleString()} · {formatUsd(currentChunkUsage.total.totalUsd)}
