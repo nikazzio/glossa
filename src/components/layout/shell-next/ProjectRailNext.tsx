@@ -16,6 +16,7 @@ import {
 import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ChunkCostPanel,
   PipelineSidebarExportDialogHost,
   PipelineSidebarRunSection,
 } from '../PipelineSidebarSections';
@@ -137,12 +138,8 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
   }, [deletePipeline, t]);
 
   return (
-    <div className="border-b border-editorial-border/70 px-4 pt-5 pb-4">
-      {/* Il progetto sta sopra la pipeline: è il contenitore, e finora non
-          compariva da nessuna parte dentro la traduzione — solo in testata, dove
-          non si poteva nemmeno rinominare. */}
-      <ProjectNameField />
-      <div className="mt-2.5 flex min-w-0 items-center justify-between gap-3">
+    <div className="border-b border-editorial-border/70 px-4 pt-4 pb-4">
+      <div className="flex min-w-0 items-center justify-between gap-3">
         <span className="block min-w-0 truncate text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
           {activeName}
         </span>
@@ -228,10 +225,11 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
           </ClickPopover>
         )}
       </div>
-      <div className="mt-5">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <ChunkRailNavigator collapsed={false} />
+        <ChunkCostPanel />
       </div>
-      {children ? <div className="mt-4 border-t border-editorial-border/50 pt-4">{children}</div> : null}
+      {children ? <div className="mt-4">{children}</div> : null}
     </div>
   );
 }
@@ -462,8 +460,12 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: solo controllo della rail; titolo e navigazione hanno fasce dedicate sotto. */}
-      <div className="flex h-20 shrink-0 items-center justify-end px-3">
+      {/* Header: titolo progetto e controllo della rail sulla stessa riga;
+          la navigazione fra frammenti ha una fascia dedicata sotto. */}
+      <div className="flex h-20 shrink-0 items-center gap-3 px-3">
+        <div className="min-w-0 flex-1">
+          <ProjectNameField />
+        </div>
         <IconButton
           size="md"
           tone="default"

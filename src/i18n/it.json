@@ -1354,7 +1354,10 @@
     "watchdogCancel": "Annulla e riprova",
     "insightsTabMemory": "Memoria",
     "insightsTabReferences": "Riferimenti",
-    "insightsTabPromptPreview": "Anteprima"
+    "insightsTabPromptPreview": "Anteprima",
+    "viewOptions": "Opzioni vista",
+    "chunkTabLockedForAudit": "Disponibile dopo la traduzione del frammento",
+    "chunkTabLockedForMemory": "Disponibile dopo la traduzione del frammento"
   },
   "promptPreview": {
     "title": "Anteprima messaggio",
@@ -1439,7 +1442,7 @@
       "title": "Funzionalità",
       "intro": "Riferimento delle aree più importanti dell'interfaccia. Ogni voce descrive cosa fa, dove si trova e quando ti torna utile.",
       "documentWorkspaceTitle": "Workspace documento",
-      "documentWorkspaceDesc": "È la modalità principale dell'app. Dopo aver importato un documento, il workspace mostra il frammento corrente su due pagine affiancate: a sinistra il testo originale, a destra la traduzione candidata. Sopra il documento trovi gli stati delle fasi, gli indicatori dei frammenti e, quando disponibili, token e costo del frammento corrente. Le frecce precedente/successivo sono nella barra sinistra; a destra il pannello Insight raccoglie indice, ricerca, statistiche, coerenza e glossario. La modalità si attiva anche con un solo frammento.",
+      "documentWorkspaceDesc": "È la modalità principale dell'app. Dopo aver importato un documento, il workspace mostra il frammento corrente su due pagine affiancate: a sinistra il testo originale, a destra la traduzione candidata. Nella barra a sinistra trovi la navigazione tra frammenti, gli stati delle fasi della pipeline accanto al pulsante di traduzione e, quando disponibili, la stima di costo e il consumo reale del frammento corrente. Sopra il documento restano gli indicatori dei frammenti e un pulsante di opzioni vista; a destra il pannello Insight raccoglie indice, ricerca, statistiche, coerenza e glossario. La modalità si attiva anche con un solo frammento.",
       "chunkIndicatorsTitle": "Indicatori dei frammenti",
       "chunkIndicatorsDesc": "Ogni cerchio è cliccabile. Il segno centrale distingue da tradurre, in elaborazione, completato ed errore. I quattro segnali agli angoli indicano, nell'ordine: problemi audit irrisolti in alto a sinistra, note in alto a destra, traduzione bloccata in basso a sinistra, traduzione da aggiornare dopo una modifica della sorgente in basso a destra. Il triangolo sotto indica il frammento corrente. Passa il mouse o usa la tastiera per leggere il riepilogo completo e i conteggi.",
       "documentToolsTitle": "Strumenti dell'editor",
@@ -1447,7 +1450,7 @@
       "markdownToolsTitle": "Toolbar Markdown",
       "markdownToolsDesc": "Il pulsante menu ⋮ nella riga di controlli apre la toolbar Markdown: modalità scrittura/anteprima/affiancata (split), dimensione testo e bottoni di formattazione (grassetto, corsivo, titoli, elenchi, nota). Il pulsante ? apre questa guida. Tutti i controlli di testo sono in questo menu.",
       "insightsTitle": "Pannello Insight",
-      "insightsDesc": "È il pannello a destra del progetto: raccoglie le schede Indice, Cerca, Statistiche, Coerenza e Glossario per metriche e ricerca su tutto il documento. Le informazioni sul frammento selezionato (Audit, Note, Memoria) sono invece nella barra a sinistra, vicino ai comandi della pipeline.",
+      "insightsDesc": "È il pannello a destra del progetto: raccoglie le schede Indice, Cerca, Statistiche, Coerenza e Glossario per metriche e ricerca su tutto il documento. Le informazioni sul frammento selezionato (Riferimenti, Anteprima, Audit, Memoria, Note) sono invece nella barra a sinistra, vicino ai comandi della pipeline: Audit e Memoria si attivano solo dopo che il frammento è stato tradotto.",
       "statsTitle": "Statistiche di sessione",
       "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e cache hit rate per la sessione corrente. Il riepilogo suddivide il consumo per operazione — ogni stage della pipeline (es. Translation, Refine, Format), l'Audit e la Coerenza — mostrando il modello usato e la percentuale di token serviti dalla cache per ciascuno.",
       "operationsLogTitle": "Log operazioni strutturato",

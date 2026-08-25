@@ -381,6 +381,13 @@ export interface TranslationChunk {
   blobId?: string;
   blobOrder?: number;
   blobReferenceChunkIds?: string[];
+  // Contatore ridondante di consumo reale, aggiornato ad ogni chiamata
+  // riuscita: fonte robusta per il numero mostrato in UI, non dipende dal
+  // collegamento coi log di dettaglio.
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
+  totalUsd?: number;
+  totalDurationMs?: number;
 }
 
 export interface TokenUsage {

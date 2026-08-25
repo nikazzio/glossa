@@ -34,6 +34,16 @@ La baseline 2.0/1.5 definisce lo schema completo per i database nuovi. Le
 migrazioni applicate non si modificano: ogni cambiamento successivo riceve un
 file nuovo.
 
+Eccezione valida solo fino al rilascio 1.0: senza dati reali distribuiti, i
+cambi di schema di questa fase vengono consolidati direttamente nella baseline
+invece di aprire un file di migrazione incrementale (coerente con "zero
+legacy" di questa fase — vedi `docs-dev/PRODUCT_ARCHITECTURE_2_0.md`). Un
+cambio di baseline richiede di ricreare il database locale (si cancella
+`glossa.db` e i suoi sidecar WAL/SHM, con backup automatico prima
+dell'eliminazione) e di reimportare i progetti da un backup applicativo. Dal
+rilascio 1.0 in avanti vale di nuovo la regola sopra: ogni cambiamento riceve
+un file di migrazione nuovo, la baseline non si tocca più.
+
 ## Modello di prodotto
 
 Biblioteca, Trascrizioni, Traduzioni e Analisi sono cataloghi globali. Un
@@ -63,7 +73,9 @@ globali.
 | `workspaceStore` | elenco e workspace operativo |
 | `projectStore` | progetti e pipeline |
 | `pipelineStore` | configurazione ed esecuzione della pipeline |
-| `chunksStore` | frammenti e risultati degli stadi |
+| `chunksStore` | frammenti, risultati degli stadi, contatore ridondante di consumo (token/costo/durata) per frammento |
+| `operationLogStore` | log strutturato delle chiamate ai modelli (in memoria + persistenza) |
+| `pricingStore` | override del listino prezzi, usati sia per la stima pre-traduzione sia per congelare il costo reale al momento della scrittura |
 | `jobsStore` | snapshot della coda ricevuto dagli eventi backend |
 | `sourceLibraryStore` | catalogo e dettaglio delle fonti |
 | `libraryStore` | dizionari e ambito di lettura |
@@ -97,6 +109,38 @@ spostare dati dinamici prima dei blob interrompe il prefix caching dei provider.
 Gli stadi chiedono risposte strutturate e validano i campi prima di aggiornare lo
 stato. Anteprima e registrazione mostrano il prompt effettivo, senza introdurre
 una seconda sorgente di verità rispetto ai costruttori usati a runtime.
+
+## Log operazioni e costi
+
+`operation_logs` è un log strutturato per chiamata (traduzione/audit/coerenza),
+distinto da `provenance_events` (fatti immutabili a più ampio raggio, vedi
+sezione Provenienza). Provider, modello, token, costo e tentativi sono colonne
+tipizzate — non un blob JSON libero — per permettere aggregazioni SQL dirette
+(costi per modello/provider nel tempo, tasso di errore/retry per fase,
+efficacia della cache).
+
+Il costo di ogni chiamata viene calcolato e scritto una sola volta, al momento
+in cui la chiamata finisce, con il listino prezzi (`pricingStore`) in vigore in
+quel momento. Non va ricalcolato in lettura: un'analisi storica che usasse il
+listino attuale per chiamate passate produrrebbe numeri sbagliati.
+
+`translations` porta un contatore ridondante (token/costo/durata totali per
+frammento), aggiornato in incremento — mai sovrascritto — nella STESSA
+transazione della riga di log corrispondente (`saveOperationLogEntry` accetta
+un `chunkUsageBump` opzionale). Le due scritture sono atomiche di proposito:
+prima erano indipendenti, e un fallimento silenzioso di una sola delle due
+disallineava il numero mostrato in UI dal dettaglio nei log senza nessun
+segnale — trovato con una revisione avversariale dopo il primo giro di questo
+refactor. L'aggiornamento del contatore avviene anche in memoria (store
+`chunksStore`), non solo su disco, perché l'interfaccia lo mostra subito senza
+attendere un ricaricamento del progetto.
+
+`operation_logs.chunk_id` referenzia `translations(id)` con `ON DELETE SET
+NULL`, non `CASCADE`: il salvataggio dei frammenti esegue di routine una
+pulizia dei chunk non più presenti, e un `CASCADE` cancellerebbe con essa
+tutta la cronologia log del frammento rimosso. Con `SET NULL` il log resta
+disponibile per analisi a livello progetto/modello, perde solo il riferimento
+al frammento specifico che non esiste più.
 
 ## Backend Rust
 

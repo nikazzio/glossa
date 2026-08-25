@@ -480,6 +480,10 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       stageResults,
       judgeResult,
       translationLocked: row.translation_locked === 1,
+      totalInputTokens: row.total_input_tokens ?? 0,
+      totalOutputTokens: row.total_output_tokens ?? 0,
+      totalUsd: row.total_usd ?? 0,
+      totalDurationMs: row.total_duration_ms ?? 0,
       ...(coherenceResult ? { coherenceResult } : {}),
       ...(footnotes?.length ? { footnotes } : {}),
       ...(row.blob_id ? {

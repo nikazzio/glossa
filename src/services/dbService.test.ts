@@ -104,7 +104,11 @@ describe('operation log pipeline scoping', () => {
       db: 'sqlite:/tmp/glossa-test-data/glossa.db',
       statements: [{
         query: expect.stringContaining('INSERT OR IGNORE INTO operation_logs'),
-        params: ['op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello', null, null, null, null, null, null, null],
+        params: [
+          'op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello',
+          null, null, null, null, null, null, null,
+          null, null, null, null, null, null, null, null, null, null,
+        ],
       }],
     });
     // Storico operazioni senza limite (deciso con l'utente 2026-07-14): nessuna

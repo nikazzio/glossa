@@ -1,4 +1,8 @@
-import { logOperation } from '../stores/operationLogStore';
+import { logOperation, type OperationLogEntry } from '../stores/operationLogStore';
+import { usePricingStore } from '../stores/pricingStore';
+import { useChunksStore } from '../stores/chunksStore';
+import { costForEntry } from './operationLogStats';
+import type { ChunkUsageBump } from '../services/dbService';
 import type { TokenUsage } from '../types';
 
 interface ProviderRef {
@@ -14,6 +18,66 @@ function usageMeta(usage?: TokenUsage): Record<string, unknown> {
     ...(usage.cachedInputTokens !== undefined ? { cachedInputTokens: usage.cachedInputTokens } : {}),
     ...(usage.cacheMissInputTokens !== undefined ? { cacheMissInputTokens: usage.cacheMissInputTokens } : {}),
   };
+}
+
+type UsageFields = Pick<
+  OperationLogEntry,
+  'provider' | 'model' | 'inputTokens' | 'outputTokens' | 'cachedInputTokens' | 'cacheMissInputTokens' | 'costUsd' | 'isFree'
+>;
+
+/**
+ * Campi tipizzati di primo livello (oltre a `meta`, invariato per i lettori
+ * già esistenti) — `costUsd` è calcolato QUI, con il listino prezzi in vigore
+ * in questo momento, e resta congelato: non va più ricalcolato in lettura con
+ * il listino di domani, altrimenti un'analisi storica dei costi userebbe
+ * prezzi sbagliati per le chiamate passate.
+ */
+function usageFields(ref: ProviderRef, usage?: TokenUsage): UsageFields {
+  const isFree = ref.provider === 'ollama';
+  const pricingOverrides = usePricingStore.getState().overrides;
+  const costUsd = isFree
+    ? 0
+    : costForEntry(
+        { provider: ref.provider, model: ref.model, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens },
+        pricingOverrides,
+      );
+  return {
+    provider: ref.provider,
+    model: ref.model,
+    inputTokens: usage?.inputTokens,
+    outputTokens: usage?.outputTokens,
+    cachedInputTokens: usage?.cachedInputTokens,
+    cacheMissInputTokens: usage?.cacheMissInputTokens,
+    isFree,
+    ...(costUsd != null ? { costUsd } : {}),
+  };
+}
+
+/**
+ * Accumula sul frammento il contatore ridondante (fonte robusta per il
+ * numero semplice mostrato in UI, non dipende dal collegamento coi log di
+ * dettaglio). Aggiorna subito lo stato in memoria — altrimenti il pannello
+ * resterebbe fermo al valore vecchio finché il progetto non viene ricaricato
+ * — e restituisce lo stesso delta da passare a `logOperation`, che lo scrive
+ * nella STESSA transazione della riga di log: le due scritture non possono
+ * più divergere, o vanno a buon fine insieme o nessuna delle due.
+ */
+function bumpChunkUsageTotals(
+  chunkId: string,
+  usage: TokenUsage | undefined,
+  costUsd: number | null | undefined,
+  durationMs: number,
+): ChunkUsageBump | undefined {
+  if (!usage) return undefined;
+  const delta = {
+    chunkId,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    usd: costUsd ?? 0,
+    durationMs,
+  };
+  useChunksStore.getState().bumpChunkUsageTotals(chunkId, delta);
+  return delta;
 }
 
 function promptDetail(systemPrompt: string, userPrompt: string): string {
@@ -175,6 +239,8 @@ export const pipelineLog = {
   },
 
   stageEnd(chunkId: string, stageId: string, stageName: string, ref: ProviderRef, durationMs: number, usage?: TokenUsage): void {
+    const fields = usageFields(ref, usage);
+    const bump = bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
     logOperation({
       level: 'success',
       scope: 'stage',
@@ -184,7 +250,8 @@ export const pipelineLog = {
       stageId,
       durationMs,
       meta: { stageName, provider: ref.provider, model: ref.model, ...usageMeta(usage) },
-    });
+      ...fields,
+    }, bump);
   },
 
   stageRetry(chunkId: string, stageId: string, attempt: number, total: number, error: string, delayMs: number): void {
@@ -196,6 +263,8 @@ export const pipelineLog = {
       chunkId,
       stageId,
       meta: { error, attempt, total, delayMs },
+      attemptNumber: attempt,
+      maxAttempts: total,
     });
   },
 
@@ -296,6 +365,8 @@ export const pipelineLog = {
   },
 
   auditEnd(chunkId: string, ref: ProviderRef, durationMs: number, usage?: TokenUsage): void {
+    const fields = usageFields(ref, usage);
+    const bump = bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
     logOperation({
       level: 'success',
       scope: 'audit',
@@ -304,7 +375,8 @@ export const pipelineLog = {
       chunkId,
       durationMs,
       meta: { provider: ref.provider, model: ref.model, ...usageMeta(usage) },
-    });
+      ...fields,
+    }, bump);
   },
 
   auditRetry(chunkId: string, attempt: number, total: number, error: string, delayMs: number): void {
@@ -315,6 +387,8 @@ export const pipelineLog = {
       message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
       chunkId,
       meta: { error, attempt, total, delayMs },
+      attemptNumber: attempt,
+      maxAttempts: total,
     });
   },
 
@@ -396,6 +470,8 @@ export const pipelineLog = {
   },
 
   coherenceChunkEnd(chunkId: string, ref: ProviderRef, durationMs: number, issueCount: number, usage?: TokenUsage): void {
+    const fields = usageFields(ref, usage);
+    const bump = bumpChunkUsageTotals(chunkId, usage, fields.costUsd, durationMs);
     logOperation({
       level: 'success',
       scope: 'coherence',
@@ -404,7 +480,8 @@ export const pipelineLog = {
       chunkId,
       durationMs,
       meta: { provider: ref.provider, model: ref.model, issues: issueCount, ...usageMeta(usage) },
-    });
+      ...fields,
+    }, bump);
   },
 
   coherenceRetry(chunkId: string, attempt: number, total: number, error: string, delayMs: number): void {
@@ -415,6 +492,8 @@ export const pipelineLog = {
       message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
       chunkId,
       meta: { error, attempt, total, delayMs },
+      attemptNumber: attempt,
+      maxAttempts: total,
     });
   },
 

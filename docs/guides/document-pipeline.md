@@ -26,7 +26,8 @@ e usa **Test** su un chunk rappresentativo prima di avviare il batch.
 | Import e anteprima | Testo sorgente, segmentazione, chunk iniziali | Prima di creare la lista chunk attiva |
 | Configurazione pipeline | Lingue, provider, modelli, prompt, glossario | Prima del Test e prima dei batch lunghi |
 | Vista documento | Chunk corrente, output, stati, run | Durante traduzione e revisione |
-| Pannello Insight | Audit, note, statistiche, coerenza | Durante controllo qualità e chiusura chunk |
+| Barra del frammento | Riferimenti, Anteprima, Audit, Memoria, Note | Durante controllo qualità e chiusura chunk |
+| Pannello Insight | Indice, ricerca, statistiche, coerenza, glossario | Su tutto il documento, in ogni fase |
 
 ## Modalità DeepL Hybrid
 

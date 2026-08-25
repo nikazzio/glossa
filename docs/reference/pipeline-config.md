@@ -86,11 +86,13 @@ risultato, preferisci la modalità Test invece di cambiare l'intera pipeline.
 
 ## Preventivo costi
 
-Passando il mouse sull'icona informazioni vicino al costo stimato (nel pannello impostazioni pipeline, e vicino al pulsante di traduzione/esecuzione nella vista documento) vedi un dettaglio per fase con il costo approssimativo in dollari.
+Nel pannello impostazioni pipeline, passando il mouse sull'icona informazioni vicino al costo stimato vedi un dettaglio per fase con il costo approssimativo in dollari.
+
+Nella barra a sinistra della vista documento, accanto alla navigazione tra frammenti, un pannello mostra sempre due righe: la stima prevista per l'azione che stai per lanciare, e — quando il frammento aperto è già stato tradotto — il consumo reale (token e costo effettivi, letti dopo la chiamata). Passando il mouse sulla riga del consumo reale vedi la scomposizione per fase, quando disponibile.
 
 - Nel pannello impostazioni pipeline il preventivo copre **sempre l'intero documento**, incluso il controllo di coerenza se configurato.
-- Vicino al pulsante di esecuzione nella vista documento, il preventivo segue quello che sta per succedere: in modalità "traduci chunk" copre solo il chunk selezionato, in modalità "esegui tutto" copre l'intero documento.
-- È una stima approssimativa basata sul conteggio parole e sul prezzo per token del modello scelto: il costo reale può variare leggermente.
+- Nella barra a sinistra della vista documento, la stima segue quello che sta per succedere: in modalità "traduci chunk" copre solo il chunk selezionato, in modalità "esegui tutto" copre l'intero documento.
+- È una stima approssimativa basata sul conteggio parole e sul prezzo per token del modello scelto: il costo reale (mostrato nella riga sotto, dopo la traduzione) può variare leggermente.
 - Gli stage DeepL sono misurati in caratteri fatturati da DeepL: Glossa può mostrarli dopo la run, ma il preventivo in dollari resta basato sui provider LLM con prezzo per token.
 
 ## Temperature per stage e per il giudice

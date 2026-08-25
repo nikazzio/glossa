@@ -1,21 +1,48 @@
-import { Columns2, Highlighter, Link2, Link2Off, PanelLeft, PanelRight } from 'lucide-react';
+import { Columns2, Highlighter, LayoutGrid, Link2, Link2Off, PanelLeft, PanelRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { ReactNode } from 'react';
-import { IconButton, Tooltip } from '../ui';
+import { useState, type ReactNode } from 'react';
+import { ClickPopover, IconButton, Tooltip } from '../ui';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 
+interface ViewOptionRowProps {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+}
+
+function ViewOptionRow({ active, disabled, onClick, icon, label }: ViewOptionRowProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        active ? 'font-medium text-editorial-accent' : 'text-editorial-ink hover:bg-editorial-textbox/60'
+      }`}
+    >
+      <span className={active ? 'text-editorial-accent' : 'text-editorial-muted'}>{icon}</span>
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
 /**
- * Comandi di vista del documento: quali colonne mostrare, scorrimento
+ * Menu unico "opzioni vista": quali colonne mostrare, scorrimento
  * sincronizzato, evidenziazioni del glossario.
  *
- * Stanno **sopra il testo**, non nella barra di stato: agiscono su ciò che
- * hanno sotto, e nella barra facevano comparire e sparire cinque comandi a
- * ogni cambio di sezione — la barra di stato deve avere la stessa forma
- * ovunque.
+ * Accorpati in un solo pulsante trigger di larghezza fissa (nessun contenuto
+ * condizionale nel trigger): prima queste cinque azioni stavano come icone
+ * separate nella barra di stato e facevano comparire/scomparire comandi a ogni
+ * cambio di sezione, cambiando la forma della barra — un bug di layout-jump
+ * già corretto una volta. Il trigger unico non lo reintroduce.
  */
-export function DocumentViewControls() {
+export function DocumentViewOptionsMenu() {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
   const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
   const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
   const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
@@ -29,62 +56,59 @@ export function DocumentViewControls() {
   const syncOn = syncScrollEnabled && !syncDisabled;
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      <IconButton
-        size="sm"
-        tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
-        onClick={() => setDocumentPaneFocus('both')}
-        title={t('document.focusBoth')}
-        tooltipSide="bottom"
-        ariaPressed={documentPaneFocus === 'both'}
-      >
-        <Columns2 size={12} />
-      </IconButton>
-      <IconButton
-        size="sm"
-        tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
-        onClick={() => setDocumentPaneFocus('source')}
-        title={t('document.focusSource')}
-        tooltipSide="bottom"
-        ariaPressed={documentPaneFocus === 'source'}
-      >
-        <PanelLeft size={12} />
-      </IconButton>
-      <IconButton
-        size="sm"
-        tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
-        onClick={() => setDocumentPaneFocus('translation')}
-        title={t('document.focusTranslation')}
-        tooltipSide="bottom"
-        ariaPressed={documentPaneFocus === 'translation'}
-      >
-        <PanelRight size={12} />
-      </IconButton>
-      <span className="mx-1 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-      <IconButton
-        size="sm"
-        tone={syncOn ? 'accent' : 'default'}
-        onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-        disabled={syncDisabled}
-        title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-        tooltipSide="bottom"
-        ariaPressed={syncOn}
-      >
-        {syncOn ? <Link2 size={12} /> : <Link2Off size={12} />}
-      </IconButton>
-      {hasGlossary && (
+    <ClickPopover
+      open={open}
+      onOpenChange={setOpen}
+      side="bottom"
+      align="end"
+      trigger={
         <IconButton
           size="sm"
-          tone={highlightsEnabled ? 'accent' : 'default'}
-          onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-          title={t('library.glossaryHighlightToggle')}
+          tone={open ? 'accent' : 'default'}
+          title={t('document.viewOptions')}
+          ariaLabel={t('document.viewOptions')}
+          ariaPressed={open}
           tooltipSide="bottom"
-          ariaPressed={highlightsEnabled}
         >
-          <Highlighter size={12} />
+          <LayoutGrid size={12} />
         </IconButton>
+      }
+    >
+      <ViewOptionRow
+        active={documentPaneFocus === 'both'}
+        onClick={() => setDocumentPaneFocus('both')}
+        icon={<Columns2 size={13} />}
+        label={t('document.focusBoth')}
+      />
+      <ViewOptionRow
+        active={documentPaneFocus === 'source'}
+        onClick={() => setDocumentPaneFocus('source')}
+        icon={<PanelLeft size={13} />}
+        label={t('document.focusSource')}
+      />
+      <ViewOptionRow
+        active={documentPaneFocus === 'translation'}
+        onClick={() => setDocumentPaneFocus('translation')}
+        icon={<PanelRight size={13} />}
+        label={t('document.focusTranslation')}
+      />
+      <div className="border-t border-editorial-border/60" />
+      <ViewOptionRow
+        active={syncOn}
+        disabled={syncDisabled}
+        onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+        icon={syncOn ? <Link2 size={13} /> : <Link2Off size={13} />}
+        label={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+      />
+      {hasGlossary && (
+        <ViewOptionRow
+          active={highlightsEnabled}
+          onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+          icon={<Highlighter size={13} />}
+          label={t('library.glossaryHighlightToggle')}
+        />
       )}
-    </div>
+    </ClickPopover>
   );
 }
 

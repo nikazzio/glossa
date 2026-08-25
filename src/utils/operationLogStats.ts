@@ -79,9 +79,9 @@ export interface ChunkUsageSummary {
   scopeBreakdown: ScopeBreakdownEntry[];
 }
 
-type Pricing = Record<string, { input: number; output: number }>;
+export type Pricing = Record<string, { input: number; output: number }>;
 
-interface EntryUsage {
+export interface EntryUsage {
   provider?: string;
   model?: string;
   inputTokens?: number;
@@ -90,17 +90,20 @@ interface EntryUsage {
   cacheMissInputTokens?: number;
 }
 
+// I campi tipizzati di primo livello (scritti da pipelineLogging.ts) sono la
+// fonte preferita: `meta` resta solo come fallback per entry più vecchie che
+// non li avevano ancora.
 function readUsage(entry: OperationLogEntry): EntryUsage {
   const meta = entry.meta ?? {};
   return {
-    provider: typeof meta.provider === 'string' ? meta.provider : undefined,
-    model: typeof meta.model === 'string' ? meta.model : undefined,
-    inputTokens: typeof meta.inputTokens === 'number' ? meta.inputTokens : undefined,
-    outputTokens: typeof meta.outputTokens === 'number' ? meta.outputTokens : undefined,
+    provider: entry.provider ?? (typeof meta.provider === 'string' ? meta.provider : undefined),
+    model: entry.model ?? (typeof meta.model === 'string' ? meta.model : undefined),
+    inputTokens: entry.inputTokens ?? (typeof meta.inputTokens === 'number' ? meta.inputTokens : undefined),
+    outputTokens: entry.outputTokens ?? (typeof meta.outputTokens === 'number' ? meta.outputTokens : undefined),
     cachedInputTokens:
-      typeof meta.cachedInputTokens === 'number' ? meta.cachedInputTokens : undefined,
+      entry.cachedInputTokens ?? (typeof meta.cachedInputTokens === 'number' ? meta.cachedInputTokens : undefined),
     cacheMissInputTokens:
-      typeof meta.cacheMissInputTokens === 'number' ? meta.cacheMissInputTokens : undefined,
+      entry.cacheMissInputTokens ?? (typeof meta.cacheMissInputTokens === 'number' ? meta.cacheMissInputTokens : undefined),
   };
 }
 
@@ -125,7 +128,7 @@ function categoryForEntry(entry: OperationLogEntry): OperationUsageCategory | nu
   return null;
 }
 
-function costForEntry(usage: EntryUsage, pricingOverrides: Pricing): number | null {
+export function costForEntry(usage: EntryUsage, pricingOverrides: Pricing): number | null {
   if (!usage.provider || !usage.model) return null;
   if (usage.provider === 'ollama') return 0;
   const key = `${usage.provider}/${usage.model}`;
@@ -190,8 +193,12 @@ function accumulate(
     stats.totalDurationMs += entry.durationMs;
   }
   if (usage.provider && usage.model) {
-    if (usage.provider !== 'ollama') stats.isFullyFree = false;
-    const cost = costForEntry(usage, pricingOverrides);
+    const isFree = entry.isFree ?? (usage.provider === 'ollama');
+    if (!isFree) stats.isFullyFree = false;
+    // `costUsd` è congelato al momento della scrittura con il listino allora
+    // in vigore — preferito sempre quando presente, altrimenti si ricalcola
+    // con il listino attuale (solo per entry più vecchie che non lo avevano).
+    const cost = entry.costUsd ?? costForEntry(usage, pricingOverrides);
     if (cost == null) stats.hasUnknownPricing = true;
     else stats.totalUsd += cost;
   }

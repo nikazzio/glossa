@@ -145,6 +145,10 @@ interface ChunksState {
   updateChunkTranslationForce: (chunkId: string, draft: string) => void;
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
+  bumpChunkUsageTotals: (
+    chunkId: string,
+    delta: { inputTokens: number; outputTokens: number; usd: number; durationMs: number },
+  ) => void;
   updateChunkSourceText: (chunkId: string, text: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
@@ -301,6 +305,20 @@ export const useChunksStore = create<ChunksState>((set) => ({
           : status === 'completed'
             ? { sourceEditable: false }
             : {}),
+      })),
+    })),
+
+  // Aggiornamento in-memory immediato del contatore ridondante — senza
+  // questo la UI resta ferma al valore vecchio finché il progetto non viene
+  // ricaricato dal DB, anche se la scrittura su disco è andata a buon fine.
+  bumpChunkUsageTotals: (chunkId, delta) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        totalInputTokens: (chunk.totalInputTokens ?? 0) + delta.inputTokens,
+        totalOutputTokens: (chunk.totalOutputTokens ?? 0) + delta.outputTokens,
+        totalUsd: (chunk.totalUsd ?? 0) + delta.usd,
+        totalDurationMs: (chunk.totalDurationMs ?? 0) + delta.durationMs,
       })),
     })),
 

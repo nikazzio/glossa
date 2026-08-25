@@ -29,7 +29,12 @@ import { NotesTab } from './tabs/NotesTab';
 import { GlossaryTab } from './tabs/GlossaryTab';
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory', 'references', 'promptPreview'];
+// Ordine visivo: prima quello che serve preparando la traduzione (Riferimenti,
+// Anteprima), poi quello che ha senso solo su un frammento già tradotto
+// (Audit, Memoria); Note è slegata dal ciclo e sta a parte, in coda.
+const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['references', 'promptPreview', 'audit', 'memory', 'notes'];
+const CHUNK_RAIL_TABS_BEFORE_TRANSLATION: ChunkRailTab[] = ['references', 'promptPreview'];
+const CHUNK_RAIL_TABS_AFTER_TRANSLATION: ChunkRailTab[] = ['audit', 'memory'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -109,19 +114,42 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
     promptPreview: t('document.insightsTabPromptPreview'),
   };
 
+  // Audit e Memoria hanno senso solo su un frammento già tradotto: restano
+  // visibili ma attenuati/disattivati prima, con un motivo nel tooltip.
+  // `translationLocked` è un'approvazione manuale separata (si attiva solo
+  // quando l'utente blocca/approva) — non equivale ad "è stato tradotto".
+  const isChunkTranslated = currentChunk?.status === 'completed';
+  const tabDisabledReason: Partial<Record<ChunkRailTab, string>> = {
+    audit: !isChunkTranslated ? t('document.chunkTabLockedForAudit') : undefined,
+    memory: !isChunkTranslated ? t('document.chunkTabLockedForMemory') : undefined,
+  };
+
   const activateTab = (tab: ChunkRailTab) => {
+    if (tabDisabledReason[tab]) return;
     setChunkRailTab(tab);
     tabButtonRefs.current[tab]?.focus();
+  };
+  // Le freccie/Home/End saltano i tab disattivati invece di attivarli — un tab
+  // disattivato può ricevere il focus (sa che esiste) ma non deve mai diventare
+  // quello selezionato.
+  const nextEnabledTab = (start: number, step: number): ChunkRailTab => {
+    const total = CHUNK_RAIL_TAB_ORDER.length;
+    for (let offset = 1; offset <= total; offset += 1) {
+      const candidate = CHUNK_RAIL_TAB_ORDER[(start + step * offset + total) % total];
+      if (!tabDisabledReason[candidate]) return candidate;
+    }
+    return CHUNK_RAIL_TAB_ORDER[start];
   };
   const handleTabKeyDown = (tab: ChunkRailTab, event: KeyboardEvent<HTMLButtonElement>) => {
     const idx = CHUNK_RAIL_TAB_ORDER.indexOf(tab);
     let next: ChunkRailTab | null = null;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      next = CHUNK_RAIL_TAB_ORDER[(idx - 1 + CHUNK_RAIL_TAB_ORDER.length) % CHUNK_RAIL_TAB_ORDER.length];
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      next = CHUNK_RAIL_TAB_ORDER[(idx + 1) % CHUNK_RAIL_TAB_ORDER.length];
-    else if (event.key === 'Home') next = CHUNK_RAIL_TAB_ORDER[0];
-    else if (event.key === 'End') next = CHUNK_RAIL_TAB_ORDER[CHUNK_RAIL_TAB_ORDER.length - 1];
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = nextEnabledTab(idx, -1);
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = nextEnabledTab(idx, 1);
+    else if (event.key === 'Home') next = tabDisabledReason[CHUNK_RAIL_TAB_ORDER[0]] ? nextEnabledTab(-1, 1) : CHUNK_RAIL_TAB_ORDER[0];
+    else if (event.key === 'End') {
+      const lastIdx = CHUNK_RAIL_TAB_ORDER.length - 1;
+      next = tabDisabledReason[CHUNK_RAIL_TAB_ORDER[lastIdx]] ? nextEnabledTab(lastIdx, -1) : CHUNK_RAIL_TAB_ORDER[lastIdx];
+    }
     if (next) { event.preventDefault(); activateTab(next); }
   };
 
@@ -129,24 +157,34 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
     ? `${t('document.chunkPanelTitle')} ${currentChunkIndex + 1}/${chunks.length}`
     : t('document.chunkPanelTitle');
 
+  const renderTab = (tab: ChunkRailTab) => (
+    <TabButton
+      key={tab}
+      buttonId={CHUNK_RAIL_TAB_BUTTON_IDS[tab]}
+      active={chunkRailTab === tab}
+      activeTone="success"
+      disabled={!!tabDisabledReason[tab]}
+      onClick={() => activateTab(tab)}
+      onKeyDown={(e) => handleTabKeyDown(tab, e)}
+      label={
+        tabDisabledReason[tab]
+          ? `${CHUNK_RAIL_TAB_LABEL[tab]} — ${tabDisabledReason[tab]}`
+          : CHUNK_RAIL_TAB_LABEL[tab]
+      }
+      icon={CHUNK_RAIL_TAB_ICON[tab]}
+      controls={CHUNK_RAIL_TAB_PANEL_IDS[tab]}
+      buttonRef={(el) => { tabButtonRefs.current[tab] = el; }}
+    />
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col" role="region" aria-label={chunkLabel}>
       <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
-        <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex gap-1">
-          {CHUNK_RAIL_TAB_ORDER.map((tab) => (
-            <TabButton
-              key={tab}
-              buttonId={CHUNK_RAIL_TAB_BUTTON_IDS[tab]}
-              active={chunkRailTab === tab}
-              activeTone="success"
-              onClick={() => activateTab(tab)}
-              onKeyDown={(e) => handleTabKeyDown(tab, e)}
-              label={CHUNK_RAIL_TAB_LABEL[tab]}
-              icon={CHUNK_RAIL_TAB_ICON[tab]}
-              controls={CHUNK_RAIL_TAB_PANEL_IDS[tab]}
-              buttonRef={(el) => { tabButtonRefs.current[tab] = el; }}
-            />
-          ))}
+        <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex flex-1 items-center gap-1">
+          {CHUNK_RAIL_TABS_BEFORE_TRANSLATION.map(renderTab)}
+          <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+          {CHUNK_RAIL_TABS_AFTER_TRANSLATION.map(renderTab)}
+          <div className="ml-auto">{renderTab('notes')}</div>
         </div>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
         <span className="font-display text-sm italic text-editorial-ink">{CHUNK_RAIL_TAB_LABEL[chunkRailTab]}</span>

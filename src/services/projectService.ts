@@ -75,6 +75,10 @@ export interface SavedTranslation {
   blob_order?: number | null;
   blob_reference_chunk_ids?: string | null;
   created_at: string;
+  total_input_tokens?: number | null;
+  total_output_tokens?: number | null;
+  total_usd?: number | null;
+  total_duration_ms?: number | null;
 }
 
 // ── Projects CRUD ────────────────────────────────────────────────────

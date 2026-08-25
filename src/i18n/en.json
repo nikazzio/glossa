@@ -1354,7 +1354,10 @@
     "watchdogCancel": "Cancel & retry",
     "insightsTabMemory": "Memory",
     "insightsTabReferences": "References",
-    "insightsTabPromptPreview": "Preview"
+    "insightsTabPromptPreview": "Preview",
+    "viewOptions": "View options",
+    "chunkTabLockedForAudit": "Available after the chunk is translated",
+    "chunkTabLockedForMemory": "Available after the chunk is translated"
   },
   "promptPreview": {
     "title": "Message preview",
@@ -1439,7 +1442,7 @@
       "title": "Features",
       "intro": "Reference of the most important areas of the interface. Each entry describes what it does, where it lives, and when it's useful.",
       "documentWorkspaceTitle": "Document workspace",
-      "documentWorkspaceDesc": "The primary mode of the app. After importing a document, the workspace shows the current chunk on two side-by-side pages: source text on the left, candidate translation on the right. Above the document are stage states, chunk indicators and, when available, current-chunk tokens and cost. Previous/next arrows live in the left rail; the right Insight panel contains index, search, statistics, coherence, and glossary. This mode is also used for a single chunk.",
+      "documentWorkspaceDesc": "The primary mode of the app. After importing a document, the workspace shows the current chunk on two side-by-side pages: source text on the left, candidate translation on the right. The left rail holds chunk navigation, pipeline stage states next to the translate button, and, when available, the cost estimate and the current chunk's real usage. Above the document are the chunk indicators and a view-options button; the right Insight panel contains index, search, statistics, coherence, and glossary. This mode is also used for a single chunk.",
       "chunkIndicatorsTitle": "Chunk indicators",
       "chunkIndicatorsDesc": "Every circle is clickable. Its central mark distinguishes ready, processing, completed, and error. The four corner signals mean: unresolved audit issues at top left, notes at top right, locked translation at bottom left, and translation needing an update after a source edit at bottom right. The triangle underneath marks the current chunk. Hover or use the keyboard to read the complete summary and counts.",
       "documentToolsTitle": "Editor tools",
@@ -1447,7 +1450,7 @@
       "markdownToolsTitle": "Markdown toolbar",
       "markdownToolsDesc": "The menu button ⋮ in the controls row opens the Markdown toolbar: write/preview/split modes, text size, and formatting buttons (bold, italic, headings, lists, note). The ? button opens this guide. All text controls are in this menu.",
       "insightsTitle": "Insights panel",
-      "insightsDesc": "The panel on the right of the project: gathers the Index, Search, Stats, Coherence, and Glossary tabs for whole-document metrics and search. Information about the selected fragment (Audit, Notes, Memory) lives instead in the left rail, next to the pipeline controls.",
+      "insightsDesc": "The panel on the right of the project: gathers the Index, Search, Stats, Coherence, and Glossary tabs for whole-document metrics and search. Information about the selected fragment (References, Preview, Audit, Memory, Notes) lives instead in the left rail, next to the pipeline controls: Audit and Memory only turn on once the fragment has been translated.",
       "statsTitle": "Session stats",
       "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and cache hit rate for the current session. The breakdown is per operation — each pipeline stage (e.g. Translation, Refine, Format), Audit, and Coherence — showing the model used and the percentage of tokens served from cache for each.",
       "operationsLogTitle": "Structured operations log",

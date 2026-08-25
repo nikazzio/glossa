@@ -128,6 +128,16 @@ interface DbOperationLogRow {
   phase: string | null;
   duration_ms: number | null;
   detail_kind: string | null;
+  provider: string | null;
+  model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cached_input_tokens: number | null;
+  cache_miss_input_tokens: number | null;
+  cost_usd: number | null;
+  is_free: number | null;
+  attempt_number: number | null;
+  max_attempts: number | null;
 }
 
 export interface PersistedLogEntry {
@@ -143,34 +153,90 @@ export interface PersistedLogEntry {
   phase?: string;
   durationMs?: number;
   detailKind?: string;
+  provider?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
+  costUsd?: number;
+  isFree?: boolean;
+  attemptNumber?: number;
+  maxAttempts?: number;
 }
 
+export interface ChunkUsageBump {
+  chunkId: string;
+  inputTokens: number;
+  outputTokens: number;
+  usd: number;
+  durationMs: number;
+}
+
+/**
+ * `chunkUsageBump` viene scritto nella STESSA transazione del log — se una
+ * delle due scritture andasse persa, il numero ridondante sul frammento e il
+ * dettaglio nei log divergerebbero senza nessun segnale. Un'unica
+ * transazione le rende indivisibili: o vanno a buon fine insieme, o nessuna
+ * delle due.
+ */
 export async function saveOperationLogEntry(
   projectId: string,
   pipelineId: string,
   entry: PersistedLogEntry,
+  chunkUsageBump?: ChunkUsageBump,
 ): Promise<void> {
-  await execute(
-    `INSERT OR IGNORE INTO operation_logs
-       (id, project_id, pipeline_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-    [
-      entry.id,
-      projectId,
-      pipelineId,
-      entry.at,
-      entry.level,
-      entry.scope,
-      entry.message,
-      entry.chunkId ?? null,
-      entry.stageId ?? null,
-      entry.meta ? JSON.stringify(entry.meta) : null,
-      entry.detail ? entry.detail.slice(0, MAX_DETAIL_LENGTH) : null,
-      entry.phase ?? null,
-      entry.durationMs ?? null,
-      entry.detailKind ?? null,
-    ],
-  );
+  await runInTransaction(async (run) => {
+    await run(
+      `INSERT OR IGNORE INTO operation_logs
+         (id, project_id, pipeline_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind,
+          provider, model, input_tokens, output_tokens, cached_input_tokens, cache_miss_input_tokens, cost_usd, is_free, attempt_number, max_attempts)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+      [
+        entry.id,
+        projectId,
+        pipelineId,
+        entry.at,
+        entry.level,
+        entry.scope,
+        entry.message,
+        entry.chunkId ?? null,
+        entry.stageId ?? null,
+        entry.meta ? JSON.stringify(entry.meta) : null,
+        entry.detail ? entry.detail.slice(0, MAX_DETAIL_LENGTH) : null,
+        entry.phase ?? null,
+        entry.durationMs ?? null,
+        entry.detailKind ?? null,
+        entry.provider ?? null,
+        entry.model ?? null,
+        entry.inputTokens ?? null,
+        entry.outputTokens ?? null,
+        entry.cachedInputTokens ?? null,
+        entry.cacheMissInputTokens ?? null,
+        entry.costUsd ?? null,
+        entry.isFree == null ? null : entry.isFree ? 1 : 0,
+        entry.attemptNumber ?? null,
+        entry.maxAttempts ?? null,
+      ],
+    );
+    if (chunkUsageBump) {
+      await run(
+        `UPDATE translations
+         SET total_input_tokens  = total_input_tokens  + $1,
+             total_output_tokens = total_output_tokens + $2,
+             total_usd           = total_usd           + $3,
+             total_duration_ms   = total_duration_ms   + $4
+         WHERE id = $5`,
+        [
+          chunkUsageBump.inputTokens,
+          chunkUsageBump.outputTokens,
+          chunkUsageBump.usd,
+          chunkUsageBump.durationMs,
+          chunkUsageBump.chunkId,
+        ],
+      );
+    }
+  });
 }
 
 export async function loadOperationLogs(projectId: string, pipelineId: string): Promise<PersistedLogEntry[]> {
@@ -191,6 +257,16 @@ export async function loadOperationLogs(projectId: string, pipelineId: string): 
     ...(row.phase && VALID_PHASES.has(row.phase) ? { phase: row.phase } : {}),
     ...(row.duration_ms != null ? { durationMs: row.duration_ms } : {}),
     ...(row.detail_kind && VALID_DETAIL_KINDS.has(row.detail_kind) ? { detailKind: row.detail_kind } : {}),
+    ...(row.provider ? { provider: row.provider } : {}),
+    ...(row.model ? { model: row.model } : {}),
+    ...(row.input_tokens != null ? { inputTokens: row.input_tokens } : {}),
+    ...(row.output_tokens != null ? { outputTokens: row.output_tokens } : {}),
+    ...(row.cached_input_tokens != null ? { cachedInputTokens: row.cached_input_tokens } : {}),
+    ...(row.cache_miss_input_tokens != null ? { cacheMissInputTokens: row.cache_miss_input_tokens } : {}),
+    ...(row.cost_usd != null ? { costUsd: row.cost_usd } : {}),
+    ...(row.is_free != null ? { isFree: row.is_free === 1 } : {}),
+    ...(row.attempt_number != null ? { attemptNumber: row.attempt_number } : {}),
+    ...(row.max_attempts != null ? { maxAttempts: row.max_attempts } : {}),
   }));
 }
 

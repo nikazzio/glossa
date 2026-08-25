@@ -26,7 +26,8 @@ use **Test** on one representative chunk before starting a batch.
 | Import and preview | Source text, segmentation, initial chunks | Before creating the active chunk list |
 | Pipeline config | Languages, providers, models, prompts, glossary | Before Test and before long batches |
 | Document view | Current chunk, output, states, runs | During translation and review |
-| Insights panel | Audit, notes, statistics, coherence | During quality control and chunk closure |
+| Chunk rail | References, Preview, Audit, Memory, Notes | During quality control and chunk closure |
+| Insights panel | Index, search, statistics, coherence, glossary | On the whole document, at any stage |
 
 ## DeepL Hybrid Mode
 
