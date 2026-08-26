@@ -138,8 +138,11 @@ pub(crate) async fn record_pages(
         .collect();
 
     ctx.with_database(move |conn| {
+        let tx = conn
+            .unchecked_transaction()
+            .map_err(|error| format!("apertura transazione pagine logiche: {error}"))?;
         for (id, position, label, canvas_url) in &pages {
-            conn.execute(
+            tx.execute(
                 "INSERT INTO source_pages (id, source_version_id, position, label, canvas_url) \
                  VALUES (?1, ?2, ?3, ?4, ?5) \
                  ON CONFLICT(id) DO UPDATE SET \
@@ -150,7 +153,8 @@ pub(crate) async fn record_pages(
             )
             .map_err(|error| format!("pagina logica {position}: {error}"))?;
         }
-        Ok(())
+        tx.commit()
+            .map_err(|error| format!("commit pagine logiche: {error}"))
     })
     .await
     .map_err(|error| JobError::new(ErrorKind::Storage, error))

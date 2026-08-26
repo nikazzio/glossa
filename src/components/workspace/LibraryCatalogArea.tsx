@@ -75,9 +75,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   }, [itemId, loadDetail]);
 
   useEffect(() => {
-    void listIIIFProviders().then((list) =>
-      setProviders(list.map((provider) => ({ key: provider.key, label: provider.label }))),
-    );
+    void listIIIFProviders()
+      .then((list) =>
+        setProviders(list.map((provider) => ({ key: provider.key, label: provider.label }))),
+      )
+      .catch(() => setProviders([]));
   }, []);
 
   const filteredCatalog = filterLibraryCatalog(catalog, filters);

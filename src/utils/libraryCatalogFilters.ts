@@ -21,7 +21,9 @@ export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
 };
 
 export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
-  return Object.values(filters).some((value) => value !== '');
+  return filters.query.trim() !== '' || Object.entries(filters).some(
+    ([key, value]) => key !== 'query' && value !== '',
+  );
 }
 
 /**
