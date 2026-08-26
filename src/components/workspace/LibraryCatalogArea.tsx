@@ -25,15 +25,22 @@ import { confirm } from '../../stores/confirmStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
 import { versionInventory } from '../../services/inventoryService';
+import { listIIIFProviders } from '../../services/iiifProviderService';
 import {
   deleteVersionFiles,
   freeVersionPages,
   summarizeAvailability,
 } from '../../services/vaultService';
 import { SourceSizeCap } from './SourceSizeCap';
+import { LibraryFilterBar } from './LibraryFilterBar';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { enqueueOptimization } from '../../services/optimizeService';
+import {
+  EMPTY_LIBRARY_FILTERS,
+  filterLibraryCatalog,
+  libraryLanguageOptions,
+} from '../../utils/libraryCatalogFilters';
 import type { LibraryCatalogEntry, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -56,6 +63,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     (state) =>
       state.jobs.filter((job) => job.jobType === 'source_download' && isTerminal(job)).length,
   );
+  const [filters, setFilters] = useState(EMPTY_LIBRARY_FILTERS);
+  const [providers, setProviders] = useState<{ key: string; label: string }[]>([]);
 
   useEffect(() => {
     void loadCatalog();
@@ -64,6 +73,17 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   useEffect(() => {
     if (itemId) void loadDetail(itemId);
   }, [itemId, loadDetail]);
+
+  useEffect(() => {
+    void listIIIFProviders().then((list) =>
+      setProviders(list.map((provider) => ({ key: provider.key, label: provider.label }))),
+    );
+  }, []);
+
+  const filteredCatalog = filterLibraryCatalog(catalog, filters);
+  const providerOptions = providers.filter((provider) =>
+    catalog.some((entry) => entry.providerKey === provider.key),
+  );
 
   const toggleLink = async (sourceId: string, workspaceId: string, linked: boolean) => {
     try {
@@ -82,7 +102,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         <div className="px-5 py-5 md:px-6">
           <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">{detail.source.title}</h1>
           <dl className="mt-4 space-y-2 text-sm text-editorial-muted">
-            <div><dt className="inline text-editorial-muted">{t('areas.library.kind')}</dt><dd className="inline pl-2 text-editorial-ink">{detail.source.kind}</dd></div>
+            <div><dt className="inline text-editorial-muted">{t('areas.library.kind')}</dt><dd className="inline pl-2 text-editorial-ink">{t(`areas.library.kindLabels.${detail.source.kind}`)}</dd></div>
             {detail.versions.map((version) => (
               <div key={version.id}><dt className="inline text-editorial-muted">{version.label}</dt><dd className="inline pl-2 text-editorial-ink">{version.sourceUrl}</dd></div>
             ))}
@@ -147,12 +167,23 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         </div>
       </div>
 
+      {catalog.length > 0 && (
+        <LibraryFilterBar
+          filters={filters}
+          onChange={setFilters}
+          languageOptions={libraryLanguageOptions(catalog)}
+          providerOptions={providerOptions}
+        />
+      )}
+
       {catalog.length === 0 ? (
         <EmptyState
           icon={<BookOpenText size={20} />}
           message={t('areas.library.empty')}
           hint={t('areas.library.emptyHint')}
         />
+      ) : filteredCatalog.length === 0 ? (
+        <EmptyState icon={<BookOpenText size={20} />} message={t('areas.library.filters.noMatches')} />
       ) : (
         <div
           className={
@@ -161,7 +192,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
           }
         >
-          {catalog.map((entry) => (
+          {filteredCatalog.map((entry) => (
             <CatalogEntryRow
               key={entry.source.id}
               entry={entry}
