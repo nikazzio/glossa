@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
@@ -44,10 +44,24 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
     principal?.missing ?? 0,
   );
 
-  const providerKey = async () =>
-    (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
-    entry.providerKey ??
-    'generic';
+  // La chiave della biblioteca sta nel deposito: chiederla al motore a ogni
+  // comando significa un viaggio in più per ogni click, e per la stessa copia
+  // la risposta non cambia. Si chiede una volta e si tiene, finché la scheda
+  // guarda la stessa copia.
+  const cachedProviderKey = useRef<{ signature: string; key: string } | null>(null);
+  const providerKey = async () => {
+    // La chiave vale per **questa** copia e per la provenienza che dichiara:
+    // se una delle due cambia, quella tenuta non vale più.
+    const signature = `${entry.versionId ?? ''}:${entry.providerKey ?? ''}`;
+    const cached = cachedProviderKey.current;
+    if (cached && cached.signature === signature) return cached.key;
+    const key =
+      (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
+      entry.providerKey ??
+      'generic';
+    cachedProviderKey.current = { signature, key };
+    return key;
+  };
 
   const startDownload = async () => {
     if (!entry.manifestUrl) return;
@@ -108,12 +122,19 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
     }
   };
 
-  /** La cancellazione vera delle pagine, senza chiedere: la domanda la fa chi
-   *  chiama, perché arriva da due strade diverse (comando diretto e
-   *  archiviazione). */
-  const runFreeSpace = async () => {
+  /**
+   * La cancellazione vera delle pagine, senza chiedere: la domanda la fa chi
+   * chiama, perché arriva da due strade diverse (comando diretto e
+   * archiviazione).
+   *
+   * `trackBusy` è spento quando la riga può essere già sparita dall'elenco —
+   * dopo l'archiviazione, se la vista nasconde le archiviate: segnare
+   * «occupato» su una riga che non c'è più significa scrivere su un componente
+   * smontato.
+   */
+  const runFreeSpace = async (trackBusy = true) => {
     if (!entry.versionId) return;
-    setBusy(true);
+    if (trackBusy) setBusy(true);
     try {
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
@@ -126,7 +147,7 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
       }
       toast.error(t('areas.library.freeSpaceFailed'), { description: reason });
     } finally {
-      setBusy(false);
+      if (trackBusy) setBusy(false);
     }
   };
 
@@ -148,7 +169,14 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
    */
   const toggleArchived = async () => {
     if (archived) {
-      await handlers.onSetArchived(false);
+      // Anche riportare in catalogo tiene i comandi spenti finché non è
+      // finito: due click di seguito sarebbero due richieste.
+      setBusy(true);
+      try {
+        await handlers.onSetArchived(false);
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     setBusy(true);
@@ -164,7 +192,7 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
       confirmLabel: t('areas.library.freeSpaceConfirm'),
       danger: true,
     });
-    if (alsoFree) await runFreeSpace();
+    if (alsoFree) await runFreeSpace(false);
   };
 
   const optimise = async () => {

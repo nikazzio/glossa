@@ -79,6 +79,14 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const openSource = (sourceId: string) => navigate(libraryLocation({ itemId: sourceId, workspaceFilter }));
   const openCatalogue = () => navigate(libraryLocation({ workspaceFilter }));
 
+  /** Si torna al catalogo **dopo** che l'opera è sparita davvero: navigare
+   *  prima farebbe intravedere l'opera ancora in elenco, come se la rimozione
+   *  non avesse funzionato. */
+  const removeAndLeave = async (sourceId: string) => {
+    await removeSource(sourceId);
+    openCatalogue();
+  };
+
   const archive = async (sourceId: string, archived: boolean) => {
     try {
       await setArchived(sourceId, archived);
@@ -107,10 +115,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         entry={catalog.find((item) => item.source.id === itemId)}
         workspaces={workspaces}
         onBack={openCatalogue}
-        onRemoved={() => {
-          void removeSource(itemId);
-          openCatalogue();
-        }}
+        onRemoved={() => void removeAndLeave(itemId)}
         onSetArchived={(archived) => archive(itemId, archived)}
         onRefresh={() => void loadCatalog()}
         onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
