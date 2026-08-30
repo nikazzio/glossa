@@ -10,6 +10,16 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 const mockListProviders = vi.fn();
 const mockDiscover = vi.fn();
 
+const RESULT_EXTRAS = {
+  itemCount: null,
+  contributors: [],
+  publisher: null,
+  rights: [],
+  physicalDescription: null,
+  holdingInstitution: null,
+  catalogUrl: null,
+};
+
 vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: () => mockListProviders(),
   discoverIIIF: (...args: unknown[]) => mockDiscover(...args),
@@ -55,8 +65,8 @@ describe('SourceDiscoveryPanel', () => {
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
       results: [
-        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
-        { id: 'two', title: 'Second source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/two' },
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/one' },
+        { id: 'two', title: 'Second source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/two' },
       ],
     });
     const user = userEvent.setup();
@@ -74,12 +84,47 @@ describe('SourceDiscoveryPanel', () => {
     expect(second).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('shows every metadata field when a list row expands, not just title and author', async () => {
+    useUiStore.setState({ discoveryResultsPerRow: 'list' });
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'gallica', manifest: null, hasMore: false,
+      results: [{
+        id: 'bpt6k3282120', title: 'Le guidon des capitaines', creator: 'Strozzi, Filippo', date: '1610',
+        description: null, thumbnailUrl: null, mediaType: null, collection: null, language: 'fre', volume: null,
+        subjects: [], itemCount: null,
+        contributors: ['Cavalcabo, Girolamo', 'Villamont, Jacques de. Traducteur'],
+        publisher: 'Claude Le Villain (Rouen)',
+        rights: ['domaine public'],
+        physicalDescription: '23-[1 bl.] p. ; in-12',
+        holdingInstitution: 'Bibliothèque nationale de France, V-22944',
+        catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+        manifestUrl: 'https://gallica.bnf.fr/iiif/ark:/12148/bpt6k3282120/manifest.json',
+      }],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'cavalcabo');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await user.click(await screen.findByRole('button', { name: /Le guidon des capitaines/ }));
+
+    expect(screen.getByText('Cavalcabo, Girolamo · Villamont, Jacques de. Traducteur')).toBeInTheDocument();
+    expect(screen.getByText('Claude Le Villain (Rouen)')).toBeInTheDocument();
+    expect(screen.getByText('domaine public')).toBeInTheDocument();
+    expect(screen.getByText('23-[1 bl.] p. ; in-12')).toBeInTheDocument();
+    expect(screen.getByText('Bibliothèque nationale de France, V-22944')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /cb33412414z/ })).toHaveAttribute(
+      'href',
+      'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+    );
+  });
+
   it('adds a result to the library and then shows it as already added', async () => {
     const libraryService = await import('../../services/libraryService');
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
       results: [
-        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/one' },
       ],
     });
     const user = userEvent.setup();
@@ -104,7 +149,7 @@ describe('SourceDiscoveryPanel', () => {
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
       results: [
-        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/one' },
       ],
     });
     const user = userEvent.setup();
@@ -124,7 +169,7 @@ describe('SourceDiscoveryPanel', () => {
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
       results: [
-        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], manifestUrl: 'https://example.test/one' },
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/one' },
       ],
     });
     const user = userEvent.setup();
@@ -156,6 +201,7 @@ describe('risultati doppi dai cataloghi', () => {
     language: null,
     volume: null,
     subjects: [],
+    ...RESULT_EXTRAS,
     manifestUrl: `https://example.test/${id}`,
   });
 

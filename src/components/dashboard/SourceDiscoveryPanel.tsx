@@ -125,6 +125,21 @@ interface CardViewProps {
  * Solo `span`: la griglia vive dentro il `button` di espansione della scheda,
  * che ammette esclusivamente phrasing content — `dl`/`dt`/`dd` (come `div` o
  * `p`) sono flow content e renderebbero il markup non valido. */
+/** Etichetta sopra, valore sotto: vive dentro un `div` (flow content), non nel
+ * `button` della scheda a griglia. Niente larghezza fissa né riga unica per
+ * l'etichetta — le traduzioni più lunghe («Altri responsabili», «Descrizione
+ * fisica») andavano a capo sopra il valore, non sopra se stesse, e finivano
+ * per scriverci sopra. I valori più lunghi (fondo di conservazione,
+ * descrizione fisica) vanno a capo invece di uscire dal riquadro. */
+function ListStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</p>
+      <p className="mt-0.5 break-words font-display text-sm italic text-editorial-ink">{value}</p>
+    </div>
+  );
+}
+
 function DataStat({ label, value }: { label: string; value: string }) {
   return (
     <span className="flex min-w-0 items-baseline gap-2">
@@ -132,6 +147,33 @@ function DataStat({ label, value }: { label: string; value: string }) {
       <span className="min-w-0 truncate font-display text-sm italic text-editorial-ink">{value}</span>
     </span>
   );
+}
+
+/** Tutte le informazioni disponibili per una scheda, etichetta/valore: le
+ * stesse per la vista a griglia e per la vista a elenco, così espandere l'una
+ * o l'altra non fa vedere cose diverse. */
+function sourceStats(
+  card: SourceCard,
+  t: (key: string) => string,
+  { includeCatalogUrl = true }: { includeCatalogUrl?: boolean } = {},
+): Array<[string, string]> {
+  return [
+    card.creator && [t('dashboard.discovery.by'), card.creator],
+    !isManifest(card) && card.contributors.length > 0 && [t('dashboard.discovery.contributors'), card.contributors.join(' · ')],
+    card.date && [t('dashboard.discovery.published'), card.date],
+    !isManifest(card) && card.publisher && [t('dashboard.discovery.publisher'), card.publisher],
+    card.language && [t('dashboard.discovery.language'), card.language],
+    card.volume && [t('dashboard.discovery.volume'), card.volume],
+    !isManifest(card) && card.mediaType && [t('dashboard.discovery.type'), card.mediaType],
+    isManifest(card) && card.materialType && [t('dashboard.discovery.type'), card.materialType],
+    !isManifest(card) && card.collection && [t('dashboard.discovery.collection'), card.collection],
+    card.itemCount !== null && [t('dashboard.discovery.pages'), String(card.itemCount)],
+    !isManifest(card) && card.physicalDescription && [t('dashboard.discovery.physicalDescription'), card.physicalDescription],
+    card.subjects.length > 0 && [t('dashboard.discovery.subjects'), card.subjects.join(' · ')],
+    !isManifest(card) && card.rights.length > 0 && [t('dashboard.discovery.rights'), card.rights.join(' · ')],
+    !isManifest(card) && card.holdingInstitution && [t('dashboard.discovery.holdingInstitution'), card.holdingInstitution],
+    includeCatalogUrl && !isManifest(card) && card.catalogUrl && [t('dashboard.discovery.catalogUrl'), card.catalogUrl],
+  ].filter((entry): entry is [string, string] => Boolean(entry));
 }
 
 function SourceCardView({ card, providerKey, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
@@ -147,17 +189,7 @@ function SourceCardView({ card, providerKey, providerLabel, expanded, width, onT
     pages,
   ].filter(Boolean).join(' · ');
 
-  const stats: Array<[string, string]> = [
-    card.creator && [t('dashboard.discovery.by'), card.creator],
-    card.date && [t('dashboard.discovery.published'), card.date],
-    card.language && [t('dashboard.discovery.language'), card.language],
-    card.volume && [t('dashboard.discovery.volume'), card.volume],
-    !isManifest(card) && card.mediaType && [t('dashboard.discovery.type'), card.mediaType],
-    isManifest(card) && card.materialType && [t('dashboard.discovery.type'), card.materialType],
-    !isManifest(card) && card.collection && [t('dashboard.discovery.collection'), card.collection],
-    card.itemCount !== null && [t('dashboard.discovery.pages'), String(card.itemCount)],
-    card.subjects.length > 0 && [t('dashboard.discovery.subjects'), card.subjects.join(' · ')],
-  ].filter((entry): entry is [string, string] => Boolean(entry));
+  const stats = sourceStats(card, t);
 
   return (
     <motion.article
@@ -216,6 +248,10 @@ function SourceCardView({ card, providerKey, providerLabel, expanded, width, onT
 function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'width' | 'providerKey'>) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
+  // Il collegamento al catalogo cartaceo è un indirizzo vero: si apre, non si
+  // legge come le altre etichette.
+  const catalogUrl = !isManifest(card) ? card.catalogUrl : null;
+  const stats = sourceStats(card, t, { includeCatalogUrl: false });
 
   return (
     <motion.article layout transition={{ duration: 0.28, ease: EASE_EDITORIAL }} className="border-b border-editorial-border/70">
@@ -246,9 +282,26 @@ function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
-            <div className="pb-3 pl-1 pr-3">
+            <div className="space-y-3 pb-3 pl-1 pr-3">
               {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80">{card.description}</p>}
-              {card.subjects.length > 0 && <p className="mt-2 text-xs leading-relaxed text-editorial-muted"><span className="text-editorial-ink">{t('dashboard.discovery.subjects')}:</span> {card.subjects.join(' · ')}</p>}
+              {stats.length > 0 && (
+                <div className="grid grid-cols-1 gap-y-2">
+                  {stats.map(([label, value]) => <ListStat key={label} label={label} value={value} />)}
+                </div>
+              )}
+              {catalogUrl && (
+                <div className="min-w-0">
+                  <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('dashboard.discovery.catalogUrl')}</p>
+                  <a
+                    href={catalogUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-0.5 block break-words font-display text-sm italic text-editorial-accent underline underline-offset-2"
+                  >
+                    {catalogUrl}
+                  </a>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

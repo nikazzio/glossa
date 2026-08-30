@@ -65,6 +65,17 @@ export interface IIIFDiscoveryResult {
   /** Quante pagine, quando la biblioteca lo dichiara nella ricerca. */
   itemCount: number | null;
   manifestUrl: string;
+  /** Autori, curatori o traduttori oltre al primo (`creator`). */
+  contributors: string[];
+  publisher: string | null;
+  /** Licenza o stato del diritto d'autore, spesso più di una dichiarazione. */
+  rights: string[];
+  /** Descrizione fisica del documento (supporto, misure): non è `mediaType`. */
+  physicalDescription: string | null;
+  /** Fondo e segnatura presso l'istituto che conserva l'originale. */
+  holdingInstitution: string | null;
+  /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
+  catalogUrl: string | null;
 }
 
 export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
@@ -128,6 +139,17 @@ export interface AddSourceToLibraryInput {
   /** Pagine dichiarate dal manifesto, quando la ricerca le ha già lette. */
   itemCount: number | null;
   workspaceId?: string;
+  /** Autori, curatori o traduttori oltre al primo (`creator`). */
+  contributors: string[];
+  publisher: string | null;
+  /** Licenza o stato del diritto d'autore, spesso più di una dichiarazione. */
+  rights: string[];
+  /** Descrizione fisica del documento (supporto, misure): non è `mediaType`. */
+  physicalDescription: string | null;
+  /** Fondo e segnatura presso l'istituto che conserva l'originale. */
+  holdingInstitution: string | null;
+  /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
+  catalogUrl: string | null;
 }
 
 /** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */
@@ -223,6 +245,20 @@ export interface LibrarySourceDetail {
   /** Solo i campi corretti a mano, col valore che aveva dato la biblioteca. */
   original: SourceFieldValues;
   collections: { id: string; name: string }[];
+  language: string | null;
+  subjects: string[];
+  publisher: string | null;
+  volume: string | null;
+  /** Autori, curatori o traduttori oltre al primo (`creator`). */
+  contributors: string[];
+  /** Licenza o stato del diritto d'autore, spesso più di una dichiarazione. */
+  rights: string[];
+  /** Descrizione fisica del documento (supporto, misure): non è il tipo di materiale. */
+  physicalDescription: string | null;
+  /** Fondo e segnatura presso l'istituto che conserva l'originale. */
+  holdingInstitution: string | null;
+  /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
+  catalogUrl: string | null;
 }
 
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';

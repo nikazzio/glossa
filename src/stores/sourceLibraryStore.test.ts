@@ -15,6 +15,18 @@ vi.mock('../services/libraryService', () => ({
 const { useSourceLibraryStore } = await import('./sourceLibraryStore');
 const service = await import('../services/libraryService');
 
+const EMPTY_DETAIL_METADATA = {
+  language: null,
+  subjects: [],
+  publisher: null,
+  volume: null,
+  contributors: [],
+  rights: [],
+  physicalDescription: null,
+  holdingInstitution: null,
+  catalogUrl: null,
+};
+
 const manifestCard: IIIFManifestPreview & { id: string } = {
   id: 'https://iiif.example.test/manifest.json',
   manifestUrl: 'https://iiif.example.test/manifest.json',
@@ -85,6 +97,7 @@ describe('sourceLibraryStore', () => {
       date: null,
       original: {},
       collections: [],
+      ...EMPTY_DETAIL_METADATA,
     });
 
     await useSourceLibraryStore.getState().loadDetail('s1');
@@ -102,6 +115,7 @@ describe('sourceLibraryStore', () => {
       date: null,
       original: {},
       collections: [],
+      ...EMPTY_DETAIL_METADATA,
     });
     useSourceLibraryStore.setState({
       detail: {
@@ -112,6 +126,7 @@ describe('sourceLibraryStore', () => {
       date: null,
       original: {},
       collections: [],
+      ...EMPTY_DETAIL_METADATA,
       },
     });
 
@@ -146,6 +161,12 @@ describe('classifySourceKind', () => {
     subjects: [],
     itemCount: null,
     manifestUrl: 'https://example.test/r1',
+    contributors: [],
+    publisher: null,
+    rights: [],
+    physicalDescription: null,
+    holdingInstitution: null,
+    catalogUrl: null,
     ...overrides,
   });
 

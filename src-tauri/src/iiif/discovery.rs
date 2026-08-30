@@ -55,6 +55,22 @@ pub struct DiscoveryResult {
     /// cui si decide se scaricare un'opera, e va visto prima di aprirla.
     pub item_count: Option<usize>,
     pub manifest_url: String,
+    /// Autori, curatori o traduttori oltre al primo (`creator`). Le
+    /// biblioteche che dichiarano più di un responsabile li perdevano tutti
+    /// tranne il primo.
+    pub contributors: Vec<String>,
+    pub publisher: Option<String>,
+    /// Licenza o stato del diritto d'autore, quando la biblioteca lo dichiara
+    /// (spesso più di una forma della stessa dichiarazione, es. in due lingue).
+    pub rights: Vec<String>,
+    /// Descrizione fisica del documento (supporto, misure, numero di carte):
+    /// non è il tipo di materiale (`media_type`), è la scheda catalografica.
+    pub physical_description: Option<String>,
+    /// Fondo e segnatura presso l'istituto che conserva l'originale.
+    pub holding_institution: Option<String>,
+    /// Collegamento alla scheda del catalogo cartaceo/archivistico, quando
+    /// distinta dalla pagina di lettura online.
+    pub catalog_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -80,6 +96,15 @@ pub struct SearchPage {
 fn client() -> Result<Client, String> {
     Client::builder()
         .timeout(Duration::from_secs(15))
+        // Alcune biblioteche (la Vaticana fra queste) rifiutano le richieste
+        // che non sembrano un browser vero, e la ricerca vive di una sessione
+        // aperta dalla pagina prima: senza né l'uno né l'altra, la ricerca
+        // libera falliva sempre, la lettura diretta di un manifesto no.
+        .user_agent(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 \
+             (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
+        .cookie_store(true)
         .build()
         .map_err(|error| error.to_string())
 }
@@ -235,6 +260,53 @@ async fn resolve_manifest(
     Ok(manifest_preview(manifest_url, value))
 }
 
+/// Completa un risultato di ricerca leggendo il suo manifesto, per le
+/// biblioteche la cui pagina di ricerca non porta già autore, data e lingua
+/// (una pagina scarsa come quella della Vaticana, non un servizio come l'SRU
+/// di Gallica che li dà da sé). Uguale per qualunque biblioteca: chi ha già
+/// tutto non fa nessuna richiesta in più, chi ha solo titolo e copertina
+/// prende il resto dal manifesto che comunque cerca per aprire l'opera.
+///
+/// Un manifesto che non si legge lascia il risultato come stava: un libro
+/// scomparso non deve rompere la ricerca degli altri diciannove.
+async fn enrich_from_manifest(
+    client: &Client,
+    gate: Option<&Gate<'_>>,
+    result: DiscoveryResult,
+) -> DiscoveryResult {
+    if result.creator.is_some() {
+        return result;
+    }
+    let Ok(preview) = resolve_manifest(client, result.manifest_url.clone(), gate).await else {
+        return result;
+    };
+    DiscoveryResult {
+        creator: preview.creator,
+        date: result.date.or(preview.date),
+        language: result.language.or(preview.language),
+        volume: result.volume.or(preview.volume),
+        item_count: result.item_count.or(preview.item_count),
+        subjects: if result.subjects.is_empty() {
+            preview.subjects
+        } else {
+            result.subjects
+        },
+        ..result
+    }
+}
+
+async fn enrich_results(
+    client: &Client,
+    gate: Option<&Gate<'_>>,
+    results: Vec<DiscoveryResult>,
+) -> Vec<DiscoveryResult> {
+    let mut enriched = Vec::with_capacity(results.len());
+    for result in results {
+        enriched.push(enrich_from_manifest(client, gate, result).await);
+    }
+    enriched
+}
+
 async fn search_archive(
     client: &Client,
     query: &str,
@@ -299,6 +371,12 @@ async fn search_archive(
                 subjects: texts(document.get("subject")),
                 item_count: count(document.get("imagecount")),
                 manifest_url: format!("https://iiif.archive.org/iiif/{id}/manifest.json"),
+                contributors: Vec::new(),
+                publisher: text(document.get("publisher")),
+                rights: text(document.get("licenseurl")).into_iter().collect(),
+                physical_description: None,
+                holding_institution: None,
+                catalog_url: None,
                 id,
             })
         })
@@ -382,12 +460,22 @@ async fn discover_with(
     };
 
     if !search.results.is_empty() {
+        // Solo la Vaticana, per ora: la sua pagina di ricerca non porta
+        // autore, data o lingua, e il suo indirizzo dei manifesti è
+        // configurabile per le prove. Le altre biblioteche che cercano già
+        // danno tutto da sole (Gallica) o aspettano lo stesso trattamento in
+        // un secondo momento (e-codices).
+        let results = if provider.key == "vatican" {
+            enrich_results(client, gate, search.results).await
+        } else {
+            search.results
+        };
         return Ok(DiscoveryOutcome {
             cached_at: None,
             status: DiscoveryStatus::Results,
             provider_key: provider.key.to_string(),
             manifest: None,
-            results: search.results,
+            results,
             has_more: search.has_more,
         });
     }
@@ -500,7 +588,7 @@ pub async fn discover_iiif(
 mod tests {
     use super::*;
     use wiremock::{
-        matchers::{method, path},
+        matchers::{header, method, path, query_param},
         Mock, MockServer, ResponseTemplate,
     };
 
@@ -610,6 +698,11 @@ mod tests {
         let provider = find_provider("vatican").expect("provider exists");
         let endpoints = SearchEndpoints {
             vatican_search: format!("{}/mss/search", server.uri()),
+            // Il manifesto dei risultati di ricerca punta qui, non al vero
+            // digi.vatlib.it: senza questo la prova telefonerebbe davvero a
+            // Internet per arricchire il risultato.
+            vatican_manifest_base: server.uri(),
+            vatican_home: format!("{}/mss/", server.uri()),
             ..SearchEndpoints::default()
         };
 
@@ -619,6 +712,12 @@ mod tests {
             "https://digi.vatlib.it/iiif/MSS_Urb.lat.1779/manifest.json"
         );
 
+        // La ricerca vive di una sessione aperta da questa pagina.
+        Mock::given(method("GET"))
+            .and(path("/mss/"))
+            .respond_with(ResponseTemplate::new(200))
+            .mount(&server)
+            .await;
         // Il testo libero, invece, passa dalla ricerca della biblioteca.
         Mock::given(method("GET"))
             .and(path("/mss/search"))
@@ -629,6 +728,19 @@ mod tests {
             ))
             .mount(&server)
             .await;
+        // La pagina di ricerca non dice chi ha scritto l'opera: il risultato
+        // si arricchisce leggendo il suo manifesto, come questo finto.
+        Mock::given(method("GET"))
+            .and(path("/iiif/MSS_Vat.lat.3225/manifest.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "label": "Vergilius Vaticanus",
+                "metadata": [
+                    {"label": "Author", "value": "Publius Vergilius Maro"},
+                    {"label": "Date", "value": "sec. IV"},
+                ],
+            })))
+            .mount(&server)
+            .await;
 
         let outcome = discover_with(&Client::new(), provider, "vergilius", &endpoints, 1, None)
             .await
@@ -636,6 +748,87 @@ mod tests {
 
         assert_eq!(outcome.status, DiscoveryStatus::Results);
         assert_eq!(outcome.results[0].id, "MSS_Vat.lat.3225");
+        assert_eq!(
+            outcome.results[0].creator.as_deref(),
+            Some("Publius Vergilius Maro")
+        );
+        assert_eq!(outcome.results[0].date.as_deref(), Some("sec. IV"));
+    }
+
+    #[tokio::test]
+    async fn a_vatican_word_search_opens_a_session_before_searching() {
+        // Il sito rifiuta la ricerca come se non venisse da un browser vero
+        // quando non ha prima visto una richiesta alla pagina normale del
+        // catalogo: senza questa visita e senza dire da dove si viene, la
+        // ricerca libera falliva sempre (la lettura diretta di un manifesto,
+        // che non passa da qui, no).
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/mss/"))
+            .respond_with(ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/mss/search"))
+            .and(header("Referer", format!("{}/mss/", server.uri()).as_str()))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/"></srw:searchRetrieveResponse>"#,
+            ))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let provider = find_provider("vatican").expect("provider exists");
+        let endpoints = SearchEndpoints {
+            vatican_search: format!("{}/mss/search", server.uri()),
+            vatican_home: format!("{}/mss/", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        discover_with(&Client::new(), provider, "vergilius", &endpoints, 1, None)
+            .await
+            .expect("ricerca");
+    }
+
+    #[tokio::test]
+    async fn a_vatican_result_keeps_its_thin_data_when_its_manifest_cannot_be_read() {
+        // Un libro che è sparito dal server, o che risponde con un errore, non
+        // deve rompere la ricerca degli altri: resta con quello che la pagina
+        // di ricerca aveva già dato.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/mss/"))
+            .respond_with(ResponseTemplate::new(200))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/mss/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<div class="row-search-result-record">
+                     <a href="/mss/edition/MSS_Vat.lat.9999" class="link-search-result-record-view">Sparito</a>
+                   </div>"#,
+            ))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/iiif/MSS_Vat.lat.9999/manifest.json"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        let provider = find_provider("vatican").expect("provider exists");
+        let endpoints = SearchEndpoints {
+            vatican_search: format!("{}/mss/search", server.uri()),
+            vatican_manifest_base: server.uri(),
+            vatican_home: format!("{}/mss/", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let outcome = discover_with(&Client::new(), provider, "sparito", &endpoints, 1, None)
+            .await
+            .expect("ricerca");
+
+        assert_eq!(outcome.results[0].title, "Sparito");
+        assert_eq!(outcome.results[0].creator, None);
     }
 
     #[tokio::test]
@@ -701,5 +894,41 @@ mod tests {
             outcome.results[0].manifest_url,
             "https://gallica.bnf.fr/iiif/ark:/12148/btv1b84260335/manifest.json"
         );
+    }
+
+    #[tokio::test]
+    async fn gallica_search_uses_the_site_wide_index_not_title_only() {
+        // Il sito cerca su tutti i metadati con l'indice `gallica`: cercare
+        // solo `dc.title` perdeva le opere dove il termine compare come
+        // autore o altrove, non nel titolo.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/SRU"))
+            .and(query_param("query", "gallica all \"cavalcabo di cremona\""))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+                     <srw:numberOfRecords>0</srw:numberOfRecords>
+                   </srw:searchRetrieveResponse>"#,
+            ))
+            .mount(&server)
+            .await;
+        let provider = find_provider("gallica").expect("provider exists");
+        let endpoints = SearchEndpoints {
+            gallica_sru: format!("{}/SRU", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let outcome = discover_with(
+            &Client::new(),
+            provider,
+            "cavalcabo di cremona",
+            &endpoints,
+            1,
+            None,
+        )
+        .await
+        .expect("ricerca");
+
+        assert_eq!(outcome.status, DiscoveryStatus::NotFound);
     }
 }

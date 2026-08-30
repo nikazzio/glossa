@@ -23,6 +23,14 @@ pub struct SearchEndpoints {
     pub gallica_sru: String,
     pub vatican_search: String,
     pub ecodices_search: String,
+    /// Radice degli indirizzi dei manifesti della Vaticana: la pagina di
+    /// ricerca non dà autore, data o lingua, e i risultati vengono
+    /// arricchiti leggendo il manifesto di ognuno.
+    pub vatican_manifest_base: String,
+    /// La pagina normale del catalogo, visitata prima della ricerca: senza
+    /// prima passarci, il sito rifiuta la ricerca come se non venisse da un
+    /// browser vero.
+    pub vatican_home: String,
 }
 
 impl Default for SearchEndpoints {
@@ -32,6 +40,8 @@ impl Default for SearchEndpoints {
             gallica_sru: "https://gallica.bnf.fr/SRU".to_string(),
             vatican_search: "https://digi.vatlib.it/mss/search".to_string(),
             ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
+            vatican_manifest_base: "https://digi.vatlib.it".to_string(),
+            vatican_home: "https://digi.vatlib.it/mss/".to_string(),
         }
     }
 }
@@ -76,7 +86,10 @@ async fn gallica(
     // Le virgolette chiuderebbero la stringa della richiesta: si sostituiscono,
     // come fa il riferimento, invece di rifiutare la ricerca.
     let cleaned = query.replace('"', "'");
-    let cql = format!("dc.title all \"{cleaned}\"");
+    // `gallica all` è l'indice di ricerca generale del sito (metadati, testo,
+    // tabelle): cercare solo `dc.title` perdeva le opere dove il termine sta
+    // nell'autore o altrove, come un coautore che sul sito compare e qui no.
+    let cql = format!("gallica all \"{cleaned}\"");
 
     let _turn = super::discovery::wait_if_gated(gate, &endpoints.gallica_sru).await;
     let response = client
@@ -114,11 +127,29 @@ async fn gallica(
 struct GallicaRecord {
     identifier: Option<String>,
     title: Option<String>,
-    creator: Option<String>,
+    /// Ogni `dc:creator` che la biblioteca dichiara: quasi sempre più di uno.
+    /// Tenerne solo il primo perdeva tutti gli altri responsabili dell'opera.
+    creators: Vec<String>,
+    /// `dc:contributor`: di solito traduttori o curatori, distinti dagli
+    /// autori nella stessa scheda.
+    contributors: Vec<String>,
     date: Option<String>,
     description: Option<String>,
     language: Option<String>,
     types: Vec<String>,
+    publisher: Option<String>,
+    /// `dc:rights`, spesso ripetuto (la stessa dichiarazione in più lingue, o
+    /// diritto d'autore insieme a condizione di consultazione).
+    rights: Vec<String>,
+    /// `dc:format`, ripetuto: supporto fisico e misure in una scheda, numero
+    /// di viste in un'altra. Si tengono entrambi.
+    format: Vec<String>,
+    /// `dc:source`: fondo e segnatura presso l'istituto che conserva
+    /// l'originale, non l'editore dell'opera.
+    holding_institution: Option<String>,
+    /// `dc:relation`: spesso il collegamento alla scheda del catalogo
+    /// cartaceo/archivistico, come testo libero («Notice du catalogue : url»).
+    relation: Option<String>,
 }
 
 /// Legge la risposta SRU: quello che serve, ignorando il resto.
@@ -211,13 +242,39 @@ fn store_gallica_field(record: &mut GallicaRecord, field: &str, value: String) {
             record.identifier = Some(value);
         }
         "title" if record.title.is_none() => record.title = Some(value),
-        "creator" if record.creator.is_none() => record.creator = Some(value),
+        "creator" if !record.creators.contains(&value) => record.creators.push(value),
+        "contributor" if !record.contributors.contains(&value) => {
+            record.contributors.push(value);
+        }
         "date" if record.date.is_none() => record.date = Some(value),
         "description" if record.description.is_none() => record.description = Some(value),
         "language" if record.language.is_none() => record.language = Some(value),
         "type" => record.types.push(value),
+        "publisher" if record.publisher.is_none() => record.publisher = Some(value),
+        "rights" if !record.rights.contains(&value) => record.rights.push(value),
+        "format" if !record.format.contains(&value) => record.format.push(value),
+        "source" if record.holding_institution.is_none() => {
+            record.holding_institution = Some(value);
+        }
+        "relation" if record.relation.is_none() => record.relation = Some(value),
         _ => {}
     }
+}
+
+/// Estrae il primo indirizzo `http(s)` da un testo libero (`dc:relation` è
+/// spesso «Notice du catalogue : <url>», non un indirizzo puro). Cerca lo
+/// schema per intero (`http://`/`https://`), non solo le lettere `http`: una
+/// parola qualunque che le contenga non deve passare per un indirizzo.
+fn extract_url(text: &str) -> Option<String> {
+    let start = ["https://", "http://"]
+        .iter()
+        .filter_map(|scheme| text.find(scheme))
+        .min()?;
+    let candidate = &text[start..];
+    let end = candidate
+        .find(|c: char| c.is_whitespace())
+        .unwrap_or(candidate.len());
+    Some(candidate[..end].to_string())
 }
 
 fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
@@ -230,9 +287,12 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         "https://gallica.bnf.fr/ark:/{naan}/{}.thumbnail",
         resolved.doc_id
     );
+    let mut creators = record.creators.into_iter();
+    let creator = creators.next();
+    let contributors = creators.chain(record.contributors).collect();
     Some(DiscoveryResult {
         title: record.title.unwrap_or_else(|| resolved.doc_id.clone()),
-        creator: record.creator,
+        creator,
         date: record.date,
         description: record.description,
         thumbnail_url: Some(thumbnail),
@@ -245,6 +305,12 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         // manifesto, quando la si apre.
         item_count: None,
         manifest_url: resolved.manifest_url,
+        contributors,
+        publisher: record.publisher,
+        rights: record.rights,
+        physical_description: (!record.format.is_empty()).then(|| record.format.join("; ")),
+        holding_institution: record.holding_institution,
+        catalog_url: record.relation.as_deref().and_then(extract_url),
         id: resolved.doc_id,
     })
 }
@@ -257,10 +323,18 @@ async fn vatican(
     query: &str,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
-    let _turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_search).await;
+    // La ricerca vive di una sessione aperta da questa pagina: senza averla
+    // visitata prima, il sito la rifiuta come se non venisse da un browser
+    // vero. Un guasto qui non è motivo per rinunciare subito: la richiesta
+    // sotto proverà comunque, e dirà lei se la biblioteca non risponde.
+    let _home_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_home).await;
+    let _ = client.get(&endpoints.vatican_home).send().await;
+
+    let _search_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_search).await;
     let body = client
         .get(&endpoints.vatican_search)
         .query(&[("k_f", "0"), ("k_v", query)])
+        .header("Referer", &endpoints.vatican_home)
         .send()
         .await
         .map_err(|_| "The Vatican Library could not be reached.".to_string())?
@@ -270,7 +344,7 @@ async fn vatican(
         .await
         .map_err(|_| "The Vatican Library returned invalid data.".to_string())?;
 
-    let results = parse_vatican_results(&body);
+    let results = parse_vatican_results(&body, &endpoints.vatican_manifest_base);
     log::info!("discovery vatican search found={}", results.len());
     Ok(SearchPage {
         // La pagina di ricerca della Vaticana non dichiara un totale: si
@@ -280,7 +354,7 @@ async fn vatican(
     })
 }
 
-fn parse_vatican_results(body: &str) -> Vec<DiscoveryResult> {
+fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult> {
     let mut results = Vec::new();
     for chunk in body.split("row-search-result-record").skip(1) {
         let Some(doc_id) = between(chunk, "/mss/edition/", '"') else {
@@ -310,7 +384,13 @@ fn parse_vatican_results(body: &str) -> Vec<DiscoveryResult> {
             volume: None,
             subjects: Vec::new(),
             item_count: None,
-            manifest_url: format!("https://digi.vatlib.it/iiif/{doc_id}/manifest.json"),
+            manifest_url: format!("{manifest_base}/iiif/{doc_id}/manifest.json"),
+            contributors: Vec::new(),
+            publisher: None,
+            rights: Vec::new(),
+            physical_description: None,
+            holding_institution: None,
+            catalog_url: None,
             id: doc_id,
         });
     }
@@ -385,6 +465,12 @@ fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
             subjects: Vec::new(),
             item_count: None,
             manifest_url: resolved.manifest_url,
+            contributors: Vec::new(),
+            publisher: None,
+            rights: Vec::new(),
+            physical_description: None,
+            holding_institution: None,
+            catalog_url: None,
             id: resolved.doc_id,
         });
     }
@@ -496,6 +582,69 @@ mod tests {
     }
 
     #[test]
+    fn a_rich_gallica_record_keeps_every_author_and_the_catalog_details() {
+        // Stessa forma di una scheda vera (più autori, un contributore
+        // traduttore, editore, diritti ripetuti, formato fisico e numero di
+        // viste, fondo di conservazione, collegamento al catalogo cartaceo):
+        // prima di questa modifica solo titolo/autore/data/lingua arrivavano.
+        let body = r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:numberOfRecords>1</srw:numberOfRecords>
+  <srw:record><srw:recordData><oai_dc:dc xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Le guidon des capitaines</dc:title>
+    <dc:creator>Strozzi, Filippo. Auteur du texte</dc:creator>
+    <dc:creator>Cavalcabo, Girolamo. Auteur du texte</dc:creator>
+    <dc:contributor>Villamont, Jacques de. Traducteur</dc:contributor>
+    <dc:publisher>Claude Le Villain (Rouen)</dc:publisher>
+    <dc:date>1610</dc:date>
+    <dc:language>fre</dc:language>
+    <dc:format>23-[1 bl.]-95-[1 bl.] p. ; in-12</dc:format>
+    <dc:format>Nombre total de vues : 128</dc:format>
+    <dc:rights>domaine public</dc:rights>
+    <dc:rights>public domain</dc:rights>
+    <dc:source>Bibliothèque nationale de France, département Littérature et art, V-22944</dc:source>
+    <dc:relation>Notice du catalogue : http://catalogue.bnf.fr/ark:/12148/cb33412414z</dc:relation>
+    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k3282120</dc:identifier>
+  </oai_dc:dc></srw:recordData></srw:record>
+</srw:searchRetrieveResponse>"#;
+
+        let (results, _) = parse_gallica_sru(body);
+
+        assert_eq!(results.len(), 1);
+        let result = &results[0];
+        assert_eq!(
+            result.creator.as_deref(),
+            Some("Strozzi, Filippo. Auteur du texte")
+        );
+        assert_eq!(
+            result.contributors,
+            vec![
+                "Cavalcabo, Girolamo. Auteur du texte".to_string(),
+                "Villamont, Jacques de. Traducteur".to_string(),
+            ]
+        );
+        assert_eq!(
+            result.publisher.as_deref(),
+            Some("Claude Le Villain (Rouen)")
+        );
+        assert_eq!(
+            result.rights,
+            vec!["domaine public".to_string(), "public domain".to_string()]
+        );
+        assert_eq!(
+            result.physical_description.as_deref(),
+            Some("23-[1 bl.]-95-[1 bl.] p. ; in-12; Nombre total de vues : 128")
+        );
+        assert_eq!(
+            result.holding_institution.as_deref(),
+            Some("Bibliothèque nationale de France, département Littérature et art, V-22944")
+        );
+        assert_eq!(
+            result.catalog_url.as_deref(),
+            Some("http://catalogue.bnf.fr/ark:/12148/cb33412414z")
+        );
+    }
+
+    #[test]
     fn a_broken_gallica_answer_is_an_empty_search_not_a_crash() {
         let (results, total) = parse_gallica_sru("<srw:records><srw:record>");
         assert!(results.is_empty());
@@ -511,7 +660,7 @@ mod tests {
             <img src="/pub/digit/MSS_Vat.lat.3225/cover/cover.jpg" />
           </div>"#;
 
-        let results = parse_vatican_results(html);
+        let results = parse_vatican_results(html, "https://digi.vatlib.it");
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "MSS_Vat.lat.3225");
@@ -528,7 +677,11 @@ mod tests {
 
     #[test]
     fn a_vatican_page_without_manuscripts_gives_nothing() {
-        assert!(parse_vatican_results("<html><body>nessun risultato</body></html>").is_empty());
+        assert!(parse_vatican_results(
+            "<html><body>nessun risultato</body></html>",
+            "https://digi.vatlib.it"
+        )
+        .is_empty());
     }
 
     #[test]
