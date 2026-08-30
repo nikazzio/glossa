@@ -928,7 +928,16 @@
         "saveView": "Salva questa vista",
         "deleteView": "Elimina la vista «{{name}}»",
         "newViewPlaceholder": "Salva come…",
-        "newViewLabel": "Nome della vista da salvare"
+        "newViewLabel": "Nome della vista da salvare",
+        "workspaceLabel": "Workspace",
+        "allWorkspaces": "Ogni workspace",
+        "noWorkspace": "In nessun workspace",
+        "sortLabel": "Ordina il catalogo",
+        "sort": {
+          "title": "Per titolo",
+          "creator": "Per autore",
+          "added": "Aggiunte di recente"
+        }
       },
       "archive": "Archivia",
       "restore": "Riporta in catalogo",

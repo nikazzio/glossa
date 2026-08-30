@@ -4,6 +4,8 @@ import {
   filterLibraryCatalog,
   hasActiveLibraryFilters,
   libraryLanguageOptions,
+  NO_WORKSPACE,
+  orderLibraryCatalog,
   parseLibraryFilters,
 } from './libraryCatalogFilters';
 import type { LibraryCatalogEntry } from '../types';
@@ -204,6 +206,76 @@ describe('collezioni e viste salvate', () => {
 
   it('una vista salvata illeggibile non produce filtri', () => {
     expect(parseLibraryFilters('non è json')).toBeNull();
+  });
+});
+
+describe('workspace e ordinamento', () => {
+  const nelWorkspace = entry({
+    source: { ...entry().source, id: 'src-ws' },
+    workspaces: [{ workspaceId: 'ws-1', workspaceName: 'Scherma', isOrigin: false }],
+  });
+
+  it('filtra le opere collegate a un workspace', () => {
+    const result = filterLibraryCatalog([entry(), nelWorkspace], {
+      ...EMPTY_LIBRARY_FILTERS,
+      workspaceId: 'ws-1',
+    });
+    expect(result.map((item) => item.source.id)).toEqual(['src-ws']);
+  });
+
+  it('sa anche mostrare solo le opere che non stanno in nessun workspace', () => {
+    const result = filterLibraryCatalog([entry(), nelWorkspace], {
+      ...EMPTY_LIBRARY_FILTERS,
+      workspaceId: NO_WORKSPACE,
+    });
+    expect(result.map((item) => item.source.id)).toEqual(['src-1']);
+  });
+
+  const catalogoDaOrdinare = [
+    entry({
+      source: { ...entry().source, id: 'b', title: 'Vita nuova', createdAt: '2026-01-02' },
+      creator: 'Dante Alighieri',
+    }),
+    entry({
+      source: { ...entry().source, id: 'a', title: 'Convivio', createdAt: '2026-01-03' },
+      creator: 'Anonimo',
+    }),
+    entry({
+      source: { ...entry().source, id: 'c', title: 'Rime', createdAt: '2026-01-01' },
+      creator: null,
+    }),
+  ];
+
+  it('ordina per titolo', () => {
+    expect(orderLibraryCatalog(catalogoDaOrdinare, 'title').map((item) => item.source.title)).toEqual(
+      ['Convivio', 'Rime', 'Vita nuova'],
+    );
+  });
+
+  it('ordina per autore, con le opere senza autore in fondo', () => {
+    expect(orderLibraryCatalog(catalogoDaOrdinare, 'creator').map((item) => item.creator)).toEqual([
+      'Anonimo',
+      'Dante Alighieri',
+      null,
+    ]);
+  });
+
+  it('per data di aggiunta parte dalle più recenti', () => {
+    expect(orderLibraryCatalog(catalogoDaOrdinare, 'added').map((item) => item.source.id)).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+  });
+
+  it('ordinare non tocca il catalogo di partenza', () => {
+    const originale = [...catalogoDaOrdinare];
+    orderLibraryCatalog(catalogoDaOrdinare, 'added');
+    expect(catalogoDaOrdinare).toEqual(originale);
+  });
+
+  it('una vista salvata con un ordine sconosciuto torna al titolo', () => {
+    expect(parseLibraryFilters('{"sort":"colore"}')).toEqual(EMPTY_LIBRARY_FILTERS);
   });
 });
 

@@ -487,7 +487,9 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText('Scherma')).toBeInTheDocument();
+    // Il nome compare anche fra le scelte del filtro workspace: qui interessa
+    // l'etichetta cliccabile sulla riga dell'opera.
+    expect(screen.getByRole('button', { name: 'Scherma' })).toBeInTheDocument();
   });
 
   it('scollega un opera cliccando il workspace su cui sta', async () => {
@@ -729,6 +731,63 @@ describe('LibraryCatalogArea', () => {
     await waitFor(() =>
       expect(service.setSourceFieldOverride).toHaveBeenCalledWith('s1', 'creator', null),
     );
+  });
+
+  it('riordina il catalogo dal comando di ordinamento', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          source: { ...entry().source, id: 's1', title: 'Vita nuova', createdAt: '2026-08-20' },
+        }),
+        entry({
+          source: { ...entry().source, id: 's2', title: 'Convivio', createdAt: '2026-08-01' },
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    const titoli = () =>
+      screen
+        .getAllByRole('button', { name: /Vita nuova|Convivio/ })
+        .map((node) => node.textContent);
+
+    // Di partenza il catalogo è in ordine di titolo.
+    expect(titoli()[0]).toContain('Convivio');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'areas.library.filters.sortLabel' }),
+      'added',
+    );
+
+    // Per data di aggiunta viene prima l'ultima arrivata.
+    expect(titoli()[0]).toContain('Vita nuova');
+  });
+
+  it('mostra solo le opere collegate al workspace scelto', async () => {
+    useWorkspaceStore.setState({
+      workspaces: [{ id: 'ws-1', name: 'Scherma' } as never],
+      activeWorkspace: null,
+    });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Vita nuova' } }),
+        entry({
+          source: { ...entry().source, id: 's2', title: 'Convivio' },
+          workspaces: [{ workspaceId: 'ws-1', workspaceName: 'Scherma', isOrigin: false }],
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'areas.library.filters.workspaceLabel' }),
+      'ws-1',
+    );
+
+    expect(screen.getByText('Convivio')).toBeInTheDocument();
+    expect(screen.queryByText('Vita nuova')).not.toBeInTheDocument();
   });
 
   it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {

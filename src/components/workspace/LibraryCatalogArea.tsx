@@ -19,6 +19,7 @@ import {
   EMPTY_LIBRARY_FILTERS,
   filterLibraryCatalog,
   libraryLanguageOptions,
+  orderLibraryCatalog,
 } from '../../utils/libraryCatalogFilters';
 import { libraryLocation } from '../../navigation/appLocation';
 import type { LibraryCatalogEntry, SourceField, Workspace } from '../../types';
@@ -80,7 +81,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       .catch(() => setProviders([]));
   }, []);
 
-  const filteredCatalog = filterLibraryCatalog(catalog, filters);
+  const filteredCatalog = orderLibraryCatalog(filterLibraryCatalog(catalog, filters), filters.sort);
   // Le tendine offrono i valori delle opere che si stanno guardando: con le
   // archiviate nascoste, una lingua presente solo lì sarebbe una scelta che
   // non seleziona niente.
@@ -189,6 +190,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           languageOptions={libraryLanguageOptions(visibleCatalog)}
           providerOptions={providerOptions}
           collectionOptions={collections}
+          workspaceOptions={workspaces}
           savedViews={savedViews}
           onSaveView={(name) => void saveView(name, filters)}
           onDeleteView={(viewId) => void removeSavedView(viewId)}

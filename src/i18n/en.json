@@ -928,7 +928,16 @@
         "saveView": "Save this view",
         "deleteView": "Delete the view “{{name}}”",
         "newViewPlaceholder": "Save as…",
-        "newViewLabel": "Name of the view to save"
+        "newViewLabel": "Name of the view to save",
+        "workspaceLabel": "Workspace",
+        "allWorkspaces": "Any workspace",
+        "noWorkspace": "In no workspace",
+        "sortLabel": "Sort the catalogue",
+        "sort": {
+          "title": "By title",
+          "creator": "By author",
+          "added": "Recently added"
+        }
       },
       "archive": "Archive",
       "restore": "Bring back to catalogue",

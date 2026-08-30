@@ -31,7 +31,9 @@ Su ogni scheda, accanto ai comandi, vedi **a quali workspace appartiene** quel l
 
 I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, verifica, riduci le immagini, libera spazio, archivia, elimina — poi dove sta.
 
-Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza, disponibilità e collezione. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
+Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
+
+**Ordinamento** — L'ultima tendina decide l'ordine: per titolo (come parte), per autore (le opere senza autore vanno in fondo) oppure per data di aggiunta, dalla più recente. L'ordine scelto entra anche nelle viste salvate.
 
 **Viste salvate** — Il comando col segnalibro apre le viste salvate: dai un nome alla combinazione di filtri che stai usando e la ritrovi lì, con un clic. Ogni vista si può eliminare. Una vista salvata quando i filtri erano diversi continua a funzionare: quello che non si riconosce più torna semplicemente neutro.
 

@@ -4,6 +4,16 @@ import {
 } from '../services/vaultService';
 import type { LibraryCatalogEntry, SourceKind } from '../types';
 
+/**
+ * Come si ordina il catalogo. Il titolo è il criterio di partenza: è il modo in
+ * cui si cerca un libro a occhio su uno scaffale.
+ */
+export const LIBRARY_SORTS = ['title', 'creator', 'added'] as const;
+export type LibrarySort = (typeof LIBRARY_SORTS)[number];
+
+/** Valore speciale del filtro workspace: le opere che non stanno in nessuno. */
+export const NO_WORKSPACE = 'none';
+
 /** I tipi di opera ammessi dallo schema, nell'ordine in cui si mostrano. */
 export const SOURCE_KINDS: SourceKind[] = ['manuscript', 'print', 'pdf', 'iiif', 'web', 'other'];
 
@@ -16,6 +26,12 @@ export interface LibraryFilters {
   /** Le archiviate stanno fuori dai risultati finché non si chiede di vederle. */
   includeArchived: boolean;
   collectionId: string | '';
+  /**
+   * Un identificativo di workspace tiene le opere collegate a quello;
+   * `NO_WORKSPACE` tiene quelle che non stanno in nessun workspace.
+   */
+  workspaceId: string | '';
+  sort: LibrarySort;
 }
 
 export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
@@ -26,6 +42,8 @@ export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
   availability: '',
   includeArchived: false,
   collectionId: '',
+  workspaceId: '',
+  sort: 'title',
 };
 
 export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
@@ -36,7 +54,12 @@ export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
     filters.language !== '' ||
     filters.providerKey !== '' ||
     filters.availability !== '' ||
-    filters.collectionId !== ''
+    filters.collectionId !== '' ||
+    filters.workspaceId !== '' ||
+    // L'ordinamento non nasconde niente, ma cambia quello che si ha davanti:
+    // se non contasse, azzerare i filtri lascerebbe un elenco riordinato senza
+    // che si veda più da dove viene.
+    filters.sort !== EMPTY_LIBRARY_FILTERS.sort
   );
 }
 
@@ -65,6 +88,10 @@ export function parseLibraryFilters(raw: string): LibraryFilters | null {
         : '',
       includeArchived: record.includeArchived === true,
       collectionId: text(record.collectionId),
+      workspaceId: text(record.workspaceId),
+      sort: (LIBRARY_SORTS as readonly string[]).includes(text(record.sort))
+        ? (record.sort as LibrarySort)
+        : EMPTY_LIBRARY_FILTERS.sort,
     };
   } catch {
     return null;
@@ -115,8 +142,41 @@ export function filterLibraryCatalog(
       !entry.collections.some((collection) => collection.id === filters.collectionId)
     )
       return false;
+    if (filters.workspaceId === NO_WORKSPACE && entry.workspaces.length > 0) return false;
+    if (
+      filters.workspaceId &&
+      filters.workspaceId !== NO_WORKSPACE &&
+      !entry.workspaces.some((link) => link.workspaceId === filters.workspaceId)
+    )
+      return false;
     return true;
   });
+}
+
+/**
+ * Mette in ordine il catalogo già filtrato.
+ *
+ * Titolo e autore in ordine alfabetico secondo la lingua di chi legge; per data
+ * di aggiunta si parte dalle più recenti, che è il motivo per cui si guarda
+ * quell'ordine. Le opere senza autore finiscono in fondo invece che in cima:
+ * un vuoto non è un nome che viene prima di tutti.
+ */
+export function orderLibraryCatalog(
+  catalog: LibraryCatalogEntry[],
+  sort: LibrarySort,
+): LibraryCatalogEntry[] {
+  const ordered = [...catalog];
+  if (sort === 'added') {
+    return ordered.sort((a, b) => b.source.createdAt.localeCompare(a.source.createdAt));
+  }
+  if (sort === 'creator') {
+    return ordered.sort((a, b) => {
+      if (!a.creator) return b.creator ? 1 : 0;
+      if (!b.creator) return -1;
+      return a.creator.localeCompare(b.creator);
+    });
+  }
+  return ordered.sort((a, b) => a.source.title.localeCompare(b.source.title));
 }
 
 /** Lingue davvero presenti nel catalogo, per non offrire scelte vuote. */

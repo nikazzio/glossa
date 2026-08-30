@@ -6,6 +6,8 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import {
   EMPTY_LIBRARY_FILTERS,
   hasActiveLibraryFilters,
+  LIBRARY_SORTS,
+  NO_WORKSPACE,
   SOURCE_KINDS,
   type LibraryFilters,
 } from '../../utils/libraryCatalogFilters';
@@ -30,6 +32,7 @@ interface LibraryFilterBarProps {
   languageOptions: string[];
   providerOptions: { key: string; label: string }[];
   collectionOptions: { id: string; name: string }[];
+  workspaceOptions: { id: string; name: string }[];
   savedViews: LibrarySavedView[];
   onSaveView: (name: string) => void;
   onDeleteView: (viewId: string) => void;
@@ -42,6 +45,7 @@ export function LibraryFilterBar({
   languageOptions,
   providerOptions,
   collectionOptions,
+  workspaceOptions,
   savedViews,
   onSaveView,
   onDeleteView,
@@ -89,6 +93,20 @@ export function LibraryFilterBar({
       label: collection.name,
     })),
   ];
+
+  const workspaceSelectOptions: SelectOption[] = [
+    { value: '', label: t('areas.library.filters.allWorkspaces') },
+    ...workspaceOptions.map((workspace) => ({
+      value: workspace.id,
+      label: workspace.name,
+    })),
+    { value: NO_WORKSPACE, label: t('areas.library.filters.noWorkspace') },
+  ];
+
+  const sortSelectOptions: SelectOption[] = LIBRARY_SORTS.map((sort) => ({
+    value: sort,
+    label: t(`areas.library.filters.sort.${sort}`),
+  }));
 
   const saveCurrentView = () => {
     const name = newViewName.trim();
@@ -146,6 +164,14 @@ export function LibraryFilterBar({
         options={availabilitySelectOptions}
         ariaLabel={t('areas.library.filters.availabilityLabel')}
       />
+      {workspaceOptions.length > 0 && (
+        <Select
+          value={filters.workspaceId}
+          onChange={(value) => onChange({ ...filters, workspaceId: value })}
+          options={workspaceSelectOptions}
+          ariaLabel={t('areas.library.filters.workspaceLabel')}
+        />
+      )}
       {collectionOptions.length > 0 && (
         <Select
           value={filters.collectionId}
@@ -154,6 +180,14 @@ export function LibraryFilterBar({
           ariaLabel={t('areas.library.filters.collectionLabel')}
         />
       )}
+      <Select
+        value={filters.sort}
+        onChange={(value) =>
+          onChange({ ...filters, sort: value as LibraryFilters['sort'] })
+        }
+        options={sortSelectOptions}
+        ariaLabel={t('areas.library.filters.sortLabel')}
+      />
       <ClickPopover
         open={viewsOpen}
         onOpenChange={setViewsOpen}
