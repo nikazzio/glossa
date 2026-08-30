@@ -288,6 +288,35 @@ CREATE INDEX IF NOT EXISTS idx_sources_status ON sources(status);
 -- Le correzioni a mano ai dati di un'opera stanno a parte, come già fanno le
 -- correzioni locali ai dizionari: quello che ha detto la biblioteca resta
 -- intatto dov'era, così si può sempre mostrare l'originale e tornarci.
+-- Le collezioni sono etichette sulle opere: un'opera può stare in più
+-- collezioni, e toglierla da una non tocca né i suoi dati né le altre.
+-- Non fondono niente: due schede della stessa opera restano due schede.
+CREATE TABLE IF NOT EXISTS source_collections (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS source_collection_items (
+  collection_id TEXT NOT NULL REFERENCES source_collections(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+  added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (collection_id, source_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_source_collection_items_source
+  ON source_collection_items(source_id);
+
+-- Una vista salvata è una combinazione di filtri con un nome. I filtri stanno
+-- come JSON: sono un dettaglio dell'interfaccia, e dargli colonne vere
+-- vincolerebbe lo schema a ogni filtro nuovo.
+CREATE TABLE IF NOT EXISTS library_saved_views (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  filters TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS source_field_overrides (
   source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
   field TEXT NOT NULL CHECK (field IN ('title', 'kind', 'primary_language', 'creator', 'date')),

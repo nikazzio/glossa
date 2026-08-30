@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
+import { EMPTY_LIBRARY_FILTERS } from '../../utils/libraryCatalogFilters';
 import { enqueueOptimization } from '../../services/optimizeService';
 import '../../test/i18n-mock';
 
@@ -63,6 +64,20 @@ vi.mock('../../services/optimizeService', () => ({
   enqueueOptimization: vi.fn(),
 }));
 
+vi.mock('../../services/libraryCollectionsService', () => ({
+  listCollections: vi.fn().mockResolvedValue([{ id: 'coll-1', name: 'Codici', createdAt: '2026-08-01' }]),
+  createCollection: vi.fn().mockResolvedValue({ id: 'coll-2', name: 'Nuova', createdAt: '2026-08-30' }),
+  deleteCollection: vi.fn().mockResolvedValue(undefined),
+  setSourceCollection: vi.fn().mockResolvedValue(undefined),
+  collectionsOfMany: vi.fn().mockResolvedValue(new Map()),
+}));
+
+vi.mock('../../services/librarySavedViewsService', () => ({
+  listSavedViews: vi.fn().mockResolvedValue([]),
+  saveView: vi.fn().mockResolvedValue(undefined),
+  deleteSavedView: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: vi.fn().mockResolvedValue([]),
 }));
@@ -94,6 +109,7 @@ const entry = (
   principalSize: null,
   workspaces: [],
   original: {},
+  collections: [],
   providerKey: 'gallica',
   ...overrides,
 });
@@ -532,6 +548,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -610,6 +627,7 @@ describe('LibraryCatalogArea', () => {
         creator: 'Anonimo',
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();
@@ -701,6 +719,7 @@ describe('LibraryCatalogArea', () => {
         creator: 'Jean Pucelle',
         date: null,
         original: { creator: 'Anonimo' },
+        collections: [],
       },
     });
 
@@ -712,6 +731,83 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
+  it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {
+    const views = await import('../../services/librarySavedViewsService');
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    await user.type(
+      screen.getByRole('searchbox', { name: 'areas.library.filters.searchLabel' }),
+      'hours',
+    );
+    await user.click(screen.getByRole('button', { name: 'areas.library.filters.savedViews' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'areas.library.filters.newViewLabel' }),
+      'Miniati',
+    );
+    await user.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));
+
+    await waitFor(() =>
+      expect(views.saveView).toHaveBeenCalledWith(
+        'Miniati',
+        expect.objectContaining({ query: 'hours' }),
+      ),
+    );
+  });
+
+  it('richiamando una vista salvata i filtri tornano quelli di allora', async () => {
+    const views = await import('../../services/librarySavedViewsService');
+    vi.mocked(views.listSavedViews).mockResolvedValue([
+      {
+        id: 'view-1',
+        name: 'Solo stampati',
+        filters: { ...EMPTY_LIBRARY_FILTERS, kind: 'print' },
+        createdAt: '2026-08-30',
+      },
+    ]);
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.filters.savedViews' }));
+    await user.click(await screen.findByRole('button', { name: 'Solo stampati' }));
+
+    // L'opera è un manoscritto: con la vista dei soli stampati sparisce.
+    await waitFor(() =>
+      expect(screen.getByText('areas.library.filters.noMatches')).toBeInTheDocument(),
+    );
+  });
+
+  it('aggiunge l opera a una collezione nuova dalla sua scheda', async () => {
+    const collectionsService = await import('../../services/libraryCollectionsService');
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.addToCollection' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'areas.library.newCollectionLabel' }),
+      'Codici miniati{Enter}',
+    );
+
+    await waitFor(() =>
+      expect(collectionsService.createCollection).toHaveBeenCalledWith('Codici miniati'),
+    );
+    expect(collectionsService.setSourceCollection).toHaveBeenCalledWith('coll-2', 's1', true);
+  });
+
   it('shows the detail panel when itemId is provided and detail is loaded', () => {
     useSourceLibraryStore.setState({
       detail: {
@@ -721,6 +817,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -746,6 +843,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -771,6 +869,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();

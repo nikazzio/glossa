@@ -15,6 +15,7 @@ export interface LibraryFilters {
   availability: SourceAvailability | '';
   /** Le archiviate stanno fuori dai risultati finché non si chiede di vederle. */
   includeArchived: boolean;
+  collectionId: string | '';
 }
 
 export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
@@ -24,6 +25,7 @@ export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
   providerKey: '',
   availability: '',
   includeArchived: false,
+  collectionId: '',
 };
 
 export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
@@ -33,8 +35,40 @@ export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
     filters.kind !== '' ||
     filters.language !== '' ||
     filters.providerKey !== '' ||
-    filters.availability !== ''
+    filters.availability !== '' ||
+    filters.collectionId !== ''
   );
+}
+
+/**
+ * Rilegge filtri salvati tempo fa: si prende solo ciò che si riconosce, e
+ * quello che manca torna al valore neutro. Una vista scritta quando i filtri
+ * erano altri deve valere ancora, non far saltare l'elenco.
+ */
+export function parseLibraryFilters(raw: string): LibraryFilters | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const record = parsed as Record<string, unknown>;
+    const text = (value: unknown) => (typeof value === 'string' ? value : '');
+    return {
+      query: text(record.query),
+      kind: (SOURCE_KINDS as string[]).includes(text(record.kind))
+        ? (record.kind as SourceKind)
+        : '',
+      language: text(record.language),
+      providerKey: text(record.providerKey),
+      availability: (['catalogued', 'partial', 'complete'] as string[]).includes(
+        text(record.availability),
+      )
+        ? (record.availability as SourceAvailability)
+        : '',
+      includeArchived: record.includeArchived === true,
+      collectionId: text(record.collectionId),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -75,6 +109,11 @@ export function filterLibraryCatalog(
     if (filters.providerKey && entry.providerKey !== filters.providerKey)
       return false;
     if (filters.availability && availabilityOf(entry) !== filters.availability)
+      return false;
+    if (
+      filters.collectionId &&
+      !entry.collections.some((collection) => collection.id === filters.collectionId)
+    )
       return false;
     return true;
   });

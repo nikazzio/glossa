@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ClickPopover, EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
+import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { listIIIFProviders } from '../../services/iiifProviderService';
@@ -35,6 +36,14 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const removeSource = useSourceLibraryStore((state) => state.removeSource);
   const setArchived = useSourceLibraryStore((state) => state.setArchived);
   const correctField = useSourceLibraryStore((state) => state.correctField);
+  const collections = useSourceLibraryStore((state) => state.collections);
+  const loadCollections = useSourceLibraryStore((state) => state.loadCollections);
+  const setCollection = useSourceLibraryStore((state) => state.setCollection);
+  const addToNewCollection = useSourceLibraryStore((state) => state.addToNewCollection);
+  const savedViews = useLibrarySavedViewsStore((state) => state.views);
+  const loadSavedViews = useLibrarySavedViewsStore((state) => state.load);
+  const saveView = useLibrarySavedViewsStore((state) => state.save);
+  const removeSavedView = useLibrarySavedViewsStore((state) => state.remove);
   const loadDetail = useSourceLibraryStore((state) => state.loadDetail);
   const toggleWorkspaceLink = useSourceLibraryStore((state) => state.toggleWorkspaceLink);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
@@ -57,6 +66,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   useEffect(() => {
     if (itemId) void loadDetail(itemId);
   }, [itemId, loadDetail]);
+
+  useEffect(() => {
+    void loadCollections();
+    void loadSavedViews();
+  }, [loadCollections, loadSavedViews]);
 
   useEffect(() => {
     void listIIIFProviders()
@@ -135,6 +149,9 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         onRefresh={() => void loadCatalog()}
         onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
         onCorrectField={(field, value) => correct(itemId, field, value)}
+        collections={collections}
+        onSetCollection={(collectionId, member) => setCollection(itemId, collectionId, member)}
+        onCreateCollection={(name) => addToNewCollection(itemId, name)}
       />
     );
   }
@@ -171,6 +188,10 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           onChange={setFilters}
           languageOptions={libraryLanguageOptions(visibleCatalog)}
           providerOptions={providerOptions}
+          collectionOptions={collections}
+          savedViews={savedViews}
+          onSaveView={(name) => void saveView(name, filters)}
+          onDeleteView={(viewId) => void removeSavedView(viewId)}
         />
       )}
 

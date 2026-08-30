@@ -31,7 +31,11 @@ Su ogni scheda, accanto ai comandi, vedi **a quali workspace appartiene** quel l
 
 I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, verifica, riduci le immagini, libera spazio, archivia, elimina — poi dove sta.
 
-Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza e disponibilità. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
+Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza, disponibilità e collezione. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
+
+**Viste salvate** — Il comando col segnalibro apre le viste salvate: dai un nome alla combinazione di filtri che stai usando e la ritrovi lì, con un clic. Ogni vista si può eliminare. Una vista salvata quando i filtri erano diversi continua a funzionare: quello che non si riconosce più torna semplicemente neutro.
+
+**Collezioni** — Una collezione è un'etichetta che raccoglie opere. Si aggiunge dalla scheda dell'opera, e un'opera può stare in **più collezioni insieme**: non si fonde e non si duplica niente, e togliere un'etichetta non tocca né l'opera né le altre collezioni. Dalla barra di ricerca puoi mostrare solo le opere di una collezione.
 
 Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina: dati (titolo, tipo, autore, data, lingua, provenienza, disponibilità, spazio occupato, stato), le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. In fondo c'è il posto dove arriverà il visore delle pagine. Il comando con la freccia riporta al catalogo.
 

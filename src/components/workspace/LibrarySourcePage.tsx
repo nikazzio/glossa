@@ -1,6 +1,8 @@
-import { ArrowLeft, BookOpenText, Images, Info, Link2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, BookOpenText, Images, Info, Link2, Tags, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, SectionLabel, StatRow } from '../ui';
+import { ClickPopover, IconButton, SectionLabel, StatRow } from '../ui';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { SourceSizeCap } from './SourceSizeCap';
 import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
@@ -11,6 +13,7 @@ import { humanSize } from '../../utils';
 import type {
   LibraryCatalogEntry,
   LibrarySourceDetail,
+  SourceCollection,
   SourceField,
   Workspace,
 } from '../../types';
@@ -28,6 +31,9 @@ interface LibrarySourcePageProps {
   onToggleLink: (workspaceId: string, linked: boolean) => void;
   /** Corregge un campo a mano; `null` riporta il valore della biblioteca. */
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
+  collections: SourceCollection[];
+  onSetCollection: (collectionId: string, member: boolean) => Promise<void>;
+  onCreateCollection: (name: string) => Promise<void>;
 }
 
 /** La scheda di un'opera: cosa è, quanto ne hai, cosa puoi farci, dove sta. */
@@ -41,6 +47,9 @@ export function LibrarySourcePage({
   onRefresh,
   onToggleLink,
   onCorrectField,
+  collections,
+  onSetCollection,
+  onCreateCollection,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
 
@@ -195,6 +204,16 @@ export function LibrarySourcePage({
           </ul>
         </section>
 
+        <section className="space-y-2">
+          <SectionLabel icon={Tags} label={t('areas.library.collectionsSection')} />
+          <CollectionPicker
+            collections={collections}
+            memberIds={detail.collections.map((collection) => collection.id)}
+            onSetCollection={onSetCollection}
+            onCreateCollection={onCreateCollection}
+          />
+        </section>
+
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
             dallo Studio di trascrizione: qui resta il posto dove andrà. */}
         <section className="space-y-2">
@@ -205,6 +224,90 @@ export function LibrarySourcePage({
         </section>
       </div>
     </main>
+  );
+}
+
+/**
+ * Le collezioni dell'opera: etichette che si aggiungono e si tolgono, sempre
+ * reversibili. Toglierne una non tocca l'opera né le altre collezioni.
+ */
+function CollectionPicker({
+  collections,
+  memberIds,
+  onSetCollection,
+  onCreateCollection,
+}: {
+  collections: SourceCollection[];
+  memberIds: string[];
+  onSetCollection: (collectionId: string, member: boolean) => Promise<void>;
+  onCreateCollection: (name: string) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+  const [newName, setNewName] = useState('');
+  const member = new Set(memberIds);
+  const available = collections.filter((collection) => !member.has(collection.id));
+
+  const create = () => {
+    const name = newName.trim();
+    if (!name) return;
+    void onCreateCollection(name);
+    setNewName('');
+    setPicking(false);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {collections
+        .filter((collection) => member.has(collection.id))
+        .map((collection) => (
+          <button
+            key={collection.id}
+            type="button"
+            onClick={() => void onSetCollection(collection.id, false)}
+            title={t('areas.library.removeFromCollection', { name: collection.name })}
+            className="flex items-center gap-1 rounded-full border border-editorial-accent/40 bg-editorial-accent/8 px-2 py-0.5 text-xs text-editorial-accent transition-colors hover:border-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            {collection.name}
+            <X size={11} aria-hidden="true" />
+          </button>
+        ))}
+      <ClickPopover
+        open={picking}
+        onOpenChange={setPicking}
+        trigger={
+          <IconButton size="sm" title={t('areas.library.addToCollection')} ariaPressed={picking}>
+            <Tags size={13} />
+          </IconButton>
+        }
+      >
+        <div className="flex min-w-52 flex-col gap-1 p-2">
+          {available.map((collection) => (
+            <button
+              key={collection.id}
+              type="button"
+              onClick={() => {
+                setPicking(false);
+                void onSetCollection(collection.id, true);
+              }}
+              className="truncate rounded px-2 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              {collection.name}
+            </button>
+          ))}
+          <input
+            value={newName}
+            onChange={(event) => setNewName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') create();
+            }}
+            placeholder={t('areas.library.newCollectionPlaceholder')}
+            aria-label={t('areas.library.newCollectionLabel')}
+            className={`${FIELD_CLASSNAME} py-1 text-xs`}
+          />
+        </div>
+      </ClickPopover>
+    </div>
   );
 }
 

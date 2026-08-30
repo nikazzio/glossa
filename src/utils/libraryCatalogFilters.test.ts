@@ -4,6 +4,7 @@ import {
   filterLibraryCatalog,
   hasActiveLibraryFilters,
   libraryLanguageOptions,
+  parseLibraryFilters,
 } from './libraryCatalogFilters';
 import type { LibraryCatalogEntry } from '../types';
 
@@ -34,6 +35,7 @@ function entry(
     workspaces: [],
     providerKey: 'vatican',
     original: {},
+    collections: [],
     ...overrides,
   };
 }
@@ -177,6 +179,31 @@ describe('opere archiviate', () => {
     expect(
       hasActiveLibraryFilters({ ...EMPTY_LIBRARY_FILTERS, includeArchived: true }),
     ).toBe(true);
+  });
+});
+
+describe('collezioni e viste salvate', () => {
+  it('il filtro per collezione tiene solo le opere che ci stanno dentro', () => {
+    const inCollection = entry({
+      source: { ...entry().source, id: 'src-coll' },
+      collections: [{ id: 'coll-1', name: 'Codici' }],
+    });
+    const result = filterLibraryCatalog([entry(), inCollection], {
+      ...EMPTY_LIBRARY_FILTERS,
+      collectionId: 'coll-1',
+    });
+    expect(result.map((item) => item.source.id)).toEqual(['src-coll']);
+  });
+
+  it('una vista salvata con filtri sconosciuti non rompe niente: torna al valore neutro', () => {
+    expect(parseLibraryFilters('{"kind":"sconosciuto","query":"dante"}')).toEqual({
+      ...EMPTY_LIBRARY_FILTERS,
+      query: 'dante',
+    });
+  });
+
+  it('una vista salvata illeggibile non produce filtri', () => {
+    expect(parseLibraryFilters('non è json')).toBeNull();
   });
 });
 

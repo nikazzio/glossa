@@ -84,6 +84,7 @@ describe('sourceLibraryStore', () => {
       creator: null,
       date: null,
       original: {},
+      collections: [],
     });
 
     await useSourceLibraryStore.getState().loadDetail('s1');
@@ -100,6 +101,7 @@ describe('sourceLibraryStore', () => {
       creator: null,
       date: null,
       original: {},
+      collections: [],
     });
     useSourceLibraryStore.setState({
       detail: {
@@ -109,6 +111,7 @@ describe('sourceLibraryStore', () => {
       creator: null,
       date: null,
       original: {},
+      collections: [],
       },
     });
 

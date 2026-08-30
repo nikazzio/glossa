@@ -1,5 +1,6 @@
 import { select, execute, runInTransaction } from './dbService';
 import { workspacesOfMany } from './workspaceItemsService';
+import { collectionsOfMany } from './libraryCollectionsService';
 import {
   inventoryBytes,
   libraryInventory,
@@ -187,6 +188,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
     rows.map((row) => row.id),
   );
   const overridesBySource = await overridesOfMany(rows.map((row) => row.id));
+  const collectionsBySource = await collectionsOfMany(rows.map((row) => row.id));
 
   return rows.map((row) => {
     const metadata = parseMetadata(row.metadata);
@@ -221,6 +223,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       // una chiave e i metadati vuoti.
       providerKey: found?.providerKey ?? metadata.providerKey,
       workspaces: workspacesBySource.get(row.id) ?? [],
+      collections: collectionsBySource.get(row.id) ?? [],
     };
   });
 }
@@ -435,6 +438,7 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
     creator: corrected.creator,
     date: corrected.date,
     original: corrected.original,
+    collections: (await collectionsOfMany([sourceId])).get(sourceId) ?? [],
   };
 }
 
