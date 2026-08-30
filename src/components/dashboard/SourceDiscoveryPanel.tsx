@@ -14,7 +14,11 @@ import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 
-const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org']);
+// Le biblioteche il cui riconoscimento e la cui ricerca sono davvero
+// implementati lato backend (v. src-tauri/src/iiif/search.rs): elenco a mano
+// perché `supportsSearch` del provider è vero anche per le biblioteche che
+// non cercano ancora, dichiarazione preesistente e fuori scopo qui.
+const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org', 'vatican', 'gallica', 'ecodices']);
 
 const VIEW_OPTIONS: ReadonlyArray<{ value: DiscoveryResultsPerRow; labelKey: string; icon: ReactNode }> = [
   { value: 3, labelKey: 'settings.discoveryResultsThree', icon: <GridGlyph columns={3} /> },
