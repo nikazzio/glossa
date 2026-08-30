@@ -496,6 +496,48 @@ describe('LibraryCatalogArea', () => {
     expect(useUiStore.getState().libraryView).toBe('grid');
   });
 
+  it('cliccando il titolo si apre la scheda dell opera, non un pannello a lato', async () => {
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: /Book of Hours/ }));
+
+    await waitFor(() =>
+      expect(useUiStore.getState().location).toEqual({ area: 'library', itemId: 's1' }),
+    );
+  });
+
+  it('la scheda mostra dati, comandi e il posto del futuro visore, e si torna al catalogo', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [entry({ localPages: 34, localBytes: 48_234_496 })],
+      detail: {
+        source: entry().source,
+        versions: [
+          {
+            id: 'v1',
+            sourceId: 's1',
+            label: 'primary',
+            versionKind: 'iiif_manifest',
+            sourceUrl: 'https://x.test/m.json',
+            isPrimary: true,
+            createdAt: '2026-01-01',
+          },
+        ],
+        linkedWorkspaceIds: [],
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+
+    expect(screen.getByRole('heading', { name: 'Book of Hours' })).toBeInTheDocument();
+    expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'areas.library.archive' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.backToCatalogue' }));
+    await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'library' }));
+  });
+
   it('shows the detail panel when itemId is provided and detail is loaded', () => {
     useSourceLibraryStore.setState({
       detail: {
