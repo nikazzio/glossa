@@ -88,6 +88,9 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     openCatalogue();
   };
 
+  /** Il messaggio lo mostra qui, ma l'errore prosegue: chi ha scritto la
+   *  correzione deve restare nel campo, non vederlo chiudersi come se fosse
+   *  stata salvata. */
   const correct = async (sourceId: string, field: SourceField, value: string | null) => {
     try {
       await correctField(sourceId, field, value);
@@ -95,6 +98,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       toast.error(t('areas.library.fieldSaveFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
+      throw error;
     }
   };
 

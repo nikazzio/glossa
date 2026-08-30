@@ -629,6 +629,67 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
+  it('correggendo il tipo salva il valore dei dati, non l etichetta tradotta', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    const kindRow = screen.getByText('areas.library.kind').closest('div') as HTMLElement;
+    await user.click(within(kindRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'areas.library.kind' }), 'print');
+    await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
+
+    await waitFor(() =>
+      expect(service.setSourceFieldOverride).toHaveBeenCalledWith('s1', 'kind', 'print'),
+    );
+  });
+
+  it('se la correzione non si salva, il campo resta aperto e lo dice', async () => {
+    const service = await import('../../services/libraryService');
+    vi.mocked(service.setSourceFieldOverride).mockRejectedValue(new Error('database occupato'));
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: 'Anonimo',
+        date: null,
+        original: {},
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    const creatorRow = screen
+      .getByText('areas.library.creatorField')
+      .closest('div') as HTMLElement;
+    await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
+    await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'areas.library.fieldSaveFailed',
+        expect.anything(),
+      ),
+    );
+    // Il campo è ancora lì: chiuderlo direbbe che la correzione è passata.
+    expect(
+      screen.getByRole('textbox', { name: 'areas.library.creatorField' }),
+    ).toBeInTheDocument();
+  });
+
   it('da un dato corretto si torna a quello della biblioteca', async () => {
     const service = await import('../../services/libraryService');
     useSourceLibraryStore.setState({

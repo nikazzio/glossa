@@ -293,7 +293,14 @@ CREATE TABLE IF NOT EXISTS source_field_overrides (
   field TEXT NOT NULL CHECK (field IN ('title', 'kind', 'primary_language', 'creator', 'date')),
   value TEXT NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (source_id, field)
+  PRIMARY KEY (source_id, field),
+  -- Il tipo corretto a mano deve restare uno dei tipi che esistono: un valore
+  -- fuori elenco lascerebbe l'opera senza etichetta leggibile e fuori dai
+  -- filtri, senza che niente segnali il perché.
+  CHECK (
+    field <> 'kind'
+    OR value IN ('manuscript', 'print', 'pdf', 'iiif', 'web', 'other')
+  )
 );
 
 CREATE TABLE IF NOT EXISTS source_versions (

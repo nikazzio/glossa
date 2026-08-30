@@ -8,6 +8,12 @@ interface SourceFieldRowProps {
   label: string;
   /** Il valore da mostrare: la correzione se c'è, altrimenti quello della biblioteca. */
   value: string;
+  /**
+   * Il valore da correggere, quando è diverso da come si legge: il tipo
+   * dell'opera si mostra tradotto («Manoscritto») ma si salva com'è nei dati
+   * («manuscript»). Senza questa distinzione si salverebbe l'etichetta.
+   */
+  editableValue?: string;
   /** Presente solo se il campo è stato corretto: è il valore originale. */
   original?: string;
   /** Valori ammessi, quando il campo è una scelta e non testo libero. */
@@ -22,10 +28,17 @@ interface SourceFieldRowProps {
  * tooltip: la riga resta leggibile a colpo d'occhio, e chi vuole sapere cosa
  * diceva la biblioteca non deve aprire nient'altro.
  */
-export function SourceFieldRow({ label, value, original, options, onSave }: SourceFieldRowProps) {
+export function SourceFieldRow({
+  label,
+  value,
+  editableValue,
+  original,
+  options,
+  onSave,
+}: SourceFieldRowProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useState(editableValue ?? value);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,7 +49,7 @@ export function SourceFieldRow({ label, value, original, options, onSave }: Sour
   }, [editing]);
 
   const startEditing = () => {
-    setDraft(value);
+    setDraft(editableValue ?? value);
     setEditing(true);
   };
 
@@ -45,6 +58,9 @@ export function SourceFieldRow({ label, value, original, options, onSave }: Sour
     try {
       await onSave(next);
       setEditing(false);
+    } catch {
+      // Il motivo lo racconta chi salva, con un messaggio a schermo. Qui conta
+      // solo non chiudere il campo: chiuderlo direbbe che è andata bene.
     } finally {
       setSaving(false);
     }
@@ -58,7 +74,17 @@ export function SourceFieldRow({ label, value, original, options, onSave }: Sour
         </dt>
         <dd className="flex min-w-0 flex-1 items-center justify-end gap-1">
           {options ? (
-            <Select value={draft} onChange={setDraft} options={options} ariaLabel={label} />
+            <Select
+              value={draft}
+              onChange={setDraft}
+              options={options}
+              ariaLabel={label}
+              // Invio ed Esc valgono anche sulla scelta, come sul campo scritto.
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void save(draft);
+                if (event.key === 'Escape') setEditing(false);
+              }}
+            />
           ) : (
             <input
               ref={inputRef}

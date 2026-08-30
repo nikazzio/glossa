@@ -85,6 +85,7 @@ export function LibrarySourcePage({
             <SourceFieldRow
               label={t('areas.library.kind')}
               value={t(`areas.library.kindLabels.${detail.source.kind}`)}
+              editableValue={detail.source.kind}
               original={
                 detail.original.kind === undefined
                   ? undefined
