@@ -971,7 +971,8 @@
       "addToCollection": "Aggiungi a una collezione",
       "removeFromCollection": "Togli da «{{name}}»",
       "newCollectionPlaceholder": "Nuova collezione…",
-      "newCollectionLabel": "Nome della nuova collezione"
+      "newCollectionLabel": "Nome della nuova collezione",
+      "collectionFailed": "Impossibile aggiornare le collezioni"
     },
     "transcriptions": {
       "title": "Trascrizioni",

@@ -971,7 +971,8 @@
       "addToCollection": "Add to a collection",
       "removeFromCollection": "Remove from “{{name}}”",
       "newCollectionPlaceholder": "New collection…",
-      "newCollectionLabel": "Name of the new collection"
+      "newCollectionLabel": "Name of the new collection",
+      "collectionFailed": "Could not update the collections"
     },
     "transcriptions": {
       "title": "Transcriptions",

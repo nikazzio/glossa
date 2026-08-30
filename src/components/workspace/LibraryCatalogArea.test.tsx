@@ -568,7 +568,7 @@ describe('LibraryCatalogArea', () => {
   it('dalla scheda, rimuovere riporta al catalogo solo dopo che l opera è sparita', async () => {
     const service = await import('../../services/libraryService');
     let posizioneDuranteLaRimozione: unknown = null;
-    vi.mocked(service.removeSourceFromLibrary).mockImplementation(async () => {
+    vi.mocked(service.removeSourceFromLibrary).mockImplementationOnce(async () => {
       posizioneDuranteLaRimozione = useUiStore.getState().location;
     });
     useSourceLibraryStore.setState({
@@ -580,6 +580,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -599,7 +600,7 @@ describe('LibraryCatalogArea', () => {
     // Il ripristino resta appeso finché non lo si lascia finire: è l'unico modo
     // di guardare com'è la riga *mentre* la richiesta è in corso.
     const sblocca: Array<() => void> = [];
-    vi.mocked(service.setSourceArchived).mockImplementation(
+    vi.mocked(service.setSourceArchived).mockImplementationOnce(
       () => new Promise<void>((resolve) => sblocca.push(resolve)),
     );
     useSourceLibraryStore.setState({
@@ -660,6 +661,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();
@@ -677,7 +679,7 @@ describe('LibraryCatalogArea', () => {
 
   it('se la correzione non si salva, il campo resta aperto e lo dice', async () => {
     const service = await import('../../services/libraryService');
-    vi.mocked(service.setSourceFieldOverride).mockRejectedValue(new Error('database occupato'));
+    vi.mocked(service.setSourceFieldOverride).mockRejectedValueOnce(new Error('database occupato'));
     useSourceLibraryStore.setState({
       catalog: [entry()],
       detail: {
@@ -687,6 +689,7 @@ describe('LibraryCatalogArea', () => {
         creator: 'Anonimo',
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();
@@ -788,6 +791,42 @@ describe('LibraryCatalogArea', () => {
 
     expect(screen.getByText('Convivio')).toBeInTheDocument();
     expect(screen.queryByText('Vita nuova')).not.toBeInTheDocument();
+  });
+
+  it('se una collezione non si aggiorna, lo dice invece di lasciar cadere l errore', async () => {
+    const collectionsService = await import('../../services/libraryCollectionsService');
+    // Solo per questo caso: un'implementazione che resta guasterebbe i casi
+    // successivi, che si aspettano una creazione riuscita.
+    vi.mocked(collectionsService.createCollection).mockRejectedValueOnce(
+      new Error('database occupato'),
+    );
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.addToCollection' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'areas.library.newCollectionLabel' }),
+      'Codici miniati{Enter}',
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'areas.library.collectionFailed',
+        expect.anything(),
+      ),
+    );
   });
 
   it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {

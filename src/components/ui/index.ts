@@ -5,6 +5,8 @@ export { IconButton, type IconButtonTone, type IconButtonSize } from './IconButt
 export { Menu, type MenuItem } from './Menu';
 export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';
+export { PopoverItem } from './PopoverItem';
+export { LinkChip } from './LinkChip';
 export { FieldLabel } from './FieldLabel';
 export { SettingRow } from './SettingRow';
 export { FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from './fieldStyles';

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BookOpenText, LayoutGrid, Link2, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ClickPopover, EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
+import { ClickPopover, EmptyState, IconButton, LinkChip, PopoverItem, SectionLabel } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -117,6 +117,28 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     }
   };
 
+  /** Anche le collezioni raccontano il guasto invece di lasciarlo cadere: un
+   *  errore che nessuno mostra è un comando che sembra non aver fatto niente. */
+  const changeCollection = async (sourceId: string, collectionId: string, member: boolean) => {
+    try {
+      await setCollection(sourceId, collectionId, member);
+    } catch (error: unknown) {
+      toast.error(t('areas.library.collectionFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const createCollectionFor = async (sourceId: string, name: string) => {
+    try {
+      await addToNewCollection(sourceId, name);
+    } catch (error: unknown) {
+      toast.error(t('areas.library.collectionFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
   const archive = async (sourceId: string, archived: boolean) => {
     try {
       await setArchived(sourceId, archived);
@@ -151,8 +173,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
         onCorrectField={(field, value) => correct(itemId, field, value)}
         collections={collections}
-        onSetCollection={(collectionId, member) => setCollection(itemId, collectionId, member)}
-        onCreateCollection={(name) => addToNewCollection(itemId, name)}
+        onSetCollection={(collectionId, member) => changeCollection(itemId, collectionId, member)}
+        onCreateCollection={(name) => createCollectionFor(itemId, name)}
       />
     );
   }
@@ -314,15 +336,12 @@ function CatalogEntryRow({
 
       <span className="flex min-w-0 shrink-0 flex-wrap items-center gap-1">
         {entry.workspaces.map((link) => (
-          <Tooltip key={link.workspaceId} label={t('areas.library.unlinkFromWorkspace')} side="top">
-            <button
-              type="button"
-              onClick={() => onToggleLink(link.workspaceId, false)}
-              className="rounded-full border border-editorial-accent/40 bg-editorial-accent/8 px-2 py-0.5 text-[11px] text-editorial-accent transition-colors hover:border-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              {link.workspaceName}
-            </button>
-          </Tooltip>
+          <LinkChip
+            key={link.workspaceId}
+            label={link.workspaceName}
+            hint={t('areas.library.unlinkFromWorkspace')}
+            onClick={() => onToggleLink(link.workspaceId, false)}
+          />
         ))}
         {available.length > 0 && (
           <ClickPopover
@@ -340,17 +359,14 @@ function CatalogEntryRow({
           >
             <ul className="flex min-w-40 flex-col py-1">
               {available.map((workspace) => (
-                <li key={workspace.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
+                <li key={workspace.id} className="flex">
+                  <PopoverItem
+                    label={workspace.name}
+                    onSelect={() => {
                       setPicking(false);
                       onToggleLink(workspace.id, true);
                     }}
-                    className="w-full px-3 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    {workspace.name}
-                  </button>
+                  />
                 </li>
               ))}
             </ul>

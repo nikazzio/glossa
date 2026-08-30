@@ -25,18 +25,22 @@ export async function createCollection(name: string): Promise<SourceCollection> 
   const trimmed = name.trim();
   if (!trimmed) throw new Error('collection_name_required');
 
-  const [existing] = await select<CollectionRow>(
+  // Prima si scrive, poi si legge: guardare e poi scrivere lascia in mezzo lo
+  // spazio per un secondo invio con lo stesso nome, che farebbe fallire la
+  // creazione invece di restituire la collezione che esiste già.
+  const id = generateId('coll');
+  await execute(
+    'INSERT INTO source_collections (id, name) VALUES ($1, $2) ON CONFLICT(name) DO NOTHING',
+    [id, trimmed],
+  );
+  const [row] = await select<CollectionRow>(
     'SELECT id, name, created_at FROM source_collections WHERE name = $1',
     [trimmed],
   );
-  if (existing) {
-    return { id: existing.id, name: existing.name, createdAt: existing.created_at };
-  }
-
-  const id = generateId('coll');
-  await execute('INSERT INTO source_collections (id, name) VALUES ($1, $2)', [id, trimmed]);
-  logger.info('library.collection.created', { collectionId: id });
-  return { id, name: trimmed, createdAt: new Date().toISOString() };
+  if (!row) throw new Error('collection_not_created');
+  if (row.id === id) logger.info('library.collection.created', { collectionId: id });
+  // La data di creazione la dice il database, non l'orologio di chi chiama.
+  return { id: row.id, name: row.name, createdAt: row.created_at };
 }
 
 /** Elimina la collezione: le opere restano, perdono solo quell'etichetta. */

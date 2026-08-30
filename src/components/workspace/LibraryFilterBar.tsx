@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Archive, Bookmark, Eraser, Search, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ClickPopover, IconButton, Select, type SelectOption } from '../ui';
+import { ClickPopover, IconButton, PopoverItem, Select, type SelectOption } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import {
   EMPTY_LIBRARY_FILTERS,
@@ -204,16 +204,13 @@ export function LibraryFilterBar({
         <div className="flex min-w-56 flex-col gap-1 p-2">
           {savedViews.map((view) => (
             <div key={view.id} className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
+              <PopoverItem
+                label={view.name}
+                onSelect={() => {
                   onChange(view.filters);
                   setViewsOpen(false);
                 }}
-                className="min-w-0 flex-1 truncate rounded px-2 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                {view.name}
-              </button>
+              />
               <IconButton
                 size="xs"
                 tone="danger"

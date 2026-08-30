@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, BookOpenText, Images, Info, Link2, Tags, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ClickPopover, IconButton, SectionLabel, StatRow } from '../ui';
+import { ClickPopover, IconButton, LinkChip, PopoverItem, SectionLabel, StatRow } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { SourceSizeCap } from './SourceSizeCap';
 import { SourceActionBar } from './SourceActionBar';
@@ -261,16 +261,13 @@ function CollectionPicker({
       {collections
         .filter((collection) => member.has(collection.id))
         .map((collection) => (
-          <button
+          <LinkChip
             key={collection.id}
-            type="button"
+            label={collection.name}
+            hint={t('areas.library.removeFromCollection', { name: collection.name })}
             onClick={() => void onSetCollection(collection.id, false)}
-            title={t('areas.library.removeFromCollection', { name: collection.name })}
-            className="flex items-center gap-1 rounded-full border border-editorial-accent/40 bg-editorial-accent/8 px-2 py-0.5 text-xs text-editorial-accent transition-colors hover:border-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            {collection.name}
-            <X size={11} aria-hidden="true" />
-          </button>
+            icon={X}
+          />
         ))}
       <ClickPopover
         open={picking}
@@ -283,17 +280,14 @@ function CollectionPicker({
       >
         <div className="flex min-w-52 flex-col gap-1 p-2">
           {available.map((collection) => (
-            <button
+            <PopoverItem
               key={collection.id}
-              type="button"
-              onClick={() => {
+              label={collection.name}
+              onSelect={() => {
                 setPicking(false);
                 void onSetCollection(collection.id, true);
               }}
-              className="truncate rounded px-2 py-1.5 text-left text-sm text-editorial-ink transition-colors hover:bg-surface-hover/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              {collection.name}
-            </button>
+            />
           ))}
           <input
             value={newName}
