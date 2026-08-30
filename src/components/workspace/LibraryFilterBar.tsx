@@ -5,19 +5,11 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import {
   EMPTY_LIBRARY_FILTERS,
   hasActiveLibraryFilters,
+  SOURCE_KINDS,
   type LibraryFilters,
 } from '../../utils/libraryCatalogFilters';
 import type { SourceAvailability } from '../../services/vaultService';
-import type { SourceKind } from '../../types';
 
-const SOURCE_KINDS: SourceKind[] = [
-  'manuscript',
-  'print',
-  'pdf',
-  'iiif',
-  'web',
-  'other',
-];
 const AVAILABILITIES: SourceAvailability[] = [
   'catalogued',
   'partial',

@@ -4,6 +4,9 @@ import {
 } from '../services/vaultService';
 import type { LibraryCatalogEntry, SourceKind } from '../types';
 
+/** I tipi di opera ammessi dallo schema, nell'ordine in cui si mostrano. */
+export const SOURCE_KINDS: SourceKind[] = ['manuscript', 'print', 'pdf', 'iiif', 'web', 'other'];
+
 export interface LibraryFilters {
   query: string;
   kind: SourceKind | '';

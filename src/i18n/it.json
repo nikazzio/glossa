@@ -940,7 +940,17 @@
       "occupiedField": "Spazio occupato",
       "statusField": "Stato",
       "statusActive": "In catalogo",
-      "statusArchived": "Archiviata"
+      "statusArchived": "Archiviata",
+      "titleField": "Titolo",
+      "creatorField": "Autore",
+      "dateField": "Data",
+      "fieldEdit": "Correggi {{field}}",
+      "fieldSave": "Salva la correzione",
+      "fieldCancel": "Annulla",
+      "fieldRestoreOriginal": "Riporta il valore della biblioteca",
+      "fieldCorrectedFrom": "Corretto a mano. La biblioteca dice: {{value}}",
+      "fieldEmptyOriginal": "niente",
+      "fieldSaveFailed": "Impossibile salvare la correzione"
     },
     "transcriptions": {
       "title": "Trascrizioni",

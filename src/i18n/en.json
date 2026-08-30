@@ -940,7 +940,17 @@
       "occupiedField": "Space used",
       "statusField": "Status",
       "statusActive": "In the catalogue",
-      "statusArchived": "Archived"
+      "statusArchived": "Archived",
+      "titleField": "Title",
+      "creatorField": "Author",
+      "dateField": "Date",
+      "fieldEdit": "Correct {{field}}",
+      "fieldSave": "Save the correction",
+      "fieldCancel": "Cancel",
+      "fieldRestoreOriginal": "Restore the library's value",
+      "fieldCorrectedFrom": "Corrected by hand. The library says: {{value}}",
+      "fieldEmptyOriginal": "nothing",
+      "fieldSaveFailed": "Could not save the correction"
     },
     "transcriptions": {
       "title": "Transcriptions",

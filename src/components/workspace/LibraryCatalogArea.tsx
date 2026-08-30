@@ -20,7 +20,7 @@ import {
   libraryLanguageOptions,
 } from '../../utils/libraryCatalogFilters';
 import { libraryLocation } from '../../navigation/appLocation';
-import type { LibraryCatalogEntry, Workspace } from '../../types';
+import type { LibraryCatalogEntry, SourceField, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
   itemId?: string;
@@ -34,6 +34,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const loadCatalog = useSourceLibraryStore((state) => state.loadCatalog);
   const removeSource = useSourceLibraryStore((state) => state.removeSource);
   const setArchived = useSourceLibraryStore((state) => state.setArchived);
+  const correctField = useSourceLibraryStore((state) => state.correctField);
   const loadDetail = useSourceLibraryStore((state) => state.loadDetail);
   const toggleWorkspaceLink = useSourceLibraryStore((state) => state.toggleWorkspaceLink);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
@@ -87,6 +88,16 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     openCatalogue();
   };
 
+  const correct = async (sourceId: string, field: SourceField, value: string | null) => {
+    try {
+      await correctField(sourceId, field, value);
+    } catch (error: unknown) {
+      toast.error(t('areas.library.fieldSaveFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
   const archive = async (sourceId: string, archived: boolean) => {
     try {
       await setArchived(sourceId, archived);
@@ -119,6 +130,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         onSetArchived={(archived) => archive(itemId, archived)}
         onRefresh={() => void loadCatalog()}
         onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
+        onCorrectField={(field, value) => correct(itemId, field, value)}
       />
     );
   }

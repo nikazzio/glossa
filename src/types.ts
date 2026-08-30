@@ -133,6 +133,16 @@ export interface AddSourceToLibraryInput {
 /** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */
 export type SourceStatus = 'active' | 'archived';
 
+/**
+ * I campi di un'opera che si possono correggere a mano. I nomi sono quelli
+ * della tabella: un secondo vocabolario in camelCase sarebbe solo una tabella
+ * di traduzione da tenere allineata.
+ */
+export type SourceField = 'title' | 'kind' | 'primary_language' | 'creator' | 'date';
+
+/** Valori per campo: come correzioni, oppure come originali della biblioteca. */
+export type SourceFieldValues = Partial<Record<SourceField, string>>;
+
 export interface LibrarySource {
   id: string;
   title: string;
@@ -181,6 +191,8 @@ export interface LibraryCatalogEntry {
    * dello scaricamento e la cartella nel deposito.
    */
   providerKey: string | null;
+  /** Solo i campi corretti a mano, col valore che aveva dato la biblioteca. */
+  original: SourceFieldValues;
 }
 
 export interface LibrarySourceVersion {
@@ -197,6 +209,10 @@ export interface LibrarySourceDetail {
   source: LibrarySource;
   versions: LibrarySourceVersion[];
   linkedWorkspaceIds: string[];
+  creator: string | null;
+  date: string | null;
+  /** Solo i campi corretti a mano, col valore che aveva dato la biblioteca. */
+  original: SourceFieldValues;
 }
 
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';

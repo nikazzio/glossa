@@ -19,6 +19,7 @@ vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   setSourceArchived: vi.fn().mockResolvedValue(undefined),
+  setSourceFieldOverride: vi.fn().mockResolvedValue(undefined),
   addSourceToLibrary: vi.fn().mockResolvedValue({ sourceId: 's1', wasCreated: true }),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),

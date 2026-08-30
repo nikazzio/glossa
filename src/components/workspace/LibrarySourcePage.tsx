@@ -4,9 +4,16 @@ import { IconButton, SectionLabel, StatRow } from '../ui';
 import { SourceSizeCap } from './SourceSizeCap';
 import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
+import { SourceFieldRow } from './SourceFieldRow';
+import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
 import { summarizeAvailability } from '../../services/vaultService';
 import { humanSize } from '../../utils';
-import type { LibraryCatalogEntry, LibrarySourceDetail, Workspace } from '../../types';
+import type {
+  LibraryCatalogEntry,
+  LibrarySourceDetail,
+  SourceField,
+  Workspace,
+} from '../../types';
 
 interface LibrarySourcePageProps {
   detail: LibrarySourceDetail;
@@ -19,6 +26,8 @@ interface LibrarySourcePageProps {
   onSetArchived: (archived: boolean) => Promise<void>;
   onRefresh: () => void;
   onToggleLink: (workspaceId: string, linked: boolean) => void;
+  /** Corregge un campo a mano; `null` riporta il valore della biblioteca. */
+  onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
 }
 
 /** La scheda di un'opera: cosa è, quanto ne hai, cosa puoi farci, dove sta. */
@@ -31,6 +40,7 @@ export function LibrarySourcePage({
   onSetArchived,
   onRefresh,
   onToggleLink,
+  onCorrectField,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
 
@@ -46,9 +56,9 @@ export function LibrarySourcePage({
               <h1 className="font-display text-3xl italic text-editorial-ink md:text-4xl">
                 {detail.source.title}
               </h1>
-              {entry && (entry.creator || entry.date) && (
+              {(detail.creator || detail.date) && (
                 <p className="mt-1 text-sm text-editorial-muted">
-                  {[entry.creator, entry.date].filter(Boolean).join(' · ')}
+                  {[detail.creator, detail.date].filter(Boolean).join(' · ')}
                 </p>
               )}
             </div>
@@ -66,16 +76,44 @@ export function LibrarySourcePage({
         <section className="space-y-2">
           <SectionLabel icon={Info} label={t('areas.library.detailsSection')} />
           <dl className="space-y-1.5">
-            <StatRow
+            <SourceFieldRow
+              label={t('areas.library.titleField')}
+              value={detail.source.title}
+              original={detail.original.title}
+              onSave={(value) => onCorrectField('title', value)}
+            />
+            <SourceFieldRow
               label={t('areas.library.kind')}
               value={t(`areas.library.kindLabels.${detail.source.kind}`)}
+              original={
+                detail.original.kind === undefined
+                  ? undefined
+                  : t(`areas.library.kindLabels.${detail.original.kind}`)
+              }
+              options={SOURCE_KINDS.map((kind) => ({
+                value: kind,
+                label: t(`areas.library.kindLabels.${kind}`),
+              }))}
+              onSave={(value) => onCorrectField('kind', value)}
             />
-            {detail.source.primaryLanguage && (
-              <StatRow
-                label={t('areas.library.languageField')}
-                value={detail.source.primaryLanguage}
-              />
-            )}
+            <SourceFieldRow
+              label={t('areas.library.creatorField')}
+              value={detail.creator ?? ''}
+              original={detail.original.creator}
+              onSave={(value) => onCorrectField('creator', value)}
+            />
+            <SourceFieldRow
+              label={t('areas.library.dateField')}
+              value={detail.date ?? ''}
+              original={detail.original.date}
+              onSave={(value) => onCorrectField('date', value)}
+            />
+            <SourceFieldRow
+              label={t('areas.library.languageField')}
+              value={detail.source.primaryLanguage ?? ''}
+              original={detail.original.primary_language}
+              onSave={(value) => onCorrectField('primary_language', value)}
+            />
             {detail.source.externalRef && (
               <StatRow
                 label={t('areas.library.provenanceField')}

@@ -24,6 +24,7 @@ vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   setSourceArchived: vi.fn().mockResolvedValue(undefined),
+  setSourceFieldOverride: vi.fn().mockResolvedValue(undefined),
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
   // Nessun file registrato: la chiave viene dai metadati, come per una fonte
   // appena aggiunta.
@@ -92,6 +93,7 @@ const entry = (
   sizes: [],
   principalSize: null,
   workspaces: [],
+  original: {},
   providerKey: 'gallica',
   ...overrides,
 });
@@ -527,6 +529,9 @@ describe('LibraryCatalogArea', () => {
           },
         ],
         linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
       },
     });
 
@@ -553,6 +558,9 @@ describe('LibraryCatalogArea', () => {
         source: entry().source,
         versions: [],
         linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
       },
     });
 
@@ -591,12 +599,67 @@ describe('LibraryCatalogArea', () => {
     sblocca.forEach((resolve) => resolve());
   });
 
+  it('corregge a mano un dato dell opera e lo segna come corretto', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: 'Anonimo',
+        date: null,
+        original: {},
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    const creatorRow = screen
+      .getByText('areas.library.creatorField')
+      .closest('div') as HTMLElement;
+    await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
+    const field = screen.getByRole('textbox', { name: 'areas.library.creatorField' });
+    await user.clear(field);
+    await user.type(field, 'Jean Pucelle');
+    await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
+
+    await waitFor(() =>
+      expect(service.setSourceFieldOverride).toHaveBeenCalledWith('s1', 'creator', 'Jean Pucelle'),
+    );
+  });
+
+  it('da un dato corretto si torna a quello della biblioteca', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: 'Jean Pucelle',
+        date: null,
+        original: { creator: 'Anonimo' },
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.fieldRestoreOriginal' }));
+
+    await waitFor(() =>
+      expect(service.setSourceFieldOverride).toHaveBeenCalledWith('s1', 'creator', null),
+    );
+  });
+
   it('shows the detail panel when itemId is provided and detail is loaded', () => {
     useSourceLibraryStore.setState({
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [{ id: 'v1', sourceId: 's1', label: 'primary', versionKind: 'iiif_manifest', sourceUrl: 'https://x.test/m.json', isPrimary: true, createdAt: '2026-01-01' }],
         linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
       },
     });
 
@@ -619,6 +682,9 @@ describe('LibraryCatalogArea', () => {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [],
         linkedWorkspaceIds: ['ws-2'],
+        creator: null,
+        date: null,
+        original: {},
       },
     });
 
@@ -641,6 +707,9 @@ describe('LibraryCatalogArea', () => {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [],
         linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
       },
     });
     const user = userEvent.setup();

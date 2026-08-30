@@ -33,7 +33,9 @@ I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, 
 
 Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza e disponibilità. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
 
-Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina: dati (tipo, lingua, provenienza, disponibilità, spazio occupato, stato), le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. In fondo c'è il posto dove arriverà il visore delle pagine. Il comando con la freccia riporta al catalogo.
+Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina: dati (titolo, tipo, autore, data, lingua, provenienza, disponibilità, spazio occupato, stato), le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. In fondo c'è il posto dove arriverà il visore delle pagine. Il comando con la freccia riporta al catalogo.
+
+**Correggere i dati** — Titolo, tipo, autore, data e lingua si correggono a mano: il comando con la matita apre il campo, Invio salva, Esc annulla. Un campo corretto porta un segno accanto all'etichetta; passandoci sopra leggi cosa diceva la biblioteca, e il comando accanto al valore riporta all'originale. **Il dato originale non viene mai sovrascritto**: la correzione vive a parte, come le correzioni ai dizionari, quindi si può sempre tornare indietro. Riscrivere esattamente il valore della biblioteca non lascia nessun segno di correzione, perché non c'è niente da segnalare.
 
 ## Scaricare una fonte
 

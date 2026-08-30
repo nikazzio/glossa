@@ -4,6 +4,7 @@ import {
   isManifest,
   type LibraryCatalogEntry,
   type LibrarySourceDetail,
+  type SourceField,
   type SourceCard,
 } from '../types';
 import {
@@ -13,6 +14,7 @@ import {
   listLibrarySourceUrls,
   removeSourceFromLibrary as removeSourceFromLibraryService,
   setSourceArchived as setSourceArchivedService,
+  setSourceFieldOverride as setSourceFieldOverrideService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
 import { logger } from '../utils/logger';
@@ -36,6 +38,8 @@ interface SourceLibraryState {
   removeSource: (sourceId: string) => Promise<void>;
   /** Archivia o rimette in circolo un'opera, poi rilegge il catalogo. */
   setArchived: (sourceId: string, archived: boolean) => Promise<void>;
+  /** Corregge a mano un campo dell'opera; `null` riporta il dato originale. */
+  correctField: (sourceId: string, field: SourceField, value: string | null) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   clearError: () => void;
@@ -122,6 +126,12 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
 
   setArchived: async (sourceId, archived) => {
     await setSourceArchivedService(sourceId, archived);
+    await get().loadCatalog();
+    if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
+  },
+
+  correctField: async (sourceId, field, value) => {
+    await setSourceFieldOverrideService(sourceId, field, value);
     await get().loadCatalog();
     if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
   },

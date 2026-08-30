@@ -55,6 +55,12 @@ Esistono due forme di appartenenza:
 - fonti, dizionari e memoria importata possono essere collegati a più workspace
   tramite `workspace_items`.
 
+Le correzioni a mano ai dati di un'opera vivono in `source_field_overrides`,
+come le correzioni locali ai dizionari: il valore della biblioteca resta intatto
+in `sources` e nei metadati della copia, e la lettura del catalogo applica la
+correzione restituendo anche l'originale. Correggere con lo stesso valore
+dell'originale non lascia una riga di correzione.
+
 Un'opera della Biblioteca vive in due stati: `active` o `archived`. Archiviare
 non tocca il deposito; rimuovere cancella subito la riga e le sue cascate.
 Non esiste uno stato di cestino per le fonti: l'archivio copre il ripensamento,

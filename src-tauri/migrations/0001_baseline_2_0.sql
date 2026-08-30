@@ -285,6 +285,17 @@ CREATE TABLE IF NOT EXISTS sources (
 CREATE INDEX IF NOT EXISTS idx_sources_title ON sources(title);
 CREATE INDEX IF NOT EXISTS idx_sources_status ON sources(status);
 
+-- Le correzioni a mano ai dati di un'opera stanno a parte, come già fanno le
+-- correzioni locali ai dizionari: quello che ha detto la biblioteca resta
+-- intatto dov'era, così si può sempre mostrare l'originale e tornarci.
+CREATE TABLE IF NOT EXISTS source_field_overrides (
+  source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+  field TEXT NOT NULL CHECK (field IN ('title', 'kind', 'primary_language', 'creator', 'date')),
+  value TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (source_id, field)
+);
+
 CREATE TABLE IF NOT EXISTS source_versions (
   id TEXT PRIMARY KEY,
   source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,

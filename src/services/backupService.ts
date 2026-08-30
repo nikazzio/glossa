@@ -122,6 +122,7 @@ const DELETE_ORDER = [
   'network_profiles',
   'workspace_items',
   'glossary_entry_overrides',
+  'source_field_overrides',
   'source_versions',
   'sources',
   'glossary_entries',
