@@ -122,61 +122,70 @@ struct GallicaRecord {
 }
 
 /// Legge la risposta SRU: quello che serve, ignorando il resto.
+///
+/// Il testo di un campo arriva a pezzi — un titolo con una `&` viene spezzato
+/// in tre eventi — quindi si accumula e si consegna alla chiusura del campo:
+/// fermarsi al primo pezzo troncherebbe il titolo alla prima e commerciale.
 fn parse_gallica_sru(body: &str) -> (Vec<DiscoveryResult>, u64) {
+    // Lo spazio non si taglia pezzo per pezzo ma sul valore finito: tagliarlo
+    // prima incollerebbe «Heures» e «usages» senza lo spazio che li separava.
     let mut reader = Reader::from_str(body);
-    reader.config_mut().trim_text(true);
 
     let mut results = Vec::new();
     let mut total = 0_u64;
     let mut record: Option<GallicaRecord> = None;
     let mut field = String::new();
+    let mut collected = String::new();
 
     loop {
         match reader.read_event() {
             Ok(Event::Start(start)) => {
                 field = local_name(start.name().as_ref());
+                collected.clear();
                 if field == "record" {
                     record = Some(GallicaRecord::default());
                 }
             }
             Ok(Event::End(end)) => {
-                if local_name(end.name().as_ref()) == "record" {
+                let name = local_name(end.name().as_ref());
+                if name == "record" {
                     if let Some(finished) = record.take() {
                         if let Some(result) = gallica_result(finished) {
                             results.push(result);
                         }
                     }
+                } else if name == field {
+                    let value = collected.trim().to_string();
+                    if !value.is_empty() {
+                        if name == "numberOfRecords" {
+                            total = value.parse().unwrap_or(0);
+                        } else if let Some(current) = record.as_mut() {
+                            store_gallica_field(current, &name, value);
+                        }
+                    }
                 }
+                collected.clear();
                 field.clear();
             }
             Ok(Event::Text(text)) => {
-                let value = text.decode().map(|value| value.trim().to_string());
-                let Ok(value) = value else { continue };
-                if value.is_empty() {
-                    continue;
+                let Ok(decoded) = text.decode() else { continue };
+                // `&amp;` e compagnia si sciolgono qui, come per il testo dei
+                // documenti Word (`documents/docx_extract.rs`): lasciarli passare
+                // li farebbe leggere tali e quali nel titolo.
+                if let Ok(value) = quick_xml::escape::unescape(&decoded) {
+                    collected.push_str(&value);
                 }
-                if field == "numberOfRecords" {
-                    total = value.parse().unwrap_or(0);
-                    continue;
-                }
-                let Some(current) = record.as_mut() else {
-                    continue;
-                };
-                match field.as_str() {
-                    // Gallica ripete l'identificativo: vale il primo, che è
-                    // l'ARK dell'opera; i successivi sono altre forme.
-                    "identifier" if current.identifier.is_none() && value.contains("ark:/") => {
-                        current.identifier = Some(value);
+            }
+            // Un'entità che il lettore consegna a parte (`&amp;`, `&#233;`):
+            // senza questo ramo sparirebbe dal testo insieme a tutto ciò che
+            // la segue nello stesso campo.
+            Ok(Event::GeneralRef(entity)) => {
+                if let Ok(Some(character)) = entity.resolve_char_ref() {
+                    collected.push(character);
+                } else if let Ok(name) = entity.decode() {
+                    if let Some(value) = quick_xml::escape::resolve_predefined_entity(&name) {
+                        collected.push_str(value);
                     }
-                    "title" if current.title.is_none() => current.title = Some(value),
-                    "creator" if current.creator.is_none() => current.creator = Some(value),
-                    "date" if current.date.is_none() => current.date = Some(value),
-                    "description" if current.description.is_none() => {
-                        current.description = Some(value);
-                    }
-                    "language" if current.language.is_none() => current.language = Some(value),
-                    "type" => current.types.push(value),
-                    _ => {}
                 }
             }
             Ok(Event::Eof) => break,
@@ -193,11 +202,32 @@ fn parse_gallica_sru(body: &str) -> (Vec<DiscoveryResult>, u64) {
     (results, total)
 }
 
+/// Dove finisce ogni campo della scheda. Il primo valore vince: Gallica
+/// ripete l'identificativo e il titolo in forme diverse, e la prima è quella
+/// dell'opera.
+fn store_gallica_field(record: &mut GallicaRecord, field: &str, value: String) {
+    match field {
+        "identifier" if record.identifier.is_none() && value.contains("ark:/") => {
+            record.identifier = Some(value);
+        }
+        "title" if record.title.is_none() => record.title = Some(value),
+        "creator" if record.creator.is_none() => record.creator = Some(value),
+        "date" if record.date.is_none() => record.date = Some(value),
+        "description" if record.description.is_none() => record.description = Some(value),
+        "language" if record.language.is_none() => record.language = Some(value),
+        "type" => record.types.push(value),
+        _ => {}
+    }
+}
+
 fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
     let identifier = record.identifier?;
     let resolved = resolvers::resolve(ResolverKind::Gallica, &identifier)?;
+    // La parte numerica dell'ARK si legge dall'identificativo: darla per
+    // scontata farebbe aprire l'opera giusta con la copertina di nessuno.
+    let (naan, _) = resolvers::gallica_ark(&identifier)?;
     let thumbnail = format!(
-        "https://gallica.bnf.fr/ark:/12148/{}.thumbnail",
+        "https://gallica.bnf.fr/ark:/{naan}/{}.thumbnail",
         resolved.doc_id
     );
     Some(DiscoveryResult {
@@ -443,6 +473,25 @@ mod tests {
         assert_eq!(
             first.manifest_url,
             "https://gallica.bnf.fr/iiif/ark:/12148/btv1b84260335/manifest.json"
+        );
+    }
+
+    #[test]
+    fn gallica_entities_are_resolved_and_the_ark_number_is_not_assumed() {
+        let body = r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:numberOfRecords>1</srw:numberOfRecords>
+  <srw:record><srw:recordData><oai_dc:dc xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Heures &amp; usages</dc:title>
+    <dc:identifier>https://gallica.bnf.fr/ark:/54321/btv1b84260335</dc:identifier>
+  </oai_dc:dc></srw:recordData></srw:record>
+</srw:searchRetrieveResponse>"#;
+
+        let (results, _) = parse_gallica_sru(body);
+
+        assert_eq!(results[0].title, "Heures & usages");
+        assert_eq!(
+            results[0].thumbnail_url.as_deref(),
+            Some("https://gallica.bnf.fr/ark:/54321/btv1b84260335.thumbnail")
         );
     }
 

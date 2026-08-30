@@ -158,9 +158,14 @@ fn gallica(value: &str) -> Option<Resolution> {
 }
 
 /// `ark:/12148/bpt6k9604118j`, ovunque si trovi dentro l'indirizzo.
-fn gallica_ark(value: &str) -> Option<(String, String)> {
-    let start = value.to_lowercase().find("ark:/")?;
-    let rest = &value[start + "ark:/".len()..];
+///
+/// Si lavora sempre sulla stessa stringa già minuscola: cercare in una e
+/// tagliare nell'altra va bene finché sono lunghe uguali, e smette di andare
+/// bene alla prima lettera accentata — con un taglio a metà carattere.
+pub(super) fn gallica_ark(value: &str) -> Option<(String, String)> {
+    let lowered = value.to_lowercase();
+    let start = lowered.find("ark:/")?;
+    let rest = &lowered[start + "ark:/".len()..];
     let mut parts = rest.split('/');
     let naan = parts.next()?;
     if naan.is_empty() || !naan.chars().all(|c| c.is_ascii_digit()) {
@@ -347,6 +352,21 @@ mod tests {
             );
             assert_eq!(resolved.strength, Strength::Strong);
         }
+    }
+
+    #[test]
+    fn an_address_with_accents_does_not_break_the_gallica_recognition() {
+        // Cercare in una stringa e tagliare in un'altra reggeva finché erano
+        // lunghe uguali: con una lettera accentata prima dell'ARK non lo è più.
+        let resolved = resolve(
+            ResolverKind::Gallica,
+            "https://gallica.bnf.fr/collection/Curiosités/ark:/12148/btv1b84260335",
+        )
+        .expect("indirizzo con accenti");
+        assert_eq!(
+            resolved.manifest_url,
+            "https://gallica.bnf.fr/iiif/ark:/12148/btv1b84260335/manifest.json"
+        );
     }
 
     #[test]

@@ -639,6 +639,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn an_ecodices_word_reaches_its_search_instead_of_stopping_at_recognition() {
+        // La biblioteca si dichiarava «solo riconoscimento»: la sua ricerca
+        // esisteva e non veniva mai chiamata, quindi cercare una parola non
+        // dava mai niente.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search/all"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<div class="search-result">
+                     <a href="https://www.e-codices.unifr.ch/en/bbb/0264">Facsimile</a>
+                     <div class="document-ms-title">Titus Livius</div>
+                   </div>"#,
+            ))
+            .mount(&server)
+            .await;
+        let provider = find_provider("ecodices").expect("provider exists");
+        let endpoints = SearchEndpoints {
+            ecodices_search: format!("{}/search/all", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let outcome = discover_with(&Client::new(), provider, "graduale", &endpoints, 1, None)
+            .await
+            .expect("ricerca");
+
+        assert_eq!(outcome.status, DiscoveryStatus::Results);
+        assert_eq!(outcome.results[0].id, "bbb-0264");
+    }
+
+    #[tokio::test]
     async fn a_gallica_title_is_searched_not_mistaken_for_an_identifier() {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
