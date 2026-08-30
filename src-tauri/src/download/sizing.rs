@@ -196,6 +196,7 @@ mod tests {
             label: None,
             image_service: "https://example.org/iiif/1".to_string(),
             size: Some((width, height)),
+            canvas_id: None,
         }
     }
 
@@ -314,6 +315,7 @@ mod tests {
             label: None,
             image_service: "https://example.org/iiif/1".to_string(),
             size: None,
+            canvas_id: None,
         };
         assert_eq!(
             token_for(

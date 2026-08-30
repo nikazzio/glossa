@@ -436,6 +436,76 @@ async fn a_resumed_download_does_not_ask_again_for_what_is_already_on_disk() {
     let _ = std::fs::remove_dir_all(&vault);
 }
 
+/// Le righe di `source_pages` per la copia, ordinate per posizione.
+fn logical_pages(db: &Path) -> Vec<(i64, Option<String>, Option<String>)> {
+    let conn = Connection::open(db).unwrap();
+    let mut stmt = conn
+        .prepare(
+            "SELECT position, label, canvas_url FROM source_pages \
+             WHERE source_version_id = ?1 ORDER BY position",
+        )
+        .unwrap();
+    stmt.query_map([VERSION_ID], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+    })
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+#[tokio::test]
+async fn a_completed_download_records_the_logical_page_identity() {
+    // #217: la pagina logica (ordine, etichetta, canvas) va registrata
+    // leggendo il manifesto, indipendentemente da quali file sono arrivati.
+    let server = MockServer::start().await;
+    mount_manifest(&server, 3).await;
+    mount_descriptors(&server).await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/img/\d+/full/.*"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(jpeg()))
+        .mount(&server)
+        .await;
+
+    let vault = temp_dir("pagine_logiche_vault");
+    let manifest_url = format!("{}/manifest.json", server.uri());
+    let db = temp_db("pagine_logiche", &manifest_url);
+    let engine = engine_with(db.clone(), vault.clone());
+    engine.submit(&download_job(&manifest_url)).await.unwrap();
+
+    let record = run_until_terminal(&engine).await;
+    assert_eq!(record.status, JobStatus::Completed, "{:?}", record.error);
+
+    let pages = logical_pages(&db);
+    assert_eq!(pages.len(), 3);
+    assert_eq!(pages[0].0, 1);
+    assert_eq!(pages[0].1.as_deref(), Some("c. 1"));
+    assert_eq!(pages[1].0, 2);
+
+    // Rileggere lo stesso manifesto (un secondo lavoro sulla stessa copia,
+    // come una nuova verifica) aggiorna le righe invece di duplicarle.
+    let second = NewJob {
+        id: "download:sver-prova:2".to_string(),
+        ..download_job(&manifest_url)
+    };
+    engine.submit(&second).await.unwrap();
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        engine.tick().await.unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let conn = engine.connection().unwrap();
+        let record = store::get(&conn, &second.id).unwrap().unwrap();
+        if record.status.is_terminal() {
+            assert_eq!(record.status, JobStatus::Completed, "{:?}", record.error);
+            break;
+        }
+        assert!(Instant::now() < deadline, "il secondo lavoro non è finito");
+    }
+    assert_eq!(logical_pages(&db).len(), 3, "nessuna riga duplicata");
+
+    let _ = std::fs::remove_dir_all(&vault);
+    let _ = std::fs::remove_file(&db);
+}
+
 #[tokio::test]
 async fn the_descriptor_is_read_once_for_the_whole_book() {
     // La misura si calcola; il descrittore serve solo a decidere **come**

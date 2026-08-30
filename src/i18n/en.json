@@ -896,7 +896,32 @@
       "optimizeAction": "Shrink the images to free up space",
       "optimizeQueued": "Optimisation queued.",
       "optimizeFailed": "The optimisation could not be started.",
-      "optimizeWhileDownloading": "This work has to finish downloading first: the two jobs would write over the same pages."
+      "optimizeWhileDownloading": "This work has to finish downloading first: the two jobs would write over the same pages.",
+      "kindLabels": {
+        "manuscript": "Manuscript",
+        "print": "Print",
+        "pdf": "PDF",
+        "iiif": "IIIF",
+        "web": "Web page",
+        "other": "Other"
+      },
+      "filters": {
+        "searchLabel": "Search the Library",
+        "searchPlaceholder": "Search by title or author…",
+        "kindLabel": "Type",
+        "allKinds": "Any type",
+        "languageLabel": "Language",
+        "allLanguages": "Any language",
+        "providerLabel": "Library",
+        "allProviders": "Any library",
+        "availabilityLabel": "Availability",
+        "allAvailability": "Any availability",
+        "availabilityRemote": "Online only",
+        "availabilityPartial": "Partial",
+        "availabilityComplete": "Complete",
+        "clear": "Clear filters",
+        "noMatches": "No work matches these filters"
+      }
     },
     "transcriptions": {
       "title": "Transcriptions",

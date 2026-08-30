@@ -896,7 +896,32 @@
       "optimizeAction": "Riduci le immagini per liberare spazio",
       "optimizeQueued": "Ottimizzazione messa in coda.",
       "optimizeFailed": "Non è stato possibile avviare l'ottimizzazione.",
-      "optimizeWhileDownloading": "Prima finisce lo scaricamento di quest'opera: i due lavori scriverebbero sulle stesse pagine."
+      "optimizeWhileDownloading": "Prima finisce lo scaricamento di quest'opera: i due lavori scriverebbero sulle stesse pagine.",
+      "kindLabels": {
+        "manuscript": "Manoscritto",
+        "print": "Stampa",
+        "pdf": "PDF",
+        "iiif": "IIIF",
+        "web": "Pagina web",
+        "other": "Altro"
+      },
+      "filters": {
+        "searchLabel": "Cerca in Biblioteca",
+        "searchPlaceholder": "Cerca per titolo o autore…",
+        "kindLabel": "Tipo",
+        "allKinds": "Ogni tipo",
+        "languageLabel": "Lingua",
+        "allLanguages": "Ogni lingua",
+        "providerLabel": "Biblioteca",
+        "allProviders": "Ogni biblioteca",
+        "availabilityLabel": "Disponibilità",
+        "allAvailability": "Ogni disponibilità",
+        "availabilityRemote": "Solo online",
+        "availabilityPartial": "Parziale",
+        "availabilityComplete": "Completa",
+        "clear": "Azzera i filtri",
+        "noMatches": "Nessuna opera corrisponde ai filtri"
+      }
     },
     "transcriptions": {
       "title": "Trascrizioni",

@@ -60,6 +60,10 @@ vi.mock('../../services/optimizeService', () => ({
   enqueueOptimization: vi.fn(),
 }));
 
+vi.mock('../../services/iiifProviderService', () => ({
+  listIIIFProviders: vi.fn().mockResolvedValue([]),
+}));
+
 const entry = (
   overrides: Partial<import('../../types').LibraryCatalogEntry> = {},
 ): import('../../types').LibraryCatalogEntry => ({

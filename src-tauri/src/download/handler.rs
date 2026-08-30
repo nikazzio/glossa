@@ -11,8 +11,12 @@
 //!
 //! Due invarianti che il resto del modulo presuppone:
 //!
-//! - **il disco è la verità**: nessuna riga per pagina nel database. Il
-//!   conteggio lo dà la cartella, l'impronta il file di lato (`sidecar`);
+//! - **il disco è la verità per i file**: nessuna riga per file nel database.
+//!   Il conteggio lo dà la cartella, l'impronta il file di lato (`sidecar`).
+//!   La pagina logica (`source_pages`, #217) è un'eccezione dichiarata: registra
+//!   solo l'identità della pagina — ordine, etichetta, canvas — letta dal
+//!   manifesto, non la presenza di un file. Riscaricare o ottimizzare non la
+//!   tocca;
 //! - nel deposito entra solo ciò che ha superato la validazione (`vault_io`).
 //!
 //! Non esiste più un punto di ripresa salvato: riprendere significa
@@ -29,7 +33,7 @@ use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
 
-use super::catalog::{profile_for, record_manifest, source_title};
+use super::catalog::{profile_for, record_manifest, record_pages, source_title};
 use super::courtesy::{Courtesy, Signals};
 use super::fetch::{build_client, fetch, host_of};
 use super::inventory;
@@ -275,6 +279,7 @@ impl SourceDownloadJob {
             .await
             .unwrap_or_else(|| config.version_id.clone());
         record_manifest(ctx, &config, total, &manifest).await?;
+        record_pages(ctx, &config.version_id, &manifest).await?;
 
         let cap = SizeCap::parse(&config.size_tag);
         let size_dir = root.join(
