@@ -130,12 +130,17 @@ export interface AddSourceToLibraryInput {
   workspaceId?: string;
 }
 
+/** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */
+export type SourceStatus = 'active' | 'archived';
+
 export interface LibrarySource {
   id: string;
   title: string;
   kind: SourceKind;
   primaryLanguage: string | null;
   externalRef: string | null;
+  status: SourceStatus;
+  archivedAt: string | null;
   createdAt: string;
 }
 

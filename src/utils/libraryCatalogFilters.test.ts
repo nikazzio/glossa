@@ -17,6 +17,8 @@ function entry(
       kind: 'manuscript',
       primaryLanguage: 'it',
       externalRef: null,
+      status: 'active' as const,
+      archivedAt: null,
       createdAt: '2026-01-01',
     },
     versionId: 'sver-1',
@@ -133,6 +135,46 @@ describe('hasActiveLibraryFilters', () => {
     ).toBe(true);
     expect(
       hasActiveLibraryFilters({ ...EMPTY_LIBRARY_FILTERS, kind: 'pdf' }),
+    ).toBe(true);
+  });
+});
+
+describe('opere archiviate', () => {
+  const archiviata = entry({
+    source: {
+      ...entry().source,
+      id: 'src-arch',
+      title: 'Trattato archiviato',
+      status: 'archived',
+      archivedAt: '2026-08-30',
+    },
+  });
+
+  it('restano fuori dai risultati finché non si chiede di vederle', () => {
+    const result = filterLibraryCatalog([entry(), archiviata], EMPTY_LIBRARY_FILTERS);
+    expect(result.map((item) => item.source.id)).toEqual(['src-1']);
+  });
+
+  it('rientrano quando si chiede di vederle, insieme alle attive', () => {
+    const result = filterLibraryCatalog([entry(), archiviata], {
+      ...EMPTY_LIBRARY_FILTERS,
+      includeArchived: true,
+    });
+    expect(result.map((item) => item.source.id)).toEqual(['src-1', 'src-arch']);
+  });
+
+  it('restano soggette agli altri filtri anche quando sono visibili', () => {
+    const result = filterLibraryCatalog([entry(), archiviata], {
+      ...EMPTY_LIBRARY_FILTERS,
+      includeArchived: true,
+      query: 'archiviato',
+    });
+    expect(result.map((item) => item.source.id)).toEqual(['src-arch']);
+  });
+
+  it('vedere le archiviate conta come filtro attivo, così si può azzerare', () => {
+    expect(
+      hasActiveLibraryFilters({ ...EMPTY_LIBRARY_FILTERS, includeArchived: true }),
     ).toBe(true);
   });
 });

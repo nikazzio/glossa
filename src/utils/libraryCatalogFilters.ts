@@ -10,6 +10,8 @@ export interface LibraryFilters {
   language: string | '';
   providerKey: string | '';
   availability: SourceAvailability | '';
+  /** Le archiviate stanno fuori dai risultati finché non si chiede di vederle. */
+  includeArchived: boolean;
 }
 
 export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
@@ -18,11 +20,17 @@ export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
   language: '',
   providerKey: '',
   availability: '',
+  includeArchived: false,
 };
 
 export function hasActiveLibraryFilters(filters: LibraryFilters): boolean {
-  return filters.query.trim() !== '' || Object.entries(filters).some(
-    ([key, value]) => key !== 'query' && value !== '',
+  return (
+    filters.query.trim() !== '' ||
+    filters.includeArchived ||
+    filters.kind !== '' ||
+    filters.language !== '' ||
+    filters.providerKey !== '' ||
+    filters.availability !== ''
   );
 }
 
@@ -56,6 +64,7 @@ export function filterLibraryCatalog(
 ): LibraryCatalogEntry[] {
   const query = filters.query.trim().toLowerCase();
   return catalog.filter((entry) => {
+    if (!filters.includeArchived && entry.source.status === 'archived') return false;
     if (query && !matchesQuery(entry, query)) return false;
     if (filters.kind && entry.source.kind !== filters.kind) return false;
     if (filters.language && entry.source.primaryLanguage !== filters.language)

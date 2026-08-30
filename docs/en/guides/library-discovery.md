@@ -29,7 +29,9 @@ The Library always shows **every book**: it is a catalogue, not the view of a wo
 
 On each card, next to the commands, you see **which workspaces that book belongs to**: one label each. Clicking a label unlinks it from there; the command beside them opens the list of workspaces it is not in yet, to link it. **A work can live in several workspaces at once** and is never duplicated: linking it in two places does not make two copies, neither of the data nor of the files.
 
-The card's commands come in two groups: first what you do to the book — download, check, free space, delete — then where it lives.
+The card's commands come in two groups: first what you do to the book — download, check, shrink images, free space, archive, delete — then where it lives.
+
+Above the list sits the **search bar**: type a title or an author, and next to it pick kind, language, source library and availability. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
 
 Opening a source shows its detail with recorded versions and the list of all your workspaces, where you can link or unlink it from each one.
 
@@ -51,7 +53,7 @@ Some libraries are slow on purpose: see [Storage and jobs](/en/guides/storage-an
 
 ## Checking and freeing space
 
-Every row in the Library has five commands, always present: **download**, **check**, **shrink images**, **free space**, **remove**. The ones that do not apply right now stay in place, disabled — so you always know what can be done.
+Every row in the Library has six commands, always present: **download**, **check**, **shrink images**, **free space**, **archive**, **remove**. The ones that do not apply right now stay in place, disabled — so you always know what can be done.
 
 **Check** compares what Glossa registered with what is actually on disk. If something is missing it says so and offers to download it again: pages already there are not requested twice.
 
@@ -59,8 +61,14 @@ From every page it downloads, Glossa derives its **thumbnail**, without asking t
 
 **Free space** deletes the downloaded pages, right away and for real. The record, the manifest and the thumbnails stay, so the book is still browsable and pages come back when you need them. The confirmation tells you how much you are freeing.
 
+## Archiving a work
+
+When a work is no longer part of your daily work but you do not want to lose it, **archive** it: it leaves the list without leaving the Library. To see archived works again, switch on the box command in the search bar; from there the same command on the row brings it back to the catalogue.
+
+Archiving is **about the list only**: pages already downloaded stay where they were. Since this is the moment you notice them, Glossa then asks whether you also want to free the space that work takes. You can say no and do it later, or never: nothing is deleted unless you ask.
+
 ## Removing a source
 
 Removing takes the work away **entirely**: the record, its workspace links, and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting.
 
-To keep the work and only get the space back, the command is a different one: **free space**.
+To keep the work and only get the space back, the command is a different one: **free space**. To simply get it out of the way without losing it, **archive** it: removal has no second thoughts, the archive does.

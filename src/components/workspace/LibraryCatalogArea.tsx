@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
+  Archive,
+  ArchiveRestore,
   BookOpenText,
   Check,
   Clock,
@@ -54,6 +56,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const detail = useSourceLibraryStore((state) => state.detail);
   const loadCatalog = useSourceLibraryStore((state) => state.loadCatalog);
   const removeSource = useSourceLibraryStore((state) => state.removeSource);
+  const setArchived = useSourceLibraryStore((state) => state.setArchived);
   const loadDetail = useSourceLibraryStore((state) => state.loadDetail);
   const toggleWorkspaceLink = useSourceLibraryStore((state) => state.toggleWorkspaceLink);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
@@ -83,9 +86,25 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   }, []);
 
   const filteredCatalog = filterLibraryCatalog(catalog, filters);
+  // Le tendine offrono i valori delle opere che si stanno guardando: con le
+  // archiviate nascoste, una lingua presente solo lì sarebbe una scelta che
+  // non seleziona niente.
+  const visibleCatalog = filters.includeArchived
+    ? catalog
+    : catalog.filter((entry) => entry.source.status === 'active');
   const providerOptions = providers.filter((provider) =>
-    catalog.some((entry) => entry.providerKey === provider.key),
+    visibleCatalog.some((entry) => entry.providerKey === provider.key),
   );
+
+  const archive = async (sourceId: string, archived: boolean) => {
+    try {
+      await setArchived(sourceId, archived);
+    } catch (error: unknown) {
+      toast.error(archived ? t('areas.library.archiveFailed') : t('areas.library.restoreFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
 
   const toggleLink = async (sourceId: string, workspaceId: string, linked: boolean) => {
     try {
@@ -173,7 +192,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         <LibraryFilterBar
           filters={filters}
           onChange={setFilters}
-          languageOptions={libraryLanguageOptions(catalog)}
+          languageOptions={libraryLanguageOptions(visibleCatalog)}
           providerOptions={providerOptions}
         />
       )}
@@ -201,6 +220,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               view={view}
               onOpen={() => void loadDetail(entry.source.id)}
               onRemove={() => void removeSource(entry.source.id)}
+              onSetArchived={(archived) => archive(entry.source.id, archived)}
               onRefresh={() => void loadCatalog()}
               workspaces={workspaces}
               onToggleLink={(workspaceId, linked) =>
@@ -219,6 +239,7 @@ function CatalogEntryRow({
   view,
   onOpen,
   onRemove,
+  onSetArchived,
   onRefresh,
   workspaces,
   onToggleLink,
@@ -227,6 +248,7 @@ function CatalogEntryRow({
   view: 'list' | 'grid';
   onOpen: () => void;
   onRemove: () => void;
+  onSetArchived: (archived: boolean) => Promise<void>;
   onRefresh: () => void;
   workspaces: Workspace[];
   onToggleLink: (workspaceId: string, linked: boolean) => void;
@@ -329,16 +351,11 @@ function CatalogEntryRow({
     }
   };
 
-  const freeSpace = async () => {
+  /** La cancellazione vera delle pagine, senza chiedere: la domanda la fa chi
+   *  chiama, perché arriva da due strade diverse (comando diretto e
+   *  archiviazione). */
+  const runFreeSpace = async () => {
     if (!entry.versionId) return;
-    const confirmed = await confirm({
-      title: t('areas.library.freeSpaceTitle', { size: humanSize(entry.localBytes) }),
-      message: t('areas.library.freeSpaceMessage'),
-      confirmLabel: t('areas.library.freeSpaceConfirm'),
-      danger: true,
-    });
-    if (!confirmed) return;
-
     setBusy(true);
     try {
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
@@ -356,6 +373,39 @@ function CatalogEntryRow({
     } finally {
       setBusy(false);
     }
+  };
+
+  const freeSpace = async () => {
+    if (!entry.versionId) return;
+    const confirmed = await confirm({
+      title: t('areas.library.freeSpaceTitle', { size: humanSize(entry.localBytes) }),
+      message: t('areas.library.freeSpaceMessage'),
+      confirmLabel: t('areas.library.freeSpaceConfirm'),
+      danger: true,
+    });
+    if (confirmed) await runFreeSpace();
+  };
+
+  /**
+   * Archiviare tocca il catalogo, non il disco. Se però quell'opera occupa
+   * spazio, è il momento naturale per proporre di liberarlo: la proposta resta
+   * una domanda a parte, così l'archiviazione non cancella niente di nascosto.
+   */
+  const archive = async () => {
+    setBusy(true);
+    try {
+      await onSetArchived(true);
+    } finally {
+      setBusy(false);
+    }
+    if (entry.localPages === 0) return;
+    const alsoFree = await confirm({
+      title: t('areas.library.archiveFreeTitle', { size: humanSize(entry.localBytes) }),
+      message: t('areas.library.archiveFreeMessage'),
+      confirmLabel: t('areas.library.freeSpaceConfirm'),
+      danger: true,
+    });
+    if (alsoFree) await runFreeSpace();
   };
 
   const optimise = async () => {
@@ -409,13 +459,15 @@ function CatalogEntryRow({
     }
   };
 
+  const archived = entry.source.status === 'archived';
+
   return (
     <article
-      className={
+      className={`${
         view === 'grid'
           ? 'flex flex-col gap-2 rounded-2xl border border-editorial-border bg-surface-elevated p-3'
           : 'flex items-center gap-3 py-2.5'
-      }
+      }${archived ? ' opacity-60' : ''}`}
     >
       <div className={view === 'grid' ? 'flex gap-3' : 'flex min-w-0 flex-1 items-center gap-3'}>
         <span className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-editorial-border bg-editorial-textbox">
@@ -553,6 +605,16 @@ function CatalogEntryRow({
           title={t('areas.library.freeSpace')}
         >
           <Eraser size={13} />
+        </IconButton>
+        <IconButton
+          size="sm"
+          tone={archived ? 'accent' : 'default'}
+          ariaPressed={archived}
+          disabled={busy}
+          onClick={() => void (archived ? onSetArchived(false) : archive())}
+          title={archived ? t('areas.library.restore') : t('areas.library.archive')}
+        >
+          {archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
         </IconButton>
         <IconButton size="sm" tone="danger" onClick={() => void askRemoval()} title={t('areas.library.remove')}>
           <Trash2 size={13} />

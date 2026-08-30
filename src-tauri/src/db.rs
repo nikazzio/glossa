@@ -333,6 +333,9 @@ mod tests {
         for (table, expected) in [
             ("workspaces", "icon_key"),
             ("workspaces", "archived_at"),
+            // Un'opera si archivia come un workspace: sta da parte senza
+            // sparire, e la data dice da quando.
+            ("sources", "archived_at"),
             ("source_versions", "availability"),
             ("source_versions", "download_policy"),
             ("source_versions", "size_cap"),

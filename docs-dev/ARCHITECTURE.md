@@ -55,6 +55,13 @@ Esistono due forme di appartenenza:
 - fonti, dizionari e memoria importata possono essere collegati a più workspace
   tramite `workspace_items`.
 
+Un'opera della Biblioteca vive in due stati: `active` o `archived`. Archiviare
+non tocca il deposito; rimuovere cancella subito la riga e le sue cascate.
+Non esiste uno stato di cestino per le fonti: l'archivio copre il ripensamento,
+una terza vista sarebbe solo da mantenere. Il catalogo legge tutte le opere in
+una volta e nasconde le archiviate nei filtri di vista, non con una seconda
+query.
+
 `workspace_items.is_origin` registra dove nasce una risorsa condivisa. Le
 correzioni locali ai dizionari vivono in `glossary_entry_overrides`; non
 modificano il dizionario degli altri workspace. Archiviare un workspace nasconde
