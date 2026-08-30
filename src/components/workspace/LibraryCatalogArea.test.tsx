@@ -8,6 +8,7 @@ import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
+import { confirm } from '../../stores/confirmStore';
 import { enqueueOptimization } from '../../services/optimizeService';
 import '../../test/i18n-mock';
 
@@ -97,6 +98,11 @@ const entry = (
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
+    // Le chiamate registrate si azzerano fra un caso e l'altro: senza, una
+    // chiamata identica fatta dal caso precedente farebbe passare
+    // un'asserzione anche se in questo caso non è successo niente.
+    vi.clearAllMocks();
+    vi.mocked(confirm).mockResolvedValue(true);
     vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     vi.mocked(enqueueOptimization).mockReset();
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
@@ -297,25 +303,38 @@ describe('LibraryCatalogArea', () => {
     expect(freeVersionPages).not.toHaveBeenCalled();
   });
 
-  it('dopo aver archiviato propone di liberare lo spazio, e lo libera solo se si accetta', async () => {
+  const conPagineSulComputer = () =>
+    entry({
+      localPages: 34,
+      localBytes: 48_234_496,
+      principalSize: '2000',
+      sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0 }],
+    });
+
+  it('dopo aver archiviato propone di liberare lo spazio, e accettando lo libera', async () => {
     const service = await import('../../services/libraryService');
     const { freeVersionPages } = await import('../../services/vaultService');
-    useSourceLibraryStore.setState({
-      catalog: [
-        entry({
-          localPages: 34,
-          localBytes: 48_234_496,
-          principalSize: '2000',
-          sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0 }],
-        }),
-      ],
-    });
+    useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
     await waitFor(() => expect(freeVersionPages).toHaveBeenCalled());
+  });
+
+  it('rifiutando la proposta, l opera resta archiviata e le pagine restano dove sono', async () => {
+    const service = await import('../../services/libraryService');
+    const { freeVersionPages } = await import('../../services/vaultService');
+    vi.mocked(confirm).mockResolvedValue(false);
+    useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    expect(freeVersionPages).not.toHaveBeenCalled();
   });
 
   it('un opera archiviata offre di riportarla in catalogo, non di archiviarla di nuovo', async () => {

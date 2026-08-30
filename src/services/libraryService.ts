@@ -222,13 +222,15 @@ export async function versionProviderKey(versionId: string): Promise<string | nu
  * restano dove sono, liberare lo spazio resta un'azione distinta e volontaria.
  */
 export async function setSourceArchived(sourceId: string, archived: boolean): Promise<void> {
+  // Una query sola, sempre uguale: la data segue lo stato invece di comporre
+  // due testi diversi, così la forma della richiesta non dipende dal caso.
   await execute(
     `UPDATE sources
         SET status = $1,
-            archived_at = ${archived ? 'CURRENT_TIMESTAMP' : 'NULL'},
+            archived_at = CASE WHEN $2 = 1 THEN CURRENT_TIMESTAMP ELSE NULL END,
             updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2`,
-    [archived ? 'archived' : 'active', sourceId],
+      WHERE id = $3`,
+    [archived ? 'archived' : 'active', archived ? 1 : 0, sourceId],
   );
   logger.info(archived ? 'library.source.archived' : 'library.source.restored', { sourceId });
 }

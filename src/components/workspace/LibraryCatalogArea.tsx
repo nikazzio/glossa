@@ -351,12 +351,19 @@ function CatalogEntryRow({
     }
   };
 
-  /** La cancellazione vera delle pagine, senza chiedere: la domanda la fa chi
-   *  chiama, perché arriva da due strade diverse (comando diretto e
-   *  archiviazione). */
-  const runFreeSpace = async () => {
+  /**
+   * La cancellazione vera delle pagine, senza chiedere: la domanda la fa chi
+   * chiama, perché arriva da due strade diverse (comando diretto e
+   * archiviazione).
+   *
+   * `trackBusy` è spento quando la riga può essere già sparita dall'elenco —
+   * dopo l'archiviazione, se la vista nasconde le archiviate: segnare
+   * «occupato» su una riga che non c'è più significa scrivere su un componente
+   * smontato.
+   */
+  const runFreeSpace = async (trackBusy = true) => {
     if (!entry.versionId) return;
-    setBusy(true);
+    if (trackBusy) setBusy(true);
     try {
       const freed = await freeVersionPages(await providerKey(), entry.versionId);
       toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
@@ -371,7 +378,7 @@ function CatalogEntryRow({
         description: reason,
       });
     } finally {
-      setBusy(false);
+      if (trackBusy) setBusy(false);
     }
   };
 
@@ -405,7 +412,18 @@ function CatalogEntryRow({
       confirmLabel: t('areas.library.freeSpaceConfirm'),
       danger: true,
     });
-    if (alsoFree) await runFreeSpace();
+    if (alsoFree) await runFreeSpace(false);
+  };
+
+  /** Riportare in catalogo è breve, ma finché non è finito i comandi della riga
+   *  restano spenti: due click di seguito sarebbero due richieste. */
+  const restore = async () => {
+    setBusy(true);
+    try {
+      await onSetArchived(false);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const optimise = async () => {
@@ -611,7 +629,7 @@ function CatalogEntryRow({
           tone={archived ? 'accent' : 'default'}
           ariaPressed={archived}
           disabled={busy}
-          onClick={() => void (archived ? onSetArchived(false) : archive())}
+          onClick={() => void (archived ? restore() : archive())}
           title={archived ? t('areas.library.restore') : t('areas.library.archive')}
         >
           {archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}

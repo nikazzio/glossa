@@ -8,7 +8,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { addSourceToLibrary, getLibrarySourceDetail, setWorkspaceSourceLink } =
+const { addSourceToLibrary, getLibrarySourceDetail, setSourceArchived, setWorkspaceSourceLink } =
   await import('./libraryService');
 
 const baseInput = {
@@ -160,6 +160,24 @@ describe('libraryService', () => {
       expect(detail.source.id).toBe('s1');
       expect(detail.versions).toHaveLength(1);
       expect(detail.linkedWorkspaceIds).toEqual(['ws-1']);
+    });
+  });
+
+  describe('setSourceArchived', () => {
+    it('archivia e ripristina con la stessa richiesta, cambiando solo i valori', async () => {
+      await setSourceArchived('s1', true);
+      const [archiveQuery, archiveParams] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+
+      dbMocks.execute.mockClear();
+      await setSourceArchived('s1', false);
+      const [restoreQuery, restoreParams] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+
+      // La forma della richiesta non dipende dal caso: cambiano solo i valori,
+      // e la data segue lo stato senza comporre due testi diversi.
+      expect(restoreQuery).toBe(archiveQuery);
+      expect(archiveQuery).toContain('UPDATE sources');
+      expect(archiveParams).toEqual(['archived', 1, 's1']);
+      expect(restoreParams).toEqual(['active', 0, 's1']);
     });
   });
 
