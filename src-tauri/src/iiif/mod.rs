@@ -3,6 +3,8 @@ use serde::Serialize;
 pub mod commands;
 pub mod discovery;
 pub mod network;
+pub mod resolvers;
+pub mod search;
 pub mod settings;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]

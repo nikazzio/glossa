@@ -3,16 +3,15 @@ use std::time::Duration;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use url::Url;
 
 use std::sync::atomic::AtomicBool;
 
 use super::network::NetworkProfile;
+use super::resolvers::{self, Strength};
+use super::search::{self, SearchEndpoints};
 use super::{find_provider, IIIFProvider, SearchMode};
 use crate::download::courtesy::{Courtesy, Signals, Turn};
 use tauri::Manager;
-
-const ARCHIVE_SEARCH_URL: &str = "https://archive.org/advancedsearch.php";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -73,9 +72,9 @@ pub struct DiscoveryOutcome {
     pub has_more: bool,
 }
 
-struct SearchPage {
-    results: Vec<DiscoveryResult>,
-    has_more: bool,
+pub struct SearchPage {
+    pub results: Vec<DiscoveryResult>,
+    pub has_more: bool,
 }
 
 fn client() -> Result<Client, String> {
@@ -208,7 +207,7 @@ impl Gate<'_> {
     }
 }
 
-async fn wait_if_gated(gate: Option<&Gate<'_>>, url: &str) -> Option<Turn> {
+pub(super) async fn wait_if_gated(gate: Option<&Gate<'_>>, url: &str) -> Option<Turn> {
     match gate {
         Some(gate) => gate.wait(url).await,
         None => None,
@@ -234,18 +233,6 @@ async fn resolve_manifest(
         .map_err(|_| "The manifest is not valid JSON.".to_string())?;
 
     Ok(manifest_preview(manifest_url, value))
-}
-
-fn archive_identifier(input: &str) -> Option<String> {
-    let url = Url::parse(input).ok()?;
-    if !url.host_str()?.ends_with("archive.org") {
-        return None;
-    }
-    let mut segments = url.path_segments()?;
-    if segments.next()? != "details" {
-        return None;
-    }
-    segments.next().map(str::to_string)
 }
 
 async fn search_archive(
@@ -331,46 +318,73 @@ async fn search_archive(
     })
 }
 
+/// Come si arriva da quello che l'utente ha scritto a un risultato.
+///
+/// Due strade, nell'ordine che la biblioteca dichiara: **riconoscere** ciò che
+/// è stato scritto (indirizzo, segnatura, identificativo) e aprire il
+/// manifesto, oppure **cercare** dentro il suo catalogo. Le biblioteche che
+/// cercano prima usano il riconoscimento solo quando è inequivocabile: su
+/// Gallica una parola qualsiasi somiglia a un identificativo, e trattarla come
+/// tale porterebbe a un manifesto che non esiste invece che ai risultati.
 async fn discover_with(
     client: &Client,
     provider: &IIIFProvider,
     input: &str,
-    archive_search_url: &str,
+    endpoints: &SearchEndpoints,
     page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<DiscoveryOutcome, String> {
     let value = input.trim();
+    let nothing = || DiscoveryOutcome {
+        cached_at: None,
+        status: DiscoveryStatus::NotFound,
+        provider_key: provider.key.to_string(),
+        manifest: None,
+        results: Vec::new(),
+        has_more: false,
+    };
     if value.is_empty() {
+        return Ok(nothing());
+    }
+
+    let recognised = resolvers::resolve(provider.resolver, value);
+    let recognised_first = match provider.search_mode {
+        SearchMode::Direct | SearchMode::Fallback => recognised.clone(),
+        SearchMode::SearchFirst => recognised
+            .clone()
+            .filter(|resolution| resolution.strength == Strength::Strong),
+    };
+
+    if let Some(resolution) = recognised_first {
         return Ok(DiscoveryOutcome {
             cached_at: None,
-            status: DiscoveryStatus::NotFound,
+            status: DiscoveryStatus::Manifest,
             provider_key: provider.key.to_string(),
-            manifest: None,
+            manifest: Some(resolve_manifest(client, resolution.manifest_url, gate).await?),
             results: Vec::new(),
             has_more: false,
         });
     }
 
-    if provider.key == "archive_org" && !matches!(provider.search_mode, SearchMode::Direct) {
-        if let Some(identifier) = archive_identifier(value) {
-            let manifest_url = format!("https://iiif.archive.org/iiif/{identifier}/manifest.json");
-            return Ok(DiscoveryOutcome {
-                cached_at: None,
-                status: DiscoveryStatus::Manifest,
-                provider_key: provider.key.to_string(),
-                manifest: Some(resolve_manifest(client, manifest_url, gate).await?),
-                results: Vec::new(),
-                has_more: false,
-            });
+    if matches!(provider.search_mode, SearchMode::Direct) {
+        return Ok(nothing());
+    }
+
+    let search = match provider.key {
+        // Internet Archive ha il suo servizio da prima di questo modulo.
+        "archive_org" => {
+            search_archive(client, value, &endpoints.archive_search, page, gate).await?
         }
-        let search = search_archive(client, value, archive_search_url, page, gate).await?;
+        _ => match provider.search_handler {
+            Some(handler) => search::run(client, handler, endpoints, value, page, gate).await?,
+            None => return Ok(nothing()),
+        },
+    };
+
+    if !search.results.is_empty() {
         return Ok(DiscoveryOutcome {
             cached_at: None,
-            status: if search.results.is_empty() {
-                DiscoveryStatus::NotFound
-            } else {
-                DiscoveryStatus::Results
-            },
+            status: DiscoveryStatus::Results,
             provider_key: provider.key.to_string(),
             manifest: None,
             results: search.results,
@@ -378,25 +392,20 @@ async fn discover_with(
         });
     }
 
-    if Url::parse(value).is_ok() {
+    // La ricerca non ha trovato niente: se quello che è stato scritto somigliava
+    // comunque a un identificativo, vale la pena provarlo prima di dire di no.
+    if let Some(resolution) = recognised {
         return Ok(DiscoveryOutcome {
             cached_at: None,
             status: DiscoveryStatus::Manifest,
             provider_key: provider.key.to_string(),
-            manifest: Some(resolve_manifest(client, value.to_string(), gate).await?),
+            manifest: Some(resolve_manifest(client, resolution.manifest_url, gate).await?),
             results: Vec::new(),
             has_more: false,
         });
     }
 
-    Ok(DiscoveryOutcome {
-        cached_at: None,
-        status: DiscoveryStatus::NotFound,
-        provider_key: provider.key.to_string(),
-        manifest: None,
-        results: Vec::new(),
-        has_more: false,
-    })
+    Ok(nothing())
 }
 
 #[tauri::command]
@@ -452,7 +461,7 @@ pub async fn discover_iiif(
         &client()?,
         provider,
         &input,
-        ARCHIVE_SEARCH_URL,
+        &SearchEndpoints::default(),
         page,
         Some(&gate),
     )
@@ -511,7 +520,7 @@ mod tests {
             &Client::new(),
             provider,
             &format!("{}/manifest.json", server.uri()),
-            ARCHIVE_SEARCH_URL,
+            &SearchEndpoints::default(),
             1,
             None,
         )
@@ -542,7 +551,10 @@ mod tests {
             &Client::new(),
             provider,
             "manuscript",
-            &format!("{}/search", server.uri()),
+            &SearchEndpoints {
+                archive_search: format!("{}/search", server.uri()),
+                ..SearchEndpoints::default()
+            },
             1,
             None,
         )
@@ -580,5 +592,84 @@ mod tests {
         .await;
 
         assert!(outcome.is_err(), "un guasto della biblioteca si dice");
+    }
+
+    #[tokio::test]
+    async fn a_vatican_shelfmark_opens_its_manuscript_without_searching() {
+        let server = MockServer::start().await;
+        // La segnatura si riconosce da sola: nessuna richiesta di ricerca deve
+        // partire, e infatti il server finto non ne offre nessuna.
+        Mock::given(method("GET"))
+            .and(path("/iiif/MSS_Urb.lat.1779/manifest.json"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"label": "Urbinate latino 1779"})),
+            )
+            .mount(&server)
+            .await;
+        let provider = find_provider("vatican").expect("provider exists");
+        let endpoints = SearchEndpoints {
+            vatican_search: format!("{}/mss/search", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let resolved = resolvers::resolve(provider.resolver, "Urb. lat. 1779").expect("segnatura");
+        assert_eq!(
+            resolved.manifest_url,
+            "https://digi.vatlib.it/iiif/MSS_Urb.lat.1779/manifest.json"
+        );
+
+        // Il testo libero, invece, passa dalla ricerca della biblioteca.
+        Mock::given(method("GET"))
+            .and(path("/mss/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<div class="row-search-result-record">
+                     <a href="/mss/edition/MSS_Vat.lat.3225" class="link-search-result-record-view">Vergilius</a>
+                   </div>"#,
+            ))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(&Client::new(), provider, "vergilius", &endpoints, 1, None)
+            .await
+            .expect("ricerca");
+
+        assert_eq!(outcome.status, DiscoveryStatus::Results);
+        assert_eq!(outcome.results[0].id, "MSS_Vat.lat.3225");
+    }
+
+    #[tokio::test]
+    async fn a_gallica_title_is_searched_not_mistaken_for_an_identifier() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/SRU"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+                     <srw:numberOfRecords>1</srw:numberOfRecords>
+                     <srw:record><srw:recordData><oai_dc:dc xmlns:dc="http://purl.org/dc/elements/1.1/">
+                       <dc:title>Heures</dc:title>
+                       <dc:identifier>https://gallica.bnf.fr/ark:/12148/btv1b84260335</dc:identifier>
+                     </oai_dc:dc></srw:recordData></srw:record>
+                   </srw:searchRetrieveResponse>"#,
+            ))
+            .mount(&server)
+            .await;
+        let provider = find_provider("gallica").expect("provider exists");
+        let endpoints = SearchEndpoints {
+            gallica_sru: format!("{}/SRU", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        // «heures» somiglia a un identificativo Gallica: senza la ricerca
+        // prima, finirebbe su un manifesto inesistente.
+        let outcome = discover_with(&Client::new(), provider, "heures", &endpoints, 1, None)
+            .await
+            .expect("ricerca");
+
+        assert_eq!(outcome.status, DiscoveryStatus::Results);
+        assert_eq!(
+            outcome.results[0].manifest_url,
+            "https://gallica.bnf.fr/iiif/ark:/12148/btv1b84260335/manifest.json"
+        );
     }
 }

@@ -8,7 +8,17 @@ Source research starts from the Dashboard. The Library is your personal catalogu
 
 ## Search for a source
 
-On the Dashboard, choose an archive, enter a query, and start it with the search icon. Internet Archive currently supports keyword search; the generic IIIF provider instead opens an IIIF manifest URL.
+On the Dashboard, choose a library, type what you are looking for, and start it with the search icon.
+
+What each one accepts:
+
+- **Internet Archive** — keywords, or the address of the detail page.
+- **Vatican Library** — the shelfmark, however you write it (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` all reach the same manuscript), the address of the reading page, or words to search its catalogue.
+- **Gallica** — the ARK identifier, a Gallica address in any shape, or words to search by title. If you type a word that looks like an identifier, Gallica searches first: better a few results than a work that does not exist.
+- **e-codices** — the compound shelfmark (`bbb-0264`), the address of the reading page, or words to search.
+- **the other libraries listed** — for now only the full IIIF manifest address.
+
+Searching downloads nothing.
 
 Each result shows a thumbnail and essential data. Select it to expand the card with its full title, description, and all available metadata. Switch view from the icon next to the search: three or four cards per row, or a compact list — the icon always shows the one currently active.
 
