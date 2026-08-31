@@ -921,7 +921,23 @@
         "availabilityComplete": "Complete",
         "clear": "Clear filters",
         "noMatches": "No work matches these filters",
-        "showArchived": "Show archived too"
+        "showArchived": "Show archived too",
+        "allCollections": "Any collection",
+        "collectionLabel": "Collection",
+        "savedViews": "Saved views",
+        "saveView": "Save this view",
+        "deleteView": "Delete the view “{{name}}”",
+        "newViewPlaceholder": "Save as…",
+        "newViewLabel": "Name of the view to save",
+        "workspaceLabel": "Workspace",
+        "allWorkspaces": "Any workspace",
+        "noWorkspace": "In no workspace",
+        "sortLabel": "Sort the catalogue",
+        "sort": {
+          "title": "By title",
+          "creator": "By author",
+          "added": "Recently added"
+        }
       },
       "archive": "Archive",
       "restore": "Bring back to catalogue",
@@ -950,7 +966,13 @@
       "fieldRestoreOriginal": "Restore the library's value",
       "fieldCorrectedFrom": "Corrected by hand. The library says: {{value}}",
       "fieldEmptyOriginal": "nothing",
-      "fieldSaveFailed": "Could not save the correction"
+      "fieldSaveFailed": "Could not save the correction",
+      "collectionsSection": "Collections",
+      "addToCollection": "Add to a collection",
+      "removeFromCollection": "Remove from “{{name}}”",
+      "newCollectionPlaceholder": "New collection…",
+      "newCollectionLabel": "Name of the new collection",
+      "collectionFailed": "Could not update the collections"
     },
     "transcriptions": {
       "title": "Transcriptions",

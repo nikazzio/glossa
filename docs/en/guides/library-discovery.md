@@ -31,7 +31,13 @@ On each card, next to the commands, you see **which workspaces that book belongs
 
 The card's commands come in two groups: first what you do to the book — download, check, shrink images, free space, archive, delete — then where it lives.
 
-Above the list sits the **search bar**: type a title or an author, and next to it pick kind, language, source library and availability. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
+Above the list sits the **search bar**: type a title or an author, and next to it pick kind, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only the works that sit in no workspace at all. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
+
+**Sorting** — The last dropdown sets the order: by title (the starting point), by author (works with no author go last), or by date added, most recent first. The chosen order is part of a saved view too.
+
+**Saved views** — The bookmark command opens your saved views: give the current filter combination a name and find it there with one click. Any view can be deleted. A view saved when the filters were different still works: whatever is no longer recognised simply goes neutral.
+
+**Collections** — A collection is a label that gathers works. You add one from the work's page, and a work can sit in **several collections at once**: nothing is merged and nothing is duplicated, and removing a label touches neither the work nor the other collections. From the search bar you can show only the works in one collection.
 
 Clicking the title opens the **work's page**, full width: details (title, kind, author, date, language, provenance, availability, space used, status), the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. At the bottom sits the place where the page viewer will arrive. The arrow command takes you back to the catalogue.
 

@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
+import { EMPTY_LIBRARY_FILTERS } from '../../utils/libraryCatalogFilters';
 import { enqueueOptimization } from '../../services/optimizeService';
 import '../../test/i18n-mock';
 
@@ -63,6 +64,20 @@ vi.mock('../../services/optimizeService', () => ({
   enqueueOptimization: vi.fn(),
 }));
 
+vi.mock('../../services/libraryCollectionsService', () => ({
+  listCollections: vi.fn().mockResolvedValue([{ id: 'coll-1', name: 'Codici', createdAt: '2026-08-01' }]),
+  createCollection: vi.fn().mockResolvedValue({ id: 'coll-2', name: 'Nuova', createdAt: '2026-08-30' }),
+  deleteCollection: vi.fn().mockResolvedValue(undefined),
+  setSourceCollection: vi.fn().mockResolvedValue(undefined),
+  collectionsOfMany: vi.fn().mockResolvedValue(new Map()),
+}));
+
+vi.mock('../../services/librarySavedViewsService', () => ({
+  listSavedViews: vi.fn().mockResolvedValue([]),
+  saveView: vi.fn().mockResolvedValue(undefined),
+  deleteSavedView: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: vi.fn().mockResolvedValue([]),
 }));
@@ -94,6 +109,7 @@ const entry = (
   principalSize: null,
   workspaces: [],
   original: {},
+  collections: [],
   providerKey: 'gallica',
   ...overrides,
 });
@@ -471,7 +487,9 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText('Scherma')).toBeInTheDocument();
+    // Il nome compare anche fra le scelte del filtro workspace: qui interessa
+    // l'etichetta cliccabile sulla riga dell'opera.
+    expect(screen.getByRole('button', { name: 'Scherma' })).toBeInTheDocument();
   });
 
   it('scollega un opera cliccando il workspace su cui sta', async () => {
@@ -532,6 +550,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -549,7 +568,7 @@ describe('LibraryCatalogArea', () => {
   it('dalla scheda, rimuovere riporta al catalogo solo dopo che l opera è sparita', async () => {
     const service = await import('../../services/libraryService');
     let posizioneDuranteLaRimozione: unknown = null;
-    vi.mocked(service.removeSourceFromLibrary).mockImplementation(async () => {
+    vi.mocked(service.removeSourceFromLibrary).mockImplementationOnce(async () => {
       posizioneDuranteLaRimozione = useUiStore.getState().location;
     });
     useSourceLibraryStore.setState({
@@ -561,6 +580,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -580,7 +600,7 @@ describe('LibraryCatalogArea', () => {
     // Il ripristino resta appeso finché non lo si lascia finire: è l'unico modo
     // di guardare com'è la riga *mentre* la richiesta è in corso.
     const sblocca: Array<() => void> = [];
-    vi.mocked(service.setSourceArchived).mockImplementation(
+    vi.mocked(service.setSourceArchived).mockImplementationOnce(
       () => new Promise<void>((resolve) => sblocca.push(resolve)),
     );
     useSourceLibraryStore.setState({
@@ -610,6 +630,7 @@ describe('LibraryCatalogArea', () => {
         creator: 'Anonimo',
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();
@@ -640,6 +661,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();
@@ -657,7 +679,7 @@ describe('LibraryCatalogArea', () => {
 
   it('se la correzione non si salva, il campo resta aperto e lo dice', async () => {
     const service = await import('../../services/libraryService');
-    vi.mocked(service.setSourceFieldOverride).mockRejectedValue(new Error('database occupato'));
+    vi.mocked(service.setSourceFieldOverride).mockRejectedValueOnce(new Error('database occupato'));
     useSourceLibraryStore.setState({
       catalog: [entry()],
       detail: {
@@ -667,6 +689,7 @@ describe('LibraryCatalogArea', () => {
         creator: 'Anonimo',
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();
@@ -701,6 +724,7 @@ describe('LibraryCatalogArea', () => {
         creator: 'Jean Pucelle',
         date: null,
         original: { creator: 'Anonimo' },
+        collections: [],
       },
     });
 
@@ -712,6 +736,176 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
+  it('riordina il catalogo dal comando di ordinamento', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          source: { ...entry().source, id: 's1', title: 'Vita nuova', createdAt: '2026-08-20' },
+        }),
+        entry({
+          source: { ...entry().source, id: 's2', title: 'Convivio', createdAt: '2026-08-01' },
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    const titoli = () =>
+      screen
+        .getAllByRole('button', { name: /Vita nuova|Convivio/ })
+        .map((node) => node.textContent);
+
+    // Di partenza il catalogo è in ordine di titolo.
+    expect(titoli()[0]).toContain('Convivio');
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'areas.library.filters.sortLabel' }),
+      'added',
+    );
+
+    // Per data di aggiunta viene prima l'ultima arrivata.
+    expect(titoli()[0]).toContain('Vita nuova');
+  });
+
+  it('mostra solo le opere collegate al workspace scelto', async () => {
+    useWorkspaceStore.setState({
+      workspaces: [{ id: 'ws-1', name: 'Scherma' } as never],
+      activeWorkspace: null,
+    });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Vita nuova' } }),
+        entry({
+          source: { ...entry().source, id: 's2', title: 'Convivio' },
+          workspaces: [{ workspaceId: 'ws-1', workspaceName: 'Scherma', isOrigin: false }],
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'areas.library.filters.workspaceLabel' }),
+      'ws-1',
+    );
+
+    expect(screen.getByText('Convivio')).toBeInTheDocument();
+    expect(screen.queryByText('Vita nuova')).not.toBeInTheDocument();
+  });
+
+  it('se una collezione non si aggiorna, lo dice invece di lasciar cadere l errore', async () => {
+    const collectionsService = await import('../../services/libraryCollectionsService');
+    // Solo per questo caso: un'implementazione che resta guasterebbe i casi
+    // successivi, che si aspettano una creazione riuscita.
+    vi.mocked(collectionsService.createCollection).mockRejectedValueOnce(
+      new Error('database occupato'),
+    );
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.addToCollection' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'areas.library.newCollectionLabel' }),
+      'Codici miniati{Enter}',
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'areas.library.collectionFailed',
+        expect.anything(),
+      ),
+    );
+  });
+
+  it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {
+    const views = await import('../../services/librarySavedViewsService');
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    await user.type(
+      screen.getByRole('searchbox', { name: 'areas.library.filters.searchLabel' }),
+      'hours',
+    );
+    await user.click(screen.getByRole('button', { name: 'areas.library.filters.savedViews' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'areas.library.filters.newViewLabel' }),
+      'Miniati',
+    );
+    await user.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));
+
+    await waitFor(() =>
+      expect(views.saveView).toHaveBeenCalledWith(
+        'Miniati',
+        expect.objectContaining({ query: 'hours' }),
+      ),
+    );
+  });
+
+  it('richiamando una vista salvata i filtri tornano quelli di allora', async () => {
+    const views = await import('../../services/librarySavedViewsService');
+    vi.mocked(views.listSavedViews).mockResolvedValue([
+      {
+        id: 'view-1',
+        name: 'Solo stampati',
+        filters: { ...EMPTY_LIBRARY_FILTERS, kind: 'print' },
+        createdAt: '2026-08-30',
+      },
+    ]);
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.filters.savedViews' }));
+    await user.click(await screen.findByRole('button', { name: 'Solo stampati' }));
+
+    // L'opera è un manoscritto: con la vista dei soli stampati sparisce.
+    await waitFor(() =>
+      expect(screen.getByText('areas.library.filters.noMatches')).toBeInTheDocument(),
+    );
+  });
+
+  it('aggiunge l opera a una collezione nuova dalla sua scheda', async () => {
+    const collectionsService = await import('../../services/libraryCollectionsService');
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('button', { name: 'areas.library.addToCollection' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'areas.library.newCollectionLabel' }),
+      'Codici miniati{Enter}',
+    );
+
+    await waitFor(() =>
+      expect(collectionsService.createCollection).toHaveBeenCalledWith('Codici miniati'),
+    );
+    expect(collectionsService.setSourceCollection).toHaveBeenCalledWith('coll-2', 's1', true);
+  });
+
   it('shows the detail panel when itemId is provided and detail is loaded', () => {
     useSourceLibraryStore.setState({
       detail: {
@@ -721,6 +915,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -746,6 +941,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
 
@@ -771,6 +967,7 @@ describe('LibraryCatalogArea', () => {
         creator: null,
         date: null,
         original: {},
+        collections: [],
       },
     });
     const user = userEvent.setup();

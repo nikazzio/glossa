@@ -4,6 +4,7 @@ import {
   isManifest,
   type LibraryCatalogEntry,
   type LibrarySourceDetail,
+  type SourceCollection,
   type SourceField,
   type SourceCard,
 } from '../types';
@@ -17,6 +18,13 @@ import {
   setSourceFieldOverride as setSourceFieldOverrideService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
+import {
+  collectionsOfMany,
+  createCollection as createCollectionService,
+  deleteCollection as deleteCollectionService,
+  listCollections,
+  setSourceCollection,
+} from '../services/libraryCollectionsService';
 import { logger } from '../utils/logger';
 
 function getErrorMessage(error: unknown): string {
@@ -40,6 +48,13 @@ interface SourceLibraryState {
   setArchived: (sourceId: string, archived: boolean) => Promise<void>;
   /** Corregge a mano un campo dell'opera; `null` riporta il dato originale. */
   correctField: (sourceId: string, field: SourceField, value: string | null) => Promise<void>;
+  collections: SourceCollection[];
+  loadCollections: () => Promise<void>;
+  /** Aggiunge o toglie l'opera da una collezione; il nome crea la collezione. */
+  setCollection: (sourceId: string, collectionId: string, member: boolean) => Promise<void>;
+  addToNewCollection: (sourceId: string, name: string) => Promise<void>;
+  deleteCollection: (collectionId: string) => Promise<void>;
+  refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   clearError: () => void;
@@ -134,6 +149,48 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     await setSourceFieldOverrideService(sourceId, field, value);
     await get().loadCatalog();
     if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
+  },
+
+  collections: [],
+
+  loadCollections: async () => {
+    try {
+      set({ collections: await listCollections() });
+    } catch (error: unknown) {
+      logger.error('loadCollections failed', { error: getErrorMessage(error) });
+    }
+  },
+
+  setCollection: async (sourceId, collectionId, member) => {
+    await setSourceCollection(collectionId, sourceId, member);
+    await get().refreshSourceCollections(sourceId);
+  },
+
+  addToNewCollection: async (sourceId, name) => {
+    const collection = await createCollectionService(name);
+    await setSourceCollection(collection.id, sourceId, true);
+    await get().loadCollections();
+    await get().refreshSourceCollections(sourceId);
+  },
+
+  deleteCollection: async (collectionId) => {
+    await deleteCollectionService(collectionId);
+    await get().loadCollections();
+    await get().loadCatalog();
+    const openId = get().detail?.source.id;
+    if (openId) await get().loadDetail(openId);
+  },
+
+  /** Rilegge solo le collezioni di quell'opera: il catalogo intero non serve. */
+  refreshSourceCollections: async (sourceId) => {
+    const collections = (await collectionsOfMany([sourceId])).get(sourceId) ?? [];
+    set((state) => ({
+      catalog: state.catalog.map((entry) =>
+        entry.source.id === sourceId ? { ...entry, collections } : entry,
+      ),
+      detail:
+        state.detail?.source.id === sourceId ? { ...state.detail, collections } : state.detail,
+    }));
   },
 
   loadDetail: async (sourceId) => {

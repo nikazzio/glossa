@@ -55,6 +55,12 @@ Esistono due forme di appartenenza:
 - fonti, dizionari e memoria importata possono essere collegati a più workspace
   tramite `workspace_items`.
 
+Le collezioni (`source_collections`, `source_collection_items`) sono etichette
+sulle opere: appartenenza multipla, sempre reversibile, nessuna fusione di
+schede. Le viste salvate (`library_saved_views`) conservano i filtri come JSON,
+riletti in modo difensivo: una vista scritta quando i filtri erano altri resta
+valida, i campi che non si riconoscono tornano neutri.
+
 Le correzioni a mano ai dati di un'opera vivono in `source_field_overrides`,
 come le correzioni locali ai dizionari: il valore della biblioteca resta intatto
 in `sources` e nei metadati della copia, e la lettura del catalogo applica la

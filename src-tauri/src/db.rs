@@ -257,6 +257,9 @@ mod tests {
         for table in [
             "sources",
             "source_field_overrides",
+            "source_collections",
+            "source_collection_items",
+            "library_saved_views",
             "source_versions",
             "source_pages",
             // I collegamenti fra workspace e item stanno tutti qui: la vecchia

@@ -92,6 +92,16 @@ interattivi.
 - Il trigger usa `ariaPressed={open}` e non ribalta manualmente lo stato.
 - Overlay sopra le finestre: `z-[210]`.
 
+### PopoverItem e LinkChip
+
+- `PopoverItem`: voce di elenco dentro un `ClickPopover` (scegliere workspace,
+  collezione, vista salvata). Si usa quando accanto alla voce vive un altro
+  comando o un campo, cioè dove `Menu` non arriva.
+- `LinkChip`: etichetta di un legame già stabilito che, cliccata, lo scioglie.
+  Il motivo sta nel `Tooltip`, mai nel `title` nativo; il nome leggibile del
+  legame resta il nome del comando.
+- Nessuna riga di elenco o etichetta di legame scritta a mano nei componenti.
+
 ### SectionLabel e StatRow
 
 - `SectionLabel`: intestazione di sezione con icona.

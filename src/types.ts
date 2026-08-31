@@ -143,6 +143,13 @@ export type SourceField = 'title' | 'kind' | 'primary_language' | 'creator' | 'd
 /** Valori per campo: come correzioni, oppure come originali della biblioteca. */
 export type SourceFieldValues = Partial<Record<SourceField, string>>;
 
+/** Un'etichetta che raccoglie opere: un'opera può stare in più collezioni. */
+export interface SourceCollection {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface LibrarySource {
   id: string;
   title: string;
@@ -193,6 +200,8 @@ export interface LibraryCatalogEntry {
   providerKey: string | null;
   /** Solo i campi corretti a mano, col valore che aveva dato la biblioteca. */
   original: SourceFieldValues;
+  /** Le collezioni a cui l'opera è stata aggiunta. */
+  collections: { id: string; name: string }[];
 }
 
 export interface LibrarySourceVersion {
@@ -213,6 +222,7 @@ export interface LibrarySourceDetail {
   date: string | null;
   /** Solo i campi corretti a mano, col valore che aveva dato la biblioteca. */
   original: SourceFieldValues;
+  collections: { id: string; name: string }[];
 }
 
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
