@@ -361,14 +361,15 @@ export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
   await execute('DELETE FROM sources WHERE id = $1', [sourceId]);
 }
 
-/** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione):
- * usato per segnare come "già aggiunto" un risultato di ricerca prima ancora
- * che l'utente provi ad aggiungerlo. */
-export async function listLibrarySourceUrls(): Promise<string[]> {
-  const rows = await select<{ source_url: string }>(
-    "SELECT DISTINCT source_url FROM source_versions WHERE source_url IS NOT NULL ORDER BY source_url",
+/** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione),
+ * con l'id della loro opera: usato per segnare come "già aggiunto" un risultato di
+ * ricerca prima ancora che l'utente provi ad aggiungerlo, e per sapere a quali
+ * workspace è già collegato senza rileggere tutto il catalogo. */
+export async function listLibrarySourceUrls(): Promise<{ sourceUrl: string; sourceId: string }[]> {
+  const rows = await select<{ source_url: string; source_id: string }>(
+    "SELECT DISTINCT source_url, source_id FROM source_versions WHERE source_url IS NOT NULL ORDER BY source_url",
   );
-  return rows.map((row) => row.source_url);
+  return rows.map((row) => ({ sourceUrl: row.source_url, sourceId: row.source_id }));
 }
 
 export async function addSourceToLibrary(

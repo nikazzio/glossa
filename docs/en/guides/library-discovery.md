@@ -20,7 +20,7 @@ What each one accepts:
 
 Searching downloads nothing.
 
-Each result shows a thumbnail and essential data. Select it to expand the card with its full title, description, and all available metadata. Switch view from the icon next to the search: three or four cards per row, or a compact list — the icon always shows the one currently active.
+Results appear as a list, each with a thumbnail and essential data. Selecting a result expands the row to show its full title, description, and all available metadata.
 
 Searching never downloads material.
 

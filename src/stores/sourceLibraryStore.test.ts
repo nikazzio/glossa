@@ -167,6 +167,7 @@ describe('classifySourceKind', () => {
     physicalDescription: null,
     holdingInstitution: null,
     catalogUrl: null,
+    pageUrl: null,
     ...overrides,
   });
 

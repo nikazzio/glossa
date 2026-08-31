@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../test/i18n-mock';
 import { SourceDiscoveryPanel } from './SourceDiscoveryPanel';
-import { useUiStore } from '../../stores/uiStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 
@@ -18,6 +17,7 @@ const RESULT_EXTRAS = {
   physicalDescription: null,
   holdingInstitution: null,
   catalogUrl: null,
+  pageUrl: null,
 };
 
 vi.mock('../../services/iiifProviderService', () => ({
@@ -43,7 +43,6 @@ const PROVIDERS = [
 describe('SourceDiscoveryPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useUiStore.setState({ discoveryResultsPerRow: 3 });
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     mockListProviders.mockResolvedValue(PROVIDERS);
@@ -85,7 +84,6 @@ describe('SourceDiscoveryPanel', () => {
   });
 
   it('shows every metadata field when a list row expands, not just title and author', async () => {
-    useUiStore.setState({ discoveryResultsPerRow: 'list' });
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'gallica', manifest: null, hasMore: false,
       results: [{
@@ -98,6 +96,7 @@ describe('SourceDiscoveryPanel', () => {
         physicalDescription: '23-[1 bl.] p. ; in-12',
         holdingInstitution: 'Bibliothèque nationale de France, V-22944',
         catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+        pageUrl: 'https://gallica.bnf.fr/ark:/12148/bpt6k3282120',
         manifestUrl: 'https://gallica.bnf.fr/iiif/ark:/12148/bpt6k3282120/manifest.json',
       }],
     });
@@ -116,6 +115,10 @@ describe('SourceDiscoveryPanel', () => {
     expect(screen.getByRole('link', { name: /cb33412414z/ })).toHaveAttribute(
       'href',
       'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+    );
+    expect(screen.getByRole('link', { name: /gallica\.bnf\.fr\/ark:\/12148\/bpt6k3282120$/ })).toHaveAttribute(
+      'href',
+      'https://gallica.bnf.fr/ark:/12148/bpt6k3282120',
     );
   });
 
@@ -186,6 +189,38 @@ describe('SourceDiscoveryPanel', () => {
       workspaceId: 'ws-1',
     }));
   });
+
+  it('marks, in the workspace picker, the workspace a result is already linked to', async () => {
+    const libraryService = await import('../../services/libraryService');
+    // La riconosce già in biblioteca com'è successo davvero: dal giro
+    // all'avvio (`loadLibraryManifestUrls`), non da uno stato messo a mano.
+    vi.mocked(libraryService.listLibrarySourceUrls).mockResolvedValueOnce([
+      { sourceUrl: 'https://example.test/one', sourceId: 's1' },
+    ]);
+    vi.mocked(libraryService.getLibrarySourceDetail).mockResolvedValueOnce({
+      linkedWorkspaceIds: ['ws-1'],
+    } as never);
+    useWorkspaceStore.setState({
+      activeWorkspace: null,
+      workspaces: [{ id: 'ws-1', name: 'Archivio' } as never, { id: 'ws-2', name: 'Altro' } as never],
+    });
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/one' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await screen.findByRole('button', { name: /First source/ });
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToWorkspace' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Archivio/ })).toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Altro' })).toBeEnabled();
+  });
 });
 
 describe('risultati doppi dai cataloghi', () => {
@@ -207,7 +242,6 @@ describe('risultati doppi dai cataloghi', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useUiStore.setState({ discoveryResultsPerRow: 3 });
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     mockListProviders.mockResolvedValue(PROVIDERS);

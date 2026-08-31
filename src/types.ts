@@ -76,6 +76,10 @@ export interface IIIFDiscoveryResult {
   holdingInstitution: string | null;
   /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
   catalogUrl: string | null;
+  /** La pagina web dell'opera sul sito della biblioteca, per un lettore umano
+   * — non il manifesto IIIF (`manifestUrl`) né la scheda del catalogo cartaceo
+   * (`catalogUrl`). */
+  pageUrl: string | null;
 }
 
 export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });

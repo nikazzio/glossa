@@ -1,12 +1,12 @@
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
-import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, List, RefreshCw, Search } from 'lucide-react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ClickPopover, Dialog, IconButton, Select, Spinner } from '../ui';
+import { Dialog, IconButton, Select, Spinner } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
+import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
-import { useUiStore, type DiscoveryResultsPerRow } from '../../stores/uiStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
@@ -20,17 +20,10 @@ import { CachedThumbnail } from '../common/CachedThumbnail';
 // non cercano ancora, dichiarazione preesistente e fuori scopo qui.
 const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org', 'vatican', 'gallica', 'ecodices']);
 
-const VIEW_OPTIONS: ReadonlyArray<{ value: DiscoveryResultsPerRow; labelKey: string; icon: ReactNode }> = [
-  { value: 3, labelKey: 'settings.discoveryResultsThree', icon: <GridGlyph columns={3} /> },
-  { value: 4, labelKey: 'settings.discoveryResultsFour', icon: <GridGlyph columns={4} /> },
-  { value: 'list', labelKey: 'settings.discoveryResultsList', icon: <List size={14} /> },
-];
-
 function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
   const mediaType = !isManifest(card) ? card.mediaType : null;
   return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
 }
-
 
 /** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del
  * catalogo, e riordinarlo per deduplicare cambierebbe quello che l'utente
@@ -42,36 +35,6 @@ function dedupeById<T extends { id: string }>(cards: T[]): T[] {
     seen.add(card.id);
     return true;
   });
-}
-
-/** Riordina la lista SOLO per la visualizzazione (chiavi card.id restano stabili,
- * Framer Motion anima lo spostamento, nessun remount): la scheda espansa tiene con
- * sé SOLO la prima scheda della sua riga originale (1 unità + `columns-1` unità
- * dell'espansa = riga sempre piena, mai a metà). Le schede rimaste in mezzo fra
- * le due passano dopo, subito dopo questa riga — mai indietro. Richiudendo,
- * torna l'ordine originale. */
-function reorderForExpansion<T extends { id: string }>(cards: T[], columns: number, expandedId: string | null): T[] {
-  if (!expandedId) return cards;
-  const idx = cards.findIndex((card) => card.id === expandedId);
-  if (idx === -1) return cards;
-  const chunkStart = Math.floor(idx / columns) * columns;
-  if (idx === chunkStart) return cards; // già prima della riga, niente da spostare
-
-  const before = cards.slice(0, chunkStart);
-  const keptRow = [cards[chunkStart], cards[idx]];
-  const between = cards.slice(chunkStart + 1, idx); // fra il primo e l'espansa: passa dopo
-  const restAfterIdx = cards.slice(idx + 1); // dopo l'espansa: prosegue invariato
-  return [...before, ...keptRow, ...between, ...restAfterIdx];
-}
-
-const CARD_GAP_REM = 0.75;
-
-/** Larghezza fissa per scheda: mai a `flex-grow`, altrimenti le righe incomplete
- * (fine risultati o riga di scarto) stirano le schede oltre la dimensione delle altre. */
-function cardWidth(isExpandedCard: boolean, columns: number): string {
-  const unit = `((100% - ${(columns - 1) * CARD_GAP_REM}rem) / ${columns})`;
-  if (!isExpandedCard) return `calc(${unit})`;
-  return `calc(${unit} * ${columns - 1} + ${(columns - 2) * CARD_GAP_REM}rem)`;
 }
 
 interface CardActionsProps {
@@ -106,12 +69,11 @@ function CardActions({ adding, alreadyAdded, onAddToLibrary, onAddToWorkspace }:
   );
 }
 
-interface CardViewProps {
+interface RowProps {
   card: SourceCard;
   providerKey: string;
   providerLabel: string;
   expanded: boolean;
-  width: string;
   onToggle: () => void;
   onAddToLibrary: () => void;
   onAddToWorkspace: () => void;
@@ -119,18 +81,9 @@ interface CardViewProps {
   alreadyAdded: boolean;
 }
 
-/** Riga compatta label/valore per la griglia dati della scheda espansa (stesso
- * schema di StatRow: label sans piccola, valore serif) — senza StatRow diretto
- * perché qui il valore può troncare (`truncate`), StatRow non lo prevede.
- * Solo `span`: la griglia vive dentro il `button` di espansione della scheda,
- * che ammette esclusivamente phrasing content — `dl`/`dt`/`dd` (come `div` o
- * `p`) sono flow content e renderebbero il markup non valido. */
-/** Etichetta sopra, valore sotto: vive dentro un `div` (flow content), non nel
- * `button` della scheda a griglia. Niente larghezza fissa né riga unica per
- * l'etichetta — le traduzioni più lunghe («Altri responsabili», «Descrizione
- * fisica») andavano a capo sopra il valore, non sopra se stesse, e finivano
- * per scriverci sopra. I valori più lunghi (fondo di conservazione,
- * descrizione fisica) vanno a capo invece di uscire dal riquadro. */
+/** Etichetta sopra, valore sotto: usata nella scheda espansa. I valori più
+ * lunghi (fondo di conservazione, descrizione fisica) vanno a capo invece di
+ * uscire dal riquadro. */
 function ListStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
@@ -140,18 +93,25 @@ function ListStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DataStat({ label, value }: { label: string; value: string }) {
+/** Etichetta sopra, indirizzo cliccabile sotto: per i link veri (pagina web,
+ * catalogo cartaceo), non per i valori di testo di `ListStat`. */
+function LinkStat({ label, url }: { label: string; url: string }) {
   return (
-    <span className="flex min-w-0 items-baseline gap-2">
-      <span className="w-24 shrink-0 whitespace-nowrap text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</span>
-      <span className="min-w-0 truncate font-display text-sm italic text-editorial-ink">{value}</span>
-    </span>
+    <div className="min-w-0">
+      <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</p>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-0.5 block break-words font-display text-sm italic text-editorial-accent underline underline-offset-2"
+      >
+        {url}
+      </a>
+    </div>
   );
 }
 
-/** Tutte le informazioni disponibili per una scheda, etichetta/valore: le
- * stesse per la vista a griglia e per la vista a elenco, così espandere l'una
- * o l'altra non fa vedere cose diverse. */
+/** Tutte le informazioni disponibili per una scheda, etichetta/valore. */
 function sourceStats(
   card: SourceCard,
   t: (key: string) => string,
@@ -176,104 +136,64 @@ function sourceStats(
   ].filter((entry): entry is [string, string] => Boolean(entry));
 }
 
-function SourceCardView({ card, providerKey, providerLabel, expanded, width, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: CardViewProps) {
+// Piccola quando chiusa, più grande e leggibile quando la riga è aperta —
+// stessa immagine, solo la cornice cambia dimensione. Larghezza esposta a
+// parte perché la colonna di allineamento sotto il titolo (vedi in basso)
+// deve restare identica senza ricalcolarla dalla stringa di classi.
+const THUMBNAIL_WIDTH_EXPANDED = 'w-24';
+const THUMBNAIL_SIZE = {
+  closed: 'h-10 w-8',
+  expanded: `h-32 ${THUMBNAIL_WIDTH_EXPANDED}`,
+};
+
+function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: RowProps) {
   const { t } = useTranslation();
   const title = card.title || t('dashboard.discovery.untitled');
-  // Quante pagine si legge **senza espandere**: è il dato con cui si decide se
-  // scaricare un'opera, e stava solo nella scheda aperta.
-  const pages = card.itemCount !== null ? t('dashboard.discovery.pageCount', { count: card.itemCount }) : null;
-  const metaLine = [
-    card.creator ? `${t('dashboard.discovery.by')} ${card.creator}` : null,
-    card.date,
-    card.volume,
-    pages,
-  ].filter(Boolean).join(' · ');
-
-  const stats = sourceStats(card, t);
+  // Il collegamento alla pagina web e quello al catalogo cartaceo sono
+  // indirizzi veri: si aprono, non si leggono come le altre etichette.
+  const pageUrl = !isManifest(card) ? card.pageUrl : null;
+  const catalogUrl = !isManifest(card) ? card.catalogUrl : null;
+  const stats = sourceStats(card, t, { includeCatalogUrl: false });
+  const metaParts = [card.creator, card.date, sourceTypeLabel(card, providerLabel)].filter(Boolean) as string[];
 
   return (
     <motion.article
       layout
-      style={{ flex: `0 0 ${width}`, minWidth: 0 }}
       transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
-      className={`overflow-hidden rounded-[20px] border bg-surface-elevated text-left transition-colors ${
-        expanded ? 'border-editorial-accent/55' : 'border-editorial-border hover:border-editorial-accent/45'
-      }`}
+      className={
+        expanded
+          ? 'my-1 overflow-hidden rounded-xl border border-editorial-accent/50 bg-surface-elevated shadow-sm'
+          : 'overflow-hidden border-b border-editorial-border/70 transition-colors hover:bg-surface-hover/50'
+      }
     >
-      <div className="flex items-center justify-between gap-2 border-b border-editorial-border/70 px-3 py-1.5">
-        <span className="truncate text-[11px] uppercase tracking-[0.1em] text-editorial-muted">{providerLabel}</span>
-        <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />
-      </div>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={onToggle}
-        className="flex h-40 w-full gap-4 p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
-        <span className="flex h-full w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox">
-          <CachedThumbnail
-            url={card.thumbnailUrl}
-            providerKey={providerKey}
-            className="h-full w-full object-cover"
-            fallback={<BookOpenText size={24} className="text-editorial-muted" aria-hidden="true" />}
-          />
-        </span>
-        {expanded ? (
-          // A tre o quattro colonne non c'è larghezza per mettere i dati
-          // accanto al titolo: affiancarli taglia gli uni e gli altri. La
-          // scheda cresce in altezza e i dati vanno sotto. (In vista elenco la
-          // scheda è un'altra, e lì lo spazio c'è.)
-          <span className="mt-3 flex min-w-0 flex-1 flex-col gap-3">
-            <span className="flex min-w-0 flex-col overflow-hidden">
-              <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
-              {card.description && <span className="mt-1.5 block line-clamp-2 text-xs leading-relaxed text-editorial-ink/70">{card.description}</span>}
-            </span>
-            <span
-              className="grid min-w-0 flex-1 auto-rows-min grid-cols-1 content-start gap-x-4 gap-y-1 overflow-hidden" 
-            >
-              {stats.map(([label, value]) => <DataStat key={label} label={label} value={value} />)}
-            </span>
+      <div className={`flex gap-3 px-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <span
+            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox transition-all duration-200 ${
+              expanded ? THUMBNAIL_SIZE.expanded : THUMBNAIL_SIZE.closed
+            }`}
+          >
+            <CachedThumbnail
+              url={card.thumbnailUrl}
+              providerKey={providerKey}
+              className="h-full w-full object-cover"
+              fallback={<BookOpenText size={expanded ? 20 : 14} className="text-editorial-muted" aria-hidden="true" />}
+            />
           </span>
-        ) : (
-          <span className="min-w-0 overflow-hidden">
-            <span className="block line-clamp-2 font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
-            {metaLine && <span className="mt-2 block line-clamp-1 text-xs text-editorial-muted">{metaLine}</span>}
-          </span>
-        )}
-      </button>
-    </motion.article>
-  );
-}
-
-function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: Omit<CardViewProps, 'width' | 'providerKey'>) {
-  const { t } = useTranslation();
-  const title = card.title || t('dashboard.discovery.untitled');
-  // Il collegamento al catalogo cartaceo è un indirizzo vero: si apre, non si
-  // legge come le altre etichette.
-  const catalogUrl = !isManifest(card) ? card.catalogUrl : null;
-  const stats = sourceStats(card, t, { includeCatalogUrl: false });
-
-  return (
-    <motion.article layout transition={{ duration: 0.28, ease: EASE_EDITORIAL }} className="border-b border-editorial-border/70">
-      <div className={`flex gap-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>
-        <button type="button" aria-expanded={expanded} onClick={onToggle} className="flex min-w-0 flex-1 flex-col text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
           {expanded ? (
-            <>
-              <span className="font-display italic text-editorial-ink">{title}</span>
-              <span className="mt-0.5 text-xs text-editorial-muted">
-                {card.creator && <>{card.creator} · </>}
-                {card.date && <>{card.date} · </>}
-                {sourceTypeLabel(card, providerLabel)}
-              </span>
-            </>
+            <span className="min-w-0 flex-1 pt-0.5">
+              <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
+              <span className="mt-1 block text-xs text-editorial-muted">{metaParts.join(' · ')}</span>
+            </span>
           ) : (
-            <span className="flex min-w-0 items-center gap-3">
-              <span className="min-w-0 flex-1 truncate">
-                <span className="font-display italic text-editorial-ink">{title}</span>
-                {card.creator && <span className="text-editorial-charcoal"> — {card.creator}</span>}
-              </span>
-              {card.date && <span className="shrink-0 text-xs text-editorial-muted">{card.date}</span>}
-              <span className="hidden shrink-0 text-xs text-editorial-muted sm:inline">{sourceTypeLabel(card, providerLabel)}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-display italic text-editorial-ink">{title}</span>
+              <span className="mt-0.5 block truncate text-xs text-editorial-muted">{metaParts.join(' · ')}</span>
             </span>
           )}
         </button>
@@ -282,26 +202,19 @@ function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
-            <div className="space-y-3 pb-3 pl-1 pr-3">
-              {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80">{card.description}</p>}
-              {stats.length > 0 && (
-                <div className="grid grid-cols-1 gap-y-2">
-                  {stats.map(([label, value]) => <ListStat key={label} label={label} value={value} />)}
-                </div>
-              )}
-              {catalogUrl && (
-                <div className="min-w-0">
-                  <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('dashboard.discovery.catalogUrl')}</p>
-                  <a
-                    href={catalogUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-0.5 block break-words font-display text-sm italic text-editorial-accent underline underline-offset-2"
-                  >
-                    {catalogUrl}
-                  </a>
-                </div>
-              )}
+            <div className="flex gap-3 px-3 pb-3">
+              {/* Colonna vuota della stessa larghezza della copertina: fa allineare il testo sotto al titolo, non sotto alla copertina. */}
+              <span className={`shrink-0 ${THUMBNAIL_WIDTH_EXPANDED}`} aria-hidden="true" />
+              <div className="min-w-0 flex-1 space-y-3">
+                {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80">{card.description}</p>}
+                {stats.length > 0 && (
+                  <div className="grid grid-cols-1 gap-y-2">
+                    {stats.map(([label, value]) => <ListStat key={label} label={label} value={value} />)}
+                  </div>
+                )}
+                {pageUrl && <LinkStat label={t('dashboard.discovery.pageUrl')} url={pageUrl} />}
+                {catalogUrl && <LinkStat label={t('dashboard.discovery.catalogUrl')} url={catalogUrl} />}
+              </div>
             </div>
           </motion.div>
         )}
@@ -312,8 +225,6 @@ function SourceListRow({ card, providerLabel, expanded, onToggle, onAddToLibrary
 
 export function SourceDiscoveryPanel() {
   const { t } = useTranslation();
-  const resultsPerRow = useUiStore((state) => state.discoveryResultsPerRow);
-  const setResultsPerRow = useUiStore((state) => state.setDiscoveryResultsPerRow);
   const [providers, setProviders] = useState<IIIFProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -329,12 +240,16 @@ export function SourceDiscoveryPanel() {
   const setExpandedId = useDiscoverySearchStore((state) => state.setExpandedId);
   const searchError = useDiscoverySearchStore((state) => state.searchError);
   const setSearchError = useDiscoverySearchStore((state) => state.setSearchError);
-  const [showLayoutOptions, setShowLayoutOptions] = useState(false);
   const [workspacePickerCard, setWorkspacePickerCard] = useState<SourceCard | null>(null);
+  // Workspace a cui l'opera del picker aperto è già collegata: null finché non
+  // si sa (opera nuova, mai aggiunta prima), così non si mostra un elenco vuoto
+  // per un'attesa che non è ancora finita.
+  const [workspacePickerLinkedIds, setWorkspacePickerLinkedIds] = useState<string[] | null>(null);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const addingUrls = useSourceLibraryStore((state) => state.addingUrls);
   const addedManifestUrls = useSourceLibraryStore((state) => state.addedManifestUrls);
   const libraryManifestUrls = useSourceLibraryStore((state) => state.libraryManifestUrls);
+  const libraryManifestSourceIds = useSourceLibraryStore((state) => state.libraryManifestSourceIds);
   const addFromDiscovery = useSourceLibraryStore((state) => state.addFromDiscovery);
   const loadLibraryManifestUrls = useSourceLibraryStore((state) => state.loadLibraryManifestUrls);
   const libraryError = useSourceLibraryStore((state) => state.error);
@@ -342,6 +257,23 @@ export function SourceDiscoveryPanel() {
 
   const isAlreadyInLibrary = (manifestUrl: string) =>
     addedManifestUrls.has(manifestUrl) || libraryManifestUrls.has(manifestUrl);
+
+  useEffect(() => {
+    if (!workspacePickerCard) {
+      setWorkspacePickerLinkedIds(null);
+      return;
+    }
+    const sourceId = libraryManifestSourceIds.get(workspacePickerCard.manifestUrl);
+    if (!sourceId) {
+      setWorkspacePickerLinkedIds(null);
+      return;
+    }
+    let cancelled = false;
+    getLibrarySourceDetail(sourceId)
+      .then((detail) => { if (!cancelled) setWorkspacePickerLinkedIds(detail.linkedWorkspaceIds); })
+      .catch(() => { if (!cancelled) setWorkspacePickerLinkedIds(null); });
+    return () => { cancelled = true; };
+  }, [workspacePickerCard, libraryManifestSourceIds]);
 
   useEffect(() => {
     if (!libraryError) return;
@@ -373,12 +305,6 @@ export function SourceDiscoveryPanel() {
   // «di quanto tempo fa» si ricalcola a ogni disegno: la finestra resta aperta
   // per minuti, e una riga che dice «adesso» per mezz'ora è peggio di niente.
   const cachedUnit = relativeDateUnit((outcome?.cachedAt ?? 0) * 1000);
-  const isListView = resultsPerRow === 'list';
-  const columns = resultsPerRow === 4 ? 4 : 3;
-  const displayCards = useMemo(
-    () => isListView ? cards : reorderForExpansion(cards, columns, expandedId),
-    [cards, isListView, columns, expandedId],
-  );
 
   const search = async (fresh: boolean) => {
     if (!input.trim()) return;
@@ -428,40 +354,6 @@ export function SourceDiscoveryPanel() {
         <IconButton title={t('dashboard.discovery.submit')} type="submit" disabled={loading || searching || !input.trim()}>
           {searching ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
-        <ClickPopover
-          open={showLayoutOptions}
-          onOpenChange={setShowLayoutOptions}
-          align="end"
-          trigger={
-            <IconButton
-              title={t('dashboard.discovery.viewOptions')}
-              ariaPressed={showLayoutOptions}
-            >
-              {resultsPerRow === 'list' ? <List size={16} /> : <GridGlyph columns={resultsPerRow} />}
-            </IconButton>
-          }
-        >
-          <div role="radiogroup" aria-label={t('dashboard.discovery.viewOptions')}>
-            {VIEW_OPTIONS.map(({ value, labelKey, icon }) => {
-              const isActive = resultsPerRow === value;
-              return (
-                <button
-                  key={value}
-                  role="radio"
-                  aria-checked={isActive}
-                  onClick={() => { setResultsPerRow(value); setShowLayoutOptions(false); }}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-editorial-textbox/60 ${
-                    isActive ? 'font-medium text-editorial-ink' : 'text-editorial-muted'
-                  }`}
-                >
-                  <span className={`flex shrink-0 items-center justify-center ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>{icon}</span>
-                  <span className="flex-1 truncate">{t(labelKey)}</span>
-                  {isActive && <Check size={14} className="shrink-0 text-editorial-accent" />}
-                </button>
-              );
-            })}
-          </div>
-        </ClickPopover>
       </form>
       <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
       {searching && !outcome && (
@@ -496,43 +388,22 @@ export function SourceDiscoveryPanel() {
       {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
       {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}
       {cards.length > 0 && (
-        <LayoutGroup>
-          {isListView ? (
-            <div className="mt-4">
-              {cards.map((card) => (
-                <SourceListRow
-                  key={card.id}
-                  card={card}
-                  providerLabel={selectedProvider?.label ?? ''}
-                  expanded={expandedId === card.id}
-                  onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
-                  onAddToWorkspace={() => setWorkspacePickerCard(card)}
-                  adding={addingUrls.has(card.manifestUrl)}
-                  alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-wrap items-start gap-3">
-              {displayCards.map((card) => (
-                <SourceCardView
-                  providerKey={providerKey}
-                  key={card.id}
-                  card={card}
-                  providerLabel={selectedProvider?.label ?? ''}
-                  expanded={expandedId === card.id}
-                  width={cardWidth(expandedId === card.id, columns)}
-                  onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-                  onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
-                  onAddToWorkspace={() => setWorkspacePickerCard(card)}
-                  adding={addingUrls.has(card.manifestUrl)}
-                  alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
-                />
-              ))}
-            </div>
-          )}
-        </LayoutGroup>
+        <div className="mt-4">
+          {cards.map((card) => (
+            <SourceListRow
+              key={card.id}
+              card={card}
+              providerKey={providerKey}
+              providerLabel={selectedProvider?.label ?? ''}
+              expanded={expandedId === card.id}
+              onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
+              onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
+              onAddToWorkspace={() => setWorkspacePickerCard(card)}
+              adding={addingUrls.has(card.manifestUrl)}
+              alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
+            />
+          ))}
+        </div>
       )}
       {outcome?.hasMore && (
         <div className="mt-4 flex justify-center">
@@ -556,32 +427,33 @@ export function SourceDiscoveryPanel() {
             </p>
           ) : (
             <div className="max-h-64 divide-y divide-editorial-border/70 overflow-y-auto">
-              {workspaces.map((workspace) => (
-                <button
-                  key={workspace.id}
-                  type="button"
-                  onClick={() => {
-                    if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, providerKey);
-                    setWorkspacePickerCard(null);
-                  }}
-                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <span className="truncate font-display text-base italic text-editorial-ink">{workspace.name}</span>
-                </button>
-              ))}
+              {workspaces.map((workspace) => {
+                const linked = workspacePickerLinkedIds?.includes(workspace.id) ?? false;
+                return (
+                  <button
+                    key={workspace.id}
+                    type="button"
+                    disabled={linked}
+                    onClick={() => {
+                      if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, providerKey);
+                      setWorkspacePickerCard(null);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <span className="min-w-0 truncate font-display text-base italic text-editorial-ink">{workspace.name}</span>
+                    {linked && (
+                      <span className="flex shrink-0 items-center gap-1 text-[11px] uppercase tracking-[0.1em] text-editorial-accent">
+                        <Check size={14} />
+                        {t('dashboard.discovery.alreadyLinked')}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       </Dialog>
     </section>
-  );
-}
-
-function GridGlyph({ columns }: { columns: 3 | 4 }) {
-  const cells = columns === 3 ? 6 : 8;
-  return (
-    <span aria-hidden="true" className={`grid h-3 w-3 gap-px ${columns === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
-      {Array.from({ length: cells }, (_, index) => <span key={index} className="rounded-[1px] bg-current" />)}
-    </span>
   );
 }

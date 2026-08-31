@@ -20,7 +20,7 @@ Cosa accetta ciascuna:
 
 La ricerca non scarica materiale.
 
-Ogni risultato mostra miniatura e dati essenziali. Selezionandolo, la scheda si apre e mostra titolo completo, descrizione e tutti i metadati disponibili. Puoi cambiare visualizzazione dall'icona accanto alla ricerca: tre o quattro schede per riga, oppure un elenco compatto — l'icona mostra sempre quella attiva.
+I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
 
 ## Aggiungere una fonte alla Biblioteca
 

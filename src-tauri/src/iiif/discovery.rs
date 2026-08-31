@@ -71,6 +71,10 @@ pub struct DiscoveryResult {
     /// Collegamento alla scheda del catalogo cartaceo/archivistico, quando
     /// distinta dalla pagina di lettura online.
     pub catalog_url: Option<String>,
+    /// La pagina web dell'opera sul sito della biblioteca, pensata per un
+    /// lettore umano — non il manifesto IIIF (`manifest_url`, un documento
+    /// tecnico) né la scheda del catalogo cartaceo (`catalog_url`).
+    pub page_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -377,6 +381,7 @@ async fn search_archive(
                 physical_description: None,
                 holding_institution: None,
                 catalog_url: None,
+                page_url: Some(format!("https://archive.org/details/{id}")),
                 id,
             })
         })
@@ -653,6 +658,10 @@ mod tests {
         assert_eq!(
             outcome.results[0].manifest_url,
             "https://iiif.archive.org/iiif/ms-1/manifest.json"
+        );
+        assert_eq!(
+            outcome.results[0].page_url.as_deref(),
+            Some("https://archive.org/details/ms-1")
         );
     }
 

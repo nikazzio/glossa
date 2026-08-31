@@ -37,6 +37,9 @@ interface SourceLibraryState {
   addingUrls: Set<string>;
   addedManifestUrls: Set<string>;
   libraryManifestUrls: Set<string>;
+  /** Id dell'opera per ogni manifesto già in biblioteca: serve a chiedere a
+   * quali workspace è già collegata senza rileggere tutto il catalogo. */
+  libraryManifestSourceIds: Map<string, string>;
   error: string | null;
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
@@ -65,12 +68,16 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   addingUrls: new Set(),
   addedManifestUrls: new Set(),
   libraryManifestUrls: new Set(),
+  libraryManifestSourceIds: new Map(),
   error: null,
 
   loadLibraryManifestUrls: async () => {
     try {
-      const urls = await listLibrarySourceUrls();
-      set({ libraryManifestUrls: new Set(urls) });
+      const rows = await listLibrarySourceUrls();
+      set({
+        libraryManifestUrls: new Set(rows.map((row) => row.sourceUrl)),
+        libraryManifestSourceIds: new Map(rows.map((row) => [row.sourceUrl, row.sourceId])),
+      });
     } catch (error) {
       logger.error('loadLibraryManifestUrls failed', { error: getErrorMessage(error) });
     }
@@ -83,7 +90,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       error: null,
     }));
     try {
-      await addSourceToLibraryService({
+      const { sourceId } = await addSourceToLibraryService({
         manifestUrl,
         title: card.title,
         description: card.description,
@@ -112,7 +119,10 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         holdingInstitution: isManifest(card) ? null : card.holdingInstitution,
         catalogUrl: isManifest(card) ? null : card.catalogUrl,
       });
-      set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));
+      set((state) => ({
+        addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),
+        libraryManifestSourceIds: new Map(state.libraryManifestSourceIds).set(manifestUrl, sourceId),
+      }));
       // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
       // Biblioteca senza riaprire la schermata.
       await get().loadCatalog();

@@ -287,6 +287,7 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         "https://gallica.bnf.fr/ark:/{naan}/{}.thumbnail",
         resolved.doc_id
     );
+    let page_url = format!("https://gallica.bnf.fr/ark:/{naan}/{}", resolved.doc_id);
     let mut creators = record.creators.into_iter();
     let creator = creators.next();
     let contributors = creators.chain(record.contributors).collect();
@@ -311,6 +312,7 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         physical_description: (!record.format.is_empty()).then(|| record.format.join("; ")),
         holding_institution: record.holding_institution,
         catalog_url: record.relation.as_deref().and_then(extract_url),
+        page_url: Some(page_url),
         id: resolved.doc_id,
     })
 }
@@ -391,6 +393,7 @@ fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult
             physical_description: None,
             holding_institution: None,
             catalog_url: None,
+            page_url: Some(format!("https://digi.vatlib.it/view/{doc_id}")),
             id: doc_id,
         });
     }
@@ -471,6 +474,7 @@ fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
             physical_description: None,
             holding_institution: None,
             catalog_url: None,
+            page_url: Some(viewer_url),
             id: resolved.doc_id,
         });
     }
@@ -589,6 +593,10 @@ mod tests {
             results[0].thumbnail_url.as_deref(),
             Some("https://gallica.bnf.fr/ark:/54321/btv1b84260335.thumbnail")
         );
+        assert_eq!(
+            results[0].page_url.as_deref(),
+            Some("https://gallica.bnf.fr/ark:/54321/btv1b84260335")
+        );
     }
 
     #[test]
@@ -683,6 +691,10 @@ mod tests {
             results[0].thumbnail_url.as_deref(),
             Some("https://digi.vatlib.it/pub/digit/MSS_Vat.lat.3225/cover/cover.jpg")
         );
+        assert_eq!(
+            results[0].page_url.as_deref(),
+            Some("https://digi.vatlib.it/view/MSS_Vat.lat.3225")
+        );
     }
 
     #[test]
@@ -717,6 +729,10 @@ mod tests {
         assert_eq!(
             results[0].thumbnail_url.as_deref(),
             Some("https://www.e-codices.unifr.ch/loris/bbb/bbb-0264/bbb-0264_001.jp2/full/180,/0/default.jpg")
+        );
+        assert_eq!(
+            results[0].page_url.as_deref(),
+            Some("https://www.e-codices.unifr.ch/en/bbb/0264")
         );
     }
 
