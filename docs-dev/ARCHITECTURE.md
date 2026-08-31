@@ -260,6 +260,22 @@ Layout:
 Il deposito usa percorsi relativi e componenti convalidati. File parziali non
 entrano nelle cartelle definitive.
 
+### Riconoscimento e ricerca per biblioteca
+
+Il riconoscimento (`iiif/resolvers.rs`) porta segnatura, identificativo o
+indirizzo al manifesto senza toccare la rete, e dichiara quanto è sicuro:
+`Strong` quando la forma è inequivocabile, `Weak` quando somiglia a un testo di
+ricerca. Le biblioteche `SearchFirst` usano solo i riconoscimenti sicuri, e il
+riconoscimento incerto resta come ultima risorsa quando la ricerca non trova
+niente.
+
+La ricerca (`iiif/search.rs`) è per biblioteca: Gallica dal suo servizio SRU,
+Vaticana ed e-codices dalle loro pagine di ricerca. Gli indirizzi dei servizi
+sono un valore iniettabile, così le prove li puntano a un server finto. Il
+riferimento di comportamento è Scriptoria
+(`resolvers/{vatican,gallica,ecodices}.py` e i rispettivi `search/`), adattato:
+niente librerie di regex né di parsing HTML.
+
 ## Risultati delle prove di rete
 
 Questi valori derivano da prove reali svolte nell'agosto 2026:

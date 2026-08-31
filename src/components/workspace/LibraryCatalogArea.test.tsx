@@ -82,6 +82,18 @@ vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: vi.fn().mockResolvedValue([]),
 }));
 
+const EMPTY_DETAIL_METADATA = {
+  language: null,
+  subjects: [],
+  publisher: null,
+  volume: null,
+  contributors: [],
+  rights: [],
+  physicalDescription: null,
+  holdingInstitution: null,
+  catalogUrl: null,
+};
+
 const entry = (
   overrides: Partial<import('../../types').LibraryCatalogEntry> = {},
 ): import('../../types').LibraryCatalogEntry => ({
@@ -551,6 +563,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
 
@@ -581,6 +594,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
 
@@ -631,6 +645,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
     const user = userEvent.setup();
@@ -662,6 +677,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
     const user = userEvent.setup();
@@ -690,6 +706,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
     const user = userEvent.setup();
@@ -725,6 +742,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: { creator: 'Anonimo' },
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
 
@@ -810,6 +828,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
     const user = userEvent.setup();
@@ -889,6 +908,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
     const user = userEvent.setup();
@@ -916,6 +936,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
 
@@ -942,6 +963,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
 
@@ -968,6 +990,7 @@ describe('LibraryCatalogArea', () => {
         date: null,
         original: {},
         collections: [],
+        ...EMPTY_DETAIL_METADATA,
       },
     });
     const user = userEvent.setup();

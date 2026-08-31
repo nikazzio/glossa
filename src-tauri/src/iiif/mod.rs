@@ -3,6 +3,8 @@ use serde::Serialize;
 pub mod commands;
 pub mod discovery;
 pub mod network;
+pub mod resolvers;
+pub mod search;
 pub mod settings;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -187,7 +189,10 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Ecodices,
         search_handler: Some(SearchHandlerKind::Ecodices),
-        search_mode: SearchMode::Direct,
+        // La segnatura composta si riconosce da sola; tutto il resto è testo da
+        // cercare. Dichiarandosi `Direct`, questa biblioteca teneva spenta la
+        // propria ricerca: il campo prometteva di cercare e non cercava.
+        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         filters: &[],

@@ -28,6 +28,12 @@ const baseInput = {
   collection: null,
   volume: null,
   itemCount: null,
+  contributors: [],
+  publisher: null,
+  rights: [],
+  physicalDescription: null,
+  holdingInstitution: null,
+  catalogUrl: null,
 };
 
 describe('metadati della fonte', () => {
@@ -58,6 +64,12 @@ describe('metadati della fonte', () => {
       collection: 'manuscrits',
       volume: 'II',
       itemCount: 210,
+      contributors: ['Cavalcabo, Girolamo'],
+      publisher: 'Claude Le Villain (Rouen)',
+      rights: ['domaine public'],
+      physicalDescription: '23-[1 bl.] p. ; in-12',
+      holdingInstitution: 'Bibliothèque nationale de France, V-22944',
+      catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
     });
 
     const written = JSON.stringify(recorded);
@@ -66,6 +78,12 @@ describe('metadati della fonte', () => {
     expect(written).toContain('providerKey');
     expect(written).toContain('manuscrits');
     expect(written).toContain('210');
+    expect(written).toContain('Cavalcabo, Girolamo');
+    expect(written).toContain('Claude Le Villain (Rouen)');
+    expect(written).toContain('domaine public');
+    expect(written).toContain('23-[1 bl.] p. ; in-12');
+    expect(written).toContain('V-22944');
+    expect(written).toContain('cb33412414z');
   });
 });
 
@@ -160,6 +178,38 @@ describe('libraryService', () => {
       expect(detail.source.id).toBe('s1');
       expect(detail.versions).toHaveLength(1);
       expect(detail.linkedWorkspaceIds).toEqual(['ws-1']);
+    });
+
+    it('rilegge tutti i metadati salvati, non solo autore e data', async () => {
+      const metadata = JSON.stringify({
+        creator: 'Strozzi, Filippo',
+        date: '1610',
+        language: 'fre',
+        subjects: ['scherma'],
+        publisher: 'Claude Le Villain (Rouen)',
+        volume: 'II',
+        contributors: ['Cavalcabo, Girolamo'],
+        rights: ['domaine public'],
+        physicalDescription: '23-[1 bl.] p. ; in-12',
+        holdingInstitution: 'Bibliothèque nationale de France, V-22944',
+        catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+      });
+      dbMocks.select
+        .mockResolvedValueOnce([{ id: 's1', title: 'Titolo', kind: 'iiif', primary_language: null, external_ref: null, created_at: '2026-01-01' }])
+        .mockResolvedValueOnce([{ id: 'v1', source_id: 's1', label: 'primary', version_kind: 'iiif_manifest', source_url: 'https://x.test/m.json', metadata, is_primary: 1, created_at: '2026-01-01' }])
+        .mockResolvedValueOnce([]);
+
+      const detail = await getLibrarySourceDetail('s1');
+
+      expect(detail.language).toBe('fre');
+      expect(detail.subjects).toEqual(['scherma']);
+      expect(detail.publisher).toBe('Claude Le Villain (Rouen)');
+      expect(detail.volume).toBe('II');
+      expect(detail.contributors).toEqual(['Cavalcabo, Girolamo']);
+      expect(detail.rights).toEqual(['domaine public']);
+      expect(detail.physicalDescription).toBe('23-[1 bl.] p. ; in-12');
+      expect(detail.holdingInstitution).toBe('Bibliothèque nationale de France, V-22944');
+      expect(detail.catalogUrl).toBe('http://catalogue.bnf.fr/ark:/12148/cb33412414z');
     });
   });
 

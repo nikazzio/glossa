@@ -241,6 +241,23 @@ interface SourceMetadata {
   providerKey: string | null;
   /** Quante pagine dichiarava la biblioteca quando l'opera è stata aggiunta. */
   itemCount: number | null;
+  language: string | null;
+  subjects: string[];
+  mediaType: string | null;
+  materialType: string | null;
+  collection: string | null;
+  volume: string | null;
+  /** Autori, curatori o traduttori oltre al primo (`creator`). */
+  contributors: string[];
+  publisher: string | null;
+  /** Licenza o stato del diritto d'autore, spesso più di una dichiarazione. */
+  rights: string[];
+  /** Descrizione fisica del documento (supporto, misure): non è `mediaType`. */
+  physicalDescription: string | null;
+  /** Fondo e segnatura presso l'istituto che conserva l'originale. */
+  holdingInstitution: string | null;
+  /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
+  catalogUrl: string | null;
 }
 
 /** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
@@ -252,6 +269,18 @@ function parseMetadata(raw: string | null): SourceMetadata {
     date: null,
     providerKey: null,
     itemCount: null,
+    language: null,
+    subjects: [],
+    mediaType: null,
+    materialType: null,
+    collection: null,
+    volume: null,
+    contributors: [],
+    publisher: null,
+    rights: [],
+    physicalDescription: null,
+    holdingInstitution: null,
+    catalogUrl: null,
   };
   if (!raw) return nothing;
   try {
@@ -259,6 +288,8 @@ function parseMetadata(raw: string | null): SourceMetadata {
     if (typeof parsed !== 'object' || parsed === null) return nothing;
     const record = parsed as Record<string, unknown>;
     const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : null);
+    const texts = (value: unknown) =>
+      Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
     return {
       thumbnailUrl: text(record.thumbnailUrl),
       creator: text(record.creator),
@@ -268,6 +299,18 @@ function parseMetadata(raw: string | null): SourceMetadata {
         typeof record.itemCount === 'number' && Number.isFinite(record.itemCount)
           ? record.itemCount
           : null,
+      language: text(record.language),
+      subjects: texts(record.subjects),
+      mediaType: text(record.mediaType),
+      materialType: text(record.materialType),
+      collection: text(record.collection),
+      volume: text(record.volume),
+      contributors: texts(record.contributors),
+      publisher: text(record.publisher),
+      rights: texts(record.rights),
+      physicalDescription: text(record.physicalDescription),
+      holdingInstitution: text(record.holdingInstitution),
+      catalogUrl: text(record.catalogUrl),
     };
   } catch {
     return nothing;
@@ -370,6 +413,12 @@ export async function addSourceToLibrary(
     collection: input.collection,
     volume: input.volume,
     itemCount: input.itemCount,
+    contributors: input.contributors,
+    publisher: input.publisher,
+    rights: input.rights,
+    physicalDescription: input.physicalDescription,
+    holdingInstitution: input.holdingInstitution,
+    catalogUrl: input.catalogUrl,
   });
 
   await runInTransaction(async (run) => {
@@ -439,6 +488,15 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
     date: corrected.date,
     original: corrected.original,
     collections: (await collectionsOfMany([sourceId])).get(sourceId) ?? [],
+    language: metadata.language,
+    subjects: metadata.subjects,
+    publisher: metadata.publisher,
+    volume: metadata.volume,
+    contributors: metadata.contributors,
+    rights: metadata.rights,
+    physicalDescription: metadata.physicalDescription,
+    holdingInstitution: metadata.holdingInstitution,
+    catalogUrl: metadata.catalogUrl,
   };
 }
 

@@ -27,7 +27,7 @@ tauri = { version = "2.10.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-updater = "2"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "cookies"] }
 # Puro Rust: nessuna libreria di sistema da installare, quindi le build per
 # Windows, macOS e Linux restano come sono. Solo i formati che servono davvero:
 # le biblioteche IIIF servono JPEG, e la PNG è l'unica altra che capiti.

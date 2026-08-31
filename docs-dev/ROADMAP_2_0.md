@@ -1,6 +1,6 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-08-24.
+Ultimo aggiornamento: 2026-08-30.
 
 ## Stato generale
 
@@ -36,6 +36,12 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 
 ### Biblioteca e acquisizione
 
+- portare a termine il blocco Biblioteca: e-rara, e-manuscripta e Wellcome
+  (nessun precedente in Scriptoria, da studiare una per una);
+- dare una ricerca vera alle nove biblioteche che oggi accettano solo
+  l'indirizzo completo del manifesto pur dichiarando di saper cercare;
+- collegare l'opera alle sue traduzioni e trascrizioni sulla scheda, quando il
+  passaggio opera → traduzione esisterà davvero;
 - applicare il divieto di scaricamento dichiarato dalle istituzioni;
 - inserire la scelta del deposito nel primo avvio;
 - controllare lo spazio libero prima di adottare una cartella;

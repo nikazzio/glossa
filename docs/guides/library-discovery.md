@@ -8,11 +8,19 @@ La ricerca delle fonti parte dalla Dashboard. La Biblioteca è il catalogo perso
 
 ## Cercare una fonte
 
-Nella Dashboard scegli l'archivio, scrivi una ricerca e avviala con l'icona di ricerca. Al momento Internet Archive offre la ricerca per parole; il provider IIIF generico apre invece un URL di manifest IIIF.
+Nella Dashboard scegli la biblioteca, scrivi cosa cerchi e avvia con l'icona di ricerca.
 
-Ogni risultato mostra miniatura e dati essenziali. Selezionandolo, la scheda si apre e mostra titolo completo, descrizione e tutti i metadati disponibili. Puoi cambiare visualizzazione dall'icona accanto alla ricerca: tre o quattro schede per riga, oppure un elenco compatto — l'icona mostra sempre quella attiva.
+Cosa accetta ciascuna:
+
+- **Internet Archive** — parole di ricerca, oppure l'indirizzo della pagina di dettaglio.
+- **Biblioteca Vaticana** — la segnatura, scritta come ti viene (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` portano allo stesso manoscritto), l'indirizzo della pagina di lettura, oppure parole da cercare nel suo catalogo.
+- **Gallica** — l'identificativo ARK, un indirizzo di Gallica in qualunque forma, oppure parole da cercare per titolo. Se scrivi una parola che somiglia a un identificativo, Gallica cerca prima: meglio qualche risultato che un'opera inesistente.
+- **e-codices** — la segnatura composta (`bbb-0264`), l'indirizzo della pagina di lettura, oppure parole da cercare.
+- **le altre biblioteche in elenco** — per ora solo l'indirizzo completo del manifesto IIIF.
 
 La ricerca non scarica materiale.
+
+Ogni risultato mostra miniatura e dati essenziali. Selezionandolo, la scheda si apre e mostra titolo completo, descrizione e tutti i metadati disponibili. Puoi cambiare visualizzazione dall'icona accanto alla ricerca: tre o quattro schede per riga, oppure un elenco compatto — l'icona mostra sempre quella attiva.
 
 ## Aggiungere una fonte alla Biblioteca
 
