@@ -106,11 +106,40 @@ describe('breadcrumb: un segmento porta dove dice', () => {
       activeWorkspace: { id: 'ws-1', name: 'Archivio' } as never,
       workspaces: [{ id: 'ws-1', name: 'Archivio' } as never],
     });
-    useUiStore.setState({ location: { area: 'library' } });
+    useUiStore.setState({ location: { area: 'workspace', workspaceId: 'ws-1' } });
 
     render(<Header />);
     fireEvent.click(screen.getByRole('button', { name: /Archivio/ }));
 
     expect(useUiStore.getState().location).toEqual({ area: 'workspace', workspaceId: 'ws-1' });
   });
+
+  it.each([
+    ['library', 'areas.library.title'],
+    ['transcriptions', 'areas.transcriptions.title'],
+    ['analysis', 'areas.analysis.title'],
+  ] as const)(
+    "l'area globale %s mostra il proprio nome, non quello del workspace attivo",
+    (area, labelKey) => {
+      // Le aree globali (#210) non dipendono da un workspace attivo: prima il
+      // titolo cadeva sul nome del workspace da cui si veniva, anche entrando
+      // in un'area che non ha niente a che fare con quel workspace.
+      useProjectStore.setState({ currentProjectId: null, projects: [] });
+      useChunksStore.setState({ isProcessing: false });
+      useWorkspaceStore.setState({
+        activeWorkspace: { id: 'ws-1', name: 'Archivio' } as never,
+        workspaces: [{ id: 'ws-1', name: 'Archivio' } as never],
+      });
+      useUiStore.setState({ location: { area } });
+
+      render(<Header />);
+
+      expect(screen.getByText(labelKey)).toBeInTheDocument();
+      expect(screen.queryByText('Archivio')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: labelKey }));
+
+      expect(useUiStore.getState().location).toEqual({ area });
+    },
+  );
 });

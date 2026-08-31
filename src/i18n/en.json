@@ -37,6 +37,9 @@
     "workspaceSection": "Workspace",
     "backToWorkspace": "Back to workspace",
     "backToTranslations": "Back to Translations",
+    "backToLibrary": "Back to Library",
+    "backToTranscriptions": "Back to Transcriptions",
+    "backToAnalysis": "Back to Analysis",
     "resize": "Resize sidebar",
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar"
