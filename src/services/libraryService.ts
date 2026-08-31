@@ -14,6 +14,9 @@ import type {
   LibrarySource,
   LibrarySourceDetail,
   LibrarySourceVersion,
+  SourceField,
+  SourceFieldValues,
+  SourceKind,
   SourceStatus,
 } from '../types';
 
@@ -71,6 +74,71 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+interface OverrideRow {
+  source_id: string;
+  field: SourceField;
+  value: string;
+}
+
+/**
+ * Applica le correzioni a mano a un'opera e restituisce, accanto ai valori da
+ * mostrare, quelli che la biblioteca aveva dato: l'originale non si perde mai,
+ * e da lì si può sempre tornare indietro.
+ */
+function withOverrides(
+  source: LibrarySource,
+  creator: string | null,
+  date: string | null,
+  overrides: SourceFieldValues,
+): { source: LibrarySource; creator: string | null; date: string | null; original: SourceFieldValues } {
+  const original: SourceFieldValues = {};
+  const corrected = { ...source };
+  let effectiveCreator = creator;
+  let effectiveDate = date;
+
+  if (overrides.title !== undefined) {
+    original.title = source.title;
+    corrected.title = overrides.title;
+  }
+  if (overrides.kind !== undefined) {
+    original.kind = source.kind;
+    corrected.kind = overrides.kind as SourceKind;
+  }
+  if (overrides.primary_language !== undefined) {
+    original.primary_language = source.primaryLanguage ?? '';
+    corrected.primaryLanguage = overrides.primary_language;
+  }
+  if (overrides.creator !== undefined) {
+    original.creator = creator ?? '';
+    effectiveCreator = overrides.creator;
+  }
+  if (overrides.date !== undefined) {
+    original.date = date ?? '';
+    effectiveDate = overrides.date;
+  }
+
+  return { source: corrected, creator: effectiveCreator, date: effectiveDate, original };
+}
+
+/**
+ * Le correzioni a mano di tutte le opere in **una lettura sola**: una query per
+ * scheda sarebbe una query per riga del catalogo.
+ */
+async function overridesOfMany(sourceIds: string[]): Promise<Map<string, SourceFieldValues>> {
+  const bySource = new Map<string, SourceFieldValues>();
+  if (sourceIds.length === 0) return bySource;
+  const placeholders = sourceIds.map((_, index) => `$${index + 1}`).join(', ');
+  const rows = await select<OverrideRow>(
+    `SELECT source_id, field, value FROM source_field_overrides
+      WHERE source_id IN (${placeholders})`,
+    sourceIds,
+  );
+  for (const row of rows) {
+    bySource.set(row.source_id, { ...bySource.get(row.source_id), [row.field]: row.value });
+  }
+  return bySource;
+}
+
 interface CatalogRow extends SourceRow {
   version_id: string | null;
   manifest_url: string | null;
@@ -118,17 +186,25 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
     'source',
     rows.map((row) => row.id),
   );
+  const overridesBySource = await overridesOfMany(rows.map((row) => row.id));
 
   return rows.map((row) => {
     const metadata = parseMetadata(row.metadata);
     const found = row.version_id ? byVersion.get(row.version_id) : undefined;
+    const corrected = withOverrides(
+      rowToSource(row),
+      metadata.creator,
+      metadata.date,
+      overridesBySource.get(row.id) ?? {},
+    );
     return {
-      source: rowToSource(row),
+      source: corrected.source,
       versionId: row.version_id,
       manifestUrl: row.manifest_url,
       thumbnailUrl: metadata.thumbnailUrl,
-      creator: metadata.creator,
-      date: metadata.date,
+      creator: corrected.creator,
+      date: corrected.date,
+      original: corrected.original,
       // Quante pagine ha l'opera. Lo scaricamento lo scrive leggendo il
       // manifesto; prima di allora vale quello che la biblioteca aveva
       // dichiarato all'aggiunta, che è già salvato nei metadati.
@@ -333,8 +409,9 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
   );
   if (!source) throw new Error('library_source_not_found');
 
-  const versionRows = await select<SourceVersionRow>(
-    'SELECT id, source_id, label, version_kind, source_url, is_primary, created_at FROM source_versions WHERE source_id = $1',
+  const versionRows = await select<SourceVersionRow & { metadata: string | null }>(
+    `SELECT id, source_id, label, version_kind, source_url, metadata, is_primary, created_at
+       FROM source_versions WHERE source_id = $1`,
     [sourceId],
   );
   const linkRows = await select<{ workspace_id: string }>(
@@ -342,11 +419,81 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
     [sourceId],
   );
 
+  const primary = versionRows.find((row) => row.is_primary === 1) ?? versionRows[0];
+  const metadata = parseMetadata(primary?.metadata ?? null);
+  const corrected = withOverrides(
+    rowToSource(source),
+    metadata.creator,
+    metadata.date,
+    (await overridesOfMany([sourceId])).get(sourceId) ?? {},
+  );
+
   return {
-    source: rowToSource(source),
+    source: corrected.source,
     versions: versionRows.map(rowToVersion),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
+    creator: corrected.creator,
+    date: corrected.date,
+    original: corrected.original,
   };
+}
+
+/**
+ * Corregge a mano un campo dell'opera, o toglie la correzione (`null`)
+ * riportando il valore della biblioteca.
+ *
+ * Correggere con lo stesso valore che aveva la biblioteca **non** lascia una
+ * correzione: un segno «corretto a mano» su un dato identico all'originale
+ * direbbe una cosa falsa.
+ */
+export async function setSourceFieldOverride(
+  sourceId: string,
+  field: SourceField,
+  value: string | null,
+): Promise<void> {
+  const trimmed = value?.trim() ?? null;
+  if (trimmed === null || trimmed === '') {
+    await execute('DELETE FROM source_field_overrides WHERE source_id = $1 AND field = $2', [
+      sourceId,
+      field,
+    ]);
+    logger.info('library.source.fieldRestored', { sourceId, field });
+    return;
+  }
+  if (trimmed === (await originalFieldValue(sourceId, field))) {
+    await execute('DELETE FROM source_field_overrides WHERE source_id = $1 AND field = $2', [
+      sourceId,
+      field,
+    ]);
+    return;
+  }
+  await execute(
+    `INSERT INTO source_field_overrides (source_id, field, value, updated_at)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+     ON CONFLICT(source_id, field)
+     DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+    [sourceId, field, trimmed],
+  );
+  logger.info('library.source.fieldCorrected', { sourceId, field });
+}
+
+/** Il valore che la biblioteca aveva dato per quel campo, mai sovrascritto. */
+async function originalFieldValue(sourceId: string, field: SourceField): Promise<string | null> {
+  const [row] = await select<{ title: string; kind: string; primary_language: string | null }>(
+    'SELECT title, kind, primary_language FROM sources WHERE id = $1',
+    [sourceId],
+  );
+  if (!row) return null;
+  if (field === 'title') return row.title;
+  if (field === 'kind') return row.kind;
+  if (field === 'primary_language') return row.primary_language;
+
+  const [version] = await select<{ metadata: string | null }>(
+    'SELECT metadata FROM source_versions WHERE source_id = $1 ORDER BY is_primary DESC LIMIT 1',
+    [sourceId],
+  );
+  const metadata = parseMetadata(version?.metadata ?? null);
+  return field === 'creator' ? metadata.creator : metadata.date;
 }
 
 export async function setWorkspaceSourceLink(

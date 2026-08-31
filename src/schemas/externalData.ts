@@ -20,6 +20,7 @@ export const BACKUP_TABLES = [
   'project_glossaries',
   'glossary_entries',
   'sources',
+  'source_field_overrides',
   'source_versions',
   'source_pages',
   'workspace_items',

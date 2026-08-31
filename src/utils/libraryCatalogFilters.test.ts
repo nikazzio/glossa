@@ -33,6 +33,7 @@ function entry(
     principalSize: '2000',
     workspaces: [],
     providerKey: 'vatican',
+    original: {},
     ...overrides,
   };
 }

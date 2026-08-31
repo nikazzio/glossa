@@ -33,7 +33,9 @@ The card's commands come in two groups: first what you do to the book — downlo
 
 Above the list sits the **search bar**: type a title or an author, and next to it pick kind, language, source library and availability. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
 
-Clicking the title opens the **work's page**, full width: details (kind, language, provenance, availability, space used, status), the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. At the bottom sits the place where the page viewer will arrive. The arrow command takes you back to the catalogue.
+Clicking the title opens the **work's page**, full width: details (title, kind, author, date, language, provenance, availability, space used, status), the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. At the bottom sits the place where the page viewer will arrive. The arrow command takes you back to the catalogue.
+
+**Correcting the details** — Title, kind, author, date and language can be corrected by hand: the pencil command opens the field, Enter saves, Esc cancels. A corrected field carries a mark next to its label; hover it to read what the library said, and the command next to the value restores the original. **The original is never overwritten**: the correction lives apart, like glossary corrections, so you can always go back. Typing exactly the library's value leaves no correction mark, because there is nothing to flag.
 
 ## Downloading a source
 

@@ -5,6 +5,7 @@ vi.mock('../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
   setSourceArchived: vi.fn().mockResolvedValue(undefined),
+  setSourceFieldOverride: vi.fn().mockResolvedValue(undefined),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
@@ -80,6 +81,9 @@ describe('sourceLibraryStore', () => {
       source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
       versions: [],
       linkedWorkspaceIds: [],
+      creator: null,
+      date: null,
+      original: {},
     });
 
     await useSourceLibraryStore.getState().loadDetail('s1');
@@ -93,12 +97,18 @@ describe('sourceLibraryStore', () => {
       source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
       versions: [],
       linkedWorkspaceIds: ['ws-1'],
+      creator: null,
+      date: null,
+      original: {},
     });
     useSourceLibraryStore.setState({
       detail: {
         source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [],
         linkedWorkspaceIds: [],
+      creator: null,
+      date: null,
+      original: {},
       },
     });
 
