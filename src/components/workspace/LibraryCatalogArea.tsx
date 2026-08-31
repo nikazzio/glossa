@@ -176,7 +176,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -yOffset }}
           transition={transition}
-          className="flex h-full min-h-0 flex-1 flex-col"
+          className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
         >
           <LibrarySourcePage
             detail={detail}
@@ -201,7 +201,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -yOffset }}
           transition={transition}
-          className="flex h-full min-h-0 flex-1 flex-col"
+          className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
         >
           <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
             <div className="flex items-center justify-between gap-3 px-5 pt-5 md:px-6">

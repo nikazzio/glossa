@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Tooltip } from '../ui';
+import { IconButton, type IconButtonSize } from './IconButton';
 
 interface CopyButtonProps {
   text: string;
+  size?: IconButtonSize;
 }
 
-export function CopyButton({ text }: CopyButtonProps) {
+export function CopyButton({ text, size = 'md' }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   const { t } = useTranslation();
   const resetTimer = useRef<number | null>(null);
@@ -31,20 +32,11 @@ export function CopyButton({ text }: CopyButtonProps) {
     }
   };
 
-  const isDisabled = !text;
   const label = copied ? t('pipeline.copied') : t('pipeline.copy');
 
   return (
-    <Tooltip label={label}>
-      <button
-        onClick={handleCopy}
-        disabled={isDisabled}
-        aria-label={label}
-        aria-live="polite"
-        className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-      </button>
-    </Tooltip>
+    <IconButton size={size} onClick={() => void handleCopy()} disabled={!text} title={label}>
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </IconButton>
   );
 }

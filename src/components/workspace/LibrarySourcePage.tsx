@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
@@ -9,6 +9,7 @@ import {
   Info,
   Library,
   Link2,
+  type LucideIcon,
   Minimize2,
   MoreVertical,
   ShieldCheck,
@@ -21,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ClickPopover,
   IconButton,
+  InspectorShell,
   LinkChip,
   MenuActionRow,
   PopoverItem,
@@ -47,6 +49,7 @@ import type {
   Workspace,
 } from '../../types';
 
+const INSPECTOR_COLLAPSED = 56;
 const INSPECTOR_MIN = 320;
 const INSPECTOR_MAX = 560;
 const VIEWER_MIN = 480;
@@ -93,10 +96,12 @@ export function LibrarySourcePage({
   onCreateCollection,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
   const inspectorWidth = useUiStore((state) => state.librarySourceInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setLibrarySourceInspectorWidth);
   const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   const persistLayout = () => {
@@ -105,108 +110,197 @@ export function LibrarySourcePage({
     if (px !== inspectorWidth) setInspectorWidth(px);
   };
 
+  // Stesso meccanismo della colonna Insight della traduzione: il collasso è
+  // del riquadro vero (react-resizable-panels), lo stato qui è solo lo
+  // specchio di quel che il riquadro dice dopo ogni ridimensionamento.
+  const syncInspectorCollapsed = () => {
+    setInspectorCollapsed(inspectorPanel?.isCollapsed() ?? false);
+  };
+  const toggleInspectorCollapsed = (next: boolean) => {
+    if (!inspectorPanel) return;
+    if (next) inspectorPanel.collapse();
+    else inspectorPanel.expand();
+    setInspectorCollapsed(next);
+  };
+
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3 py-2">
-        <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
-          <X size={14} />
-        </IconButton>
-        {entry && (
-          <SourceHeaderActions
-            entry={entry}
-            onRemoved={onRemoved}
-            onSetArchived={onSetArchived}
-            onRefresh={onRefresh}
-          />
-        )}
-      </header>
+    <Group orientation="horizontal" className="flex h-full min-h-0 flex-1" onLayoutChanged={persistLayout}>
+      <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
+        {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
+            dallo Studio di trascrizione: qui resta il posto dove andrà, con
+            la stessa dimensione minima che avrà da riempito. */}
+        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
+          <span className="flex flex-col items-center gap-2">
+            <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
+            {t('areas.library.viewerComingSoon')}
+          </span>
+        </div>
+      </Panel>
 
-      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
-        <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col">
-          {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
-              dallo Studio di trascrizione: qui resta il posto dove andrà, con
-              la stessa dimensione minima che avrà da riempito. */}
-          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
-            <span className="flex flex-col items-center gap-2">
-              <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-              {t('areas.library.viewerComingSoon')}
-            </span>
-          </div>
-        </Panel>
-
-        <Separator
-          onPointerDown={() => setDragging(true)}
-          className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-            dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
+      <Separator
+        onPointerDown={() => setDragging(true)}
+        className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
+          dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`relative h-7 w-px rounded-full transition-colors ${
+            dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
           }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`relative h-7 w-px rounded-full transition-colors ${
-              dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-            }`}
-          />
-        </Separator>
+        />
+      </Separator>
 
-        <Panel
-          id="library-source-inspector"
-          minSize={INSPECTOR_MIN}
-          maxSize={INSPECTOR_MAX}
-          defaultSize={initialInspectorWidth.current}
-          panelRef={setInspectorPanel}
-          className={`flex min-w-0 flex-col overflow-y-auto custom-scrollbar border-l border-editorial-border bg-surface-panel ${
-            dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
-          }`}
+      <Panel
+        id="library-source-inspector"
+        collapsible
+        collapsedSize={INSPECTOR_COLLAPSED}
+        minSize={INSPECTOR_MIN}
+        maxSize={INSPECTOR_MAX}
+        defaultSize={initialInspectorWidth.current}
+        panelRef={setInspectorPanel}
+        onResize={syncInspectorCollapsed}
+        className={`flex min-w-0 flex-col border-l border-editorial-border bg-surface-panel ${
+          dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
+        }`}
+      >
+        {/* Guscio identico alla colonna Insight della traduzione (stesso
+            componente condiviso): tre tab oggi, un domani se ne può
+            aggiungere un'altra (es. il visore), e la stessa versione
+            collassata — sono la stessa colonna, non due da tenere allineate
+            a mano. */}
+        <InspectorShell
+          ariaLabel={t('areas.library.inspectorLabel')}
+          tabs={INSPECTOR_TABS.map((tab) => ({ ...tab, label: t(tab.labelKey) }))}
+          activeTab={activeTab}
+          onTabChange={(id) => setActiveTab(id as InspectorTabId)}
+          panelIcon={<Info size={15} />}
+          panelLabel={t('areas.library.inspectorLabel')}
+          collapsed={inspectorCollapsed}
+          onCollapsedChange={toggleInspectorCollapsed}
+          headerActions={
+            <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
+              <X size={14} />
+            </IconButton>
+          }
+          actions={entry && (
+            <SourceHeaderActions
+              entry={entry}
+              onRemoved={onRemoved}
+              onSetArchived={onSetArchived}
+              onRefresh={onRefresh}
+            />
+          )}
         >
           <div className="flex flex-col gap-6 px-4 py-5">
-            <DataSection detail={detail} entry={entry} onCorrectField={onCorrectField} />
-            <SourceInfoSection detail={detail} providerLabel={providerLabel} />
-            <CopiesSection detail={detail} entry={entry} onRefresh={onRefresh} />
+            {activeTab === 'info' ? (
+              <>
+                <DataSection detail={detail} entry={entry} onCorrectField={onCorrectField} />
+                <SourceInfoSection detail={detail} providerLabel={providerLabel} />
+              </>
+            ) : activeTab === 'copies' ? (
+              <CopiesSection detail={detail} entry={entry} onRefresh={onRefresh} />
+            ) : (
+              <>
+                <Section icon={Link2} label={t('areas.library.linkedWorkspaces')}>
+                  <WorkspaceLinkPicker
+                    workspaces={workspaces}
+                    linkedIds={detail.linkedWorkspaceIds}
+                    onToggleLink={onToggleLink}
+                  />
+                </Section>
 
-            <section className="space-y-2">
-              <SectionLabel icon={Link2} label={t('areas.library.linkedWorkspaces')} />
-              <ul className="space-y-1">
-                {workspaces.map((workspace) => {
-                  const linked = detail.linkedWorkspaceIds.includes(workspace.id);
-                  return (
-                    <li
-                      key={workspace.id}
-                      className="flex items-center justify-between gap-3 rounded-md border border-editorial-border bg-surface-elevated px-3 py-2"
-                    >
-                      <span className="min-w-0 truncate text-sm text-editorial-ink">
-                        {workspace.name}
-                      </span>
-                      <IconButton
-                        title={
-                          linked
-                            ? t('areas.library.unlinkWorkspace', { name: workspace.name })
-                            : t('areas.library.linkWorkspace', { name: workspace.name })
-                        }
-                        onClick={() => onToggleLink(workspace.id, !linked)}
-                        tone={linked ? 'accent' : 'default'}
-                        ariaPressed={linked}
-                        size="sm"
-                      >
-                        <Link2 size={14} />
-                      </IconButton>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-
-            <section className="space-y-2">
-              <SectionLabel icon={Tags} label={t('areas.library.collectionsSection')} />
-              <CollectionPicker
-                collections={collections}
-                memberIds={detail.collections.map((collection) => collection.id)}
-                onSetCollection={onSetCollection}
-                onCreateCollection={onCreateCollection}
-              />
-            </section>
+                <Section icon={Tags} label={t('areas.library.collectionsSection')}>
+                  <CollectionPicker
+                    collections={collections}
+                    memberIds={detail.collections.map((collection) => collection.id)}
+                    onSetCollection={onSetCollection}
+                    onCreateCollection={onCreateCollection}
+                  />
+                </Section>
+              </>
+            )}
           </div>
-        </Panel>
-      </Group>
+        </InspectorShell>
+      </Panel>
+    </Group>
+  );
+}
+
+type InspectorTabId = 'info' | 'copies' | 'links';
+
+const INSPECTOR_TABS: { id: InspectorTabId; labelKey: string; icon: ReactNode }[] = [
+  { id: 'info', labelKey: 'areas.library.infoTab', icon: <Info size={16} /> },
+  { id: 'copies', labelKey: 'areas.library.copiesTab', icon: <BookOpenText size={16} /> },
+  { id: 'links', labelKey: 'areas.library.linksTab', icon: <Link2 size={16} /> },
+];
+
+/** Intestazione di sezione con un filo sotto: basta a distinguerla dal
+ *  contenuto senza introdurre un altro stile di riquadro nella pagina. */
+function Section({ icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <div className="border-b border-editorial-border/70 pb-1.5">
+        <SectionLabel icon={icon} label={label} />
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** I workspace collegati come etichette rimovibili, più un comando per
+ *  collegarne un altro — stesso pattern già in uso nella riga di catalogo,
+ *  invece dell'elenco di ogni workspace con un interruttore acceso/spento. */
+function WorkspaceLinkPicker({
+  workspaces,
+  linkedIds,
+  onToggleLink,
+}: {
+  workspaces: Workspace[];
+  linkedIds: string[];
+  onToggleLink: (workspaceId: string, linked: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const [picking, setPicking] = useState(false);
+  const linked = new Set(linkedIds);
+  const linkedWorkspaces = workspaces.filter((workspace) => linked.has(workspace.id));
+  const available = workspaces.filter((workspace) => !linked.has(workspace.id));
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {linkedWorkspaces.map((workspace) => (
+        <LinkChip
+          key={workspace.id}
+          label={workspace.name}
+          hint={t('areas.library.unlinkWorkspace', { name: workspace.name })}
+          onClick={() => onToggleLink(workspace.id, false)}
+        />
+      ))}
+      {available.length > 0 && (
+        <ClickPopover
+          open={picking}
+          onOpenChange={setPicking}
+          trigger={
+            <IconButton size="sm" title={t('areas.library.linkToWorkspace')} ariaPressed={picking}>
+              <Link2 size={13} />
+            </IconButton>
+          }
+        >
+          <ul className="flex min-w-40 flex-col py-1">
+            {available.map((workspace) => (
+              <li key={workspace.id} className="flex">
+                <PopoverItem
+                  label={workspace.name}
+                  onSelect={() => {
+                    setPicking(false);
+                    onToggleLink(workspace.id, true);
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        </ClickPopover>
+      )}
     </div>
   );
 }
@@ -223,19 +317,21 @@ function DataSection({
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const readonlyFields: Array<[string, string | null]> = [
-    [t('areas.library.contributorsField'), detail.contributors.join(' · ') || null],
-    [t('areas.library.volumeField'), detail.volume],
-    [t('areas.library.subjectsField'), detail.subjects.join(' · ') || null],
-    [t('areas.library.publisherField'), detail.publisher],
-    [t('areas.library.rightsField'), detail.rights.join(' · ') || null],
-    [t('areas.library.physicalDescriptionField'), detail.physicalDescription],
-    [t('areas.library.descriptionField'), detail.description],
+  // Le stesse etichette per ogni opera, che la biblioteca le abbia dichiarate
+  // o no: un campo che sparisce quando è vuoto farebbe sembrare due schede
+  // strutturate in modo diverso, invece è solo la fonte che ne sa di meno.
+  const readonlyFields: Array<[string, string]> = [
+    [t('areas.library.contributorsField'), detail.contributors.join(' · ')],
+    [t('areas.library.volumeField'), detail.volume ?? ''],
+    [t('areas.library.subjectsField'), detail.subjects.join(' · ')],
+    [t('areas.library.publisherField'), detail.publisher ?? ''],
+    [t('areas.library.rightsField'), detail.rights.join(' · ')],
+    [t('areas.library.physicalDescriptionField'), detail.physicalDescription ?? ''],
+    [t('areas.library.descriptionField'), detail.description ?? ''],
   ];
 
   return (
-    <section className="space-y-2">
-      <SectionLabel icon={Info} label={t('areas.library.detailsSection')} />
+    <Section icon={Info} label={t('areas.library.detailsSection')}>
       <dl className="space-y-2.5">
         <SourceFieldRow
           label={t('areas.library.titleField')}
@@ -276,13 +372,17 @@ function DataSection({
           original={detail.original.primary_language}
           onSave={(value) => onCorrectField('primary_language', value)}
         />
-        {readonlyFields
-          .filter((field): field is [string, string] => Boolean(field[1]))
-          .map(([label, value]) => (
-            <StatBlock key={label} label={label} value={value} />
-          ))}
+        {readonlyFields.map(([label, value]) => (
+          <StatBlock key={label} label={label} value={value} />
+        ))}
         {entry && (
           <>
+            {entry.expectedPages !== null && (
+              <StatBlock
+                label={t('areas.library.pagesField')}
+                value={t('areas.library.pageCount', { count: entry.expectedPages })}
+              />
+            )}
             <StatBlock
               label={t('areas.library.availabilityField')}
               value={availabilityText(entry, t)}
@@ -301,7 +401,7 @@ function DataSection({
           }
         />
       </dl>
-    </section>
+    </Section>
   );
 }
 
@@ -327,8 +427,7 @@ function SourceInfoSection({
   if (!hasContent) return null;
 
   return (
-    <section className="space-y-2">
-      <SectionLabel icon={Library} label={t('areas.library.sourceSection')} />
+    <Section icon={Library} label={t('areas.library.sourceSection')}>
       <dl className="space-y-2.5">
         {providerLabel && <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />}
         {identifier && <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier} />}
@@ -346,7 +445,7 @@ function SourceInfoSection({
           />
         )}
       </dl>
-    </section>
+    </Section>
   );
 }
 
@@ -365,89 +464,80 @@ function CopiesSection({
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
-  const actions = useSourceActions(
-    entry ?? PLACEHOLDER_ENTRY,
-    { onRemove: () => {}, onSetArchived: async () => {}, onRefresh },
-  );
 
   return (
-    <section className="space-y-2">
-      <SectionLabel icon={BookOpenText} label={t('areas.library.copiesSection')} />
-      <ul className="space-y-2">
-        {detail.versions.map((version) => {
-          const isEntryVersion = Boolean(entry && version.id === entry.versionId);
-          return (
-            <li
-              key={version.id}
-              className="space-y-2.5 rounded-md border border-editorial-border bg-surface-elevated px-3 py-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-                  {t(`areas.library.versionKindLabels.${version.versionKind}`)}
-                </span>
-                {isEntryVersion && entry && (
-                  <CopyActionsRow entry={entry} actions={actions} />
+    // Niente intestazione di sezione qui: la tab la dà già ("Copie digitali").
+    // Niente riquadro a sfondo: la tab stessa è già il contenitore, un'altra
+    // cornice attorno sarebbe una scatola dentro la scatola.
+    <ul className="divide-y divide-editorial-border/70">
+      {detail.versions.map((version) => {
+        const isEntryVersion = Boolean(entry && version.id === entry.versionId);
+        return (
+          <li key={version.id} className="space-y-3 py-4 first:pt-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                {t(`areas.library.versionKindLabels.${version.versionKind}`)}
+              </span>
+              {isEntryVersion && entry && <CopyActionsRow entry={entry} onRefresh={onRefresh} />}
+            </div>
+
+            {version.sourceUrl && (
+              <StatBlock label={t('areas.library.sourceUrlField')} value={version.sourceUrl} href={version.sourceUrl} />
+            )}
+
+            {isEntryVersion && entry && (
+              <div className="space-y-3 border-t border-editorial-border/60 pt-3">
+                <StatBlock label={t('areas.library.availabilityField')} value={availabilityText(entry, t)} />
+
+                {entry.sizes.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                      {t('areas.library.resolutionsSection')}
+                    </p>
+                    <ul className="divide-y divide-editorial-border/60 rounded-md border border-editorial-border/60">
+                      {entry.sizes.map((size) => (
+                        <li key={size.sizeTag} className="flex items-center justify-between gap-3 px-2.5 py-2 text-xs">
+                          <span className="font-display italic text-editorial-ink">
+                            {size.sizeTag}
+                            {size.sizeTag === entry.principalSize && (
+                              <span className="ml-1.5 text-[10px] not-italic uppercase tracking-wide text-editorial-accent">
+                                {t('areas.library.resolutionPrincipal')}
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-editorial-muted">
+                            {t('areas.library.resolutionSummary', {
+                              count: size.pages,
+                              pages: size.pages,
+                              size: humanSize(size.bytes),
+                            })}
+                            {size.missing > 0 &&
+                              ` · ${t('areas.library.resolutionMissing', { count: size.missing })}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
+
+                <SourceSizeCap versionId={version.id} />
               </div>
-              <p className="break-all font-mono text-xs text-editorial-muted">{version.sourceUrl}</p>
-              {isEntryVersion && entry && (
-                <div className="space-y-2 border-t border-editorial-border/60 pt-2.5">
-                  {entry.sizes.map((size) => (
-                    <StatBlock
-                      key={size.sizeTag}
-                      label={
-                        t('areas.library.resolutionField', { tag: size.sizeTag }) +
-                        (size.sizeTag === entry.principalSize
-                          ? ` (${t('areas.library.resolutionPrincipal')})`
-                          : '')
-                      }
-                      value={[
-                        t('areas.library.resolutionSummary', {
-                          count: size.pages,
-                          pages: size.pages,
-                          size: humanSize(size.bytes),
-                        }),
-                        size.missing > 0
-                          ? t('areas.library.resolutionMissing', { count: size.missing })
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    />
-                  ))}
-                  <SourceSizeCap versionId={version.id} />
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-const PLACEHOLDER_ENTRY: LibraryCatalogEntry = {
-  source: { id: '', title: '', kind: 'other', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '' },
-  versionId: null,
-  manifestUrl: null,
-  thumbnailUrl: null,
-  creator: null,
-  date: null,
-  expectedPages: null,
-  localPages: 0,
-  localBytes: 0,
-  sizes: [],
-  principalSize: null,
-  workspaces: [],
-  providerKey: null,
-  original: {},
-  collections: [],
-};
-
 /** Scarica/Verifica/Comprimi/Libera spazio: comandi sulla copia, montati
- *  dentro "Copie digitali" invece che nell'intestazione della pagina. */
-function CopyActionsRow({ entry, actions }: { entry: LibraryCatalogEntry; actions: ReturnType<typeof useSourceActions> }) {
+ *  dentro "Copie digitali" invece che nell'intestazione della pagina. Monta
+ *  la propria istanza di `useSourceActions` (solo quando la copia esiste
+ *  davvero, mai con dati finti): archiviare e rimuovere non passano di qui,
+ *  quindi non serve dare a `useSourceActions` handler veri per quei due. */
+function CopyActionsRow({ entry, onRefresh }: { entry: LibraryCatalogEntry; onRefresh: () => void }) {
   const { t } = useTranslation();
+  const actions = useSourceActions(entry, { onRemove: () => {}, onSetArchived: async () => {}, onRefresh });
   const { busy } = actions;
 
   return (
@@ -514,7 +604,6 @@ function SourceHeaderActions({
           </Tooltip>
         ) : null}
       </span>
-      <DownloadButton entry={entry} actions={actions} size="md" />
       <ClickPopover
         open={menuOpen}
         onOpenChange={setMenuOpen}

@@ -575,6 +575,8 @@ describe('LibraryCatalogArea', () => {
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
     expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
@@ -659,14 +661,16 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
 
-    // Il mock i18n dei test non interpola i placeholder: le due etichette
-    // restano uguali salvo il segno "principale", che è quanto conta verificare.
-    expect(screen.getByText('areas.library.resolutionField')).toBeInTheDocument();
-    expect(
-      screen.getByText('areas.library.resolutionField (areas.library.resolutionPrincipal)'),
-    ).toBeInTheDocument();
+    const resolutionsList = screen.getByText('areas.library.resolutionsSection').nextElementSibling as HTMLElement;
+    expect(resolutionsList).toHaveTextContent('1500');
+    expect(resolutionsList).toHaveTextContent('full');
+    // Solo la principale porta il segno: è quanto conta verificare, non il
+    // testo del riepilogo (il mock i18n dei test non interpola i placeholder).
+    expect(resolutionsList).toHaveTextContent('areas.library.resolutionPrincipal');
   });
 
   it('dalla scheda, rimuovere riporta al catalogo solo dopo che l opera è sparita', async () => {
@@ -927,6 +931,7 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
 
     render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('tab', { name: 'areas.library.linksTab' }));
     await user.click(screen.getByRole('button', { name: 'areas.library.addToCollection' }));
     await user.type(
       screen.getByRole('textbox', { name: 'areas.library.newCollectionLabel' }),
@@ -1007,6 +1012,7 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
 
     render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('tab', { name: 'areas.library.linksTab' }));
     await user.click(screen.getByRole('button', { name: 'areas.library.addToCollection' }));
     await user.type(
       screen.getByRole('textbox', { name: 'areas.library.newCollectionLabel' }),
@@ -1019,7 +1025,7 @@ describe('LibraryCatalogArea', () => {
     expect(collectionsService.setSourceCollection).toHaveBeenCalledWith('coll-2', 's1', true);
   });
 
-  it('shows the detail panel when itemId is provided and detail is loaded', () => {
+  it('shows the detail panel when itemId is provided and detail is loaded', async () => {
     useSourceLibraryStore.setState({
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
@@ -1033,13 +1039,15 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
     expect(screen.getByText('https://x.test/m.json')).toBeInTheDocument();
   });
 
-  it('shows every workspace with its own link toggle, independent from any "active" workspace', async () => {
+  it('shows linked workspaces as chips, and the rest in the picker to link one', async () => {
     useWorkspaceStore.setState({
       activeWorkspace: { id: 'ws-stale', name: 'Stale' } as never,
       workspaces: [
@@ -1059,13 +1067,16 @@ describe('LibraryCatalogArea', () => {
         ...EMPTY_DETAIL_METADATA,
       },
     });
+    const user = userEvent.setup();
 
     render(<LibraryCatalogArea itemId="s1" />);
+    await user.click(screen.getByRole('tab', { name: 'areas.library.linksTab' }));
 
-    const archivioRow = screen.getByText('Archivio').closest('li') as HTMLElement;
-    const ricercaRow = screen.getByText('Ricerca').closest('li') as HTMLElement;
-    expect(within(archivioRow).getByRole('button')).toHaveAttribute('aria-pressed', 'false');
-    expect(within(ricercaRow).getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Ricerca' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archivio' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.linkToWorkspace' }));
+    expect(screen.getByRole('button', { name: 'Archivio' })).toBeInTheDocument();
   });
 
   it('toggles the link for the clicked workspace only, using that workspace id, never activeWorkspace', async () => {
@@ -1089,8 +1100,9 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
 
     render(<LibraryCatalogArea itemId="s1" />);
-    const archivioRow = screen.getByText('Archivio').closest('li') as HTMLElement;
-    await user.click(within(archivioRow).getByRole('button'));
+    await user.click(screen.getByRole('tab', { name: 'areas.library.linksTab' }));
+    await user.click(screen.getByRole('button', { name: 'areas.library.linkToWorkspace' }));
+    await user.click(screen.getByRole('button', { name: 'Archivio' }));
 
     expect(service.setWorkspaceSourceLink).toHaveBeenCalledWith('ws-1', 's1', true);
   });

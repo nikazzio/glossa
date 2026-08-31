@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ChevronRight, HelpCircle,
   FolderOpen, Upload,
@@ -6,13 +6,12 @@ import {
   PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen, Brain,
-  Copy, Check, RefreshCw,
+  RefreshCw,
 } from 'lucide-react';
 import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Dialog, DialogCancelButton, Tooltip } from '../ui';
+import { CopyButton, Dialog, DialogCancelButton, Tooltip } from '../ui';
 import { useUiStore, type HelpSection } from '../../stores/uiStore';
 
 interface HelpGuideProps {
@@ -780,8 +779,6 @@ function ShortcutsSection() {
 function TroubleshootingSection() {
   const { t } = useTranslation();
   const [logPath, setLogPath] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const resetTimer = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -790,24 +787,6 @@ function TroubleshootingSection() {
       .catch(() => { if (!cancelled) setLogPath(null); });
     return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => () => {
-    if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
-  }, []);
-
-  const handleCopy = async () => {
-    if (!logPath) return;
-    try {
-      await navigator.clipboard.writeText(logPath);
-      setCopied(true);
-      if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
-      resetTimer.current = window.setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      toast.error(t('pipeline.copyFailed'), {
-        description: err instanceof Error ? err.message : undefined,
-      });
-    }
-  };
 
   return (
     <>
@@ -818,18 +797,7 @@ function TroubleshootingSection() {
       <P>{t('help.troubleshooting.logFileDesc')}</P>
       <div className="flex items-center gap-2 border-y border-editorial-border/70 py-3 font-mono text-xs text-editorial-ink/80">
         <span className="flex-1 break-all">{logPath ?? '…'}</span>
-        <Tooltip label={t('common.copy')}>
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!logPath}
-            aria-label={copied ? t('pipeline.copied') : t('common.copy')}
-            aria-live="polite"
-            className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
-          >
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-          </button>
-        </Tooltip>
+        <CopyButton text={logPath ?? ''} size="sm" />
       </div>
 
       <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Select } from '../ui';
+import { Select, Tooltip } from '../ui';
 import {
   getVersionSizeCap,
   MAX_SIZE_CAP,
@@ -50,12 +51,20 @@ export function SourceSizeCap({ versionId }: { versionId: string }) {
   };
 
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs text-editorial-muted">{t('areas.library.sizeCap')}</span>
+    <div className="flex items-center gap-2">
+      <Tooltip label={t('areas.library.sizeCapHint')} side="top">
+        <span
+          className="flex shrink-0 items-center justify-center text-editorial-muted"
+          aria-label={t('areas.library.sizeCap')}
+        >
+          <SlidersHorizontal size={14} />
+        </span>
+      </Tooltip>
       <Select
         value={cap}
         onChange={(value) => void change(value)}
         ariaLabel={t('areas.library.sizeCap')}
+        className="flex-1"
         options={[
           { value: '', label: t('areas.library.sizeCapInherited') },
           ...SIZE_CAPS.map((value) => ({

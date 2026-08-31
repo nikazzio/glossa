@@ -36,6 +36,24 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 
 ### Biblioteca e acquisizione
 
+- **sistemare visivamente l'elenco del catalogo** (vista lista/griglia): dopo
+  il ridisegno della scheda opera, resta la revisione UI/UX del punto 9bis
+  segnata da Niki, non ancora iniziata;
+- **rivedere le nuove tab della scheda opera e i dati da poter correggere a
+  mano**: oggi solo 5 campi sono correggibili (titolo, tipo, autore, data,
+  lingua) — capire con Niki se altri campi di sola lettura (editore, diritti,
+  soggetti…) devono diventarlo;
+- **migliorare la tab "Copie digitali"**: funziona ma va rifinita — capire se
+  prevedere davvero più tipi di copia scaricabili per la stessa opera (oggi
+  l'elenco versioni lo permette a livello di dati, ma l'interfaccia non
+  distingue bene "scarica come IIIF" da "scarica come PDF" quando entrambi
+  sono disponibili) e comunque rendere più chiara la relazione fra risoluzioni
+  scaricate, tetto per-copia e tetto generale;
+- **coerenza Biblioteca ↔ Trascrizioni**: la scheda opera ha ora un pattern
+  stabile (colonna visore + colonna informazioni a tab, con `InspectorShell`
+  condiviso con la traduzione) — quando lo Studio di trascrizione prende
+  forma, i comandi generali (tornare indietro, aprire/chiudere la colonna
+  informazioni) devono seguire lo stesso pattern, non uno nuovo per area;
 - portare a termine il blocco Biblioteca: e-rara, e-manuscripta e Wellcome
   (nessun precedente in Scriptoria, da studiare una per una);
 - dare una ricerca vera alle nove biblioteche che oggi accettano solo

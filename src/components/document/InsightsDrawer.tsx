@@ -20,7 +20,7 @@ import { ChunkPromptPreviewTab } from './tabs/ChunkPromptPreviewTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import { SearchTab } from './SearchTab';
-import { TabButton } from './tabs/TabButton';
+import { TabButton, InspectorShell, type InspectorTab } from '../ui';
 import { IndexTab } from './tabs/IndexTab';
 import { StatsTab } from './tabs/StatsTab';
 import { CoherenceTab } from './tabs/CoherenceTab';
@@ -35,22 +35,6 @@ const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coheren
 const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['references', 'promptPreview', 'audit', 'memory', 'notes'];
 const CHUNK_RAIL_TABS_BEFORE_TRANSLATION: ChunkRailTab[] = ['references', 'promptPreview'];
 const CHUNK_RAIL_TABS_AFTER_TRANSLATION: ChunkRailTab[] = ['audit', 'memory'];
-
-const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
-  index: 'insights-tab-button-index',
-  search: 'insights-tab-button-search',
-  stats: 'insights-tab-button-stats',
-  coherence: 'insights-tab-button-coherence',
-  glossary: 'insights-tab-button-glossary',
-};
-
-const DOC_TAB_PANEL_IDS: Record<InsightsDrawerTab, string> = {
-  index: 'insights-tab-panel-index',
-  search: 'insights-tab-panel-search',
-  stats: 'insights-tab-panel-stats',
-  coherence: 'insights-tab-panel-coherence',
-  glossary: 'insights-tab-panel-glossary',
-};
 
 const CHUNK_RAIL_TAB_BUTTON_IDS: Record<ChunkRailTab, string> = {
   audit: 'chunk-rail-tab-button-audit',
@@ -238,9 +222,11 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
 
 interface DocumentInsightTabsProps {
   onRunCoherenceAudit: () => void;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
 }
 
-export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabsProps) {
+export function DocumentInsightTabs({ onRunCoherenceAudit, collapsed, onCollapsedChange }: DocumentInsightTabsProps) {
   const { t } = useTranslation();
   const documentDrawerTab = useUiStore((state) => state.documentDrawerTab);
   const setDocumentDrawerTab = useUiStore((state) => state.setDocumentDrawerTab);
@@ -254,8 +240,6 @@ export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabs
   const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
   const { config } = usePipelineStore();
   const hasGlossary = !!config.assignedGlossaryId && config.glossary.length > 0;
-
-  const tabButtonRefs = useRef<Partial<Record<InsightsDrawerTab, HTMLButtonElement | null>>>({});
 
   // Esci dal tab glossario se il glossario viene rimosso.
   useEffect(() => {
@@ -279,52 +263,35 @@ export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabs
     glossary: t('document.insightsTabGlossary'),
   };
 
-  const enabledTabOrder = DOC_TAB_ORDER.filter((tab) => tab !== 'glossary' || hasGlossary);
-
-  const activateTab = (tab: InsightsDrawerTab) => {
-    setDocumentDrawerTab(tab);
-    tabButtonRefs.current[tab]?.focus();
-  };
-  const handleTabKeyDown = (tab: InsightsDrawerTab, event: KeyboardEvent<HTMLButtonElement>) => {
-    const idx = enabledTabOrder.indexOf(tab);
-    let next: InsightsDrawerTab | null = null;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      next = enabledTabOrder[(idx - 1 + enabledTabOrder.length) % enabledTabOrder.length];
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      next = enabledTabOrder[(idx + 1) % enabledTabOrder.length];
-    else if (event.key === 'Home') next = enabledTabOrder[0];
-    else if (event.key === 'End') next = enabledTabOrder[enabledTabOrder.length - 1];
-    if (next) { event.preventDefault(); activateTab(next); }
-  };
+  const tabs: InspectorTab[] = DOC_TAB_ORDER.map((tab) => ({
+    id: tab,
+    label: tab === 'glossary' && !hasGlossary ? t('document.insightsGlossaryEmpty') : DOC_TAB_LABEL[tab],
+    icon: DOC_TAB_ICON[tab],
+    disabled: tab === 'glossary' && !hasGlossary,
+  }));
+  const buttonId = (tab: InsightsDrawerTab) => `inspector-tab-button-${tab}`;
+  const panelId = (tab: InsightsDrawerTab) => `inspector-tab-panel-${tab}`;
 
   return (
-    <div className="flex h-full flex-col" role="region" aria-label={t('document.insightTabsLabel')}>
-      <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
-        <div role="tablist" aria-orientation="horizontal" aria-label={t('document.insightTabsLabel')} className="flex gap-1">
-          {DOC_TAB_ORDER.map((tab) => (
-            <TabButton
-              key={tab}
-              buttonId={DOC_TAB_BUTTON_IDS[tab]}
-              active={documentDrawerTab === tab}
-              disabled={tab === 'glossary' && !hasGlossary}
-              onClick={() => activateTab(tab)}
-              onKeyDown={(e) => handleTabKeyDown(tab, e)}
-              label={tab === 'glossary' && !hasGlossary ? t('document.insightsGlossaryEmpty') : DOC_TAB_LABEL[tab]}
-              icon={DOC_TAB_ICON[tab]}
-              controls={DOC_TAB_PANEL_IDS[tab]}
-              buttonRef={(el) => { tabButtonRefs.current[tab] = el; }}
-            />
-          ))}
-        </div>
-        <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+    <InspectorShell
+      ariaLabel={t('document.insightTabsLabel')}
+      tabs={tabs}
+      activeTab={documentDrawerTab}
+      onTabChange={(tab) => setDocumentDrawerTab(tab as InsightsDrawerTab)}
+      actions={
         <span className="font-display text-sm italic text-editorial-ink">{DOC_TAB_LABEL[documentDrawerTab]}</span>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
+      }
+      ownsPanelSemantics={false}
+      panelIcon={<BarChart2 size={15} />}
+      panelLabel={t('projectShell.insightTab')}
+      collapsed={collapsed}
+      onCollapsedChange={onCollapsedChange}
+    >
+      <div className="flex flex-1 flex-col bg-editorial-bg/40">
         {documentDrawerTab === 'index' ? (
           <IndexTab
-            panelId={DOC_TAB_PANEL_IDS.index}
-            labelledBy={DOC_TAB_BUTTON_IDS.index}
+            panelId={panelId('index')}
+            labelledBy={buttonId('index')}
             chunks={chunks}
             currentChunkId={currentChunk?.id ?? null}
             stuckChunkIds={stuckChunkIds}
@@ -333,28 +300,28 @@ export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabs
           />
         ) : documentDrawerTab === 'search' ? (
           <SearchTab
-            panelId={DOC_TAB_PANEL_IDS.search}
-            labelledBy={DOC_TAB_BUTTON_IDS.search}
+            panelId={panelId('search')}
+            labelledBy={buttonId('search')}
             chunks={chunks}
             currentChunkId={currentChunk?.id ?? null}
             onSelectChunk={setSelectedChunkId}
           />
         ) : documentDrawerTab === 'stats' ? (
           <StatsTab
-            panelId={DOC_TAB_PANEL_IDS.stats}
-            labelledBy={DOC_TAB_BUTTON_IDS.stats}
+            panelId={panelId('stats')}
+            labelledBy={buttonId('stats')}
             chunks={chunks}
           />
         ) : documentDrawerTab === 'glossary' ? (
           <GlossaryTab
-            panelId={DOC_TAB_PANEL_IDS.glossary}
-            labelledBy={DOC_TAB_BUTTON_IDS.glossary}
+            panelId={panelId('glossary')}
+            labelledBy={buttonId('glossary')}
             glossary={config.glossary}
           />
         ) : (
           <CoherenceTab
-            panelId={DOC_TAB_PANEL_IDS.coherence}
-            labelledBy={DOC_TAB_BUTTON_IDS.coherence}
+            panelId={panelId('coherence')}
+            labelledBy={buttonId('coherence')}
             currentChunk={currentChunk}
             isProcessing={isProcessing}
             allChunksTranslated={allChunksTranslated}
@@ -366,6 +333,6 @@ export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabs
           />
         )}
       </div>
-    </div>
+    </InspectorShell>
   );
 }

@@ -10,7 +10,7 @@ import {
   type MarkdownCommand,
 } from './markdownEditorUtils';
 import { HighlightedText } from './HighlightedText';
-import { CopyButton } from './CopyButton';
+import { CopyButton } from '../ui';
 import { IconButton } from '../ui';
 import { escapeHtml } from '../../hooks/useGlossaryHighlight';
 
