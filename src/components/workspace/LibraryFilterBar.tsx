@@ -1,8 +1,9 @@
-import { Eraser, Search } from 'lucide-react';
+import { Archive, Eraser, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Select, type SelectOption } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import {
+  EMPTY_LIBRARY_FILTERS,
   hasActiveLibraryFilters,
   type LibraryFilters,
 } from '../../utils/libraryCatalogFilters';
@@ -125,18 +126,19 @@ export function LibraryFilterBar({
         options={availabilitySelectOptions}
         ariaLabel={t('areas.library.filters.availabilityLabel')}
       />
+      <IconButton
+        size="sm"
+        tone={filters.includeArchived ? 'accent' : 'default'}
+        ariaPressed={filters.includeArchived}
+        onClick={() => onChange({ ...filters, includeArchived: !filters.includeArchived })}
+        title={t('areas.library.filters.showArchived')}
+      >
+        <Archive size={13} />
+      </IconButton>
       {hasActiveLibraryFilters(filters) && (
         <IconButton
           size="sm"
-          onClick={() =>
-            onChange({
-              query: '',
-              kind: '',
-              language: '',
-              providerKey: '',
-              availability: '',
-            })
-          }
+          onClick={() => onChange(EMPTY_LIBRARY_FILTERS)}
           title={t('areas.library.filters.clear')}
         >
           <Eraser size={13} />

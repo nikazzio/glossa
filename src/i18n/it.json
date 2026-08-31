@@ -920,8 +920,15 @@
         "availabilityPartial": "Parziale",
         "availabilityComplete": "Completa",
         "clear": "Azzera i filtri",
-        "noMatches": "Nessuna opera corrisponde ai filtri"
-      }
+        "noMatches": "Nessuna opera corrisponde ai filtri",
+        "showArchived": "Mostra anche le archiviate"
+      },
+      "archive": "Archivia",
+      "restore": "Riporta in catalogo",
+      "archiveFailed": "Impossibile archiviare l'opera",
+      "restoreFailed": "Impossibile riportare l'opera in catalogo",
+      "archiveFreeTitle": "Liberare anche {{size}} sul computer?",
+      "archiveFreeMessage": "L'opera è archiviata. Le pagine scaricate restano finché non le togli: puoi liberare lo spazio ora oppure più tardi."
     },
     "transcriptions": {
       "title": "Trascrizioni",

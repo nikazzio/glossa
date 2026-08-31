@@ -4,6 +4,7 @@ import { classifySourceKind, type IIIFDiscoveryResult, type IIIFManifestPreview 
 vi.mock('../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
+  setSourceArchived: vi.fn().mockResolvedValue(undefined),
   addSourceToLibrary: vi.fn(),
   getLibrarySourceDetail: vi.fn(),
   setWorkspaceSourceLink: vi.fn(),
@@ -76,7 +77,7 @@ describe('sourceLibraryStore', () => {
 
   it('loadDetail popola detail dal service', async () => {
     vi.mocked(service.getLibrarySourceDetail).mockResolvedValue({
-      source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
+      source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
       versions: [],
       linkedWorkspaceIds: [],
     });
@@ -89,13 +90,13 @@ describe('sourceLibraryStore', () => {
   it('toggleWorkspaceLink chiama il service e ricarica il dettaglio se e\' quello aperto', async () => {
     vi.mocked(service.setWorkspaceSourceLink).mockResolvedValue(undefined);
     vi.mocked(service.getLibrarySourceDetail).mockResolvedValue({
-      source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
+      source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
       versions: [],
       linkedWorkspaceIds: ['ws-1'],
     });
     useSourceLibraryStore.setState({
       detail: {
-        source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
+        source: { id: 's1', title: 'Titolo', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [],
         linkedWorkspaceIds: [],
       },

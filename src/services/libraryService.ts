@@ -7,7 +7,15 @@ import {
   versionInventory,
 } from './inventoryService';
 import { generateId } from '../utils';
-import type { AddSourceToLibraryInput, LibraryCatalogEntry, LibrarySource, LibrarySourceDetail, LibrarySourceVersion } from '../types';
+import { logger } from '../utils/logger';
+import type {
+  AddSourceToLibraryInput,
+  LibraryCatalogEntry,
+  LibrarySource,
+  LibrarySourceDetail,
+  LibrarySourceVersion,
+  SourceStatus,
+} from '../types';
 
 interface SourceRow {
   id: string;
@@ -15,6 +23,8 @@ interface SourceRow {
   kind: LibrarySource['kind'];
   primary_language: string | null;
   external_ref: string | null;
+  status: SourceStatus;
+  archived_at: string | null;
   created_at: string;
 }
 
@@ -35,6 +45,8 @@ function rowToSource(row: SourceRow): LibrarySource {
     kind: row.kind,
     primaryLanguage: row.primary_language,
     externalRef: row.external_ref,
+    status: row.status,
+    archivedAt: row.archived_at,
     createdAt: row.created_at,
   };
 }
@@ -77,16 +89,20 @@ interface CatalogRow extends SourceRow {
  * Il catalogo mostra **sempre tutti i libri** (#213): la Biblioteca è un
  * catalogo, non la vista di un workspace. A quali workspace appartiene un libro
  * si **vede** sulla sua scheda, e da lì si collega o si scollega.
+ *
+ * Le opere archiviate rientrano in questa lettura: nasconderle è una scelta
+ * della vista, fatta dai filtri sul catalogo già in mano, non una seconda
+ * query al database.
  */
 export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   const rows = await select<CatalogRow>(
-    `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref, s.created_at,
+    `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref,
+            s.status, s.archived_at, s.created_at,
             v.id AS version_id, v.source_url AS manifest_url, v.metadata,
             v.expected_asset_count
        FROM sources s
        LEFT JOIN source_versions v
          ON v.source_id = s.id AND v.is_primary = 1
-      WHERE s.status = 'active'
       ORDER BY s.title ASC`,
   );
 
@@ -199,6 +215,26 @@ export async function versionProviderKey(versionId: string): Promise<string | nu
   return (await versionInventory(versionId))?.providerKey ?? null;
 }
 
+/**
+ * Mette da parte un'opera senza perderla, o la rimette in circolo.
+ *
+ * L'archiviazione riguarda **solo il catalogo**: le pagine già scaricate
+ * restano dove sono, liberare lo spazio resta un'azione distinta e volontaria.
+ */
+export async function setSourceArchived(sourceId: string, archived: boolean): Promise<void> {
+  // Una query sola, sempre uguale: la data segue lo stato invece di comporre
+  // due testi diversi, così la forma della richiesta non dipende dal caso.
+  await execute(
+    `UPDATE sources
+        SET status = $1,
+            archived_at = CASE WHEN $2 = 1 THEN CURRENT_TIMESTAMP ELSE NULL END,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3`,
+    [archived ? 'archived' : 'active', archived ? 1 : 0, sourceId],
+  );
+  logger.info(archived ? 'library.source.archived' : 'library.source.restored', { sourceId });
+}
+
 export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
   await execute('DELETE FROM sources WHERE id = $1', [sourceId]);
 }
@@ -291,7 +327,8 @@ export async function addSourceToLibrary(
 
 export async function getLibrarySourceDetail(sourceId: string): Promise<LibrarySourceDetail> {
   const [source] = await select<SourceRow>(
-    'SELECT id, title, kind, primary_language, external_ref, created_at FROM sources WHERE id = $1',
+    `SELECT id, title, kind, primary_language, external_ref, status, archived_at, created_at
+       FROM sources WHERE id = $1`,
     [sourceId],
   );
   if (!source) throw new Error('library_source_not_found');

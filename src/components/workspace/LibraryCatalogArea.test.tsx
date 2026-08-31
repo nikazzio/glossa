@@ -8,6 +8,7 @@ import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
+import { confirm } from '../../stores/confirmStore';
 import { enqueueOptimization } from '../../services/optimizeService';
 import '../../test/i18n-mock';
 
@@ -22,6 +23,7 @@ vi.mock('sonner', () => ({
 vi.mock('../../services/libraryService', () => ({
   listLibraryCatalog: vi.fn().mockResolvedValue([]),
   removeSourceFromLibrary: vi.fn().mockResolvedValue(undefined),
+  setSourceArchived: vi.fn().mockResolvedValue(undefined),
   listLibrarySourceUrls: vi.fn().mockResolvedValue([]),
   // Nessun file registrato: la chiave viene dai metadati, come per una fonte
   // appena aggiunta.
@@ -75,6 +77,8 @@ const entry = (
     // Provenienza completa: chiave della biblioteca **e** identificativo. Non è
     // un nome di cartella, e passarla come tale faceva fallire lo scaricamento.
     externalRef: 'gallica:btv1b8426',
+    status: 'active' as const,
+    archivedAt: null,
     createdAt: '2026-01-01',
   },
   versionId: 'v1',
@@ -94,6 +98,11 @@ const entry = (
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
+    // Le chiamate registrate si azzerano fra un caso e l'altro: senza, una
+    // chiamata identica fatta dal caso precedente farebbe passare
+    // un'asserzione anche se in questo caso non è successo niente.
+    vi.clearAllMocks();
+    vi.mocked(confirm).mockResolvedValue(true);
     vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     vi.mocked(enqueueOptimization).mockReset();
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
@@ -282,6 +291,82 @@ describe('LibraryCatalogArea', () => {
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith('areas.library.filesBusy'));
   });
 
+  it('archivia l opera senza toccare i file quando non ce ne sono sul computer', async () => {
+    const service = await import('../../services/libraryService');
+    const { freeVersionPages } = await import('../../services/vaultService');
+    useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0, localBytes: 0 })] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
+    expect(freeVersionPages).not.toHaveBeenCalled();
+  });
+
+  const conPagineSulComputer = () =>
+    entry({
+      localPages: 34,
+      localBytes: 48_234_496,
+      principalSize: '2000',
+      sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0 }],
+    });
+
+  it('dopo aver archiviato propone di liberare lo spazio, e accettando lo libera', async () => {
+    const service = await import('../../services/libraryService');
+    const { freeVersionPages } = await import('../../services/vaultService');
+    useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
+    await waitFor(() => expect(freeVersionPages).toHaveBeenCalled());
+  });
+
+  it('rifiutando la proposta, l opera resta archiviata e le pagine restano dove sono', async () => {
+    const service = await import('../../services/libraryService');
+    const { freeVersionPages } = await import('../../services/vaultService');
+    vi.mocked(confirm).mockResolvedValue(false);
+    useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    expect(freeVersionPages).not.toHaveBeenCalled();
+  });
+
+  it('un opera archiviata offre di riportarla in catalogo, non di archiviarla di nuovo', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, status: 'archived', archivedAt: '2026-08-30' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    // Di default le archiviate non si vedono: si accende il filtro.
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', false));
+  });
+
+  it('le opere archiviate stanno fuori dall elenco finché non si chiede di vederle', () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, status: 'archived', archivedAt: '2026-08-30' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+
+    expect(screen.queryByText('Book of Hours')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
+    expect(screen.getByText('Book of Hours')).toBeInTheDocument();
+  });
+
   it('offre lo scaricamento e la rimozione per ogni fonte', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
@@ -414,7 +499,7 @@ describe('LibraryCatalogArea', () => {
   it('shows the detail panel when itemId is provided and detail is loaded', () => {
     useSourceLibraryStore.setState({
       detail: {
-        source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
+        source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [{ id: 'v1', sourceId: 's1', label: 'primary', versionKind: 'iiif_manifest', sourceUrl: 'https://x.test/m.json', isPrimary: true, createdAt: '2026-01-01' }],
         linkedWorkspaceIds: [],
       },
@@ -436,7 +521,7 @@ describe('LibraryCatalogArea', () => {
     });
     useSourceLibraryStore.setState({
       detail: {
-        source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
+        source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [],
         linkedWorkspaceIds: ['ws-2'],
       },
@@ -458,7 +543,7 @@ describe('LibraryCatalogArea', () => {
     });
     useSourceLibraryStore.setState({
       detail: {
-        source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, createdAt: '2026-01-01' },
+        source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
         versions: [],
         linkedWorkspaceIds: [],
       },

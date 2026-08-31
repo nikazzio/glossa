@@ -12,6 +12,7 @@ import {
   listLibraryCatalog,
   listLibrarySourceUrls,
   removeSourceFromLibrary as removeSourceFromLibraryService,
+  setSourceArchived as setSourceArchivedService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
 import { logger } from '../utils/logger';
@@ -33,6 +34,8 @@ interface SourceLibraryState {
   /** Il catalogo: **tutte** le opere, sempre (#213). */
   loadCatalog: () => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
+  /** Archivia o rimette in circolo un'opera, poi rilegge il catalogo. */
+  setArchived: (sourceId: string, archived: boolean) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   clearError: () => void;
@@ -115,6 +118,12 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     } catch (error: unknown) {
       set({ error: getErrorMessage(error) });
     }
+  },
+
+  setArchived: async (sourceId, archived) => {
+    await setSourceArchivedService(sourceId, archived);
+    await get().loadCatalog();
+    if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
   },
 
   loadDetail: async (sourceId) => {

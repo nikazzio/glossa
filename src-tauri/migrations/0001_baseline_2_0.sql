@@ -272,13 +272,18 @@ CREATE TABLE IF NOT EXISTS sources (
   primary_language TEXT,
   description TEXT,
   external_ref TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trashed')),
-  trashed_at DATETIME DEFAULT NULL,
+  -- Un'opera sta nel catalogo oppure ne esce per sempre: archiviarla la mette
+  -- da parte senza perderla, rimuoverla la cancella subito. Nessuno stato
+  -- intermedio di cestino: sarebbe una terza vista da tenere in vita per un
+  -- ripensamento che l'archivio copre già.
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  archived_at DATETIME DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_sources_title ON sources(title);
+CREATE INDEX IF NOT EXISTS idx_sources_status ON sources(status);
 
 CREATE TABLE IF NOT EXISTS source_versions (
   id TEXT PRIMARY KEY,

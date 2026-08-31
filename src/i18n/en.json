@@ -920,8 +920,15 @@
         "availabilityPartial": "Partial",
         "availabilityComplete": "Complete",
         "clear": "Clear filters",
-        "noMatches": "No work matches these filters"
-      }
+        "noMatches": "No work matches these filters",
+        "showArchived": "Show archived too"
+      },
+      "archive": "Archive",
+      "restore": "Bring back to catalogue",
+      "archiveFailed": "Could not archive this work",
+      "restoreFailed": "Could not bring this work back",
+      "archiveFreeTitle": "Also free {{size}} on this computer?",
+      "archiveFreeMessage": "The work is archived. Downloaded pages stay until you remove them: free the space now or later."
     },
     "transcriptions": {
       "title": "Transcriptions",

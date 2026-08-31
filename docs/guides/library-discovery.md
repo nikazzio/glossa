@@ -29,7 +29,9 @@ La Biblioteca mostra **sempre tutti i libri**: è un catalogo, non la vista di u
 
 Su ogni scheda, accanto ai comandi, vedi **a quali workspace appartiene** quel libro: un'etichetta per ognuno. Cliccarne una lo scollega da lì; il comando accanto apre l'elenco dei workspace dove non è ancora, per collegarlo. **Un'opera può stare in più workspace insieme** e non viene mai duplicata: collegarla in due posti non fa due copie, né dei dati né dei file.
 
-I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, verifica, libera spazio, elimina — poi dove sta.
+I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, verifica, riduci le immagini, libera spazio, archivia, elimina — poi dove sta.
+
+Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza e disponibilità. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
 
 Aprendo una fonte vedi il dettaglio con le versioni registrate e l'elenco di tutti i tuoi workspace, dove puoi collegarla o scollegarla da ciascuno.
 
@@ -51,7 +53,7 @@ Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Ar
 
 ## Controllare e liberare spazio
 
-Ogni riga della Biblioteca ha cinque comandi, sempre presenti: **scarica**, **verifica**, **riduci le immagini**, **libera spazio**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
+Ogni riga della Biblioteca ha sei comandi, sempre presenti: **scarica**, **verifica**, **riduci le immagini**, **libera spazio**, **archivia**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
 
 **Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le pagine già presenti non vengono richieste di nuovo.
 
@@ -59,8 +61,14 @@ Da ogni pagina che scarica Glossa ricava la sua **miniatura**, senza chiedere ni
 
 **Libera spazio** cancella le pagine scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le pagine si riscaricano quando servono. La conferma dice quanto stai liberando.
 
+## Archiviare un'opera
+
+Quando un'opera non ti serve più tutti i giorni ma non vuoi perderla, **archiviala**: sparisce dall'elenco senza uscire dalla Biblioteca. Per rivedere le archiviate accendi il comando con la cassetta nella barra di ricerca; da lì lo stesso comando sulla riga la riporta in catalogo.
+
+Archiviare riguarda **solo l'elenco**: le pagine già scaricate restano dov'erano. Siccome è il momento in cui te ne accorgi, subito dopo Glossa ti chiede se vuoi anche liberare lo spazio che quell'opera occupa. Puoi dire di no e farlo più tardi, o non farlo mai: niente viene cancellato senza che tu lo chieda.
+
 ## Togliere una fonte
 
 Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando.
 
-Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è un altro: **libera spazio**.
+Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è un altro: **libera spazio**. Se invece vuoi solo toglierla di mezzo senza perderla, **archiviala**: la rimozione non ha ripensamenti, l'archivio sì.
