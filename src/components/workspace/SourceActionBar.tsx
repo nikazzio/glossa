@@ -1,18 +1,7 @@
-import {
-  Archive,
-  ArchiveRestore,
-  Check,
-  Clock,
-  Download,
-  Eraser,
-  Loader2,
-  Minimize2,
-  PauseCircle,
-  ShieldCheck,
-  Trash2,
-} from 'lucide-react';
+import { Archive, ArchiveRestore, Check, Eraser, Minimize2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Tooltip } from '../ui';
+import { DownloadButton } from './DownloadButton';
 import type { SourceActions } from './useSourceActions';
 import type { LibraryCatalogEntry } from '../../types';
 
@@ -25,7 +14,7 @@ interface SourceActionBarProps {
 /** I comandi di un'opera, identici nella riga del catalogo e nella sua scheda. */
 export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBarProps) {
   const { t } = useTranslation();
-  const { busy, runningJob, jobState, archived, summary } = actions;
+  const { busy, runningJob, archived, summary } = actions;
   const icon = size === 'sm' ? 13 : 15;
 
   return (
@@ -44,36 +33,7 @@ export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBar
         ) : null}
       </span>
 
-      <IconButton
-        size={size}
-        onClick={() => void actions.startDownload()}
-        disabled={
-          !entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'
-        }
-        title={
-          jobState === 'paused'
-            ? t('areas.library.downloadPaused')
-            : jobState === 'libraryLimits'
-              ? t('jobs.waitingForLibrary')
-              : jobState
-                ? t('areas.library.downloadWaiting')
-                : runningJob
-                  ? t('areas.library.downloadRunning')
-                  : t('areas.library.download')
-        }
-      >
-        {/* Mentre il lavoro gira il comando lo dice da sé: la percentuale sta
-            altrove, e un pulsante spento senza motivo visibile sembra rotto. */}
-        {jobState === 'paused' ? (
-          <PauseCircle size={icon} />
-        ) : jobState ? (
-          <Clock size={icon} />
-        ) : runningJob ? (
-          <Loader2 size={icon} className="motion-safe:animate-spin" />
-        ) : (
-          <Download size={icon} />
-        )}
-      </IconButton>
+      <DownloadButton entry={entry} actions={actions} size={size} />
       <IconButton
         size={size}
         onClick={() => void actions.verify()}

@@ -258,6 +258,8 @@ interface SourceMetadata {
   holdingInstitution: string | null;
   /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
   catalogUrl: string | null;
+  /** La pagina web dell'opera sul sito della biblioteca, per un lettore umano. */
+  pageUrl: string | null;
 }
 
 /** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
@@ -281,6 +283,7 @@ function parseMetadata(raw: string | null): SourceMetadata {
     physicalDescription: null,
     holdingInstitution: null,
     catalogUrl: null,
+    pageUrl: null,
   };
   if (!raw) return nothing;
   try {
@@ -311,6 +314,7 @@ function parseMetadata(raw: string | null): SourceMetadata {
       physicalDescription: text(record.physicalDescription),
       holdingInstitution: text(record.holdingInstitution),
       catalogUrl: text(record.catalogUrl),
+      pageUrl: text(record.pageUrl),
     };
   } catch {
     return nothing;
@@ -420,6 +424,7 @@ export async function addSourceToLibrary(
     physicalDescription: input.physicalDescription,
     holdingInstitution: input.holdingInstitution,
     catalogUrl: input.catalogUrl,
+    pageUrl: input.pageUrl,
   });
 
   await runInTransaction(async (run) => {
@@ -455,8 +460,8 @@ export async function addSourceToLibrary(
 }
 
 export async function getLibrarySourceDetail(sourceId: string): Promise<LibrarySourceDetail> {
-  const [source] = await select<SourceRow>(
-    `SELECT id, title, kind, primary_language, external_ref, status, archived_at, created_at
+  const [source] = await select<SourceRow & { description: string | null }>(
+    `SELECT id, title, kind, primary_language, external_ref, status, archived_at, created_at, description
        FROM sources WHERE id = $1`,
     [sourceId],
   );
@@ -498,6 +503,9 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
     physicalDescription: metadata.physicalDescription,
     holdingInstitution: metadata.holdingInstitution,
     catalogUrl: metadata.catalogUrl,
+    pageUrl: metadata.pageUrl,
+    description: source.description,
+    providerKey: metadata.providerKey,
   };
 }
 

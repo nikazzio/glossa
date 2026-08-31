@@ -92,6 +92,9 @@ const EMPTY_DETAIL_METADATA = {
   physicalDescription: null,
   holdingInstitution: null,
   catalogUrl: null,
+  pageUrl: null,
+  description: null,
+  providerKey: null,
 };
 
 const entry = (
@@ -567,15 +570,103 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
 
-    expect(screen.getByRole('heading', { name: 'Book of Hours' })).toBeInTheDocument();
+    expect(screen.getByText('Book of Hours')).toBeInTheDocument();
     expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'areas.library.archive' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
+    expect(await screen.findByRole('button', { name: 'areas.library.archive' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.backToCatalogue' }));
     await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'library' }));
+  });
+
+  it('la scheda mostra la fonte con identificativo pulito e link veri', async () => {
+    const iiifService = await import('../../services/iiifProviderService');
+    vi.mocked(iiifService.listIIIFProviders).mockResolvedValueOnce([
+      { key: 'gallica', label: 'Gallica', aliases: [], placeholder: '', isEnabled: true, resolver: 'gallica', searchHandler: 'gallica', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, filters: [] },
+    ] as never);
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: { ...entry().source, externalRef: 'gallica:btv1b8426' },
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+        ...EMPTY_DETAIL_METADATA,
+        holdingInstitution: 'Bibliothèque nationale de France',
+        pageUrl: 'https://gallica.bnf.fr/ark:/12148/btv1b8426',
+        catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb1234',
+        providerKey: 'gallica',
+        description: 'Manoscritto miniato.',
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+
+    expect(screen.getByText('areas.library.sourceSection')).toBeInTheDocument();
+    expect(await screen.findByText('Gallica')).toBeInTheDocument();
+    expect(screen.getByText('btv1b8426')).toBeInTheDocument();
+    expect(screen.getByText('Bibliothèque nationale de France')).toBeInTheDocument();
+    expect(screen.getByText('Manoscritto miniato.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://gallica.bnf.fr/ark:/12148/btv1b8426' })).toHaveAttribute(
+      'href',
+      'https://gallica.bnf.fr/ark:/12148/btv1b8426',
+    );
+    expect(screen.getByRole('link', { name: 'http://catalogue.bnf.fr/ark:/12148/cb1234' })).toHaveAttribute(
+      'href',
+      'http://catalogue.bnf.fr/ark:/12148/cb1234',
+    );
+  });
+
+  it('la scheda elenca le risoluzioni scaricate per ogni copia', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({
+          localPages: 40,
+          sizes: [
+            { sizeTag: '1500', pages: 40, bytes: 40_000_000, missing: 0 },
+            { sizeTag: 'full', pages: 10, bytes: 60_000_000, missing: 2 },
+          ],
+          principalSize: '1500',
+        }),
+      ],
+      detail: {
+        source: entry().source,
+        versions: [
+          {
+            id: 'v1',
+            sourceId: 's1',
+            label: 'primary',
+            versionKind: 'iiif_manifest',
+            sourceUrl: 'https://x.test/m.json',
+            isPrimary: true,
+            createdAt: '2026-01-01',
+          },
+        ],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+        ...EMPTY_DETAIL_METADATA,
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+
+    // Il mock i18n dei test non interpola i placeholder: le due etichette
+    // restano uguali salvo il segno "principale", che è quanto conta verificare.
+    expect(screen.getByText('areas.library.resolutionField')).toBeInTheDocument();
+    expect(
+      screen.getByText('areas.library.resolutionField (areas.library.resolutionPrincipal)'),
+    ).toBeInTheDocument();
   });
 
   it('dalla scheda, rimuovere riporta al catalogo solo dopo che l opera è sparita', async () => {
@@ -600,8 +691,10 @@ describe('LibraryCatalogArea', () => {
 
     useUiStore.setState({ location: { area: 'library', itemId: 's1' } });
 
+    const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
-    fireEvent.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+    await user.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
+    await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'library' }));
     // Mentre l'opera veniva tolta si era ancora sulla sua scheda: il ritorno
@@ -655,9 +748,9 @@ describe('LibraryCatalogArea', () => {
       .getByText('areas.library.creatorField')
       .closest('div') as HTMLElement;
     await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
-    const field = screen.getByRole('textbox', { name: 'areas.library.creatorField' });
-    await user.clear(field);
-    await user.type(field, 'Jean Pucelle');
+    fireEvent.change(screen.getByRole('textbox', { name: 'areas.library.creatorField' }), {
+      target: { value: 'Jean Pucelle' },
+    });
     await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
 
     await waitFor(() =>
@@ -942,7 +1035,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea itemId="s1" />);
 
-    expect(screen.getByRole('heading', { name: 'Book of Hours' })).toBeInTheDocument();
+    expect(screen.getByText('Book of Hours')).toBeInTheDocument();
     expect(screen.getByText('https://x.test/m.json')).toBeInTheDocument();
   });
 

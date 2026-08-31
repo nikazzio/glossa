@@ -154,6 +154,9 @@ export interface AddSourceToLibraryInput {
   holdingInstitution: string | null;
   /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
   catalogUrl: string | null;
+  /** La pagina web dell'opera sul sito della biblioteca, per un lettore
+   * umano — non il manifesto IIIF né la scheda del catalogo cartaceo. */
+  pageUrl: string | null;
 }
 
 /** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */
@@ -263,6 +266,13 @@ export interface LibrarySourceDetail {
   holdingInstitution: string | null;
   /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
   catalogUrl: string | null;
+  /** La pagina web dell'opera sul sito della biblioteca, per un lettore umano. */
+  pageUrl: string | null;
+  /** Testo libero dichiarato dalla biblioteca (o scritto a mano all'aggiunta). */
+  description: string | null;
+  /** Chiave della biblioteca nel registro dei provider: risolve l'etichetta
+   * leggibile e ripulisce `source.externalRef` dal suo prefisso. */
+  providerKey: string | null;
 }
 
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';

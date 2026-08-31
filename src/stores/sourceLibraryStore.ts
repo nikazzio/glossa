@@ -113,6 +113,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         physicalDescription: isManifest(card) ? null : card.physicalDescription,
         holdingInstitution: isManifest(card) ? null : card.holdingInstitution,
         catalogUrl: isManifest(card) ? null : card.catalogUrl,
+        pageUrl: isManifest(card) ? null : card.pageUrl,
       });
       set((state) => ({
         addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),

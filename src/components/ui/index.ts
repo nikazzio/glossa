@@ -18,6 +18,8 @@ export { Popover } from './Popover';
 export { ClickPopover } from './ClickPopover';
 export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';
+export { StatBlock } from './StatBlock';
+export { MenuActionRow } from './MenuActionRow';
 export { ContrastBadge } from './ContrastBadge';
 export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';

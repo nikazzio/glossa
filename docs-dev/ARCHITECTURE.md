@@ -264,6 +264,12 @@ rappresentazione fisica resta solo su disco e nel file laterale, com'è per
 tutto il resto del deposito. Riscaricare o ottimizzare una pagina non tocca
 questa riga.
 
+`getLibrarySourceDetail` espone ora anche `description` (colonna `sources`,
+scritta all'aggiunta ma prima mai riletta), `pageUrl` e `providerKey` (nel
+blob `metadata` di `source_versions`, stesso trattamento già in uso per
+`catalogUrl`/`holdingInstitution`/ecc.): nessuna nuova colonna, solo campi
+già scritti e non ancora selezionati/tipizzati sul lato di lettura.
+
 Layout:
 
 ```text

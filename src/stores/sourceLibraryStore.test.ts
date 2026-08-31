@@ -25,6 +25,9 @@ const EMPTY_DETAIL_METADATA = {
   physicalDescription: null,
   holdingInstitution: null,
   catalogUrl: null,
+  pageUrl: null,
+  description: null,
+  providerKey: null,
 };
 
 const manifestCard: IIIFManifestPreview & { id: string } = {

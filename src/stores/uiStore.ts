@@ -117,6 +117,8 @@ interface UiState {
   dashboardSidebarWidth: number;
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
+  /** Colonna informazioni della scheda opera in Biblioteca. */
+  librarySourceInspectorWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   location: AppLocation;
   setTraceStageId: (id: string | null) => void;
@@ -162,6 +164,7 @@ interface UiState {
   setDashboardSidebarWidth: (width: number) => void;
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
+  setLibrarySourceInspectorWidth: (width: number) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
 }
 
@@ -308,6 +311,7 @@ export const useUiStore = create<UiState>()(
       dashboardSidebarWidth: 240,
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
+      librarySourceInspectorWidth: 400,
       pendingAnnotationAnchor: null,
       location: dashboardLocation(),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
@@ -485,6 +489,7 @@ export const useUiStore = create<UiState>()(
       setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
+      setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
@@ -550,6 +555,7 @@ export const useUiStore = create<UiState>()(
         dashboardSidebarWidth: state.dashboardSidebarWidth,
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
+        librarySourceInspectorWidth: state.librarySourceInspectorWidth,
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
         libraryView: state.libraryView,

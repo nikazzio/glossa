@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { BookOpenText, LayoutGrid, Link2, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { EASE_EDITORIAL } from '../layout/motion';
 import { ClickPopover, EmptyState, IconButton, LinkChip, PopoverItem, SectionLabel } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
@@ -31,6 +33,7 @@ interface LibraryCatalogAreaProps {
 /** Catalogo delle fonti salvate in Biblioteca. */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const catalog = useSourceLibraryStore((state) => state.catalog);
   const detail = useSourceLibraryStore((state) => state.detail);
   const loadCatalog = useSourceLibraryStore((state) => state.loadCatalog);
@@ -160,99 +163,122 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     }
   };
 
-  if (itemId && detail && detail.source.id === itemId) {
-    return (
-      <LibrarySourcePage
-        detail={detail}
-        entry={catalog.find((item) => item.source.id === itemId)}
-        workspaces={workspaces}
-        onBack={openCatalogue}
-        onRemoved={() => void removeAndLeave(itemId)}
-        onSetArchived={(archived) => archive(itemId, archived)}
-        onRefresh={() => void loadCatalog()}
-        onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
-        onCorrectField={(field, value) => correct(itemId, field, value)}
-        collections={collections}
-        onSetCollection={(collectionId, member) => changeCollection(itemId, collectionId, member)}
-        onCreateCollection={(name) => createCollectionFor(itemId, name)}
-      />
-    );
-  }
+  const isSourcePage = Boolean(itemId && detail && detail.source.id === itemId);
+  const transition = { duration: 0.28, ease: EASE_EDITORIAL };
+  const yOffset = reducedMotion ? 0 : 8;
 
   return (
-    <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
-      <div className="flex items-center justify-between gap-3 px-5 pt-5 md:px-6">
-        <SectionLabel icon={BookOpenText} label={t('areas.library.title')} />
-        <div className="flex items-center gap-1">
-          <IconButton
-            size="sm"
-            tone={view === 'list' ? 'accent' : 'default'}
-            onClick={() => setView('list')}
-            title={t('areas.library.viewList')}
-            ariaPressed={view === 'list'}
-          >
-            <List size={13} />
-          </IconButton>
-          <IconButton
-            size="sm"
-            tone={view === 'grid' ? 'accent' : 'default'}
-            onClick={() => setView('grid')}
-            title={t('areas.library.viewGrid')}
-            ariaPressed={view === 'grid'}
-          >
-            <LayoutGrid size={13} />
-          </IconButton>
-        </div>
-      </div>
-
-      {catalog.length > 0 && (
-        <LibraryFilterBar
-          filters={filters}
-          onChange={setFilters}
-          languageOptions={libraryLanguageOptions(visibleCatalog)}
-          providerOptions={providerOptions}
-          collectionOptions={collections}
-          workspaceOptions={workspaces}
-          savedViews={savedViews}
-          onSaveView={(name) => void saveView(name, filters)}
-          onDeleteView={(viewId) => void removeSavedView(viewId)}
-        />
-      )}
-
-      {catalog.length === 0 ? (
-        <EmptyState
-          icon={<BookOpenText size={20} />}
-          message={t('areas.library.empty')}
-          hint={t('areas.library.emptyHint')}
-        />
-      ) : filteredCatalog.length === 0 ? (
-        <EmptyState icon={<BookOpenText size={20} />} message={t('areas.library.filters.noMatches')} />
-      ) : (
-        <div
-          className={
-            view === 'grid'
-              ? 'grid grid-cols-2 gap-3 px-5 py-4 md:px-6 lg:grid-cols-3'
-              : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
-          }
+    <AnimatePresence mode="wait" initial={false}>
+      {isSourcePage && itemId && detail ? (
+        <motion.div
+          key={itemId}
+          initial={{ opacity: 0, y: yOffset }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -yOffset }}
+          transition={transition}
+          className="flex h-full min-h-0 flex-1 flex-col"
         >
-          {filteredCatalog.map((entry) => (
-            <CatalogEntryRow
-              key={entry.source.id}
-              entry={entry}
-              view={view}
-              onOpen={() => openSource(entry.source.id)}
-              onRemove={() => void removeSource(entry.source.id)}
-              onSetArchived={(archived) => archive(entry.source.id, archived)}
-              onRefresh={() => void loadCatalog()}
-              workspaces={workspaces}
-              onToggleLink={(workspaceId, linked) =>
-                void toggleLink(entry.source.id, workspaceId, linked)
-              }
-            />
-          ))}
-        </div>
+          <LibrarySourcePage
+            detail={detail}
+            entry={catalog.find((item) => item.source.id === itemId)}
+            providerLabel={providers.find((provider) => provider.key === detail.providerKey)?.label}
+            workspaces={workspaces}
+            onBack={openCatalogue}
+            onRemoved={() => void removeAndLeave(itemId)}
+            onSetArchived={(archived) => archive(itemId, archived)}
+            onRefresh={() => void loadCatalog()}
+            onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
+            onCorrectField={(field, value) => correct(itemId, field, value)}
+            collections={collections}
+            onSetCollection={(collectionId, member) => changeCollection(itemId, collectionId, member)}
+            onCreateCollection={(name) => createCollectionFor(itemId, name)}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="catalogue"
+          initial={{ opacity: 0, y: yOffset }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -yOffset }}
+          transition={transition}
+          className="flex h-full min-h-0 flex-1 flex-col"
+        >
+          <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
+            <div className="flex items-center justify-between gap-3 px-5 pt-5 md:px-6">
+              <SectionLabel icon={BookOpenText} label={t('areas.library.title')} />
+              <div className="flex items-center gap-1">
+                <IconButton
+                  size="sm"
+                  tone={view === 'list' ? 'accent' : 'default'}
+                  onClick={() => setView('list')}
+                  title={t('areas.library.viewList')}
+                  ariaPressed={view === 'list'}
+                >
+                  <List size={13} />
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  tone={view === 'grid' ? 'accent' : 'default'}
+                  onClick={() => setView('grid')}
+                  title={t('areas.library.viewGrid')}
+                  ariaPressed={view === 'grid'}
+                >
+                  <LayoutGrid size={13} />
+                </IconButton>
+              </div>
+            </div>
+
+            {catalog.length > 0 && (
+              <LibraryFilterBar
+                filters={filters}
+                onChange={setFilters}
+                languageOptions={libraryLanguageOptions(visibleCatalog)}
+                providerOptions={providerOptions}
+                collectionOptions={collections}
+                workspaceOptions={workspaces}
+                savedViews={savedViews}
+                onSaveView={(name) => void saveView(name, filters)}
+                onDeleteView={(viewId) => void removeSavedView(viewId)}
+              />
+            )}
+
+            {catalog.length === 0 ? (
+              <EmptyState
+                icon={<BookOpenText size={20} />}
+                message={t('areas.library.empty')}
+                hint={t('areas.library.emptyHint')}
+              />
+            ) : filteredCatalog.length === 0 ? (
+              <EmptyState icon={<BookOpenText size={20} />} message={t('areas.library.filters.noMatches')} />
+            ) : (
+              <div
+                className={
+                  view === 'grid'
+                    ? 'grid grid-cols-2 gap-3 px-5 py-4 md:px-6 lg:grid-cols-3'
+                    : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
+                }
+              >
+                {filteredCatalog.map((entry) => (
+                  <CatalogEntryRow
+                    key={entry.source.id}
+                    entry={entry}
+                    view={view}
+                    onOpen={() => openSource(entry.source.id)}
+                    onRemove={() => void removeSource(entry.source.id)}
+                    onSetArchived={(archived) => archive(entry.source.id, archived)}
+                    onRefresh={() => void loadCatalog()}
+                    workspaces={workspaces}
+                    onToggleLink={(workspaceId, linked) =>
+                      void toggleLink(entry.source.id, workspaceId, linked)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </main>
+        </motion.div>
       )}
-    </main>
+    </AnimatePresence>
   );
 }
 

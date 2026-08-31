@@ -97,15 +97,24 @@ interattivi.
 - `PopoverItem`: voce di elenco dentro un `ClickPopover` (scegliere workspace,
   collezione, vista salvata). Si usa quando accanto alla voce vive un altro
   comando o un campo, cioè dove `Menu` non arriva.
+- `MenuActionRow`: voce di comando dentro un `ClickPopover` (icona, etichetta,
+  `tone` opzionale `danger`) — per menu di azioni (es. archivia/rimuovi
+  raccolti in un unico trigger), non per scegliere un'opzione da un elenco
+  (quello resta `PopoverItem`).
 - `LinkChip`: etichetta di un legame già stabilito che, cliccata, lo scioglie.
   Il motivo sta nel `Tooltip`, mai nel `title` nativo; il nome leggibile del
   legame resta il nome del comando.
-- Nessuna riga di elenco o etichetta di legame scritta a mano nei componenti.
+- Nessuna riga di elenco, etichetta di legame o voce di menu scritta a mano
+  nei componenti.
 
-### SectionLabel e StatRow
+### SectionLabel, StatRow e StatBlock
 
 - `SectionLabel`: intestazione di sezione con icona.
-- `StatRow`: label e valore allineati su due colonne.
+- `StatRow`: label e valore corti, allineati su due colonne — non va a capo.
+- `StatBlock`: label sopra, valore sotto, va a capo con `break-words` — per
+  pannelli stretti con valori lunghi (titoli, descrizioni fisiche, fondi di
+  conservazione); prop `href` opzionale per i link veri (pagina web, scheda
+  del catalogo).
 - Non ricreare localmente gli stessi pattern.
 
 ### SettingRow e campi

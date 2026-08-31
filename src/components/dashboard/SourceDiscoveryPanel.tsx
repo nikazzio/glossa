@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, IconButton, Select, Spinner } from '../ui';
+import { Dialog, IconButton, Select, Spinner, StatBlock } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
@@ -80,36 +80,6 @@ interface RowProps {
   onAddToWorkspace: () => void;
   adding: boolean;
   alreadyAdded: boolean;
-}
-
-/** Etichetta sopra, valore sotto: usata nella scheda espansa. I valori più
- * lunghi (fondo di conservazione, descrizione fisica) vanno a capo invece di
- * uscire dal riquadro. */
-function ListStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</p>
-      <p className="mt-0.5 break-words font-display text-sm italic text-editorial-ink">{value}</p>
-    </div>
-  );
-}
-
-/** Etichetta sopra, indirizzo cliccabile sotto: per i link veri (pagina web,
- * catalogo cartaceo), non per i valori di testo di `ListStat`. */
-function LinkStat({ label, url }: { label: string; url: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</p>
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-0.5 block break-words font-display text-sm italic text-editorial-accent underline underline-offset-2"
-      >
-        {url}
-      </a>
-    </div>
-  );
 }
 
 /** Tutte le informazioni disponibili per una scheda, etichetta/valore. */
@@ -210,11 +180,11 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
                 {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80">{card.description}</p>}
                 {stats.length > 0 && (
                   <div className="grid grid-cols-1 gap-y-2">
-                    {stats.map(([label, value]) => <ListStat key={label} label={label} value={value} />)}
+                    {stats.map(([label, value]) => <StatBlock key={label} label={label} value={value} />)}
                   </div>
                 )}
-                {pageUrl && <LinkStat label={t('dashboard.discovery.pageUrl')} url={pageUrl} />}
-                {catalogUrl && <LinkStat label={t('dashboard.discovery.catalogUrl')} url={catalogUrl} />}
+                {pageUrl && <StatBlock label={t('dashboard.discovery.pageUrl')} value={pageUrl} href={pageUrl} />}
+                {catalogUrl && <StatBlock label={t('dashboard.discovery.catalogUrl')} value={catalogUrl} href={catalogUrl} />}
               </div>
             </div>
           </motion.div>
