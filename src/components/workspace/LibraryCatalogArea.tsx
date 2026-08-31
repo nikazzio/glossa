@@ -1,48 +1,25 @@
 import { useEffect, useState } from 'react';
-import {
-  Archive,
-  ArchiveRestore,
-  BookOpenText,
-  Check,
-  Clock,
-  Download,
-  Eraser,
-  LayoutGrid,
-  Link2,
-  List,
-  Loader2,
-  Minimize2,
-  PauseCircle,
-  ShieldCheck,
-  Trash2,
-} from 'lucide-react';
+import { BookOpenText, LayoutGrid, Link2, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ClickPopover, EmptyState, IconButton, SectionLabel, Tooltip } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
-import { confirm } from '../../stores/confirmStore';
-import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import { versionProviderKey } from '../../services/libraryService';
-import { versionInventory } from '../../services/inventoryService';
 import { listIIIFProviders } from '../../services/iiifProviderService';
-import {
-  deleteVersionFiles,
-  freeVersionPages,
-  summarizeAvailability,
-} from '../../services/vaultService';
-import { SourceSizeCap } from './SourceSizeCap';
+import { isTerminal } from '../../services/jobsService';
+import { useJobsStore } from '../../stores/jobsStore';
 import { LibraryFilterBar } from './LibraryFilterBar';
-import { humanSize } from '../../utils';
+import { LibrarySourcePage } from './LibrarySourcePage';
+import { SourceActionBar } from './SourceActionBar';
+import { useSourceActions } from './useSourceActions';
 import { CachedThumbnail } from '../common/CachedThumbnail';
-import { enqueueOptimization } from '../../services/optimizeService';
 import {
   EMPTY_LIBRARY_FILTERS,
   filterLibraryCatalog,
   libraryLanguageOptions,
 } from '../../utils/libraryCatalogFilters';
+import { libraryLocation } from '../../navigation/appLocation';
 import type { LibraryCatalogEntry, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -60,6 +37,9 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const loadDetail = useSourceLibraryStore((state) => state.loadDetail);
   const toggleWorkspaceLink = useSourceLibraryStore((state) => state.toggleWorkspaceLink);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
+  const navigate = useUiStore((state) => state.navigate);
+  const location = useUiStore((state) => state.location);
+  const workspaceFilter = location.area === 'library' ? location.workspaceFilter : undefined;
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
   const finishedDownloads = useJobsStore(
@@ -96,6 +76,17 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     visibleCatalog.some((entry) => entry.providerKey === provider.key),
   );
 
+  const openSource = (sourceId: string) => navigate(libraryLocation({ itemId: sourceId, workspaceFilter }));
+  const openCatalogue = () => navigate(libraryLocation({ workspaceFilter }));
+
+  /** Si torna al catalogo **dopo** che l'opera è sparita davvero: navigare
+   *  prima farebbe intravedere l'opera ancora in elenco, come se la rimozione
+   *  non avesse funzionato. */
+  const removeAndLeave = async (sourceId: string) => {
+    await removeSource(sourceId);
+    openCatalogue();
+  };
+
   const archive = async (sourceId: string, archived: boolean) => {
     try {
       await setArchived(sourceId, archived);
@@ -119,46 +110,16 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
 
   if (itemId && detail && detail.source.id === itemId) {
     return (
-      <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
-        <div className="px-5 py-5 md:px-6">
-          <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">{detail.source.title}</h1>
-          <dl className="mt-4 space-y-2 text-sm text-editorial-muted">
-            <div><dt className="inline text-editorial-muted">{t('areas.library.kind')}</dt><dd className="inline pl-2 text-editorial-ink">{t(`areas.library.kindLabels.${detail.source.kind}`)}</dd></div>
-            {detail.versions.map((version) => (
-              <div key={version.id}><dt className="inline text-editorial-muted">{version.label}</dt><dd className="inline pl-2 text-editorial-ink">{version.sourceUrl}</dd></div>
-            ))}
-          </dl>
-          <div className="mt-4 flex flex-col gap-2">
-            {detail.versions.map((version) => (
-              <SourceSizeCap key={version.id} versionId={version.id} />
-            ))}
-          </div>
-          {workspaces.length > 0 && (
-            <div className="mt-6">
-              <SectionLabel icon={Link2} label={t('areas.library.linkedWorkspaces')} />
-              <ul className="mt-2 space-y-1">
-                {workspaces.map((workspace) => {
-                  const linked = detail.linkedWorkspaceIds.includes(workspace.id);
-                  return (
-                    <li key={workspace.id} className="flex items-center justify-between gap-3 rounded-md border border-editorial-border bg-surface-elevated px-3 py-2">
-                      <span className="min-w-0 truncate text-sm text-editorial-ink">{workspace.name}</span>
-                      <IconButton
-                        title={linked ? t('areas.library.unlinkWorkspace', { name: workspace.name }) : t('areas.library.linkWorkspace', { name: workspace.name })}
-                        onClick={() => void toggleWorkspaceLink(workspace.id, detail.source.id, !linked)}
-                        tone={linked ? 'accent' : 'default'}
-                        ariaPressed={linked}
-                        size="sm"
-                      >
-                        <Link2 size={14} />
-                      </IconButton>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-      </main>
+      <LibrarySourcePage
+        detail={detail}
+        entry={catalog.find((item) => item.source.id === itemId)}
+        workspaces={workspaces}
+        onBack={openCatalogue}
+        onRemoved={() => void removeAndLeave(itemId)}
+        onSetArchived={(archived) => archive(itemId, archived)}
+        onRefresh={() => void loadCatalog()}
+        onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
+      />
     );
   }
 
@@ -218,7 +179,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               key={entry.source.id}
               entry={entry}
               view={view}
-              onOpen={() => void loadDetail(entry.source.id)}
+              onOpen={() => openSource(entry.source.id)}
               onRemove={() => void removeSource(entry.source.id)}
               onSetArchived={(archived) => archive(entry.source.id, archived)}
               onRefresh={() => void loadCatalog()}
@@ -254,21 +215,14 @@ function CatalogEntryRow({
   onToggleLink: (workspaceId: string, linked: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-  const jobs = useJobsStore((state) => state.jobs);
-  const applyChange = useJobsStore((state) => state.applyChange);
-
-  const runningJob = jobs.find((job) => job.id === `download:${entry.versionId}` && !isTerminal(job));
-  const jobState = runningJob ? stillReasonOf(runningJob) : null;
+  const actions = useSourceActions(entry, { onRemove, onSetArchived, onRefresh });
 
   const [picking, setPicking] = useState(false);
   const linkedIds = new Set(entry.workspaces.map((link) => link.workspaceId));
   const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
 
-  const meta = [entry.creator, entry.date].filter(Boolean).join(' · ');
-  const principal = entry.sizes.find((size) => size.sizeTag === entry.principalSize);
-  const notServed = principal?.missing ?? 0;
-  const summary = summarizeAvailability(entry.localPages, entry.expectedPages ?? 0, notServed);
+  const meta = [entry.creator, entry.date].filter(Boolean).join(' \u00b7 ');
+  const summary = actions.summary;
   const availability =
     summary.availability === 'catalogued'
       ? t('areas.library.availabilityRemote')
@@ -287,205 +241,13 @@ function CatalogEntryRow({
       ? t('areas.library.pageCount', { count: entry.expectedPages })
       : null;
 
-  const providerKey = async () =>
-    (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
-    entry.providerKey ??
-    'generic';
-
-  const startDownload = async () => {
-    if (!entry.manifestUrl) return;
-    setBusy(true);
-    try {
-      const job = await enqueueSourceDownload({
-        providerKey: await providerKey(),
-        manifestUrl: entry.manifestUrl,
-        versionId: entry.versionId ?? undefined,
-      });
-      applyChange(job);
-      toast.success(t('areas.library.downloadQueued'));
-    } catch (error: unknown) {
-      toast.error(t('areas.library.downloadFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verify = async () => {
-    if (!entry.versionId) return;
-    setBusy(true);
-    try {
-      const inventory = await versionInventory(entry.versionId);
-      const principal = inventory?.sizes.find((size) => size.sizeTag === inventory.principal);
-      if (!principal) {
-        toast.info(t('areas.library.verifyNothing'));
-        return;
-      }
-      const expected = entry.expectedPages ?? 0;
-      if (expected <= 0) {
-        toast.info(t('areas.library.verifyNoExpected', { count: principal.pages }));
-        return;
-      }
-      const missing = Math.max(0, expected - principal.pages - principal.missing);
-      if (missing === 0) {
-        toast.success(t('areas.library.verifyIntact', { count: principal.pages }));
-        return;
-      }
-      const confirmed = await confirm({
-        title: t('areas.library.verifyMissingTitle', { count: missing }),
-        message: t('areas.library.verifyMissingMessage', { total: expected }),
-        confirmLabel: t('areas.library.verifyDownloadMissing'),
-      });
-      if (confirmed) await startDownload();
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : String(error);
-      toast.error(
-        reason.includes('vault_unreachable')
-          ? t('areas.library.vaultUnreachable')
-          : t('areas.library.verifyFailed'),
-        { description: reason },
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  /**
-   * La cancellazione vera delle pagine, senza chiedere: la domanda la fa chi
-   * chiama, perché arriva da due strade diverse (comando diretto e
-   * archiviazione).
-   *
-   * `trackBusy` è spento quando la riga può essere già sparita dall'elenco —
-   * dopo l'archiviazione, se la vista nasconde le archiviate: segnare
-   * «occupato» su una riga che non c'è più significa scrivere su un componente
-   * smontato.
-   */
-  const runFreeSpace = async (trackBusy = true) => {
-    if (!entry.versionId) return;
-    if (trackBusy) setBusy(true);
-    try {
-      const freed = await freeVersionPages(await providerKey(), entry.versionId);
-      toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
-      onRefresh();
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason.includes('version_work_in_progress')) {
-        toast.info(t('areas.library.filesBusy'));
-        return;
-      }
-      toast.error(t('areas.library.freeSpaceFailed'), {
-        description: reason,
-      });
-    } finally {
-      if (trackBusy) setBusy(false);
-    }
-  };
-
-  const freeSpace = async () => {
-    if (!entry.versionId) return;
-    const confirmed = await confirm({
-      title: t('areas.library.freeSpaceTitle', { size: humanSize(entry.localBytes) }),
-      message: t('areas.library.freeSpaceMessage'),
-      confirmLabel: t('areas.library.freeSpaceConfirm'),
-      danger: true,
-    });
-    if (confirmed) await runFreeSpace();
-  };
-
-  /**
-   * Archiviare tocca il catalogo, non il disco. Se però quell'opera occupa
-   * spazio, è il momento naturale per proporre di liberarlo: la proposta resta
-   * una domanda a parte, così l'archiviazione non cancella niente di nascosto.
-   */
-  const archive = async () => {
-    setBusy(true);
-    try {
-      await onSetArchived(true);
-    } finally {
-      setBusy(false);
-    }
-    if (entry.localPages === 0) return;
-    const alsoFree = await confirm({
-      title: t('areas.library.archiveFreeTitle', { size: humanSize(entry.localBytes) }),
-      message: t('areas.library.archiveFreeMessage'),
-      confirmLabel: t('areas.library.freeSpaceConfirm'),
-      danger: true,
-    });
-    if (alsoFree) await runFreeSpace(false);
-  };
-
-  /** Riportare in catalogo è breve, ma finché non è finito i comandi della riga
-   *  restano spenti: due click di seguito sarebbero due richieste. */
-  const restore = async () => {
-    setBusy(true);
-    try {
-      await onSetArchived(false);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const optimise = async () => {
-    if (!entry.versionId || !entry.principalSize) return;
-    setBusy(true);
-    try {
-      const job = await enqueueOptimization(entry.versionId, entry.principalSize);
-      applyChange(job);
-      toast.success(t('areas.library.optimizeQueued'));
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason.includes('download_in_corso')) {
-        toast.info(t('areas.library.optimizeWhileDownloading'));
-        return;
-      }
-      toast.error(t('areas.library.optimizeFailed'), { description: reason });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const askRemoval = async () => {
-    const confirmed = await confirm({
-      title: t('areas.library.removeTitle', { title: entry.source.title }),
-      message:
-        entry.localBytes > 0
-          ? t('areas.library.removeMessageWithFiles', { size: humanSize(entry.localBytes) })
-          : t('areas.library.removeMessage'),
-      confirmLabel: t('areas.library.removeConfirm'),
-      danger: true,
-    });
-    if (!confirmed) return;
-
-    setBusy(true);
-    try {
-      if (entry.versionId) {
-        await deleteVersionFiles(await providerKey(), entry.versionId);
-      }
-      onRemove();
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason.includes('version_work_in_progress')) {
-        toast.info(t('areas.library.filesBusy'));
-        return;
-      }
-      toast.error(t('areas.library.removeFailed'), {
-        description: reason,
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const archived = entry.source.status === 'archived';
-
   return (
     <article
       className={`${
         view === 'grid'
           ? 'flex flex-col gap-2 rounded-2xl border border-editorial-border bg-surface-elevated p-3'
           : 'flex items-center gap-3 py-2.5'
-      }${archived ? ' opacity-60' : ''}`}
+      }${actions.archived ? ' opacity-60' : ''}`}
     >
       <div className={view === 'grid' ? 'flex gap-3' : 'flex min-w-0 flex-1 items-center gap-3'}>
         <span className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-editorial-border bg-editorial-textbox">
@@ -505,8 +267,8 @@ function CatalogEntryRow({
             {entry.source.title}
           </span>
           {meta && <span className="mt-0.5 block truncate text-xs text-editorial-muted">{meta}</span>}
-          <span className="mt-1 block text-[11px] text-editorial-muted">
-            {[pageCount, availability, extraNote].filter(Boolean).join(' · ')}
+          <span className="mt-1 block text-xs text-editorial-muted">
+            {[pageCount, availability, extraNote].filter(Boolean).join(' \u00b7 ')}
           </span>
         </button>
       </div>
@@ -557,87 +319,7 @@ function CatalogEntryRow({
         )}
       </span>
 
-      <div className={`flex shrink-0 items-center gap-1 ${view === 'grid' ? 'justify-end' : ''}`}>
-        <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
-          {runningJob ? (
-            <Tooltip label={t('areas.library.downloadRunning')} side="top">
-              <span className="text-editorial-accent">{Math.round(runningJob.progress * 100)}%</span>
-            </Tooltip>
-          ) : summary.availability === 'complete' ? (
-            <Tooltip label={t('areas.library.availabilityComplete')} side="top">
-              <span aria-label={t('areas.library.availabilityComplete')}>
-                <Check size={13} />
-              </span>
-            </Tooltip>
-          ) : null}
-        </span>
-
-        <IconButton
-          size="sm"
-          onClick={() => void startDownload()}
-          disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
-          title={
-            jobState === 'paused'
-              ? t('areas.library.downloadPaused')
-              : jobState === 'libraryLimits'
-                ? t('jobs.waitingForLibrary')
-                : jobState
-                  ? t('areas.library.downloadWaiting')
-                  : runningJob
-                    ? t('areas.library.downloadRunning')
-                    : t('areas.library.download')
-          }
-        >
-          {/* Mentre il lavoro gira il comando lo dice da sé: la percentuale sta
-              altrove, e un pulsante spento senza motivo visibile sembra rotto. */}
-          {jobState === 'paused' ? (
-            <PauseCircle size={13} />
-          ) : jobState ? (
-            <Clock size={13} />
-          ) : runningJob ? (
-            <Loader2 size={13} className="motion-safe:animate-spin" />
-          ) : (
-            <Download size={13} />
-          )}
-        </IconButton>
-        <IconButton
-          size="sm"
-          onClick={() => void verify()}
-          disabled={busy || entry.localPages === 0}
-          title={t('areas.library.verify')}
-        >
-          <ShieldCheck size={13} />
-        </IconButton>
-        <IconButton
-          size="sm"
-          onClick={() => void optimise()}
-          disabled={busy || entry.localPages === 0}
-          title={t('areas.library.optimizeAction')}
-        >
-          <Minimize2 size={13} />
-        </IconButton>
-        <IconButton
-          size="sm"
-          onClick={() => void freeSpace()}
-          disabled={busy || entry.localPages === 0}
-          title={t('areas.library.freeSpace')}
-        >
-          <Eraser size={13} />
-        </IconButton>
-        <IconButton
-          size="sm"
-          tone={archived ? 'accent' : 'default'}
-          ariaPressed={archived}
-          disabled={busy}
-          onClick={() => void (archived ? restore() : archive())}
-          title={archived ? t('areas.library.restore') : t('areas.library.archive')}
-        >
-          {archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
-        </IconButton>
-        <IconButton size="sm" tone="danger" onClick={() => void askRemoval()} title={t('areas.library.remove')}>
-          <Trash2 size={13} />
-        </IconButton>
-      </div>
+      <SourceActionBar entry={entry} actions={actions} />
     </article>
   );
 }

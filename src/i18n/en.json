@@ -928,7 +928,19 @@
       "archiveFailed": "Could not archive this work",
       "restoreFailed": "Could not bring this work back",
       "archiveFreeTitle": "Also free {{size}} on this computer?",
-      "archiveFreeMessage": "The work is archived. Downloaded pages stay until you remove them: free the space now or later."
+      "archiveFreeMessage": "The work is archived. Downloaded pages stay until you remove them: free the space now or later.",
+      "backToCatalogue": "Back to the catalogue",
+      "detailsSection": "Details",
+      "copiesSection": "Digital copies",
+      "viewerSection": "Pages",
+      "viewerComingSoon": "The page viewer will live here.",
+      "languageField": "Language",
+      "provenanceField": "Provenance",
+      "availabilityField": "Availability",
+      "occupiedField": "Space used",
+      "statusField": "Status",
+      "statusActive": "In the catalogue",
+      "statusArchived": "Archived"
     },
     "transcriptions": {
       "title": "Transcriptions",

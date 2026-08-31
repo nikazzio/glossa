@@ -110,6 +110,9 @@ describe('LibraryCatalogArea', () => {
     // La coda è globale: un lavoro lasciato da un altro test farebbe comparire
     // la percentuale al posto del pulsante.
     useJobsStore.setState({ jobs: [] });
+    // Anche la posizione è globale: senza riportarla al catalogo, un test
+    // erediterebbe la scheda aperta da quello prima.
+    useUiStore.setState({ location: { area: 'library' } });
     const service = await import('../../services/libraryService');
     // Evita che l'effetto di mount (che ricarica dettaglio e catalogo)
     // sovrascriva il fixture impostato dal test — mantiene la stessa forma.
@@ -494,6 +497,98 @@ describe('LibraryCatalogArea', () => {
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.viewGrid' }));
 
     expect(useUiStore.getState().libraryView).toBe('grid');
+  });
+
+  it('cliccando il titolo si apre la scheda dell opera, non un pannello a lato', async () => {
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: /Book of Hours/ }));
+
+    await waitFor(() =>
+      expect(useUiStore.getState().location).toEqual({ area: 'library', itemId: 's1' }),
+    );
+  });
+
+  it('la scheda mostra dati, comandi e il posto del futuro visore, e si torna al catalogo', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [entry({ localPages: 34, localBytes: 48_234_496 })],
+      detail: {
+        source: entry().source,
+        versions: [
+          {
+            id: 'v1',
+            sourceId: 's1',
+            label: 'primary',
+            versionKind: 'iiif_manifest',
+            sourceUrl: 'https://x.test/m.json',
+            isPrimary: true,
+            createdAt: '2026-01-01',
+          },
+        ],
+        linkedWorkspaceIds: [],
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+
+    expect(screen.getByRole('heading', { name: 'Book of Hours' })).toBeInTheDocument();
+    expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'areas.library.archive' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.backToCatalogue' }));
+    await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'library' }));
+  });
+
+  it('dalla scheda, rimuovere riporta al catalogo solo dopo che l opera è sparita', async () => {
+    const service = await import('../../services/libraryService');
+    let posizioneDuranteLaRimozione: unknown = null;
+    vi.mocked(service.removeSourceFromLibrary).mockImplementation(async () => {
+      posizioneDuranteLaRimozione = useUiStore.getState().location;
+    });
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+      },
+    });
+
+    useUiStore.setState({ location: { area: 'library', itemId: 's1' } });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+
+    await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'library' }));
+    // Mentre l'opera veniva tolta si era ancora sulla sua scheda: il ritorno
+    // al catalogo arriva dopo, non insieme.
+    expect(posizioneDuranteLaRimozione).toEqual({ area: 'library', itemId: 's1' });
+  });
+
+  it('riportare in catalogo tiene i comandi spenti finché non è finito', async () => {
+    const service = await import('../../services/libraryService');
+    // Il ripristino resta appeso finché non lo si lascia finire: è l'unico modo
+    // di guardare com'è la riga *mentre* la richiesta è in corso.
+    const sblocca: Array<() => void> = [];
+    vi.mocked(service.setSourceArchived).mockImplementation(
+      () => new Promise<void>((resolve) => sblocca.push(resolve)),
+    );
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, status: 'archived', archivedAt: '2026-08-30' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'areas.library.restore' })).toBeDisabled(),
+    );
+    sblocca.forEach((resolve) => resolve());
   });
 
   it('shows the detail panel when itemId is provided and detail is loaded', () => {

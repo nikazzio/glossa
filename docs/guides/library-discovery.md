@@ -33,7 +33,7 @@ I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, 
 
 Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli tipo, lingua, biblioteca di provenienza e disponibilità. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
 
-Aprendo una fonte vedi il dettaglio con le versioni registrate e l'elenco di tutti i tuoi workspace, dove puoi collegarla o scollegarla da ciascuno.
+Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina: dati (tipo, lingua, provenienza, disponibilità, spazio occupato, stato), le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. In fondo c'è il posto dove arriverà il visore delle pagine. Il comando con la freccia riporta al catalogo.
 
 ## Scaricare una fonte
 

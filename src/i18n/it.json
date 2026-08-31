@@ -928,7 +928,19 @@
       "archiveFailed": "Impossibile archiviare l'opera",
       "restoreFailed": "Impossibile riportare l'opera in catalogo",
       "archiveFreeTitle": "Liberare anche {{size}} sul computer?",
-      "archiveFreeMessage": "L'opera è archiviata. Le pagine scaricate restano finché non le togli: puoi liberare lo spazio ora oppure più tardi."
+      "archiveFreeMessage": "L'opera è archiviata. Le pagine scaricate restano finché non le togli: puoi liberare lo spazio ora oppure più tardi.",
+      "backToCatalogue": "Torna al catalogo",
+      "detailsSection": "Dati",
+      "copiesSection": "Copie digitali",
+      "viewerSection": "Pagine",
+      "viewerComingSoon": "Il visore delle pagine arriverà qui.",
+      "languageField": "Lingua",
+      "provenanceField": "Provenienza",
+      "availabilityField": "Disponibilità",
+      "occupiedField": "Spazio occupato",
+      "statusField": "Stato",
+      "statusActive": "In catalogo",
+      "statusArchived": "Archiviata"
     },
     "transcriptions": {
       "title": "Trascrizioni",

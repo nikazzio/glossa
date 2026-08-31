@@ -33,7 +33,7 @@ The card's commands come in two groups: first what you do to the book — downlo
 
 Above the list sits the **search bar**: type a title or an author, and next to it pick kind, language, source library and availability. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
 
-Opening a source shows its detail with recorded versions and the list of all your workspaces, where you can link or unlink it from each one.
+Clicking the title opens the **work's page**, full width: details (kind, language, provenance, availability, space used, status), the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. At the bottom sits the place where the page viewer will arrive. The arrow command takes you back to the catalogue.
 
 ## Downloading a source
 

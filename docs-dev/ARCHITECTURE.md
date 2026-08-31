@@ -70,7 +70,9 @@ esplicita di spostamento o rimozione e non elimina le fonti condivise.
 
 La posizione dell'interfaccia usa `AppLocation`, un'unione tipizzata distinta
 dallo stato dei dati. Il workspace attivo non filtra implicitamente i cataloghi
-globali.
+globali. La scheda di un'opera è una posizione, non uno stato di pannello:
+`library` con `itemId` apre la pagina dell'opera e conserva il filtro workspace
+attivo, così tornare indietro non perde la vista da cui si veniva.
 
 ## Stato frontend
 
