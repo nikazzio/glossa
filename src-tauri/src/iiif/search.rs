@@ -104,13 +104,22 @@ async fn gallica(
         ])
         .send()
         .await
-        .map_err(|_| "Gallica could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery gallica request failed error={error}");
+            "Gallica could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "Gallica search failed.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery gallica response failed error={error}");
+            "Gallica search failed.".to_string()
+        })?;
     let body = response
         .text()
         .await
-        .map_err(|_| "Gallica returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery gallica body failed error={error}");
+            "Gallica returned invalid data.".to_string()
+        })?;
 
     let (results, total) = parse_gallica_sru(&body);
     log::info!(
@@ -330,7 +339,9 @@ async fn vatican(
     // vero. Un guasto qui non è motivo per rinunciare subito: la richiesta
     // sotto proverà comunque, e dirà lei se la biblioteca non risponde.
     let _home_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_home).await;
-    let _ = client.get(&endpoints.vatican_home).send().await;
+    if let Err(error) = client.get(&endpoints.vatican_home).send().await {
+        log::warn!("discovery vatican home visit failed error={error}");
+    }
 
     let _search_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_search).await;
     let body = client
@@ -339,12 +350,21 @@ async fn vatican(
         .header("Referer", &endpoints.vatican_home)
         .send()
         .await
-        .map_err(|_| "The Vatican Library could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery vatican request failed error={error}");
+            "The Vatican Library could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "The Vatican Library search failed.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery vatican response failed error={error}");
+            "The Vatican Library search failed.".to_string()
+        })?
         .text()
         .await
-        .map_err(|_| "The Vatican Library returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery vatican body failed error={error}");
+            "The Vatican Library returned invalid data.".to_string()
+        })?;
 
     let results = parse_vatican_results(&body, &endpoints.vatican_manifest_base);
     log::info!("discovery vatican search found={}", results.len());
@@ -419,12 +439,21 @@ async fn ecodices(
         ])
         .send()
         .await
-        .map_err(|_| "e-codices could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery ecodices request failed error={error}");
+            "e-codices could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "The e-codices search failed.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery ecodices response failed error={error}");
+            "The e-codices search failed.".to_string()
+        })?
         .text()
         .await
-        .map_err(|_| "e-codices returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery ecodices body failed error={error}");
+            "e-codices returned invalid data.".to_string()
+        })?;
 
     let results = parse_ecodices_results(&body);
     log::info!("discovery ecodices search found={}", results.len());

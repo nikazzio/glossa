@@ -253,13 +253,22 @@ async fn resolve_manifest(
         .get(&manifest_url)
         .send()
         .await
-        .map_err(|_| "The manifest could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery manifest request failed url={manifest_url} error={error}");
+            "The manifest could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "The manifest could not be read.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery manifest response failed url={manifest_url} error={error}");
+            "The manifest could not be read.".to_string()
+        })?;
     let value = response
         .json::<Value>()
         .await
-        .map_err(|_| "The manifest is not valid JSON.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
+            "The manifest is not valid JSON.".to_string()
+        })?;
 
     Ok(manifest_preview(manifest_url, value))
 }
@@ -281,8 +290,16 @@ async fn enrich_from_manifest(
     if result.creator.is_some() {
         return result;
     }
-    let Ok(preview) = resolve_manifest(client, result.manifest_url.clone(), gate).await else {
-        return result;
+    let preview = match resolve_manifest(client, result.manifest_url.clone(), gate).await {
+        Ok(preview) => preview,
+        Err(error) => {
+            log::warn!(
+                "discovery enrichment skipped id={} manifest={} error={error}",
+                result.id,
+                result.manifest_url
+            );
+            return result;
+        }
     };
     DiscoveryResult {
         creator: preview.creator,
@@ -339,13 +356,22 @@ async fn search_archive(
         ])
         .send()
         .await
-        .map_err(|_| "Internet Archive could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery archive request failed error={error}");
+            "Internet Archive could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "Internet Archive search failed.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery archive response failed error={error}");
+            "Internet Archive search failed.".to_string()
+        })?;
     let value = response
         .json::<Value>()
         .await
-        .map_err(|_| "Internet Archive returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery archive body failed error={error}");
+            "Internet Archive returned invalid data.".to_string()
+        })?;
 
     // Il servizio risponde 200 anche quando è il suo motore di ricerca a non
     // rispondere: senza questo, un guasto della biblioteca si legge come

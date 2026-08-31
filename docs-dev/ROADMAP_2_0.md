@@ -62,7 +62,9 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 ### Shell e osservabilità
 
 - unificare la barra di stato;
-- completare la console generale dei log (#413);
+- completare la console generale dei log (#413) — la ricerca in Biblioteca ha
+  già log tecnici completi (Rust e frontend) pronti per confluirci, oggi
+  visibili solo nel log di sistema;
 - aggiungere notifiche di sistema per i lavori lunghi;
 - risolvere scrollbar e artefatti grafici Linux senza workaround globali.
 

@@ -12,6 +12,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
+import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 
 // Le biblioteche il cui riconoscimento e la cui ricerca sono davvero
@@ -271,7 +272,11 @@ export function SourceDiscoveryPanel() {
     let cancelled = false;
     getLibrarySourceDetail(sourceId)
       .then((detail) => { if (!cancelled) setWorkspacePickerLinkedIds(detail.linkedWorkspaceIds); })
-      .catch(() => { if (!cancelled) setWorkspacePickerLinkedIds(null); });
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        logger.warn('discovery workspace link lookup failed', { sourceId, error: errorMessage(error) });
+        setWorkspacePickerLinkedIds(null);
+      });
     return () => { cancelled = true; };
   }, [workspacePickerCard, libraryManifestSourceIds]);
 
@@ -293,7 +298,10 @@ export function SourceDiscoveryPanel() {
         const current = useDiscoverySearchStore.getState().providerKey;
         if (!ready.some((provider) => provider.key === current) && ready[0]) setProviderKey(ready[0].key);
       })
-      .catch(() => setProviders([]))
+      .catch((error: unknown) => {
+        logger.error('discovery providers load failed', { error: errorMessage(error) });
+        setProviders([]);
+      })
       .finally(() => setLoading(false));
   }, [setProviderKey]);
 
@@ -315,7 +323,8 @@ export function SourceDiscoveryPanel() {
     setSearchError(false);
     try {
       setOutcome(await discoverIIIF(providerKey, input.trim(), 1, fresh));
-    } catch {
+    } catch (error: unknown) {
+      logger.warn('discovery search failed', { providerKey, error: errorMessage(error) });
       setSearchError(true);
     } finally {
       setSearching(false);
@@ -339,7 +348,8 @@ export function SourceDiscoveryPanel() {
       // produce schede doppie con la stessa chiave.
       setOutcome(outcome ? { ...next, results: dedupeById([...outcome.results, ...next.results]) } : next);
       setPage(nextPage);
-    } catch {
+    } catch (error: unknown) {
+      logger.warn('discovery load more failed', { providerKey, page: nextPage, error: errorMessage(error) });
       setSearchError(true);
     } finally {
       setSearching(false);

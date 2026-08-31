@@ -25,12 +25,7 @@ import {
   listCollections,
   setSourceCollection,
 } from '../services/libraryCollectionsService';
-import { logger } from '../utils/logger';
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return 'library_source_add_failed';
-}
+import { errorMessage as getErrorMessage, logger } from '../utils/logger';
 
 interface SourceLibraryState {
   detail: LibrarySourceDetail | null;

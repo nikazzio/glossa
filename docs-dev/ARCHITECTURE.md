@@ -163,6 +163,27 @@ tutta la cronologia log del frammento rimosso. Con `SET NULL` il log resta
 disponibile per analisi a livello progetto/modello, perde solo il riferimento
 al frammento specifico che non esiste più.
 
+## Log tecnico (debug, non i log operazioni)
+
+Distinto da "Log operazioni e costi" sopra: quello è specifico per le chiamate
+ai modelli linguistici (costi/token, visibile nel pannello Operazioni), questo
+è il log tecnico generico per diagnosticare guasti — non ha ancora una vista
+in-app (finisce nel log di sistema/OS via `tauri-plugin-log`; unificarlo in
+una console generale consultabile è #413, non ancora fatto).
+
+- **Frontend**: `logger` in `src/utils/logger.ts` (`debug/info/warn/error`).
+  `errorMessage(error)` legge il messaggio da un errore intercettato in un
+  `catch` — stesso schema già in uso a mano in gran parte dell'app
+  (`error instanceof Error ? error.message : String(error)`), incluso il caso
+  dei comandi Tauri, che rifiutano con una stringa nuda, non un `Error`.
+- **Backend**: crate `log` (`log::info!/warn!/error!`), stessa convenzione.
+- **Convenzione**: il motivo tecnico vero va sempre in log, mai a schermo; il
+  messaggio a schermo resta un testo tradotto fisso e generico, uguale per
+  ogni causa tecnica (es. la ricerca in Biblioteca: qualunque libreria fallisca
+  e qualunque sia lo stadio — richiesta, risposta, lettura — l'utente vede
+  sempre lo stesso `dashboard.discovery.searchFailed`, il log riceve libreria,
+  stadio e l'errore vero).
+
 ## Backend Rust
 
 | Modulo | Responsabilità |
