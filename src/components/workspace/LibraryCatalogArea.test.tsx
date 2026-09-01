@@ -137,6 +137,17 @@ const entry = (
   ...overrides,
 });
 
+/** Scarica/verifica/ottimizza/libera spazio vivono nel menu "···" della riga:
+ *  vanno aperti prima di poterci cliccare o leggerne lo stato. */
+const openRowMenu = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
+
+/** Le tendine dei filtri (natura, lingua, biblioteca, disponibilità,
+ *  workspace, collezione, ordinamento) e "mostra archiviate" stanno in una
+ *  riga a scomparsa, chiusa di default. */
+const openFilters = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.toggleFilters' }));
+
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
     // Le chiamate registrate si azzerano fra un caso e l'altro: senza, una
@@ -216,6 +227,7 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.optimizeAction' }));
 
     await waitFor(() => expect(enqueueOptimization).toHaveBeenCalledWith('v1', '2000'));
@@ -391,6 +403,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
     // Di default le archiviate non si vedono: si accende il filtro.
+    openFilters();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
@@ -407,6 +420,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.queryByText('Book of Hours')).not.toBeInTheDocument();
+    openFilters();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
   });
@@ -415,6 +429,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'areas.library.remove' })).toBeInTheDocument();
@@ -429,6 +444,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     // I comandi icona vivono dentro un tooltip: con userEvent il clic non
     // arriva al bottone in jsdom, come già visto nella testata.
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
@@ -450,6 +466,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ providerKey: null })] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
 
     await waitFor(() =>
@@ -466,6 +483,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 210 })] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
     expect(screen.getByLabelText('areas.library.availabilityComplete')).toBeInTheDocument();
@@ -475,6 +493,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0 })] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
@@ -484,6 +503,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 48_234_496 })] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
@@ -511,11 +531,11 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     // Il nome compare anche fra le scelte del filtro workspace: qui interessa
-    // l'etichetta cliccabile sulla riga dell'opera.
-    expect(screen.getByRole('button', { name: 'Scherma' })).toBeInTheDocument();
+    // l'etichetta sulla riga dell'opera.
+    expect(screen.getByText('Scherma')).toBeInTheDocument();
   });
 
-  it('scollega un opera cliccando il workspace su cui sta', async () => {
+  it('scollega un opera premendo la X sul workspace su cui sta', async () => {
     const user = userEvent.setup();
     const service = await import('../../services/libraryService');
     useWorkspaceStore.setState({ workspaces: [], activeWorkspace: null });
@@ -526,7 +546,7 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
-    await user.click(screen.getByRole('button', { name: 'Scherma' }));
+    await user.click(screen.getByRole('button', { name: 'areas.library.unlinkFromWorkspace' }));
 
     await waitFor(() =>
       expect(vi.mocked(service.setWorkspaceSourceLink)).toHaveBeenCalledWith('ws1', 's1', false),
@@ -581,7 +601,9 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
 
-    expect(screen.getByText('Book of Hours')).toBeInTheDocument();
+    // Il titolo compare due volte apposta: nell'intestazione della colonna
+    // (resta in vista cambiando tab) e nel campo titolo correggibile.
+    expect(screen.getAllByText('Book of Hours').length).toBeGreaterThan(0);
     expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
@@ -729,6 +751,7 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
+    openFilters();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
@@ -931,6 +954,7 @@ describe('LibraryCatalogArea', () => {
     // Di partenza il catalogo è in ordine di titolo.
     expect(titoli()[0]).toContain('Convivio');
 
+    openFilters();
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'areas.library.filters.sortLabel' }),
       'added',
@@ -957,6 +981,7 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
 
     render(<LibraryCatalogArea />);
+    openFilters();
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'areas.library.filters.workspaceLabel' }),
       'ws-1',
@@ -1100,7 +1125,7 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
 
-    expect(screen.getByText('Book of Hours')).toBeInTheDocument();
+    expect(screen.getAllByText('Book of Hours').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
     expect(screen.getByText('https://x.test/m.json')).toBeInTheDocument();
   });
@@ -1130,11 +1155,14 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea itemId="s1" />);
     await user.click(screen.getByRole('tab', { name: 'areas.library.linksTab' }));
 
-    expect(screen.getByRole('button', { name: 'Ricerca' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Archivio' })).not.toBeInTheDocument();
+    // Il nome del workspace è solo testo: solo la X (con l'aria-label del
+    // comando) scioglie il legame, non tutto il riquadro.
+    expect(screen.getByText('Ricerca')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'areas.library.unlinkWorkspace' })).toBeInTheDocument();
+    expect(screen.queryByText('Archivio')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'areas.library.linkToWorkspace' }));
-    expect(screen.getByRole('button', { name: 'Archivio' })).toBeInTheDocument();
+    expect(screen.getByText('Archivio')).toBeInTheDocument();
   });
 
   it('toggles the link for the clicked workspace only, using that workspace id, never activeWorkspace', async () => {
@@ -1178,6 +1206,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ providerKey: 'archive_org' })] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
 
     await waitFor(() =>

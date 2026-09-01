@@ -130,9 +130,9 @@ export function InspectorShell({
           >
             <PanelRightClose size={14} />
           </IconButton>
-          <span className="flex items-center gap-2 text-sm font-semibold text-editorial-accent">
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-editorial-accent">
             {panelIcon}
-            {panelLabel}
+            <span className="truncate">{panelLabel}</span>
           </span>
           {headerActions && <div className="ml-auto flex shrink-0 items-center gap-1">{headerActions}</div>}
         </div>

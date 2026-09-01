@@ -1,7 +1,17 @@
-import { Archive, ArchiveRestore, Check, Eraser, Minimize2, ShieldCheck, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Archive,
+  ArchiveRestore,
+  Check,
+  Eraser,
+  Minimize2,
+  MoreVertical,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, Tooltip } from '../ui';
-import { DownloadButton } from './DownloadButton';
+import { ClickPopover, IconButton, MenuActionRow, Tooltip } from '../ui';
+import { downloadIconAndLabel } from './DownloadButton';
 import type { SourceActions } from './useSourceActions';
 import type { LibraryCatalogEntry } from '../../types';
 
@@ -11,11 +21,21 @@ interface SourceActionBarProps {
   size?: 'sm' | 'md';
 }
 
-/** I comandi di un'opera, identici nella riga del catalogo e nella sua scheda. */
+/**
+ * I comandi di un'opera nella riga del catalogo. Solo archivia e rimuovi
+ * restano icone dirette — sono i due che si usano scorrendo l'elenco;
+ * scarica/verifica/ottimizza/libera spazio vivono già, uguali, nella tab
+ * Copie digitali della scheda, quindi qui stanno in un menu invece di
+ * affollare la riga con comandi che servono solo quando si è aperto il
+ * libro.
+ */
 export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBarProps) {
   const { t } = useTranslation();
   const { busy, runningJob, archived, summary } = actions;
   const icon = size === 'sm' ? 13 : 15;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hasLocalPages = entry.localPages > 0;
+  const { icon: downloadIcon, label: downloadLabel } = downloadIconAndLabel(actions, 14, t);
 
   return (
     <div className="flex shrink-0 items-center gap-1">
@@ -33,31 +53,43 @@ export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBar
         ) : null}
       </span>
 
-      <DownloadButton entry={entry} actions={actions} size={size} />
-      <IconButton
-        size={size}
-        onClick={() => void actions.verify()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.verify')}
+      <ClickPopover
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        trigger={
+          <IconButton size={size} title={t('areas.library.moreActions')} ariaPressed={menuOpen}>
+            <MoreVertical size={icon} />
+          </IconButton>
+        }
       >
-        <ShieldCheck size={icon} />
-      </IconButton>
-      <IconButton
-        size={size}
-        onClick={() => void actions.optimise()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.optimizeAction')}
-      >
-        <Minimize2 size={icon} />
-      </IconButton>
-      <IconButton
-        size={size}
-        onClick={() => void actions.freeSpace()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.freeSpace')}
-      >
-        <Eraser size={icon} />
-      </IconButton>
+        <div className="min-w-44 py-1">
+          <MenuActionRow
+            icon={downloadIcon}
+            label={downloadLabel}
+            onClick={() => { setMenuOpen(false); void actions.startDownload(); }}
+            disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
+          />
+          <MenuActionRow
+            icon={<ShieldCheck size={14} />}
+            label={t('areas.library.verify')}
+            onClick={() => { setMenuOpen(false); void actions.verify(); }}
+            disabled={busy || !hasLocalPages}
+          />
+          <MenuActionRow
+            icon={<Minimize2 size={14} />}
+            label={t('areas.library.optimizeAction')}
+            onClick={() => { setMenuOpen(false); void actions.optimise(); }}
+            disabled={busy || !hasLocalPages}
+          />
+          <MenuActionRow
+            icon={<Eraser size={14} />}
+            label={t('areas.library.freeSpace')}
+            onClick={() => { setMenuOpen(false); void actions.freeSpace(); }}
+            disabled={busy || !hasLocalPages}
+          />
+        </div>
+      </ClickPopover>
+
       <IconButton
         size={size}
         tone={archived ? 'accent' : 'default'}

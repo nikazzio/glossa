@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, Bookmark, Eraser, Search, Trash2 } from 'lucide-react';
+import { Archive, Bookmark, Eraser, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ClickPopover, IconButton, PopoverItem, Select, type SelectOption } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
@@ -38,7 +38,10 @@ interface LibraryFilterBarProps {
   onDeleteView: (viewId: string) => void;
 }
 
-/** Ricerca e filtri della Biblioteca: guardano il catalogo già caricato, non interrogano il backend. */
+/** Ricerca e filtri della Biblioteca: guardano il catalogo già caricato, non interrogano il backend.
+ *  Solo la ricerca e il gruppo di comandi restano sempre in vista; le tendine dei filtri stanno in
+ *  una riga a scomparsa sotto, aperta dal comando con le manopole (o già aperta se si arriva con
+ *  filtri attivi, es. da una vista salvata). */
 export function LibraryFilterBar({
   filters,
   onChange,
@@ -52,6 +55,7 @@ export function LibraryFilterBar({
 }: LibraryFilterBarProps) {
   const { t } = useTranslation();
   const [viewsOpen, setViewsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(() => hasActiveLibraryFilters(filters));
   const [newViewName, setNewViewName] = useState('');
 
   const kindOptions: SelectOption[] = [
@@ -117,150 +121,170 @@ export function LibraryFilterBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-5 pb-3 md:px-6">
-      <div className="relative min-w-[12rem] flex-1">
-        <Search
-          size={14}
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-editorial-muted"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={filters.query}
-          onChange={(e) => onChange({ ...filters, query: e.target.value })}
-          placeholder={t('areas.library.filters.searchPlaceholder')}
-          aria-label={t('areas.library.filters.searchLabel')}
-          className={`${FIELD_CLASSNAME} py-1.5 pl-8 text-xs`}
-        />
-      </div>
-      <Select
-        value={filters.kind}
-        onChange={(value) =>
-          onChange({ ...filters, kind: value as LibraryFilters['kind'] })
-        }
-        options={kindOptions}
-        ariaLabel={t('areas.library.filters.kindLabel')}
-      />
-      <Select
-        value={filters.language}
-        onChange={(value) => onChange({ ...filters, language: value })}
-        options={languageSelectOptions}
-        ariaLabel={t('areas.library.filters.languageLabel')}
-      />
-      <Select
-        value={filters.providerKey}
-        onChange={(value) => onChange({ ...filters, providerKey: value })}
-        options={providerSelectOptions}
-        ariaLabel={t('areas.library.filters.providerLabel')}
-      />
-      <Select
-        value={filters.availability}
-        onChange={(value) =>
-          onChange({
-            ...filters,
-            availability: value as LibraryFilters['availability'],
-          })
-        }
-        options={availabilitySelectOptions}
-        ariaLabel={t('areas.library.filters.availabilityLabel')}
-      />
-      {workspaceOptions.length > 0 && (
-        <Select
-          value={filters.workspaceId}
-          onChange={(value) => onChange({ ...filters, workspaceId: value })}
-          options={workspaceSelectOptions}
-          ariaLabel={t('areas.library.filters.workspaceLabel')}
-        />
-      )}
-      {collectionOptions.length > 0 && (
-        <Select
-          value={filters.collectionId}
-          onChange={(value) => onChange({ ...filters, collectionId: value })}
-          options={collectionSelectOptions}
-          ariaLabel={t('areas.library.filters.collectionLabel')}
-        />
-      )}
-      <Select
-        value={filters.sort}
-        onChange={(value) =>
-          onChange({ ...filters, sort: value as LibraryFilters['sort'] })
-        }
-        options={sortSelectOptions}
-        ariaLabel={t('areas.library.filters.sortLabel')}
-      />
-      <ClickPopover
-        open={viewsOpen}
-        onOpenChange={setViewsOpen}
-        trigger={
-          <IconButton
-            size="sm"
-            title={t('areas.library.filters.savedViews')}
-            ariaPressed={viewsOpen}
-          >
-            <Bookmark size={13} />
-          </IconButton>
-        }
-      >
-        <div className="flex min-w-56 flex-col gap-1 p-2">
-          {savedViews.map((view) => (
-            <div key={view.id} className="flex items-center gap-1">
-              <PopoverItem
-                label={view.name}
-                onSelect={() => {
-                  onChange(view.filters);
-                  setViewsOpen(false);
+    <div className="px-5 pb-3 md:px-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[12rem] flex-1">
+          <Search
+            size={14}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-editorial-muted"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={filters.query}
+            onChange={(e) => onChange({ ...filters, query: e.target.value })}
+            placeholder={t('areas.library.filters.searchPlaceholder')}
+            aria-label={t('areas.library.filters.searchLabel')}
+            className={`${FIELD_CLASSNAME} py-1.5 pl-8 text-xs`}
+          />
+        </div>
+
+        <IconButton
+          size="sm"
+          tone={filtersOpen || hasActiveLibraryFilters(filters) ? 'accent' : 'default'}
+          ariaPressed={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
+          title={t('areas.library.filters.toggleFilters')}
+        >
+          <SlidersHorizontal size={13} />
+        </IconButton>
+
+        <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
+
+        <ClickPopover
+          open={viewsOpen}
+          onOpenChange={setViewsOpen}
+          trigger={
+            <IconButton
+              size="sm"
+              title={t('areas.library.filters.savedViews')}
+              ariaPressed={viewsOpen}
+            >
+              <Bookmark size={13} />
+            </IconButton>
+          }
+        >
+          <div className="flex min-w-56 flex-col gap-1 p-2">
+            {savedViews.map((view) => (
+              <div key={view.id} className="flex items-center gap-1">
+                <PopoverItem
+                  label={view.name}
+                  onSelect={() => {
+                    onChange(view.filters);
+                    setViewsOpen(false);
+                  }}
+                />
+                <IconButton
+                  size="xs"
+                  tone="danger"
+                  onClick={() => onDeleteView(view.id)}
+                  title={t('areas.library.filters.deleteView', { name: view.name })}
+                >
+                  <Trash2 size={12} />
+                </IconButton>
+              </div>
+            ))}
+            <div className="flex items-center gap-1">
+              <input
+                value={newViewName}
+                onChange={(event) => setNewViewName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') saveCurrentView();
                 }}
+                placeholder={t('areas.library.filters.newViewPlaceholder')}
+                aria-label={t('areas.library.filters.newViewLabel')}
+                className={`${FIELD_CLASSNAME} py-1 text-xs`}
               />
               <IconButton
                 size="xs"
-                tone="danger"
-                onClick={() => onDeleteView(view.id)}
-                title={t('areas.library.filters.deleteView', { name: view.name })}
+                tone="accent"
+                disabled={newViewName.trim() === ''}
+                onClick={saveCurrentView}
+                title={t('areas.library.filters.saveView')}
               >
-                <Trash2 size={12} />
+                <Bookmark size={12} />
               </IconButton>
             </div>
-          ))}
-          <div className="flex items-center gap-1">
-            <input
-              value={newViewName}
-              onChange={(event) => setNewViewName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') saveCurrentView();
-              }}
-              placeholder={t('areas.library.filters.newViewPlaceholder')}
-              aria-label={t('areas.library.filters.newViewLabel')}
-              className={`${FIELD_CLASSNAME} py-1 text-xs`}
-            />
-            <IconButton
-              size="xs"
-              tone="accent"
-              disabled={newViewName.trim() === ''}
-              onClick={saveCurrentView}
-              title={t('areas.library.filters.saveView')}
-            >
-              <Bookmark size={12} />
-            </IconButton>
           </div>
+        </ClickPopover>
+        {hasActiveLibraryFilters(filters) && (
+          <IconButton
+            size="sm"
+            onClick={() => onChange(EMPTY_LIBRARY_FILTERS)}
+            title={t('areas.library.filters.clear')}
+          >
+            <Eraser size={13} />
+          </IconButton>
+        )}
+      </div>
+
+      {filtersOpen && (
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <IconButton
+            size="sm"
+            tone={filters.includeArchived ? 'accent' : 'default'}
+            ariaPressed={filters.includeArchived}
+            onClick={() => onChange({ ...filters, includeArchived: !filters.includeArchived })}
+            title={t('areas.library.filters.showArchived')}
+          >
+            <Archive size={13} />
+          </IconButton>
+          <Select
+            value={filters.kind}
+            onChange={(value) =>
+              onChange({ ...filters, kind: value as LibraryFilters['kind'] })
+            }
+            options={kindOptions}
+            ariaLabel={t('areas.library.filters.kindLabel')}
+          />
+          <Select
+            value={filters.language}
+            onChange={(value) => onChange({ ...filters, language: value })}
+            options={languageSelectOptions}
+            ariaLabel={t('areas.library.filters.languageLabel')}
+          />
+          <Select
+            value={filters.providerKey}
+            onChange={(value) => onChange({ ...filters, providerKey: value })}
+            options={providerSelectOptions}
+            ariaLabel={t('areas.library.filters.providerLabel')}
+          />
+          <Select
+            value={filters.availability}
+            onChange={(value) =>
+              onChange({
+                ...filters,
+                availability: value as LibraryFilters['availability'],
+              })
+            }
+            options={availabilitySelectOptions}
+            ariaLabel={t('areas.library.filters.availabilityLabel')}
+          />
+          {workspaceOptions.length > 0 && (
+            <Select
+              value={filters.workspaceId}
+              onChange={(value) => onChange({ ...filters, workspaceId: value })}
+              options={workspaceSelectOptions}
+              ariaLabel={t('areas.library.filters.workspaceLabel')}
+            />
+          )}
+          {collectionOptions.length > 0 && (
+            <Select
+              value={filters.collectionId}
+              onChange={(value) => onChange({ ...filters, collectionId: value })}
+              options={collectionSelectOptions}
+              ariaLabel={t('areas.library.filters.collectionLabel')}
+            />
+          )}
+          <Select
+            value={filters.sort}
+            onChange={(value) =>
+              onChange({ ...filters, sort: value as LibraryFilters['sort'] })
+            }
+            options={sortSelectOptions}
+            ariaLabel={t('areas.library.filters.sortLabel')}
+          />
         </div>
-      </ClickPopover>
-      <IconButton
-        size="sm"
-        tone={filters.includeArchived ? 'accent' : 'default'}
-        ariaPressed={filters.includeArchived}
-        onClick={() => onChange({ ...filters, includeArchived: !filters.includeArchived })}
-        title={t('areas.library.filters.showArchived')}
-      >
-        <Archive size={13} />
-      </IconButton>
-      {hasActiveLibraryFilters(filters) && (
-        <IconButton
-          size="sm"
-          onClick={() => onChange(EMPTY_LIBRARY_FILTERS)}
-          title={t('areas.library.filters.clear')}
-        >
-          <Eraser size={13} />
-        </IconButton>
       )}
     </div>
   );

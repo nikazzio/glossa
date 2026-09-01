@@ -3,34 +3,18 @@
 -- catalogazione bibliotecaria). "kind" smette di essere un enum fisso: resta
 -- solo la natura fisica dell'originale (manoscritto/stampa/altro), il
 -- formato del file è già tracciato per copia su source_versions.version_kind
--- e non ha bisogno di un campo anagrafico separato.
+-- e non ha bisogno di un campo anagrafico separato — ma i tre valori che il
+-- riconoscimento automatico assegna oggi (manuscript/print/other) erano già
+-- ammessi dal vincolo precedente: non serve toccare la tabella `sources`.
 --
 -- SQLite non permette di alterare un CHECK esistente: si ricostruisce la
--- tabella, si copiano i dati, si rinomina.
-
-PRAGMA foreign_keys=OFF;
-
-CREATE TABLE sources_new (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind <> ''),
-  primary_language TEXT,
-  description TEXT,
-  external_ref TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
-  archived_at DATETIME DEFAULT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO sources_new (id, title, kind, primary_language, description, external_ref, status, archived_at, created_at, updated_at)
-  SELECT id, title, kind, primary_language, description, external_ref, status, archived_at, created_at, updated_at FROM sources;
-
-DROP TABLE sources;
-ALTER TABLE sources_new RENAME TO sources;
-
-CREATE INDEX IF NOT EXISTS idx_sources_title ON sources(title);
-CREATE INDEX IF NOT EXISTS idx_sources_status ON sources(status);
+-- tabella, si copiano i dati, si rinomina. Tocca solo `source_field_overrides`
+-- di proposito — nessun'altra tabella referenzia questa con `ON DELETE
+-- CASCADE`, quindi ricostruirla non può cancellare righe altrove. Ricostruire
+-- `sources` invece le cancellerebbe: `PRAGMA foreign_keys=OFF` non ha effetto
+-- dentro una transazione (le migrazioni girano sempre in una), quindi
+-- `DROP TABLE sources` farebbe scattare la cancellazione a catena su
+-- `source_versions` e `source_collection_items` per davvero.
 
 CREATE TABLE source_field_overrides_new (
   source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
@@ -51,5 +35,3 @@ INSERT INTO source_field_overrides_new (source_id, field, value, updated_at)
 
 DROP TABLE source_field_overrides;
 ALTER TABLE source_field_overrides_new RENAME TO source_field_overrides;
-
-PRAGMA foreign_keys=ON;

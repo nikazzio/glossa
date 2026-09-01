@@ -177,7 +177,7 @@ export function LibrarySourcePage({
           activeTab={activeTab}
           onTabChange={(id) => setActiveTab(id as InspectorTabId)}
           panelIcon={<Info size={15} />}
-          panelLabel={t('areas.library.inspectorLabel')}
+          panelLabel={detail.source.title}
           collapsed={inspectorCollapsed}
           onCollapsedChange={toggleInspectorCollapsed}
           headerActions={
@@ -366,7 +366,13 @@ function DataSection({
         />
         <StatBlock
           label={t('areas.library.kind')}
-          value={t(`areas.library.kindLabels.${detail.source.kind}`, { defaultValue: detail.source.kind })}
+          // Libri aggiunti prima che "natura" perdesse i valori di formato
+          // (pdf/iiif/web) hanno ancora quei vecchi valori salvati: mostrano
+          // "Altro" come qualunque valore che oggi non si riconosce più,
+          // non la parola tecnica grezza.
+          value={t(`areas.library.kindLabels.${detail.source.kind}`, {
+            defaultValue: t('areas.library.kindLabels.other'),
+          })}
         />
         <SourceFieldRow
           label={t('areas.library.creatorField')}
@@ -731,7 +737,6 @@ function CollectionPicker({
             label={collection.name}
             hint={t('areas.library.removeFromCollection', { name: collection.name })}
             onClick={() => void onSetCollection(collection.id, false)}
-            icon={X}
           />
         ))}
       <ClickPopover

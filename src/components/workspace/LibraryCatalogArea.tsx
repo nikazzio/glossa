@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, LayoutGrid, Link2, List } from 'lucide-react';
+import { BookOpenText, LayoutGrid, Link2, List, Tags } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EASE_EDITORIAL } from '../layout/motion';
@@ -24,7 +24,7 @@ import {
   orderLibraryCatalog,
 } from '../../utils/libraryCatalogFilters';
 import { libraryLocation } from '../../navigation/appLocation';
-import type { LibraryCatalogEntry, SourceField, Workspace } from '../../types';
+import type { LibraryCatalogEntry, SourceCollection, SourceField, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
   itemId?: string;
@@ -204,9 +204,28 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
         >
           <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
-            <div className="flex items-center justify-between gap-3 px-5 pt-5 md:px-6">
+            <div className="px-5 pt-5 md:px-6">
               <SectionLabel icon={BookOpenText} label={t('areas.library.title')} />
-              <div className="flex items-center gap-1">
+            </div>
+
+            {catalog.length > 0 && (
+              <LibraryFilterBar
+                filters={filters}
+                onChange={setFilters}
+                languageOptions={libraryLanguageOptions(visibleCatalog)}
+                providerOptions={providerOptions}
+                collectionOptions={collections}
+                workspaceOptions={workspaces}
+                savedViews={savedViews}
+                onSaveView={(name) => void saveView(name, filters)}
+                onDeleteView={(viewId) => void removeSavedView(viewId)}
+              />
+            )}
+
+            {/* Riguarda come si vedono i risultati, non la ricerca: sta qui,
+                accanto all'elenco che governa, non nella barra di ricerca. */}
+            {catalog.length > 0 && (
+              <div className="flex items-center justify-end gap-1 px-5 md:px-6">
                 <IconButton
                   size="sm"
                   tone={view === 'list' ? 'accent' : 'default'}
@@ -226,20 +245,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                   <LayoutGrid size={13} />
                 </IconButton>
               </div>
-            </div>
-
-            {catalog.length > 0 && (
-              <LibraryFilterBar
-                filters={filters}
-                onChange={setFilters}
-                languageOptions={libraryLanguageOptions(visibleCatalog)}
-                providerOptions={providerOptions}
-                collectionOptions={collections}
-                workspaceOptions={workspaces}
-                savedViews={savedViews}
-                onSaveView={(name) => void saveView(name, filters)}
-                onDeleteView={(viewId) => void removeSavedView(viewId)}
-              />
             )}
 
             {catalog.length === 0 ? (
@@ -263,6 +268,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                     key={entry.source.id}
                     entry={entry}
                     view={view}
+                    providerLabel={providers.find((provider) => provider.key === entry.providerKey)?.label}
                     onOpen={() => openSource(entry.source.id)}
                     onRemove={() => void removeSource(entry.source.id)}
                     onSetArchived={(archived) => archive(entry.source.id, archived)}
@@ -270,6 +276,10 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                     workspaces={workspaces}
                     onToggleLink={(workspaceId, linked) =>
                       void toggleLink(entry.source.id, workspaceId, linked)
+                    }
+                    collections={collections}
+                    onSetCollection={(collectionId, member) =>
+                      void changeCollection(entry.source.id, collectionId, member)
                     }
                   />
                 ))}
@@ -285,30 +295,40 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
 function CatalogEntryRow({
   entry,
   view,
+  providerLabel,
   onOpen,
   onRemove,
   onSetArchived,
   onRefresh,
   workspaces,
   onToggleLink,
+  collections,
+  onSetCollection,
 }: {
   entry: LibraryCatalogEntry;
   view: 'list' | 'grid';
+  providerLabel?: string;
   onOpen: () => void;
   onRemove: () => void;
   onSetArchived: (archived: boolean) => Promise<void>;
   onRefresh: () => void;
   workspaces: Workspace[];
   onToggleLink: (workspaceId: string, linked: boolean) => void;
+  collections: SourceCollection[];
+  onSetCollection: (collectionId: string, member: boolean) => void;
 }) {
   const { t } = useTranslation();
   const actions = useSourceActions(entry, { onRemove, onSetArchived, onRefresh });
 
-  const [picking, setPicking] = useState(false);
-  const linkedIds = new Set(entry.workspaces.map((link) => link.workspaceId));
-  const available = workspaces.filter((workspace) => !linkedIds.has(workspace.id));
+  const [pickingWorkspace, setPickingWorkspace] = useState(false);
+  const [pickingCollection, setPickingCollection] = useState(false);
+  const linkedWorkspaceIds = new Set(entry.workspaces.map((link) => link.workspaceId));
+  const availableWorkspaces = workspaces.filter((workspace) => !linkedWorkspaceIds.has(workspace.id));
+  const linkedCollectionIds = new Set(entry.collections.map((collection) => collection.id));
+  const linkedCollections = collections.filter((collection) => linkedCollectionIds.has(collection.id));
+  const availableCollections = collections.filter((collection) => !linkedCollectionIds.has(collection.id));
 
-  const meta = [entry.creator, entry.date].filter(Boolean).join(' \u00b7 ');
+  const authorDate = [entry.creator, entry.date].filter(Boolean).join(' \u00b7 ');
   const summary = actions.summary;
   const availability =
     summary.availability === 'catalogued'
@@ -345,60 +365,115 @@ function CatalogEntryRow({
             fallback={<BookOpenText size={16} className="text-editorial-muted" aria-hidden="true" />}
           />
         </span>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <span className="block truncate font-display text-base italic text-editorial-ink">
-            {entry.source.title}
-          </span>
-          {meta && <span className="mt-0.5 block truncate text-xs text-editorial-muted">{meta}</span>}
-          <span className="mt-1 block text-xs text-editorial-muted">
-            {[pageCount, availability, extraNote].filter(Boolean).join(' \u00b7 ')}
-          </span>
-        </button>
-      </div>
-
-      <span className="flex min-w-0 shrink-0 flex-wrap items-center gap-1">
-        {entry.workspaces.map((link) => (
-          <LinkChip
-            key={link.workspaceId}
-            label={link.workspaceName}
-            hint={t('areas.library.unlinkFromWorkspace')}
-            onClick={() => onToggleLink(link.workspaceId, false)}
-          />
-        ))}
-        {available.length > 0 && (
-          <ClickPopover
-            open={picking}
-            onOpenChange={setPicking}
-            trigger={
-              <IconButton
-                size="sm"
-                title={t('areas.library.linkToWorkspace')}
-                ariaPressed={picking}
-              >
-                <Link2 size={13} />
-              </IconButton>
-            }
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="block w-full min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
-            <ul className="flex min-w-40 flex-col py-1">
-              {available.map((workspace) => (
-                <li key={workspace.id} className="flex">
-                  <PopoverItem
-                    label={workspace.name}
-                    onSelect={() => {
-                      setPicking(false);
-                      onToggleLink(workspace.id, true);
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
-          </ClickPopover>
-        )}
-      </span>
+            <span className="block truncate font-display text-base italic text-editorial-ink">
+              {entry.source.title}
+            </span>
+            {(providerLabel || authorDate) && (
+              <span className="mt-0.5 block truncate text-xs text-editorial-muted">
+                {providerLabel && (
+                  <span className="font-semibold text-editorial-ink">{providerLabel}</span>
+                )}
+                {providerLabel && authorDate && ' \u00b7 '}
+                {authorDate}
+              </span>
+            )}
+            <span className="mt-1 block truncate text-xs text-editorial-muted">
+              {pageCount}
+              {pageCount && ' \u00b7 '}
+              <span className={summary.availability === 'complete' ? 'font-medium text-editorial-accent' : undefined}>
+                {availability}
+              </span>
+              {extraNote && ' \u00b7 '}
+              {extraNote}
+            </span>
+          </button>
+
+          {/* Collegamenti dell'opera: sotto il titolo, ben lontani dai comandi
+              a destra \u2014 non sono azioni sull'opera, sono dove sta l'opera. */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            {entry.workspaces.map((link) => (
+              <LinkChip
+                key={link.workspaceId}
+                label={link.workspaceName}
+                hint={t('areas.library.unlinkFromWorkspace')}
+                onClick={() => onToggleLink(link.workspaceId, false)}
+              />
+            ))}
+            {linkedCollections.map((collection) => (
+              <LinkChip
+                key={collection.id}
+                label={collection.name}
+                hint={t('areas.library.removeFromCollection', { name: collection.name })}
+                onClick={() => onSetCollection(collection.id, false)}
+              />
+            ))}
+            {availableWorkspaces.length > 0 && (
+              <ClickPopover
+                open={pickingWorkspace}
+                onOpenChange={setPickingWorkspace}
+                trigger={
+                  <IconButton
+                    size="xs"
+                    title={t('areas.library.linkToWorkspace')}
+                    ariaPressed={pickingWorkspace}
+                  >
+                    <Link2 size={12} />
+                  </IconButton>
+                }
+              >
+                <ul className="flex min-w-40 flex-col py-1">
+                  {availableWorkspaces.map((workspace) => (
+                    <li key={workspace.id} className="flex">
+                      <PopoverItem
+                        label={workspace.name}
+                        onSelect={() => {
+                          setPickingWorkspace(false);
+                          onToggleLink(workspace.id, true);
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </ClickPopover>
+            )}
+            {availableCollections.length > 0 && (
+              <ClickPopover
+                open={pickingCollection}
+                onOpenChange={setPickingCollection}
+                trigger={
+                  <IconButton
+                    size="xs"
+                    title={t('areas.library.addToCollection')}
+                    ariaPressed={pickingCollection}
+                  >
+                    <Tags size={12} />
+                  </IconButton>
+                }
+              >
+                <ul className="flex min-w-40 flex-col py-1">
+                  {availableCollections.map((collection) => (
+                    <li key={collection.id} className="flex">
+                      <PopoverItem
+                        label={collection.name}
+                        onSelect={() => {
+                          setPickingCollection(false);
+                          onSetCollection(collection.id, true);
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </ClickPopover>
+            )}
+          </div>
+        </div>
+      </div>
 
       <SourceActionBar entry={entry} actions={actions} />
     </article>
