@@ -323,7 +323,9 @@ function WorkspaceLinkPicker({
  *  nessuno tocca — natura dell'origine inclusa, di proposito: è un fatto
  *  della biblioteca, non un dato di Niki. Il motore sa correggere anche
  *  questi campi e gli altri anagrafici non ancora in scheda; quali portare
- *  davvero a schermo resta da decidere. I campi vuoti non compaiono. */
+ *  davvero a schermo resta da decidere. Ogni campo resta sempre in vista,
+ *  «—» quando non c'è ancora un dato: due schede diverse non devono sembrare
+ *  strutturate in modo diverso solo perché una biblioteca ne sa di meno. */
 function DataSection({
   detail,
   entry,
@@ -395,23 +397,24 @@ function DataSection({
         {readonlyFields.map(([label, value]) => (
           <StatBlock key={label} label={label} value={value} />
         ))}
-        {entry && (
-          <>
-            {entry.expectedPages !== null && (
-              <StatBlock
-                label={t('areas.library.pagesField')}
-                value={t('areas.library.pageCount', { count: entry.expectedPages })}
-              />
-            )}
-            <StatBlock
-              label={t('areas.library.availabilityField')}
-              value={availabilityText(entry, t)}
-            />
-            {entry.localBytes > 0 && (
-              <StatBlock label={t('areas.library.occupiedField')} value={humanSize(entry.localBytes)} />
-            )}
-          </>
-        )}
+        {/* Come gli altri campi: sempre in vista, «—» quando non c'è ancora
+            un dato (nessuna pagina dichiarata, entry non ancora caricato). */}
+        <StatBlock
+          label={t('areas.library.pagesField')}
+          value={
+            entry && entry.expectedPages !== null && entry.expectedPages > 0
+              ? t('areas.library.pageCount', { count: entry.expectedPages })
+              : ''
+          }
+        />
+        <StatBlock
+          label={t('areas.library.availabilityField')}
+          value={entry ? availabilityText(entry, t) : ''}
+        />
+        <StatBlock
+          label={t('areas.library.occupiedField')}
+          value={entry ? humanSize(entry.localBytes) : ''}
+        />
         <StatBlock
           label={t('areas.library.statusField')}
           value={
