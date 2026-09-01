@@ -38,7 +38,6 @@ import { SourceSizeCap } from './SourceSizeCap';
 import { DownloadButton } from './DownloadButton';
 import { useSourceActions } from './useSourceActions';
 import { SourceFieldRow } from './SourceFieldRow';
-import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
 import { summarizeAvailability } from '../../services/vaultService';
 import { humanSize } from '../../utils';
 import type {
@@ -305,8 +304,12 @@ function WorkspaceLinkPicker({
   );
 }
 
-/** Tutti i campi anagrafici: i cinque correggibili a mano più quelli che la
- *  biblioteca dichiara e nessuno tocca. I campi vuoti non compaiono. */
+/** Tutti i campi anagrafici oggi in scheda: quattro correggibili a mano
+ *  (titolo, autore, data, lingua) più quelli che la biblioteca dichiara e
+ *  nessuno tocca — natura dell'origine inclusa, di proposito: è un fatto
+ *  della biblioteca, non un dato di Niki. Il motore sa correggere anche
+ *  questi campi e gli altri anagrafici non ancora in scheda; quali portare
+ *  davvero a schermo resta da decidere. I campi vuoti non compaiono. */
 function DataSection({
   detail,
   entry,
@@ -318,8 +321,9 @@ function DataSection({
 }) {
   const { t } = useTranslation();
   // Le stesse etichette per ogni opera, che la biblioteca le abbia dichiarate
-  // o no: un campo che sparisce quando è vuoto farebbe sembrare due schede
+  // o no: un campo che sparisse quando è vuoto farebbe sembrare due schede
   // strutturate in modo diverso, invece è solo la fonte che ne sa di meno.
+  // StatBlock mostra sempre l'etichetta, con «—» al posto del valore assente.
   const readonlyFields: Array<[string, string]> = [
     [t('areas.library.contributorsField'), detail.contributors.join(' · ')],
     [t('areas.library.volumeField'), detail.volume ?? ''],
@@ -328,6 +332,14 @@ function DataSection({
     [t('areas.library.rightsField'), detail.rights.join(' · ')],
     [t('areas.library.physicalDescriptionField'), detail.physicalDescription ?? ''],
     [t('areas.library.descriptionField'), detail.description ?? ''],
+    [t('areas.library.originPlaceField'), detail.originPlace ?? ''],
+    [t('areas.library.provenanceField'), detail.provenance.join(' · ')],
+    [t('areas.library.notesField'), detail.notes ?? ''],
+    [t('areas.library.seriesField'), detail.series ?? ''],
+    [t('areas.library.genreFormField'), detail.genreForm.join(' · ')],
+    [t('areas.library.standardIdentifierField'), detail.standardIdentifier ?? ''],
+    [t('areas.library.coverageField'), detail.coverage.join(' · ')],
+    [t('areas.library.relatedWorksField'), detail.relatedWorks.join(' · ')],
   ];
 
   return (
@@ -339,20 +351,9 @@ function DataSection({
           original={detail.original.title}
           onSave={(value) => onCorrectField('title', value)}
         />
-        <SourceFieldRow
+        <StatBlock
           label={t('areas.library.kind')}
-          value={t(`areas.library.kindLabels.${detail.source.kind}`)}
-          editableValue={detail.source.kind}
-          original={
-            detail.original.kind === undefined
-              ? undefined
-              : t(`areas.library.kindLabels.${detail.original.kind}`)
-          }
-          options={SOURCE_KINDS.map((kind) => ({
-            value: kind,
-            label: t(`areas.library.kindLabels.${kind}`),
-          }))}
-          onSave={(value) => onCorrectField('kind', value)}
+          value={t(`areas.library.kindLabels.${detail.source.kind}`, { defaultValue: detail.source.kind })}
         />
         <SourceFieldRow
           label={t('areas.library.creatorField')}

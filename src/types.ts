@@ -101,9 +101,8 @@ export function classifySourceKind(card: SourceCard): SourceKind {
   ].filter((value): value is string => Boolean(value)).join(' ').toLowerCase();
 
   if (/manuscript|manoscritt/.test(haystack)) return 'manuscript';
-  if (/\bpdf\b/.test(haystack)) return 'pdf';
   if (/print|stamp|incunab|imprint/.test(haystack)) return 'print';
-  return 'iiif';
+  return 'other';
 }
 
 export interface IIIFDiscoveryOutcome {
@@ -120,7 +119,14 @@ export interface IIIFDiscoveryOutcome {
   cachedAt?: number;
 }
 
-export type SourceKind = 'manuscript' | 'print' | 'pdf' | 'iiif' | 'web' | 'other';
+/**
+ * Solo la natura fisica dell'originale (manoscritto, stampa...): il formato
+ * del file (IIIF/PDF/pagina web) è già tracciato per copia su
+ * `LibrarySourceVersion.versionKind`, non è un fatto anagrafico dell'opera.
+ * Ogni biblioteca dichiara questo dato a modo suo — non è un enum chiuso,
+ * `manoscritto`/`stampa`/`altro` sono solo i valori riconosciuti in automatico.
+ */
+export type SourceKind = string;
 
 export interface AddSourceToLibraryInput {
   manifestUrl: string;
@@ -163,11 +169,27 @@ export interface AddSourceToLibraryInput {
 export type SourceStatus = 'active' | 'archived';
 
 /**
- * I campi di un'opera che si possono correggere a mano. I nomi sono quelli
- * della tabella: un secondo vocabolario in camelCase sarebbe solo una tabella
- * di traduzione da tenere allineata.
+ * Tutti i campi anagrafici di un'opera che il motore sa correggere a mano. I
+ * nomi sono quelli della tabella: un secondo vocabolario in camelCase sarebbe
+ * solo una tabella di traduzione da tenere allineata.
+ *
+ * Il motore e il database accettano una correzione per ognuno di questi;
+ * quali siano davvero modificabili da schermata è una scelta a parte, ancora
+ * da fare (vedi STATO_SESSIONE_2.0.md).
  */
-export type SourceField = 'title' | 'kind' | 'primary_language' | 'creator' | 'date';
+export const SOURCE_FIELDS = [
+  'title', 'kind', 'primary_language', 'creator', 'date',
+  'publisher', 'contributors', 'rights', 'physical_description', 'subjects', 'volume', 'description',
+  'origin_place', 'provenance', 'notes', 'series', 'genre_form', 'standard_identifier', 'coverage', 'related_works',
+] as const;
+
+export type SourceField = (typeof SOURCE_FIELDS)[number];
+
+/** I campi che, lato biblioteca, arrivano come più valori insieme (uniti da
+ *  ` · ` in visualizzazione e nella correzione a mano). */
+export const MULTI_VALUE_SOURCE_FIELDS: ReadonlySet<SourceField> = new Set([
+  'contributors', 'rights', 'subjects', 'provenance', 'genre_form', 'coverage', 'related_works',
+]);
 
 /** Valori per campo: come correzioni, oppure come originali della biblioteca. */
 export type SourceFieldValues = Partial<Record<SourceField, string>>;
@@ -273,6 +295,25 @@ export interface LibrarySourceDetail {
   /** Chiave della biblioteca nel registro dei provider: risolve l'etichetta
    * leggibile e ripulisce `source.externalRef` dal suo prefisso. */
   providerKey: string | null;
+  /** Dove è stato scritto o stampato il volume — non l'editore moderno. */
+  originPlace: string | null;
+  /** Catena cronologica di chi lo ha posseduto prima della biblioteca attuale. */
+  provenance: string[];
+  /** Testo libero, sempre di Niki: non viene mai da nessuna biblioteca. */
+  notes: string | null;
+  /** Collana editoriale o fondo con titolo proprio, col numero di volume nella
+   *  collana — diverso da `volume`, che è il volume/fascicolo fisico dell'opera. */
+  series: string | null;
+  /** Genere/forma testuale (es. "trattato", "salterio") — diverso da `source.kind`,
+   *  che è la natura fisica dell'originale. */
+  genreForm: string[];
+  /** ISBN/ISSN o segnatura normalizzata, quando esiste. */
+  standardIdentifier: string | null;
+  /** Di cosa/quale epoca parla il contenuto — non quando è stato fatto il libro. */
+  coverage: string[];
+  /** Rimandi ad altre edizioni/traduzioni note alla biblioteca stessa — non il
+   *  collegamento interno di Glossa a trascrizioni/traduzioni. */
+  relatedWorks: string[];
 }
 
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';

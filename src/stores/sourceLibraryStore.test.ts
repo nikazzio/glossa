@@ -28,6 +28,14 @@ const EMPTY_DETAIL_METADATA = {
   pageUrl: null,
   description: null,
   providerKey: null,
+  originPlace: null,
+  provenance: [],
+  notes: null,
+  series: null,
+  genreForm: [],
+  standardIdentifier: null,
+  coverage: [],
+  relatedWorks: [],
 };
 
 const manifestCard: IIIFManifestPreview & { id: string } = {
@@ -60,7 +68,7 @@ describe('sourceLibraryStore', () => {
     expect(service.addSourceToLibrary).toHaveBeenCalledWith(expect.objectContaining({
       manifestUrl: manifestCard.manifestUrl,
       title: manifestCard.title,
-      kind: 'iiif',
+      kind: 'other',
       creator: 'Anonimo',
       date: '1450',
       workspaceId: 'ws-1',
@@ -182,15 +190,12 @@ describe('classifySourceKind', () => {
     expect(classifySourceKind({ ...manifestCard, materialType: null, subjects: ['manoscritti medievali'] })).toBe('manuscript');
   });
 
-  it('riconosce pdf da mediaType di un risultato di ricerca', () => {
-    expect(classifySourceKind(resultCard({ mediaType: 'application/pdf' }))).toBe('pdf');
-  });
-
   it('riconosce stampa da mediaType con parola chiave "print"', () => {
     expect(classifySourceKind(resultCard({ mediaType: 'printed book' }))).toBe('print');
   });
 
-  it('ricade su iiif se nessuna parola chiave nota compare', () => {
-    expect(classifySourceKind(resultCard({ mediaType: 'photograph' }))).toBe('iiif');
+  it('ricade su altro se nessuna parola chiave nota compare (il formato del file non è più la natura)', () => {
+    expect(classifySourceKind(resultCard({ mediaType: 'application/pdf' }))).toBe('other');
+    expect(classifySourceKind(resultCard({ mediaType: 'photograph' }))).toBe('other');
   });
 });

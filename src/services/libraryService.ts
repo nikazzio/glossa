@@ -9,17 +9,86 @@ import {
 } from './inventoryService';
 import { generateId } from '../utils';
 import { logger } from '../utils/logger';
-import type {
-  AddSourceToLibraryInput,
-  LibraryCatalogEntry,
-  LibrarySource,
-  LibrarySourceDetail,
-  LibrarySourceVersion,
-  SourceField,
-  SourceFieldValues,
-  SourceKind,
-  SourceStatus,
+import {
+  SOURCE_FIELDS,
+  type AddSourceToLibraryInput,
+  type LibraryCatalogEntry,
+  type LibrarySource,
+  type LibrarySourceDetail,
+  type LibrarySourceVersion,
+  type SourceField,
+  type SourceFieldValues,
+  type SourceStatus,
 } from '../types';
+
+const FIELD_SEPARATOR = ' · ';
+
+function joinValues(values: string[]): string | null {
+  return values.length ? values.join(FIELD_SEPARATOR) : null;
+}
+
+function splitValues(value: string | null): string[] {
+  return value
+    ? value.split(FIELD_SEPARATOR).map((entry) => entry.trim()).filter(Boolean)
+    : [];
+}
+
+interface SourceDetailRow {
+  title: string;
+  kind: string;
+  primary_language: string | null;
+  description: string | null;
+}
+
+/**
+ * Il valore che l'opera avrebbe senza nessuna correzione a mano: dalla
+ * tabella `sources` per i campi che ci vivono, dai metadati del manifesto per
+ * il resto. Gli 8 campi non ancora raccolti da nessuna biblioteca (note,
+ * provenienza, serie...) non hanno un originale: `null` finché Niki non li
+ * scrive lui.
+ */
+function baseFieldValue(field: SourceField, row: SourceDetailRow, metadata: SourceMetadata): string | null {
+  switch (field) {
+    case 'title': return row.title;
+    case 'kind': return row.kind;
+    case 'primary_language': return row.primary_language;
+    case 'creator': return metadata.creator;
+    case 'date': return metadata.date;
+    case 'publisher': return metadata.publisher;
+    case 'contributors': return joinValues(metadata.contributors);
+    case 'rights': return joinValues(metadata.rights);
+    case 'physical_description': return metadata.physicalDescription;
+    case 'subjects': return joinValues(metadata.subjects);
+    case 'volume': return metadata.volume;
+    case 'description': return row.description;
+    default: return null;
+  }
+}
+
+/**
+ * Applica le correzioni a mano a tutti i campi anagrafici di un'opera: dove
+ * Niki ha corretto, il valore mostrato è il suo e l'originale della
+ * biblioteca resta in `original`; altrove resta il valore di base.
+ */
+function effectiveFieldValues(
+  row: SourceDetailRow,
+  metadata: SourceMetadata,
+  overrides: SourceFieldValues,
+): { effective: Record<SourceField, string | null>; original: SourceFieldValues } {
+  const original: SourceFieldValues = {};
+  const effective = {} as Record<SourceField, string | null>;
+  for (const field of SOURCE_FIELDS) {
+    const base = baseFieldValue(field, row, metadata);
+    const override = overrides[field];
+    if (override !== undefined) {
+      original[field] = base ?? '';
+      effective[field] = override;
+    } else {
+      effective[field] = base;
+    }
+  }
+  return { effective, original };
+}
 
 interface SourceRow {
   id: string;
@@ -103,7 +172,7 @@ function withOverrides(
   }
   if (overrides.kind !== undefined) {
     original.kind = source.kind;
-    corrected.kind = overrides.kind as SourceKind;
+    corrected.kind = overrides.kind;
   }
   if (overrides.primary_language !== undefined) {
     original.primary_language = source.primaryLanguage ?? '';
@@ -479,33 +548,42 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
 
   const primary = versionRows.find((row) => row.is_primary === 1) ?? versionRows[0];
   const metadata = parseMetadata(primary?.metadata ?? null);
-  const corrected = withOverrides(
-    rowToSource(source),
-    metadata.creator,
-    metadata.date,
-    (await overridesOfMany([sourceId])).get(sourceId) ?? {},
-  );
+  const overrides = (await overridesOfMany([sourceId])).get(sourceId) ?? {};
+  const { effective, original } = effectiveFieldValues(source, metadata, overrides);
 
   return {
-    source: corrected.source,
+    source: {
+      ...rowToSource(source),
+      title: effective.title ?? source.title,
+      kind: effective.kind ?? source.kind,
+      primaryLanguage: effective.primary_language,
+    },
     versions: versionRows.map(rowToVersion),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
-    creator: corrected.creator,
-    date: corrected.date,
-    original: corrected.original,
+    creator: effective.creator,
+    date: effective.date,
+    original,
     collections: (await collectionsOfMany([sourceId])).get(sourceId) ?? [],
     language: metadata.language,
-    subjects: metadata.subjects,
-    publisher: metadata.publisher,
-    volume: metadata.volume,
-    contributors: metadata.contributors,
-    rights: metadata.rights,
-    physicalDescription: metadata.physicalDescription,
+    subjects: splitValues(effective.subjects),
+    publisher: effective.publisher,
+    volume: effective.volume,
+    contributors: splitValues(effective.contributors),
+    rights: splitValues(effective.rights),
+    physicalDescription: effective.physical_description,
     holdingInstitution: metadata.holdingInstitution,
     catalogUrl: metadata.catalogUrl,
     pageUrl: metadata.pageUrl,
-    description: source.description,
+    description: effective.description,
     providerKey: metadata.providerKey,
+    originPlace: effective.origin_place,
+    provenance: splitValues(effective.provenance),
+    notes: effective.notes,
+    series: effective.series,
+    genreForm: splitValues(effective.genre_form),
+    standardIdentifier: effective.standard_identifier,
+    coverage: splitValues(effective.coverage),
+    relatedWorks: splitValues(effective.related_works),
   };
 }
 
@@ -550,21 +628,18 @@ export async function setSourceFieldOverride(
 
 /** Il valore che la biblioteca aveva dato per quel campo, mai sovrascritto. */
 async function originalFieldValue(sourceId: string, field: SourceField): Promise<string | null> {
-  const [row] = await select<{ title: string; kind: string; primary_language: string | null }>(
-    'SELECT title, kind, primary_language FROM sources WHERE id = $1',
+  const [row] = await select<SourceDetailRow>(
+    'SELECT title, kind, primary_language, description FROM sources WHERE id = $1',
     [sourceId],
   );
   if (!row) return null;
-  if (field === 'title') return row.title;
-  if (field === 'kind') return row.kind;
-  if (field === 'primary_language') return row.primary_language;
 
   const [version] = await select<{ metadata: string | null }>(
     'SELECT metadata FROM source_versions WHERE source_id = $1 ORDER BY is_primary DESC LIMIT 1',
     [sourceId],
   );
   const metadata = parseMetadata(version?.metadata ?? null);
-  return field === 'creator' ? metadata.creator : metadata.date;
+  return baseFieldValue(field, row, metadata);
 }
 
 export async function setWorkspaceSourceLink(

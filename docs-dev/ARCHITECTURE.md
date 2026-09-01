@@ -67,6 +67,24 @@ in `sources` e nei metadati della copia, e la lettura del catalogo applica la
 correzione restituendo anche l'originale. Correggere con lo stesso valore
 dell'originale non lascia una riga di correzione.
 
+Il vincolo su `source_field_overrides.field` accetta tutti i **20 campi
+anagrafici** (`SOURCE_FIELDS` in `src/types.ts`), non solo i 5 storici: motore
+e database sono generici su ognuno, `getLibrarySourceDetail` li applica tutti
+in un solo passaggio (`effectiveFieldValues`/`baseFieldValue` in
+`libraryService.ts`). Quali campi abbiano davvero un comando di modifica a
+schermo è una scelta separata, oggi limitata a titolo/autore/data/lingua — gli
+altri sono in tab Info come sola lettura. I campi che arrivano come più valori
+insieme (contributori, diritti, soggetti, provenienza, genere/forma, copertura,
+opere collegate) si salvano come testo unico separato da ` · `, la stessa forma
+già usata in visualizzazione.
+
+`sources.kind` è solo la **natura fisica dell'originale** (manoscritto/stampa/
+altro): il formato del file (IIIF/PDF/pagina web) vive per copia su
+`source_versions.version_kind`, non è un fatto anagrafico dell'opera. Il campo
+resta semi-libero (ogni biblioteca lo dichiara a modo suo, nessun enum chiuso a
+livello di dato) e oggi non ha un comando di modifica a schermo: è un fatto
+della biblioteca, non un dato che Niki corregge.
+
 Un'opera della Biblioteca vive in due stati: `active` o `archived`. Archiviare
 non tocca il deposito; rimuovere cancella subito la riga e le sue cascate.
 Non esiste uno stato di cestino per le fonti: l'archivio copre il ripensamento,

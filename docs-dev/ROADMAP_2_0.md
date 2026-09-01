@@ -39,21 +39,17 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 - **sistemare visivamente l'elenco del catalogo** (vista lista/griglia): dopo
   il ridisegno della scheda opera, resta la revisione UI/UX del punto 9bis
   segnata da Niki, non ancora iniziata;
-- **estendere la correzione a mano a tutti i campi della scheda opera**:
-  deciso con Niki (1 settembre) — non serve solo per correggere quello che la
-  biblioteca dichiara, ma soprattutto per **aggiungere** un dato quando la
-  biblioteca non lo dà affatto (l'obiettivo è la stessa scheda, con lo stesso
-  elenco di campi, per ogni opera — quello che manca dalla fonte lo completa
-  Niki a mano). Oggi solo 5 campi sono correggibili (titolo, tipo, autore,
-  data, lingua), tramite `source_field_overrides` con un vincolo che accetta
-  solo quei 5 nomi. Da estendere ai 7 rimasti (editore, altri responsabili,
-  diritti, descrizione fisica, soggetti, volume, descrizione) — nessuna
-  migrazione incrementale serve (schema ancora in consolidamento pre-1.0,
-  vedi CLAUDE.md), ma tre di questi campi (altri responsabili, diritti,
-  soggetti) sono più valori insieme lato biblioteca: da decidere come si
-  modificano a mano (oggi in visualizzazione sono uniti con «·» — probabile
-  che la correzione a mano usi lo stesso separatore in un campo di testo
-  unico, da confermare con Niki prima di scrivere codice);
+- **motore e database generici su tutti i 20 campi anagrafici**: fatto (2
+  settembre — vedi STATO_SESSIONE_2.0.md e `docs-dev/ARCHITECTURE.md`). Il
+  campo "tipo" è diventato "Natura dell'origine" (il formato del file vive
+  già per copia su `source_versions`); 8 campi nuovi (luogo di origine,
+  provenienza, note, serie, genere/forma, identificativo standard, copertura,
+  opere collegate) sono ora sempre in tab Info, sola lettura come i 7 di
+  prima. Restano da fare: un'area nelle Impostazioni per abilitare/
+  disabilitare la modifica campo per campo (idea confermata da Niki, non
+  ancora costruita); l'editor dei campi con più valori insieme (oggi uniti
+  con «·» in visualizzazione, da decidere se lo stesso separatore basti anche
+  per la modifica a mano o serva una lista voce-per-voce);
 - **migliorare la tab "Copie digitali"**: funziona ma va rifinita — capire se
   prevedere davvero più tipi di copia scaricabili per la stessa opera (oggi
   l'elenco versioni lo permette a livello di dati, ma l'interfaccia non

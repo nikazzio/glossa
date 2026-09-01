@@ -95,6 +95,14 @@ const EMPTY_DETAIL_METADATA = {
   pageUrl: null,
   description: null,
   providerKey: null,
+  originPlace: null,
+  provenance: [],
+  notes: null,
+  series: null,
+  genreForm: [],
+  standardIdentifier: null,
+  coverage: [],
+  relatedWorks: [],
 };
 
 const entry = (
@@ -762,8 +770,7 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
-  it('correggendo il tipo salva il valore dei dati, non l etichetta tradotta', async () => {
-    const service = await import('../../services/libraryService');
+  it('mostra la natura dell\'origine come sola lettura, non più correggibile dalla scheda', async () => {
     useSourceLibraryStore.setState({
       catalog: [entry()],
       detail: {
@@ -777,17 +784,10 @@ describe('LibraryCatalogArea', () => {
         ...EMPTY_DETAIL_METADATA,
       },
     });
-    const user = userEvent.setup();
 
     render(<LibraryCatalogArea itemId="s1" />);
     const kindRow = screen.getByText('areas.library.kind').closest('div') as HTMLElement;
-    await user.click(within(kindRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'areas.library.kind' }), 'print');
-    await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
-
-    await waitFor(() =>
-      expect(service.setSourceFieldOverride).toHaveBeenCalledWith('s1', 'kind', 'print'),
-    );
+    expect(within(kindRow).queryByRole('button', { name: 'areas.library.fieldEdit' })).toBeNull();
   });
 
   it('se la correzione non si salva, il campo resta aperto e lo dice', async () => {
