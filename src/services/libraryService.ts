@@ -432,6 +432,8 @@ export async function setSourceArchived(sourceId: string, archived: boolean): Pr
 
 export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
   await execute('DELETE FROM sources WHERE id = $1', [sourceId]);
+  // Immediato e definitivo, nessun cestino: vale la pena poterlo rintracciare.
+  logger.info('library.source.removed', { sourceId });
 }
 
 /** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione),
@@ -525,6 +527,7 @@ export async function addSourceToLibrary(
     }
   });
 
+  logger.info('library.source.added', { sourceId, providerKey: input.providerKey });
   return { sourceId, wasCreated: true };
 }
 
@@ -659,4 +662,8 @@ export async function setWorkspaceSourceLink(
       [workspaceId, sourceId],
     );
   }
+  logger.info(linked ? 'library.source.workspaceLinked' : 'library.source.workspaceUnlinked', {
+    sourceId,
+    workspaceId,
+  });
 }
