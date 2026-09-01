@@ -55,6 +55,10 @@ interface MarkdownEditorProps {
   fillHeight?: boolean;
   identityKey?: string;
   previewValue?: string;
+  /** Modalità con cui l'editor si apre (scrittura di default). Usi dove il
+   *  contenuto si legge più spesso di quanto si scriva (es. le note della
+   *  Biblioteca) partono in anteprima. */
+  initialMode?: 'write' | 'preview' | 'split';
   defaultTextSizeStep?: number;
   useDocLineHeight?: boolean;
   // Shell nuova (#291): toolbar a filo (niente cornice arrotondata/ombra/rilievo),
@@ -89,6 +93,7 @@ export function MarkdownEditor({
   fillHeight = false,
   identityKey = 'default',
   previewValue,
+  initialMode = 'write',
   flatToolbar = false,
   menuOpen,
   onMenuOpenChange,
@@ -107,7 +112,7 @@ export function MarkdownEditor({
   const lastTypingChangeAtRef = useRef(0);
   const previousIdentityRef = useRef(identityKey);
   const pendingScrollRestoreRef = useRef<number | null>(null);
-  const [mode, setMode] = useState<EditorMode>('write');
+  const [mode, setMode] = useState<EditorMode>(initialMode);
   const [textSizeStep, setTextSizeStep] = useState(defaultTextSizeStep ?? DEFAULT_TEXT_SIZE_STEP);
   useEffect(() => {
     if (defaultTextSizeStep !== undefined) setTextSizeStep(defaultTextSizeStep);

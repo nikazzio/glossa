@@ -983,7 +983,6 @@
       "descriptionField": "Description",
       "originPlaceField": "Place of origin",
       "provenanceField": "Provenance",
-      "notesField": "Notes",
       "seriesField": "Series",
       "genreFormField": "Genre/form",
       "standardIdentifierField": "Standard identifier",
@@ -1000,6 +999,8 @@
       "infoTab": "Info",
       "copiesTab": "Digital copies",
       "linksTab": "Links",
+      "notesTab": "Notes",
+      "notesPlaceholder": "Write your notes on this work here…",
       "versionKindLabels": {
         "iiif_manifest": "IIIF manifest",
         "pdf": "PDF",

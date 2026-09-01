@@ -770,6 +770,64 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
+  it('nella tab Note, scrivere salva da solo dopo una breve pausa', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+        ...EMPTY_DETAIL_METADATA,
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    fireEvent.click(screen.getByRole('tab', { name: 'areas.library.notesTab' }));
+    // La tab apre in anteprima: si scrive passando prima alla scrittura.
+    fireEvent.click(screen.getByRole('button', { name: 'editor.write' }));
+    fireEvent.change(screen.getByPlaceholderText('areas.library.notesPlaceholder'), {
+      target: { value: 'Legatura settecentesca rifatta.' },
+    });
+
+    await waitFor(
+      () =>
+        expect(service.setSourceFieldOverride).toHaveBeenCalledWith(
+          's1',
+          'notes',
+          'Legatura settecentesca rifatta.',
+        ),
+      { timeout: 2000 },
+    );
+  });
+
+  it('la tab Note mostra le note già salvate dell\'opera', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [entry()],
+      detail: {
+        source: entry().source,
+        versions: [],
+        linkedWorkspaceIds: [],
+        creator: null,
+        date: null,
+        original: {},
+        collections: [],
+        ...EMPTY_DETAIL_METADATA,
+        notes: 'Legatura settecentesca rifatta.',
+      },
+    });
+
+    render(<LibraryCatalogArea itemId="s1" />);
+    fireEvent.click(screen.getByRole('tab', { name: 'areas.library.notesTab' }));
+
+    // Apre in anteprima: il testo si legge subito, senza passare a scrittura.
+    expect(screen.getByText('Legatura settecentesca rifatta.')).toBeInTheDocument();
+  });
+
   it('mostra la natura dell\'origine come sola lettura, non più correggibile dalla scheda', async () => {
     useSourceLibraryStore.setState({
       catalog: [entry()],

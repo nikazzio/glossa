@@ -48,6 +48,17 @@ export interface IIIFManifestPreview {
   subjects: string[];
   itemCount: number | null;
   materialType: string | null;
+  /** Letti dal `metadata` del manifesto stesso, quando lo dichiara — qui non
+   *  c'è una risposta strutturata della biblioteca da cui leggerli con
+   *  certezza, a differenza di un risultato di ricerca. */
+  contributors: string[];
+  publisher: string | null;
+  rights: string[];
+  physicalDescription: string | null;
+  holdingInstitution: string | null;
+  /** `homepage` nello standard IIIF: la pagina pensata per un lettore umano,
+   *  non il manifesto tecnico (`manifestUrl`). */
+  pageUrl: string | null;
 }
 
 export interface IIIFDiscoveryResult {

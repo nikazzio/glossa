@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
@@ -12,6 +12,7 @@ import {
   type LucideIcon,
   Minimize2,
   MoreVertical,
+  NotebookText,
   ShieldCheck,
   Tags,
   Trash2,
@@ -38,6 +39,8 @@ import { SourceSizeCap } from './SourceSizeCap';
 import { DownloadButton } from './DownloadButton';
 import { useSourceActions } from './useSourceActions';
 import { SourceFieldRow } from './SourceFieldRow';
+import { MarkdownEditor } from '../common';
+import { useDebounce } from '../../hooks/useDebounce';
 import { summarizeAvailability } from '../../services/vaultService';
 import { humanSize } from '../../utils';
 import type {
@@ -191,47 +194,58 @@ export function LibrarySourcePage({
             />
           )}
         >
-          <div className="flex flex-col gap-6 px-4 py-5">
-            {activeTab === 'info' ? (
-              <>
-                <DataSection detail={detail} entry={entry} onCorrectField={onCorrectField} />
-                <SourceInfoSection detail={detail} providerLabel={providerLabel} />
-              </>
-            ) : activeTab === 'copies' ? (
-              <CopiesSection detail={detail} entry={entry} onRefresh={onRefresh} />
-            ) : (
-              <>
-                <Section icon={Link2} label={t('areas.library.linkedWorkspaces')}>
-                  <WorkspaceLinkPicker
-                    workspaces={workspaces}
-                    linkedIds={detail.linkedWorkspaceIds}
-                    onToggleLink={onToggleLink}
-                  />
-                </Section>
+          {activeTab === 'notes' ? (
+            <div className="flex h-full min-h-0 flex-1 flex-col p-4">
+              <NotesTab
+                sourceId={detail.source.id}
+                notes={detail.notes}
+                onCorrectField={onCorrectField}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6 px-4 py-5">
+              {activeTab === 'info' ? (
+                <>
+                  <DataSection detail={detail} entry={entry} onCorrectField={onCorrectField} />
+                  <SourceInfoSection detail={detail} providerLabel={providerLabel} />
+                </>
+              ) : activeTab === 'copies' ? (
+                <CopiesSection detail={detail} entry={entry} onRefresh={onRefresh} />
+              ) : (
+                <>
+                  <Section icon={Link2} label={t('areas.library.linkedWorkspaces')}>
+                    <WorkspaceLinkPicker
+                      workspaces={workspaces}
+                      linkedIds={detail.linkedWorkspaceIds}
+                      onToggleLink={onToggleLink}
+                    />
+                  </Section>
 
-                <Section icon={Tags} label={t('areas.library.collectionsSection')}>
-                  <CollectionPicker
-                    collections={collections}
-                    memberIds={detail.collections.map((collection) => collection.id)}
-                    onSetCollection={onSetCollection}
-                    onCreateCollection={onCreateCollection}
-                  />
-                </Section>
-              </>
-            )}
-          </div>
+                  <Section icon={Tags} label={t('areas.library.collectionsSection')}>
+                    <CollectionPicker
+                      collections={collections}
+                      memberIds={detail.collections.map((collection) => collection.id)}
+                      onSetCollection={onSetCollection}
+                      onCreateCollection={onCreateCollection}
+                    />
+                  </Section>
+                </>
+              )}
+            </div>
+          )}
         </InspectorShell>
       </Panel>
     </Group>
   );
 }
 
-type InspectorTabId = 'info' | 'copies' | 'links';
+type InspectorTabId = 'info' | 'copies' | 'links' | 'notes';
 
 const INSPECTOR_TABS: { id: InspectorTabId; labelKey: string; icon: ReactNode }[] = [
   { id: 'info', labelKey: 'areas.library.infoTab', icon: <Info size={16} /> },
   { id: 'copies', labelKey: 'areas.library.copiesTab', icon: <BookOpenText size={16} /> },
   { id: 'links', labelKey: 'areas.library.linksTab', icon: <Link2 size={16} /> },
+  { id: 'notes', labelKey: 'areas.library.notesTab', icon: <NotebookText size={16} /> },
 ];
 
 /** Intestazione di sezione con un filo sotto: basta a distinguerla dal
@@ -334,7 +348,6 @@ function DataSection({
     [t('areas.library.descriptionField'), detail.description ?? ''],
     [t('areas.library.originPlaceField'), detail.originPlace ?? ''],
     [t('areas.library.provenanceField'), detail.provenance.join(' · ')],
-    [t('areas.library.notesField'), detail.notes ?? ''],
     [t('areas.library.seriesField'), detail.series ?? ''],
     [t('areas.library.genreFormField'), detail.genreForm.join(' · ')],
     [t('areas.library.standardIdentifierField'), detail.standardIdentifier ?? ''],
@@ -408,7 +421,12 @@ function DataSection({
 
 /** La provenienza dell'opera: riconoscibile a colpo d'occhio, con i
  *  riferimenti specifici della biblioteca — testo semplice, mai una pastiglia
- *  colorata (il design system la vieta per i metadati di provenienza). */
+ *  colorata (il design system la vieta per i metadati di provenienza).
+ *
+ *  Sempre presente, come le altre sezioni anagrafiche: un'opera aggiunta
+ *  riconoscendo una segnatura/indirizzo diretto (invece che da un risultato
+ *  di ricerca) non porta fondo/pagina web/scheda del catalogo — quei campi
+ *  restano «—», la sezione non sparisce. */
 function SourceInfoSection({
   detail,
   providerLabel,
@@ -423,30 +441,70 @@ function SourceInfoSection({
       ? externalRef.slice(detail.providerKey.length + 1)
       : externalRef;
 
-  const hasContent =
-    providerLabel || identifier || detail.holdingInstitution || detail.pageUrl || detail.catalogUrl;
-  if (!hasContent) return null;
-
   return (
     <Section icon={Library} label={t('areas.library.sourceSection')}>
       <dl className="space-y-2.5">
-        {providerLabel && <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />}
-        {identifier && <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier} />}
-        {detail.holdingInstitution && (
-          <StatBlock label={t('areas.library.sourceHoldingField')} value={detail.holdingInstitution} />
-        )}
-        {detail.pageUrl && (
-          <StatBlock label={t('areas.library.sourcePageUrlField')} value={detail.pageUrl} href={detail.pageUrl} />
-        )}
-        {detail.catalogUrl && (
-          <StatBlock
-            label={t('areas.library.sourceCatalogUrlField')}
-            value={detail.catalogUrl}
-            href={detail.catalogUrl}
-          />
-        )}
+        <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel ?? ''} />
+        <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier ?? ''} />
+        <StatBlock label={t('areas.library.sourceHoldingField')} value={detail.holdingInstitution ?? ''} />
+        <StatBlock
+          label={t('areas.library.sourcePageUrlField')}
+          value={detail.pageUrl ?? ''}
+          href={detail.pageUrl ?? undefined}
+        />
+        <StatBlock
+          label={t('areas.library.sourceCatalogUrlField')}
+          value={detail.catalogUrl ?? ''}
+          href={detail.catalogUrl ?? undefined}
+        />
       </dl>
     </Section>
+  );
+}
+
+const NOTES_SAVE_DELAY_MS = 800;
+
+/** Le note libere sull'opera: sempre di Niki, mai dalla biblioteca — stesso
+ *  editor con formattazione già in uso per le note della traduzione, non un
+ *  campo a parte scritto da zero. Salva da sola, con un breve ritardo dopo
+ *  che si smette di scrivere, come un campo di testo qualunque della scheda. */
+function NotesTab({
+  sourceId,
+  notes,
+  onCorrectField,
+}: {
+  sourceId: string;
+  notes: string | null;
+  onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(notes ?? '');
+  const debouncedDraft = useDebounce(draft, NOTES_SAVE_DELAY_MS);
+  const savedRef = useRef(notes ?? '');
+
+  // Un'altra opera è stata aperta: si riparte dalle sue note, non da quelle
+  // lasciate a metà sull'opera precedente.
+  useEffect(() => {
+    setDraft(notes ?? '');
+    savedRef.current = notes ?? '';
+  }, [sourceId, notes]);
+
+  useEffect(() => {
+    if (debouncedDraft === savedRef.current) return;
+    savedRef.current = debouncedDraft;
+    void onCorrectField('notes', debouncedDraft || null);
+  }, [debouncedDraft, onCorrectField]);
+
+  return (
+    <MarkdownEditor
+      identityKey={sourceId}
+      value={draft}
+      onChange={setDraft}
+      markdownEnabled
+      fillHeight
+      initialMode="preview"
+      placeholder={t('areas.library.notesPlaceholder')}
+    />
   );
 }
 

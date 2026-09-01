@@ -35,6 +35,20 @@ pub struct ManifestPreview {
     pub subjects: Vec<String>,
     pub item_count: Option<usize>,
     pub material_type: Option<String>,
+    /// Autori, curatori o traduttori oltre al primo (`creator`), quando il
+    /// manifesto stesso li dichiara nel proprio `metadata`.
+    pub contributors: Vec<String>,
+    pub publisher: Option<String>,
+    /// Licenza o stato del diritto d'autore, quando il manifesto lo dichiara.
+    pub rights: Vec<String>,
+    pub physical_description: Option<String>,
+    /// Fondo/istituto conservatore, quando il manifesto stesso lo dichiara nel
+    /// proprio `metadata` — a differenza della ricerca, qui non c'è una
+    /// risposta strutturata della biblioteca da cui leggerlo con certezza.
+    pub holding_institution: Option<String>,
+    /// La pagina web pensata per un lettore umano: nello standard IIIF è
+    /// `homepage`, non il manifesto stesso (`manifest_url`).
+    pub page_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -157,6 +171,41 @@ fn metadata_value(value: &Value, key: &str) -> Option<String> {
         })
 }
 
+/// Come `metadata_value`, ma per le etichette che il manifesto dichiara con
+/// più valori insieme (es. più responsabili, più licenze): il primo valore
+/// non basta, e `metadata_value` lo scarterebbe.
+fn metadata_values(value: &Value, key: &str) -> Vec<String> {
+    value
+        .get("metadata")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|entry| {
+            text(entry.get("label")).is_some_and(|label| label.eq_ignore_ascii_case(key))
+        })
+        .flat_map(|entry| texts(entry.get("value")))
+        .collect()
+}
+
+/// La pagina web pensata per un lettore umano (`homepage` nello standard
+/// IIIF Presentation API), non il manifesto tecnico.
+fn homepage_url(value: &Value) -> Option<String> {
+    let homepage = value.get("homepage")?;
+    let first = match homepage {
+        Value::Array(values) => values.first()?,
+        other => other,
+    };
+    // `id`/`@id` prima: un `homepage` IIIF è un oggetto con più campi
+    // (`type`, `format`, `label`...) e `text()` prenderebbe il primo trovato
+    // in ordine alfabetico delle chiavi, non necessariamente l'indirizzo.
+    first
+        .get("id")
+        .or_else(|| first.get("@id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| text(Some(first)))
+}
+
 fn thumbnail_url(value: &Value) -> Option<String> {
     let thumbnail = value.get("thumbnail")?;
     text(Some(thumbnail))
@@ -208,6 +257,23 @@ fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
             .or_else(|| metadata_value(&value, "genre"))
             .or_else(|| metadata_value(&value, "object type"))
             .or_else(|| metadata_value(&value, "material type")),
+        contributors: {
+            let mut found = metadata_values(&value, "contributor");
+            found.extend(metadata_values(&value, "contributors"));
+            found
+        },
+        publisher: metadata_value(&value, "publisher"),
+        rights: {
+            let mut found = metadata_values(&value, "rights");
+            found.extend(metadata_values(&value, "license"));
+            found
+        },
+        physical_description: metadata_value(&value, "extent")
+            .or_else(|| metadata_value(&value, "physical description")),
+        holding_institution: metadata_value(&value, "repository")
+            .or_else(|| metadata_value(&value, "holding institution"))
+            .or_else(|| metadata_value(&value, "institution")),
+        page_url: homepage_url(&value),
     }
 }
 
@@ -262,13 +328,10 @@ async fn resolve_manifest(
             log::warn!("discovery manifest response failed url={manifest_url} error={error}");
             "The manifest could not be read.".to_string()
         })?;
-    let value = response
-        .json::<Value>()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
-            "The manifest is not valid JSON.".to_string()
-        })?;
+    let value = response.json::<Value>().await.map_err(|error| {
+        log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
+        "The manifest is not valid JSON.".to_string()
+    })?;
 
     Ok(manifest_preview(manifest_url, value))
 }
@@ -365,13 +428,10 @@ async fn search_archive(
             log::warn!("discovery archive response failed error={error}");
             "Internet Archive search failed.".to_string()
         })?;
-    let value = response
-        .json::<Value>()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery archive body failed error={error}");
-            "Internet Archive returned invalid data.".to_string()
-        })?;
+    let value = response.json::<Value>().await.map_err(|error| {
+        log::warn!("discovery archive body failed error={error}");
+        "Internet Archive returned invalid data.".to_string()
+    })?;
 
     // Il servizio risponde 200 anche quando è il suo motore di ricerca a non
     // rispondere: senza questo, un guasto della biblioteca si legge come
@@ -658,6 +718,71 @@ mod tests {
         );
 
         assert!(preview.title.is_empty());
+    }
+
+    #[test]
+    fn manifest_preview_reads_source_metadata_when_the_manifest_declares_it() {
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({
+                "label": "Book of Hours",
+                "metadata": [
+                    {"label": "Contributor", "value": ["Jane Editor", "John Translator"]},
+                    {"label": "Publisher", "value": "Example Press"},
+                    {"label": "Rights", "value": "CC BY 4.0"},
+                    {"label": "Extent", "value": "120 folios"},
+                    {"label": "Repository", "value": "Example Library, MS 42"},
+                ],
+                "homepage": [{"id": "https://example.test/read/42", "type": "Text"}],
+            }),
+        );
+
+        assert_eq!(preview.contributors, vec!["Jane Editor", "John Translator"]);
+        assert_eq!(preview.publisher.as_deref(), Some("Example Press"));
+        assert_eq!(preview.rights, vec!["CC BY 4.0"]);
+        assert_eq!(preview.physical_description.as_deref(), Some("120 folios"));
+        assert_eq!(
+            preview.holding_institution.as_deref(),
+            Some("Example Library, MS 42")
+        );
+        assert_eq!(
+            preview.page_url.as_deref(),
+            Some("https://example.test/read/42")
+        );
+    }
+
+    #[test]
+    fn manifest_preview_without_declared_metadata_leaves_the_new_fields_empty() {
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({"label": "Bare Manifest"}),
+        );
+
+        assert!(preview.contributors.is_empty());
+        assert!(preview.publisher.is_none());
+        assert!(preview.rights.is_empty());
+        assert!(preview.physical_description.is_none());
+        assert!(preview.holding_institution.is_none());
+        assert!(preview.page_url.is_none());
+    }
+
+    #[test]
+    fn homepage_url_reads_the_id_not_another_field_that_sorts_first() {
+        // `format` viene prima di `id` in ordine alfabetico: se si leggesse il
+        // primo valore testuale trovato invece di cercare `id` di proposito,
+        // qui si prenderebbe "text/html" invece dell'indirizzo vero.
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({
+                "label": "Book of Hours",
+                "homepage": [{"format": "text/html", "id": "https://example.test/read/42"}],
+            }),
+        );
+
+        assert_eq!(
+            preview.page_url.as_deref(),
+            Some("https://example.test/read/42")
+        );
     }
 
     #[tokio::test]

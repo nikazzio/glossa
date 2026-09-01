@@ -113,13 +113,10 @@ async fn gallica(
             log::warn!("discovery gallica response failed error={error}");
             "Gallica search failed.".to_string()
         })?;
-    let body = response
-        .text()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery gallica body failed error={error}");
-            "Gallica returned invalid data.".to_string()
-        })?;
+    let body = response.text().await.map_err(|error| {
+        log::warn!("discovery gallica body failed error={error}");
+        "Gallica returned invalid data.".to_string()
+    })?;
 
     let (results, total) = parse_gallica_sru(&body);
     log::info!(

@@ -51,6 +51,12 @@ const manifestCard: IIIFManifestPreview & { id: string } = {
   subjects: [],
   itemCount: 10,
   materialType: null,
+  contributors: [],
+  publisher: null,
+  rights: [],
+  physicalDescription: null,
+  holdingInstitution: null,
+  pageUrl: null,
 };
 
 describe('sourceLibraryStore', () => {

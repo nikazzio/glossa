@@ -105,15 +105,19 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         // dai canvas, quella della ricerca lo prende dalla biblioteca.
         itemCount: card.itemCount,
         workspaceId,
-        // Solo la scheda di ricerca porta questi dati: quella del manifesto
-        // viene da un'altra fonte (la presentazione IIIF), non dal catalogo.
-        contributors: isManifest(card) ? [] : card.contributors,
-        publisher: isManifest(card) ? null : card.publisher,
-        rights: isManifest(card) ? [] : card.rights,
-        physicalDescription: isManifest(card) ? null : card.physicalDescription,
-        holdingInstitution: isManifest(card) ? null : card.holdingInstitution,
+        // Entrambe le schede portano questi dati: quella di ricerca dalla
+        // risposta strutturata della biblioteca, quella del manifesto diretto
+        // dal `metadata`/`homepage` del manifesto stesso, quando lo dichiara.
+        contributors: card.contributors,
+        publisher: card.publisher,
+        rights: card.rights,
+        physicalDescription: card.physicalDescription,
+        holdingInstitution: card.holdingInstitution,
+        // Solo la scheda di ricerca porta un link alla scheda del catalogo
+        // cartaceo: non c'è un campo IIIF generico da cui leggerlo per un
+        // manifesto preso al volo.
         catalogUrl: isManifest(card) ? null : card.catalogUrl,
-        pageUrl: isManifest(card) ? null : card.pageUrl,
+        pageUrl: card.pageUrl,
       });
       set((state) => ({
         addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),
