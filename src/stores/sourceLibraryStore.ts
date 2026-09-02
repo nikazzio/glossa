@@ -18,6 +18,7 @@ import {
   setSourceArchived as setSourceArchivedService,
   setSourceFieldOverride as setSourceFieldOverrideService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
+  versionProviderKey,
 } from '../services/libraryService';
 import { discoverIIIF } from '../services/iiifProviderService';
 import {
@@ -232,11 +233,18 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       throw new Error('library_source_resync_no_detail');
     }
     const primary = detail.versions.find((version) => version.isPrimary) ?? detail.versions[0];
-    if (!primary?.sourceUrl || !detail.providerKey) {
+    if (!primary?.sourceUrl) {
+      throw new Error('library_source_resync_missing_manifest');
+    }
+    // I metadati e il disco possono non concordare: le fonti aggiunte prima
+    // che la provenienza venisse salvata nei metadati hanno i file sotto una
+    // chiave che solo il deposito conosce ancora.
+    const providerKey = detail.providerKey ?? (await versionProviderKey(primary.id));
+    if (!providerKey) {
       throw new Error('library_source_resync_missing_manifest');
     }
 
-    const outcome = await discoverIIIF(detail.providerKey, primary.sourceUrl, 1, true);
+    const outcome = await discoverIIIF(providerKey, primary.sourceUrl, 1, true);
     if (!outcome.manifest) {
       throw new Error('library_source_resync_not_found');
     }
@@ -251,7 +259,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       thumbnailUrl: card.thumbnailUrl,
       language: card.language,
       subjects: card.subjects,
-      providerKey: detail.providerKey,
+      providerKey,
       externalId: null,
       mediaType: null,
       materialType: card.materialType,
