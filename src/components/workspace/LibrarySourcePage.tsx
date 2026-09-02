@@ -36,7 +36,11 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useUiStore } from '../../stores/uiStore';
+import { useJobsStore } from '../../stores/jobsStore';
+import { isTerminal } from '../../services/jobsService';
+import { enqueueOptimization } from '../../services/optimizeService';
 import { confirm } from '../../stores/confirmStore';
+import { toast } from 'sonner';
 import { SourceSizeCap } from './SourceSizeCap';
 import { DownloadButton } from './DownloadButton';
 import { useSourceActions } from './useSourceActions';
@@ -48,6 +52,7 @@ import { humanSize } from '../../utils';
 import type {
   LibraryCatalogEntry,
   LibrarySourceDetail,
+  LibrarySourceVersion,
   SourceCollection,
   SourceField,
   Workspace,
@@ -571,10 +576,11 @@ function NotesTab({
 }
 
 /** Le copie digitali dell'opera: cosa sono (manifesto IIIF, PDF, altro),
- *  dove stanno (solo online o anche sul computer, a quale risoluzione), e i
- *  comandi per-copia — scarica, verifica, comprimi, libera spazio. Sono
- *  comandi sulla copia, non sull'opera: archiviare e rimuovere restano nel
- *  menu dell'intestazione. */
+ *  dove stanno (solo online o anche sul computer), i comandi generali
+ *  (scarica a una risoluzione scelta, verifica, libera spazio) e — per
+ *  ognuna delle risoluzioni davvero presenti — il suo comando di
+ *  compressione. Sono comandi sulla copia, non sull'opera: archiviare e
+ *  rimuovere restano nel menu dell'intestazione. */
 function CopiesSection({
   detail,
   entry,
@@ -595,54 +601,16 @@ function CopiesSection({
         const isEntryVersion = Boolean(entry && version.id === entry.versionId);
         return (
           <li key={version.id} className="space-y-3 py-4 first:pt-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-                {t(`areas.library.versionKindLabels.${version.versionKind}`)}
-              </span>
-              {isEntryVersion && entry && <CopyActionsRow entry={entry} onRefresh={onRefresh} />}
-            </div>
+            <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              {t(`areas.library.versionKindLabels.${version.versionKind}`)}
+            </span>
 
             {version.sourceUrl && (
               <StatBlock label={t('areas.library.sourceUrlField')} value={version.sourceUrl} href={version.sourceUrl} />
             )}
 
             {isEntryVersion && entry && (
-              <div className="space-y-3 border-t border-editorial-border/60 pt-3">
-                <StatBlock label={t('areas.library.availabilityField')} value={availabilityText(entry, t)} />
-
-                {entry.sizes.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-                      {t('areas.library.resolutionsSection')}
-                    </p>
-                    <ul className="divide-y divide-editorial-border/60 rounded-md border border-editorial-border/60">
-                      {entry.sizes.map((size) => (
-                        <li key={size.sizeTag} className="flex items-center justify-between gap-3 px-2.5 py-2 text-xs">
-                          <span className="font-display italic text-editorial-ink">
-                            {size.sizeTag}
-                            {size.sizeTag === entry.principalSize && (
-                              <span className="ml-1.5 text-[10px] not-italic uppercase tracking-wide text-editorial-accent">
-                                {t('areas.library.resolutionPrincipal')}
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-editorial-muted">
-                            {t('areas.library.resolutionSummary', {
-                              count: size.pages,
-                              pages: size.pages,
-                              size: humanSize(size.bytes),
-                            })}
-                            {size.missing > 0 &&
-                              ` · ${t('areas.library.resolutionMissing', { count: size.missing })}`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <SourceSizeCap versionId={version.id} />
-              </div>
+              <PrimaryCopyDetails entry={entry} version={version} onRefresh={onRefresh} />
             )}
           </li>
         );
@@ -651,44 +619,145 @@ function CopiesSection({
   );
 }
 
-/** Scarica/Verifica/Comprimi/Libera spazio: comandi sulla copia, montati
- *  dentro "Copie digitali" invece che nell'intestazione della pagina. Monta
- *  la propria istanza di `useSourceActions` (solo quando la copia esiste
- *  davvero, mai con dati finti): archiviare e rimuovere non passano di qui,
- *  quindi non serve dare a `useSourceActions` handler veri per quei due. */
-function CopyActionsRow({ entry, onRefresh }: { entry: LibraryCatalogEntry; onRefresh: () => void }) {
+/** La copia che sta davvero sul computer (quella che descrive la riga del
+ *  catalogo): in alto disponibilità e comandi generali — scegli la
+ *  risoluzione e scarica, verifica, libera spazio (cancella tutte le
+ *  risoluzioni insieme: cancellarne una sola non è ancora possibile). Sotto,
+ *  ogni risoluzione presente con il suo comando di compressione dedicato. */
+function PrimaryCopyDetails({
+  entry,
+  version,
+  onRefresh,
+}: {
+  entry: LibraryCatalogEntry;
+  version: LibrarySourceVersion;
+  onRefresh: () => void;
+}) {
   const { t } = useTranslation();
   const actions = useSourceActions(entry, { onRemove: () => {}, onSetArchived: async () => {}, onRefresh });
   const { busy } = actions;
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      <DownloadButton entry={entry} actions={actions} size="xs" />
+    <div className="space-y-4 border-t border-editorial-border/60 pt-3">
+      <StatBlock label={t('areas.library.availabilityField')} value={availabilityText(entry, t)} />
+
+      <div className="space-y-2 rounded-md border border-editorial-border/60 p-2.5">
+        <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          {t('areas.library.downloadSection')}
+        </p>
+        <SourceSizeCap versionId={version.id} />
+        <div className="flex items-center gap-1">
+          <DownloadButton entry={entry} actions={actions} size="sm" />
+          <span className="text-xs text-editorial-muted">{t('areas.library.downloadHint')}</span>
+          <span className="ml-auto flex shrink-0 items-center gap-1">
+            <IconButton
+              size="sm"
+              onClick={() => void actions.verify()}
+              disabled={busy || entry.localPages === 0}
+              title={t('areas.library.verify')}
+            >
+              <ShieldCheck size={13} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              onClick={() => void actions.freeSpace()}
+              disabled={busy || entry.localPages === 0}
+              title={t('areas.library.freeSpace')}
+            >
+              <Eraser size={13} />
+            </IconButton>
+          </span>
+        </div>
+      </div>
+
+      {entry.sizes.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            {t('areas.library.resolutionsSection')}
+          </p>
+          <ul className="divide-y divide-editorial-border/60 rounded-md border border-editorial-border/60">
+            {entry.sizes.map((size) => (
+              <ResolutionRow
+                key={size.sizeTag}
+                versionId={version.id}
+                size={size}
+                isPrincipal={size.sizeTag === entry.principalSize}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Una risoluzione presente sul computer, col suo comando di compressione —
+ *  comprime solo questa cartella, non tutta la copia come prima (che
+ *  comprimeva sempre e solo la principale). */
+function ResolutionRow({
+  versionId,
+  size,
+  isPrincipal,
+}: {
+  versionId: string;
+  size: { sizeTag: string; pages: number; bytes: number; missing: number };
+  isPrincipal: boolean;
+}) {
+  const { t } = useTranslation();
+  const jobs = useJobsStore((state) => state.jobs);
+  const applyChange = useJobsStore((state) => state.applyChange);
+  const [busy, setBusy] = useState(false);
+  const runningJob = jobs.find(
+    (job) => job.id === `optimize:${versionId}:${size.sizeTag}` && !isTerminal(job),
+  );
+
+  const compress = async () => {
+    setBusy(true);
+    try {
+      const job = await enqueueOptimization(versionId, size.sizeTag);
+      applyChange(job);
+      toast.success(t('areas.library.optimizeQueued'));
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason.includes('download_in_corso')) {
+        toast.info(t('areas.library.optimizeWhileDownloading'));
+      } else {
+        toast.error(t('areas.library.optimizeFailed'), { description: reason });
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <li className="flex items-center justify-between gap-3 px-2.5 py-2 text-xs">
+      <span className="min-w-0">
+        <span className="font-display italic text-editorial-ink">
+          {size.sizeTag}
+          {isPrincipal && (
+            <span className="ml-1.5 text-[10px] not-italic uppercase tracking-wide text-editorial-accent">
+              {t('areas.library.resolutionPrincipal')}
+            </span>
+          )}
+        </span>
+        <span className="ml-2 text-editorial-muted">
+          {t('areas.library.resolutionSummary', {
+            count: size.pages,
+            pages: size.pages,
+            size: humanSize(size.bytes),
+          })}
+          {size.missing > 0 && ` · ${t('areas.library.resolutionMissing', { count: size.missing })}`}
+        </span>
+      </span>
       <IconButton
         size="xs"
-        onClick={() => void actions.verify()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.verify')}
-      >
-        <ShieldCheck size={13} />
-      </IconButton>
-      <IconButton
-        size="xs"
-        onClick={() => void actions.optimise()}
-        disabled={busy || entry.localPages === 0}
+        onClick={() => void compress()}
+        disabled={busy || Boolean(runningJob)}
         title={t('areas.library.optimizeAction')}
       >
-        <Minimize2 size={13} />
+        <Minimize2 size={13} className={runningJob ? 'animate-spin' : undefined} />
       </IconButton>
-      <IconButton
-        size="xs"
-        onClick={() => void actions.freeSpace()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.freeSpace')}
-      >
-        <Eraser size={13} />
-      </IconButton>
-    </div>
+    </li>
   );
 }
 

@@ -1015,6 +1015,8 @@
         "other": "Altro"
       },
       "sourceUrlField": "Indirizzo",
+      "downloadSection": "Scarica",
+      "downloadHint": "Vale per gli scaricamenti da adesso in poi — quello già sul computer resta alla risoluzione con cui è arrivato.",
       "resolutionsSection": "Risoluzioni scaricate",
       "resolutionSummary_one": "{{pages}} pagina, {{size}}",
       "resolutionSummary_other": "{{pages}} pagine, {{size}}",

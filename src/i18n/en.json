@@ -1015,6 +1015,8 @@
         "other": "Other"
       },
       "sourceUrlField": "Address",
+      "downloadSection": "Download",
+      "downloadHint": "Applies to downloads from now on — what's already on this computer stays at the resolution it arrived with.",
       "resolutionsSection": "Downloaded resolutions",
       "resolutionSummary_one": "{{pages}} page, {{size}}",
       "resolutionSummary_other": "{{pages}} pages, {{size}}",
