@@ -322,6 +322,9 @@ async fn resolve_manifest(
     let _turn = wait_if_gated(gate, &manifest_url).await;
     let response = client
         .get(&manifest_url)
+        // Verificato su Gallica: senza dichiarare di volere JSON, il server
+        // risponde 500 con una pagina di errore invece del manifesto.
+        .header(reqwest::header::ACCEPT, "application/json")
         .send()
         .await
         .map_err(|error| {
