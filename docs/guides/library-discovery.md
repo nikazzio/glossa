@@ -37,7 +37,7 @@ La Biblioteca mostra **sempre tutti i libri**: è un catalogo, non la vista di u
 
 Su ogni scheda, accanto ai comandi, vedi **a quali workspace appartiene** quel libro: un'etichetta per ognuno. Cliccarne una lo scollega da lì; il comando accanto apre l'elenco dei workspace dove non è ancora, per collegarlo. **Un'opera può stare in più workspace insieme** e non viene mai duplicata: collegarla in due posti non fa due copie, né dei dati né dei file.
 
-I comandi della scheda sono in due gruppi: prima cosa fai al libro — scarica, verifica, riduci le immagini, libera spazio, archivia, elimina — poi dove sta.
+Sulla riga restano diretti solo **archivia** ed **elimina**; scarica, verifica, riduci le immagini e libera spazio sono nel menu "···" — sono comandi che si usano più spesso aprendo il libro, dalla tab Copie digitali, che stare a scorrerli riga per riga.
 
 Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli natura dell'origine, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
 

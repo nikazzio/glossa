@@ -58,6 +58,11 @@ fn refuse_while_downloading(app: &tauri::AppHandle, version_id: &str) -> Result<
 ///
 /// Un lavoro per cartella: l'identificativo lo dice, quindi chiederla due volte
 /// non ne apre due.
+/// Mette in coda la creazione di **una nuova copia**, ricavata da una misura
+/// già scaricata, mai al suo posto: `size_tag` è la fonte, il lato lungo
+/// chiesto diventa il nome della cartella d'arrivo. Se quella cartella esiste
+/// già — scaricata o ricavata in un giro precedente — il comando si rifiuta:
+/// tocca a chi chiede scegliere un'altra misura o liberare prima quella.
 #[tauri::command]
 pub async fn enqueue_optimization(
     app: tauri::AppHandle,
@@ -70,12 +75,27 @@ pub async fn enqueue_optimization(
     let inventory = inventory::of_version(&root, &version_id)
         .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
     refuse_while_downloading(&app, &version_id)?;
-    if !inventory.sizes.iter().any(|size| size.size_tag == size_tag) {
-        return Err("Questa misura non è nel deposito.".to_string());
+    let source = inventory
+        .sizes
+        .iter()
+        .find(|size| size.size_tag == size_tag)
+        .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
+    if source.derived {
+        return Err("Una copia già ricavata in locale non si ricomprime di nuovo.".to_string());
     }
     let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
     let (default_edge, default_quality) = configured(&conn);
-    let thumbnail_edge = crate::download::thumbnail_edge(&conn)?;
+    let long_edge = long_edge
+        .unwrap_or(default_edge)
+        .clamp(MIN_LONG_EDGE, MAX_LONG_EDGE);
+    let target_tag = long_edge.to_string();
+    if inventory
+        .sizes
+        .iter()
+        .any(|size| size.size_tag == target_tag)
+    {
+        return Err("Questa misura esiste già per quest'opera.".to_string());
+    }
     let title = conn
         .query_row(
             "SELECT s.title FROM sources s \
@@ -89,19 +109,17 @@ pub async fn enqueue_optimization(
     let config = serde_json::json!({
         "providerKey": inventory.provider_key,
         "versionId": version_id,
-        "sizeTag": size_tag,
-        "longEdge": long_edge.unwrap_or(default_edge).clamp(MIN_LONG_EDGE, MAX_LONG_EDGE),
+        "sourceSizeTag": size_tag,
+        "targetSizeTag": target_tag,
+        "longEdge": long_edge,
         "quality": quality.unwrap_or(default_quality).clamp(MIN_QUALITY, MAX_QUALITY),
-        // Le miniature si rifanno, e vanno della misura scelta nelle
-        // impostazioni: la stessa che usa lo scaricamento.
-        "thumbnailEdge": thumbnail_edge,
     })
     .to_string();
 
     let jobs = app.state::<JobsState>();
     jobs.0
         .submit(&NewJob {
-            id: format!("optimize:{version_id}:{size_tag}"),
+            id: format!("optimize:{version_id}:{target_tag}"),
             job_type: JOB_TYPE.to_string(),
             priority: PRIORITY,
             config,

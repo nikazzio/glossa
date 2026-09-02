@@ -243,7 +243,7 @@ export interface LibraryCatalogEntry {
    * il libro è stato scaricato; le altre sono pagine prese a parte, e
    * distinguerle evita di chiamare incompleto un libro che non lo è.
    */
-  sizes: { sizeTag: string; pages: number; bytes: number; missing: number }[];
+  sizes: { sizeTag: string; pages: number; bytes: number; missing: number; derived: boolean }[];
   /**
    * Quale delle misure è la principale, **come la dichiara il deposito**.
    *
@@ -274,6 +274,10 @@ export interface LibrarySourceVersion {
   sourceUrl: string | null;
   isPrimary: boolean;
   createdAt: string;
+  /** Pagine dichiarate dal manifesto di **questa** copia (non dell'opera). */
+  expectedPages: number | null;
+  /** Chiave della biblioteca nel registro dei provider, per questa copia. */
+  providerKey: string | null;
 }
 
 export interface LibrarySourceDetail {

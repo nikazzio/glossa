@@ -204,7 +204,7 @@ describe('LibraryCatalogArea', () => {
           localPages: 308,
           expectedPages: 328,
           principalSize: '2000',
-          sizes: [{ sizeTag: '2000', pages: 308, bytes: 1_000, missing: 20 }],
+          sizes: [{ sizeTag: '2000', pages: 308, bytes: 1_000, missing: 20, derived: false }],
         }),
       ],
     });
@@ -226,7 +226,7 @@ describe('LibraryCatalogArea', () => {
         localPages: 34,
         localBytes: 48_234_496,
         principalSize: '2000',
-        sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0 }],
+        sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0, derived: false }],
       })],
     });
 
@@ -251,8 +251,8 @@ describe('LibraryCatalogArea', () => {
           expectedPages: 328,
           principalSize: '2000',
           sizes: [
-            { sizeTag: '2000', pages: 308, bytes: 1_000, missing: 0 },
-            { sizeTag: 'max', pages: 3, bytes: 900, missing: 20 },
+            { sizeTag: '2000', pages: 308, bytes: 1_000, missing: 0, derived: false },
+            { sizeTag: 'max', pages: 3, bytes: 900, missing: 20, derived: false },
           ],
         }),
       ],
@@ -271,8 +271,8 @@ describe('LibraryCatalogArea', () => {
           expectedPages: 328,
           principalSize: '2000',
           sizes: [
-            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
-            { sizeTag: 'max', pages: 3, bytes: 900, missing: 0 },
+            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0, derived: false },
+            { sizeTag: 'max', pages: 3, bytes: 900, missing: 0, derived: false },
           ],
         }),
       ],
@@ -296,8 +296,8 @@ describe('LibraryCatalogArea', () => {
           expectedPages: 328,
           principalSize: 'max',
           sizes: [
-            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0 },
-            { sizeTag: 'max', pages: 328, bytes: 3_000, missing: 0 },
+            { sizeTag: '2000', pages: 328, bytes: 1_000, missing: 0, derived: false },
+            { sizeTag: 'max', pages: 328, bytes: 3_000, missing: 0, derived: false },
           ],
         }),
       ],
@@ -368,7 +368,7 @@ describe('LibraryCatalogArea', () => {
       localPages: 34,
       localBytes: 48_234_496,
       principalSize: '2000',
-      sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0 }],
+      sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0, derived: false }],
     });
 
   it('dopo aver archiviato propone di liberare lo spazio, e accettando lo libera', async () => {
@@ -591,6 +591,8 @@ describe('LibraryCatalogArea', () => {
             sourceUrl: 'https://x.test/m.json',
             isPrimary: true,
             createdAt: '2026-01-01',
+            expectedPages: null,
+            providerKey: null,
           },
         ],
         linkedWorkspaceIds: [],
@@ -667,8 +669,8 @@ describe('LibraryCatalogArea', () => {
         entry({
           localPages: 40,
           sizes: [
-            { sizeTag: '1500', pages: 40, bytes: 40_000_000, missing: 0 },
-            { sizeTag: 'full', pages: 10, bytes: 60_000_000, missing: 2 },
+            { sizeTag: '1500', pages: 40, bytes: 40_000_000, missing: 0, derived: false },
+            { sizeTag: 'full', pages: 10, bytes: 60_000_000, missing: 2, derived: false },
           ],
           principalSize: '1500',
         }),
@@ -684,6 +686,8 @@ describe('LibraryCatalogArea', () => {
             sourceUrl: 'https://x.test/m.json',
             isPrimary: true,
             createdAt: '2026-01-01',
+            expectedPages: null,
+            providerKey: null,
           },
         ],
         linkedWorkspaceIds: [],
@@ -1120,7 +1124,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({
       detail: {
         source: { id: 's1', title: 'Book of Hours', kind: 'iiif', primaryLanguage: null, externalRef: null, status: 'active', archivedAt: null, createdAt: '2026-01-01' },
-        versions: [{ id: 'v1', sourceId: 's1', label: 'primary', versionKind: 'iiif_manifest', sourceUrl: 'https://x.test/m.json', isPrimary: true, createdAt: '2026-01-01' }],
+        versions: [{ id: 'v1', sourceId: 's1', label: 'primary', versionKind: 'iiif_manifest', sourceUrl: 'https://x.test/m.json', isPrimary: true, createdAt: '2026-01-01', expectedPages: null, providerKey: null }],
         linkedWorkspaceIds: [],
         creator: null,
         date: null,

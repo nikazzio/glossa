@@ -188,30 +188,35 @@ libraries do fix things.
 larger version of three pages, the record says «plus 3 at full resolution» next to
 the count, instead of making the book look half-finished.
 
-## Shrinking images to free up space
+## Compressing to free up space, without losing the original
 
 A book downloaded at full resolution takes three times more room than it needs.
 One downloaded months ago with a higher cap than you need now holds detail you
-never look at. In both cases **cleaning up beats downloading again**, because the
+never look at. In both cases **compressing beats downloading again**, because the
 library does not pay the price for it.
 
-On the work's record, in the Library, a command reads the downloaded pages again,
-shrinks them to the chosen size and recompresses them, replacing the original.
+In the work's record, on the **Digital copies** tab, the "compress" command
+opens a small panel: which already-downloaded resolution to start from (only
+if there is more than one), which smaller resolution to arrive at, and at
+what quality. The command queues the job immediately.
 
-**It is irreversible: the original is replaced.** The command queues the job
-immediately. It works on **one size at a time**: the one the book was downloaded at.
-Pages you deliberately took at full resolution are left as they are.
+**No longer irreversible: a new copy is born, the original is never touched.**
+Compression used to replace the downloaded pages in place, for good; now the
+compressed copy shows up next to the work's other resolutions, each with its
+own command to free just that one — keep the light copy and drop the heavy
+original, or the other way round, whenever you like.
 
 On a long book it runs for minutes, so it is a job like a download: you follow it
-from the panel at the bottom right, and you can pause or cancel it. Pages already
-smaller than the chosen size are not touched, because recompressing them would
-lose something without freeing anything.
+from the panel at the bottom right, and you can pause or cancel it. The job
+works on several pages together (as many as your processor's cores, minus
+one), not one at a time.
 
-While it runs, the panel says how many pages it has shrunk and how much room it has freed; the value remains on the completed job. Target size and quality are chosen in **Settings → Downloads**.
+While it runs, the panel says how many pages it has shrunk and how big the
+copy will be; the value remains on the completed job.
 
-If a page cannot be read or rewritten, the job ends in error instead of hiding it: its
+If a page cannot be read, the job ends in error instead of hiding it: its
 details keep the number of unprocessed pages, while successful pages remain
-safely stored.
+safely stored in the copy.
 
 While a download or optimisation can still change a work, commands that free
 its space or remove it are refused. Let the job finish or cancel it first;

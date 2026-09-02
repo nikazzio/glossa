@@ -109,6 +109,7 @@ interface SourceVersionRow {
   source_url: string | null;
   is_primary: number;
   created_at: string;
+  expected_asset_count: number | null;
 }
 
 function rowToSource(row: SourceRow): LibrarySource {
@@ -124,7 +125,7 @@ function rowToSource(row: SourceRow): LibrarySource {
   };
 }
 
-function rowToVersion(row: SourceVersionRow): LibrarySourceVersion {
+function rowToVersion(row: SourceVersionRow, metadata: SourceMetadata): LibrarySourceVersion {
   return {
     id: row.id,
     sourceId: row.source_id,
@@ -133,6 +134,8 @@ function rowToVersion(row: SourceVersionRow): LibrarySourceVersion {
     sourceUrl: row.source_url,
     isPrimary: Boolean(row.is_primary),
     createdAt: row.created_at,
+    expectedPages: row.expected_asset_count ?? metadata.itemCount,
+    providerKey: metadata.providerKey,
   };
 }
 
@@ -595,7 +598,7 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
   if (!source) throw new Error('library_source_not_found');
 
   const versionRows = await select<SourceVersionRow & { metadata: string | null }>(
-    `SELECT id, source_id, label, version_kind, source_url, metadata, is_primary, created_at
+    `SELECT id, source_id, label, version_kind, source_url, metadata, is_primary, created_at, expected_asset_count
        FROM source_versions WHERE source_id = $1`,
     [sourceId],
   );
@@ -616,7 +619,7 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
       kind: effective.kind ?? source.kind,
       primaryLanguage: effective.primary_language,
     },
-    versions: versionRows.map(rowToVersion),
+    versions: versionRows.map((row) => rowToVersion(row, parseMetadata(row.metadata))),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
     creator: effective.creator,
     date: effective.date,

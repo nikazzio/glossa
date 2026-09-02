@@ -334,7 +334,7 @@ impl SourceDownloadJob {
 
         // Stato di partenza letto dal disco, non da un punto salvato.
         let known = sidecar::read(size_dir);
-        let start = inventory::read_size_folder(cap.folder(), size_dir);
+        let start = inventory::read_size_folder(cap.folder(), size_dir, false);
         let mut rule = rule.clone();
 
         ctx.report_phase(phase::DOWNLOADING).await;

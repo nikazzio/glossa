@@ -4,19 +4,14 @@ import {
   ArchiveRestore,
   BookOpenText,
   Check,
-  Download,
-  Eraser,
   Images,
   Info,
   Library,
   Link2,
-  Loader2,
   type LucideIcon,
-  Minimize2,
   MoreVertical,
   NotebookText,
   RefreshCw,
-  ShieldCheck,
   Tags,
   Trash2,
   X,
@@ -31,7 +26,6 @@ import {
   MenuActionRow,
   PopoverItem,
   SectionLabel,
-  Select,
   StatBlock,
   Tooltip,
 } from '../ui';
@@ -39,21 +33,9 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useUiStore } from '../../stores/uiStore';
-import { useJobsStore } from '../../stores/jobsStore';
-import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import { versionProviderKey } from '../../services/libraryService';
-import {
-  enqueueOptimization,
-  getOptimizeLongEdge,
-  getOptimizeQuality,
-  OPTIMIZE_LONG_EDGES,
-  OPTIMIZE_QUALITIES,
-} from '../../services/optimizeService';
-import { MAX_SIZE_CAP, SIZE_CAPS } from '../../services/downloadSettingsService';
 import { confirm } from '../../stores/confirmStore';
-import { toast } from 'sonner';
-import { SourceSizeCap } from './SourceSizeCap';
 import { useSourceActions } from './useSourceActions';
+import { CopiesSection, resolutionLabel } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -62,7 +44,6 @@ import { humanSize } from '../../utils';
 import type {
   LibraryCatalogEntry,
   LibrarySourceDetail,
-  LibrarySourceVersion,
   SourceCollection,
   SourceField,
   Workspace,
@@ -585,327 +566,6 @@ function NotesTab({
   );
 }
 
-/** Le copie digitali dell'opera: cosa sono (manifesto IIIF, PDF, altro),
- *  dove stanno (solo online o anche sul computer), i comandi generali
- *  (scarica a una risoluzione scelta, verifica, libera spazio) e — per
- *  ognuna delle risoluzioni davvero presenti — il suo comando di
- *  compressione. Sono comandi sulla copia, non sull'opera: archiviare e
- *  rimuovere restano nel menu dell'intestazione. */
-function CopiesSection({
-  detail,
-  entry,
-  onRefresh,
-}: {
-  detail: LibrarySourceDetail;
-  entry?: LibraryCatalogEntry;
-  onRefresh: () => void;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    // Niente intestazione di sezione qui: la tab la dà già ("Copie digitali").
-    // Niente riquadro a sfondo: la tab stessa è già il contenitore, un'altra
-    // cornice attorno sarebbe una scatola dentro la scatola.
-    <ul className="divide-y divide-editorial-border/70">
-      {detail.versions.map((version) => {
-        const isEntryVersion = Boolean(entry && version.id === entry.versionId);
-        return (
-          <li key={version.id} className="space-y-3 py-4 first:pt-0">
-            <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-              {t(`areas.library.versionKindLabels.${version.versionKind}`)}
-            </span>
-
-            {version.sourceUrl && (
-              <StatBlock label={t('areas.library.sourceUrlField')} value={version.sourceUrl} href={version.sourceUrl} />
-            )}
-
-            {isEntryVersion && entry && (
-              <PrimaryCopyDetails entry={entry} version={version} onRefresh={onRefresh} />
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-/** L'etichetta di una risoluzione — con l'unità di misura, non il numero
- *  grezzo, e "Massima disponibile" per l'ultimo scalino della scala. */
-function resolutionLabel(tag: string, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (tag === MAX_SIZE_CAP) return t('settings.download.sizeCapMax');
-  // Solo un numero è davvero un lato lungo in pixel: una biblioteca può
-  // dichiarare una risoluzione fuori scala con un'etichetta propria (es.
-  // "full"), e inventarle un'unità di misura sarebbe falso.
-  return /^\d+$/.test(tag) ? t('settings.download.pixels', { value: tag }) : tag;
-}
-
-/** La copia che sta davvero sul computer (quella che descrive la riga del
- *  catalogo): in alto disponibilità e comandi generali sull'intera copia —
- *  verifica, libera spazio (cancella tutte le risoluzioni insieme:
- *  cancellarne una sola non è ancora possibile). Sotto, la scala completa
- *  delle risoluzioni che Glossa sa scaricare — non solo quelle già presenti:
- *  ognuna ha il suo comando di scarica e, se ha pagine, il suo comando di
- *  compressione con qualità scelta lì per lì. */
-function PrimaryCopyDetails({
-  entry,
-  version,
-  onRefresh,
-}: {
-  entry: LibraryCatalogEntry;
-  version: LibrarySourceVersion;
-  onRefresh: () => void;
-}) {
-  const { t } = useTranslation();
-  const actions = useSourceActions(entry, { onRemove: () => {}, onSetArchived: async () => {}, onRefresh });
-  const { busy, runningJob } = actions;
-
-  const onDisk = new Map(entry.sizes.map((size) => [size.sizeTag, size]));
-  // La scala che Glossa offre sempre, più eventuali misure fuori scala che la
-  // biblioteca ha già dato (rare, ma non vanno nascoste se ci sono davvero).
-  const extraTags = entry.sizes
-    .map((size) => size.sizeTag)
-    .filter((tag) => !(SIZE_CAPS as readonly string[]).includes(tag));
-  const tags: string[] = [...SIZE_CAPS, ...extraTags];
-
-  return (
-    <div className="space-y-4 border-t border-editorial-border/60 pt-3">
-      <StatBlock label={t('areas.library.availabilityField')} value={availabilityText(entry, t)} />
-
-      <div className="flex items-center gap-1">
-        <IconButton
-          size="sm"
-          onClick={() => void actions.verify()}
-          disabled={busy || entry.localPages === 0}
-          title={t('areas.library.verify')}
-        >
-          <ShieldCheck size={13} />
-        </IconButton>
-        <IconButton
-          size="sm"
-          onClick={() => void actions.freeSpace()}
-          disabled={busy || entry.localPages === 0}
-          title={t('areas.library.freeSpace')}
-        >
-          <Eraser size={13} />
-        </IconButton>
-        <span className="ml-1 flex-1 text-xs text-editorial-muted">
-          {t('areas.library.freeSpaceWholeCopyHint')}
-        </span>
-      </div>
-
-      <div className="space-y-1">
-        <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-          {t('areas.library.resolutionsSection')}
-        </p>
-        <ul className="divide-y divide-editorial-border/60 rounded-md border border-editorial-border/60">
-          {tags.map((tag) => (
-            <ResolutionRow
-              key={tag}
-              entry={entry}
-              versionId={version.id}
-              tag={tag}
-              size={onDisk.get(tag) ?? null}
-              isPrincipal={tag === entry.principalSize}
-              downloadDisabled={busy || Boolean(runningJob) || !entry.manifestUrl}
-            />
-          ))}
-        </ul>
-      </div>
-
-      {/* Preferenza per i comandi "Scarica" senza scelta — dalla riga del
-          catalogo, o "verifica" che riscarica quel che manca. Qui sopra, ogni
-          risoluzione si scarica già mirata, senza bisogno di impostarla prima. */}
-      <SourceSizeCap versionId={version.id} />
-    </div>
-  );
-}
-
-/** Una risoluzione della scala — presente sul computer o no. Se non c'è
- *  ancora, "Scarica" la richiede direttamente a quella misura, senza dover
- *  prima cambiare un'impostazione altrove. Se ha pagine, "Comprimi" apre la
- *  scelta di lato lungo e qualità lì per lì — non solo quella predefinita
- *  nelle Impostazioni. */
-function ResolutionRow({
-  entry,
-  versionId,
-  tag,
-  size,
-  isPrincipal,
-  downloadDisabled,
-}: {
-  entry: LibraryCatalogEntry;
-  versionId: string;
-  tag: string;
-  size: { sizeTag: string; pages: number; bytes: number; missing: number } | null;
-  isPrincipal: boolean;
-  downloadDisabled: boolean;
-}) {
-  const { t } = useTranslation();
-  const jobs = useJobsStore((state) => state.jobs);
-  const applyChange = useJobsStore((state) => state.applyChange);
-  const [downloading, setDownloading] = useState(false);
-  const expectedPages = entry.expectedPages ?? 0;
-  const isComplete = Boolean(size) && expectedPages > 0 && size!.missing === 0 && size!.pages >= expectedPages;
-  const optimizeJob = jobs.find((job) => job.id === `optimize:${versionId}:${tag}` && !isTerminal(job));
-
-  const download = async () => {
-    setDownloading(true);
-    try {
-      const providerKey = entry.providerKey ?? (await versionProviderKey(versionId)) ?? 'generic';
-      const job = await enqueueSourceDownload({
-        providerKey,
-        manifestUrl: entry.manifestUrl ?? '',
-        versionId,
-        sizeTag: tag,
-      });
-      applyChange(job);
-      toast.success(t('areas.library.downloadQueued'));
-    } catch (error: unknown) {
-      toast.error(t('areas.library.downloadFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <li className="flex items-center justify-between gap-3 px-2.5 py-2 text-xs">
-      <span className="min-w-0">
-        <span className="font-display italic text-editorial-ink">
-          {resolutionLabel(tag, t)}
-          {isPrincipal && (
-            <span className="ml-1.5 text-[10px] not-italic uppercase tracking-wide text-editorial-accent">
-              {t('areas.library.resolutionPrincipal')}
-            </span>
-          )}
-        </span>
-        <span className="ml-2 text-editorial-muted">
-          {size
-            ? t('areas.library.resolutionSummary', {
-                count: size.pages,
-                pages: size.pages,
-                size: humanSize(size.bytes),
-              })
-            : t('areas.library.resolutionNotDownloaded')}
-          {size && size.missing > 0 && ` · ${t('areas.library.resolutionMissing', { count: size.missing })}`}
-        </span>
-      </span>
-      <span className="flex shrink-0 items-center gap-1">
-        <IconButton
-          size="xs"
-          onClick={() => void download()}
-          disabled={downloadDisabled || downloading || isComplete}
-          title={isComplete ? t('areas.library.resolutionComplete') : t('areas.library.download')}
-        >
-          {downloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-        </IconButton>
-        <CompressButton versionId={versionId} tag={tag} disabled={!size || size.pages === 0} running={Boolean(optimizeJob)} />
-      </span>
-    </li>
-  );
-}
-
-/** Comprimi con la qualità scelta lì per lì, non solo quella predefinita
- *  nelle Impostazioni — parte già valorizzata con quella, la si cambia solo
- *  se serve per questa risoluzione. */
-function CompressButton({
-  versionId,
-  tag,
-  disabled,
-  running,
-}: {
-  versionId: string;
-  tag: string;
-  disabled: boolean;
-  running: boolean;
-}) {
-  const { t } = useTranslation();
-  const applyChange = useJobsStore((state) => state.applyChange);
-  const [open, setOpen] = useState(false);
-  const [longEdge, setLongEdge] = useState<number | null>(null);
-  const [quality, setQuality] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const openChange = async (next: boolean) => {
-    setOpen(next);
-    if (next && longEdge === null) {
-      const [defaultEdge, defaultQuality] = await Promise.all([getOptimizeLongEdge(), getOptimizeQuality()]);
-      setLongEdge(defaultEdge);
-      setQuality(defaultQuality);
-    }
-  };
-
-  const confirmCompress = async () => {
-    if (longEdge === null || quality === null) return;
-    setBusy(true);
-    try {
-      const job = await enqueueOptimization(versionId, tag, longEdge, quality);
-      applyChange(job);
-      toast.success(t('areas.library.optimizeQueued'));
-      setOpen(false);
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason.includes('download_in_corso')) {
-        toast.info(t('areas.library.optimizeWhileDownloading'));
-      } else {
-        toast.error(t('areas.library.optimizeFailed'), { description: reason });
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <ClickPopover
-      open={open}
-      onOpenChange={(next) => void openChange(next)}
-      trigger={
-        <IconButton size="xs" disabled={disabled || running} title={t('areas.library.optimizeAction')} ariaPressed={open}>
-          <Minimize2 size={13} className={running ? 'animate-spin' : undefined} />
-        </IconButton>
-      }
-    >
-      <div className="flex min-w-52 flex-col gap-2 p-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-editorial-muted">
-            {t('settings.download.optimizeLongEdge')}
-          </span>
-          <Select
-            value={longEdge !== null ? String(longEdge) : ''}
-            onChange={(value) => setLongEdge(Number(value))}
-            ariaLabel={t('settings.download.optimizeLongEdge')}
-            options={OPTIMIZE_LONG_EDGES.map((value) => ({
-              value: String(value),
-              label: t('settings.download.pixels', { value }),
-            }))}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-editorial-muted">
-            {t('settings.download.optimizeQuality')}
-          </span>
-          <Select
-            value={quality !== null ? String(quality) : ''}
-            onChange={(value) => setQuality(Number(value))}
-            ariaLabel={t('settings.download.optimizeQuality')}
-            options={OPTIMIZE_QUALITIES.map((value) => ({ value: String(value), label: String(value) }))}
-          />
-        </label>
-        <IconButton
-          size="sm"
-          tone="accent"
-          onClick={() => void confirmCompress()}
-          disabled={busy || longEdge === null || quality === null}
-          title={t('areas.library.optimizeAction')}
-        >
-          <Check size={14} />
-        </IconButton>
-      </div>
-    </ClickPopover>
-  );
-}
-
 /** Comandi sull'opera intera (non su una copia): un pulsante primario per lo
  *  scaricamento e un menu per Archivia/Rimuovi — non più icone sparse in fila. */
 function SourceHeaderActions({
@@ -1056,10 +716,16 @@ function availabilityText(
     entry.expectedPages ?? 0,
     principal?.missing ?? 0,
   );
-  if (summary.availability === 'catalogued') return t('areas.library.availabilityRemote');
-  if (summary.availability === 'complete') return t('areas.library.availabilityComplete');
-  return t('areas.library.availabilityPartial', {
-    done: summary.presentPages,
-    total: summary.expectedPages,
-  });
+  // Un'opera in Biblioteca è sempre online: quello che cambia è se c'è
+  // *anche* qualcosa sul computer, non se è raggiungibile. Quando c'è,
+  // si dice anche a quale risoluzione — altrimenti "immagini locali" da
+  // solo non dice a quanto sono state scaricate.
+  const online = t('areas.library.viewOnline');
+  if (summary.availability === 'catalogued') return online;
+  const resolution = entry.principalSize ? resolutionLabel(entry.principalSize, t) : null;
+  const local =
+    summary.availability === 'complete'
+      ? t('areas.library.availabilityComplete')
+      : t('areas.library.availabilityPartial', { done: summary.presentPages, total: summary.expectedPages });
+  return resolution ? `${online} · ${local} (${resolution})` : `${online} · ${local}`;
 }

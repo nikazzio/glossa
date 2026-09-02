@@ -17,6 +17,8 @@ export interface SizeFolder {
   bytes: number;
   /** Pagine che la biblioteca ha dichiarato di non servire. */
   missing: number;
+  /** Vero per una copia ricavata in locale (compressione), falso per una scaricata davvero. */
+  derived: boolean;
 }
 
 export interface VersionInventory {

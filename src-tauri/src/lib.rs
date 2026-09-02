@@ -184,6 +184,7 @@ pub fn run() {
             vault::commands::get_vault_status,
             vault::commands::initialize_vault,
             vault::commands::free_version_pages,
+            vault::commands::free_version_size,
             vault::commands::delete_version_files,
             vault::commands::choose_vault_folder,
             vault::commands::use_default_vault_folder,

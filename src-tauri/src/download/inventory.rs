@@ -37,6 +37,9 @@ pub struct SizeFolder {
     /// permette di dire «completo per quanto la biblioteca serve» invece di un
     /// «incompleto» che sembra un lavoro a metà.
     pub missing: u32,
+    /// Vero per una copia ricavata in locale dall'ottimizzazione (`derived/`),
+    /// falso per una scaricata davvero dalla biblioteca (`providers/`).
+    pub derived: bool,
 }
 
 /// Cosa si ha di una digitalizzazione, e a che misure.
@@ -74,7 +77,7 @@ pub fn of_version(root: &Path, version_id: &str) -> Option<VersionInventory> {
     // cartelle — che non è lo stesso su due macchine.
     version_folders(root, version_id)
         .into_iter()
-        .map(|(provider_key, folder)| read_folder(&provider_key, version_id, &folder))
+        .map(|(provider_key, folder)| read_folder(root, &provider_key, version_id, &folder))
         .max_by(|a, b| {
             a.principal_pages()
                 .cmp(&b.principal_pages())
@@ -98,7 +101,12 @@ pub fn of_vault(root: &Path) -> Vec<VersionInventory> {
                 continue;
             }
             let version_id = version.file_name().to_string_lossy().to_string();
-            found.push(read_folder(&provider_key, &version_id, &version.path()));
+            found.push(read_folder(
+                root,
+                &provider_key,
+                &version_id,
+                &version.path(),
+            ));
         }
     }
     found
@@ -119,7 +127,12 @@ fn version_folders(root: &Path, version_id: &str) -> Vec<(String, PathBuf)> {
         .collect()
 }
 
-fn read_folder(provider_key: &str, version_id: &str, folder: &Path) -> VersionInventory {
+fn read_folder(
+    root: &Path,
+    provider_key: &str,
+    version_id: &str,
+    folder: &Path,
+) -> VersionInventory {
     let mut sizes: Vec<SizeFolder> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(folder.join(crate::vault::layout::PAGES_DIR)) {
         for entry in entries.flatten() {
@@ -129,7 +142,25 @@ fn read_folder(provider_key: &str, version_id: &str, folder: &Path) -> VersionIn
             sizes.push(read_size_folder(
                 entry.file_name().to_string_lossy().to_string(),
                 &entry.path(),
+                false,
             ));
+        }
+    }
+    // Le copie ricavate in locale (l'ottimizzazione) stanno fuori da
+    // `providers/`, apposta: "libera spazio" sulle pagine scaricate non deve
+    // portarsele via. Si scandiscono a parte e si sommano alla stessa lista.
+    if let Ok(derived_dir) = crate::vault::layout::derived_version_dir(provider_key, version_id) {
+        if let Ok(entries) = std::fs::read_dir(root.join(derived_dir)) {
+            for entry in entries.flatten() {
+                if !entry.path().is_dir() {
+                    continue;
+                }
+                sizes.push(read_size_folder(
+                    entry.file_name().to_string_lossy().to_string(),
+                    &entry.path(),
+                    true,
+                ));
+            }
         }
     }
     // La più fornita: è quella con cui il libro è stato scaricato. A parità
@@ -139,9 +170,15 @@ fn read_folder(provider_key: &str, version_id: &str, folder: &Path) -> VersionIn
             .cmp(&a.pages)
             .then_with(|| a.size_tag.cmp(&b.size_tag))
     });
+    // La principale è sempre una scaricata davvero, quando ce n'è una: una
+    // copia ricavata in locale ha per forza lo stesso conteggio della sua
+    // fonte, e sceglierla per un pareggio alfabetico direbbe una bugia su
+    // cosa si è davvero scaricato. Solo se l'originale non c'è più (tolto per
+    // liberare spazio, tenendo la copia) si accetta la migliore rimasta.
     let principal = sizes
-        .first()
-        .filter(|size| size.pages > 0)
+        .iter()
+        .find(|size| !size.derived && size.pages > 0)
+        .or_else(|| sizes.iter().find(|size| size.pages > 0))
         .map(|size| size.size_tag.clone());
     VersionInventory {
         version_id: version_id.to_string(),
@@ -156,7 +193,7 @@ fn read_folder(provider_key: &str, version_id: &str, folder: &Path) -> VersionIn
 /// biblioteca ha dichiarato di non servire. **Il file di lato pesa ma non è una
 /// pagina**: la regola sta qui e in nessun altro posto, perché il ciclo dello
 /// scaricamento chiede a questa funzione il suo stato di partenza.
-pub(crate) fn read_size_folder(size_tag: String, dir: &Path) -> SizeFolder {
+pub(crate) fn read_size_folder(size_tag: String, dir: &Path, derived: bool) -> SizeFolder {
     let mut pages = 0;
     let mut bytes = 0;
     if let Ok(entries) = std::fs::read_dir(dir) {
@@ -183,6 +220,7 @@ pub(crate) fn read_size_folder(size_tag: String, dir: &Path) -> SizeFolder {
         pages,
         bytes,
         missing,
+        derived,
     }
 }
 
@@ -221,6 +259,16 @@ mod tests {
             .join(provider)
             .join(version)
             .join(crate::vault::layout::PAGES_DIR)
+            .join(size);
+        std::fs::create_dir_all(&dir).expect("cartella");
+        std::fs::write(dir.join(format!("{index:04}.jpg")), b"pixel").expect("pagina");
+    }
+
+    fn put_derived_page(root: &Path, provider: &str, version: &str, size: &str, index: u32) {
+        let dir = root
+            .join(crate::vault::layout::DERIVED_DIR)
+            .join(provider)
+            .join(version)
             .join(size);
         std::fs::create_dir_all(&dir).expect("cartella");
         std::fs::write(dir.join(format!("{index:04}.jpg")), b"pixel").expect("pagina");
@@ -277,6 +325,59 @@ mod tests {
         let inventory = of_version(&root, "v1").expect("la digitalizzazione c'è");
 
         assert_eq!(inventory.principal.as_deref(), Some("2000"));
+        assert_eq!(inventory.principal_pages(), 10);
+    }
+
+    #[test]
+    fn a_derived_copy_never_outranks_the_real_download_even_at_a_tie() {
+        // La copia compressa ha per costruzione lo stesso numero di pagine
+        // dell'originale da cui viene: un pareggio non deve farla vincere per
+        // ordine alfabetico, o "principale" smetterebbe di voler dire "quella
+        // scaricata davvero".
+        let root = temp_vault("derived-tie");
+        for index in 1..=10 {
+            put_page(&root, "gallica", "v1", "2000", index);
+            put_derived_page(&root, "gallica", "v1", "500", index);
+        }
+
+        let inventory = of_version(&root, "v1").expect("la digitalizzazione c'è");
+
+        assert_eq!(inventory.principal.as_deref(), Some("2000"));
+        assert_eq!(inventory.sizes.len(), 2);
+        let derived = inventory
+            .sizes
+            .iter()
+            .find(|size| size.size_tag == "500")
+            .expect("la copia derivata c'è");
+        assert!(derived.derived);
+        let original = inventory
+            .sizes
+            .iter()
+            .find(|size| size.size_tag == "2000")
+            .expect("l'originale c'è");
+        assert!(!original.derived);
+    }
+
+    #[test]
+    fn freeing_the_original_falls_back_to_the_derived_copy() {
+        // Niki tiene solo la copia compressa dopo aver liberato l'originale:
+        // "libera spazio" toglie `pages/` ma non la cartella della
+        // digitalizzazione (restano manifesto e miniature) — il libro deve
+        // continuare a dire quante pagine ha, non sparire.
+        let root = temp_vault("derived-only");
+        std::fs::create_dir_all(
+            root.join(crate::vault::layout::PROVIDERS_DIR)
+                .join("gallica")
+                .join("v1"),
+        )
+        .expect("cartella della digitalizzazione");
+        for index in 1..=10 {
+            put_derived_page(&root, "gallica", "v1", "500", index);
+        }
+
+        let inventory = of_version(&root, "v1").expect("la digitalizzazione c'è");
+
+        assert_eq!(inventory.principal.as_deref(), Some("500"));
         assert_eq!(inventory.principal_pages(), 10);
     }
 

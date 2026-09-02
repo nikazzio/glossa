@@ -298,12 +298,30 @@ Layout:
     pages/<misura>/0001.jpg
     pages/<misura>/pages.jsonl
     thumbnails/0001.jpg
-  derived/<asset-id>/
+  derived/<biblioteca>/<versione>/<misura>/
+    0001.jpg
+    pages.jsonl
   staging/<lavoro>/
 ```
 
 Il deposito usa percorsi relativi e componenti convalidati. File parziali non
 entrano nelle cartelle definitive.
+
+`derived/` (2 settembre 2026) contiene le copie ricavate in locale
+dall'ottimizzazione: stessa forma di `providers/.../pages/`, ma **mai** dentro
+`providers/`, apposta — "libera spazio" cancella solo `pages/`, e una copia
+compressa deve poter sopravvivere alla cancellazione dell'originale da cui è
+nata (o viceversa). Il lavoro di ottimizzazione (`optimize::ImageOptimizationJob`)
+legge una cartella di misura già scaricata e ne scrive una **nuova** sotto
+`derived/`, mai in-place: la fonte non cambia mai. La "misura principale"
+(`VersionInventory::principal`, usata per dire se un libro è completo) sceglie
+sempre una cartella scaricata davvero quando ce n'è una, anche a parità di
+pagine con una copia derivata — altrimenti un pareggio alfabetico
+mostrerebbe come "scaricata" una copia che non lo è mai stata. Solo se
+l'originale è stato liberato e resta solo la copia, quella diventa principale.
+`vault::commands::free_version_size` libera **una sola** cartella di misura
+(scaricata o derivata); `delete_version_files` (rimozione dell'opera) e lo
+spazzino delle cartelle orfane coprono ora anche `derived/`.
 
 ### Riconoscimento e ricerca per biblioteca
 

@@ -193,34 +193,36 @@ riparano.
 pagine hai voluto anche la versione più grande, la scheda dice «più 3 a
 risoluzione piena» accanto al conteggio, invece di far sembrare il libro a metà.
 
-## Ridurre le immagini per liberare spazio
+## Comprimere per liberare spazio, senza perdere l'originale
 
 Un libro scaricato alla massima risoluzione occupa il triplo del necessario. Uno
 scaricato mesi fa con un tetto più alto di quello che ti serve adesso tiene
-dettaglio che non guardi. In entrambi i casi **ripulire è meglio che
+dettaglio che non guardi. In entrambi i casi **comprimere è meglio che
 riscaricare**, perché la biblioteca non ne paga il prezzo.
 
-Nella scheda dell'opera, in Biblioteca, c'è il comando che rilegge le pagine già
-scaricate, le rimpicciolisce alla misura scelta e le ricomprime, sostituendo
-l'originale.
+Nella tab **Copie digitali** della scheda dell'opera, il comando "comprimi"
+apre un piccolo pannello: da quale risoluzione già scaricata partire (solo se
+ce n'è più di una), a quale risoluzione più piccola arrivare, e a che
+qualità. Il comando mette subito il lavoro in coda.
 
-**È irreversibile: l'originale viene sostituito.** Il comando mette subito il
-lavoro in coda. Lavora su **una misura per volta**: quella con cui il libro è
-stato scaricato. Le pagine che
-avevi preso a risoluzione piena di proposito restano come sono.
+**Non è più irreversibile: nasce una copia nuova, l'originale non si tocca
+mai.** Prima la compressione sostituiva le pagine scaricate al loro posto,
+per sempre; ora la copia compressa compare accanto alle altre risoluzioni
+della stessa opera, ognuna con il suo comando per liberare solo quella —
+tieni la copia leggera e butta l'originale pesante, o il contrario, quando
+vuoi.
 
 Su un libro lungo dura minuti, quindi è un lavoro come lo scaricamento: lo segui
-dal pannello in basso a destra, e puoi metterlo in pausa o annullarlo. Le pagine
-già più piccole della misura scelta non vengono toccate, perché ricomprimerle
-perderebbe qualcosa senza liberare niente.
+dal pannello in basso a destra, e puoi metterlo in pausa o annullarlo. Il
+lavoro usa più pagine insieme (quanti nuclei ha il tuo processore, meno uno),
+non una alla volta.
 
-Mentre gira, il pannello dice quante pagine ha ridotto e quanto spazio ha
-liberato; il valore resta nel lavoro concluso. La misura di arrivo e la qualità si scelgono in **Impostazioni →
-Scaricamento**.
+Mentre gira, il pannello dice quante pagine ha ridotto e quanto peserà la
+copia; il valore resta nel lavoro concluso.
 
-Se una pagina non può essere letta o riscritta, il lavoro termina in errore senza nasconderla:
-nel dettaglio resta il numero delle pagine non elaborate e quelle riuscite
-restano correttamente salvate.
+Se una pagina non può essere letta, il lavoro termina in errore senza nasconderla:
+nel dettaglio resta il numero delle pagine non riuscite, e quelle riuscite
+restano correttamente salvate nella copia.
 
 Finché uno scaricamento o un'ottimizzazione può modificare un'opera, i comandi
 per liberarne lo spazio o eliminarla vengono rifiutati. Prima il lavoro deve

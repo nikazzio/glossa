@@ -102,6 +102,20 @@ export async function freeVersionPages(providerKey: string, versionId: string): 
 }
 
 /**
+ * Libera una sola risoluzione — scaricata o ricavata in locale — senza
+ * toccare le altre: è così che si tiene la copia compressa e si butta
+ * l'originale, o viceversa.
+ */
+export async function freeVersionSize(
+  providerKey: string,
+  versionId: string,
+  sizeTag: string,
+  derived: boolean,
+): Promise<FreedSpace> {
+  return invoke<FreedSpace>('free_version_size', { providerKey, versionId, sizeTag, derived });
+}
+
+/**
  * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
  * miniature, pagine — quando l'opera esce dalla Biblioteca.
  */
