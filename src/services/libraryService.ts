@@ -441,8 +441,12 @@ export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
  * ricerca prima ancora che l'utente provi ad aggiungerlo, e per sapere a quali
  * workspace è già collegato senza rileggere tutto il catalogo. */
 export async function listLibrarySourceUrls(): Promise<{ sourceUrl: string; sourceId: string }[]> {
+  // Un `source_url` non ha un vincolo di unicità: `GROUP BY` con `MIN` sceglie
+  // sempre lo stesso `source_id` per lo stesso indirizzo, invece di un
+  // risultato che cambia a seconda dell'ordine con cui le righe arrivano.
   const rows = await select<{ source_url: string; source_id: string }>(
-    "SELECT DISTINCT source_url, source_id FROM source_versions WHERE source_url IS NOT NULL ORDER BY source_url",
+    `SELECT source_url, MIN(source_id) AS source_id FROM source_versions
+      WHERE source_url IS NOT NULL GROUP BY source_url ORDER BY source_url`,
   );
   return rows.map((row) => ({ sourceUrl: row.source_url, sourceId: row.source_id }));
 }

@@ -98,10 +98,14 @@ export function InspectorShell({
       const candidate = tabs[(start + step * offset + total) % total];
       if (!candidate.disabled) return candidate;
     }
-    return tabs[start];
+    // Nessuna tab abilitata: si resta dove si è, non c'è dove andare.
+    // `start` può essere -1 (chiamata da Home su una prima tab disabilitata),
+    // quindi non è un indice sempre valido di per sé.
+    return tabs[Math.max(start, 0)] ?? tabs[0];
   };
 
   const handleKeyDown = (id: string, event: KeyboardEvent<HTMLButtonElement>) => {
+    if (tabs.length === 0) return;
     const idx = tabs.findIndex((tab) => tab.id === id);
     let next: InspectorTab | null = null;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = nextEnabledTab(idx, -1);

@@ -23,7 +23,7 @@ export function StatBlock({ label, value, href }: StatBlockProps) {
           <a
             href={href}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="min-w-0 flex-1 break-words font-display text-sm italic text-editorial-accent underline underline-offset-2"
           >
             {value}
