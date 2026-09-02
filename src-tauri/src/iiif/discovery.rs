@@ -224,7 +224,12 @@ fn thumbnail_url(value: &Value) -> Option<String> {
 }
 
 fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
-    let title = text(value.get("label"))
+    // Gallica mette la segnatura in `label` (il campo che lo standard IIIF
+    // userebbe per il titolo) e il titolo vero solo dentro `metadata` — non è
+    // un caso isolato, va cercato lì per primo e ripiegare su `label`/`title`
+    // solo se la biblioteca non dichiara affatto un titolo nei metadati.
+    let title = metadata_value(&value, "title")
+        .or_else(|| text(value.get("label")))
         .or_else(|| text(value.get("title")))
         .unwrap_or_default();
     let item_count = value
@@ -718,6 +723,25 @@ mod tests {
         );
 
         assert!(preview.title.is_empty());
+    }
+
+    #[test]
+    fn manifest_preview_prefers_the_metadata_title_over_a_label_that_is_really_a_shelfmark() {
+        // Verificato su un manifesto vero di Gallica: `label` è la segnatura
+        // ("BnF, département Littérature et art, V-22944"), il titolo vero
+        // sta solo dentro `metadata` con etichetta "Title".
+        let preview = manifest_preview(
+            "https://gallica.bnf.fr/iiif/ark:/12148/bpt6k3282120/manifest.json".to_string(),
+            serde_json::json!({
+                "label": "BnF, département Littérature et art, V-22944",
+                "metadata": [
+                    {"label": "Shelfmark", "value": "Bibliothèque nationale de France, département Littérature et art, V-22944"},
+                    {"label": "Title", "value": "Le guidon des capitaines"},
+                ],
+            }),
+        );
+
+        assert_eq!(preview.title, "Le guidon des capitaines");
     }
 
     #[test]

@@ -245,7 +245,14 @@ fn is_ecodices_compound(value: &str) -> bool {
 
 fn archive_org(value: &str) -> Option<Resolution> {
     let url = url::Url::parse(value).ok()?;
-    if !url.host_str()?.ends_with("archive.org") {
+    let host = url.host_str()?;
+    if host == "iiif.archive.org" {
+        // Il manifesto stesso (già salvato come sourceUrl di una fonte che
+        // c'è già in Biblioteca, es. per risincronizzarla): è già la forma
+        // canonica, non serve ricostruire niente.
+        return direct_url(value);
+    }
+    if !host.ends_with("archive.org") {
         return None;
     }
     let mut segments = url.path_segments()?;
@@ -409,6 +416,23 @@ mod tests {
             "https://archive.org/details/dellarchitettura",
         )
         .expect("pagina di dettaglio");
+        assert_eq!(
+            resolved.manifest_url,
+            "https://iiif.archive.org/iiif/dellarchitettura/manifest.json"
+        );
+    }
+
+    #[test]
+    fn an_already_resolved_archive_org_manifest_address_resolves_again() {
+        // Risincronizzare un'opera passa proprio l'indirizzo del manifesto
+        // già salvato (non la pagina di dettaglio): senza questo, la
+        // risincronizzazione delle fonti Internet Archive non trovava mai
+        // niente.
+        let resolved = resolve(
+            ResolverKind::ArchiveOrg,
+            "https://iiif.archive.org/iiif/dellarchitettura/manifest.json",
+        )
+        .expect("manifesto già risolto");
         assert_eq!(
             resolved.manifest_url,
             "https://iiif.archive.org/iiif/dellarchitettura/manifest.json"
