@@ -50,6 +50,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const removeSavedView = useLibrarySavedViewsStore((state) => state.remove);
   const loadDetail = useSourceLibraryStore((state) => state.loadDetail);
   const toggleWorkspaceLink = useSourceLibraryStore((state) => state.toggleWorkspaceLink);
+  const resyncSource = useSourceLibraryStore((state) => state.resyncSource);
   const workspaces = useWorkspaceStore((state) => state.workspaces);
   const navigate = useUiStore((state) => state.navigate);
   const location = useUiStore((state) => state.location);
@@ -117,6 +118,17 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         description: error instanceof Error ? error.message : String(error),
       });
       throw error;
+    }
+  };
+
+  const resync = async (sourceId: string) => {
+    try {
+      await resyncSource(sourceId);
+      toast.success(t('areas.library.resyncSuccess'));
+    } catch (error: unknown) {
+      toast.error(t('areas.library.resyncFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
@@ -192,6 +204,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
             collections={collections}
             onSetCollection={(collectionId, member) => changeCollection(itemId, collectionId, member)}
             onCreateCollection={(name) => createCollectionFor(itemId, name)}
+            onResyncSource={() => resync(itemId)}
           />
         </motion.div>
       ) : (

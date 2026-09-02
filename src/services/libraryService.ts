@@ -531,6 +531,57 @@ export async function addSourceToLibrary(
   return { sourceId, wasCreated: true };
 }
 
+/**
+ * Riscrive i dati anagrafici di un'opera già in Biblioteca con quello che la
+ * biblioteca dichiara **ora**: un campo che oggi non dichiara più torna
+ * vuoto, non tiene il vecchio valore. Cancella anche ogni correzione a mano
+ * fatta finora — eccetto le Note, che non sono mai state un dato della
+ * biblioteca e risincronizzare non le riguarda.
+ */
+export async function resyncSourceFromManifest(
+  sourceId: string,
+  input: Omit<AddSourceToLibraryInput, 'manifestUrl' | 'workspaceId'>,
+): Promise<void> {
+  const metadata = JSON.stringify({
+    creator: input.creator,
+    date: input.date,
+    thumbnailUrl: input.thumbnailUrl,
+    language: input.language,
+    subjects: input.subjects,
+    providerKey: input.providerKey,
+    externalId: input.externalId,
+    mediaType: input.mediaType,
+    materialType: input.materialType,
+    collection: input.collection,
+    volume: input.volume,
+    itemCount: input.itemCount,
+    contributors: input.contributors,
+    publisher: input.publisher,
+    rights: input.rights,
+    physicalDescription: input.physicalDescription,
+    holdingInstitution: input.holdingInstitution,
+    catalogUrl: input.catalogUrl,
+    pageUrl: input.pageUrl,
+  });
+
+  await runInTransaction(async (run) => {
+    await run(
+      `UPDATE sources SET title = $2, kind = $3, primary_language = $4, description = $5,
+         updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [sourceId, input.title, input.kind, input.language, input.description],
+    );
+    await run(
+      'UPDATE source_versions SET metadata = $2 WHERE source_id = $1 AND is_primary = 1',
+      [sourceId, metadata],
+    );
+    await run(`DELETE FROM source_field_overrides WHERE source_id = $1 AND field <> 'notes'`, [
+      sourceId,
+    ]);
+  });
+
+  logger.info('library.source.resynced', { sourceId });
+}
+
 export async function getLibrarySourceDetail(sourceId: string): Promise<LibrarySourceDetail> {
   const [source] = await select<SourceRow & { description: string | null }>(
     `SELECT id, title, kind, primary_language, external_ref, status, archived_at, created_at, description

@@ -14,10 +14,12 @@ import {
   listLibraryCatalog,
   listLibrarySourceUrls,
   removeSourceFromLibrary as removeSourceFromLibraryService,
+  resyncSourceFromManifest,
   setSourceArchived as setSourceArchivedService,
   setSourceFieldOverride as setSourceFieldOverrideService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
 } from '../services/libraryService';
+import { discoverIIIF } from '../services/iiifProviderService';
 import {
   collectionsOfMany,
   createCollection as createCollectionService,
@@ -55,6 +57,9 @@ interface SourceLibraryState {
   refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
+  /** Rilegge il manifesto da cui l'opera è stata aggiunta e ne riscrive i
+   *  dati anagrafici, cancellando ogni correzione a mano (Note escluse). */
+  resyncSource: (sourceId: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -219,6 +224,51 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   toggleWorkspaceLink: async (workspaceId, sourceId, linked) => {
     await setWorkspaceSourceLinkService(workspaceId, sourceId, linked);
     if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
+  },
+
+  resyncSource: async (sourceId) => {
+    const detail = get().detail;
+    if (!detail || detail.source.id !== sourceId) {
+      throw new Error('library_source_resync_no_detail');
+    }
+    const primary = detail.versions.find((version) => version.isPrimary) ?? detail.versions[0];
+    if (!primary?.sourceUrl || !detail.providerKey) {
+      throw new Error('library_source_resync_missing_manifest');
+    }
+
+    const outcome = await discoverIIIF(detail.providerKey, primary.sourceUrl, 1, true);
+    if (!outcome.manifest) {
+      throw new Error('library_source_resync_not_found');
+    }
+    const card = { ...outcome.manifest, id: outcome.manifest.manifestUrl };
+
+    await resyncSourceFromManifest(sourceId, {
+      title: card.title,
+      description: card.description,
+      kind: classifySourceKind(card),
+      creator: card.creator,
+      date: card.date,
+      thumbnailUrl: card.thumbnailUrl,
+      language: card.language,
+      subjects: card.subjects,
+      providerKey: detail.providerKey,
+      externalId: null,
+      mediaType: null,
+      materialType: card.materialType,
+      collection: null,
+      volume: card.volume,
+      itemCount: card.itemCount,
+      contributors: card.contributors,
+      publisher: card.publisher,
+      rights: card.rights,
+      physicalDescription: card.physicalDescription,
+      holdingInstitution: card.holdingInstitution,
+      catalogUrl: null,
+      pageUrl: card.pageUrl,
+    });
+
+    await get().loadDetail(sourceId);
+    await get().loadCatalog();
   },
 
   clearError: () => set({ error: null }),

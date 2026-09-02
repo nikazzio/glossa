@@ -13,6 +13,7 @@ import {
   Minimize2,
   MoreVertical,
   NotebookText,
+  RefreshCw,
   ShieldCheck,
   Tags,
   Trash2,
@@ -35,6 +36,7 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useUiStore } from '../../stores/uiStore';
+import { confirm } from '../../stores/confirmStore';
 import { SourceSizeCap } from './SourceSizeCap';
 import { DownloadButton } from './DownloadButton';
 import { useSourceActions } from './useSourceActions';
@@ -79,6 +81,9 @@ interface LibrarySourcePageProps {
   collections: SourceCollection[];
   onSetCollection: (collectionId: string, member: boolean) => Promise<void>;
   onCreateCollection: (name: string) => Promise<void>;
+  /** Rilegge il manifesto e riscrive i dati anagrafici, cancellando le
+   *  correzioni a mano (Note escluse). */
+  onResyncSource: () => Promise<void>;
 }
 
 /** La scheda di un'opera: cosa è, quanto ne hai, cosa puoi farci, dove sta. */
@@ -96,6 +101,7 @@ export function LibrarySourcePage({
   collections,
   onSetCollection,
   onCreateCollection,
+  onResyncSource,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
@@ -206,7 +212,12 @@ export function LibrarySourcePage({
             <div className="flex flex-col gap-6 px-4 py-5">
               {activeTab === 'info' ? (
                 <>
-                  <DataSection detail={detail} entry={entry} onCorrectField={onCorrectField} />
+                  <DataSection
+                    detail={detail}
+                    entry={entry}
+                    onCorrectField={onCorrectField}
+                    onResyncSource={onResyncSource}
+                  />
                   <SourceInfoSection detail={detail} providerLabel={providerLabel} />
                 </>
               ) : activeTab === 'copies' ? (
@@ -250,11 +261,22 @@ const INSPECTOR_TABS: { id: InspectorTabId; labelKey: string; icon: ReactNode }[
 
 /** Intestazione di sezione con un filo sotto: basta a distinguerla dal
  *  contenuto senza introdurre un altro stile di riquadro nella pagina. */
-function Section({ icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+function Section({
+  icon,
+  label,
+  actions,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="space-y-3">
-      <div className="border-b border-editorial-border/70 pb-1.5">
+      <div className="flex items-center justify-between gap-2 border-b border-editorial-border/70 pb-1.5">
         <SectionLabel icon={icon} label={label} />
+        {actions}
       </div>
       {children}
     </section>
@@ -330,12 +352,30 @@ function DataSection({
   detail,
   entry,
   onCorrectField,
+  onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
+  onResyncSource: () => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [resyncing, setResyncing] = useState(false);
+  const resync = async () => {
+    const confirmed = await confirm({
+      title: t('areas.library.resyncTitle'),
+      message: t('areas.library.resyncMessage'),
+      confirmLabel: t('areas.library.resyncConfirm'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    setResyncing(true);
+    try {
+      await onResyncSource();
+    } finally {
+      setResyncing(false);
+    }
+  };
   // Le stesse etichette per ogni opera, che la biblioteca le abbia dichiarate
   // o no: un campo che sparisse quando è vuoto farebbe sembrare due schede
   // strutturate in modo diverso, invece è solo la fonte che ne sa di meno.
@@ -358,7 +398,20 @@ function DataSection({
   ];
 
   return (
-    <Section icon={Info} label={t('areas.library.detailsSection')}>
+    <Section
+      icon={Info}
+      label={t('areas.library.detailsSection')}
+      actions={
+        <IconButton
+          size="sm"
+          onClick={() => void resync()}
+          disabled={resyncing}
+          title={t('areas.library.resyncAction')}
+        >
+          <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
+        </IconButton>
+      }
+    >
       <dl className="space-y-2.5">
         <SourceFieldRow
           label={t('areas.library.titleField')}
