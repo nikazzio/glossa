@@ -62,6 +62,10 @@ vi.mock('../../services/jobsService', async (importOriginal) => {
 
 vi.mock('../../services/optimizeService', () => ({
   enqueueOptimization: vi.fn(),
+  getOptimizeLongEdge: vi.fn().mockResolvedValue(2000),
+  getOptimizeQuality: vi.fn().mockResolvedValue(82),
+  OPTIMIZE_LONG_EDGES: [1000, 1500, 2000, 3000, 4000],
+  OPTIMIZE_QUALITIES: [60, 70, 82, 90],
 }));
 
 vi.mock('../../services/libraryCollectionsService', () => ({
@@ -696,7 +700,11 @@ describe('LibraryCatalogArea', () => {
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
 
     const resolutionsList = screen.getByText('areas.library.resolutionsSection').nextElementSibling as HTMLElement;
-    expect(resolutionsList).toHaveTextContent('1500');
+    // "1500" è numerica: l'etichetta aggiunge l'unità di misura tramite una
+    // chiave tradotta (il mock i18n dei test non interpola i placeholder,
+    // quindi qui si legge la chiave, non "1500 pixel"). "full" non è
+    // numerica: resta il valore così com'è, senza inventarsi un'unità.
+    expect(resolutionsList).toHaveTextContent('settings.download.pixels');
     expect(resolutionsList).toHaveTextContent('full');
     // Solo la principale porta il segno: è quanto conta verificare, non il
     // testo del riepilogo (il mock i18n dei test non interpola i placeholder).
