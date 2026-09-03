@@ -341,12 +341,12 @@ niente librerie di regex né di parsing HTML.
 
 ## Risultati delle prove di rete
 
-Questi valori derivano da prove reali svolte nell'agosto 2026:
+Questi valori derivano da prove reali svolte nell'agosto 2026 e dal confronto
+con Scriptoria di settembre 2026:
 
 - un 403 sui servizi misurati indica spesso eccesso di richieste; viene
   ritentato con raffreddamento condiviso per host;
 - attesa esponenziale: base 20 secondi, massimo 300 secondi;
-- la pausa casuale viene estratta una volta per richiesta;
 - `info.json` ha impiegato circa 4,3 secondi nei casi misurati e può fallire su
   una singola pagina;
 - una misura generata sul momento ha richiesto 26,6 secondi contro 2,3 secondi
@@ -356,8 +356,28 @@ Questi valori derivano da prove reali svolte nell'agosto 2026:
 - il preriscaldamento tramite pagina del lettore dichiarato per la Biblioteca
   Vaticana non è ancora stato verificato.
 
-Il valore `host_concurrency` esiste, ma il valore predefinito resta 1 finché le
-biblioteche non vengono misurate singolarmente.
+### Cortesia: due classi, un solo tetto
+
+**Non esiste pausa fra due richieste riuscite.** È la scelta verificata nel
+client HTTP di Scriptoria: i freni sono la concorrenza per host, la finestra a
+raffica e il raffreddamento dopo un rifiuto. Una pausa per richiesta si
+moltiplicava per ogni tassello del visore e rendeva illeggibile una pagina che
+il servizio serviva in un secondo.
+
+`Lane::Interactive` è ciò che qualcuno sta guardando, `Lane::Bulk` è uno
+scaricamento. Entrambe passano dallo **stesso** semaforo per host
+(`host_concurrency`), ma il traffico massivo prende anche un permesso di un
+sottoinsieme più piccolo (`bulk_workers = min(workers_per_job,
+host_concurrency - 1)`): il tetto non si supera sommando le due classi e un
+posto resta sempre a chi sfoglia. La finestra a raffica e il raffreddamento
+valgono per entrambe.
+
+Il traffico interattivo fa **un solo tentativo** con scadenza a 90 secondi: tre
+tentativi da due minuti erano sei minuti di posto occupato prima di poter dire
+qualcosa. Lo scaricamento mantiene tre tentativi e la scadenza del profilo.
+
+I profili predefiniti si riscrivono dal registro quando cambia
+`BUILTIN_PROFILES_VERSION`; i profili creati dall'utente non vengono toccati.
 
 ## Cache remota
 
@@ -369,6 +389,47 @@ La chiave deriva dalla richiesta canonica. Ogni valore ha un file di metadati;
 una voce incompleta non viene servita. I risultati di ricerca scadono, le
 immagini sono regolate dal limite complessivo. L'accesso aggiorna la data del
 file, usata per eliminare prima le voci meno recenti.
+
+### Prima quello che è sul computer
+
+Ogni immagine di una pagina — pagina grande, miniatura del rail, copertina
+dell'elenco — si chiede con **una sola forma**: `CacheRequest::Page` con numero
+di pagina, misura e l'indirizzo remoto come ripiego. `size` è il lato lungo in
+pixel oppure `thumb`. L'ordine è fisso:
+
+1. il file nel deposito a quella misura (`thumb` guarda la cartella
+   `thumbnails/`, che «libera spazio» non cancella);
+2. la cache;
+3. una copia più grande nel deposito, rimpicciolita sul momento e messa in
+   cache — è anche il modo in cui nasce la miniatura di un libro scaricato
+   prima che le miniature esistessero;
+4. `remote_url`, con la cortesia del profilo della biblioteca.
+
+L'indirizzo remoto **non** entra nella chiave di cache: dice dove andarla a
+prendere, non quale immagine è. Un deposito irraggiungibile vale come «qui non
+c'è niente», non come errore: la pagina si chiede alla biblioteca invece di
+lasciare il visore vuoto.
+
+### Il visore
+
+Il manifesto lo legge il motore in un passaggio solo (`iiif_viewer_manifest`):
+portarlo alla finestra per rimandarlo indietro da leggere lo trasformava due
+volte in un elenco di numeri, e su un libro di ottocento pagine era buona parte
+dell'attesa all'apertura.
+
+**Libro sul computer** → pagine lette dal deposito e mostrate intere, senza
+tasselli e senza rete. È il comportamento di Scriptoria, che per un libro locale
+toglie del tutto il riferimento al servizio della biblioteca.
+
+**Libro solo in rete** → zoom a tasselli via OpenSeadragon attraverso il ponte
+controllato. Se i tasselli non sono servibili — succede con servizi che li
+dichiarano e poi rifiutano le regioni — si ripiega sulla pagina intera. Un
+tassello perso non dichiara guasta una pagina che si vede già.
+
+Per la miniatura di una pagina non posseduta si usa **quella dichiarata dal
+manifesto**: è già pronta sul server della biblioteca, mentre ordinare una
+misura piccola al servizio immagini la fa ricavare al momento e su Internet
+Archive costa quanto la pagina intera.
 
 ## Ottimizzazione locale
 

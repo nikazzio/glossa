@@ -313,7 +313,12 @@ fn from_vault_exact(
     let Some((version_id, index, size)) = page_of(request)? else {
         return Ok(None);
     };
-    let root = crate::vault::commands::root_of(app)?;
+    // Deposito irraggiungibile — disco staccato, cartella di rete non montata —
+    // significa «qui non c'è niente», non «errore»: la pagina si chiederà alla
+    // biblioteca invece di lasciare il visore vuoto.
+    let Ok(root) = crate::vault::commands::root_of(app) else {
+        return Ok(None);
+    };
     let file = crate::vault::layout::page_file_name(index);
     for folder in version_folders(&root, version_id) {
         let exact = if size == THUMB_SIZE {
@@ -353,7 +358,9 @@ fn from_vault_larger(
     let Some(wanted) = wanted_edge(app, size) else {
         return Ok(None);
     };
-    let root = crate::vault::commands::root_of(app)?;
+    let Ok(root) = crate::vault::commands::root_of(app) else {
+        return Ok(None);
+    };
     for folder in version_folders(&root, version_id) {
         let pages = folder.join(crate::vault::layout::PAGES_DIR);
         let Some(bytes) = larger_in_vault(&pages, index, wanted)? else {

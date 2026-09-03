@@ -867,6 +867,8 @@
       "availabilityRemote": "online",
       "availabilityComplete": "Immagini locali",
       "availabilityPartial": "{{done}}/{{total}} Immagini locali",
+      "localImagesAll": "Tutte le immagini sono sul computer",
+      "localImagesSome": "{{done}} immagini su {{total}} sono sul computer",
       "verify": "Verifica i file di questa fonte",
       "verifyIntact": "Tutte le {{count}} pagine sono al loro posto",
       "verifyNoExpected_one": "C'è 1 pagina sul computer. Quante dovrebbero essere non lo sappiamo: la biblioteca non lo dichiara.",

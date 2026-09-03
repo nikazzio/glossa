@@ -229,33 +229,39 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
       setPageLoading(false);
       setPageError(null);
     };
-    const handleTileLoadFailed = () => {
-      if (cancelled) return;
-      logger.warn('library.viewer.tileFailed', { index: currentIndex, shown });
-      // Un tassello ai bordi che non arriva non è una pagina rotta: si dichiara
-      // guasta solo quando **non si vede niente**, e prima si prova l'intera.
-      if (shown > 0) return;
-      if (fallback === 'running') return;
+    /** Non si vede niente: prima si prova la pagina intera, poi si rinuncia. */
+    const nothingIsShowing = () => {
+      if (cancelled || fallback === 'running') return;
       if (fallback === 'untried') {
         void showWholePage().catch(givingUp);
         return;
       }
-      setPageLoading(false);
-      setPageError(TILE_LOAD_FAILED);
+      givingUp(new Error(TILE_LOAD_FAILED));
+    };
+    const handleTileLoadFailed = () => {
+      if (cancelled) return;
+      logger.warn('library.viewer.tileFailed', { index: currentIndex, shown });
+      // Un tassello ai bordi che non arriva non è una pagina rotta: si dichiara
+      // guasta solo quando non si vede niente.
+      if (shown > 0) return;
+      nothingIsShowing();
     };
     // OpenSeadragon rinuncia prima ancora di chiedere un tassello quando il
-    // descrittore non descrive niente di apribile: anche lì c'è la pagina
-    // intera da provare.
-    const handleOpenFailed = () => {
-      if (cancelled || fallback !== 'untried') return;
-      void showWholePage().catch(givingUp);
-    };
+    // descrittore non descrive niente di apribile, o quando l'immagine intera
+    // che gli abbiamo dato è illeggibile.
+    const handleOpenFailed = nothingIsShowing;
     viewer.close();
     viewer.addHandler('tile-loaded', handleTileLoaded);
     viewer.addHandler('tile-load-failed', handleTileLoadFailed);
     viewer.addHandler('open-failed', handleOpenFailed);
     setPageError(null);
     setPageLoading(true);
+    // Dove si è arrivati si ricorda comunque, che la pagina venga dal computer
+    // o dalla rete: riaprendo il libro si torna qui.
+    void setLastViewedPage(sourceId, currentIndex).catch((error) => {
+      logger.warn('library.viewer.lastPageSaveFailed', { message: errorMessage(error), index: currentIndex });
+    });
+
     void (async () => {
       // Il libro è sul computer: si legge da lì e non si chiede niente a
       // nessuno. Niente zoom a pezzi, che avrebbe senso solo in rete.
@@ -273,9 +279,6 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
         // grezze, non l'istanza di `TileSource` già pronta che il ponte
         // costruisce sopra — a runtime OpenSeadragon la accetta comunque.
         viewer.open(tileSource as unknown as OpenSeadragon.TileSourceSpecifier);
-        void setLastViewedPage(sourceId, currentIndex).catch((error) => {
-          logger.warn('library.viewer.lastPageSaveFailed', { message: errorMessage(error), index: currentIndex });
-        });
       } catch (error) {
         if (cancelled) return;
         // Senza `info.json` non c'è zoom, ma la pagina intera si può ancora
@@ -409,7 +412,6 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
             providerKey={providerKey}
             currentIndex={currentIndex}
             onSelect={goToIndex}
-            fetching={!pageLoading}
           />
         </div>
       )}

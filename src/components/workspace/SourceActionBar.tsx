@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
-  Check,
   Eraser,
   Minimize2,
   MoreVertical,
@@ -39,18 +38,15 @@ export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBar
 
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {/* Solo l'avanzamento di uno scaricamento in corso: che le immagini
+          siano sul computer lo dice già l'icona sotto il titolo, e dirlo due
+          volte sulla stessa riga non aggiunge niente. */}
       <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
-        {runningJob ? (
+        {runningJob && (
           <Tooltip label={t('areas.library.downloadRunning')} side="top">
             <span className="text-editorial-accent">{Math.round(runningJob.progress * 100)}%</span>
           </Tooltip>
-        ) : summary.availability === 'complete' ? (
-          <Tooltip label={t('areas.library.availabilityComplete')} side="top">
-            <span aria-label={t('areas.library.availabilityComplete')}>
-              <Check size={icon} />
-            </span>
-          </Tooltip>
-        ) : null}
+        )}
       </span>
 
       <ClickPopover

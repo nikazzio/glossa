@@ -16,15 +16,6 @@ interface ThumbnailRailProps {
   providerKey: string | null;
   currentIndex: number;
   onSelect: (index: number) => void;
-  /**
-   * Falso finché la pagina aperta non si vede.
-   *
-   * Le miniature restano disegnate come segnaposto ma non chiedono niente: su
-   * certe biblioteche ricavare una miniatura costa quanto ricavare la pagina, e
-   * dieci miniature davanti alla pagina che si sta aspettando la fanno
-   * aspettare ancora di più.
-   */
-  fetching: boolean;
 }
 
 /**
@@ -40,7 +31,6 @@ export function ThumbnailRail({
   providerKey,
   currentIndex,
   onSelect,
-  fetching,
 }: ThumbnailRailProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,7 +99,6 @@ export function ThumbnailRail({
               page={page}
               versionId={versionId}
               providerKey={providerKey}
-              fetching={fetching}
               active={index === currentIndex}
               top={index * ROW_HEIGHT_PX}
               onSelect={() => onSelect(index)}
@@ -125,7 +114,6 @@ function ThumbnailRow({
   page,
   versionId,
   providerKey,
-  fetching,
   active,
   top,
   onSelect,
@@ -133,7 +121,6 @@ function ThumbnailRow({
   page: ViewerPage;
   versionId: string;
   providerKey: string | null;
-  fetching: boolean;
   active: boolean;
   top: number;
   onSelect: () => void;
@@ -142,16 +129,14 @@ function ThumbnailRow({
   // costruirne una su misura fa ricavare l'immagine al momento, e su alcune
   // biblioteche costa quanto la pagina intera.
   const { url, loading } = useCachedImage(
-    fetching
-      ? {
-          kind: 'page',
-          versionId,
-          index: page.index,
-          size: THUMB_SIZE,
-          remoteUrl: pageThumbnailUrl(page, THUMB_WIDTH_PX),
-          providerKey,
-        }
-      : null,
+    {
+      kind: 'page',
+      versionId,
+      index: page.index,
+      size: THUMB_SIZE,
+      remoteUrl: pageThumbnailUrl(page, THUMB_WIDTH_PX),
+      providerKey,
+    },
     { priority: 'low' },
   );
 

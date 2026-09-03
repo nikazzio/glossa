@@ -192,7 +192,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
   });
 
   it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
@@ -211,7 +211,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('accoda subito l’ottimizzazione e mostra il lavoro', async () => {
@@ -260,7 +260,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
   });
 
   it('le pagine prese a risoluzione piena sono un aggiunta, non un buco', () => {
@@ -281,7 +281,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
-    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('due misure con lo stesso numero di pagine non rendono casuale quale sia la principale', () => {
@@ -490,7 +490,7 @@ describe('LibraryCatalogArea', () => {
     openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
-    expect(screen.getByLabelText('areas.library.availabilityComplete')).toBeInTheDocument();
+    expect(screen.getByLabelText('areas.library.localImagesAll')).toBeInTheDocument();
   });
 
   it('verifica e libera spazio ci sono sempre, spenti quando non c\u2019è niente in locale', () => {

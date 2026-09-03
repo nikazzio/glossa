@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { BookOpenText, LayoutGrid, Link2, List, Tags } from 'lucide-react';
+import { BookOpenText, CircleCheck, CircleDashed, LayoutGrid, Link2, List, Tags } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EASE_EDITORIAL } from '../layout/motion';
-import { ClickPopover, EmptyState, IconButton, LinkChip, PopoverItem, SectionLabel } from '../ui';
+import { ClickPopover, EmptyState, IconButton, LinkChip, PopoverItem, SectionLabel, Tooltip } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -343,15 +343,42 @@ function CatalogEntryRow({
 
   const authorDate = [entry.creator, entry.date].filter(Boolean).join(' \u00b7 ');
   const summary = actions.summary;
+  /**
+   * Le immagini sul computer si dicono con un'icona, non con una parola: un
+   * segno di spunta tondo quando ci sono tutte, un cerchio tratteggiato con il
+   * conteggio accanto quando ne manca qualcuna. Un pallino pieno diceva
+   * un'altra cosa — sembrava la spia di «collegato». Un'opera solo in rete
+   * resta scritta com'era.
+   */
+  const localImages =
+    summary.availability === 'complete'
+      ? t('areas.library.localImagesAll')
+      : t('areas.library.localImagesSome', {
+          done: summary.presentPages,
+          total: summary.expectedPages,
+        });
   const availability =
-    summary.availability === 'catalogued'
-      ? t('areas.library.availabilityRemote')
-      : summary.availability === 'complete'
-        ? t('areas.library.availabilityComplete')
-        : t('areas.library.availabilityPartial', {
-            done: summary.presentPages,
-            total: summary.expectedPages,
-          });
+    summary.availability === 'catalogued' ? (
+      t('areas.library.availabilityRemote')
+    ) : (
+      <Tooltip label={localImages} side="top">
+        <span
+          aria-label={localImages}
+          className="inline-flex items-center gap-1 align-middle text-editorial-success"
+        >
+          {summary.availability === 'complete' ? (
+            <CircleCheck size={12} aria-hidden="true" />
+          ) : (
+            <CircleDashed size={12} aria-hidden="true" />
+          )}
+          {summary.availability === 'partial' && (
+            <span className="tabular-nums">
+              {summary.presentPages}/{summary.expectedPages}
+            </span>
+          )}
+        </span>
+      </Tooltip>
+    );
   const extra = entry.sizes
     .filter((size) => size.sizeTag !== entry.principalSize && size.pages > 0)
     .reduce((total, size) => total + size.pages, 0);
@@ -400,9 +427,7 @@ function CatalogEntryRow({
             <span className="mt-1 block truncate text-xs text-editorial-muted">
               {pageCount}
               {pageCount && ' \u00b7 '}
-              <span className={summary.availability === 'complete' ? 'font-medium text-editorial-accent' : undefined}>
-                {availability}
-              </span>
+              {availability}
               {extraNote && ' \u00b7 '}
               {extraNote}
             </span>

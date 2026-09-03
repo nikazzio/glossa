@@ -23,20 +23,20 @@ describe('ThumbnailRail', () => {
 
   it('porta nel tratto visibile la pagina corrente', () => {
     const { rerender } = render(
-      <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} fetching />,
+      <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} />,
     );
     const rail = screen.getByRole('listbox');
     Object.defineProperty(rail, 'clientHeight', { configurable: true, value: 300 });
     Object.defineProperty(rail, 'scrollTop', { configurable: true, writable: true, value: 0 });
 
-    rerender(<ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={20} onSelect={vi.fn()} fetching />);
+    rerender(<ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={20} onSelect={vi.fn()} />);
 
     expect(rail.scrollTop).toBeGreaterThan(0);
   });
 
   it('usa le frecce per scegliere la pagina adiacente quando il rail ha il focus', () => {
     const onSelect = vi.fn();
-    render(<ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={5} onSelect={onSelect} fetching />);
+    render(<ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={5} onSelect={onSelect} />);
 
     fireEvent.keyDown(screen.getByRole('listbox'), { key: 'ArrowDown' });
 
@@ -52,7 +52,7 @@ describe('ThumbnailRail', () => {
       observe(): void {}
       disconnect(): void {}
     });
-    render(<ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} fetching />);
+    render(<ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} />);
     const rail = screen.getByRole('listbox');
     Object.defineProperty(rail, 'clientHeight', { configurable: true, value: 280 });
     Object.defineProperty(rail, 'scrollTop', { configurable: true, writable: true, value: 1200 });
