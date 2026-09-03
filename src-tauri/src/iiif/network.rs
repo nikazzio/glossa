@@ -70,7 +70,13 @@ pub const CAUTIOUS: NetworkProfile = NetworkProfile {
     backoff_base_secs: 15,
     backoff_cap_secs: 300,
     connect_timeout_secs: 15,
-    read_timeout_secs: 30,
+    // Lungo di proposito. Internet Archive ricava manifesto e immagini **su
+    // richiesta**: la prima volta che si apre un libro il server accetta la
+    // connessione e poi tace anche per un minuto. Con trenta secondi si
+    // rinunciava e si ricominciava da capo tre volte, cioè si aspettava di più.
+    // Un server irraggiungibile continua a fallire subito: quello lo dice
+    // `connect_timeout_secs`.
+    read_timeout_secs: 120,
     needs_viewer_warmup: false,
 };
 

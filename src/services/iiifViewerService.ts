@@ -31,16 +31,21 @@ export interface ViewerManifest {
   presentation2: boolean;
 }
 
-/** Scarica (o rilegge dalla cache) il manifesto e lo normalizza in pagine. */
+/**
+ * Il manifesto, già letto in pagine.
+ *
+ * Lo prende e lo legge il motore, in un passaggio solo: il manifesto di un libro
+ * di ottocento pagine pesa megabyte, e portarlo qui per rimandarlo indietro da
+ * leggere era buona parte dell'attesa all'apertura su Internet Archive.
+ */
 export async function fetchViewerManifest(
   manifestUrl: string,
   providerKey: string | null,
 ): Promise<ViewerManifest> {
-  const bytes = await cachedImage(
-    { kind: 'remote', url: manifestUrl, providerKey },
-    { priority: 'high' },
-  );
-  return invoke<ViewerManifest>('iiif_viewer_pages', { bytes: Array.from(bytes) });
+  return invoke<ViewerManifest>('iiif_viewer_manifest', {
+    url: manifestUrl,
+    providerKey,
+  });
 }
 
 /** Indirizzo di una miniatura secondo la Image API: identico per 2.x e 3.0,

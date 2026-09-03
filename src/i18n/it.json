@@ -970,6 +970,7 @@
       "viewerSection": "Pagine",
       "viewerComingSoon": "Il visore delle pagine arriverà qui.",
       "viewerLoading": "Apertura pagina…",
+      "viewerPreparing": "Questa biblioteca prepara il libro al momento della richiesta: la prima apertura può richiedere un minuto.",
       "viewerLoadError": "Non è stato possibile aprire questa pagina.",
       "viewerTileLoadErrorHint": "La biblioteca non ha restituito tutti i tasselli necessari.",
       "viewerRetry": "Riprova",

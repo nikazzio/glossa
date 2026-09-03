@@ -113,7 +113,7 @@ pub fn ensure_builtin_profiles(conn: &Connection) -> Result<(), String> {
 /// vecchi salvati, e continuerebbe a usarli per sempre. Alzando questo numero i
 /// due profili che nascono con l'applicazione tornano a quelli del registro. I
 /// profili creati dall'utente non vengono toccati.
-const BUILTIN_PROFILES_VERSION: i64 = 2;
+const BUILTIN_PROFILES_VERSION: i64 = 3;
 const BUILTIN_PROFILES_VERSION_KEY: &str = "network_profiles_version";
 
 fn reseed_needed(conn: &Connection) -> Result<bool, String> {

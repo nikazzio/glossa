@@ -37,6 +37,10 @@ interface PageViewerProps {
 
 const TILE_LOAD_FAILED = 'tile_load_failed';
 
+/** Oltre questo tempo l'apertura si dichiara lenta: più lungo di una
+ * biblioteca che risponde subito, più corto della pazienza di chi guarda. */
+const SLOW_OPENING_AFTER_MS = 8_000;
+
 /** Entro questo tempo dall'ultima risposta la biblioteca è ancora "collegata".
  * Più lungo di una pagina lenta, più corto di una pausa fra due sfogliate. */
 const ONLINE_FOR_MS = 30_000;
@@ -56,6 +60,10 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
   const [pageLoading, setPageLoading] = useState(false);
   const [thumbnailsOpen, setThumbnailsOpen] = useState(true);
   const [goToPage, setGoToPage] = useState('');
+  // Vero quando l'apertura dura più del normale. Internet Archive ricava il
+  // libro su richiesta: la prima volta l'attesa è lunga e senza una riga che
+  // lo dica sembra che il programma si sia piantato.
+  const [openingIsSlow, setOpeningIsSlow] = useState(false);
   const [manifestAttempt, setManifestAttempt] = useState(0);
   const [pageAttempt, setPageAttempt] = useState(0);
 
@@ -73,6 +81,15 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
     setManifestAttempt(0);
     setPageAttempt(0);
   }, [manifestUrl, sourceId]);
+
+  useEffect(() => {
+    if (manifest || manifestError) {
+      setOpeningIsSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setOpeningIsSlow(true), SLOW_OPENING_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [manifest, manifestError, manifestAttempt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,8 +316,13 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
             </div>
           )}
           {!manifestError && !manifest && (
-            <div className="absolute inset-0 flex items-center justify-center bg-surface-panel">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-panel">
               <Spinner label={t('areas.library.viewerLoading')} />
+              {openingIsSlow && (
+                <p className="max-w-xs text-center text-xs text-editorial-muted">
+                  {t('areas.library.viewerPreparing')}
+                </p>
+              )}
             </div>
           )}
           {manifest && total === 0 && (

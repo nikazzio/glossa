@@ -167,18 +167,42 @@ pub async fn cached_image(
     app: tauri::AppHandle,
     request: CacheRequest,
 ) -> Result<tauri::ipc::Response, String> {
-    if let Some(bytes) = from_vault_exact(&app, &request)? {
-        return Ok(served(&app, Source::Vault, bytes));
+    let (source, bytes) = resolve(&app, &request).await?;
+    Ok(served(&app, source, bytes))
+}
+
+/// I byte di una risorsa remota — immagine **o manifesto** — presi dove sono e
+/// segnati nel conto delle provenienze.
+///
+/// Esiste separata dal comando perché il visore ha bisogno degli stessi byte
+/// senza farli attraversare il ponte: un manifesto di un libro può pesare
+/// megabyte, e riportarlo alla finestra per rimandarlo indietro da leggere
+/// significava trasformarlo due volte in un elenco di numeri.
+pub async fn bytes_of(app: &tauri::AppHandle, request: &CacheRequest) -> Result<Vec<u8>, String> {
+    let (source, bytes) = resolve(app, request).await?;
+    if let Some(cache) = cache(app) {
+        cache.served(source, bytes.len());
+    }
+    Ok(bytes)
+}
+
+/// Deposito, cache, deposito a misura più grande, biblioteca: in quest'ordine.
+async fn resolve(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<(Source, Vec<u8>), String> {
+    if let Some(bytes) = from_vault_exact(app, request)? {
+        return Ok((Source::Vault, bytes));
     }
     // Prima della riduzione dal deposito: è lei che riempie la cache, e
     // cercarla dopo significherebbe non rileggerla mai.
-    if let Some(bytes) = lookup(&app, &request) {
-        return Ok(served(&app, Source::Cache, bytes));
+    if let Some(bytes) = lookup(app, request) {
+        return Ok((Source::Cache, bytes));
     }
-    if let Some(bytes) = from_vault_larger(&app, &request)? {
-        return Ok(served(&app, Source::Vault, bytes));
+    if let Some(bytes) = from_vault_larger(app, request)? {
+        return Ok((Source::Vault, bytes));
     }
-    let CacheRequest::Remote { url, .. } = &request else {
+    let CacheRequest::Remote { url, .. } = request else {
         // Una pagina che non è nel deposito e non è in cache la chiederà il
         // visore, che sa costruirne l'indirizzo. Finché non esiste, non c'è
         // niente da indovinare qui.
@@ -188,7 +212,7 @@ pub async fn cached_image(
     let provider_key = request.provider_key().unwrap_or_default();
     let host = request.host();
     let read_profile = || {
-        crate::storage_config::db_path(&app)
+        crate::storage_config::db_path(app)
             .and_then(|path| crate::db::open_connection(&path))
             .map(|conn| {
                 crate::iiif::settings::effective_profile(&conn, provider_key, host.as_deref())
@@ -198,7 +222,7 @@ pub async fn cached_image(
 
     // Client e ritmo si riusano: uno nuovo per immagine significa una
     // connessione nuova e una lettura del database per ogni tassello.
-    let (profile, client) = match cache(&app) {
+    let (profile, client) = match cache(app) {
         Some(cache) => {
             let profile = cache.profile_for(provider_key, host.as_deref(), read_profile);
             (profile, cache.client_for(&profile)?)
@@ -231,8 +255,8 @@ pub async fn cached_image(
     .map_err(|error| error.message)?
     .ok_or_else(|| "Richiesta interrotta.".to_string())?;
 
-    store(&app, &request, &fetched.bytes, fetched.content_type);
-    Ok(served(&app, Source::Network, fetched.bytes))
+    store(app, request, &fetched.bytes, fetched.content_type);
+    Ok((Source::Network, fetched.bytes))
 }
 
 /// Segna la provenienza e restituisce i byte. Sapere quante immagini sono

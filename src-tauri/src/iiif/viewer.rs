@@ -1,10 +1,13 @@
-//! Pagine normalizzate per il visore, dal manifesto già in mano.
+//! Pagine normalizzate per il visore.
 //!
-//! I byte del manifesto arrivano dal ponte generico (`cached_image`, con
-//! `kind: "remote"`): stessa cortesia e stessa cache di ogni altra richiesta
-//! verso una biblioteca, niente di dedicato qui. Questo comando non tocca la
-//! rete: prende byte già scaricati e li fa passare dallo stesso lettore
-//! IIIF 2/3 (`download::manifest::parse`) che usa lo scaricamento, così il
+//! Il manifesto si prende dal ponte generico — stessa cortesia e stessa cache di
+//! ogni altra richiesta verso una biblioteca — e si legge **qui dentro**, senza
+//! farlo passare dalla finestra. Il manifesto di un libro di ottocento pagine
+//! pesa megabyte: portarlo alla finestra per rimandarlo indietro da leggere
+//! significava trasformarlo due volte in un elenco di numeri, e su Internet
+//! Archive era buona parte dell'attesa all'apertura.
+//!
+//! La lettura è quella dello scaricamento (`download::manifest::parse`), così il
 //! visore vede esattamente le pagine che scaricherebbe.
 
 use serde::Serialize;
@@ -59,10 +62,21 @@ impl From<manifest::Manifest> for ViewerManifest {
     }
 }
 
-/// Legge le pagine di un manifesto già scaricato dal ponte controllato.
+/// Le pagine del manifesto a quell'indirizzo, prendendolo dove è: cache o
+/// biblioteca, con la cortesia di sempre.
 #[tauri::command]
-pub fn iiif_viewer_pages(bytes: Vec<u8>) -> Result<ViewerManifest, String> {
-    manifest::parse(&bytes)
+pub async fn iiif_viewer_manifest(
+    app: tauri::AppHandle,
+    url: String,
+    provider_key: Option<String>,
+) -> Result<ViewerManifest, String> {
+    let request = crate::httpcache::request::CacheRequest::Remote { url, provider_key };
+    let bytes = crate::httpcache::commands::bytes_of(&app, &request).await?;
+    pages_of(&bytes)
+}
+
+fn pages_of(bytes: &[u8]) -> Result<ViewerManifest, String> {
+    manifest::parse(bytes)
         .map(ViewerManifest::from)
         .map_err(|error| error.message)
 }
@@ -90,7 +104,7 @@ mod tests {
 
     #[test]
     fn parses_pages_from_bytes_without_touching_the_network() {
-        let result = iiif_viewer_pages(PRESENTATION_3.as_bytes().to_vec()).expect("parses");
+        let result = pages_of(PRESENTATION_3.as_bytes()).expect("parses");
         assert_eq!(result.pages.len(), 1);
         assert_eq!(result.pages[0].image_service, "https://img/1");
         assert_eq!(result.pages[0].width, Some(1000));
@@ -99,7 +113,7 @@ mod tests {
 
     #[test]
     fn exposes_presentation_2_pages_to_the_same_viewer_contract() {
-        let result = iiif_viewer_pages(PRESENTATION_2.as_bytes().to_vec()).expect("parses");
+        let result = pages_of(PRESENTATION_2.as_bytes()).expect("parses");
         assert!(result.presentation2);
         assert_eq!(result.pages[0].label.as_deref(), Some("1r"));
         assert_eq!(
@@ -111,7 +125,7 @@ mod tests {
 
     #[test]
     fn rejects_bytes_that_are_not_a_manifest() {
-        let result = iiif_viewer_pages(b"not json".to_vec());
+        let result = pages_of(b"not json");
         assert!(result.is_err());
     }
 }
