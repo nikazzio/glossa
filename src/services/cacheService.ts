@@ -60,9 +60,14 @@ export interface CachedImageOptions {
 
 // Un rapido scorrimento non deve trasformarsi in centinaia di invoke ormai
 // invisibili. Sei richieste bastano a riempire le corsie native senza creare
-// una seconda coda incontrollata nella webview; due posti restano ai tasselli
-// della pagina aperta, che altrimenti aspetterebbero dietro alle miniature.
-const remoteImageScheduler = createRequestScheduler(6, 2);
+// una seconda coda incontrollata nella webview.
+//
+// Quattro posti sono riservati alla pagina aperta, e non è generosità: verso
+// una biblioteca severa il motore ne concede due per volta, quindi ogni
+// miniatura in più in volo è una miniatura **davanti** a un tassello nella coda
+// del motore, dove la priorità non arriva. Due miniature alla volta bastano a
+// riempire il rail e lasciano la corsia libera per la pagina che si guarda.
+const remoteImageScheduler = createRequestScheduler(6, 4);
 
 export async function cachedImage(request: CacheRequest, options: CachedImageOptions = {}): Promise<Uint8Array> {
   // Il motore risponde con i byte grezzi: l'annotazione dice quello che il
