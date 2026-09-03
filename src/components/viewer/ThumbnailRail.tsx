@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ViewerPage } from '../../services/iiifViewerService';
 import { pageThumbnailUrl } from '../../services/iiifViewerService';
@@ -32,16 +32,54 @@ export function ThumbnailRail({ pages, providerKey, currentIndex, onSelect }: Th
   const visibleRows = Math.ceil(viewportHeight / ROW_HEIGHT_PX) + OVERSCAN_ROWS * 2;
   const lastVisible = Math.min(pages.length, firstVisible + visibleRows);
 
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const measure = () => setViewportHeight(container.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rowTop = currentIndex * ROW_HEIGHT_PX;
+    const rowBottom = rowTop + ROW_HEIGHT_PX;
+    const viewportTop = container.scrollTop;
+    const viewportBottom = viewportTop + container.clientHeight;
+    if (rowTop < viewportTop) {
+      container.scrollTop = rowTop;
+      setScrollTop(rowTop);
+    } else if (rowBottom > viewportBottom) {
+      const nextScrollTop = Math.max(0, rowBottom - container.clientHeight);
+      container.scrollTop = nextScrollTop;
+      setScrollTop(nextScrollTop);
+    }
+  }, [currentIndex, viewportHeight]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    let target: number | null = null;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') target = currentIndex + 1;
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') target = currentIndex - 1;
+    else if (event.key === 'Home') target = 0;
+    else if (event.key === 'End') target = pages.length - 1;
+    if (target === null || target < 0 || target >= pages.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onSelect(target);
+  };
+
   return (
     <div
       role="listbox"
       aria-label={t('areas.library.viewerThumbnails')}
+      tabIndex={0}
       className="h-full min-h-0 flex-1 overflow-y-auto"
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-      ref={(node) => {
-        containerRef.current = node;
-        if (node && viewportHeight === 0) setViewportHeight(node.clientHeight);
-      }}
+      onKeyDown={handleKeyDown}
+      ref={containerRef}
     >
       <div style={{ height: pages.length * ROW_HEIGHT_PX, position: 'relative' }}>
         {pages.slice(firstVisible, lastVisible).map((page, offset) => {

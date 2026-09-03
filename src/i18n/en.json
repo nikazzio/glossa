@@ -972,6 +972,7 @@
       "viewerComingSoon": "The page viewer will live here.",
       "viewerLoading": "Opening page…",
       "viewerLoadError": "This page could not be opened.",
+      "viewerTileLoadErrorHint": "The library did not return all the required tiles.",
       "viewerRetry": "Retry",
       "viewerNoManifest": "This work has no IIIF digitisation to read yet.",
       "viewerPrevPage": "Previous page",

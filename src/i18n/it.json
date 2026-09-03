@@ -972,6 +972,7 @@
       "viewerComingSoon": "Il visore delle pagine arriverà qui.",
       "viewerLoading": "Apertura pagina…",
       "viewerLoadError": "Non è stato possibile aprire questa pagina.",
+      "viewerTileLoadErrorHint": "La biblioteca non ha restituito tutti i tasselli necessari.",
       "viewerRetry": "Riprova",
       "viewerNoManifest": "Questa opera non ha ancora una digitalizzazione IIIF da leggere.",
       "viewerPrevPage": "Pagina precedente",

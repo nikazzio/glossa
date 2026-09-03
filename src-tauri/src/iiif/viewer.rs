@@ -80,6 +80,14 @@ mod tests {
       ]
     }"#;
 
+    const PRESENTATION_2: &str = r#"{
+      "@id": "https://example.org/manifest",
+      "sequences": [{ "canvases": [
+        { "@id": "https://example.org/canvas/1", "label": "1r", "width": 1200, "height": 1800,
+          "images": [{ "resource": { "service": { "@id": "https://img/legacy" } } }] }
+      ] }]
+    }"#;
+
     #[test]
     fn parses_pages_from_bytes_without_touching_the_network() {
         let result = iiif_viewer_pages(PRESENTATION_3.as_bytes().to_vec()).expect("parses");
@@ -87,6 +95,18 @@ mod tests {
         assert_eq!(result.pages[0].image_service, "https://img/1");
         assert_eq!(result.pages[0].width, Some(1000));
         assert!(!result.presentation2);
+    }
+
+    #[test]
+    fn exposes_presentation_2_pages_to_the_same_viewer_contract() {
+        let result = iiif_viewer_pages(PRESENTATION_2.as_bytes().to_vec()).expect("parses");
+        assert!(result.presentation2);
+        assert_eq!(result.pages[0].label.as_deref(), Some("1r"));
+        assert_eq!(
+            result.pages[0].canvas_id.as_deref(),
+            Some("https://example.org/canvas/1")
+        );
+        assert_eq!(result.pages[0].image_service, "https://img/legacy");
     }
 
     #[test]

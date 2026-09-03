@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- La superficie deep-zoom è intenzionalmente un widget ARIA application: riceve focus e gestisce le frecce, mentre i controlli figli e la tela OSD conservano la propria tastiera. */
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import {
@@ -32,6 +33,8 @@ interface PageViewerProps {
   providerKey: string | null;
 }
 
+const TILE_LOAD_FAILED = 'tile_load_failed';
+
 /**
  * Il visore IIIF remoto (Blocco 1 del piano locale): pagina singola, zoom a
  * tasselli via OpenSeadragon, tutto passato dal ponte controllato. File
@@ -55,10 +58,14 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
 
   // Un'opera diversa: il manifesto e la posizione precedenti non hanno senso.
   useEffect(() => {
+    viewerRef.current?.close();
     setManifest(null);
     setManifestError(null);
     setCurrentIndex(0);
+    setPageError(null);
+    setPageLoading(false);
     setManifestAttempt(0);
+    setPageAttempt(0);
   }, [manifestUrl, sourceId]);
 
   useEffect(() => {
@@ -120,6 +127,18 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
     const viewer = viewerRef.current;
     if (!viewer || !page) return;
     let cancelled = false;
+    const handleTileLoaded = () => {
+      if (!cancelled) setPageLoading(false);
+    };
+    const handleTileLoadFailed = () => {
+      if (cancelled) return;
+      logger.error('library.viewer.tileFailed', { index: currentIndex });
+      setPageLoading(false);
+      setPageError(TILE_LOAD_FAILED);
+    };
+    viewer.close();
+    viewer.addHandler('tile-loaded', handleTileLoaded);
+    viewer.addHandler('tile-load-failed', handleTileLoadFailed);
     setPageError(null);
     setPageLoading(true);
     void (async () => {
@@ -133,37 +152,48 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
         // grezze, non l'istanza di `TileSource` già pronta che il ponte
         // costruisce sopra — a runtime OpenSeadragon la accetta comunque.
         viewer.open(tileSource as unknown as OpenSeadragon.TileSourceSpecifier);
-        void setLastViewedPage(sourceId, currentIndex);
+        void setLastViewedPage(sourceId, currentIndex).catch((error) => {
+          logger.warn('library.viewer.lastPageSaveFailed', { message: errorMessage(error), index: currentIndex });
+        });
       } catch (error) {
         if (cancelled) return;
         logger.error('library.viewer.pageFailed', { message: errorMessage(error), index: currentIndex });
+        setPageLoading(false);
         setPageError(errorMessage(error));
-      } finally {
-        if (!cancelled) setPageLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      viewer.removeHandler('tile-loaded', handleTileLoaded);
+      viewer.removeHandler('tile-load-failed', handleTileLoadFailed);
     };
   }, [page, providerKey, sourceId, currentIndex, pageAttempt]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
-      if (event.key === 'ArrowRight') goToIndex(currentIndex + 1);
-      else if (event.key === 'ArrowLeft') goToIndex(currentIndex - 1);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, total, goToIndex]);
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    // I campi e i controlli mantengono le proprie frecce; dentro la tela OSD
+    // servono per il pan. Il cambio pagina appartiene alla cornice del visore,
+    // non all'intera applicazione.
+    if (target?.closest('input, textarea, select, button, [contenteditable="true"], .openseadragon-canvas')) return;
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      goToIndex(currentIndex + 1);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      goToIndex(currentIndex - 1);
+    }
+  };
 
   // Il contenitore di OpenSeadragon resta sempre montato: l'effetto che crea
   // il viewer gira una sola volta, al primo montaggio del componente. Se il
   // suo `<div>` comparisse solo dopo che il manifesto è arrivato, quel primo
   // giro troverebbe il ref ancora vuoto e il viewer non nascerebbe mai.
   return (
-    <div className="flex h-full min-h-0 flex-1">
+    <div
+      role="region"
+      aria-label={t('areas.library.viewerSection')}
+      className="flex h-full min-h-0 flex-1"
+    >
       <div className="flex min-h-0 flex-1 flex-col">
         {manifest && total > 0 && (
           <ViewerToolbar
@@ -186,7 +216,13 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
           />
         )}
-        <div className="relative min-h-0 flex-1 bg-surface-elevated">
+        <div
+          role="application"
+          aria-label={t('areas.library.viewerSection')}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          className="relative min-h-0 flex-1 bg-surface-elevated outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent"
+        >
           <div ref={viewerElementRef} className="absolute inset-0" />
           {manifestError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-panel">
@@ -216,7 +252,11 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
           )}
           {pageError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-panel/90">
-              <EmptyState icon={<Images size={24} />} message={t('areas.library.viewerLoadError')} hint={pageError} />
+              <EmptyState
+                icon={<Images size={24} />}
+                message={t('areas.library.viewerLoadError')}
+                hint={pageError === TILE_LOAD_FAILED ? t('areas.library.viewerTileLoadErrorHint') : pageError}
+              />
               <IconButton size="sm" onClick={() => setPageAttempt((n) => n + 1)} title={t('areas.library.viewerRetry')}>
                 <RefreshCw size={14} />
               </IconButton>

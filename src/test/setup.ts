@@ -20,7 +20,10 @@ vi.mock('openseadragon', () => {
     return {
       viewport: { zoomBy: vi.fn(), goHome: vi.fn() },
       open: vi.fn(),
+      close: vi.fn(),
       destroy: vi.fn(),
+      addHandler: vi.fn(),
+      removeHandler: vi.fn(),
     };
   }
   OpenSeadragon.IIIFTileSource = class {};
