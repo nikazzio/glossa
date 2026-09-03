@@ -202,10 +202,15 @@ async fn resolve(
     if let Some(bytes) = from_vault_larger(app, request)? {
         return Ok((Source::Vault, bytes));
     }
-    let CacheRequest::Remote { url, .. } = request else {
-        // Una pagina che non è nel deposito e non è in cache la chiederà il
-        // visore, che sa costruirne l'indirizzo. Finché non esiste, non c'è
-        // niente da indovinare qui.
+    // Sul computer non c'è: si va dove la richiesta dice di andare. Una pagina
+    // senza indirizzo remoto è una pagina che esiste solo in locale, e non c'è
+    // niente da indovinare qui.
+    let remote = match request {
+        CacheRequest::Remote { url, .. } => Some(url.as_str()),
+        CacheRequest::Page { remote_url, .. } => remote_url.as_deref(),
+        CacheRequest::Search { .. } => None,
+    };
+    let Some(url) = remote else {
         return Err("Questa pagina non è disponibile in locale.".to_string());
     };
 
@@ -293,8 +298,14 @@ pub async fn network_probe(app: tauri::AppHandle) -> Result<NetworkProbe, String
     })
 }
 
-/// La pagina nel deposito, alla misura chiesta. Ha la precedenza su tutto: è
+/// La misura che chiede la miniatura invece di un numero di pixel.
+pub const THUMB_SIZE: &str = "thumb";
+
+/// Il file già sul computer, alla misura chiesta. Ha la precedenza su tutto: è
 /// roba posseduta, e non costa una richiesta a nessuno.
+///
+/// Le miniature hanno una cartella loro, che «libera spazio» non tocca: un libro
+/// di cui si sono cancellate le pagine continua a sfogliarsi in piccolo.
 fn from_vault_exact(
     app: &tauri::AppHandle,
     request: &CacheRequest,
@@ -303,11 +314,18 @@ fn from_vault_exact(
         return Ok(None);
     };
     let root = crate::vault::commands::root_of(app)?;
+    let file = crate::vault::layout::page_file_name(index);
     for folder in version_folders(&root, version_id) {
-        let exact = folder
-            .join(crate::vault::layout::PAGES_DIR)
-            .join(size)
-            .join(crate::vault::layout::page_file_name(index));
+        let exact = if size == THUMB_SIZE {
+            folder
+                .join(crate::vault::layout::THUMBNAILS_DIR)
+                .join(&file)
+        } else {
+            folder
+                .join(crate::vault::layout::PAGES_DIR)
+                .join(size)
+                .join(&file)
+        };
         if exact.is_file() {
             return std::fs::read(&exact)
                 .map(Some)
@@ -317,9 +335,12 @@ fn from_vault_exact(
     Ok(None)
 }
 
-/// La stessa pagina a una misura maggiore, rimpicciolita sul momento e messa in
-/// cache: meglio del deposito che chiedere alla biblioteca una cosa che abbiamo
-/// già in casa più bella.
+/// La stessa pagina in una cartella più grande, rimpicciolita sul momento e
+/// messa in cache: meglio del deposito che chiedere alla biblioteca una cosa che
+/// abbiamo già in casa più bella.
+///
+/// È anche il modo in cui nasce la miniatura di un libro scaricato prima che le
+/// miniature esistessero: si ricava dalla pagina, non si scarica.
 fn from_vault_larger(
     app: &tauri::AppHandle,
     request: &CacheRequest,
@@ -327,22 +348,40 @@ fn from_vault_larger(
     let Some((version_id, index, size)) = page_of(request)? else {
         return Ok(None);
     };
+    // Chi chiede `max` vuole la più grande che c'è: se non è sul computer non
+    // la si costruisce rimpicciolendo qualcos'altro.
+    let Some(wanted) = wanted_edge(app, size) else {
+        return Ok(None);
+    };
     let root = crate::vault::commands::root_of(app)?;
     for folder in version_folders(&root, version_id) {
         let pages = folder.join(crate::vault::layout::PAGES_DIR);
-        let Some(bytes) = larger_in_vault(&pages, index, size)? else {
+        let Some(bytes) = larger_in_vault(&pages, index, wanted)? else {
             continue;
         };
-        let wanted = size.parse::<u32>().unwrap_or(0);
-        if wanted == 0 {
-            return Ok(Some(bytes));
-        }
         let smaller = crate::images::resize_jpeg(&bytes, wanted, DOWNSCALE_QUALITY)
             .map_err(|error| error.to_string())?;
         store(app, request, &smaller, Some("image/jpeg".to_string()));
         return Ok(Some(smaller));
     }
     Ok(None)
+}
+
+/// Il lato lungo in pixel di una misura, o `None` quando non è un numero e
+/// quindi non si può ricavare da una copia più grande.
+fn wanted_edge(app: &tauri::AppHandle, size: &str) -> Option<u32> {
+    if size == THUMB_SIZE {
+        return Some(thumbnail_edge(app));
+    }
+    size.parse::<u32>().ok().filter(|pixels| *pixels > 0)
+}
+
+/// Il lato lungo scelto per le miniature, o quello predefinito.
+fn thumbnail_edge(app: &tauri::AppHandle) -> u32 {
+    crate::storage_config::db_path(app)
+        .and_then(|path| crate::db::open_connection(&path))
+        .and_then(|conn| crate::download::thumbnail_edge(&conn))
+        .unwrap_or(crate::images::DEFAULT_THUMBNAIL_EDGE)
 }
 
 /// La pagina chiesta, **dopo aver controllato che i suoi pezzi siano nomi e non
@@ -356,6 +395,7 @@ fn page_of(request: &CacheRequest) -> Result<Option<(&str, u32, &str)>, String> 
         version_id,
         index,
         size,
+        ..
     } = request
     else {
         return Ok(None);
@@ -384,9 +424,8 @@ fn version_folders(root: &std::path::Path, version_id: &str) -> Vec<std::path::P
 fn larger_in_vault(
     pages: &std::path::Path,
     index: u32,
-    wanted: &str,
+    wanted_pixels: u32,
 ) -> Result<Option<Vec<u8>>, String> {
-    let wanted_pixels = wanted.parse::<u32>().unwrap_or(u32::MAX);
     let Ok(entries) = std::fs::read_dir(pages) else {
         return Ok(None);
     };

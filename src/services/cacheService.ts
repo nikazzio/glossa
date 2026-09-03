@@ -18,9 +18,26 @@ import { hostOf, useNetworkActivity } from './networkActivity';
  * scarto, e non è mai contato come scaricato.
  */
 
+/** La misura che chiede la miniatura invece di un numero di pixel. */
+export const THUMB_SIZE = 'thumb';
+
 export type CacheRequest =
   | { kind: 'remote'; url: string; providerKey?: string | null }
-  | { kind: 'page'; versionId: string; index: number; size: string }
+  /**
+   * Una pagina di un'opera, a una misura.
+   *
+   * È la forma con cui il visore chiede tutto. Il motore guarda **prima sul
+   * computer** — la pagina a quella misura, la miniatura salvata, una copia più
+   * grande da rimpicciolire — e va a `remoteUrl` solo se in casa non c'è niente.
+   */
+  | {
+      kind: 'page';
+      versionId: string;
+      index: number;
+      size: string;
+      remoteUrl?: string | null;
+      providerKey?: string | null;
+    }
   | {
       kind: 'search';
       providerKey: string;
@@ -76,14 +93,16 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
     const bytes = await invoke<number[]>('cached_image', { request });
     return new Uint8Array(bytes);
   };
-  if (request.kind !== 'remote') return load();
+  // Le ricerche non sono immagini: non passano dalla corsia del visore.
+  if (request.kind === 'search') return load();
 
   // Una richiesta remota può finire nel deposito o in cache senza toccare la
   // rete: si conta lo stesso, perché è comunque il tempo che l'utente aspetta.
   const priority = options.priority ?? 'normal';
+  const host = request.kind === 'remote' ? request.url : (request.remoteUrl ?? '');
   useNetworkActivity.getState().queue(priority);
   const watched = async () => {
-    useNetworkActivity.getState().start(priority, hostOf(request.url));
+    useNetworkActivity.getState().start(priority, hostOf(host));
     try {
       const bytes = await load();
       useNetworkActivity.getState().succeed(priority, bytes.byteLength);

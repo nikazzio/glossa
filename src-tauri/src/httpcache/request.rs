@@ -38,14 +38,24 @@ pub enum CacheRequest {
         url: String,
         provider_key: Option<String>,
     },
-    /// Una pagina di una digitalizzazione, a una misura. Non la usa ancora
-    /// nessuno: la userà il visore, e dichiararla adesso è la ragione per cui
-    /// questa cache non andrà rifatta allora.
+    /// Una pagina di una digitalizzazione, a una misura.
+    ///
+    /// **È la forma con cui il visore chiede tutto**: la pagina grande, la
+    /// miniatura del rail, la copertina dell'elenco. Prima si guarda sul
+    /// computer, e solo se lì non c'è si va a `remote_url` — che è l'indirizzo
+    /// dichiarato dall'indice del libro, non uno costruito a mano.
+    ///
+    /// `size` è il lato lungo in pixel, oppure `thumb` per la miniatura.
     #[serde(rename_all = "camelCase")]
     Page {
         version_id: String,
         index: u32,
         size: String,
+        /// Dove chiederla se sul computer non c'è. Assente = solo locale.
+        #[serde(default)]
+        remote_url: Option<String>,
+        #[serde(default)]
+        provider_key: Option<String>,
     },
     /// La risposta di una ricerca. È l'unica che scade.
     #[serde(rename_all = "camelCase")]
@@ -74,7 +84,10 @@ impl CacheRequest {
     pub fn host(&self) -> Option<String> {
         match self {
             CacheRequest::Remote { url, .. } => crate::download::fetch::host_of(url).ok(),
-            _ => None,
+            CacheRequest::Page { remote_url, .. } => remote_url
+                .as_deref()
+                .and_then(|url| crate::download::fetch::host_of(url).ok()),
+            CacheRequest::Search { .. } => None,
         }
     }
 
@@ -82,17 +95,20 @@ impl CacheRequest {
         match self {
             CacheRequest::Remote { provider_key, .. } => provider_key.as_deref(),
             CacheRequest::Search { provider_key, .. } => Some(provider_key),
-            CacheRequest::Page { .. } => None,
+            CacheRequest::Page { provider_key, .. } => provider_key.as_deref(),
         }
     }
 
     fn canonical(&self) -> String {
         match self {
             CacheRequest::Remote { url, .. } => format!("remote|{url}"),
+            // L'indirizzo remoto **non** entra nella chiave: è dove andarla a
+            // prendere, non quale immagine è.
             CacheRequest::Page {
                 version_id,
                 index,
                 size,
+                ..
             } => format!("page|{version_id}|{index}|{size}"),
             CacheRequest::Search {
                 provider_key,
@@ -181,8 +197,32 @@ mod tests {
             version_id: "sver-1".into(),
             index: 34,
             size: "2000".into(),
+            remote_url: None,
+            provider_key: None,
         }
         .expires());
+    }
+
+    #[test]
+    fn where_a_page_is_fetched_from_does_not_change_which_page_it_is() {
+        // La stessa pagina chiesta da due schermate diverse, una che conosce
+        // l'indirizzo remoto e una no, deve leggere lo stesso file di cache.
+        let local = CacheRequest::Page {
+            version_id: "sver-1".into(),
+            index: 34,
+            size: "thumb".into(),
+            remote_url: None,
+            provider_key: None,
+        };
+        let with_fallback = CacheRequest::Page {
+            version_id: "sver-1".into(),
+            index: 34,
+            size: "thumb".into(),
+            remote_url: Some("https://images.example/34/full/300,/0/default.jpg".into()),
+            provider_key: Some("archive_org".into()),
+        };
+
+        assert_eq!(local.key(), with_fallback.key());
     }
 
     #[test]

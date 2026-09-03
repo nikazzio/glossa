@@ -142,6 +142,7 @@ export function LibrarySourcePage({
           <PageViewer
             key={detail.source.id}
             sourceId={detail.source.id}
+            versionId={manifestVersion.id}
             manifestUrl={manifestVersion.sourceUrl}
             providerKey={manifestVersion.providerKey}
           />

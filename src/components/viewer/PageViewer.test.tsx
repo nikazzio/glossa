@@ -29,6 +29,15 @@ vi.mock('../../services/iiifViewerService', () => ({
   wholePageUrl: (service: string) => `${service}/full/1600,/0/default.jpg`,
 }));
 
+vi.mock('../../services/inventoryService', () => ({
+  versionInventory: vi.fn(async () => null),
+}));
+
+vi.mock('../../services/cacheService', () => ({
+  cachedImage: vi.fn(async () => new Uint8Array([1, 2, 3])),
+  THUMB_SIZE: 'thumb',
+}));
+
 vi.mock('./iiifTileBridge', () => ({
   createControlledIiifTileSource: vi.fn(() => ({})),
 }));
@@ -44,6 +53,7 @@ const pages = [1, 2, 3].map((index) => ({
   width: 1000,
   height: 1400,
   canvasId: `canvas-${index}`,
+  thumbnail: null,
 }));
 
 describe('PageViewer', () => {
@@ -65,7 +75,7 @@ describe('PageViewer', () => {
   });
 
   it('ripiega sulla pagina intera quando lo zoom a tasselli non arriva', async () => {
-    render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
     await waitFor(() => expect(osd.handlers.get('tile-load-failed')).toBeDefined());
 
@@ -93,7 +103,7 @@ describe('PageViewer', () => {
       }
       throw new Error('la biblioteca non risponde');
     });
-    render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
     await waitFor(() => expect(osd.handlers.get('tile-load-failed')).toBeDefined());
 
@@ -107,7 +117,7 @@ describe('PageViewer', () => {
   });
 
   it('un tassello perso non cancella una pagina che si vede già', async () => {
-    render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
     await waitFor(() => expect(osd.handlers.get('tile-loaded')).toBeDefined());
 
@@ -118,7 +128,7 @@ describe('PageViewer', () => {
   });
 
   it('cambia pagina con le frecce solo quando il focus appartiene al visore', async () => {
-    render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
 
     fireEvent.keyDown(document.body, { key: 'ArrowRight' });

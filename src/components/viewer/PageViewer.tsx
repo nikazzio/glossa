@@ -24,13 +24,19 @@ import {
   infoJsonUrl,
   setLastViewedPage,
   wholePageUrl,
+  WHOLE_PAGE_WIDTH_PX,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
+import { cachedImage as pageImage } from '../../services/cacheService';
+import { versionInventory } from '../../services/inventoryService';
 import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
 
 interface PageViewerProps {
   sourceId: string;
+  /** La copia digitale mostrata: è la chiave con cui si cercano le pagine sul
+   *  computer prima di chiederle alla biblioteca. */
+  versionId: string;
   manifestUrl: string;
   providerKey: string | null;
 }
@@ -51,7 +57,7 @@ const ONLINE_FOR_MS = 30_000;
  * locali, PDF e selezione multipla restano fuori — arrivano nei blocchi
  * successivi.
  */
-export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerProps) {
+export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
   const [manifestError, setManifestError] = useState<string | null>(null);
@@ -66,6 +72,15 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
   const [openingIsSlow, setOpeningIsSlow] = useState(false);
   const [manifestAttempt, setManifestAttempt] = useState(0);
   const [pageAttempt, setPageAttempt] = useState(0);
+  /**
+   * La misura con cui il libro è stato scaricato, quando c'è.
+   *
+   * Se c'è, le pagine si leggono dal computer e si mostrano intere: nessuna
+   * richiesta alla biblioteca, nessuno zoom a pezzi da ricomporre. È il
+   * comportamento di Scriptoria, che per un libro scaricato toglie del tutto il
+   * riferimento al servizio della biblioteca.
+   */
+  const [localSize, setLocalSize] = useState<string | null>(null);
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -82,14 +97,28 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
     setPageAttempt(0);
   }, [manifestUrl, sourceId]);
 
+  const stillOpening = (!manifest && !manifestError) || pageLoading;
   useEffect(() => {
-    if (manifest || manifestError) {
+    if (!stillOpening) {
       setOpeningIsSlow(false);
       return;
     }
     const timer = setTimeout(() => setOpeningIsSlow(true), SLOW_OPENING_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [manifest, manifestError, manifestAttempt]);
+  }, [stillOpening, manifestAttempt, currentIndex, pageAttempt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLocalSize(null);
+    void versionInventory(versionId).then((inventory) => {
+      if (cancelled || !inventory) return;
+      const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);
+      setLocalSize(principal && principal.pages > 0 ? principal.sizeTag : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [versionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,9 +196,18 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
      */
     const showWholePage = async () => {
       fallback = 'running';
-      logger.warn('library.viewer.wholePageFallback', { index: currentIndex });
       try {
-        const bytes = await fetchIiifBytes(wholePageUrl(page.imageService), providerKey, controller.signal);
+        const bytes = await pageImage(
+          {
+            kind: 'page',
+            versionId,
+            index: page.index,
+            size: localSize ?? String(WHOLE_PAGE_WIDTH_PX),
+            remoteUrl: wholePageUrl(page.imageService),
+            providerKey,
+          },
+          { priority: 'high', signal: controller.signal },
+        );
         if (cancelled) return;
         objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
         viewer.open({ type: 'image', url: objectUrl } as unknown as OpenSeadragon.TileSourceSpecifier);
@@ -219,6 +257,12 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
     setPageError(null);
     setPageLoading(true);
     void (async () => {
+      // Il libro è sul computer: si legge da lì e non si chiede niente a
+      // nessuno. Niente zoom a pezzi, che avrebbe senso solo in rete.
+      if (localSize) {
+        await showWholePage().catch(givingUp);
+        return;
+      }
       try {
         const bytes = await fetchIiifBytes(infoJsonUrl(page.imageService), providerKey, controller.signal);
         if (cancelled) return;
@@ -250,7 +294,7 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
       // dell'indirizzo; tenerlo vivo esaurirebbe solo il tetto della finestra.
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [page, providerKey, sourceId, currentIndex, pageAttempt]);
+  }, [page, providerKey, sourceId, versionId, localSize, currentIndex, pageAttempt]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
@@ -331,11 +375,16 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
             </div>
           )}
           {pageLoading && (
-            <div className="absolute inset-x-0 top-0 flex justify-center p-2">
+            <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-1 p-2">
               <Spinner
                 label={t('areas.library.viewerLoading')}
                 className="rounded bg-surface-panel/90 px-2 py-1 text-xs text-editorial-muted shadow"
               />
+              {openingIsSlow && (
+                <p className="max-w-xs rounded bg-surface-panel/90 px-2 py-1 text-center text-xs text-editorial-muted shadow">
+                  {t('areas.library.viewerPreparing')}
+                </p>
+              )}
             </div>
           )}
           {pageError && (
@@ -354,7 +403,14 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
       </div>
       {manifest && total > 0 && thumbnailsOpen && (
         <div className="flex w-28 shrink-0 flex-col border-l border-editorial-border">
-          <ThumbnailRail pages={manifest.pages} providerKey={providerKey} currentIndex={currentIndex} onSelect={goToIndex} />
+          <ThumbnailRail
+            pages={manifest.pages}
+            versionId={versionId}
+            providerKey={providerKey}
+            currentIndex={currentIndex}
+            onSelect={goToIndex}
+            fetching={!pageLoading}
+          />
         </div>
       )}
     </div>

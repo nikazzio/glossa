@@ -23,6 +23,8 @@ pub struct ViewerPage {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub canvas_id: Option<String>,
+    /// La miniatura già pronta dichiarata dalla biblioteca, quando c'è.
+    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,6 +48,7 @@ impl From<manifest::Page> for ViewerPage {
             width: page.size.map(|(width, _)| width),
             height: page.size.map(|(_, height)| height),
             canvas_id: page.canvas_id,
+            thumbnail: page.thumbnail,
         }
     }
 }

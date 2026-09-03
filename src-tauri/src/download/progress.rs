@@ -308,6 +308,7 @@ mod tests {
             image_service: "https://img/1".into(),
             size: Some((2646, 4112)),
             canvas_id: None,
+            thumbnail: None,
         };
         let progress = Progress {
             total: 10,
@@ -345,6 +346,7 @@ mod tests {
             image_service: "https://img/34".into(),
             size: Some((2646, 4112)),
             canvas_id: None,
+            thumbnail: None,
         };
         let parsed: serde_json::Value =
             serde_json::from_str(&progress(4, 4, Duration::from_secs(3)).detail(
@@ -377,6 +379,7 @@ mod tests {
             image_service: "https://img/7".into(),
             size: Some((2646, 4112)),
             canvas_id: None,
+            thumbnail: None,
         };
         let parsed: serde_json::Value =
             serde_json::from_str(&progress(4, 0, Duration::ZERO).detail(

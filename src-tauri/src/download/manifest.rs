@@ -26,6 +26,13 @@ pub struct Page {
     /// Presentation 3, `@id` in 2.1). È il riferimento stabile della pagina
     /// logica: una futura trascrizione punta a questo, non a un file.
     pub canvas_id: Option<String>,
+    /// La miniatura **dichiarata dalla biblioteca** per questa pagina.
+    ///
+    /// Quando c'è vale più di una costruita da noi: è già pronta sul loro
+    /// server, mentre chiedere al servizio immagini una misura piccola fa
+    /// ricavare l'immagine al momento — su alcune biblioteche costa quanto la
+    /// pagina intera.
+    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,6 +104,7 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         image_service: service_of(body)?,
                         size: canvas_size(canvas),
                         canvas_id: id_of(canvas),
+                        thumbnail: thumbnail_of(canvas),
                     })
                 })
                 .collect()
@@ -126,6 +134,7 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         // canvas non le dichiara.
                         size: canvas_size(canvas).or_else(|| canvas_size(resource)),
                         canvas_id: id_of(canvas),
+                        thumbnail: thumbnail_of(canvas).or_else(|| thumbnail_of(resource)),
                     })
                 })
                 .collect()
@@ -143,6 +152,19 @@ fn service_of(body: &Value) -> Option<String> {
         None => None,
     };
     from_service.map(|id| id.trim_end_matches('/').to_string())
+}
+
+/// La miniatura dichiarata, in una qualsiasi delle forme che lo standard
+/// ammette: un indirizzo, un oggetto, o un elenco di cui vale il primo.
+fn thumbnail_of(canvas: &Value) -> Option<String> {
+    let declared = match canvas.get("thumbnail")? {
+        Value::Array(entries) => entries.first()?,
+        other => other,
+    };
+    match declared {
+        Value::String(url) => Some(url.clone()),
+        object => id_of(object),
+    }
 }
 
 /// Dimensioni dell'originale dichiarate dal canvas.
@@ -332,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    fn a_thumbnail_declared_by_the_library_is_ignored() {
+    fn a_thumbnail_declared_by_the_library_is_the_one_we_use() {
         let manifest = parse(
             br#"{"items":[{"width":100,"height":200,
               "thumbnail":[{"id":"https://img/1/full/160,/0/default.jpg"}],
@@ -342,6 +364,23 @@ mod tests {
 
         assert_eq!(manifest.pages.len(), 1);
         assert_eq!(manifest.pages[0].image_service, "https://img/1");
+        // Chiedere al servizio una misura piccola fa ricavare l'immagine al
+        // momento; questa è già pronta sul loro server.
+        assert_eq!(
+            manifest.pages[0].thumbnail.as_deref(),
+            Some("https://img/1/full/160,/0/default.jpg")
+        );
+    }
+
+    #[test]
+    fn a_page_without_a_declared_thumbnail_says_so() {
+        let manifest = parse(
+            br#"{"items":[{"width":100,"height":200,
+              "items":[{"items":[{"body":{"service":[{"id":"https://img/1"}]}}]}]}]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(manifest.pages[0].thumbnail, None);
     }
 
     #[test]

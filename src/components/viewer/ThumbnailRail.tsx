@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 import { useTranslation } from 'react-i18next';
 import type { ViewerPage } from '../../services/iiifViewerService';
 import { pageThumbnailUrl } from '../../services/iiifViewerService';
+import { THUMB_SIZE } from '../../services/cacheService';
 import { useCachedImage } from '../../hooks/useCachedImage';
 
 const THUMB_WIDTH_PX = 96;
@@ -10,9 +11,20 @@ const OVERSCAN_ROWS = 4;
 
 interface ThumbnailRailProps {
   pages: ViewerPage[];
+  /** L'opera a cui appartengono: serve a cercarne le pagine sul computer. */
+  versionId: string;
   providerKey: string | null;
   currentIndex: number;
   onSelect: (index: number) => void;
+  /**
+   * Falso finché la pagina aperta non si vede.
+   *
+   * Le miniature restano disegnate come segnaposto ma non chiedono niente: su
+   * certe biblioteche ricavare una miniatura costa quanto ricavare la pagina, e
+   * dieci miniature davanti alla pagina che si sta aspettando la fanno
+   * aspettare ancora di più.
+   */
+  fetching: boolean;
 }
 
 /**
@@ -22,7 +34,14 @@ interface ThumbnailRailProps {
  * costruirebbe altrettanti elementi DOM e altrettante richieste in un colpo
  * solo — la finestra qui sotto evita entrambe le cose.
  */
-export function ThumbnailRail({ pages, providerKey, currentIndex, onSelect }: ThumbnailRailProps) {
+export function ThumbnailRail({
+  pages,
+  versionId,
+  providerKey,
+  currentIndex,
+  onSelect,
+  fetching,
+}: ThumbnailRailProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -88,7 +107,9 @@ export function ThumbnailRail({ pages, providerKey, currentIndex, onSelect }: Th
             <ThumbnailRow
               key={page.canvasId ?? page.index}
               page={page}
+              versionId={versionId}
               providerKey={providerKey}
+              fetching={fetching}
               active={index === currentIndex}
               top={index * ROW_HEIGHT_PX}
               onSelect={() => onSelect(index)}
@@ -102,24 +123,36 @@ export function ThumbnailRail({ pages, providerKey, currentIndex, onSelect }: Th
 
 function ThumbnailRow({
   page,
+  versionId,
   providerKey,
+  fetching,
   active,
   top,
   onSelect,
 }: {
   page: ViewerPage;
+  versionId: string;
   providerKey: string | null;
+  fetching: boolean;
   active: boolean;
   top: number;
   onSelect: () => void;
 }) {
+  // Prima la miniatura sul computer, poi quella dichiarata dalla biblioteca:
+  // costruirne una su misura fa ricavare l'immagine al momento, e su alcune
+  // biblioteche costa quanto la pagina intera.
   const { url, loading } = useCachedImage(
-    {
-      kind: 'remote',
-      url: pageThumbnailUrl(page.imageService, THUMB_WIDTH_PX),
-      providerKey,
-    },
-    { priority: 'low', delayMs: 150 },
+    fetching
+      ? {
+          kind: 'page',
+          versionId,
+          index: page.index,
+          size: THUMB_SIZE,
+          remoteUrl: pageThumbnailUrl(page, THUMB_WIDTH_PX),
+          providerKey,
+        }
+      : null,
+    { priority: 'low' },
   );
 
   return (

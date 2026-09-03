@@ -4,14 +4,14 @@ import { execute, select } from './dbService';
 
 /**
  * Il ponte controllato del visore: la finestra non contatta mai da sola il
- * server di una biblioteca. Ogni indirizzo (manifesto, `info.json`, tassello)
- * passa dallo stesso ponte già in uso per copertine e miniature
- * (`cachedImage`, `kind: "remote"`) — stessa cortesia, stessa cache, nessun
- * indirizzo aggiunto alla politica di sicurezza della finestra.
+ * server di una biblioteca. Ogni immagine passa dal motore — stessa cortesia,
+ * stessa cache, nessun indirizzo aggiunto alla politica di sicurezza.
  *
- * Il parsing del manifesto resta nel motore (`iiif_viewer_pages`): è la
- * stessa lettura IIIF 2/3 che usa lo scaricamento, non una seconda da tenere
- * allineata a mano.
+ * **Una regola sola: prima quello che c'è sul computer.** Ogni pagina e ogni
+ * miniatura si chiedono per numero di pagina, non per indirizzo; l'indirizzo
+ * remoto viaggia insieme alla richiesta ed è il ripiego di quando in casa non
+ * c'è niente. È il comportamento di Scriptoria, dove un libro scaricato si
+ * sfoglia senza toccare la rete.
  */
 
 export interface ViewerPage {
@@ -21,6 +21,8 @@ export interface ViewerPage {
   width: number | null;
   height: number | null;
   canvasId: string | null;
+  /** La miniatura già pronta dichiarata dalla biblioteca, quando c'è. */
+  thumbnail: string | null;
 }
 
 export interface ViewerManifest {
@@ -48,10 +50,15 @@ export async function fetchViewerManifest(
   });
 }
 
-/** Indirizzo di una miniatura secondo la Image API: identico per 2.x e 3.0,
- *  finché si chiede solo la larghezza e non la dimensione piena nativa. */
-export function pageThumbnailUrl(imageService: string, width: number): string {
-  return `${imageService}/full/${width},/0/default.jpg`;
+/**
+ * Dove chiedere la miniatura di una pagina **se non ce l'abbiamo**.
+ *
+ * Prima quella che la biblioteca dichiara: è già pronta sul loro server. Solo se
+ * non la dichiara si costruisce una misura piccola, che su alcune biblioteche
+ * costa quanto la pagina intera perché la ricavano al momento.
+ */
+export function pageThumbnailUrl(page: ViewerPage, width: number): string {
+  return page.thumbnail ?? `${page.imageService}/full/${width},/0/default.jpg`;
 }
 
 /** Indirizzo dell'`info.json` del servizio immagini di una pagina: da qui

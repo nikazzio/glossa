@@ -19,7 +19,7 @@ import { cachedImage, type CacheRequest, type CachedImageOptions } from '../serv
  */
 export function useCachedImage(
   request: CacheRequest | null,
-  options: Pick<CachedImageOptions, 'priority'> & { delayMs?: number } = {},
+  options: Pick<CachedImageOptions, 'priority'> = {},
 ): {
   url: string | null;
   loading: boolean;
@@ -27,7 +27,7 @@ export function useCachedImage(
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const key = request ? JSON.stringify(request) : null;
-  const { priority = 'normal', delayMs = 0 } = options;
+  const { priority = 'normal' } = options;
 
   useEffect(() => {
     if (!key) {
@@ -61,16 +61,14 @@ export function useCachedImage(
         if (!cancelled) setLoading(false);
       }
     };
-    const timer = delayMs > 0 ? setTimeout(() => void load(), delayMs) : null;
-    if (timer === null) void load();
+    void load();
 
     return () => {
       cancelled = true;
       controller.abort();
-      if (timer !== null) clearTimeout(timer);
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [key, priority, delayMs]);
+  }, [key, priority]);
 
   return { url, loading };
 }

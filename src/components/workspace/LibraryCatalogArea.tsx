@@ -373,6 +373,7 @@ function CatalogEntryRow({
         <span className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-editorial-border bg-editorial-textbox">
           <CachedThumbnail
             url={entry.thumbnailUrl}
+            versionId={entry.localPages > 0 ? entry.versionId : null}
             providerKey={entry.providerKey}
             className="h-full w-full object-cover"
             fallback={<BookOpenText size={16} className="text-editorial-muted" aria-hidden="true" />}

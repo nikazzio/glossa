@@ -37,6 +37,14 @@ pub struct Fetched {
 const TRANSPORT_ATTEMPTS: u32 = 3;
 const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 
+/// Quanto aspetta al massimo una richiesta che qualcuno sta guardando.
+///
+/// Il profilo ne concede molti di più, e per uno scaricamento va bene: certe
+/// biblioteche ricavano l'immagine al momento e vale la pena aspettarle. Ma il
+/// visore tiene occupato un posto in corsia per tutto quel tempo, e chi guarda
+/// resta davanti a una rotella. Meglio dirlo e lasciare il tasto per riprovare.
+const INTERACTIVE_DEADLINE: Duration = Duration::from_secs(90);
+
 /// I segnali del lavoro interrompono l'attesa del turno quando è stato messo in
 /// pausa o annullato — `Ok(None)` significa "fermato mentre aspettava", non
 /// "fallito" — e dicono a chi guarda se l'attesa è la nostra cortesia o la
@@ -58,8 +66,14 @@ pub async fn fetch(
 ) -> Result<Option<Fetched>, JobError> {
     let host = host_of(url)?;
     let mut last_error = None;
+    // Una sola prova per ciò che si guarda: tre tentativi da un minuto l'uno
+    // sono sei minuti di posto occupato, e nel frattempo non si vede niente.
+    let attempts = match lane {
+        Lane::Interactive => 1,
+        Lane::Bulk => TRANSPORT_ATTEMPTS,
+    };
 
-    for attempt in 1..=TRANSPORT_ATTEMPTS {
+    for attempt in 1..=attempts {
         let queued_at = std::time::Instant::now();
         let Some(_turn) = courtesy.wait_turn(&host, profile, lane, signals).await else {
             log::debug!("request dropped host={host} lane={lane:?} url={url}");
@@ -68,7 +82,7 @@ pub async fn fetch(
         let waited_ms = queued_at.elapsed().as_millis();
         let started_at = std::time::Instant::now();
 
-        match attempt_once(client, url, profile).await {
+        match attempt_within(client, url, profile, lane).await {
             Ok(fetched) => {
                 // La riga che serve quando "sembra piantato": dice se il tempo
                 // se n'è andato in coda da noi o dalla parte della biblioteca.
@@ -100,7 +114,7 @@ pub async fn fetch(
                     return Err(error);
                 }
                 last_error = Some(error);
-                if attempt < TRANSPORT_ATTEMPTS {
+                if attempt < attempts {
                     tokio::time::sleep(TRANSPORT_PAUSE * attempt).await;
                     if (signals.stop)() {
                         return Ok(None);
@@ -122,6 +136,29 @@ pub async fn fetch(
         ))),
         ..error
     })
+}
+
+/// La richiesta, con la scadenza della sua classe.
+async fn attempt_within(
+    client: &Client,
+    url: &str,
+    profile: &NetworkProfile,
+    lane: Lane,
+) -> Result<Fetched, JobError> {
+    let deadline = match lane {
+        Lane::Interactive => INTERACTIVE_DEADLINE.min(profile.read_timeout()),
+        Lane::Bulk => profile.read_timeout(),
+    };
+    match tokio::time::timeout(deadline, attempt_once(client, url, profile)).await {
+        Ok(outcome) => outcome,
+        Err(_) => {
+            log::warn!("request timed out url={url} after_s={}", deadline.as_secs());
+            Err(JobError::new(
+                ErrorKind::Transport,
+                "la biblioteca non ha risposto in tempo",
+            ))
+        }
+    }
 }
 
 async fn attempt_once(
