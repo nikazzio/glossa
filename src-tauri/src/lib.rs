@@ -225,6 +225,7 @@ pub fn run() {
             iiif::commands::set_library_network_profile,
             iiif::commands::get_version_size_cap,
             iiif::commands::set_version_size_cap,
+            iiif::viewer::iiif_viewer_pages,
             httpcache::commands::cached_image,
             httpcache::commands::cache_usage,
             httpcache::commands::apply_cache_cap,

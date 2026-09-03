@@ -610,7 +610,10 @@ describe('LibraryCatalogArea', () => {
     // Il titolo compare due volte apposta: nell'intestazione della colonna
     // (resta in vista cambiando tab) e nel campo titolo correggibile.
     expect(screen.getAllByText('Book of Hours').length).toBeGreaterThan(0);
-    expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
+    // Un manifesto IIIF è dichiarato: il visore prova ad aprirlo davvero
+    // (non più il segnaposto), e qui — dove `invoke` è un mock senza
+    // risposta — arriva legittimamente all'errore controllato.
+    expect(await screen.findByText('areas.library.viewerLoadError')).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();

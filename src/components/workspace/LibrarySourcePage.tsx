@@ -38,6 +38,7 @@ import { useSourceActions } from './useSourceActions';
 import { CopiesSection, resolutionLabel } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
+import { PageViewer } from '../viewer/PageViewer';
 import { useDebounce } from '../../hooks/useDebounce';
 import { summarizeAvailability } from '../../services/vaultService';
 import { humanSize } from '../../utils';
@@ -100,6 +101,10 @@ export function LibrarySourcePage({
   onResyncSource,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
+  const iiifVersions = detail.versions.filter(
+    (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
+  );
+  const manifestVersion = iiifVersions.find((version) => version.isPrimary) ?? iiifVersions[0];
   const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
   const inspectorWidth = useUiStore((state) => state.librarySourceInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setLibrarySourceInspectorWidth);
@@ -131,14 +136,23 @@ export function LibrarySourcePage({
     <Group orientation="horizontal" className="flex h-full min-h-0 flex-1" onLayoutChanged={persistLayout}>
       <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
-            dallo Studio di trascrizione: qui resta il posto dove andrà, con
-            la stessa dimensione minima che avrà da riempito. */}
-        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
-          <span className="flex flex-col items-center gap-2">
-            <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-            {t('areas.library.viewerComingSoon')}
-          </span>
-        </div>
+            dallo Studio di trascrizione: questo componente resta la stessa
+            dimensione minima predisposta prima che esistesse. */}
+        {manifestVersion?.sourceUrl ? (
+          <PageViewer
+            key={detail.source.id}
+            sourceId={detail.source.id}
+            manifestUrl={manifestVersion.sourceUrl}
+            providerKey={manifestVersion.providerKey}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
+            <span className="flex flex-col items-center gap-2">
+              <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
+              {t('areas.library.viewerComingSoon')}
+            </span>
+          </div>
+        )}
       </Panel>
 
       <Separator

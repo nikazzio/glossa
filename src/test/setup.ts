@@ -10,6 +10,23 @@ if (!('ResizeObserver' in globalThis)) {
   } as unknown as typeof ResizeObserver;
 }
 
+// OpenSeadragon (visore Biblioteca) è pesante da istanziare per davvero
+// (canvas, immagini, coda di richieste) e jsdom non gli offre un ambiente
+// completo (niente `matchMedia`, `getContext` finto). Nessun test qui dentro
+// verifica il motore di zoom in sé: basta un guscio minimo con gli stessi
+// punti che i componenti chiamano, come già per le API Tauri sotto.
+vi.mock('openseadragon', () => {
+  function OpenSeadragon() {
+    return {
+      viewport: { zoomBy: vi.fn(), goHome: vi.fn() },
+      open: vi.fn(),
+      destroy: vi.fn(),
+    };
+  }
+  OpenSeadragon.IIIFTileSource = class {};
+  return { default: OpenSeadragon };
+});
+
 // Mock Tauri APIs globally
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
