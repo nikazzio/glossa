@@ -10,7 +10,7 @@ use super::network::NetworkProfile;
 use super::resolvers::{self, Strength};
 use super::search::{self, SearchEndpoints};
 use super::{find_provider, IIIFProvider, SearchMode};
-use crate::download::courtesy::{Courtesy, Signals, Turn};
+use crate::download::courtesy::{Courtesy, Lane, Signals, Turn};
 use tauri::Manager;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -303,7 +303,11 @@ impl Gate<'_> {
             stop: &never_stops,
             courtesy_wait: &waiting,
         };
-        self.courtesy.wait_turn(&host, self.profile, &signals).await
+        // Una ricerca è qualcuno che sta aspettando a schermo, non un
+        // acquisizione in blocco: passa dalla corsia interattiva.
+        self.courtesy
+            .wait_turn(&host, self.profile, Lane::Interactive, &signals)
+            .await
     }
 }
 

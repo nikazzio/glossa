@@ -36,7 +36,10 @@ export async function fetchViewerManifest(
   manifestUrl: string,
   providerKey: string | null,
 ): Promise<ViewerManifest> {
-  const bytes = await cachedImage({ kind: 'remote', url: manifestUrl, providerKey });
+  const bytes = await cachedImage(
+    { kind: 'remote', url: manifestUrl, providerKey },
+    { priority: 'high' },
+  );
   return invoke<ViewerManifest>('iiif_viewer_pages', { bytes: Array.from(bytes) });
 }
 
@@ -54,8 +57,12 @@ export function infoJsonUrl(imageService: string): string {
 
 /** I byte di un indirizzo IIIF (info.json o tassello), sempre dal ponte
  *  controllato — mai una richiesta diretta della finestra. */
-export async function fetchIiifBytes(url: string, providerKey: string | null): Promise<Uint8Array> {
-  return cachedImage({ kind: 'remote', url, providerKey });
+export async function fetchIiifBytes(
+  url: string,
+  providerKey: string | null,
+  signal?: AbortSignal,
+): Promise<Uint8Array> {
+  return cachedImage({ kind: 'remote', url, providerKey }, { priority: 'high', signal });
 }
 
 const LAST_PAGE_KEY_PREFIX = 'library_last_page:';

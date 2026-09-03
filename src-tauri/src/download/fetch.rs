@@ -6,7 +6,7 @@ use std::time::Duration;
 use crate::iiif::network::NetworkProfile;
 use crate::jobs::{ErrorKind, JobError};
 
-use super::courtesy::{Courtesy, Signals};
+use super::courtesy::{Courtesy, Lane, Signals};
 
 /// Identificativo inviato alle biblioteche.
 pub fn user_agent() -> String {
@@ -45,11 +45,14 @@ const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 /// `job_attempt` è il tentativo del **lavoro**, non della richiesta: serve a
 /// calcolare l'attesa esponenziale con la base e il tetto del profilo della
 /// biblioteca, invece che con costanti del motore.
+/// `lane` dice se la richiesta è quella che l'utente sta guardando o parte di
+/// uno scaricamento: cambia il posto in corsia, non i limiti né gli errori.
 pub async fn fetch(
     client: &Client,
     courtesy: &Courtesy,
     profile: &NetworkProfile,
     url: &str,
+    lane: Lane,
     job_attempt: u32,
     signals: &Signals<'_>,
 ) -> Result<Option<Fetched>, JobError> {
@@ -57,12 +60,26 @@ pub async fn fetch(
     let mut last_error = None;
 
     for attempt in 1..=TRANSPORT_ATTEMPTS {
-        let Some(_turn) = courtesy.wait_turn(&host, profile, signals).await else {
+        let queued_at = std::time::Instant::now();
+        let Some(_turn) = courtesy.wait_turn(&host, profile, lane, signals).await else {
+            log::debug!("request dropped host={host} lane={lane:?} url={url}");
             return Ok(None);
         };
+        let waited_ms = queued_at.elapsed().as_millis();
+        let started_at = std::time::Instant::now();
 
         match attempt_once(client, url, profile).await {
-            Ok(fetched) => return Ok(Some(fetched)),
+            Ok(fetched) => {
+                // La riga che serve quando "sembra piantato": dice se il tempo
+                // se n'è andato in coda da noi o dalla parte della biblioteca.
+                log::debug!(
+                    "request ok host={host} lane={lane:?} waited_ms={waited_ms} \
+                     server_ms={} bytes={} url={url}",
+                    started_at.elapsed().as_millis(),
+                    fetched.bytes.len()
+                );
+                return Ok(Some(fetched));
+            }
             Err(error) => {
                 // Un rifiuto per eccesso di richieste raffredda **l'host**, non
                 // solo questo lavoro: un secondo scaricamento sullo stesso
@@ -234,11 +251,7 @@ mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     fn instant_profile() -> NetworkProfile {
-        NetworkProfile {
-            pause_min_ms: 0,
-            pause_max_ms: 0,
-            ..CAUTIOUS
-        }
+        CAUTIOUS
     }
 
     fn never_stop() -> impl Fn() -> bool + Sync {
@@ -264,6 +277,7 @@ mod tests {
             &courtesy,
             &profile,
             &format!("{}{route}", server.uri()),
+            Lane::Bulk,
             1,
             &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
@@ -293,11 +307,7 @@ mod tests {
             .respond_with(ResponseTemplate::new(403))
             .mount(&server)
             .await;
-        let profile = NetworkProfile {
-            pause_min_ms: 0,
-            pause_max_ms: 0,
-            ..crate::iiif::network::GALLICA
-        };
+        let profile = crate::iiif::network::GALLICA;
         let client = build_client(&profile).unwrap();
 
         let error = fetch(
@@ -305,6 +315,7 @@ mod tests {
             &Courtesy::new(),
             &profile,
             &format!("{}/page.jpg", server.uri()),
+            Lane::Bulk,
             1,
             &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
@@ -322,11 +333,7 @@ mod tests {
             .respond_with(ResponseTemplate::new(503))
             .mount(&server)
             .await;
-        let profile = NetworkProfile {
-            pause_min_ms: 0,
-            pause_max_ms: 0,
-            ..crate::iiif::network::GALLICA
-        };
+        let profile = crate::iiif::network::GALLICA;
         let client = build_client(&profile).unwrap();
 
         let error = fetch(
@@ -334,6 +341,7 @@ mod tests {
             &Courtesy::new(),
             &profile,
             &format!("{}/page.jpg", server.uri()),
+            Lane::Bulk,
             2,
             &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
@@ -415,6 +423,7 @@ mod tests {
             &courtesy,
             &profile,
             &url,
+            Lane::Bulk,
             1,
             &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
         )
@@ -430,6 +439,7 @@ mod tests {
                 &courtesy,
                 &profile,
                 &url,
+                Lane::Interactive,
                 1,
                 &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
             ),

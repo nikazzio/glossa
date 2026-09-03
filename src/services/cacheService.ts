@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
+import { createRequestScheduler, type RequestPriority } from './requestScheduler';
+import { hostOf, useNetworkActivity } from './networkActivity';
 
 /**
  * La cache di tutto quello che viene dalla rete: copertine, miniature remote e
@@ -51,9 +53,53 @@ export const CACHE_CAPS = [
 
 export const SEARCH_TTLS = [1, 6, 24, 72, 168] as const;
 
-export async function cachedImage(request: CacheRequest): Promise<Uint8Array> {
-  const bytes = await invoke<number[]>('cached_image', { request });
-  return new Uint8Array(bytes);
+export interface CachedImageOptions {
+  priority?: RequestPriority;
+  signal?: AbortSignal;
+}
+
+// Un rapido scorrimento non deve trasformarsi in centinaia di invoke ormai
+// invisibili. Sei richieste bastano a riempire le corsie native senza creare
+// una seconda coda incontrollata nella webview; due posti restano ai tasselli
+// della pagina aperta, che altrimenti aspetterebbero dietro alle miniature.
+const remoteImageScheduler = createRequestScheduler(6, 2);
+
+export async function cachedImage(request: CacheRequest, options: CachedImageOptions = {}): Promise<Uint8Array> {
+  // Il motore risponde con i byte grezzi: l'annotazione dice quello che il
+  // ponte dichiara, non quello che arriva davvero.
+  const load = async () => {
+    const bytes = await invoke<number[]>('cached_image', { request });
+    return new Uint8Array(bytes);
+  };
+  if (request.kind !== 'remote') return load();
+
+  // Una richiesta remota può finire nel deposito o in cache senza toccare la
+  // rete: si conta lo stesso, perché è comunque il tempo che l'utente aspetta.
+  const activity = useNetworkActivity.getState();
+  activity.queue();
+  const watched = async () => {
+    useNetworkActivity.getState().start(hostOf(request.url));
+    try {
+      const bytes = await load();
+      useNetworkActivity.getState().succeed(bytes.byteLength);
+      return bytes;
+    } catch (error) {
+      useNetworkActivity
+        .getState()
+        .fail(error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  };
+  try {
+    return await remoteImageScheduler.schedule(watched, options);
+  } catch (error) {
+    // Annullata mentre era ancora in coda: `watched` non è mai partita, quindi
+    // il posto in coda va restituito qui.
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      useNetworkActivity.setState((state) => ({ queued: Math.max(0, state.queued - 1) }));
+    }
+    throw error;
+  }
 }
 
 export async function cacheUsage(): Promise<CacheUsage> {

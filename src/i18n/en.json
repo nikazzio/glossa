@@ -677,11 +677,10 @@
       "unsaved": "unsaved",
       "discard": "Discard the unsaved changes",
       "field": {
-        "pauseMinMs": "Minimum pause (ms)",
-        "pauseMaxMs": "Maximum pause (ms)",
         "burstRequests": "Requests in a burst",
         "burstWindowSecs": "Within how many seconds",
         "hostConcurrency": "Requests at a time",
+        "workersPerJob": "Pages at a time",
         "maxAttempts": "Attempts",
         "backoffBaseSecs": "First wait (s)",
         "backoffCapSecs": "Longest wait (s)",
@@ -1018,7 +1017,6 @@
       "physicalDescriptionField": "Physical description",
       "descriptionField": "Description",
       "originPlaceField": "Place of origin",
-      "provenanceField": "Provenance",
       "seriesField": "Series",
       "genreFormField": "Genre/form",
       "standardIdentifierField": "Standard identifier",
@@ -2222,7 +2220,21 @@
     "discoveryPages_one": "{{count}} page",
     "discoveryPages_other": "{{count}} pages",
     "panelToggle": "Messages and jobs",
-    "workspaceFilter": "· filter: {{name}}"
+    "workspaceFilter": "· filter: {{name}}",
+    "network": {
+      "label": "Network to the libraries",
+      "inFlight_one": "one request in progress",
+      "inFlight_other": "{{count}} requests in progress",
+      "inFlight_zero": "no request in progress",
+      "queued_one": "one waiting its turn",
+      "queued_other": "{{count}} waiting their turn",
+      "queued_zero": "none waiting",
+      "host": "to {{host}}",
+      "speed": "{{speed}}",
+      "lastAnswer": "last answer {{seconds}} s ago",
+      "noAnswerYet": "no answer yet",
+      "lastError": "last error: {{message}}"
+    }
   },
   "workflow": {
     "translation": "Translation",
@@ -2298,6 +2310,7 @@
       "type": "type",
       "phase": "phase",
       "bytes": "downloaded",
+      "speed": "Speed",
       "unavailable": "not served by the library",
       "shrunk": "pages shrunk",
       "skipped": "pages not processed",

@@ -57,7 +57,7 @@ export function ThumbnailRail({ pages, providerKey, currentIndex, onSelect }: Th
       container.scrollTop = nextScrollTop;
       setScrollTop(nextScrollTop);
     }
-  }, [currentIndex, viewportHeight]);
+  }, [currentIndex]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     let target: number | null = null;
@@ -113,11 +113,14 @@ function ThumbnailRow({
   top: number;
   onSelect: () => void;
 }) {
-  const { url, loading } = useCachedImage({
-    kind: 'remote',
-    url: pageThumbnailUrl(page.imageService, THUMB_WIDTH_PX),
-    providerKey,
-  });
+  const { url, loading } = useCachedImage(
+    {
+      kind: 'remote',
+      url: pageThumbnailUrl(page.imageService, THUMB_WIDTH_PX),
+      providerKey,
+    },
+    { priority: 'low', delayMs: 150 },
+  );
 
   return (
     <button

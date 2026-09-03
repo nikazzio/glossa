@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ThumbnailRail } from './ThumbnailRail';
 
 vi.mock('../../hooks/useCachedImage', () => ({
@@ -16,6 +16,8 @@ const pages = Array.from({ length: 30 }, (_, index) => ({
 }));
 
 describe('ThumbnailRail', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('porta nel tratto visibile la pagina corrente', () => {
     const { rerender } = render(
       <ThumbnailRail pages={pages} providerKey={null} currentIndex={0} onSelect={vi.fn()} />,
@@ -36,5 +38,24 @@ describe('ThumbnailRail', () => {
     fireEvent.keyDown(screen.getByRole('listbox'), { key: 'ArrowDown' });
 
     expect(onSelect).toHaveBeenCalledWith(6);
+  });
+
+  it('non riporta in cima lo scorrimento quando cambia l altezza del rail', () => {
+    let notifyResize: (() => void) | null = null;
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) {
+        notifyResize = callback;
+      }
+      observe(): void {}
+      disconnect(): void {}
+    });
+    render(<ThumbnailRail pages={pages} providerKey={null} currentIndex={0} onSelect={vi.fn()} />);
+    const rail = screen.getByRole('listbox');
+    Object.defineProperty(rail, 'clientHeight', { configurable: true, value: 280 });
+    Object.defineProperty(rail, 'scrollTop', { configurable: true, writable: true, value: 1200 });
+
+    act(() => notifyResize?.());
+
+    expect(rail.scrollTop).toBe(1200);
   });
 });

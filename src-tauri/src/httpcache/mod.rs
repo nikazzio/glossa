@@ -95,6 +95,12 @@ pub struct HttpCache {
     /// strette di mano, cioè il contrario della cortesia che questa cache serve
     /// a ottenere.
     clients: Mutex<HashMap<(u64, u64), Client>>,
+    /// Il ritmo in vigore per una biblioteca, già letto.
+    ///
+    /// Ogni tassello del visore lo rileggeva dal database: aprire il file,
+    /// interrogarlo e chiuderlo centinaia di volte per una sola schermata. I
+    /// ritmi cambiano solo dalle Impostazioni, che svuotano questa memoria.
+    profiles: Mutex<HashMap<(String, String), crate::iiif::network::NetworkProfile>>,
 }
 
 impl HttpCache {
@@ -103,6 +109,40 @@ impl HttpCache {
             root,
             since_walk: AtomicU64::new(0),
             clients: Mutex::new(HashMap::new()),
+            profiles: Mutex::new(HashMap::new()),
+        }
+    }
+
+    /// Il ritmo verso una biblioteca, letto dal database la prima volta e poi
+    /// ricordato. `read` viene chiamata solo quando non si sa già.
+    pub fn profile_for(
+        &self,
+        provider_key: &str,
+        host: Option<&str>,
+        read: impl FnOnce() -> crate::iiif::network::NetworkProfile,
+    ) -> crate::iiif::network::NetworkProfile {
+        let key = (
+            provider_key.to_string(),
+            host.unwrap_or_default().to_string(),
+        );
+        if let Ok(profiles) = self.profiles.lock() {
+            if let Some(profile) = profiles.get(&key) {
+                return *profile;
+            }
+        }
+        let profile = read();
+        if let Ok(mut profiles) = self.profiles.lock() {
+            profiles.insert(key, profile);
+        }
+        profile
+    }
+
+    /// Dimentica i ritmi: il prossimo che serve si rilegge. Si chiama quando le
+    /// Impostazioni ne cambiano uno, altrimenti la modifica non si vedrebbe
+    /// fino al riavvio.
+    pub fn forget_profiles(&self) {
+        if let Ok(mut profiles) = self.profiles.lock() {
+            profiles.clear();
         }
     }
 

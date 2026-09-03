@@ -29,7 +29,7 @@ use super::{
     request::CacheRequest, CacheMeta, CacheUsage, HttpCache, DEFAULT_MAX_BYTES,
     DEFAULT_SEARCH_TTL_HOURS, MAX_BYTES_SETTING, SEARCH_TTL_SETTING,
 };
-use crate::download::courtesy::{Courtesy, Signals};
+use crate::download::courtesy::{Courtesy, Lane, Signals};
 use crate::download::fetch;
 
 /// Estremi accettati per il tetto: sotto i 32 MB la cache non serve a niente,
@@ -185,22 +185,31 @@ pub async fn cached_image(
         return Err("Questa pagina non è disponibile in locale.".to_string());
     };
 
-    let profile = crate::storage_config::db_path(&app)
-        .and_then(|path| crate::db::open_connection(&path))
-        .map(|conn| {
-            crate::iiif::settings::effective_profile(
-                &conn,
-                request.provider_key().unwrap_or_default(),
-                request.host().as_deref(),
-            )
-        })
-        .unwrap_or(crate::iiif::network::CAUTIOUS);
+    let provider_key = request.provider_key().unwrap_or_default();
+    let host = request.host();
+    let read_profile = || {
+        crate::storage_config::db_path(&app)
+            .and_then(|path| crate::db::open_connection(&path))
+            .map(|conn| {
+                crate::iiif::settings::effective_profile(&conn, provider_key, host.as_deref())
+            })
+            .unwrap_or(crate::iiif::network::CAUTIOUS)
+    };
 
-    // Il client si riusa: uno nuovo per copertina significa una connessione
-    // nuova per copertina.
-    let client = match cache(&app) {
-        Some(cache) => cache.client_for(&profile)?,
-        None => fetch::build_client(&profile).map_err(|error| error.message)?,
+    // Client e ritmo si riusano: uno nuovo per immagine significa una
+    // connessione nuova e una lettura del database per ogni tassello.
+    let (profile, client) = match cache(&app) {
+        Some(cache) => {
+            let profile = cache.profile_for(provider_key, host.as_deref(), read_profile);
+            (profile, cache.client_for(&profile)?)
+        }
+        None => {
+            let profile = read_profile();
+            (
+                profile,
+                fetch::build_client(&profile).map_err(|error| error.message)?,
+            )
+        }
     };
     let courtesy = app.state::<Arc<Courtesy>>().inner().clone();
     let never_stops = || false;
@@ -209,10 +218,18 @@ pub async fn cached_image(
         stop: &never_stops,
         courtesy_wait: &waiting,
     };
-    let fetched = fetch::fetch(&client, &courtesy, &profile, url, 1, &signals)
-        .await
-        .map_err(|error| error.message)?
-        .ok_or_else(|| "Richiesta interrotta.".to_string())?;
+    let fetched = fetch::fetch(
+        &client,
+        &courtesy,
+        &profile,
+        url,
+        Lane::Interactive,
+        1,
+        &signals,
+    )
+    .await
+    .map_err(|error| error.message)?
+    .ok_or_else(|| "Richiesta interrotta.".to_string())?;
 
     store(&app, &request, &fetched.bytes, fetched.content_type);
     Ok(tauri::ipc::Response::new(fetched.bytes))

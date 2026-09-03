@@ -25,6 +25,7 @@ import {
   setLastViewedPage,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
+import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
 
 interface PageViewerProps {
@@ -34,6 +35,10 @@ interface PageViewerProps {
 }
 
 const TILE_LOAD_FAILED = 'tile_load_failed';
+
+/** Entro questo tempo dall'ultima risposta la biblioteca è ancora "collegata".
+ * Più lungo di una pagina lenta, più corto di una pausa fra due sfogliate. */
+const ONLINE_FOR_MS = 30_000;
 
 /**
  * Il visore IIIF remoto (Blocco 1 del piano locale): pagina singola, zoom a
@@ -289,6 +294,38 @@ interface ViewerToolbarProps {
   onToggleThumbnails: () => void;
 }
 
+/**
+ * Se la biblioteca sta davvero rispondendo.
+ *
+ * Verde quando una risposta è arrivata da poco, smorzato quando è passato
+ * troppo tempo: la stessa scritta sempre accesa non distingueva un visore
+ * collegato da uno fermo.
+ */
+function ConnectionBadge() {
+  const { t } = useTranslation();
+  const lastOkAt = useNetworkActivity((state) => state.lastOkAt);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const connected = lastOkAt !== null && now - lastOkAt <= ONLINE_FOR_MS;
+
+  return (
+    <span
+      className={`ml-auto flex items-center gap-1.5 text-xs ${connected ? 'text-editorial-success' : 'text-editorial-muted'}`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-editorial-success' : 'bg-editorial-border'}`}
+        aria-hidden="true"
+      />
+      {t('areas.library.viewerOnline')}
+    </span>
+  );
+}
+
 function ViewerToolbar({
   index,
   total,
@@ -342,7 +379,7 @@ function ViewerToolbar({
       <IconButton size="sm" onClick={onZoomToFit} title={t('areas.library.viewerZoomToFit')}>
         <Maximize size={14} />
       </IconButton>
-      <span className="ml-auto text-xs text-editorial-muted">{t('areas.library.viewerOnline')}</span>
+      <ConnectionBadge />
       <IconButton
         size="sm"
         onClick={onToggleThumbnails}

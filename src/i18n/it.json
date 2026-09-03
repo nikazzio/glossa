@@ -677,11 +677,10 @@
       "unsaved": "non salvato",
       "discard": "Butta le modifiche non salvate",
       "field": {
-        "pauseMinMs": "Pausa minima (ms)",
-        "pauseMaxMs": "Pausa massima (ms)",
         "burstRequests": "Richieste a raffica",
         "burstWindowSecs": "In quanti secondi",
         "hostConcurrency": "Richieste insieme",
+        "workersPerJob": "Pagine insieme",
         "maxAttempts": "Tentativi",
         "backoffBaseSecs": "Prima attesa (s)",
         "backoffCapSecs": "Attesa massima (s)",
@@ -1018,7 +1017,6 @@
       "physicalDescriptionField": "Descrizione fisica",
       "descriptionField": "Descrizione",
       "originPlaceField": "Luogo di origine",
-      "provenanceField": "Provenienza",
       "seriesField": "Serie/collana",
       "genreFormField": "Genere/forma",
       "standardIdentifierField": "Identificativo standard",
@@ -2223,7 +2221,21 @@
     "discoveryPages_one": "{{count}} pagina",
     "discoveryPages_other": "{{count}} pagine",
     "panelToggle": "Messaggi e lavori",
-    "workspaceFilter": "· filtro: {{name}}"
+    "workspaceFilter": "· filtro: {{name}}",
+    "network": {
+      "label": "Rete verso le biblioteche",
+      "inFlight_one": "una richiesta in corso",
+      "inFlight_other": "{{count}} richieste in corso",
+      "inFlight_zero": "nessuna richiesta in corso",
+      "queued_one": "una in attesa del turno",
+      "queued_other": "{{count}} in attesa del turno",
+      "queued_zero": "nessuna in attesa",
+      "host": "verso {{host}}",
+      "speed": "{{speed}}",
+      "lastAnswer": "ultima risposta {{seconds}} s fa",
+      "noAnswerYet": "nessuna risposta ancora",
+      "lastError": "ultimo errore: {{message}}"
+    }
   },
   "workflow": {
     "translation": "Traduzione",
@@ -2299,6 +2311,7 @@
       "type": "tipo",
       "phase": "fase",
       "bytes": "scaricato",
+      "speed": "Velocità",
       "unavailable": "non servite dalla biblioteca",
       "shrunk": "pagine ridotte",
       "skipped": "pagine non riuscite",

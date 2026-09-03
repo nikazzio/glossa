@@ -44,10 +44,12 @@ export function createControlledIiifTileSource(
   const tileSource = new OpenSeadragon.IIIFTileSource(options);
 
   tileSource.downloadTileStart = (context) => {
+    const controller = new AbortController();
+    context.userData.controlledRequestController = controller;
     context.userData.controlledRequestCancelled = false;
     void (async () => {
       try {
-        const bytes = await fetchIiifBytes(context.src, providerKey);
+        const bytes = await fetchIiifBytes(context.src, providerKey, controller.signal);
         if (context.userData.controlledRequestCancelled) return;
         const image = await decodeImage(bytes);
         if (context.userData.controlledRequestCancelled) return;
@@ -63,6 +65,8 @@ export function createControlledIiifTileSource(
   // dopo — non c'è modo di interromperlo a metà da qui.
   tileSource.downloadTileAbort = (context) => {
     context.userData.controlledRequestCancelled = true;
+    const controller = context.userData.controlledRequestController;
+    if (controller instanceof AbortController) controller.abort();
   };
 
   return tileSource;

@@ -14,11 +14,11 @@ use crate::images;
 use crate::jobs::{ErrorKind, JobError};
 use crate::vault::{integrity, layout};
 
-use super::courtesy::{Courtesy, Signals};
+use super::courtesy::{Courtesy, Lane, Signals};
 use super::fetch::fetch;
 use super::handler::DownloadConfig;
 use super::manifest::{image_url, Manifest, Page};
-use super::progress::{Progress, Reporter};
+use super::progress::{Reporter, Snapshot};
 use super::sidecar::{self, Note, PageRecord};
 use super::sizing::{self, SizeCap, SizingRule};
 use super::vault_io::{now_secs, stage_and_promote};
@@ -82,6 +82,37 @@ enum Asked {
     Stopped,
 }
 
+/// La regola di calcolo della misura, vista da tutte le pagine in corso.
+///
+/// Quando un servizio rifiuta la misura, il libro **intero** passa alla
+/// dimensione piena: con più pagine insieme quella decisione deve arrivare
+/// anche a chi è già partito, altrimenti ogni pagina rifarebbe la stessa
+/// richiesta rifiutata.
+pub(crate) struct SharedRule(std::sync::Mutex<SizingRule>);
+
+impl SharedRule {
+    pub(crate) fn new(rule: SizingRule) -> Self {
+        Self(std::sync::Mutex::new(rule))
+    }
+
+    fn get(&self) -> SizingRule {
+        self.read().clone()
+    }
+
+    fn downgrade_to_full(&self) {
+        *self.read() = SizingRule::Full;
+    }
+
+    /// Un turno avvelenato significa che un'altra pagina è andata in panico
+    /// mentre teneva la regola: il valore resta leggibile, ed è più utile
+    /// continuare il libro che fermarlo.
+    fn read(&self) -> std::sync::MutexGuard<'_, SizingRule> {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+}
+
 /// Quello che serve a scaricare una pagina e non cambia da una pagina all'altra.
 pub(crate) struct PageFetcher<'a> {
     pub courtesy: &'a Courtesy,
@@ -105,7 +136,7 @@ pub(crate) struct PageFetcher<'a> {
 impl PageFetcher<'_> {
     pub(crate) async fn one(
         &self,
-        rule: &mut SizingRule,
+        rule: &SharedRule,
         page: &Page,
         known: &BTreeMap<u32, PageRecord>,
         signals: &Signals<'_>,
@@ -162,11 +193,11 @@ impl PageFetcher<'_> {
     /// rifiutata e il guasto che non passa. Non scrive niente sul disco.
     async fn ask(
         &self,
-        rule: &mut SizingRule,
+        rule: &SharedRule,
         page: &Page,
         signals: &Signals<'_>,
     ) -> Result<Asked, JobError> {
-        let mut token = sizing::token_for(rule, page, self.cap, self.manifest.presentation2);
+        let mut token = sizing::token_for(&rule.get(), page, self.cap, self.manifest.presentation2);
         let url = image_url(&page.image_service, &token);
         // Vero quando vale la pena chiedere la stessa pagina a dimensione piena.
         let mut try_full = false;
@@ -186,7 +217,7 @@ impl PageFetcher<'_> {
                         "job size refused page={} token={token} — passaggio a max",
                         page.index
                     );
-                    *rule = SizingRule::Full;
+                    rule.downgrade_to_full();
                     try_full = true;
                     None
                 }
@@ -269,6 +300,7 @@ impl PageFetcher<'_> {
             self.courtesy,
             self.profile,
             url,
+            Lane::Bulk,
             self.attempt,
             signals,
         )
@@ -323,17 +355,17 @@ impl PageFetcher<'_> {
 }
 
 /// Oltre questa attesa si dichiara che è la **nostra** cortesia a tenere fermo
-/// il lavoro. Più lunga della pausa massima fra due richieste (6 s su
-/// Gallica) e molto più corta del raffreddamento più breve (120 s).
+/// il lavoro. Molto più corta del raffreddamento più breve (120 s) e più lunga
+/// di qualsiasi attesa dovuta alla finestra a raffica.
 const DECLARE_WAIT_AFTER: std::time::Duration = std::time::Duration::from_secs(15);
 
 /// Segnala le attese di cortesia abbastanza lunghe da essere visibili.
 pub(crate) async fn one_declaring_long_waits(
     fetcher: &PageFetcher<'_>,
-    rule: &mut SizingRule,
+    rule: &SharedRule,
     page: &Page,
     known: &BTreeMap<u32, PageRecord>,
-    progress: &Progress,
+    at: Snapshot,
     reporter: &Reporter<'_>,
     signals: &Signals<'_>,
 ) -> Result<PageOutcome, JobError> {
@@ -346,7 +378,7 @@ pub(crate) async fn one_declaring_long_waits(
             // Solo se l'attesa è la nostra: un server lento non è un limite che
             // stiamo rispettando.
             if signals.courtesy_wait.load(std::sync::atomic::Ordering::SeqCst) {
-                reporter.waiting(progress, page).await;
+                reporter.waiting(at, page).await;
             }
             work.await
         }

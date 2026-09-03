@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cachedImage, type CacheRequest } from '../services/cacheService';
+import { cachedImage, type CacheRequest, type CachedImageOptions } from '../services/cacheService';
 
 /**
  * I byte di un'immagine, presi dal motore e trasformati in un indirizzo
@@ -13,17 +13,21 @@ import { cachedImage, type CacheRequest } from '../services/cacheService';
  * ogni scorrimento di una lista lascerebbe dietro di sé i byte di tutte le
  * copertine già viste.
  *
- * `loading` esiste perché l'attesa **si vede**: le richieste passano dalle
- * pause verso la biblioteca, quindi una copertina può metterci qualche secondo
- * e chi guarda deve capire che sta arrivando, non che non c'è.
+ * `loading` esiste perché l'attesa **si vede**: rete e decodifica possono
+ * richiedere tempo e chi guarda deve capire che l'immagine sta arrivando, non
+ * che non c'è.
  */
-export function useCachedImage(request: CacheRequest | null): {
+export function useCachedImage(
+  request: CacheRequest | null,
+  options: Pick<CachedImageOptions, 'priority'> & { delayMs?: number } = {},
+): {
   url: string | null;
   loading: boolean;
 } {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const key = request ? JSON.stringify(request) : null;
+  const { priority = 'normal', delayMs = 0 } = options;
 
   useEffect(() => {
     if (!key) {
@@ -33,15 +37,19 @@ export function useCachedImage(request: CacheRequest | null): {
     }
     let objectUrl: string | null = null;
     let cancelled = false;
+    const controller = new AbortController();
     // La richiesta è cambiata: l'indirizzo di prima sta per essere rilasciato,
     // e lasciarlo disegnato mostrerebbe il riquadro dell'immagine rotta al
     // posto del segnaposto finché la nuova non arriva.
     setUrl(null);
     setLoading(true);
 
-    void (async () => {
+    const load = async () => {
       try {
-        const bytes = await cachedImage(JSON.parse(key) as CacheRequest);
+        const bytes = await cachedImage(JSON.parse(key) as CacheRequest, {
+          priority,
+          signal: controller.signal,
+        });
         if (cancelled) return;
         objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
         setUrl(objectUrl);
@@ -52,13 +60,17 @@ export function useCachedImage(request: CacheRequest | null): {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+    const timer = delayMs > 0 ? setTimeout(() => void load(), delayMs) : null;
+    if (timer === null) void load();
 
     return () => {
       cancelled = true;
+      controller.abort();
+      if (timer !== null) clearTimeout(timer);
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [key]);
+  }, [key, priority, delayMs]);
 
   return { url, loading };
 }
