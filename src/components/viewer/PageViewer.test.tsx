@@ -26,6 +26,7 @@ vi.mock('../../services/iiifViewerService', () => ({
   setLastViewedPage: vi.fn(),
   infoJsonUrl: (service: string) => `${service}/info.json`,
   pageThumbnailUrl: (service: string) => `${service}/full/96,/0/default.jpg`,
+  wholePageUrl: (service: string) => `${service}/full/1600,/0/default.jpg`,
 }));
 
 vi.mock('./iiifTileBridge', () => ({
@@ -63,15 +64,57 @@ describe('PageViewer', () => {
     vi.mocked(viewerService.setLastViewedPage).mockResolvedValue(undefined);
   });
 
-  it('mostra un errore riprovabile quando fallisce il caricamento dei tasselli', async () => {
+  it('ripiega sulla pagina intera quando lo zoom a tasselli non arriva', async () => {
     render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
     await waitFor(() => expect(osd.handlers.get('tile-load-failed')).toBeDefined());
 
-    act(() => osd.handlers.get('tile-load-failed')?.());
+    await act(async () => {
+      osd.handlers.get('tile-load-failed')?.();
+      await Promise.resolve();
+    });
+
+    // Chiesta l'immagine intera, e nessun errore a schermo: la pagina si vede,
+    // solo senza zoom.
+    await waitFor(() =>
+      expect(vi.mocked(viewerService.fetchIiifBytes)).toHaveBeenCalledWith(
+        'https://images.example.test/1/full/1600,/0/default.jpg',
+        null,
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(screen.queryByText('areas.library.viewerLoadError')).not.toBeInTheDocument();
+  });
+
+  it('dichiara la pagina guasta solo quando nemmeno l intera arriva', async () => {
+    vi.mocked(viewerService.fetchIiifBytes).mockImplementation(async (url: string) => {
+      if (url.endsWith('/info.json')) {
+        return new TextEncoder().encode('{"id":"https://images.example.test/1","width":1000,"height":1400}');
+      }
+      throw new Error('la biblioteca non risponde');
+    });
+    render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    await screen.findByText('areas.library.viewerPageOf · P1');
+    await waitFor(() => expect(osd.handlers.get('tile-load-failed')).toBeDefined());
+
+    await act(async () => {
+      osd.handlers.get('tile-load-failed')?.();
+      await Promise.resolve();
+    });
 
     expect(await screen.findByText('areas.library.viewerLoadError')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'areas.library.viewerRetry' })).toBeInTheDocument();
+  });
+
+  it('un tassello perso non cancella una pagina che si vede già', async () => {
+    render(<PageViewer sourceId="source-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    await screen.findByText('areas.library.viewerPageOf · P1');
+    await waitFor(() => expect(osd.handlers.get('tile-loaded')).toBeDefined());
+
+    act(() => osd.handlers.get('tile-loaded')?.());
+    act(() => osd.handlers.get('tile-load-failed')?.());
+
+    expect(screen.queryByText('areas.library.viewerLoadError')).not.toBeInTheDocument();
   });
 
   it('cambia pagina con le frecce solo quando il focus appartiene al visore', async () => {

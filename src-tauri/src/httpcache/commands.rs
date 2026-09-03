@@ -26,8 +26,8 @@ use std::sync::Arc;
 use tauri::Manager;
 
 use super::{
-    request::CacheRequest, CacheMeta, CacheUsage, HttpCache, DEFAULT_MAX_BYTES,
-    DEFAULT_SEARCH_TTL_HOURS, MAX_BYTES_SETTING, SEARCH_TTL_SETTING,
+    request::CacheRequest, CacheMeta, CacheUsage, HttpCache, ServedCounts, Source,
+    DEFAULT_MAX_BYTES, DEFAULT_SEARCH_TTL_HOURS, MAX_BYTES_SETTING, SEARCH_TTL_SETTING,
 };
 use crate::download::courtesy::{Courtesy, Lane, Signals};
 use crate::download::fetch;
@@ -168,15 +168,15 @@ pub async fn cached_image(
     request: CacheRequest,
 ) -> Result<tauri::ipc::Response, String> {
     if let Some(bytes) = from_vault_exact(&app, &request)? {
-        return Ok(tauri::ipc::Response::new(bytes));
+        return Ok(served(&app, Source::Vault, bytes));
     }
     // Prima della riduzione dal deposito: è lei che riempie la cache, e
     // cercarla dopo significherebbe non rileggerla mai.
     if let Some(bytes) = lookup(&app, &request) {
-        return Ok(tauri::ipc::Response::new(bytes));
+        return Ok(served(&app, Source::Cache, bytes));
     }
     if let Some(bytes) = from_vault_larger(&app, &request)? {
-        return Ok(tauri::ipc::Response::new(bytes));
+        return Ok(served(&app, Source::Vault, bytes));
     }
     let CacheRequest::Remote { url, .. } = &request else {
         // Una pagina che non è nel deposito e non è in cache la chiederà il
@@ -232,7 +232,41 @@ pub async fn cached_image(
     .ok_or_else(|| "Richiesta interrotta.".to_string())?;
 
     store(&app, &request, &fetched.bytes, fetched.content_type);
-    Ok(tauri::ipc::Response::new(fetched.bytes))
+    Ok(served(&app, Source::Network, fetched.bytes))
+}
+
+/// Segna la provenienza e restituisce i byte. Sapere quante immagini sono
+/// arrivate senza toccare la rete è l'unica misura che dice se la cache serve.
+fn served(app: &tauri::AppHandle, source: Source, bytes: Vec<u8>) -> tauri::ipc::Response {
+    if let Some(cache) = cache(app) {
+        cache.served(source, bytes.len());
+    }
+    tauri::ipc::Response::new(bytes)
+}
+
+/// Cosa sta facendo la rete verso le biblioteche, adesso.
+///
+/// Si chiede solo mentre il pannello è aperto: fuori di lì nessuno la guarda, e
+/// interrogarla di continuo costerebbe senza dire niente di nuovo.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkProbe {
+    pub hosts: Vec<crate::download::courtesy::HostActivity>,
+    pub served: ServedCounts,
+}
+
+#[tauri::command]
+pub async fn network_probe(app: tauri::AppHandle) -> Result<NetworkProbe, String> {
+    let courtesy = app
+        .try_state::<Arc<Courtesy>>()
+        .map(|state| state.inner().clone())
+        .ok_or_else(|| "cortesia non disponibile".to_string())?;
+    Ok(NetworkProbe {
+        hosts: courtesy.activity().await,
+        served: cache(&app)
+            .map(|cache| cache.served_counts())
+            .unwrap_or_default(),
+    })
 }
 
 /// La pagina nel deposito, alla misura chiesta. Ha la precedenza su tutto: è

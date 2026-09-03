@@ -2224,17 +2224,22 @@
     "workspaceFilter": "· filtro: {{name}}",
     "network": {
       "label": "Rete verso le biblioteche",
-      "inFlight_one": "una richiesta in corso",
-      "inFlight_other": "{{count}} richieste in corso",
-      "inFlight_zero": "nessuna richiesta in corso",
-      "queued_one": "una in attesa del turno",
-      "queued_other": "{{count}} in attesa del turno",
-      "queued_zero": "nessuna in attesa",
-      "host": "verso {{host}}",
-      "speed": "{{speed}}",
-      "lastAnswer": "ultima risposta {{seconds}} s fa",
-      "noAnswerYet": "nessuna risposta ancora",
-      "lastError": "ultimo errore: {{message}}"
+      "requests": "Richieste (in corso + in coda)",
+      "page": "Pagina aperta",
+      "thumbnails": "Miniature",
+      "speed": "Velocità",
+      "delivered": "Servite",
+      "lanes": "Corsie per biblioteca",
+      "seats": "Posti in uso",
+      "bulkShort": "scar.",
+      "perWindow": "Nei {{seconds}} s",
+      "cooldown": "Raffreddamento",
+      "images": "Provenienza immagini",
+      "fromVault": "Dal deposito",
+      "fromCache": "Dalla cache",
+      "fromNetwork": "Dalla rete",
+      "spared": "Richieste risparmiate",
+      "lastError": "Ultimo errore"
     }
   },
   "workflow": {

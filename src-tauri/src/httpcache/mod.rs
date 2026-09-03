@@ -101,6 +101,37 @@ pub struct HttpCache {
     /// interrogarlo e chiuderlo centinaia di volte per una sola schermata. I
     /// ritmi cambiano solo dalle Impostazioni, che svuotano questa memoria.
     profiles: Mutex<HashMap<(String, String), crate::iiif::network::NetworkProfile>>,
+    /// Da dove sono arrivate le immagini chieste finora. Tre provenienze
+    /// diverse con tre costi diversi: il deposito non costa niente, la cache
+    /// costa una lettura, la rete costa una richiesta a una biblioteca.
+    served: Served,
+}
+
+/// Quante immagini sono arrivate da dove, dall'avvio.
+#[derive(Default)]
+pub struct Served {
+    pub from_vault: AtomicU64,
+    pub from_cache: AtomicU64,
+    pub from_network: AtomicU64,
+    pub network_bytes: AtomicU64,
+}
+
+/// La stessa cosa, in numeri leggibili da chi guarda.
+#[derive(Clone, Copy, Debug, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServedCounts {
+    pub from_vault: u64,
+    pub from_cache: u64,
+    pub from_network: u64,
+    pub network_bytes: u64,
+}
+
+/// Dove è stata trovata un'immagine.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Source {
+    Vault,
+    Cache,
+    Network,
 }
 
 impl HttpCache {
@@ -110,6 +141,31 @@ impl HttpCache {
             since_walk: AtomicU64::new(0),
             clients: Mutex::new(HashMap::new()),
             profiles: Mutex::new(HashMap::new()),
+            served: Served::default(),
+        }
+    }
+
+    /// Segna da dove è arrivata un'immagine appena servita.
+    pub fn served(&self, source: Source, bytes: usize) {
+        let counter = match source {
+            Source::Vault => &self.served.from_vault,
+            Source::Cache => &self.served.from_cache,
+            Source::Network => {
+                self.served
+                    .network_bytes
+                    .fetch_add(bytes as u64, Ordering::Relaxed);
+                &self.served.from_network
+            }
+        };
+        counter.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn served_counts(&self) -> ServedCounts {
+        ServedCounts {
+            from_vault: self.served.from_vault.load(Ordering::Relaxed),
+            from_cache: self.served.from_cache.load(Ordering::Relaxed),
+            from_network: self.served.from_network.load(Ordering::Relaxed),
+            network_bytes: self.served.network_bytes.load(Ordering::Relaxed),
         }
     }
 

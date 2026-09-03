@@ -23,6 +23,7 @@ import {
   getLastViewedPage,
   infoJsonUrl,
   setLastViewedPage,
+  wholePageUrl,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
 import { useNetworkActivity } from '../../services/networkActivity';
@@ -132,23 +133,77 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
     const viewer = viewerRef.current;
     if (!viewer || !page) return;
     let cancelled = false;
+    // Cambiare pagina non deve lasciare in coda le richieste di quella prima:
+    // sarebbero in testa alla corsia riservata, davanti a quella che si guarda.
+    const controller = new AbortController();
+    let shown = 0;
+    // Tre stati e non un sì/no: mentre il ripiego è in corso arrivano altri
+    // tasselli falliti, e con un solo interruttore dichiaravano guasta una
+    // pagina che si stava ancora andando a prendere.
+    let fallback: 'untried' | 'running' | 'done' = 'untried';
+    let objectUrl: string | null = null;
+
+    /**
+     * Ripiego a pagina intera. Alcuni servizi promettono nell'`info.json` uno
+     * zoom a tasselli che poi non servono: senza questo ripiego la pagina resta
+     * bianca e il libro sembra rotto, mentre l'immagine intera arriva benissimo.
+     */
+    const showWholePage = async () => {
+      fallback = 'running';
+      logger.warn('library.viewer.wholePageFallback', { index: currentIndex });
+      try {
+        const bytes = await fetchIiifBytes(wholePageUrl(page.imageService), providerKey, controller.signal);
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
+        viewer.open({ type: 'image', url: objectUrl } as unknown as OpenSeadragon.TileSourceSpecifier);
+      } finally {
+        fallback = 'done';
+      }
+    };
+
+    const givingUp = (error: unknown) => {
+      if (cancelled) return;
+      logger.error('library.viewer.pageFailed', { message: errorMessage(error), index: currentIndex });
+      setPageLoading(false);
+      setPageError(TILE_LOAD_FAILED);
+    };
+
     const handleTileLoaded = () => {
-      if (!cancelled) setPageLoading(false);
+      if (cancelled) return;
+      shown += 1;
+      setPageLoading(false);
+      setPageError(null);
     };
     const handleTileLoadFailed = () => {
       if (cancelled) return;
-      logger.error('library.viewer.tileFailed', { index: currentIndex });
+      logger.warn('library.viewer.tileFailed', { index: currentIndex, shown });
+      // Un tassello ai bordi che non arriva non è una pagina rotta: si dichiara
+      // guasta solo quando **non si vede niente**, e prima si prova l'intera.
+      if (shown > 0) return;
+      if (fallback === 'running') return;
+      if (fallback === 'untried') {
+        void showWholePage().catch(givingUp);
+        return;
+      }
       setPageLoading(false);
       setPageError(TILE_LOAD_FAILED);
+    };
+    // OpenSeadragon rinuncia prima ancora di chiedere un tassello quando il
+    // descrittore non descrive niente di apribile: anche lì c'è la pagina
+    // intera da provare.
+    const handleOpenFailed = () => {
+      if (cancelled || fallback !== 'untried') return;
+      void showWholePage().catch(givingUp);
     };
     viewer.close();
     viewer.addHandler('tile-loaded', handleTileLoaded);
     viewer.addHandler('tile-load-failed', handleTileLoadFailed);
+    viewer.addHandler('open-failed', handleOpenFailed);
     setPageError(null);
     setPageLoading(true);
     void (async () => {
       try {
-        const bytes = await fetchIiifBytes(infoJsonUrl(page.imageService), providerKey);
+        const bytes = await fetchIiifBytes(infoJsonUrl(page.imageService), providerKey, controller.signal);
         if (cancelled) return;
         const infoJson = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
         if (cancelled) return;
@@ -162,15 +217,21 @@ export function PageViewer({ sourceId, manifestUrl, providerKey }: PageViewerPro
         });
       } catch (error) {
         if (cancelled) return;
-        logger.error('library.viewer.pageFailed', { message: errorMessage(error), index: currentIndex });
-        setPageLoading(false);
-        setPageError(errorMessage(error));
+        // Senza `info.json` non c'è zoom, ma la pagina intera si può ancora
+        // chiedere: è il caso dei servizi che espongono solo le immagini.
+        logger.warn('library.viewer.infoFailed', { message: errorMessage(error), index: currentIndex });
+        await showWholePage().catch(givingUp);
       }
     })();
     return () => {
       cancelled = true;
+      controller.abort();
       viewer.removeHandler('tile-loaded', handleTileLoaded);
       viewer.removeHandler('tile-load-failed', handleTileLoadFailed);
+      viewer.removeHandler('open-failed', handleOpenFailed);
+      // L'immagine resta disegnata da OpenSeadragon anche dopo il rilascio
+      // dell'indirizzo; tenerlo vivo esaurirebbe solo il tetto della finestra.
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [page, providerKey, sourceId, currentIndex, pageAttempt]);
 

@@ -220,6 +220,7 @@ pub fn run() {
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
             iiif::commands::list_network_settings,
+            httpcache::commands::network_probe,
             iiif::commands::save_network_profile,
             iiif::commands::delete_network_profile,
             iiif::commands::set_library_network_profile,

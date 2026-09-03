@@ -2223,17 +2223,22 @@
     "workspaceFilter": "· filter: {{name}}",
     "network": {
       "label": "Network to the libraries",
-      "inFlight_one": "one request in progress",
-      "inFlight_other": "{{count}} requests in progress",
-      "inFlight_zero": "no request in progress",
-      "queued_one": "one waiting its turn",
-      "queued_other": "{{count}} waiting their turn",
-      "queued_zero": "none waiting",
-      "host": "to {{host}}",
-      "speed": "{{speed}}",
-      "lastAnswer": "last answer {{seconds}} s ago",
-      "noAnswerYet": "no answer yet",
-      "lastError": "last error: {{message}}"
+      "requests": "Requests (in progress + queued)",
+      "page": "Open page",
+      "thumbnails": "Thumbnails",
+      "speed": "Speed",
+      "delivered": "Served",
+      "lanes": "Lanes per library",
+      "seats": "Seats in use",
+      "bulkShort": "dl",
+      "perWindow": "In {{seconds}} s",
+      "cooldown": "Cooldown",
+      "images": "Where images came from",
+      "fromVault": "From the vault",
+      "fromCache": "From the cache",
+      "fromNetwork": "From the network",
+      "spared": "Requests spared",
+      "lastError": "Last error"
     }
   },
   "workflow": {

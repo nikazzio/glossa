@@ -55,6 +55,27 @@ export function infoJsonUrl(imageService: string): string {
   return `${imageService}/info.json`;
 }
 
+/**
+ * Larghezza della pagina intera chiesta quando i tasselli non funzionano.
+ *
+ * Non è la dimensione piena: quella su un manoscritto è di parecchi megabyte e
+ * ci si aspetta un ripiego rapido, non un secondo scaricamento.
+ */
+export const WHOLE_PAGE_WIDTH_PX = 1600;
+
+/**
+ * Indirizzo della pagina **intera**, il ripiego di quando lo zoom a tasselli
+ * non è servibile.
+ *
+ * Alcuni servizi dichiarano un `info.json` che promette tasselli e poi rifiuta
+ * le regioni chieste. È la stessa scelta di Scriptoria, che prova le immagini
+ * intere prima di ricucire i tasselli: una pagina che si vede vale più di uno
+ * zoom che non arriva.
+ */
+export function wholePageUrl(imageService: string, width = WHOLE_PAGE_WIDTH_PX): string {
+  return `${imageService}/full/${width},/0/default.jpg`;
+}
+
 /** I byte di un indirizzo IIIF (info.json o tassello), sempre dal ponte
  *  controllato — mai una richiesta diretta della finestra. */
 export async function fetchIiifBytes(

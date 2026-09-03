@@ -80,18 +80,18 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
 
   // Una richiesta remota può finire nel deposito o in cache senza toccare la
   // rete: si conta lo stesso, perché è comunque il tempo che l'utente aspetta.
-  const activity = useNetworkActivity.getState();
-  activity.queue();
+  const priority = options.priority ?? 'normal';
+  useNetworkActivity.getState().queue(priority);
   const watched = async () => {
-    useNetworkActivity.getState().start(hostOf(request.url));
+    useNetworkActivity.getState().start(priority, hostOf(request.url));
     try {
       const bytes = await load();
-      useNetworkActivity.getState().succeed(bytes.byteLength);
+      useNetworkActivity.getState().succeed(priority, bytes.byteLength);
       return bytes;
     } catch (error) {
       useNetworkActivity
         .getState()
-        .fail(error instanceof Error ? error.message : String(error));
+        .fail(priority, error instanceof Error ? error.message : String(error));
       throw error;
     }
   };
@@ -101,10 +101,36 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
     // Annullata mentre era ancora in coda: `watched` non è mai partita, quindi
     // il posto in coda va restituito qui.
     if (error instanceof DOMException && error.name === 'AbortError') {
-      useNetworkActivity.setState((state) => ({ queued: Math.max(0, state.queued - 1) }));
+      useNetworkActivity.getState().drop(priority);
     }
     throw error;
   }
+}
+
+/** Cosa sa il motore della rete verso le biblioteche, in questo momento. */
+export interface HostActivity {
+  host: string;
+  inUse: number;
+  seats: number;
+  bulkInUse: number;
+  windowUsed: number;
+  windowLimit: number;
+  windowSecs: number;
+  cooldownSecs: number;
+}
+
+export interface NetworkProbe {
+  hosts: HostActivity[];
+  served: {
+    fromVault: number;
+    fromCache: number;
+    fromNetwork: number;
+    networkBytes: number;
+  };
+}
+
+export async function networkProbe(): Promise<NetworkProbe> {
+  return invoke<NetworkProbe>('network_probe');
 }
 
 export async function cacheUsage(): Promise<CacheUsage> {

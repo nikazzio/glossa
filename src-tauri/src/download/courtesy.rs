@@ -51,6 +51,28 @@ struct HostGate {
     /// meno di `seats`, così un posto resta a chi guarda.
     bulk_seats: Arc<Semaphore>,
     timeline: Mutex<Timeline>,
+    /// Il ritmo con cui questa corsia è nata: i semafori non si ridimensionano,
+    /// quindi è anche quello che vale finché l'applicazione è aperta.
+    profile: NetworkProfile,
+}
+
+/// Come sta andando la conversazione con un host, adesso. Serve a chi guarda:
+/// «è collegato davvero» è una domanda con una risposta precisa.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HostActivity {
+    pub host: String,
+    /// Posti occupati e posti totali verso questo host.
+    pub in_use: usize,
+    pub seats: usize,
+    /// Di quelli occupati, quanti sono di uno scaricamento.
+    pub bulk_in_use: usize,
+    /// Richieste nella finestra a raffica, e quante ne ammette.
+    pub window_used: usize,
+    pub window_limit: u32,
+    pub window_secs: u64,
+    /// Secondi di raffreddamento che restano, `0` se non ce n'è.
+    pub cooldown_secs: u64,
 }
 
 #[derive(Default)]
@@ -176,8 +198,53 @@ impl Courtesy {
                 seats: Arc::new(Semaphore::new(profile.host_concurrency.max(1))),
                 bulk_seats: Arc::new(Semaphore::new(profile.bulk_workers())),
                 timeline: Mutex::new(Timeline::default()),
+                profile: *profile,
             })
         }))
+    }
+
+    /// Lo stato di ogni host con cui si è parlato, in ordine di nome.
+    ///
+    /// Si legge senza aspettare nessuno: è una fotografia per chi guarda, e
+    /// bloccare una richiesta vera per disegnarla sarebbe il contrario di quello
+    /// che serve.
+    pub async fn activity(&self) -> Vec<HostActivity> {
+        let gates: Vec<(String, Arc<HostGate>)> = {
+            let hosts = self.hosts.lock().await;
+            hosts
+                .iter()
+                .map(|(host, gate)| (host.clone(), Arc::clone(gate)))
+                .collect()
+        };
+
+        let mut activity = Vec::with_capacity(gates.len());
+        for (host, gate) in gates {
+            let seats = gate.profile.host_concurrency.max(1);
+            let bulk_seats = gate.profile.bulk_workers();
+            let window = Duration::from_secs(gate.profile.burst_window_secs);
+            let now = Instant::now();
+            let timeline = gate.timeline.lock().await;
+            activity.push(HostActivity {
+                host,
+                in_use: seats - gate.seats.available_permits(),
+                seats,
+                bulk_in_use: bulk_seats - gate.bulk_seats.available_permits(),
+                window_used: timeline
+                    .recent
+                    .iter()
+                    .filter(|stamp| now.duration_since(**stamp) < window)
+                    .count(),
+                window_limit: gate.profile.burst_requests,
+                window_secs: gate.profile.burst_window_secs,
+                cooldown_secs: timeline
+                    .cooldown_until
+                    .filter(|until| *until > now)
+                    .map(|until| (until - now).as_secs() + 1)
+                    .unwrap_or(0),
+            });
+        }
+        activity.sort_by(|a, b| a.host.cmp(&b.host));
+        activity
     }
 
     /// Aspetta finché non è il momento di parlare con questo host, oppure
