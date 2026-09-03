@@ -125,10 +125,17 @@ better; they cost no request at all.
 
 ## The pace towards libraries
 
-Every library has its own pace: how long to wait between requests, how many
-requests in a minute, how long to stop when it asks you to slow down, how many
-attempts to make. These are a few different paces applied to many libraries, so
-**Settings → Libraries** governs them as **profiles**.
+Every library has its own pace: how many requests in a minute, how many at once,
+how many pages of the same book to fetch at a time, how long to stop when it asks
+you to slow down, how many attempts to make.
+
+Between one successful request and the next there is **no pause at all**: the
+pace comes from the number of requests at once, the per-minute limit and the long
+stop after a refusal. A pause on every request multiplied by all the pieces of a
+zoomed page, and made the viewer unusable.
+
+These are a few different paces applied to many libraries, so **Settings →
+Libraries** governs them as **profiles**.
 
 Two profiles ship with Glossa, with values proven in the field: **Normal**,
 used by almost all of them, and **Slow**, tuned on Gallica, the strictest one.
@@ -140,7 +147,14 @@ profile someone is using cannot be deleted — move the libraries that follow it
 first — and the two that ship with the application cannot be deleted at all.
 
 **Requests at the same time never go above four**, whatever you write: the
-limit depends on their server and it keeps you from being blocked.
+limit depends on their server and it keeps you from being blocked. A download
+never takes them all: one seat always stays with the page you are looking at, so
+you can keep browsing a book while another one downloads.
+
+At the bottom right, next to the jobs, a small indicator tells you whether the
+network is actually moving: how many requests are in progress, how many are
+waiting their turn, which library is being talked to, at what speed, and how many
+seconds since the last answer. It tells a slow job from a stuck one.
 
 ## Covers and searches kept aside
 

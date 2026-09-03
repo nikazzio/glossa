@@ -128,10 +128,16 @@ meglio; non costano nessuna richiesta.
 
 ## Il ritmo verso le biblioteche
 
-Ogni biblioteca ha i suoi tempi: quanto aspettare fra una richiesta e l'altra,
-quante richieste in un minuto, quanto fermarsi quando chiede di rallentare,
-quanti tentativi fare. Sono pochi ritmi diversi applicati a molte biblioteche,
-quindi in **Impostazioni → Biblioteche** si governano come **profili**.
+Ogni biblioteca ha i suoi tempi: quante richieste in un minuto, quante insieme,
+quante pagine di uno stesso libro scaricare per volta, quanto fermarsi quando
+chiede di rallentare, quanti tentativi fare. Sono pochi ritmi diversi applicati a
+molte biblioteche, quindi in **Impostazioni → Biblioteche** si governano come
+**profili**.
+
+Fra una richiesta riuscita e la successiva **non c'è nessuna pausa**: a tenere i
+tempi sono il numero di richieste insieme, il limite al minuto e la pausa lunga
+dopo un rifiuto. Una pausa a ogni richiesta si moltiplicava per tutti i pezzi di
+una pagina ingrandita e rendeva il visore inutilizzabile.
 
 Due profili arrivano con Glossa, con i valori provati sul campo: **Normale**,
 che usano quasi tutte, e **Lento**, tarato su Gallica che è la più severa.
@@ -144,7 +150,14 @@ biblioteche che lo seguono — e i due che arrivano con l'applicazione non si
 eliminano affatto.
 
 Le **richieste insieme non superano mai quattro**, qualunque cosa si scriva: il
-limite dipende dal loro server e serve a non farsi bloccare.
+limite dipende dal loro server e serve a non farsi bloccare. Uno scaricamento
+non le occupa mai tutte: un posto resta sempre alla pagina che stai guardando,
+così sfogliare un libro resta possibile mentre un altro si scarica.
+
+In basso a destra, accanto ai lavori, un piccolo indicatore dice se la rete si
+sta muovendo davvero: quante richieste sono in corso, quante aspettano il turno,
+con quale biblioteca si sta parlando, a che velocità e da quanti secondi non
+arriva una risposta. Serve a distinguere un lavoro lento da uno fermo.
 
 ## Le copertine e le ricerche tenute da parte
 
