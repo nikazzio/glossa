@@ -2,15 +2,26 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PageViewer } from './PageViewer';
 import * as viewerService from '../../services/iiifViewerService';
+import * as cacheService from '../../services/cacheService';
 
 const osd = vi.hoisted(() => ({
   handlers: new Map<string, () => void>(),
   viewer: {
-    viewport: { zoomBy: vi.fn(), goHome: vi.fn() },
+    viewport: {
+      zoomBy: vi.fn(),
+      goHome: vi.fn(),
+      zoomTo: vi.fn(),
+      panTo: vi.fn(),
+      getZoom: vi.fn(() => 1),
+      getCenter: vi.fn(() => ({ x: 0.5, y: 0.5 })),
+      imageToViewportZoom: vi.fn(() => 1),
+      applyConstraints: vi.fn(),
+    },
     open: vi.fn(),
     close: vi.fn(),
     destroy: vi.fn(),
     addHandler: vi.fn((name: string, handler: () => void) => osd.handlers.set(name, handler)),
+    addOnceHandler: vi.fn(),
     removeHandler: vi.fn((name: string) => osd.handlers.delete(name)),
   },
 }));
@@ -26,7 +37,9 @@ vi.mock('../../services/iiifViewerService', () => ({
   setLastViewedPage: vi.fn(),
   infoJsonUrl: (service: string) => `${service}/info.json`,
   pageThumbnailUrl: (service: string) => `${service}/full/96,/0/default.jpg`,
-  wholePageUrl: (service: string) => `${service}/full/1600,/0/default.jpg`,
+  pageSourceUrl: (service: string, size: string) => `${service}/full/${size},/0/default.jpg`,
+  WHOLE_PAGE_WIDTH_PX: 1600,
+  MAX_SIZE: 'max',
 }));
 
 vi.mock('../../services/inventoryService', () => ({
@@ -70,53 +83,65 @@ describe('PageViewer', () => {
     vi.mocked(viewerService.fetchIiifBytes).mockResolvedValue(
       new TextEncoder().encode('{"id":"https://images.example.test/1","width":1000,"height":1400}'),
     );
+    vi.mocked(cacheService.cachedImage).mockResolvedValue(new Uint8Array([1, 2, 3]));
     vi.mocked(viewerService.getLastViewedPage).mockResolvedValue(0);
     vi.mocked(viewerService.setLastViewedPage).mockResolvedValue(undefined);
   });
 
-  it('ripiega sulla pagina intera quando lo zoom a tasselli non arriva', async () => {
+  it('apre la pagina con una sola richiesta, senza chiedere lo zoom a pezzi', async () => {
     render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
-    await waitFor(() => expect(osd.handlers.get('tile-load-failed')).toBeDefined());
 
+    // Una richiesta sola, per numero di pagina: il motore guarda prima sul
+    // computer, e l'indirizzo remoto è solo il ripiego.
+    await waitFor(() =>
+      expect(vi.mocked(cacheService.cachedImage)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'page',
+          versionId: 'sver-1',
+          index: 1,
+          remoteUrl: 'https://images.example.test/1/full/1600,/0/default.jpg',
+        }),
+        expect.objectContaining({ priority: 'high' }),
+      ),
+    );
+    // Lo zoom a pezzi costa una quindicina di richieste: non si chiede finché
+    // nessuno sta ingrandendo.
+    expect(vi.mocked(viewerService.fetchIiifBytes)).not.toHaveBeenCalled();
+  });
+
+  it('passa allo zoom a pezzi solo quando si ingrandisce oltre l immagine intera', async () => {
+    render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
+    await screen.findByText('areas.library.viewerPageOf · P1');
+    await waitFor(() => expect(osd.handlers.get('zoom')).toBeDefined());
+
+    // Prima si vede qualcosa, poi si ingrandisce oltre i pixel dell'immagine.
+    act(() => osd.handlers.get('tile-loaded')?.());
+    osd.viewer.viewport.getZoom.mockReturnValue(4);
     await act(async () => {
-      osd.handlers.get('tile-load-failed')?.();
+      osd.handlers.get('zoom')?.();
       await Promise.resolve();
     });
 
-    // Chiesta l'immagine intera, e nessun errore a schermo: la pagina si vede,
-    // solo senza zoom.
     await waitFor(() =>
       expect(vi.mocked(viewerService.fetchIiifBytes)).toHaveBeenCalledWith(
-        'https://images.example.test/1/full/1600,/0/default.jpg',
+        'https://images.example.test/1/info.json',
         null,
         expect.any(AbortSignal),
       ),
     );
-    expect(screen.queryByText('areas.library.viewerLoadError')).not.toBeInTheDocument();
   });
 
-  it('dichiara la pagina guasta solo quando nemmeno l intera arriva', async () => {
-    vi.mocked(viewerService.fetchIiifBytes).mockImplementation(async (url: string) => {
-      if (url.endsWith('/info.json')) {
-        return new TextEncoder().encode('{"id":"https://images.example.test/1","width":1000,"height":1400}');
-      }
-      throw new Error('la biblioteca non risponde');
-    });
+  it('dichiara la pagina guasta quando non arriva niente', async () => {
+    vi.mocked(cacheService.cachedImage).mockRejectedValue(new Error('la biblioteca non risponde'));
     render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
-    await waitFor(() => expect(osd.handlers.get('tile-load-failed')).toBeDefined());
-
-    await act(async () => {
-      osd.handlers.get('tile-load-failed')?.();
-      await Promise.resolve();
-    });
 
     expect(await screen.findByText('areas.library.viewerLoadError')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'areas.library.viewerRetry' })).toBeInTheDocument();
   });
 
-  it('un tassello perso non cancella una pagina che si vede già', async () => {
+  it('un pezzo perso non cancella una pagina che si vede già', async () => {
     render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
     await waitFor(() => expect(osd.handlers.get('tile-loaded')).toBeDefined());

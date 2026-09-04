@@ -155,9 +155,13 @@ non le occupa mai tutte: un posto resta sempre alla pagina che stai guardando,
 così sfogliare un libro resta possibile mentre un altro si scarica.
 
 In basso a destra, accanto ai lavori, un piccolo indicatore dice se la rete si
-sta muovendo davvero: quante richieste sono in corso, quante aspettano il turno,
-con quale biblioteca si sta parlando, a che velocità e da quanti secondi non
-arriva una risposta. Serve a distinguere un lavoro lento da uno fermo.
+sta muovendo davvero. Passandoci sopra si apre un pannello: quante immagini
+sono in corso e quante aspettano il turno, tenendo separata la pagina che stai
+guardando dalle miniature; quanti posti sono occupati verso ciascuna biblioteca
+e quante richieste hai già speso nel minuto corrente; e da dove sono arrivate le
+immagini finora — dal deposito, dalla memoria di lavoro o dalla rete — con la
+percentuale di richieste che ti sei risparmiato. Serve a distinguere un lavoro
+lento da uno fermo.
 
 ## Le copertine e le ricerche tenute da parte
 

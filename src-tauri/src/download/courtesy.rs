@@ -11,7 +11,7 @@
 //! il raffreddamento, e quello vale per tutti.
 //!
 //! Due classi di traffico, **un solo tetto**: ciò che l'utente sta guardando
-//! (`Lane::Interactive`) e ciò che si scarica in blocco (`Lane::Bulk`). Il
+//! (`Lane::Page`) e ciò che si scarica in blocco (`Lane::Bulk`). Il
 //! secondo non può occupare l'ultimo posto verso un host, così cambiare pagina
 //! resta possibile mentre un libro si scarica.
 
@@ -32,12 +32,19 @@ const POLL_SLICE: Duration = Duration::from_millis(250);
 /// scorrere della finestra a raffica.
 const LONG_WAIT: Duration = Duration::from_secs(5);
 
-/// La classe di traffico verso una biblioteca.
+/// La classe di traffico verso una biblioteca, dalla più urgente alla meno.
+///
+/// Non sono tre code: sono tre diritti sullo **stesso** tetto di richieste
+/// insieme. Un posto resta sempre alla pagina aperta, perché due miniature che
+/// occupavano gli unici due posti di una biblioteca severa lasciavano la pagina
+/// ad aspettare finché non scadeva.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lane {
-    /// Quello che si vede a schermo: manifesto in apertura, `info.json`,
-    /// tasselli e miniature.
-    Interactive,
+    /// La pagina che si sta guardando: manifesto in apertura, `info.json`,
+    /// tasselli, immagine intera. Ha sempre un posto.
+    Page,
+    /// Le miniature del rail e le copertine. Utili, mai davanti alla pagina.
+    Thumbnail,
     /// Lo scaricamento di un libro, di un intervallo o delle pagine mancanti.
     Bulk,
 }
@@ -47,8 +54,11 @@ pub enum Lane {
 struct HostGate {
     /// Il tetto vero: nessuno parla a questo host se non ha un posto qui.
     seats: Arc<Semaphore>,
-    /// Sottoinsieme dei posti che gli scaricamenti possono occupare. Sempre
-    /// meno di `seats`, così un posto resta a chi guarda.
+    /// Quanti posti può occupare tutto ciò che **non** è la pagina aperta.
+    /// Sempre uno meno del tetto: quello che avanza è suo.
+    behind_the_page: Arc<Semaphore>,
+    /// Sottoinsieme ulteriore per gli scaricamenti, così un libro in corso non
+    /// mangia anche i posti delle miniature.
     bulk_seats: Arc<Semaphore>,
     timeline: Mutex<Timeline>,
     /// Il ritmo con cui questa corsia è nata: i semafori non si ridimensionano,
@@ -65,6 +75,8 @@ pub struct HostActivity {
     /// Posti occupati e posti totali verso questo host.
     pub in_use: usize,
     pub seats: usize,
+    /// Di quelli occupati, quanti non sono la pagina aperta.
+    pub behind_in_use: usize,
     /// Di quelli occupati, quanti sono di uno scaricamento.
     pub bulk_in_use: usize,
     /// Richieste nella finestra a raffica, e quante ne ammette.
@@ -115,8 +127,9 @@ pub struct Courtesy {
 /// concessi dalla concorrenza per host.
 pub struct Turn {
     _seat: OwnedSemaphorePermit,
-    /// Presente solo per gli scaricamenti: è il posto nel sottoinsieme che li
-    /// tiene sotto il tetto riservato.
+    /// Presenti per chi non è la pagina aperta: sono i posti dei sottoinsiemi
+    /// che tengono miniature e scaricamenti sotto il tetto riservato.
+    _behind: Option<OwnedSemaphorePermit>,
     _bulk_seat: Option<OwnedSemaphorePermit>,
 }
 
@@ -133,10 +146,13 @@ impl Courtesy {
     /// terrebbe occupato il suo posto in corsia. `None` significa "fermato
     /// mentre aspettava".
     ///
-    /// Uno scaricamento prende **due** posti: quello del suo sottoinsieme e poi
-    /// quello generale. Il sottoinsieme è più piccolo del tetto, quindi un posto
-    /// resta sempre libero per il visore e nessuno dei due può salire oltre il
-    /// numero dichiarato dalla biblioteca.
+    /// I posti si prendono sempre nello stesso ordine — sottoinsieme più
+    /// stretto, poi più largo, poi il tetto — così due richieste non possono
+    /// tenersi a vicenda quello che serve all'altra.
+    ///
+    /// La pagina aperta prende solo il posto del tetto. Tutto il resto prende
+    /// prima un posto fra quelli che avanzano, che sono uno meno del tetto:
+    /// nessuno può togliere alla pagina l'ultimo posto.
     pub async fn wait_turn(
         &self,
         host: &str,
@@ -148,13 +164,20 @@ impl Courtesy {
 
         let bulk_seat = match lane {
             Lane::Bulk => Some(Self::take_seat(&gate.bulk_seats, host).await?),
-            Lane::Interactive => None,
+            Lane::Page | Lane::Thumbnail => None,
+        };
+        let behind = match lane {
+            Lane::Bulk | Lane::Thumbnail => {
+                Some(Self::take_seat(&gate.behind_the_page, host).await?)
+            }
+            Lane::Page => None,
         };
         let seat = Self::take_seat(&gate.seats, host).await?;
 
         Self::respect_limits(host, &gate, profile, signals).await?;
         Some(Turn {
             _seat: seat,
+            _behind: behind,
             _bulk_seat: bulk_seat,
         })
     }
@@ -196,6 +219,7 @@ impl Courtesy {
                 // La concorrenza la dichiara il profilo della biblioteca: due
                 // verso Gallica, quattro verso chi regge di più.
                 seats: Arc::new(Semaphore::new(profile.host_concurrency.max(1))),
+                behind_the_page: Arc::new(Semaphore::new(behind_the_page(profile))),
                 bulk_seats: Arc::new(Semaphore::new(profile.bulk_workers())),
                 timeline: Mutex::new(Timeline::default()),
                 profile: *profile,
@@ -220,6 +244,7 @@ impl Courtesy {
         let mut activity = Vec::with_capacity(gates.len());
         for (host, gate) in gates {
             let seats = gate.profile.host_concurrency.max(1);
+            let behind = behind_the_page(&gate.profile);
             let bulk_seats = gate.profile.bulk_workers();
             let window = Duration::from_secs(gate.profile.burst_window_secs);
             let now = Instant::now();
@@ -228,6 +253,7 @@ impl Courtesy {
                 host,
                 in_use: seats - gate.seats.available_permits(),
                 seats,
+                behind_in_use: behind - gate.behind_the_page.available_permits(),
                 bulk_in_use: bulk_seats - gate.bulk_seats.available_permits(),
                 window_used: timeline
                     .recent
@@ -283,6 +309,13 @@ impl Courtesy {
             }
         }
     }
+}
+
+/// Quanti posti restano a chi non è la pagina aperta: sempre uno meno del
+/// tetto, e almeno uno — con un solo posto dichiarato non si può riservare
+/// niente, e meglio miniature lente che nessuna miniatura.
+fn behind_the_page(profile: &NetworkProfile) -> usize {
+    profile.host_concurrency.max(2) - 1
 }
 
 /// Quanto manca prima di poter parlare, o `None` se si può parlare adesso — e
@@ -403,12 +436,39 @@ mod tests {
         .await;
         let viewer = tokio::time::timeout(
             Duration::from_millis(80),
-            turn(&courtesy, "host", &rhythm, Lane::Interactive),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
         )
         .await;
 
         assert!(second_download.is_err(), "il secondo scaricamento aspetta");
         assert!(viewer.is_ok(), "il visore deve passare comunque");
+    }
+
+    #[tokio::test]
+    async fn thumbnails_never_take_the_last_seat_from_the_open_page() {
+        // Due miniature che occupavano gli unici due posti di una biblioteca
+        // severa lasciavano la pagina ad aspettare finché non scadeva.
+        let courtesy = Courtesy::new();
+        let rhythm = NetworkProfile {
+            host_concurrency: 2,
+            workers_per_job: 1,
+            ..profile(1_000, 60)
+        };
+
+        let (_first, _) = turn(&courtesy, "host", &rhythm, Lane::Thumbnail).await;
+        let second_thumbnail = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Thumbnail),
+        )
+        .await;
+        let page = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
+        )
+        .await;
+
+        assert!(second_thumbnail.is_err(), "la seconda miniatura aspetta");
+        assert!(page.is_ok(), "la pagina aperta passa comunque");
     }
 
     #[tokio::test]
@@ -421,10 +481,10 @@ mod tests {
         };
 
         let (_downloading, _) = turn(&courtesy, "host", &rhythm, Lane::Bulk).await;
-        let (_viewing, _) = turn(&courtesy, "host", &rhythm, Lane::Interactive).await;
+        let (_viewing, _) = turn(&courtesy, "host", &rhythm, Lane::Page).await;
         let third = tokio::time::timeout(
             Duration::from_millis(80),
-            turn(&courtesy, "host", &rhythm, Lane::Interactive),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
         )
         .await;
 
@@ -439,11 +499,11 @@ mod tests {
         let courtesy = Courtesy::new();
         let rhythm = profile(2, 1);
 
-        let (a, _) = turn(&courtesy, "host", &rhythm, Lane::Interactive).await;
+        let (a, _) = turn(&courtesy, "host", &rhythm, Lane::Page).await;
         drop(a);
         let (b, _) = turn(&courtesy, "host", &rhythm, Lane::Bulk).await;
         drop(b);
-        let (_c, waited) = turn(&courtesy, "host", &rhythm, Lane::Interactive).await;
+        let (_c, waited) = turn(&courtesy, "host", &rhythm, Lane::Page).await;
 
         assert!(
             waited >= Duration::from_millis(500),
@@ -480,7 +540,7 @@ mod tests {
         .await;
         let viewing = tokio::time::timeout(
             Duration::from_millis(120),
-            turn(&courtesy, "host", &rhythm, Lane::Interactive),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
         )
         .await;
 

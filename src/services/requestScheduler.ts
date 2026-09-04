@@ -65,6 +65,12 @@ export function createRequestScheduler(maxActive: number, reservedForHigh = 0) {
       const onAbort = () => {
         if (started || cancelled) return;
         cancelled = true;
+        // Tolta subito dalla coda, non solo marcata: scartarla quando risale in
+        // testa significa tenerne centinaia vive dopo uno scorrimento veloce,
+        // e se il rail sparisce non risalgono mai.
+        const queue = queues[priority];
+        const waiting = queue.indexOf(entry);
+        if (waiting >= 0) queue.splice(waiting, 1);
         reject(abortError());
       };
       const entry: QueueEntry = {

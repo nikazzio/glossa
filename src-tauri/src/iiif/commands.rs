@@ -19,12 +19,12 @@ pub struct NetworkSettings {
     pub libraries: Vec<Library>,
 }
 
-/// Il ritmo ricordato dalla cache non vale più: al prossimo bisogno si rilegge.
-/// Senza, una modifica delle Impostazioni si vedrebbe solo dopo un riavvio.
+/// Quello che la cache ricorda delle impostazioni non vale più: al prossimo
+/// bisogno si rilegge. Senza, una modifica si vedrebbe solo dopo un riavvio.
 fn forget_cached_profiles(app: &tauri::AppHandle) {
     use tauri::Manager;
     if let Some(cache) = app.try_state::<std::sync::Arc<crate::httpcache::HttpCache>>() {
-        cache.forget_profiles();
+        cache.forget_settings();
     }
 }
 

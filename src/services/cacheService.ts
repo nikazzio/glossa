@@ -86,13 +86,21 @@ export interface CachedImageOptions {
 // riempire il rail e lasciano la corsia libera per la pagina che si guarda.
 const remoteImageScheduler = createRequestScheduler(6, 4);
 
+/**
+ * Le richieste identiche ancora in volo, per non farne partire due.
+ *
+ * Succede continuamente: il rail rimonta una riga, si torna su una pagina già
+ * vista, e in sviluppo React fa partire ogni effetto due volte. Due richieste
+ * gemelle **mancano entrambe** la cache — la prima non ha ancora finito di
+ * scriverla — e vanno entrambe in rete. Chi arriva secondo aspetta la prima.
+ */
+const inFlight = new Map<string, Promise<Uint8Array>>();
+
 export async function cachedImage(request: CacheRequest, options: CachedImageOptions = {}): Promise<Uint8Array> {
-  // Il motore risponde con i byte grezzi: l'annotazione dice quello che il
-  // ponte dichiara, non quello che arriva davvero.
-  const load = async () => {
-    const bytes = await invoke<number[]>('cached_image', { request });
-    return new Uint8Array(bytes);
-  };
+  // Il motore risponde con byte grezzi, non con un elenco di numeri: un
+  // vettore che attraversa il ponte in JSON pesa tre o quattro volte i byte
+  // che trasporta.
+  const load = async () => new Uint8Array(await invoke<ArrayBuffer>('cached_image', { request }));
   // Le ricerche non sono immagini: non passano dalla corsia del visore.
   if (request.kind === 'search') return load();
 
@@ -101,11 +109,13 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
   const priority = options.priority ?? 'normal';
   const host = request.kind === 'remote' ? request.url : (request.remoteUrl ?? '');
   useNetworkActivity.getState().queue(priority);
+  let started = false;
   const watched = async () => {
+    started = true;
     useNetworkActivity.getState().start(priority, hostOf(host));
     try {
       const bytes = await load();
-      useNetworkActivity.getState().succeed(priority, bytes.byteLength);
+      useNetworkActivity.getState().succeed(priority);
       return bytes;
     } catch (error) {
       useNetworkActivity
@@ -114,14 +124,32 @@ export async function cachedImage(request: CacheRequest, options: CachedImageOpt
       throw error;
     }
   };
-  try {
-    return await remoteImageScheduler.schedule(watched, options);
-  } catch (error) {
-    // Annullata mentre era ancora in coda: `watched` non è mai partita, quindi
-    // il posto in coda va restituito qui.
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      useNetworkActivity.getState().drop(priority);
+  const key = JSON.stringify(request);
+  const shared = inFlight.get(key);
+  if (shared) {
+    useNetworkActivity.getState().drop(priority);
+    try {
+      // I byte sono gli stessi, ma ognuno deve poterli tenere per sé: una
+      // vista che li rilascia non deve svuotare quelli di un'altra.
+      return new Uint8Array(await shared);
+    } catch (error) {
+      // Chi l'aveva chiesta per primo se n'è andato prima che partisse: la
+      // richiesta è sua, l'annullamento no. Si rifà per conto proprio.
+      if (!(error instanceof DOMException && error.name === 'AbortError')) throw error;
+      return cachedImage(request, options);
     }
+  }
+
+  const running = remoteImageScheduler
+    .schedule(watched, options)
+    .finally(() => inFlight.delete(key));
+  inFlight.set(key, running);
+  try {
+    return await running;
+  } catch (error) {
+    // Annullata mentre era ancora in coda: il posto va restituito qui, perché
+    // `watched` non è mai partita e nessuno l'ha già tolto.
+    if (!started) useNetworkActivity.getState().drop(priority);
     throw error;
   }
 }

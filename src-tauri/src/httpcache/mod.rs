@@ -31,7 +31,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use reqwest::Client;
@@ -68,7 +68,6 @@ pub struct CacheMeta {
     /// Quando è arrivata dalla rete. Non è la data del file, che alla lettura
     /// viene toccata e diventa «ultimo uso»: serve a dire a chi guarda **di
     /// quando** è il risultato che ha davanti.
-    #[serde(default)]
     pub stored_at: Option<i64>,
     /// Secondi dall'epoca. `None` per ciò che non scade.
     pub expires_at: Option<i64>,
@@ -101,6 +100,17 @@ pub struct HttpCache {
     /// interrogarlo e chiuderlo centinaia di volte per una sola schermata. I
     /// ritmi cambiano solo dalle Impostazioni, che svuotano questa memoria.
     profiles: Mutex<HashMap<(String, String), crate::iiif::network::NetworkProfile>>,
+    /// Le richieste alla rete già in volo, per chiave.
+    ///
+    /// Due richieste identiche che si sovrappongono **mancano entrambe** la
+    /// cache — la prima non ha ancora finito di scriverla — e vanno entrambe a
+    /// disturbare la biblioteca. Chi arriva secondo aspetta qui, e poi trova i
+    /// byte già messi da parte.
+    in_flight: tokio::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+    /// Tetto della cache e scadenza delle ricerche, già letti. Erano una
+    /// apertura del database **per ogni immagine messa da parte**, in contesa
+    /// con il motore dei lavori sullo stesso file.
+    limits: Mutex<Option<(u64, u64)>>,
     /// Da dove sono arrivate le immagini chieste finora. Tre provenienze
     /// diverse con tre costi diversi: il deposito non costa niente, la cache
     /// costa una lettura, la rete costa una richiesta a una biblioteca.
@@ -141,6 +151,8 @@ impl HttpCache {
             since_walk: AtomicU64::new(0),
             clients: Mutex::new(HashMap::new()),
             profiles: Mutex::new(HashMap::new()),
+            in_flight: tokio::sync::Mutex::new(HashMap::new()),
+            limits: Mutex::new(None),
             served: Served::default(),
         }
     }
@@ -193,12 +205,53 @@ impl HttpCache {
         profile
     }
 
-    /// Dimentica i ritmi: il prossimo che serve si rilegge. Si chiama quando le
-    /// Impostazioni ne cambiano uno, altrimenti la modifica non si vedrebbe
-    /// fino al riavvio.
-    pub fn forget_profiles(&self) {
+    /// Il turno per andare in rete a prendere **questa** risorsa. Finché
+    /// qualcuno lo tiene, chi chiede la stessa cosa aspetta invece di
+    /// affiancarlo.
+    pub async fn one_at_a_time(&self, key: &str) -> Arc<tokio::sync::Mutex<()>> {
+        let mut in_flight = self.in_flight.lock().await;
+        Arc::clone(
+            in_flight
+                .entry(key.to_string())
+                .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(()))),
+        )
+    }
+
+    /// Dimentica il turno quando non lo aspetta più nessuno: senza, la mappa
+    /// crescerebbe di una voce per ogni immagine mai chiesta.
+    pub async fn turn_is_over(&self, key: &str) {
+        let mut in_flight = self.in_flight.lock().await;
+        if in_flight
+            .get(key)
+            .is_some_and(|turn| Arc::strong_count(turn) == 1)
+        {
+            in_flight.remove(key);
+        }
+    }
+
+    /// Tetto e scadenza in vigore, letti dal database la prima volta.
+    pub fn limits_for(&self, read: impl FnOnce() -> (u64, u64)) -> (u64, u64) {
+        if let Ok(limits) = self.limits.lock() {
+            if let Some(known) = *limits {
+                return known;
+            }
+        }
+        let fresh = read();
+        if let Ok(mut limits) = self.limits.lock() {
+            *limits = Some(fresh);
+        }
+        fresh
+    }
+
+    /// Dimentica ritmi e limiti: il prossimo che serve si rilegge. Si chiama
+    /// quando le Impostazioni ne cambiano uno, altrimenti la modifica non si
+    /// vedrebbe fino al riavvio.
+    pub fn forget_settings(&self) {
         if let Ok(mut profiles) = self.profiles.lock() {
             profiles.clear();
+        }
+        if let Ok(mut limits) = self.limits.lock() {
+            *limits = None;
         }
     }
 
@@ -232,9 +285,10 @@ impl HttpCache {
     pub fn get_with_meta(&self, key: &CacheKey) -> Option<(Vec<u8>, CacheMeta)> {
         let path = self.path_of(key);
         // Senza file di lato non si sa quando scade: si scarta invece di
-        // servirlo per sempre.
+        // servirlo per sempre. Ma solo se il file di lato **manca davvero**:
+        // una lettura andata storta per un momento non è una voce da buttare.
         let Some(meta) = self.read_meta(key) else {
-            if path.exists() {
+            if path.exists() && !self.meta_path_of(key).exists() {
                 self.forget(&path);
             }
             return None;

@@ -38,7 +38,7 @@ import { useSourceActions } from './useSourceActions';
 import { CopiesSection, resolutionLabel } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
-import { PageViewer } from '../viewer/PageViewer';
+import { PageViewer, type ViewerPagePosition } from '../viewer/PageViewer';
 import { useDebounce } from '../../hooks/useDebounce';
 import { summarizeAvailability } from '../../services/vaultService';
 import { humanSize } from '../../utils';
@@ -111,7 +111,16 @@ export function LibrarySourcePage({
   const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  // Dove si è arrivati nel libro: interessa solo a questa schermata (visore e
+  // scheda), quindi resta qui e non in uno stato condiviso di tutta l'app.
+  const [viewerPage, setViewerPage] = useState<ViewerPagePosition | null>(null);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
+
+  // Un'altra opera: la posizione di quella precedente non va lasciata a
+  // schermo finché il nuovo manifesto non è arrivato.
+  useEffect(() => {
+    setViewerPage(null);
+  }, [detail.source.id]);
 
   const persistLayout = () => {
     if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
@@ -145,6 +154,7 @@ export function LibrarySourcePage({
             versionId={manifestVersion.id}
             manifestUrl={manifestVersion.sourceUrl}
             providerKey={manifestVersion.providerKey}
+            onPageChange={setViewerPage}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
@@ -226,6 +236,7 @@ export function LibrarySourcePage({
                   <DataSection
                     detail={detail}
                     entry={entry}
+                    viewerPage={viewerPage}
                     onCorrectField={onCorrectField}
                     onResyncSource={onResyncSource}
                   />
@@ -362,11 +373,13 @@ function WorkspaceLinkPicker({
 function DataSection({
   detail,
   entry,
+  viewerPage,
   onCorrectField,
   onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
+  viewerPage: ViewerPagePosition | null;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
   onResyncSource: () => Promise<void>;
 }) {
@@ -468,6 +481,19 @@ function DataSection({
           value={
             entry && entry.expectedPages !== null && entry.expectedPages > 0
               ? t('areas.library.pageCount', { count: entry.expectedPages })
+              : ''
+          }
+        />
+        {/* La pagina aperta nel visore accanto: «—» finché il libro non è
+            aperto, come ogni altro campo della scheda. */}
+        <StatBlock
+          label={t('areas.library.currentPageField')}
+          value={
+            viewerPage
+              ? t('areas.library.viewerPageOf', {
+                  index: viewerPage.index + 1,
+                  total: viewerPage.total,
+                }) + (viewerPage.label ? ` · ${viewerPage.label}` : '')
               : ''
           }
         />

@@ -364,17 +364,25 @@ raffica e il raffreddamento dopo un rifiuto. Una pausa per richiesta si
 moltiplicava per ogni tassello del visore e rendeva illeggibile una pagina che
 il servizio serviva in un secondo.
 
-`Lane::Interactive` è ciò che qualcuno sta guardando, `Lane::Bulk` è uno
-scaricamento. Entrambe passano dallo **stesso** semaforo per host
-(`host_concurrency`), ma il traffico massivo prende anche un permesso di un
-sottoinsieme più piccolo (`bulk_workers = min(workers_per_job,
-host_concurrency - 1)`): il tetto non si supera sommando le due classi e un
-posto resta sempre a chi sfoglia. La finestra a raffica e il raffreddamento
-valgono per entrambe.
+Tre classi, un solo tetto. `Lane::Page` è la pagina che si sta guardando,
+`Lane::Thumbnail` sono le miniature del rail e le copertine, `Lane::Bulk` è uno
+scaricamento. Tutte passano dallo **stesso** semaforo per host
+(`host_concurrency`); chi non è la pagina prende prima un permesso di
+`behind_the_page = host_concurrency - 1`, e gli scaricamenti anche uno di
+`bulk_workers = workers_per_job.clamp(1, host_concurrency.max(2) - 1)`.
 
-Il traffico interattivo fa **un solo tentativo** con scadenza a 90 secondi: tre
-tentativi da due minuti erano sei minuti di posto occupato prima di poter dire
-qualcosa. Lo scaricamento mantiene tre tentativi e la scadenza del profilo.
+Ne segue l'invariante: **la pagina aperta ha sempre un posto**. Due miniature
+che occupavano gli unici due posti di una biblioteca severa lasciavano la pagina
+ad aspettare finché non scadeva. I permessi si prendono sempre nello stesso
+ordine — `bulk_seats`, `behind_the_page`, `seats` — così due richieste non
+possono tenersi a vicenda quello che serve all'altra.
+
+La finestra a raffica e il raffreddamento valgono per tutte e tre.
+
+Tentativi e scadenze per classe: pagina un tentativo a 90 secondi, miniatura un
+tentativo a 20 secondi, scaricamento tre tentativi con la scadenza del profilo.
+Una miniatura che tiene un posto per un minuto e mezzo rallenta tutto il resto e
+in cambio riempie un riquadro.
 
 I profili predefiniti si riscrivono dal registro quando cambia
 `BUILTIN_PROFILES_VERSION`; i profili creati dall'utente non vengono toccati.
@@ -410,6 +418,14 @@ prendere, non quale immagine è. Un deposito irraggiungibile vale come «qui non
 c'è niente», non come errore: la pagina si chiede alla biblioteca invece di
 lasciare il visore vuoto.
 
+**Una richiesta per volta per la stessa risorsa**, su entrambi i lati. Due
+richieste identiche che si sovrappongono mancano entrambe la cache — la prima
+non ha ancora finito di scriverla — e vanno entrambe a disturbare la
+biblioteca. Succede di continuo: il rail rimonta una riga, si torna su una
+pagina già vista, e in sviluppo React fa partire ogni effetto due volte. Chi
+arriva secondo aspetta: nel motore su un turno per chiave (`one_at_a_time`),
+nella finestra su una mappa delle promesse ancora aperte.
+
 ### Il visore
 
 Il manifesto lo legge il motore in un passaggio solo (`iiif_viewer_manifest`):
@@ -417,14 +433,25 @@ portarlo alla finestra per rimandarlo indietro da leggere lo trasformava due
 volte in un elenco di numeri, e su un libro di ottocento pagine era buona parte
 dell'attesa all'apertura.
 
-**Libro sul computer** → pagine lette dal deposito e mostrate intere, senza
-tasselli e senza rete. È il comportamento di Scriptoria, che per un libro locale
-toglie del tutto il riferimento al servizio della biblioteca.
+**Libro sul computer** → pagine lette dal deposito, senza rete. È il
+comportamento di Scriptoria, che per un libro locale toglie del tutto il
+riferimento al servizio della biblioteca. Per un libro scaricato a metà la
+pagina mancante si chiede alla biblioteca **alla misura della cartella**, non a
+una misura fissa: altrimenti finirebbe in cache sotto un nome che promette una
+risoluzione che non ha.
 
-**Libro solo in rete** → zoom a tasselli via OpenSeadragon attraverso il ponte
-controllato. Se i tasselli non sono servibili — succede con servizi che li
-dichiarano e poi rifiutano le regioni — si ripiega sulla pagina intera. Un
-tassello perso non dichiara guasta una pagina che si vede già.
+**Ogni pagina si apre con una sola richiesta**, l'immagine intera, locale o
+remota. Lo zoom a tasselli chiede una quindicina di immagini per schermata, e
+ognuna attraversa il motore e occupa un posto in corsia: dove le immagini
+vengono ricavate al momento — Internet Archive, Gallica — quella schermata non
+arrivava mai.
+
+**I tasselli si chiedono solo quando servono davvero**, cioè quando lo zoom
+supera i pixel dell'immagine intera (`TILE_UPGRADE_FACTOR`). Allora il visore
+riapre la stessa pagina con la sorgente a tasselli, rimettendo dov'era la
+posizione. Se i tasselli non arrivano, l'immagine intera resta a schermo.
+
+Un tassello perso non dichiara guasta una pagina che si vede già.
 
 Per la miniatura di una pagina non posseduta si usa **quella dichiarata dal
 manifesto**: è già pronta sul server della biblioteca, mentre ordinare una

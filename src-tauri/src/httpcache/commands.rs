@@ -62,15 +62,22 @@ impl Default for Limits {
 }
 
 fn limits(app: &tauri::AppHandle) -> Limits {
-    let Ok(path) = crate::storage_config::db_path(app) else {
-        return Limits::default();
+    let read = || {
+        let Ok(path) = crate::storage_config::db_path(app) else {
+            return (DEFAULT_MAX_BYTES, DEFAULT_SEARCH_TTL_HOURS);
+        };
+        let Ok(conn) = crate::db::open_connection(&path) else {
+            return (DEFAULT_MAX_BYTES, DEFAULT_SEARCH_TTL_HOURS);
+        };
+        (max_bytes(&conn), search_ttl_hours(&conn))
     };
-    let Ok(conn) = crate::db::open_connection(&path) else {
-        return Limits::default();
+    let (max_bytes, search_ttl_hours) = match cache(app) {
+        Some(cache) => cache.limits_for(read),
+        None => read(),
     };
     Limits {
-        max_bytes: max_bytes(&conn),
-        search_ttl_hours: search_ttl_hours(&conn),
+        max_bytes,
+        search_ttl_hours,
     }
 }
 
@@ -167,7 +174,7 @@ pub async fn cached_image(
     app: tauri::AppHandle,
     request: CacheRequest,
 ) -> Result<tauri::ipc::Response, String> {
-    let (source, bytes) = resolve(&app, &request).await?;
+    let (source, bytes) = resolve_and_release(&app, &request).await?;
     Ok(served(&app, source, bytes))
 }
 
@@ -179,7 +186,7 @@ pub async fn cached_image(
 /// megabyte, e riportarlo alla finestra per rimandarlo indietro da leggere
 /// significava trasformarlo due volte in un elenco di numeri.
 pub async fn bytes_of(app: &tauri::AppHandle, request: &CacheRequest) -> Result<Vec<u8>, String> {
-    let (source, bytes) = resolve(app, request).await?;
+    let (source, bytes) = resolve_and_release(app, request).await?;
     if let Some(cache) = cache(app) {
         cache.served(source, bytes.len());
     }
@@ -201,6 +208,24 @@ async fn resolve(
     }
     if let Some(bytes) = from_vault_larger(app, request)? {
         return Ok((Source::Vault, bytes));
+    }
+
+    // Da qui in avanti si va a disturbare una biblioteca: una richiesta per
+    // volta per la stessa risorsa. Chi arriva secondo aspetta e poi ritrova i
+    // byte in cache, invece di fare la stessa domanda due volte.
+    let key = request.key().as_str().to_string();
+    let turn = match cache(app) {
+        Some(cache) => Some(cache.one_at_a_time(&key).await),
+        None => None,
+    };
+    let _first = match &turn {
+        Some(turn) => Some(turn.lock().await),
+        None => None,
+    };
+    if turn.is_some() {
+        if let Some(bytes) = lookup(app, request) {
+            return Ok((Source::Cache, bytes));
+        }
     }
     // Sul computer non c'è: si va dove la richiesta dice di andare. Una pagina
     // senza indirizzo remoto è una pagina che esiste solo in locale, e non c'è
@@ -252,7 +277,7 @@ async fn resolve(
         &courtesy,
         &profile,
         url,
-        Lane::Interactive,
+        lane_of(request),
         1,
         &signals,
     )
@@ -262,6 +287,18 @@ async fn resolve(
 
     store(app, request, &fetched.bytes, fetched.content_type);
     Ok((Source::Network, fetched.bytes))
+}
+
+/// Come `resolve`, ma libera il turno anche quando la richiesta fallisce.
+async fn resolve_and_release(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<(Source, Vec<u8>), String> {
+    let outcome = resolve(app, request).await;
+    if let Some(cache) = cache(app) {
+        cache.turn_is_over(request.key().as_str()).await;
+    }
+    outcome
 }
 
 /// Segna la provenienza e restituisce i byte. Sapere quante immagini sono
@@ -300,6 +337,18 @@ pub async fn network_probe(app: tauri::AppHandle) -> Result<NetworkProbe, String
 
 /// La misura che chiede la miniatura invece di un numero di pixel.
 pub const THUMB_SIZE: &str = "thumb";
+
+/// Quanto è urgente questa immagine.
+///
+/// Una miniatura non deve mai togliere il posto alla pagina che si sta
+/// guardando: due miniature che occupavano gli unici due posti di una
+/// biblioteca severa lasciavano la pagina ad aspettare finché non scadeva.
+fn lane_of(request: &CacheRequest) -> Lane {
+    match request {
+        CacheRequest::Page { size, .. } if size == THUMB_SIZE => Lane::Thumbnail,
+        _ => Lane::Page,
+    }
+}
 
 /// Il file già sul computer, alla misura chiesta. Ha la precedenza su tutto: è
 /// roba posseduta, e non costa una richiesta a nessuno.
@@ -483,6 +532,9 @@ pub fn apply_cache_cap(app: tauri::AppHandle) -> Result<CacheUsage, String> {
     let Some(cache) = cache(&app) else {
         return Ok(CacheUsage::default());
     };
+    // Si arriva qui subito dopo aver cambiato il tetto: quello ricordato è
+    // proprio il valore che non vale più.
+    cache.forget_settings();
     let freed = cache.evict_to(limits(&app).max_bytes);
     if freed > 0 {
         log::info!("cache eviction freed {freed} bytes");

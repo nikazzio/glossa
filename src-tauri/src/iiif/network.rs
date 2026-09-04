@@ -36,7 +36,6 @@ pub struct NetworkProfile {
     pub host_concurrency: usize,
     /// Quante pagine di uno stesso libro si scaricano insieme. Resta comunque
     /// sotto `host_concurrency`, che è il tetto vero.
-    #[serde(default = "default_workers_per_job")]
     pub workers_per_job: usize,
     /// Tentativi del lavoro, e attesa esponenziale fra l'uno e l'altro.
     pub max_attempts: u32,
@@ -47,10 +46,6 @@ pub struct NetworkProfile {
     /// Alcuni servizi servono le immagini solo dopo aver visitato la pagina del
     /// lettore, che apre una sessione.
     pub needs_viewer_warmup: bool,
-}
-
-fn default_workers_per_job() -> usize {
-    CAUTIOUS.workers_per_job
 }
 
 /// Profilo prudente: vale per ogni fonte che non abbia una voce nel registro.
@@ -224,30 +219,5 @@ mod tests {
         };
 
         assert_eq!(single.bulk_workers(), 1);
-    }
-
-    #[test]
-    fn a_profile_written_before_the_parallel_download_still_reads() {
-        // I profili salvati non dichiarano quante pagine insieme: senza un
-        // valore di riserva diventerebbero illeggibili e la biblioteca perderebbe
-        // il ritmo scelto dall'utente.
-        let stored = serde_json::json!({
-            "burstRequests": 90,
-            "burstWindowSecs": 60,
-            "cooldown403Secs": 120,
-            "cooldown429Secs": 120,
-            "hostConcurrency": 3,
-            "maxAttempts": 4,
-            "backoffBaseSecs": 15,
-            "backoffCapSecs": 300,
-            "connectTimeoutSecs": 15,
-            "readTimeoutSecs": 30,
-            "needsViewerWarmup": false,
-        });
-
-        let parsed: NetworkProfile = serde_json::from_value(stored).unwrap();
-
-        assert_eq!(parsed.burst_requests, 90);
-        assert_eq!(parsed.workers_per_job, CAUTIOUS.workers_per_job);
     }
 }

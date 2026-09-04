@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { Tooltip } from '../ui';
@@ -37,7 +37,7 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: stri
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-0.5">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-editorial-muted/70">{title}</div>
+      <div className="text-xs uppercase tracking-[0.14em] text-editorial-muted/70">{title}</div>
       {children}
     </div>
   );
@@ -49,20 +49,31 @@ function NetworkPanel() {
   const { t } = useTranslation();
   const active = useNetworkActivity((state) => state.active);
   const queued = useNetworkActivity((state) => state.queued);
-  const delivered = useNetworkActivity((state) => state.delivered);
-  const deliveredBytes = useNetworkActivity((state) => state.deliveredBytes);
   const lastErrorAt = useNetworkActivity((state) => state.lastErrorAt);
-  const lastOkAt = useNetworkActivity((state) => state.lastOkAt);
+  const lastAnswerAt = useNetworkActivity((state) => state.lastAnswerAt);
   const lastErrorMessage = useNetworkActivity((state) => state.lastErrorMessage);
-  const speed = useNetworkActivity((state) => state.speed);
   const [probe, setProbe] = useState<NetworkProbe | null>(null);
+  /**
+   * La velocità si misura sui byte che il **motore** dichiara arrivati dalla
+   * rete fra due sonde. Contare quelli consegnati alla finestra segnava
+   * megabyte al secondo anche sfogliando un libro tutto sul computer.
+   */
+  const [speed, setSpeed] = useState(0);
+  const previous = useRef<{ bytes: number; at: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const ask = async () => {
       try {
         const next = await networkProbe();
-        if (!cancelled) setProbe(next);
+        if (cancelled) return;
+        setProbe(next);
+        const now = performance.now();
+        const before = previous.current;
+        previous.current = { bytes: next.served.networkBytes, at: now };
+        if (before && now > before.at) {
+          setSpeed(Math.max(0, Math.round(((next.served.networkBytes - before.bytes) * 1000) / (now - before.at))));
+        }
       } catch {
         // Il motore non risponde alla sonda: il pannello mostra quello che sa
         // la finestra, che è comunque la metà che riguarda chi guarda.
@@ -77,7 +88,7 @@ function NetworkPanel() {
     };
   }, []);
 
-  const failing = lastErrorAt !== null && (lastOkAt === null || lastErrorAt > lastOkAt);
+  const failing = lastErrorAt !== null && (lastAnswerAt === null || lastErrorAt > lastAnswerAt);
   const served = probe?.served;
   const fromDisk = served ? served.fromVault + served.fromCache : 0;
   const total = served ? fromDisk + served.fromNetwork : 0;
@@ -94,11 +105,7 @@ function NetworkPanel() {
           label={t('statusBar.network.thumbnails')}
           value={`${active.thumbnails} + ${queued.thumbnails}`}
         />
-        <Row label={t('statusBar.network.speed')} value={humanSpeed(speed())} />
-        <Row
-          label={t('statusBar.network.delivered')}
-          value={`${delivered} · ${humanBytes(deliveredBytes)}`}
-        />
+        <Row label={t('statusBar.network.speed')} value={humanSpeed(speed)} />
       </Section>
 
       {probe && probe.hosts.length > 0 && (
@@ -166,9 +173,8 @@ export function NetworkActivity() {
   const { t } = useTranslation();
   const active = useNetworkActivity((state) => state.active);
   const queued = useNetworkActivity((state) => state.queued);
-  const lastOkAt = useNetworkActivity((state) => state.lastOkAt);
+  const lastAnswerAt = useNetworkActivity((state) => state.lastAnswerAt);
   const lastErrorAt = useNetworkActivity((state) => state.lastErrorAt);
-  const speed = useNetworkActivity((state) => state.speed);
   const [now, setNow] = useState(() => Date.now());
 
   const inFlight = active.page + active.thumbnails + queued.page + queued.thumbnails;
@@ -182,11 +188,10 @@ export function NetworkActivity() {
     return () => clearInterval(timer);
   }, [busy]);
 
-  if (!busy && lastOkAt === null && lastErrorAt === null) return null;
+  if (!busy && lastAnswerAt === null && lastErrorAt === null) return null;
 
-  const failing = lastErrorAt !== null && (lastOkAt === null || lastErrorAt > lastOkAt);
-  const stale = busy && (lastOkAt === null || now - lastOkAt > STALE_AFTER_MS);
-  const bytesPerSecond = speed();
+  const failing = lastErrorAt !== null && (lastAnswerAt === null || lastErrorAt > lastAnswerAt);
+  const stale = busy && (lastAnswerAt === null || now - lastAnswerAt > STALE_AFTER_MS);
 
   const tone = failing
     ? 'text-editorial-danger'
@@ -200,9 +205,7 @@ export function NetworkActivity() {
     <Tooltip label={<NetworkPanel />} variant="panel" side="top">
       <span className={`flex items-center gap-1 ${tone}`} aria-label={t('statusBar.network.label')}>
         <Activity size={11} className={busy && !stale ? 'animate-pulse' : undefined} />
-        <span className="tabular-nums">
-          {busy ? inFlight : bytesPerSecond > 0 ? humanSpeed(bytesPerSecond) : '—'}
-        </span>
+        <span className="tabular-nums">{busy ? inFlight : '—'}</span>
       </span>
     </Tooltip>
   );

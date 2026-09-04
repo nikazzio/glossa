@@ -88,6 +88,31 @@ export function wholePageUrl(imageService: string, width = WHOLE_PAGE_WIDTH_PX):
   return `${imageService}/full/${width},/0/default.jpg`;
 }
 
+/** La misura che significa «la più grande che c'è», come la chiama il deposito. */
+export const MAX_SIZE = 'max';
+
+/**
+ * Dove chiedere alla biblioteca la pagina **alla misura di una cartella del
+ * deposito**.
+ *
+ * Serve per i libri scaricati a metà: la pagina che manca deve arrivare della
+ * stessa misura delle sue vicine, altrimenti finisce in cache sotto un nome che
+ * promette una risoluzione che non ha. La dimensione piena si chiama `max`
+ * dalla Image API 3.0 e `full` prima: chiederla alla maniera nuova a un
+ * servizio vecchio fa rispondere 400.
+ */
+export function pageSourceUrl(
+  imageService: string,
+  sizeTag: string,
+  presentation2: boolean,
+): string {
+  if (sizeTag === MAX_SIZE) {
+    return `${imageService}/full/${presentation2 ? 'full' : 'max'}/0/default.jpg`;
+  }
+  const width = Number(sizeTag);
+  return wholePageUrl(imageService, Number.isFinite(width) && width > 0 ? width : WHOLE_PAGE_WIDTH_PX);
+}
+
 /** I byte di un indirizzo IIIF (info.json o tassello), sempre dal ponte
  *  controllato — mai una richiesta diretta della finestra. */
 export async function fetchIiifBytes(

@@ -303,10 +303,10 @@ impl Gate<'_> {
             stop: &never_stops,
             courtesy_wait: &waiting,
         };
-        // Una ricerca è qualcuno che sta aspettando a schermo, non un
-        // acquisizione in blocco: passa dalla corsia interattiva.
+        // Una ricerca è quello che l'utente sta aspettando a schermo, non
+        // un'acquisizione in blocco: passa dalla corsia della pagina.
         self.courtesy
-            .wait_turn(&host, self.profile, Lane::Interactive, &signals)
+            .wait_turn(&host, self.profile, Lane::Page, &signals)
             .await
     }
 }

@@ -200,6 +200,14 @@ async fn attempt_page(
     signals: &Signals<'_>,
 ) -> (usize, Result<PageOutcome, JobError>) {
     let page = &work.pages[at_index];
+    // Una bandiera per pagina: con più pagine in volo, una che passava
+    // azzerava quella di una collega ferma in raffreddamento, e il pannello
+    // smetteva di dire «in attesa della biblioteca» proprio quando era vero.
+    let waiting = std::sync::atomic::AtomicBool::new(false);
+    let signals = &Signals {
+        stop: signals.stop,
+        courtesy_wait: &waiting,
+    };
     // Fermarsi significa non farne partire altre: quelle già in volo escono da
     // sole appena il turno non viene concesso.
     if work.ctx.pause_requested() || work.ctx.cancel_requested() {

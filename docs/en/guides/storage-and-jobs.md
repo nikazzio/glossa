@@ -152,9 +152,13 @@ never takes them all: one seat always stays with the page you are looking at, so
 you can keep browsing a book while another one downloads.
 
 At the bottom right, next to the jobs, a small indicator tells you whether the
-network is actually moving: how many requests are in progress, how many are
-waiting their turn, which library is being talked to, at what speed, and how many
-seconds since the last answer. It tells a slow job from a stuck one.
+network is actually moving. Hovering it opens a panel: how many images are in
+progress and how many are waiting their turn, keeping the page you are looking
+at separate from the thumbnails; how many seats are taken towards each library
+and how many requests you have already spent in the current minute; and where
+the images came from so far — the vault, the working memory or the network —
+with the share of requests you spared yourself. It tells a slow job from a stuck
+one.
 
 ## Covers and searches kept aside
 

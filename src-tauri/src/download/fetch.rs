@@ -37,13 +37,20 @@ pub struct Fetched {
 const TRANSPORT_ATTEMPTS: u32 = 3;
 const TRANSPORT_PAUSE: Duration = Duration::from_millis(700);
 
-/// Quanto aspetta al massimo una richiesta che qualcuno sta guardando.
+/// Quanto aspetta al massimo la pagina che si sta guardando.
 ///
-/// Il profilo ne concede molti di più, e per uno scaricamento va bene: certe
+/// Il profilo ne concede di più, e per uno scaricamento va bene: certe
 /// biblioteche ricavano l'immagine al momento e vale la pena aspettarle. Ma il
 /// visore tiene occupato un posto in corsia per tutto quel tempo, e chi guarda
 /// resta davanti a una rotella. Meglio dirlo e lasciare il tasto per riprovare.
-const INTERACTIVE_DEADLINE: Duration = Duration::from_secs(90);
+const PAGE_DEADLINE: Duration = Duration::from_secs(90);
+
+/// Quanto aspetta al massimo una miniatura.
+///
+/// Molto meno: una miniatura che non arriva lascia un riquadro vuoto, mentre un
+/// posto in corsia tenuto per un minuto e mezzo rallenta tutto il resto. Non
+/// vale la pena.
+const THUMBNAIL_DEADLINE: Duration = Duration::from_secs(20);
 
 /// I segnali del lavoro interrompono l'attesa del turno quando è stato messo in
 /// pausa o annullato — `Ok(None)` significa "fermato mentre aspettava", non
@@ -69,7 +76,7 @@ pub async fn fetch(
     // Una sola prova per ciò che si guarda: tre tentativi da un minuto l'uno
     // sono sei minuti di posto occupato, e nel frattempo non si vede niente.
     let attempts = match lane {
-        Lane::Interactive => 1,
+        Lane::Page | Lane::Thumbnail => 1,
         Lane::Bulk => TRANSPORT_ATTEMPTS,
     };
 
@@ -146,7 +153,8 @@ async fn attempt_within(
     lane: Lane,
 ) -> Result<Fetched, JobError> {
     let deadline = match lane {
-        Lane::Interactive => INTERACTIVE_DEADLINE.min(profile.read_timeout()),
+        Lane::Page => PAGE_DEADLINE.min(profile.read_timeout()),
+        Lane::Thumbnail => THUMBNAIL_DEADLINE.min(profile.read_timeout()),
         Lane::Bulk => profile.read_timeout(),
     };
     match tokio::time::timeout(deadline, attempt_once(client, url, profile)).await {
@@ -476,7 +484,7 @@ mod tests {
                 &courtesy,
                 &profile,
                 &url,
-                Lane::Interactive,
+                Lane::Page,
                 1,
                 &signals(&never_stop(), &std::sync::atomic::AtomicBool::new(false)),
             ),

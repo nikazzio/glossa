@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
+  Focus,
 } from 'lucide-react';
 import { IconButton, Spinner, EmptyState } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
@@ -22,8 +23,8 @@ import {
   fetchViewerManifest,
   getLastViewedPage,
   infoJsonUrl,
+  pageSourceUrl,
   setLastViewedPage,
-  wholePageUrl,
   WHOLE_PAGE_WIDTH_PX,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
@@ -32,6 +33,13 @@ import { versionInventory } from '../../services/inventoryService';
 import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
 
+/** Dove si è arrivati nel libro, per chi sta fuori dal visore. */
+export interface ViewerPagePosition {
+  index: number;
+  label: string | null;
+  total: number;
+}
+
 interface PageViewerProps {
   sourceId: string;
   /** La copia digitale mostrata: è la chiave con cui si cercano le pagine sul
@@ -39,6 +47,9 @@ interface PageViewerProps {
   versionId: string;
   manifestUrl: string;
   providerKey: string | null;
+  /** Avvisa chi ospita il visore della pagina mostrata, così altri riquadri
+   *  della stessa schermata possono dirla senza chiederla al visore. */
+  onPageChange?: (page: ViewerPagePosition) => void;
 }
 
 const TILE_LOAD_FAILED = 'tile_load_failed';
@@ -46,6 +57,11 @@ const TILE_LOAD_FAILED = 'tile_load_failed';
 /** Oltre questo tempo l'apertura si dichiara lenta: più lungo di una
  * biblioteca che risponde subito, più corto della pazienza di chi guarda. */
 const SLOW_OPENING_AFTER_MS = 8_000;
+
+/** Oltre questo ingrandimento rispetto ai pixel dell'immagine intera si passa
+ *  allo zoom a pezzi. Poco più di uno: sotto, i pezzi non aggiungono nitidezza
+ *  e costerebbero una quindicina di richieste alla biblioteca. */
+const TILE_UPGRADE_FACTOR = 1.2;
 
 /** Entro questo tempo dall'ultima risposta la biblioteca è ancora "collegata".
  * Più lungo di una pagina lenta, più corto di una pausa fra due sfogliate. */
@@ -57,7 +73,13 @@ const ONLINE_FOR_MS = 30_000;
  * locali, PDF e selezione multipla restano fuori — arrivano nei blocchi
  * successivi.
  */
-export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: PageViewerProps) {
+export function PageViewer({
+  sourceId,
+  versionId,
+  manifestUrl,
+  providerKey,
+  onPageChange,
+}: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
   const [manifestError, setManifestError] = useState<string | null>(null);
@@ -93,8 +115,10 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
     setCurrentIndex(0);
     setPageError(null);
     setPageLoading(false);
-    setManifestAttempt(0);
-    setPageAttempt(0);
+    // I contatori dei tentativi **non** si azzerano qui: l'effetto che carica
+    // il manifesto li ha fra le dipendenze, e riportarli a zero gli faceva
+    // chiedere due volte lo stesso manifesto — megabyte, sulla corsia della
+    // pagina — per una sola apertura.
   }, [manifestUrl, sourceId]);
 
   const stillOpening = (!manifest && !manifestError) || pageLoading;
@@ -175,6 +199,13 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
     [total],
   );
 
+  // Vale anche alla prima apertura: `page` esiste solo da quando il manifesto
+  // è arrivato, quindi il primo giro annuncia già la pagina di partenza.
+  useEffect(() => {
+    if (!page) return;
+    onPageChange?.({ index: currentIndex, label: page.label, total });
+  }, [page, currentIndex, total, onPageChange]);
+
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !page) return;
@@ -183,42 +214,85 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
     // sarebbero in testa alla corsia riservata, davanti a quella che si guarda.
     const controller = new AbortController();
     let shown = 0;
-    // Tre stati e non un sì/no: mentre il ripiego è in corso arrivano altri
-    // tasselli falliti, e con un solo interruttore dichiaravano guasta una
-    // pagina che si stava ancora andando a prendere.
-    let fallback: 'untried' | 'running' | 'done' = 'untried';
+    let tiles: 'none' | 'loading' | 'shown' = 'none';
     let objectUrl: string | null = null;
+    const openedAt = performance.now();
 
     /**
-     * Ripiego a pagina intera. Alcuni servizi promettono nell'`info.json` uno
-     * zoom a tasselli che poi non servono: senza questo ripiego la pagina resta
-     * bianca e il libro sembra rotto, mentre l'immagine intera arriva benissimo.
+     * La pagina intera, in **una sola richiesta**.
+     *
+     * È così che si apre sempre, locale o remota. Lo zoom a pezzi chiede una
+     * quindicina di immagini per schermata, e ognuna attraversa il motore e
+     * occupa un posto in corsia verso la biblioteca: dove le immagini vengono
+     * ricavate al momento — Internet Archive, Gallica — quella schermata non
+     * arrivava mai. Una pagina che si vede subito vale più di uno zoom che non
+     * arriva; i pezzi si chiedono solo se lo zoom li rende davvero utili.
      */
-    const showWholePage = async () => {
-      fallback = 'running';
-      try {
-        const bytes = await pageImage(
-          {
-            kind: 'page',
-            versionId,
-            index: page.index,
-            size: localSize ?? String(WHOLE_PAGE_WIDTH_PX),
-            remoteUrl: wholePageUrl(page.imageService),
-            providerKey,
-          },
-          { priority: 'high', signal: controller.signal },
-        );
+    const openWholePage = async () => {
+      const bytes = await pageImage(
+        {
+          kind: 'page',
+          versionId,
+          index: page.index,
+          size: localSize ?? String(WHOLE_PAGE_WIDTH_PX),
+          remoteUrl: pageSourceUrl(
+            page.imageService,
+            localSize ?? String(WHOLE_PAGE_WIDTH_PX),
+            manifest?.presentation2 ?? false,
+          ),
+          providerKey,
+        },
+        { priority: 'high', signal: controller.signal },
+      );
+      if (cancelled) return;
+      // Un indirizzo temporaneo per volta: sovrascriverlo senza rilasciarlo
+      // lascerebbe i byte della pagina precedente appesi alla finestra.
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
+      viewer.open({ type: 'image', url: objectUrl } as unknown as OpenSeadragon.TileSourceSpecifier);
+      logger.debug('library.viewer.wholePageShown', {
+        index: page.index,
+        bytes: bytes.byteLength,
+        ms: Math.round(performance.now() - openedAt),
+        local: Boolean(localSize),
+      });
+    };
+
+    /**
+     * Si passa ai pezzi solo quando l'immagine intera non basta più, cioè
+     * quando lo zoom la sta ingrandendo oltre i suoi pixel. Prima sarebbe
+     * spendere quindici richieste per una nitidezza che nessuno sta guardando.
+     */
+    const upgradeToTiles = async () => {
+      tiles = 'loading';
+      const bytes = await fetchIiifBytes(infoJsonUrl(page.imageService), providerKey, controller.signal);
+      if (cancelled) return;
+      const infoJson = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+      if (cancelled) return;
+      const source = createControlledIiifTileSource(infoJson, providerKey);
+      // Dove si stava guardando non deve saltare: si rimette com'era appena la
+      // nuova sorgente è aperta.
+      const center = viewer.viewport.getCenter();
+      const zoom = viewer.viewport.getZoom();
+      viewer.addOnceHandler('open', () => {
         if (cancelled) return;
-        objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
-        viewer.open({ type: 'image', url: objectUrl } as unknown as OpenSeadragon.TileSourceSpecifier);
-      } finally {
-        fallback = 'done';
-      }
+        viewer.viewport.zoomTo(zoom, undefined, true);
+        viewer.viewport.panTo(center, true);
+      });
+      // I tipi del pacchetto descrivono `open` come accettante opzioni grezze,
+      // non l'istanza di `TileSource` già pronta che il ponte costruisce sopra.
+      viewer.open(source as unknown as OpenSeadragon.TileSourceSpecifier);
+      tiles = 'shown';
+      logger.debug('library.viewer.tilesShown', { index: page.index });
     };
 
     const givingUp = (error: unknown) => {
       if (cancelled) return;
-      logger.error('library.viewer.pageFailed', { message: errorMessage(error), index: currentIndex });
+      logger.error('library.viewer.pageFailed', {
+        message: errorMessage(error),
+        index: page.index,
+        ms: Math.round(performance.now() - openedAt),
+      });
       setPageLoading(false);
       setPageError(TILE_LOAD_FAILED);
     };
@@ -229,31 +303,39 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
       setPageLoading(false);
       setPageError(null);
     };
-    /** Non si vede niente: prima si prova la pagina intera, poi si rinuncia. */
+    /** Non si vede ancora niente: la pagina è guasta. */
     const nothingIsShowing = () => {
-      if (cancelled || fallback === 'running') return;
-      if (fallback === 'untried') {
-        void showWholePage().catch(givingUp);
-        return;
-      }
+      if (cancelled || shown > 0) return;
       givingUp(new Error(TILE_LOAD_FAILED));
     };
     const handleTileLoadFailed = () => {
       if (cancelled) return;
-      logger.warn('library.viewer.tileFailed', { index: currentIndex, shown });
-      // Un tassello ai bordi che non arriva non è una pagina rotta: si dichiara
-      // guasta solo quando non si vede niente.
-      if (shown > 0) return;
+      logger.warn('library.viewer.tileFailed', { index: page.index, shown });
+      // Un pezzo ai bordi che non arriva non è una pagina rotta.
       nothingIsShowing();
     };
-    // OpenSeadragon rinuncia prima ancora di chiedere un tassello quando il
-    // descrittore non descrive niente di apribile, o quando l'immagine intera
-    // che gli abbiamo dato è illeggibile.
     const handleOpenFailed = nothingIsShowing;
+    /** Lo zoom ha superato i pixel dell'immagine intera: adesso i pezzi servono. */
+    const handleZoom = () => {
+      if (cancelled || localSize || tiles !== 'none' || shown === 0) return;
+      const viewport = viewer.viewport;
+      if (viewport.getZoom(true) <= viewport.imageToViewportZoom(1) * TILE_UPGRADE_FACTOR) return;
+      void upgradeToTiles().catch((error) => {
+        // I pezzi non arrivano: l'immagine intera resta a schermo, che è meglio
+        // di una superficie vuota.
+        tiles = 'none';
+        logger.warn('library.viewer.tilesUnavailable', {
+          message: errorMessage(error),
+          index: page.index,
+        });
+      });
+    };
+
     viewer.close();
     viewer.addHandler('tile-loaded', handleTileLoaded);
     viewer.addHandler('tile-load-failed', handleTileLoadFailed);
     viewer.addHandler('open-failed', handleOpenFailed);
+    viewer.addHandler('zoom', handleZoom);
     setPageError(null);
     setPageLoading(true);
     // Dove si è arrivati si ricorda comunque, che la pagina venga dal computer
@@ -262,42 +344,20 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
       logger.warn('library.viewer.lastPageSaveFailed', { message: errorMessage(error), index: currentIndex });
     });
 
-    void (async () => {
-      // Il libro è sul computer: si legge da lì e non si chiede niente a
-      // nessuno. Niente zoom a pezzi, che avrebbe senso solo in rete.
-      if (localSize) {
-        await showWholePage().catch(givingUp);
-        return;
-      }
-      try {
-        const bytes = await fetchIiifBytes(infoJsonUrl(page.imageService), providerKey, controller.signal);
-        if (cancelled) return;
-        const infoJson = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
-        if (cancelled) return;
-        const tileSource = createControlledIiifTileSource(infoJson, providerKey);
-        // I tipi del pacchetto descrivono `open` come accettante opzioni
-        // grezze, non l'istanza di `TileSource` già pronta che il ponte
-        // costruisce sopra — a runtime OpenSeadragon la accetta comunque.
-        viewer.open(tileSource as unknown as OpenSeadragon.TileSourceSpecifier);
-      } catch (error) {
-        if (cancelled) return;
-        // Senza `info.json` non c'è zoom, ma la pagina intera si può ancora
-        // chiedere: è il caso dei servizi che espongono solo le immagini.
-        logger.warn('library.viewer.infoFailed', { message: errorMessage(error), index: currentIndex });
-        await showWholePage().catch(givingUp);
-      }
-    })();
+    void openWholePage().catch(givingUp);
+
     return () => {
       cancelled = true;
       controller.abort();
       viewer.removeHandler('tile-loaded', handleTileLoaded);
       viewer.removeHandler('tile-load-failed', handleTileLoadFailed);
       viewer.removeHandler('open-failed', handleOpenFailed);
+      viewer.removeHandler('zoom', handleZoom);
       // L'immagine resta disegnata da OpenSeadragon anche dopo il rilascio
       // dell'indirizzo; tenerlo vivo esaurirebbe solo il tetto della finestra.
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [page, providerKey, sourceId, versionId, localSize, currentIndex, pageAttempt]);
+  }, [page, providerKey, sourceId, versionId, localSize, manifest, currentIndex, pageAttempt]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
@@ -327,6 +387,7 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
       <div className="flex min-h-0 flex-1 flex-col">
         {manifest && total > 0 && (
           <ViewerToolbar
+            fromDisk={localSize !== null}
             index={currentIndex}
             total={total}
             label={page?.label ?? null}
@@ -342,6 +403,14 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
             onZoomIn={() => viewerRef.current?.viewport.zoomBy(1.4)}
             onZoomOut={() => viewerRef.current?.viewport.zoomBy(1 / 1.4)}
             onZoomToFit={() => viewerRef.current?.viewport.goHome()}
+            onZoomToActualSize={() => {
+              const viewport = viewerRef.current?.viewport;
+              if (!viewport) return;
+              // Un pixel dell'immagine su un pixel dello schermo; i vincoli
+              // rimettono dentro la cornice quel che finirebbe fuori.
+              viewport.zoomTo(viewport.imageToViewportZoom(1));
+              viewport.applyConstraints();
+            }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
           />
@@ -420,6 +489,8 @@ export function PageViewer({ sourceId, versionId, manifestUrl, providerKey }: Pa
 }
 
 interface ViewerToolbarProps {
+  /** Vero quando la pagina viene letta dal computer e non dalla biblioteca. */
+  fromDisk: boolean;
   index: number;
   total: number;
   label: string | null;
@@ -431,43 +502,49 @@ interface ViewerToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomToFit: () => void;
+  onZoomToActualSize: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
 }
 
 /**
- * Se la biblioteca sta davvero rispondendo.
+ * Da dove arriva quello che si sta leggendo.
  *
- * Verde quando una risposta è arrivata da poco, smorzato quando è passato
- * troppo tempo: la stessa scritta sempre accesa non distingueva un visore
- * collegato da uno fermo.
+ * Due cose diverse, e vanno dette diverse: un libro sul computer non ha niente
+ * a che fare con la biblioteca, e accendere «Online» mentre si sfoglia dal
+ * disco era falso. Quando invece si legge in rete, verde vuol dire che la
+ * biblioteca ha risposto da poco.
  */
-function ConnectionBadge() {
+function ConnectionBadge({ fromDisk }: { fromDisk: boolean }) {
   const { t } = useTranslation();
-  const lastOkAt = useNetworkActivity((state) => state.lastOkAt);
+  const lastAnswerAt = useNetworkActivity((state) => state.lastAnswerAt);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    // L'orologio serve solo a spegnere il verde quando la biblioteca smette di
+    // rispondere: leggendo dal disco non c'è niente da spegnere.
+    if (fromDisk) return;
     const timer = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(timer);
-  }, []);
+  }, [fromDisk]);
 
-  const connected = lastOkAt !== null && now - lastOkAt <= ONLINE_FOR_MS;
+  const lit = fromDisk || (lastAnswerAt !== null && now - lastAnswerAt <= ONLINE_FOR_MS);
 
   return (
     <span
-      className={`ml-auto flex items-center gap-1.5 text-xs ${connected ? 'text-editorial-success' : 'text-editorial-muted'}`}
+      className={`ml-auto flex items-center gap-1.5 text-xs ${lit ? 'text-editorial-success' : 'text-editorial-muted'}`}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-editorial-success' : 'bg-editorial-border'}`}
+        className={`h-1.5 w-1.5 rounded-full ${lit ? 'bg-editorial-success' : 'bg-editorial-border'}`}
         aria-hidden="true"
       />
-      {t('areas.library.viewerOnline')}
+      {t(fromDisk ? 'areas.library.viewerFromDisk' : 'areas.library.viewerOnline')}
     </span>
   );
 }
 
 function ViewerToolbar({
+  fromDisk,
   index,
   total,
   label,
@@ -479,6 +556,7 @@ function ViewerToolbar({
   onZoomIn,
   onZoomOut,
   onZoomToFit,
+  onZoomToActualSize,
   thumbnailsOpen,
   onToggleThumbnails,
 }: ViewerToolbarProps) {
@@ -520,7 +598,10 @@ function ViewerToolbar({
       <IconButton size="sm" onClick={onZoomToFit} title={t('areas.library.viewerZoomToFit')}>
         <Maximize size={14} />
       </IconButton>
-      <ConnectionBadge />
+      <IconButton size="sm" onClick={onZoomToActualSize} title={t('areas.library.viewerZoomActualSize')}>
+        <Focus size={14} />
+      </IconButton>
+      <ConnectionBadge fromDisk={fromDisk} />
       <IconButton
         size="sm"
         onClick={onToggleThumbnails}
