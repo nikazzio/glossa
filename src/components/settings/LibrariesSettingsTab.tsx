@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Check, Gauge, Landmark, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { IconButton, SectionLabel, SegmentedControl, Select, SettingRow } from '../ui';
+import { IconButton, SectionLabel, SegmentedControl, Select } from '../ui';
 import { NetworkProfileFields } from './NetworkProfileFields';
 import {
   deleteNetworkProfile,
@@ -10,8 +10,11 @@ import {
   MAX_HOST_CONCURRENCY,
   saveNetworkProfile,
   setLibraryProfile,
+  setLibrarySizePolicy,
+  SIZE_POLICIES,
   type NetworkSettings,
   type NetworkValues,
+  type SizePolicy,
 } from '../../services/downloadSettingsService';
 
 /** Il posto del profilo che si sta creando, prima che abbia un identificativo. */
@@ -131,6 +134,16 @@ export function LibrariesSettingsTab({ draft, setDraft, embedded = false }: Libr
     }
   };
 
+  const chooseSizePolicy = async (libraryKey: string, policy: SizePolicy) => {
+    try {
+      setSettings(await setLibrarySizePolicy(libraryKey, policy));
+    } catch (error: unknown) {
+      toast.error(t('settings.network.saveFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
   const choose = async (libraryKey: string, profileId: string) => {
     try {
       setSettings(await setLibraryProfile(libraryKey, profileId));
@@ -227,17 +240,39 @@ export function LibrariesSettingsTab({ draft, setDraft, embedded = false }: Libr
         <SectionLabel icon={Landmark} label={t('settings.network.libraries')} />
         <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
           {settings.libraries.map((library) => (
-            <SettingRow key={library.key} label={library.label}>
-              <Select
-                value={library.profileId}
-                onChange={(value) => void choose(library.key, value)}
-                ariaLabel={library.label}
-                options={settings.profiles.map((profile) => ({
-                  value: profile.id,
-                  label: profile.name,
-                }))}
-              />
-            </SettingRow>
+            <div key={library.key} className="space-y-1.5 py-3 first:pt-0">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="min-w-0 truncate font-display text-sm italic text-editorial-ink">
+                  {library.label}
+                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Select
+                    value={library.profileId}
+                    onChange={(value) => void choose(library.key, value)}
+                    ariaLabel={`${library.label} · ${t('settings.network.rhythm')}`}
+                    options={settings.profiles.map((profile) => ({
+                      value: profile.id,
+                      label: profile.name,
+                    }))}
+                  />
+                  {/* La misura sta qui e non nel profilo: un profilo è un ritmo
+                      condiviso, e due biblioteche possono meritare la stessa
+                      prudenza e servire misure diverse. */}
+                  <Select
+                    value={library.sizePolicy}
+                    onChange={(value) => void chooseSizePolicy(library.key, value as SizePolicy)}
+                    ariaLabel={`${library.label} · ${t('settings.network.sizes')}`}
+                    options={SIZE_POLICIES.map((policy) => ({
+                      value: policy,
+                      label: t(`settings.network.sizePolicy.${policy}`),
+                    }))}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-editorial-muted">
+                {t(`settings.network.sizePolicyHint.${library.sizePolicy}`)}
+              </p>
+            </div>
           ))}
         </div>
       </section>

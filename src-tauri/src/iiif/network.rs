@@ -45,6 +45,13 @@ pub struct NetworkProfile {
     pub read_timeout_secs: u64,
     /// Alcuni servizi servono le immagini solo dopo aver visitato la pagina del
     /// lettore, che apre una sessione.
+    ///
+    /// **Dichiarato, non ancora onorato**: nessuna riga lo legge, e la Vaticana
+    /// — l'unica che lo alza — riceve comunque il profilo predefinito, perché
+    /// i ritmi in vigore si leggono dalla banca dati e lì ci sono solo i due
+    /// che nascono con l'applicazione. Resta qui perché è una caratteristica
+    /// della biblioteca e va ritrovata quando la sessione si aprirà davvero;
+    /// non è una manopola, e fuori dal registro non si tocca.
     pub needs_viewer_warmup: bool,
 }
 

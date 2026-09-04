@@ -51,10 +51,19 @@ export interface NetworkProfile {
   usedBy: number;
 }
 
+/**
+ * Come chiedere le misure a una biblioteca. Non è un ritmo: sta sulla riga
+ * della biblioteca, non nel profilo di rete.
+ */
+export type SizePolicy = 'auto' | 'readyOnly' | 'exact';
+
+export const SIZE_POLICIES: SizePolicy[] = ['auto', 'readyOnly', 'exact'];
+
 export interface LibraryChoice {
   key: string;
   label: string;
   profileId: string;
+  sizePolicy: SizePolicy;
 }
 
 export interface NetworkSettings {
@@ -108,7 +117,14 @@ function asSettings(answer: NetworkSettings | null): NetworkSettings {
   if (!answer) return emptySettings;
   return {
     profiles: Array.isArray(answer.profiles) ? answer.profiles : [],
-    libraries: Array.isArray(answer.libraries) ? answer.libraries : [],
+    // Una politica di misura che non si riconosce vale «decidi tu», come nel
+    // motore: un menu senza nessuna voce scelta non si può usare.
+    libraries: Array.isArray(answer.libraries)
+      ? answer.libraries.map((library) => ({
+          ...library,
+          sizePolicy: SIZE_POLICIES.includes(library.sizePolicy) ? library.sizePolicy : 'auto',
+        }))
+      : [],
   };
 }
 
@@ -135,6 +151,15 @@ export async function deleteNetworkProfile(id: string): Promise<NetworkSettings>
 export async function setLibraryProfile(libraryKey: string, profileId: string): Promise<NetworkSettings> {
   return asSettings(
     await invoke<NetworkSettings | null>('set_library_network_profile', { libraryKey, profileId }),
+  );
+}
+
+export async function setLibrarySizePolicy(
+  libraryKey: string,
+  policy: SizePolicy,
+): Promise<NetworkSettings> {
+  return asSettings(
+    await invoke<NetworkSettings | null>('set_library_size_policy', { libraryKey, policy }),
   );
 }
 

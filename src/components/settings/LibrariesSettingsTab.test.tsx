@@ -19,6 +19,7 @@ vi.mock('../../services/downloadSettingsService', async (importOriginal) => {
     saveNetworkProfile: vi.fn(),
     deleteNetworkProfile: vi.fn(),
     setLibraryProfile: vi.fn(),
+    setLibrarySizePolicy: vi.fn(),
   };
 });
 
@@ -43,8 +44,8 @@ const settings: NetworkSettings = {
     { id: 'lento', name: 'Lento', builtin: true, values: { ...values, maxAttempts: 3 }, usedBy: 1 },
   ],
   libraries: [
-    { key: 'gallica', label: 'Gallica', profileId: 'lento' },
-    { key: 'archive_org', label: 'Internet Archive', profileId: 'normale' },
+    { key: 'gallica', label: 'Gallica', profileId: 'lento', sizePolicy: 'readyOnly' },
+    { key: 'archive_org', label: 'Internet Archive', profileId: 'normale', sizePolicy: 'auto' },
   ],
 };
 
@@ -76,7 +77,20 @@ describe('profili di rete', () => {
   it('apre il primo profilo con i suoi valori', async () => {
     render(<Harness />);
 
-    expect(await screen.findByLabelText('settings.network.field.maxAttempts')).toHaveValue(5);
+    expect(
+      await screen.findByLabelText('settings.network.field.requestsPerMinute'),
+    ).toHaveValue(240);
+  });
+
+  it('mostra le pagine insieme che partiranno davvero, non quelle scritte', async () => {
+    // Il motore lascia sempre un posto libero per chi legge: con quattro posti
+    // verso la biblioteca il massimo vero è tre, e un campo che accettasse
+    // quattro prometterebbe una cosa che non accade.
+    render(<Harness />);
+    const pages = await screen.findByLabelText('settings.network.field.pagesAtOnce');
+
+    expect(pages).toHaveValue(2);
+    expect(pages).toHaveAttribute('max', '3');
   });
 
   it('salva i valori cambiati del profilo scelto', async () => {
@@ -85,6 +99,7 @@ describe('profili di rete', () => {
     // I campi si rimontano quando arrivano i profili: prima si aspetta
     // l'elenco, altrimenti si scrive dentro un campo già sostituito.
     await screen.findByRole('radio', { name: /Normale/ });
+    await user.click(screen.getByText('settings.network.advanced'));
     const attempts = screen.getByLabelText('settings.network.field.maxAttempts');
 
     await user.clear(attempts);
@@ -107,6 +122,7 @@ describe('profili di rete', () => {
     expect(screen.queryByText('settings.network.unsaved')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'settings.network.save' })).toBeDisabled();
 
+    await user.click(screen.getByText('settings.network.advanced'));
     await user.clear(screen.getByLabelText('settings.network.field.maxAttempts'));
     await user.type(screen.getByLabelText('settings.network.field.maxAttempts'), '4');
 
@@ -123,7 +139,7 @@ describe('profili di rete', () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    await user.selectOptions(await screen.findByLabelText('Internet Archive'), 'lento');
+    await user.selectOptions(await screen.findByLabelText(/Internet Archive.*rhythm/), 'lento');
 
     expect(choose).toHaveBeenCalledWith('archive_org', 'lento');
   });

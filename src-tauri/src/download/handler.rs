@@ -29,12 +29,13 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::iiif::network::NetworkProfile;
+use crate::iiif::settings::SizePolicy;
 use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
 
-use super::catalog::{profile_for, record_manifest, record_pages, source_title};
+use super::catalog::{profile_for, record_manifest, record_pages, size_policy_for, source_title};
 use super::courtesy::{Courtesy, Lane, Signals};
 use super::fetch::{build_client, fetch, host_of};
 use super::inventory;
@@ -350,8 +351,9 @@ impl SourceDownloadJob {
                 .join(cap.folder()),
         );
 
+        let policy = size_policy_for(ctx, &config).await;
         let rule = self
-            .decide_rule(&client, &profile, &manifest, cap, signals)
+            .decide_rule(&client, &profile, &manifest, cap, policy, signals)
             .await;
         log::info!(
             "job download starting id={} provider={} pages={total} cap={} rule={rule:?}",
@@ -554,16 +556,24 @@ impl SourceDownloadJob {
 
     /// Legge il descrittore della prima pagina e ne ricava la regola di calcolo
     /// per tutto il libro. Costo: una richiesta, 4,3 s misurati.
+    ///
+    /// Con «misura esatta richiesta» la richiesta non si fa nemmeno: il
+    /// descrittore serve a sapere quali misure la biblioteca tiene pronte, e
+    /// quella politica dice di non tenerne conto.
     async fn decide_rule(
         &self,
         client: &reqwest::Client,
         profile: &NetworkProfile,
         manifest: &Manifest,
         cap: SizeCap,
+        policy: SizePolicy,
         signals: &Signals<'_>,
     ) -> SizingRule {
         if matches!(cap, SizeCap::Max) {
             return SizingRule::Full;
+        }
+        if matches!(policy, SizePolicy::Exact) {
+            return SizingRule::ExactWidth;
         }
         let Some(page) = manifest.pages.first() else {
             return SizingRule::ExactWidth;
@@ -585,7 +595,7 @@ impl SourceDownloadJob {
             // (fatto 6). Non si riprova: il guadagno è di velocità, non di esito.
             _ => None,
         };
-        sizing::rule_from_info(info.as_ref(), cap)
+        sizing::rule_from_info(info.as_ref(), cap, policy)
     }
 }
 

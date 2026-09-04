@@ -676,18 +676,32 @@
       "deleteInUse": "Move the libraries that use it first",
       "unsaved": "unsaved",
       "discard": "Discard the unsaved changes",
+      "advanced": "Advanced",
+      "rhythm": "rhythm",
+      "sizes": "sizes",
+      "sizePolicy": {
+        "auto": "Let Glossa decide",
+        "readyOnly": "Only sizes kept ready",
+        "exact": "Exactly the size requested"
+      },
+      "sizePolicyHint": {
+        "auto": "Glossa picks the closest size among those the library keeps ready; if it declares none, it asks for a made-to-measure one.",
+        "readyOnly": "Only what the library already has ready is asked for: it arrives far sooner, and is sometimes a little larger than needed.",
+        "exact": "The size you set is always asked for: it is the one you want, but the library has to build it and each page can take around ten times as long."
+      },
       "field": {
-        "burstRequests": "Requests in a burst",
-        "burstWindowSecs": "Within how many seconds",
-        "hostConcurrency": "Requests at a time",
-        "workersPerJob": "Pages at a time",
+        "pagesAtOnce": "Pages at a time",
+        "requestsPerMinute": "Requests per minute",
+        "waitAfterRefusal": "Pause after a refusal (seconds)",
         "maxAttempts": "Attempts",
-        "backoffBaseSecs": "First wait (s)",
-        "backoffCapSecs": "Longest wait (s)",
-        "cooldown403Secs": "Pause after a refusal (s)",
-        "cooldown429Secs": "Pause after a slow-down (s)",
-        "connectTimeoutSecs": "Wait to connect (s)",
-        "readTimeoutSecs": "Wait to read (s)"
+        "slowLibraryWaitSecs": "Wait for a slow library (seconds)"
+      },
+      "fieldHint": {
+        "pagesAtOnce": "How many pages of the same book download together. This library allows at most {{max}}, because one slot always stays free for whoever is reading.",
+        "requestsPerMinute": "The overall ceiling towards this library: it covers downloads and the pages you are looking at.",
+        "waitAfterRefusal": "How long to stay put when the library refuses or asks to slow down. If it states its own wait, that one wins.",
+        "maxAttempts": "How many times a page is retried before it is given up.",
+        "slowLibraryWaitSecs": "How long to wait for an answer already under way. Some libraries build the book when you ask for it and can stay silent for a minute."
       }
     }
   },

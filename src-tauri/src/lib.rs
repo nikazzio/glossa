@@ -224,6 +224,7 @@ pub fn run() {
             iiif::commands::save_network_profile,
             iiif::commands::delete_network_profile,
             iiif::commands::set_library_network_profile,
+            iiif::commands::set_library_size_policy,
             iiif::commands::get_version_size_cap,
             iiif::commands::set_version_size_cap,
             iiif::viewer::iiif_viewer_manifest,

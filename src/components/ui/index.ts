@@ -1,7 +1,7 @@
 export { AlertDialog } from './AlertDialog';
 export { Dialog } from './Dialog';
 export { DialogConfirmButton, DialogCancelButton, DialogDangerButton } from './DialogButtons';
-export { IconButton, type IconButtonTone, type IconButtonSize } from './IconButton';
+export { IconButton, IconLink, type IconButtonTone, type IconButtonSize } from './IconButton';
 export { Menu, type MenuItem } from './Menu';
 export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';

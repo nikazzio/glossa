@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ClickPopover,
   IconButton,
+  IconLink,
   InspectorShell,
   LinkChip,
   MenuActionRow,
@@ -147,33 +148,28 @@ export function LibrarySourcePage({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
-        <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
-          <ArrowLeft size={15} />
-        </IconButton>
-        <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate font-display text-base italic text-editorial-ink">
-            {detail.source.title}
-          </h1>
-          {creatorDate && (
-            <p className="truncate text-xs text-editorial-muted">{creatorDate}</p>
-          )}
+      {/* Una riga sola: identità dell'opera a sinistra, digitalizzazione al
+          centro, comandi a destra. Le due colonne laterali hanno la stessa
+          quota, così il centro resta centrato davvero anche con un titolo
+          lungo, che si tronca invece di spostarlo. */}
+      <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-editorial-border px-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
+            <ArrowLeft size={15} />
+          </IconButton>
+          <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-base italic text-editorial-ink">
+              {detail.source.title}
+            </h1>
+            {creatorDate && (
+              <p className="truncate text-xs text-editorial-muted">{creatorDate}</p>
+            )}
+          </div>
         </div>
-        {entry && (
-          <SourceHeaderActions
-            entry={entry}
-            onRemoved={onRemoved}
-            onSetArchived={onSetArchived}
-            onRefresh={onRefresh}
-          />
-        )}
-      </header>
 
-      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
-      <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
-        {manifestVersion && (
-          <div className="flex h-11 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
+        {manifestVersion ? (
+          <div className="flex min-w-0 items-center gap-2">
             <span className="shrink-0 text-xs font-semibold text-editorial-muted">
               {t('areas.library.digitalizationLabel')}
             </span>
@@ -186,7 +182,7 @@ export function LibrarySourcePage({
                   value: version.id,
                   label: version.label,
                 }))}
-                className="min-w-0 max-w-sm"
+                className="min-w-0 max-w-[14rem]"
               />
             ) : (
               <span className="min-w-0 truncate text-xs text-editorial-ink">
@@ -194,20 +190,34 @@ export function LibrarySourcePage({
               </span>
             )}
             {libraryPageUrl && (
-              <Tooltip label={t('areas.library.openOnLibrarySite')} side="bottom">
-                <a
-                  href={libraryPageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded text-xs text-editorial-accent underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <ExternalLink size={13} aria-hidden="true" />
-                  <span className="hidden xl:inline">{t('areas.library.openOnLibrarySite')}</span>
-                </a>
-              </Tooltip>
+              <IconLink
+                size="sm"
+                href={libraryPageUrl}
+                title={t('areas.library.openOnLibrarySite')}
+                tooltipSide="bottom"
+              >
+                <ExternalLink size={13} />
+              </IconLink>
             )}
           </div>
+        ) : (
+          <span />
         )}
+
+        <div className="flex items-center justify-end">
+          {entry && (
+            <SourceHeaderActions
+              entry={entry}
+              onRemoved={onRemoved}
+              onSetArchived={onSetArchived}
+              onRefresh={onRefresh}
+            />
+          )}
+        </div>
+      </header>
+
+      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
+      <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
             dallo Studio di trascrizione: questo componente resta la stessa
             dimensione minima predisposta prima che esistesse. */}

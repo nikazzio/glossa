@@ -5,6 +5,7 @@
 use rusqlite::params;
 
 use crate::iiif::network::{NetworkProfile, CAUTIOUS};
+use crate::iiif::settings::SizePolicy;
 use crate::jobs::engine::JobContext;
 use crate::jobs::{ErrorKind, JobError};
 
@@ -32,6 +33,26 @@ pub(crate) async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> Ne
         // conosciamo, non a quello che capita.
         log::warn!("job profile not read id={} error={error}", ctx.id);
         CAUTIOUS
+    })
+}
+
+/// Come chiedere le misure a questa biblioteca, riletta come il ritmo
+/// all'avvio del lavoro. Database non raggiungibile: vale «decidi tu», che è
+/// il comportamento di sempre.
+pub(crate) async fn size_policy_for(ctx: &JobContext, config: &DownloadConfig) -> SizePolicy {
+    let key = config.provider_key.clone();
+    let host = host_of(&config.manifest_url).ok();
+    ctx.with_database(move |conn| {
+        Ok(crate::iiif::settings::effective_size_policy(
+            conn,
+            &key,
+            host.as_deref(),
+        ))
+    })
+    .await
+    .unwrap_or_else(|error| {
+        log::warn!("job size policy not read id={} error={error}", ctx.id);
+        SizePolicy::default()
     })
 }
 
