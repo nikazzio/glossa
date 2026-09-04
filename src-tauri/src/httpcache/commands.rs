@@ -542,6 +542,20 @@ pub fn apply_cache_cap(app: tauri::AppHandle) -> Result<CacheUsage, String> {
     Ok(cache.usage())
 }
 
+/// Dimentica tetto e scadenza ricordati, senza toccare quello che è in cache.
+///
+/// Serve a chi cambia la **scadenza delle ricerche**: quel valore finisce nella
+/// stessa fotografia del tetto, letta una volta sola, e senza questo passo le
+/// ricerche fatte dopo continuavano a nascere con la scadenza di prima fino al
+/// riavvio. Il tetto ha già la sua strada (`apply_cache_cap`), che oltre a
+/// dimenticare libera anche lo spazio in eccesso.
+#[tauri::command]
+pub fn forget_cache_settings(app: tauri::AppHandle) {
+    if let Some(cache) = cache(&app) {
+        cache.forget_settings();
+    }
+}
+
 #[tauri::command]
 pub fn clear_cache(app: tauri::AppHandle) -> Result<(), String> {
     match cache(&app) {

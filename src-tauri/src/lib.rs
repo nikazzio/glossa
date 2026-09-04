@@ -230,6 +230,7 @@ pub fn run() {
             httpcache::commands::cached_image,
             httpcache::commands::cache_usage,
             httpcache::commands::apply_cache_cap,
+            httpcache::commands::forget_cache_settings,
             httpcache::commands::clear_cache,
         ])
         .run(tauri::generate_context!())

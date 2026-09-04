@@ -244,4 +244,7 @@ export async function getSearchTtlHours(): Promise<number> {
 
 export async function setSearchTtlHours(hours: number): Promise<void> {
   await writeSetting(SEARCH_TTL_KEY, String(hours));
+  // La scadenza scelta vale dalla prossima ricerca, non dal prossimo avvio: il
+  // motore la tiene a memoria insieme al tetto, e va avvisato che non vale più.
+  await invoke('forget_cache_settings');
 }

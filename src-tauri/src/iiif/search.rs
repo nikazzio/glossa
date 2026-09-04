@@ -277,7 +277,11 @@ fn store_gallica_field(record: &mut GallicaRecord, field: &str, value: String) {
         // il nome che gli dà Gallica. Fuori restano le sole voci di struttura
         // della busta SRU, che non dicono niente dell'opera.
         _ if !SRU_ENVELOPE_FIELDS.contains(&field) => {
-            record.extra.entry(field.to_string()).or_default().push(value);
+            record
+                .extra
+                .entry(field.to_string())
+                .or_default()
+                .push(value);
         }
         _ => {}
     }
