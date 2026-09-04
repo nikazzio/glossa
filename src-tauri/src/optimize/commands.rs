@@ -117,9 +117,31 @@ pub async fn enqueue_optimization(
     .to_string();
 
     let jobs = app.state::<JobsState>();
+    let id = format!("optimize:{version_id}:{target_tag}");
+
+    // Un tentativo precedente per la stessa misura ha lasciato la sua riga in
+    // elenco, anche se è fallito. Riproporlo come lavoro nuovo urtava contro
+    // l'identificativo già in uso e l'errore arrivava a schermo così com'era:
+    // un lavoro già in corso si ritrova, uno finito si rilancia da capo con la
+    // qualità e il lato lungo appena chiesti.
+    {
+        let conn = jobs.0.connection()?;
+        let existing = crate::jobs::store::get(&conn, &id)?;
+        drop(conn);
+        if let Some(job) = existing {
+            if !job.status.is_terminal() {
+                return Ok(job);
+            }
+            jobs.0.relaunch_with_config(&id, &config).await?;
+            let conn = jobs.0.connection()?;
+            return crate::jobs::store::get(&conn, &id)?
+                .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());
+        }
+    }
+
     jobs.0
         .submit(&NewJob {
-            id: format!("optimize:{version_id}:{target_tag}"),
+            id,
             job_type: JOB_TYPE.to_string(),
             priority: PRIORITY,
             config,

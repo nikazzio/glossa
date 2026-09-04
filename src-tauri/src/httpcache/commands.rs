@@ -178,6 +178,76 @@ pub async fn cached_image(
     Ok(served(&app, &request, source, bytes))
 }
 
+/// Conserva nel deposito la pagina che il visore ha gia' aperto.
+///
+/// I byte passano dalla stessa risoluzione deposito/cache/rete del visore: di
+/// norma sono gia' in memoria e il comando deve solo validarli e promuoverli.
+#[tauri::command]
+pub async fn keep_viewer_page(
+    app: tauri::AppHandle,
+    writes: tauri::State<'_, crate::db::DbWriteCoordinator>,
+    request: CacheRequest,
+) -> Result<bool, String> {
+    let (version_id, index, size, provider_key) = match &request {
+        CacheRequest::Page {
+            version_id,
+            index,
+            size,
+            provider_key: Some(provider_key),
+            ..
+        } if size != THUMB_SIZE => (
+            version_id.as_str(),
+            *index,
+            size.as_str(),
+            provider_key.as_str(),
+        ),
+        _ => return Err("pagina_non_conservabile".to_string()),
+    };
+    let _write_guard = writes.lock().await;
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
+    if crate::jobs::store::has_active_version_work(&conn, version_id)? {
+        return Err("version_work_in_progress".to_string());
+    }
+    drop(conn);
+
+    let (_, bytes) = resolve_and_release(&app, &request).await?;
+    let root = crate::vault::commands::root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let folder = root.join(crate::vault::layout::version_dir(provider_key, version_id)?);
+    let size_dir = folder.join(crate::vault::layout::PAGES_DIR).join(size);
+    let target = size_dir.join(crate::vault::layout::page_file_name(index));
+    if target.is_file() {
+        return Ok(false);
+    }
+    let staging = root
+        .join(crate::vault::layout::STAGING_DIR)
+        .join(format!("viewer-{version_id}"));
+    let staged = staging.join(format!("page-{index:04}.jpg"));
+    let checksum = crate::download::vault_io::stage_and_promote(
+        &staged,
+        &target,
+        &bytes,
+        crate::vault::integrity::FileKind::Image,
+    )
+    .map_err(|error| error.message)?;
+    let record = crate::download::sidecar::PageRecord {
+        index,
+        label: None,
+        got: image_dimensions(&bytes),
+        bytes: Some(bytes.len() as u64),
+        checksum: Some(checksum),
+        at: crate::download::vault_io::now_secs(),
+        note: None,
+    };
+    if let Err(error) = crate::download::sidecar::append(&size_dir, &record) {
+        log::warn!("viewer page sidecar not written index={index} error={error}");
+    }
+    keep_thumbnail_in_vault(&app, &folder, index, &bytes);
+    Ok(true)
+}
+
 /// Da dove è arrivata l'ultima volta l'immagine chiesta così: deposito, memoria
 /// di lavoro o biblioteca.
 ///

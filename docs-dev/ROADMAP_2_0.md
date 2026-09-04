@@ -41,7 +41,7 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
   segnata da Niki, non ancora iniziata;
 - **motore e database generici su tutti i 20 campi anagrafici**: fatto (2
   settembre — vedi STATO_SESSIONE_2.0.md e `docs-dev/ARCHITECTURE.md`). Il
-  campo "tipo" è diventato "Natura dell'origine" (il formato del file vive
+  campo "tipo" si chiama ora "Tipo di opera" (il formato del file vive
   già per copia su `source_versions`); 8 campi nuovi (luogo di origine,
   provenienza, note, serie, genere/forma, identificativo standard, copertura,
   opere collegate) sono ora sempre in tab Info, sola lettura come i 7 di
@@ -50,12 +50,13 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
   ancora costruita); l'editor dei campi con più valori insieme (oggi uniti
   con «·» in visualizzazione, da decidere se lo stesso separatore basti anche
   per la modifica a mano o serva una lista voce-per-voce);
-- **migliorare la tab "Copie digitali"**: funziona ma va rifinita — capire se
-  prevedere davvero più tipi di copia scaricabili per la stessa opera (oggi
-  l'elenco versioni lo permette a livello di dati, ma l'interfaccia non
-  distingue bene "scarica come IIIF" da "scarica come PDF" quando entrambi
-  sono disponibili) e comunque rendere più chiara la relazione fra risoluzioni
-  scaricate, tetto per-copia e tetto generale;
+- **tab "Digitalizzazioni"**: la struttura è stata rifatta il 5 settembre —
+  scaricamento in cima, versioni locali una per riga con origine, pagine,
+  spazio e stato, e i comandi di quella versione accanto (leggila, riducila,
+  cancella solo lei). Resta il caso di **più tipi di copia scaricabili** per la
+  stessa opera: le digitalizzazioni PDF compaiono già fra le copie ma non si
+  scaricano, e il comando per quelle è stato togliere invece di lasciarlo
+  fallire — il lavoro vero è la issue #462;
 - **coerenza Biblioteca ↔ Trascrizioni**: la scheda opera ha ora un pattern
   stabile (colonna visore + colonna informazioni a tab, con `InspectorShell`
   condiviso con la traduzione) — quando lo Studio di trascrizione prende

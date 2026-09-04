@@ -51,10 +51,14 @@ export interface NetworkProfile {
   usedBy: number;
 }
 
+export type SizePolicy = 'auto' | 'readyOnly' | 'exact';
+export const SIZE_POLICIES: SizePolicy[] = ['auto', 'readyOnly', 'exact'];
+
 export interface LibraryChoice {
   key: string;
   label: string;
   profileId: string;
+  sizePolicy: SizePolicy;
 }
 
 export interface NetworkSettings {
@@ -108,7 +112,12 @@ function asSettings(answer: NetworkSettings | null): NetworkSettings {
   if (!answer) return emptySettings;
   return {
     profiles: Array.isArray(answer.profiles) ? answer.profiles : [],
-    libraries: Array.isArray(answer.libraries) ? answer.libraries : [],
+    libraries: Array.isArray(answer.libraries)
+      ? answer.libraries.map((library) => ({
+          ...library,
+          sizePolicy: SIZE_POLICIES.includes(library.sizePolicy) ? library.sizePolicy : 'auto',
+        }))
+      : [],
   };
 }
 
@@ -138,6 +147,15 @@ export async function setLibraryProfile(libraryKey: string, profileId: string): 
   );
 }
 
+export async function setLibrarySizePolicy(
+  libraryKey: string,
+  policy: SizePolicy,
+): Promise<NetworkSettings> {
+  return asSettings(
+    await invoke<NetworkSettings | null>('set_library_size_policy', { libraryKey, policy }),
+  );
+}
+
 /** La misura scelta per la singola opera, quando c'è. */
 export async function getVersionSizeCap(versionId: string): Promise<string | null> {
   return knownSizeCap(await invoke<string | null>('get_version_size_cap', { versionId }));
@@ -146,4 +164,3 @@ export async function getVersionSizeCap(versionId: string): Promise<string | nul
 export async function setVersionSizeCap(versionId: string, sizeCap: string | null): Promise<string | null> {
   return invoke<string | null>('set_version_size_cap', { versionId, sizeCap });
 }
-

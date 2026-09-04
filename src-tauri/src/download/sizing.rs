@@ -5,6 +5,8 @@
 
 use serde_json::Value;
 
+use crate::iiif::settings::SizePolicy;
+
 use crate::download::manifest::Page;
 
 /// Come calcolare la misura per **questo** libro.
@@ -58,17 +60,17 @@ pub fn info_url(image_service: &str) -> String {
 }
 
 /// Sceglie la regola dal primo descrittore disponibile.
-pub fn rule_from_info(info: Option<&Value>, cap: SizeCap) -> SizingRule {
+pub fn rule_from_info(info: Option<&Value>, cap: SizeCap, policy: SizePolicy) -> SizingRule {
     if matches!(cap, SizeCap::Max) {
         return SizingRule::Full;
     }
-    let Some(info) = info else {
+    if matches!(policy, SizePolicy::Exact) {
         return SizingRule::ExactWidth;
-    };
-    if declares_halvings(info) {
-        SizingRule::Halvings
-    } else {
-        SizingRule::ExactWidth
+    }
+    match (info.is_some_and(declares_halvings), policy) {
+        (true, _) => SizingRule::Halvings,
+        (false, SizePolicy::ReadyOnly) => SizingRule::Full,
+        (false, _) => SizingRule::ExactWidth,
     }
 }
 
@@ -221,7 +223,11 @@ mod tests {
     #[test]
     fn a_library_that_keeps_the_halvings_ready_is_recognised() {
         assert_eq!(
-            rule_from_info(Some(&archive_info()), SizeCap::LongEdge(2000)),
+            rule_from_info(
+                Some(&archive_info()),
+                SizeCap::LongEdge(2000),
+                SizePolicy::Auto
+            ),
             SizingRule::Halvings
         );
     }
@@ -229,7 +235,11 @@ mod tests {
     #[test]
     fn a_library_that_declares_nothing_gets_the_general_rule() {
         assert_eq!(
-            rule_from_info(Some(&gallica_info()), SizeCap::LongEdge(2000)),
+            rule_from_info(
+                Some(&gallica_info()),
+                SizeCap::LongEdge(2000),
+                SizePolicy::Auto
+            ),
             SizingRule::ExactWidth
         );
     }
@@ -237,7 +247,7 @@ mod tests {
     #[test]
     fn a_descriptor_that_does_not_answer_is_not_a_problem() {
         assert_eq!(
-            rule_from_info(None, SizeCap::LongEdge(2000)),
+            rule_from_info(None, SizeCap::LongEdge(2000), SizePolicy::Auto),
             SizingRule::ExactWidth
         );
     }
@@ -245,7 +255,7 @@ mod tests {
     #[test]
     fn the_max_cap_has_nothing_to_calculate() {
         assert_eq!(
-            rule_from_info(Some(&archive_info()), SizeCap::Max),
+            rule_from_info(Some(&archive_info()), SizeCap::Max, SizePolicy::Auto),
             SizingRule::Full
         );
         assert_eq!(

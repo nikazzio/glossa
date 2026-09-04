@@ -11,6 +11,7 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { EMPTY_LIBRARY_FILTERS } from '../../utils/libraryCatalogFilters';
 import { enqueueOptimization } from '../../services/optimizeService';
+import { versionInventory } from '../../services/inventoryService';
 import '../../test/i18n-mock';
 
 vi.mock('sonner', () => ({
@@ -86,6 +87,16 @@ vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: vi.fn().mockResolvedValue([]),
 }));
 
+// Aprendo una scheda, il pannello azzera i dati dell'opera precedente prima di
+// chiedere quelli nuovi: senza, si guardava la scheda di un'altra opera mentre
+// arrivava questa. Il finto servizio deve quindi restituire la scheda che il
+// caso ha preparato, non quella che lo store ha in mano quando viene chiamato —
+// che a quel punto è già vuota.
+let schedaPreparata: unknown = null;
+useSourceLibraryStore.subscribe((state) => {
+  if (state.detail) schedaPreparata = state.detail;
+});
+
 const EMPTY_DETAIL_METADATA = {
   language: null,
   subjects: [],
@@ -146,11 +157,10 @@ const entry = (
 const openRowMenu = () =>
   fireEvent.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
 
-/** Le tendine dei filtri (natura, lingua, biblioteca, disponibilità,
- *  workspace, collezione, ordinamento) e "mostra archiviate" stanno in una
- *  riga a scomparsa, chiusa di default. */
-const openFilters = () =>
-  fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.toggleFilters' }));
+/** Le tendine dei filtri e "mostra archiviate" vivono nella colonna dei
+ *  filtri, aperta di default: non c'è più niente da aprire prima. */
+const showArchived = () =>
+  fireEvent.click(screen.getByRole('switch', { name: 'areas.library.filters.showArchived' }));
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
@@ -161,7 +171,13 @@ describe('LibraryCatalogArea', () => {
     vi.mocked(confirm).mockResolvedValue(true);
     vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     vi.mocked(enqueueOptimization).mockReset();
-    useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
+    // Le versioni locali si leggono sempre dal motore: ogni caso dichiara cosa
+    // c'è nel deposito, e chi non lo dichiara parte da «niente sul disco».
+    vi.mocked(versionInventory).mockResolvedValue(null);
+    useSourceLibraryStore.setState({
+      catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null,
+      catalogLoading: false, catalogError: null, detailLoading: false, detailError: null,
+    });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     // La coda è globale: un lavoro lasciato da un altro test farebbe comparire
     // la percentuale al posto del pulsante.
@@ -172,18 +188,20 @@ describe('LibraryCatalogArea', () => {
     const service = await import('../../services/libraryService');
     // Evita che l'effetto di mount (che ricarica dettaglio e catalogo)
     // sovrascriva il fixture impostato dal test — mantiene la stessa forma.
+    schedaPreparata = null;
     vi.mocked(service.getLibrarySourceDetail).mockImplementation(
-      async () => useSourceLibraryStore.getState().detail ?? undefined as never,
+      async () =>
+        (useSourceLibraryStore.getState().detail ?? schedaPreparata) as never,
     );
     vi.mocked(service.listLibraryCatalog).mockImplementation(
       async () => useSourceLibraryStore.getState().catalog,
     );
   });
 
-  it('senza fonti spiega cosa comparirà lì', () => {
+  it('senza fonti spiega cosa comparirà lì', async () => {
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText('areas.library.empty')).toBeInTheDocument();
+    expect(await screen.findByText('areas.library.empty')).toBeInTheDocument();
   });
 
   it('elenca le fonti con quante pagine sono davvero sul computer', () => {
@@ -192,7 +210,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.getByLabelText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
   });
 
   it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
@@ -211,7 +229,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByLabelText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('accoda subito l’ottimizzazione e mostra il lavoro', async () => {
@@ -260,7 +278,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByLabelText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
   });
 
   it('le pagine prese a risoluzione piena sono un aggiunta, non un buco', () => {
@@ -281,7 +299,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('due misure con lo stesso numero di pagine non rendono casuale quale sia la principale', () => {
@@ -333,7 +351,8 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
 
-    await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+    openRowMenu();
+    await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() =>
       expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
@@ -346,7 +365,8 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
     render(<LibraryCatalogArea />);
 
-    await user.click(screen.getByRole('button', { name: 'areas.library.remove' }));
+    openRowMenu();
+    await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith('areas.library.filesBusy'));
   });
@@ -357,6 +377,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0, localBytes: 0 })] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -377,6 +398,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -390,6 +412,7 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -407,8 +430,8 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
     // Di default le archiviate non si vedono: si accende il filtro.
-    openFilters();
-    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
+    showArchived();
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', false));
@@ -424,8 +447,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.queryByText('Book of Hours')).not.toBeInTheDocument();
-    openFilters();
-    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
+    showArchived();
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
   });
 
@@ -490,7 +512,7 @@ describe('LibraryCatalogArea', () => {
     openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
-    expect(screen.getByLabelText('areas.library.localImagesAll')).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('verifica e libera spazio ci sono sempre, spenti quando non c\u2019è niente in locale', () => {
@@ -534,9 +556,11 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    // Il nome compare anche fra le scelte del filtro workspace: qui interessa
-    // l'etichetta sulla riga dell'opera.
-    expect(screen.getByText('Scherma')).toBeInTheDocument();
+    // Il nome compare anche fra le scelte del filtro workspace, che ora è
+    // sempre in vista nella sua colonna: qui interessa l'etichetta sulla riga
+    // dell'opera.
+    const riga = screen.getByRole('button', { name: /Book of Hours/ }).closest('article');
+    expect(within(riga as HTMLElement).getByText('Scherma')).toBeInTheDocument();
   });
 
   it('scollega un opera premendo la X sul workspace su cui sta', async () => {
@@ -604,6 +628,14 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    vi.mocked(versionInventory).mockResolvedValue({
+      versionId: 'v1',
+      providerKey: 'gallica',
+      sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0, derived: false }],
+      principal: '2000',
+      hasManifest: true,
+    });
+
     const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
 
@@ -667,6 +699,16 @@ describe('LibraryCatalogArea', () => {
   });
 
   it('la scheda elenca le risoluzioni scaricate per ogni copia', async () => {
+    vi.mocked(versionInventory).mockResolvedValue({
+      versionId: 'v1',
+      providerKey: 'gallica',
+      sizes: [
+        { sizeTag: '1500', pages: 40, bytes: 40_000_000, missing: 0, derived: false },
+        { sizeTag: 'full', pages: 10, bytes: 60_000_000, missing: 2, derived: false },
+      ],
+      principal: '1500',
+      hasManifest: true,
+    });
     useSourceLibraryStore.setState({
       catalog: [
         entry({
@@ -706,16 +748,20 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea itemId="s1" />);
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
 
-    const resolutionsList = screen.getByText('areas.library.resolutionsSection').nextElementSibling as HTMLElement;
+    const resolutionsList = screen.getByText('areas.library.localVersionsSection')
+      .closest('section') as HTMLElement;
     // "1500" è numerica: l'etichetta aggiunge l'unità di misura tramite una
     // chiave tradotta (il mock i18n dei test non interpola i placeholder,
     // quindi qui si legge la chiave, non "1500 pixel"). "full" non è
     // numerica: resta il valore così com'è, senza inventarsi un'unità.
     expect(resolutionsList).toHaveTextContent('settings.download.pixels');
     expect(resolutionsList).toHaveTextContent('full');
-    // Solo la principale porta il segno: è quanto conta verificare, non il
-    // testo del riepilogo (il mock i18n dei test non interpola i placeholder).
-    expect(resolutionsList).toHaveTextContent('areas.library.resolutionPrincipal');
+    // «Principale» è uscito dall'interfaccia: descriveva una cartella scelta
+    // dal motore, non una preferenza. Ogni riga dichiara invece da dove viene
+    // e se è completa.
+    expect(resolutionsList).not.toHaveTextContent('areas.library.resolutionPrincipal');
+    expect(resolutionsList).toHaveTextContent('areas.library.localVersionDownloaded');
+    expect(resolutionsList).toHaveTextContent('areas.library.localVersionPartial');
   });
 
   it('dalla scheda, rimuovere riporta al catalogo solo dopo che l opera è sparita', async () => {
@@ -766,10 +812,13 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
-    openFilters();
-    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.showArchived' }));
+    showArchived();
+    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
+    // Scegliendo una voce il menu si chiude: si riapre per guardare com'è il
+    // comando *mentre* la richiesta è ancora in volo.
+    openRowMenu();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'areas.library.restore' })).toBeDisabled(),
     );
@@ -912,10 +961,7 @@ describe('LibraryCatalogArea', () => {
     await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        'areas.library.fieldSaveFailed',
-        expect.anything(),
-      ),
+      expect(toast.error).toHaveBeenCalledWith('areas.library.fieldSaveFailed'),
     );
     // Il campo è ancora lì: chiuderlo direbbe che la correzione è passata.
     expect(
@@ -969,7 +1015,6 @@ describe('LibraryCatalogArea', () => {
     // Di partenza il catalogo è in ordine di titolo.
     expect(titoli()[0]).toContain('Convivio');
 
-    openFilters();
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'areas.library.filters.sortLabel' }),
       'added',
@@ -996,7 +1041,6 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
 
     render(<LibraryCatalogArea />);
-    openFilters();
     await user.selectOptions(
       screen.getByRole('combobox', { name: 'areas.library.filters.workspaceLabel' }),
       'ws-1',
@@ -1037,29 +1081,27 @@ describe('LibraryCatalogArea', () => {
     );
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        'areas.library.collectionFailed',
-        expect.anything(),
-      ),
+      expect(toast.error).toHaveBeenCalledWith('areas.library.collectionFailed'),
     );
   });
 
   it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {
     const views = await import('../../services/librarySavedViewsService');
     useSourceLibraryStore.setState({ catalog: [entry()] });
-    const user = userEvent.setup();
 
     render(<LibraryCatalogArea />);
-    await user.type(
+    // Nella colonna dei filtri i campi si scrivono con un evento diretto:
+    // userEvent non consegna i tasti dentro un pannello ridimensionabile in
+    // jsdom, come già per i comandi icona dentro un tooltip.
+    fireEvent.change(
       screen.getByRole('searchbox', { name: 'areas.library.filters.searchLabel' }),
-      'hours',
+      { target: { value: 'hours' } },
     );
-    await user.click(screen.getByRole('button', { name: 'areas.library.filters.savedViews' }));
-    await user.type(
+    fireEvent.change(
       screen.getByRole('textbox', { name: 'areas.library.filters.newViewLabel' }),
-      'Miniati',
+      { target: { value: 'Miniati' } },
     );
-    await user.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));
 
     await waitFor(() =>
       expect(views.saveView).toHaveBeenCalledWith(
@@ -1083,7 +1125,6 @@ describe('LibraryCatalogArea', () => {
     const user = userEvent.setup();
 
     render(<LibraryCatalogArea />);
-    await user.click(screen.getByRole('button', { name: 'areas.library.filters.savedViews' }));
     await user.click(await screen.findByRole('button', { name: 'Solo stampati' }));
 
     // L'opera è un manoscritto: con la vista dei soli stampati sparisce.

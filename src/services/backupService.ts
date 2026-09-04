@@ -119,6 +119,7 @@ const DELETE_ORDER = [
   'transcription_documents',
   'source_pages',
   'library_network_profiles',
+  'library_size_policies',
   'network_profiles',
   'workspace_items',
   'glossary_entry_overrides',

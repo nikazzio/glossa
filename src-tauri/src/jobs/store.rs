@@ -333,6 +333,21 @@ pub fn requeue(conn: &Connection, id: &str, reset_progress: bool) -> Result<(), 
     Ok(())
 }
 
+/// Riscrive la configurazione di un lavoro già in elenco.
+///
+/// Serve quando l'utente rilancia lo stesso lavoro chiedendo qualcosa di
+/// diverso — una misura più grande per lo stesso libro: l'identificativo resta
+/// uno per digitalizzazione, ma ripartire con la configurazione vecchia
+/// significherebbe riscaricare la misura di prima senza dirlo.
+pub fn set_config(conn: &Connection, id: &str, config: &str) -> Result<(), String> {
+    conn.execute(
+        "UPDATE jobs SET config = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        params![id, config],
+    )
+    .map_err(|e| format!("Failed to update the job configuration: {e}"))?;
+    Ok(())
+}
+
 /// Mette da parte un lavoro interrotto, in attesa che l'utente decida.
 ///
 /// `reset_progress` serve a chi non sa riprendere: il progresso rimasto sul

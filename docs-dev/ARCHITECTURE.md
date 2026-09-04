@@ -1,6 +1,6 @@
 # Glossa — riferimento architetturale
 
-Ultimo aggiornamento: 2026-08-22.
+Ultimo aggiornamento: 2026-09-04.
 
 Questo documento descrive struttura corrente e invarianti tecniche. Decisioni di
 prodotto in `PRODUCT_ARCHITECTURE_2_0.md`; regole visive in
@@ -122,6 +122,18 @@ attivo, così tornare indietro non perde la vista da cui si veniva.
 Gli store non duplicano il database. Oggetti e collezioni vengono aggiornati in
 modo immutabile. Stato confinato a un componente resta locale.
 
+`sourceLibraryStore.loadDetail` conserva l'identificativo dell'ultima opera
+chiesta e scarta le risposte più lente: aprendo A e poi B, la risposta di A
+sostituiva il dettaglio di B e l'attesa non finiva più.
+
+**Impostazioni.** `uiStore.settingsTab` ha una sola linguetta per la Biblioteca
+(`library`), che al suo interno si divide in tre sotto-linguette — ritmi di
+rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
+`libraries` non esistono più; la linguetta disattivata «in arrivo» resta solo per
+le Trascrizioni. La bozza di un profilo di rete vive nella finestra e non nella
+scheda, perché la scheda si smonta cambiando linguetta, e il profilo in modifica
+si ritrova dalla bozza al rientro.
+
 ## Pipeline di traduzione
 
 Il motore frontend coordina:
@@ -238,7 +250,26 @@ Invarianti:
 I lavori di scaricamento e ottimizzazione identificano la digitalizzazione nel
 campo di configurazione. Operazioni che cancellano le sue pagine interrogano il
 backend immediatamente prima di agire e vengono rifiutate se uno di questi lavori
-è ancora attivo. Controllo e cancellazione mantengono lo stesso coordinamento
+è ancora attivo.
+
+**Un lavoro per digitalizzazione, con la configurazione della richiesta corrente.**
+Lo scaricamento usa l'identificativo `download:<versione>`, l'ottimizzazione
+`optimize:<versione>:<misura>`: non se ne aprono due sullo stesso libro. Un
+lavoro già in elenco viene quindi ritrovato, e qui la configurazione conta:
+
+- se non è terminale e la misura chiesta è la stessa, si restituisce il lavoro in
+  corso;
+- se non è terminale e la misura chiesta è diversa, il comando **fallisce** con
+  `download_in_progress:<misura in corso>`, che l'interfaccia traduce in un
+  avviso leggibile;
+- se è terminale, si usa `relaunch_with_config`, che riscrive la configurazione
+  prima di rimettere in coda e azzera progresso e tentativi.
+
+`relaunch_with_config` esiste perché `retry` riparte dalla configurazione
+salvata: chiedere 3000 dopo aver scaricato a 2000 rilanciava il vecchio 2000
+senza dirlo, e il comando sembrava non fare niente. Lo stesso vale per
+l'ottimizzazione, dove un tentativo fallito lasciava la sua riga in elenco e la
+nuova messa in coda urtava contro l'identificativo già in uso. Controllo e cancellazione mantengono lo stesso coordinamento
 delle scritture usato dalla messa in coda, evitando nuove partenze nel mezzo
 dell'operazione.
 
@@ -508,11 +539,11 @@ manifesto**: è già pronta sul server della biblioteca, mentre ordinare una
 misura piccola al servizio immagini la fa ricavare al momento e su Internet
 Archive costa quanto la pagina intera.
 
-La virtualizzazione smonta le righe fuori schermo, ma il rail conserva gli
-indirizzi delle miniature già ottenute per tutta la sua apertura. Una richiesta
-già partita continua anche se la riga esce dallo schermo; tornando indietro la
-miniatura ricompare senza nuovo passaggio dal motore. Chiudere il rail o cambiare
-libro annulla le richieste residue e rilascia gli indirizzi.
+La virtualizzazione smonta le righe fuori schermo. Copertine e miniature usano
+lo stesso piccolo deposito di indirizzi locali, limitato alle 128 immagini usate
+più di recente: tornando al catalogo o riaprendo un libro ricompaiono senza
+decodifica e senza nuovo passaggio dal motore. Le richieste residue non più
+visibili vengono tolte dalla coda, così non precedono la pagina aperta.
 
 Le pagine grandi non restano duplicate nella memoria della finestra: tornando
 su una pagina, `CacheRequest::Page` usa la stessa chiave stabile e `resolve`
@@ -565,8 +596,8 @@ restituisce. Chi ha appena ricevuto una pagina la chiede subito dopo: è una
 lettura in memoria, non tocca né disco né rete, e riguarda la stessa chiave,
 quindi non può raccontare la provenienza di un'altra immagine.
 
-Il visore mostra tre stati distinti — **Dal computer**, **Dalla memoria**,
-**Dalla biblioteca** — con la misura chiesta nel suggerimento. Il verde acceso
+Il visore mostra tre stati distinti — **File locale**, **Memoria temporanea**,
+**Biblioteca online** — con la misura chiesta nel suggerimento. Il verde acceso
 vale solo per la biblioteca. Se il libro risultava locale e la pagina è invece
 arrivata dalla rete, il visore rilegge l'inventario: qualcuno ha cancellato
 quella copia mentre si leggeva, e le pagine successive non devono continuare a
@@ -583,6 +614,49 @@ presente — e riusa la catena dello scaricamento (transito, validazione,
 spostamento atomico, riga nell'inventario laterale con impronta e dimensioni),
 ricavando anche la miniatura. Se qualcosa non riesce, la pagina si vede comunque
 e finisce in cache come prima.
+
+Il comando **Scarica questa pagina** usa `keep_viewer_page`: prende gli stessi
+byte già aperti dal visore, li convalida e li promuove atomicamente nel
+deposito, aggiungendo impronta e miniatura. Se un lavoro sulla stessa
+digitalizzazione è attivo, il comando si ferma invece di scrivere sullo stesso
+file in concorrenza.
+
+La misura è quindi **quella con cui la pagina è arrivata**, non il tetto delle
+impostazioni: il comando non fa una seconda richiesta, e su un libro non ancora
+scaricato la misura mostrata nasce dal formato pronto più vicino alla larghezza
+leggibile. Il suggerimento del comando la dichiara, in entrambi gli stati, così
+non nasce una versione locale a una misura non scelta. La scelta esplicita della
+misura per la singola pagina resta nella #459.
+
+Il comando ha tre stati, non due: da prendere, in corso (icona che gira) e già
+in casa — quest'ultimo è uno stato con il proprio colore, non un pulsante
+disabilitato, perché disabilitato non distingue «non si può» da «è già fatto».
+L'esito si applica alla pagina a schermo solo se è ancora quella: si confronta
+digitalizzazione, indice e misura, perché la promessa può risolversi dopo un
+cambio pagina. A pagina conservata il visore avvisa chi lo ospita
+(`onPageKept`), e la scheda delle digitalizzazioni rilegge il deposito: non
+esiste un lavoro in coda al cui termine aggiornarsi.
+
+### Quale versione locale legge il visore
+
+`preferredLocalSize` dice al visore quale cartella di misura preferire; se quella
+misura non ha pagine si torna alla più fornita, che è il comportamento di
+sempre. Il visore dichiara a sua volta la misura che sta davvero leggendo
+(`onLocalSizeChange`): la scheda dell'opera segna quella riga come «in lettura»
+senza indovinarla, anche quando di versioni locali ce n'è una sola. Scelta
+dell'utente e versione letta restano due dati distinti — la prima scende al
+visore, la seconda risale da lui.
+
+### Il conteggio delle pagine attese
+
+`iiif_viewer_manifest` registra `expected_asset_count` sulla digitalizzazione,
+non solo lo scaricamento del libro: il manifesto è la stessa fonte in entrambi i
+casi, e prima chi conservava una pagina sola dal visore lasciava in piedi il
+conteggio dichiarato dalla ricerca — a volte uno — con la scheda che diceva
+«1 di 1 · completa» su un manoscritto intero. La scrittura passa dal
+coordinatore delle scritture e non tocca la riga quando il valore coincide. La
+finestra, informata dal visore del totale del manifesto, rilegge la scheda una
+volta sola per digitalizzazione.
 
 ### Rimozione di un'opera e cache dei byte
 
@@ -603,9 +677,20 @@ restano: escono per sfratto.
 
 ## Ottimizzazione locale
 
-L'ottimizzazione è un lavoro CPU avviato dalla scheda della fonte. Opera su una
-cartella di misura, ridimensiona e ricodifica solo quando il file risultante è
-più piccolo, sostituisce la pagina atomicamente e rigenera la miniatura.
+L'ottimizzazione è un lavoro CPU avviato **dalla riga della versione locale**
+nella scheda della fonte: la fonte è quella riga, non una scelta dentro il
+pannello — nell'intestazione della sezione non si capiva su quale versione si
+stesse agendo. Legge una cartella di misura e ne **produce una nuova**
+(`derived/<chiave>/<versione>/<misura>/`), senza toccare l'originale; le due
+convivono, ognuna con il proprio comando per cancellare solo lei e per leggerla
+nel visore. Una copia già ricavata non si ricomprime: il motore la rifiuta, e
+l'interfaccia non offre il comando su quelle righe.
+
+L'inventario del deposito è **la sola fonte di verità** per le versioni locali:
+la scheda lo rilegge sempre dal motore, e non usa la fotografia che la riga di
+catalogo porta dall'apertura della Biblioteca — con quella, una versione ridotta
+appena creata non compariva. Un lavoro di scaricamento o ottimizzazione arrivato
+a termine fa rileggere le cartelle da sé.
 
 La stima usa gli stessi parametri e la stessa codifica del lavoro, quindi conta
 solo le pagine che liberano davvero spazio. Le dimensioni originarie registrate

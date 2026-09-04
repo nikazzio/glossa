@@ -121,6 +121,20 @@ interattivi.
   link a pagine esterne) lo usa — mai un pulsante di copia scritto a mano.
 - Non ricreare localmente gli stessi pattern.
 
+### TabStrip
+
+Fila di linguette icona con la propria navigazione da tastiera: frecce, Home ed
+End, con il focus che segue la linguetta scelta come vuole il modello ARIA.
+Usarla per ogni gruppo di linguette che non sia già dentro `InspectorShell` —
+sotto-schede di una finestra di impostazioni, linguette di un pannello.
+
+- `tabs`: `{ id, label, icon }`; l'etichetta vive nel tooltip, non a schermo.
+- `idPrefix`: da cui derivano `<prefix>-tab-<id>` e `<prefix>-panel-<id>`, così
+  il pannello si collega con `aria-labelledby`.
+- Il pannello attivo lo monta il chiamante, con `role="tabpanel"`.
+- Non riscrivere la gestione delle frecce nei componenti: esisteva tre volte a
+  mano e ogni copia divergeva su Home o sul percorso di tabulazione.
+
 ### InspectorShell
 
 Guscio comune per una colonna a tab con collasso — nato per il pannello
@@ -150,8 +164,29 @@ solo**.
 - Ogni impostazione usa `SettingRow` dentro una lista con `divide-y` e
   `border-y`.
 - Riga `py-2.5`, label `text-sm`, una sola icona nel comando a destra.
-- Spiegazioni nel `hint`, non come paragrafi permanenti.
-- Input, select e textarea usano le classi campo condivise.
+- L'etichetta prende lo spazio disponibile, il comando non lo ruba: `SettingRow`
+  incapsula i figli in un contenitore che non si allarga. Un campo a larghezza
+  piena dentro una riga riduceva «Nome» a «No…».
+- Spiegazioni nel `hint`, che è un suggerimento al passaggio del mouse
+  raggiungibile da tastiera, non un paragrafo permanente. Ogni valore che ha una
+  conseguenza non ovvia ne ha uno.
+- Input, select e textarea usano le classi campo condivise:
+
+| Classe | Uso |
+|---|---|
+| `FIELD_CLASSNAME` | campo a larghezza piena, per moduli e riquadri propri |
+| `FIELD_INLINE_CLASSNAME` | campo di testo accanto alla sua etichetta, che non si allarga |
+| `FIELD_NUMBER_CLASSNAME` | numero breve: `w-16`, allineato a destra, monospaziato, senza le frecce native |
+| `FIELD_MONO_CLASSNAME` | valori tecnici a spaziatura fissa |
+
+- Un numero con unità di misura tiene l'unità **fuori dall'etichetta**, in una
+  colonna di larghezza fissa accanto al campo: senza, i campi di due righe
+  vicine finiscono a larghezze diverse e le cifre non si incolonnano.
+- `Select` ha due misure di testo: `sm` (predefinita) per barre e righe
+  compatte, `md` dentro le liste di impostazioni, dove un valore più piccolo
+  dell'etichetta accanto si legge come una nota a margine invece che come la
+  scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
+  un tetto per i testi lunghi.
 - Scelte esclusive con nome usano `SegmentedControl`.
 - Interruttori booleani usano `ToggleRow`.
 
@@ -191,9 +226,24 @@ interattiva.
 - Radice: `space-y-10`, `role="tabpanel"`, `aria-labelledby`.
 - Sezione: `space-y-4` con `SectionLabel`.
 - Elenchi: righe piatte separate, niente card o pill.
+- Una scheda che raccoglie argomenti diversi si divide in **sotto-linguette**
+  (`TabStrip`) invece di diventare un rotolo unico: accanto alla fila,
+  l'etichetta della linguetta attiva in `font-display italic`.
 - Salvataggio al cambio, salvo input intermedi che richiedono conferma
   esplicita. In quel caso mostrare stato non salvato e comando di ripristino.
 - Ordine generale: modalità di traduzione, coppia linguistica, persona.
+
+### Elenchi di versioni e comandi per riga
+
+Quando una riga descrive una cosa su cui si può agire — una versione locale di
+un libro, un profilo, un file — i comandi che la riguardano stanno **su quella
+riga**, non nell'intestazione della sezione: nell'intestazione non si capisce su
+quale delle righe agiscano. Restano nell'intestazione soltanto i comandi che
+valgono per l'insieme, e il loro testo dice che valgono per tutto.
+
+I dati della riga stanno su righe separate (`StatRow` dentro un `dl`), non
+concatenati con punti su una riga sola: in una colonna stretta quattro dati
+separati da «·» non si leggono.
 
 ### Barra di stato
 

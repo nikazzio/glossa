@@ -1,31 +1,36 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
+  AlertCircle,
+  ArrowLeft,
   BookOpenText,
   Check,
+  ExternalLink,
   Images,
   Info,
   Library,
   Link2,
+  Loader2,
   type LucideIcon,
   MoreVertical,
   NotebookText,
   RefreshCw,
   Tags,
   Trash2,
-  X,
 } from 'lucide-react';
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
 import {
   ClickPopover,
   IconButton,
+  IconLink,
   InspectorShell,
   LinkChip,
   MenuActionRow,
   PopoverItem,
   SectionLabel,
+  Select,
   StatBlock,
   Tooltip,
 } from '../ui';
@@ -35,13 +40,11 @@ import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { useSourceActions } from './useSourceActions';
-import { CopiesSection, resolutionLabel } from './CopiesSection';
+import { CopiesSection } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
-import { PageViewer, type ViewerPagePosition } from '../viewer/PageViewer';
+import { PageViewer } from '../viewer/PageViewer';
 import { useDebounce } from '../../hooks/useDebounce';
-import { summarizeAvailability } from '../../services/vaultService';
-import { humanSize } from '../../utils';
 import type {
   LibraryCatalogEntry,
   LibrarySourceDetail,
@@ -69,7 +72,7 @@ interface LibrarySourcePageProps {
   providerLabel?: string;
   workspaces: Workspace[];
   onBack: () => void;
-  onRemoved: () => void;
+  onRemoved: () => Promise<void>;
   onSetArchived: (archived: boolean) => Promise<void>;
   onRefresh: () => void;
   onToggleLink: (workspaceId: string, linked: boolean) => void;
@@ -104,23 +107,46 @@ export function LibrarySourcePage({
   const iiifVersions = detail.versions.filter(
     (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
   );
-  const manifestVersion = iiifVersions.find((version) => version.isPrimary) ?? iiifVersions[0];
+  const initialManifestVersion = iiifVersions.find((version) => version.isPrimary) ?? iiifVersions[0];
+  const [selectedVersionId, setSelectedVersionId] = useState(initialManifestVersion?.id ?? '');
+  const manifestVersion =
+    iiifVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
+  const libraryPageUrl = detail.pageUrl ?? detail.catalogUrl;
+  const creatorDate = [detail.creator, detail.date].filter(Boolean).join(' · ');
   const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
   const inspectorWidth = useUiStore((state) => state.librarySourceInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setLibrarySourceInspectorWidth);
   const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
-  // Dove si è arrivati nel libro: interessa solo a questa schermata (visore e
-  // scheda), quindi resta qui e non in uno stato condiviso di tutta l'app.
-  const [viewerPage, setViewerPage] = useState<ViewerPagePosition | null>(null);
+  /**
+   * Quale versione locale sta leggendo il visore, quando ce n'è più di una sul
+   * computer. Vive qui perché la scelta si fa nella scheda a destra e il
+   * risultato si vede nel visore a sinistra.
+   */
+  const [chosenLocalSize, setChosenLocalSize] = useState<string | null>(null);
+  /**
+   * Quale versione locale il visore sta **davvero** leggendo, dichiarata da
+   * lui. Senza, nessuna riga risultava «in lettura» finché non si sceglieva a
+   * mano — nemmeno quando di versioni ce n'era una sola.
+   */
+  const [readingLocalSize, setReadingLocalSize] = useState<string | null>(null);
+  /** La digitalizzazione per cui la scheda è già stata riletta dopo il nuovo
+   *  conteggio: una volta basta, senza si rileggerebbe a ogni pagina. */
+  const countRefreshedFor = useRef<string | null>(null);
+  /** Cresce ogni volta che il visore conserva una pagina: la scheda delle
+   *  digitalizzazioni rilegge il deposito senza aspettare un lavoro in coda. */
+  const [keptPages, setKeptPages] = useState(0);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
   // schermo finché il nuovo manifesto non è arrivato.
   useEffect(() => {
-    setViewerPage(null);
-  }, [detail.source.id]);
+    setSelectedVersionId(initialManifestVersion?.id ?? '');
+    setChosenLocalSize(null);
+    setReadingLocalSize(null);
+    countRefreshedFor.current = null;
+  }, [detail.source.id, initialManifestVersion?.id]);
 
   const persistLayout = () => {
     if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
@@ -142,19 +168,102 @@ export function LibrarySourcePage({
   };
 
   return (
-    <Group orientation="horizontal" className="flex h-full min-h-0 flex-1" onLayoutChanged={persistLayout}>
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
+      {/* Una riga sola: identità dell'opera a sinistra, digitalizzazione al
+          centro, comandi a destra. Le due colonne laterali hanno la stessa
+          quota, così il centro resta centrato davvero anche con un titolo
+          lungo, che si tronca invece di spostarlo. */}
+      <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-editorial-border px-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
+            <ArrowLeft size={15} />
+          </IconButton>
+          <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-base italic text-editorial-ink">
+              {detail.source.title}
+            </h1>
+            {creatorDate && (
+              <p className="truncate text-xs text-editorial-muted">{creatorDate}</p>
+            )}
+          </div>
+        </div>
+
+        {manifestVersion ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-xs font-semibold text-editorial-muted">
+              {t('areas.library.digitalizationLabel')}
+            </span>
+            {iiifVersions.length > 1 ? (
+              <Select
+                value={manifestVersion.id}
+                onChange={setSelectedVersionId}
+                ariaLabel={t('areas.library.digitalizationLabel')}
+                options={iiifVersions.map((version) => ({
+                  value: version.id,
+                  label: version.label,
+                }))}
+                className="min-w-0 max-w-[14rem]"
+              />
+            ) : (
+              <span className="min-w-0 truncate text-xs text-editorial-ink">
+                {providerLabel ?? manifestVersion.label}
+              </span>
+            )}
+            {libraryPageUrl && (
+              <IconLink
+                size="sm"
+                href={libraryPageUrl}
+                title={t('areas.library.openOnLibrarySite')}
+                tooltipSide="bottom"
+              >
+                <ExternalLink size={13} />
+              </IconLink>
+            )}
+          </div>
+        ) : (
+          <span />
+        )}
+
+        <div className="flex items-center justify-end">
+          {entry && (
+            <SourceHeaderActions
+              entry={entry}
+              onRemoved={onRemoved}
+              onSetArchived={onSetArchived}
+              onRefresh={onRefresh}
+            />
+          )}
+        </div>
+      </header>
+
+      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
       <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
             dallo Studio di trascrizione: questo componente resta la stessa
             dimensione minima predisposta prima che esistesse. */}
         {manifestVersion?.sourceUrl ? (
           <PageViewer
-            key={detail.source.id}
+            key={manifestVersion.id}
             sourceId={detail.source.id}
             versionId={manifestVersion.id}
             manifestUrl={manifestVersion.sourceUrl}
             providerKey={manifestVersion.providerKey}
-            onPageChange={setViewerPage}
+            preferredLocalSize={chosenLocalSize}
+            onLocalSizeChange={setReadingLocalSize}
+            onPageKept={() => setKeptPages((count) => count + 1)}
+            onPageChange={(position) => {
+              // Il manifesto letto dal visore dice quante pagine ha il libro, e
+              // il motore lo registra. La scheda però tiene in mano il numero
+              // di prima — a volte «1», dichiarato dalla ricerca — e diceva
+              // «1 di 1 · completa» su un libro intero: se il conteggio è
+              // cambiato, la si rilegge una volta.
+              if (position.total <= 0 || !manifestVersion) return;
+              if (manifestVersion.expectedPages === position.total) return;
+              if (countRefreshedFor.current === manifestVersion.id) return;
+              countRefreshedFor.current = manifestVersion.id;
+              onRefresh();
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
@@ -206,22 +315,9 @@ export function LibrarySourcePage({
           activeTab={activeTab}
           onTabChange={(id) => setActiveTab(id as InspectorTabId)}
           panelIcon={<Info size={15} />}
-          panelLabel={detail.source.title}
+          panelLabel={t('areas.library.inspectorPanelTitle')}
           collapsed={inspectorCollapsed}
           onCollapsedChange={toggleInspectorCollapsed}
-          headerActions={
-            <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
-              <X size={14} />
-            </IconButton>
-          }
-          actions={entry && (
-            <SourceHeaderActions
-              entry={entry}
-              onRemoved={onRemoved}
-              onSetArchived={onSetArchived}
-              onRefresh={onRefresh}
-            />
-          )}
         >
           {activeTab === 'notes' ? (
             <div className="flex h-full min-h-0 flex-1 flex-col p-4">
@@ -237,15 +333,21 @@ export function LibrarySourcePage({
                 <>
                   <DataSection
                     detail={detail}
-                    entry={entry}
-                    viewerPage={viewerPage}
                     onCorrectField={onCorrectField}
                     onResyncSource={onResyncSource}
                   />
                   <SourceInfoSection detail={detail} providerLabel={providerLabel} />
                 </>
               ) : activeTab === 'copies' ? (
-                <CopiesSection detail={detail} entry={entry} onRefresh={onRefresh} />
+                <CopiesSection
+                  detail={detail}
+                  entry={entry}
+                  onRefresh={onRefresh}
+                  openVersionId={manifestVersion?.id ?? null}
+                  viewedLocalSize={readingLocalSize}
+                  onViewLocalSize={setChosenLocalSize}
+                  reloadToken={keptPages}
+                />
               ) : (
                 <>
                   <Section icon={Link2} label={t('areas.library.linkedWorkspaces')}>
@@ -270,7 +372,8 @@ export function LibrarySourcePage({
           )}
         </InspectorShell>
       </Panel>
-    </Group>
+      </Group>
+    </div>
   );
 }
 
@@ -364,24 +467,14 @@ function WorkspaceLinkPicker({
   );
 }
 
-/** Tutti i campi anagrafici oggi in scheda: quattro correggibili a mano
- *  (titolo, autore, data, lingua) più quelli che la biblioteca dichiara e
- *  nessuno tocca — natura dell'origine inclusa, di proposito: è un fatto
- *  della biblioteca, non un dato di Niki. Il motore sa correggere anche
- *  questi campi e gli altri anagrafici non ancora in scheda; quali portare
- *  davvero a schermo resta da decidere. Ogni campo resta sempre in vista,
- *  «—» quando non c'è ancora un dato: due schede diverse non devono sembrare
- *  strutturate in modo diverso solo perché una biblioteca ne sa di meno. */
+/** Dati essenziali dell'opera; i metadati meno comuni compaiono soltanto se
+ *  presenti e restano raccolti in una sezione chiusa. */
 function DataSection({
   detail,
-  entry,
-  viewerPage,
   onCorrectField,
   onResyncSource,
 }: {
   detail: LibrarySourceDetail;
-  entry?: LibraryCatalogEntry;
-  viewerPage: ViewerPagePosition | null;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
   onResyncSource: () => Promise<void>;
 }) {
@@ -402,18 +495,13 @@ function DataSection({
       setResyncing(false);
     }
   };
-  // Le stesse etichette per ogni opera, che la biblioteca le abbia dichiarate
-  // o no: un campo che sparisse quando è vuoto farebbe sembrare due schede
-  // strutturate in modo diverso, invece è solo la fonte che ne sa di meno.
-  // StatBlock mostra sempre l'etichetta, con «—» al posto del valore assente.
-  const readonlyFields: Array<[string, string]> = [
+  const allReadonlyFields: Array<[string, string]> = [
     [t('areas.library.contributorsField'), detail.contributors.join(' · ')],
     [t('areas.library.volumeField'), detail.volume ?? ''],
     [t('areas.library.subjectsField'), detail.subjects.join(' · ')],
     [t('areas.library.publisherField'), detail.publisher ?? ''],
     [t('areas.library.rightsField'), detail.rights.join(' · ')],
     [t('areas.library.physicalDescriptionField'), detail.physicalDescription ?? ''],
-    [t('areas.library.descriptionField'), detail.description ?? ''],
     [t('areas.library.originPlaceField'), detail.originPlace ?? ''],
     [t('areas.library.provenanceField'), detail.provenance.join(' · ')],
     [t('areas.library.seriesField'), detail.series ?? ''],
@@ -422,6 +510,7 @@ function DataSection({
     [t('areas.library.coverageField'), detail.coverage.join(' · ')],
     [t('areas.library.relatedWorksField'), detail.relatedWorks.join(' · ')],
   ];
+  const readonlyFields = allReadonlyFields.filter(([, value]) => value.trim() !== '');
 
   return (
     <Section
@@ -473,49 +562,22 @@ function DataSection({
           original={detail.original.primary_language}
           onSave={(value) => onCorrectField('primary_language', value)}
         />
-        {readonlyFields.map(([label, value]) => (
-          <StatBlock key={label} label={label} value={value} />
-        ))}
-        {/* Come gli altri campi: sempre in vista, «—» quando non c'è ancora
-            un dato (nessuna pagina dichiarata, entry non ancora caricato). */}
-        <StatBlock
-          label={t('areas.library.pagesField')}
-          value={
-            entry && entry.expectedPages !== null && entry.expectedPages > 0
-              ? t('areas.library.pageCount', { count: entry.expectedPages })
-              : ''
-          }
-        />
-        {/* La pagina aperta nel visore accanto: «—» finché il libro non è
-            aperto, come ogni altro campo della scheda. */}
-        <StatBlock
-          label={t('areas.library.currentPageField')}
-          value={
-            viewerPage
-              ? t('areas.library.viewerPageOf', {
-                  index: viewerPage.index + 1,
-                  total: viewerPage.total,
-                }) + (viewerPage.label ? ` · ${viewerPage.label}` : '')
-              : ''
-          }
-        />
-        <StatBlock
-          label={t('areas.library.availabilityField')}
-          value={entry ? availabilityText(entry, t) : ''}
-        />
-        <StatBlock
-          label={t('areas.library.occupiedField')}
-          value={entry ? humanSize(entry.localBytes) : ''}
-        />
-        <StatBlock
-          label={t('areas.library.statusField')}
-          value={
-            detail.source.status === 'archived'
-              ? t('areas.library.statusArchived')
-              : t('areas.library.statusActive')
-          }
-        />
+        {detail.description && (
+          <StatBlock label={t('areas.library.descriptionField')} value={detail.description} />
+        )}
       </dl>
+      {readonlyFields.length > 0 && (
+        <details className="border-t border-editorial-border/70 pt-2">
+          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
+            {t('areas.library.otherMetadata')}
+          </summary>
+          <dl className="mt-3 space-y-2.5">
+            {readonlyFields.map(([label, value]) => (
+              <StatBlock key={label} label={label} value={value} />
+            ))}
+          </dl>
+        </details>
+      )}
     </Section>
   );
 }
@@ -541,24 +603,39 @@ function SourceInfoSection({
     externalRef && detail.providerKey && externalRef.startsWith(`${detail.providerKey}:`)
       ? externalRef.slice(detail.providerKey.length + 1)
       : externalRef;
+  const technicalFields = [
+    [t('areas.library.sourceHoldingField'), detail.holdingInstitution ?? ''],
+    [t('areas.library.sourcePageUrlField'), detail.pageUrl ?? ''],
+    [t('areas.library.sourceCatalogUrlField'), detail.catalogUrl ?? ''],
+  ].filter(([, value]) => value !== '');
 
   return (
     <Section icon={Library} label={t('areas.library.sourceSection')}>
       <dl className="space-y-2.5">
-        <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel ?? ''} />
-        <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier ?? ''} />
-        <StatBlock label={t('areas.library.sourceHoldingField')} value={detail.holdingInstitution ?? ''} />
-        <StatBlock
-          label={t('areas.library.sourcePageUrlField')}
-          value={detail.pageUrl ?? ''}
-          href={detail.pageUrl ?? undefined}
-        />
-        <StatBlock
-          label={t('areas.library.sourceCatalogUrlField')}
-          value={detail.catalogUrl ?? ''}
-          href={detail.catalogUrl ?? undefined}
-        />
+        {providerLabel && (
+          <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />
+        )}
+        {identifier && (
+          <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier} />
+        )}
       </dl>
+      {technicalFields.length > 0 && (
+        <details className="border-t border-editorial-border/70 pt-2">
+          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
+            {t('areas.library.technicalData')}
+          </summary>
+          <dl className="mt-3 space-y-2.5">
+            {technicalFields.map(([label, value]) => (
+              <StatBlock
+                key={label}
+                label={label}
+                value={value}
+                href={value.startsWith('http') ? value : undefined}
+              />
+            ))}
+          </dl>
+        </details>
+      )}
     </Section>
   );
 }
@@ -581,31 +658,88 @@ function NotesTab({
   const { t } = useTranslation();
   const [draft, setDraft] = useState(notes ?? '');
   const debouncedDraft = useDebounce(draft, NOTES_SAVE_DELAY_MS);
+  /** L'ultimo testo **arrivato** al deposito. */
   const savedRef = useRef(notes ?? '');
+  /**
+   * L'ultimo testo per cui si è provato a salvare, riuscito o no.
+   *
+   * Sta separato da quello salvato: prima si segnava come salvato il testo
+   * appena mandato, e un salvataggio fallito diventava indistinguibile da uno
+   * riuscito — nessun tentativo successivo, e uscendo dall'opera la nota si
+   * perdeva.
+   */
+  const attemptRef = useRef<string | null>(null);
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
 
   // Un'altra opera è stata aperta: si riparte dalle sue note, non da quelle
   // lasciate a metà sull'opera precedente.
   useEffect(() => {
     setDraft(notes ?? '');
     savedRef.current = notes ?? '';
+    attemptRef.current = null;
+    setSaveState('saved');
   }, [sourceId, notes]);
+
+  const save = useCallback(
+    async (value: string) => {
+      attemptRef.current = value;
+      setSaveState('saving');
+      try {
+        await onCorrectField('notes', value || null);
+        savedRef.current = value;
+        if (attemptRef.current === value) setSaveState('saved');
+      } catch {
+        if (attemptRef.current === value) setSaveState('error');
+      }
+    },
+    [onCorrectField],
+  );
 
   useEffect(() => {
     if (debouncedDraft === savedRef.current) return;
-    savedRef.current = debouncedDraft;
-    void onCorrectField('notes', debouncedDraft || null);
-  }, [debouncedDraft, onCorrectField]);
+    // Un testo già provato non si ritenta da sé: scrivendo si riprova, e
+    // sull'errore resta il comando per riprovare quello che c'è.
+    if (attemptRef.current === debouncedDraft) return;
+    void save(debouncedDraft);
+  }, [debouncedDraft, save]);
 
   return (
-    <MarkdownEditor
-      identityKey={sourceId}
-      value={draft}
-      onChange={setDraft}
-      markdownEnabled
-      fillHeight
-      initialMode="preview"
-      placeholder={t('areas.library.notesPlaceholder')}
-    />
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
+      <span
+        className={`flex shrink-0 items-center justify-end gap-1 text-xs ${
+          saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'
+        }`}
+        role="status"
+      >
+        {saveState === 'saving' ? (
+          <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+        ) : saveState === 'error' ? (
+          <AlertCircle size={12} aria-hidden="true" />
+        ) : (
+          <Check size={12} aria-hidden="true" />
+        )}
+        {t(`areas.library.notes${saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving' : 'SaveError'}`)}
+        {saveState === 'error' && (
+          <IconButton
+            size="xs"
+            tone="danger"
+            onClick={() => void save(draft)}
+            title={t('areas.library.notesRetry')}
+          >
+            <RefreshCw size={12} />
+          </IconButton>
+        )}
+      </span>
+      <MarkdownEditor
+        identityKey={sourceId}
+        value={draft}
+        onChange={setDraft}
+        markdownEnabled
+        fillHeight
+        initialMode="preview"
+        placeholder={t('areas.library.notesPlaceholder')}
+      />
+    </div>
   );
 }
 
@@ -618,7 +752,7 @@ function SourceHeaderActions({
   onRefresh,
 }: {
   entry: LibraryCatalogEntry;
-  onRemoved: () => void;
+  onRemoved: () => Promise<void>;
   onSetArchived: (archived: boolean) => Promise<void>;
   onRefresh: () => void;
 }) {
@@ -746,29 +880,4 @@ function CollectionPicker({
       </ClickPopover>
     </div>
   );
-}
-
-/** Stessa lettura della riga di catalogo: la disponibilità la dice il deposito. */
-function availabilityText(
-  entry: LibraryCatalogEntry,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  const principal = entry.sizes.find((size) => size.sizeTag === entry.principalSize);
-  const summary = summarizeAvailability(
-    entry.localPages,
-    entry.expectedPages ?? 0,
-    principal?.missing ?? 0,
-  );
-  // Un'opera in Biblioteca è sempre online: quello che cambia è se c'è
-  // *anche* qualcosa sul computer, non se è raggiungibile. Quando c'è,
-  // si dice anche a quale risoluzione — altrimenti "immagini locali" da
-  // solo non dice a quanto sono state scaricate.
-  const online = t('areas.library.viewOnline');
-  if (summary.availability === 'catalogued') return online;
-  const resolution = entry.principalSize ? resolutionLabel(entry.principalSize, t) : null;
-  const local =
-    summary.availability === 'complete'
-      ? t('areas.library.availabilityComplete')
-      : t('areas.library.availabilityPartial', { done: summary.presentPages, total: summary.expectedPages });
-  return resolution ? `${online} · ${local} (${resolution})` : `${online} · ${local}`;
 }

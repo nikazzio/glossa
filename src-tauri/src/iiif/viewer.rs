@@ -77,18 +77,59 @@ impl From<manifest::Manifest> for ViewerManifest {
 #[tauri::command]
 pub async fn iiif_viewer_manifest(
     app: tauri::AppHandle,
+    writes: tauri::State<'_, crate::db::DbWriteCoordinator>,
     url: String,
     provider_key: Option<String>,
     version_id: Option<String>,
 ) -> Result<ViewerManifest, String> {
-    if let (Some(provider), Some(version)) = (provider_key.as_deref(), version_id.as_deref()) {
-        if let Some(parsed) = manifest_from_vault(&app, provider, version) {
-            return Ok(parsed);
+    let parsed = match (provider_key.as_deref(), version_id.as_deref()) {
+        (Some(provider), Some(version)) => manifest_from_vault(&app, provider, version),
+        _ => None,
+    };
+    let parsed = match parsed {
+        Some(parsed) => parsed,
+        None => {
+            let request = crate::httpcache::request::CacheRequest::Remote { url, provider_key };
+            let bytes = crate::httpcache::commands::bytes_of(&app, &request).await?;
+            pages_of(&bytes)?
         }
+    };
+    if let Some(version) = version_id.as_deref() {
+        record_expected_pages(&app, &writes, version, parsed.pages.len() as i64).await;
     }
-    let request = crate::httpcache::request::CacheRequest::Remote { url, provider_key };
-    let bytes = crate::httpcache::commands::bytes_of(&app, &request).await?;
-    pages_of(&bytes)
+    Ok(parsed)
+}
+
+/// Quante pagine ha il libro, secondo il manifesto appena letto.
+///
+/// Lo scriveva soltanto lo scaricamento del libro intero: chi conservava una
+/// pagina sola dal visore lasciava in piedi il conteggio dichiarato dalla
+/// ricerca — a volte uno — e la scheda diceva «1 di 1 · completa» per un
+/// manoscritto di trecento carte. Il manifesto è la stessa fonte in entrambi i
+/// casi: lo si registra da qualunque strada arrivi.
+async fn record_expected_pages(
+    app: &tauri::AppHandle,
+    writes: &tauri::State<'_, crate::db::DbWriteCoordinator>,
+    version_id: &str,
+    total: i64,
+) {
+    if total <= 0 {
+        return;
+    }
+    let _write_guard = writes.lock().await;
+    let Ok(path) = crate::storage_config::db_path(app) else {
+        return;
+    };
+    let Ok(conn) = crate::db::open_connection(&path) else {
+        return;
+    };
+    if let Err(error) = conn.execute(
+        "UPDATE source_versions SET expected_asset_count = ?2 \
+         WHERE id = ?1 AND (expected_asset_count IS NULL OR expected_asset_count <> ?2)",
+        rusqlite::params![version_id, total],
+    ) {
+        log::warn!("viewer expected pages not recorded version={version_id} error={error}");
+    }
 }
 
 /// Il manifesto conservato nel deposito, quando c'è ed è leggibile. Un deposito

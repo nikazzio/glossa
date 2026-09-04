@@ -49,6 +49,44 @@ type IconButtonProps = VariantProps<typeof iconButton> &
     tooltipSide?: TooltipSide;
   };
 
+type IconLinkProps = VariantProps<typeof iconButton> & {
+  href: string;
+  children: ReactNode;
+  title: string;
+  ariaLabel?: string;
+  className?: string;
+  tooltipSide?: TooltipSide;
+};
+
+/** Stesso aspetto di `IconButton` per un indirizzo esterno: resta un
+ *  collegamento vero, così vale il tasto centrale e il menu del browser. */
+export function IconLink({
+  href,
+  children,
+  title,
+  ariaLabel,
+  size,
+  tone,
+  className,
+  tooltipSide,
+}: IconLinkProps) {
+  return (
+    <Tooltip label={title} side={tooltipSide}>
+      <span className="inline-flex">
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={ariaLabel ?? title}
+          className={iconButton({ size, tone, className })}
+        >
+          {children}
+        </a>
+      </span>
+    </Tooltip>
+  );
+}
+
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton({
   onClick,
   children,

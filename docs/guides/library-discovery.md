@@ -39,9 +39,9 @@ La Biblioteca mostra **sempre tutti i libri**: è un catalogo, non la vista di u
 
 Su ogni scheda, accanto ai comandi, vedi **a quali workspace appartiene** quel libro: un'etichetta per ognuno. Cliccarne una lo scollega da lì; il comando accanto apre l'elenco dei workspace dove non è ancora, per collegarlo. **Un'opera può stare in più workspace insieme** e non viene mai duplicata: collegarla in due posti non fa due copie, né dei dati né dei file.
 
-Sulla riga restano diretti solo **archivia** ed **elimina**; scarica, verifica, riduci le immagini e libera spazio sono nel menu "···" — sono comandi che si usano più spesso aprendo il libro, dalla tab Copie digitali, che stare a scorrerli riga per riga.
+Sulla riga restano diretti solo **archivia** ed **elimina**; scarica, verifica, riduci le immagini e libera spazio sono nel menu "···" — sono comandi che si usano più spesso aprendo il libro, dalla tab Digitalizzazioni, che stare a scorrerli riga per riga.
 
-Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto scegli natura dell'origine, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
+I **filtri** vivono in una colonna a destra, che si ridimensiona e si richiude come gli altri pannelli laterali: la larghezza e lo stato aperto o chiuso si ricordano, e quando è chiusa un conteggio dice quanti filtri sono attivi. In cima c'è la ricerca — scrivi titolo o autore — e sotto tipo di opera, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
 
 **Ordinamento** — L'ultima tendina decide l'ordine: per titolo (come parte), per autore (le opere senza autore vanno in fondo) oppure per data di aggiunta, dalla più recente. L'ordine scelto entra anche nelle viste salvate.
 
@@ -51,7 +51,7 @@ Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto s
 
 **Collezioni** — Una collezione è un'etichetta che raccoglie opere. Si aggiunge dalla scheda dell'opera, e un'opera può stare in **più collezioni insieme**: non si fonde e non si duplica niente, e togliere un'etichetta non tocca né l'opera né le altre collezioni. Dalla barra di ricerca puoi mostrare solo le opere di una collezione.
 
-Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina, con tutti i dati anagrafici che Glossa conosce per quel libro: titolo, natura dell'origine, autore, data, lingua, editore, altri responsabili, diritti, descrizione fisica, soggetti, volume, descrizione, luogo di origine, provenienza, note, serie/collana, genere/forma, identificativo standard, copertura, opere collegate — un campo che la biblioteca non dichiara mostra «—», non sparisce, così ogni scheda resta leggibile allo stesso modo. Ci sono anche disponibilità, spazio occupato e stato, le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. Nella parte grande della scheda c'è il **visore delle pagine**: sfogli il libro pagina per pagina, con le miniature a fianco, i comandi per la pagina precedente e successiva, il campo per saltare a un numero e lo zoom. Glossa ricorda dove eri arrivato: riaprendo il libro torni lì.
+Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina, con tutti i dati anagrafici che Glossa conosce per quel libro: titolo, tipo di opera, autore, data, lingua, editore, altri responsabili, diritti, descrizione fisica, soggetti, volume, descrizione, luogo di origine, provenienza, note, serie/collana, genere/forma, identificativo standard, copertura, opere collegate — un campo che la biblioteca non dichiara mostra «—», non sparisce, così ogni scheda resta leggibile allo stesso modo. Ci sono anche disponibilità, spazio occupato e stato, le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. Nella parte grande della scheda c'è il **visore delle pagine**: sfogli il libro pagina per pagina, con le miniature a fianco, i comandi per la pagina precedente e successiva, il campo per saltare a un numero e lo zoom. Glossa ricorda dove eri arrivato: riaprendo il libro torni lì.
 
 Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pagine e le miniature si leggono dal disco: compaiono subito, non costano nessuna richiesta alla biblioteca e funzionano anche senza collegamento. Se non hai niente, la pagina si chiede alla biblioteca **in una volta sola**, come immagine intera: è il modo più rapido di vederla. Ingrandendo oltre la sua nitidezza, il visore passa da solo allo zoom a pezzi e chiede alla biblioteca il dettaglio che serve. Alcune biblioteche costruiscono le immagini nel momento in cui gliele chiedi: là la prima apertura può richiedere un minuto, e Glossa ribussa una volta invece di arrendersi — è il motivo per cui certi libri prima non si aprivano affatto. Su quelle biblioteche capita che una singola pagina, a una certa misura, non arrivi mai: Glossa la richiede in un'altra misura, che di solito arriva, invece di dichiararla guasta. L'avviso sull'attesa lunga compare solo dove quella spiegazione è vera, non con tutte le biblioteche.
 
@@ -64,7 +64,20 @@ Le miniature già apparse restano disponibili mentre scorri avanti e indietro;
 anche le pagine già viste vengono riprese dalla memoria di lavoro, non dalla
 biblioteca.
 
-In alto a destra c'è scritto **da dove arriva la pagina che stai guardando**, e sono tre cose diverse: **Dal computer** quando il file è tuo, **Dalla memoria** quando è una pagina già vista di un libro che non hai scaricato, **Dalla biblioteca** quando è appena arrivata — verde finché la biblioteca risponde, smorzato quando non arriva niente. Passandoci sopra leggi anche a quale misura è stata chiesta.
+Il comando di scaricamento nel visore conserva **solo la pagina aperta**, usando
+gli stessi byte che stai già guardando: non la chiede una seconda volta. Mentre
+salva, l'icona gira; quando la pagina è sul computer il comando lascia il posto a
+un segno verde, che è uno stato e non un pulsante spento. Il suggerimento dice
+sempre **a che misura** conserva — quella con cui la pagina è arrivata, che su un
+libro ancora tutto online può essere diversa da quella impostata. La tab
+Digitalizzazioni si aggiorna subito: spazio, conteggio e versioni locali non
+aspettano la riapertura dell'opera.
+
+I comandi del visore stanno tutti a destra — conserva la pagina, riduci,
+ingrandisci, altre opzioni di zoom — la provenienza dell'immagine sta al centro e
+la navigazione fra le pagine a sinistra, con le miniature.
+
+Al centro della barra c'è scritto **da dove arriva la pagina che stai guardando**, e sono tre cose diverse: **File locale** quando è tua, **Memoria temporanea** quando è una pagina già vista di un libro che non hai scaricato, **Biblioteca online** quando è appena arrivata — verde finché la biblioteca risponde, smorzato quando non arriva niente. Passandoci sopra leggi anche a quale misura è stata chiesta.
 
 Se cancelli le pagine locali mentre stai leggendo, Glossa si accorge da sé che quella copia non c'è più: la pagina resta leggibile, e le successive vengono chieste alla biblioteca invece di essere cercate in una cartella che non esiste.
 

@@ -42,6 +42,8 @@ interface SourceLibraryState {
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
   catalog: LibraryCatalogEntry[];
+  catalogLoading: boolean;
+  catalogError: string | null;
   /** Il catalogo: **tutte** le opere, sempre (#213). */
   loadCatalog: () => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
@@ -57,12 +59,20 @@ interface SourceLibraryState {
   deleteCollection: (collectionId: string) => Promise<void>;
   refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
+  detailLoading: boolean;
+  detailError: string | null;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   /** Rilegge il manifesto da cui l'opera è stata aggiunta e ne riscrive i
    *  dati anagrafici, cancellando ogni correzione a mano (Note escluse). */
   resyncSource: (sourceId: string) => Promise<void>;
   clearError: () => void;
 }
+
+/**
+ * L'opera per cui è partita l'ultima lettura della scheda: le risposte più
+ * lente delle altre non contano.
+ */
+let pendingDetailSource: string | null = null;
 
 export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   detail: null,
@@ -147,12 +157,17 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   },
 
   catalog: [],
+  catalogLoading: false,
+  catalogError: null,
 
   loadCatalog: async () => {
+    set({ catalogLoading: true, catalogError: null });
     try {
       set({ catalog: await listLibraryCatalog() });
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error) });
+      set({ catalogError: getErrorMessage(error) });
+    } finally {
+      set({ catalogLoading: false });
     }
   },
 
@@ -163,6 +178,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       await get().loadLibraryManifestUrls();
     } catch (error: unknown) {
       set({ error: getErrorMessage(error) });
+      throw error;
     }
   },
 
@@ -220,9 +236,24 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     }));
   },
 
+  detailLoading: false,
+  detailError: null,
+
   loadDetail: async (sourceId) => {
-    const detail = await getLibrarySourceDetail(sourceId);
-    set({ detail });
+    // Aprire un'opera e subito un'altra fa partire due letture: se la prima
+    // risponde per ultima, la scheda mostrerebbe l'opera che non si sta
+    // guardando, e l'attesa non finirebbe più. Vale solo la lettura dell'opera
+    // chiesta per ultima.
+    pendingDetailSource = sourceId;
+    set({ detail: null, detailLoading: true, detailError: null });
+    try {
+      const detail = await getLibrarySourceDetail(sourceId);
+      if (pendingDetailSource !== sourceId) return;
+      set({ detail, detailLoading: false });
+    } catch (error: unknown) {
+      if (pendingDetailSource !== sourceId) return;
+      set({ detailError: getErrorMessage(error), detailLoading: false });
+    }
   },
 
   toggleWorkspaceLink: async (workspaceId, sourceId, linked) => {
