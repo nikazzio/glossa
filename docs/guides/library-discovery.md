@@ -20,7 +20,9 @@ Cosa accetta ciascuna:
 
 La ricerca non scarica materiale.
 
-I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
+I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
+
+Di ogni risultato Glossa conserva **tutto quello che la biblioteca ha detto**, anche i dati che nessuna schermata mostra oggi: rifare la ricerca domani per recuperarli sarebbe lavoro sprecato, e la biblioteca potrebbe non ridarli uguali.
 
 ## Aggiungere una fonte alla Biblioteca
 
@@ -51,7 +53,7 @@ Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto s
 
 Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina, con tutti i dati anagrafici che Glossa conosce per quel libro: titolo, natura dell'origine, autore, data, lingua, editore, altri responsabili, diritti, descrizione fisica, soggetti, volume, descrizione, luogo di origine, provenienza, note, serie/collana, genere/forma, identificativo standard, copertura, opere collegate — un campo che la biblioteca non dichiara mostra «—», non sparisce, così ogni scheda resta leggibile allo stesso modo. Ci sono anche disponibilità, spazio occupato e stato, le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. Nella parte grande della scheda c'è il **visore delle pagine**: sfogli il libro pagina per pagina, con le miniature a fianco, i comandi per la pagina precedente e successiva, il campo per saltare a un numero e lo zoom. Glossa ricorda dove eri arrivato: riaprendo il libro torni lì.
 
-Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pagine e le miniature si leggono dal disco: compaiono subito, non costano nessuna richiesta alla biblioteca e funzionano anche senza collegamento. Se non hai niente, la pagina si chiede alla biblioteca **in una volta sola**, come immagine intera: è il modo più rapido di vederla. Ingrandendo oltre la sua nitidezza, il visore passa da solo allo zoom a pezzi e chiede alla biblioteca il dettaglio che serve. Alcune biblioteche costruiscono le immagini nel momento in cui gliele chiedi: la prima apertura può richiedere un minuto, e il visore te lo dice invece di lasciarti davanti a una rotella.
+Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pagine e le miniature si leggono dal disco: compaiono subito, non costano nessuna richiesta alla biblioteca e funzionano anche senza collegamento. Se non hai niente, la pagina si chiede alla biblioteca **in una volta sola**, come immagine intera: è il modo più rapido di vederla. Ingrandendo oltre la sua nitidezza, il visore passa da solo allo zoom a pezzi e chiede alla biblioteca il dettaglio che serve. Alcune biblioteche costruiscono le immagini nel momento in cui gliele chiedi: là la prima apertura può richiedere un minuto, e Glossa ribussa una volta invece di arrendersi — è il motivo per cui certi libri prima non si aprivano affatto. Su quelle biblioteche la pagina si chiede sempre a piena risoluzione: pesa un po' di più ma arriva, mentre chiederla rimpicciolita è la richiesta che lì si perde. L'avviso sull'attesa lunga compare solo dove quella spiegazione è vera, non con tutte le biblioteche.
 
 Quando l'indice del libro dichiara misure già pronte, Glossa usa la più piccola
 che resta nitida nel visore. Altrimenti usa subito un dimezzamento della pagina:

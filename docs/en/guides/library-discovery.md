@@ -20,7 +20,9 @@ What each one accepts:
 
 Searching downloads nothing.
 
-Results appear as a list, each with a thumbnail and essential data. Selecting a result expands the row to show its full title, description, and all available metadata.
+Results appear as a list, each with a thumbnail and essential data: author, date, **how many pages the work has**, and which library it comes from. The page count is visible without expanding the row, because that is what makes you decide whether the work is worth a look. When the catalogue does not declare it — which happens with manuscripts — the entry is simply absent, rather than showing a zero that would be untrue. Selecting a result expands the row to show its full title, description, and all available metadata.
+
+For every result Glossa keeps **everything the library said**, including data no screen shows today: searching again tomorrow to recover it would be wasted work, and the library might not give it back the same.
 
 Searching never downloads material.
 
@@ -53,7 +55,7 @@ Above the list sits the **search bar**: type a title or an author, and next to i
 
 Clicking the title opens the **work's page**, full width, with every bibliographic detail Glossa knows for that book: title, origin nature, author, date, language, publisher, other contributors, rights, physical description, subjects, volume, description, place of origin, provenance, notes, series, genre/form, standard identifier, coverage, related works — a field the library does not declare shows "—" instead of disappearing, so every work's page reads the same way. There is also availability, space used and status, the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. The large part of the page holds the **page viewer**: you browse the book page by page, with thumbnails alongside, previous and next commands, a field to jump to a number, and zoom. Glossa remembers where you were: reopening the book takes you back there.
 
-The viewer **uses what you have on your computer**. If you downloaded the book, pages and thumbnails are read from disk: they appear at once, cost the library no request at all, and work with no connection. If you have nothing, the page is asked for **in a single request**, as a whole image: it is the fastest way to see it. Zoom past its sharpness and the viewer switches to tiled zoom on its own, asking the library only for the detail you need. Some libraries build the images the moment you ask for them: the first opening can take a minute, and the viewer says so instead of leaving you with a spinner.
+The viewer **uses what you have on your computer**. If you downloaded the book, pages and thumbnails are read from disk: they appear at once, cost the library no request at all, and work with no connection. If you have nothing, the page is asked for **in a single request**, as a whole image: it is the fastest way to see it. Zoom past its sharpness and the viewer switches to tiled zoom on its own, asking the library only for the detail you need. Some libraries build the images the moment you ask for them: there the first opening can take a minute, and Glossa knocks a second time instead of giving up — which is why some books would not open at all before. On those libraries the page is always asked for at full resolution: it weighs a little more but it arrives, whereas asking for it scaled down is the request that gets lost there. The notice about the long wait appears only where that explanation is true, not for every library.
 
 When the book index already declares ready-made sizes, Glossa uses the smallest
 one that remains sharp in the viewer. Otherwise it immediately uses a halving

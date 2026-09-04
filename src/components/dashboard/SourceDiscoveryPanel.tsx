@@ -125,7 +125,11 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
   const pageUrl = !isManifest(card) ? card.pageUrl : null;
   const catalogUrl = !isManifest(card) ? card.catalogUrl : null;
   const stats = sourceStats(card, t, { includeCatalogUrl: false });
-  const metaParts = [card.creator, card.date, sourceTypeLabel(card, providerLabel)].filter(Boolean) as string[];
+  // Il numero di pagine sta già fra i dati della scheda aperta: nella riga
+  // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
+  // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
+  const pageCount = card.itemCount !== null ? t('dashboard.discovery.pagesCount', { count: card.itemCount }) : null;
+  const metaParts = [card.creator, card.date, ...(expanded ? [] : [pageCount]), sourceTypeLabel(card, providerLabel)].filter(Boolean) as string[];
 
   return (
     <motion.article

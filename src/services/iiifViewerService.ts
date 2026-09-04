@@ -141,6 +141,48 @@ export function wholePageUrl(imageService: string, width = WHOLE_PAGE_WIDTH_PX):
 export const MAX_SIZE = 'max';
 
 /**
+ * Biblioteche che ricavano l'immagine al momento in cui la si chiede, invece di
+ * servirne una già pronta.
+ *
+ * Cambia tre comportamenti del visore: la prima apertura può fallire e va
+ * ritentata, si avvisa chi guarda che l'attesa è normale, e la pagina si chiede
+ * **intera** invece che rimpicciolita.
+ *
+ * Misurato il 4 settembre 2026 su Internet Archive, su un libro di 308 pagine:
+ * l'indice fallisce alla prima richiesta dopo 60 secondi e arriva alla seconda
+ * in 1,3 s; e le pagine chieste rimpicciolite falliscono dopo 60 secondi in
+ * modo ripetibile (pagine 22, 26, 33: tre volte su tre), mentre le stesse
+ * pagine chieste intere arrivano in circa 3 secondi. Le miniature restano
+ * piccole: alla misura che chiediamo rispondono sempre, in meno di un secondo.
+ */
+const LIBRARIES_THAT_BUILD_ON_DEMAND: ReadonlySet<string> = new Set(['archive_org']);
+
+export function buildsImagesOnDemand(providerKey: string | null): boolean {
+  return providerKey !== null && LIBRARIES_THAT_BUILD_ON_DEMAND.has(providerKey);
+}
+
+/**
+ * L'indice del libro, con **un solo nuovo tentativo** dove la biblioteca lo
+ * costruisce al momento.
+ *
+ * Il primo tentativo fa partire la costruzione e scade prima che finisca; il
+ * secondo trova il lavoro già fatto. Misurato: 60 secondi di attesa e un errore,
+ * poi 1,3 secondi e l'indice. Altrove non si ritenta: raddoppierebbe l'attesa
+ * di un indirizzo davvero rotto senza nessun guadagno.
+ */
+export async function fetchViewerManifestWithRetry(
+  manifestUrl: string,
+  providerKey: string | null,
+): Promise<ViewerManifest> {
+  try {
+    return await fetchViewerManifest(manifestUrl, providerKey);
+  } catch (error: unknown) {
+    if (!buildsImagesOnDemand(providerKey)) throw error;
+    return fetchViewerManifest(manifestUrl, providerKey);
+  }
+}
+
+/**
  * Dove chiedere alla biblioteca la pagina **alla misura di una cartella del
  * deposito**.
  *

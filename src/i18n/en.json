@@ -1194,6 +1194,8 @@
       "volume": "Volume",
       "date": "Date",
       "pages": "Pages",
+      "pagesCount_one": "{{count}} page",
+      "pagesCount_other": "{{count}} pages",
       "language": "Language",
       "type": "Type",
       "collection": "Collection",

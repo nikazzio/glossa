@@ -35,6 +35,7 @@ const baseInput = {
   holdingInstitution: null,
   catalogUrl: null,
   pageUrl: null,
+  raw: {},
 };
 
 describe('metadati della fonte', () => {

@@ -19,10 +19,12 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { ThumbnailRail } from './ThumbnailRail';
 import { createControlledIiifTileSource } from './iiifTileBridge';
 import {
+  buildsImagesOnDemand,
   fetchIiifBytes,
-  fetchViewerManifest,
+  fetchViewerManifestWithRetry,
   getLastViewedPage,
   infoJsonUrl,
+  MAX_SIZE,
   pageSourceUrl,
   preferredPageWidth,
   setLastViewedPage,
@@ -121,6 +123,9 @@ export function PageViewer({
     // pagina — per una sola apertura.
   }, [manifestUrl, sourceId]);
 
+  // Il messaggio spiega perché *questa* biblioteca è lenta: dirlo dove non è
+  // vero — la francese, la vaticana — è una spiegazione sbagliata.
+  const explainsSlowness = buildsImagesOnDemand(providerKey);
   const stillOpening = (!manifest && !manifestError) || pageLoading;
   useEffect(() => {
     if (!stillOpening) {
@@ -149,7 +154,7 @@ export function PageViewer({
     setManifestError(null);
     void (async () => {
       try {
-        const result = await fetchViewerManifest(manifestUrl, providerKey);
+        const result = await fetchViewerManifestWithRetry(manifestUrl, providerKey);
         // Un motore che rispondesse con qualcosa senza `pages` non deve
         // restare a schermo come un caricamento infinito: è un errore, va
         // detto come tale.
@@ -233,8 +238,11 @@ export function PageViewer({
      */
     const openWholePage = async () => {
       // Nessuna attesa aggiuntiva: se l'indice porta già misure pronte si usa
-      // la più piccola sufficiente, altrimenti il dimezzamento misurato.
-      const size = localSize ?? String(preferredPageWidth(page));
+      // la più piccola sufficiente, altrimenti il dimezzamento misurato. Dove
+      // l'immagine viene ricavata al momento, invece, si chiede la pagina
+      // intera: rimpicciolirla è la richiesta che lì fallisce.
+      const size =
+        localSize ?? (buildsImagesOnDemand(providerKey) ? MAX_SIZE : String(preferredPageWidth(page)));
       const bytes = await pageImage(
         {
           kind: 'page',
@@ -440,7 +448,7 @@ export function PageViewer({
           {!manifestError && !manifest && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-panel">
               <Spinner label={t('areas.library.viewerLoading')} />
-              {openingIsSlow && (
+              {openingIsSlow && explainsSlowness && (
                 <p className="max-w-xs text-center text-xs text-editorial-muted">
                   {t('areas.library.viewerPreparing')}
                 </p>
@@ -458,7 +466,7 @@ export function PageViewer({
                 label={t('areas.library.viewerLoading')}
                 className="rounded bg-surface-panel/90 px-2 py-1 text-xs text-editorial-muted shadow"
               />
-              {openingIsSlow && (
+              {openingIsSlow && explainsSlowness && (
                 <p className="max-w-xs rounded bg-surface-panel/90 px-2 py-1 text-center text-xs text-editorial-muted shadow">
                   {t('areas.library.viewerPreparing')}
                 </p>

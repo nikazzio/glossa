@@ -124,6 +124,9 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         // manifesto preso al volo.
         catalogUrl: isManifest(card) ? null : card.catalogUrl,
         pageUrl: card.pageUrl,
+        // Solo la scheda di ricerca porta il deposito di tutto il resto: un
+        // manifesto preso al volo non è una risposta di catalogo.
+        raw: isManifest(card) ? {} : (card.raw ?? {}),
       });
       set((state) => ({
         addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),
@@ -273,6 +276,10 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       holdingInstitution: card.holdingInstitution,
       catalogUrl: null,
       pageUrl: card.pageUrl,
+      // Risincronizzare legge il manifesto, non la risposta di ricerca: il
+      // deposito dei dati di catalogo non si può riempire da qui, e
+      // sovrascriverlo con niente perderebbe quello che avevamo.
+      raw: {},
     });
 
     await get().loadDetail(sourceId);

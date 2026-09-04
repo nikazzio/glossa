@@ -242,6 +242,35 @@ backend immediatamente prima di agire e vengono rifiutate se uno di questi lavor
 delle scritture usato dalla messa in coda, evitando nuove partenze nel mezzo
 dell'operazione.
 
+## Ricerca nelle biblioteche
+
+Ogni risultato conserva **tutto** quello che la biblioteca ha risposto. I dati
+con un significato stabile hanno un campo proprio in `DiscoveryResult`; il resto
+va in `raw: BTreeMap<String, Vec<String>>`, con la chiave così come la nomina la
+biblioteca e i valori sempre in elenco perché molti campi si ripetono. È un
+deposito, non una struttura su cui costruire logica: quando un dato serve
+davvero gli si dà un campo suo. `raw` viaggia fino a `source_versions.metadata`
+quando l'opera entra in Biblioteca; risincronizzare dal manifesto **non** lo
+sovrascrive, perché il manifesto non è una risposta di catalogo.
+
+**Gallica** dichiara il numero di immagini dentro `dc:format`, in chiaro
+(«Nombre total de vues : 588»), verificato coincidere con il servizio di
+paginazione ufficiale. Misurato su 135 schede reali: 105 lo dichiarano, e i
+manoscritti non lo dichiarano mai — per loro `dc:format` porta la descrizione
+fisica, dove un numero di fogli non è un numero di vedute. Dello stesso blocco
+si leggono ora anche i soggetti e `srw:extraRecordData`, da cui vengono
+miniatura e collegamento **dichiarati** invece di quelli indovinati dall'ARK: per
+i periodici il collegamento vero finisce in `/date`.
+
+**Internet Archive** accetta `fl[]=*` e restituisce ogni campo indicizzato.
+Misurato a regime su venti risultati: i venti campi di prima costavano 0,68 s e
+12,6 KB, tutti costano 0,86 s e 43 KB. Si preferisce +0,24 s una volta per
+ricerca a una richiesta per opera il giorno in cui serve un dato che non avevamo
+chiesto.
+
+Vaticana ed e-codices si leggono raschiando la pagina web: non c'è una risposta
+strutturata da conservare, e `raw` resta vuoto.
+
 ## Scaricamento IIIF
 
 Il flusso di una digitalizzazione è:
@@ -479,6 +508,26 @@ su una pagina, `CacheRequest::Page` usa la stessa chiave stabile e `resolve`
 legge i byte dalla cache **prima** di considerare la rete. L'indirizzo remoto
 non partecipa alla chiave. Questo evita un secondo download senza trattenere in
 RAM tutte le pagine visitate.
+
+### Biblioteche che ricavano l'immagine su richiesta
+
+`buildsImagesOnDemand` (oggi solo `archive_org`) cambia tre comportamenti del
+visore, tutti misurati il 4 settembre 2026 su un libro di 308 pagine:
+
+- **l'indice si richiede una seconda volta.** Il primo tentativo fa partire la
+  costruzione e scade a 60 secondi con un errore del loro gateway; il secondo
+  trova il lavoro fatto e risponde in 1,3 s. Altrove non si ritenta:
+  raddoppierebbe l'attesa di un indirizzo davvero rotto.
+- **la pagina si chiede intera** (`max`), non rimpicciolita. Su quelle pagine la
+  richiesta con ridimensionamento fallisce a 60 secondi in modo ripetibile
+  (pagine 22, 26, 33: tre volte su tre, anche una richiesta alla volta con
+  cinque secondi di pausa, anche chiedendo una misura che il servizio dichiara
+  pronta), mentre la stessa pagina intera arriva in circa 3 secondi. Costa 1,4 MB
+  invece di 0,45. Le miniature restano piccole: alla misura che chiediamo
+  rispondono sempre, sotto il secondo.
+- **il messaggio sull'attesa lunga si mostra solo qui.** Prima compariva dopo
+  otto secondi con qualunque biblioteca, spiegando un comportamento che altrove
+  non esiste.
 
 ### Rimozione di un'opera e cache dei byte — limite noto
 
