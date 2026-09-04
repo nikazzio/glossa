@@ -43,6 +43,7 @@ import { keepViewerPage } from '../../services/cacheService';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
+import { resolutionLabel } from '../../utils/resolutionLabel';
 import { toast } from 'sonner';
 
 /** Dove si è arrivati nel libro, per chi sta fuori dal visore. */
@@ -72,6 +73,9 @@ interface PageViewerProps {
   /** Avvisa chi ospita il visore della pagina mostrata, così altri riquadri
    *  della stessa schermata possono dirla senza chiederla al visore. */
   onPageChange?: (page: ViewerPagePosition) => void;
+  /** Una pagina è appena entrata nel deposito: chi mostra le versioni locali
+   *  deve rileggerle, perché spazio e conteggio sono cambiati. */
+  onPageKept?: () => void;
 }
 
 /**
@@ -133,6 +137,7 @@ export function PageViewer({
   preferredLocalSize = null,
   onLocalSizeChange,
   onPageChange,
+  onPageKept,
 }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -582,6 +587,11 @@ export function PageViewer({
                   ? 'saved'
                   : 'available'
             }
+            // La misura non è quella delle impostazioni: è quella con cui la
+            // pagina è arrivata, perché il comando riusa i byte già a schermo
+            // senza chiederli di nuovo. Dirla evita di ritrovarsi una versione
+            // locale a una misura che non si era scelta.
+            keepSize={pageRequest?.kind === 'page' ? pageRequest.size : null}
             savingPage={savingPage}
             onDownloadPage={() => {
               const saved = pageRequest;
@@ -596,6 +606,7 @@ export function PageViewer({
                     setPageOrigin({ source: 'vault', size: saved.size });
                   }
                   void refreshLocalSize();
+                  onPageKept?.();
                   toast.success(t('areas.library.viewerPageDownloaded'));
                 })
                 .catch((error: unknown) => {
@@ -703,6 +714,9 @@ interface ViewerToolbarProps {
    * comando dichiarava sul computer una pagina appena chiesta alla biblioteca.
    */
   keepState: 'unavailable' | 'available' | 'saved';
+  /** La misura con cui la pagina a schermo è arrivata, cioè quella con cui
+   *  verrebbe conservata. */
+  keepSize: string | null;
   /** Vero mentre la pagina aperta sta entrando nel deposito. */
   savingPage: boolean;
   onDownloadPage: () => void;
@@ -788,6 +802,7 @@ function ViewerToolbar({
   onZoomToFit,
   onZoomToActualSize,
   keepState,
+  keepSize,
   savingPage,
   onDownloadPage,
   thumbnailsOpen,
@@ -845,7 +860,12 @@ function ViewerToolbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        <PageKeepButton saving={savingPage} state={keepState} onDownload={onDownloadPage} />
+        <PageKeepButton
+          saving={savingPage}
+          state={keepState}
+          size={keepSize}
+          onDownload={onDownloadPage}
+        />
         <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
           <ZoomOut size={14} />
@@ -902,13 +922,16 @@ function ViewerToolbar({
 function PageKeepButton({
   saving,
   state,
+  size,
   onDownload,
 }: {
   saving: boolean;
   state: 'unavailable' | 'available' | 'saved';
+  size: string | null;
   onDownload: () => void;
 }) {
   const { t } = useTranslation();
+  const sizeLabel = size ? resolutionLabel(size, t) : null;
 
   if (saving) {
     return (
@@ -919,11 +942,16 @@ function PageKeepButton({
   }
 
   if (state === 'saved') {
+    // La misura serve anche qui: sapere *quale* versione locale contiene questa
+    // pagina è la differenza fra «ce l'ho» e «ce l'ho a quella giusta».
+    const label = sizeLabel
+      ? t('areas.library.viewerPageOnComputerAt', { size: sizeLabel })
+      : t('areas.library.viewerPageOnComputer');
     return (
-      <Tooltip label={t('areas.library.viewerPageOnComputer')} side="bottom">
+      <Tooltip label={label} side="bottom">
         <span
           role="status"
-          aria-label={t('areas.library.viewerPageOnComputer')}
+          aria-label={label}
           className="flex h-7 w-7 items-center justify-center text-editorial-success"
         >
           <HardDriveDownload size={14} />
@@ -937,7 +965,11 @@ function PageKeepButton({
       size="sm"
       onClick={onDownload}
       disabled={state === 'unavailable'}
-      title={t('areas.library.viewerDownloadPage')}
+      title={
+        sizeLabel
+          ? t('areas.library.viewerDownloadPageAt', { size: sizeLabel })
+          : t('areas.library.viewerDownloadPage')
+      }
     >
       <Download size={14} />
     </IconButton>

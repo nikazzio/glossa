@@ -134,6 +134,9 @@ export function LibrarySourcePage({
   /** La digitalizzazione per cui la scheda è già stata riletta dopo il nuovo
    *  conteggio: una volta basta, senza si rileggerebbe a ogni pagina. */
   const countRefreshedFor = useRef<string | null>(null);
+  /** Cresce ogni volta che il visore conserva una pagina: la scheda delle
+   *  digitalizzazioni rilegge il deposito senza aspettare un lavoro in coda. */
+  const [keptPages, setKeptPages] = useState(0);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
@@ -248,6 +251,7 @@ export function LibrarySourcePage({
             providerKey={manifestVersion.providerKey}
             preferredLocalSize={chosenLocalSize}
             onLocalSizeChange={setReadingLocalSize}
+            onPageKept={() => setKeptPages((count) => count + 1)}
             onPageChange={(position) => {
               // Il manifesto letto dal visore dice quante pagine ha il libro, e
               // il motore lo registra. La scheda però tiene in mano il numero
@@ -342,6 +346,7 @@ export function LibrarySourcePage({
                   openVersionId={manifestVersion?.id ?? null}
                   viewedLocalSize={readingLocalSize}
                   onViewLocalSize={setChosenLocalSize}
+                  reloadToken={keptPages}
                 />
               ) : (
                 <>

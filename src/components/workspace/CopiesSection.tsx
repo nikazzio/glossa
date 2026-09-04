@@ -15,7 +15,6 @@ import {
 import {
   DEFAULT_SIZE_CAP,
   getVersionSizeCap,
-  MAX_SIZE_CAP,
   setVersionSizeCap,
   SIZE_CAPS,
 } from '../../services/downloadSettingsService';
@@ -23,17 +22,8 @@ import { confirm } from '../../stores/confirmStore';
 import { freeVersionPages, freeVersionSize } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { humanSize } from '../../utils';
+import { resolutionLabel } from '../../utils/resolutionLabel';
 import type { LibraryCatalogEntry, LibrarySourceDetail, LibrarySourceVersion } from '../../types';
-
-/** L'etichetta di una risoluzione — con l'unità di misura, non il numero
- *  grezzo, e "Massima disponibile" per l'ultimo scalino della scala. */
-export function resolutionLabel(tag: string, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (tag === MAX_SIZE_CAP) return t('settings.download.sizeCapMax');
-  // Solo un numero è davvero un lato lungo in pixel: una biblioteca può
-  // dichiarare una risoluzione fuori scala con un'etichetta propria (es.
-  // "full"), e inventarle un'unità di misura sarebbe falso.
-  return /^\d+$/.test(tag) ? t('settings.download.pixels', { value: tag }) : tag;
-}
 
 /** Quanto c'è sul computer, per una copia: le risoluzioni presenti, quale è
  *  la principale, quante pagine e quanto pesano. */
@@ -63,10 +53,14 @@ export function CopiesSection({
   openVersionId = null,
   viewedLocalSize = null,
   onViewLocalSize,
+  reloadToken = 0,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
   onRefresh: () => void;
+  /** Cambia quando qualcosa fuori da questa scheda ha toccato i file — una
+   *  pagina conservata dal visore: le versioni locali si rileggono. */
+  reloadToken?: number;
   /** La digitalizzazione che il visore sta mostrando: solo le sue versioni
    *  locali si possono aprire da qui. */
   openVersionId?: string | null;
@@ -96,6 +90,7 @@ export function CopiesSection({
             version={version}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
+            reloadToken={reloadToken}
             isOpenInViewer={version.id === openVersionId}
             viewedLocalSize={viewedLocalSize}
             onViewLocalSize={onViewLocalSize}
@@ -135,6 +130,7 @@ function CopyDetails({
   version,
   entry,
   onRefresh,
+  reloadToken,
   isOpenInViewer,
   viewedLocalSize,
   onViewLocalSize,
@@ -142,6 +138,7 @@ function CopyDetails({
   version: LibrarySourceVersion;
   entry?: LibraryCatalogEntry;
   onRefresh: () => void;
+  reloadToken: number;
   isOpenInViewer: boolean;
   viewedLocalSize: string | null;
   onViewLocalSize?: (sizeTag: string | null) => void;
@@ -178,7 +175,7 @@ function CopyDetails({
     return () => {
       cancelled = true;
     };
-  }, [version.id, reloadTick]);
+  }, [version.id, reloadTick, reloadToken]);
 
   const reload = () => setReloadTick((tick) => tick + 1);
 
