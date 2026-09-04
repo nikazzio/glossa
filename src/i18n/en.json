@@ -697,12 +697,21 @@
         "maxAttempts": "How many times to retry the same page before calling it not downloaded. Between attempts the wait grows on its own.",
         "slowLibraryWaitSecs": "How long to wait for an answer before considering it lost. Raise it for libraries that build images on the spot; lowering it too much fails pages that were still arriving."
       },
+      "unit": {
+        "seconds": "seconds",
+        "perMinute": "per minute"
+      },
+      "subtab": {
+        "profiles": "Settings",
+        "libraries": "Libraries",
+        "images": "Images"
+      },
       "field": {
         "pagesAtOnce": "Pages at a time",
-        "requestsPerMinute": "Requests per minute",
-        "waitAfterRefusal": "Pause after a refusal (seconds)",
+        "requestsPerMinute": "Requests",
+        "waitAfterRefusal": "Pause after a refusal",
         "maxAttempts": "Attempts",
-        "slowLibraryWaitSecs": "Wait for a slow library (seconds)"
+        "slowLibraryWaitSecs": "Wait for a slow library"
       }
     }
   },
@@ -925,6 +934,11 @@
       "resolutionPages": "{{done}}/{{total}} pages",
       "resolutionsSection": "Downloaded resolutions",
       "localVersionsSection": "Local versions",
+      "localVersionOrigin": "Origin",
+      "localVersionSpace": "Space",
+      "localVersionNotServedLabel": "Not served",
+      "localVersionRead": "Read this version in the viewer",
+      "localVersionBeingRead": "This is the version you are reading: go back to the largest",
       "resolutionPrincipal": "default",
       "derivedLabel": "created on this computer",
       "localVersionDownloaded": "Downloaded from the library",
@@ -1011,6 +1025,7 @@
       "viewerRetry": "Retry",
       "viewerDownloadPage": "Download this page",
       "viewerPageOnComputer": "This page is already on your computer",
+      "viewerPageSaving": "Saving the page to your computer…",
       "viewerPageDownloaded": "Page saved to your computer",
       "viewerPageDownloadFailed": "Could not save the page",
       "viewerNoManifest": "This work has no IIIF digitisation to read yet.",
@@ -1099,6 +1114,7 @@
       },
       "sourceUrlField": "Address",
       "downloadSection": "Download",
+      "downloadOnlyImages": "For now Glossa only downloads image digitisations. For this one you can read the record and open it on the library site.",
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
       "viewOnline": "Online"
@@ -1600,8 +1616,8 @@
       "projects": "Projects",
       "providers": "Providers",
       "ollama": "Ollama",
-      "glossary": "Library",
-      "library": "Library",
+      "glossary": "Language resources",
+      "library": "Language resources",
       "shortcuts": "Interface",
       "troubleshooting": "Troubleshooting",
       "design": "Design System",
@@ -1682,7 +1698,7 @@
       "configDrawerTitle": "Configuration panel",
       "configDrawerDesc": "Opens with the gear icon. Five tabs: Settings (mode, language pair, persona, refine readiness), Translation (translation stage and refine/format when in editorial mode), Quality Control (judge and coherence prompts), Term Registry (glossary assigned to the project), Prompt Preview (preview of the final prompt for every stage).",
       "modalsTitle": "Unified modals",
-      "modalsDesc": "Settings, Library, Projects, Save dialog, Preflight check, and this guide share the same editorial shell: rounded border, header with icon and title, scrollable body, footer with a Close button and an X in the top-right. Every modal can be closed from either the X or the footer button.",
+      "modalsDesc": "Settings, Language resources, Projects, Save dialog, Preflight check, and this guide share the same editorial shell: rounded border, header with icon and title, scrollable body, footer with a Close button and an X in the top-right. Every modal can be closed from either the X or the footer button.",
       "appearanceTitle": "Appearance and typography",
       "appearanceDesc": "Under Settings → Typography you choose the font for the whole interface among Plus Jakarta Sans (default), Geist, Inter, and IBM Plex Sans. The choice applies to the UI immediately and is remembered across sessions. Editorial serif values (italic headings and data) stay in Elstob and are left untouched. The same screen also holds the reading layout and highlight controls.",
       "personaTitle": "Per-project persona",
@@ -1780,7 +1796,7 @@
       "title": "Projects",
       "intro": "Every translation project belongs to a workspace. Phrase Memory and glossaries can be shared by projects in the same workspace; configuration remains specific to the open pipeline. The Translations area lists projects from every workspace.",
       "workspaceIdentityTitle": "Workspace mark",
-      "workspaceIdentityDesc": "In workspace settings, choose one of the available historical-editorial marks before the name and description. The mark identifies the workspace in project lists, the Library, and the side rail; in global areas it accompanies the smaller icon for the item's type. The Translations, Library, Transcriptions, and Analysis icons remain reserved for their respective areas; custom icons are not available.",
+      "workspaceIdentityDesc": "In workspace settings, choose one of the available historical-editorial marks before the name and description. The mark identifies the workspace in project lists, the language resources, and the side rail; in global areas it accompanies the smaller icon for the item's type. The Translations, Library, Transcriptions, and Analysis icons remain reserved for their respective areas; custom icons are not available.",
       "createTitle": "Create a project",
       "createDesc": "You can create a project from a workspace page or the Translations area; the workspace page also lets you open or delete its projects. The new project is created in the workspace you choose.",
       "saveTitle": "Save your work",
@@ -1832,8 +1848,8 @@
       "thinkDesc": "Some Ollama models support an extended reasoning step before responding. In the Ollama section of Settings you can set the Think level: off, low, medium, or high. Higher levels can improve quality at the cost of time and tokens. Only enable it for models that explicitly support thinking — on standard models it has no effect."
     },
     "glossary": {
-      "title": "Library: dictionaries and templates",
-      "intro": "The Library (workspace bar button) is a workspace panel: the title shows the active workspace name. It has three tabs: Dictionaries (glossaries scoped to the workspace), Prompt Templates (global templates filterable by workflow), and Phrases (workspace phrase memory).",
+      "title": "Language resources: dictionaries and templates",
+      "intro": "The language resources (workspace bar button) is a workspace panel: the title shows the active workspace name. It has three tabs: Dictionaries (glossaries scoped to the workspace), Prompt Templates (global templates filterable by workflow), and Phrases (workspace phrase memory).",
       "libraryTitle": "Workspace dictionaries",
       "libraryDesc": "In the Dictionaries tab you can create new dictionaries, rename them with double-click, duplicate (Fork), delete, import terms from CSV/TSV, and edit entries inline by expanding a dictionary. A dictionary can be assigned as the active glossary of the current project with the Assign button. The same dictionary can be linked to several workspaces: it stays one dictionary, and the entries you add show up everywhere it is linked. If one workspace needs an entry translated differently, correct it there: it applies only in that workspace and the original does not change.",
       "iiifTitle": "Source Library",
@@ -1849,7 +1865,7 @@
       "auditTitle": "Audit and glossary",
       "auditDesc": "The AI Judge explicitly checks adherence to the assigned dictionary and flags every deviation as a 'glossary' category issue, with severity and suggested fix. Particularly useful for technical, legal, or academic texts where terminology must remain stable.",
       "templatesTitle": "Prompt templates",
-      "templatesDesc": "In the Prompt Templates tab of the Library you manage the global collection of templates, scoped by context: Stage (for translation, refine, format prompts), Audit (for judge and coherence), Persona (for system prompt openers). Create a template by setting name, context, and text; use the wand in the creation form to refine the text with an LLM. Saved templates are recallable via the bookmark buttons next to each matching prompt."
+      "templatesDesc": "In the Prompt Templates tab of the language resources you manage the global collection of templates, scoped by context: Stage (for translation, refine, format prompts), Audit (for judge and coherence), Persona (for system prompt openers). Create a template by setting name, context, and text; use the wand in the creation form to refine the text with an LLM. Saved templates are recallable via the bookmark buttons next to each matching prompt."
     },
     "shortcuts": {
       "title": "Interface reference",
@@ -1863,7 +1879,7 @@
       "importFile": "Import a source file — bottom of the project rail",
       "openConfig": "Open the pipeline configuration panel",
       "saveProject": "Save the current project",
-      "openLibrary": "Open the Library (dictionaries and templates) — project rail",
+      "openLibrary": "Open the language resources (dictionaries and templates) — project rail",
       "switchLang": "Switch interface language (IT / EN)",
       "openSettings": "Open Settings (providers, typography, data) — bottom of the rail",
       "openHelp": "Open this guide",

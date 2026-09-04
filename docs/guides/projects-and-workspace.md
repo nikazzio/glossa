@@ -11,7 +11,7 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 | Livello | Cosa contiene |
 |---|---|
 | App | API key, connessione Ollama, preferenze interfaccia, default |
-| Workspace | Phrase memory, glossari della Libreria, contesto area traduzioni |
+| Workspace | Phrase memory, glossari delle Risorse linguistiche, contesto area traduzioni |
 | Progetto / pipeline | Lingue, stage, prompt, glossario assegnato, chunk, output |
 
 ## Significato pratico
@@ -45,7 +45,7 @@ Quando crei un workspace, scegli uno dei segni storico-editoriali disponibili,
 come manoscritto, penna, archivio o sigillo. Puoi cambiarlo in seguito dalle
 impostazioni del workspace, insieme a nome e descrizione. Lo stesso segno,
 più evidente nelle liste progetto, compare nella barra laterale, nel contesto
-del workspace, nella Libreria e nelle liste di progetti; passando il mouse
+del workspace, nelle Risorse linguistiche e nelle liste di progetti; passando il mouse
 sull'icona, oppure raggiungendola con la tastiera, resta disponibile il nome
 completo del workspace. Nelle aree globali il segno affianca sempre l'icona
 più piccola del tipo di elemento, senza sostituirla. Questi segni sono distinti
@@ -77,7 +77,7 @@ riepilogo completo degli stati e degli eventuali conteggi.
 | API key | App |
 | Preferenze interfaccia | App |
 | Storage phrase memory | Workspace |
-| Glossari della Libreria | Workspace |
+| Glossari delle Risorse linguistiche | Workspace |
 | Glossario assegnato alla pipeline | Progetto / pipeline |
 | Chunk, bozze, audit, note | Progetto / pipeline |
 
@@ -136,7 +136,7 @@ volta per tutto**:
 
 **Libri, dizionari e frasi restano sempre**: sono collegati, non posseduti, e
 possono stare anche altrove. Un dizionario che resta senza nessun workspace non
-viene eliminato: lo ritrovi nel catalogo generale della Libreria.
+viene eliminato: lo ritrovi nel catalogo generale delle Risorse linguistiche.
 
 ## Consigli sui nomi
 

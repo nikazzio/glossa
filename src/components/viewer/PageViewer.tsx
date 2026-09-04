@@ -6,9 +6,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  HardDriveDownload,
   Images,
   PanelLeftClose,
   PanelLeftOpen,
+  Loader2,
   RefreshCw,
   ZoomIn,
   ZoomOut,
@@ -38,7 +40,7 @@ import {
   type ImageSource,
 } from '../../services/cacheService';
 import { keepViewerPage } from '../../services/cacheService';
-import { versionInventory } from '../../services/inventoryService';
+import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
 import { toast } from 'sonner';
@@ -57,9 +59,29 @@ interface PageViewerProps {
   versionId: string;
   manifestUrl: string;
   providerKey: string | null;
+  /**
+   * Quale versione locale leggere, quando ce n'è più di una sul computer: la
+   * misura scelta nella scheda dell'opera. Se quella misura non ha pagine si
+   * torna alla più fornita, che è il comportamento di sempre.
+   */
+  preferredLocalSize?: string | null;
   /** Avvisa chi ospita il visore della pagina mostrata, così altri riquadri
    *  della stessa schermata possono dirla senza chiederla al visore. */
   onPageChange?: (page: ViewerPagePosition) => void;
+}
+
+/**
+ * Quale cartella di misura leggere sul computer: quella chiesta, se ha pagine,
+ * altrimenti la più fornita. Nessuna scelta implicita fra due misure: una
+ * versione ridotta si legge solo se qualcuno l'ha chiesta.
+ */
+function readableSize(inventory: VersionInventory, preferred: string | null): string | null {
+  const wanted = preferred
+    ? inventory.sizes.find((size) => size.sizeTag === preferred && size.pages > 0)
+    : undefined;
+  if (wanted) return wanted.sizeTag;
+  const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);
+  return principal && principal.pages > 0 ? principal.sizeTag : null;
 }
 
 const TILE_LOAD_FAILED = 'tile_load_failed';
@@ -104,6 +126,7 @@ export function PageViewer({
   versionId,
   manifestUrl,
   providerKey,
+  preferredLocalSize = null,
   onPageChange,
 }: PageViewerProps) {
   const { t } = useTranslation();
@@ -136,6 +159,8 @@ export function PageViewer({
     size: string;
   } | null>(null);
   const [pageRequest, setPageRequest] = useState<CacheRequest | null>(null);
+  /** Vero mentre la pagina aperta sta entrando nel deposito. */
+  const [savingPage, setSavingPage] = useState(false);
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -175,22 +200,19 @@ export function PageViewer({
    */
   const refreshLocalSize = useCallback(async () => {
     const inventory = await versionInventory(versionId);
-    const principal = inventory?.sizes.find((size) => size.sizeTag === inventory.principal);
-    setLocalSize(principal && principal.pages > 0 ? principal.sizeTag : null);
-  }, [versionId]);
+    setLocalSize(inventory ? readableSize(inventory, preferredLocalSize) : null);
+  }, [versionId, preferredLocalSize]);
 
   useEffect(() => {
     let cancelled = false;
-    setLocalSize(null);
     void versionInventory(versionId).then((inventory) => {
-      if (cancelled || !inventory) return;
-      const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);
-      setLocalSize(principal && principal.pages > 0 ? principal.sizeTag : null);
+      if (cancelled) return;
+      setLocalSize(inventory ? readableSize(inventory, preferredLocalSize) : null);
     });
     return () => {
       cancelled = true;
     };
-  }, [versionId]);
+  }, [versionId, preferredLocalSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -536,8 +558,10 @@ export function PageViewer({
               viewport.applyConstraints();
             }}
             canDownloadPage={pageRequest?.kind === 'page' && pageOrigin?.source !== 'vault'}
+            savingPage={savingPage}
             onDownloadPage={() => {
               if (!pageRequest || pageRequest.kind !== 'page') return;
+              setSavingPage(true);
               void keepViewerPage(pageRequest)
                 .then(() => {
                   setPageOrigin({ source: 'vault', size: pageRequest.size });
@@ -548,7 +572,8 @@ export function PageViewer({
                   toast.error(t('areas.library.viewerPageDownloadFailed'), {
                     description: errorMessage(error),
                   });
-                });
+                })
+                .finally(() => setSavingPage(false));
             }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
@@ -642,6 +667,8 @@ interface ViewerToolbarProps {
   onZoomToFit: () => void;
   onZoomToActualSize: () => void;
   canDownloadPage: boolean;
+  /** Vero mentre la pagina aperta sta entrando nel deposito. */
+  savingPage: boolean;
   onDownloadPage: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
@@ -725,6 +752,7 @@ function ViewerToolbar({
   onZoomToFit,
   onZoomToActualSize,
   canDownloadPage,
+  savingPage,
   onDownloadPage,
   thumbnailsOpen,
   onToggleThumbnails,
@@ -774,17 +802,15 @@ function ViewerToolbar({
         </span>
       </div>
 
-      <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
-      <IconButton
-        size="sm"
-        onClick={onDownloadPage}
-        disabled={!canDownloadPage}
-        title={t(canDownloadPage ? 'areas.library.viewerDownloadPage' : 'areas.library.viewerPageOnComputer')}
-      >
-        <Download size={14} />
-      </IconButton>
-      <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
-      <div className="flex shrink-0 items-center gap-1">
+      {/* La provenienza è uno stato, non un comando: sta in mezzo, fra il
+          contesto a sinistra e i comandi a destra. */}
+      <div className="mx-auto shrink-0">
+        <ConnectionBadge fromDisk={fromDisk} origin={origin} />
+      </div>
+
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <PageKeepButton saving={savingPage} canDownload={canDownloadPage} onDownload={onDownloadPage} />
+        <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
           <ZoomOut size={14} />
         </IconButton>
@@ -824,10 +850,55 @@ function ViewerToolbar({
           </div>
         </ClickPopover>
       </div>
-
-      <div className="ml-auto shrink-0 border-l border-editorial-border pl-3">
-        <ConnectionBadge fromDisk={fromDisk} origin={origin} />
-      </div>
     </div>
+  );
+}
+
+/**
+ * Il comando che conserva sul computer la pagina aperta, e che dice in che
+ * punto di quel gesto si è: da prendere, in corso, già in casa.
+ *
+ * Quando la pagina è già nel deposito non è più un comando spento — un pulsante
+ * disabilitato non distingue «non si può» da «è già fatto» — ma uno stato, con
+ * il suo colore e la sua frase. Riscaricare una pagina che c'è già è un'altra
+ * funzione, e arriva con i comandi della singola pagina.
+ */
+function PageKeepButton({
+  saving,
+  canDownload,
+  onDownload,
+}: {
+  saving: boolean;
+  canDownload: boolean;
+  onDownload: () => void;
+}) {
+  const { t } = useTranslation();
+
+  if (saving) {
+    return (
+      <IconButton size="sm" disabled title={t('areas.library.viewerPageSaving')}>
+        <Loader2 size={14} className="animate-spin" />
+      </IconButton>
+    );
+  }
+
+  if (!canDownload) {
+    return (
+      <Tooltip label={t('areas.library.viewerPageOnComputer')} side="bottom">
+        <span
+          role="status"
+          aria-label={t('areas.library.viewerPageOnComputer')}
+          className="flex h-7 w-7 items-center justify-center text-editorial-success"
+        >
+          <HardDriveDownload size={14} />
+        </span>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <IconButton size="sm" onClick={onDownload} title={t('areas.library.viewerDownloadPage')}>
+      <Download size={14} />
+    </IconButton>
   );
 }

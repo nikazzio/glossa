@@ -11,6 +11,7 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { EMPTY_LIBRARY_FILTERS } from '../../utils/libraryCatalogFilters';
 import { enqueueOptimization } from '../../services/optimizeService';
+import { versionInventory } from '../../services/inventoryService';
 import '../../test/i18n-mock';
 
 vi.mock('sonner', () => ({
@@ -170,6 +171,9 @@ describe('LibraryCatalogArea', () => {
     vi.mocked(confirm).mockResolvedValue(true);
     vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     vi.mocked(enqueueOptimization).mockReset();
+    // Le versioni locali si leggono sempre dal motore: ogni caso dichiara cosa
+    // c'è nel deposito, e chi non lo dichiara parte da «niente sul disco».
+    vi.mocked(versionInventory).mockResolvedValue(null);
     useSourceLibraryStore.setState({
       catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null,
       catalogLoading: false, catalogError: null, detailLoading: false, detailError: null,
@@ -624,6 +628,14 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    vi.mocked(versionInventory).mockResolvedValue({
+      versionId: 'v1',
+      providerKey: 'gallica',
+      sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0, derived: false }],
+      principal: '2000',
+      hasManifest: true,
+    });
+
     const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
 
@@ -687,6 +699,16 @@ describe('LibraryCatalogArea', () => {
   });
 
   it('la scheda elenca le risoluzioni scaricate per ogni copia', async () => {
+    vi.mocked(versionInventory).mockResolvedValue({
+      versionId: 'v1',
+      providerKey: 'gallica',
+      sizes: [
+        { sizeTag: '1500', pages: 40, bytes: 40_000_000, missing: 0, derived: false },
+        { sizeTag: 'full', pages: 10, bytes: 60_000_000, missing: 2, derived: false },
+      ],
+      principal: '1500',
+      hasManifest: true,
+    });
     useSourceLibraryStore.setState({
       catalog: [
         entry({

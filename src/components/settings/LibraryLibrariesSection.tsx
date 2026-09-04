@@ -34,7 +34,7 @@ export function LibraryLibrariesSection({
                 value={library.profileId}
                 onChange={(value) => onChooseProfile(library.key, value)}
                 ariaLabel={`${library.label} · ${t('settings.network.rhythm')}`}
-                className="w-32"
+                size="md"
                 options={settings.profiles.map((profile) => ({
                   value: profile.id,
                   label: profile.name,
@@ -44,7 +44,7 @@ export function LibraryLibrariesSection({
                 value={library.sizePolicy}
                 onChange={(value) => onChooseSizePolicy(library.key, value as SizePolicy)}
                 ariaLabel={`${library.label} · ${t('settings.network.imageRequestMode')}`}
-                className="w-48"
+                size="md"
                 options={SIZE_POLICIES.map((policy) => ({
                   value: policy,
                   label: t(`settings.network.sizePolicy.${policy}`),

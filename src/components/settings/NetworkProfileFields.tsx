@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { FIELD_CLASSNAME, FIELD_MONO_CLASSNAME, SectionLabel, SettingRow } from '../ui';
+import { FIELD_INLINE_CLASSNAME, FIELD_NUMBER_CLASSNAME, SectionLabel, SettingRow } from '../ui';
 import { Gauge, Wrench } from 'lucide-react';
 import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloadSettingsService';
 
@@ -34,6 +34,8 @@ function waitAfterRefusal(values: NetworkValues): number {
 interface Knob {
   /** Nome del campo per etichetta e identificativo. */
   key: string;
+  /** L'unità sta accanto al campo, non dentro l'etichetta fra parentesi. */
+  unit?: 'seconds' | 'perMinute';
   min: number;
   max: number;
   read: (values: NetworkValues) => number;
@@ -51,6 +53,7 @@ const KNOBS: Knob[] = [
   },
   {
     key: 'requestsPerMinute',
+    unit: 'perMinute',
     min: 1,
     max: 1_000,
     read: (values) => values.burstRequests,
@@ -58,6 +61,7 @@ const KNOBS: Knob[] = [
   },
   {
     key: 'waitAfterRefusal',
+    unit: 'seconds',
     min: 0,
     max: 86_400,
     read: waitAfterRefusal,
@@ -78,6 +82,7 @@ const ADVANCED_KNOBS: Knob[] = [
   },
   {
     key: 'slowLibraryWaitSecs',
+    unit: 'seconds',
     min: 1,
     max: 300,
     read: (values) => values.readTimeoutSecs,
@@ -129,8 +134,14 @@ export function NetworkProfileFields({
         aria-label={t(`settings.network.field.${knob.key}`)}
         value={knob.read(values)}
         onChange={(event) => change(knob, event.target.value)}
-        className={`${FIELD_MONO_CLASSNAME} w-24`}
+        className={FIELD_NUMBER_CLASSNAME}
       />
+      {/* L'unità ha sempre la sua colonna, anche vuota: senza, i campi di due
+          righe vicine finivano a larghezze diverse e nessun numero si
+          incolonnava. */}
+      <span className="w-16 text-xs text-editorial-muted">
+        {knob.unit ? t(`settings.network.unit.${knob.unit}`) : ''}
+      </span>
     </SettingRow>
   );
 
@@ -145,7 +156,7 @@ export function NetworkProfileFields({
             aria-label={t('settings.network.name')}
             value={name}
             onChange={(event) => onChange(event.target.value, values)}
-            className={`${FIELD_CLASSNAME} w-64 max-w-[50vw]`}
+            className={`${FIELD_INLINE_CLASSNAME} w-56 max-w-[40vw]`}
           />
         </SettingRow>
       </div>

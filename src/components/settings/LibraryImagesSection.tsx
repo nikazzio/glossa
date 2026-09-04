@@ -85,6 +85,7 @@ export function LibraryImagesSection() {
             <Select
               value={sizeCap}
               onChange={(value) => void persist(value, sizeCap, setSizeCap, setGlobalSizeCap)}
+              size="md"
               ariaLabel={t('settings.download.sizeCap')}
               options={SIZE_CAPS.map((value) => ({
                 value,
@@ -105,6 +106,7 @@ export function LibraryImagesSection() {
               onChange={(value) =>
                 void persist(Number.parseInt(value, 10), thumbnailEdge, setEdge, setThumbnailEdge)
               }
+              size="md"
               ariaLabel={t('settings.download.thumbnailEdge')}
               options={THUMBNAIL_EDGES.map((value) => ({
                 value: String(value),
@@ -127,6 +129,7 @@ export function LibraryImagesSection() {
               onChange={(value) =>
                 void persist(Number(value), optimizeEdge, setOptimizeEdge, setOptimizeLongEdge)
               }
+              size="md"
               ariaLabel={t('settings.download.optimizeLongEdge')}
               options={OPTIMIZE_LONG_EDGES.map((value) => ({
                 value: String(value),
@@ -144,6 +147,7 @@ export function LibraryImagesSection() {
               onChange={(value) =>
                 void persist(Number(value), optimizeQuality, setOptimizeQualityState, setOptimizeQuality)
               }
+              size="md"
               ariaLabel={t('settings.download.optimizeQuality')}
               options={OPTIMIZE_QUALITIES.map((value) => ({
                 value: String(value),

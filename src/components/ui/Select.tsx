@@ -14,6 +14,12 @@ interface SelectProps {
   ariaLabel?: string;
   disabled?: boolean;
   className?: string;
+  /**
+   * `sm` (predefinita) per barre e righe compatte; `md` dentro le liste di
+   * impostazioni, dove un valore più piccolo dell'etichetta accanto si legge
+   * come una nota a margine invece che come la scelta fatta.
+   */
+  size?: 'sm' | 'md';
   /** Per i casi in cui la scelta vive dentro una modifica da confermare o
    *  annullare (Invio ed Esc), come nei campi scritti. */
   onKeyDown?: (event: KeyboardEvent<HTMLSelectElement>) => void;
@@ -28,8 +34,10 @@ export function Select({
   ariaLabel,
   disabled = false,
   className = '',
+  size = 'sm',
   onKeyDown,
 }: SelectProps) {
+  const text = size === 'md' ? 'text-sm' : 'text-xs';
   return (
     <select
       id={id}
@@ -38,7 +46,7 @@ export function Select({
       onKeyDown={onKeyDown}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={`rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 ${text} font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value} disabled={opt.disabled}>

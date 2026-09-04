@@ -133,7 +133,8 @@ export function LibraryProfilesSection({
             value={creating ? NEW_PROFILE : (active?.id ?? '')}
             onChange={(id) => show(id === NEW_PROFILE ? null : id)}
             ariaLabel={t('settings.network.selectedProfile')}
-            className="w-64 max-w-[50vw]"
+            size="md"
+            className="max-w-[50vw]"
             options={[
               ...settings.profiles.map((profile) => ({
                 value: profile.id,

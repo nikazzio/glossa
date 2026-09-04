@@ -11,7 +11,7 @@ Glossa separates application settings, workspace resources, and per-project pipe
 | Level | What lives there |
 |---|---|
 | App | API keys, Ollama connection, interface preferences, defaults |
-| Workspace | Phrase memory, Library glossaries, translation area context |
+| Workspace | Phrase memory, Language-resource glossaries, translation area context |
 | Project / pipeline | Languages, stages, prompts, glossary assignment, chunks, outputs |
 
 ## Practical meaning
@@ -44,7 +44,7 @@ When you create a workspace, choose one of the available historical-editorial
 marks, such as a manuscript, quill, archive, or seal. You can change it later
 from workspace settings together with its name and description. The same mark,
 shown more prominently in project lists, appears in the side rail, workspace
-context, Library, and project lists; hover it or reach it with the keyboard to
+context, language resources, and project lists; hover it or reach it with the keyboard to
 access the full workspace name. In global areas, the mark always accompanies a
 smaller icon for the item's type rather than replacing it. These marks are
 distinct from the icons that identify the Translations, Library, Transcriptions,
@@ -75,7 +75,7 @@ and any related counts.
 | API keys | App-wide |
 | Interface preferences | App-wide |
 | Phrase-memory storage | Workspace |
-| Library glossaries | Workspace |
+| Language-resource glossaries | Workspace |
 | Glossary assigned to pipeline | Project / pipeline |
 | Chunks, drafts, audit output, notes | Project / pipeline |
 
@@ -134,7 +134,7 @@ The command no longer refuses. It tells you what is inside and lets you choose
 
 **Books, dictionaries and phrases always stay**: they are linked, not owned, and
 may live elsewhere too. A dictionary left without any workspace is not deleted:
-you find it in the Library's general catalogue.
+you find it in the general catalogue of the language resources.
 
 ## Naming advice
 

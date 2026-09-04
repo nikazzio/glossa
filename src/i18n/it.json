@@ -30,7 +30,7 @@
     "nothingToSave": "Tutto già salvato",
     "globalSaveFailed": "Salvataggio fallito",
     "projectSaveDeferred": "Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline",
-    "savedLibraryProjectDeferred": "Libreria salvata. Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline"
+    "savedLibraryProjectDeferred": "Risorse linguistiche salvate. Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline"
   },
   "sidebar": {
     "areaLabel": "Area",
@@ -351,7 +351,7 @@
     "noProjectTitle": "Nessun progetto aperto",
     "noProjectHint": "Apri o crea un progetto per configurare fasi, modelli, audit e glossario.",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
-    "glossaryOpenProject": "Apri un progetto e assegna un dizionario dalla Libreria per gestire i termini.",
+    "glossaryOpenProject": "Apri un progetto e assegna un dizionario dalle Risorse linguistiche per gestire i termini.",
     "glossaryNotes": "Note",
     "templates": {
       "save": "Salva come template",
@@ -697,12 +697,21 @@
         "maxAttempts": "Quante volte riprovare la stessa pagina prima di dichiararla non scaricata. Fra un tentativo e l'altro l'attesa cresce da sé.",
         "slowLibraryWaitSecs": "Quanto attendere una risposta prima di considerarla persa. Alzalo con le biblioteche che costruiscono le immagini al momento; abbassarlo troppo fa fallire pagine che stavano arrivando."
       },
+      "unit": {
+        "seconds": "secondi",
+        "perMinute": "al minuto"
+      },
+      "subtab": {
+        "profiles": "Configurazioni",
+        "libraries": "Biblioteche",
+        "images": "Immagini"
+      },
       "field": {
         "pagesAtOnce": "Pagine insieme",
-        "requestsPerMinute": "Richieste al minuto",
-        "waitAfterRefusal": "Pausa dopo un rifiuto (secondi)",
+        "requestsPerMinute": "Richieste",
+        "waitAfterRefusal": "Pausa dopo un rifiuto",
         "maxAttempts": "Tentativi",
-        "slowLibraryWaitSecs": "Attesa per una biblioteca lenta (secondi)"
+        "slowLibraryWaitSecs": "Attesa per una biblioteca lenta"
       }
     }
   },
@@ -925,6 +934,11 @@
       "resolutionPages": "{{done}}/{{total}} pagine",
       "resolutionsSection": "Risoluzioni scaricate",
       "localVersionsSection": "Versioni locali",
+      "localVersionOrigin": "Origine",
+      "localVersionSpace": "Spazio",
+      "localVersionNotServedLabel": "Non servite",
+      "localVersionRead": "Leggi questa versione nel visore",
+      "localVersionBeingRead": "È la versione che stai leggendo: torna alla più grande",
       "resolutionPrincipal": "predefinita",
       "derivedLabel": "ricavata sul computer",
       "localVersionDownloaded": "Scaricata dalla biblioteca",
@@ -1011,6 +1025,7 @@
       "viewerRetry": "Riprova",
       "viewerDownloadPage": "Scarica questa pagina",
       "viewerPageOnComputer": "Questa pagina è già sul computer",
+      "viewerPageSaving": "Sto salvando la pagina sul computer…",
       "viewerPageDownloaded": "Pagina salvata sul computer",
       "viewerPageDownloadFailed": "Non è stato possibile salvare la pagina",
       "viewerNoManifest": "Questa opera non ha ancora una digitalizzazione IIIF da leggere.",
@@ -1099,6 +1114,7 @@
       },
       "sourceUrlField": "Indirizzo",
       "downloadSection": "Scarica",
+      "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
       "viewOnline": "Online"
@@ -1600,8 +1616,8 @@
       "projects": "Progetti",
       "providers": "Provider",
       "ollama": "Ollama",
-      "glossary": "Libreria",
-      "library": "Libreria",
+      "glossary": "Risorse linguistiche",
+      "library": "Risorse linguistiche",
       "shortcuts": "Interfaccia",
       "troubleshooting": "Risoluzione problemi",
       "design": "Design System",
@@ -1682,7 +1698,7 @@
       "configDrawerTitle": "Pannello di configurazione",
       "configDrawerDesc": "Si apre con l'icona ingranaggio. Ha cinque tab: Impostazioni (modalità, coppia linguistica, persona, rifinitura prompt), Traduzione (stage di traduzione e refine/format quando in modalità editoriale), Controllo qualità (giudice e prompt di coerenza), Registro Termini (glossario assegnato al progetto), Prompt Preview (anteprima del prompt finale per ogni stage).",
       "modalsTitle": "Modali unificate",
-      "modalsDesc": "Settings, Libreria, Progetti, Save dialog, Preflight check e questa guida condividono la stessa shell editoriale: bordo arrotondato, header con icona e titolo, body scrollabile, footer con pulsante Chiudi e una X in alto a destra. Ogni modale può essere chiusa sia dalla X sia dal pulsante in basso.",
+      "modalsDesc": "Settings, Risorse linguistiche, Progetti, Save dialog, Preflight check e questa guida condividono la stessa shell editoriale: bordo arrotondato, header con icona e titolo, body scrollabile, footer con pulsante Chiudi e una X in alto a destra. Ogni modale può essere chiusa sia dalla X sia dal pulsante in basso.",
       "appearanceTitle": "Aspetto e tipografia",
       "appearanceDesc": "In Impostazioni → Tipografia scegli il font dell'intera interfaccia tra Plus Jakarta Sans (predefinito), Geist, Inter e IBM Plex Sans. La scelta si applica subito a tutta la UI e viene ricordata tra le sessioni. I valori serif editoriali (titoli e dati in corsivo) restano in Elstob e non vengono toccati. Nella stessa schermata regoli anche layout di lettura ed evidenziazioni.",
       "personaTitle": "Persona di progetto",
@@ -1780,7 +1796,7 @@
       "title": "Progetti",
       "intro": "Ogni progetto di traduzione appartiene a un workspace. Phrase Memory e glossari possono essere condivisi fra i progetti dello stesso workspace; la configurazione resta specifica della pipeline aperta. L'area Traduzioni mostra invece tutti i progetti di tutti i workspace.",
       "workspaceIdentityTitle": "Segno del workspace",
-      "workspaceIdentityDesc": "Nelle impostazioni del workspace scegli uno dei segni storico-editoriali disponibili, prima di nome e descrizione. Il segno identifica il workspace nelle liste progetto, nella Libreria e nella barra laterale; nelle aree globali affianca la più piccola icona del tipo di elemento. Le icone di Traduzioni, Biblioteca, Trascrizioni e Analisi restano riservate alle rispettive aree; non sono disponibili icone personalizzate.",
+      "workspaceIdentityDesc": "Nelle impostazioni del workspace scegli uno dei segni storico-editoriali disponibili, prima di nome e descrizione. Il segno identifica il workspace nelle liste progetto, nelle Risorse linguistiche e nella barra laterale; nelle aree globali affianca la più piccola icona del tipo di elemento. Le icone di Traduzioni, Biblioteca, Trascrizioni e Analisi restano riservate alle rispettive aree; non sono disponibili icone personalizzate.",
       "createTitle": "Crea un progetto",
       "createDesc": "Dalla pagina del workspace o dall'area Traduzioni puoi creare un progetto; dalla pagina del workspace puoi anche aprire o eliminare quelli che gli appartengono. Il nuovo progetto viene creato nel workspace scelto.",
       "saveTitle": "Salva il lavoro",
@@ -1832,8 +1848,8 @@
       "thinkDesc": "Alcuni modelli Ollama supportano un passaggio di ragionamento esteso prima di rispondere. Nella sezione Ollama delle Impostazioni puoi impostare il livello Think: off, basso, medio o alto. Un livello più alto può migliorare la qualità a costo di tempo e token. Abilitalo solo per modelli che supportano esplicitamente il thinking — su modelli standard non ha effetto."
     },
     "glossary": {
-      "title": "Libreria: dizionari e template",
-      "intro": "La Libreria (pulsante nella barra del workspace) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
+      "title": "Risorse linguistiche: dizionari e modelli",
+      "intro": "Le Risorse linguistiche (pulsante nella barra del workspace) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
       "libraryTitle": "Dizionari del workspace",
       "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna. Lo stesso dizionario si può collegare a più workspace: resta uno solo, e le voci che aggiungi si vedono ovunque sia collegato. Se in un workspace una voce va tradotta diversamente, correggila lì: vale solo in quel workspace e l'originale non cambia.",
       "iiifTitle": "Biblioteca delle fonti",
@@ -1849,7 +1865,7 @@
       "auditTitle": "Audit e glossario",
       "auditDesc": "Il Giudice AI verifica esplicitamente l'aderenza al dizionario assegnato e segnala come problema di categoria 'glossario' ogni deviazione, con severità e correzione suggerita. Particolarmente utile per testi tecnici, giuridici o accademici dove la terminologia deve essere stabile.",
       "templatesTitle": "Modelli di prompt",
-      "templatesDesc": "Nel tab Modelli Prompt della Libreria gestisci la raccolta globale dei template, divisi per contesto: Stage (per prompt di traduzione, refine, format), Audit (per giudice e coerenza), Persona (per opener del system prompt). Crea un template specificando nome, contesto e testo; usa la bacchetta nella form di creazione per rifinire il testo con un modello LLM. I template salvati sono richiamabili nei pulsanti segnalibro accanto a ogni prompt corrispondente."
+      "templatesDesc": "Nel tab Modelli Prompt delle Risorse linguistiche gestisci la raccolta globale dei template, divisi per contesto: Stage (per prompt di traduzione, refine, format), Audit (per giudice e coerenza), Persona (per opener del system prompt). Crea un template specificando nome, contesto e testo; usa la bacchetta nella form di creazione per rifinire il testo con un modello LLM. I template salvati sono richiamabili nei pulsanti segnalibro accanto a ogni prompt corrispondente."
     },
     "shortcuts": {
       "title": "Riferimento interfaccia",
@@ -1863,7 +1879,7 @@
       "importFile": "Importa un file sorgente — fondo della barra del progetto",
       "openConfig": "Apri il pannello di configurazione della pipeline",
       "saveProject": "Salva il progetto corrente",
-      "openLibrary": "Apri la Libreria (dizionari e template) — barra del progetto",
+      "openLibrary": "Apri le Risorse linguistiche (dizionari e modelli) — barra del progetto",
       "switchLang": "Cambia la lingua dell'interfaccia (IT / EN)",
       "openSettings": "Apri Impostazioni (provider, tipografia, dati) — fondo della barra",
       "openHelp": "Apri questa guida",
@@ -1938,11 +1954,11 @@
     }
   },
   "library": {
-    "openLibrary": "Libreria di questo spazio",
-    "openLibraryGlobal": "Apri Libreria generale",
+    "openLibrary": "Risorse linguistiche di questo spazio",
+    "openLibraryGlobal": "Apri le risorse linguistiche generali",
     "globalDictionaryBadge": "Workspace non disponibile",
-    "title": "Libreria",
-    "globalTitle": "Libreria generale",
+    "title": "Risorse linguistiche",
+    "globalTitle": "Risorse linguistiche generali",
     "tabDictionaries": "Dizionari",
     "tabTemplates": "Modelli Prompt",
     "tabMemories": "Memorie",

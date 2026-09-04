@@ -119,12 +119,19 @@ export function LibrarySourcePage({
   const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  /**
+   * Quale versione locale sta leggendo il visore, quando ce n'è più di una sul
+   * computer. Vive qui perché la scelta si fa nella scheda a destra e il
+   * risultato si vede nel visore a sinistra.
+   */
+  const [viewedLocalSize, setViewedLocalSize] = useState<string | null>(null);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
   // schermo finché il nuovo manifesto non è arrivato.
   useEffect(() => {
     setSelectedVersionId(initialManifestVersion?.id ?? '');
+    setViewedLocalSize(null);
   }, [detail.source.id, initialManifestVersion?.id]);
 
   const persistLayout = () => {
@@ -228,6 +235,7 @@ export function LibrarySourcePage({
             versionId={manifestVersion.id}
             manifestUrl={manifestVersion.sourceUrl}
             providerKey={manifestVersion.providerKey}
+            preferredLocalSize={viewedLocalSize}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
@@ -303,7 +311,14 @@ export function LibrarySourcePage({
                   <SourceInfoSection detail={detail} providerLabel={providerLabel} />
                 </>
               ) : activeTab === 'copies' ? (
-                <CopiesSection detail={detail} entry={entry} onRefresh={onRefresh} />
+                <CopiesSection
+                  detail={detail}
+                  entry={entry}
+                  onRefresh={onRefresh}
+                  openVersionId={manifestVersion?.id ?? null}
+                  viewedLocalSize={viewedLocalSize}
+                  onViewLocalSize={setViewedLocalSize}
+                />
               ) : (
                 <>
                   <Section icon={Link2} label={t('areas.library.linkedWorkspaces')}>
