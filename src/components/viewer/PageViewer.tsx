@@ -214,6 +214,10 @@ export function PageViewer({
     // sarebbero in testa alla corsia riservata, davanti a quella che si guarda.
     const controller = new AbortController();
     let shown = 0;
+    // Finché non siamo stati noi ad aprire, quello che arriva riguarda ancora
+    // la pagina di prima, che è rimasta a schermo: contarlo spegnerebbe la
+    // rotella su un'immagine che non è quella chiesta.
+    let opened = false;
     let tiles: 'none' | 'loading' | 'shown' = 'none';
     let objectUrl: string | null = null;
     const openedAt = performance.now();
@@ -249,6 +253,7 @@ export function PageViewer({
       // lascerebbe i byte della pagina precedente appesi alla finestra.
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
+      opened = true;
       viewer.open({ type: 'image', url: objectUrl } as unknown as OpenSeadragon.TileSourceSpecifier);
       logger.debug('library.viewer.wholePageShown', {
         index: page.index,
@@ -298,18 +303,18 @@ export function PageViewer({
     };
 
     const handleTileLoaded = () => {
-      if (cancelled) return;
+      if (cancelled || !opened) return;
       shown += 1;
       setPageLoading(false);
       setPageError(null);
     };
     /** Non si vede ancora niente: la pagina è guasta. */
     const nothingIsShowing = () => {
-      if (cancelled || shown > 0) return;
+      if (cancelled || !opened || shown > 0) return;
       givingUp(new Error(TILE_LOAD_FAILED));
     };
     const handleTileLoadFailed = () => {
-      if (cancelled) return;
+      if (cancelled || !opened) return;
       logger.warn('library.viewer.tileFailed', { index: page.index, shown });
       // Un pezzo ai bordi che non arriva non è una pagina rotta.
       nothingIsShowing();
@@ -331,7 +336,10 @@ export function PageViewer({
       });
     };
 
-    viewer.close();
+    // La pagina di prima **resta a schermo** finché la nuova non è pronta:
+    // `open` la sostituisce da solo. Chiuderla subito lasciava un rettangolo
+    // vuoto per tutto il tempo dell'attesa, e sembrava che l'immagine fosse
+    // sparita.
     viewer.addHandler('tile-loaded', handleTileLoaded);
     viewer.addHandler('tile-load-failed', handleTileLoadFailed);
     viewer.addHandler('open-failed', handleOpenFailed);
