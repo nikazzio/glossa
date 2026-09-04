@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThumbnailRail } from './ThumbnailRail';
+import { clearRetainedImageUrls } from '../../hooks/useCachedImage';
 
 const cachedImage = vi.hoisted(() => vi.fn());
 
@@ -21,6 +22,7 @@ const pages = Array.from({ length: 30 }, (_, index) => ({
 
 describe('ThumbnailRail', () => {
   beforeEach(() => {
+    clearRetainedImageUrls();
     cachedImage.mockReset();
     cachedImage.mockResolvedValue(new Uint8Array([1, 2, 3]));
     let next = 0;
@@ -29,6 +31,7 @@ describe('ThumbnailRail', () => {
   });
 
   afterEach(() => {
+    clearRetainedImageUrls();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -84,11 +87,11 @@ describe('ThumbnailRail', () => {
     view.rerender(
       <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={20} onSelect={vi.fn()} />,
     );
-    await waitFor(() => expect(screen.getByText('Pagina 21')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('21')).toBeInTheDocument());
     view.rerender(
       <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} />,
     );
-    await waitFor(() => expect(screen.getByText('Pagina 1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1')).toBeInTheDocument());
 
     const pageOneRequests = cachedImage.mock.calls.filter(([request]) => request.index === 1);
     expect(pageOneRequests).toHaveLength(1);

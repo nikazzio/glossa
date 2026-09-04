@@ -85,11 +85,6 @@ pub async fn set_library_network_profile(
     snapshot(&conn)
 }
 
-/// Sceglie come chiedere le misure a una biblioteca.
-///
-/// Sta sulla riga della biblioteca e non nel profilo di rete: un profilo è un
-/// ritmo condiviso, e due biblioteche possono meritare la stessa prudenza e
-/// servire misure diverse.
 #[tauri::command]
 pub async fn set_library_size_policy(
     app: tauri::AppHandle,

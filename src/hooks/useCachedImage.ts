@@ -1,6 +1,54 @@
 import { useEffect, useState } from 'react';
 import { cachedImage, type CacheRequest, type CachedImageOptions } from '../services/cacheService';
 
+const MAX_RETAINED_IMAGES = 128;
+
+interface RetainedImage {
+  url: string;
+  users: number;
+  touchedAt: number;
+}
+
+/**
+ * Indirizzi locali gia' decodificati. Il motore conserva i byte; questo piccolo
+ * livello evita che tornare dal visore al catalogo faccia comunque sparire e
+ * ricreare tutte le copertine. Le voci in uso non vengono mai revocate.
+ */
+const retainedImages = new Map<string, RetainedImage>();
+
+function retain(key: string, bytes: Uint8Array): string {
+  const known = retainedImages.get(key);
+  if (known) {
+    known.users += 1;
+    known.touchedAt = Date.now();
+    return known.url;
+  }
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
+  retainedImages.set(key, { url, users: 1, touchedAt: Date.now() });
+  const disposable = [...retainedImages.entries()]
+    .filter(([, image]) => image.users === 0)
+    .sort((left, right) => left[1].touchedAt - right[1].touchedAt);
+  while (retainedImages.size > MAX_RETAINED_IMAGES && disposable.length > 0) {
+    const [oldKey, image] = disposable.shift()!;
+    retainedImages.delete(oldKey);
+    URL.revokeObjectURL(image.url);
+  }
+  return url;
+}
+
+function release(key: string): void {
+  const known = retainedImages.get(key);
+  if (!known) return;
+  known.users = Math.max(0, known.users - 1);
+  known.touchedAt = Date.now();
+}
+
+/** Svuota solo gli indirizzi della finestra; i byte nel motore restano. */
+export function clearRetainedImageUrls(): void {
+  for (const image of retainedImages.values()) URL.revokeObjectURL(image.url);
+  retainedImages.clear();
+}
+
 /**
  * I byte di un'immagine, presi dal motore e trasformati in un indirizzo
  * temporaneo che la finestra può disegnare.
@@ -35,7 +83,7 @@ export function useCachedImage(
       setLoading(false);
       return;
     }
-    let objectUrl: string | null = null;
+    let retained = false;
     let cancelled = false;
     const controller = new AbortController();
     // La richiesta è cambiata: l'indirizzo di prima sta per essere rilasciato,
@@ -46,12 +94,21 @@ export function useCachedImage(
 
     const load = async () => {
       try {
+        const remembered = retainedImages.get(key);
+        if (remembered) {
+          remembered.users += 1;
+          remembered.touchedAt = Date.now();
+          retained = true;
+          setUrl(remembered.url);
+          return;
+        }
         const bytes = await cachedImage(JSON.parse(key) as CacheRequest, {
           priority,
           signal: controller.signal,
         });
         if (cancelled) return;
-        objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
+        const objectUrl = retain(key, bytes);
+        retained = true;
         setUrl(objectUrl);
       } catch {
         // Una copertina che non arriva non è un errore da mostrare: al suo
@@ -66,7 +123,7 @@ export function useCachedImage(
     return () => {
       cancelled = true;
       controller.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (retained) release(key);
     };
   }, [key, priority]);
 

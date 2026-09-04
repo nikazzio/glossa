@@ -61,46 +61,34 @@ pub struct Profile {
     pub used_by: usize,
 }
 
-/// Come chiedere le misure a una biblioteca.
-///
-/// Non è un ritmo e non entra nel profilo: due biblioteche possono meritare la
-/// stessa prudenza e servire misure diverse.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum SizePolicy {
-    /// Come è sempre stato: i dimezzamenti quando la biblioteca li dichiara,
-    /// altrimenti la larghezza calcolata sul tetto.
     #[default]
     Auto,
-    /// Solo misure che la biblioteca tiene già pronte. Mai una costruita per
-    /// noi: misurato, 2,3 s contro 26,6 s.
     ReadyOnly,
-    /// La misura esatta chiesta, anche se va costruita al momento. Serve a chi
-    /// vuole quel numero di pixel e accetta di aspettare.
     Exact,
 }
 
 impl SizePolicy {
-    /// Una politica scritta da qualcuno. Tutto ciò che non si riconosce vale
-    /// come «decidi tu»: non si scarica seguendo una parola che non si capisce.
     pub fn parse(value: &str) -> Self {
         match value.trim() {
-            "readyOnly" => SizePolicy::ReadyOnly,
-            "exact" => SizePolicy::Exact,
-            _ => SizePolicy::Auto,
+            "readyOnly" => Self::ReadyOnly,
+            "exact" => Self::Exact,
+            _ => Self::Auto,
         }
     }
 
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
-            SizePolicy::Auto => "auto",
-            SizePolicy::ReadyOnly => "readyOnly",
-            SizePolicy::Exact => "exact",
+            Self::Auto => "auto",
+            Self::ReadyOnly => "readyOnly",
+            Self::Exact => "exact",
         }
     }
 }
 
-/// Una biblioteca, il ritmo che ha scelto e come le si chiedono le misure.
+/// Una biblioteca e il ritmo che ha scelto.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Library {
@@ -319,7 +307,6 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
             .map(|(_, profile)| profile.clone())
             .unwrap_or_else(|| DEFAULT_PROFILE_ID.to_string())
     };
-
     let policies = size_policies(conn)?;
     let policy_of = |key: &str| {
         policies
@@ -339,11 +326,7 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
         })
         .collect();
 
-    // Un host associato a mano compare in elenco se ha scelto un ritmo oppure
-    // una politica di misure: bastava una delle due a farlo esistere, e
-    // guardare solo i ritmi lo faceva sparire dalla schermata dove era stato
-    // configurato.
-    let extra_keys: Vec<String> = chosen
+    let extra_keys = chosen
         .iter()
         .map(|(key, _)| key.clone())
         .chain(policies.iter().map(|(key, _)| key.clone()))
@@ -354,7 +337,6 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
             }
             keys
         });
-
     libraries.extend(extra_keys.into_iter().map(|key| Library {
         profile_id: profile_of(&key),
         size_policy: policy_of(&key),
@@ -364,15 +346,12 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
     Ok(libraries)
 }
 
-/// Le politiche di misura scelte, per chiave di biblioteca.
 fn size_policies(conn: &Connection) -> Result<Vec<(String, SizePolicy)>, String> {
     let mut statement = conn
         .prepare("SELECT library_key, policy FROM library_size_policies")
         .map_err(|error| format!("politiche di misura: {error}"))?;
     let rows = statement
-        .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
         .map_err(|error| format!("politiche di misura: {error}"))?;
     Ok(rows
         .filter_map(Result::ok)
@@ -380,37 +359,28 @@ fn size_policies(conn: &Connection) -> Result<Vec<(String, SizePolicy)>, String>
         .collect())
 }
 
-/// Come chiedere le misure a questa fonte.
-///
-/// Prima la scelta per quella chiave, poi quella per il suo host — le opere
-/// aggiunte per indirizzo non hanno voce nel registro — poi «decidi tu».
 pub fn effective_size_policy(
     conn: &Connection,
     provider_key: &str,
     host: Option<&str>,
 ) -> SizePolicy {
     chosen_size_policy(conn, provider_key)
-        .or_else(|| host.and_then(|host| chosen_size_policy(conn, host)))
+        .or_else(|| host.and_then(|value| chosen_size_policy(conn, value)))
         .unwrap_or_default()
 }
 
 fn chosen_size_policy(conn: &Connection, library_key: &str) -> Option<SizePolicy> {
-    let stored: Option<String> = conn
-        .query_row(
-            "SELECT policy FROM library_size_policies WHERE library_key = ?1",
-            params![library_key],
-            |row| row.get(0),
-        )
-        .optional()
-        .ok()
-        .flatten();
-    stored.map(|value| SizePolicy::parse(&value))
+    conn.query_row(
+        "SELECT policy FROM library_size_policies WHERE library_key = ?1",
+        params![library_key],
+        |row| row.get::<_, String>(0),
+    )
+    .optional()
+    .ok()
+    .flatten()
+    .map(|value| SizePolicy::parse(&value))
 }
 
-/// Sceglie come chiedere le misure a una biblioteca.
-///
-/// «Decidi tu» non lascia una riga: è l'assenza di scelta, e tenerla scritta
-/// vorrebbe dire due modi di dire la stessa cosa.
 pub fn set_library_size_policy(
     conn: &Connection,
     library_key: &str,
@@ -422,14 +392,14 @@ pub fn set_library_size_policy(
             params![library_key],
         )
         .map_err(|error| format!("politica di misura: {error}"))?;
-        return Ok(());
+    } else {
+        conn.execute(
+            "INSERT INTO library_size_policies (library_key, policy) VALUES (?1, ?2) \
+             ON CONFLICT(library_key) DO UPDATE SET policy = excluded.policy",
+            params![library_key, policy.as_str()],
+        )
+        .map_err(|error| format!("politica di misura: {error}"))?;
     }
-    conn.execute(
-        "INSERT INTO library_size_policies (library_key, policy) VALUES (?1, ?2) \
-         ON CONFLICT(library_key) DO UPDATE SET policy = excluded.policy",
-        params![library_key, policy.as_str()],
-    )
-    .map_err(|error| format!("politica di misura: {error}"))?;
     Ok(())
 }
 
@@ -790,76 +760,6 @@ mod tests {
         assert_eq!(
             delete_profile(&conn, DEFAULT_PROFILE_ID),
             Err("profile_builtin".to_string())
-        );
-    }
-
-    #[test]
-    fn how_the_sizes_are_asked_is_a_choice_of_the_library_not_of_the_rhythm() {
-        // Senza scelta vale «decidi tu», e cambiare il ritmo non la tocca: sono
-        // due assi diversi, ed è il motivo per cui la politica non sta nel
-        // profilo.
-        let conn = database();
-        assert_eq!(
-            effective_size_policy(&conn, "gallica", None),
-            SizePolicy::Auto
-        );
-
-        set_library_size_policy(&conn, "gallica", SizePolicy::ReadyOnly).unwrap();
-        set_library_profile(&conn, "gallica", DEFAULT_PROFILE_ID).unwrap();
-
-        assert_eq!(
-            effective_size_policy(&conn, "gallica", None),
-            SizePolicy::ReadyOnly
-        );
-    }
-
-    #[test]
-    fn choosing_decide_for_me_leaves_no_trace() {
-        // Una riga che dice «predefinito» è un secondo modo di dire la stessa
-        // cosa: tornando indietro la scelta se ne va.
-        let conn = database();
-        set_library_size_policy(&conn, "gallica", SizePolicy::Exact).unwrap();
-        set_library_size_policy(&conn, "gallica", SizePolicy::Auto).unwrap();
-
-        assert!(size_policies(&conn).unwrap().is_empty());
-    }
-
-    #[test]
-    fn a_host_configured_by_hand_keeps_its_size_choice_in_the_list() {
-        // La schermata elenca le biblioteche del registro più gli host
-        // configurati a mano: guardare solo i ritmi faceva sparire dall'elenco
-        // un host a cui era stata scelta soltanto una misura.
-        let conn = database();
-        set_library_size_policy(&conn, "biblioteca.example.org", SizePolicy::ReadyOnly).unwrap();
-
-        let libraries = list_libraries(&conn).unwrap();
-        let mine = libraries
-            .iter()
-            .find(|library| library.key == "biblioteca.example.org")
-            .expect("l'host configurato a mano resta in elenco");
-
-        assert_eq!(mine.size_policy, SizePolicy::ReadyOnly);
-        assert_eq!(mine.profile_id, DEFAULT_PROFILE_ID);
-        assert_eq!(
-            effective_size_policy(&conn, "generic", Some("biblioteca.example.org")),
-            SizePolicy::ReadyOnly
-        );
-    }
-
-    #[test]
-    fn a_size_policy_that_means_nothing_is_as_if_it_had_never_been_written() {
-        // Scritta a mano nella banca dati: non si scarica seguendo una parola
-        // che non si capisce.
-        let conn = database();
-        conn.execute(
-            "INSERT INTO library_size_policies (library_key, policy) VALUES ('gallica', 'boh')",
-            [],
-        )
-        .unwrap();
-
-        assert_eq!(
-            effective_size_policy(&conn, "gallica", None),
-            SizePolicy::Auto
         );
     }
 

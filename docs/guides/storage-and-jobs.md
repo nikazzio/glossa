@@ -144,7 +144,10 @@ che usano quasi tutte, e **Lento**, tarato su Gallica che è la più severa.
 Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome
 Glossa dice quante biblioteche lo usano.
 
-Sotto, l'elenco delle biblioteche: per ognuna scegli il profilo con un menu.
+Sotto, l'elenco delle biblioteche: per ognuna scegli il profilo e come chiedere
+le immagini — **Automatico**, **Solo formati già pronti** o **Misura precisa**.
+Il primo è consigliato; l'ultimo può essere molto più lento quando la
+biblioteca deve costruire ogni immagine.
 Un profilo che qualcuno sta usando non si può eliminare — prima si spostano le
 biblioteche che lo seguono — e i due che arrivano con l'applicazione non si
 eliminano affatto.

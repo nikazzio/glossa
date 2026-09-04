@@ -29,8 +29,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::iiif::network::NetworkProfile;
-use crate::iiif::settings::SizePolicy;
 use crate::images;
+use crate::iiif::settings::SizePolicy;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
@@ -556,10 +556,6 @@ impl SourceDownloadJob {
 
     /// Legge il descrittore della prima pagina e ne ricava la regola di calcolo
     /// per tutto il libro. Costo: una richiesta, 4,3 s misurati.
-    ///
-    /// Con «misura esatta richiesta» la richiesta non si fa nemmeno: il
-    /// descrittore serve a sapere quali misure la biblioteca tiene pronte, e
-    /// quella politica dice di non tenerne conto.
     async fn decide_rule(
         &self,
         client: &reqwest::Client,

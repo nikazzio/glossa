@@ -268,7 +268,9 @@ CREATE TABLE IF NOT EXISTS custom_providers (
 CREATE TABLE IF NOT EXISTS sources (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('manuscript', 'print', 'pdf', 'iiif', 'web', 'other')),
+  -- Il tipo arriva dalla biblioteca e non si può prevedere: una lista chiusa
+  -- rifiuterebbe opere valide. Si chiede solo che non sia vuoto.
+  kind TEXT NOT NULL CHECK (kind <> ''),
   primary_language TEXT,
   description TEXT,
   external_ref TEXT,
@@ -319,17 +321,14 @@ CREATE TABLE IF NOT EXISTS library_saved_views (
 
 CREATE TABLE IF NOT EXISTS source_field_overrides (
   source_id TEXT NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-  field TEXT NOT NULL CHECK (field IN ('title', 'kind', 'primary_language', 'creator', 'date')),
+  field TEXT NOT NULL CHECK (field IN (
+    'title', 'kind', 'primary_language', 'creator', 'date',
+    'publisher', 'contributors', 'rights', 'physical_description', 'subjects', 'volume', 'description',
+    'origin_place', 'provenance', 'notes', 'series', 'genre_form', 'standard_identifier', 'coverage', 'related_works'
+  )),
   value TEXT NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (source_id, field),
-  -- Il tipo corretto a mano deve restare uno dei tipi che esistono: un valore
-  -- fuori elenco lascerebbe l'opera senza etichetta leggibile e fuori dai
-  -- filtri, senza che niente segnali il perché.
-  CHECK (
-    field <> 'kind'
-    OR value IN ('manuscript', 'print', 'pdf', 'iiif', 'web', 'other')
-  )
+  PRIMARY KEY (source_id, field)
 );
 
 CREATE TABLE IF NOT EXISTS source_versions (
@@ -616,6 +615,11 @@ CREATE TABLE IF NOT EXISTS network_profiles (
 CREATE TABLE IF NOT EXISTS library_network_profiles (
   library_key TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_size_policies (
+  library_key TEXT PRIMARY KEY,
+  policy TEXT NOT NULL CHECK (policy IN ('readyOnly', 'exact'))
 );
 
 CREATE TABLE IF NOT EXISTS workspace_items (

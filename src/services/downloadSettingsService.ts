@@ -51,12 +51,7 @@ export interface NetworkProfile {
   usedBy: number;
 }
 
-/**
- * Come chiedere le misure a una biblioteca. Non è un ritmo: sta sulla riga
- * della biblioteca, non nel profilo di rete.
- */
 export type SizePolicy = 'auto' | 'readyOnly' | 'exact';
-
 export const SIZE_POLICIES: SizePolicy[] = ['auto', 'readyOnly', 'exact'];
 
 export interface LibraryChoice {
@@ -117,8 +112,6 @@ function asSettings(answer: NetworkSettings | null): NetworkSettings {
   if (!answer) return emptySettings;
   return {
     profiles: Array.isArray(answer.profiles) ? answer.profiles : [],
-    // Una politica di misura che non si riconosce vale «decidi tu», come nel
-    // motore: un menu senza nessuna voce scelta non si può usare.
     libraries: Array.isArray(answer.libraries)
       ? answer.libraries.map((library) => ({
           ...library,
@@ -171,4 +164,3 @@ export async function getVersionSizeCap(versionId: string): Promise<string | nul
 export async function setVersionSizeCap(versionId: string, sizeCap: string | null): Promise<string | null> {
   return invoke<string | null>('set_version_size_cap', { versionId, sizeCap });
 }
-

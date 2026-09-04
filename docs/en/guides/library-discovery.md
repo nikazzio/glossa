@@ -67,6 +67,10 @@ Thumbnails that have already appeared remain available while you scroll back
 and forth; previously viewed pages are also read from the working cache, not
 from the library again.
 
+The download command in the viewer keeps **only the open page**, using the same
+bytes you are already looking at: it does not request them twice. From then on,
+that page remains available on your computer.
+
 At the top right it says **where the page you are looking at comes from**, and these are three different things: **From your computer** when the file is yours, **From working memory** when it is a page you already saw of a book you never downloaded, **From the library** when it has just arrived — green while the library answers, dimmed when nothing arrives. Hover it to also read the size that was requested.
 
 If you delete the local pages while you are reading, Glossa notices by itself that the copy is gone: the page stays readable, and the next ones are asked of the library instead of being looked for in a folder that no longer exists.

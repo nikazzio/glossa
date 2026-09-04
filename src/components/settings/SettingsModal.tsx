@@ -29,8 +29,8 @@ import { ProviderSettingsTab } from './ProviderSettingsTab';
 import { StorageSettingsTab } from './StorageSettingsTab';
 import { BackupSection } from './BackupSection';
 import { JobsSettingsTab } from './JobsSettingsTab';
-import { DownloadSettingsTab } from './DownloadSettingsTab';
-import { LibrariesSettingsTab, type NetworkProfileDraft } from './LibrariesSettingsTab';
+import { LibrarySettingsTab } from './LibrarySettingsTab';
+import type { NetworkProfileDraft } from '../../hooks/useLibraryNetworkSettings';
 
 export function SettingsModal() {
   const {
@@ -291,15 +291,7 @@ export function SettingsModal() {
       {activeTab === 'jobs' && <JobsSettingsTab />}
 
       {activeTab === 'library' && (
-        <div
-          id="settings-panel-library"
-          role="tabpanel"
-          aria-labelledby="settings-tab-library"
-          className="space-y-10"
-        >
-          <DownloadSettingsTab embedded />
-          <LibrariesSettingsTab draft={networkDraft} setDraft={setNetworkDraft} embedded />
-        </div>
+        <LibrarySettingsTab draft={networkDraft} setDraft={setNetworkDraft} />
       )}
 
     </Dialog>

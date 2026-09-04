@@ -142,7 +142,10 @@ used by almost all of them, and **Slow**, tuned on Gallica, the strictest one.
 You can change them, create others and name each one; next to the name Glossa
 says how many libraries use it.
 
-Below, the list of libraries: for each one you pick its profile from a menu. A
+Below, the list of libraries: for each one you pick its profile and how images
+are requested — **Automatic**, **Ready-made formats only**, or **Exact size**.
+The first is recommended; the last can be much slower when the library must
+build each image. A
 profile someone is using cannot be deleted — move the libraries that follow it
 first — and the two that ship with the application cannot be deleted at all.
 

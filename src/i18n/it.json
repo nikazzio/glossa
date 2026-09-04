@@ -625,24 +625,22 @@
     "backupImportConfirmTitle": "Ripristinare da questo backup?",
     "backupImportConfirmMessage": "Tutto quello che c'è adesso — ogni workspace, con progetti, traduzioni, trascrizioni, dizionari e impostazioni — viene sostituito dal contenuto del backup. Non si torna indietro.",
     "backupImportConfirm": "Ripristina",
-    "downloadTab": "Scaricamento",
     "download": {
       "loadFailed": "Impossibile leggere le impostazioni di scaricamento",
       "saveFailed": "Impossibile salvare le impostazioni di scaricamento",
       "sizeCap": "Misura delle pagine",
       "sizeCapMax": "la più grande disponibile",
-      "sizeCapHint": "Il tetto sul lato lungo. Glossa calcola per ogni pagina la larghezza che ci arriva e chiede quella; le pagine già più piccole le prende come sono.",
+      "sizeCapHint": "Quanto grande vuoi le pagine: è il tetto sul lato lungo. Per ogni pagina Glossa calcola la larghezza corrispondente e chiede quella; le pagine già più piccole le prende come sono. Come questa misura viene chiesta a ciascuna biblioteca si decide sopra, in Biblioteche.",
       "pixels": "{{value}} pixel",
       "thumbnailEdge": "Misura delle miniature",
       "thumbnailEdgeHint": "Le miniature si ricavano dalle pagine scaricate, sul computer: non costano nessuna richiesta. Più grandi occupano più spazio e si sfogliano meglio.",
-      "sizes": "Misure",
-      "optimize": "Ottimizzazione locale",
-      "optimizeLongEdge": "lato lungo di arrivo",
-      "optimizeLongEdgeHint": "A che misura ridurre le pagine già scaricate, quando lanci l'ottimizzazione su un'opera. Dipende dal materiale: una stampa larga sopporta molto meno di una minuscola fitta, quindi vale la pena cambiarla qui prima di lanciarla su un libro diverso dagli altri.",
-      "optimizeQuality": "qualità JPEG",
+      "sizes": "Immagini",
+      "optimize": "Versioni ridotte",
+      "optimizeLongEdge": "Lato lungo di arrivo",
+      "optimizeLongEdgeHint": "A che misura ridurre le pagine già scaricate, quando chiedi una versione ridotta di un'opera. L'originale resta intatto: la versione ridotta si aggiunge accanto. Dipende dal materiale: una stampa larga sopporta molto meno di una minuscola fitta, quindi vale la pena cambiarla qui prima di lanciarla su un libro diverso dagli altri.",
+      "optimizeQuality": "Qualità JPEG",
       "optimizeQualityHint": "Quanto comprimere. Più basso significa file più piccoli e più artefatti; 82 è il valore che si usa di norma per il materiale d'archivio."
     },
-    "librariesTab": "Biblioteche",
     "jobsTab": "Lavori",
     "jobs": {
       "loadFailed": "Impossibile leggere le impostazioni dei lavori",
@@ -661,6 +659,8 @@
     },
     "network": {
       "profiles": "Profili di rete",
+      "selectedProfile": "Profilo da modificare",
+      "selectedProfileHint": "Il ritmo che stai modificando. Un profilo vale per tutte le biblioteche a cui è assegnato: salvarlo cambia il passo di ognuna di quelle.",
       "libraries": "Biblioteche",
       "name": "Nome",
       "newProfile": "Crea un profilo",
@@ -676,18 +676,26 @@
       "deleteInUse": "Prima sposta le biblioteche che lo usano",
       "unsaved": "non salvato",
       "discard": "Butta le modifiche non salvate",
-      "advanced": "Avanzate",
+      "rhythmSection": "Ritmo",
       "rhythm": "ritmo",
-      "sizes": "misure",
+      "imageRequestMode": "modalità richiesta immagini",
+      "advanced": "Avanzate",
       "sizePolicy": {
-        "auto": "Decidi tu",
-        "readyOnly": "Solo misure pronte",
-        "exact": "Misura esatta richiesta"
+        "auto": "Automatico",
+        "readyOnly": "Solo formati già pronti",
+        "exact": "Misura precisa"
       },
       "sizePolicyHint": {
-        "auto": "Glossa sceglie la misura più vicina fra quelle che la biblioteca tiene pronte; se non ne dichiara nessuna, la chiede su misura.",
-        "readyOnly": "Si chiede soltanto quello che la biblioteca ha già pronto: arriva molto più in fretta, e a volte è un po' più grande del necessario.",
-        "exact": "Si chiede sempre la misura impostata: è quella che vuoi, ma la biblioteca deve costruirla e ogni pagina può richiedere una decina di volte il tempo."
+        "auto": "Glossa sceglie da sé: usa un formato che la biblioteca tiene già pronto quando c'è, altrimenti chiede la misura impostata. È la scelta consigliata.",
+        "readyOnly": "Chiede solo formati già pronti: nessuna attesa, ma la pagina può arrivare più grande o più piccola della misura impostata.",
+        "exact": "Chiede sempre la misura impostata, anche quando la biblioteca deve costruirla al momento: misura esatta, prima apertura più lenta."
+      },
+      "fieldHint": {
+        "pagesAtOnce": "Quante pagine di uno scaricamento partono insieme. Un posto verso la biblioteca resta sempre libero per la pagina che stai leggendo: per questo il massimo del campo dipende dal ritmo scelto.",
+        "requestsPerMinute": "Il tetto di richieste al minuto verso quella biblioteca. Più alto va più veloce, ma superare il passo che la biblioteca tollera fa scattare rifiuti e pause.",
+        "waitAfterRefusal": "Quanto Glossa sta fermo quando la biblioteca rifiuta o chiede di rallentare. Il valore mostrato è la pausa più lunga fra i due casi: toccandolo valgono entrambi.",
+        "maxAttempts": "Quante volte riprovare la stessa pagina prima di dichiararla non scaricata. Fra un tentativo e l'altro l'attesa cresce da sé.",
+        "slowLibraryWaitSecs": "Quanto attendere una risposta prima di considerarla persa. Alzalo con le biblioteche che costruiscono le immagini al momento; abbassarlo troppo fa fallire pagine che stavano arrivando."
       },
       "field": {
         "pagesAtOnce": "Pagine insieme",
@@ -695,13 +703,6 @@
         "waitAfterRefusal": "Pausa dopo un rifiuto (secondi)",
         "maxAttempts": "Tentativi",
         "slowLibraryWaitSecs": "Attesa per una biblioteca lenta (secondi)"
-      },
-      "fieldHint": {
-        "pagesAtOnce": "Quante pagine dello stesso libro si scaricano insieme. Questa biblioteca ne concede al massimo {{max}}, perché un posto resta sempre libero per chi sta leggendo.",
-        "requestsPerMinute": "Il tetto complessivo verso questa biblioteca: vale per gli scaricamenti e per le pagine che stai guardando.",
-        "waitAfterRefusal": "Quanto si sta fermi quando la biblioteca rifiuta o chiede di rallentare. Se dichiara lei quanto aspettare, vale il suo tempo.",
-        "maxAttempts": "Quante volte si riprova una pagina prima di darla per persa.",
-        "slowLibraryWaitSecs": "Quanto si attende una risposta già iniziata. Alcune biblioteche costruiscono il libro quando lo chiedi e possono tacere per un minuto."
       }
     }
   },
@@ -930,6 +931,9 @@
       "localVersionDerived": "Ricavata sul computer",
       "localVersionComplete": "Completa",
       "localVersionPartial": "Incompleta",
+      "localVersionNeverDownloaded": "Mai scaricata",
+      "localVersionLastDownloadFailed": "Ultimo scaricamento fallito",
+      "localVersionNotServed": "{{count}} non servite dalla biblioteca",
       "compressAction": "Crea una copia compressa, senza toccare l'originale",
       "compressSourceLabel": "Da quale risoluzione",
       "compressTargetLabel": "A quale risoluzione",
@@ -1000,11 +1004,15 @@
       "viewerSection": "Pagine",
       "viewerLoading": "Apertura pagina…",
       "viewerOpeningPage": "Apro pagina {{index}}…",
-      "viewerPreparing": "Questa biblioteca prepara il libro al momento della richiesta: la prima apertura può richiedere un minuto.",
+      "viewerPreparing": "La biblioteca sta ancora rispondendo. La prima apertura di un libro può richiedere un minuto.",
       "viewerLoadError": "Non è stato possibile aprire questa pagina.",
       "viewerLoadErrorHint": "Controlla la connessione e riprova.",
       "viewerTileLoadErrorHint": "La biblioteca non ha restituito tutti i tasselli necessari.",
       "viewerRetry": "Riprova",
+      "viewerDownloadPage": "Scarica questa pagina",
+      "viewerPageOnComputer": "Questa pagina è già sul computer",
+      "viewerPageDownloaded": "Pagina salvata sul computer",
+      "viewerPageDownloadFailed": "Non è stato possibile salvare la pagina",
       "viewerNoManifest": "Questa opera non ha ancora una digitalizzazione IIIF da leggere.",
       "viewerPrevPage": "Pagina precedente",
       "viewerNextPage": "Pagina successiva",

@@ -229,6 +229,7 @@ pub fn run() {
             iiif::commands::set_version_size_cap,
             iiif::viewer::iiif_viewer_manifest,
             httpcache::commands::cached_image,
+            httpcache::commands::keep_viewer_page,
             httpcache::commands::cache_usage,
             httpcache::commands::apply_cache_cap,
             httpcache::commands::forget_cache_settings,

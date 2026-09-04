@@ -577,6 +577,13 @@ function CatalogEntryRow({
     entry.expectedPages !== null && entry.expectedPages > 0
       ? t('areas.library.pageCount', { count: entry.expectedPages })
       : null;
+  // Le pagine tenute in un'altra misura sono un'aggiunta, non un buco: senza
+  // dirlo, un libro completo con tre pagine a risoluzione piena sembrava avere
+  // più file del dovuto e nessuno sapeva perché.
+  const extra = entry.sizes
+    .filter((size) => size.sizeTag !== entry.principalSize && size.pages > 0)
+    .reduce((total, size) => total + size.pages, 0);
+  const extraNote = extra > 0 ? t('areas.library.extraFullSize', { count: extra }) : null;
 
   return (
     <article
@@ -619,6 +626,8 @@ function CatalogEntryRow({
               {pageCount}
               {pageCount && ' \u00b7 '}
               {availability}
+              {extraNote && ' \u00b7 '}
+              {extraNote}
             </span>
           </span>
         </button>

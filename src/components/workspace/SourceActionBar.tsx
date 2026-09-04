@@ -36,7 +36,7 @@ export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBar
   return (
     <div className="flex shrink-0 items-center gap-1">
       {/* Solo l'avanzamento di uno scaricamento in corso: che le immagini
-          siano sul computer lo dice già l'icona sotto il titolo, e dirlo due
+          siano sul computer lo dice già la riga sotto il titolo, e dirlo due
           volte sulla stessa riga non aggiunge niente. */}
       <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
         {runningJob && (

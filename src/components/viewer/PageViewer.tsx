@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   Images,
   PanelLeftClose,
   PanelLeftOpen,
@@ -20,9 +21,9 @@ import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { ThumbnailRail } from './ThumbnailRail';
 import { createControlledIiifTileSource } from './iiifTileBridge';
 import {
-  buildsImagesOnDemand,
   fetchIiifBytes,
   fetchViewerManifestWithRetry,
+  buildsImagesOnDemand,
   getLastViewedPage,
   infoJsonUrl,
   pageSourceUrl,
@@ -36,9 +37,11 @@ import {
   type CacheRequest,
   type ImageSource,
 } from '../../services/cacheService';
+import { keepViewerPage } from '../../services/cacheService';
 import { versionInventory } from '../../services/inventoryService';
 import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
+import { toast } from 'sonner';
 
 /** Dove si è arrivati nel libro, per chi sta fuori dal visore. */
 export interface ViewerPagePosition {
@@ -115,6 +118,7 @@ export function PageViewer({
   // libro su richiesta: la prima volta l'attesa è lunga e senza una riga che
   // lo dica sembra che il programma si sia piantato.
   const [openingIsSlow, setOpeningIsSlow] = useState(false);
+  const explainsSlowness = buildsImagesOnDemand(providerKey);
   const [manifestAttempt, setManifestAttempt] = useState(0);
   const [pageAttempt, setPageAttempt] = useState(0);
   /**
@@ -131,6 +135,7 @@ export function PageViewer({
     source: ImageSource | null;
     size: string;
   } | null>(null);
+  const [pageRequest, setPageRequest] = useState<CacheRequest | null>(null);
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -151,16 +156,16 @@ export function PageViewer({
 
   // Il messaggio spiega perché *questa* biblioteca è lenta: dirlo dove non è
   // vero — la francese, la vaticana — è una spiegazione sbagliata.
-  const explainsSlowness = buildsImagesOnDemand(providerKey);
   const stillOpening = (!manifest && !manifestError) || pageLoading;
   useEffect(() => {
     if (!stillOpening) {
       setOpeningIsSlow(false);
       return;
     }
+    if (!explainsSlowness) return;
     const timer = setTimeout(() => setOpeningIsSlow(true), SLOW_OPENING_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [stillOpening, manifestAttempt, currentIndex, pageAttempt]);
+  }, [stillOpening, explainsSlowness, manifestAttempt, currentIndex, pageAttempt]);
 
   /**
    * Quale misura di questo libro è sul computer, se c'è.
@@ -274,17 +279,17 @@ export function PageViewer({
      * arriva; i pezzi si chiedono solo se lo zoom li rende davvero utili.
      */
     const openWholePage = async () => {
-      // Nessuna attesa aggiuntiva: se l'indice porta già misure pronte si usa
-      // la più piccola sufficiente, altrimenti il dimezzamento misurato. Dove
-      // l'immagine viene ricavata al momento si prova più di una forma della
-      // stessa richiesta: là un singolo derivato guasto non arriva mai, e
-      // chiederlo in un altro modo lo aggira.
+      // Una grandezza sola, sempre la stessa: quella del deposito se il libro è
+      // in casa, altrimenti il dimezzamento — che è una misura che la
+      // biblioteca tiene pronta. Chiedere sempre la stessa cosa è anche il
+      // motivo per cui riaprendo il libro la pagina si ritrova in casa invece
+      // di essere richiesta di nuovo.
       const attempts = wholePageAttempts(page, localSize, buildsImagesOnDemand(providerKey));
       let bytes: Uint8Array | null = null;
+      let request: CacheRequest | null = null;
       let lastFailure: unknown = null;
-      let served: CacheRequest | null = null;
       for (const size of attempts) {
-        const request: CacheRequest = {
+        const candidate: CacheRequest = {
           kind: 'page',
           versionId,
           index: page.index,
@@ -293,24 +298,17 @@ export function PageViewer({
           providerKey,
         };
         try {
-          bytes = await pageImage(request, { priority: 'high', signal: controller.signal });
-          served = request;
+          bytes = await pageImage(candidate, { priority: 'high', signal: controller.signal });
+          request = candidate;
           break;
         } catch (error: unknown) {
-          // Un annullamento non è un guasto della biblioteca: la pagina non
-          // interessa più a nessuno, e insistere con un'altra forma sarebbe
-          // lavoro chiesto per niente.
           if (cancelled || controller.signal.aborted) throw error;
-          logger.warn('library.viewer.wholePageAttemptFailed', {
-            index: page.index,
-            size,
-            message: errorMessage(error),
-          });
           lastFailure = error;
         }
       }
+      if (!bytes || !request) throw lastFailure ?? new Error('pagina non servita');
       if (cancelled) return;
-      if (!bytes) throw lastFailure ?? new Error('pagina non servita');
+      setPageRequest({ ...request, providerKey: providerKey ?? 'generic' });
       // Un indirizzo temporaneo per volta: sovrascriverlo senza rilasciarlo
       // lascerebbe i byte della pagina precedente appesi alla finestra.
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -326,25 +324,22 @@ export function PageViewer({
       // Da dove sono arrivati davvero quei byte lo sa solo il motore, e non
       // può viaggiare insieme a loro: si chiede subito dopo, sulla stessa
       // richiesta. Non arrivarci non è un guasto — si resta senza dirlo.
-      if (served) {
-        const request = served;
-        void imageSource(request)
-          .then((source) => {
-            if (cancelled) return;
-            setPageOrigin({ source, size: request.kind === 'page' ? request.size : '' });
-            // Credevamo di leggere dal computer e la pagina è arrivata dalla
-            // biblioteca: qualcuno ha cancellato quella copia mentre stavamo
-            // leggendo. La pagina si vede comunque — il motore ha già ripiegato
-            // da sé — ma l'inventario va riletto, o le prossime continuerebbero
-            // a essere chieste come se il libro fosse ancora tutto in casa.
-            if (localSize && source === 'network') {
-              void refreshLocalSize();
-            }
-          })
-          .catch((error: unknown) => {
-            logger.debug('library.viewer.originUnknown', { message: errorMessage(error) });
-          });
-      }
+      void imageSource(request)
+        .then((source) => {
+          if (cancelled) return;
+          setPageOrigin({ source, size: request.kind === 'page' ? request.size : '' });
+          // Credevamo di leggere dal computer e la pagina è arrivata dalla
+          // biblioteca: qualcuno ha cancellato quella copia mentre stavamo
+          // leggendo. La pagina si vede comunque — il motore ha già ripiegato
+          // da sé — ma l'inventario va riletto, o le prossime continuerebbero
+          // a essere chieste come se il libro fosse ancora tutto in casa.
+          if (localSize && source === 'network') {
+            void refreshLocalSize();
+          }
+        })
+        .catch((error: unknown) => {
+          logger.debug('library.viewer.originUnknown', { message: errorMessage(error) });
+        });
     };
 
     /**
@@ -448,6 +443,7 @@ export function PageViewer({
     // La provenienza è di questa pagina: tenere quella di prima mentre la nuova
     // arriva la farebbe leggere come se valesse per l'immagine a schermo.
     setPageOrigin(null);
+    setPageRequest(null);
     void openWholePage().catch(givingUp);
 
     return () => {
@@ -539,6 +535,21 @@ export function PageViewer({
               viewport.zoomTo(viewport.imageToViewportZoom(1));
               viewport.applyConstraints();
             }}
+            canDownloadPage={pageRequest?.kind === 'page' && pageOrigin?.source !== 'vault'}
+            onDownloadPage={() => {
+              if (!pageRequest || pageRequest.kind !== 'page') return;
+              void keepViewerPage(pageRequest)
+                .then(() => {
+                  setPageOrigin({ source: 'vault', size: pageRequest.size });
+                  void refreshLocalSize();
+                  toast.success(t('areas.library.viewerPageDownloaded'));
+                })
+                .catch((error: unknown) => {
+                  toast.error(t('areas.library.viewerPageDownloadFailed'), {
+                    description: errorMessage(error),
+                  });
+                });
+            }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
           />
@@ -566,7 +577,7 @@ export function PageViewer({
           {!manifestError && !manifest && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-panel">
               <Spinner label={t('areas.library.viewerLoading')} />
-              {openingIsSlow && explainsSlowness && (
+              {openingIsSlow && (
                 <p className="max-w-xs text-center text-xs text-editorial-muted">
                   {t('areas.library.viewerPreparing')}
                 </p>
@@ -584,7 +595,7 @@ export function PageViewer({
                 label={t('areas.library.viewerOpeningPage', { index: currentIndex + 1 })}
                 className="rounded bg-surface-panel/90 px-2 py-1 text-xs text-editorial-muted shadow"
               />
-              {openingIsSlow && explainsSlowness && (
+              {openingIsSlow && (
                 <p className="max-w-xs rounded bg-surface-panel/90 px-2 py-1 text-center text-xs text-editorial-muted shadow">
                   {t('areas.library.viewerPreparing')}
                 </p>
@@ -630,6 +641,8 @@ interface ViewerToolbarProps {
   onZoomOut: () => void;
   onZoomToFit: () => void;
   onZoomToActualSize: () => void;
+  canDownloadPage: boolean;
+  onDownloadPage: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
 }
@@ -711,6 +724,8 @@ function ViewerToolbar({
   onZoomOut,
   onZoomToFit,
   onZoomToActualSize,
+  canDownloadPage,
+  onDownloadPage,
   thumbnailsOpen,
   onToggleThumbnails,
 }: ViewerToolbarProps) {
@@ -759,6 +774,15 @@ function ViewerToolbar({
         </span>
       </div>
 
+      <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
+      <IconButton
+        size="sm"
+        onClick={onDownloadPage}
+        disabled={!canDownloadPage}
+        title={t(canDownloadPage ? 'areas.library.viewerDownloadPage' : 'areas.library.viewerPageOnComputer')}
+      >
+        <Download size={14} />
+      </IconButton>
       <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
       <div className="flex shrink-0 items-center gap-1">
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>

@@ -625,24 +625,22 @@
       "invalidProfile": "Enter a valid name and complete address.",
       "testModelRequired": "Enter a model name to test"
     },
-    "downloadTab": "Download",
     "download": {
       "loadFailed": "Could not read the download settings",
       "saveFailed": "Could not save the download settings",
       "sizeCap": "Page size",
       "sizeCapMax": "the largest available",
-      "sizeCapHint": "The ceiling on the long side. Glossa computes the width that reaches it for every page and asks for that; pages already smaller are taken as they are.",
+      "sizeCapHint": "How large you want pages: it is the ceiling on the long side. For every page Glossa computes the matching width and asks for that; pages already smaller are taken as they are. How that size is requested from each library is decided above, under Libraries.",
       "pixels": "{{value}} pixels",
       "thumbnailEdge": "Thumbnail size",
       "thumbnailEdgeHint": "Thumbnails are derived from the downloaded pages, on your computer: they cost no request. Larger ones take more space and browse better.",
-      "sizes": "Sizes",
-      "optimize": "Local optimisation",
-      "optimizeLongEdge": "target long side",
-      "optimizeLongEdgeHint": "What size to reduce already-downloaded pages to when you run optimisation on a work. It depends on the material: a wide print takes much less than a tight, tiny one, so it is worth changing it here before running it on a book unlike the others.",
+      "sizes": "Images",
+      "optimize": "Reduced versions",
+      "optimizeLongEdge": "Target long side",
+      "optimizeLongEdgeHint": "What size to reduce already-downloaded pages to when you ask for a reduced version of a work. The original stays untouched: the reduced version is added next to it. It depends on the material: a wide print takes much less than a tight, tiny one, so it is worth changing it here before running it on a book unlike the others.",
       "optimizeQuality": "JPEG quality",
       "optimizeQualityHint": "How much to compress. Lower means smaller files and more artefacts; 82 is the usual value for archival material."
     },
-    "librariesTab": "Libraries",
     "jobsTab": "Jobs",
     "jobs": {
       "loadFailed": "Could not read the job settings",
@@ -661,6 +659,8 @@
     },
     "network": {
       "profiles": "Network profiles",
+      "selectedProfile": "Profile to edit",
+      "selectedProfileHint": "The rhythm you are editing. A profile applies to every library assigned to it: saving it changes the pace of each of them.",
       "libraries": "Libraries",
       "name": "Name",
       "newProfile": "Create a profile",
@@ -676,18 +676,26 @@
       "deleteInUse": "Move the libraries that use it first",
       "unsaved": "unsaved",
       "discard": "Discard the unsaved changes",
-      "advanced": "Advanced",
+      "rhythmSection": "Rhythm",
       "rhythm": "rhythm",
-      "sizes": "sizes",
+      "imageRequestMode": "image request mode",
+      "advanced": "Advanced",
       "sizePolicy": {
-        "auto": "Let Glossa decide",
-        "readyOnly": "Only sizes kept ready",
-        "exact": "Exactly the size requested"
+        "auto": "Automatic",
+        "readyOnly": "Ready-made formats only",
+        "exact": "Exact size"
       },
       "sizePolicyHint": {
-        "auto": "Glossa picks the closest size among those the library keeps ready; if it declares none, it asks for a made-to-measure one.",
-        "readyOnly": "Only what the library already has ready is asked for: it arrives far sooner, and is sometimes a little larger than needed.",
-        "exact": "The size you set is always asked for: it is the one you want, but the library has to build it and each page can take around ten times as long."
+        "auto": "Glossa decides: it uses a format the library already keeps ready when there is one, otherwise it asks for the configured size. Recommended.",
+        "readyOnly": "Asks only for ready-made formats: no waiting, but the page may arrive larger or smaller than the configured size.",
+        "exact": "Always asks for the configured size, even when the library must build it on the spot: exact size, slower first opening."
+      },
+      "fieldHint": {
+        "pagesAtOnce": "How many pages of a download start together. One slot towards the library always stays free for the page you are reading: that is why the field's maximum depends on the chosen rhythm.",
+        "requestsPerMinute": "The ceiling of requests per minute towards that library. Higher is faster, but going past the pace the library tolerates triggers refusals and pauses.",
+        "waitAfterRefusal": "How long Glossa waits when the library refuses or asks to slow down. The value shown is the longer pause of the two cases: changing it sets both.",
+        "maxAttempts": "How many times to retry the same page before calling it not downloaded. Between attempts the wait grows on its own.",
+        "slowLibraryWaitSecs": "How long to wait for an answer before considering it lost. Raise it for libraries that build images on the spot; lowering it too much fails pages that were still arriving."
       },
       "field": {
         "pagesAtOnce": "Pages at a time",
@@ -695,13 +703,6 @@
         "waitAfterRefusal": "Pause after a refusal (seconds)",
         "maxAttempts": "Attempts",
         "slowLibraryWaitSecs": "Wait for a slow library (seconds)"
-      },
-      "fieldHint": {
-        "pagesAtOnce": "How many pages of the same book download together. This library allows at most {{max}}, because one slot always stays free for whoever is reading.",
-        "requestsPerMinute": "The overall ceiling towards this library: it covers downloads and the pages you are looking at.",
-        "waitAfterRefusal": "How long to stay put when the library refuses or asks to slow down. If it states its own wait, that one wins.",
-        "maxAttempts": "How many times a page is retried before it is given up.",
-        "slowLibraryWaitSecs": "How long to wait for an answer already under way. Some libraries build the book when you ask for it and can stay silent for a minute."
       }
     }
   },
@@ -930,6 +931,9 @@
       "localVersionDerived": "Created on this computer",
       "localVersionComplete": "Complete",
       "localVersionPartial": "Incomplete",
+      "localVersionNeverDownloaded": "Never downloaded",
+      "localVersionLastDownloadFailed": "Last download failed",
+      "localVersionNotServed": "{{count}} not served by the library",
       "compressAction": "Make a compressed copy, without touching the original",
       "compressSourceLabel": "From which resolution",
       "compressTargetLabel": "To which resolution",
@@ -1000,11 +1004,15 @@
       "viewerSection": "Pages",
       "viewerLoading": "Opening page…",
       "viewerOpeningPage": "Opening page {{index}}…",
-      "viewerPreparing": "This library builds the book when you ask for it: the first opening can take a minute.",
+      "viewerPreparing": "The library is still answering. Opening a book for the first time can take a minute.",
       "viewerLoadError": "This page could not be opened.",
       "viewerLoadErrorHint": "Check your connection and try again.",
       "viewerTileLoadErrorHint": "The library did not return all the required tiles.",
       "viewerRetry": "Retry",
+      "viewerDownloadPage": "Download this page",
+      "viewerPageOnComputer": "This page is already on your computer",
+      "viewerPageDownloaded": "Page saved to your computer",
+      "viewerPageDownloadFailed": "Could not save the page",
       "viewerNoManifest": "This work has no IIIF digitisation to read yet.",
       "viewerPrevPage": "Previous page",
       "viewerNextPage": "Next page",
@@ -1090,6 +1098,7 @@
         "other": "File"
       },
       "sourceUrlField": "Address",
+      "downloadSection": "Download",
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
       "viewOnline": "Online"

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { FieldLabel, FIELD_CLASSNAME, FIELD_MONO_CLASSNAME } from '../ui';
+import { FIELD_CLASSNAME, FIELD_MONO_CLASSNAME, SectionLabel, SettingRow } from '../ui';
+import { Gauge, Wrench } from 'lucide-react';
 import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloadSettingsService';
 
 /**
@@ -91,7 +92,7 @@ const ADVANCED_KNOBS: Knob[] = [
  *
  * Gli altri valori del profilo — la finestra del conteggio, i posti verso la
  * biblioteca, le attese fra un tentativo e l'altro, l'attesa per connettersi —
- * restano quelli che sono: sono numeri misurati sul campo, e una manopola per
+ * restano quelli che sono: sono numeri misurati sul campo, e un campo per
  * ognuno faceva una schermata che nessuno poteva usare.
  */
 export function NetworkProfileFields({
@@ -110,56 +111,54 @@ export function NetworkProfileFields({
     onChange(name, knob.write(values, Number.isFinite(parsed) ? parsed : 0));
   };
 
-  const knobField = (knob: Knob) => {
-    // Le pagine insieme sono l'unico campo il cui massimo dipende dal profilo:
-    // su una biblioteca che concede due posti, il massimo vero è uno.
-    const max = knob.key === 'pagesAtOnce' ? pagesAtOnceCeiling(values) : knob.max;
-    return (
-      <div key={knob.key} className="space-y-1.5">
-        <FieldLabel htmlFor={`settings-network-${knob.key}`} block>
-          {t(`settings.network.field.${knob.key}`)}
-        </FieldLabel>
-        <input
-          id={`settings-network-${knob.key}`}
-          type="number"
-          min={knob.min}
-          max={max}
-          step={1}
-          value={knob.read(values)}
-          onChange={(event) => change(knob, event.target.value)}
-          className={FIELD_MONO_CLASSNAME}
-        />
-        <p className="text-xs text-editorial-muted">
-          {t(`settings.network.fieldHint.${knob.key}`, { max })}
-        </p>
-      </div>
-    );
-  };
+  const knobRow = (knob: Knob) => (
+    <SettingRow
+      key={knob.key}
+      label={t(`settings.network.field.${knob.key}`)}
+      hint={t(`settings.network.fieldHint.${knob.key}`)}
+    >
+      <input
+        id={`settings-network-${knob.key}`}
+        type="number"
+        min={knob.min}
+        // Le pagine insieme sono l'unico campo il cui massimo dipende dal
+        // profilo: su una biblioteca che concede due posti, il massimo vero
+        // è uno.
+        max={knob.key === 'pagesAtOnce' ? pagesAtOnceCeiling(values) : knob.max}
+        step={1}
+        aria-label={t(`settings.network.field.${knob.key}`)}
+        value={knob.read(values)}
+        onChange={(event) => change(knob, event.target.value)}
+        className={`${FIELD_MONO_CLASSNAME} w-24`}
+      />
+    </SettingRow>
+  );
+
+  const rows = 'divide-y divide-editorial-border/60 border-y border-editorial-border/70';
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <FieldLabel htmlFor="settings-network-profile-name" block>
-          {t('settings.network.name')}
-        </FieldLabel>
-        <input
-          id="settings-network-profile-name"
-          value={name}
-          onChange={(event) => onChange(event.target.value, values)}
-          className={FIELD_CLASSNAME}
-        />
+    <div className="space-y-10">
+      <div className={rows}>
+        <SettingRow label={t('settings.network.name')}>
+          <input
+            id="settings-network-profile-name"
+            aria-label={t('settings.network.name')}
+            value={name}
+            onChange={(event) => onChange(event.target.value, values)}
+            className={`${FIELD_CLASSNAME} w-64 max-w-[50vw]`}
+          />
+        </SettingRow>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">{KNOBS.map(knobField)}</div>
+      <section className="space-y-4">
+        <SectionLabel icon={Gauge} label={t('settings.network.rhythmSection')} />
+        <div className={rows}>{KNOBS.map(knobRow)}</div>
+      </section>
 
-      <details className="border-t border-editorial-border/70 pt-3">
-        <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
-          {t('settings.network.advanced')}
-        </summary>
-        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-          {ADVANCED_KNOBS.map(knobField)}
-        </div>
-      </details>
+      <section className="space-y-4">
+        <SectionLabel icon={Wrench} label={t('settings.network.advanced')} />
+        <div className={rows}>{ADVANCED_KNOBS.map(knobRow)}</div>
+      </section>
     </div>
   );
 }

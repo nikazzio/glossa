@@ -1,6 +1,6 @@
 # Glossa — riferimento architetturale
 
-Ultimo aggiornamento: 2026-08-22.
+Ultimo aggiornamento: 2026-09-04.
 
 Questo documento descrive struttura corrente e invarianti tecniche. Decisioni di
 prodotto in `PRODUCT_ARCHITECTURE_2_0.md`; regole visive in
@@ -508,11 +508,11 @@ manifesto**: è già pronta sul server della biblioteca, mentre ordinare una
 misura piccola al servizio immagini la fa ricavare al momento e su Internet
 Archive costa quanto la pagina intera.
 
-La virtualizzazione smonta le righe fuori schermo, ma il rail conserva gli
-indirizzi delle miniature già ottenute per tutta la sua apertura. Una richiesta
-già partita continua anche se la riga esce dallo schermo; tornando indietro la
-miniatura ricompare senza nuovo passaggio dal motore. Chiudere il rail o cambiare
-libro annulla le richieste residue e rilascia gli indirizzi.
+La virtualizzazione smonta le righe fuori schermo. Copertine e miniature usano
+lo stesso piccolo deposito di indirizzi locali, limitato alle 128 immagini usate
+più di recente: tornando al catalogo o riaprendo un libro ricompaiono senza
+decodifica e senza nuovo passaggio dal motore. Le richieste residue non più
+visibili vengono tolte dalla coda, così non precedono la pagina aperta.
 
 Le pagine grandi non restano duplicate nella memoria della finestra: tornando
 su una pagina, `CacheRequest::Page` usa la stessa chiave stabile e `resolve`
@@ -583,6 +583,12 @@ presente — e riusa la catena dello scaricamento (transito, validazione,
 spostamento atomico, riga nell'inventario laterale con impronta e dimensioni),
 ricavando anche la miniatura. Se qualcosa non riesce, la pagina si vede comunque
 e finisce in cache come prima.
+
+Il comando **Scarica questa pagina** usa `keep_viewer_page`: prende gli stessi
+byte già aperti dal visore, li convalida e li promuove atomicamente nel
+deposito, aggiungendo impronta e miniatura. Se un lavoro sulla stessa
+digitalizzazione è attivo, il comando si ferma invece di scrivere sullo stesso
+file in concorrenza.
 
 ### Rimozione di un'opera e cache dei byte
 

@@ -64,6 +64,10 @@ Le miniature già apparse restano disponibili mentre scorri avanti e indietro;
 anche le pagine già viste vengono riprese dalla memoria di lavoro, non dalla
 biblioteca.
 
+Il comando di scaricamento nel visore conserva **solo la pagina aperta**, usando
+gli stessi byte che stai già guardando: non la chiede una seconda volta. Da quel
+momento quella pagina resta disponibile sul computer.
+
 In alto a destra c'è scritto **da dove arriva la pagina che stai guardando**, e sono tre cose diverse: **Dal computer** quando il file è tuo, **Dalla memoria** quando è una pagina già vista di un libro che non hai scaricato, **Dalla biblioteca** quando è appena arrivata — verde finché la biblioteca risponde, smorzato quando non arriva niente. Passandoci sopra leggi anche a quale misura è stata chiesta.
 
 Se cancelli le pagine locali mentre stai leggendo, Glossa si accorge da sé che quella copia non c'è più: la pagina resta leggibile, e le successive vengono chieste alla biblioteca invece di essere cercate in una cartella che non esiste.

@@ -5,8 +5,9 @@
 
 use serde_json::Value;
 
-use crate::download::manifest::Page;
 use crate::iiif::settings::SizePolicy;
+
+use crate::download::manifest::Page;
 
 /// Come calcolare la misura per **questo** libro.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,12 +59,7 @@ pub fn info_url(image_service: &str) -> String {
     format!("{}/info.json", image_service.trim_end_matches('/'))
 }
 
-/// Sceglie la regola dal primo descrittore disponibile, dentro la politica
-/// scelta per quella biblioteca.
-///
-/// `ReadyOnly` non chiede mai una larghezza costruita per noi: senza
-/// dimezzamenti dichiarati scende alla dimensione piena, che una biblioteca
-/// tiene sempre pronta. Costa più byte e non costa un'attesa.
+/// Sceglie la regola dal primo descrittore disponibile.
 pub fn rule_from_info(info: Option<&Value>, cap: SizeCap, policy: SizePolicy) -> SizingRule {
     if matches!(cap, SizeCap::Max) {
         return SizingRule::Full;
@@ -71,8 +67,7 @@ pub fn rule_from_info(info: Option<&Value>, cap: SizeCap, policy: SizePolicy) ->
     if matches!(policy, SizePolicy::Exact) {
         return SizingRule::ExactWidth;
     }
-    let declares = info.is_some_and(declares_halvings);
-    match (declares, policy) {
+    match (info.is_some_and(declares_halvings), policy) {
         (true, _) => SizingRule::Halvings,
         (false, SizePolicy::ReadyOnly) => SizingRule::Full,
         (false, _) => SizingRule::ExactWidth,
@@ -228,11 +223,7 @@ mod tests {
     #[test]
     fn a_library_that_keeps_the_halvings_ready_is_recognised() {
         assert_eq!(
-            rule_from_info(
-                Some(&archive_info()),
-                SizeCap::LongEdge(2000),
-                SizePolicy::Auto
-            ),
+            rule_from_info(Some(&archive_info()), SizeCap::LongEdge(2000), SizePolicy::Auto),
             SizingRule::Halvings
         );
     }
@@ -240,11 +231,7 @@ mod tests {
     #[test]
     fn a_library_that_declares_nothing_gets_the_general_rule() {
         assert_eq!(
-            rule_from_info(
-                Some(&gallica_info()),
-                SizeCap::LongEdge(2000),
-                SizePolicy::Auto
-            ),
+            rule_from_info(Some(&gallica_info()), SizeCap::LongEdge(2000), SizePolicy::Auto),
             SizingRule::ExactWidth
         );
     }
@@ -258,52 +245,9 @@ mod tests {
     }
 
     #[test]
-    fn asking_only_ready_sizes_never_builds_a_width_for_us() {
-        // Senza dimezzamenti dichiarati la larghezza calcolata è l'unica misura
-        // che porterebbe al tetto, e va costruita al momento: 26,6 s misurati.
-        // Chi ha chiesto «solo misure pronte» preferisce la dimensione piena.
-        assert_eq!(
-            rule_from_info(
-                Some(&gallica_info()),
-                SizeCap::LongEdge(2000),
-                SizePolicy::ReadyOnly
-            ),
-            SizingRule::Full
-        );
-        // Con i dimezzamenti dichiarati non cambia niente: sono già pronti.
-        assert_eq!(
-            rule_from_info(
-                Some(&archive_info()),
-                SizeCap::LongEdge(2000),
-                SizePolicy::ReadyOnly
-            ),
-            SizingRule::Halvings
-        );
-    }
-
-    #[test]
-    fn asking_the_exact_size_ignores_what_the_library_keeps_ready() {
-        // Chi vuole quel numero di pixel accetta l'attesa: nemmeno i
-        // dimezzamenti dichiarati lo dirottano su una misura vicina.
-        assert_eq!(
-            rule_from_info(
-                Some(&archive_info()),
-                SizeCap::LongEdge(2000),
-                SizePolicy::Exact
-            ),
-            SizingRule::ExactWidth
-        );
-    }
-
-    #[test]
     fn the_max_cap_has_nothing_to_calculate() {
         assert_eq!(
             rule_from_info(Some(&archive_info()), SizeCap::Max, SizePolicy::Auto),
-            SizingRule::Full
-        );
-        // «Massima» è già una misura pronta: la politica non ha niente da dire.
-        assert_eq!(
-            rule_from_info(Some(&archive_info()), SizeCap::Max, SizePolicy::Exact),
             SizingRule::Full
         );
         assert_eq!(

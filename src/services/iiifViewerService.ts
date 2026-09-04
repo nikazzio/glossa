@@ -143,21 +143,25 @@ export function wholePageUrl(imageService: string, width = WHOLE_PAGE_WIDTH_PX):
 export const MAX_SIZE = 'max';
 
 /**
- * Biblioteche che ricavano l'immagine al momento in cui la si chiede, invece di
- * servirne una già pronta.
+ * Un secondo tentativo, e uno solo, per qualsiasi biblioteca.
  *
- * Cambia due comportamenti del visore: l'indice va ritentato, e si avvisa chi
- * guarda che l'attesa è normale.
+ * Misurato il 4 settembre 2026 su Internet Archive: l'indice di un libro di 322
+ * pagine risponde con un errore del server dopo 60 secondi al primo tentativo e
+ * arriva in 1,3 secondi al secondo. Non è un indirizzo rotto: la biblioteca sta
+ * preparando il file e la prima richiesta scade prima che finisca. Lo stesso
+ * vale per le immagini.
  *
- * Misurato il 4 settembre 2026 su Internet Archive, su un libro di 308 pagine.
- * L'indice fallisce alla prima richiesta dopo 60 secondi e arriva alla seconda
- * in 1,3 s. Le pagine invece falliscono **per singola coppia pagina+misura**:
- * la stessa richiesta ripetuta identica fallisce ancora (due volte su due),
- * mentre la stessa pagina a un'altra misura arriva in circa 3 secondi. Vale in
- * tutte le direzioni: la pagina 21 fallisce a 1312 e arriva a piena
- * risoluzione, la 42 fallisce a piena risoluzione e arriva chiedendo la sua
- * larghezza in numero. Non è la misura a essere sbagliata: è un loro
- * derivato guasto, e cambiare forma della richiesta lo aggira.
+ * Prima questo valeva solo per l'indice e solo per le biblioteche di un elenco
+ * scritto a mano, e le pagine se la cavavano chiedendo **tre grandezze diverse**
+ * in fila. Quelle tre non funzionavano perché una fosse la grandezza giusta:
+ * funzionavano perché ogni tentativo dava tempo al lavoro cominciato dal
+ * precedente. Un secondo tentativo dice la stessa cosa senza fingere che il
+ * problema sia la grandezza — e senza il costo di chiedere per prima la
+ * dimensione piena, che alla riapertura del libro faceva riscaricare da capo
+ * pagine già in casa.
+ *
+ * Uno solo: un terzo raddoppierebbe l'attesa di un guasto vero senza aggirare
+ * niente.
  */
 const LIBRARIES_THAT_BUILD_ON_DEMAND: ReadonlySet<string> = new Set(['archive_org']);
 
@@ -165,26 +169,6 @@ export function buildsImagesOnDemand(providerKey: string | null): boolean {
   return providerKey !== null && LIBRARIES_THAT_BUILD_ON_DEMAND.has(providerKey);
 }
 
-/**
- * Le forme in cui chiedere la stessa pagina intera, in ordine, da provare una
- * dopo l'altra finché una risponde.
- *
- * Serve a due guasti diversi che si curano allo stesso modo:
- *
- * 1. i derivati guasti di chi ricava su richiesta (vedi sopra): cambiare forma
- *    aggira il singolo derivato che non arriva;
- * 2. la versione dell'Image API, che **non** si deduce da quella del
- *    manifesto: un manifesto Presentation 3 può indicare un servizio immagini
- *    Image API 2, dove `max` non esiste e la richiesta torna 400. La larghezza
- *    in numero è valida in entrambe le versioni, quindi chiude anche quel caso.
- *
- * Altrove si tenta una volta sola: un secondo tentativo lì raddoppierebbe
- * l'attesa di un guasto vero senza aggirare niente.
- *
- * La misura del deposito, quando c'è, non ammette ripieghi: una pagina che
- * arrivasse a un'altra misura finirebbe in cache sotto un nome che promette una
- * risoluzione che non ha.
- */
 export function wholePageAttempts(
   page: ViewerPage,
   localSize: string | null,
@@ -199,15 +183,7 @@ export function wholePageAttempts(
     .filter((form, index, all) => all.indexOf(form) === index);
 }
 
-/**
- * L'indice del libro, con **un solo nuovo tentativo** dove la biblioteca lo
- * costruisce al momento.
- *
- * Il primo tentativo fa partire la costruzione e scade prima che finisca; il
- * secondo trova il lavoro già fatto. Misurato: 60 secondi di attesa e un errore,
- * poi 1,3 secondi e l'indice. Altrove non si ritenta: raddoppierebbe l'attesa
- * di un indirizzo davvero rotto senza nessun guadagno.
- */
+/** Ritenta l'indice solo dove la biblioteca lo costruisce su richiesta. */
 export async function fetchViewerManifestWithRetry(
   manifestUrl: string,
   providerKey: string | null,
@@ -243,6 +219,16 @@ export function pageSourceUrl(
   return wholePageUrl(imageService, Number.isFinite(width) && width > 0 ? width : WHOLE_PAGE_WIDTH_PX);
 }
 
+/**
+ * La grandezza con cui chiedere una pagina intera.
+ *
+ * Una sola. Quella del deposito quando il libro è in casa a una certa misura,
+ * altrimenti il dimezzamento: e il dimezzamento **è** una misura pronta, non una
+ * stima fortunata. Verificato il 4 settembre 2026 su Internet Archive — pagina
+ * 2500x3559, grandezze dichiarate pronte 78, 156, 313, 625, 1250, 2500: il
+ * calcolo chiede 1250, che è una di quelle. Le biblioteche preparano i
+ * dimezzamenti, ed è per questo che quel calcolo li cerca.
+ */
 /** I byte di un indirizzo IIIF (info.json o tassello), sempre dal ponte
  *  controllato — mai una richiesta diretta della finestra. */
 export async function fetchIiifBytes(

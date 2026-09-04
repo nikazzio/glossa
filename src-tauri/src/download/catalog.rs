@@ -4,8 +4,9 @@
 
 use rusqlite::params;
 
-use crate::iiif::network::{NetworkProfile, CAUTIOUS};
 use crate::iiif::settings::SizePolicy;
+
+use crate::iiif::network::{NetworkProfile, CAUTIOUS};
 use crate::jobs::engine::JobContext;
 use crate::jobs::{ErrorKind, JobError};
 
@@ -36,9 +37,6 @@ pub(crate) async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> Ne
     })
 }
 
-/// Come chiedere le misure a questa biblioteca, riletta come il ritmo
-/// all'avvio del lavoro. Database non raggiungibile: vale «decidi tu», che è
-/// il comportamento di sempre.
 pub(crate) async fn size_policy_for(ctx: &JobContext, config: &DownloadConfig) -> SizePolicy {
     let key = config.provider_key.clone();
     let host = host_of(&config.manifest_url).ok();

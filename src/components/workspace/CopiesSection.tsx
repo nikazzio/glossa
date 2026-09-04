@@ -169,8 +169,12 @@ function CopyDetails({
     ? { sizes: entry.sizes, principal: entry.principalSize, localPages: entry.localPages, localBytes: entry.localBytes }
     : fetched ?? emptyInventory();
   const expectedPages = entry?.expectedPages ?? version.expectedPages ?? 0;
-  const { sizes, principal, localBytes } = inventory;
+  const { sizes, principal, localPages, localBytes } = inventory;
+  // Le pagine contate dal deposito, oppure le cartelle di misura quando
+  // l'inventario non risponde ma il catalogo sa già che c'è qualcosa.
+  const hasLocalPages = localPages > 0 || sizes.some((size) => size.pages > 0);
   const runningDownload = jobs.some((job) => job.id === `download:${version.id}` && !isTerminal(job));
+  const lastDownload = jobs.find((job) => job.id === `download:${version.id}`);
 
   const startDownload = async () => {
     if (!version.sourceUrl) return;
@@ -245,32 +249,42 @@ function CopyDetails({
 
   return (
     <div className="space-y-5 border-t border-editorial-border/60 pt-3">
-      {sizes.length > 0 && (
-        <section className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <SectionLabel icon={HardDrive} label={t('areas.library.localVersionsSection')} />
-            <div className="flex items-center gap-1">
-              <IconButton
-                size="sm"
-                onClick={() => void verify()}
-                disabled={busy}
-                title={t('areas.library.verify')}
-              >
-                <ShieldCheck size={13} />
-              </IconButton>
-              <CompressPopover version={version} sizes={sizes} onRefresh={reload} />
-              <IconButton
-                size="sm"
-                onClick={() => void freeSpace()}
-                disabled={busy}
-                title={t('areas.library.freeSpace')}
-              >
-                <Eraser size={13} />
-              </IconButton>
-            </div>
+      {/* I comandi restano sempre in vista, spenti quando non c'è niente sul
+          computer: dentro l'elenco delle versioni sparivano del tutto quando
+          l'inventario del deposito non risponde, e allora non si poteva più né
+          verificare né liberare spazio. */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel icon={HardDrive} label={t('areas.library.localVersionsSection')} />
+          <div className="flex items-center gap-1">
+            <IconButton
+              size="sm"
+              onClick={() => void verify()}
+              disabled={busy || !hasLocalPages}
+              title={t('areas.library.verify')}
+            >
+              <ShieldCheck size={13} />
+            </IconButton>
+            <CompressPopover version={version} sizes={sizes} onRefresh={reload} />
+            <IconButton
+              size="sm"
+              onClick={() => void freeSpace()}
+              disabled={busy || !hasLocalPages}
+              title={t('areas.library.freeSpace')}
+            >
+              <Eraser size={13} />
+            </IconButton>
           </div>
-          <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />
-          <div className="space-y-1">
+        </div>
+        <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />
+        {!hasLocalPages && (
+          <p className="text-xs text-editorial-muted">
+            {lastDownload?.status === 'error'
+              ? t('areas.library.localVersionLastDownloadFailed')
+              : t('areas.library.localVersionNeverDownloaded')}
+          </p>
+        )}
+        <div className="space-y-1">
             {sizes.map((size) => (
               <ResolutionRow
                 key={`${size.sizeTag}-${size.derived ? 'derived' : 'native'}`}
@@ -300,9 +314,8 @@ function CopyDetails({
                 }}
               />
             ))}
-          </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       <section className="space-y-2">
         <SectionLabel icon={Download} label={t('areas.library.downloadSection')} />
@@ -350,6 +363,7 @@ function ResolutionRow({
             : t('areas.library.localVersionDownloaded')}
           {' · '}{pagesLabel} · {humanSize(size.bytes)} ·{' '}
           {t(complete ? 'areas.library.localVersionComplete' : 'areas.library.localVersionPartial')}
+          {size.missing > 0 && ` · ${t('areas.library.localVersionNotServed', { count: size.missing })}`}
         </span>
       </span>
       <IconButton
