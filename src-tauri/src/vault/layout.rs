@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 /// svuotamento) arriva con la PR che lo usa: qui non serve ancora.
 pub(crate) const PROVIDERS_DIR: &str = "providers";
 pub(crate) const PAGES_DIR: &str = "pages";
-const THUMBNAILS_DIR: &str = "thumbnails";
+pub(crate) const THUMBNAILS_DIR: &str = "thumbnails";
 pub(crate) const MANIFEST_FILE: &str = "manifest.json";
 
 /// Radice delle copie ricavate in locale (l'ottimizzazione, oggi; un domani

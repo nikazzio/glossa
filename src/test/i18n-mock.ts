@@ -19,11 +19,24 @@ const EN_TRANSLATIONS: Record<string, string> = {
   'statusBar.areaTranslations': 'Translations',
   'statusBar.areaLibrary': 'Library',
   'statusBar.areaTranscriptions': 'Transcriptions',
+  'dashboard.discovery.pagesCount_one': '{{count}} page',
+  'dashboard.discovery.pagesCount_other': '{{count}} pages',
 };
+
+// Riproduce il minimo di i18next che serve alle asserzioni: scelta della forma
+// singolare/plurale col suffisso e sostituzione dei segnaposto. Le chiavi non
+// mappate tornano com'erano (nessun segnaposto da sostituire).
+function translate(key: string, options?: Record<string, unknown>): string {
+  const count = typeof options?.count === 'number' ? options.count : null;
+  const pluralKey = count === null ? null : `${key}_${count === 1 ? 'one' : 'other'}`;
+  const template = (pluralKey ? EN_TRANSLATIONS[pluralKey] : undefined) ?? EN_TRANSLATIONS[key] ?? key;
+  if (!options) return template;
+  return template.replace(/{{(\w+)}}/g, (_match, name: string) => String(options[name] ?? ''));
+}
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => EN_TRANSLATIONS[key] ?? key,
+    t: (key: string, options?: Record<string, unknown>) => translate(key, options),
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   initReactI18next: { type: '3rdParty', init: vi.fn() },

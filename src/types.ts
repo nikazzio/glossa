@@ -91,6 +91,12 @@ export interface IIIFDiscoveryResult {
    * — non il manifesto IIIF (`manifestUrl`) né la scheda del catalogo cartaceo
    * (`catalogUrl`). */
   pageUrl: string | null;
+  /**
+   * Tutto il resto che la biblioteca ha dichiarato e che non ha un campo suo,
+   * com'è arrivato. Il motore lo omette quando è vuoto, quindi qui è
+   * facoltativo. Non è una struttura su cui costruire logica: è un deposito.
+   */
+  raw?: Record<string, string[]>;
 }
 
 export type SourceCard = IIIFDiscoveryResult | (IIIFManifestPreview & { id: string });
@@ -174,6 +180,15 @@ export interface AddSourceToLibraryInput {
   /** La pagina web dell'opera sul sito della biblioteca, per un lettore
    * umano — non il manifesto IIIF né la scheda del catalogo cartaceo. */
   pageUrl: string | null;
+  /**
+   * Tutto il resto che la biblioteca ha dichiarato e che non ha un campo suo,
+   * com'è arrivato: chiave con il nome che le dà la biblioteca, valori in
+   * elenco perché molti campi si ripetono. Si conserva per intero anche se
+   * oggi nessuna schermata lo mostra — rifare la ricerca domani per un dato che
+   * avevamo già in mano è lavoro sprecato, e la biblioteca potrebbe non
+   * ridarlo uguale.
+   */
+  raw: Record<string, string[]>;
 }
 
 /** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */

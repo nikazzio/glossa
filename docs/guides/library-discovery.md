@@ -20,7 +20,9 @@ Cosa accetta ciascuna:
 
 La ricerca non scarica materiale.
 
-I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
+I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
+
+Di ogni risultato Glossa conserva **tutto quello che la biblioteca ha detto**, anche i dati che nessuna schermata mostra oggi: rifare la ricerca domani per recuperarli sarebbe lavoro sprecato, e la biblioteca potrebbe non ridarli uguali.
 
 ## Aggiungere una fonte alla Biblioteca
 
@@ -45,9 +47,24 @@ Sopra l'elenco c'è la **barra di ricerca**: scrivi titolo o autore, e accanto s
 
 **Viste salvate** — Il comando col segnalibro apre le viste salvate: dai un nome alla combinazione di filtri che stai usando e la ritrovi lì, con un clic. Ogni vista si può eliminare. Una vista salvata quando i filtri erano diversi continua a funzionare: quello che non si riconosce più torna semplicemente neutro.
 
+**Immagini sul computer** — Nella riga di ogni opera, accanto al numero di pagine, un'**icona tonda verde** dice cosa hai già scaricato: piena quando ci sono tutte le immagini, tratteggiata con il conteggio accanto quando ne manca qualcuna. Se non c'è icona, l'opera esiste solo in rete. Passandoci sopra Glossa lo scrive per esteso.
+
 **Collezioni** — Una collezione è un'etichetta che raccoglie opere. Si aggiunge dalla scheda dell'opera, e un'opera può stare in **più collezioni insieme**: non si fonde e non si duplica niente, e togliere un'etichetta non tocca né l'opera né le altre collezioni. Dalla barra di ricerca puoi mostrare solo le opere di una collezione.
 
-Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina, con tutti i dati anagrafici che Glossa conosce per quel libro: titolo, natura dell'origine, autore, data, lingua, editore, altri responsabili, diritti, descrizione fisica, soggetti, volume, descrizione, luogo di origine, provenienza, note, serie/collana, genere/forma, identificativo standard, copertura, opere collegate — un campo che la biblioteca non dichiara mostra «—», non sparisce, così ogni scheda resta leggibile allo stesso modo. Ci sono anche disponibilità, spazio occupato e stato, le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. In fondo c'è il posto dove arriverà il visore delle pagine. Il comando con la freccia riporta al catalogo.
+Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina, con tutti i dati anagrafici che Glossa conosce per quel libro: titolo, natura dell'origine, autore, data, lingua, editore, altri responsabili, diritti, descrizione fisica, soggetti, volume, descrizione, luogo di origine, provenienza, note, serie/collana, genere/forma, identificativo standard, copertura, opere collegate — un campo che la biblioteca non dichiara mostra «—», non sparisce, così ogni scheda resta leggibile allo stesso modo. Ci sono anche disponibilità, spazio occupato e stato, le copie digitali registrate con il loro limite di qualità, i workspace dove puoi collegarla o scollegarla, e i comandi dell'opera raccolti in alto. Nella parte grande della scheda c'è il **visore delle pagine**: sfogli il libro pagina per pagina, con le miniature a fianco, i comandi per la pagina precedente e successiva, il campo per saltare a un numero e lo zoom. Glossa ricorda dove eri arrivato: riaprendo il libro torni lì.
+
+Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pagine e le miniature si leggono dal disco: compaiono subito, non costano nessuna richiesta alla biblioteca e funzionano anche senza collegamento. Se non hai niente, la pagina si chiede alla biblioteca **in una volta sola**, come immagine intera: è il modo più rapido di vederla. Ingrandendo oltre la sua nitidezza, il visore passa da solo allo zoom a pezzi e chiede alla biblioteca il dettaglio che serve. Alcune biblioteche costruiscono le immagini nel momento in cui gliele chiedi: là la prima apertura può richiedere un minuto, e Glossa ribussa una volta invece di arrendersi — è il motivo per cui certi libri prima non si aprivano affatto. Su quelle biblioteche capita che una singola pagina, a una certa misura, non arrivi mai: Glossa la richiede in un'altra misura, che di solito arriva, invece di dichiararla guasta. L'avviso sull'attesa lunga compare solo dove quella spiegazione è vera, non con tutte le biblioteche.
+
+**Lo zoom** ora arriva ben oltre la dimensione reale della pagina: ingrandendo molto l'immagine sgrana, ma una nota a margine si legge. Leggendo online, superata la dimensione reale Glossa passa da sola al dettaglio vero chiesto alla biblioteca — prima non ci arrivava mai, perché il limite dello zoom stava sotto quella soglia. Su un libro letto dal disco l'ingrandimento resta quello della misura con cui l'hai scaricato: più grande si vede, non più nitido.
+
+Quando l'indice del libro dichiara misure già pronte, Glossa usa la più piccola
+che resta nitida nel visore. Altrimenti usa subito un dimezzamento della pagina:
+non aspetta una richiesta tecnica aggiuntiva prima di mostrarti l'immagine.
+Le miniature già apparse restano disponibili mentre scorri avanti e indietro;
+anche le pagine già viste vengono riprese dalla memoria di lavoro, non dalla
+biblioteca.
+
+In alto a destra c'è scritto da dove stai leggendo: **Dal computer** quando il libro è sul disco, **Online** quando arriva dalla biblioteca — verde finché sta rispondendo, smorzato quando non arriva niente. Il comando con la freccia riporta al catalogo.
 
 **Correggere i dati** — Titolo, autore, data e lingua si correggono a mano: il comando con la matita apre il campo, Invio salva, Esc annulla. Un campo corretto porta un segno accanto all'etichetta; passandoci sopra leggi cosa diceva la biblioteca, e il comando accanto al valore riporta all'originale. **Il dato originale non viene mai sovrascritto**: la correzione vive a parte, come le correzioni ai dizionari, quindi si può sempre tornare indietro. Riscrivere esattamente il valore della biblioteca non lascia nessun segno di correzione, perché non c'è niente da segnalare. Gli altri campi non hanno ancora un comando di modifica in questa scheda.
 

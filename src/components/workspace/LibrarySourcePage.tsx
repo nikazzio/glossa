@@ -38,6 +38,7 @@ import { useSourceActions } from './useSourceActions';
 import { CopiesSection, resolutionLabel } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
+import { PageViewer, type ViewerPagePosition } from '../viewer/PageViewer';
 import { useDebounce } from '../../hooks/useDebounce';
 import { summarizeAvailability } from '../../services/vaultService';
 import { humanSize } from '../../utils';
@@ -100,13 +101,26 @@ export function LibrarySourcePage({
   onResyncSource,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
+  const iiifVersions = detail.versions.filter(
+    (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
+  );
+  const manifestVersion = iiifVersions.find((version) => version.isPrimary) ?? iiifVersions[0];
   const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
   const inspectorWidth = useUiStore((state) => state.librarySourceInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setLibrarySourceInspectorWidth);
   const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  // Dove si è arrivati nel libro: interessa solo a questa schermata (visore e
+  // scheda), quindi resta qui e non in uno stato condiviso di tutta l'app.
+  const [viewerPage, setViewerPage] = useState<ViewerPagePosition | null>(null);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
+
+  // Un'altra opera: la posizione di quella precedente non va lasciata a
+  // schermo finché il nuovo manifesto non è arrivato.
+  useEffect(() => {
+    setViewerPage(null);
+  }, [detail.source.id]);
 
   const persistLayout = () => {
     if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
@@ -131,14 +145,27 @@ export function LibrarySourcePage({
     <Group orientation="horizontal" className="flex h-full min-h-0 flex-1" onLayoutChanged={persistLayout}>
       <Panel id="library-source-viewer" minSize={VIEWER_MIN} className="flex min-w-0 flex-col bg-surface-panel">
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
-            dallo Studio di trascrizione: qui resta il posto dove andrà, con
-            la stessa dimensione minima che avrà da riempito. */}
-        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
-          <span className="flex flex-col items-center gap-2">
-            <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-            {t('areas.library.viewerComingSoon')}
-          </span>
-        </div>
+            dallo Studio di trascrizione: questo componente resta la stessa
+            dimensione minima predisposta prima che esistesse. */}
+        {manifestVersion?.sourceUrl ? (
+          <PageViewer
+            key={detail.source.id}
+            sourceId={detail.source.id}
+            versionId={manifestVersion.id}
+            manifestUrl={manifestVersion.sourceUrl}
+            providerKey={manifestVersion.providerKey}
+            onPageChange={setViewerPage}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
+            <span className="flex flex-col items-center gap-2">
+              <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
+              {/* Il visore c'è: quello che manca è una digitalizzazione da
+                  aprire. Promettere che «arriverà» descriveva l'app di prima. */}
+              {t('areas.library.viewerNoManifest')}
+            </span>
+          </div>
+        )}
       </Panel>
 
       <Separator
@@ -211,6 +238,7 @@ export function LibrarySourcePage({
                   <DataSection
                     detail={detail}
                     entry={entry}
+                    viewerPage={viewerPage}
                     onCorrectField={onCorrectField}
                     onResyncSource={onResyncSource}
                   />
@@ -347,11 +375,13 @@ function WorkspaceLinkPicker({
 function DataSection({
   detail,
   entry,
+  viewerPage,
   onCorrectField,
   onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
+  viewerPage: ViewerPagePosition | null;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
   onResyncSource: () => Promise<void>;
 }) {
@@ -453,6 +483,19 @@ function DataSection({
           value={
             entry && entry.expectedPages !== null && entry.expectedPages > 0
               ? t('areas.library.pageCount', { count: entry.expectedPages })
+              : ''
+          }
+        />
+        {/* La pagina aperta nel visore accanto: «—» finché il libro non è
+            aperto, come ogni altro campo della scheda. */}
+        <StatBlock
+          label={t('areas.library.currentPageField')}
+          value={
+            viewerPage
+              ? t('areas.library.viewerPageOf', {
+                  index: viewerPage.index + 1,
+                  total: viewerPage.total,
+                }) + (viewerPage.label ? ` · ${viewerPage.label}` : '')
               : ''
           }
         />

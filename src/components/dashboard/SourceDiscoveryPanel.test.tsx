@@ -122,6 +122,42 @@ describe('SourceDiscoveryPanel', () => {
     );
   });
 
+  it('shows the page count on the collapsed row, without needing to expand it', async () => {
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, itemCount: 372, manifestUrl: 'https://example.test/one' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    const row = await screen.findByRole('button', { name: /First source/ });
+
+    expect(row).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText(/372 pages/)).toBeInTheDocument();
+  });
+
+  it('shows nothing about pages on the collapsed row when the catalog does not declare the count', async () => {
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'gallica', manifest: null, hasMore: false,
+      results: [
+        { id: 'one', title: 'First source', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, itemCount: null, manifestUrl: 'https://example.test/one' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+    await screen.findByRole('button', { name: /First source/ });
+
+    expect(screen.queryByText(/page/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\b0\b/)).not.toBeInTheDocument();
+  });
+
   it('adds a result to the library and then shows it as already added', async () => {
     const libraryService = await import('../../services/libraryService');
     mockDiscover.mockResolvedValueOnce({

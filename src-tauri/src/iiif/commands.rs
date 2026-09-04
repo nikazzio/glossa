@@ -19,6 +19,15 @@ pub struct NetworkSettings {
     pub libraries: Vec<Library>,
 }
 
+/// Quello che la cache ricorda delle impostazioni non vale più: al prossimo
+/// bisogno si rilegge. Senza, una modifica si vedrebbe solo dopo un riavvio.
+fn forget_cached_profiles(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    if let Some(cache) = app.try_state::<std::sync::Arc<crate::httpcache::HttpCache>>() {
+        cache.forget_settings();
+    }
+}
+
 fn snapshot(conn: &rusqlite::Connection) -> Result<NetworkSettings, String> {
     Ok(NetworkSettings {
         profiles: settings::list_profiles(conn)?,
@@ -45,6 +54,7 @@ pub async fn save_network_profile(
     let _write_guard = write_coordinator.lock().await;
     let conn = connection(&app)?;
     settings::save_profile(&conn, &profile)?;
+    forget_cached_profiles(&app);
     snapshot(&conn)
 }
 
@@ -57,6 +67,7 @@ pub async fn delete_network_profile(
     let _write_guard = write_coordinator.lock().await;
     let conn = connection(&app)?;
     settings::delete_profile(&conn, &id)?;
+    forget_cached_profiles(&app);
     snapshot(&conn)
 }
 
@@ -70,6 +81,7 @@ pub async fn set_library_network_profile(
     let _write_guard = write_coordinator.lock().await;
     let conn = connection(&app)?;
     settings::set_library_profile(&conn, &library_key, &profile_id)?;
+    forget_cached_profiles(&app);
     snapshot(&conn)
 }
 

@@ -20,7 +20,9 @@ What each one accepts:
 
 Searching downloads nothing.
 
-Results appear as a list, each with a thumbnail and essential data. Selecting a result expands the row to show its full title, description, and all available metadata.
+Results appear as a list, each with a thumbnail and essential data: author, date, **how many pages the work has**, and which library it comes from. The page count is visible without expanding the row, because that is what makes you decide whether the work is worth a look. When the catalogue does not declare it — which happens with manuscripts — the entry is simply absent, rather than showing a zero that would be untrue. Selecting a result expands the row to show its full title, description, and all available metadata.
+
+For every result Glossa keeps **everything the library said**, including data no screen shows today: searching again tomorrow to recover it would be wasted work, and the library might not give it back the same.
 
 Searching never downloads material.
 
@@ -47,9 +49,25 @@ Above the list sits the **search bar**: type a title or an author, and next to i
 
 **Saved views** — The bookmark command opens your saved views: give the current filter combination a name and find it there with one click. Any view can be deleted. A view saved when the filters were different still works: whatever is no longer recognised simply goes neutral.
 
+**Images on your computer** — On each work's row, next to the page count, a **round green icon** says what you already downloaded: filled when every image is there, dashed with the count beside it when some are missing. No icon means the work only exists online. Hovering it, Glossa spells it out.
+
 **Collections** — A collection is a label that gathers works. You add one from the work's page, and a work can sit in **several collections at once**: nothing is merged and nothing is duplicated, and removing a label touches neither the work nor the other collections. From the search bar you can show only the works in one collection.
 
-Clicking the title opens the **work's page**, full width, with every bibliographic detail Glossa knows for that book: title, origin nature, author, date, language, publisher, other contributors, rights, physical description, subjects, volume, description, place of origin, provenance, notes, series, genre/form, standard identifier, coverage, related works — a field the library does not declare shows "—" instead of disappearing, so every work's page reads the same way. There is also availability, space used and status, the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. At the bottom sits the place where the page viewer will arrive. The arrow command takes you back to the catalogue.
+Clicking the title opens the **work's page**, full width, with every bibliographic detail Glossa knows for that book: title, origin nature, author, date, language, publisher, other contributors, rights, physical description, subjects, volume, description, place of origin, provenance, notes, series, genre/form, standard identifier, coverage, related works — a field the library does not declare shows "—" instead of disappearing, so every work's page reads the same way. There is also availability, space used and status, the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. The large part of the page holds the **page viewer**: you browse the book page by page, with thumbnails alongside, previous and next commands, a field to jump to a number, and zoom. Glossa remembers where you were: reopening the book takes you back there.
+
+The viewer **uses what you have on your computer**. If you downloaded the book, pages and thumbnails are read from disk: they appear at once, cost the library no request at all, and work with no connection. If you have nothing, the page is asked for **in a single request**, as a whole image: it is the fastest way to see it. Zoom past its sharpness and the viewer switches to tiled zoom on its own, asking the library only for the detail you need. Some libraries build the images the moment you ask for them: there the first opening can take a minute, and Glossa knocks a second time instead of giving up — which is why some books would not open at all before. On those libraries a single page at a particular size sometimes never arrives: Glossa asks for it at another size, which usually does, instead of calling it broken. The notice about the long wait appears only where that explanation is true, not for every library.
+
+**Zoom** now goes well past the page's real size: magnify a lot and the image gets grainy, but a marginal note becomes readable. Reading online, once you pass the real size Glossa switches on its own to the true detail asked of the library — it never got there before, because the zoom limit sat below that threshold. On a book read from disk, magnification stays bound to the size you downloaded: bigger, not sharper.
+
+When the book index already declares ready-made sizes, Glossa uses the smallest
+one that remains sharp in the viewer. Otherwise it immediately uses a halving
+of the page: it does not wait for an extra technical request before showing the
+image.
+Thumbnails that have already appeared remain available while you scroll back
+and forth; previously viewed pages are also read from the working cache, not
+from the library again.
+
+At the top right it says where you are reading from: **From your computer** when the book is on disk, **Online** when it comes from the library — green while it is answering, dimmed when nothing arrives. The arrow command takes you back to the catalogue.
 
 **Correcting the details** — Title, author, date and language can be corrected by hand: the pencil command opens the field, Enter saves, Esc cancels. A corrected field carries a mark next to its label; hover it to read what the library said, and the command next to the value restores the original. **The original is never overwritten**: the correction lives apart, like glossary corrections, so you can always go back. Typing exactly the library's value leaves no correction mark, because there is nothing to flag. The other fields have no edit command on this page yet.
 

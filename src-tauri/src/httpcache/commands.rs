@@ -26,10 +26,10 @@ use std::sync::Arc;
 use tauri::Manager;
 
 use super::{
-    request::CacheRequest, CacheMeta, CacheUsage, HttpCache, DEFAULT_MAX_BYTES,
-    DEFAULT_SEARCH_TTL_HOURS, MAX_BYTES_SETTING, SEARCH_TTL_SETTING,
+    request::CacheRequest, CacheMeta, CacheUsage, HttpCache, ServedCounts, Source,
+    DEFAULT_MAX_BYTES, DEFAULT_SEARCH_TTL_HOURS, MAX_BYTES_SETTING, SEARCH_TTL_SETTING,
 };
-use crate::download::courtesy::{Courtesy, Signals};
+use crate::download::courtesy::{Courtesy, Lane, Signals};
 use crate::download::fetch;
 
 /// Estremi accettati per il tetto: sotto i 32 MB la cache non serve a niente,
@@ -62,15 +62,22 @@ impl Default for Limits {
 }
 
 fn limits(app: &tauri::AppHandle) -> Limits {
-    let Ok(path) = crate::storage_config::db_path(app) else {
-        return Limits::default();
+    let read = || {
+        let Ok(path) = crate::storage_config::db_path(app) else {
+            return (DEFAULT_MAX_BYTES, DEFAULT_SEARCH_TTL_HOURS);
+        };
+        let Ok(conn) = crate::db::open_connection(&path) else {
+            return (DEFAULT_MAX_BYTES, DEFAULT_SEARCH_TTL_HOURS);
+        };
+        (max_bytes(&conn), search_ttl_hours(&conn))
     };
-    let Ok(conn) = crate::db::open_connection(&path) else {
-        return Limits::default();
+    let (max_bytes, search_ttl_hours) = match cache(app) {
+        Some(cache) => cache.limits_for(read),
+        None => read(),
     };
     Limits {
-        max_bytes: max_bytes(&conn),
-        search_ttl_hours: search_ttl_hours(&conn),
+        max_bytes,
+        search_ttl_hours,
     }
 }
 
@@ -167,40 +174,96 @@ pub async fn cached_image(
     app: tauri::AppHandle,
     request: CacheRequest,
 ) -> Result<tauri::ipc::Response, String> {
-    if let Some(bytes) = from_vault_exact(&app, &request)? {
-        return Ok(tauri::ipc::Response::new(bytes));
+    let (source, bytes) = resolve_and_release(&app, &request).await?;
+    Ok(served(&app, source, bytes))
+}
+
+/// I byte di una risorsa remota — immagine **o manifesto** — presi dove sono e
+/// segnati nel conto delle provenienze.
+///
+/// Esiste separata dal comando perché il visore ha bisogno degli stessi byte
+/// senza farli attraversare il ponte: un manifesto di un libro può pesare
+/// megabyte, e riportarlo alla finestra per rimandarlo indietro da leggere
+/// significava trasformarlo due volte in un elenco di numeri.
+pub async fn bytes_of(app: &tauri::AppHandle, request: &CacheRequest) -> Result<Vec<u8>, String> {
+    let (source, bytes) = resolve_and_release(app, request).await?;
+    if let Some(cache) = cache(app) {
+        cache.served(source, bytes.len());
+    }
+    Ok(bytes)
+}
+
+/// Deposito, cache, deposito a misura più grande, biblioteca: in quest'ordine.
+async fn resolve(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<(Source, Vec<u8>), String> {
+    if let Some(bytes) = from_vault_exact(app, request)? {
+        return Ok((Source::Vault, bytes));
     }
     // Prima della riduzione dal deposito: è lei che riempie la cache, e
     // cercarla dopo significherebbe non rileggerla mai.
-    if let Some(bytes) = lookup(&app, &request) {
-        return Ok(tauri::ipc::Response::new(bytes));
+    if let Some(bytes) = lookup(app, request) {
+        return Ok((Source::Cache, bytes));
     }
-    if let Some(bytes) = from_vault_larger(&app, &request)? {
-        return Ok(tauri::ipc::Response::new(bytes));
+    if let Some(bytes) = from_vault_larger(app, request)? {
+        return Ok((Source::Vault, bytes));
     }
-    let CacheRequest::Remote { url, .. } = &request else {
-        // Una pagina che non è nel deposito e non è in cache la chiederà il
-        // visore, che sa costruirne l'indirizzo. Finché non esiste, non c'è
-        // niente da indovinare qui.
+
+    // Da qui in avanti si va a disturbare una biblioteca: una richiesta per
+    // volta per la stessa risorsa. Chi arriva secondo aspetta e poi ritrova i
+    // byte in cache, invece di fare la stessa domanda due volte.
+    let key = request.key().as_str().to_string();
+    let turn = match cache(app) {
+        Some(cache) => Some(cache.one_at_a_time(&key).await),
+        None => None,
+    };
+    let _first = match &turn {
+        Some(turn) => Some(turn.lock().await),
+        None => None,
+    };
+    if turn.is_some() {
+        if let Some(bytes) = lookup(app, request) {
+            return Ok((Source::Cache, bytes));
+        }
+    }
+    // Sul computer non c'è: si va dove la richiesta dice di andare. Una pagina
+    // senza indirizzo remoto è una pagina che esiste solo in locale, e non c'è
+    // niente da indovinare qui.
+    let remote = match request {
+        CacheRequest::Remote { url, .. } => Some(url.as_str()),
+        CacheRequest::Page { remote_url, .. } => remote_url.as_deref(),
+        CacheRequest::Search { .. } => None,
+    };
+    let Some(url) = remote else {
         return Err("Questa pagina non è disponibile in locale.".to_string());
     };
 
-    let profile = crate::storage_config::db_path(&app)
-        .and_then(|path| crate::db::open_connection(&path))
-        .map(|conn| {
-            crate::iiif::settings::effective_profile(
-                &conn,
-                request.provider_key().unwrap_or_default(),
-                request.host().as_deref(),
-            )
-        })
-        .unwrap_or(crate::iiif::network::CAUTIOUS);
+    let provider_key = request.provider_key().unwrap_or_default();
+    let host = request.host();
+    let read_profile = || {
+        crate::storage_config::db_path(app)
+            .and_then(|path| crate::db::open_connection(&path))
+            .map(|conn| {
+                crate::iiif::settings::effective_profile(&conn, provider_key, host.as_deref())
+            })
+            .unwrap_or(crate::iiif::network::CAUTIOUS)
+    };
 
-    // Il client si riusa: uno nuovo per copertina significa una connessione
-    // nuova per copertina.
-    let client = match cache(&app) {
-        Some(cache) => cache.client_for(&profile)?,
-        None => fetch::build_client(&profile).map_err(|error| error.message)?,
+    // Client e ritmo si riusano: uno nuovo per immagine significa una
+    // connessione nuova e una lettura del database per ogni tassello.
+    let (profile, client) = match cache(app) {
+        Some(cache) => {
+            let profile = cache.profile_for(provider_key, host.as_deref(), read_profile);
+            (profile, cache.client_for(&profile)?)
+        }
+        None => {
+            let profile = read_profile();
+            (
+                profile,
+                fetch::build_client(&profile).map_err(|error| error.message)?,
+            )
+        }
     };
     let courtesy = app.state::<Arc<Courtesy>>().inner().clone();
     let never_stops = || false;
@@ -209,17 +272,89 @@ pub async fn cached_image(
         stop: &never_stops,
         courtesy_wait: &waiting,
     };
-    let fetched = fetch::fetch(&client, &courtesy, &profile, url, 1, &signals)
-        .await
-        .map_err(|error| error.message)?
-        .ok_or_else(|| "Richiesta interrotta.".to_string())?;
+    let fetched = fetch::fetch(
+        &client,
+        &courtesy,
+        &profile,
+        url,
+        lane_of(request),
+        1,
+        &signals,
+    )
+    .await
+    .map_err(|error| error.message)?
+    .ok_or_else(|| "Richiesta interrotta.".to_string())?;
 
-    store(&app, &request, &fetched.bytes, fetched.content_type);
-    Ok(tauri::ipc::Response::new(fetched.bytes))
+    store(app, request, &fetched.bytes, fetched.content_type);
+    Ok((Source::Network, fetched.bytes))
 }
 
-/// La pagina nel deposito, alla misura chiesta. Ha la precedenza su tutto: è
+/// Come `resolve`, ma libera il turno anche quando la richiesta fallisce.
+async fn resolve_and_release(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<(Source, Vec<u8>), String> {
+    let outcome = resolve(app, request).await;
+    if let Some(cache) = cache(app) {
+        cache.turn_is_over(request.key().as_str()).await;
+    }
+    outcome
+}
+
+/// Segna la provenienza e restituisce i byte. Sapere quante immagini sono
+/// arrivate senza toccare la rete è l'unica misura che dice se la cache serve.
+fn served(app: &tauri::AppHandle, source: Source, bytes: Vec<u8>) -> tauri::ipc::Response {
+    if let Some(cache) = cache(app) {
+        cache.served(source, bytes.len());
+    }
+    tauri::ipc::Response::new(bytes)
+}
+
+/// Cosa sta facendo la rete verso le biblioteche, adesso.
+///
+/// Si chiede solo mentre il pannello è aperto: fuori di lì nessuno la guarda, e
+/// interrogarla di continuo costerebbe senza dire niente di nuovo.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkProbe {
+    pub hosts: Vec<crate::download::courtesy::HostActivity>,
+    pub served: ServedCounts,
+}
+
+#[tauri::command]
+pub async fn network_probe(app: tauri::AppHandle) -> Result<NetworkProbe, String> {
+    let courtesy = app
+        .try_state::<Arc<Courtesy>>()
+        .map(|state| state.inner().clone())
+        .ok_or_else(|| "cortesia non disponibile".to_string())?;
+    Ok(NetworkProbe {
+        hosts: courtesy.activity().await,
+        served: cache(&app)
+            .map(|cache| cache.served_counts())
+            .unwrap_or_default(),
+    })
+}
+
+/// La misura che chiede la miniatura invece di un numero di pixel.
+pub const THUMB_SIZE: &str = "thumb";
+
+/// Quanto è urgente questa immagine.
+///
+/// Una miniatura non deve mai togliere il posto alla pagina che si sta
+/// guardando: due miniature che occupavano gli unici due posti di una
+/// biblioteca severa lasciavano la pagina ad aspettare finché non scadeva.
+fn lane_of(request: &CacheRequest) -> Lane {
+    match request {
+        CacheRequest::Page { size, .. } if size == THUMB_SIZE => Lane::Thumbnail,
+        _ => Lane::Page,
+    }
+}
+
+/// Il file già sul computer, alla misura chiesta. Ha la precedenza su tutto: è
 /// roba posseduta, e non costa una richiesta a nessuno.
+///
+/// Le miniature hanno una cartella loro, che «libera spazio» non tocca: un libro
+/// di cui si sono cancellate le pagine continua a sfogliarsi in piccolo.
 fn from_vault_exact(
     app: &tauri::AppHandle,
     request: &CacheRequest,
@@ -227,12 +362,24 @@ fn from_vault_exact(
     let Some((version_id, index, size)) = page_of(request)? else {
         return Ok(None);
     };
-    let root = crate::vault::commands::root_of(app)?;
+    // Deposito irraggiungibile — disco staccato, cartella di rete non montata —
+    // significa «qui non c'è niente», non «errore»: la pagina si chiederà alla
+    // biblioteca invece di lasciare il visore vuoto.
+    let Ok(root) = crate::vault::commands::root_of(app) else {
+        return Ok(None);
+    };
+    let file = crate::vault::layout::page_file_name(index);
     for folder in version_folders(&root, version_id) {
-        let exact = folder
-            .join(crate::vault::layout::PAGES_DIR)
-            .join(size)
-            .join(crate::vault::layout::page_file_name(index));
+        let exact = if size == THUMB_SIZE {
+            folder
+                .join(crate::vault::layout::THUMBNAILS_DIR)
+                .join(&file)
+        } else {
+            folder
+                .join(crate::vault::layout::PAGES_DIR)
+                .join(size)
+                .join(&file)
+        };
         if exact.is_file() {
             return std::fs::read(&exact)
                 .map(Some)
@@ -242,9 +389,12 @@ fn from_vault_exact(
     Ok(None)
 }
 
-/// La stessa pagina a una misura maggiore, rimpicciolita sul momento e messa in
-/// cache: meglio del deposito che chiedere alla biblioteca una cosa che abbiamo
-/// già in casa più bella.
+/// La stessa pagina in una cartella più grande, rimpicciolita sul momento e
+/// messa in cache: meglio del deposito che chiedere alla biblioteca una cosa che
+/// abbiamo già in casa più bella.
+///
+/// È anche il modo in cui nasce la miniatura di un libro scaricato prima che le
+/// miniature esistessero: si ricava dalla pagina, non si scarica.
 fn from_vault_larger(
     app: &tauri::AppHandle,
     request: &CacheRequest,
@@ -252,22 +402,42 @@ fn from_vault_larger(
     let Some((version_id, index, size)) = page_of(request)? else {
         return Ok(None);
     };
-    let root = crate::vault::commands::root_of(app)?;
+    // Chi chiede `max` vuole la più grande che c'è: se non è sul computer non
+    // la si costruisce rimpicciolendo qualcos'altro.
+    let Some(wanted) = wanted_edge(app, size) else {
+        return Ok(None);
+    };
+    let Ok(root) = crate::vault::commands::root_of(app) else {
+        return Ok(None);
+    };
     for folder in version_folders(&root, version_id) {
         let pages = folder.join(crate::vault::layout::PAGES_DIR);
-        let Some(bytes) = larger_in_vault(&pages, index, size)? else {
+        let Some(bytes) = larger_in_vault(&pages, index, wanted)? else {
             continue;
         };
-        let wanted = size.parse::<u32>().unwrap_or(0);
-        if wanted == 0 {
-            return Ok(Some(bytes));
-        }
         let smaller = crate::images::resize_jpeg(&bytes, wanted, DOWNSCALE_QUALITY)
             .map_err(|error| error.to_string())?;
         store(app, request, &smaller, Some("image/jpeg".to_string()));
         return Ok(Some(smaller));
     }
     Ok(None)
+}
+
+/// Il lato lungo in pixel di una misura, o `None` quando non è un numero e
+/// quindi non si può ricavare da una copia più grande.
+fn wanted_edge(app: &tauri::AppHandle, size: &str) -> Option<u32> {
+    if size == THUMB_SIZE {
+        return Some(thumbnail_edge(app));
+    }
+    size.parse::<u32>().ok().filter(|pixels| *pixels > 0)
+}
+
+/// Il lato lungo scelto per le miniature, o quello predefinito.
+fn thumbnail_edge(app: &tauri::AppHandle) -> u32 {
+    crate::storage_config::db_path(app)
+        .and_then(|path| crate::db::open_connection(&path))
+        .and_then(|conn| crate::download::thumbnail_edge(&conn))
+        .unwrap_or(crate::images::DEFAULT_THUMBNAIL_EDGE)
 }
 
 /// La pagina chiesta, **dopo aver controllato che i suoi pezzi siano nomi e non
@@ -281,6 +451,7 @@ fn page_of(request: &CacheRequest) -> Result<Option<(&str, u32, &str)>, String> 
         version_id,
         index,
         size,
+        ..
     } = request
     else {
         return Ok(None);
@@ -309,9 +480,8 @@ fn version_folders(root: &std::path::Path, version_id: &str) -> Vec<std::path::P
 fn larger_in_vault(
     pages: &std::path::Path,
     index: u32,
-    wanted: &str,
+    wanted_pixels: u32,
 ) -> Result<Option<Vec<u8>>, String> {
-    let wanted_pixels = wanted.parse::<u32>().unwrap_or(u32::MAX);
     let Ok(entries) = std::fs::read_dir(pages) else {
         return Ok(None);
     };
@@ -362,6 +532,9 @@ pub fn apply_cache_cap(app: tauri::AppHandle) -> Result<CacheUsage, String> {
     let Some(cache) = cache(&app) else {
         return Ok(CacheUsage::default());
     };
+    // Si arriva qui subito dopo aver cambiato il tetto: quello ricordato è
+    // proprio il valore che non vale più.
+    cache.forget_settings();
     let freed = cache.evict_to(limits(&app).max_bytes);
     if freed > 0 {
         log::info!("cache eviction freed {freed} bytes");

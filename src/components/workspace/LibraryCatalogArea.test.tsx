@@ -192,7 +192,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
   });
 
   it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
@@ -211,7 +211,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('accoda subito l’ottimizzazione e mostra il lavoro', async () => {
@@ -260,7 +260,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.availabilityPartial/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
   });
 
   it('le pagine prese a risoluzione piena sono un aggiunta, non un buco', () => {
@@ -281,7 +281,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
-    expect(screen.getByText(/areas\.library\.availabilityComplete/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
   });
 
   it('due misure con lo stesso numero di pagine non rendono casuale quale sia la principale', () => {
@@ -490,7 +490,7 @@ describe('LibraryCatalogArea', () => {
     openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
-    expect(screen.getByLabelText('areas.library.availabilityComplete')).toBeInTheDocument();
+    expect(screen.getByLabelText('areas.library.localImagesAll')).toBeInTheDocument();
   });
 
   it('verifica e libera spazio ci sono sempre, spenti quando non c\u2019è niente in locale', () => {
@@ -610,7 +610,10 @@ describe('LibraryCatalogArea', () => {
     // Il titolo compare due volte apposta: nell'intestazione della colonna
     // (resta in vista cambiando tab) e nel campo titolo correggibile.
     expect(screen.getAllByText('Book of Hours').length).toBeGreaterThan(0);
-    expect(screen.getByText('areas.library.viewerComingSoon')).toBeInTheDocument();
+    // Un manifesto IIIF è dichiarato: il visore prova ad aprirlo davvero
+    // (non più il segnaposto), e qui — dove `invoke` è un mock senza
+    // risposta — arriva legittimamente all'errore controllato.
+    expect(await screen.findByText('areas.library.viewerLoadError')).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();

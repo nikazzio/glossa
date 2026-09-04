@@ -54,6 +54,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 sqlite-vec = "0.1.6"
 thiserror = "1"
 schemars = { version = "0.8", features = ["derive"] }
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"

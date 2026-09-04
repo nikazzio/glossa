@@ -19,13 +19,12 @@ const NEW_PROFILE = 'nuovo';
 
 /** I valori di un profilo nuovo: il ritmo prudente, che è quello di partenza. */
 const NEW_PROFILE_VALUES: NetworkValues = {
-  pauseMinMs: 600,
-  pauseMaxMs: 1_600,
-  burstRequests: 100,
+  burstRequests: 240,
   burstWindowSecs: 60,
   cooldown403Secs: 120,
   cooldown429Secs: 120,
   hostConcurrency: MAX_HOST_CONCURRENCY,
+  workersPerJob: 2,
   maxAttempts: 5,
   backoffBaseSecs: 15,
   backoffCapSecs: 300,

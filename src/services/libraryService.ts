@@ -332,6 +332,27 @@ interface SourceMetadata {
   catalogUrl: string | null;
   /** La pagina web dell'opera sul sito della biblioteca, per un lettore umano. */
   pageUrl: string | null;
+  /** Tutto il resto dichiarato dalla biblioteca quando l'opera è stata
+   *  aggiunta, com'era arrivato. */
+  raw: Record<string, string[]>;
+}
+
+/**
+ * Il deposito dei dati di catalogo, riletto senza fidarsi della forma: le
+ * chiavi le ha scelte la biblioteca, quindi qui può esserci qualunque cosa. Si
+ * tengono solo le voci che sono davvero elenchi di testo, e si scartano le
+ * altre invece di far cadere l'intera scheda.
+ */
+function rawFields(value: unknown): Record<string, string[]> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, string[]>>(
+    (fields, [key, entry]) => {
+      if (!Array.isArray(entry)) return fields;
+      const texts = entry.filter((item): item is string => typeof item === 'string');
+      return texts.length > 0 ? { ...fields, [key]: texts } : fields;
+    },
+    {},
+  );
 }
 
 /** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
@@ -356,6 +377,7 @@ function parseMetadata(raw: string | null): SourceMetadata {
     holdingInstitution: null,
     catalogUrl: null,
     pageUrl: null,
+    raw: {},
   };
   if (!raw) return nothing;
   try {
@@ -387,6 +409,7 @@ function parseMetadata(raw: string | null): SourceMetadata {
       holdingInstitution: text(record.holdingInstitution),
       catalogUrl: text(record.catalogUrl),
       pageUrl: text(record.pageUrl),
+      raw: rawFields(record.raw),
     };
   } catch {
     return nothing;
@@ -503,6 +526,7 @@ export async function addSourceToLibrary(
     holdingInstitution: input.holdingInstitution,
     catalogUrl: input.catalogUrl,
     pageUrl: input.pageUrl,
+    raw: input.raw,
   });
 
   await runInTransaction(async (run) => {
@@ -549,6 +573,14 @@ export async function resyncSourceFromManifest(
   sourceId: string,
   input: Omit<AddSourceToLibraryInput, 'manifestUrl' | 'workspaceId'>,
 ): Promise<void> {
+  // Risincronizzare rilegge il manifesto, che non è una risposta di catalogo:
+  // il deposito dei dati della ricerca non si può ricostruire da qui, e
+  // riscriverlo vuoto butterebbe quello che avevamo già in mano.
+  const [existing] = await select<{ metadata: string | null }>(
+    'SELECT metadata FROM source_versions WHERE source_id = $1 AND is_primary = 1',
+    [sourceId],
+  );
+  const keptRaw = parseMetadata(existing?.metadata ?? null).raw;
   const metadata = JSON.stringify({
     creator: input.creator,
     date: input.date,
@@ -569,6 +601,7 @@ export async function resyncSourceFromManifest(
     holdingInstitution: input.holdingInstitution,
     catalogUrl: input.catalogUrl,
     pageUrl: input.pageUrl,
+    raw: Object.keys(input.raw).length > 0 ? input.raw : keptRaw,
   });
 
   await runInTransaction(async (run) => {

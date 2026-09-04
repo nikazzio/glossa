@@ -6,6 +6,7 @@ pub mod network;
 pub mod resolvers;
 pub mod search;
 pub mod settings;
+pub mod viewer;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
