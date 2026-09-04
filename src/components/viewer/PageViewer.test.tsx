@@ -30,21 +30,31 @@ vi.mock('openseadragon', () => ({
   default: vi.fn(() => osd.viewer),
 }));
 
-vi.mock('../../services/iiifViewerService', () => ({
-  fetchViewerManifest: vi.fn(),
-  fetchIiifBytes: vi.fn(),
-  getLastViewedPage: vi.fn(),
-  setLastViewedPage: vi.fn(),
-  infoJsonUrl: (service: string) => `${service}/info.json`,
-  pageThumbnailUrl: (service: string) => `${service}/full/96,/0/default.jpg`,
-  pageSourceUrl: (service: string, size: string) => `${service}/full/${size},/0/default.jpg`,
-  preferredPageWidth: () => 1000,
-  // Il dimezzamento di una pagina 1000×1400 verso i 1600 di lettura: la pagina
-  // è già più piccola, quindi si chiede com'è.
-  readablePageWidth: () => 1000,
-  WHOLE_PAGE_WIDTH_PX: 1600,
-  MAX_SIZE: 'max',
-}));
+vi.mock('../../services/iiifViewerService', () => {
+  // Il visore chiede l'indice passando dal ritentativo: è la stessa finzione,
+  // così i test continuano a preparare `fetchViewerManifest` e il secondo
+  // tentativo non ha niente da aggiungere a una risposta già decisa.
+  const fetchViewerManifest = vi.fn();
+  return {
+    fetchViewerManifest,
+    fetchViewerManifestWithRetry: fetchViewerManifest,
+    // Nessuna delle biblioteche dei test ricava le immagini su richiesta.
+    buildsImagesOnDemand: () => false,
+    wholePageAttempts: (_page: unknown, localSize: string | null) => [localSize ?? '1000'],
+    fetchIiifBytes: vi.fn(),
+    getLastViewedPage: vi.fn(),
+    setLastViewedPage: vi.fn(),
+    infoJsonUrl: (service: string) => `${service}/info.json`,
+    pageThumbnailUrl: (service: string) => `${service}/full/96,/0/default.jpg`,
+    pageSourceUrl: (service: string, size: string) => `${service}/full/${size},/0/default.jpg`,
+    preferredPageWidth: () => 1000,
+    // Il dimezzamento di una pagina 1000×1400 verso i 1600 di lettura: la
+    // pagina è già più piccola, quindi si chiede com'è.
+    readablePageWidth: () => 1000,
+    WHOLE_PAGE_WIDTH_PX: 1600,
+    MAX_SIZE: 'max',
+  };
+});
 
 vi.mock('../../services/inventoryService', () => ({
   versionInventory: vi.fn(async () => null),
