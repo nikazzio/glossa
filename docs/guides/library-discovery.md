@@ -53,6 +53,10 @@ Cliccando il titolo si apre la **scheda dell'opera**, a tutta pagina, con tutti 
 
 Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pagine e le miniature si leggono dal disco: compaiono subito, non costano nessuna richiesta alla biblioteca e funzionano anche senza collegamento. Se non hai niente, la pagina si chiede alla biblioteca **in una volta sola**, come immagine intera: è il modo più rapido di vederla. Ingrandendo oltre la sua nitidezza, il visore passa da solo allo zoom a pezzi e chiede alla biblioteca il dettaglio che serve. Alcune biblioteche costruiscono le immagini nel momento in cui gliele chiedi: la prima apertura può richiedere un minuto, e il visore te lo dice invece di lasciarti davanti a una rotella.
 
+Quando l'indice del libro dichiara misure già pronte, Glossa usa la più piccola
+che resta nitida nel visore. Altrimenti usa subito un dimezzamento della pagina:
+non aspetta una richiesta tecnica aggiuntiva prima di mostrarti l'immagine.
+
 In alto a destra c'è scritto da dove stai leggendo: **Dal computer** quando il libro è sul disco, **Online** quando arriva dalla biblioteca — verde finché sta rispondendo, smorzato quando non arriva niente. Il comando con la freccia riporta al catalogo.
 
 **Correggere i dati** — Titolo, autore, data e lingua si correggono a mano: il comando con la matita apre il campo, Invio salva, Esc annulla. Un campo corretto porta un segno accanto all'etichetta; passandoci sopra leggi cosa diceva la biblioteca, e il comando accanto al valore riporta all'originale. **Il dato originale non viene mai sovrascritto**: la correzione vive a parte, come le correzioni ai dizionari, quindi si può sempre tornare indietro. Riscrivere esattamente il valore della biblioteca non lascia nessun segno di correzione, perché non c'è niente da segnalare. Gli altri campi non hanno ancora un comando di modifica in questa scheda.

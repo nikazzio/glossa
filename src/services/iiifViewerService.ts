@@ -23,6 +23,8 @@ export interface ViewerPage {
   canvasId: string | null;
   /** La miniatura già pronta dichiarata dalla biblioteca, quando c'è. */
   thumbnail: string | null;
+  /** Misure già pronte incluse direttamente nell'indice del libro. */
+  readySizes?: Array<[width: number, height: number]>;
 }
 
 export interface ViewerManifest {
@@ -68,7 +70,22 @@ export const WHOLE_PAGE_WIDTH_PX = 1600;
  */
 export function pageThumbnailUrl(page: ViewerPage, width: number): string {
   if (page.thumbnail) return page.thumbnail;
-  return `${page.imageService}/full/${readablePageWidth(page, width)},/0/default.jpg`;
+  return `${page.imageService}/full/${preferredPageWidth(page, width)},/0/default.jpg`;
+}
+
+/**
+ * Prima usa una misura pronta già contenuta nell'indice del libro. Leggere una
+ * scheda separata prima di mostrare la pagina aggiungerebbe attesa proprio sul
+ * percorso più importante. Se l'indice non porta l'elenco, resta il
+ * dimezzamento misurato sul campo; senza dimensioni, la misura fissa.
+ */
+export function preferredPageWidth(page: ViewerPage, target = WHOLE_PAGE_WIDTH_PX): number {
+  const sizes = (page.readySizes ?? [])
+    .filter(([width, height]) => width > 0 && height > 0)
+    .map(([width, height]) => ({ width, longEdge: Math.max(width, height) }))
+    .sort((left, right) => left.longEdge - right.longEdge);
+  const ready = sizes.find((size) => size.longEdge >= target) ?? sizes.at(-1);
+  return ready?.width ?? readablePageWidth(page, target);
 }
 
 /**

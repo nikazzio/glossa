@@ -38,6 +38,7 @@ vi.mock('../../services/iiifViewerService', () => ({
   infoJsonUrl: (service: string) => `${service}/info.json`,
   pageThumbnailUrl: (service: string) => `${service}/full/96,/0/default.jpg`,
   pageSourceUrl: (service: string, size: string) => `${service}/full/${size},/0/default.jpg`,
+  preferredPageWidth: () => 1000,
   // Il dimezzamento di una pagina 1000×1400 verso i 1600 di lettura: la pagina
   // è già più piccola, quindi si chiede com'è.
   readablePageWidth: () => 1000,
@@ -91,7 +92,7 @@ describe('PageViewer', () => {
     vi.mocked(viewerService.setLastViewedPage).mockResolvedValue(undefined);
   });
 
-  it('apre la pagina con una sola richiesta, senza chiedere lo zoom a pezzi', async () => {
+  it('apre la pagina senza aspettare la scheda usata dallo zoom', async () => {
     render(<PageViewer sourceId="source-1" versionId="sver-1" manifestUrl="https://example.test/manifest" providerKey={null} />);
     await screen.findByText('areas.library.viewerPageOf · P1');
 
@@ -108,8 +109,6 @@ describe('PageViewer', () => {
         expect.objectContaining({ priority: 'high' }),
       ),
     );
-    // Lo zoom a pezzi costa una quindicina di richieste: non si chiede finché
-    // nessuno sta ingrandendo.
     expect(vi.mocked(viewerService.fetchIiifBytes)).not.toHaveBeenCalled();
   });
 
@@ -133,6 +132,7 @@ describe('PageViewer', () => {
         expect.any(AbortSignal),
       ),
     );
+    expect(vi.mocked(viewerService.fetchIiifBytes)).toHaveBeenCalledTimes(1);
   });
 
   it('dichiara la pagina guasta quando non arriva niente', async () => {

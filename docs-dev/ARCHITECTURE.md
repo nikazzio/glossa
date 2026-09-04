@@ -446,6 +446,16 @@ ognuna attraversa il motore e occupa un posto in corsia: dove le immagini
 vengono ricavate al momento — Internet Archive, Gallica — quella schermata non
 arrivava mai.
 
+La prima immagine **non aspetta `info.json`**. Se il servizio immagini include
+già `sizes` nel manifesto, il parser le porta fino al visore e si usa la più
+piccola misura pronta il cui lato lungo basta; se nessuna basta, la maggiore.
+Quando `sizes` non è nel manifesto, si usa subito il dimezzamento calcolato
+dalle dimensioni del canvas; senza dimensioni resta il tetto fisso. La stessa
+scelta costruisce le miniature prive di un indirizzo esplicito. `info.json`
+viene chiesto solo passando allo zoom a tasselli: aggiungerlo prima della pagina
+pagherebbe fino a 4,3 secondi per scoprire una misura che spesso il
+dimezzamento individua già.
+
 **I tasselli si chiedono solo quando servono davvero**, cioè quando lo zoom
 supera i pixel dell'immagine intera (`TILE_UPGRADE_FACTOR`). Allora il visore
 riapre la stessa pagina con la sorgente a tasselli, rimettendo dov'era la

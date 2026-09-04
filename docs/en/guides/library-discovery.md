@@ -55,6 +55,11 @@ Clicking the title opens the **work's page**, full width, with every bibliograph
 
 The viewer **uses what you have on your computer**. If you downloaded the book, pages and thumbnails are read from disk: they appear at once, cost the library no request at all, and work with no connection. If you have nothing, the page is asked for **in a single request**, as a whole image: it is the fastest way to see it. Zoom past its sharpness and the viewer switches to tiled zoom on its own, asking the library only for the detail you need. Some libraries build the images the moment you ask for them: the first opening can take a minute, and the viewer says so instead of leaving you with a spinner.
 
+When the book index already declares ready-made sizes, Glossa uses the smallest
+one that remains sharp in the viewer. Otherwise it immediately uses a halving
+of the page: it does not wait for an extra technical request before showing the
+image.
+
 At the top right it says where you are reading from: **From your computer** when the book is on disk, **Online** when it comes from the library — green while it is answering, dimmed when nothing arrives. The arrow command takes you back to the catalogue.
 
 **Correcting the details** — Title, author, date and language can be corrected by hand: the pencil command opens the field, Enter saves, Esc cancels. A corrected field carries a mark next to its label; hover it to read what the library said, and the command next to the value restores the original. **The original is never overwritten**: the correction lives apart, like glossary corrections, so you can always go back. Typing exactly the library's value leaves no correction mark, because there is nothing to flag. The other fields have no edit command on this page yet.

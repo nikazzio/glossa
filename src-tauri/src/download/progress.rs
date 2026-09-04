@@ -309,6 +309,7 @@ mod tests {
             size: Some((2646, 4112)),
             canvas_id: None,
             thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         let progress = Progress {
             total: 10,
@@ -347,6 +348,7 @@ mod tests {
             size: Some((2646, 4112)),
             canvas_id: None,
             thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         let parsed: serde_json::Value =
             serde_json::from_str(&progress(4, 4, Duration::from_secs(3)).detail(
@@ -380,6 +382,7 @@ mod tests {
             size: Some((2646, 4112)),
             canvas_id: None,
             thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         let parsed: serde_json::Value =
             serde_json::from_str(&progress(4, 0, Duration::ZERO).detail(

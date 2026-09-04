@@ -24,7 +24,7 @@ import {
   getLastViewedPage,
   infoJsonUrl,
   pageSourceUrl,
-  readablePageWidth,
+  preferredPageWidth,
   setLastViewedPage,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
@@ -221,7 +221,6 @@ export function PageViewer({
     let tiles: 'none' | 'loading' | 'shown' = 'none';
     let objectUrl: string | null = null;
     const openedAt = performance.now();
-
     /**
      * La pagina intera, in **una sola richiesta**.
      *
@@ -233,10 +232,9 @@ export function PageViewer({
      * arriva; i pezzi si chiedono solo se lo zoom li rende davvero utili.
      */
     const openWholePage = async () => {
-      // Senza copia sul computer si chiede un **dimezzamento** della pagina,
-      // non una misura tonda: quello lo tengono pronto, qualunque altro lo
-      // costruiscono al momento — dieci volte più lento, misurato.
-      const size = localSize ?? String(readablePageWidth(page));
+      // Nessuna attesa aggiuntiva: se l'indice porta già misure pronte si usa
+      // la più piccola sufficiente, altrimenti il dimezzamento misurato.
+      const size = localSize ?? String(preferredPageWidth(page));
       const bytes = await pageImage(
         {
           kind: 'page',

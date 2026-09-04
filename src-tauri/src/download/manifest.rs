@@ -33,6 +33,9 @@ pub struct Page {
     /// ricavare l'immagine al momento — su alcune biblioteche costa quanto la
     /// pagina intera.
     pub thumbnail: Option<String>,
+    /// Misure che il servizio immagini include già nel manifesto. Quando ci
+    /// sono, il visore può usarle senza aspettare una seconda richiesta.
+    pub ready_sizes: Vec<(u32, u32)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,6 +108,7 @@ fn parse_presentation_3(root: &Value) -> Vec<Page> {
                         size: canvas_size(canvas),
                         canvas_id: id_of(canvas),
                         thumbnail: thumbnail_of(canvas),
+                        ready_sizes: ready_sizes_of(body),
                     })
                 })
                 .collect()
@@ -135,6 +139,7 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                         size: canvas_size(canvas).or_else(|| canvas_size(resource)),
                         canvas_id: id_of(canvas),
                         thumbnail: thumbnail_of(canvas).or_else(|| thumbnail_of(resource)),
+                        ready_sizes: ready_sizes_of(resource),
                     })
                 })
                 .collect()
@@ -146,12 +151,24 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
 ///
 /// Restituisce il servizio immagini, non l'indirizzo di una singola immagine.
 fn service_of(body: &Value) -> Option<String> {
-    let from_service = match body.get("service") {
-        Some(Value::Array(entries)) => entries.first().and_then(id_of),
-        Some(single) => id_of(single),
-        None => None,
-    };
-    from_service.map(|id| id.trim_end_matches('/').to_string())
+    service_entry(body)
+        .and_then(id_of)
+        .map(|id| id.trim_end_matches('/').to_string())
+}
+
+fn service_entry(body: &Value) -> Option<&Value> {
+    match body.get("service")? {
+        Value::Array(entries) => entries.first(),
+        single => Some(single),
+    }
+}
+
+fn ready_sizes_of(body: &Value) -> Vec<(u32, u32)> {
+    service_entry(body)
+        .and_then(|service| service.get("sizes"))
+        .and_then(Value::as_array)
+        .map(|sizes| sizes.iter().filter_map(canvas_size).collect())
+        .unwrap_or_default()
 }
 
 /// La miniatura dichiarata, in una qualsiasi delle forme che lo standard

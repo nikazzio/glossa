@@ -25,6 +25,7 @@ pub struct ViewerPage {
     pub canvas_id: Option<String>,
     /// La miniatura già pronta dichiarata dalla biblioteca, quando c'è.
     pub thumbnail: Option<String>,
+    pub ready_sizes: Vec<(u32, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -49,6 +50,7 @@ impl From<manifest::Page> for ViewerPage {
             height: page.size.map(|(_, height)| height),
             canvas_id: page.canvas_id,
             thumbnail: page.thumbnail,
+            ready_sizes: page.ready_sizes,
         }
     }
 }
@@ -93,7 +95,8 @@ mod tests {
       "items": [
         { "label": { "it": ["1r"] }, "width": 1000, "height": 1400,
           "items": [{ "items": [{ "body": { "id": "https://img/1/full/max/0/default.jpg",
-                                            "service": [{ "id": "https://img/1" }] } }] }] }
+                                            "service": [{ "id": "https://img/1",
+                                              "sizes": [{"width":500,"height":700},{"width":1000,"height":1400}] }] } }] }] }
       ]
     }"#;
 
@@ -111,6 +114,7 @@ mod tests {
         assert_eq!(result.pages.len(), 1);
         assert_eq!(result.pages[0].image_service, "https://img/1");
         assert_eq!(result.pages[0].width, Some(1000));
+        assert_eq!(result.pages[0].ready_sizes, vec![(500, 700), (1000, 1400)]);
         assert!(!result.presentation2);
     }
 
