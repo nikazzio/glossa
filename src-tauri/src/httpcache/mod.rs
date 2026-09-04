@@ -26,7 +26,7 @@
 pub mod commands;
 pub mod request;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -115,7 +115,19 @@ pub struct HttpCache {
     /// diverse con tre costi diversi: il deposito non costa niente, la cache
     /// costa una lettura, la rete costa una richiesta a una biblioteca.
     served: Served,
+    /// Da dove è arrivata **quella** immagine, per chiave, per le ultime poche.
+    ///
+    /// I byte tornano alla finestra grezzi, non dentro un oggetto: non c'è un
+    /// posto dove infilare «da dove viene» insieme a loro. Chi ha appena
+    /// ricevuto una pagina lo chiede qui, e la risposta non può mentire perché
+    /// è la stessa chiave. Si tengono solo le ultime: interessa la pagina che si
+    /// sta guardando e le miniature vicine, non la storia della sessione.
+    recent_sources: Mutex<VecDeque<(String, Source)>>,
 }
+
+/// Quante provenienze recenti si ricordano. Una pagina più le miniature che le
+/// stanno intorno, con abbondanza.
+const RECENT_SOURCES: usize = 64;
 
 /// Quante immagini sono arrivate da dove, dall'avvio.
 #[derive(Default)]
@@ -154,7 +166,31 @@ impl HttpCache {
             in_flight: tokio::sync::Mutex::new(HashMap::new()),
             limits: Mutex::new(None),
             served: Served::default(),
+            recent_sources: Mutex::new(VecDeque::new()),
         }
+    }
+
+    /// Ricorda da dove è arrivata l'immagine di quella chiave, buttando la più
+    /// vecchia quando si supera il tetto.
+    pub fn note_source(&self, key: &str, source: Source) {
+        if let Ok(mut recent) = self.recent_sources.lock() {
+            recent.retain(|(known, _)| known != key);
+            recent.push_back((key.to_string(), source));
+            while recent.len() > RECENT_SOURCES {
+                recent.pop_front();
+            }
+        }
+    }
+
+    /// Da dove è arrivata l'immagine di quella chiave, se ce lo ricordiamo
+    /// ancora.
+    pub fn source_of(&self, key: &str) -> Option<Source> {
+        let recent = self.recent_sources.lock().ok()?;
+        recent
+            .iter()
+            .rev()
+            .find(|(known, _)| known == key)
+            .map(|(_, source)| *source)
     }
 
     /// Segna da dove è arrivata un'immagine appena servita.
@@ -376,6 +412,36 @@ impl HttpCache {
             self.forget(&entry.path);
             total = total.saturating_sub(entry.bytes);
             freed += entry.bytes;
+        }
+        freed
+    }
+
+    /// Butta tutto quello che riguarda una digitalizzazione. Ritorna i byte
+    /// liberati.
+    ///
+    /// È **l'unico** caso in cui una voce se ne va prima del tempo: le altre
+    /// sono pixel di libri storici, che non cambiano. Qui invece l'utente ha
+    /// detto di togliere l'opera, e tenerne le pagine significa non liberare lo
+    /// spazio che si aspetta di liberare, e riaggiungendola ritrovarle senza
+    /// che la biblioteca sia stata ricontattata.
+    ///
+    /// La chiave è un'impronta e non si può interrogare per opera: si guarda la
+    /// richiesta registrata nel file di lato. Costa una camminata sulla cache,
+    /// che per un'azione fatta a mano una volta va benissimo.
+    pub fn forget_version(&self, version_id: &str) -> u64 {
+        let needle = format!("version_id: {version_id:?}");
+        let mut freed = 0;
+        for entry in self.entries() {
+            let describes_it = fs::read(meta_path(&entry.path))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<CacheMeta>(&bytes).ok())
+                .and_then(|meta| meta.request)
+                .map(|request| request.contains(&needle))
+                .unwrap_or(false);
+            if describes_it {
+                self.forget(&entry.path);
+                freed += entry.bytes;
+            }
         }
         freed
     }

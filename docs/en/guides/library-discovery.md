@@ -67,7 +67,11 @@ Thumbnails that have already appeared remain available while you scroll back
 and forth; previously viewed pages are also read from the working cache, not
 from the library again.
 
-At the top right it says where you are reading from: **From your computer** when the book is on disk, **Online** when it comes from the library — green while it is answering, dimmed when nothing arrives. The arrow command takes you back to the catalogue.
+At the top right it says **where the page you are looking at comes from**, and these are three different things: **From your computer** when the file is yours, **From working memory** when it is a page you already saw of a book you never downloaded, **From the library** when it has just arrived — green while the library answers, dimmed when nothing arrives. Hover it to also read the size that was requested.
+
+If you delete the local pages while you are reading, Glossa notices by itself that the copy is gone: the page stays readable, and the next ones are asked of the library instead of being looked for in a folder that no longer exists.
+
+**Browsing a half-downloaded book, the gaps fill themselves.** The missing pages stay on your computer without you starting anything: the count on the card grows as you read, and reopening those pages costs no request at all. The arrow command takes you back to the catalogue.
 
 **Correcting the details** — Title, author, date and language can be corrected by hand: the pencil command opens the field, Enter saves, Esc cancels. A corrected field carries a mark next to its label; hover it to read what the library said, and the command next to the value restores the original. **The original is never overwritten**: the correction lives apart, like glossary corrections, so you can always go back. Typing exactly the library's value leaves no correction mark, because there is nothing to flag. The other fields have no edit command on this page yet.
 
@@ -105,6 +109,6 @@ Archiving is **about the list only**: pages already downloaded stay where they w
 
 ## Removing a source
 
-Removing takes the work away **entirely**: the record, its workspace links, and everything it has in the vault — manifest, thumbnails and downloaded pages. The confirmation tells you how much space you are deleting.
+Removing takes the work away **entirely**: the record, its workspace links, everything it has in the vault — manifest, thumbnails and downloaded pages — **and the pages held in working memory too**. It is the only moment when Glossa throws away what it had set aside: that way the space is really freed, and adding the same work again means asking the library for its pages once more. The confirmation tells you how much space you are deleting.
 
 To keep the work and only get the space back, the command is a different one: **free space**. To simply get it out of the way without losing it, **archive** it: removal has no second thoughts, the archive does.

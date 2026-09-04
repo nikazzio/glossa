@@ -180,12 +180,44 @@ export async function networkProbe(): Promise<NetworkProbe> {
   return invoke<NetworkProbe>('network_probe');
 }
 
+/** Dove è stata trovata l'immagine: il deposito sul computer, la memoria di
+ *  lavoro, oppure la biblioteca. */
+export type ImageSource = 'vault' | 'cache' | 'network';
+
+/**
+ * Da dove è arrivata l'immagine chiesta così, subito dopo averla ricevuta.
+ *
+ * I byte attraversano il ponte grezzi, senza un posto dove infilare anche
+ * questo: si chiede a parte. È una lettura in memoria del motore — niente disco,
+ * niente rete — e la risposta riguarda la stessa richiesta, quindi non può
+ * raccontare la provenienza di un'altra immagine. `null` quando il motore non se
+ * lo ricorda più.
+ */
+export async function imageSource(request: CacheRequest): Promise<ImageSource | null> {
+  const source = await invoke<string | null>('image_source', { request });
+  return source === 'vault' || source === 'cache' || source === 'network' ? source : null;
+}
+
 export async function cacheUsage(): Promise<CacheUsage> {
   return invoke<CacheUsage>('cache_usage');
 }
 
 export async function clearCache(): Promise<void> {
   await invoke('clear_cache');
+}
+
+/**
+ * Butta dalla memoria di lavoro tutto quello che riguarda una digitalizzazione,
+ * e dice quanti byte ha liberato.
+ *
+ * Si chiama togliendo un'opera dalla Biblioteca, ed è l'unico momento in cui
+ * buttare è giusto: tutto il resto sono scansioni di libri storici, che non
+ * cambiano. Senza questo passo lo spazio non si libera come chi rimuove si
+ * aspetta, e riaggiungendo la stessa opera le pagine tornerebbero da qui senza
+ * che la biblioteca venga ricontattata.
+ */
+export async function forgetVersionCache(versionId: string): Promise<number> {
+  return invoke<number>('forget_version_cache', { versionId });
 }
 
 /**

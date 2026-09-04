@@ -29,7 +29,12 @@ import {
   wholePageAttempts,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
-import { cachedImage as pageImage } from '../../services/cacheService';
+import {
+  cachedImage as pageImage,
+  imageSource,
+  type CacheRequest,
+  type ImageSource,
+} from '../../services/cacheService';
 import { versionInventory } from '../../services/inventoryService';
 import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
@@ -120,6 +125,11 @@ export function PageViewer({
    * riferimento al servizio della biblioteca.
    */
   const [localSize, setLocalSize] = useState<string | null>(null);
+  /** Da dove è arrivata la pagina che si sta guardando, e a che misura. */
+  const [pageOrigin, setPageOrigin] = useState<{
+    source: ImageSource | null;
+    size: string;
+  } | null>(null);
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -150,6 +160,18 @@ export function PageViewer({
     const timer = setTimeout(() => setOpeningIsSlow(true), SLOW_OPENING_AFTER_MS);
     return () => clearTimeout(timer);
   }, [stillOpening, manifestAttempt, currentIndex, pageAttempt]);
+
+  /**
+   * Quale misura di questo libro è sul computer, se c'è.
+   *
+   * Si rilegge anche a libro aperto: cancellare le pagine locali mentre si
+   * legge non deve lasciare il visore convinto di averle ancora.
+   */
+  const refreshLocalSize = useCallback(async () => {
+    const inventory = await versionInventory(versionId);
+    const principal = inventory?.sizes.find((size) => size.sizeTag === inventory.principal);
+    setLocalSize(principal && principal.pages > 0 ? principal.sizeTag : null);
+  }, [versionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -265,19 +287,19 @@ export function PageViewer({
       const attempts = wholePageAttempts(page, localSize, buildsImagesOnDemand(providerKey));
       let bytes: Uint8Array | null = null;
       let lastFailure: unknown = null;
+      let served: CacheRequest | null = null;
       for (const size of attempts) {
+        const request: CacheRequest = {
+          kind: 'page',
+          versionId,
+          index: page.index,
+          size,
+          remoteUrl: pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
+          providerKey,
+        };
         try {
-          bytes = await pageImage(
-            {
-              kind: 'page',
-              versionId,
-              index: page.index,
-              size,
-              remoteUrl: pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
-              providerKey,
-            },
-            { priority: 'high', signal: controller.signal },
-          );
+          bytes = await pageImage(request, { priority: 'high', signal: controller.signal });
+          served = request;
           break;
         } catch (error: unknown) {
           // Un annullamento non è un guasto della biblioteca: la pagina non
@@ -306,6 +328,28 @@ export function PageViewer({
         ms: Math.round(performance.now() - openedAt),
         local: Boolean(localSize),
       });
+      // Da dove sono arrivati davvero quei byte lo sa solo il motore, e non
+      // può viaggiare insieme a loro: si chiede subito dopo, sulla stessa
+      // richiesta. Non arrivarci non è un guasto — si resta senza dirlo.
+      if (served) {
+        const request = served;
+        void imageSource(request)
+          .then((source) => {
+            if (cancelled) return;
+            setPageOrigin({ source, size: request.kind === 'page' ? request.size : '' });
+            // Credevamo di leggere dal computer e la pagina è arrivata dalla
+            // biblioteca: qualcuno ha cancellato quella copia mentre stavamo
+            // leggendo. La pagina si vede comunque — il motore ha già ripiegato
+            // da sé — ma l'inventario va riletto, o le prossime continuerebbero
+            // a essere chieste come se il libro fosse ancora tutto in casa.
+            if (localSize && source === 'network') {
+              void refreshLocalSize();
+            }
+          })
+          .catch((error: unknown) => {
+            logger.debug('library.viewer.originUnknown', { message: errorMessage(error) });
+          });
+      }
     };
 
     /**
@@ -396,6 +440,9 @@ export function PageViewer({
     viewer.addHandler('zoom', handleZoom);
     setPageError(null);
     setPageLoading(true);
+    // La provenienza è di questa pagina: tenere quella di prima mentre la nuova
+    // arriva la farebbe leggere come se valesse per l'immagine a schermo.
+    setPageOrigin(null);
     // Dove si è arrivati si ricorda comunque, che la pagina venga dal computer
     // o dalla rete: riaprendo il libro si torna qui.
     void setLastViewedPage(sourceId, currentIndex).catch((error) => {
@@ -415,7 +462,17 @@ export function PageViewer({
       // dell'indirizzo; tenerlo vivo esaurirebbe solo il tetto della finestra.
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [page, providerKey, sourceId, versionId, localSize, manifest, currentIndex, pageAttempt]);
+  }, [
+    page,
+    providerKey,
+    sourceId,
+    versionId,
+    localSize,
+    manifest,
+    currentIndex,
+    pageAttempt,
+    refreshLocalSize,
+  ]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
@@ -446,6 +503,7 @@ export function PageViewer({
         {manifest && total > 0 && (
           <ViewerToolbar
             fromDisk={localSize !== null}
+            origin={pageOrigin}
             index={currentIndex}
             total={total}
             label={page?.label ?? null}
@@ -549,6 +607,8 @@ export function PageViewer({
 interface ViewerToolbarProps {
   /** Vero quando la pagina viene letta dal computer e non dalla biblioteca. */
   fromDisk: boolean;
+  /** Da dove arriva la pagina a schermo, quando il motore l'ha detto. */
+  origin: { source: ImageSource | null; size: string } | null;
   index: number;
   total: number;
   label: string | null;
@@ -566,43 +626,66 @@ interface ViewerToolbarProps {
 }
 
 /**
- * Da dove arriva quello che si sta leggendo.
+ * Da dove arriva **la pagina che si sta guardando**, e a che misura.
  *
- * Due cose diverse, e vanno dette diverse: un libro sul computer non ha niente
- * a che fare con la biblioteca, e accendere «Online» mentre si sfoglia dal
- * disco era falso. Quando invece si legge in rete, verde vuol dire che la
- * biblioteca ha risposto da poco.
+ * Tre provenienze, che vanno dette diverse: il deposito sul computer, la
+ * memoria di lavoro, la biblioteca. Dire «Online» sfogliando dal disco era
+ * falso; dire «Dal computer» per una pagina ripresa dalla memoria di lavoro di
+ * un libro che non possiedi lo è altrettanto. Il verde acceso vale solo per la
+ * biblioteca, e significa che ha risposto da poco.
+ *
+ * Finché la provenienza non è nota si dice quello che si sa: se il libro è sul
+ * disco, il disco.
  */
-function ConnectionBadge({ fromDisk }: { fromDisk: boolean }) {
+function ConnectionBadge({
+  fromDisk,
+  origin,
+}: {
+  fromDisk: boolean;
+  origin: { source: ImageSource | null; size: string } | null;
+}) {
   const { t } = useTranslation();
   const lastAnswerAt = useNetworkActivity((state) => state.lastAnswerAt);
   const [now, setNow] = useState(() => Date.now());
+  const source = origin?.source ?? (fromDisk ? 'vault' : null);
+  const fromLibrary = source === 'network';
 
   useEffect(() => {
     // L'orologio serve solo a spegnere il verde quando la biblioteca smette di
-    // rispondere: leggendo dal disco non c'è niente da spegnere.
-    if (fromDisk) return;
+    // rispondere: quello che è già in casa non ha niente da spegnere.
+    if (!fromLibrary) return;
     const timer = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(timer);
-  }, [fromDisk]);
+  }, [fromLibrary]);
 
-  const lit = fromDisk || (lastAnswerAt !== null && now - lastAnswerAt <= ONLINE_FOR_MS);
+  const answeredRecently = lastAnswerAt !== null && now - lastAnswerAt <= ONLINE_FOR_MS;
+  const lit = fromLibrary ? answeredRecently : source !== null;
+  const label =
+    source === 'vault'
+      ? t('areas.library.viewerFromDisk')
+      : source === 'cache'
+        ? t('areas.library.viewerFromMemory')
+        : source === 'network'
+          ? t('areas.library.viewerFromLibrary')
+          : t('areas.library.viewerOnline');
 
   return (
     <span
       className={`ml-auto flex items-center gap-1.5 text-xs ${lit ? 'text-editorial-success' : 'text-editorial-muted'}`}
+      title={origin ? t('areas.library.viewerOriginSize', { size: origin.size }) : undefined}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${lit ? 'bg-editorial-success' : 'bg-editorial-border'}`}
         aria-hidden="true"
       />
-      {t(fromDisk ? 'areas.library.viewerFromDisk' : 'areas.library.viewerOnline')}
+      {label}
     </span>
   );
 }
 
 function ViewerToolbar({
   fromDisk,
+  origin,
   index,
   total,
   label,
@@ -659,7 +742,7 @@ function ViewerToolbar({
       <IconButton size="sm" onClick={onZoomToActualSize} title={t('areas.library.viewerZoomActualSize')}>
         <Focus size={14} />
       </IconButton>
-      <ConnectionBadge fromDisk={fromDisk} />
+      <ConnectionBadge fromDisk={fromDisk} origin={origin} />
       <IconButton
         size="sm"
         onClick={onToggleThumbnails}
