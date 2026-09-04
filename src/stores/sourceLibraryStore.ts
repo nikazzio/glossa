@@ -42,6 +42,8 @@ interface SourceLibraryState {
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
   catalog: LibraryCatalogEntry[];
+  catalogLoading: boolean;
+  catalogError: string | null;
   /** Il catalogo: **tutte** le opere, sempre (#213). */
   loadCatalog: () => Promise<void>;
   removeSource: (sourceId: string) => Promise<void>;
@@ -57,6 +59,8 @@ interface SourceLibraryState {
   deleteCollection: (collectionId: string) => Promise<void>;
   refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
+  detailLoading: boolean;
+  detailError: string | null;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
   /** Rilegge il manifesto da cui l'opera è stata aggiunta e ne riscrive i
    *  dati anagrafici, cancellando ogni correzione a mano (Note escluse). */
@@ -147,12 +151,17 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   },
 
   catalog: [],
+  catalogLoading: false,
+  catalogError: null,
 
   loadCatalog: async () => {
+    set({ catalogLoading: true, catalogError: null });
     try {
       set({ catalog: await listLibraryCatalog() });
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error) });
+      set({ catalogError: getErrorMessage(error) });
+    } finally {
+      set({ catalogLoading: false });
     }
   },
 
@@ -163,6 +172,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       await get().loadLibraryManifestUrls();
     } catch (error: unknown) {
       set({ error: getErrorMessage(error) });
+      throw error;
     }
   },
 
@@ -220,9 +230,19 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     }));
   },
 
+  detailLoading: false,
+  detailError: null,
+
   loadDetail: async (sourceId) => {
-    const detail = await getLibrarySourceDetail(sourceId);
-    set({ detail });
+    set({ detail: null, detailLoading: true, detailError: null });
+    try {
+      const detail = await getLibrarySourceDetail(sourceId);
+      set({ detail });
+    } catch (error: unknown) {
+      set({ detailError: getErrorMessage(error) });
+    } finally {
+      set({ detailLoading: false });
+    }
   },
 
   toggleWorkspaceLink: async (workspaceId, sourceId, linked) => {

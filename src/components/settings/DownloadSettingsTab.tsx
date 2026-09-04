@@ -26,7 +26,7 @@ import {
 } from '../../services/optimizeService';
 
 /** Impostazioni globali per scaricamento e ottimizzazione delle immagini. */
-export function DownloadSettingsTab() {
+export function DownloadSettingsTab({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const [sizeCap, setSizeCap] = useState(DEFAULT_SIZE_CAP);
   const [thumbnailEdge, setEdge] = useState(DEFAULT_THUMBNAIL_EDGE);
@@ -104,9 +104,9 @@ export function DownloadSettingsTab() {
 
   return (
     <div
-      id="settings-panel-download"
-      role="tabpanel"
-      aria-labelledby="settings-tab-download"
+      id={embedded ? undefined : 'settings-panel-download'}
+      role={embedded ? undefined : 'tabpanel'}
+      aria-labelledby={embedded ? undefined : 'settings-tab-download'}
       className="space-y-10"
     >
       <section className="space-y-4">

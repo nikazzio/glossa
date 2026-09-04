@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Eraser, Loader2, Minimize2, ShieldCheck } from 'lucide-react';
+import { Download, Eraser, HardDrive, Loader2, Minimize2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ClickPopover, CopyButton, IconButton, Select, StatBlock } from '../ui';
+import { ClickPopover, CopyButton, IconButton, SectionLabel, Select, StatBlock } from '../ui';
 import { useJobsStore } from '../../stores/jobsStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
@@ -74,29 +74,39 @@ export function CopiesSection({
     <ul className="divide-y divide-editorial-border/70">
       {detail.versions.map((version) => (
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-            {t(`areas.library.versionKindLabels.${version.versionKind}`)}
-          </span>
-
-          {version.sourceUrl && (
-            <span className="flex items-start gap-1">
-              <a
-                href={version.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="min-w-0 flex-1 truncate font-display text-sm italic text-editorial-accent underline underline-offset-2"
-              >
-                {version.sourceUrl}
-              </a>
-              <CopyButton text={version.sourceUrl} size="xs" />
+          <div>
+            <span className="block truncate font-display text-sm italic text-editorial-ink">
+              {version.label}
             </span>
-          )}
+            <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              {t(`areas.library.versionKindLabels.${version.versionKind}`)}
+            </span>
+          </div>
 
           <CopyDetails
             version={version}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
           />
+
+          {version.sourceUrl && (
+            <details className="border-t border-editorial-border/70 pt-2">
+              <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
+                {t('areas.library.technicalData')}
+              </summary>
+              <span className="mt-2 flex items-start gap-1">
+                <a
+                  href={version.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 flex-1 truncate text-xs text-editorial-accent underline underline-offset-2"
+                >
+                  {version.sourceUrl}
+                </a>
+                <CopyButton text={version.sourceUrl} size="xs" />
+              </span>
+            </details>
+          )}
         </li>
       ))}
     </ul>
@@ -159,7 +169,7 @@ function CopyDetails({
     ? { sizes: entry.sizes, principal: entry.principalSize, localPages: entry.localPages, localBytes: entry.localBytes }
     : fetched ?? emptyInventory();
   const expectedPages = entry?.expectedPages ?? version.expectedPages ?? 0;
-  const { sizes, principal, localPages, localBytes } = inventory;
+  const { sizes, principal, localBytes } = inventory;
   const runningDownload = jobs.some((job) => job.id === `download:${version.id}` && !isTerminal(job));
 
   const startDownload = async () => {
@@ -234,31 +244,38 @@ function CopyDetails({
   };
 
   return (
-    <div className="space-y-4 border-t border-editorial-border/60 pt-3">
-      {localBytes > 0 && <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />}
-
-      <div className="flex items-center gap-1.5">
-        <IconButton onClick={() => void verify()} disabled={busy || localPages === 0} title={t('areas.library.verify')}>
-          <ShieldCheck size={16} />
-        </IconButton>
-        <IconButton onClick={() => void freeSpace()} disabled={busy || localPages === 0} title={t('areas.library.freeSpace')}>
-          <Eraser size={16} />
-        </IconButton>
-        <CompressPopover version={version} sizes={sizes} onRefresh={reload} />
-      </div>
-
+    <div className="space-y-5 border-t border-editorial-border/60 pt-3">
       {sizes.length > 0 && (
-        <div className="space-y-1">
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-            {t('areas.library.resolutionsSection')}
-          </span>
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <SectionLabel icon={HardDrive} label={t('areas.library.localVersionsSection')} />
+            <div className="flex items-center gap-1">
+              <IconButton
+                size="sm"
+                onClick={() => void verify()}
+                disabled={busy}
+                title={t('areas.library.verify')}
+              >
+                <ShieldCheck size={13} />
+              </IconButton>
+              <CompressPopover version={version} sizes={sizes} onRefresh={reload} />
+              <IconButton
+                size="sm"
+                onClick={() => void freeSpace()}
+                disabled={busy}
+                title={t('areas.library.freeSpace')}
+              >
+                <Eraser size={13} />
+              </IconButton>
+            </div>
+          </div>
+          <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />
           <div className="space-y-1">
             {sizes.map((size) => (
               <ResolutionRow
                 key={`${size.sizeTag}-${size.derived ? 'derived' : 'native'}`}
                 size={size}
                 expectedPages={expectedPages}
-                isPrincipal={size.sizeTag === principal}
                 onFree={async () => {
                   const confirmed = await confirm({
                     title: t('areas.library.freeSizeTitle', { size: humanSize(size.bytes) }),
@@ -284,17 +301,18 @@ function CopyDetails({
               />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <DownloadRow
-        version={version}
-        existingSizes={sizes}
-        expectedPages={expectedPages}
-        disabled={busy || runningDownload || !version.sourceUrl}
-      />
-
-      <PageActionsPlaceholder />
+      <section className="space-y-2">
+        <SectionLabel icon={Download} label={t('areas.library.downloadSection')} />
+        <DownloadRow
+          version={version}
+          existingSizes={sizes}
+          expectedPages={expectedPages}
+          disabled={busy || runningDownload || !version.sourceUrl}
+        />
+      </section>
     </div>
   );
 }
@@ -305,12 +323,10 @@ function CopyDetails({
 function ResolutionRow({
   size,
   expectedPages,
-  isPrincipal,
   onFree,
 }: {
   size: SizeFolder;
   expectedPages: number;
-  isPrincipal: boolean;
   onFree: () => Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -320,24 +336,21 @@ function ResolutionRow({
     expectedPages > 0
       ? t('areas.library.resolutionPages', { done: size.pages, total: expectedPages })
       : t('areas.library.pageCount', { count: size.pages });
+  const complete = expectedPages > 0 && size.pages >= expectedPages;
 
   return (
     <div className="flex items-center justify-between gap-2 py-1">
-      <span className="min-w-0 flex-1 truncate font-display text-sm italic text-editorial-ink">
-        {resolutionLabel(size.sizeTag, t)}
-        {isPrincipal && (
-          <span className="ml-1.5 font-sans text-[10px] not-italic uppercase tracking-[0.08em] text-editorial-muted">
-            {t('areas.library.resolutionPrincipal')}
-          </span>
-        )}
-        {size.derived && (
-          <span className="ml-1.5 font-sans text-[10px] not-italic uppercase tracking-[0.08em] text-editorial-accent">
-            {t('areas.library.derivedLabel')}
-          </span>
-        )}
-      </span>
-      <span className="shrink-0 text-xs text-editorial-muted">
-        {pagesLabel} · {humanSize(size.bytes)}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-display text-sm italic text-editorial-ink">
+          {resolutionLabel(size.sizeTag, t)}
+        </span>
+        <span className="block truncate text-xs text-editorial-muted">
+          {size.derived
+            ? t('areas.library.localVersionDerived')
+            : t('areas.library.localVersionDownloaded')}
+          {' · '}{pagesLabel} · {humanSize(size.bytes)} ·{' '}
+          {t(complete ? 'areas.library.localVersionComplete' : 'areas.library.localVersionPartial')}
+        </span>
       </span>
       <IconButton
         size="sm"
@@ -515,8 +528,8 @@ function CompressPopover({
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <IconButton disabled={running} title={t('areas.library.compressAction')} ariaPressed={open}>
-          <Minimize2 size={16} className={running ? 'animate-spin' : undefined} />
+        <IconButton size="sm" disabled={running} title={t('areas.library.compressAction')} ariaPressed={open}>
+          <Minimize2 size={13} className={running ? 'animate-spin' : undefined} />
         </IconButton>
       }
     >
@@ -564,24 +577,5 @@ function CompressPopover({
         )}
       </div>
     </ClickPopover>
-  );
-}
-
-/** Spazio riservato per i comandi sulla singola pagina — disattivato finché
- *  il visore non esiste: quando arriverà, i comandi vanno qui, non altrove. */
-function PageActionsPlaceholder() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center justify-between gap-2 border-t border-dashed border-editorial-border/50 pt-3 text-xs text-editorial-muted">
-      <span>{t('areas.library.pageActionsLabel')}</span>
-      <div className="flex items-center gap-1">
-        <IconButton size="sm" disabled title={t('areas.library.pageActionsComingSoon')}>
-          <Download size={13} />
-        </IconButton>
-        <IconButton size="sm" disabled title={t('areas.library.pageActionsComingSoon')}>
-          <Minimize2 size={13} />
-        </IconButton>
-      </div>
-    </div>
   );
 }

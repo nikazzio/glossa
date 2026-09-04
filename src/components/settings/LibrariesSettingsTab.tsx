@@ -47,10 +47,11 @@ export interface NetworkProfileDraft {
 interface LibrariesSettingsTabProps {
   draft: NetworkProfileDraft | null;
   setDraft: (draft: NetworkProfileDraft | null) => void;
+  embedded?: boolean;
 }
 
 /** Profili di rete e associazioni alle biblioteche. */
-export function LibrariesSettingsTab({ draft, setDraft }: LibrariesSettingsTabProps) {
+export function LibrariesSettingsTab({ draft, setDraft, embedded = false }: LibrariesSettingsTabProps) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<NetworkSettings>({ profiles: [], libraries: [] });
   const [activeId, setActiveId] = useState<string | null>(draft?.id ?? null);
@@ -142,9 +143,9 @@ export function LibrariesSettingsTab({ draft, setDraft }: LibrariesSettingsTabPr
 
   return (
     <div
-      id="settings-panel-libraries"
-      role="tabpanel"
-      aria-labelledby="settings-tab-libraries"
+      id={embedded ? undefined : 'settings-panel-libraries'}
+      role={embedded ? undefined : 'tabpanel'}
+      aria-labelledby={embedded ? undefined : 'settings-tab-libraries'}
       className="space-y-10"
     >
       <section className="space-y-4">

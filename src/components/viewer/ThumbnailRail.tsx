@@ -202,7 +202,7 @@ function ThumbnailRow({
           <span className="h-3 w-3 animate-pulse rounded-full bg-editorial-muted/40" aria-hidden="true" />
         ) : null}
       </span>
-      <span className="truncate">{page.label ?? page.index}</span>
+      <span className="truncate">{page.label ?? page.index + 1}</span>
     </button>
   );
 }

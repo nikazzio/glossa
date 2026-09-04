@@ -6,15 +6,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Images,
-  PanelRightClose,
-  PanelRightOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
   RefreshCw,
   ZoomIn,
   ZoomOut,
   Maximize,
   Focus,
+  MoreHorizontal,
 } from 'lucide-react';
-import { IconButton, Spinner, EmptyState } from '../ui';
+import { ClickPopover, EmptyState, IconButton, MenuActionRow, Spinner, Tooltip } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { ThumbnailRail } from './ThumbnailRail';
 import { createControlledIiifTileSource } from './iiifTileBridge';
@@ -246,13 +247,6 @@ export function PageViewer({
     [total],
   );
 
-  // Vale anche alla prima apertura: `page` esiste solo da quando il manifesto
-  // è arrivato, quindi il primo giro annuncia già la pagina di partenza.
-  useEffect(() => {
-    if (!page) return;
-    onPageChange?.({ index: currentIndex, label: page.label, total });
-  }, [page, currentIndex, total, onPageChange]);
-
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !page) return;
@@ -265,6 +259,7 @@ export function PageViewer({
     // la pagina di prima, che è rimasta a schermo: contarlo spegnerebbe la
     // rotella su un'immagine che non è quella chiesta.
     let opened = false;
+    let announced = false;
     let tiles: 'none' | 'loading' | 'shown' = 'none';
     let objectUrl: string | null = null;
     const openedAt = performance.now();
@@ -401,6 +396,16 @@ export function PageViewer({
       shown += 1;
       setPageLoading(false);
       setPageError(null);
+      if (!announced) {
+        announced = true;
+        onPageChange?.({ index: currentIndex, label: page.label, total });
+        void setLastViewedPage(sourceId, currentIndex).catch((error) => {
+          logger.warn('library.viewer.lastPageSaveFailed', {
+            message: errorMessage(error),
+            index: currentIndex,
+          });
+        });
+      }
     };
     /** Non si vede ancora niente: la pagina è guasta. */
     const nothingIsShowing = () => {
@@ -443,12 +448,6 @@ export function PageViewer({
     // La provenienza è di questa pagina: tenere quella di prima mentre la nuova
     // arriva la farebbe leggere come se valesse per l'immagine a schermo.
     setPageOrigin(null);
-    // Dove si è arrivati si ricorda comunque, che la pagina venga dal computer
-    // o dalla rete: riaprendo il libro si torna qui.
-    void setLastViewedPage(sourceId, currentIndex).catch((error) => {
-      logger.warn('library.viewer.lastPageSaveFailed', { message: errorMessage(error), index: currentIndex });
-    });
-
     void openWholePage().catch(givingUp);
 
     return () => {
@@ -472,6 +471,8 @@ export function PageViewer({
     currentIndex,
     pageAttempt,
     refreshLocalSize,
+    onPageChange,
+    total,
   ]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -499,6 +500,17 @@ export function PageViewer({
       aria-label={t('areas.library.viewerSection')}
       className="flex h-full min-h-0 flex-1"
     >
+      {manifest && total > 0 && thumbnailsOpen && (
+        <div className="flex w-28 shrink-0 flex-col border-r border-editorial-border">
+          <ThumbnailRail
+            pages={manifest.pages}
+            versionId={versionId}
+            providerKey={providerKey}
+            currentIndex={currentIndex}
+            onSelect={goToIndex}
+          />
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 flex-col">
         {manifest && total > 0 && (
           <ViewerToolbar
@@ -541,7 +553,11 @@ export function PageViewer({
           <div ref={viewerElementRef} className="absolute inset-0" />
           {manifestError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-panel">
-              <EmptyState icon={<Images size={28} />} message={t('areas.library.viewerLoadError')} hint={manifestError} />
+              <EmptyState
+                icon={<Images size={28} />}
+                message={t('areas.library.viewerLoadError')}
+                hint={t('areas.library.viewerLoadErrorHint')}
+              />
               <IconButton size="sm" onClick={() => setManifestAttempt((n) => n + 1)} title={t('areas.library.viewerRetry')}>
                 <RefreshCw size={14} />
               </IconButton>
@@ -565,7 +581,7 @@ export function PageViewer({
           {pageLoading && (
             <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-1 p-2">
               <Spinner
-                label={t('areas.library.viewerLoading')}
+                label={t('areas.library.viewerOpeningPage', { index: currentIndex + 1 })}
                 className="rounded bg-surface-panel/90 px-2 py-1 text-xs text-editorial-muted shadow"
               />
               {openingIsSlow && explainsSlowness && (
@@ -580,7 +596,11 @@ export function PageViewer({
               <EmptyState
                 icon={<Images size={24} />}
                 message={t('areas.library.viewerLoadError')}
-                hint={pageError === TILE_LOAD_FAILED ? t('areas.library.viewerTileLoadErrorHint') : pageError}
+                hint={
+                  pageError === TILE_LOAD_FAILED
+                    ? t('areas.library.viewerTileLoadErrorHint')
+                    : t('areas.library.viewerLoadErrorHint')
+                }
               />
               <IconButton size="sm" onClick={() => setPageAttempt((n) => n + 1)} title={t('areas.library.viewerRetry')}>
                 <RefreshCw size={14} />
@@ -589,17 +609,6 @@ export function PageViewer({
           )}
         </div>
       </div>
-      {manifest && total > 0 && thumbnailsOpen && (
-        <div className="flex w-28 shrink-0 flex-col border-l border-editorial-border">
-          <ThumbnailRail
-            pages={manifest.pages}
-            versionId={versionId}
-            providerKey={providerKey}
-            currentIndex={currentIndex}
-            onSelect={goToIndex}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -659,7 +668,7 @@ function ConnectionBadge({
   }, [fromLibrary]);
 
   const answeredRecently = lastAnswerAt !== null && now - lastAnswerAt <= ONLINE_FOR_MS;
-  const lit = fromLibrary ? answeredRecently : source !== null;
+  const lit = fromLibrary && answeredRecently;
   const label =
     source === 'vault'
       ? t('areas.library.viewerFromDisk')
@@ -670,16 +679,20 @@ function ConnectionBadge({
           : t('areas.library.viewerOnline');
 
   return (
-    <span
-      className={`ml-auto flex items-center gap-1.5 text-xs ${lit ? 'text-editorial-success' : 'text-editorial-muted'}`}
-      title={origin ? t('areas.library.viewerOriginSize', { size: origin.size }) : undefined}
+    <Tooltip
+      label={origin ? t('areas.library.viewerOriginSize', { size: origin.size }) : label}
+      side="bottom"
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${lit ? 'bg-editorial-success' : 'bg-editorial-border'}`}
-        aria-hidden="true"
-      />
-      {label}
-    </span>
+        className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${lit ? 'text-editorial-success' : 'text-editorial-muted'}`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${lit ? 'bg-editorial-success' : 'bg-editorial-border'}`}
+          aria-hidden="true"
+        />
+        {label}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -702,55 +715,95 @@ function ViewerToolbar({
   onToggleThumbnails,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
+  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
   return (
-    <div className="flex h-11 shrink-0 items-center gap-1 border-b border-editorial-border px-2">
-      <IconButton size="sm" onClick={onPrev} disabled={index <= 0} title={t('areas.library.viewerPrevPage')}>
-        <ChevronLeft size={14} />
-      </IconButton>
-      <IconButton size="sm" onClick={onNext} disabled={index >= total - 1} title={t('areas.library.viewerNextPage')}>
-        <ChevronRight size={14} />
-      </IconButton>
-      <form
-        className="flex items-center gap-1"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onGoToPageSubmit();
-        }}
-      >
-        <input
-          value={goToPage}
-          onChange={(event) => onGoToPageChange(event.target.value.replace(/\D/g, ''))}
-          placeholder={String(index + 1)}
-          aria-label={t('areas.library.viewerGoToPage')}
-          className={`${FIELD_CLASSNAME} w-12 py-1 text-center text-xs`}
-        />
-      </form>
-      <span className="text-xs text-editorial-muted">
-        {t('areas.library.viewerPageOf', { index: index + 1, total })}
-        {label ? ` · ${label}` : ''}
-      </span>
-      <span className="mx-1 h-4 w-px bg-editorial-border" aria-hidden="true" />
-      <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
-        <ZoomOut size={14} />
-      </IconButton>
-      <IconButton size="sm" onClick={onZoomIn} title={t('areas.library.viewerZoomIn')}>
-        <ZoomIn size={14} />
-      </IconButton>
-      <IconButton size="sm" onClick={onZoomToFit} title={t('areas.library.viewerZoomToFit')}>
-        <Maximize size={14} />
-      </IconButton>
-      <IconButton size="sm" onClick={onZoomToActualSize} title={t('areas.library.viewerZoomActualSize')}>
-        <Focus size={14} />
-      </IconButton>
-      <ConnectionBadge fromDisk={fromDisk} origin={origin} />
+    <div className="flex h-12 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
       <IconButton
         size="sm"
         onClick={onToggleThumbnails}
         ariaPressed={thumbnailsOpen}
         title={t(thumbnailsOpen ? 'areas.library.viewerHideThumbnails' : 'areas.library.viewerShowThumbnails')}
       >
-        {thumbnailsOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+        {thumbnailsOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
       </IconButton>
+      <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
+
+      <div className="flex shrink-0 items-center gap-1">
+        <IconButton size="sm" onClick={onPrev} disabled={index <= 0} title={t('areas.library.viewerPrevPage')}>
+          <ChevronLeft size={14} />
+        </IconButton>
+        <IconButton size="sm" onClick={onNext} disabled={index >= total - 1} title={t('areas.library.viewerNextPage')}>
+          <ChevronRight size={14} />
+        </IconButton>
+      </div>
+
+      <div className="flex min-w-0 items-center gap-2">
+        <form
+          className="shrink-0"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onGoToPageSubmit();
+          }}
+        >
+          <input
+            value={goToPage}
+            onChange={(event) => onGoToPageChange(event.target.value.replace(/\D/g, ''))}
+            placeholder={String(index + 1)}
+            aria-label={t('areas.library.viewerGoToPage')}
+            className={`${FIELD_CLASSNAME} w-12 py-1 text-center text-xs`}
+          />
+        </form>
+        <span className="truncate text-xs text-editorial-muted">
+          {t('areas.library.viewerPageOf', { index: index + 1, total })}
+          {label ? ` · ${label}` : ''}
+        </span>
+      </div>
+
+      <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
+      <div className="flex shrink-0 items-center gap-1">
+        <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
+          <ZoomOut size={14} />
+        </IconButton>
+        <IconButton size="sm" onClick={onZoomIn} title={t('areas.library.viewerZoomIn')}>
+          <ZoomIn size={14} />
+        </IconButton>
+        <ClickPopover
+          open={zoomMenuOpen}
+          onOpenChange={setZoomMenuOpen}
+          trigger={
+            <IconButton
+              size="sm"
+              ariaPressed={zoomMenuOpen}
+              title={t('areas.library.viewerZoomMore')}
+            >
+              <MoreHorizontal size={14} />
+            </IconButton>
+          }
+        >
+          <div className="min-w-44 py-1">
+            <MenuActionRow
+              icon={<Maximize size={14} />}
+              label={t('areas.library.viewerZoomToFit')}
+              onClick={() => {
+                setZoomMenuOpen(false);
+                onZoomToFit();
+              }}
+            />
+            <MenuActionRow
+              icon={<Focus size={14} />}
+              label={t('areas.library.viewerZoomActualSize')}
+              onClick={() => {
+                setZoomMenuOpen(false);
+                onZoomToActualSize();
+              }}
+            />
+          </div>
+        </ClickPopover>
+      </div>
+
+      <div className="ml-auto shrink-0 border-l border-editorial-border pl-3">
+        <ConnectionBadge fromDisk={fromDisk} origin={origin} />
+      </div>
     </div>
   );
 }

@@ -9,8 +9,6 @@ import {
   HardDrive,
   DatabaseBackup,
   ListChecks,
-  Download,
-  Landmark,
   SlidersHorizontal,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -124,12 +122,10 @@ export function SettingsModal() {
     { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
     { id: 'backup',       icon: <DatabaseBackup size={14} />,    label: t('settings.backup') },
     { id: 'jobs',         icon: <ListChecks size={14} />,        label: t('settings.jobsTab') },
-    { id: 'download',     icon: <Download size={14} />,          label: t('settings.downloadTab') },
-    { id: 'libraries',    icon: <Landmark size={14} />,          label: t('settings.librariesTab') },
+    { id: 'library',      icon: <LibraryBig size={14} />,        label: t('areas.library.title') },
   ];
 
   const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
-    { icon: <LibraryBig size={14} />,  label: t('areas.library.title') },
     { icon: <BookOpen size={14} />,    label: t('areas.transcriptions.title') },
   ];
 
@@ -294,10 +290,16 @@ export function SettingsModal() {
 
       {activeTab === 'jobs' && <JobsSettingsTab />}
 
-      {activeTab === 'download' && <DownloadSettingsTab />}
-
-      {activeTab === 'libraries' && (
-        <LibrariesSettingsTab draft={networkDraft} setDraft={setNetworkDraft} />
+      {activeTab === 'library' && (
+        <div
+          id="settings-panel-library"
+          role="tabpanel"
+          aria-labelledby="settings-tab-library"
+          className="space-y-10"
+        >
+          <DownloadSettingsTab embedded />
+          <LibrariesSettingsTab draft={networkDraft} setDraft={setNetworkDraft} embedded />
+        </div>
       )}
 
     </Dialog>
