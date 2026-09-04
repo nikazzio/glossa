@@ -143,25 +143,24 @@ export function wholePageUrl(imageService: string, width = WHOLE_PAGE_WIDTH_PX):
 export const MAX_SIZE = 'max';
 
 /**
- * Un secondo tentativo, e uno solo, per qualsiasi biblioteca.
+ * Le biblioteche che costruiscono le immagini al momento della richiesta.
  *
  * Misurato il 4 settembre 2026 su Internet Archive: l'indice di un libro di 322
  * pagine risponde con un errore del server dopo 60 secondi al primo tentativo e
  * arriva in 1,3 secondi al secondo. Non è un indirizzo rotto: la biblioteca sta
- * preparando il file e la prima richiesta scade prima che finisca. Lo stesso
- * vale per le immagini.
+ * preparando il file e la prima richiesta scade prima che finisca.
  *
- * Prima questo valeva solo per l'indice e solo per le biblioteche di un elenco
- * scritto a mano, e le pagine se la cavavano chiedendo **tre grandezze diverse**
- * in fila. Quelle tre non funzionavano perché una fosse la grandezza giusta:
- * funzionavano perché ogni tentativo dava tempo al lavoro cominciato dal
- * precedente. Un secondo tentativo dice la stessa cosa senza fingere che il
- * problema sia la grandezza — e senza il costo di chiedere per prima la
- * dimensione piena, che alla riapertura del libro faceva riscaricare da capo
- * pagine già in casa.
+ * Per queste due cose cambiano, e solo per queste:
  *
- * Uno solo: un terzo raddoppierebbe l'attesa di un guasto vero senza aggirare
- * niente.
+ * - **l'indice si richiede una seconda volta**, una sola: un terzo tentativo
+ *   raddoppierebbe l'attesa di un guasto vero senza aggirare niente;
+ * - **la pagina si chiede in più forme** — la più grande, il dimezzamento, la
+ *   larghezza dichiarata — non perché una sia la misura giusta, ma perché ogni
+ *   richiesta dà tempo al lavoro cominciato dalla precedente. Ogni forma è un
+ *   file diverso nel deposito, e quindi si tengono poche e sempre le stesse.
+ *
+ * Le altre biblioteche servono file già pronti: una richiesta, una forma sola —
+ * il dimezzamento, che è la misura che tengono pronta.
  */
 const LIBRARIES_THAT_BUILD_ON_DEMAND: ReadonlySet<string> = new Set(['archive_org']);
 

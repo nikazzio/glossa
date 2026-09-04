@@ -223,7 +223,11 @@ mod tests {
     #[test]
     fn a_library_that_keeps_the_halvings_ready_is_recognised() {
         assert_eq!(
-            rule_from_info(Some(&archive_info()), SizeCap::LongEdge(2000), SizePolicy::Auto),
+            rule_from_info(
+                Some(&archive_info()),
+                SizeCap::LongEdge(2000),
+                SizePolicy::Auto
+            ),
             SizingRule::Halvings
         );
     }
@@ -231,7 +235,11 @@ mod tests {
     #[test]
     fn a_library_that_declares_nothing_gets_the_general_rule() {
         assert_eq!(
-            rule_from_info(Some(&gallica_info()), SizeCap::LongEdge(2000), SizePolicy::Auto),
+            rule_from_info(
+                Some(&gallica_info()),
+                SizeCap::LongEdge(2000),
+                SizePolicy::Auto
+            ),
             SizingRule::ExactWidth
         );
     }

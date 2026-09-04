@@ -322,11 +322,7 @@ pub async fn delete_version_files(
 ///
 /// Si guardano sia le copie scaricate sia quelle ricavate in locale: una
 /// riduzione può stare sotto una chiave diversa da quella degli originali.
-fn provider_keys_holding(
-    root: &std::path::Path,
-    declared: &str,
-    version_id: &str,
-) -> Vec<String> {
+fn provider_keys_holding(root: &std::path::Path, declared: &str, version_id: &str) -> Vec<String> {
     let mut keys = vec![declared.to_string()];
     for area in [super::layout::PROVIDERS_DIR, super::layout::DERIVED_DIR] {
         let Ok(entries) = std::fs::read_dir(root.join(area)) else {

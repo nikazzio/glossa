@@ -47,10 +47,14 @@ export interface NetworkProfileDraft {
  * la modifica dei profili — non sono più vicine nella schermata: due copie
  * dello stesso stato avrebbero mostrato conteggi diversi dopo un salvataggio.
  */
-export function useLibraryNetworkSettings() {
+export function useLibraryNetworkSettings(editingProfileId: string | null = null) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<NetworkSettings>({ profiles: [], libraries: [] });
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Si parte dal profilo della bozza, quando ce n'è una: la bozza vive nella
+  // finestra e sopravvive al cambio di scheda, mentre questo stato no —
+  // tornando indietro si vedeva scelto il primo profilo con i campi di un
+  // altro.
+  const [activeId, setActiveId] = useState<string | null>(editingProfileId);
 
   const reportFailure = useCallback(
     (key: string, error: unknown) => {

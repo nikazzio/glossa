@@ -30,7 +30,7 @@ export function LibrarySettingsTab({
   const { t } = useTranslation();
   const [subTab, setSubTab] = useState<LibrarySubTab>('profiles');
   const { settings, activeId, setActiveId, saveProfile, removeProfile, chooseProfile, chooseSizePolicy } =
-    useLibraryNetworkSettings();
+    useLibraryNetworkSettings(draft?.id ?? null);
 
   const tabs: TabStripItem[] = [
     { id: 'profiles', label: t('settings.network.subtab.profiles'), icon: <Gauge size={16} /> },

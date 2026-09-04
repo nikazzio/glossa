@@ -68,6 +68,12 @@ interface SourceLibraryState {
   clearError: () => void;
 }
 
+/**
+ * L'opera per cui è partita l'ultima lettura della scheda: le risposte più
+ * lente delle altre non contano.
+ */
+let pendingDetailSource: string | null = null;
+
 export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   detail: null,
   addingUrls: new Set(),
@@ -234,14 +240,19 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   detailError: null,
 
   loadDetail: async (sourceId) => {
+    // Aprire un'opera e subito un'altra fa partire due letture: se la prima
+    // risponde per ultima, la scheda mostrerebbe l'opera che non si sta
+    // guardando, e l'attesa non finirebbe più. Vale solo la lettura dell'opera
+    // chiesta per ultima.
+    pendingDetailSource = sourceId;
     set({ detail: null, detailLoading: true, detailError: null });
     try {
       const detail = await getLibrarySourceDetail(sourceId);
-      set({ detail });
+      if (pendingDetailSource !== sourceId) return;
+      set({ detail, detailLoading: false });
     } catch (error: unknown) {
-      set({ detailError: getErrorMessage(error) });
-    } finally {
-      set({ detailLoading: false });
+      if (pendingDetailSource !== sourceId) return;
+      set({ detailError: getErrorMessage(error), detailLoading: false });
     }
   },
 

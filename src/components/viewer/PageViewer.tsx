@@ -65,6 +65,10 @@ interface PageViewerProps {
    * torna alla più fornita, che è il comportamento di sempre.
    */
   preferredLocalSize?: string | null;
+  /** Dice quale versione locale il visore sta davvero leggendo, `null` se sta
+   *  leggendo dalla biblioteca: la scheda dell'opera la segna come «in
+   *  lettura» senza doverla indovinare. */
+  onLocalSizeChange?: (sizeTag: string | null) => void;
   /** Avvisa chi ospita il visore della pagina mostrata, così altri riquadri
    *  della stessa schermata possono dirla senza chiederla al visore. */
   onPageChange?: (page: ViewerPagePosition) => void;
@@ -127,6 +131,7 @@ export function PageViewer({
   manifestUrl,
   providerKey,
   preferredLocalSize = null,
+  onLocalSizeChange,
   onPageChange,
 }: PageViewerProps) {
   const { t } = useTranslation();
@@ -161,6 +166,15 @@ export function PageViewer({
   const [pageRequest, setPageRequest] = useState<CacheRequest | null>(null);
   /** Vero mentre la pagina aperta sta entrando nel deposito. */
   const [savingPage, setSavingPage] = useState(false);
+  /**
+   * La richiesta a schermo, leggibile da una promessa che finisce dopo.
+   *
+   * Conservare una pagina dura: nel frattempo si può voltare pagina, e senza
+   * questo confronto l'esito veniva scritto sulla pagina nuova — che risultava
+   * «sul computer» senza esserci.
+   */
+  const shownRequest = useRef<CacheRequest | null>(null);
+  shownRequest.current = pageRequest;
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -213,6 +227,10 @@ export function PageViewer({
       cancelled = true;
     };
   }, [versionId, preferredLocalSize]);
+
+  useEffect(() => {
+    onLocalSizeChange?.(localSize);
+  }, [localSize, onLocalSizeChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -557,14 +575,26 @@ export function PageViewer({
               viewport.zoomTo(viewport.imageToViewportZoom(1));
               viewport.applyConstraints();
             }}
-            canDownloadPage={pageRequest?.kind === 'page' && pageOrigin?.source !== 'vault'}
+            keepState={
+              pageRequest?.kind !== 'page'
+                ? 'unavailable'
+                : pageOrigin?.source === 'vault'
+                  ? 'saved'
+                  : 'available'
+            }
             savingPage={savingPage}
             onDownloadPage={() => {
-              if (!pageRequest || pageRequest.kind !== 'page') return;
+              const saved = pageRequest;
+              if (!saved || saved.kind !== 'page') return;
               setSavingPage(true);
-              void keepViewerPage(pageRequest)
+              void keepViewerPage(saved)
                 .then(() => {
-                  setPageOrigin({ source: 'vault', size: pageRequest.size });
+                  // Se nel frattempo si è voltata pagina, la provenienza a
+                  // schermo riguarda un'altra immagine e non si tocca: quello
+                  // che è finito nel deposito lo dice l'inventario.
+                  if (sameRequest(shownRequest.current, saved)) {
+                    setPageOrigin({ source: 'vault', size: saved.size });
+                  }
                   void refreshLocalSize();
                   toast.success(t('areas.library.viewerPageDownloaded'));
                 })
@@ -666,7 +696,13 @@ interface ViewerToolbarProps {
   onZoomOut: () => void;
   onZoomToFit: () => void;
   onZoomToActualSize: () => void;
-  canDownloadPage: boolean;
+  /**
+   * Cosa si può fare con la pagina a schermo: prenderla, niente perché non è
+   * ancora aperta, oppure niente perché è già in casa. Un booleano solo
+   * confondeva «non si può» con «è già fatto», e durante ogni apertura il
+   * comando dichiarava sul computer una pagina appena chiesta alla biblioteca.
+   */
+  keepState: 'unavailable' | 'available' | 'saved';
   /** Vero mentre la pagina aperta sta entrando nel deposito. */
   savingPage: boolean;
   onDownloadPage: () => void;
@@ -751,7 +787,7 @@ function ViewerToolbar({
   onZoomOut,
   onZoomToFit,
   onZoomToActualSize,
-  canDownloadPage,
+  keepState,
   savingPage,
   onDownloadPage,
   thumbnailsOpen,
@@ -809,7 +845,7 @@ function ViewerToolbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        <PageKeepButton saving={savingPage} canDownload={canDownloadPage} onDownload={onDownloadPage} />
+        <PageKeepButton saving={savingPage} state={keepState} onDownload={onDownloadPage} />
         <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
           <ZoomOut size={14} />
@@ -865,11 +901,11 @@ function ViewerToolbar({
  */
 function PageKeepButton({
   saving,
-  canDownload,
+  state,
   onDownload,
 }: {
   saving: boolean;
-  canDownload: boolean;
+  state: 'unavailable' | 'available' | 'saved';
   onDownload: () => void;
 }) {
   const { t } = useTranslation();
@@ -882,7 +918,7 @@ function PageKeepButton({
     );
   }
 
-  if (!canDownload) {
+  if (state === 'saved') {
     return (
       <Tooltip label={t('areas.library.viewerPageOnComputer')} side="bottom">
         <span
@@ -897,8 +933,23 @@ function PageKeepButton({
   }
 
   return (
-    <IconButton size="sm" onClick={onDownload} title={t('areas.library.viewerDownloadPage')}>
+    <IconButton
+      size="sm"
+      onClick={onDownload}
+      disabled={state === 'unavailable'}
+      title={t('areas.library.viewerDownloadPage')}
+    >
       <Download size={14} />
     </IconButton>
+  );
+}
+
+/** Due richieste che parlano della stessa immagine alla stessa misura. */
+function sameRequest(current: CacheRequest | null, other: CacheRequest): boolean {
+  if (!current || current.kind !== 'page' || other.kind !== 'page') return false;
+  return (
+    current.versionId === other.versionId &&
+    current.index === other.index &&
+    current.size === other.size
   );
 }

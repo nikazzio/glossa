@@ -111,7 +111,15 @@ export function LibraryProfilesSection({
           <IconButton
             size="sm"
             tone="danger"
-            onClick={() => active && onRemove(active.id)}
+            onClick={() => {
+              if (!active) return;
+              // Buttata anche la bozza: restava quella del profilo cancellato,
+              // e salvarla dichiarava riuscito un aggiornamento che non
+              // toccava nessuna riga.
+              setDraft(null);
+              setCreating(false);
+              onRemove(active.id);
+            }}
             disabled={!active || active.builtin || active.usedBy > 0}
             title={
               active && active.usedBy > 0

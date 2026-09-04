@@ -106,7 +106,7 @@ server della biblioteca: alzarlo troppo fa scattare blocchi temporanei.
 
 ## Quanto grandi le pagine
 
-In **Impostazioni → Scaricamento** scegli la misura delle pagine e quella delle
+In **Impostazioni → Biblioteca → Immagini** scegli la misura delle pagine e quella delle
 miniature.
 
 La misura delle pagine è un **obiettivo, non un numero esatto**: Glossa chiede
@@ -131,8 +131,8 @@ meglio; non costano nessuna richiesta.
 Ogni biblioteca ha i suoi tempi: quante richieste in un minuto, quante insieme,
 quante pagine di uno stesso libro scaricare per volta, quanto fermarsi quando
 chiede di rallentare, quanti tentativi fare. Sono pochi ritmi diversi applicati a
-molte biblioteche, quindi in **Impostazioni → Biblioteche** si governano come
-**profili**.
+molte biblioteche, quindi in **Impostazioni → Biblioteca → Configurazioni** si
+governano come **profili**.
 
 Fra una richiesta riuscita e la successiva **non c'è nessuna pausa**: a tenere i
 tempi sono il numero di richieste insieme, il limite al minuto e la pausa lunga
@@ -144,7 +144,8 @@ che usano quasi tutte, e **Lento**, tarato su Gallica che è la più severa.
 Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome
 Glossa dice quante biblioteche lo usano.
 
-Sotto, l'elenco delle biblioteche: per ognuna scegli il profilo e come chiedere
+Nella linguetta **Biblioteche** trovi l'elenco delle biblioteche: per ognuna
+scegli il profilo e come chiedere
 le immagini — **Automatico**, **Solo formati già pronti** o **Misura precisa**.
 Il primo è consigliato; l'ultimo può essere molto più lento quando la
 biblioteca deve costruire ogni immagine.
@@ -220,10 +221,10 @@ scaricato mesi fa con un tetto più alto di quello che ti serve adesso tiene
 dettaglio che non guardi. In entrambi i casi **comprimere è meglio che
 riscaricare**, perché la biblioteca non ne paga il prezzo.
 
-Nella tab **Copie digitali** della scheda dell'opera, il comando "comprimi"
-apre un piccolo pannello: da quale risoluzione già scaricata partire (solo se
-ce n'è più di una), a quale risoluzione più piccola arrivare, e a che
-qualità. Il comando mette subito il lavoro in coda.
+Nella tab **Digitalizzazioni** della scheda dell'opera ogni versione locale ha
+il suo comando "comprimi": parte da quella versione, e nel pannello si scelgono
+soltanto la misura più piccola d'arrivo e la qualità. Il comando mette subito il
+lavoro in coda.
 
 **Non è più irreversibile: nasce una copia nuova, l'originale non si tocca
 mai.** Prima la compressione sostituiva le pagine scaricate al loro posto,

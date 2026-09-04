@@ -29,8 +29,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::iiif::network::NetworkProfile;
-use crate::images;
 use crate::iiif::settings::SizePolicy;
+use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};

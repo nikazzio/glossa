@@ -195,7 +195,12 @@ pub async fn keep_viewer_page(
             size,
             provider_key: Some(provider_key),
             ..
-        } if size != THUMB_SIZE => (version_id.as_str(), *index, size.as_str(), provider_key.as_str()),
+        } if size != THUMB_SIZE => (
+            version_id.as_str(),
+            *index,
+            size.as_str(),
+            provider_key.as_str(),
+        ),
         _ => return Err("pagina_non_conservabile".to_string()),
     };
     let _write_guard = writes.lock().await;

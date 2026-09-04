@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
@@ -124,14 +124,25 @@ export function LibrarySourcePage({
    * computer. Vive qui perché la scelta si fa nella scheda a destra e il
    * risultato si vede nel visore a sinistra.
    */
-  const [viewedLocalSize, setViewedLocalSize] = useState<string | null>(null);
+  const [chosenLocalSize, setChosenLocalSize] = useState<string | null>(null);
+  /**
+   * Quale versione locale il visore sta **davvero** leggendo, dichiarata da
+   * lui. Senza, nessuna riga risultava «in lettura» finché non si sceglieva a
+   * mano — nemmeno quando di versioni ce n'era una sola.
+   */
+  const [readingLocalSize, setReadingLocalSize] = useState<string | null>(null);
+  /** La digitalizzazione per cui la scheda è già stata riletta dopo il nuovo
+   *  conteggio: una volta basta, senza si rileggerebbe a ogni pagina. */
+  const countRefreshedFor = useRef<string | null>(null);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
   // schermo finché il nuovo manifesto non è arrivato.
   useEffect(() => {
     setSelectedVersionId(initialManifestVersion?.id ?? '');
-    setViewedLocalSize(null);
+    setChosenLocalSize(null);
+    setReadingLocalSize(null);
+    countRefreshedFor.current = null;
   }, [detail.source.id, initialManifestVersion?.id]);
 
   const persistLayout = () => {
@@ -235,7 +246,20 @@ export function LibrarySourcePage({
             versionId={manifestVersion.id}
             manifestUrl={manifestVersion.sourceUrl}
             providerKey={manifestVersion.providerKey}
-            preferredLocalSize={viewedLocalSize}
+            preferredLocalSize={chosenLocalSize}
+            onLocalSizeChange={setReadingLocalSize}
+            onPageChange={(position) => {
+              // Il manifesto letto dal visore dice quante pagine ha il libro, e
+              // il motore lo registra. La scheda però tiene in mano il numero
+              // di prima — a volte «1», dichiarato dalla ricerca — e diceva
+              // «1 di 1 · completa» su un libro intero: se il conteggio è
+              // cambiato, la si rilegge una volta.
+              if (position.total <= 0 || !manifestVersion) return;
+              if (manifestVersion.expectedPages === position.total) return;
+              if (countRefreshedFor.current === manifestVersion.id) return;
+              countRefreshedFor.current = manifestVersion.id;
+              onRefresh();
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
@@ -316,8 +340,8 @@ export function LibrarySourcePage({
                   entry={entry}
                   onRefresh={onRefresh}
                   openVersionId={manifestVersion?.id ?? null}
-                  viewedLocalSize={viewedLocalSize}
-                  onViewLocalSize={setViewedLocalSize}
+                  viewedLocalSize={readingLocalSize}
+                  onViewLocalSize={setChosenLocalSize}
                 />
               ) : (
                 <>
@@ -629,7 +653,17 @@ function NotesTab({
   const { t } = useTranslation();
   const [draft, setDraft] = useState(notes ?? '');
   const debouncedDraft = useDebounce(draft, NOTES_SAVE_DELAY_MS);
+  /** L'ultimo testo **arrivato** al deposito. */
   const savedRef = useRef(notes ?? '');
+  /**
+   * L'ultimo testo per cui si è provato a salvare, riuscito o no.
+   *
+   * Sta separato da quello salvato: prima si segnava come salvato il testo
+   * appena mandato, e un salvataggio fallito diventava indistinguibile da uno
+   * riuscito — nessun tentativo successivo, e uscendo dall'opera la nota si
+   * perdeva.
+   */
+  const attemptRef = useRef<string | null>(null);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
 
   // Un'altra opera è stata aperta: si riparte dalle sue note, non da quelle
@@ -637,22 +671,32 @@ function NotesTab({
   useEffect(() => {
     setDraft(notes ?? '');
     savedRef.current = notes ?? '';
+    attemptRef.current = null;
     setSaveState('saved');
   }, [sourceId, notes]);
 
+  const save = useCallback(
+    async (value: string) => {
+      attemptRef.current = value;
+      setSaveState('saving');
+      try {
+        await onCorrectField('notes', value || null);
+        savedRef.current = value;
+        if (attemptRef.current === value) setSaveState('saved');
+      } catch {
+        if (attemptRef.current === value) setSaveState('error');
+      }
+    },
+    [onCorrectField],
+  );
+
   useEffect(() => {
     if (debouncedDraft === savedRef.current) return;
-    savedRef.current = debouncedDraft;
-    const savingValue = debouncedDraft;
-    setSaveState('saving');
-    void onCorrectField('notes', savingValue || null)
-      .then(() => {
-        if (savedRef.current === savingValue) setSaveState('saved');
-      })
-      .catch(() => {
-        if (savedRef.current === savingValue) setSaveState('error');
-      });
-  }, [debouncedDraft, onCorrectField]);
+    // Un testo già provato non si ritenta da sé: scrivendo si riprova, e
+    // sull'errore resta il comando per riprovare quello che c'è.
+    if (attemptRef.current === debouncedDraft) return;
+    void save(debouncedDraft);
+  }, [debouncedDraft, save]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
@@ -670,6 +714,16 @@ function NotesTab({
           <Check size={12} aria-hidden="true" />
         )}
         {t(`areas.library.notes${saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving' : 'SaveError'}`)}
+        {saveState === 'error' && (
+          <IconButton
+            size="xs"
+            tone="danger"
+            onClick={() => void save(draft)}
+            title={t('areas.library.notesRetry')}
+          >
+            <RefreshCw size={12} />
+          </IconButton>
+        )}
       </span>
       <MarkdownEditor
         identityKey={sourceId}

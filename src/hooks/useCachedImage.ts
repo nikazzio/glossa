@@ -16,6 +16,24 @@ interface RetainedImage {
  */
 const retainedImages = new Map<string, RetainedImage>();
 
+/**
+ * Butta gli indirizzi non più in uso finché si rientra nel tetto, dai meno
+ * recenti. Gira sia quando arriva un'immagine nuova sia quando una viene
+ * lasciata: lasciando un catalogo intero senza aprirne un altro, il tetto
+ * restava superato a tempo indeterminato.
+ */
+function evictUnused(): void {
+  if (retainedImages.size <= MAX_RETAINED_IMAGES) return;
+  const disposable = [...retainedImages.entries()]
+    .filter(([, image]) => image.users === 0)
+    .sort((left, right) => left[1].touchedAt - right[1].touchedAt);
+  while (retainedImages.size > MAX_RETAINED_IMAGES && disposable.length > 0) {
+    const [oldKey, image] = disposable.shift()!;
+    retainedImages.delete(oldKey);
+    URL.revokeObjectURL(image.url);
+  }
+}
+
 function retain(key: string, bytes: Uint8Array): string {
   const known = retainedImages.get(key);
   if (known) {
@@ -25,14 +43,7 @@ function retain(key: string, bytes: Uint8Array): string {
   }
   const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
   retainedImages.set(key, { url, users: 1, touchedAt: Date.now() });
-  const disposable = [...retainedImages.entries()]
-    .filter(([, image]) => image.users === 0)
-    .sort((left, right) => left[1].touchedAt - right[1].touchedAt);
-  while (retainedImages.size > MAX_RETAINED_IMAGES && disposable.length > 0) {
-    const [oldKey, image] = disposable.shift()!;
-    retainedImages.delete(oldKey);
-    URL.revokeObjectURL(image.url);
-  }
+  evictUnused();
   return url;
 }
 
@@ -41,6 +52,7 @@ function release(key: string): void {
   if (!known) return;
   known.users = Math.max(0, known.users - 1);
   known.touchedAt = Date.now();
+  if (known.users === 0) evictUnused();
 }
 
 /** Svuota solo gli indirizzi della finestra; i byte nel motore restano. */

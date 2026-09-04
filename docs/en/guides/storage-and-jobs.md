@@ -104,7 +104,7 @@ library's server: raising it too much triggers temporary blocks.
 
 ## How large the pages
 
-In **Settings → Download** you choose the page size and the thumbnail size.
+In **Settings → Library → Images** you choose the page size and the thumbnail size.
 
 The page size is a **target, not an exact number**: Glossa asks the library for
 the one it declares closest, above or below. Asking for an invented size would
@@ -135,15 +135,15 @@ stop after a refusal. A pause on every request multiplied by all the pieces of a
 zoomed page, and made the viewer unusable.
 
 These are a few different paces applied to many libraries, so **Settings →
-Libraries** governs them as **profiles**.
+Library → Settings** governs them as **profiles**.
 
 Two profiles ship with Glossa, with values proven in the field: **Normal**,
 used by almost all of them, and **Slow**, tuned on Gallica, the strictest one.
 You can change them, create others and name each one; next to the name Glossa
 says how many libraries use it.
 
-Below, the list of libraries: for each one you pick its profile and how images
-are requested — **Automatic**, **Ready-made formats only**, or **Exact size**.
+In the **Libraries** tab you find the list of libraries: for each one you pick
+its profile and how images are requested — **Automatic**, **Ready-made formats only**, or **Exact size**.
 The first is recommended; the last can be much slower when the library must
 build each image. A
 profile someone is using cannot be deleted — move the libraries that follow it
@@ -216,10 +216,9 @@ One downloaded months ago with a higher cap than you need now holds detail you
 never look at. In both cases **compressing beats downloading again**, because the
 library does not pay the price for it.
 
-In the work's record, on the **Digital copies** tab, the "compress" command
-opens a small panel: which already-downloaded resolution to start from (only
-if there is more than one), which smaller resolution to arrive at, and at
-what quality. The command queues the job immediately.
+In the work's record, on the **Digitisations** tab, every local version has its
+own "compress" command: it starts from that version, and the panel only asks for
+the smaller target size and the quality. The command queues the job immediately.
 
 **No longer irreversible: a new copy is born, the original is never touched.**
 Compression used to replace the downloaded pages in place, for good; now the

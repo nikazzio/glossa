@@ -351,7 +351,9 @@ fn size_policies(conn: &Connection) -> Result<Vec<(String, SizePolicy)>, String>
         .prepare("SELECT library_key, policy FROM library_size_policies")
         .map_err(|error| format!("politiche di misura: {error}"))?;
     let rows = statement
-        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
         .map_err(|error| format!("politiche di misura: {error}"))?;
     Ok(rows
         .filter_map(Result::ok)
