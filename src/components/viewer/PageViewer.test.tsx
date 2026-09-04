@@ -38,6 +38,9 @@ vi.mock('../../services/iiifViewerService', () => ({
   infoJsonUrl: (service: string) => `${service}/info.json`,
   pageThumbnailUrl: (service: string) => `${service}/full/96,/0/default.jpg`,
   pageSourceUrl: (service: string, size: string) => `${service}/full/${size},/0/default.jpg`,
+  // Il dimezzamento di una pagina 1000×1400 verso i 1600 di lettura: la pagina
+  // è già più piccola, quindi si chiede com'è.
+  readablePageWidth: () => 1000,
   WHOLE_PAGE_WIDTH_PX: 1600,
   MAX_SIZE: 'max',
 }));
@@ -100,7 +103,7 @@ describe('PageViewer', () => {
           kind: 'page',
           versionId: 'sver-1',
           index: 1,
-          remoteUrl: 'https://images.example.test/1/full/1600,/0/default.jpg',
+          remoteUrl: 'https://images.example.test/1/full/1000,/0/default.jpg',
         }),
         expect.objectContaining({ priority: 'high' }),
       ),

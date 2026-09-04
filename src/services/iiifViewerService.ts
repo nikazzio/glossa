@@ -51,14 +51,53 @@ export async function fetchViewerManifest(
 }
 
 /**
+ * Larghezza della pagina intera chiesta quando i tasselli non funzionano.
+ *
+ * Non è la dimensione piena: quella su un manoscritto è di parecchi megabyte e
+ * ci si aspetta un ripiego rapido, non un secondo scaricamento.
+ */
+export const WHOLE_PAGE_WIDTH_PX = 1600;
+
+/**
  * Dove chiedere la miniatura di una pagina **se non ce l'abbiamo**.
  *
- * Prima quella che la biblioteca dichiara: è già pronta sul loro server. Solo se
- * non la dichiara si costruisce una misura piccola, che su alcune biblioteche
- * costa quanto la pagina intera perché la ricavano al momento.
+ * Prima quella che la biblioteca dichiara: è già pronta sul loro server. Se non
+ * la dichiara si chiede il dimezzamento più vicino alla misura voluta, non la
+ * misura esatta: una misura tonda la costruiscono al momento, e per una
+ * miniatura costa quanto costruire la pagina intera.
  */
 export function pageThumbnailUrl(page: ViewerPage, width: number): string {
-  return page.thumbnail ?? `${page.imageService}/full/${width},/0/default.jpg`;
+  if (page.thumbnail) return page.thumbnail;
+  return `${page.imageService}/full/${readablePageWidth(page, width)},/0/default.jpg`;
+}
+
+/**
+ * La larghezza da chiedere per vedere questa pagina.
+ *
+ * **Non** un numero fisso: un dimezzamento successivo della pagina originale.
+ * Le biblioteche tengono pronti proprio i dimezzamenti; qualunque altra misura
+ * la costruiscono al momento. Misurato sul campo: 2,3 secondi per una misura
+ * già pronta contro 26,6 per una generata sul momento.
+ *
+ * Si prende **il più piccolo che non scenda sotto** la misura voluta: scendere
+ * sotto risparmierebbe qualche byte e lascerebbe l'immagine sgranata nello
+ * spazio che deve riempire.
+ *
+ * Senza le dimensioni dichiarate dal manifesto non c'è niente da dimezzare, e
+ * si chiede la misura voluta.
+ */
+export function readablePageWidth(page: ViewerPage, target = WHOLE_PAGE_WIDTH_PX): number {
+  const width = page.width ?? 0;
+  const height = page.height ?? 0;
+  const longEdge = Math.max(width, height);
+  if (width <= 0 || longEdge <= 0) return target;
+  // Una pagina già più piccola di quella voluta si chiede com'è: ingrandirla
+  // non aggiunge niente e costa una costruzione.
+  if (longEdge <= target) return width;
+
+  let divisor = 1;
+  while (longEdge / (divisor * 2) >= target) divisor *= 2;
+  return Math.max(1, Math.round(width / divisor));
 }
 
 /** Indirizzo dell'`info.json` del servizio immagini di una pagina: da qui
@@ -67,13 +106,6 @@ export function infoJsonUrl(imageService: string): string {
   return `${imageService}/info.json`;
 }
 
-/**
- * Larghezza della pagina intera chiesta quando i tasselli non funzionano.
- *
- * Non è la dimensione piena: quella su un manoscritto è di parecchi megabyte e
- * ci si aspetta un ripiego rapido, non un secondo scaricamento.
- */
-export const WHOLE_PAGE_WIDTH_PX = 1600;
 
 /**
  * Indirizzo della pagina **intera**, il ripiego di quando lo zoom a tasselli

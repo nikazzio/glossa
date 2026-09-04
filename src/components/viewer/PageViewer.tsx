@@ -24,8 +24,8 @@ import {
   getLastViewedPage,
   infoJsonUrl,
   pageSourceUrl,
+  readablePageWidth,
   setLastViewedPage,
-  WHOLE_PAGE_WIDTH_PX,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
 import { cachedImage as pageImage } from '../../services/cacheService';
@@ -233,17 +233,17 @@ export function PageViewer({
      * arriva; i pezzi si chiedono solo se lo zoom li rende davvero utili.
      */
     const openWholePage = async () => {
+      // Senza copia sul computer si chiede un **dimezzamento** della pagina,
+      // non una misura tonda: quello lo tengono pronto, qualunque altro lo
+      // costruiscono al momento — dieci volte più lento, misurato.
+      const size = localSize ?? String(readablePageWidth(page));
       const bytes = await pageImage(
         {
           kind: 'page',
           versionId,
           index: page.index,
-          size: localSize ?? String(WHOLE_PAGE_WIDTH_PX),
-          remoteUrl: pageSourceUrl(
-            page.imageService,
-            localSize ?? String(WHOLE_PAGE_WIDTH_PX),
-            manifest?.presentation2 ?? false,
-          ),
+          size,
+          remoteUrl: pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
           providerKey,
         },
         { priority: 'high', signal: controller.signal },
