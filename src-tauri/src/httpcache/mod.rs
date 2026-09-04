@@ -560,6 +560,35 @@ mod tests {
     }
 
     #[test]
+    fn a_page_is_reused_without_contacting_its_remote_address_again() {
+        let cache = temp_cache("page-round-trip");
+        let first = CacheRequest::Page {
+            version_id: "book-1".into(),
+            index: 12,
+            size: "1600".into(),
+            remote_url: Some("https://images.example/12/first.jpg".into()),
+            provider_key: None,
+        };
+        cache
+            .put(&first.key(), b"page bytes", CacheMeta::default())
+            .expect("scrittura");
+        // Stessa pagina, indirizzo remoto diverso: succede appena il visore
+        // ricalcola la misura o la biblioteca cambia il suo derivatore.
+        let reopened = CacheRequest::Page {
+            version_id: "book-1".into(),
+            index: 12,
+            size: "1600".into(),
+            remote_url: Some("https://images.example/12/another.jpg".into()),
+            provider_key: None,
+        };
+
+        assert_eq!(
+            cache.get(&reopened.key()).as_deref(),
+            Some(b"page bytes".as_slice())
+        );
+    }
+
+    #[test]
     fn an_expired_entry_is_not_returned_and_goes_away() {
         let cache = temp_cache("expired");
         let key = remote("https://example.org/vecchia.json").key();

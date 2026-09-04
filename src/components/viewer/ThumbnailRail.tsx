@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ViewerPage } from '../../services/iiifViewerService';
 import { pageThumbnailUrl } from '../../services/iiifViewerService';
-import { THUMB_SIZE } from '../../services/cacheService';
-import { useCachedImage } from '../../hooks/useCachedImage';
+import { cachedImage, THUMB_SIZE } from '../../services/cacheService';
+import { errorMessage, logger } from '../../utils/logger';
 
 const THUMB_WIDTH_PX = 96;
 const ROW_HEIGHT_PX = 96;
@@ -36,6 +36,60 @@ export function ThumbnailRail({
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
+  const [, redraw] = useState(0);
+  const imageUrls = useRef(new Map<number, string>());
+  const pending = useRef(new Set<number>());
+  const requestController = useRef(new AbortController());
+
+  useEffect(() => {
+    const controller = new AbortController();
+    requestController.current = controller;
+    redraw((value) => value + 1);
+    const urls = imageUrls.current;
+    const loading = pending.current;
+    return () => {
+      controller.abort();
+      for (const url of urls.values()) URL.revokeObjectURL(url);
+      urls.clear();
+      loading.clear();
+    };
+  }, [versionId]);
+
+  const loadThumbnail = useCallback((page: ViewerPage) => {
+    if (imageUrls.current.has(page.index) || pending.current.has(page.index)) return;
+    pending.current.add(page.index);
+    redraw((value) => value + 1);
+    const controller = requestController.current;
+    void cachedImage(
+      {
+        kind: 'page',
+        versionId,
+        index: page.index,
+        size: THUMB_SIZE,
+        remoteUrl: pageThumbnailUrl(page, THUMB_WIDTH_PX),
+        providerKey,
+      },
+      { priority: 'low', signal: controller.signal },
+    )
+      .then((bytes) => {
+        if (controller.signal.aborted) return;
+        const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
+        imageUrls.current.set(page.index, url);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          logger.debug('library.viewer.thumbnailUnavailable', {
+            index: page.index,
+            message: errorMessage(error),
+          });
+        }
+      })
+      .finally(() => {
+        if (controller.signal.aborted) return;
+        pending.current.delete(page.index);
+        redraw((value) => value + 1);
+      });
+  }, [providerKey, versionId]);
 
   const firstVisible = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT_PX) - OVERSCAN_ROWS);
   const visibleRows = Math.ceil(viewportHeight / ROW_HEIGHT_PX) + OVERSCAN_ROWS * 2;
@@ -97,10 +151,11 @@ export function ThumbnailRail({
             <ThumbnailRow
               key={page.canvasId ?? page.index}
               page={page}
-              versionId={versionId}
-              providerKey={providerKey}
               active={index === currentIndex}
               top={index * ROW_HEIGHT_PX}
+              url={imageUrls.current.get(page.index) ?? null}
+              loading={pending.current.has(page.index)}
+              onVisible={loadThumbnail}
               onSelect={() => onSelect(index)}
             />
           );
@@ -112,33 +167,22 @@ export function ThumbnailRail({
 
 function ThumbnailRow({
   page,
-  versionId,
-  providerKey,
   active,
   top,
+  url,
+  loading,
+  onVisible,
   onSelect,
 }: {
   page: ViewerPage;
-  versionId: string;
-  providerKey: string | null;
   active: boolean;
   top: number;
+  url: string | null;
+  loading: boolean;
+  onVisible: (page: ViewerPage) => void;
   onSelect: () => void;
 }) {
-  // Prima la miniatura sul computer, poi quella dichiarata dalla biblioteca:
-  // costruirne una su misura fa ricavare l'immagine al momento, e su alcune
-  // biblioteche costa quanto la pagina intera.
-  const { url, loading } = useCachedImage(
-    {
-      kind: 'page',
-      versionId,
-      index: page.index,
-      size: THUMB_SIZE,
-      remoteUrl: pageThumbnailUrl(page, THUMB_WIDTH_PX),
-      providerKey,
-    },
-    { priority: 'low' },
-  );
+  useEffect(() => onVisible(page), [onVisible, page]);
 
   return (
     <button

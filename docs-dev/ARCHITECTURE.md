@@ -468,6 +468,31 @@ manifesto**: è già pronta sul server della biblioteca, mentre ordinare una
 misura piccola al servizio immagini la fa ricavare al momento e su Internet
 Archive costa quanto la pagina intera.
 
+La virtualizzazione smonta le righe fuori schermo, ma il rail conserva gli
+indirizzi delle miniature già ottenute per tutta la sua apertura. Una richiesta
+già partita continua anche se la riga esce dallo schermo; tornando indietro la
+miniatura ricompare senza nuovo passaggio dal motore. Chiudere il rail o cambiare
+libro annulla le richieste residue e rilascia gli indirizzi.
+
+Le pagine grandi non restano duplicate nella memoria della finestra: tornando
+su una pagina, `CacheRequest::Page` usa la stessa chiave stabile e `resolve`
+legge i byte dalla cache **prima** di considerare la rete. L'indirizzo remoto
+non partecipa alla chiave. Questo evita un secondo download senza trattenere in
+RAM tutte le pagine visitate.
+
+### Rimozione di un'opera e cache dei byte — limite noto
+
+Togliere un'opera dalla biblioteca esegue `delete_version_files` (manifesto,
+miniature, pagine e copie ricavate spariscono dal deposito) e poi `DELETE FROM
+sources`, con cascata sulle righe collegate. **La cache dei byte non viene
+toccata**: le voci `CacheRequest::Page`, `Remote` e le copertine restano sotto la
+loro chiave finché non le sfratta il tetto di spazio, perché solo `Search`
+scade. Riaggiungendo la stessa opera, le pagine tornano dalla cache senza
+ricontattare la biblioteca — comodo, ma «rimuovi» non libera lo spazio che
+l'utente si aspetta di liberare. Oggi l'unico modo di buttarli è «svuota la
+cache», che è globale. Un `remove_prefix` per versione non esiste: la chiave è
+un hash, quindi servirebbe un indice da chiave a versione.
+
 ## Ottimizzazione locale
 
 L'ottimizzazione è un lavoro CPU avviato dalla scheda della fonte. Opera su una

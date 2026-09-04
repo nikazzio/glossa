@@ -1,11 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThumbnailRail } from './ThumbnailRail';
 
-vi.mock('../../services/cacheService', () => ({ THUMB_SIZE: 'thumb' }));
+const cachedImage = vi.hoisted(() => vi.fn());
 
-vi.mock('../../hooks/useCachedImage', () => ({
-  useCachedImage: () => ({ url: null, loading: false }),
+vi.mock('../../services/cacheService', () => ({
+  THUMB_SIZE: 'thumb',
+  cachedImage,
 }));
 
 const pages = Array.from({ length: 30 }, (_, index) => ({
@@ -19,7 +20,18 @@ const pages = Array.from({ length: 30 }, (_, index) => ({
 }));
 
 describe('ThumbnailRail', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    cachedImage.mockReset();
+    cachedImage.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    let next = 0;
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => `blob:miniatura-${(next += 1)}`);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it('porta nel tratto visibile la pagina corrente', () => {
     const { rerender } = render(
@@ -60,5 +72,26 @@ describe('ThumbnailRail', () => {
     act(() => notifyResize?.());
 
     expect(rail.scrollTop).toBe(1200);
+  });
+
+  it('conserva una miniatura quando esce e rientra nel tratto visibile', async () => {
+    const view = render(
+      <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} />,
+    );
+    await waitFor(() => expect(cachedImage).toHaveBeenCalled());
+    await waitFor(() => expect(view.container.querySelector('img')?.getAttribute('src')).toBe('blob:miniatura-1'));
+
+    view.rerender(
+      <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={20} onSelect={vi.fn()} />,
+    );
+    await waitFor(() => expect(screen.getByText('Pagina 21')).toBeInTheDocument());
+    view.rerender(
+      <ThumbnailRail pages={pages} versionId="sver-1" providerKey={null} currentIndex={0} onSelect={vi.fn()} />,
+    );
+    await waitFor(() => expect(screen.getByText('Pagina 1')).toBeInTheDocument());
+
+    const pageOneRequests = cachedImage.mock.calls.filter(([request]) => request.index === 1);
+    expect(pageOneRequests).toHaveLength(1);
+    expect(view.container.querySelector('img')?.getAttribute('src')).toBe('blob:miniatura-1');
   });
 });

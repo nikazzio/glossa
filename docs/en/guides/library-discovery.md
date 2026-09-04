@@ -59,6 +59,9 @@ When the book index already declares ready-made sizes, Glossa uses the smallest
 one that remains sharp in the viewer. Otherwise it immediately uses a halving
 of the page: it does not wait for an extra technical request before showing the
 image.
+Thumbnails that have already appeared remain available while you scroll back
+and forth; previously viewed pages are also read from the working cache, not
+from the library again.
 
 At the top right it says where you are reading from: **From your computer** when the book is on disk, **Online** when it comes from the library — green while it is answering, dimmed when nothing arrives. The arrow command takes you back to the catalogue.
 

@@ -56,6 +56,9 @@ Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pag
 Quando l'indice del libro dichiara misure già pronte, Glossa usa la più piccola
 che resta nitida nel visore. Altrimenti usa subito un dimezzamento della pagina:
 non aspetta una richiesta tecnica aggiuntiva prima di mostrarti l'immagine.
+Le miniature già apparse restano disponibili mentre scorri avanti e indietro;
+anche le pagine già viste vengono riprese dalla memoria di lavoro, non dalla
+biblioteca.
 
 In alto a destra c'è scritto da dove stai leggendo: **Dal computer** quando il libro è sul disco, **Online** quando arriva dalla biblioteca — verde finché sta rispondendo, smorzato quando non arriva niente. Il comando con la freccia riporta al catalogo.
 
