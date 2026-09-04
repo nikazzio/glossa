@@ -117,10 +117,23 @@ ventitré secondi contro uno.
 La stessa scelta si può fare sulla **singola opera**, aprendo la sua scheda in
 Biblioteca, e lì vince: la misura dipende dal materiale — una cinquecentina a
 stampa larga si legge a molto meno di una minuscola fitta — non da chi conserva
-il libro.
+il libro. Il comando dello scaricamento nella scheda usa sempre la misura scelta
+lì accanto: chiedere una misura diversa da quella già presente scarica davvero
+quella nuova, e ne nasce una seconda versione locale accanto alla prima.
+
+Uno scaricamento per volta per ogni digitalizzazione: se ne è già in corso uno e
+chiedi un'altra misura, Glossa te lo dice invece di ignorare il comando —
+aspetta che finisca, oppure fermalo dal pannello dei lavori.
 
 Le pagine già scaricate restano come sono: la scelta vale per quello che si
 scarica da adesso.
+
+La pagina che **conservi dal visore** fa eccezione, e il comando lo dichiara:
+riusa i byte che stai già guardando, senza chiederli di nuovo alla biblioteca,
+quindi la misura è quella con cui la pagina è arrivata. Su un libro già presente
+sul computer coincide con la sua; su un libro ancora tutto online può essere una
+misura diversa da quella impostata, e il suggerimento del comando la scrive
+prima che tu clicchi.
 
 Le **miniature** non si chiedono alla biblioteca: Glossa le ricava dalle pagine
 che ha scaricato, sul computer. Più grandi occupano più spazio e si sfogliano
@@ -128,11 +141,27 @@ meglio; non costano nessuna richiesta.
 
 ## Il ritmo verso le biblioteche
 
-Ogni biblioteca ha i suoi tempi: quante richieste in un minuto, quante insieme,
-quante pagine di uno stesso libro scaricare per volta, quanto fermarsi quando
-chiede di rallentare, quanti tentativi fare. Sono pochi ritmi diversi applicati a
-molte biblioteche, quindi in **Impostazioni → Biblioteca → Configurazioni** si
-governano come **profili**.
+Ogni biblioteca ha i suoi tempi. Sono pochi ritmi diversi applicati a molte
+biblioteche, quindi in **Impostazioni → Biblioteca → Configurazioni** si
+governano come **profili**, e ogni profilo ha cinque valori:
+
+| Valore | Cosa decide |
+|---|---|
+| Pagine insieme | quante pagine di uno stesso libro partono contemporaneamente |
+| Richieste al minuto | il tetto di richieste verso quella biblioteca |
+| Pausa dopo un rifiuto | quanto stare fermi quando la biblioteca rifiuta o chiede di rallentare |
+| Tentativi *(avanzate)* | quante volte riprovare la stessa pagina prima di dichiararla non scaricata |
+| Attesa per una biblioteca lenta *(avanzate)* | quanto attendere una risposta prima di considerarla persa |
+
+Ogni valore spiega la propria conseguenza al passaggio del mouse. Il massimo
+delle **pagine insieme** dipende dal profilo: un posto verso la biblioteca resta
+sempre libero per la pagina che stai leggendo, quindi il campo si ferma dove si
+fermerà davvero il motore — prima si poteva scrivere «4» e vederne partire una,
+senza che niente lo dicesse.
+
+Le modifiche a un profilo si salvano **con un comando esplicito**: finché non lo
+premi, accanto al titolo resta scritto che c'è qualcosa da salvare, e il comando
+accanto butta le modifiche.
 
 Fra una richiesta riuscita e la successiva **non c'è nessuna pausa**: a tenere i
 tempi sono il numero di richieste insieme, il limite al minuto e la pausa lunga
@@ -145,10 +174,16 @@ Puoi modificarli, crearne altri e dare un nome a ciascuno; accanto al nome
 Glossa dice quante biblioteche lo usano.
 
 Nella linguetta **Biblioteche** trovi l'elenco delle biblioteche: per ognuna
-scegli il profilo e come chiedere
-le immagini — **Automatico**, **Solo formati già pronti** o **Misura precisa**.
-Il primo è consigliato; l'ultimo può essere molto più lento quando la
-biblioteca deve costruire ogni immagine.
+scegli il profilo e la **modalità di richiesta delle immagini**, che non è la
+misura ma il modo di chiederla:
+
+- **Automatico** *(consigliato)* — Glossa usa un formato che la biblioteca tiene
+  già pronto quando c'è, altrimenti chiede la misura impostata;
+- **Solo formati già pronti** — nessuna attesa, ma la pagina può arrivare più
+  grande o più piccola della misura impostata;
+- **Misura precisa** — la misura impostata sempre, anche quando la biblioteca
+  deve costruirla al momento: misura esatta, prima apertura più lenta.
+
 Un profilo che qualcuno sta usando non si può eliminare — prima si spostano le
 biblioteche che lo seguono — e i due che arrivano con l'applicazione non si
 eliminano affatto.
@@ -210,9 +245,30 @@ richiede a ogni ripresa, e considera il libro completo per quanto la biblioteca
 serve. Ogni tanto — una volta a settimana — le riprova, perché le biblioteche
 riparano.
 
-**Le pagine prese a risoluzione piena sono un'aggiunta, non un buco.** Se di tre
-pagine hai voluto anche la versione più grande, la scheda dice «più 3 a
-risoluzione piena» accanto al conteggio, invece di far sembrare il libro a metà.
+**Quante pagine ha il libro** lo dice il suo indice, e Glossa lo registra sia
+scaricandolo sia semplicemente aprendolo nel visore: prima lo scriveva solo lo
+scaricamento del libro intero, e chi conservava una pagina sola si ritrovava
+«1 di 1 · completa» su un manoscritto di trecento carte.
+
+### Le versioni locali, una per riga
+
+Nella tab **Digitalizzazioni** ogni versione presente sul computer ha la sua
+riga, e ogni riga dichiara quattro cose su righe separate: da dove viene
+(scaricata dalla biblioteca oppure ricavata sul computer), quante pagine ha
+sulle dichiarate, quanto occupa, e se è completa. Se la biblioteca non serve
+alcune pagine, la riga lo dice a parte: non sono un buco, e una versione che ha
+tutte le pagine servite risulta completa.
+
+Accanto a ogni riga stanno **i comandi di quella versione, e solo di quella**:
+leggila nel visore, ricavane una più piccola, cancella solo lei. Nell'intestazione
+della sezione restano la verifica e «libera tutto lo spazio di questa
+digitalizzazione», che invece agisce su ogni versione presente.
+
+La versione che il visore sta leggendo è **segnata da sé**, anche quando ce n'è
+una sola: non devi indovinarla né scegliertela a mano. Scegliendone un'altra, il
+visore ricarica la pagina da quella cartella; le pagine assenti da quella
+versione vengono comunque chieste alla biblioteca, quindi non ci si trova
+davanti a un buco.
 
 ## Comprimere per liberare spazio, senza perdere l'originale
 

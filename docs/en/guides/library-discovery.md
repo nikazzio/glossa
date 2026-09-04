@@ -43,7 +43,7 @@ On each card, next to the commands, you see **which workspaces that book belongs
 
 The card's commands come in two groups: first what you do to the book — download, check, shrink images, free space, archive, delete — then where it lives.
 
-Above the list sits the **search bar**: type a title or an author, and next to it pick origin nature, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only the works that sit in no workspace at all. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
+The **filters** live in a column on the right, which resizes and folds away like the other side panels: its width and its open or closed state are remembered, and when it is closed a count tells you how many filters are active. Search sits at the top — type a title or an author — and below it the kind of work, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only the works that sit in no workspace at all. Filters work on what is already in front of you, with nothing to reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears them all.
 
 **Sorting** — The last dropdown sets the order: by title (the starting point), by author (works with no author go last), or by date added, most recent first. The chosen order is part of a saved view too.
 
@@ -53,7 +53,7 @@ Above the list sits the **search bar**: type a title or an author, and next to i
 
 **Collections** — A collection is a label that gathers works. You add one from the work's page, and a work can sit in **several collections at once**: nothing is merged and nothing is duplicated, and removing a label touches neither the work nor the other collections. From the search bar you can show only the works in one collection.
 
-Clicking the title opens the **work's page**, full width, with every bibliographic detail Glossa knows for that book: title, origin nature, author, date, language, publisher, other contributors, rights, physical description, subjects, volume, description, place of origin, provenance, notes, series, genre/form, standard identifier, coverage, related works — a field the library does not declare shows "—" instead of disappearing, so every work's page reads the same way. There is also availability, space used and status, the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. The large part of the page holds the **page viewer**: you browse the book page by page, with thumbnails alongside, previous and next commands, a field to jump to a number, and zoom. Glossa remembers where you were: reopening the book takes you back there.
+Clicking the title opens the **work's page**, full width, with every bibliographic detail Glossa knows for that book: title, kind of work, author, date, language, publisher, other contributors, rights, physical description, subjects, volume, description, place of origin, provenance, notes, series, genre/form, standard identifier, coverage, related works — a field the library does not declare shows "—" instead of disappearing, so every work's page reads the same way. There is also availability, space used and status, the recorded digital copies with their quality cap, the workspaces you can link it to or unlink it from, and the work's commands gathered at the top. The large part of the page holds the **page viewer**: you browse the book page by page, with thumbnails alongside, previous and next commands, a field to jump to a number, and zoom. Glossa remembers where you were: reopening the book takes you back there.
 
 The viewer **uses what you have on your computer**. If you downloaded the book, pages and thumbnails are read from disk: they appear at once, cost the library no request at all, and work with no connection. If you have nothing, the page is asked for **in a single request**, as a whole image: it is the fastest way to see it. Zoom past its sharpness and the viewer switches to tiled zoom on its own, asking the library only for the detail you need. Some libraries build the images the moment you ask for them: there the first opening can take a minute, and Glossa knocks a second time instead of giving up — which is why some books would not open at all before. On those libraries a single page at a particular size sometimes never arrives: Glossa asks for it at another size, which usually does, instead of calling it broken. The notice about the long wait appears only where that explanation is true, not for every library.
 
@@ -68,10 +68,19 @@ and forth; previously viewed pages are also read from the working cache, not
 from the library again.
 
 The download command in the viewer keeps **only the open page**, using the same
-bytes you are already looking at: it does not request them twice. From then on,
-that page remains available on your computer.
+bytes you are already looking at: it does not request them twice. While it
+saves, the icon spins; once the page is on your computer the command gives way
+to a green mark, which is a state and not a disabled button. The tooltip always
+says **at what size** it keeps — the size the page arrived at, which on a book
+still entirely online may differ from the configured one. The Digitisations tab
+updates right away: space, count and local versions do not wait for the work to
+be reopened.
 
-At the top right it says **where the page you are looking at comes from**, and these are three different things: **From your computer** when the file is yours, **From working memory** when it is a page you already saw of a book you never downloaded, **From the library** when it has just arrived — green while the library answers, dimmed when nothing arrives. Hover it to also read the size that was requested.
+The viewer's commands all sit on the right — keep the page, zoom out, zoom in,
+more zoom options — the image's origin sits in the middle, and page navigation
+on the left, with the thumbnails.
+
+In the middle of the bar it says **where the page you are looking at comes from**, and these are three different things: **Local file** when it is yours, **Temporary memory** when it is a page you already saw of a book you never downloaded, **Library online** when it has just arrived — green while the library answers, dimmed when nothing arrives. Hover it to also read the size that was requested.
 
 If you delete the local pages while you are reading, Glossa notices by itself that the copy is gone: the page stays readable, and the next ones are asked of the library instead of being looked for in a folder that no longer exists.
 
