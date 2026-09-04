@@ -555,18 +555,51 @@ non si apriva a computer scollegato se la memoria di lavoro era stata svuotata,
 pur avendo ogni pagina presente. Un deposito assente, un file mancante o un
 manifesto illeggibile non sono un errore da mostrare: si prosegue dalla rete.
 
-### Rimozione di un'opera e cache dei byte — limite noto
+### Provenienza di una pagina
+
+`resolve` sa già da dove ha preso i byte (`Source::Vault | Cache | Network`), ma
+i byte tornano alla finestra grezzi: non c'è un posto dove infilare anche
+questo. La cache ricorda quindi la provenienza **per chiave**, per le ultime 64
+immagini (`note_source` / `source_of`), e il comando `image_source` la
+restituisce. Chi ha appena ricevuto una pagina la chiede subito dopo: è una
+lettura in memoria, non tocca né disco né rete, e riguarda la stessa chiave,
+quindi non può raccontare la provenienza di un'altra immagine.
+
+Il visore mostra tre stati distinti — **Dal computer**, **Dalla memoria**,
+**Dalla biblioteca** — con la misura chiesta nel suggerimento. Il verde acceso
+vale solo per la biblioteca. Se il libro risultava locale e la pagina è invece
+arrivata dalla rete, il visore rilegge l'inventario: qualcuno ha cancellato
+quella copia mentre si leggeva, e le pagine successive non devono continuare a
+essere chieste come se il libro fosse ancora tutto in casa.
+
+### Le pagine mancanti entrano nel deposito da sole
+
+Quando una pagina arriva dalla rete e quell'opera ha **già** una cartella per la
+misura chiesta, i byte vanno nel deposito invece che nella memoria di lavoro
+(`keep_in_vault`): sfogliando un libro scaricato a metà, i buchi si riempiono
+senza che nessuno lanci uno scaricamento. Vale solo a colpo sicuro — pagina
+intera chiesta per numero, cartella della misura già esistente, file non ancora
+presente — e riusa la catena dello scaricamento (transito, validazione,
+spostamento atomico, riga nell'inventario laterale con impronta e dimensioni),
+ricavando anche la miniatura. Se qualcosa non riesce, la pagina si vede comunque
+e finisce in cache come prima.
+
+### Rimozione di un'opera e cache dei byte
 
 Togliere un'opera dalla biblioteca esegue `delete_version_files` (manifesto,
 miniature, pagine e copie ricavate spariscono dal deposito) e poi `DELETE FROM
-sources`, con cascata sulle righe collegate. **La cache dei byte non viene
-toccata**: le voci `CacheRequest::Page`, `Remote` e le copertine restano sotto la
-loro chiave finché non le sfratta il tetto di spazio, perché solo `Search`
-scade. Riaggiungendo la stessa opera, le pagine tornano dalla cache senza
-ricontattare la biblioteca — comodo, ma «rimuovi» non libera lo spazio che
-l'utente si aspetta di liberare. Oggi l'unico modo di buttarli è «svuota la
-cache», che è globale. Un `remove_prefix` per versione non esiste: la chiave è
-un hash, quindi servirebbe un indice da chiave a versione.
+sources`, con cascata sulle righe collegate, e infine `forget_version_cache`.
+
+Quest'ultimo è **l'unico caso in cui una voce di cache se ne va prima del
+tempo**: tutto il resto sono pixel di libri storici, che non cambiano. Senza di
+esso lo spazio non si liberava come l'utente si aspetta, e riaggiungendo la
+stessa opera le pagine tornavano dalla cache senza che la biblioteca venisse
+ricontattata. La chiave è un'impronta e non si può interrogare per opera: si
+guarda la richiesta registrata nel file di lato di ogni voce (`CacheMeta.request`
+contiene il `version_id` per le richieste `Page`). Costa una camminata sulla
+cache, che per un'azione fatta a mano una volta va benissimo. Le voci `Remote` —
+manifesto, copertine chieste per indirizzo — non portano il `version_id` e
+restano: escono per sfratto.
 
 ## Ottimizzazione locale
 

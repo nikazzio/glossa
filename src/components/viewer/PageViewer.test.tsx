@@ -62,6 +62,9 @@ vi.mock('../../services/inventoryService', () => ({
 
 vi.mock('../../services/cacheService', () => ({
   cachedImage: vi.fn(async () => new Uint8Array([1, 2, 3])),
+  // Nei test la pagina arriva dal deposito: è il caso in cui il visore deve
+  // dire «Dal computer» senza contare sulla rete.
+  imageSource: vi.fn(async () => 'vault'),
   THUMB_SIZE: 'thumb',
 }));
 

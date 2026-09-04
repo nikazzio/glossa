@@ -175,7 +175,25 @@ pub async fn cached_image(
     request: CacheRequest,
 ) -> Result<tauri::ipc::Response, String> {
     let (source, bytes) = resolve_and_release(&app, &request).await?;
-    Ok(served(&app, source, bytes))
+    Ok(served(&app, &request, source, bytes))
+}
+
+/// Da dove è arrivata l'ultima volta l'immagine chiesta così: deposito, memoria
+/// di lavoro o biblioteca.
+///
+/// I byte tornano alla finestra grezzi, senza un posto dove infilare anche
+/// questo; chi ha appena ricevuto una pagina lo chiede qui subito dopo. È una
+/// lettura in memoria, non tocca né disco né rete, e non può mentire perché è
+/// la stessa chiave della richiesta. `None` quando quella richiesta non è
+/// passata di qui, o è passata troppe immagini fa.
+#[tauri::command]
+pub fn image_source(app: tauri::AppHandle, request: CacheRequest) -> Option<&'static str> {
+    let source = cache(&app)?.source_of(request.key().as_str())?;
+    Some(match source {
+        Source::Vault => "vault",
+        Source::Cache => "cache",
+        Source::Network => "network",
+    })
 }
 
 /// I byte di una risorsa remota — immagine **o manifesto** — presi dove sono e
@@ -189,6 +207,7 @@ pub async fn bytes_of(app: &tauri::AppHandle, request: &CacheRequest) -> Result<
     let (source, bytes) = resolve_and_release(app, request).await?;
     if let Some(cache) = cache(app) {
         cache.served(source, bytes.len());
+        cache.note_source(request.key().as_str(), source);
     }
     Ok(bytes)
 }
@@ -285,8 +304,134 @@ async fn resolve(
     .map_err(|error| error.message)?
     .ok_or_else(|| "Richiesta interrotta.".to_string())?;
 
-    store(app, request, &fetched.bytes, fetched.content_type);
+    // Prima si prova a tenerla per sempre: se quell'opera ha già una cartella
+    // per questa misura, la pagina appena arrivata è una pagina del libro, non
+    // una copia di passaggio. Se il deposito la accoglie, la memoria di lavoro
+    // non deve tenerne una seconda.
+    if !keep_in_vault(app, request, &fetched.bytes) {
+        store(app, request, &fetched.bytes, fetched.content_type);
+    }
     Ok((Source::Network, fetched.bytes))
+}
+
+/// La pagina appena arrivata entra nel **deposito** invece che nella memoria di
+/// lavoro, quando quell'opera ha già una cartella per la misura chiesta.
+///
+/// Sfogliando un libro scaricato a metà, le pagine che mancavano restano sul
+/// computer senza che nessuno lanci niente. Vale solo a colpo sicuro:
+///
+/// - solo per una pagina intera chiesta per numero (mai una miniatura, mai un
+///   tassello, mai una risorsa remota generica);
+/// - solo se la cartella di quella misura **esiste già**: la misura è quella
+///   decisa dallo scaricamento, non una inventata adesso;
+/// - se il file c'è già non si sovrascrive niente: presenza del file = pagina
+///   valida, è la regola del deposito;
+/// - i byte sono quelli mandati dalla biblioteca, mai ricompressi da noi.
+///
+/// Si riusa la catena dello scaricamento — transito, validazione, spostamento
+/// atomico, riga nell'inventario laterale con impronta e dimensioni — e si
+/// ricava la miniatura come farebbe lui. Qualunque intoppo non è un guasto per
+/// chi legge: la pagina si vede comunque, e finisce nella memoria di lavoro.
+///
+/// Ritorna vero solo se la pagina è davvero finita nel deposito.
+fn keep_in_vault(app: &tauri::AppHandle, request: &CacheRequest, bytes: &[u8]) -> bool {
+    let Ok(Some((version_id, index, size))) = page_of(request) else {
+        return false;
+    };
+    if size == THUMB_SIZE {
+        return false;
+    }
+    let Ok(root) = crate::vault::commands::root_of(app) else {
+        return false;
+    };
+    let file = crate::vault::layout::page_file_name(index);
+    for folder in version_folders(&root, version_id) {
+        let size_dir = folder.join(crate::vault::layout::PAGES_DIR).join(size);
+        if !size_dir.is_dir() {
+            continue;
+        }
+        let target = size_dir.join(&file);
+        if target.exists() {
+            return false;
+        }
+        let staging = root
+            .join(crate::vault::layout::STAGING_DIR)
+            .join(format!("viewer-{version_id}"));
+        if std::fs::create_dir_all(&staging).is_err() {
+            return false;
+        }
+        let staged = staging.join(format!("page-{index:04}.jpg"));
+        let promoted = crate::download::vault_io::stage_and_promote(
+            &staged,
+            &target,
+            bytes,
+            crate::vault::integrity::FileKind::Image,
+        );
+        let checksum = match promoted {
+            Ok(checksum) => checksum,
+            Err(error) => {
+                log::warn!(
+                    "viewer page not kept version={version_id} index={index} error={}",
+                    error.message
+                );
+                let _ = std::fs::remove_file(&staged);
+                return false;
+            }
+        };
+        let record = crate::download::sidecar::PageRecord {
+            index,
+            label: None,
+            got: image_dimensions(bytes),
+            bytes: Some(bytes.len() as u64),
+            checksum: Some(checksum),
+            at: crate::download::vault_io::now_secs(),
+            note: None,
+        };
+        if let Err(error) = crate::download::sidecar::append(&size_dir, &record) {
+            // Il file è già dentro e vale: una riga mancante lo lascia con
+            // impronta ignota, che la verifica completa tollera.
+            log::warn!("viewer page sidecar not written index={index} error={error}");
+        }
+        keep_thumbnail_in_vault(app, &folder, index, bytes);
+        log::info!("viewer page kept version={version_id} index={index} size={size}");
+        return true;
+    }
+    false
+}
+
+/// La miniatura della pagina appena tenuta, ricavata in casa come fa lo
+/// scaricamento: dalla pagina che abbiamo già, senza chiedere niente in più.
+fn keep_thumbnail_in_vault(
+    app: &tauri::AppHandle,
+    folder: &std::path::Path,
+    index: u32,
+    bytes: &[u8],
+) {
+    let target = folder
+        .join(crate::vault::layout::THUMBNAILS_DIR)
+        .join(crate::vault::layout::page_file_name(index));
+    if target.exists() {
+        return;
+    }
+    let Ok(thumbnail) = crate::images::thumbnail(bytes, thumbnail_edge(app)) else {
+        return;
+    };
+    if let Some(parent) = target.parent() {
+        if std::fs::create_dir_all(parent).is_err() {
+            return;
+        }
+    }
+    if let Err(error) = std::fs::write(&target, &thumbnail) {
+        log::warn!("viewer thumbnail not kept index={index} error={error}");
+    }
+}
+
+fn image_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
+    image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .ok()?
+        .into_dimensions()
+        .ok()
 }
 
 /// Come `resolve`, ma libera il turno anche quando la richiesta fallisce.
@@ -303,9 +448,15 @@ async fn resolve_and_release(
 
 /// Segna la provenienza e restituisce i byte. Sapere quante immagini sono
 /// arrivate senza toccare la rete è l'unica misura che dice se la cache serve.
-fn served(app: &tauri::AppHandle, source: Source, bytes: Vec<u8>) -> tauri::ipc::Response {
+fn served(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+    source: Source,
+    bytes: Vec<u8>,
+) -> tauri::ipc::Response {
     if let Some(cache) = cache(app) {
         cache.served(source, bytes.len());
+        cache.note_source(request.key().as_str(), source);
     }
     tauri::ipc::Response::new(bytes)
 }
@@ -553,6 +704,23 @@ pub fn apply_cache_cap(app: tauri::AppHandle) -> Result<CacheUsage, String> {
 pub fn forget_cache_settings(app: tauri::AppHandle) {
     if let Some(cache) = cache(&app) {
         cache.forget_settings();
+    }
+}
+
+/// Butta dalla memoria di lavoro tutto quello che riguarda una
+/// digitalizzazione, e dice quanti byte ha liberato.
+///
+/// Si chiama togliendo un'opera dalla Biblioteca: è l'unico momento in cui
+/// buttare è giusto. Vedi `HttpCache::forget_version`.
+#[tauri::command]
+pub fn forget_version_cache(app: tauri::AppHandle, version_id: String) -> u64 {
+    match cache(&app) {
+        Some(cache) => {
+            let freed = cache.forget_version(&version_id);
+            log::info!("cache forgot version={version_id} freed={freed}");
+            freed
+        }
+        None => 0,
     }
 }
 

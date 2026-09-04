@@ -64,7 +64,11 @@ Le miniature già apparse restano disponibili mentre scorri avanti e indietro;
 anche le pagine già viste vengono riprese dalla memoria di lavoro, non dalla
 biblioteca.
 
-In alto a destra c'è scritto da dove stai leggendo: **Dal computer** quando il libro è sul disco, **Online** quando arriva dalla biblioteca — verde finché sta rispondendo, smorzato quando non arriva niente. Il comando con la freccia riporta al catalogo.
+In alto a destra c'è scritto **da dove arriva la pagina che stai guardando**, e sono tre cose diverse: **Dal computer** quando il file è tuo, **Dalla memoria** quando è una pagina già vista di un libro che non hai scaricato, **Dalla biblioteca** quando è appena arrivata — verde finché la biblioteca risponde, smorzato quando non arriva niente. Passandoci sopra leggi anche a quale misura è stata chiesta.
+
+Se cancelli le pagine locali mentre stai leggendo, Glossa si accorge da sé che quella copia non c'è più: la pagina resta leggibile, e le successive vengono chieste alla biblioteca invece di essere cercate in una cartella che non esiste.
+
+**Sfogliando un libro scaricato a metà, i buchi si riempiono da soli.** Le pagine che mancavano restano sul computer senza che tu lanci niente: il conteggio nella scheda cresce mentre leggi, e riaprendo quelle pagine non costano nessuna richiesta. Il comando con la freccia riporta al catalogo.
 
 **Correggere i dati** — Titolo, autore, data e lingua si correggono a mano: il comando con la matita apre il campo, Invio salva, Esc annulla. Un campo corretto porta un segno accanto all'etichetta; passandoci sopra leggi cosa diceva la biblioteca, e il comando accanto al valore riporta all'originale. **Il dato originale non viene mai sovrascritto**: la correzione vive a parte, come le correzioni ai dizionari, quindi si può sempre tornare indietro. Riscrivere esattamente il valore della biblioteca non lascia nessun segno di correzione, perché non c'è niente da segnalare. Gli altri campi non hanno ancora un comando di modifica in questa scheda.
 
@@ -102,6 +106,6 @@ Archiviare riguarda **solo l'elenco**: le pagine già scaricate restano dov'eran
 
 ## Togliere una fonte
 
-Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. La conferma dice quanto spazio stai eliminando.
+Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace, tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate — **e anche le pagine tenute nella memoria di lavoro**. È l'unico momento in cui Glossa butta via quello che ha messo da parte: così lo spazio si libera davvero, e riaggiungendo la stessa opera le pagine tornano a essere chieste alla biblioteca. La conferma dice quanto spazio stai eliminando.
 
 Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è un altro: **libera spazio**. Se invece vuoi solo toglierla di mezzo senza perderla, **archiviala**: la rimozione non ha ripensamenti, l'archivio sì.
