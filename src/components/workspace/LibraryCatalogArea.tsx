@@ -400,7 +400,12 @@ function CatalogEntryRow({
         <span className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-editorial-border bg-editorial-textbox">
           <CachedThumbnail
             url={entry.thumbnailUrl}
-            versionId={entry.localPages > 0 ? entry.versionId : null}
+            // Si chiede sempre per numero di pagina, anche senza pagine sul
+            // disco: «libera spazio» cancella le pagine e **tiene le
+            // miniature**, e legarlo al conteggio delle pagine faceva tornare
+            // in rete per una copertina che era rimasta in casa. Senza niente
+            // in casa, la richiesta ripiega da sola sull'indirizzo remoto.
+            versionId={entry.versionId}
             providerKey={entry.providerKey}
             className="h-full w-full object-cover"
             fallback={<BookOpenText size={16} className="text-editorial-muted" aria-hidden="true" />}

@@ -970,7 +970,6 @@
       "resyncFailed": "Could not resync",
       "copiesSection": "Digital copies",
       "viewerSection": "Pages",
-      "viewerComingSoon": "The page viewer will live here.",
       "viewerLoading": "Opening page…",
       "viewerPreparing": "This library builds the book when you ask for it: the first opening can take a minute.",
       "viewerLoadError": "This page could not be opened.",

@@ -67,17 +67,51 @@ impl From<manifest::Manifest> for ViewerManifest {
     }
 }
 
-/// Le pagine del manifesto a quell'indirizzo, prendendolo dove è: cache o
-/// biblioteca, con la cortesia di sempre.
+/// Le pagine del manifesto: **prima quello sul computer**, poi cache o
+/// biblioteca con la cortesia di sempre.
+///
+/// Lo scaricamento conserva il manifesto accanto alle pagine, e «libera spazio»
+/// non lo cancella. Cercarlo solo in rete voleva dire che un libro tutto sul
+/// disco non si apriva a computer scollegato, con tutte le sue pagine presenti:
+/// bastava che la memoria di lavoro fosse stata svuotata.
 #[tauri::command]
 pub async fn iiif_viewer_manifest(
     app: tauri::AppHandle,
     url: String,
     provider_key: Option<String>,
+    version_id: Option<String>,
 ) -> Result<ViewerManifest, String> {
+    if let (Some(provider), Some(version)) = (provider_key.as_deref(), version_id.as_deref()) {
+        if let Some(parsed) = manifest_from_vault(&app, provider, version) {
+            return Ok(parsed);
+        }
+    }
     let request = crate::httpcache::request::CacheRequest::Remote { url, provider_key };
     let bytes = crate::httpcache::commands::bytes_of(&app, &request).await?;
     pages_of(&bytes)
+}
+
+/// Il manifesto conservato nel deposito, quando c'è ed è leggibile. Un deposito
+/// assente, un file mancante o un manifesto illeggibile non sono un errore da
+/// mostrare: si prosegue dalla rete, che è la strada di sempre.
+fn manifest_from_vault(
+    app: &tauri::AppHandle,
+    provider_key: &str,
+    version_id: &str,
+) -> Option<ViewerManifest> {
+    let root = crate::vault::commands::root_of(app).ok()?;
+    let path = root.join(crate::vault::layout::manifest_path(provider_key, version_id).ok()?);
+    let bytes = std::fs::read(&path).ok()?;
+    match pages_of(&bytes) {
+        Ok(parsed) => Some(parsed),
+        Err(error) => {
+            log::warn!(
+                "viewer vault manifest unreadable version={version_id} path={} error={error}",
+                path.display()
+            );
+            None
+        }
+    }
 }
 
 fn pages_of(bytes: &[u8]) -> Result<ViewerManifest, String> {

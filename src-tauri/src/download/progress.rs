@@ -104,8 +104,12 @@ impl Progress {
             return 0;
         }
         let (first, _) = self.recent[0];
-        let (last, _) = self.recent[self.recent.len() - 1];
-        let elapsed = (last - first).as_millis() as u64;
+        // La finestra finisce **adesso**, non all'ultima pagina arrivata:
+        // fermandosi lì, uno scaricamento piantato dopo qualche successo
+        // continuava a dichiarare la velocità di prima per sempre, che è
+        // l'opposto della domanda a cui questo numero deve rispondere. Con
+        // l'attesa dentro il conto, il valore scende da solo verso zero.
+        let elapsed = first.elapsed().as_millis() as u64;
         if elapsed == 0 {
             return 0;
         }

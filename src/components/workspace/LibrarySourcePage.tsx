@@ -160,7 +160,9 @@ export function LibrarySourcePage({
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
             <span className="flex flex-col items-center gap-2">
               <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-              {t('areas.library.viewerComingSoon')}
+              {/* Il visore c'è: quello che manca è una digitalizzazione da
+                  aprire. Promettere che «arriverà» descriveva l'app di prima. */}
+              {t('areas.library.viewerNoManifest')}
             </span>
           </div>
         )}

@@ -486,9 +486,20 @@ pagherebbe fino a 4,3 secondi per scoprire una misura che spesso il
 dimezzamento individua già.
 
 **I tasselli si chiedono solo quando servono davvero**, cioè quando lo zoom
-supera i pixel dell'immagine intera (`TILE_UPGRADE_FACTOR`). Allora il visore
-riapre la stessa pagina con la sorgente a tasselli, rimettendo dov'era la
+supera i pixel dell'immagine intera (`TILE_UPGRADE_FACTOR`, 1,2). Allora il
+visore riapre la stessa pagina con la sorgente a tasselli, rimettendo dov'era la
 posizione. Se i tasselli non arrivano, l'immagine intera resta a schermo.
+
+**Il tetto dello zoom è nostro, non di OpenSeadragon.** Il valore predefinito
+della libreria, `maxZoomPixelRatio: 1.1`, è **più basso** di
+`TILE_UPGRADE_FACTOR`: la soglia dei tasselli era quindi irraggiungibile, e la
+nitidezza vera non arrivava mai. Sui libri letti dal disco lo stesso tetto
+lasciava uno zoom quasi inesistente, perché lì l'immagine è quella che è stata
+scaricata e non c'è nessuna piramide dietro. Ora `MAX_MAGNIFICATION` vale 6:
+ingrandire oltre i pixel sgrana, ma su una scansione serve, e chi legge in rete
+supera intanto la soglia e riceve il dettaglio vero. Un libro locale a bassa
+risoluzione resta sgranato: passare ai tasselli remoti per una pagina locale
+poco definita è la scelta per pagina del Blocco 2, non una regolazione.
 
 Un tassello perso non dichiara guasta una pagina che si vede già.
 
@@ -518,16 +529,31 @@ visore, tutti misurati il 4 settembre 2026 su un libro di 308 pagine:
   costruzione e scade a 60 secondi con un errore del loro gateway; il secondo
   trova il lavoro fatto e risponde in 1,3 s. Altrove non si ritenta:
   raddoppierebbe l'attesa di un indirizzo davvero rotto.
-- **la pagina si chiede intera** (`max`), non rimpicciolita. Su quelle pagine la
-  richiesta con ridimensionamento fallisce a 60 secondi in modo ripetibile
-  (pagine 22, 26, 33: tre volte su tre, anche una richiesta alla volta con
-  cinque secondi di pausa, anche chiedendo una misura che il servizio dichiara
-  pronta), mentre la stessa pagina intera arriva in circa 3 secondi. Costa 1,4 MB
-  invece di 0,45. Le miniature restano piccole: alla misura che chiediamo
-  rispondono sempre, sotto il secondo.
+- **la pagina si chiede in più forme, in fila** (`wholePageAttempts`: `max`, poi
+  il dimezzamento, poi la larghezza nativa in numero). Il guasto è **per coppia
+  pagina+misura** e deterministico: la stessa richiesta ripetuta identica
+  fallisce ancora (due volte su due), mentre la stessa pagina a un'altra misura
+  arriva in circa 3 secondi. Vale in tutte le direzioni — la pagina 21 fallisce
+  a 1312 e arriva a piena risoluzione, la 42 fallisce a piena risoluzione e
+  arriva chiedendo `2623,`. Non è la misura a essere sbagliata: è un loro
+  derivato guasto, e cambiare forma lo aggira. Fuori da queste biblioteche si
+  tenta una volta sola: un secondo tentativo raddoppierebbe l'attesa di un
+  guasto vero senza aggirare niente. La misura del deposito non ammette
+  ripieghi, o i byte finirebbero in cache sotto un nome che promette una
+  risoluzione che non hanno. Le miniature restano piccole: alla misura che
+  chiediamo rispondono sempre, sotto il secondo.
 - **il messaggio sull'attesa lunga si mostra solo qui.** Prima compariva dopo
   otto secondi con qualunque biblioteca, spiegando un comportamento che altrove
   non esiste.
+
+### L'indice di un libro scaricato si legge dal disco
+
+`iiif_viewer_manifest` accetta anche `version_id` e, quando c'è insieme alla
+biblioteca, prova prima il manifesto conservato nel deposito — quello che
+«libera spazio» non cancella. Cercandolo solo in rete, un libro tutto sul disco
+non si apriva a computer scollegato se la memoria di lavoro era stata svuotata,
+pur avendo ogni pagina presente. Un deposito assente, un file mancante o un
+manifesto illeggibile non sono un errore da mostrare: si prosegue dalla rete.
 
 ### Rimozione di un'opera e cache dei byte — limite noto
 

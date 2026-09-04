@@ -45,10 +45,12 @@ export interface ViewerManifest {
 export async function fetchViewerManifest(
   manifestUrl: string,
   providerKey: string | null,
+  versionId: string | null = null,
 ): Promise<ViewerManifest> {
   return invoke<ViewerManifest>('iiif_viewer_manifest', {
     url: manifestUrl,
     providerKey,
+    versionId,
   });
 }
 
@@ -144,21 +146,57 @@ export const MAX_SIZE = 'max';
  * Biblioteche che ricavano l'immagine al momento in cui la si chiede, invece di
  * servirne una già pronta.
  *
- * Cambia tre comportamenti del visore: la prima apertura può fallire e va
- * ritentata, si avvisa chi guarda che l'attesa è normale, e la pagina si chiede
- * **intera** invece che rimpicciolita.
+ * Cambia due comportamenti del visore: l'indice va ritentato, e si avvisa chi
+ * guarda che l'attesa è normale.
  *
- * Misurato il 4 settembre 2026 su Internet Archive, su un libro di 308 pagine:
- * l'indice fallisce alla prima richiesta dopo 60 secondi e arriva alla seconda
- * in 1,3 s; e le pagine chieste rimpicciolite falliscono dopo 60 secondi in
- * modo ripetibile (pagine 22, 26, 33: tre volte su tre), mentre le stesse
- * pagine chieste intere arrivano in circa 3 secondi. Le miniature restano
- * piccole: alla misura che chiediamo rispondono sempre, in meno di un secondo.
+ * Misurato il 4 settembre 2026 su Internet Archive, su un libro di 308 pagine.
+ * L'indice fallisce alla prima richiesta dopo 60 secondi e arriva alla seconda
+ * in 1,3 s. Le pagine invece falliscono **per singola coppia pagina+misura**:
+ * la stessa richiesta ripetuta identica fallisce ancora (due volte su due),
+ * mentre la stessa pagina a un'altra misura arriva in circa 3 secondi. Vale in
+ * tutte le direzioni: la pagina 21 fallisce a 1312 e arriva a piena
+ * risoluzione, la 42 fallisce a piena risoluzione e arriva chiedendo la sua
+ * larghezza in numero. Non è la misura a essere sbagliata: è un loro
+ * derivato guasto, e cambiare forma della richiesta lo aggira.
  */
 const LIBRARIES_THAT_BUILD_ON_DEMAND: ReadonlySet<string> = new Set(['archive_org']);
 
 export function buildsImagesOnDemand(providerKey: string | null): boolean {
   return providerKey !== null && LIBRARIES_THAT_BUILD_ON_DEMAND.has(providerKey);
+}
+
+/**
+ * Le forme in cui chiedere la stessa pagina intera, in ordine, da provare una
+ * dopo l'altra finché una risponde.
+ *
+ * Serve a due guasti diversi che si curano allo stesso modo:
+ *
+ * 1. i derivati guasti di chi ricava su richiesta (vedi sopra): cambiare forma
+ *    aggira il singolo derivato che non arriva;
+ * 2. la versione dell'Image API, che **non** si deduce da quella del
+ *    manifesto: un manifesto Presentation 3 può indicare un servizio immagini
+ *    Image API 2, dove `max` non esiste e la richiesta torna 400. La larghezza
+ *    in numero è valida in entrambe le versioni, quindi chiude anche quel caso.
+ *
+ * Altrove si tenta una volta sola: un secondo tentativo lì raddoppierebbe
+ * l'attesa di un guasto vero senza aggirare niente.
+ *
+ * La misura del deposito, quando c'è, non ammette ripieghi: una pagina che
+ * arrivasse a un'altra misura finirebbe in cache sotto un nome che promette una
+ * risoluzione che non ha.
+ */
+export function wholePageAttempts(
+  page: ViewerPage,
+  localSize: string | null,
+  onDemand: boolean,
+): string[] {
+  if (localSize) return [localSize];
+  const halved = String(preferredPageWidth(page));
+  if (!onDemand) return [halved];
+  const nativeWidth = page.width && page.width > 0 ? String(page.width) : null;
+  return [MAX_SIZE, halved, nativeWidth]
+    .filter((form): form is string => form !== null)
+    .filter((form, index, all) => all.indexOf(form) === index);
 }
 
 /**
@@ -173,12 +211,13 @@ export function buildsImagesOnDemand(providerKey: string | null): boolean {
 export async function fetchViewerManifestWithRetry(
   manifestUrl: string,
   providerKey: string | null,
+  versionId: string | null = null,
 ): Promise<ViewerManifest> {
   try {
-    return await fetchViewerManifest(manifestUrl, providerKey);
+    return await fetchViewerManifest(manifestUrl, providerKey, versionId);
   } catch (error: unknown) {
     if (!buildsImagesOnDemand(providerKey)) throw error;
-    return fetchViewerManifest(manifestUrl, providerKey);
+    return fetchViewerManifest(manifestUrl, providerKey, versionId);
   }
 }
 

@@ -24,10 +24,9 @@ import {
   fetchViewerManifestWithRetry,
   getLastViewedPage,
   infoJsonUrl,
-  MAX_SIZE,
   pageSourceUrl,
-  preferredPageWidth,
   setLastViewedPage,
+  wholePageAttempts,
   type ViewerManifest,
 } from '../../services/iiifViewerService';
 import { cachedImage as pageImage } from '../../services/cacheService';
@@ -64,6 +63,22 @@ const SLOW_OPENING_AFTER_MS = 8_000;
  *  allo zoom a pezzi. Poco più di uno: sotto, i pezzi non aggiungono nitidezza
  *  e costerebbero una quindicina di richieste alla biblioteca. */
 const TILE_UPGRADE_FACTOR = 1.2;
+
+/**
+ * Quanto si può ingrandire oltre i pixel dell'immagine che si sta guardando.
+ *
+ * OpenSeadragon si fermerebbe a 1,1 — appena sopra la dimensione reale. Su un
+ * libro letto dal disco, dove l'immagine è quella che è stata scaricata,
+ * quel tetto lascia uno zoom quasi inesistente: si adatta la pagina alla
+ * finestra e non si va più avanti. Peggio: essendo **più basso** di
+ * `TILE_UPGRADE_FACTOR`, rendeva il passaggio allo zoom a pezzi
+ * irraggiungibile, quindi la nitidezza vera non arrivava mai nemmeno online.
+ *
+ * Ingrandire oltre i pixel sgrana, ma su una scansione serve — una nota a
+ * margine si legge ingrandendo, sfocata o no. Chi legge in rete supera intanto
+ * la soglia dei pezzi e riceve il dettaglio vero.
+ */
+const MAX_MAGNIFICATION = 6;
 
 /** Entro questo tempo dall'ultima risposta la biblioteca è ancora "collegata".
  * Più lungo di una pagina lenta, più corto di una pausa fra due sfogliate. */
@@ -154,17 +169,21 @@ export function PageViewer({
     setManifestError(null);
     void (async () => {
       try {
-        const result = await fetchViewerManifestWithRetry(manifestUrl, providerKey);
+        const result = await fetchViewerManifestWithRetry(manifestUrl, providerKey, versionId);
         // Un motore che rispondesse con qualcosa senza `pages` non deve
         // restare a schermo come un caricamento infinito: è un errore, va
         // detto come tale.
         if (!result?.pages) throw new Error('manifesto senza pagine');
         if (cancelled) return;
-        setManifest(result);
+        // La pagina di ripresa si legge **prima** di pubblicare l'indice:
+        // pubblicarlo per primo faceva aprire la pagina uno mentre la lettura
+        // era ancora in volo, e quella pagina uno finiva scritta al posto del
+        // segno che si stava cercando.
         const lastPage = await getLastViewedPage(sourceId);
         if (cancelled) return;
         const validLast = lastPage !== null && lastPage < result.pages.length ? lastPage : 0;
         setCurrentIndex(validLast);
+        setManifest(result);
       } catch (error) {
         if (cancelled) return;
         logger.error('library.viewer.manifestFailed', { message: errorMessage(error) });
@@ -174,7 +193,7 @@ export function PageViewer({
     return () => {
       cancelled = true;
     };
-  }, [manifestUrl, providerKey, sourceId, manifestAttempt]);
+  }, [manifestUrl, providerKey, sourceId, versionId, manifestAttempt]);
 
   // Il visore nasce una sola volta e muore con il componente: ricrearlo a
   // ogni cambio pagina butterebbe via lo stato di zoom/pan senza motivo.
@@ -186,6 +205,7 @@ export function PageViewer({
       gestureSettingsMouse: { clickToZoom: false },
       visibilityRatio: 1,
       constrainDuringPan: true,
+      maxZoomPixelRatio: MAX_MAGNIFICATION,
     });
     viewerRef.current = viewer;
     return () => {
@@ -239,22 +259,41 @@ export function PageViewer({
     const openWholePage = async () => {
       // Nessuna attesa aggiuntiva: se l'indice porta già misure pronte si usa
       // la più piccola sufficiente, altrimenti il dimezzamento misurato. Dove
-      // l'immagine viene ricavata al momento, invece, si chiede la pagina
-      // intera: rimpicciolirla è la richiesta che lì fallisce.
-      const size =
-        localSize ?? (buildsImagesOnDemand(providerKey) ? MAX_SIZE : String(preferredPageWidth(page)));
-      const bytes = await pageImage(
-        {
-          kind: 'page',
-          versionId,
-          index: page.index,
-          size,
-          remoteUrl: pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
-          providerKey,
-        },
-        { priority: 'high', signal: controller.signal },
-      );
+      // l'immagine viene ricavata al momento si prova più di una forma della
+      // stessa richiesta: là un singolo derivato guasto non arriva mai, e
+      // chiederlo in un altro modo lo aggira.
+      const attempts = wholePageAttempts(page, localSize, buildsImagesOnDemand(providerKey));
+      let bytes: Uint8Array | null = null;
+      let lastFailure: unknown = null;
+      for (const size of attempts) {
+        try {
+          bytes = await pageImage(
+            {
+              kind: 'page',
+              versionId,
+              index: page.index,
+              size,
+              remoteUrl: pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
+              providerKey,
+            },
+            { priority: 'high', signal: controller.signal },
+          );
+          break;
+        } catch (error: unknown) {
+          // Un annullamento non è un guasto della biblioteca: la pagina non
+          // interessa più a nessuno, e insistere con un'altra forma sarebbe
+          // lavoro chiesto per niente.
+          if (cancelled || controller.signal.aborted) throw error;
+          logger.warn('library.viewer.wholePageAttemptFailed', {
+            index: page.index,
+            size,
+            message: errorMessage(error),
+          });
+          lastFailure = error;
+        }
+      }
       if (cancelled) return;
+      if (!bytes) throw lastFailure ?? new Error('pagina non servita');
       // Un indirizzo temporaneo per volta: sovrascriverlo senza rilasciarlo
       // lascerebbe i byte della pagina precedente appesi alla finestra.
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -297,15 +336,20 @@ export function PageViewer({
       logger.debug('library.viewer.tilesShown', { index: page.index });
     };
 
+    // Il suggerimento sui pezzi vale solo quando sono davvero i pezzi a non
+    // arrivare: appiccicarlo a ogni guasto faceva leggere «la biblioteca non ha
+    // restituito tutti i pezzi» anche a chi era andato in timeout prima che un
+    // solo pezzo venisse chiesto.
     const givingUp = (error: unknown) => {
       if (cancelled) return;
+      const message = errorMessage(error);
       logger.error('library.viewer.pageFailed', {
-        message: errorMessage(error),
+        message,
         index: page.index,
         ms: Math.round(performance.now() - openedAt),
       });
       setPageLoading(false);
-      setPageError(TILE_LOAD_FAILED);
+      setPageError(message);
     };
 
     const handleTileLoaded = () => {
