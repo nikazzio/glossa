@@ -8,9 +8,10 @@
 //! esegue fuori dal filo principale, altrimenti tiene fermo il runtime mentre
 //! decodifica.
 
-use image::{
-    codecs::jpeg::JpegEncoder, imageops::FilterType, DynamicImage, ExtendedColorType, ImageEncoder,
+use fast_image_resize::{
+    FilterType as ResizeFilter, IntoImageView, ResizeAlg, ResizeOptions, Resizer,
 };
+use image::{codecs::jpeg::JpegEncoder, DynamicImage, ExtendedColorType, ImageEncoder, RgbImage};
 
 /// Lato lungo predefinito delle miniature, in pixel *(scelto dall'utente il
 /// 2026-08-16)*: 160 era la misura che le biblioteche davano per ripiego, 300 è
@@ -21,9 +22,10 @@ pub const DEFAULT_THUMBNAIL_EDGE: u32 = 300;
 /// resa, non una preferenza da esporre.
 const THUMBNAIL_QUALITY: u8 = 80;
 
-/// Filtro del ridimensionamento. Lanczos costa più di un'interpolazione
-/// lineare e su una miniatura si vede: le lettere restano leggibili.
-const THUMBNAIL_FILTER: FilterType = FilterType::Lanczos3;
+/// Algoritmo del ridimensionamento: la stessa resa di Lanczos, calcolata a
+/// blocchi con le istruzioni vettoriali del processore invece che un pixel
+/// alla volta. Su una miniatura si vede: le lettere restano leggibili.
+const RESIZE_ALGORITHM: ResizeAlg = ResizeAlg::Convolution(ResizeFilter::Lanczos3);
 
 #[derive(Debug, thiserror::Error)]
 pub enum ImageError {
@@ -31,6 +33,8 @@ pub enum ImageError {
     Size(u32),
     #[error("immagine illeggibile: {0}")]
     Decode(String),
+    #[error("ridimensionamento fallito: {0}")]
+    Resize(String),
     #[error("ricodifica fallita: {0}")]
     Encode(String),
 }
@@ -55,16 +59,51 @@ pub fn resize_jpeg(bytes: &[u8], long_edge: u32, quality: u8) -> Result<Vec<u8>,
     }
     let decoded =
         image::load_from_memory(bytes).map_err(|error| ImageError::Decode(error.to_string()))?;
-    encode_jpeg_at(&fit_inside(decoded, long_edge), quality)
+    encode_jpeg_at(&fit_inside(decoded, long_edge)?, quality)
 }
 
 /// Riporta l'immagine dentro un quadrato di lato `edge` conservando le
 /// proporzioni: il lato lungo diventa `edge`, l'altro scende di conseguenza.
-fn fit_inside(image: DynamicImage, edge: u32) -> DynamicImage {
+fn fit_inside(image: DynamicImage, edge: u32) -> Result<DynamicImage, ImageError> {
     if image.width() <= edge && image.height() <= edge {
-        return image;
+        return Ok(image);
     }
-    image.resize(edge, edge, THUMBNAIL_FILTER)
+    let (target_width, target_height) = scaled_to_edge(image.width(), image.height(), edge);
+    // Il ridimensionatore veloce lavora su un tipo di pixel alla volta: si
+    // normalizza a RGB prima, la stessa forma con cui si ricodifica dopo.
+    let source = DynamicImage::ImageRgb8(image.to_rgb8());
+    let pixel_type = source
+        .pixel_type()
+        .ok_or_else(|| ImageError::Resize("formato pixel non riconosciuto".to_string()))?;
+    let mut destination =
+        fast_image_resize::images::Image::new(target_width, target_height, pixel_type);
+    Resizer::new()
+        .resize(
+            &source,
+            &mut destination,
+            &ResizeOptions::new().resize_alg(RESIZE_ALGORITHM),
+        )
+        .map_err(|error| ImageError::Resize(error.to_string()))?;
+    let resized = RgbImage::from_raw(target_width, target_height, destination.into_vec())
+        .ok_or_else(|| ImageError::Resize("byte ridimensionati incoerenti".to_string()))?;
+    Ok(DynamicImage::ImageRgb8(resized))
+}
+
+/// Le dimensioni che porta il lato lungo a `edge`, proporzioni intatte —
+/// stessa aritmetica che usava il ridimensionamento precedente, per non
+/// spostare di un pixel le pagine già viste dagli utenti.
+fn scaled_to_edge(width: u32, height: u32, edge: u32) -> (u32, u32) {
+    if width >= height {
+        (
+            edge,
+            ((u64::from(height) * u64::from(edge)) / u64::from(width)).max(1) as u32,
+        )
+    } else {
+        (
+            ((u64::from(width) * u64::from(edge)) / u64::from(height)).max(1) as u32,
+            edge,
+        )
+    }
 }
 
 fn encode_jpeg_at(image: &DynamicImage, quality: u8) -> Result<Vec<u8>, ImageError> {

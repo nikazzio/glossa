@@ -38,8 +38,9 @@ pub(crate) struct Progress {
     /// Vero se almeno una pagina è stata saltata per un **guasto** e non per un
     /// rifiuto: cambia come si dichiara un lavoro che non ha portato niente.
     pub faulty: bool,
-    /// Quando sono arrivate le ultime pagine scaricate: è la base della stima.
-    pub recent: VecDeque<Instant>,
+    /// Quando sono arrivate le ultime pagine scaricate e quanto pesavano: è la
+    /// base della stima e della velocità mostrata a chi guarda.
+    pub recent: VecDeque<(Instant, u64)>,
 }
 
 impl Progress {
@@ -52,8 +53,8 @@ impl Progress {
     }
 
     /// Registra l'arrivo di una pagina, tenendo solo le ultime `PACE_WINDOW`.
-    pub(crate) fn fetched(&mut self, at: Instant) {
-        self.recent.push_back(at);
+    pub(crate) fn fetched(&mut self, at: Instant, bytes: u64) {
+        self.recent.push_back((at, bytes));
         while self.recent.len() > PACE_WINDOW + 1 {
             self.recent.pop_front();
         }
@@ -61,16 +62,27 @@ impl Progress {
 
     /// Stima del tempo restante dal ritmo delle **ultime** pagine.
     ///
-    /// Finché non ce ne sono abbastanza si somma la pausa dichiarata dal profilo
-    /// al tempo di risposta misurato sul campo: la pausa da sola è il minimo che
-    /// aspettiamo noi, non quanto ci mette la biblioteca, e su archive.org
-    /// dichiara 1,6 s dove il tempo per pagina misurato va da 1 a 19 s.
+    /// Non esiste più una pausa dichiarata da cui partire: finché il ritmo non è
+    /// misurato si usa il tempo di risposta osservato sul campo, diviso per
+    /// quante pagine il profilo chiede insieme. È una stima di partenza, e dopo
+    /// tre pagine viene sostituita da quella vera.
     pub(crate) fn eta(&self, profile: &NetworkProfile) -> i64 {
         let remaining = self.total.saturating_sub(self.done());
         let per_page = self
             .pace()
-            .unwrap_or_else(|| profile.average_pause() + TYPICAL_SERVER_TIME);
+            .unwrap_or(TYPICAL_SERVER_TIME / profile.bulk_workers().max(1) as u32);
         (u64::from(remaining) * per_page.as_millis() as u64 / 1000) as i64
+    }
+
+    /// Quello che il pannello deve sapere di questo istante.
+    ///
+    /// Si legge sotto il turno e poi si lascia andare: tenere aperta la lettura
+    /// mentre si riferisce fermerebbe le altre pagine in corso.
+    pub(crate) fn snapshot(&self, profile: &NetworkProfile) -> Snapshot {
+        Snapshot {
+            ratio: self.ratio(),
+            eta: self.eta(profile),
+        }
     }
 
     /// Il tempo per pagina osservato nella finestra, se la finestra è abbastanza
@@ -79,10 +91,32 @@ impl Progress {
         if self.recent.len() < PACE_SAMPLE {
             return None;
         }
-        let first = *self.recent.front()?;
-        let last = *self.recent.back()?;
+        let (first, _) = *self.recent.front()?;
+        let (last, _) = *self.recent.back()?;
         let intervals = (self.recent.len() - 1) as u32;
         Some((last - first) / intervals)
+    }
+
+    /// Byte al secondo osservati nella finestra, `0` finché non c'è abbastanza
+    /// per dirlo. È la risposta a «sta scaricando o è piantato?».
+    pub(crate) fn speed_bytes_per_sec(&self) -> u64 {
+        if self.recent.len() < 2 {
+            return 0;
+        }
+        let (first, _) = self.recent[0];
+        // La finestra finisce **adesso**, non all'ultima pagina arrivata:
+        // fermandosi lì, uno scaricamento piantato dopo qualche successo
+        // continuava a dichiarare la velocità di prima per sempre, che è
+        // l'opposto della domanda a cui questo numero deve rispondere. Con
+        // l'attesa dentro il conto, il valore scende da solo verso zero.
+        let elapsed = first.elapsed().as_millis() as u64;
+        if elapsed == 0 {
+            return 0;
+        }
+        // Il primo arrivo segna l'inizio della finestra, non un carico dentro:
+        // contarlo gonfierebbe la velocità di una pagina intera.
+        let bytes: u64 = self.recent.iter().skip(1).map(|(_, bytes)| bytes).sum();
+        bytes * 1_000 / elapsed
     }
 
     /// Dettaglio JSON letto dal pannello.
@@ -133,6 +167,7 @@ impl Progress {
             "units": { "done": self.present, "total": self.total, "label": "items" },
             "unavailable": self.unavailable,
             "bytes": { "downloaded": self.bytes, "estimated": estimated },
+            "speed": self.speed_bytes_per_sec(),
             "cap": cap,
             "provider": provider,
             "host": host,
@@ -142,17 +177,22 @@ impl Progress {
     }
 }
 
-/// Chi riferisce al pannello. Tiene insieme le tre cose che servono a dichiarare
-/// un'attesa, che altrimenti viaggiano una per una.
+/// Avanzamento e stima in un istante preciso, staccati dal conteggio vivo.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Snapshot {
+    pub ratio: f64,
+    pub eta: i64,
+}
+
+/// Chi riferisce al pannello.
 pub(crate) struct Reporter<'a> {
     pub ctx: &'a JobContext,
     pub title: &'a str,
-    pub profile: &'a NetworkProfile,
 }
 
 impl Reporter<'_> {
     /// Dichiara che il lavoro è fermo per i limiti della biblioteca.
-    pub(crate) async fn waiting(&self, progress: &Progress, page: &Page) {
+    pub(crate) async fn waiting(&self, at: Snapshot, page: &Page) {
         log::info!(
             "job waiting id={} reason={} page={}",
             self.ctx.id,
@@ -160,23 +200,14 @@ impl Reporter<'_> {
             page.index
         );
         self.ctx
-            .report_waiting(
-                progress.ratio(),
-                Some(self.title),
-                Some(progress.eta(self.profile)),
-            )
+            .report_waiting(at.ratio, Some(self.title), Some(at.eta))
             .await;
     }
 
     /// Avanzamento normale, una volta per pagina.
-    pub(crate) async fn advanced(&self, progress: &Progress, detail: &str) {
+    pub(crate) async fn advanced(&self, at: Snapshot, detail: &str) {
         self.ctx
-            .report(
-                progress.ratio(),
-                Some(self.title),
-                Some(progress.eta(self.profile)),
-                Some(detail),
-            )
+            .report(at.ratio, Some(self.title), Some(at.eta), Some(detail))
             .await;
     }
 }
@@ -192,7 +223,7 @@ mod tests {
         let start = Instant::now();
         let mut recent = VecDeque::new();
         for index in 0..fetched {
-            recent.push_back(start + every * index as u32);
+            recent.push_back((start + every * index as u32, 500_000));
         }
         Progress {
             present,
@@ -205,21 +236,16 @@ mod tests {
     }
 
     #[test]
-    fn before_having_measured_anything_the_estimate_comes_from_the_declared_pause() {
-        let quick = Progress {
-            total: 10,
-            ..progress(0, 0, Duration::ZERO)
-        }
-        .eta(&CAUTIOUS);
-        let long = Progress {
+    fn before_having_measured_anything_the_estimate_comes_from_how_many_pages_go_together() {
+        let book = Progress {
             total: 210,
             ..progress(0, 0, Duration::ZERO)
-        }
-        .eta(&GALLICA);
+        };
 
-        assert!(long > quick);
-        // Con i valori di Gallica 210 pagine non scendono sotto il quarto d'ora.
-        assert!(long >= 900, "stimati {long} secondi");
+        // Gallica chiede una pagina alla volta, le altre due: a parità di libro
+        // la stima di partenza è il doppio, a meno dell'arrotondamento.
+        assert!(book.eta(&CAUTIOUS) > 0);
+        assert!((book.eta(&GALLICA) - 2 * book.eta(&CAUTIOUS)).abs() <= 1);
     }
 
     #[test]
@@ -250,11 +276,14 @@ mod tests {
         let start = Instant::now();
         let mut progress = progress(10, 2, Duration::from_secs(1));
         let after_the_cooldown = start + Duration::from_secs(601);
-        progress.fetched(after_the_cooldown);
+        progress.fetched(after_the_cooldown, 500_000);
         let pessimistic = progress.eta(&CAUTIOUS);
 
         for index in 1..=PACE_WINDOW {
-            progress.fetched(after_the_cooldown + Duration::from_secs(index as u64));
+            progress.fetched(
+                after_the_cooldown + Duration::from_secs(index as u64),
+                500_000,
+            );
         }
 
         assert!(
@@ -269,7 +298,7 @@ mod tests {
         let mut progress = progress(0, 0, Duration::ZERO);
         let start = Instant::now();
         for index in 0..=(PACE_WINDOW * 3) {
-            progress.fetched(start + Duration::from_secs(index as u64));
+            progress.fetched(start + Duration::from_secs(index as u64), 500_000);
         }
 
         assert_eq!(progress.recent.len(), PACE_WINDOW + 1);
@@ -283,6 +312,8 @@ mod tests {
             image_service: "https://img/1".into(),
             size: Some((2646, 4112)),
             canvas_id: None,
+            thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         let progress = Progress {
             total: 10,
@@ -320,6 +351,8 @@ mod tests {
             image_service: "https://img/34".into(),
             size: Some((2646, 4112)),
             canvas_id: None,
+            thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         let parsed: serde_json::Value =
             serde_json::from_str(&progress(4, 4, Duration::from_secs(3)).detail(
@@ -352,6 +385,8 @@ mod tests {
             image_service: "https://img/7".into(),
             size: Some((2646, 4112)),
             canvas_id: None,
+            thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         let parsed: serde_json::Value =
             serde_json::from_str(&progress(4, 0, Duration::ZERO).detail(

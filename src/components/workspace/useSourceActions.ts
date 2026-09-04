@@ -7,6 +7,7 @@ import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
 import { versionInventory } from '../../services/inventoryService';
 import { enqueueOptimization } from '../../services/optimizeService';
+import { forgetVersionCache } from '../../services/cacheService';
 import {
   deleteVersionFiles,
   freeVersionPages,
@@ -230,6 +231,10 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
     try {
       if (entry.versionId) {
         await deleteVersionFiles(await providerKey(), entry.versionId);
+        // Anche la memoria di lavoro: senza questo passo lo spazio non si
+        // libera davvero, e riaggiungendo la stessa opera le pagine
+        // tornerebbero da lì senza ricontattare la biblioteca.
+        await forgetVersionCache(entry.versionId);
       }
       handlers.onRemove();
     } catch (error: unknown) {

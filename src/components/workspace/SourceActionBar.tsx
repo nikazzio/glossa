@@ -1,18 +1,16 @@
+import { useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
-  Check,
-  Clock,
-  Download,
   Eraser,
-  Loader2,
   Minimize2,
-  PauseCircle,
+  MoreVertical,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, Tooltip } from '../ui';
+import { ClickPopover, IconButton, MenuActionRow, Tooltip } from '../ui';
+import { downloadIconAndLabel } from './DownloadButton';
 import type { SourceActions } from './useSourceActions';
 import type { LibraryCatalogEntry } from '../../types';
 
@@ -22,82 +20,72 @@ interface SourceActionBarProps {
   size?: 'sm' | 'md';
 }
 
-/** I comandi di un'opera, identici nella riga del catalogo e nella sua scheda. */
+/**
+ * I comandi di un'opera nella riga del catalogo. Solo archivia e rimuovi
+ * restano icone dirette — sono i due che si usano scorrendo l'elenco;
+ * scarica/verifica/ottimizza/libera spazio vivono già, uguali, nella tab
+ * Copie digitali della scheda, quindi qui stanno in un menu invece di
+ * affollare la riga con comandi che servono solo quando si è aperto il
+ * libro.
+ */
 export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBarProps) {
   const { t } = useTranslation();
-  const { busy, runningJob, jobState, archived, summary } = actions;
+  const { busy, runningJob, archived, summary } = actions;
   const icon = size === 'sm' ? 13 : 15;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hasLocalPages = entry.localPages > 0;
+  const { icon: downloadIcon, label: downloadLabel } = downloadIconAndLabel(actions, 14, t);
 
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {/* Solo l'avanzamento di uno scaricamento in corso: che le immagini
+          siano sul computer lo dice già l'icona sotto il titolo, e dirlo due
+          volte sulla stessa riga non aggiunge niente. */}
       <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
-        {runningJob ? (
+        {runningJob && (
           <Tooltip label={t('areas.library.downloadRunning')} side="top">
             <span className="text-editorial-accent">{Math.round(runningJob.progress * 100)}%</span>
           </Tooltip>
-        ) : summary.availability === 'complete' ? (
-          <Tooltip label={t('areas.library.availabilityComplete')} side="top">
-            <span aria-label={t('areas.library.availabilityComplete')}>
-              <Check size={icon} />
-            </span>
-          </Tooltip>
-        ) : null}
+        )}
       </span>
 
-      <IconButton
-        size={size}
-        onClick={() => void actions.startDownload()}
-        disabled={
-          !entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'
-        }
-        title={
-          jobState === 'paused'
-            ? t('areas.library.downloadPaused')
-            : jobState === 'libraryLimits'
-              ? t('jobs.waitingForLibrary')
-              : jobState
-                ? t('areas.library.downloadWaiting')
-                : runningJob
-                  ? t('areas.library.downloadRunning')
-                  : t('areas.library.download')
+      <ClickPopover
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        trigger={
+          <IconButton size={size} title={t('areas.library.moreActions')} ariaPressed={menuOpen}>
+            <MoreVertical size={icon} />
+          </IconButton>
         }
       >
-        {/* Mentre il lavoro gira il comando lo dice da sé: la percentuale sta
-            altrove, e un pulsante spento senza motivo visibile sembra rotto. */}
-        {jobState === 'paused' ? (
-          <PauseCircle size={icon} />
-        ) : jobState ? (
-          <Clock size={icon} />
-        ) : runningJob ? (
-          <Loader2 size={icon} className="motion-safe:animate-spin" />
-        ) : (
-          <Download size={icon} />
-        )}
-      </IconButton>
-      <IconButton
-        size={size}
-        onClick={() => void actions.verify()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.verify')}
-      >
-        <ShieldCheck size={icon} />
-      </IconButton>
-      <IconButton
-        size={size}
-        onClick={() => void actions.optimise()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.optimizeAction')}
-      >
-        <Minimize2 size={icon} />
-      </IconButton>
-      <IconButton
-        size={size}
-        onClick={() => void actions.freeSpace()}
-        disabled={busy || entry.localPages === 0}
-        title={t('areas.library.freeSpace')}
-      >
-        <Eraser size={icon} />
-      </IconButton>
+        <div className="min-w-44 py-1">
+          <MenuActionRow
+            icon={downloadIcon}
+            label={downloadLabel}
+            onClick={() => { setMenuOpen(false); void actions.startDownload(); }}
+            disabled={!entry.manifestUrl || busy || Boolean(runningJob) || summary.availability === 'complete'}
+          />
+          <MenuActionRow
+            icon={<ShieldCheck size={14} />}
+            label={t('areas.library.verify')}
+            onClick={() => { setMenuOpen(false); void actions.verify(); }}
+            disabled={busy || !hasLocalPages}
+          />
+          <MenuActionRow
+            icon={<Minimize2 size={14} />}
+            label={t('areas.library.optimizeAction')}
+            onClick={() => { setMenuOpen(false); void actions.optimise(); }}
+            disabled={busy || !hasLocalPages}
+          />
+          <MenuActionRow
+            icon={<Eraser size={14} />}
+            label={t('areas.library.freeSpace')}
+            onClick={() => { setMenuOpen(false); void actions.freeSpace(); }}
+            disabled={busy || !hasLocalPages}
+          />
+        </div>
+      </ClickPopover>
+
       <IconButton
         size={size}
         tone={archived ? 'accent' : 'default'}

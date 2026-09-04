@@ -66,6 +66,10 @@ export async function setSourceCollection(
       [collectionId, sourceId],
     );
   }
+  logger.info(member ? 'library.collection.memberAdded' : 'library.collection.memberRemoved', {
+    collectionId,
+    sourceId,
+  });
 }
 
 interface MembershipRow {

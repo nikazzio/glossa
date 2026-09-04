@@ -8,11 +8,10 @@ import { MAX_HOST_CONCURRENCY, type NetworkValues } from '../../services/downloa
  * vuol dire aggiungere una riga qui.
  */
 const FIELDS: Array<{ key: NumericField; min: number; max: number; step?: number }> = [
-  { key: 'pauseMinMs', min: 0, max: 60_000, step: 100 },
-  { key: 'pauseMaxMs', min: 0, max: 60_000, step: 100 },
   { key: 'burstRequests', min: 1, max: 1_000 },
   { key: 'burstWindowSecs', min: 1, max: 3_600 },
   { key: 'hostConcurrency', min: 1, max: MAX_HOST_CONCURRENCY },
+  { key: 'workersPerJob', min: 1, max: MAX_HOST_CONCURRENCY },
   { key: 'maxAttempts', min: 1, max: 10 },
   { key: 'backoffBaseSecs', min: 1, max: 600 },
   { key: 'backoffCapSecs', min: 1, max: 3_600 },

@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { execute, select } from './dbService';
+import { createRequestScheduler, type RequestPriority } from './requestScheduler';
+import { hostOf, useNetworkActivity } from './networkActivity';
 
 /**
  * La cache di tutto quello che viene dalla rete: copertine, miniature remote e
@@ -16,9 +18,26 @@ import { execute, select } from './dbService';
  * scarto, e non è mai contato come scaricato.
  */
 
+/** La misura che chiede la miniatura invece di un numero di pixel. */
+export const THUMB_SIZE = 'thumb';
+
 export type CacheRequest =
   | { kind: 'remote'; url: string; providerKey?: string | null }
-  | { kind: 'page'; versionId: string; index: number; size: string }
+  /**
+   * Una pagina di un'opera, a una misura.
+   *
+   * È la forma con cui il visore chiede tutto. Il motore guarda **prima sul
+   * computer** — la pagina a quella misura, la miniatura salvata, una copia più
+   * grande da rimpicciolire — e va a `remoteUrl` solo se in casa non c'è niente.
+   */
+  | {
+      kind: 'page';
+      versionId: string;
+      index: number;
+      size: string;
+      remoteUrl?: string | null;
+      providerKey?: string | null;
+    }
   | {
       kind: 'search';
       providerKey: string;
@@ -51,9 +70,132 @@ export const CACHE_CAPS = [
 
 export const SEARCH_TTLS = [1, 6, 24, 72, 168] as const;
 
-export async function cachedImage(request: CacheRequest): Promise<Uint8Array> {
-  const bytes = await invoke<number[]>('cached_image', { request });
-  return new Uint8Array(bytes);
+export interface CachedImageOptions {
+  priority?: RequestPriority;
+  signal?: AbortSignal;
+}
+
+// Un rapido scorrimento non deve trasformarsi in centinaia di invoke ormai
+// invisibili. Sei richieste bastano a riempire le corsie native senza creare
+// una seconda coda incontrollata nella webview.
+//
+// Quattro posti sono riservati alla pagina aperta, e non è generosità: verso
+// una biblioteca severa il motore ne concede due per volta, quindi ogni
+// miniatura in più in volo è una miniatura **davanti** a un tassello nella coda
+// del motore, dove la priorità non arriva. Due miniature alla volta bastano a
+// riempire il rail e lasciano la corsia libera per la pagina che si guarda.
+const remoteImageScheduler = createRequestScheduler(6, 4);
+
+/**
+ * Le richieste identiche ancora in volo, per non farne partire due.
+ *
+ * Succede continuamente: il rail rimonta una riga, si torna su una pagina già
+ * vista, e in sviluppo React fa partire ogni effetto due volte. Due richieste
+ * gemelle **mancano entrambe** la cache — la prima non ha ancora finito di
+ * scriverla — e vanno entrambe in rete. Chi arriva secondo aspetta la prima.
+ */
+const inFlight = new Map<string, Promise<Uint8Array>>();
+
+export async function cachedImage(request: CacheRequest, options: CachedImageOptions = {}): Promise<Uint8Array> {
+  // Il motore risponde con byte grezzi, non con un elenco di numeri: un
+  // vettore che attraversa il ponte in JSON pesa tre o quattro volte i byte
+  // che trasporta.
+  const load = async () => new Uint8Array(await invoke<ArrayBuffer>('cached_image', { request }));
+  // Le ricerche non sono immagini: non passano dalla corsia del visore.
+  if (request.kind === 'search') return load();
+
+  // Una richiesta remota può finire nel deposito o in cache senza toccare la
+  // rete: si conta lo stesso, perché è comunque il tempo che l'utente aspetta.
+  const priority = options.priority ?? 'normal';
+  const host = request.kind === 'remote' ? request.url : (request.remoteUrl ?? '');
+  useNetworkActivity.getState().queue(priority);
+  let started = false;
+  const watched = async () => {
+    started = true;
+    useNetworkActivity.getState().start(priority, hostOf(host));
+    try {
+      const bytes = await load();
+      useNetworkActivity.getState().succeed(priority);
+      return bytes;
+    } catch (error) {
+      useNetworkActivity
+        .getState()
+        .fail(priority, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  };
+  const key = JSON.stringify(request);
+  const shared = inFlight.get(key);
+  if (shared) {
+    useNetworkActivity.getState().drop(priority);
+    try {
+      // I byte sono gli stessi, ma ognuno deve poterli tenere per sé: una
+      // vista che li rilascia non deve svuotare quelli di un'altra.
+      return new Uint8Array(await shared);
+    } catch (error) {
+      // Chi l'aveva chiesta per primo se n'è andato prima che partisse: la
+      // richiesta è sua, l'annullamento no. Si rifà per conto proprio.
+      if (!(error instanceof DOMException && error.name === 'AbortError')) throw error;
+      return cachedImage(request, options);
+    }
+  }
+
+  const running = remoteImageScheduler
+    .schedule(watched, options)
+    .finally(() => inFlight.delete(key));
+  inFlight.set(key, running);
+  try {
+    return await running;
+  } catch (error) {
+    // Annullata mentre era ancora in coda: il posto va restituito qui, perché
+    // `watched` non è mai partita e nessuno l'ha già tolto.
+    if (!started) useNetworkActivity.getState().drop(priority);
+    throw error;
+  }
+}
+
+/** Cosa sa il motore della rete verso le biblioteche, in questo momento. */
+export interface HostActivity {
+  host: string;
+  inUse: number;
+  seats: number;
+  bulkInUse: number;
+  windowUsed: number;
+  windowLimit: number;
+  windowSecs: number;
+  cooldownSecs: number;
+}
+
+export interface NetworkProbe {
+  hosts: HostActivity[];
+  served: {
+    fromVault: number;
+    fromCache: number;
+    fromNetwork: number;
+    networkBytes: number;
+  };
+}
+
+export async function networkProbe(): Promise<NetworkProbe> {
+  return invoke<NetworkProbe>('network_probe');
+}
+
+/** Dove è stata trovata l'immagine: il deposito sul computer, la memoria di
+ *  lavoro, oppure la biblioteca. */
+export type ImageSource = 'vault' | 'cache' | 'network';
+
+/**
+ * Da dove è arrivata l'immagine chiesta così, subito dopo averla ricevuta.
+ *
+ * I byte attraversano il ponte grezzi, senza un posto dove infilare anche
+ * questo: si chiede a parte. È una lettura in memoria del motore — niente disco,
+ * niente rete — e la risposta riguarda la stessa richiesta, quindi non può
+ * raccontare la provenienza di un'altra immagine. `null` quando il motore non se
+ * lo ricorda più.
+ */
+export async function imageSource(request: CacheRequest): Promise<ImageSource | null> {
+  const source = await invoke<string | null>('image_source', { request });
+  return source === 'vault' || source === 'cache' || source === 'network' ? source : null;
 }
 
 export async function cacheUsage(): Promise<CacheUsage> {
@@ -62,6 +204,20 @@ export async function cacheUsage(): Promise<CacheUsage> {
 
 export async function clearCache(): Promise<void> {
   await invoke('clear_cache');
+}
+
+/**
+ * Butta dalla memoria di lavoro tutto quello che riguarda una digitalizzazione,
+ * e dice quanti byte ha liberato.
+ *
+ * Si chiama togliendo un'opera dalla Biblioteca, ed è l'unico momento in cui
+ * buttare è giusto: tutto il resto sono scansioni di libri storici, che non
+ * cambiano. Senza questo passo lo spazio non si libera come chi rimuove si
+ * aspetta, e riaggiungendo la stessa opera le pagine tornerebbero da qui senza
+ * che la biblioteca venga ricontattata.
+ */
+export async function forgetVersionCache(versionId: string): Promise<number> {
+  return invoke<number>('forget_version_cache', { versionId });
 }
 
 /**
@@ -120,4 +276,7 @@ export async function getSearchTtlHours(): Promise<number> {
 
 export async function setSearchTtlHours(hours: number): Promise<void> {
   await writeSetting(SEARCH_TTL_KEY, String(hours));
+  // La scadenza scelta vale dalla prossima ricerca, non dal prossimo avvio: il
+  // motore la tiene a memoria insieme al tetto, e va avvisato che non vale più.
+  await invoke('forget_cache_settings');
 }

@@ -14,10 +14,13 @@ import {
   listLibraryCatalog,
   listLibrarySourceUrls,
   removeSourceFromLibrary as removeSourceFromLibraryService,
+  resyncSourceFromManifest,
   setSourceArchived as setSourceArchivedService,
   setSourceFieldOverride as setSourceFieldOverrideService,
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
+  versionProviderKey,
 } from '../services/libraryService';
+import { discoverIIIF } from '../services/iiifProviderService';
 import {
   collectionsOfMany,
   createCollection as createCollectionService,
@@ -25,18 +28,16 @@ import {
   listCollections,
   setSourceCollection,
 } from '../services/libraryCollectionsService';
-import { logger } from '../utils/logger';
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return 'library_source_add_failed';
-}
+import { errorMessage as getErrorMessage, logger } from '../utils/logger';
 
 interface SourceLibraryState {
   detail: LibrarySourceDetail | null;
   addingUrls: Set<string>;
   addedManifestUrls: Set<string>;
   libraryManifestUrls: Set<string>;
+  /** Id dell'opera per ogni manifesto già in biblioteca: serve a chiedere a
+   * quali workspace è già collegata senza rileggere tutto il catalogo. */
+  libraryManifestSourceIds: Map<string, string>;
   error: string | null;
   loadLibraryManifestUrls: () => Promise<void>;
   addFromDiscovery: (card: SourceCard, workspaceId?: string, providerKey?: string) => Promise<void>;
@@ -57,6 +58,9 @@ interface SourceLibraryState {
   refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
   toggleWorkspaceLink: (workspaceId: string, sourceId: string, linked: boolean) => Promise<void>;
+  /** Rilegge il manifesto da cui l'opera è stata aggiunta e ne riscrive i
+   *  dati anagrafici, cancellando ogni correzione a mano (Note escluse). */
+  resyncSource: (sourceId: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -65,12 +69,16 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   addingUrls: new Set(),
   addedManifestUrls: new Set(),
   libraryManifestUrls: new Set(),
+  libraryManifestSourceIds: new Map(),
   error: null,
 
   loadLibraryManifestUrls: async () => {
     try {
-      const urls = await listLibrarySourceUrls();
-      set({ libraryManifestUrls: new Set(urls) });
+      const rows = await listLibrarySourceUrls();
+      set({
+        libraryManifestUrls: new Set(rows.map((row) => row.sourceUrl)),
+        libraryManifestSourceIds: new Map(rows.map((row) => [row.sourceUrl, row.sourceId])),
+      });
     } catch (error) {
       logger.error('loadLibraryManifestUrls failed', { error: getErrorMessage(error) });
     }
@@ -83,7 +91,7 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       error: null,
     }));
     try {
-      await addSourceToLibraryService({
+      const { sourceId } = await addSourceToLibraryService({
         manifestUrl,
         title: card.title,
         description: card.description,
@@ -103,16 +111,27 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         // dai canvas, quella della ricerca lo prende dalla biblioteca.
         itemCount: card.itemCount,
         workspaceId,
-        // Solo la scheda di ricerca porta questi dati: quella del manifesto
-        // viene da un'altra fonte (la presentazione IIIF), non dal catalogo.
-        contributors: isManifest(card) ? [] : card.contributors,
-        publisher: isManifest(card) ? null : card.publisher,
-        rights: isManifest(card) ? [] : card.rights,
-        physicalDescription: isManifest(card) ? null : card.physicalDescription,
-        holdingInstitution: isManifest(card) ? null : card.holdingInstitution,
+        // Entrambe le schede portano questi dati: quella di ricerca dalla
+        // risposta strutturata della biblioteca, quella del manifesto diretto
+        // dal `metadata`/`homepage` del manifesto stesso, quando lo dichiara.
+        contributors: card.contributors,
+        publisher: card.publisher,
+        rights: card.rights,
+        physicalDescription: card.physicalDescription,
+        holdingInstitution: card.holdingInstitution,
+        // Solo la scheda di ricerca porta un link alla scheda del catalogo
+        // cartaceo: non c'è un campo IIIF generico da cui leggerlo per un
+        // manifesto preso al volo.
         catalogUrl: isManifest(card) ? null : card.catalogUrl,
+        pageUrl: card.pageUrl,
+        // Solo la scheda di ricerca porta il deposito di tutto il resto: un
+        // manifesto preso al volo non è una risposta di catalogo.
+        raw: isManifest(card) ? {} : (card.raw ?? {}),
       });
-      set((state) => ({ addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl) }));
+      set((state) => ({
+        addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),
+        libraryManifestSourceIds: new Map(state.libraryManifestSourceIds).set(manifestUrl, sourceId),
+      }));
       // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
       // Biblioteca senza riaprire la schermata.
       await get().loadCatalog();
@@ -209,6 +228,62 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
   toggleWorkspaceLink: async (workspaceId, sourceId, linked) => {
     await setWorkspaceSourceLinkService(workspaceId, sourceId, linked);
     if (get().detail?.source.id === sourceId) await get().loadDetail(sourceId);
+  },
+
+  resyncSource: async (sourceId) => {
+    const detail = get().detail;
+    if (!detail || detail.source.id !== sourceId) {
+      throw new Error('library_source_resync_no_detail');
+    }
+    const primary = detail.versions.find((version) => version.isPrimary) ?? detail.versions[0];
+    if (!primary?.sourceUrl) {
+      throw new Error('library_source_resync_missing_manifest');
+    }
+    // I metadati e il disco possono non concordare: le fonti aggiunte prima
+    // che la provenienza venisse salvata nei metadati hanno i file sotto una
+    // chiave che solo il deposito conosce ancora.
+    const providerKey = detail.providerKey ?? (await versionProviderKey(primary.id));
+    if (!providerKey) {
+      throw new Error('library_source_resync_missing_manifest');
+    }
+
+    const outcome = await discoverIIIF(providerKey, primary.sourceUrl, 1, true);
+    if (!outcome.manifest) {
+      throw new Error('library_source_resync_not_found');
+    }
+    const card = { ...outcome.manifest, id: outcome.manifest.manifestUrl };
+
+    await resyncSourceFromManifest(sourceId, {
+      title: card.title,
+      description: card.description,
+      kind: classifySourceKind(card),
+      creator: card.creator,
+      date: card.date,
+      thumbnailUrl: card.thumbnailUrl,
+      language: card.language,
+      subjects: card.subjects,
+      providerKey,
+      externalId: null,
+      mediaType: null,
+      materialType: card.materialType,
+      collection: null,
+      volume: card.volume,
+      itemCount: card.itemCount,
+      contributors: card.contributors,
+      publisher: card.publisher,
+      rights: card.rights,
+      physicalDescription: card.physicalDescription,
+      holdingInstitution: card.holdingInstitution,
+      catalogUrl: null,
+      pageUrl: card.pageUrl,
+      // Risincronizzare legge il manifesto, non la risposta di ricerca: il
+      // deposito dei dati di catalogo non si può riempire da qui, e
+      // sovrascriverlo con niente perderebbe quello che avevamo.
+      raw: {},
+    });
+
+    await get().loadDetail(sourceId);
+    await get().loadCatalog();
   },
 
   clearError: () => set({ error: null }),

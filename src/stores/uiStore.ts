@@ -19,7 +19,6 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
   lg: '1.0625rem',
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
-export type DiscoveryResultsPerRow = 3 | 4 | 'list';
 export type SettingsTab =
   | 'translations'
   | 'provider'
@@ -73,7 +72,6 @@ interface UiState {
   colorScheme: ColorScheme;
   documentFontSize: DocumentFontSize;
   documentLineHeight: DocumentLineHeight;
-  discoveryResultsPerRow: DiscoveryResultsPerRow;
   selectedChunkId: string | null;
   showSettings: boolean;
   settingsTab: SettingsTab;
@@ -119,6 +117,8 @@ interface UiState {
   dashboardSidebarWidth: number;
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
+  /** Colonna informazioni della scheda opera in Biblioteca. */
+  librarySourceInspectorWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   location: AppLocation;
   setTraceStageId: (id: string | null) => void;
@@ -132,7 +132,6 @@ interface UiState {
   setColorScheme: (scheme: ColorScheme) => void;
   setDocumentFontSize: (size: DocumentFontSize) => void;
   setDocumentLineHeight: (height: DocumentLineHeight) => void;
-  setDiscoveryResultsPerRow: (count: DiscoveryResultsPerRow) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean, tab?: SettingsTab) => void;
   setSettingsTab: (tab: SettingsTab) => void;
@@ -165,6 +164,7 @@ interface UiState {
   setDashboardSidebarWidth: (width: number) => void;
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
+  setLibrarySourceInspectorWidth: (width: number) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
 }
 
@@ -262,9 +262,6 @@ export function migrateUiStorePersistedState(persisted: unknown, fromVersion: nu
   if (fromVersion < 16) {
     s.editorialAccentColor = { light: EDITORIAL_ACCENT_LIGHT, dark: EDITORIAL_ACCENT_DARK };
   }
-  if (fromVersion < 17) {
-    s.discoveryResultsPerRow = 3;
-  }
   return s;
 }
 
@@ -279,7 +276,6 @@ export const useUiStore = create<UiState>()(
       colorScheme: 'system',
       documentFontSize: 'md',
       documentLineHeight: 'normal',
-      discoveryResultsPerRow: 3,
       selectedChunkId: null,
       showSettings: false,
       settingsTab: 'translations',
@@ -315,6 +311,7 @@ export const useUiStore = create<UiState>()(
       dashboardSidebarWidth: 240,
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
+      librarySourceInspectorWidth: 400,
       pendingAnnotationAnchor: null,
       location: dashboardLocation(),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
@@ -325,7 +322,6 @@ export const useUiStore = create<UiState>()(
       setColorScheme: (scheme) => set({ colorScheme: scheme }),
       setDocumentFontSize: (size) => set({ documentFontSize: size }),
       setDocumentLineHeight: (height) => set({ documentLineHeight: height }),
-      setDiscoveryResultsPerRow: (count) => set({ discoveryResultsPerRow: count }),
       setSelectedChunkId: (chunkId) =>
         set((state) => ({
           selectedChunkId: chunkId,
@@ -493,6 +489,7 @@ export const useUiStore = create<UiState>()(
       setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
+      setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
@@ -549,7 +546,6 @@ export const useUiStore = create<UiState>()(
         colorScheme: state.colorScheme,
         documentFontSize: state.documentFontSize,
         documentLineHeight: state.documentLineHeight,
-        discoveryResultsPerRow: state.discoveryResultsPerRow,
         activeProjectPanel: INLINE_PROJECT_PANELS.includes(state.activeProjectPanel)
           ? state.activeProjectPanel
           : 'run',
@@ -559,6 +555,7 @@ export const useUiStore = create<UiState>()(
         dashboardSidebarWidth: state.dashboardSidebarWidth,
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
+        librarySourceInspectorWidth: state.librarySourceInspectorWidth,
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
         libraryView: state.libraryView,

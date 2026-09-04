@@ -32,7 +32,7 @@ function entry(
     expectedPages: 100,
     localPages: 100,
     localBytes: 0,
-    sizes: [{ sizeTag: '2000', pages: 100, bytes: 0, missing: 0 }],
+    sizes: [{ sizeTag: '2000', pages: 100, bytes: 0, missing: 0, derived: false }],
     principalSize: '2000',
     workspaces: [],
     providerKey: 'vatican',

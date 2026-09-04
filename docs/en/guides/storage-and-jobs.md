@@ -125,10 +125,17 @@ better; they cost no request at all.
 
 ## The pace towards libraries
 
-Every library has its own pace: how long to wait between requests, how many
-requests in a minute, how long to stop when it asks you to slow down, how many
-attempts to make. These are a few different paces applied to many libraries, so
-**Settings → Libraries** governs them as **profiles**.
+Every library has its own pace: how many requests in a minute, how many at once,
+how many pages of the same book to fetch at a time, how long to stop when it asks
+you to slow down, how many attempts to make.
+
+Between one successful request and the next there is **no pause at all**: the
+pace comes from the number of requests at once, the per-minute limit and the long
+stop after a refusal. A pause on every request multiplied by all the pieces of a
+zoomed page, and made the viewer unusable.
+
+These are a few different paces applied to many libraries, so **Settings →
+Libraries** governs them as **profiles**.
 
 Two profiles ship with Glossa, with values proven in the field: **Normal**,
 used by almost all of them, and **Slow**, tuned on Gallica, the strictest one.
@@ -140,7 +147,18 @@ profile someone is using cannot be deleted — move the libraries that follow it
 first — and the two that ship with the application cannot be deleted at all.
 
 **Requests at the same time never go above four**, whatever you write: the
-limit depends on their server and it keeps you from being blocked.
+limit depends on their server and it keeps you from being blocked. A download
+never takes them all: one seat always stays with the page you are looking at, so
+you can keep browsing a book while another one downloads.
+
+At the bottom right, next to the jobs, a small indicator tells you whether the
+network is actually moving. Hovering it opens a panel: how many images are in
+progress and how many are waiting their turn, keeping the page you are looking
+at separate from the thumbnails; how many seats are taken towards each library
+and how many requests you have already spent in the current minute; and where
+the images came from so far — the vault, the working memory or the network —
+with the share of requests you spared yourself. It tells a slow job from a stuck
+one.
 
 ## Covers and searches kept aside
 
@@ -188,30 +206,35 @@ libraries do fix things.
 larger version of three pages, the record says «plus 3 at full resolution» next to
 the count, instead of making the book look half-finished.
 
-## Shrinking images to free up space
+## Compressing to free up space, without losing the original
 
 A book downloaded at full resolution takes three times more room than it needs.
 One downloaded months ago with a higher cap than you need now holds detail you
-never look at. In both cases **cleaning up beats downloading again**, because the
+never look at. In both cases **compressing beats downloading again**, because the
 library does not pay the price for it.
 
-On the work's record, in the Library, a command reads the downloaded pages again,
-shrinks them to the chosen size and recompresses them, replacing the original.
+In the work's record, on the **Digital copies** tab, the "compress" command
+opens a small panel: which already-downloaded resolution to start from (only
+if there is more than one), which smaller resolution to arrive at, and at
+what quality. The command queues the job immediately.
 
-**It is irreversible: the original is replaced.** The command queues the job
-immediately. It works on **one size at a time**: the one the book was downloaded at.
-Pages you deliberately took at full resolution are left as they are.
+**No longer irreversible: a new copy is born, the original is never touched.**
+Compression used to replace the downloaded pages in place, for good; now the
+compressed copy shows up next to the work's other resolutions, each with its
+own command to free just that one — keep the light copy and drop the heavy
+original, or the other way round, whenever you like.
 
 On a long book it runs for minutes, so it is a job like a download: you follow it
-from the panel at the bottom right, and you can pause or cancel it. Pages already
-smaller than the chosen size are not touched, because recompressing them would
-lose something without freeing anything.
+from the panel at the bottom right, and you can pause or cancel it. The job
+works on several pages together (as many as your processor's cores, minus
+one), not one at a time.
 
-While it runs, the panel says how many pages it has shrunk and how much room it has freed; the value remains on the completed job. Target size and quality are chosen in **Settings → Downloads**.
+While it runs, the panel says how many pages it has shrunk and how big the
+copy will be; the value remains on the completed job.
 
-If a page cannot be read or rewritten, the job ends in error instead of hiding it: its
+If a page cannot be read, the job ends in error instead of hiding it: its
 details keep the number of unprocessed pages, while successful pages remain
-safely stored.
+safely stored in the copy.
 
 While a download or optimisation can still change a work, commands that free
 its space or remove it are refused. Let the job finish or cancel it first;

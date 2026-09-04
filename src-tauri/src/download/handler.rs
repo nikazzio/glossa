@@ -23,6 +23,7 @@
 //! rileggere la cartella.
 
 use async_trait::async_trait;
+use futures_util::StreamExt;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -34,11 +35,11 @@ use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
 
 use super::catalog::{profile_for, record_manifest, record_pages, source_title};
-use super::courtesy::{Courtesy, Signals};
+use super::courtesy::{Courtesy, Lane, Signals};
 use super::fetch::{build_client, fetch, host_of};
 use super::inventory;
-use super::manifest::{parse, Manifest};
-use super::pages::{one_declaring_long_waits, PageFetcher, PageOutcome};
+use super::manifest::{parse, Manifest, Page};
+use super::pages::{one_declaring_long_waits, PageFetcher, PageOutcome, SharedRule};
 use super::progress::{Progress, Reporter};
 use super::sidecar;
 use super::sizing::{self, SizeCap, SizingRule};
@@ -150,9 +151,12 @@ fn account_for(outcome: &PageOutcome, progress: &mut Progress) {
         PageOutcome::Written { bytes, .. } => {
             progress.present += 1;
             progress.bytes += bytes;
-            progress.fetched(std::time::Instant::now());
+            progress.fetched(std::time::Instant::now(), *bytes);
         }
-        PageOutcome::Present => progress.present += 1,
+        // **Non** si conta: le pagine già sul disco sono quelle da cui il
+        // conteggio è partito. Contarle di nuovo faceva arrivare un libro di
+        // 126 pagine a «214 / 126» quando lo si riprendeva.
+        PageOutcome::Present => {}
         // Un guasto si conta come le altre non arrivate, ma non lascia niente
         // sul disco: la ripresa la richiede di nuovo.
         PageOutcome::Faulty => {
@@ -163,6 +167,64 @@ fn account_for(outcome: &PageOutcome, progress: &mut Progress) {
         // Il ciclo esce prima: qui non arriva.
         PageOutcome::Stopped => {}
     }
+}
+
+/// Il turno di lettura sul conteggio vivo. Non si tiene mai mentre si aspetta:
+/// le altre pagine in volo resterebbero ferme lì.
+fn read_progress(progress: &std::sync::Mutex<Progress>) -> std::sync::MutexGuard<'_, Progress> {
+    progress
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Quello che ogni pagina in volo condivide con le altre.
+struct PageWork<'a> {
+    pages: &'a [Page],
+    fetcher: &'a PageFetcher<'a>,
+    rule: &'a SharedRule,
+    known: &'a std::collections::BTreeMap<u32, sidecar::PageRecord>,
+    reporter: &'a Reporter<'a>,
+    progress: &'a std::sync::Mutex<Progress>,
+    profile: &'a NetworkProfile,
+    ctx: &'a JobContext,
+}
+
+/// Una pagina, dalla richiesta al suo esito.
+///
+/// Prende e torna la **posizione**, non la pagina: una chiusura che ricevesse un
+/// prestito e ne restituisse un altro legato a quello non verrebbe accettata dal
+/// compilatore per una durata qualsiasi.
+async fn attempt_page(
+    work: &PageWork<'_>,
+    at_index: usize,
+    signals: &Signals<'_>,
+) -> (usize, Result<PageOutcome, JobError>) {
+    let page = &work.pages[at_index];
+    // Una bandiera per pagina: con più pagine in volo, una che passava
+    // azzerava quella di una collega ferma in raffreddamento, e il pannello
+    // smetteva di dire «in attesa della biblioteca» proprio quando era vero.
+    let waiting = std::sync::atomic::AtomicBool::new(false);
+    let signals = &Signals {
+        stop: signals.stop,
+        courtesy_wait: &waiting,
+    };
+    // Fermarsi significa non farne partire altre: quelle già in volo escono da
+    // sole appena il turno non viene concesso.
+    if work.ctx.pause_requested() || work.ctx.cancel_requested() {
+        return (at_index, Ok(PageOutcome::Stopped));
+    }
+    let at = read_progress(work.progress).snapshot(work.profile);
+    let outcome = one_declaring_long_waits(
+        work.fetcher,
+        work.rule,
+        page,
+        work.known,
+        at,
+        work.reporter,
+        signals,
+    )
+    .await;
+    (at_index, outcome)
 }
 
 /// Dove cercare il manifesto e con che ritmo chiederlo.
@@ -312,7 +374,13 @@ impl SourceDownloadJob {
         }))
     }
 
-    /// Il ciclo sulle pagine.
+    /// Il ciclo sulle pagine, con più pagine in volo insieme.
+    ///
+    /// Quante lo dice il profilo della biblioteca (`bulk_workers`), e comunque
+    /// mai tante da occupare tutti i posti verso quell'host: una pagina alla
+    /// volta era il motivo principale per cui un libro richiedeva decine di
+    /// minuti. Il conteggio e il resoconto restano di **questo** ciclo: le
+    /// pagine chiedono, chi le raccoglie conta.
     async fn download(
         &self,
         ctx: &JobContext,
@@ -334,8 +402,8 @@ impl SourceDownloadJob {
 
         // Stato di partenza letto dal disco, non da un punto salvato.
         let known = sidecar::read(size_dir);
-        let start = inventory::read_size_folder(cap.folder(), size_dir);
-        let mut rule = rule.clone();
+        let start = inventory::read_size_folder(cap.folder(), size_dir, false);
+        let rule = SharedRule::new(rule.clone());
 
         ctx.report_phase(phase::DOWNLOADING).await;
         let host = host_of(&config.manifest_url).unwrap_or_default();
@@ -352,40 +420,64 @@ impl SourceDownloadJob {
             attempt: ctx.attempt,
             max_attempts: ctx.max_attempts,
         };
-        let reporter = Reporter {
-            ctx,
-            title,
-            profile,
-        };
-        let mut progress = Progress {
+        let reporter = Reporter { ctx, title };
+        let progress = std::sync::Mutex::new(Progress {
             present: start.pages,
             total: manifest.pages.len() as u32,
             bytes: start.bytes,
             unavailable: 0,
             faulty: false,
             recent: std::collections::VecDeque::new(),
+        });
+        let workers = profile.bulk_workers();
+        log::info!(
+            "job download pages id={} workers={workers} host_concurrency={}",
+            ctx.id,
+            profile.host_concurrency
+        );
+        let shared = PageWork {
+            pages: &manifest.pages,
+            fetcher: &fetcher,
+            rule: &rule,
+            known: &known,
+            reporter: &reporter,
+            progress: &progress,
+            profile,
+            ctx,
         };
 
-        for page in &manifest.pages {
-            if ctx.pause_requested() || ctx.cancel_requested() {
-                return Ok(stopped_outcome(ctx.cancel_requested(), staging));
-            }
+        let mut in_flight = futures_util::stream::iter(0..manifest.pages.len())
+            .map(|at_index| attempt_page(&shared, at_index, signals))
+            .buffer_unordered(workers);
 
-            let outcome = one_declaring_long_waits(
-                &fetcher, &mut rule, page, &known, &progress, &reporter, signals,
-            )
-            .await
-            .inspect_err(|_| discard(staging))?;
-
+        // Uscire dal ciclo non basta: l'area di transito si svuota **dopo** che
+        // le pagine ancora in volo sono state lasciate cadere, altrimenti una di
+        // loro starebbe scrivendo nella cartella che si sta cancellando.
+        let mut failure = None;
+        let mut stopped = false;
+        while let Some((at_index, outcome)) = in_flight.next().await {
+            let page = &manifest.pages[at_index];
+            let outcome = match outcome {
+                Ok(outcome) => outcome,
+                Err(error) => {
+                    failure = Some(error);
+                    break;
+                }
+            };
             if matches!(outcome, PageOutcome::Stopped) {
-                return Ok(stopped_outcome(ctx.cancel_requested(), staging));
+                stopped = true;
+                break;
             }
-            account_for(&outcome, &mut progress);
 
-            reporter
-                .advanced(
-                    &progress,
-                    &progress.detail(
+            // Il turno si tiene per contare e comporre la riga, non per
+            // riferirla: riferire è un'attesa, e le altre pagine non devono
+            // fermarsi lì.
+            let (at, detail) = {
+                let mut progress = read_progress(&progress);
+                account_for(&outcome, &mut progress);
+                (
+                    progress.snapshot(profile),
+                    progress.detail(
                         &config.size_tag,
                         &config.provider_key,
                         &host,
@@ -393,10 +485,23 @@ impl SourceDownloadJob {
                         &outcome,
                     ),
                 )
-                .await;
+            };
+            reporter.advanced(at, &detail).await;
+        }
+        drop(in_flight);
+
+        if let Some(error) = failure {
+            discard(staging);
+            return Err(error);
+        }
+        if stopped {
+            return Ok(stopped_outcome(ctx.cancel_requested(), staging));
         }
 
         discard(staging);
+        let progress = progress
+            .into_inner()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         finished(&ctx.id, &progress, profile, ctx.attempt)
     }
 
@@ -429,6 +534,7 @@ impl SourceDownloadJob {
             &self.courtesy,
             profile,
             &config.manifest_url,
+            Lane::Bulk,
             ctx.attempt,
             signals,
         )
@@ -463,12 +569,70 @@ impl SourceDownloadJob {
             return SizingRule::ExactWidth;
         };
         let url = sizing::info_url(&page.image_service);
-        let info = match fetch(client, &self.courtesy, profile, &url, 1, signals).await {
+        let info = match fetch(
+            client,
+            &self.courtesy,
+            profile,
+            &url,
+            Lane::Bulk,
+            1,
+            signals,
+        )
+        .await
+        {
             Ok(Some(fetched)) => serde_json::from_slice::<serde_json::Value>(&fetched.bytes).ok(),
             // Silenzio passeggero o descrittore illeggibile: regola generale
             // (fatto 6). Non si riprova: il guadagno è di velocità, non di esito.
             _ => None,
         };
         sizing::rule_from_info(info.as_ref(), cap)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn resumed_book(present: u32, total: u32) -> Progress {
+        Progress {
+            present,
+            total,
+            bytes: 0,
+            unavailable: 0,
+            faulty: false,
+            recent: std::collections::VecDeque::new(),
+        }
+    }
+
+    #[test]
+    fn a_page_already_on_disk_is_not_counted_a_second_time() {
+        // Il conteggio parte da quello che c'è nella cartella: ricontare le
+        // stesse pagine mentre il ciclo le attraversa portava un libro di 126
+        // pagine a dichiararne 214.
+        let mut progress = resumed_book(88, 126);
+
+        for _ in 0..88 {
+            account_for(&PageOutcome::Present, &mut progress);
+        }
+
+        assert_eq!(progress.present, 88);
+        assert!(progress.ratio() <= 1.0);
+    }
+
+    #[test]
+    fn a_page_arrived_now_is_added_to_the_ones_already_there() {
+        let mut progress = resumed_book(88, 126);
+
+        account_for(
+            &PageOutcome::Written {
+                bytes: 1_000,
+                token: "987,".into(),
+                pixels: None,
+            },
+            &mut progress,
+        );
+
+        assert_eq!(progress.present, 89);
+        assert_eq!(progress.bytes, 1_000);
     }
 }

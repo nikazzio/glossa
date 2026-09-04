@@ -10,6 +10,7 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use reqwest::Client;
+use std::collections::BTreeMap;
 
 use super::discovery::{DiscoveryResult, Gate, SearchPage};
 use super::resolvers;
@@ -104,13 +105,19 @@ async fn gallica(
         ])
         .send()
         .await
-        .map_err(|_| "Gallica could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery gallica request failed error={error}");
+            "Gallica could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "Gallica search failed.".to_string())?;
-    let body = response
-        .text()
-        .await
-        .map_err(|_| "Gallica returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery gallica response failed error={error}");
+            "Gallica search failed.".to_string()
+        })?;
+    let body = response.text().await.map_err(|error| {
+        log::warn!("discovery gallica body failed error={error}");
+        "Gallica returned invalid data.".to_string()
+    })?;
 
     let (results, total) = parse_gallica_sru(&body);
     log::info!(
@@ -150,6 +157,13 @@ struct GallicaRecord {
     /// `dc:relation`: spesso il collegamento alla scheda del catalogo
     /// cartaceo/archivistico, come testo libero («Notice du catalogue : url»).
     relation: Option<String>,
+    /// `dc:subject`: arriva in quasi tutte le schede e prima veniva buttato.
+    subjects: Vec<String>,
+    /// Tutto il resto della scheda, com'è arrivato — comprese le occorrenze
+    /// successive alla prima dei campi che qui tengono un valore solo, e il
+    /// blocco `srw:extraRecordData`, che Gallica riempie di dati suoi
+    /// (`typedoc`, `nqamoyen`, `link`, `thumbnail`, le risoluzioni pronte).
+    extra: BTreeMap<String, Vec<String>>,
 }
 
 /// Legge la risposta SRU: quello che serve, ignorando il resto.
@@ -252,13 +266,58 @@ fn store_gallica_field(record: &mut GallicaRecord, field: &str, value: String) {
         "type" => record.types.push(value),
         "publisher" if record.publisher.is_none() => record.publisher = Some(value),
         "rights" if !record.rights.contains(&value) => record.rights.push(value),
+        "subject" if !record.subjects.contains(&value) => record.subjects.push(value),
         "format" if !record.format.contains(&value) => record.format.push(value),
         "source" if record.holding_institution.is_none() => {
             record.holding_institution = Some(value);
         }
         "relation" if record.relation.is_none() => record.relation = Some(value),
+        // Nient'altro si butta: quello che non ha un posto suo — o che arriva
+        // di nuovo per un campo che ne tiene uno solo — si conserva com'è, sotto
+        // il nome che gli dà Gallica. Fuori restano le sole voci di struttura
+        // della busta SRU, che non dicono niente dell'opera.
+        _ if !SRU_ENVELOPE_FIELDS.contains(&field) => {
+            record
+                .extra
+                .entry(field.to_string())
+                .or_default()
+                .push(value);
+        }
         _ => {}
     }
+}
+
+/// Le voci che descrivono la busta della risposta, non l'opera: conservarle
+/// sporcherebbe il deposito senza aggiungere niente.
+const SRU_ENVELOPE_FIELDS: [&str; 6] = [
+    "version",
+    "recordPacking",
+    "recordSchema",
+    "recordPosition",
+    "recordIdentifier",
+    "nextRecordPosition",
+];
+
+/// Quante immagini ha l'opera, quando Gallica lo dichiara.
+///
+/// Lo dice dentro `dc:format`, in chiaro: «Nombre total de vues : 588»,
+/// verificato coincidere con il servizio di paginazione ufficiale. Le altre
+/// occorrenze dello stesso campo portano la descrizione fisica («Papier. -
+/// 206 f. - 320 × 265 mm»), dove il numero di fogli **non** è un numero di
+/// vedute: per questo si riconosce solo la forma esatta. Misurato su 135
+/// schede reali: 105 lo dichiarano, e i manoscritti non lo dichiarano mai.
+fn gallica_view_count(formats: &[String]) -> Option<usize> {
+    formats.iter().find_map(|entry| {
+        let after_label = entry.split_once("Nombre total de vues")?.1;
+        let digits: String = after_label
+            .trim_start()
+            .trim_start_matches(':')
+            .trim_start()
+            .chars()
+            .take_while(|character: &char| character.is_ascii_digit())
+            .collect();
+        digits.parse().ok()
+    })
 }
 
 /// Estrae il primo indirizzo `http(s)` da un testo libero (`dc:relation` è
@@ -283,10 +342,27 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
     // La parte numerica dell'ARK si legge dall'identificativo: darla per
     // scontata farebbe aprire l'opera giusta con la copertina di nessuno.
     let (naan, _) = resolvers::gallica_ark(&identifier)?;
-    let thumbnail = format!(
-        "https://gallica.bnf.fr/ark:/{naan}/{}.thumbnail",
-        resolved.doc_id
-    );
+    // Miniatura e pagina di lettura: prima quelle che Gallica **dichiara** nel
+    // suo blocco, poi quelle costruite dall'ARK. Indovinarle funziona per una
+    // monografia ma sbaglia sui periodici, dove il collegamento vero finisce in
+    // `/date`.
+    let declared = |field: &str| {
+        record
+            .extra
+            .get(field)
+            .and_then(|values| values.first())
+            .filter(|value| value.starts_with("http"))
+            .cloned()
+    };
+    let thumbnail = declared("thumbnail").unwrap_or_else(|| {
+        format!(
+            "https://gallica.bnf.fr/ark:/{naan}/{}.thumbnail",
+            resolved.doc_id
+        )
+    });
+    let page_url = declared("link")
+        .unwrap_or_else(|| format!("https://gallica.bnf.fr/ark:/{naan}/{}", resolved.doc_id));
+    let item_count = gallica_view_count(&record.format);
     let mut creators = record.creators.into_iter();
     let creator = creators.next();
     let contributors = creators.chain(record.contributors).collect();
@@ -300,10 +376,8 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         collection: None,
         language: record.language,
         volume: None,
-        subjects: Vec::new(),
-        // Il servizio di ricerca non dice quante pagine ha l'opera: lo dirà il
-        // manifesto, quando la si apre.
-        item_count: None,
+        subjects: record.subjects,
+        item_count,
         manifest_url: resolved.manifest_url,
         contributors,
         publisher: record.publisher,
@@ -311,6 +385,8 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         physical_description: (!record.format.is_empty()).then(|| record.format.join("; ")),
         holding_institution: record.holding_institution,
         catalog_url: record.relation.as_deref().and_then(extract_url),
+        page_url: Some(page_url),
+        raw: record.extra,
         id: resolved.doc_id,
     })
 }
@@ -328,7 +404,9 @@ async fn vatican(
     // vero. Un guasto qui non è motivo per rinunciare subito: la richiesta
     // sotto proverà comunque, e dirà lei se la biblioteca non risponde.
     let _home_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_home).await;
-    let _ = client.get(&endpoints.vatican_home).send().await;
+    if let Err(error) = client.get(&endpoints.vatican_home).send().await {
+        log::warn!("discovery vatican home visit failed error={error}");
+    }
 
     let _search_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_search).await;
     let body = client
@@ -337,12 +415,21 @@ async fn vatican(
         .header("Referer", &endpoints.vatican_home)
         .send()
         .await
-        .map_err(|_| "The Vatican Library could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery vatican request failed error={error}");
+            "The Vatican Library could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "The Vatican Library search failed.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery vatican response failed error={error}");
+            "The Vatican Library search failed.".to_string()
+        })?
         .text()
         .await
-        .map_err(|_| "The Vatican Library returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery vatican body failed error={error}");
+            "The Vatican Library returned invalid data.".to_string()
+        })?;
 
     let results = parse_vatican_results(&body, &endpoints.vatican_manifest_base);
     log::info!("discovery vatican search found={}", results.len());
@@ -391,6 +478,10 @@ fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult
             physical_description: None,
             holding_institution: None,
             catalog_url: None,
+            page_url: Some(format!("https://digi.vatlib.it/view/{doc_id}")),
+            // Questa ricerca si legge raschiando la pagina web: non c'è una
+            // risposta strutturata da cui conservare il resto.
+            raw: BTreeMap::new(),
             id: doc_id,
         });
     }
@@ -416,12 +507,21 @@ async fn ecodices(
         ])
         .send()
         .await
-        .map_err(|_| "e-codices could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery ecodices request failed error={error}");
+            "e-codices could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "The e-codices search failed.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery ecodices response failed error={error}");
+            "The e-codices search failed.".to_string()
+        })?
         .text()
         .await
-        .map_err(|_| "e-codices returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery ecodices body failed error={error}");
+            "e-codices returned invalid data.".to_string()
+        })?;
 
     let results = parse_ecodices_results(&body);
     log::info!("discovery ecodices search found={}", results.len());
@@ -471,6 +571,10 @@ fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
             physical_description: None,
             holding_institution: None,
             catalog_url: None,
+            page_url: Some(viewer_url),
+            // Come la Vaticana: pagina web raschiata, niente risposta
+            // strutturata da conservare.
+            raw: BTreeMap::new(),
             id: resolved.doc_id,
         });
     }
@@ -589,6 +693,10 @@ mod tests {
             results[0].thumbnail_url.as_deref(),
             Some("https://gallica.bnf.fr/ark:/54321/btv1b84260335.thumbnail")
         );
+        assert_eq!(
+            results[0].page_url.as_deref(),
+            Some("https://gallica.bnf.fr/ark:/54321/btv1b84260335")
+        );
     }
 
     #[test]
@@ -655,6 +763,88 @@ mod tests {
     }
 
     #[test]
+    fn gallica_declares_the_page_count_inside_its_format_field() {
+        let body = r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:record><srw:recordData><oai_dc:dc xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Le guidon des capitaines</dc:title>
+    <dc:subject>Escrime</dc:subject>
+    <dc:subject>Duels</dc:subject>
+    <dc:format>23-[1 bl.]-95-[1 bl.] p. ; in-12</dc:format>
+    <dc:format>Nombre total de vues : 128</dc:format>
+    <dc:identifier>https://gallica.bnf.fr/ark:/12148/bpt6k3282120</dc:identifier>
+  </oai_dc:dc></srw:recordData></srw:record>
+</srw:searchRetrieveResponse>"#;
+
+        let (results, _) = parse_gallica_sru(body);
+
+        assert_eq!(results[0].item_count, Some(128));
+        assert_eq!(
+            results[0].subjects,
+            vec!["Escrime".to_string(), "Duels".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_manuscript_without_a_view_count_keeps_its_leaf_count_out_of_it() {
+        // I manoscritti non dichiarano mai il numero di vedute: `dc:format`
+        // porta la descrizione fisica, dove «206 f.» sono fogli, non pagine
+        // digitalizzate. Leggerlo come conteggio direbbe una misura falsa.
+        let body = r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:record><srw:recordData><oai_dc:dc xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>Heures a l'usage de Rome</dc:title>
+    <dc:format>Papier. - 206 f. - 320 × 265 mm</dc:format>
+    <dc:identifier>https://gallica.bnf.fr/ark:/12148/btv1b52508664n</dc:identifier>
+  </oai_dc:dc></srw:recordData></srw:record>
+</srw:searchRetrieveResponse>"#;
+
+        let (results, _) = parse_gallica_sru(body);
+
+        assert_eq!(results[0].item_count, None);
+    }
+
+    #[test]
+    fn gallica_keeps_what_it_declares_and_prefers_it_to_a_guessed_address() {
+        // `srw:extraRecordData` è il blocco che Gallica riempie di dati suoi.
+        // Prima veniva ignorato in blocco: la miniatura e il collegamento
+        // venivano indovinati dall'ARK, e per i periodici il collegamento vero
+        // finisce in `/date`, che indovinandolo si perde.
+        let body = r#"<srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">
+  <srw:record>
+    <srw:recordData><oai_dc:dc xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:title>Le Montaigne</dc:title>
+      <dc:identifier>https://gallica.bnf.fr/ark:/12148/cb328197904</dc:identifier>
+    </oai_dc:dc></srw:recordData>
+    <srw:extraRecordData>
+      <link>https://gallica.bnf.fr/ark:/12148/cb328197904/date</link>
+      <thumbnail>https://gallica.bnf.fr/ark:/12148/bpt6k5790615p.thumbnail</thumbnail>
+      <typedoc>periodiques</typedoc>
+      <nqamoyen>99.98</nqamoyen>
+    </srw:extraRecordData>
+  </srw:record>
+</srw:searchRetrieveResponse>"#;
+
+        let (results, _) = parse_gallica_sru(body);
+
+        let result = &results[0];
+        assert_eq!(
+            result.page_url.as_deref(),
+            Some("https://gallica.bnf.fr/ark:/12148/cb328197904/date")
+        );
+        assert_eq!(
+            result.thumbnail_url.as_deref(),
+            Some("https://gallica.bnf.fr/ark:/12148/bpt6k5790615p.thumbnail")
+        );
+        assert_eq!(
+            result.raw.get("typedoc").map(Vec::as_slice),
+            Some(["periodiques".to_string()].as_slice())
+        );
+        assert_eq!(
+            result.raw.get("nqamoyen").map(Vec::as_slice),
+            Some(["99.98".to_string()].as_slice())
+        );
+    }
+
+    #[test]
     fn a_broken_gallica_answer_is_an_empty_search_not_a_crash() {
         let (results, total) = parse_gallica_sru("<srw:records><srw:record>");
         assert!(results.is_empty());
@@ -682,6 +872,10 @@ mod tests {
         assert_eq!(
             results[0].thumbnail_url.as_deref(),
             Some("https://digi.vatlib.it/pub/digit/MSS_Vat.lat.3225/cover/cover.jpg")
+        );
+        assert_eq!(
+            results[0].page_url.as_deref(),
+            Some("https://digi.vatlib.it/view/MSS_Vat.lat.3225")
         );
     }
 
@@ -717,6 +911,10 @@ mod tests {
         assert_eq!(
             results[0].thumbnail_url.as_deref(),
             Some("https://www.e-codices.unifr.ch/loris/bbb/bbb-0264/bbb-0264_001.jp2/full/180,/0/default.jpg")
+        );
+        assert_eq!(
+            results[0].page_url.as_deref(),
+            Some("https://www.e-codices.unifr.ch/en/bbb/0264")
         );
     }
 

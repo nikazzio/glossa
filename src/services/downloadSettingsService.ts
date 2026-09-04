@@ -27,13 +27,12 @@ export const DEFAULT_THUMBNAIL_EDGE = 300;
 export const MAX_HOST_CONCURRENCY = 4;
 
 export interface NetworkValues {
-  pauseMinMs: number;
-  pauseMaxMs: number;
   burstRequests: number;
   burstWindowSecs: number;
   cooldown403Secs: number;
   cooldown429Secs: number;
   hostConcurrency: number;
+  workersPerJob: number;
   maxAttempts: number;
   backoffBaseSecs: number;
   backoffCapSecs: number;
@@ -147,3 +146,4 @@ export async function getVersionSizeCap(versionId: string): Promise<string | nul
 export async function setVersionSizeCap(versionId: string, sizeCap: string | null): Promise<string | null> {
   return invoke<string | null>('set_version_size_cap', { versionId, sizeCap });
 }
+

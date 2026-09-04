@@ -11,6 +11,16 @@ export async function initLogger(): Promise<void> {
   }
 }
 
+/** Messaggio leggibile da un errore intercettato in un `catch`, per log e
+ * stato interno — mai per il testo a schermo, che resta un messaggio tradotto
+ * fisso (vedi `dashboard.discovery.searchFailed` e affini). Stesso schema già
+ * usato (a mano, in decine di punti) in tutta l'app: `Error.message` quando
+ * c'è, altrimenti `String(error)` — i comandi Tauri respingono con una
+ * stringa nuda, non un `Error`, e `String` la restituisce inalterata. */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export const logger = {
   debug: (msg: string, ctx?: Record<string, unknown>) => {
     const formatted = ctx ? `${msg} ${JSON.stringify(ctx)}` : msg;

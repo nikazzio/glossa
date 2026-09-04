@@ -1,10 +1,16 @@
 //! Profilo di rete dei provider.
 //!
-//! Ogni biblioteca dichiara **come si sta al suo tavolo**: quanto aspettare fra
-//! una richiesta e l'altra, quante richieste in un minuto, quanto raffreddarsi
-//! dopo un rifiuto, quanti tentativi. I valori non sono stimati: vengono dalle
-//! prove sul campo fatte in Scriptoria, dove un 403 su Gallica significa "stai
-//! correndo troppo" e non "vietato".
+//! Ogni biblioteca dichiara **come si sta al suo tavolo**: quante richieste in
+//! un minuto, quante insieme, quante pagine per volta, quanto raffreddarsi dopo
+//! un rifiuto, quanti tentativi. I valori vengono dalle prove sul campo fatte in
+//! Scriptoria, dove un 403 su Gallica significa "stai correndo troppo" e non
+//! "vietato".
+//!
+//! **Non esiste una pausa fra due richieste riuscite.** È la scelta di
+//! Scriptoria, verificata nel suo client HTTP: i freni sono il numero di
+//! richieste insieme, il limite a raffica e il raffreddamento dopo un rifiuto.
+//! Una pausa per richiesta si moltiplicava per ogni tassello del visore e
+//! rendeva illeggibile una pagina che il servizio avrebbe servito in un secondo.
 //!
 //! Il profilo lo dichiara il provider, **i contatori si tengono per host**: un
 //! provider può servire ricerca e immagini da macchine diverse, e quella che si
@@ -13,24 +19,24 @@
 
 use std::time::Duration;
 
-/// Quanto si aspetta fra due richieste allo stesso host, e quante se ne possono
-/// fare in una finestra.
+/// Quante richieste si possono fare a un host, insieme e in una finestra.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkProfile {
-    /// Pausa fra richieste: durata casuale nell'intervallo, per non presentarsi
-    /// con un ritmo meccanico.
-    pub pause_min_ms: u64,
-    pub pause_max_ms: u64,
     /// Limite a raffica, a finestra scorrevole: `burst_requests` richieste ogni
-    /// `burst_window_secs`, **indipendente** dalla concorrenza.
+    /// `burst_window_secs`, **indipendente** dalla concorrenza. Vale per tutto
+    /// il traffico verso quell'host, visore compreso.
     pub burst_requests: u32,
     pub burst_window_secs: u64,
     /// Raffreddamento dopo un rifiuto per eccesso di richieste.
     pub cooldown_403_secs: u64,
     pub cooldown_429_secs: u64,
-    /// Quante richieste insieme verso lo stesso host.
+    /// Quante richieste insieme verso lo stesso host, **sommando** visore e
+    /// scaricamenti. Un posto di questo tetto resta sempre a chi guarda.
     pub host_concurrency: usize,
+    /// Quante pagine di uno stesso libro si scaricano insieme. Resta comunque
+    /// sotto `host_concurrency`, che è il tetto vero.
+    pub workers_per_job: usize,
     /// Tentativi del lavoro, e attesa esponenziale fra l'uno e l'altro.
     pub max_attempts: u32,
     pub backoff_base_secs: u64,
@@ -43,33 +49,41 @@ pub struct NetworkProfile {
 }
 
 /// Profilo prudente: vale per ogni fonte che non abbia una voce nel registro.
+///
+/// La raffica è più larga di quella di Scriptoria (100/min) perché lì il visore
+/// non passa dal limitatore: qui lo stesso contatore copre tasselli, miniature e
+/// pagine scaricate, e con 100/min una sola schermata a zoom pieno consumerebbe
+/// il minuto intero.
 pub const CAUTIOUS: NetworkProfile = NetworkProfile {
-    pause_min_ms: 600,
-    pause_max_ms: 1_600,
-    burst_requests: 100,
+    burst_requests: 240,
     burst_window_secs: 60,
     cooldown_403_secs: 120,
     cooldown_429_secs: 120,
     host_concurrency: 4,
+    workers_per_job: 2,
     max_attempts: 5,
     backoff_base_secs: 15,
     backoff_cap_secs: 300,
     connect_timeout_secs: 15,
-    read_timeout_secs: 30,
+    // Lungo di proposito. Internet Archive ricava manifesto e immagini **su
+    // richiesta**: la prima volta che si apre un libro il server accetta la
+    // connessione e poi tace anche per un minuto. Con trenta secondi si
+    // rinunciava e si ricominciava da capo tre volte, cioè si aspettava di più.
+    // Un server irraggiungibile continua a fallire subito: quello lo dice
+    // `connect_timeout_secs`.
+    read_timeout_secs: 120,
     needs_viewer_warmup: false,
 };
 
-/// Gallica è la più severa delle biblioteche provate: con questi valori un
-/// manoscritto di 210 pagine richiede almeno un quarto d'ora, ed è il motivo per
-/// cui pausa, ripresa e tempo stimato non sono ornamenti.
+/// Gallica è la più severa delle biblioteche provate: due richieste insieme, una
+/// pagina alla volta, e dopo un 403 dieci minuti di silenzio. Il raffreddamento
+/// lungo, non una pausa fra richieste, è quello che evita di farsi bandire.
 pub const GALLICA: NetworkProfile = NetworkProfile {
-    pause_min_ms: 2_500,
-    pause_max_ms: 6_000,
-    burst_requests: 20,
-    burst_window_secs: 60,
+    burst_requests: 120,
     cooldown_403_secs: 600,
     cooldown_429_secs: 300,
     host_concurrency: 2,
+    workers_per_job: 1,
     max_attempts: 3,
     backoff_base_secs: 20,
     ..CAUTIOUS
@@ -110,11 +124,14 @@ impl NetworkProfile {
         Duration::from_secs(self.read_timeout_secs)
     }
 
-    /// Tempo medio di una richiesta, usato per la stima del tempo che manca
-    /// si calcola dalla pausa dichiarata, non dalla velocità osservata
-    /// negli ultimi secondi, che con pause di 2,5–6 secondi oscilla troppo.
-    pub fn average_pause(&self) -> Duration {
-        Duration::from_millis((self.pause_min_ms + self.pause_max_ms) / 2)
+    /// Quante pagine si chiedono davvero insieme.
+    ///
+    /// Un posto del tetto per host resta sempre libero per il visore: senza,
+    /// uno scaricamento in corso riempirebbe la corsia e cambiare pagina
+    /// significherebbe aspettare la fine del libro.
+    pub fn bulk_workers(&self) -> usize {
+        let reserved_for_the_viewer = self.host_concurrency.max(2) - 1;
+        self.workers_per_job.clamp(1, reserved_for_the_viewer)
     }
 }
 
@@ -168,16 +185,39 @@ mod tests {
     }
 
     #[test]
-    fn gallica_waits_longer_than_the_cautious_default() {
+    fn gallica_is_more_careful_than_the_cautious_default() {
+        // Confronto fatto su copie: i profili sono costanti, e paragonare due
+        // costanti è una domanda a cui il compilatore risponde da solo.
         let gallica = GALLICA;
         let cautious = CAUTIOUS;
-        assert!(gallica.pause_min_ms > cautious.pause_min_ms);
         assert!(gallica.burst_requests < cautious.burst_requests);
+        assert!(gallica.host_concurrency < cautious.host_concurrency);
+        assert!(gallica.workers_per_job < cautious.workers_per_job);
         assert!(gallica.cooldown_403_secs > cautious.cooldown_403_secs);
     }
 
     #[test]
-    fn the_estimate_uses_the_declared_pause() {
-        assert_eq!(GALLICA.average_pause(), Duration::from_millis(4_250));
+    fn a_download_never_takes_the_last_seat_of_a_host() {
+        // Il visore deve poter cambiare pagina mentre il libro si scarica: se lo
+        // scaricamento potesse occupare tutti i posti, non ci riuscirebbe.
+        for profile in [CAUTIOUS, GALLICA] {
+            assert!(
+                profile.bulk_workers() < profile.host_concurrency,
+                "un posto resta al visore"
+            );
+        }
+    }
+
+    #[test]
+    fn a_single_seat_host_still_downloads_one_page_at_a_time() {
+        // Con un solo posto dichiarato non si può riservare niente: meglio una
+        // pagina alla volta che nessuna.
+        let single = NetworkProfile {
+            host_concurrency: 1,
+            workers_per_job: 4,
+            ..CAUTIOUS
+        };
+
+        assert_eq!(single.bulk_workers(), 1);
     }
 }

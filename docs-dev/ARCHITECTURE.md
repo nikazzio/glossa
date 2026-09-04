@@ -67,6 +67,24 @@ in `sources` e nei metadati della copia, e la lettura del catalogo applica la
 correzione restituendo anche l'originale. Correggere con lo stesso valore
 dell'originale non lascia una riga di correzione.
 
+Il vincolo su `source_field_overrides.field` accetta tutti i **20 campi
+anagrafici** (`SOURCE_FIELDS` in `src/types.ts`), non solo i 5 storici: motore
+e database sono generici su ognuno, `getLibrarySourceDetail` li applica tutti
+in un solo passaggio (`effectiveFieldValues`/`baseFieldValue` in
+`libraryService.ts`). Quali campi abbiano davvero un comando di modifica a
+schermo è una scelta separata, oggi limitata a titolo/autore/data/lingua — gli
+altri sono in tab Info come sola lettura. I campi che arrivano come più valori
+insieme (contributori, diritti, soggetti, provenienza, genere/forma, copertura,
+opere collegate) si salvano come testo unico separato da ` · `, la stessa forma
+già usata in visualizzazione.
+
+`sources.kind` è solo la **natura fisica dell'originale** (manoscritto/stampa/
+altro): il formato del file (IIIF/PDF/pagina web) vive per copia su
+`source_versions.version_kind`, non è un fatto anagrafico dell'opera. Il campo
+resta semi-libero (ogni biblioteca lo dichiara a modo suo, nessun enum chiuso a
+livello di dato) e oggi non ha un comando di modifica a schermo: è un fatto
+della biblioteca, non un dato che Niki corregge.
+
 Un'opera della Biblioteca vive in due stati: `active` o `archived`. Archiviare
 non tocca il deposito; rimuovere cancella subito la riga e le sue cascate.
 Non esiste uno stato di cestino per le fonti: l'archivio copre il ripensamento,
@@ -163,6 +181,27 @@ tutta la cronologia log del frammento rimosso. Con `SET NULL` il log resta
 disponibile per analisi a livello progetto/modello, perde solo il riferimento
 al frammento specifico che non esiste più.
 
+## Log tecnico (debug, non i log operazioni)
+
+Distinto da "Log operazioni e costi" sopra: quello è specifico per le chiamate
+ai modelli linguistici (costi/token, visibile nel pannello Operazioni), questo
+è il log tecnico generico per diagnosticare guasti — non ha ancora una vista
+in-app (finisce nel log di sistema/OS via `tauri-plugin-log`; unificarlo in
+una console generale consultabile è #413, non ancora fatto).
+
+- **Frontend**: `logger` in `src/utils/logger.ts` (`debug/info/warn/error`).
+  `errorMessage(error)` legge il messaggio da un errore intercettato in un
+  `catch` — stesso schema già in uso a mano in gran parte dell'app
+  (`error instanceof Error ? error.message : String(error)`), incluso il caso
+  dei comandi Tauri, che rifiutano con una stringa nuda, non un `Error`.
+- **Backend**: crate `log` (`log::info!/warn!/error!`), stessa convenzione.
+- **Convenzione**: il motivo tecnico vero va sempre in log, mai a schermo; il
+  messaggio a schermo resta un testo tradotto fisso e generico, uguale per
+  ogni causa tecnica (es. la ricerca in Biblioteca: qualunque libreria fallisca
+  e qualunque sia lo stadio — richiesta, risposta, lettura — l'utente vede
+  sempre lo stesso `dashboard.discovery.searchFailed`, il log riceve libreria,
+  stadio e l'errore vero).
+
 ## Backend Rust
 
 | Modulo | Responsabilità |
@@ -202,6 +241,35 @@ backend immediatamente prima di agire e vengono rifiutate se uno di questi lavor
 è ancora attivo. Controllo e cancellazione mantengono lo stesso coordinamento
 delle scritture usato dalla messa in coda, evitando nuove partenze nel mezzo
 dell'operazione.
+
+## Ricerca nelle biblioteche
+
+Ogni risultato conserva **tutto** quello che la biblioteca ha risposto. I dati
+con un significato stabile hanno un campo proprio in `DiscoveryResult`; il resto
+va in `raw: BTreeMap<String, Vec<String>>`, con la chiave così come la nomina la
+biblioteca e i valori sempre in elenco perché molti campi si ripetono. È un
+deposito, non una struttura su cui costruire logica: quando un dato serve
+davvero gli si dà un campo suo. `raw` viaggia fino a `source_versions.metadata`
+quando l'opera entra in Biblioteca; risincronizzare dal manifesto **non** lo
+sovrascrive, perché il manifesto non è una risposta di catalogo.
+
+**Gallica** dichiara il numero di immagini dentro `dc:format`, in chiaro
+(«Nombre total de vues : 588»), verificato coincidere con il servizio di
+paginazione ufficiale. Misurato su 135 schede reali: 105 lo dichiarano, e i
+manoscritti non lo dichiarano mai — per loro `dc:format` porta la descrizione
+fisica, dove un numero di fogli non è un numero di vedute. Dello stesso blocco
+si leggono ora anche i soggetti e `srw:extraRecordData`, da cui vengono
+miniatura e collegamento **dichiarati** invece di quelli indovinati dall'ARK: per
+i periodici il collegamento vero finisce in `/date`.
+
+**Internet Archive** accetta `fl[]=*` e restituisce ogni campo indicizzato.
+Misurato a regime su venti risultati: i venti campi di prima costavano 0,68 s e
+12,6 KB, tutti costano 0,86 s e 43 KB. Si preferisce +0,24 s una volta per
+ricerca a una richiesta per opera il giorno in cui serve un dato che non avevamo
+chiesto.
+
+Vaticana ed e-codices si leggono raschiando la pagina web: non c'è una risposta
+strutturata da conservare, e `raw` resta vuoto.
 
 ## Scaricamento IIIF
 
@@ -243,6 +311,12 @@ rappresentazione fisica resta solo su disco e nel file laterale, com'è per
 tutto il resto del deposito. Riscaricare o ottimizzare una pagina non tocca
 questa riga.
 
+`getLibrarySourceDetail` espone ora anche `description` (colonna `sources`,
+scritta all'aggiunta ma prima mai riletta), `pageUrl` e `providerKey` (nel
+blob `metadata` di `source_versions`, stesso trattamento già in uso per
+`catalogUrl`/`holdingInstitution`/ecc.): nessuna nuova colonna, solo campi
+già scritti e non ancora selezionati/tipizzati sul lato di lettura.
+
 Layout:
 
 ```text
@@ -253,12 +327,30 @@ Layout:
     pages/<misura>/0001.jpg
     pages/<misura>/pages.jsonl
     thumbnails/0001.jpg
-  derived/<asset-id>/
+  derived/<biblioteca>/<versione>/<misura>/
+    0001.jpg
+    pages.jsonl
   staging/<lavoro>/
 ```
 
 Il deposito usa percorsi relativi e componenti convalidati. File parziali non
 entrano nelle cartelle definitive.
+
+`derived/` (2 settembre 2026) contiene le copie ricavate in locale
+dall'ottimizzazione: stessa forma di `providers/.../pages/`, ma **mai** dentro
+`providers/`, apposta — "libera spazio" cancella solo `pages/`, e una copia
+compressa deve poter sopravvivere alla cancellazione dell'originale da cui è
+nata (o viceversa). Il lavoro di ottimizzazione (`optimize::ImageOptimizationJob`)
+legge una cartella di misura già scaricata e ne scrive una **nuova** sotto
+`derived/`, mai in-place: la fonte non cambia mai. La "misura principale"
+(`VersionInventory::principal`, usata per dire se un libro è completo) sceglie
+sempre una cartella scaricata davvero quando ce n'è una, anche a parità di
+pagine con una copia derivata — altrimenti un pareggio alfabetico
+mostrerebbe come "scaricata" una copia che non lo è mai stata. Solo se
+l'originale è stato liberato e resta solo la copia, quella diventa principale.
+`vault::commands::free_version_size` libera **una sola** cartella di misura
+(scaricata o derivata); `delete_version_files` (rimozione dell'opera) e lo
+spazzino delle cartelle orfane coprono ora anche `derived/`.
 
 ### Riconoscimento e ricerca per biblioteca
 
@@ -278,12 +370,12 @@ niente librerie di regex né di parsing HTML.
 
 ## Risultati delle prove di rete
 
-Questi valori derivano da prove reali svolte nell'agosto 2026:
+Questi valori derivano da prove reali svolte nell'agosto 2026 e dal confronto
+con Scriptoria di settembre 2026:
 
 - un 403 sui servizi misurati indica spesso eccesso di richieste; viene
   ritentato con raffreddamento condiviso per host;
 - attesa esponenziale: base 20 secondi, massimo 300 secondi;
-- la pausa casuale viene estratta una volta per richiesta;
 - `info.json` ha impiegato circa 4,3 secondi nei casi misurati e può fallire su
   una singola pagina;
 - una misura generata sul momento ha richiesto 26,6 secondi contro 2,3 secondi
@@ -293,8 +385,36 @@ Questi valori derivano da prove reali svolte nell'agosto 2026:
 - il preriscaldamento tramite pagina del lettore dichiarato per la Biblioteca
   Vaticana non è ancora stato verificato.
 
-Il valore `host_concurrency` esiste, ma il valore predefinito resta 1 finché le
-biblioteche non vengono misurate singolarmente.
+### Cortesia: due classi, un solo tetto
+
+**Non esiste pausa fra due richieste riuscite.** È la scelta verificata nel
+client HTTP di Scriptoria: i freni sono la concorrenza per host, la finestra a
+raffica e il raffreddamento dopo un rifiuto. Una pausa per richiesta si
+moltiplicava per ogni tassello del visore e rendeva illeggibile una pagina che
+il servizio serviva in un secondo.
+
+Tre classi, un solo tetto. `Lane::Page` è la pagina che si sta guardando,
+`Lane::Thumbnail` sono le miniature del rail e le copertine, `Lane::Bulk` è uno
+scaricamento. Tutte passano dallo **stesso** semaforo per host
+(`host_concurrency`); chi non è la pagina prende prima un permesso di
+`behind_the_page = host_concurrency - 1`, e gli scaricamenti anche uno di
+`bulk_workers = workers_per_job.clamp(1, host_concurrency.max(2) - 1)`.
+
+Ne segue l'invariante: **la pagina aperta ha sempre un posto**. Due miniature
+che occupavano gli unici due posti di una biblioteca severa lasciavano la pagina
+ad aspettare finché non scadeva. I permessi si prendono sempre nello stesso
+ordine — `bulk_seats`, `behind_the_page`, `seats` — così due richieste non
+possono tenersi a vicenda quello che serve all'altra.
+
+La finestra a raffica e il raffreddamento valgono per tutte e tre.
+
+Tentativi e scadenze per classe: pagina un tentativo a 90 secondi, miniatura un
+tentativo a 20 secondi, scaricamento tre tentativi con la scadenza del profilo.
+Una miniatura che tiene un posto per un minuto e mezzo rallenta tutto il resto e
+in cambio riempie un riquadro.
+
+I profili predefiniti si riscrivono dal registro quando cambia
+`BUILTIN_PROFILES_VERSION`; i profili creati dall'utente non vengono toccati.
 
 ## Cache remota
 
@@ -306,6 +426,180 @@ La chiave deriva dalla richiesta canonica. Ogni valore ha un file di metadati;
 una voce incompleta non viene servita. I risultati di ricerca scadono, le
 immagini sono regolate dal limite complessivo. L'accesso aggiorna la data del
 file, usata per eliminare prima le voci meno recenti.
+
+### Prima quello che è sul computer
+
+Ogni immagine di una pagina — pagina grande, miniatura del rail, copertina
+dell'elenco — si chiede con **una sola forma**: `CacheRequest::Page` con numero
+di pagina, misura e l'indirizzo remoto come ripiego. `size` è il lato lungo in
+pixel oppure `thumb`. L'ordine è fisso:
+
+1. il file nel deposito a quella misura (`thumb` guarda la cartella
+   `thumbnails/`, che «libera spazio» non cancella);
+2. la cache;
+3. una copia più grande nel deposito, rimpicciolita sul momento e messa in
+   cache — è anche il modo in cui nasce la miniatura di un libro scaricato
+   prima che le miniature esistessero;
+4. `remote_url`, con la cortesia del profilo della biblioteca.
+
+L'indirizzo remoto **non** entra nella chiave di cache: dice dove andarla a
+prendere, non quale immagine è. Un deposito irraggiungibile vale come «qui non
+c'è niente», non come errore: la pagina si chiede alla biblioteca invece di
+lasciare il visore vuoto.
+
+**Una richiesta per volta per la stessa risorsa**, su entrambi i lati. Due
+richieste identiche che si sovrappongono mancano entrambe la cache — la prima
+non ha ancora finito di scriverla — e vanno entrambe a disturbare la
+biblioteca. Succede di continuo: il rail rimonta una riga, si torna su una
+pagina già vista, e in sviluppo React fa partire ogni effetto due volte. Chi
+arriva secondo aspetta: nel motore su un turno per chiave (`one_at_a_time`),
+nella finestra su una mappa delle promesse ancora aperte.
+
+### Il visore
+
+Il manifesto lo legge il motore in un passaggio solo (`iiif_viewer_manifest`):
+portarlo alla finestra per rimandarlo indietro da leggere lo trasformava due
+volte in un elenco di numeri, e su un libro di ottocento pagine era buona parte
+dell'attesa all'apertura.
+
+**Libro sul computer** → pagine lette dal deposito, senza rete. È il
+comportamento di Scriptoria, che per un libro locale toglie del tutto il
+riferimento al servizio della biblioteca. Per un libro scaricato a metà la
+pagina mancante si chiede alla biblioteca **alla misura della cartella**, non a
+una misura fissa: altrimenti finirebbe in cache sotto un nome che promette una
+risoluzione che non ha.
+
+**Ogni pagina si apre con una sola richiesta**, l'immagine intera, locale o
+remota. Lo zoom a tasselli chiede una quindicina di immagini per schermata, e
+ognuna attraversa il motore e occupa un posto in corsia: dove le immagini
+vengono ricavate al momento — Internet Archive, Gallica — quella schermata non
+arrivava mai.
+
+La prima immagine **non aspetta `info.json`**. Se il servizio immagini include
+già `sizes` nel manifesto, il parser le porta fino al visore e si usa la più
+piccola misura pronta il cui lato lungo basta; se nessuna basta, la maggiore.
+Quando `sizes` non è nel manifesto, si usa subito il dimezzamento calcolato
+dalle dimensioni del canvas; senza dimensioni resta il tetto fisso. La stessa
+scelta costruisce le miniature prive di un indirizzo esplicito. `info.json`
+viene chiesto solo passando allo zoom a tasselli: aggiungerlo prima della pagina
+pagherebbe fino a 4,3 secondi per scoprire una misura che spesso il
+dimezzamento individua già.
+
+**I tasselli si chiedono solo quando servono davvero**, cioè quando lo zoom
+supera i pixel dell'immagine intera (`TILE_UPGRADE_FACTOR`, 1,2). Allora il
+visore riapre la stessa pagina con la sorgente a tasselli, rimettendo dov'era la
+posizione. Se i tasselli non arrivano, l'immagine intera resta a schermo.
+
+**Il tetto dello zoom è nostro, non di OpenSeadragon.** Il valore predefinito
+della libreria, `maxZoomPixelRatio: 1.1`, è **più basso** di
+`TILE_UPGRADE_FACTOR`: la soglia dei tasselli era quindi irraggiungibile, e la
+nitidezza vera non arrivava mai. Sui libri letti dal disco lo stesso tetto
+lasciava uno zoom quasi inesistente, perché lì l'immagine è quella che è stata
+scaricata e non c'è nessuna piramide dietro. Ora `MAX_MAGNIFICATION` vale 6:
+ingrandire oltre i pixel sgrana, ma su una scansione serve, e chi legge in rete
+supera intanto la soglia e riceve il dettaglio vero. Un libro locale a bassa
+risoluzione resta sgranato: passare ai tasselli remoti per una pagina locale
+poco definita è la scelta per pagina del Blocco 2, non una regolazione.
+
+Un tassello perso non dichiara guasta una pagina che si vede già.
+
+Per la miniatura di una pagina non posseduta si usa **quella dichiarata dal
+manifesto**: è già pronta sul server della biblioteca, mentre ordinare una
+misura piccola al servizio immagini la fa ricavare al momento e su Internet
+Archive costa quanto la pagina intera.
+
+La virtualizzazione smonta le righe fuori schermo, ma il rail conserva gli
+indirizzi delle miniature già ottenute per tutta la sua apertura. Una richiesta
+già partita continua anche se la riga esce dallo schermo; tornando indietro la
+miniatura ricompare senza nuovo passaggio dal motore. Chiudere il rail o cambiare
+libro annulla le richieste residue e rilascia gli indirizzi.
+
+Le pagine grandi non restano duplicate nella memoria della finestra: tornando
+su una pagina, `CacheRequest::Page` usa la stessa chiave stabile e `resolve`
+legge i byte dalla cache **prima** di considerare la rete. L'indirizzo remoto
+non partecipa alla chiave. Questo evita un secondo download senza trattenere in
+RAM tutte le pagine visitate.
+
+### Biblioteche che ricavano l'immagine su richiesta
+
+`buildsImagesOnDemand` (oggi solo `archive_org`) cambia tre comportamenti del
+visore, tutti misurati il 4 settembre 2026 su un libro di 308 pagine:
+
+- **l'indice si richiede una seconda volta.** Il primo tentativo fa partire la
+  costruzione e scade a 60 secondi con un errore del loro gateway; il secondo
+  trova il lavoro fatto e risponde in 1,3 s. Altrove non si ritenta:
+  raddoppierebbe l'attesa di un indirizzo davvero rotto.
+- **la pagina si chiede in più forme, in fila** (`wholePageAttempts`: `max`, poi
+  il dimezzamento, poi la larghezza nativa in numero). Il guasto è **per coppia
+  pagina+misura** e deterministico: la stessa richiesta ripetuta identica
+  fallisce ancora (due volte su due), mentre la stessa pagina a un'altra misura
+  arriva in circa 3 secondi. Vale in tutte le direzioni — la pagina 21 fallisce
+  a 1312 e arriva a piena risoluzione, la 42 fallisce a piena risoluzione e
+  arriva chiedendo `2623,`. Non è la misura a essere sbagliata: è un loro
+  derivato guasto, e cambiare forma lo aggira. Fuori da queste biblioteche si
+  tenta una volta sola: un secondo tentativo raddoppierebbe l'attesa di un
+  guasto vero senza aggirare niente. La misura del deposito non ammette
+  ripieghi, o i byte finirebbero in cache sotto un nome che promette una
+  risoluzione che non hanno. Le miniature restano piccole: alla misura che
+  chiediamo rispondono sempre, sotto il secondo.
+- **il messaggio sull'attesa lunga si mostra solo qui.** Prima compariva dopo
+  otto secondi con qualunque biblioteca, spiegando un comportamento che altrove
+  non esiste.
+
+### L'indice di un libro scaricato si legge dal disco
+
+`iiif_viewer_manifest` accetta anche `version_id` e, quando c'è insieme alla
+biblioteca, prova prima il manifesto conservato nel deposito — quello che
+«libera spazio» non cancella. Cercandolo solo in rete, un libro tutto sul disco
+non si apriva a computer scollegato se la memoria di lavoro era stata svuotata,
+pur avendo ogni pagina presente. Un deposito assente, un file mancante o un
+manifesto illeggibile non sono un errore da mostrare: si prosegue dalla rete.
+
+### Provenienza di una pagina
+
+`resolve` sa già da dove ha preso i byte (`Source::Vault | Cache | Network`), ma
+i byte tornano alla finestra grezzi: non c'è un posto dove infilare anche
+questo. La cache ricorda quindi la provenienza **per chiave**, per le ultime 64
+immagini (`note_source` / `source_of`), e il comando `image_source` la
+restituisce. Chi ha appena ricevuto una pagina la chiede subito dopo: è una
+lettura in memoria, non tocca né disco né rete, e riguarda la stessa chiave,
+quindi non può raccontare la provenienza di un'altra immagine.
+
+Il visore mostra tre stati distinti — **Dal computer**, **Dalla memoria**,
+**Dalla biblioteca** — con la misura chiesta nel suggerimento. Il verde acceso
+vale solo per la biblioteca. Se il libro risultava locale e la pagina è invece
+arrivata dalla rete, il visore rilegge l'inventario: qualcuno ha cancellato
+quella copia mentre si leggeva, e le pagine successive non devono continuare a
+essere chieste come se il libro fosse ancora tutto in casa.
+
+### Le pagine mancanti entrano nel deposito da sole
+
+Quando una pagina arriva dalla rete e quell'opera ha **già** una cartella per la
+misura chiesta, i byte vanno nel deposito invece che nella memoria di lavoro
+(`keep_in_vault`): sfogliando un libro scaricato a metà, i buchi si riempiono
+senza che nessuno lanci uno scaricamento. Vale solo a colpo sicuro — pagina
+intera chiesta per numero, cartella della misura già esistente, file non ancora
+presente — e riusa la catena dello scaricamento (transito, validazione,
+spostamento atomico, riga nell'inventario laterale con impronta e dimensioni),
+ricavando anche la miniatura. Se qualcosa non riesce, la pagina si vede comunque
+e finisce in cache come prima.
+
+### Rimozione di un'opera e cache dei byte
+
+Togliere un'opera dalla biblioteca esegue `delete_version_files` (manifesto,
+miniature, pagine e copie ricavate spariscono dal deposito) e poi `DELETE FROM
+sources`, con cascata sulle righe collegate, e infine `forget_version_cache`.
+
+Quest'ultimo è **l'unico caso in cui una voce di cache se ne va prima del
+tempo**: tutto il resto sono pixel di libri storici, che non cambiano. Senza di
+esso lo spazio non si liberava come l'utente si aspetta, e riaggiungendo la
+stessa opera le pagine tornavano dalla cache senza che la biblioteca venisse
+ricontattata. La chiave è un'impronta e non si può interrogare per opera: si
+guarda la richiesta registrata nel file di lato di ogni voce (`CacheMeta.request`
+contiene il `version_id` per le richieste `Page`). Costa una camminata sulla
+cache, che per un'azione fatta a mano una volta va benissimo. Le voci `Remote` —
+manifesto, copertine chieste per indirizzo — non portano il `version_id` e
+restano: escono per sfratto.
 
 ## Ottimizzazione locale
 

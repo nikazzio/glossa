@@ -2,12 +2,18 @@
 //!
 //! Il profilo lo dichiara il provider, ma i contatori si tengono **per host**:
 //! un provider può servire ricerca e immagini da macchine diverse, e quella che
-//! si affanna è la seconda. Qui vivono pausa fra richieste, limite a raffica a
-//! finestra scorrevole e concorrenza per host.
+//! si affanna è la seconda. Qui vivono il limite a raffica a finestra
+//! scorrevole, la concorrenza per host e il raffreddamento dopo un rifiuto.
 //!
-//! Non è una gentilezza astratta: con i valori di Gallica un manoscritto di 210
-//! pagine richiede un quarto d'ora, e superarli significa farsi bandire — cioè
-//! non scaricare più niente, per ore.
+//! **Nessuna pausa fra due richieste riuscite**, come nel client di Scriptoria:
+//! la stessa pausa che rende gentile uno scaricamento moltiplicata per i
+//! tasselli di una schermata rendeva il visore inservibile. Chi ferma davvero è
+//! il raffreddamento, e quello vale per tutti.
+//!
+//! Due classi di traffico, **un solo tetto**: ciò che l'utente sta guardando
+//! (`Lane::Page`) e ciò che si scarica in blocco (`Lane::Bulk`). Il
+//! secondo non può occupare l'ultimo posto verso un host, così cambiare pagina
+//! resta possibile mentre un libro si scarica.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -22,24 +28,67 @@ use crate::iiif::network::NetworkProfile;
 /// il lavoro sordo a pausa e annullamento.
 const POLL_SLICE: Duration = Duration::from_millis(250);
 
-/// Sopra questa attesa vale la pena scriverlo nel registro: sotto è la pausa
-/// normale fra due richieste, e ce n'è una per ogni pagina.
+/// Sopra questa attesa vale la pena scriverla nel registro: sotto è il normale
+/// scorrere della finestra a raffica.
 const LONG_WAIT: Duration = Duration::from_secs(5);
 
-/// Stato di un singolo host: chi sta parlando adesso, quando si è parlato
-/// l'ultima volta, e le richieste della finestra corrente.
+/// La classe di traffico verso una biblioteca, dalla più urgente alla meno.
+///
+/// Non sono tre code: sono tre diritti sullo **stesso** tetto di richieste
+/// insieme. Un posto resta sempre alla pagina aperta, perché due miniature che
+/// occupavano gli unici due posti di una biblioteca severa lasciavano la pagina
+/// ad aspettare finché non scadeva.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Lane {
+    /// La pagina che si sta guardando: manifesto in apertura, `info.json`,
+    /// tasselli, immagine intera. Ha sempre un posto.
+    Page,
+    /// Le miniature del rail e le copertine. Utili, mai davanti alla pagina.
+    Thumbnail,
+    /// Lo scaricamento di un libro, di un intervallo o delle pagine mancanti.
+    Bulk,
+}
+
+/// Stato di un singolo host: i posti in corsia e le richieste della finestra
+/// corrente.
 struct HostGate {
-    permits: Arc<Semaphore>,
+    /// Il tetto vero: nessuno parla a questo host se non ha un posto qui.
+    seats: Arc<Semaphore>,
+    /// Quanti posti può occupare tutto ciò che **non** è la pagina aperta.
+    /// Sempre uno meno del tetto: quello che avanza è suo.
+    behind_the_page: Arc<Semaphore>,
+    /// Sottoinsieme ulteriore per gli scaricamenti, così un libro in corso non
+    /// mangia anche i posti delle miniature.
+    bulk_seats: Arc<Semaphore>,
     timeline: Mutex<Timeline>,
+    /// Il ritmo con cui questa corsia è nata: i semafori non si ridimensionano,
+    /// quindi è anche quello che vale finché l'applicazione è aperta.
+    profile: NetworkProfile,
+}
+
+/// Come sta andando la conversazione con un host, adesso. Serve a chi guarda:
+/// «è collegato davvero» è una domanda con una risposta precisa.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HostActivity {
+    pub host: String,
+    /// Posti occupati e posti totali verso questo host.
+    pub in_use: usize,
+    pub seats: usize,
+    /// Di quelli occupati, quanti non sono la pagina aperta.
+    pub behind_in_use: usize,
+    /// Di quelli occupati, quanti sono di uno scaricamento.
+    pub bulk_in_use: usize,
+    /// Richieste nella finestra a raffica, e quante ne ammette.
+    pub window_used: usize,
+    pub window_limit: u32,
+    pub window_secs: u64,
+    /// Secondi di raffreddamento che restano, `0` se non ce n'è.
+    pub cooldown_secs: u64,
 }
 
 #[derive(Default)]
 struct Timeline {
-    /// Quando si potrà parlare di nuovo. Si sorteggia **una volta**, quando la
-    /// richiesta parte: rinnovare il sorteggio a ogni controllo farebbe uscire
-    /// al primo numero basso, e la pausa media crollerebbe sotto quella
-    /// dichiarata dal profilo — cioè si sarebbe meno cortesi del previsto.
-    next_allowed: Option<Instant>,
     recent: VecDeque<Instant>,
     /// Fino a quando questo host è in raffreddamento. Dopo un 403 o un 429 non
     /// basta far aspettare il lavoro che l'ha preso: **tutto** ciò che parla con
@@ -77,7 +126,11 @@ pub struct Courtesy {
 /// Il turno di parola verso un host: finché è vivo, occupa uno dei posti
 /// concessi dalla concorrenza per host.
 pub struct Turn {
-    _permit: OwnedSemaphorePermit,
+    _seat: OwnedSemaphorePermit,
+    /// Presenti per chi non è la pagina aperta: sono i posti dei sottoinsiemi
+    /// che tengono miniature e scaricamenti sotto il tetto riservato.
+    _behind: Option<OwnedSemaphorePermit>,
+    _bulk_seat: Option<OwnedSemaphorePermit>,
 }
 
 impl Courtesy {
@@ -85,34 +138,53 @@ impl Courtesy {
         Self::default()
     }
 
-    /// Aspetta il proprio turno verso `host`, rispettando pausa fra richieste,
-    /// limite a raffica, concorrenza e raffreddamento.
+    /// Aspetta il proprio turno verso `host`, rispettando concorrenza, limite a
+    /// raffica e raffreddamento.
     ///
-    /// `should_stop` viene guardato **durante** l'attesa: senza, un lavoro in
-    /// raffreddamento non risponderebbe più né alla pausa né all'annullamento
-    /// fino a scadenza, e terrebbe occupato il suo posto in corsia.
-    /// `None` significa "fermato mentre aspettava".
+    /// `stop` viene guardato **durante** l'attesa: senza, un lavoro in
+    /// raffreddamento non risponderebbe più all'annullamento fino a scadenza, e
+    /// terrebbe occupato il suo posto in corsia. `None` significa "fermato
+    /// mentre aspettava".
+    ///
+    /// I posti si prendono sempre nello stesso ordine — sottoinsieme più
+    /// stretto, poi più largo, poi il tetto — così due richieste non possono
+    /// tenersi a vicenda quello che serve all'altra.
+    ///
+    /// La pagina aperta prende solo il posto del tetto. Tutto il resto prende
+    /// prima un posto fra quelli che avanzano, che sono uno meno del tetto:
+    /// nessuno può togliere alla pagina l'ultimo posto.
     pub async fn wait_turn(
         &self,
         host: &str,
         profile: &NetworkProfile,
+        lane: Lane,
         signals: &Signals<'_>,
     ) -> Option<Turn> {
         let gate = self.gate_for(host, profile).await;
-        let Ok(permit) = Arc::clone(&gate.permits).acquire_owned().await else {
-            // Il semaforo di un host non viene mai chiuso: se succedesse, non
-            // si parla con quell'host invece di dare per buono un turno.
-            log::error!("cortesia: corsia chiusa verso {host}");
-            return None;
-        };
 
-        Self::respect_timing(host, &gate, profile, signals).await?;
-        Some(Turn { _permit: permit })
+        let bulk_seat = match lane {
+            Lane::Bulk => Some(Self::take_seat(&gate.bulk_seats, host).await?),
+            Lane::Page | Lane::Thumbnail => None,
+        };
+        let behind = match lane {
+            Lane::Bulk | Lane::Thumbnail => {
+                Some(Self::take_seat(&gate.behind_the_page, host).await?)
+            }
+            Lane::Page => None,
+        };
+        let seat = Self::take_seat(&gate.seats, host).await?;
+
+        Self::respect_limits(host, &gate, profile, signals).await?;
+        Some(Turn {
+            _seat: seat,
+            _behind: behind,
+            _bulk_seat: bulk_seat,
+        })
     }
 
     /// Mette un host in raffreddamento: da qui in avanti, per quei secondi,
-    /// nessuno gli parla. Un raffreddamento più lungo di quello in corso lo
-    /// estende, uno più corto non lo accorcia.
+    /// nessuno gli parla — né il visore né gli scaricamenti. Un raffreddamento
+    /// più lungo di quello in corso lo estende, uno più corto non lo accorcia.
     pub async fn cool_down(&self, host: &str, profile: &NetworkProfile, seconds: u64) {
         if seconds == 0 {
             return;
@@ -127,21 +199,83 @@ impl Courtesy {
         });
     }
 
+    /// Un posto, o `None` se il semaforo fosse chiuso — non succede, ma dare per
+    /// buono un turno che non è stato concesso significherebbe superare il tetto
+    /// della biblioteca.
+    async fn take_seat(seats: &Arc<Semaphore>, host: &str) -> Option<OwnedSemaphorePermit> {
+        match Arc::clone(seats).acquire_owned().await {
+            Ok(seat) => Some(seat),
+            Err(_) => {
+                log::error!("cortesia: corsia chiusa verso {host}");
+                None
+            }
+        }
+    }
+
     async fn gate_for(&self, host: &str, profile: &NetworkProfile) -> Arc<HostGate> {
         let mut hosts = self.hosts.lock().await;
         Arc::clone(hosts.entry(host.to_string()).or_insert_with(|| {
             Arc::new(HostGate {
                 // La concorrenza la dichiara il profilo della biblioteca: due
                 // verso Gallica, quattro verso chi regge di più.
-                permits: Arc::new(Semaphore::new(profile.host_concurrency.max(1))),
+                seats: Arc::new(Semaphore::new(profile.host_concurrency.max(1))),
+                behind_the_page: Arc::new(Semaphore::new(behind_the_page(profile))),
+                bulk_seats: Arc::new(Semaphore::new(profile.bulk_workers())),
                 timeline: Mutex::new(Timeline::default()),
+                profile: *profile,
             })
         }))
     }
 
+    /// Lo stato di ogni host con cui si è parlato, in ordine di nome.
+    ///
+    /// Si legge senza aspettare nessuno: è una fotografia per chi guarda, e
+    /// bloccare una richiesta vera per disegnarla sarebbe il contrario di quello
+    /// che serve.
+    pub async fn activity(&self) -> Vec<HostActivity> {
+        let gates: Vec<(String, Arc<HostGate>)> = {
+            let hosts = self.hosts.lock().await;
+            hosts
+                .iter()
+                .map(|(host, gate)| (host.clone(), Arc::clone(gate)))
+                .collect()
+        };
+
+        let mut activity = Vec::with_capacity(gates.len());
+        for (host, gate) in gates {
+            let seats = gate.profile.host_concurrency.max(1);
+            let behind = behind_the_page(&gate.profile);
+            let bulk_seats = gate.profile.bulk_workers();
+            let window = Duration::from_secs(gate.profile.burst_window_secs);
+            let now = Instant::now();
+            let timeline = gate.timeline.lock().await;
+            activity.push(HostActivity {
+                host,
+                in_use: seats - gate.seats.available_permits(),
+                seats,
+                behind_in_use: behind - gate.behind_the_page.available_permits(),
+                bulk_in_use: bulk_seats - gate.bulk_seats.available_permits(),
+                window_used: timeline
+                    .recent
+                    .iter()
+                    .filter(|stamp| now.duration_since(**stamp) < window)
+                    .count(),
+                window_limit: gate.profile.burst_requests,
+                window_secs: gate.profile.burst_window_secs,
+                cooldown_secs: timeline
+                    .cooldown_until
+                    .filter(|until| *until > now)
+                    .map(|until| (until - now).as_secs() + 1)
+                    .unwrap_or(0),
+            });
+        }
+        activity.sort_by(|a, b| a.host.cmp(&b.host));
+        activity
+    }
+
     /// Aspetta finché non è il momento di parlare con questo host, oppure
     /// finché non viene chiesto di fermarsi (`None`).
-    async fn respect_timing(
+    async fn respect_limits(
         host: &str,
         gate: &HostGate,
         profile: &NetworkProfile,
@@ -177,19 +311,23 @@ impl Courtesy {
     }
 }
 
+/// Quanti posti restano a chi non è la pagina aperta: sempre uno meno del
+/// tetto, e almeno uno — con un solo posto dichiarato non si può riservare
+/// niente, e meglio miniature lente che nessuna miniatura.
+fn behind_the_page(profile: &NetworkProfile) -> usize {
+    profile.host_concurrency.max(2) - 1
+}
+
 /// Quanto manca prima di poter parlare, o `None` se si può parlare adesso — e
 /// in quel caso la richiesta viene segnata sulla linea del tempo dell'host.
 ///
-/// I tre freni si guardano in ordine: raffreddamento, limite a raffica, pausa
-/// fra due richieste. Il primo che dice di aspettare vince.
+/// Due freni, in ordine: raffreddamento e limite a raffica. Il primo che dice di
+/// aspettare vince. Fra due richieste riuscite non c'è nessuna pausa.
 fn next_delay(timeline: &mut Timeline, profile: &NetworkProfile) -> Option<Duration> {
     let now = Instant::now();
 
-    if let Some(until) = timeline.cooldown_until {
-        if until > now {
-            return Some(until - now);
-        }
-        timeline.cooldown_until = None;
+    if let Some(delay) = cooldown_delay_at(timeline, now) {
+        return Some(delay);
     }
 
     let window = Duration::from_secs(profile.burst_window_secs);
@@ -205,25 +343,19 @@ fn next_delay(timeline: &mut Timeline, profile: &NetworkProfile) -> Option<Durat
         return Some(window.saturating_sub(now.duration_since(oldest)));
     }
 
-    if let Some(until) = timeline.next_allowed {
-        if until > now {
-            return Some(until - now);
-        }
-    }
-
-    // Sorteggiata qui, una volta per richiesta concessa.
-    timeline.next_allowed = Some(now + pause_for(profile));
     timeline.recent.push_back(now);
     None
 }
 
-fn pause_for(profile: &NetworkProfile) -> Duration {
-    if profile.pause_max_ms <= profile.pause_min_ms {
-        return Duration::from_millis(profile.pause_min_ms);
+fn cooldown_delay_at(timeline: &mut Timeline, now: Instant) -> Option<Duration> {
+    match timeline.cooldown_until {
+        Some(until) if until > now => Some(until - now),
+        Some(_) => {
+            timeline.cooldown_until = None;
+            None
+        }
+        None => None,
     }
-    let span = profile.pause_max_ms - profile.pause_min_ms;
-    let jitter = rand::random::<u64>() % (span + 1);
-    Duration::from_millis(profile.pause_min_ms + jitter)
 }
 
 #[cfg(test)]
@@ -246,21 +378,24 @@ mod tests {
 
     /// Turno atteso senza interruzioni, con quanto è durata l'attesa: i test
     /// misurano il tempo, il codice di produzione no.
-    async fn turn(courtesy: &Courtesy, host: &str, profile: &NetworkProfile) -> (Turn, Duration) {
+    async fn turn(
+        courtesy: &Courtesy,
+        host: &str,
+        profile: &NetworkProfile,
+        lane: Lane,
+    ) -> (Turn, Duration) {
         let started = Instant::now();
         let stop = never_stop();
         let waiting = AtomicBool::new(false);
         let turn = courtesy
-            .wait_turn(host, profile, &signals(&stop, &waiting))
+            .wait_turn(host, profile, lane, &signals(&stop, &waiting))
             .await
             .expect("nessuno ha chiesto di fermarsi");
         (turn, started.elapsed())
     }
 
-    fn fast(pause_ms: u64, burst: u32, window_secs: u64) -> NetworkProfile {
+    fn profile(burst: u32, window_secs: u64) -> NetworkProfile {
         NetworkProfile {
-            pause_min_ms: pause_ms,
-            pause_max_ms: pause_ms,
             burst_requests: burst,
             burst_window_secs: window_secs,
             ..crate::iiif::network::CAUTIOUS
@@ -268,109 +403,158 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_first_request_does_not_wait() {
+    async fn nothing_waits_between_two_successful_requests() {
+        // È la scelta di Scriptoria: i freni sono la concorrenza, la raffica e
+        // il raffreddamento. Una pausa per richiesta, moltiplicata per i
+        // tasselli di una schermata, rendeva il visore inservibile.
         let courtesy = Courtesy::new();
+        let rhythm = profile(100, 60);
 
-        let (_turn, waited) = turn(&courtesy, "gallica.bnf.fr", &fast(40, 100, 60)).await;
+        let (first, _) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Bulk).await;
+        drop(first);
+        let (_second, waited) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Bulk).await;
 
         assert!(waited < Duration::from_millis(20), "atteso {waited:?}");
     }
 
     #[tokio::test]
-    async fn two_requests_to_the_same_host_are_spaced_by_the_declared_pause() {
+    async fn a_running_download_always_leaves_a_seat_to_the_viewer() {
+        // Il criterio di accettazione: lo scaricamento in corso non deve
+        // impedire di cambiare pagina.
         let courtesy = Courtesy::new();
-        let profile = fast(60, 100, 60);
+        let rhythm = NetworkProfile {
+            host_concurrency: 2,
+            workers_per_job: 8,
+            ..profile(1_000, 60)
+        };
 
-        let (first, _) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
-        drop(first);
-        let (_second, waited) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
+        let (_busy, _) = turn(&courtesy, "host", &rhythm, Lane::Bulk).await;
+        let second_download = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Bulk),
+        )
+        .await;
+        let viewer = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
+        )
+        .await;
 
-        assert!(waited >= Duration::from_millis(40), "atteso {waited:?}");
+        assert!(second_download.is_err(), "il secondo scaricamento aspetta");
+        assert!(viewer.is_ok(), "il visore deve passare comunque");
     }
 
-    #[test]
-    fn the_pause_is_drawn_once_not_at_every_check() {
-        // Con il sorteggio ripetuto a ogni fetta d'attesa bastava un numero
-        // basso per ripartire, e la pausa media finiva sotto quella dichiarata
-        // dal profilo. Qui il secondo controllo deve trovare la stessa attesa,
-        // solo più corta del tempo passato.
-        let profile = NetworkProfile {
-            pause_min_ms: 1_000,
-            pause_max_ms: 20_000,
-            ..crate::iiif::network::CAUTIOUS
+    #[tokio::test]
+    async fn thumbnails_never_take_the_last_seat_from_the_open_page() {
+        // Due miniature che occupavano gli unici due posti di una biblioteca
+        // severa lasciavano la pagina ad aspettare finché non scadeva.
+        let courtesy = Courtesy::new();
+        let rhythm = NetworkProfile {
+            host_concurrency: 2,
+            workers_per_job: 1,
+            ..profile(1_000, 60)
         };
-        let mut timeline = Timeline::default();
+
+        let (_first, _) = turn(&courtesy, "host", &rhythm, Lane::Thumbnail).await;
+        let second_thumbnail = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Thumbnail),
+        )
+        .await;
+        let page = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
+        )
+        .await;
+
+        assert!(second_thumbnail.is_err(), "la seconda miniatura aspetta");
+        assert!(page.is_ok(), "la pagina aperta passa comunque");
+    }
+
+    #[tokio::test]
+    async fn the_two_classes_never_add_up_beyond_the_declared_ceiling() {
+        let courtesy = Courtesy::new();
+        let rhythm = NetworkProfile {
+            host_concurrency: 2,
+            workers_per_job: 1,
+            ..profile(1_000, 60)
+        };
+
+        let (_downloading, _) = turn(&courtesy, "host", &rhythm, Lane::Bulk).await;
+        let (_viewing, _) = turn(&courtesy, "host", &rhythm, Lane::Page).await;
+        let third = tokio::time::timeout(
+            Duration::from_millis(80),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
+        )
+        .await;
+
+        assert!(third.is_err(), "i posti erano due, il terzo aspetta");
+    }
+
+    #[tokio::test]
+    async fn the_burst_window_counts_the_viewer_too() {
+        // Il visore non è traffico invisibile: se non entrasse nel conto, una
+        // schermata a zoom pieno sfonderebbe il limite al minuto senza che
+        // nessuno se ne accorga.
+        let courtesy = Courtesy::new();
+        let rhythm = profile(2, 1);
+
+        let (a, _) = turn(&courtesy, "host", &rhythm, Lane::Page).await;
+        drop(a);
+        let (b, _) = turn(&courtesy, "host", &rhythm, Lane::Bulk).await;
+        drop(b);
+        let (_c, waited) = turn(&courtesy, "host", &rhythm, Lane::Page).await;
 
         assert!(
-            next_delay(&mut timeline, &profile).is_none(),
-            "la prima parte"
-        );
-        let first = next_delay(&mut timeline, &profile).expect("la seconda aspetta");
-        let second = next_delay(&mut timeline, &profile).expect("aspetta ancora");
-
-        assert!(second <= first);
-        assert!(
-            first - second < Duration::from_millis(100),
-            "attesa risorteggiata: {first:?} poi {second:?}"
+            waited >= Duration::from_millis(500),
+            "la terza deve aspettare la finestra, ha atteso {waited:?}"
         );
     }
 
     #[tokio::test]
     async fn hosts_are_counted_separately() {
         // Un provider può servire ricerca e immagini da macchine diverse: la
-        // pausa verso l'una non deve rallentare l'altra.
+        // finestra dell'una non deve fermare l'altra.
         let courtesy = Courtesy::new();
-        let profile = fast(200, 100, 60);
+        let rhythm = profile(1, 60);
 
-        let (first, _) = turn(&courtesy, "gallica.bnf.fr", &profile).await;
+        let (first, _) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Bulk).await;
         drop(first);
-        let (_second, waited) = turn(&courtesy, "images.bnf.fr", &profile).await;
+        let (_second, waited) = turn(&courtesy, "images.bnf.fr", &rhythm, Lane::Bulk).await;
 
         assert!(waited < Duration::from_millis(50), "atteso {waited:?}");
     }
 
     #[tokio::test]
-    async fn the_profile_decides_how_many_talk_to_a_host_at_once() {
-        // Gallica ne regge due, chi regge di più ne ha quattro: il numero è
-        // della biblioteca, non una costante nostra.
-        let courtesy = Courtesy::new();
-        let strict = NetworkProfile {
-            host_concurrency: 1,
-            ..fast(0, 100, 60)
-        };
-
-        let (first, _) = turn(&courtesy, "host", &strict).await;
-        let second =
-            tokio::time::timeout(Duration::from_millis(80), turn(&courtesy, "host", &strict)).await;
-
-        assert!(second.is_err(), "il posto era uno solo, il secondo aspetta");
-        drop(first);
-    }
-
-    #[tokio::test]
     async fn a_cooldown_stops_everyone_talking_to_that_host() {
-        // Dopo un 403 non basta far aspettare il lavoro che l'ha preso: un
-        // secondo scaricamento sullo stesso host continuerebbe a bussare.
+        // Dopo un 403 non basta far aspettare il lavoro che l'ha preso: il
+        // visore continuerebbe a bussare mentre lo scaricamento aspetta.
         let courtesy = Courtesy::new();
-        let profile = fast(0, 100, 60);
+        let rhythm = profile(100, 60);
+        courtesy.cool_down("host", &rhythm, 1).await;
 
-        courtesy.cool_down("host", &profile, 1).await;
-        let waited = tokio::time::timeout(
+        let downloading = tokio::time::timeout(
             Duration::from_millis(120),
-            turn(&courtesy, "host", &profile),
+            turn(&courtesy, "host", &rhythm, Lane::Bulk),
+        )
+        .await;
+        let viewing = tokio::time::timeout(
+            Duration::from_millis(120),
+            turn(&courtesy, "host", &rhythm, Lane::Page),
         )
         .await;
 
-        assert!(waited.is_err(), "l'host è in raffreddamento");
+        assert!(downloading.is_err(), "l'host è in raffreddamento");
+        assert!(viewing.is_err(), "vale anche per il visore");
     }
 
     #[tokio::test]
     async fn the_cooldown_of_one_host_does_not_touch_the_others() {
         let courtesy = Courtesy::new();
-        let profile = fast(0, 100, 60);
-        courtesy.cool_down("gallica.bnf.fr", &profile, 5).await;
+        let rhythm = profile(100, 60);
+        courtesy.cool_down("gallica.bnf.fr", &rhythm, 5).await;
 
-        let (_turn, waited) = turn(&courtesy, "images.vatlib.it", &profile).await;
+        let (_turn, waited) = turn(&courtesy, "images.vatlib.it", &rhythm, Lane::Bulk).await;
 
         assert!(waited < Duration::from_millis(50), "atteso {waited:?}");
     }
@@ -381,14 +565,15 @@ mod tests {
         // tutto renderebbe il lavoro sordo a pausa e annullamento, e terrebbe
         // occupato il posto in corsia per tutto il tempo.
         let courtesy = Courtesy::new();
-        let profile = fast(0, 100, 60);
-        courtesy.cool_down("host", &profile, 600).await;
+        let rhythm = profile(100, 60);
+        courtesy.cool_down("host", &rhythm, 600).await;
 
         let outcome = tokio::time::timeout(
             Duration::from_millis(500),
             courtesy.wait_turn(
                 "host",
-                &profile,
+                &rhythm,
+                Lane::Bulk,
                 &signals(&|| true, &AtomicBool::new(false)),
             ),
         )
@@ -400,21 +585,15 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn the_burst_window_holds_back_the_extra_request() {
-        let courtesy = Courtesy::new();
-        // Due richieste al secondo di finestra, senza pausa fra le due.
-        let profile = fast(0, 2, 1);
+    #[test]
+    fn an_expired_cooldown_lets_the_host_talk_again() {
+        let rhythm = profile(100, 60);
+        let mut timeline = Timeline {
+            cooldown_until: Some(Instant::now() - Duration::from_secs(1)),
+            ..Timeline::default()
+        };
 
-        let (a, _) = turn(&courtesy, "host", &profile).await;
-        drop(a);
-        let (b, _) = turn(&courtesy, "host", &profile).await;
-        drop(b);
-        let (_c, waited) = turn(&courtesy, "host", &profile).await;
-
-        assert!(
-            waited >= Duration::from_millis(500),
-            "la terza deve aspettare la finestra, ha atteso {waited:?}"
-        );
+        assert!(next_delay(&mut timeline, &rhythm).is_none());
+        assert!(timeline.cooldown_until.is_none(), "va dimenticato");
     }
 }

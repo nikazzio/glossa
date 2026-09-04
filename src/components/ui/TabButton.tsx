@@ -1,5 +1,5 @@
 import { type KeyboardEvent } from 'react';
-import { IconButton, type IconButtonTone } from '../../ui';
+import { IconButton, type IconButtonTone } from './IconButton';
 
 export interface TabButtonProps {
   buttonId: string;

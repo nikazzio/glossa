@@ -26,12 +26,12 @@
 pub mod commands;
 pub mod request;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use reqwest::Client;
@@ -68,7 +68,6 @@ pub struct CacheMeta {
     /// Quando è arrivata dalla rete. Non è la data del file, che alla lettura
     /// viene toccata e diventa «ultimo uso»: serve a dire a chi guarda **di
     /// quando** è il risultato che ha davanti.
-    #[serde(default)]
     pub stored_at: Option<i64>,
     /// Secondi dall'epoca. `None` per ciò che non scade.
     pub expires_at: Option<i64>,
@@ -95,6 +94,66 @@ pub struct HttpCache {
     /// strette di mano, cioè il contrario della cortesia che questa cache serve
     /// a ottenere.
     clients: Mutex<HashMap<(u64, u64), Client>>,
+    /// Il ritmo in vigore per una biblioteca, già letto.
+    ///
+    /// Ogni tassello del visore lo rileggeva dal database: aprire il file,
+    /// interrogarlo e chiuderlo centinaia di volte per una sola schermata. I
+    /// ritmi cambiano solo dalle Impostazioni, che svuotano questa memoria.
+    profiles: Mutex<HashMap<(String, String), crate::iiif::network::NetworkProfile>>,
+    /// Le richieste alla rete già in volo, per chiave.
+    ///
+    /// Due richieste identiche che si sovrappongono **mancano entrambe** la
+    /// cache — la prima non ha ancora finito di scriverla — e vanno entrambe a
+    /// disturbare la biblioteca. Chi arriva secondo aspetta qui, e poi trova i
+    /// byte già messi da parte.
+    in_flight: tokio::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+    /// Tetto della cache e scadenza delle ricerche, già letti. Erano una
+    /// apertura del database **per ogni immagine messa da parte**, in contesa
+    /// con il motore dei lavori sullo stesso file.
+    limits: Mutex<Option<(u64, u64)>>,
+    /// Da dove sono arrivate le immagini chieste finora. Tre provenienze
+    /// diverse con tre costi diversi: il deposito non costa niente, la cache
+    /// costa una lettura, la rete costa una richiesta a una biblioteca.
+    served: Served,
+    /// Da dove è arrivata **quella** immagine, per chiave, per le ultime poche.
+    ///
+    /// I byte tornano alla finestra grezzi, non dentro un oggetto: non c'è un
+    /// posto dove infilare «da dove viene» insieme a loro. Chi ha appena
+    /// ricevuto una pagina lo chiede qui, e la risposta non può mentire perché
+    /// è la stessa chiave. Si tengono solo le ultime: interessa la pagina che si
+    /// sta guardando e le miniature vicine, non la storia della sessione.
+    recent_sources: Mutex<VecDeque<(String, Source)>>,
+}
+
+/// Quante provenienze recenti si ricordano. Una pagina più le miniature che le
+/// stanno intorno, con abbondanza.
+const RECENT_SOURCES: usize = 64;
+
+/// Quante immagini sono arrivate da dove, dall'avvio.
+#[derive(Default)]
+pub struct Served {
+    pub from_vault: AtomicU64,
+    pub from_cache: AtomicU64,
+    pub from_network: AtomicU64,
+    pub network_bytes: AtomicU64,
+}
+
+/// La stessa cosa, in numeri leggibili da chi guarda.
+#[derive(Clone, Copy, Debug, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServedCounts {
+    pub from_vault: u64,
+    pub from_cache: u64,
+    pub from_network: u64,
+    pub network_bytes: u64,
+}
+
+/// Dove è stata trovata un'immagine.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Source {
+    Vault,
+    Cache,
+    Network,
 }
 
 impl HttpCache {
@@ -103,6 +162,132 @@ impl HttpCache {
             root,
             since_walk: AtomicU64::new(0),
             clients: Mutex::new(HashMap::new()),
+            profiles: Mutex::new(HashMap::new()),
+            in_flight: tokio::sync::Mutex::new(HashMap::new()),
+            limits: Mutex::new(None),
+            served: Served::default(),
+            recent_sources: Mutex::new(VecDeque::new()),
+        }
+    }
+
+    /// Ricorda da dove è arrivata l'immagine di quella chiave, buttando la più
+    /// vecchia quando si supera il tetto.
+    pub fn note_source(&self, key: &str, source: Source) {
+        if let Ok(mut recent) = self.recent_sources.lock() {
+            recent.retain(|(known, _)| known != key);
+            recent.push_back((key.to_string(), source));
+            while recent.len() > RECENT_SOURCES {
+                recent.pop_front();
+            }
+        }
+    }
+
+    /// Da dove è arrivata l'immagine di quella chiave, se ce lo ricordiamo
+    /// ancora.
+    pub fn source_of(&self, key: &str) -> Option<Source> {
+        let recent = self.recent_sources.lock().ok()?;
+        recent
+            .iter()
+            .rev()
+            .find(|(known, _)| known == key)
+            .map(|(_, source)| *source)
+    }
+
+    /// Segna da dove è arrivata un'immagine appena servita.
+    pub fn served(&self, source: Source, bytes: usize) {
+        let counter = match source {
+            Source::Vault => &self.served.from_vault,
+            Source::Cache => &self.served.from_cache,
+            Source::Network => {
+                self.served
+                    .network_bytes
+                    .fetch_add(bytes as u64, Ordering::Relaxed);
+                &self.served.from_network
+            }
+        };
+        counter.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn served_counts(&self) -> ServedCounts {
+        ServedCounts {
+            from_vault: self.served.from_vault.load(Ordering::Relaxed),
+            from_cache: self.served.from_cache.load(Ordering::Relaxed),
+            from_network: self.served.from_network.load(Ordering::Relaxed),
+            network_bytes: self.served.network_bytes.load(Ordering::Relaxed),
+        }
+    }
+
+    /// Il ritmo verso una biblioteca, letto dal database la prima volta e poi
+    /// ricordato. `read` viene chiamata solo quando non si sa già.
+    pub fn profile_for(
+        &self,
+        provider_key: &str,
+        host: Option<&str>,
+        read: impl FnOnce() -> crate::iiif::network::NetworkProfile,
+    ) -> crate::iiif::network::NetworkProfile {
+        let key = (
+            provider_key.to_string(),
+            host.unwrap_or_default().to_string(),
+        );
+        if let Ok(profiles) = self.profiles.lock() {
+            if let Some(profile) = profiles.get(&key) {
+                return *profile;
+            }
+        }
+        let profile = read();
+        if let Ok(mut profiles) = self.profiles.lock() {
+            profiles.insert(key, profile);
+        }
+        profile
+    }
+
+    /// Il turno per andare in rete a prendere **questa** risorsa. Finché
+    /// qualcuno lo tiene, chi chiede la stessa cosa aspetta invece di
+    /// affiancarlo.
+    pub async fn one_at_a_time(&self, key: &str) -> Arc<tokio::sync::Mutex<()>> {
+        let mut in_flight = self.in_flight.lock().await;
+        Arc::clone(
+            in_flight
+                .entry(key.to_string())
+                .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(()))),
+        )
+    }
+
+    /// Dimentica il turno quando non lo aspetta più nessuno: senza, la mappa
+    /// crescerebbe di una voce per ogni immagine mai chiesta.
+    pub async fn turn_is_over(&self, key: &str) {
+        let mut in_flight = self.in_flight.lock().await;
+        if in_flight
+            .get(key)
+            .is_some_and(|turn| Arc::strong_count(turn) == 1)
+        {
+            in_flight.remove(key);
+        }
+    }
+
+    /// Tetto e scadenza in vigore, letti dal database la prima volta.
+    pub fn limits_for(&self, read: impl FnOnce() -> (u64, u64)) -> (u64, u64) {
+        if let Ok(limits) = self.limits.lock() {
+            if let Some(known) = *limits {
+                return known;
+            }
+        }
+        let fresh = read();
+        if let Ok(mut limits) = self.limits.lock() {
+            *limits = Some(fresh);
+        }
+        fresh
+    }
+
+    /// Dimentica ritmi e limiti: il prossimo che serve si rilegge. Si chiama
+    /// quando le Impostazioni ne cambiano uno, altrimenti la modifica non si
+    /// vedrebbe fino al riavvio.
+    pub fn forget_settings(&self) {
+        if let Ok(mut profiles) = self.profiles.lock() {
+            profiles.clear();
+        }
+        if let Ok(mut limits) = self.limits.lock() {
+            *limits = None;
         }
     }
 
@@ -136,9 +321,10 @@ impl HttpCache {
     pub fn get_with_meta(&self, key: &CacheKey) -> Option<(Vec<u8>, CacheMeta)> {
         let path = self.path_of(key);
         // Senza file di lato non si sa quando scade: si scarta invece di
-        // servirlo per sempre.
+        // servirlo per sempre. Ma solo se il file di lato **manca davvero**:
+        // una lettura andata storta per un momento non è una voce da buttare.
         let Some(meta) = self.read_meta(key) else {
-            if path.exists() {
+            if path.exists() && !self.meta_path_of(key).exists() {
                 self.forget(&path);
             }
             return None;
@@ -226,6 +412,36 @@ impl HttpCache {
             self.forget(&entry.path);
             total = total.saturating_sub(entry.bytes);
             freed += entry.bytes;
+        }
+        freed
+    }
+
+    /// Butta tutto quello che riguarda una digitalizzazione. Ritorna i byte
+    /// liberati.
+    ///
+    /// È **l'unico** caso in cui una voce se ne va prima del tempo: le altre
+    /// sono pixel di libri storici, che non cambiano. Qui invece l'utente ha
+    /// detto di togliere l'opera, e tenerne le pagine significa non liberare lo
+    /// spazio che si aspetta di liberare, e riaggiungendola ritrovarle senza
+    /// che la biblioteca sia stata ricontattata.
+    ///
+    /// La chiave è un'impronta e non si può interrogare per opera: si guarda la
+    /// richiesta registrata nel file di lato. Costa una camminata sulla cache,
+    /// che per un'azione fatta a mano una volta va benissimo.
+    pub fn forget_version(&self, version_id: &str) -> u64 {
+        let needle = format!("version_id: {version_id:?}");
+        let mut freed = 0;
+        for entry in self.entries() {
+            let describes_it = fs::read(meta_path(&entry.path))
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<CacheMeta>(&bytes).ok())
+                .and_then(|meta| meta.request)
+                .map(|request| request.contains(&needle))
+                .unwrap_or(false);
+            if describes_it {
+                self.forget(&entry.path);
+                freed += entry.bytes;
+            }
         }
         freed
     }
@@ -407,6 +623,35 @@ mod tests {
         assert!(cache
             .get(&remote("https://example.org/mai.jpg").key())
             .is_none());
+    }
+
+    #[test]
+    fn a_page_is_reused_without_contacting_its_remote_address_again() {
+        let cache = temp_cache("page-round-trip");
+        let first = CacheRequest::Page {
+            version_id: "book-1".into(),
+            index: 12,
+            size: "1600".into(),
+            remote_url: Some("https://images.example/12/first.jpg".into()),
+            provider_key: None,
+        };
+        cache
+            .put(&first.key(), b"page bytes", CacheMeta::default())
+            .expect("scrittura");
+        // Stessa pagina, indirizzo remoto diverso: succede appena il visore
+        // ricalcola la misura o la biblioteca cambia il suo derivatore.
+        let reopened = CacheRequest::Page {
+            version_id: "book-1".into(),
+            index: 12,
+            size: "1600".into(),
+            remote_url: Some("https://images.example/12/another.jpg".into()),
+            provider_key: None,
+        };
+
+        assert_eq!(
+            cache.get(&reopened.key()).as_deref(),
+            Some(b"page bytes".as_slice())
+        );
     }
 
     #[test]

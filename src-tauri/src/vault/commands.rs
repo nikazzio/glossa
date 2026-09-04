@@ -272,7 +272,8 @@ pub async fn choose_vault_folder(
     }))
 }
 
-/// Cancella manifesto, miniature e pagine di una digitalizzazione.
+/// Cancella manifesto, miniature, pagine **e copie ricavate in locale** di una
+/// digitalizzazione: l'opera sparisce del tutto, non solo dalle biblioteche.
 #[tauri::command]
 pub async fn delete_version_files(
     app: tauri::AppHandle,
@@ -286,17 +287,70 @@ pub async fn delete_version_files(
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
+    let mut deleted_files = 0;
+    let mut freed_bytes = 0;
     let folder = root.join(super::layout::version_dir(&provider_key, &version_id)?);
+    if folder.is_dir() {
+        let stats = directory_stats(&folder);
+        deleted_files += stats.files;
+        freed_bytes += stats.bytes;
+        std::fs::remove_dir_all(&folder)
+            .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))?;
+    }
+    let derived = root.join(super::layout::derived_version_dir(
+        &provider_key,
+        &version_id,
+    )?);
+    if derived.is_dir() {
+        let stats = directory_stats(&derived);
+        deleted_files += stats.files;
+        freed_bytes += stats.bytes;
+        std::fs::remove_dir_all(&derived)
+            .map_err(|e| format!("Failed to delete {}: {e}", derived.display()))?;
+    }
+    Ok(FreedSpace {
+        deleted_files,
+        freed_bytes,
+    })
+}
+
+/// Libera una sola misura: una risoluzione scaricata, o una copia ricavata in
+/// locale. Non tocca le altre — è questo che permette di tenere la copia
+/// compressa e buttare l'originale, o viceversa.
+#[tauri::command]
+pub async fn free_version_size(
+    app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
+    provider_key: String,
+    version_id: String,
+    size_tag: String,
+    derived: bool,
+) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let folder = if derived {
+        root.join(super::layout::derived_size_dir(
+            &provider_key,
+            &version_id,
+            &size_tag,
+        )?)
+    } else {
+        root.join(super::layout::pages_dir(&provider_key, &version_id)?)
+            .join(super::layout::safe_component(&size_tag)?)
+    };
     if !folder.is_dir() {
         return Ok(FreedSpace {
             deleted_files: 0,
             freed_bytes: 0,
         });
     }
-    // Una sola camminata per file e byte, prima di cancellare.
     let stats = directory_stats(&folder);
     std::fs::remove_dir_all(&folder)
-        .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))?;
+        .map_err(|e| format!("Failed to free {}: {e}", folder.display()))?;
     Ok(FreedSpace {
         deleted_files: stats.files,
         freed_bytes: stats.bytes,

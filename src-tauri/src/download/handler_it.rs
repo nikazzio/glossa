@@ -22,11 +22,13 @@ use super::handler::{SourceDownloadJob, JOB_TYPE};
 const VERSION_ID: &str = "sver-prova";
 const JOB_ID: &str = "download:sver-prova";
 const SIZE_TAG: &str = "2000";
-/// Il profilo della biblioteca finta: nessuna pausa, perché la cortesia è
-/// provata altrove e qui allungherebbe soltanto i test.
+/// Il profilo della biblioteca finta: nessun freno, perché la cortesia è
+/// provata altrove e qui allungherebbe soltanto i test. Una pagina alla volta,
+/// così l'ordine degli esiti resta quello del manifesto.
 const INSTANT_PROFILE: &str = r#"{
-  "pauseMinMs": 0, "pauseMaxMs": 0, "burstRequests": 1000, "burstWindowSecs": 1,
-  "cooldown403Secs": 1, "cooldown429Secs": 1, "hostConcurrency": 1,
+  "burstRequests": 1000, "burstWindowSecs": 1,
+  "cooldown403Secs": 1, "cooldown429Secs": 1, "hostConcurrency": 2,
+  "workersPerJob": 1,
   "maxAttempts": 2, "backoffBaseSecs": 1, "backoffCapSecs": 1,
   "connectTimeoutSecs": 2, "readTimeoutSecs": 2, "needsViewerWarmup": false
 }"#;

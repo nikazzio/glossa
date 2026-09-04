@@ -5,12 +5,11 @@ import type { Job } from './jobsService';
 /**
  * L'ottimizzazione locale delle immagini: rilegge le pagine di una
  * cartella di misura già scaricata, le rimpicciolisce al lato lungo scelto e le
- * ricomprime, sostituendo l'originale.
+ * ricomprime in una nuova versione locale, senza sostituire l'originale.
  *
- * È **irreversibile** e perde informazione: la si chiede, non parte mai da sé.
- * Lavora su una cartella di misura per volta, così le pagine prese a risoluzione
- * piena di proposito non vengono schiacciate da un'ottimizzazione che puntava ad
- * altro.
+ * La nuova versione perde dettaglio rispetto alla fonte, ma l'operazione è
+ * reversibile perché la fonte resta intatta. Lavora su una cartella di misura
+ * per volta e non parte mai da sé.
  */
 
 export const DEFAULT_OPTIMIZE_LONG_EDGE = 2000;

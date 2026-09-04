@@ -128,10 +128,16 @@ meglio; non costano nessuna richiesta.
 
 ## Il ritmo verso le biblioteche
 
-Ogni biblioteca ha i suoi tempi: quanto aspettare fra una richiesta e l'altra,
-quante richieste in un minuto, quanto fermarsi quando chiede di rallentare,
-quanti tentativi fare. Sono pochi ritmi diversi applicati a molte biblioteche,
-quindi in **Impostazioni → Biblioteche** si governano come **profili**.
+Ogni biblioteca ha i suoi tempi: quante richieste in un minuto, quante insieme,
+quante pagine di uno stesso libro scaricare per volta, quanto fermarsi quando
+chiede di rallentare, quanti tentativi fare. Sono pochi ritmi diversi applicati a
+molte biblioteche, quindi in **Impostazioni → Biblioteche** si governano come
+**profili**.
+
+Fra una richiesta riuscita e la successiva **non c'è nessuna pausa**: a tenere i
+tempi sono il numero di richieste insieme, il limite al minuto e la pausa lunga
+dopo un rifiuto. Una pausa a ogni richiesta si moltiplicava per tutti i pezzi di
+una pagina ingrandita e rendeva il visore inutilizzabile.
 
 Due profili arrivano con Glossa, con i valori provati sul campo: **Normale**,
 che usano quasi tutte, e **Lento**, tarato su Gallica che è la più severa.
@@ -144,7 +150,18 @@ biblioteche che lo seguono — e i due che arrivano con l'applicazione non si
 eliminano affatto.
 
 Le **richieste insieme non superano mai quattro**, qualunque cosa si scriva: il
-limite dipende dal loro server e serve a non farsi bloccare.
+limite dipende dal loro server e serve a non farsi bloccare. Uno scaricamento
+non le occupa mai tutte: un posto resta sempre alla pagina che stai guardando,
+così sfogliare un libro resta possibile mentre un altro si scarica.
+
+In basso a destra, accanto ai lavori, un piccolo indicatore dice se la rete si
+sta muovendo davvero. Passandoci sopra si apre un pannello: quante immagini
+sono in corso e quante aspettano il turno, tenendo separata la pagina che stai
+guardando dalle miniature; quanti posti sono occupati verso ciascuna biblioteca
+e quante richieste hai già speso nel minuto corrente; e da dove sono arrivate le
+immagini finora — dal deposito, dalla memoria di lavoro o dalla rete — con la
+percentuale di richieste che ti sei risparmiato. Serve a distinguere un lavoro
+lento da uno fermo.
 
 ## Le copertine e le ricerche tenute da parte
 
@@ -193,34 +210,36 @@ riparano.
 pagine hai voluto anche la versione più grande, la scheda dice «più 3 a
 risoluzione piena» accanto al conteggio, invece di far sembrare il libro a metà.
 
-## Ridurre le immagini per liberare spazio
+## Comprimere per liberare spazio, senza perdere l'originale
 
 Un libro scaricato alla massima risoluzione occupa il triplo del necessario. Uno
 scaricato mesi fa con un tetto più alto di quello che ti serve adesso tiene
-dettaglio che non guardi. In entrambi i casi **ripulire è meglio che
+dettaglio che non guardi. In entrambi i casi **comprimere è meglio che
 riscaricare**, perché la biblioteca non ne paga il prezzo.
 
-Nella scheda dell'opera, in Biblioteca, c'è il comando che rilegge le pagine già
-scaricate, le rimpicciolisce alla misura scelta e le ricomprime, sostituendo
-l'originale.
+Nella tab **Copie digitali** della scheda dell'opera, il comando "comprimi"
+apre un piccolo pannello: da quale risoluzione già scaricata partire (solo se
+ce n'è più di una), a quale risoluzione più piccola arrivare, e a che
+qualità. Il comando mette subito il lavoro in coda.
 
-**È irreversibile: l'originale viene sostituito.** Il comando mette subito il
-lavoro in coda. Lavora su **una misura per volta**: quella con cui il libro è
-stato scaricato. Le pagine che
-avevi preso a risoluzione piena di proposito restano come sono.
+**Non è più irreversibile: nasce una copia nuova, l'originale non si tocca
+mai.** Prima la compressione sostituiva le pagine scaricate al loro posto,
+per sempre; ora la copia compressa compare accanto alle altre risoluzioni
+della stessa opera, ognuna con il suo comando per liberare solo quella —
+tieni la copia leggera e butta l'originale pesante, o il contrario, quando
+vuoi.
 
 Su un libro lungo dura minuti, quindi è un lavoro come lo scaricamento: lo segui
-dal pannello in basso a destra, e puoi metterlo in pausa o annullarlo. Le pagine
-già più piccole della misura scelta non vengono toccate, perché ricomprimerle
-perderebbe qualcosa senza liberare niente.
+dal pannello in basso a destra, e puoi metterlo in pausa o annullarlo. Il
+lavoro usa più pagine insieme (quanti nuclei ha il tuo processore, meno uno),
+non una alla volta.
 
-Mentre gira, il pannello dice quante pagine ha ridotto e quanto spazio ha
-liberato; il valore resta nel lavoro concluso. La misura di arrivo e la qualità si scelgono in **Impostazioni →
-Scaricamento**.
+Mentre gira, il pannello dice quante pagine ha ridotto e quanto peserà la
+copia; il valore resta nel lavoro concluso.
 
-Se una pagina non può essere letta o riscritta, il lavoro termina in errore senza nasconderla:
-nel dettaglio resta il numero delle pagine non elaborate e quelle riuscite
-restano correttamente salvate.
+Se una pagina non può essere letta, il lavoro termina in errore senza nasconderla:
+nel dettaglio resta il numero delle pagine non riuscite, e quelle riuscite
+restano correttamente salvate nella copia.
 
 Finché uno scaricamento o un'ottimizzazione può modificare un'opera, i comandi
 per liberarne lo spazio o eliminarla vengono rifiutati. Prima il lavoro deve

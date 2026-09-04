@@ -15,6 +15,7 @@ import { JobsIndicator } from '../jobs/JobsIndicator';
 import { TerminalIconButton } from '../jobs/TerminalIconButton';
 import { JobsPanel } from '../jobs/JobsPanel';
 import { JobsBulkControls } from '../jobs/JobsBulkControls';
+import { NetworkActivity } from './NetworkActivity';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -454,6 +455,7 @@ export function AppStatusBar() {
         {/* 3 — Comandi e stato globali, ordine invariabile:
             lavori · pannello · controlli vista · salvataggio. */}
         <div className="flex shrink-0 items-center justify-end gap-2">
+          <NetworkActivity />
           <JobsIndicator />
           <IconButton
             size="xs"

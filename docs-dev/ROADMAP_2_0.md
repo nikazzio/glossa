@@ -36,6 +36,31 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 
 ### Biblioteca e acquisizione
 
+- **sistemare visivamente l'elenco del catalogo** (vista lista/griglia): dopo
+  il ridisegno della scheda opera, resta la revisione UI/UX del punto 9bis
+  segnata da Niki, non ancora iniziata;
+- **motore e database generici su tutti i 20 campi anagrafici**: fatto (2
+  settembre — vedi STATO_SESSIONE_2.0.md e `docs-dev/ARCHITECTURE.md`). Il
+  campo "tipo" è diventato "Natura dell'origine" (il formato del file vive
+  già per copia su `source_versions`); 8 campi nuovi (luogo di origine,
+  provenienza, note, serie, genere/forma, identificativo standard, copertura,
+  opere collegate) sono ora sempre in tab Info, sola lettura come i 7 di
+  prima. Restano da fare: un'area nelle Impostazioni per abilitare/
+  disabilitare la modifica campo per campo (idea confermata da Niki, non
+  ancora costruita); l'editor dei campi con più valori insieme (oggi uniti
+  con «·» in visualizzazione, da decidere se lo stesso separatore basti anche
+  per la modifica a mano o serva una lista voce-per-voce);
+- **migliorare la tab "Copie digitali"**: funziona ma va rifinita — capire se
+  prevedere davvero più tipi di copia scaricabili per la stessa opera (oggi
+  l'elenco versioni lo permette a livello di dati, ma l'interfaccia non
+  distingue bene "scarica come IIIF" da "scarica come PDF" quando entrambi
+  sono disponibili) e comunque rendere più chiara la relazione fra risoluzioni
+  scaricate, tetto per-copia e tetto generale;
+- **coerenza Biblioteca ↔ Trascrizioni**: la scheda opera ha ora un pattern
+  stabile (colonna visore + colonna informazioni a tab, con `InspectorShell`
+  condiviso con la traduzione) — quando lo Studio di trascrizione prende
+  forma, i comandi generali (tornare indietro, aprire/chiudere la colonna
+  informazioni) devono seguire lo stesso pattern, non uno nuovo per area;
 - portare a termine il blocco Biblioteca: e-rara, e-manuscripta e Wellcome
   (nessun precedente in Scriptoria, da studiare una per una);
 - dare una ricerca vera alle nove biblioteche che oggi accettano solo
@@ -62,7 +87,9 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 ### Shell e osservabilità
 
 - unificare la barra di stato;
-- completare la console generale dei log (#413);
+- completare la console generale dei log (#413) — la ricerca in Biblioteca ha
+  già log tecnici completi (Rust e frontend) pronti per confluirci, oggi
+  visibili solo nel log di sistema;
 - aggiungere notifiche di sistema per i lavori lunghi;
 - risolvere scrollbar e artefatti grafici Linux senza workaround globali.
 

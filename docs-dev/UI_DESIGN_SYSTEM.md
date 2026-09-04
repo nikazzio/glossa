@@ -97,16 +97,53 @@ interattivi.
 - `PopoverItem`: voce di elenco dentro un `ClickPopover` (scegliere workspace,
   collezione, vista salvata). Si usa quando accanto alla voce vive un altro
   comando o un campo, cioè dove `Menu` non arriva.
+- `MenuActionRow`: voce di comando dentro un `ClickPopover` (icona, etichetta,
+  `tone` opzionale `danger`) — per menu di azioni (es. archivia/rimuovi
+  raccolti in un unico trigger), non per scegliere un'opzione da un elenco
+  (quello resta `PopoverItem`).
 - `LinkChip`: etichetta di un legame già stabilito che, cliccata, lo scioglie.
   Il motivo sta nel `Tooltip`, mai nel `title` nativo; il nome leggibile del
   legame resta il nome del comando.
-- Nessuna riga di elenco o etichetta di legame scritta a mano nei componenti.
+- Nessuna riga di elenco, etichetta di legame o voce di menu scritta a mano
+  nei componenti.
 
-### SectionLabel e StatRow
+### SectionLabel, StatRow e StatBlock
 
 - `SectionLabel`: intestazione di sezione con icona.
-- `StatRow`: label e valore allineati su due colonne.
+- `StatRow`: label e valore corti, allineati su due colonne — non va a capo.
+- `StatBlock`: label sopra, valore sotto, va a capo con `break-words` — per
+  pannelli stretti con valori lunghi (titoli, descrizioni fisiche, fondi di
+  conservazione); prop `href` opzionale per i link veri (pagina web, scheda
+  del catalogo), che aggiunge da sé un comando di copia (`CopyButton`)
+  accanto al link.
+- `CopyButton`: copia negli appunti, icona che diventa un segno di spunta per
+  due secondi, `size` come `IconButton`. Ogni indirizzo copiabile (manifesti,
+  link a pagine esterne) lo usa — mai un pulsante di copia scritto a mano.
 - Non ricreare localmente gli stessi pattern.
+
+### InspectorShell
+
+Guscio comune per una colonna a tab con collasso — nato per il pannello
+Insight della traduzione, riusato identico dalla scheda opera in Biblioteca,
+pensato per qualunque colonna laterale a tab futura (es. Trascrizioni): un
+domani si aggiunge una tab o si cambia lo stile di collasso **in un punto
+solo**.
+
+- `tabs`/`activeTab`/`onTabChange`: barra tab a roving tabindex (`TabButton`),
+  le frecce/Home/End saltano le tab disattivate.
+- `actions`: contenuto a destra della barra tab (etichetta della tab attiva,
+  comandi contestuali) — libero, ogni uso ci mette il suo.
+- `panelIcon`/`panelLabel`: se presenti, mostrano sopra la barra tab
+  un'intestazione con il comando di collassa/espandi (`collapsed`/
+  `onCollapsedChange`) e uno slot `headerActions` per comandi accanto (es.
+  chiudere il pannello). Senza `panelLabel`, niente collasso: solo tab e
+  contenuto.
+- Chi monta il componente resta responsabile della larghezza fisica del
+  riquadro (es. un `Panel` di `react-resizable-panels` con `collapsible`):
+  `collapsed` qui è solo lo specchio di quello stato, non lo decide da sé.
+- `ownsPanelSemantics` (default vero): falso solo se `children` porta già un
+  proprio wrapper `role="tabpanel"` per tab (più componenti di contenuto,
+  ognuno con la sua identità — come i tab del documento).
 
 ### SettingRow e campi
 

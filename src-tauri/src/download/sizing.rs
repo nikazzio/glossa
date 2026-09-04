@@ -197,6 +197,8 @@ mod tests {
             image_service: "https://example.org/iiif/1".to_string(),
             size: Some((width, height)),
             canvas_id: None,
+            thumbnail: None,
+            ready_sizes: Vec::new(),
         }
     }
 
@@ -316,6 +318,8 @@ mod tests {
             image_service: "https://example.org/iiif/1".to_string(),
             size: None,
             canvas_id: None,
+            thumbnail: None,
+            ready_sizes: Vec::new(),
         };
         assert_eq!(
             token_for(
