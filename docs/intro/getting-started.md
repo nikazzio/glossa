@@ -36,7 +36,7 @@ o contribuire al progetto. Se stai solo usando Glossa, salta al
 
 ### Prerequisiti
 
-- Node.js 20.19 o superiore, oppure 22.12 o superiore (Node 24 compreso)
+- Node.js e npm nelle versioni dichiarate in [`package.json`](https://github.com/nikazzio/glossa/blob/main/package.json), campo `engines`
 - Rust stable aggiornato
 - `npm` per le dipendenze frontend
 - Su Linux servono anche le librerie di sistema indicate nella [guida di sviluppo](https://github.com/nikazzio/glossa#develop)

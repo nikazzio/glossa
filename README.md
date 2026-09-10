@@ -100,7 +100,7 @@ Beta data and backup formats may change. Current backups do not accept earlier f
 
 ## Develop
 
-Node and npm requirements live in `package.json` under `engines`: Node **20.19+ or 22.12+** (Node 24 included) and npm 11. Rust: current stable. CI runs Node 22 and stable Rust.
+Node and npm requirements are declared in [`package.json`](package.json) under `engines`; `npm ci` refuses to run outside that range, so there is no second copy of the numbers to keep in sync. Rust: current stable. CI runs Node 22 and stable Rust.
 
 Linux system dependencies:
 
@@ -122,7 +122,7 @@ The development port defaults to 48123; set `GLOSSA_DEV_PORT` to override it.
 ```bash
 npm run lint:all
 npm test
-# From src-tauri:
+cd src-tauri
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test

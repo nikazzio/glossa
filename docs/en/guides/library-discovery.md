@@ -43,7 +43,7 @@ A source is unique per manifest: adding it again never creates a duplicate — i
 
 ## The catalogue
 
-The Library always shows **every book**: it is a catalogue, not the view of a workspace. The command above the results switches between list and grid.
+The Library is a catalogue, not the view of a workspace: it shows works from every workspace together. Archived works stay out until you ask to see them, with the dedicated command among the filters. The command above the results switches between list and grid.
 
 ### What a row says
 
@@ -61,11 +61,11 @@ Below the data line sit the **link chips**: the workspaces the work belongs to a
 
 ### Row commands
 
-There is no direct command on the row: they all live in the **"···"** menu — download, check, shrink images, free space, and further down, after a separating line, archive and remove. The ones that do not apply right now stay in place, disabled, so you always know what can be done. Keeping the trash icon outside the menu would mean having it one click away on every row of a long catalogue.
+The commands that act on files and on the record all live in the **"···"** menu — download, check, shrink images, free space, and further down, after a separating line, archive and remove. Only the links stay on the row itself: the workspace and collection chips, with the two commands to add more. The ones that do not apply right now stay in place, disabled, so you always know what can be done. Keeping the trash icon outside the menu would mean having it one click away on every row of a long catalogue.
 
 ### Filters, sorting and saved views
 
-**Filters** live in a right-hand column that resizes and collapses like the other side panels: its width and open state are remembered, and when it is closed a count says how many filters are active. Search sits at the top — type a title or an author — and below it work type, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only those in no workspace at all. Filters work on what you already have in front of you, with no reload, and the dropdowns only offer values actually present in your catalogue. The eraser command clears everything.
+**Filters** live in a right-hand column that resizes and collapses like the other side panels: its width and open state are remembered, and when it is closed a count says how many filters are active. Search sits at the top — type a title or an author — and below it work type, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only those in no workspace at all. Filters work on what you already have in front of you, with no reload. Language and source library only offer values actually present in your catalogue; work type and availability always list every supported entry, and workspace and collection list the ones you created even when no work uses them. The eraser command clears everything.
 
 **Sorting** — The last dropdown decides the order: by title (as it starts), by author (works without an author go last) or by date added, newest first. The chosen order is part of saved views too.
 
@@ -94,7 +94,7 @@ Title, author, date and language can be corrected by hand: the pencil command op
 
 **The original data is never overwritten**: the correction lives separately, so you can always go back. Retyping exactly the library's value leaves no correction mark, because there is nothing to flag. The other fields do not have an edit command in this record yet.
 
-**Resync with the library** — The command in the data section header asks the library for the record again and updates what changed. Your corrections stay, because they are kept separately and are reapplied on top of the new data.
+**Resync with the library** — The command in the data section header asks the library for the record again and rewrites the data with what just arrived. **Corrections made by hand are discarded**: after a resync the record says what the library says, and a title you had fixed must be fixed again. Your notes stay, and downloaded pages stay: resyncing concerns bibliographic data, not files.
 
 ### Local versions
 
@@ -182,7 +182,7 @@ They live in **Settings → Library**, in three tabs:
 
 - **Libraries** — one row per library, with the network profile it follows and the way images are requested from it.
 - **Images** — the size of pages, the size of thumbnails and the values used to derive reduced versions.
-- **Configurations** — the network profiles, that is the pacing shared by several libraries, with explicit saving.
+- **Settings** — the network profiles, that is the pacing shared by several libraries, with explicit saving.
 
 The page size is a cap, not an obligation: pages already smaller are taken as they are. The same choice can be made on a single work, and there it wins, because the size depends on the material and not on who keeps the book. Details of profiles and network controls are in [Storage and jobs](/en/guides/storage-and-jobs).
 

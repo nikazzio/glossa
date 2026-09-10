@@ -43,7 +43,7 @@ Una fonte è unica per manifesto: aggiungerla di nuovo non crea un duplicato, co
 
 ## Il catalogo
 
-La Biblioteca mostra **sempre tutti i libri**: è un catalogo, non la vista di un workspace. Il comando sopra i risultati alterna vista a elenco e vista a griglia.
+La Biblioteca è un catalogo, non la vista di un workspace: mostra le opere di tutti i workspace insieme. Le opere archiviate restano fuori finché non chiedi di vederle, con il comando apposito fra i filtri. Il comando sopra i risultati alterna vista a elenco e vista a griglia.
 
 ### Che cosa dice una riga
 
@@ -61,11 +61,11 @@ Sotto la riga di dati stanno le **etichette dei collegamenti**: i workspace a cu
 
 ### I comandi della riga
 
-Sulla riga non c'è nessun comando diretto: stanno tutti nel menu **«···»** — scarica, verifica, riduci le immagini, libera spazio, e più in basso, dopo un filo di separazione, archivia e togli. Quelli che in quel momento non servono restano al loro posto, spenti, così sai sempre cosa si può fare. Tenere il cestino fuori dal menu significherebbe averlo a un clic di distanza su ogni riga di un catalogo lungo.
+I comandi che agiscono sui file e sulla scheda stanno tutti nel menu **«···»** — scarica, verifica, riduci le immagini, libera spazio, e più in basso, dopo un filo di separazione, archivia e togli. Restano sulla riga soltanto i collegamenti: le etichette dei workspace e delle collezioni, con i due comandi per aggiungerne. Quelli che in quel momento non servono restano al loro posto, spenti, così sai sempre cosa si può fare. Tenere il cestino fuori dal menu significherebbe averlo a un clic di distanza su ogni riga di un catalogo lungo.
 
 ### Filtri, ordinamento e viste salvate
 
-I **filtri** vivono in una colonna a destra, che si ridimensiona e si richiude come gli altri pannelli laterali: la larghezza e lo stato aperto o chiuso si ricordano, e quando è chiusa un conteggio dice quanti filtri sono attivi. In cima c'è la ricerca — scrivi titolo o autore — e sotto tipo di opera, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
+I **filtri** vivono in una colonna a destra, che si ridimensiona e si richiude come gli altri pannelli laterali: la larghezza e lo stato aperto o chiuso si ricordano, e quando è chiusa un conteggio dice quanti filtri sono attivi. In cima c'è la ricerca — scrivi titolo o autore — e sotto tipo di opera, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente. Lingua e biblioteca di provenienza offrono soltanto i valori davvero presenti nel tuo catalogo; tipo di opera e disponibilità elencano sempre tutte le voci previste, e workspace e collezione elencano quelli che hai creato anche se nessuna opera li usa. Il comando con la gomma azzera tutto.
 
 **Ordinamento** — L'ultima tendina decide l'ordine: per titolo (come parte), per autore (le opere senza autore vanno in fondo) oppure per data di aggiunta, dalla più recente. L'ordine scelto entra anche nelle viste salvate.
 
@@ -94,7 +94,7 @@ Titolo, autore, data e lingua si correggono a mano: il comando con la matita apr
 
 **Il dato originale non viene mai sovrascritto**: la correzione vive a parte, quindi si può sempre tornare indietro. Riscrivere esattamente il valore della biblioteca non lascia nessun segno di correzione, perché non c'è niente da segnalare. Gli altri campi non hanno ancora un comando di modifica in questa scheda.
 
-**Risincronizza con la biblioteca** — Il comando nell'intestazione della sezione dei dati richiede di nuovo la scheda alla biblioteca e aggiorna quello che è cambiato. Le tue correzioni restano, perché sono conservate a parte e vengono riapplicate sopra i dati nuovi.
+**Risincronizza con la biblioteca** — Il comando nell'intestazione della sezione dei dati richiede di nuovo la scheda alla biblioteca e riscrive i dati con quelli appena ricevuti. **Le correzioni fatte a mano vengono cancellate**: dopo la risincronizzazione la scheda dice quello che dice la biblioteca, e se ti serviva un titolo diverso va corretto di nuovo. Restano le note che hai scritto e restano le pagine scaricate: la risincronizzazione riguarda i dati bibliografici, non i file.
 
 ### Le versioni locali
 

@@ -26,7 +26,7 @@ Useful links:
 
 ## Prerequisites
 
-- Node.js 20.19 or newer, or 22.12 or newer (Node 24 included)
+- Node.js and npm at the versions declared in [`package.json`](https://github.com/nikazzio/glossa/blob/main/package.json), `engines` field
 - Current stable Rust
 - `npm` for frontend dependencies
 - Linux users also need the system libraries listed in the [development guide](https://github.com/nikazzio/glossa#develop)

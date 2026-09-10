@@ -38,7 +38,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'audit',           label: t('help.sections.audit') },
     { id: 'projects',        label: t('help.sections.projects') },
     { id: 'sources',         label: t('help.sections.sources') },
-{ id: 'storage',         label: t('help.sections.storage') },
+    { id: 'storage',         label: t('help.sections.storage') },
     { id: 'providers',       label: t('help.sections.providers') },
     { id: 'ollama',          label: t('help.sections.ollama') },
     { id: 'glossary',        label: t('help.sections.library') },
@@ -501,11 +501,6 @@ function AuditSection() {
 }
 
 /**
- * Archiviazione e lavori in background. Sta qui, e non nei pannelli delle
- * impostazioni, perché lì il testo lungo affolla i comandi: le impostazioni
- * dicono cosa fanno, l'aiuto spiega perché.
- */
-/**
  * Biblioteca: ricerca, catalogo, scheda dell'opera, visore.
  *
  * Sta prima di «Archiviazione e lavori», che continua a raccontare deposito,
@@ -557,6 +552,11 @@ function SourcesSection() {
   );
 }
 
+/**
+ * Archiviazione e lavori in background. Sta qui, e non nei pannelli delle
+ * impostazioni, perché lì il testo lungo affolla i comandi: le impostazioni
+ * dicono cosa fanno, l'aiuto spiega perché.
+ */
 function StorageSection() {
   const { t } = useTranslation();
   return (

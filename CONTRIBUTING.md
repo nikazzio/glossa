@@ -4,7 +4,7 @@ Glossa is a beta under active development. Version numbers reflect automated rel
 
 ## Setup
 
-Follow the [README](README.md) for platform dependencies and startup. Node and npm requirements are declared in `package.json` under `engines`: Node 20.19+ or 22.12+, npm 11, current stable Rust. CI runs Node 22.
+Follow the [README](README.md) for platform dependencies and startup. Node and npm requirements are declared in [`package.json`](package.json) under `engines`, and that is the only place they are written; Rust: current stable. CI runs Node 22.
 
 Read [development documentation](docs-dev/README.md) and the repository instructions before changing code. Start from updated `main`, use a focused branch and keep each pull request independently understandable.
 
@@ -15,7 +15,7 @@ During implementation, run tests for the affected behaviour. Before handing off 
 ```bash
 npm run lint:all
 npm test
-# From src-tauri:
+cd src-tauri
 cargo check --all-targets
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
