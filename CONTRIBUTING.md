@@ -1,150 +1,65 @@
 # Contributing to Glossa
 
-## Development setup
+Glossa is a beta under active development. Version numbers reflect automated release experiments, not a declaration that the planned product is complete.
 
-### Prerequisites
+## Setup
 
-- Node.js ≥ 18
-- Rust (via [rustup](https://rustup.rs/))
-- System dependencies:
-  - **Linux**: `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsecret-1-dev`
-  - **Windows**: WebView2 (included in Windows 10/11)
+Follow the [README](README.md) for platform dependencies and startup. Node and npm requirements are declared in `package.json` under `engines`: Node 20.19+ or 22.12+, npm 11, current stable Rust. CI runs Node 22.
 
-### Getting started
+Read [development documentation](docs-dev/README.md) and the repository instructions before changing code. Start from updated `main`, use a focused branch and keep each pull request independently understandable.
 
-```bash
-git clone https://github.com/nikazzio/glossa.git
-cd glossa
-npm install
-npm run tauri:dev    # dev mode with hot reload
-npm run tauri:build  # production build
-```
+## Verification
 
-### Checks
+During implementation, run tests for the affected behaviour. Before handing off a change spanning multiple areas, run the relevant full suites once.
 
 ```bash
-npm run lint:all                  # TypeScript type-check + ESLint
-cd src-tauri && cargo check       # Rust type-check
+npm run lint:all
+npm test
+# From src-tauri:
+cargo check --all-targets
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
 ```
 
-Both checks run automatically on every push via CI.
+CI runs these checks on pull requests and pushes to main, plus browser smoke tests, production npm dependency auditing, Rust dependency auditing and release security configuration checks. Rust audit exceptions are documented in the workflow; green audit status includes those exceptions.
 
----
+The 80% coverage target is a development objective, not a currently enforced CI threshold. Test count alone does not establish coverage.
 
-## Commit conventions
+Browser smoke tests simulate the desktop bridge. Test installed desktop workflows separately when native storage, networking, recovery or platform behaviour changes. Do not run app/documentation builds, E2E or dependency installations routinely unless requested or necessary to diagnose a failure.
 
-We use [Conventional Commits](https://www.conventionalcommits.org/) to generate changelogs and determine version bumps automatically.
+## Documentation
 
-### Format
+User behaviour changes update the in-app guide and public guides in Italian and English. Describe present behaviour, limitations and meaningful choices; keep development history out of user guides.
 
-```
-<type>: <description>
+Architecture records current contracts. Product architecture records the target and domain boundaries. The roadmap owns remaining work. Session notes are a short handoff, not a second roadmap or a commit diary.
 
-[optional body]
-```
+For source acquisition, jobs, transcription and export, consult relevant Scriptoria modules and record what was adopted, adapted or rejected. It is a reference, not an automatic requirement to copy every feature.
 
-### Types
+## Pull requests and issues
 
-| Type | Description | Version bump |
-|------|-------------|-------------|
-| `feat` | New feature | minor (0.1.0 → 0.**2**.0) |
-| `fix` | Bug fix | patch (0.1.0 → 0.1.**1**) |
-| `perf` | Performance improvement | patch |
-| `refactor` | Code restructuring (no behavior change) | patch |
-| `docs` | Documentation only | no release |
-| `chore` | Build, CI, tooling | no release |
-| `test` | Adding or fixing tests | no release |
-| `style` | Formatting, whitespace | no release |
+Use Conventional Commits, for example `fix(library): preserve offline page selection`. The type decides what release-please proposes:
 
-### Examples
+| Type | Meaning | Version bump |
+|------|---------|--------------|
+| `feat` | New capability | minor |
+| `fix`, `perf`, `refactor` | Bug fix, speed, restructuring | patch |
+| `docs`, `chore`, `test`, `style`, `ci` | No user-visible change | none |
 
-```bash
-git commit -m "feat: add glossary term management"
-git commit -m "fix: prevent crash when importing empty files"
-git commit -m "docs: update Ollama setup instructions"
-git commit -m "refactor: extract streaming logic into separate module"
-```
+Add `!` after the type, or `BREAKING CHANGE:` in the body, for a major bump. A CI check enforces the convention on pull request titles.
 
-### Breaking changes
+Describe the user-visible result, scope and checks. Link implementation issues and close only work actually completed on main. An epic with unfinished children stays open.
 
-For major version bumps, add `!` after the type or include `BREAKING CHANGE:` in the body:
+Update stale issue descriptions when implementation resolves a decision. Separate implemented work from remaining acceptance criteria. The beta completion milestone describes product scope independently of package version numbers.
 
-```bash
-git commit -m "feat!: redesign project file format"
-```
+## Releases
 
----
+GitHub Actions uses **release-please** to propose version and changelog changes. Merging its release PR creates the tag and triggers Linux, Windows and macOS Apple Silicon builds, checksums and configured updater artifacts. Tags use the `glossa-v` prefix.
 
-## Release process
+A release proposal is not a completion gate and must not be merged merely because it exists. Keep the current numbering; beta completion is defined in the [roadmap](docs-dev/ROADMAP_2_0.md).
 
-Releases are fully automated via [release-please](https://github.com/googleapis/release-please).
+Before distributing a build, state included capabilities, remaining limitations and data/backup compatibility. Verify fresh installation, restart and recovery on representative data. During this private beta, do not promise compatibility that has not been implemented.
 
-### How it works
+Updater signing uses `TAURI_SIGNING_PRIVATE_KEY` and optional `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Updater signatures are separate from Windows Authenticode signing.
 
-1. **You commit and push to `main`** using conventional commits
-2. **release-please** automatically creates (or updates) a PR titled `chore(main): release X.Y.Z`
-   - This PR contains the version bump across all files (`package.json`, `Cargo.toml`, `tauri.conf.json`)
-   - It includes a generated `CHANGELOG.md` with all changes since the last release
-   - The PR accumulates changes — every new push to main updates it
-3. **When you're ready to release**, merge the release PR
-4. **Automatically**:
-   - A git tag `vX.Y.Z` is created
-   - GitHub Actions builds the app on Linux and Windows in parallel
-   - Binaries (`.deb`, `.rpm`, `.AppImage`, `.msi`, `.exe`) are uploaded to a GitHub Release
-   - Platform-specific `SHA256SUMS-*.txt` files are uploaded for integrity verification
-   - Release builds also generate signed Tauri updater artifacts when updater signing secrets are configured
-
-### Build targets
-
-| Platform | Artifacts |
-|----------|-----------|
-| Linux | `.deb`, `.rpm`, `.AppImage` |
-| Windows | `.msi`, `.exe` (NSIS installer) |
-
-### Workflow
-
-```
-feat: add glossary support   ──┐
-fix: correct export encoding ──┤  push to main
-refactor: clean up stores    ──┘
-                                │
-              ┌─────────────────▼──────────────────┐
-              │  release-please opens/updates       │
-              │  PR "chore(main): release 0.2.0"    │
-              │  with CHANGELOG listing all changes │
-              └─────────────────┬──────────────────┘
-                                │
-                   you merge when ready
-                                │
-              ┌─────────────────▼──────────────────┐
-              │  tag v0.2.0 created                 │
-              │  🐧 Linux build  → .deb .rpm .AppImage │
-              │  🪟 Windows build → .msi .exe       │
-              │  📦 uploaded to GitHub Releases      │
-              └────────────────────────────────────┘
-```
-
----
-
-## Branching
-
-- `main` — stable, CI-checked. All work merges here.
-- Feature branches — `feat/glossary-support`, `fix/crash-large-files`, etc.
-- Release PR — managed by release-please, do not edit manually.
-
-## Pull requests
-
-1. Create a branch from `main`
-2. Make your changes with conventional commits
-3. Push and open a PR
-4. CI runs lint + cargo check automatically
-5. After review, merge to `main`
-
-## Release secrets
-
-The automated release workflow expects these repository secrets for Tauri updater artifact signing:
-
-- `TAURI_SIGNING_PRIVATE_KEY`
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (optional if the private key has no password)
-
-These are used for Tauri updater artifact signing only. They do **not** replace Windows Authenticode code signing.
+Public docs deploy from main when their workflow is triggered. Therefore they describe development state and may be ahead of downloadable builds.
