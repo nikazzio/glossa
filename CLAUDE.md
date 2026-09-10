@@ -1,7 +1,7 @@
 # Glossa — Istruzioni per lo sviluppo
 
 ## Stato del progetto
-Sviluppo attivo (pre-1.0). Priorità assoluta modalità documento/editoriale. UI sandbox tocca solo regressioni bloccanti.
+Beta privata in sviluppo, senza una base di utenti esterni. La numerazione 2.x deriva da prove di rilascio automatico e non indica completezza. Obiettivo: completare Biblioteca → Trascrizioni → Traduzioni → Export, preservando la modalità documento/editoriale. Ordine in docs-dev/ROADMAP_2_0.md. Scriptoria resta riferimento tecnico per fonti, deposito, lavori, trascrizione ed export. UI sandbox tocca solo regressioni bloccanti.
 
 ## Stack
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite

@@ -5,8 +5,8 @@ description: Documentazione pubblica dell'app desktop Glossa.
 
 hero:
   name: Glossa
-  text: Traduzione editoriale per testi lunghi
-  tagline: Workflow desktop di traduzione per studiosi, editor professionisti e revisori di testi lunghi — traduzione a stadi, gestione documenti a chunk, audit, glossario e phrase memory in un'unica app locale.
+  text: Fonti, studio e traduzione editoriale
+  tagline: Un ambiente desktop in beta per raccogliere e leggere fonti, organizzare la ricerca e tradurre testi lunghi con revisione, glossari e memoria di frasi.
   image:
     src: /glossa-app-icon.png
     alt: Glossa
@@ -30,6 +30,13 @@ features:
     details: Importa testo, Markdown, DOCX o PDF, segmenta il contenuto e processalo progressivamente invece di incollare tutto in una chat.
 ---
 
+## Una beta in evoluzione
+
+La Biblioteca e la traduzione sono operative. Studio di trascrizione, OCR/HTR,
+Export Studio e Analisi sono ancora da completare. Il numero 2.x non indica
+che l'intero prodotto sia finito. Le guide seguono main e possono precedere
+la versione scaricabile: consulta lo [stato della beta](./project/status).
+
 ## Leggi prima questi
 
 - [Scarica l'app](./intro/getting-started#scarica-lapp) per installare la release giusta per Windows, macOS o Linux
@@ -42,6 +49,9 @@ features:
 - [Risoluzione problemi](./reference/troubleshooting) per i guasti più comuni
 
 ## Cosa copre Glossa
+
+- Biblioteca delle fonti, lettore IIIF e immagini disponibili offline
+- Workspace, scaricamenti persistenti e backup dell'applicazione
 
 - Modalità Standard per una singola traduzione più audit
 - Modalità Editoriale per traduzione, refine, format e review

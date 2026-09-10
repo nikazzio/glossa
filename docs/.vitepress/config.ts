@@ -32,7 +32,7 @@ const sidebarIt = [
   },
   {
     text: 'Progetto',
-    items: [{ text: 'Changelog', link: '/project/changelog' }],
+    items: [{ text: 'Stato della beta', link: '/project/status' }, { text: 'Changelog', link: '/project/changelog' }],
   },
 ];
 
@@ -68,7 +68,7 @@ const sidebarEn = [
   },
   {
     text: 'Project',
-    items: [{ text: 'Changelog', link: '/en/project/changelog' }],
+    items: [{ text: 'Beta status', link: '/en/project/status' }, { text: 'Changelog', link: '/en/project/changelog' }],
   },
 ];
 

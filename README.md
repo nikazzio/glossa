@@ -1,376 +1,82 @@
-<div align="center">
+# Glossa
 
-```text
-  ██████╗ ██╗      ██████╗ ███████╗███████╗ █████╗
- ██╔════╝ ██║     ██╔═══██╗██╔════╝██╔════╝██╔══██╗
- ██║  ███╗██║     ██║   ██║███████╗███████╗███████║
- ██║   ██║██║     ██║   ██║╚════██║╚════██║██╔══██║
- ╚██████╔╝███████╗╚██████╔╝███████║███████║██║  ██║
-  ╚═════╝ ╚══════╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝
+A local desktop workbench for studying historical sources and producing reviewed translations.
+
+**Glossa is in beta.** Release numbers reflect experiments with automated versioning; a 2.x tag does not mean the planned workbench is complete. The project is currently developed and tested by its maintainer, with no established external user base.
+
+[User documentation](https://nikazzio.github.io/glossa/) · [Beta status](https://nikazzio.github.io/glossa/project/status) · [Downloads](https://github.com/nikazzio/glossa/releases) · [Contributing](CONTRIBUTING.md)
+
+## What works today
+
+- **Translation:** import text, Markdown, DOCX or text-based PDF; split it into passages; test a configurable pipeline; translate, revise and export.
+- **Editorial control:** glossaries, phrase memory, annotations, translation history, AI review and document-level coherence checks. Human review remains essential.
+- **Library:** search supported collections, save source records, organise them across workspaces, read IIIF pages and keep local image versions for offline use.
+- **Long-running work:** persistent downloads, pause/resume, local image optimisation and integrity checks.
+- **Recovery:** whole-app backups, optional password encryption and recovery code. Downloaded images are kept separately in the vault.
+- **Providers:** Gemini, OpenAI, Anthropic, DeepSeek, Ollama and custom OpenAI-compatible endpoints; DeepL for the initial translation pass.
+- **Interface:** Italian and English.
+
+A workspace brings related research together without duplicating shared sources. The Library contains source materials; Language resources contains dictionaries and prompt templates.
+
+## What is still being built
+
+The complete transcription studio, OCR/HTR assistance, the approved-transcription-to-translation bridge, PDF reading/downloads within the Library, advanced export and the Analysis area are not complete. A visible area or an existing data model does not imply an operational workflow.
+
+See the [completion roadmap](docs-dev/ROADMAP_2_0.md) for dependencies, acceptance criteria and remaining work. Scriptoria remains a technical and workflow reference for sources, storage, jobs, transcription and export; patterns are evaluated and adapted to Glossa.
+
+## Try the beta
+
+Download an installer from [GitHub Releases](https://github.com/nikazzio/glossa/releases) and read its notes. Available packages are Windows installers, Linux AppImage/DEB/RPM and macOS Apple Silicon DMG.
+
+The documentation follows development on `main`; a downloaded build can lag behind it. Check the version shown in the app against the release notes.
+
+For a first translation, create a workspace and project, import a short sample, configure a provider and run one passage in Test mode. Review the result before processing the full document. For source research, start with the Library guide.
+
+Data stays on your computer except for requests you make to remote libraries or language providers. Local translation requires a running Ollama model. Provider credentials use the operating-system keychain when available, with an encrypted local fallback.
+
+Beta data and backup formats may change. Current backups do not accept earlier formats. Keep useful source documents and exports alongside backups; read compatibility notes before switching builds.
+
+## Develop
+
+Use Node.js **22.12 or newer in the 22.x series**, npm 11 and current stable Rust. CI uses Node 22 and stable Rust.
+
+Linux system dependencies:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libgtk-3-dev libsecret-1-dev
 ```
 
-**Multi-stage AI translation pipeline for scholars**
-
-A desktop application that chains multiple LLM passes — draft, refinement, audit — to produce publication-quality translations. Built for philologists, classicists, and translators who need precision over speed.
-
-[Official docs](https://nikazzio.github.io/glossa/) · [Releases](https://github.com/nikazzio/glossa/releases/latest) · [Contributing](CONTRIBUTING.md)
-
-[![Tauri v2](https://img.shields.io/badge/Tauri-v2-blue?logo=tauri)](https://v2.tauri.app)
-[![Release](https://img.shields.io/github/v/release/nikazzio/glossa?display_name=tag)](https://github.com/nikazzio/glossa/releases/latest)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
-[![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://rust-lang.org)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-
-</div>
-
----
-
-## Download the app
-
-Glossa is a desktop application first. If you want to use it, download a release build from GitHub instead of cloning the repository.
-
-- Windows: installer `.exe` or `.msi`
-- macOS: `.dmg`
-- Linux: `.AppImage`, `.deb`, or `.rpm`
-
-Latest release:
-
-- [GitHub Releases](https://github.com/nikazzio/glossa/releases/latest)
-- Current latest tag as of July 21, 2026: [`glossa-v1.2.1`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.2.1)
-
-Use the source repository only if you want to develop Glossa, test changes locally, or contribute code.
-
-## Develop from source
-
-If you want to hack on Glossa itself, clone the repository and run it locally:
+Windows needs Visual Studio C++ Build Tools and WebView2. macOS needs Xcode command-line tools.
 
 ```bash
 git clone https://github.com/nikazzio/glossa.git
 cd glossa
-npm install
+npm ci
 npm run tauri:dev
 ```
 
-## How it works
-
-Glossa runs your source text through a configurable pipeline of LLM stages, then audits the result with an AI judge.
-
-**Standard mode** — single translation pass:
-```
-Source text
-  └─► Translation (model + prompt + persona)
-        └─► AI Judge: quality rating + issues + suggested fixes
-```
-
-**Editorial mode** — three-stage refinement:
-```
-Source text
-  └─► Translation → Refine → Format
-                               └─► AI Judge
-```
-
-Each stage has its own model, provider, prompt, and can be individually inspected. Long documents are split into chunks processed in sequence.
-
-**Four-phase workflow** (Document mode):
-
-| Phase | What happens |
-|-------|-------------|
-| **Configure** | Set up pipeline, language pair, glossary |
-| **Test** | Run one chunk as a preview — config stays editable, nothing is locked |
-| **Translate** | Full production run across all unlocked chunks |
-| **Review** | Audit panel with quality ratings, issues, and suggested fixes |
-
-Translations stream token-by-token in real time. You can edit the candidate translation manually before auditing, re-run only the audit, and iterate until the quality meets your standards.
-
-## Features
-
-| Category | Details |
-|----------|---------|
-| **LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models), and custom OpenAI-compatible endpoints; DeepL supports the first translation pass |
-| **Streaming** | Real-time token display during translation |
-| **Responsive stop** | Stop requests cancel in-flight Ollama and cloud-provider stage calls, then halt after the current unit |
-| **Standard pipeline** | Single translation pass with model, provider, prompt, and optional persona |
-| **Editorial pipeline** | Three-stage Translation → Refine → Format, each with its own model and prompt |
-| **Test / Production mode** | Test on a single chunk before committing to a full run; config stays editable until you switch to Production |
-| **AI Judge** | LLM-as-a-judge audit with semantic quality ratings, categorized issues, and fixes |
-| **Glossary** | Keyword registry enforced across all stages and the audit |
-| **Chunk annotations** | Attach typed notes (Comment, Doubt, Problem, Approved) to any chunk; right-click selected text to anchor a note to a specific phrase; audit issues convert to annotations in one click |
-| **Import-aware segmentation** | Splits source text by paragraphs, keeps Markdown headings attached to following content, and can carry only genuinely short plain-text trailing blocks forward |
-| **Project management** | Save/load projects with full pipeline config and translations |
-| **File I/O** | Import `.txt`, `.md`, `.docx`, `.pdf`; export `.txt`, `.md`, `.html`, `.docx`, or bilingual Markdown |
-| **Markdown-safe import** | Markdown imports preserve significant whitespace such as hard line breaks, indentation, and fenced-block spacing |
-| **Secure keys** | API keys stored in OS keychain (GNOME Keyring / macOS Keychain / Windows Credential Manager) |
-| **i18n** | English and Italian interface |
-| **Desktop native** | Tauri v2 — lightweight binaries, no browser runtime |
-
-## Documentation
-
-- Public docs: [nikazzio.github.io/glossa](https://nikazzio.github.io/glossa/)
-- Internal architecture notes: `docs-dev/ARCHITECTURE.md`
-- Internal UI design system: `docs-dev/UI_DESIGN_SYSTEM.md`
-
-## Quick start
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) ≥ 18 (20 LTS recommended)
-- [Rust](https://rust-lang.org/tools/install/) ≥ 1.77.2
-- System libraries for Tauri (Linux only):
-  ```bash
-  sudo apt update
-  sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
-    libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
-    libgtk-3-dev libsecret-1-dev
-  ```
-
-### Install Rust
-
-Linux, macOS, or WSL:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-rustc --version
-cargo --version
-```
-
-Windows:
-
-1. Install Microsoft Visual Studio C++ Build Tools with **Desktop development with C++**.
-2. Install Rust with `winget install --id Rustlang.Rustup` or download `rustup-init.exe` from [rust-lang.org/tools/install](https://rust-lang.org/tools/install/).
-3. Use the MSVC toolchain:
-   ```powershell
-   rustup default stable-msvc
-   rustc --version
-   cargo --version
-   ```
-
-### Install & run from source
-
-```bash
-npm run tauri:dev      # development mode with hot reload
-```
-
-The dev server runs on a dedicated port (`48123`) to avoid clashing with other local projects. If that port is ever taken on your machine, override it:
-
-```bash
-# Linux / macOS
-GLOSSA_DEV_PORT=9999 npm run tauri:dev
-```
-
-```powershell
-# Windows PowerShell
-$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev
-```
-
-```cmd
-:: Windows cmd.exe
-set GLOSSA_DEV_PORT=9999 && npm run tauri:dev
-```
-
-Vite and Tauri's dev URL both pick up the same value automatically — no file to edit by hand.
-
-### Build for production
-
-```bash
-npm run tauri:build
-```
-
-Outputs `.deb`, `.rpm`, and `.AppImage` on Linux; `.dmg` on macOS; `.msi` on Windows.  
-Bundles are in `src-tauri/target/release/bundle/`.
-
-### Development checks
+The development port defaults to 48123; set `GLOSSA_DEV_PORT` to override it.
 
 ```bash
 npm run lint:all
 npm test
-npm run build
-cd src-tauri
+# From src-tauri:
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-### Verify release downloads
+Run focused checks during development. Browser smoke tests use a simulated desktop bridge; they do not replace testing an installed app. See [Contributing](CONTRIBUTING.md) for release and verification details.
 
-GitHub Releases include machine-readable SHA-256 checksum files so you can verify downloaded assets before running them.
+## Project organisation
 
-Windows PowerShell:
-```powershell
-Get-FileHash .\Glossa-setup.exe -Algorithm SHA256
-```
+React/TypeScript provides the interface; Rust/Tauri handles native operations, network access and jobs; SQLite stores structured data. Downloaded images live separately from the database.
 
-Windows CMD:
-```cmd
-certutil -hashfile Glossa-setup.exe SHA256
-```
-
-Compare the resulting hash with the corresponding entry in `SHA256SUMS-*.txt`.
-
-Note: Tauri updater artifacts are also signed for in-app update verification, but that signature is separate from Windows Authenticode code signing and does not suppress SmartScreen warnings.
-
-## Configuration
-
-### API keys
-
-Open **Settings** (⚙️ icon) and paste your API keys. They are stored in your operating system's keychain — never in plain text, never sent anywhere except to the provider's API.
-
-| Provider | Get a key |
-|----------|-----------|
-| Gemini | [ai.google.dev](https://ai.google.dev/) |
-| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) |
-| Anthropic | [console.anthropic.com](https://console.anthropic.com/) |
-| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/) |
-
-### Ollama (local models)
-
-For fully offline, private translation with models running on your own hardware:
-
-1. Install Ollama: [ollama.com/download](https://ollama.com/download)
-2. Pull a model: `ollama pull llama3.2` (or `mistral`, `gemma2`, etc.)
-3. Start the server: `ollama serve`
-4. In Glossa Settings, the Ollama section will show connected status and available models.
-
-No API key is needed. All data stays on your machine.
-
-## Usage guide
-
-### 1. Set up the pipeline
-
-In the configuration panel (gear icon in **Document** mode):
-
-- Choose source and target languages
-- Configure the translation pass (Translation tab):
-  - Set the **provider**, **model**, and **translation instructions**
-  - Toggle **Rolling context** to pass the tail of the previous chunk as background context
-- Optionally set a **Persona** (Settings tab) to define the translator's voice and domain — replaces the default opener with your custom system prompt
-- Set up the **Quality Control** tab with a judge model, audit prompt and coherence prompt
-- Add terms to the **Term Registry** tab to enforce consistent terminology
-
-### 2. Run the pipeline
-
-**Document mode** — long texts split into chunks:
-
-1. Import a file (`.txt`, `.md`, `.docx`, `.pdf`) via the upload icon
-2. Set segmentation options in the preview dialog and confirm
-   - In Markdown mode, isolated `#` headings stay attached to the paragraph that follows
-   - Markdown imports preserve significant whitespace before chunking
-3. Open the document — you are now in **Configure** phase with the pipeline fully editable
-4. **Test** the pipeline on a single chunk first:
-   - The run bar defaults to **Test mode** (flask icon)
-   - Click the run button — Glossa processes one chunk and marks it as *preview*
-   - Inspect the result in the translation pane; config remains unlocked
-   - Repeat until satisfied, then switch to **Production mode** (lightning icon)
-5. Click run in **Production mode** to translate all remaining chunks
-6. Navigate chunks via the **Insights** panel (Index tab) and review the audit results
-
-If a batch is interrupted, the next run resumes and skips chunks already completed. If a full batch already finished, running it again reprocesses every chunk that is not explicitly locked.
-
-### 3. Review the audit
-
-**Chunk-level** (Insights panel → Audit tab):
-
-- **Quality rating** for each chunk
-- **Issues** categorized by type (glossary, fluency, accuracy, grammar, consistency) and severity
-- **Suggested fixes** for each issue
-- Click **"Re-Evaluate Drafts"** after manual edits to get an updated quality rating
-- Lock a translation when you want to keep it out of later full-document reruns
-- Use the **Notes tab** (Insights panel) to attach typed annotations (Comment, Doubt, Problem, Approved) to a chunk — right-click any selected text in the translation to anchor an annotation to that phrase; audit issues have a one-click button to create a pre-filled annotation
-- Annotations with an anchor appear as GFM footnote markers in the rendered translation view; the stored draft is never modified
-
-**Document-level coherence** (Insights panel → Coherence tab, Document mode):
-
-- Cross-segment consistency check using the Coherence prompt
-- Run after all chunks are complete for a holistic terminology review
-
-### 4. Projects and files
-
-- **📂 Projects**: Save your entire pipeline config + translations. Reload anytime.
-- **⬆ Import**: Load `.txt`, `.md`, `.docx`, or `.pdf` files via native OS dialog
-- **⬇ Export**: Save as `.txt`, `.md`, `.html`, `.docx`, or bilingual `.md` (source + translation + audit)
-- **💾 Save**: Persist the current project state to SQLite
-- **🗄 Backup**: Open **Settings → Backup and restore** to export the full workspace (all projects, pipelines, translations, glossaries, templates) as a portable `.glossa-backup` file. Before replacing local data, Glossa checks that the backup is complete and compatible.
-
-### 5. Stop, resume, and rerun
-
-- **Stop** is best-effort immediate cancellation for the in-flight provider request; Glossa then stops cleanly without continuing to later stages or chunks.
-- **Resume** appears after an interrupted batch and continues from the unfinished chunks.
-- **Run again after completion** starts a new batch round and preserves only chunks you have explicitly locked.
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────┐
-│  Frontend (React 19 + Zustand + Vite)        │
-│  ├── components/pipeline   (config + run UI) │
-│  ├── components/document   (chunk workspace) │
-│  ├── components/help       (in-app guide)    │
-│  ├── hooks/usePipeline     (execution logic) │
-│  ├── stores/               (Zustand stores)  │
-│  └── services/llmService   (IPC bridge)      │
-├──────────────────────────────────────────────┤
-│  Tauri IPC (invoke commands / SSE events)    │
-├──────────────────────────────────────────────┤
-│  Rust Backend                                │
-│  ├── llm/pipeline  (Tauri commands)          │
-│  ├── llm/prompts   (prompt assembly)         │
-│  ├── llm/blobs     (reference blob system)   │
-│  ├── llm/stream    (SSE streaming)           │
-│  ├── llm/providers (OpenAI, Anthropic, …)    │
-│  ├── keystore      (OS keychain)             │
-│  └── db            (SQLite via sqlx)         │
-└──────────────────────────────────────────────┘
-```
-
-| Layer | Tech |
-|-------|------|
-| Desktop shell | Tauri v2 (webview + Rust backend) |
-| Frontend | React 19, TypeScript, Tailwind CSS v4, Zustand |
-| LLM integration | Rust `reqwest` with SSE streaming |
-| Prompt caching | Structured cacheable/non-cacheable prompt blocks |
-| Storage | SQLite via `sqlx` + `tauri-plugin-sql` |
-| API key security | OS keychain via `keyring` crate |
-| i18n | `react-i18next` with bundled JSON |
-
-## Project structure
-
-```
-glossa/
-├── src/                      # React frontend
-│   ├── components/           # UI components by domain
-│   │   ├── pipeline/         # Config drawer, run controls, prompt preview
-│   │   ├── document/         # Chunk workspace, insights, editor
-│   │   ├── help/             # In-app user guide
-│   │   ├── settings/         # Settings modal, API keys
-│   │   └── common/           # Shared UI primitives
-│   ├── hooks/                # usePipeline (pipeline execution)
-│   ├── services/             # llmService, projectService, fileService, dbService
-│   ├── stores/               # Zustand stores (pipeline, chunks, ui, project)
-│   ├── models/               # Model catalog, blob budget calculation
-│   ├── pipeline/             # Pipeline mode definitions and stage templates
-│   ├── i18n/                 # en.json, it.json
-│   └── utils/                # Chunking, retry, fingerprint, logging
-├── src-tauri/                # Rust backend
-│   ├── src/
-│   │   ├── lib.rs            # Tauri app entry, plugin registration, command registration
-│   │   ├── llm/
-│   │   │   ├── pipeline.rs   # Tauri commands (run_stage, judge, coherence, blobs)
-│   │   │   ├── prompts.rs    # Prompt assembly with cacheable block structure
-│   │   │   ├── blobs.rs      # Reference blob grouping and token budget logic
-│   │   │   ├── stream.rs     # SSE streaming + cancel token registry
-│   │   │   ├── provider.rs   # LlmRequest trait and provider abstraction
-│   │   │   ├── types.rs      # Shared types (PipelineConfig, StageConfig, …)
-│   │   │   └── providers/    # openai.rs, anthropic.rs, gemini.rs, ollama.rs
-│   │   ├── keystore.rs       # OS keychain read/write
-│   │   ├── db.rs             # SQLite project persistence
-│   │   └── documents.rs      # File import (txt, md, docx, pdf)
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-└── package.json
-```
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit conventions, and the release process.
+- [Development documentation](docs-dev/README.md): architecture, product boundaries and UI conventions.
+- [Roadmap](docs-dev/ROADMAP_2_0.md): remaining capabilities and completion order.
+- [Session handoff](STATO_SESSIONE_2.0.md): current state and next actions.
+- [User guides](https://nikazzio.github.io/glossa/): workflows and current limitations.
 
 ## License
 
-GNU GPL v3.0 or later — see [LICENSE](LICENSE) for details.
+GPL-3.0-or-later. See [LICENSE](LICENSE) and [third-party attributions](ATTRIBUTIONS.md).

@@ -1,6 +1,6 @@
 # Glossa — riferimento architetturale
 
-Ultimo aggiornamento: 2026-09-04.
+Ultimo aggiornamento: 2026-09-10.
 
 Questo documento descrive struttura corrente e invarianti tecniche. Decisioni di
 prodotto in `PRODUCT_ARCHITECTURE_2_0.md`; regole visive in
@@ -30,19 +30,17 @@ attraversano la webview: i dialoghi nativi vengono aperti dal backend.
    le operazioni già protette dai servizi esistenti.
 
 SQLite usa chiavi esterne, WAL, `synchronous=NORMAL` e un timeout di 10 secondi.
-La baseline 2.0/1.5 definisce lo schema completo per i database nuovi. Le
+La baseline della beta definisce lo schema completo per i database nuovi. Le
 migrazioni applicate non si modificano: ogni cambiamento successivo riceve un
 file nuovo.
 
-Eccezione valida solo fino al rilascio 1.0: senza dati reali distribuiti, i
-cambi di schema di questa fase vengono consolidati direttamente nella baseline
-invece di aprire un file di migrazione incrementale (coerente con "zero
-legacy" di questa fase — vedi `docs-dev/PRODUCT_ARCHITECTURE_2_0.md`). Un
-cambio di baseline richiede di ricreare il database locale (si cancella
-`glossa.db` e i suoi sidecar WAL/SHM, con backup automatico prima
-dell'eliminazione) e di reimportare i progetti da un backup applicativo. Dal
-rilascio 1.0 in avanti vale di nuovo la regola sopra: ogni cambiamento riceve
-un file di migrazione nuovo, la baseline non si tocca più.
+Eccezione per la beta privata, indipendente dal numero di versione: i cambi
+di schema possono essere consolidati nella baseline. Questo può richiedere di
+ricreare il database locale: prima si conserva una copia verificata dei dati e
+si stabilisce come recuperarli. Non è un'autorizzazione a cancellazioni
+automatiche né una garanzia di importazione dei backup precedenti. Prima
+dell'uso con utenti esterni si fissa la baseline distribuita e ogni cambiamento
+successivo riceve una nuova migrazione.
 
 ## Modello di prodotto
 
