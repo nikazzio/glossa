@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import {
   analysisLocation,
   isGlobalArea,
@@ -74,6 +75,7 @@ export function Header() {
   );
   const location = useUiStore((state) => state.location);
   const isProcessing = useChunksStore((s) => s.isProcessing);
+  const librarySourceDetail = useSourceLibraryStore((state) => state.detail);
   const { t } = useTranslation();
 
   const helpLoaded = useRef(false);
@@ -96,6 +98,13 @@ export function Header() {
   const isGlobalAreaContext = globalArea !== null;
   const contextLabel = globalArea ? t(GLOBAL_AREA_LABEL_KEYS[globalArea]) : workspaceLabel;
   const showContextBreadcrumb = Boolean(currentProjectId || location.area !== 'dashboard');
+  // Aprendo un'opera della Biblioteca, il titolo resta in vista nel
+  // breadcrumb: cambiando tab nella colonna informazioni non si perde il
+  // riferimento a quale libro si sta guardando.
+  const librarySourceTitle =
+    location.area === 'library' && location.itemId && librarySourceDetail?.source.id === location.itemId
+      ? librarySourceDetail.source.title
+      : null;
   const backToContextLabel = t(globalArea ? GLOBAL_AREA_BACK_KEYS[globalArea] : 'sidebar.backToWorkspace');
 
   /**
@@ -163,6 +172,22 @@ export function Header() {
                     </span>
                     <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
                       {currentProjectName}
+                    </span>
+                  </motion.span>
+                ) : librarySourceTitle ? (
+                  <motion.span
+                    key="library-source-segment"
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
+                    className="flex min-w-0 items-baseline gap-2.5"
+                  >
+                    <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                      //
+                    </span>
+                    <span className="min-w-0 max-w-[24rem] truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {librarySourceTitle}
                     </span>
                   </motion.span>
                 ) : null}

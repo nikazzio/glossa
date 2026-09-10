@@ -308,8 +308,8 @@ pub struct Orphan {
 }
 
 /// Le cartelle di digitalizzazioni che il database non conosce più. Si guarda
-/// solo sotto `providers/`: l'area di transito è di passaggio, e `derived/`
-/// appartiene a chi l'ha prodotta.
+/// sotto `providers/` **e** sotto `derived/`: l'area di transito resta fuori,
+/// è di passaggio.
 ///
 /// Restituisce l'elenco e non solo il conto perché lo usa anche la
 /// cancellazione.
@@ -324,27 +324,29 @@ pub fn orphan_folders(root: &Path, known: &HashSet<String>) -> Vec<Orphan> {
     if known.is_empty() {
         return found;
     }
-    let Ok(providers) = std::fs::read_dir(root.join(super::layout::PROVIDERS_DIR)) else {
-        return found;
-    };
-    for provider in providers.flatten() {
-        let Ok(versions) = std::fs::read_dir(provider.path()) else {
+    for top_dir in [super::layout::PROVIDERS_DIR, super::layout::DERIVED_DIR] {
+        let Ok(providers) = std::fs::read_dir(root.join(top_dir)) else {
             continue;
         };
-        for version in versions.flatten() {
-            let path = version.path();
-            if !path.is_dir() {
+        for provider in providers.flatten() {
+            let Ok(versions) = std::fs::read_dir(provider.path()) else {
                 continue;
+            };
+            for version in versions.flatten() {
+                let path = version.path();
+                if !path.is_dir() {
+                    continue;
+                }
+                if known.contains(&version.file_name().to_string_lossy().to_string()) {
+                    continue;
+                }
+                let stats = super::directory_stats(&path);
+                found.push(Orphan {
+                    path,
+                    files: stats.files,
+                    bytes: stats.bytes,
+                });
             }
-            if known.contains(&version.file_name().to_string_lossy().to_string()) {
-                continue;
-            }
-            let stats = super::directory_stats(&path);
-            found.push(Orphan {
-                path,
-                files: stats.files,
-                bytes: stats.bytes,
-            });
         }
     }
     found

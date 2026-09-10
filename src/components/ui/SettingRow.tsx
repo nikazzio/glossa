@@ -26,7 +26,7 @@ export function SettingRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
-      <span className="flex min-w-0 items-center gap-1.5 text-sm text-editorial-ink">
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-editorial-ink">
         <span className="min-w-0 truncate">{label}</span>
         {hint && (
           // Un pulsante e non un riquadro qualsiasi: la spiegazione si deve
@@ -43,7 +43,9 @@ export function SettingRow({
           </Tooltip>
         )}
       </span>
-      {children}
+      {/* Il comando non si allarga a spese dell'etichetta: un campo a larghezza
+          piena riduceva «Nome» a «No…». */}
+      <span className="flex shrink-0 items-center justify-end gap-2">{children}</span>
     </div>
   );
 }

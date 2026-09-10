@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DownloadSettingsTab } from './DownloadSettingsTab';
+import { LibraryImagesSection } from './LibraryImagesSection';
 import {
   getGlobalSizeCap,
   getThumbnailEdge,
@@ -25,7 +25,7 @@ const readEdge = vi.mocked(getThumbnailEdge);
 const saveCap = vi.mocked(setGlobalSizeCap);
 const saveEdge = vi.mocked(setThumbnailEdge);
 
-describe('politica di scaricamento', () => {
+describe('misure delle immagini', () => {
   beforeEach(() => {
     readCap.mockReset().mockResolvedValue('2000');
     readEdge.mockReset().mockResolvedValue(300);
@@ -34,7 +34,7 @@ describe('politica di scaricamento', () => {
   });
 
   it('mostra il tetto e la misura delle miniature come sono salvati', async () => {
-    render(<DownloadSettingsTab />);
+    render(<LibraryImagesSection />);
 
     expect(await screen.findByLabelText('settings.download.sizeCap')).toHaveValue('2000');
     expect(await screen.findByLabelText('settings.download.thumbnailEdge')).toHaveValue('300');
@@ -42,7 +42,7 @@ describe('politica di scaricamento', () => {
 
   it('la misura più grande disponibile è una scelta', async () => {
     const user = userEvent.setup();
-    render(<DownloadSettingsTab />);
+    render(<LibraryImagesSection />);
     const cap = await screen.findByLabelText('settings.download.sizeCap');
 
     await user.selectOptions(cap, 'max');
@@ -52,7 +52,7 @@ describe('politica di scaricamento', () => {
 
   it('cambiando la misura delle miniature la salva come numero', async () => {
     const user = userEvent.setup();
-    render(<DownloadSettingsTab />);
+    render(<LibraryImagesSection />);
     const edge = await screen.findByLabelText('settings.download.thumbnailEdge');
 
     await user.selectOptions(edge, '600');

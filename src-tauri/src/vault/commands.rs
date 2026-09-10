@@ -272,7 +272,8 @@ pub async fn choose_vault_folder(
     }))
 }
 
-/// Cancella manifesto, miniature e pagine di una digitalizzazione.
+/// Cancella manifesto, miniature, pagine **e copie ricavate in locale** di una
+/// digitalizzazione: l'opera sparisce del tutto, non solo dalle biblioteche.
 #[tauri::command]
 pub async fn delete_version_files(
     app: tauri::AppHandle,
@@ -286,17 +287,99 @@ pub async fn delete_version_files(
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
-    let folder = root.join(super::layout::version_dir(&provider_key, &version_id)?);
+    // La chiave dichiarata dal catalogo si prova per prima, ma non è l'unica
+    // possibile: le cartelle sono nominate con la chiave che valeva quando i
+    // file sono stati scritti, e su un'opera aggiunta per indirizzo quella
+    // chiave può essere cambiata da allora. Chiedendo solo la cartella
+    // dichiarata, una rimozione trovava «niente da cancellare», rispondeva
+    // zero file e lasciava tutto sul disco senza dire niente: riaggiungendo la
+    // stessa opera le pagine tornavano da lì.
+    let mut deleted_files = 0;
+    let mut freed_bytes = 0;
+    let mut wipe = |folder: std::path::PathBuf| -> Result<(), String> {
+        if !folder.is_dir() {
+            return Ok(());
+        }
+        let stats = directory_stats(&folder);
+        deleted_files += stats.files;
+        freed_bytes += stats.bytes;
+        std::fs::remove_dir_all(&folder)
+            .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))
+    };
+
+    for key in provider_keys_holding(&root, &provider_key, &version_id) {
+        wipe(root.join(super::layout::version_dir(&key, &version_id)?))?;
+        wipe(root.join(super::layout::derived_version_dir(&key, &version_id)?))?;
+    }
+    Ok(FreedSpace {
+        deleted_files,
+        freed_bytes,
+    })
+}
+
+/// Le chiavi di biblioteca sotto cui esiste davvero una cartella per questa
+/// digitalizzazione, più quella dichiarata dal catalogo.
+///
+/// Si guardano sia le copie scaricate sia quelle ricavate in locale: una
+/// riduzione può stare sotto una chiave diversa da quella degli originali.
+fn provider_keys_holding(root: &std::path::Path, declared: &str, version_id: &str) -> Vec<String> {
+    let mut keys = vec![declared.to_string()];
+    for area in [super::layout::PROVIDERS_DIR, super::layout::DERIVED_DIR] {
+        let Ok(entries) = std::fs::read_dir(root.join(area)) else {
+            continue;
+        };
+        for provider in entries.flatten() {
+            if !provider.path().join(version_id).is_dir() {
+                continue;
+            }
+            let Some(key) = provider.file_name().to_str().map(str::to_string) else {
+                continue;
+            };
+            if !keys.contains(&key) {
+                keys.push(key);
+            }
+        }
+    }
+    keys
+}
+
+/// Libera una sola misura: una risoluzione scaricata, o una copia ricavata in
+/// locale. Non tocca le altre — è questo che permette di tenere la copia
+/// compressa e buttare l'originale, o viceversa.
+#[tauri::command]
+pub async fn free_version_size(
+    app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
+    provider_key: String,
+    version_id: String,
+    size_tag: String,
+    derived: bool,
+) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let folder = if derived {
+        root.join(super::layout::derived_size_dir(
+            &provider_key,
+            &version_id,
+            &size_tag,
+        )?)
+    } else {
+        root.join(super::layout::pages_dir(&provider_key, &version_id)?)
+            .join(super::layout::safe_component(&size_tag)?)
+    };
     if !folder.is_dir() {
         return Ok(FreedSpace {
             deleted_files: 0,
             freed_bytes: 0,
         });
     }
-    // Una sola camminata per file e byte, prima di cancellare.
     let stats = directory_stats(&folder);
     std::fs::remove_dir_all(&folder)
-        .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))?;
+        .map_err(|e| format!("Failed to free {}: {e}", folder.display()))?;
     Ok(FreedSpace {
         deleted_files: stats.files,
         freed_bytes: stats.bytes,

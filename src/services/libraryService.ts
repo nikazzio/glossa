@@ -9,17 +9,86 @@ import {
 } from './inventoryService';
 import { generateId } from '../utils';
 import { logger } from '../utils/logger';
-import type {
-  AddSourceToLibraryInput,
-  LibraryCatalogEntry,
-  LibrarySource,
-  LibrarySourceDetail,
-  LibrarySourceVersion,
-  SourceField,
-  SourceFieldValues,
-  SourceKind,
-  SourceStatus,
+import {
+  SOURCE_FIELDS,
+  type AddSourceToLibraryInput,
+  type LibraryCatalogEntry,
+  type LibrarySource,
+  type LibrarySourceDetail,
+  type LibrarySourceVersion,
+  type SourceField,
+  type SourceFieldValues,
+  type SourceStatus,
 } from '../types';
+
+const FIELD_SEPARATOR = ' · ';
+
+function joinValues(values: string[]): string | null {
+  return values.length ? values.join(FIELD_SEPARATOR) : null;
+}
+
+function splitValues(value: string | null): string[] {
+  return value
+    ? value.split(FIELD_SEPARATOR).map((entry) => entry.trim()).filter(Boolean)
+    : [];
+}
+
+interface SourceDetailRow {
+  title: string;
+  kind: string;
+  primary_language: string | null;
+  description: string | null;
+}
+
+/**
+ * Il valore che l'opera avrebbe senza nessuna correzione a mano: dalla
+ * tabella `sources` per i campi che ci vivono, dai metadati del manifesto per
+ * il resto. Gli 8 campi non ancora raccolti da nessuna biblioteca (note,
+ * provenienza, serie...) non hanno un originale: `null` finché Niki non li
+ * scrive lui.
+ */
+function baseFieldValue(field: SourceField, row: SourceDetailRow, metadata: SourceMetadata): string | null {
+  switch (field) {
+    case 'title': return row.title;
+    case 'kind': return row.kind;
+    case 'primary_language': return row.primary_language;
+    case 'creator': return metadata.creator;
+    case 'date': return metadata.date;
+    case 'publisher': return metadata.publisher;
+    case 'contributors': return joinValues(metadata.contributors);
+    case 'rights': return joinValues(metadata.rights);
+    case 'physical_description': return metadata.physicalDescription;
+    case 'subjects': return joinValues(metadata.subjects);
+    case 'volume': return metadata.volume;
+    case 'description': return row.description;
+    default: return null;
+  }
+}
+
+/**
+ * Applica le correzioni a mano a tutti i campi anagrafici di un'opera: dove
+ * Niki ha corretto, il valore mostrato è il suo e l'originale della
+ * biblioteca resta in `original`; altrove resta il valore di base.
+ */
+function effectiveFieldValues(
+  row: SourceDetailRow,
+  metadata: SourceMetadata,
+  overrides: SourceFieldValues,
+): { effective: Record<SourceField, string | null>; original: SourceFieldValues } {
+  const original: SourceFieldValues = {};
+  const effective = {} as Record<SourceField, string | null>;
+  for (const field of SOURCE_FIELDS) {
+    const base = baseFieldValue(field, row, metadata);
+    const override = overrides[field];
+    if (override !== undefined) {
+      original[field] = base ?? '';
+      effective[field] = override;
+    } else {
+      effective[field] = base;
+    }
+  }
+  return { effective, original };
+}
 
 interface SourceRow {
   id: string;
@@ -40,6 +109,7 @@ interface SourceVersionRow {
   source_url: string | null;
   is_primary: number;
   created_at: string;
+  expected_asset_count: number | null;
 }
 
 function rowToSource(row: SourceRow): LibrarySource {
@@ -55,7 +125,7 @@ function rowToSource(row: SourceRow): LibrarySource {
   };
 }
 
-function rowToVersion(row: SourceVersionRow): LibrarySourceVersion {
+function rowToVersion(row: SourceVersionRow, metadata: SourceMetadata): LibrarySourceVersion {
   return {
     id: row.id,
     sourceId: row.source_id,
@@ -64,6 +134,8 @@ function rowToVersion(row: SourceVersionRow): LibrarySourceVersion {
     sourceUrl: row.source_url,
     isPrimary: Boolean(row.is_primary),
     createdAt: row.created_at,
+    expectedPages: row.expected_asset_count ?? metadata.itemCount,
+    providerKey: metadata.providerKey,
   };
 }
 
@@ -103,7 +175,7 @@ function withOverrides(
   }
   if (overrides.kind !== undefined) {
     original.kind = source.kind;
-    corrected.kind = overrides.kind as SourceKind;
+    corrected.kind = overrides.kind;
   }
   if (overrides.primary_language !== undefined) {
     original.primary_language = source.primaryLanguage ?? '';
@@ -258,6 +330,29 @@ interface SourceMetadata {
   holdingInstitution: string | null;
   /** Collegamento alla scheda del catalogo cartaceo/archivistico. */
   catalogUrl: string | null;
+  /** La pagina web dell'opera sul sito della biblioteca, per un lettore umano. */
+  pageUrl: string | null;
+  /** Tutto il resto dichiarato dalla biblioteca quando l'opera è stata
+   *  aggiunta, com'era arrivato. */
+  raw: Record<string, string[]>;
+}
+
+/**
+ * Il deposito dei dati di catalogo, riletto senza fidarsi della forma: le
+ * chiavi le ha scelte la biblioteca, quindi qui può esserci qualunque cosa. Si
+ * tengono solo le voci che sono davvero elenchi di testo, e si scartano le
+ * altre invece di far cadere l'intera scheda.
+ */
+function rawFields(value: unknown): Record<string, string[]> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, string[]>>(
+    (fields, [key, entry]) => {
+      if (!Array.isArray(entry)) return fields;
+      const texts = entry.filter((item): item is string => typeof item === 'string');
+      return texts.length > 0 ? { ...fields, [key]: texts } : fields;
+    },
+    {},
+  );
 }
 
 /** I metadati arrivano da cataloghi esterni: si legge quello che c'è e si
@@ -281,6 +376,8 @@ function parseMetadata(raw: string | null): SourceMetadata {
     physicalDescription: null,
     holdingInstitution: null,
     catalogUrl: null,
+    pageUrl: null,
+    raw: {},
   };
   if (!raw) return nothing;
   try {
@@ -311,6 +408,8 @@ function parseMetadata(raw: string | null): SourceMetadata {
       physicalDescription: text(record.physicalDescription),
       holdingInstitution: text(record.holdingInstitution),
       catalogUrl: text(record.catalogUrl),
+      pageUrl: text(record.pageUrl),
+      raw: rawFields(record.raw),
     };
   } catch {
     return nothing;
@@ -359,16 +458,23 @@ export async function setSourceArchived(sourceId: string, archived: boolean): Pr
 
 export async function removeSourceFromLibrary(sourceId: string): Promise<void> {
   await execute('DELETE FROM sources WHERE id = $1', [sourceId]);
+  // Immediato e definitivo, nessun cestino: vale la pena poterlo rintracciare.
+  logger.info('library.source.removed', { sourceId });
 }
 
-/** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione):
- * usato per segnare come "già aggiunto" un risultato di ricerca prima ancora
- * che l'utente provi ad aggiungerlo. */
-export async function listLibrarySourceUrls(): Promise<string[]> {
-  const rows = await select<{ source_url: string }>(
-    "SELECT DISTINCT source_url FROM source_versions WHERE source_url IS NOT NULL ORDER BY source_url",
+/** URL manifest già presenti in biblioteca (qualunque fonte, in qualunque versione),
+ * con l'id della loro opera: usato per segnare come "già aggiunto" un risultato di
+ * ricerca prima ancora che l'utente provi ad aggiungerlo, e per sapere a quali
+ * workspace è già collegato senza rileggere tutto il catalogo. */
+export async function listLibrarySourceUrls(): Promise<{ sourceUrl: string; sourceId: string }[]> {
+  // Un `source_url` non ha un vincolo di unicità: `GROUP BY` con `MIN` sceglie
+  // sempre lo stesso `source_id` per lo stesso indirizzo, invece di un
+  // risultato che cambia a seconda dell'ordine con cui le righe arrivano.
+  const rows = await select<{ source_url: string; source_id: string }>(
+    `SELECT source_url, MIN(source_id) AS source_id FROM source_versions
+      WHERE source_url IS NOT NULL GROUP BY source_url ORDER BY source_url`,
   );
-  return rows.map((row) => row.source_url);
+  return rows.map((row) => ({ sourceUrl: row.source_url, sourceId: row.source_id }));
 }
 
 export async function addSourceToLibrary(
@@ -419,6 +525,8 @@ export async function addSourceToLibrary(
     physicalDescription: input.physicalDescription,
     holdingInstitution: input.holdingInstitution,
     catalogUrl: input.catalogUrl,
+    pageUrl: input.pageUrl,
+    raw: input.raw,
   });
 
   await runInTransaction(async (run) => {
@@ -450,19 +558,80 @@ export async function addSourceToLibrary(
     }
   });
 
+  logger.info('library.source.added', { sourceId, providerKey: input.providerKey });
   return { sourceId, wasCreated: true };
 }
 
+/**
+ * Riscrive i dati anagrafici di un'opera già in Biblioteca con quello che la
+ * biblioteca dichiara **ora**: un campo che oggi non dichiara più torna
+ * vuoto, non tiene il vecchio valore. Cancella anche ogni correzione a mano
+ * fatta finora — eccetto le Note, che non sono mai state un dato della
+ * biblioteca e risincronizzare non le riguarda.
+ */
+export async function resyncSourceFromManifest(
+  sourceId: string,
+  input: Omit<AddSourceToLibraryInput, 'manifestUrl' | 'workspaceId'>,
+): Promise<void> {
+  // Risincronizzare rilegge il manifesto, che non è una risposta di catalogo:
+  // il deposito dei dati della ricerca non si può ricostruire da qui, e
+  // riscriverlo vuoto butterebbe quello che avevamo già in mano.
+  const [existing] = await select<{ metadata: string | null }>(
+    'SELECT metadata FROM source_versions WHERE source_id = $1 AND is_primary = 1',
+    [sourceId],
+  );
+  const keptRaw = parseMetadata(existing?.metadata ?? null).raw;
+  const metadata = JSON.stringify({
+    creator: input.creator,
+    date: input.date,
+    thumbnailUrl: input.thumbnailUrl,
+    language: input.language,
+    subjects: input.subjects,
+    providerKey: input.providerKey,
+    externalId: input.externalId,
+    mediaType: input.mediaType,
+    materialType: input.materialType,
+    collection: input.collection,
+    volume: input.volume,
+    itemCount: input.itemCount,
+    contributors: input.contributors,
+    publisher: input.publisher,
+    rights: input.rights,
+    physicalDescription: input.physicalDescription,
+    holdingInstitution: input.holdingInstitution,
+    catalogUrl: input.catalogUrl,
+    pageUrl: input.pageUrl,
+    raw: Object.keys(input.raw).length > 0 ? input.raw : keptRaw,
+  });
+
+  await runInTransaction(async (run) => {
+    await run(
+      `UPDATE sources SET title = $2, kind = $3, primary_language = $4, description = $5,
+         updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [sourceId, input.title, input.kind, input.language, input.description],
+    );
+    await run(
+      'UPDATE source_versions SET metadata = $2 WHERE source_id = $1 AND is_primary = 1',
+      [sourceId, metadata],
+    );
+    await run(`DELETE FROM source_field_overrides WHERE source_id = $1 AND field <> 'notes'`, [
+      sourceId,
+    ]);
+  });
+
+  logger.info('library.source.resynced', { sourceId });
+}
+
 export async function getLibrarySourceDetail(sourceId: string): Promise<LibrarySourceDetail> {
-  const [source] = await select<SourceRow>(
-    `SELECT id, title, kind, primary_language, external_ref, status, archived_at, created_at
+  const [source] = await select<SourceRow & { description: string | null }>(
+    `SELECT id, title, kind, primary_language, external_ref, status, archived_at, created_at, description
        FROM sources WHERE id = $1`,
     [sourceId],
   );
   if (!source) throw new Error('library_source_not_found');
 
   const versionRows = await select<SourceVersionRow & { metadata: string | null }>(
-    `SELECT id, source_id, label, version_kind, source_url, metadata, is_primary, created_at
+    `SELECT id, source_id, label, version_kind, source_url, metadata, is_primary, created_at, expected_asset_count
        FROM source_versions WHERE source_id = $1`,
     [sourceId],
   );
@@ -473,30 +642,42 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
 
   const primary = versionRows.find((row) => row.is_primary === 1) ?? versionRows[0];
   const metadata = parseMetadata(primary?.metadata ?? null);
-  const corrected = withOverrides(
-    rowToSource(source),
-    metadata.creator,
-    metadata.date,
-    (await overridesOfMany([sourceId])).get(sourceId) ?? {},
-  );
+  const overrides = (await overridesOfMany([sourceId])).get(sourceId) ?? {};
+  const { effective, original } = effectiveFieldValues(source, metadata, overrides);
 
   return {
-    source: corrected.source,
-    versions: versionRows.map(rowToVersion),
+    source: {
+      ...rowToSource(source),
+      title: effective.title ?? source.title,
+      kind: effective.kind ?? source.kind,
+      primaryLanguage: effective.primary_language,
+    },
+    versions: versionRows.map((row) => rowToVersion(row, parseMetadata(row.metadata))),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
-    creator: corrected.creator,
-    date: corrected.date,
-    original: corrected.original,
+    creator: effective.creator,
+    date: effective.date,
+    original,
     collections: (await collectionsOfMany([sourceId])).get(sourceId) ?? [],
     language: metadata.language,
-    subjects: metadata.subjects,
-    publisher: metadata.publisher,
-    volume: metadata.volume,
-    contributors: metadata.contributors,
-    rights: metadata.rights,
-    physicalDescription: metadata.physicalDescription,
+    subjects: splitValues(effective.subjects),
+    publisher: effective.publisher,
+    volume: effective.volume,
+    contributors: splitValues(effective.contributors),
+    rights: splitValues(effective.rights),
+    physicalDescription: effective.physical_description,
     holdingInstitution: metadata.holdingInstitution,
     catalogUrl: metadata.catalogUrl,
+    pageUrl: metadata.pageUrl,
+    description: effective.description,
+    providerKey: metadata.providerKey,
+    originPlace: effective.origin_place,
+    provenance: splitValues(effective.provenance),
+    notes: effective.notes,
+    series: effective.series,
+    genreForm: splitValues(effective.genre_form),
+    standardIdentifier: effective.standard_identifier,
+    coverage: splitValues(effective.coverage),
+    relatedWorks: splitValues(effective.related_works),
   };
 }
 
@@ -541,21 +722,18 @@ export async function setSourceFieldOverride(
 
 /** Il valore che la biblioteca aveva dato per quel campo, mai sovrascritto. */
 async function originalFieldValue(sourceId: string, field: SourceField): Promise<string | null> {
-  const [row] = await select<{ title: string; kind: string; primary_language: string | null }>(
-    'SELECT title, kind, primary_language FROM sources WHERE id = $1',
+  const [row] = await select<SourceDetailRow>(
+    'SELECT title, kind, primary_language, description FROM sources WHERE id = $1',
     [sourceId],
   );
   if (!row) return null;
-  if (field === 'title') return row.title;
-  if (field === 'kind') return row.kind;
-  if (field === 'primary_language') return row.primary_language;
 
   const [version] = await select<{ metadata: string | null }>(
     'SELECT metadata FROM source_versions WHERE source_id = $1 ORDER BY is_primary DESC LIMIT 1',
     [sourceId],
   );
   const metadata = parseMetadata(version?.metadata ?? null);
-  return field === 'creator' ? metadata.creator : metadata.date;
+  return baseFieldValue(field, row, metadata);
 }
 
 export async function setWorkspaceSourceLink(
@@ -575,4 +753,8 @@ export async function setWorkspaceSourceLink(
       [workspaceId, sourceId],
     );
   }
+  logger.info(linked ? 'library.source.workspaceLinked' : 'library.source.workspaceUnlinked', {
+    sourceId,
+    workspaceId,
+  });
 }

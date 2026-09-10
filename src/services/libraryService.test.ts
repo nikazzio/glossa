@@ -34,6 +34,8 @@ const baseInput = {
   physicalDescription: null,
   holdingInstitution: null,
   catalogUrl: null,
+  pageUrl: null,
+  raw: {},
 };
 
 describe('metadati della fonte', () => {
@@ -70,6 +72,7 @@ describe('metadati della fonte', () => {
       physicalDescription: '23-[1 bl.] p. ; in-12',
       holdingInstitution: 'Bibliothèque nationale de France, V-22944',
       catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+      pageUrl: 'https://gallica.bnf.fr/ark:/12148/btv1b84260335',
     });
 
     const written = JSON.stringify(recorded);
@@ -84,6 +87,7 @@ describe('metadati della fonte', () => {
     expect(written).toContain('23-[1 bl.] p. ; in-12');
     expect(written).toContain('V-22944');
     expect(written).toContain('cb33412414z');
+    expect(written).toContain('btv1b84260335');
   });
 });
 
@@ -193,9 +197,11 @@ describe('libraryService', () => {
         physicalDescription: '23-[1 bl.] p. ; in-12',
         holdingInstitution: 'Bibliothèque nationale de France, V-22944',
         catalogUrl: 'http://catalogue.bnf.fr/ark:/12148/cb33412414z',
+        pageUrl: 'https://gallica.bnf.fr/ark:/12148/bpt6k3282120',
+        providerKey: 'gallica',
       });
       dbMocks.select
-        .mockResolvedValueOnce([{ id: 's1', title: 'Titolo', kind: 'iiif', primary_language: null, external_ref: null, created_at: '2026-01-01' }])
+        .mockResolvedValueOnce([{ id: 's1', title: 'Titolo', kind: 'iiif', primary_language: null, external_ref: 'gallica:bpt6k3282120', created_at: '2026-01-01', description: 'Manoscritto in versi.' }])
         .mockResolvedValueOnce([{ id: 'v1', source_id: 's1', label: 'primary', version_kind: 'iiif_manifest', source_url: 'https://x.test/m.json', metadata, is_primary: 1, created_at: '2026-01-01' }])
         .mockResolvedValueOnce([]);
 
@@ -210,6 +216,9 @@ describe('libraryService', () => {
       expect(detail.physicalDescription).toBe('23-[1 bl.] p. ; in-12');
       expect(detail.holdingInstitution).toBe('Bibliothèque nationale de France, V-22944');
       expect(detail.catalogUrl).toBe('http://catalogue.bnf.fr/ark:/12148/cb33412414z');
+      expect(detail.pageUrl).toBe('https://gallica.bnf.fr/ark:/12148/bpt6k3282120');
+      expect(detail.providerKey).toBe('gallica');
+      expect(detail.description).toBe('Manoscritto in versi.');
     });
   });
 

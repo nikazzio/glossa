@@ -61,6 +61,33 @@ pub struct Profile {
     pub used_by: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum SizePolicy {
+    #[default]
+    Auto,
+    ReadyOnly,
+    Exact,
+}
+
+impl SizePolicy {
+    pub fn parse(value: &str) -> Self {
+        match value.trim() {
+            "readyOnly" => Self::ReadyOnly,
+            "exact" => Self::Exact,
+            _ => Self::Auto,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::ReadyOnly => "readyOnly",
+            Self::Exact => "exact",
+        }
+    }
+}
+
 /// Una biblioteca e il ritmo che ha scelto.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +96,7 @@ pub struct Library {
     pub key: String,
     pub label: String,
     pub profile_id: String,
+    pub size_policy: SizePolicy,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -87,8 +115,12 @@ pub struct ProfileInput {
 /// l'unico posto dove una biblioteca nuova si compila, e due elenchi degli
 /// stessi numeri prima o poi divergono.
 pub fn ensure_builtin_profiles(conn: &Connection) -> Result<(), String> {
-    write_profile(conn, DEFAULT_PROFILE_ID, "Normale", true, &CAUTIOUS)?;
-    write_profile(conn, SLOW_PROFILE_ID, "Lento", true, &GALLICA)?;
+    let stale = reseed_needed(conn)?;
+    write_profile(conn, DEFAULT_PROFILE_ID, "Normale", true, &CAUTIOUS, stale)?;
+    write_profile(conn, SLOW_PROFILE_ID, "Lento", true, &GALLICA, stale)?;
+    if stale {
+        mark_reseeded(conn)?;
+    }
 
     for provider in super::PROVIDERS {
         if provider.network == GALLICA {
@@ -103,16 +135,58 @@ pub fn ensure_builtin_profiles(conn: &Connection) -> Result<(), String> {
     Ok(())
 }
 
+/// Quale versione dei ritmi predefiniti è già stata scritta.
+///
+/// Cambiare i numeri nel registro non basta: chi ha già l'applicazione ha i
+/// vecchi salvati, e continuerebbe a usarli per sempre. Alzando questo numero i
+/// due profili che nascono con l'applicazione tornano a quelli del registro. I
+/// profili creati dall'utente non vengono toccati.
+const BUILTIN_PROFILES_VERSION: i64 = 3;
+const BUILTIN_PROFILES_VERSION_KEY: &str = "network_profiles_version";
+
+fn reseed_needed(conn: &Connection) -> Result<bool, String> {
+    let stored: Option<String> = conn
+        .query_row(
+            "SELECT value FROM app_settings WHERE key = ?1",
+            params![BUILTIN_PROFILES_VERSION_KEY],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| format!("versione dei profili di rete: {error}"))?;
+    Ok(stored.and_then(|value| value.parse::<i64>().ok()) != Some(BUILTIN_PROFILES_VERSION))
+}
+
+fn mark_reseeded(conn: &Connection) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?1, ?2) \
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![
+            BUILTIN_PROFILES_VERSION_KEY,
+            BUILTIN_PROFILES_VERSION.to_string()
+        ],
+    )
+    .map_err(|error| format!("versione dei profili di rete: {error}"))?;
+    Ok(())
+}
+
 fn write_profile(
     conn: &Connection,
     id: &str,
     name: &str,
     builtin: bool,
     values: &NetworkProfile,
+    overwrite: bool,
 ) -> Result<(), String> {
-    conn.execute(
+    let statement = if overwrite {
+        "INSERT INTO network_profiles (id, name, builtin, values_json) VALUES (?1, ?2, ?3, ?4) \
+         ON CONFLICT(id) DO UPDATE SET values_json = excluded.values_json, \
+         updated_at = CURRENT_TIMESTAMP"
+    } else {
         "INSERT OR IGNORE INTO network_profiles (id, name, builtin, values_json) \
-         VALUES (?1, ?2, ?3, ?4)",
+         VALUES (?1, ?2, ?3, ?4)"
+    };
+    conn.execute(
+        statement,
         params![
             id,
             name,
@@ -233,6 +307,14 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
             .map(|(_, profile)| profile.clone())
             .unwrap_or_else(|| DEFAULT_PROFILE_ID.to_string())
     };
+    let policies = size_policies(conn)?;
+    let policy_of = |key: &str| {
+        policies
+            .iter()
+            .find(|(library, _)| library == key)
+            .map(|(_, policy)| *policy)
+            .unwrap_or_default()
+    };
 
     let mut libraries: Vec<Library> = super::PROVIDERS
         .iter()
@@ -240,20 +322,87 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
             key: provider.key.to_string(),
             label: provider.label.to_string(),
             profile_id: profile_of(provider.key),
+            size_policy: policy_of(provider.key),
         })
         .collect();
 
-    libraries.extend(
-        chosen
-            .iter()
-            .filter(|(key, _)| super::find_provider(key).is_none())
-            .map(|(key, profile)| Library {
-                key: key.clone(),
-                label: key.clone(),
-                profile_id: profile.clone(),
-            }),
-    );
+    let extra_keys = chosen
+        .iter()
+        .map(|(key, _)| key.clone())
+        .chain(policies.iter().map(|(key, _)| key.clone()))
+        .filter(|key| super::find_provider(key).is_none())
+        .fold(Vec::new(), |mut keys, key| {
+            if !keys.contains(&key) {
+                keys.push(key);
+            }
+            keys
+        });
+    libraries.extend(extra_keys.into_iter().map(|key| Library {
+        profile_id: profile_of(&key),
+        size_policy: policy_of(&key),
+        label: key.clone(),
+        key,
+    }));
     Ok(libraries)
+}
+
+fn size_policies(conn: &Connection) -> Result<Vec<(String, SizePolicy)>, String> {
+    let mut statement = conn
+        .prepare("SELECT library_key, policy FROM library_size_policies")
+        .map_err(|error| format!("politiche di misura: {error}"))?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|error| format!("politiche di misura: {error}"))?;
+    Ok(rows
+        .filter_map(Result::ok)
+        .map(|(key, policy)| (key, SizePolicy::parse(&policy)))
+        .collect())
+}
+
+pub fn effective_size_policy(
+    conn: &Connection,
+    provider_key: &str,
+    host: Option<&str>,
+) -> SizePolicy {
+    chosen_size_policy(conn, provider_key)
+        .or_else(|| host.and_then(|value| chosen_size_policy(conn, value)))
+        .unwrap_or_default()
+}
+
+fn chosen_size_policy(conn: &Connection, library_key: &str) -> Option<SizePolicy> {
+    conn.query_row(
+        "SELECT policy FROM library_size_policies WHERE library_key = ?1",
+        params![library_key],
+        |row| row.get::<_, String>(0),
+    )
+    .optional()
+    .ok()
+    .flatten()
+    .map(|value| SizePolicy::parse(&value))
+}
+
+pub fn set_library_size_policy(
+    conn: &Connection,
+    library_key: &str,
+    policy: SizePolicy,
+) -> Result<(), String> {
+    if policy == SizePolicy::Auto {
+        conn.execute(
+            "DELETE FROM library_size_policies WHERE library_key = ?1",
+            params![library_key],
+        )
+        .map_err(|error| format!("politica di misura: {error}"))?;
+    } else {
+        conn.execute(
+            "INSERT INTO library_size_policies (library_key, policy) VALUES (?1, ?2) \
+             ON CONFLICT(library_key) DO UPDATE SET policy = excluded.policy",
+            params![library_key, policy.as_str()],
+        )
+        .map_err(|error| format!("politica di misura: {error}"))?;
+    }
+    Ok(())
 }
 
 /// Salva un profilo, nuovo o esistente, con i valori riportati dentro i
@@ -283,7 +432,7 @@ pub fn save_profile(conn: &Connection, input: &ProfileInput) -> Result<String, S
         }
         None => {
             let id = new_profile_id(conn, name);
-            write_profile(conn, &id, name, false, &values)?;
+            write_profile(conn, &id, name, false, &values, false)?;
             Ok(id)
         }
     }
@@ -429,18 +578,16 @@ fn version_size_cap(conn: &Connection, version_id: &str) -> Result<Option<String
 /// rilegge quello che è stato davvero salvato, così il valore che si vede è
 /// quello che vale.
 pub fn within_limits(values: NetworkProfile) -> NetworkProfile {
-    let pause_min_ms = values.pause_min_ms.min(60_000);
     NetworkProfile {
-        pause_min_ms,
-        // Una pausa massima sotto la minima significherebbe un intervallo
-        // vuoto, e il sorteggio non saprebbe cosa estrarre.
-        pause_max_ms: values.pause_max_ms.clamp(pause_min_ms, 60_000),
         burst_requests: values.burst_requests.clamp(1, 1_000),
         burst_window_secs: values.burst_window_secs.clamp(1, 3_600),
         cooldown_403_secs: values.cooldown_403_secs.min(86_400),
         cooldown_429_secs: values.cooldown_429_secs.min(86_400),
         // Il tetto che non si supera.
         host_concurrency: values.host_concurrency.clamp(1, MAX_HOST_CONCURRENCY),
+        // Quante pagine insieme: il tetto per host resta comunque quello sopra,
+        // e `bulk_workers` tiene sempre un posto libero per il visore.
+        workers_per_job: values.workers_per_job.clamp(1, MAX_HOST_CONCURRENCY),
         max_attempts: values.max_attempts.clamp(1, 10),
         backoff_base_secs: values.backoff_base_secs.clamp(1, 600),
         backoff_cap_secs: values
@@ -466,7 +613,9 @@ mod tests {
                  builtin INTEGER NOT NULL DEFAULT 0, values_json TEXT NOT NULL, \
                  updated_at DATETIME);
              CREATE TABLE library_network_profiles (library_key TEXT PRIMARY KEY, \
-                 profile_id TEXT NOT NULL);",
+                 profile_id TEXT NOT NULL);
+             CREATE TABLE library_size_policies (library_key TEXT PRIMARY KEY, \
+                 policy TEXT NOT NULL);",
         )
         .unwrap();
         ensure_builtin_profiles(&conn).unwrap();
@@ -488,6 +637,51 @@ mod tests {
     }
 
     #[test]
+    fn the_builtin_rhythms_go_back_to_the_registry_when_the_registry_changes() {
+        // Chi ha già l'applicazione ha i vecchi numeri salvati: senza questo
+        // ritorno continuerebbe a scaricare con un ritmo che non esiste più.
+        let conn = database();
+        let old = NetworkProfile {
+            burst_requests: 20,
+            ..GALLICA
+        };
+        conn.execute(
+            "UPDATE network_profiles SET values_json = ?2 WHERE id = ?1",
+            params![SLOW_PROFILE_ID, serde_json::to_string(&old).unwrap()],
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM app_settings WHERE key = ?1",
+            params![BUILTIN_PROFILES_VERSION_KEY],
+        )
+        .unwrap();
+
+        ensure_builtin_profiles(&conn).unwrap();
+
+        assert_eq!(profile_values(&conn, SLOW_PROFILE_ID), Some(GALLICA));
+    }
+
+    #[test]
+    fn a_rhythm_chosen_by_hand_survives_the_next_start() {
+        // Il ritorno al registro avviene una volta sola, non a ogni avvio: una
+        // modifica dell'utente non deve sparire da sola.
+        let conn = database();
+        let mine = NetworkProfile {
+            burst_requests: 33,
+            ..GALLICA
+        };
+        conn.execute(
+            "UPDATE network_profiles SET values_json = ?2 WHERE id = ?1",
+            params![SLOW_PROFILE_ID, serde_json::to_string(&mine).unwrap()],
+        )
+        .unwrap();
+
+        ensure_builtin_profiles(&conn).unwrap();
+
+        assert_eq!(profile_values(&conn, SLOW_PROFILE_ID), Some(mine));
+    }
+
+    #[test]
     fn a_profile_says_how_many_libraries_use_it() {
         let conn = database();
         let profiles = list_profiles(&conn).unwrap();
@@ -506,8 +700,8 @@ mod tests {
         set_library_profile(&conn, "archive_org", SLOW_PROFILE_ID).unwrap();
 
         assert_eq!(
-            effective_profile(&conn, "archive_org", None).pause_min_ms,
-            GALLICA.pause_min_ms
+            effective_profile(&conn, "archive_org", None).burst_requests,
+            GALLICA.burst_requests
         );
     }
 

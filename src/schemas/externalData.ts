@@ -38,6 +38,7 @@ export const BACKUP_TABLES = [
   'derived_metrics',
   'network_profiles',
   'library_network_profiles',
+  'library_size_policies',
   'phrase_memory',
   'source_phrase_embeddings',
 ] as const;

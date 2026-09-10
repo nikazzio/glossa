@@ -27,13 +27,12 @@ export const DEFAULT_THUMBNAIL_EDGE = 300;
 export const MAX_HOST_CONCURRENCY = 4;
 
 export interface NetworkValues {
-  pauseMinMs: number;
-  pauseMaxMs: number;
   burstRequests: number;
   burstWindowSecs: number;
   cooldown403Secs: number;
   cooldown429Secs: number;
   hostConcurrency: number;
+  workersPerJob: number;
   maxAttempts: number;
   backoffBaseSecs: number;
   backoffCapSecs: number;
@@ -52,10 +51,14 @@ export interface NetworkProfile {
   usedBy: number;
 }
 
+export type SizePolicy = 'auto' | 'readyOnly' | 'exact';
+export const SIZE_POLICIES: SizePolicy[] = ['auto', 'readyOnly', 'exact'];
+
 export interface LibraryChoice {
   key: string;
   label: string;
   profileId: string;
+  sizePolicy: SizePolicy;
 }
 
 export interface NetworkSettings {
@@ -109,7 +112,12 @@ function asSettings(answer: NetworkSettings | null): NetworkSettings {
   if (!answer) return emptySettings;
   return {
     profiles: Array.isArray(answer.profiles) ? answer.profiles : [],
-    libraries: Array.isArray(answer.libraries) ? answer.libraries : [],
+    libraries: Array.isArray(answer.libraries)
+      ? answer.libraries.map((library) => ({
+          ...library,
+          sizePolicy: SIZE_POLICIES.includes(library.sizePolicy) ? library.sizePolicy : 'auto',
+        }))
+      : [],
   };
 }
 
@@ -136,6 +144,15 @@ export async function deleteNetworkProfile(id: string): Promise<NetworkSettings>
 export async function setLibraryProfile(libraryKey: string, profileId: string): Promise<NetworkSettings> {
   return asSettings(
     await invoke<NetworkSettings | null>('set_library_network_profile', { libraryKey, profileId }),
+  );
+}
+
+export async function setLibrarySizePolicy(
+  libraryKey: string,
+  policy: SizePolicy,
+): Promise<NetworkSettings> {
+  return asSettings(
+    await invoke<NetworkSettings | null>('set_library_size_policy', { libraryKey, policy }),
   );
 }
 

@@ -1,19 +1,23 @@
 # Roadmap Glossa 2.0
 
-Ultimo aggiornamento: 2026-08-30.
+Ultimo aggiornamento: 2026-09-10.
 
 ## Stato generale
 
 La foundation 2.0 e il blocco 1 hanno introdotto cataloghi globali, workspace
 operativi, deposito, scaricamento IIIF, coda persistente, cache, registrazione e
-backup di base. Il prossimo rilascio intermedio è la 1.5.
+backup di base (PR #429 e #444, unite). Il blocco Biblioteca — ricerca, scheda
+opera, visore delle pagine, Fase B — è in attesa di unione nella catena
+#461 → #456 → `main`.
 
-## Prima della 1.5
+## Rilascio 2.0.0
 
-### PR #444
-
-Rifiniture funzionali, lint e suite automatica completati. Restano prove manuali
-e CI.
+La proposta di rilascio è la **#386**, aperta e da unire **per ultima**: prima la
+catena della Biblioteca, altrimenti pubblica una 2.0.0 senza quel blocco.
+Unendola parte tutto in automatico — tag, note di rilascio, installatori
+Linux/Windows/Mac e aggiornamento automatico proposto a chi ha Glossa
+installata. Contiene una rottura dichiarata: i backup nei formati precedenti non
+vengono più accettati.
 
 ### Riservatezza di backup ed esportazioni
 
@@ -27,15 +31,48 @@ Il formato cifrato deve conservare in chiaro versione e parametri di derivazione
 distinguere password errata da archivio danneggiato e non includere le chiavi dei
 provider.
 
-### Integrazione
-
-La PR #429 è pronta: baseline, CI e ripristino del backup su database ricreato
-sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
-
-## Dopo la 1.5
+## Dopo il rilascio
 
 ### Biblioteca e acquisizione
 
+- **revisione UI/UX generale** (punto 9bis segnato da Niki, non ancora
+  iniziata): la riga del catalogo è stata rifatta con la Fase B — riga di dati a
+  separatori più barra corta di completamento — e resta il giro schermata per
+  schermata. Dentro c'è la proposta di separare la **natura dell'originale** dal
+  **formato in cui arriva**, che oggi convivono in un campo solo e toccano anche
+  il filtro per tipo;
+- **motore e database generici su tutti i 20 campi anagrafici**: fatto (2
+  settembre — vedi STATO_SESSIONE_2.0.md e `docs-dev/ARCHITECTURE.md`). Il
+  campo "tipo" si chiama ora "Tipo di opera" (il formato del file vive
+  già per copia su `source_versions`); 8 campi nuovi (luogo di origine,
+  provenienza, note, serie, genere/forma, identificativo standard, copertura,
+  opere collegate) sono ora sempre in tab Info, sola lettura come i 7 di
+  prima. Restano da fare: un'area nelle Impostazioni per abilitare/
+  disabilitare la modifica campo per campo (idea confermata da Niki, non
+  ancora costruita); l'editor dei campi con più valori insieme (oggi uniti
+  con «·» in visualizzazione, da decidere se lo stesso separatore basti anche
+  per la modifica a mano o serva una lista voce-per-voce);
+- **apertura delle pagine**: chiusa con la Fase B. Vince sempre la copia
+  migliore presente sul computer, la misura nelle impostazioni dice solo cosa
+  chiedere alla biblioteca, e il ripiego online si spegne per il libro aperto
+  dal visore. Niente preferenze salvate per opera: se serviranno, si aggiungono
+  allora;
+- **superficie dei log**: apertura di una pagina, provenienza, pagina salvata e
+  lettura locale scrivono già una riga con opera, copia, pagina, misura ed
+  esito, ma restano nel file di log. Raccoglierle dentro l'applicazione è la
+  #413; da qui in avanti ogni parte nuova usa gli stessi campi;
+- **tab "Digitalizzazioni"**: la struttura è stata rifatta il 5 settembre —
+  scaricamento in cima, versioni locali una per riga con origine, pagine,
+  spazio e stato, e i comandi di quella versione accanto (leggila, riducila,
+  cancella solo lei). Resta il caso di **più tipi di copia scaricabili** per la
+  stessa opera: le digitalizzazioni PDF compaiono già fra le copie ma non si
+  scaricano, e il comando per quelle è stato togliere invece di lasciarlo
+  fallire — il lavoro vero è la issue #462;
+- **coerenza Biblioteca ↔ Trascrizioni**: la scheda opera ha ora un pattern
+  stabile (colonna visore + colonna informazioni a tab, con `InspectorShell`
+  condiviso con la traduzione) — quando lo Studio di trascrizione prende
+  forma, i comandi generali (tornare indietro, aprire/chiudere la colonna
+  informazioni) devono seguire lo stesso pattern, non uno nuovo per area;
 - portare a termine il blocco Biblioteca: e-rara, e-manuscripta e Wellcome
   (nessun precedente in Scriptoria, da studiare una per una);
 - dare una ricerca vera alle nove biblioteche che oggi accettano solo
@@ -49,7 +86,9 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 - misurare le undici biblioteche e verificare la sessione del lettore per la
   Biblioteca Vaticana;
 - abilitare più pagine in parallelo solo per le biblioteche misurate;
-- aggiungere il visore e il recupero della singola pagina a piena risoluzione;
+- azioni sulla singola pagina e selezione multipla dalle miniature, con gli
+  stati che il modello non conserva ancora — eliminazione volontaria,
+  esclusione, esito di una verifica (#459);
 - permettere valori di ottimizzazione specifici per opera.
 
 ### Workspace e portabilità
@@ -62,7 +101,9 @@ sono stati verificati. Resta il merge di `blocco-1` in `main` come Glossa 1.5.
 ### Shell e osservabilità
 
 - unificare la barra di stato;
-- completare la console generale dei log (#413);
+- completare la console generale dei log (#413) — la ricerca in Biblioteca ha
+  già log tecnici completi (Rust e frontend) pronti per confluirci, oggi
+  visibili solo nel log di sistema;
 - aggiungere notifiche di sistema per i lavori lunghi;
 - risolvere scrollbar e artefatti grafici Linux senza workaround globali.
 

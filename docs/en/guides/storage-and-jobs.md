@@ -104,7 +104,7 @@ library's server: raising it too much triggers temporary blocks.
 
 ## How large the pages
 
-In **Settings → Download** you choose the page size and the thumbnail size.
+In **Settings → Library → Images** you choose the page size and the thumbnail size.
 
 The page size is a **target, not an exact number**: Glossa asks the library for
 the one it declares closest, above or below. Asking for an invented size would
@@ -114,10 +114,22 @@ against one.
 The same choice can be made on the **single work**, by opening its card in the
 Library, and there it wins: the size depends on the material — a wide-set
 printed book reads at far less than a cramped minuscule — not on who keeps the
-book.
+book. The download command in the card always uses the size chosen next to it:
+asking for a size other than the one already present really does download that
+new one, and a second local version appears next to the first.
+
+One download at a time per digitisation: if one is already running and you ask
+for another size, Glossa tells you instead of ignoring the command — wait for it
+to finish, or stop it from the jobs panel.
 
 Pages already downloaded stay as they are: the choice applies to what is
 downloaded from now on.
+
+The page you **keep from the viewer** is the exception, and the command says so:
+it reuses the bytes you are already looking at, without asking the library
+again, so the size is the one the page arrived at. On a book already on your
+computer it matches its own; on a book still entirely online it can differ from
+the configured size, and the command's tooltip writes it before you click.
 
 **Thumbnails** are not asked of the library: Glossa derives them from the pages
 it has downloaded, on your computer. Larger ones take more space and browse
@@ -125,22 +137,65 @@ better; they cost no request at all.
 
 ## The pace towards libraries
 
-Every library has its own pace: how long to wait between requests, how many
-requests in a minute, how long to stop when it asks you to slow down, how many
-attempts to make. These are a few different paces applied to many libraries, so
-**Settings → Libraries** governs them as **profiles**.
+Every library has its own pace. These are a few different paces applied to many
+libraries, so **Settings → Library → Settings** governs them as **profiles**,
+and every profile has five values:
+
+| Value | What it decides |
+|---|---|
+| Pages at once | how many pages of the same book start together |
+| Requests | the per-minute ceiling towards that library |
+| Pause after a refusal | how long to stay still when the library refuses or asks to slow down |
+| Attempts *(advanced)* | how many times to retry the same page before calling it not downloaded |
+| Wait for a slow library *(advanced)* | how long to wait for an answer before considering it lost |
+
+Every value explains its own consequence on hover. The maximum for **pages at
+once** depends on the profile: one seat towards the library always stays free
+for the page you are reading, so the field stops where the engine will actually
+stop — you used to be able to write "4" and see one start, with nothing saying
+so.
+
+Changes to a profile are saved **with an explicit command**: until you press it,
+next to the title it stays written that something needs saving, and the command
+next to it throws the changes away.
+
+Between one successful request and the next there is **no pause at all**: the
+pace comes from the number of requests at once, the per-minute limit and the long
+stop after a refusal. A pause on every request multiplied by all the pieces of a
+zoomed page, and made the viewer unusable.
 
 Two profiles ship with Glossa, with values proven in the field: **Normal**,
 used by almost all of them, and **Slow**, tuned on Gallica, the strictest one.
 You can change them, create others and name each one; next to the name Glossa
 says how many libraries use it.
 
-Below, the list of libraries: for each one you pick its profile from a menu. A
-profile someone is using cannot be deleted — move the libraries that follow it
+In the **Libraries** tab you find the list of libraries: for each one you pick
+its profile and the **image request mode**, which is not the size but the way of
+asking for it:
+
+- **Automatic** *(recommended)* — Glossa uses a format the library already keeps
+  ready when there is one, otherwise it asks for the configured size;
+- **Ready-made formats only** — no waiting, but the page may arrive larger or
+  smaller than the configured size;
+- **Exact size** — always the configured size, even when the library must build
+  it on the spot: exact size, slower first opening.
+
+A profile someone is using cannot be deleted — move the libraries that follow it
 first — and the two that ship with the application cannot be deleted at all.
 
 **Requests at the same time never go above four**, whatever you write: the
-limit depends on their server and it keeps you from being blocked.
+limit depends on their server and it keeps you from being blocked. A download
+never takes them all: one seat always stays with the page you are looking at, so
+you can keep browsing a book while another one downloads.
+
+At the bottom right, next to the jobs, a small indicator tells you whether the
+network is actually moving. Hovering it opens a panel: how many images are in
+progress and how many are waiting their turn, keeping the page you are looking
+at separate from the thumbnails; how many seats are taken towards each library
+and how many requests you have already spent in the current minute; and where
+the images came from so far — the vault, the working memory or the network —
+with the share of requests you spared yourself. It tells a slow job from a stuck
+one.
 
 ## Covers and searches kept aside
 
@@ -184,34 +239,58 @@ them at every resume, and reads the book as complete for as much as the library
 serves. Every now and then — about once a week — it tries them again, because
 libraries do fix things.
 
-**Pages taken at full resolution are an addition, not a gap.** If you wanted the
-larger version of three pages, the record says «plus 3 at full resolution» next to
-the count, instead of making the book look half-finished.
+**How many pages the book has** is stated by its index, and Glossa records it
+both when downloading and when simply opening the book in the viewer: it used to
+be written only by a full download, so whoever kept a single page ended up with
+"1 of 1 · complete" on a three-hundred-leaf manuscript.
 
-## Shrinking images to free up space
+### Local versions, one per row
+
+In the **Digitisations** tab every version present on your computer has its own
+row, and every row states four things on separate lines: where it comes from
+(downloaded from the library, or derived on your computer), how many pages it
+has out of those declared, how much room it takes, and whether it is complete.
+If the library does not serve some pages, the row says so separately: they are
+not a gap, and a version holding every served page counts as complete.
+
+Next to each row sit **that version's commands, and only that version's**: read
+it in the viewer, derive a smaller one, delete only this one. The section header
+keeps verification and "free all the space of this digitisation", which does act
+on every version present.
+
+The version the viewer is reading is **marked by itself**, even when there is
+only one: you neither guess it nor pick it by hand. Choosing another one makes
+the viewer reload the page from that folder; pages missing from that version are
+still requested from the library, so you never face a gap.
+
+## Compressing to free up space, without losing the original
 
 A book downloaded at full resolution takes three times more room than it needs.
 One downloaded months ago with a higher cap than you need now holds detail you
-never look at. In both cases **cleaning up beats downloading again**, because the
+never look at. In both cases **compressing beats downloading again**, because the
 library does not pay the price for it.
 
-On the work's record, in the Library, a command reads the downloaded pages again,
-shrinks them to the chosen size and recompresses them, replacing the original.
+In the work's record, on the **Digitisations** tab, every local version has its
+own "compress" command: it starts from that version, and the panel only asks for
+the smaller target size and the quality. The command queues the job immediately.
 
-**It is irreversible: the original is replaced.** The command queues the job
-immediately. It works on **one size at a time**: the one the book was downloaded at.
-Pages you deliberately took at full resolution are left as they are.
+**No longer irreversible: a new copy is born, the original is never touched.**
+Compression used to replace the downloaded pages in place, for good; now the
+compressed copy shows up next to the work's other resolutions, each with its
+own command to free just that one — keep the light copy and drop the heavy
+original, or the other way round, whenever you like.
 
 On a long book it runs for minutes, so it is a job like a download: you follow it
-from the panel at the bottom right, and you can pause or cancel it. Pages already
-smaller than the chosen size are not touched, because recompressing them would
-lose something without freeing anything.
+from the panel at the bottom right, and you can pause or cancel it. The job
+works on several pages together (as many as your processor's cores, minus
+one), not one at a time.
 
-While it runs, the panel says how many pages it has shrunk and how much room it has freed; the value remains on the completed job. Target size and quality are chosen in **Settings → Downloads**.
+While it runs, the panel says how many pages it has shrunk and how big the
+copy will be; the value remains on the completed job.
 
-If a page cannot be read or rewritten, the job ends in error instead of hiding it: its
+If a page cannot be read, the job ends in error instead of hiding it: its
 details keep the number of unprocessed pages, while successful pages remain
-safely stored.
+safely stored in the copy.
 
 While a download or optimisation can still change a work, commands that free
 its space or remove it are refused. Let the job finish or cancel it first;

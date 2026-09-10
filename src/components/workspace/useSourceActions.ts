@@ -7,6 +7,7 @@ import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
 import { versionInventory } from '../../services/inventoryService';
 import { enqueueOptimization } from '../../services/optimizeService';
+import { forgetVersionCache } from '../../services/cacheService';
 import {
   deleteVersionFiles,
   freeVersionPages,
@@ -17,7 +18,7 @@ import type { LibraryCatalogEntry } from '../../types';
 
 interface SourceActionHandlers {
   /** L'opera è stata tolta dalla Biblioteca: la scheda non esiste più. */
-  onRemove: () => void;
+  onRemove: () => void | Promise<void>;
   onSetArchived: (archived: boolean) => Promise<void>;
   /** Qualcosa sul disco è cambiato: il catalogo va riletto. */
   onRefresh: () => void;
@@ -230,8 +231,12 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
     try {
       if (entry.versionId) {
         await deleteVersionFiles(await providerKey(), entry.versionId);
+        // Anche la memoria di lavoro: senza questo passo lo spazio non si
+        // libera davvero, e riaggiungendo la stessa opera le pagine
+        // tornerebbero da lì senza ricontattare la biblioteca.
+        await forgetVersionCache(entry.versionId);
       }
-      handlers.onRemove();
+      await handlers.onRemove();
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);
       if (reason.includes('version_work_in_progress')) {

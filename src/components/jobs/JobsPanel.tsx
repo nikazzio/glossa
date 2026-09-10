@@ -113,6 +113,7 @@ function JobRow({ job }: { job: Job }) {
             <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
               {humanSize(detail.bytes.downloaded)}
               {detail.bytes.estimated > 0 && ` / ~${humanSize(detail.bytes.estimated)}`}
+{detail.speed !== undefined && detail.speed > 0 && ` · ${humanSize(detail.speed)}/s`}
             </span>
           )}
         </button>
@@ -248,6 +249,11 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
           ? `${humanSize(detail.bytes.downloaded)} / ~${humanSize(detail.bytes.estimated)}`
           : humanSize(detail.bytes.downloaded),
     },
+    detail.speed !== undefined &&
+      detail.speed > 0 && {
+        label: t('jobs.detail.speed'),
+        value: `${humanSize(detail.speed)}/s`,
+      },
     detail.unavailable !== undefined &&
       detail.unavailable > 0 && {
         label: t('jobs.detail.unavailable'),

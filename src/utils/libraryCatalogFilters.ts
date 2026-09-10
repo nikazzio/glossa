@@ -14,8 +14,11 @@ export type LibrarySort = (typeof LIBRARY_SORTS)[number];
 /** Valore speciale del filtro workspace: le opere che non stanno in nessuno. */
 export const NO_WORKSPACE = 'none';
 
-/** I tipi di opera ammessi dallo schema, nell'ordine in cui si mostrano. */
-export const SOURCE_KINDS: SourceKind[] = ['manuscript', 'print', 'pdf', 'iiif', 'web', 'other'];
+/** Le nature d'origine riconosciute in automatico, nell'ordine in cui si
+ *  mostrano nel filtro. Il campo resta semi-libero (ogni biblioteca lo
+ *  dichiara a modo suo): questi sono solo i valori che il riconoscimento
+ *  automatico sa assegnare oggi, non un enum chiuso a livello di dato. */
+export const SOURCE_KINDS: SourceKind[] = ['manuscript', 'print', 'other'];
 
 export interface LibraryFilters {
   query: string;

@@ -25,8 +25,15 @@ import {
   setOptimizeQuality,
 } from '../../services/optimizeService';
 
-/** Impostazioni globali per scaricamento e ottimizzazione delle immagini. */
-export function DownloadSettingsTab() {
+const ROWS = 'divide-y divide-editorial-border/60 border-y border-editorial-border/70';
+
+/**
+ * Le misure che valgono per tutte le biblioteche: quanto grande si vuole una
+ * pagina, quanto una miniatura, e con quali valori si ricava una versione
+ * ridotta. Il *modo* in cui la misura viene chiesta si sceglie per biblioteca,
+ * più su nella schermata.
+ */
+export function LibraryImagesSection() {
   const { t } = useTranslation();
   const [sizeCap, setSizeCap] = useState(DEFAULT_SIZE_CAP);
   const [thumbnailEdge, setEdge] = useState(DEFAULT_THUMBNAIL_EDGE);
@@ -49,53 +56,17 @@ export function DownloadSettingsTab() {
     void load();
   }, [t]);
 
-  const changeSizeCap = async (value: string) => {
-    const previous = sizeCap;
-    setSizeCap(value);
+  /**
+   * Salva e, se il motore rifiuta, riporta il campo al valore che aveva: una
+   * schermata che mostra un valore mai arrivato al deposito è peggio di un
+   * errore.
+   */
+  const persist = async <T,>(next: T, previous: T, apply: (value: T) => void, save: (value: T) => Promise<unknown>) => {
+    apply(next);
     try {
-      await setGlobalSizeCap(value);
+      await save(next);
     } catch (error: unknown) {
-      setSizeCap(previous);
-      toast.error(t('settings.download.saveFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const changeEdge = async (value: string) => {
-    const previous = thumbnailEdge;
-    const chosen = Number.parseInt(value, 10);
-    setEdge(chosen);
-    try {
-      await setThumbnailEdge(chosen);
-    } catch (error: unknown) {
-      setEdge(previous);
-      toast.error(t('settings.download.saveFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const changeOptimizeEdge = async (value: number) => {
-    const previous = optimizeEdge;
-    setOptimizeEdge(value);
-    try {
-      await setOptimizeLongEdge(value);
-    } catch (error: unknown) {
-      setOptimizeEdge(previous);
-      toast.error(t('settings.download.saveFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const changeOptimizeQuality = async (value: number) => {
-    const previous = optimizeQuality;
-    setOptimizeQualityState(value);
-    try {
-      await setOptimizeQuality(value);
-    } catch (error: unknown) {
-      setOptimizeQualityState(previous);
+      apply(previous);
       toast.error(t('settings.download.saveFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
@@ -103,22 +74,18 @@ export function DownloadSettingsTab() {
   };
 
   return (
-    <div
-      id="settings-panel-download"
-      role="tabpanel"
-      aria-labelledby="settings-tab-download"
-      className="space-y-10"
-    >
+    <>
       <section className="space-y-4">
         <SectionLabel icon={Ruler} label={t('settings.download.sizes')} />
-        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <div className={ROWS}>
           <SettingRow
             label={t('settings.download.sizeCap')}
             hint={t('settings.download.sizeCapHint')}
           >
             <Select
               value={sizeCap}
-              onChange={(value) => void changeSizeCap(value)}
+              onChange={(value) => void persist(value, sizeCap, setSizeCap, setGlobalSizeCap)}
+              size="md"
               ariaLabel={t('settings.download.sizeCap')}
               options={SIZE_CAPS.map((value) => ({
                 value,
@@ -136,7 +103,10 @@ export function DownloadSettingsTab() {
           >
             <Select
               value={String(thumbnailEdge)}
-              onChange={(value) => void changeEdge(value)}
+              onChange={(value) =>
+                void persist(Number.parseInt(value, 10), thumbnailEdge, setEdge, setThumbnailEdge)
+              }
+              size="md"
               ariaLabel={t('settings.download.thumbnailEdge')}
               options={THUMBNAIL_EDGES.map((value) => ({
                 value: String(value),
@@ -149,14 +119,17 @@ export function DownloadSettingsTab() {
 
       <section className="space-y-4">
         <SectionLabel icon={Minimize2} label={t('settings.download.optimize')} />
-        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <div className={ROWS}>
           <SettingRow
             label={t('settings.download.optimizeLongEdge')}
             hint={t('settings.download.optimizeLongEdgeHint')}
           >
             <Select
               value={String(optimizeEdge)}
-              onChange={(value) => void changeOptimizeEdge(Number(value))}
+              onChange={(value) =>
+                void persist(Number(value), optimizeEdge, setOptimizeEdge, setOptimizeLongEdge)
+              }
+              size="md"
               ariaLabel={t('settings.download.optimizeLongEdge')}
               options={OPTIMIZE_LONG_EDGES.map((value) => ({
                 value: String(value),
@@ -171,7 +144,10 @@ export function DownloadSettingsTab() {
           >
             <Select
               value={String(optimizeQuality)}
-              onChange={(value) => void changeOptimizeQuality(Number(value))}
+              onChange={(value) =>
+                void persist(Number(value), optimizeQuality, setOptimizeQualityState, setOptimizeQuality)
+              }
+              size="md"
               ariaLabel={t('settings.download.optimizeQuality')}
               options={OPTIMIZE_QUALITIES.map((value) => ({
                 value: String(value),
@@ -181,6 +157,6 @@ export function DownloadSettingsTab() {
           </SettingRow>
         </div>
       </section>
-    </div>
+    </>
   );
 }

@@ -103,9 +103,17 @@ pub fn path_in(size_dir: &Path) -> PathBuf {
     size_dir.join(SIDECAR_FILE)
 }
 
+/// Le pagine di uno stesso libro si scaricano insieme: senza questo turno due
+/// righe potrebbero intrecciarsi in una sola, e quella pagina perderebbe la sua
+/// impronta.
+static APPEND_TURN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Aggiunge una riga in coda. Da chiamare **dopo** che il file della pagina è al
 /// suo posto: prima si mette al sicuro la pagina, poi si racconta.
 pub fn append(size_dir: &Path, record: &PageRecord) -> std::io::Result<()> {
+    let _turn = APPEND_TURN
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     std::fs::create_dir_all(size_dir)?;
     let mut line = serde_json::to_vec(record)
         .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;

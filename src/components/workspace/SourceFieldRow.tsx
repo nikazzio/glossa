@@ -68,11 +68,11 @@ export function SourceFieldRow({
 
   if (editing) {
     return (
-      <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
         <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
           {label}
         </dt>
-        <dd className="flex min-w-0 flex-1 items-center justify-end gap-1">
+        <dd className="mt-0.5 flex min-w-0 items-center gap-1">
           {options ? (
             <Select
               value={draft}
@@ -95,7 +95,7 @@ export function SourceFieldRow({
                 if (event.key === 'Escape') setEditing(false);
               }}
               aria-label={label}
-              className={`${FIELD_CLASSNAME} max-w-xs py-1 text-sm`}
+              className={`${FIELD_CLASSNAME} min-w-0 flex-1 py-1 text-sm`}
             />
           )}
           <IconButton
@@ -121,7 +121,7 @@ export function SourceFieldRow({
   }
 
   return (
-    <div className="group flex items-baseline justify-between gap-3">
+    <div className="group min-w-0">
       <dt className="flex items-center gap-1 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
         {label}
         {original !== undefined && (
@@ -142,27 +142,29 @@ export function SourceFieldRow({
           </Tooltip>
         )}
       </dt>
-      <dd className="flex min-w-0 items-center gap-1">
-        <span className="truncate font-display text-sm italic text-editorial-ink">
+      <dd className="mt-0.5 flex items-start justify-between gap-2">
+        <span className="min-w-0 flex-1 break-words font-display text-sm italic text-editorial-ink">
           {value || '—'}
         </span>
-        {original !== undefined && (
+        <span className="flex shrink-0 items-center gap-1">
+          {original !== undefined && (
+            <IconButton
+              size="xs"
+              onClick={() => void save(null)}
+              disabled={saving}
+              title={t('areas.library.fieldRestoreOriginal')}
+            >
+              <Undo2 size={12} />
+            </IconButton>
+          )}
           <IconButton
             size="xs"
-            onClick={() => void save(null)}
-            disabled={saving}
-            title={t('areas.library.fieldRestoreOriginal')}
+            onClick={startEditing}
+            title={t('areas.library.fieldEdit', { field: label })}
           >
-            <Undo2 size={12} />
+            <Pencil size={12} />
           </IconButton>
-        )}
-        <IconButton
-          size="xs"
-          onClick={startEditing}
-          title={t('areas.library.fieldEdit', { field: label })}
-        >
-          <Pencil size={12} />
-        </IconButton>
+        </span>
       </dd>
     </div>
   );

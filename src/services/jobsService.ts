@@ -113,6 +113,8 @@ export async function onJobChanged(handler: (job: Job) => void): Promise<() => v
 export interface JobDetail {
   units?: { done: number; total: number; label: string };
   bytes?: { downloaded: number; estimated: number };
+  /** Byte al secondo osservati adesso: dice se sta scaricando o è fermo. */
+  speed?: number;
   last?: {
     index: number;
     label?: string;
@@ -162,6 +164,7 @@ export function parseJobDetail(raw: string | null): JobDetail {
         num(bytes.downloaded) !== undefined
           ? { downloaded: num(bytes.downloaded)!, estimated: num(bytes.estimated) ?? 0 }
           : undefined,
+      speed: num(record.speed),
       last:
         num(last.index) !== undefined
           ? {

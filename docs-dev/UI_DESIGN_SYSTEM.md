@@ -97,24 +97,101 @@ interattivi.
 - `PopoverItem`: voce di elenco dentro un `ClickPopover` (scegliere workspace,
   collezione, vista salvata). Si usa quando accanto alla voce vive un altro
   comando o un campo, cioè dove `Menu` non arriva.
+- `MenuActionRow`: voce di comando dentro un `ClickPopover` (icona, etichetta,
+  `tone` opzionale `danger`) — per menu di azioni (es. archivia/rimuovi
+  raccolti in un unico trigger), non per scegliere un'opzione da un elenco
+  (quello resta `PopoverItem`).
 - `LinkChip`: etichetta di un legame già stabilito che, cliccata, lo scioglie.
   Il motivo sta nel `Tooltip`, mai nel `title` nativo; il nome leggibile del
   legame resta il nome del comando.
-- Nessuna riga di elenco o etichetta di legame scritta a mano nei componenti.
+- Nessuna riga di elenco, etichetta di legame o voce di menu scritta a mano
+  nei componenti.
 
-### SectionLabel e StatRow
+### SectionLabel, StatRow e StatBlock
 
 - `SectionLabel`: intestazione di sezione con icona.
-- `StatRow`: label e valore allineati su due colonne.
+- `StatRow`: label e valore corti, allineati su due colonne — non va a capo.
+- `StatBlock`: label sopra, valore sotto, va a capo con `break-words` — per
+  pannelli stretti con valori lunghi (titoli, descrizioni fisiche, fondi di
+  conservazione); prop `href` opzionale per i link veri (pagina web, scheda
+  del catalogo), che aggiunge da sé un comando di copia (`CopyButton`)
+  accanto al link.
+- `CopyButton`: copia negli appunti, icona che diventa un segno di spunta per
+  due secondi, `size` come `IconButton`. Ogni indirizzo copiabile (manifesti,
+  link a pagine esterne) lo usa — mai un pulsante di copia scritto a mano.
 - Non ricreare localmente gli stessi pattern.
+
+### TabStrip
+
+Fila di linguette icona con la propria navigazione da tastiera: frecce, Home ed
+End, con il focus che segue la linguetta scelta come vuole il modello ARIA.
+Usarla per ogni gruppo di linguette che non sia già dentro `InspectorShell` —
+sotto-schede di una finestra di impostazioni, linguette di un pannello.
+
+- `tabs`: `{ id, label, icon }`; l'etichetta vive nel tooltip, non a schermo.
+- `idPrefix`: da cui derivano `<prefix>-tab-<id>` e `<prefix>-panel-<id>`, così
+  il pannello si collega con `aria-labelledby`.
+- Il pannello attivo lo monta il chiamante, con `role="tabpanel"`.
+- Non riscrivere la gestione delle frecce nei componenti: esisteva tre volte a
+  mano e ogni copia divergeva su Home o sul percorso di tabulazione.
+
+### InspectorShell
+
+Guscio comune per una colonna a tab con collasso — nato per il pannello
+Insight della traduzione, riusato identico dalla scheda opera in Biblioteca,
+pensato per qualunque colonna laterale a tab futura (es. Trascrizioni): un
+domani si aggiunge una tab o si cambia lo stile di collasso **in un punto
+solo**.
+
+- `tabs`/`activeTab`/`onTabChange`: barra tab a roving tabindex (`TabButton`),
+  le frecce/Home/End saltano le tab disattivate.
+- `actions`: contenuto a destra della barra tab (etichetta della tab attiva,
+  comandi contestuali) — libero, ogni uso ci mette il suo. **L'etichetta della
+  tab attiva ci va sempre**: le linguette sono icone, e senza il nome accanto
+  restano leggibili solo al passaggio del mouse. È la forma già usata dal
+  pannello Insight, dalla finestra delle risorse linguistiche e dalla
+  configurazione della pipeline; la scheda opera in Biblioteca era l'unica
+  senza.
+- `panelIcon`/`panelLabel`: se presenti, mostrano sopra la barra tab
+  un'intestazione con il comando di collassa/espandi (`collapsed`/
+  `onCollapsedChange`) e uno slot `headerActions` per comandi accanto (es.
+  chiudere il pannello). Senza `panelLabel`, niente collasso: solo tab e
+  contenuto.
+- Chi monta il componente resta responsabile della larghezza fisica del
+  riquadro (es. un `Panel` di `react-resizable-panels` con `collapsible`):
+  `collapsed` qui è solo lo specchio di quello stato, non lo decide da sé.
+- `ownsPanelSemantics` (default vero): falso solo se `children` porta già un
+  proprio wrapper `role="tabpanel"` per tab (più componenti di contenuto,
+  ognuno con la sua identità — come i tab del documento).
 
 ### SettingRow e campi
 
 - Ogni impostazione usa `SettingRow` dentro una lista con `divide-y` e
   `border-y`.
 - Riga `py-2.5`, label `text-sm`, una sola icona nel comando a destra.
-- Spiegazioni nel `hint`, non come paragrafi permanenti.
-- Input, select e textarea usano le classi campo condivise.
+- L'etichetta prende lo spazio disponibile, il comando non lo ruba: `SettingRow`
+  incapsula i figli in un contenitore che non si allarga. Un campo a larghezza
+  piena dentro una riga riduceva «Nome» a «No…».
+- Spiegazioni nel `hint`, che è un suggerimento al passaggio del mouse
+  raggiungibile da tastiera, non un paragrafo permanente. Ogni valore che ha una
+  conseguenza non ovvia ne ha uno.
+- Input, select e textarea usano le classi campo condivise:
+
+| Classe | Uso |
+|---|---|
+| `FIELD_CLASSNAME` | campo a larghezza piena, per moduli e riquadri propri |
+| `FIELD_INLINE_CLASSNAME` | campo di testo accanto alla sua etichetta, che non si allarga |
+| `FIELD_NUMBER_CLASSNAME` | numero breve: `w-16`, allineato a destra, monospaziato, senza le frecce native |
+| `FIELD_MONO_CLASSNAME` | valori tecnici a spaziatura fissa |
+
+- Un numero con unità di misura tiene l'unità **fuori dall'etichetta**, in una
+  colonna di larghezza fissa accanto al campo: senza, i campi di due righe
+  vicine finiscono a larghezze diverse e le cifre non si incolonnano.
+- `Select` ha due misure di testo: `sm` (predefinita) per barre e righe
+  compatte, `md` dentro le liste di impostazioni, dove un valore più piccolo
+  dell'etichetta accanto si legge come una nota a margine invece che come la
+  scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
+  un tetto per i testi lunghi.
 - Scelte esclusive con nome usano `SegmentedControl`.
 - Interruttori booleani usano `ToggleRow`.
 
@@ -133,6 +210,45 @@ dalla mappa semantica esistente. Conteggi cliccabili usano una primitiva
 interattiva.
 
 ## Pattern di layout
+
+### Intestazione di un'area
+
+Ogni area globale apre con il **titolo grande** in `font-display` corsivo
+(`text-4xl md:text-5xl`): Traduzioni, Trascrizioni, Analisi, Biblioteca. I
+comandi propri dell'elenco (vista, ordinamento) stanno in fondo alla stessa
+riga, allineati alla base del titolo. La Biblioteca usava una `SectionLabel`
+piccola con icona: era l'unica area a non somigliare alle altre.
+
+### Provenienza di un dato: parola + pallino
+
+Quando un'informazione ha più provenienze possibili, la **parola** dice solo la
+distinzione che cambia qualcosa per chi legge, e il **colore del pallino** porta
+il dettaglio. Nel visore: «File locale» / «File online» come parole, pallino
+neutro per il deposito, `editorial-running` (oro) per la cache,
+`editorial-success` per la biblioteca appena interpellata. Il suggerimento
+scrive la provenienza per esteso.
+
+Per il pallino **non** si usa `editorial-warning`: su un cerchio da sei pixel
+l'ocra profonda legge come un rosso scuro, cioè come un avviso. `warning` resta
+per gli avvisi veri, che sono testo.
+
+Un indicatore di provenienza non deve dipendere da un orologio. La versione
+precedente si accendeva solo entro trenta secondi dall'ultima risposta —
+contando anche le immagini lette dal disco — e su un libro tutto online restava
+spento quasi sempre.
+
+### Completamento in una riga di elenco
+
+Quanto di una cosa è già disponibile si dice con una **riga di dati a
+separatori** più una **barra corta a larghezza fissa** (`w-10`, spessore 3 px)
+con il conteggio accanto in `tabular-nums`: `100%` in verde a completamento
+pieno, `120/328` in oro a metà, barra assente quando non c'è niente. La barra
+non si stende per tutta la larghezza della riga: è un dato fra gli altri, non un
+elemento grafico. I dati si troncano prima della barra, che resta visibile.
+
+Nella riga di un elenco i dati **si concatenano** con «·» (biblioteca · pagine ·
+misure · spazio): è l'opposto della regola sulle righe di dettaglio in colonna
+stretta, e la differenza è la larghezza disponibile.
 
 ### Barre filtro
 
@@ -154,9 +270,24 @@ interattiva.
 - Radice: `space-y-10`, `role="tabpanel"`, `aria-labelledby`.
 - Sezione: `space-y-4` con `SectionLabel`.
 - Elenchi: righe piatte separate, niente card o pill.
+- Una scheda che raccoglie argomenti diversi si divide in **sotto-linguette**
+  (`TabStrip`) invece di diventare un rotolo unico: accanto alla fila,
+  l'etichetta della linguetta attiva in `font-display italic`.
 - Salvataggio al cambio, salvo input intermedi che richiedono conferma
   esplicita. In quel caso mostrare stato non salvato e comando di ripristino.
 - Ordine generale: modalità di traduzione, coppia linguistica, persona.
+
+### Elenchi di versioni e comandi per riga
+
+Quando una riga descrive una cosa su cui si può agire — una versione locale di
+un libro, un profilo, un file — i comandi che la riguardano stanno **su quella
+riga**, non nell'intestazione della sezione: nell'intestazione non si capisce su
+quale delle righe agiscano. Restano nell'intestazione soltanto i comandi che
+valgono per l'insieme, e il loro testo dice che valgono per tutto.
+
+I dati della riga stanno su righe separate (`StatRow` dentro un `dl`), non
+concatenati con punti su una riga sola: in una colonna stretta quattro dati
+separati da «·» non si leggono.
 
 ### Barra di stato
 

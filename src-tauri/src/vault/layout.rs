@@ -12,13 +12,18 @@
 
 use std::path::{Path, PathBuf};
 
-/// Radice di ciò che scarichiamo dalle biblioteche. `derived/` (ritagli e
-/// immagini ottimizzate) e `trash/` (in attesa dello svuotamento) arrivano
-/// con le PR che li usano: qui non servono ancora.
+/// Radice di ciò che scarichiamo dalle biblioteche. `trash/` (in attesa dello
+/// svuotamento) arriva con la PR che lo usa: qui non serve ancora.
 pub(crate) const PROVIDERS_DIR: &str = "providers";
 pub(crate) const PAGES_DIR: &str = "pages";
-const THUMBNAILS_DIR: &str = "thumbnails";
+pub(crate) const THUMBNAILS_DIR: &str = "thumbnails";
 pub(crate) const MANIFEST_FILE: &str = "manifest.json";
+
+/// Radice delle copie ricavate in locale (l'ottimizzazione, oggi; un domani
+/// anche i ritagli) — mai dentro `providers/`: sono un fatto di Niki, non
+/// della biblioteca, e "libera spazio" sulle pagine scaricate non deve
+/// portarsele via.
+pub(crate) const DERIVED_DIR: &str = "derived";
 
 /// Area di transito: ci si scrive, si valida, e solo allora si
 /// promuove. Sta accanto alle radici del layout perché quello che c'è dentro
@@ -91,6 +96,29 @@ pub fn pages_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, String
     Ok(version_dir(provider_key, version_id)?.join(PAGES_DIR))
 }
 
+/// Cartella di una digitalizzazione dentro `derived/`: stessa forma di
+/// `version_dir`, radice diversa.
+pub fn derived_version_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
+    if !is_safe_component(provider_key) {
+        return Err(format!(
+            "Invalid provider key for a vault path: {provider_key}"
+        ));
+    }
+    if !is_safe_component(version_id) {
+        return Err(format!("Invalid version id for a vault path: {version_id}"));
+    }
+    Ok(Path::new(DERIVED_DIR).join(provider_key).join(version_id))
+}
+
+/// Cartella di una singola copia ricavata in locale: `derived/<chiave>/<id>/<misura>/`.
+pub fn derived_size_dir(
+    provider_key: &str,
+    version_id: &str,
+    size_tag: &str,
+) -> Result<PathBuf, String> {
+    Ok(derived_version_dir(provider_key, version_id)?.join(safe_component(size_tag)?))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,6 +187,16 @@ mod tests {
         assert_eq!(
             as_string(manifest_path("estense", "v9").unwrap()),
             "providers/estense/v9/manifest.json"
+        );
+    }
+
+    #[test]
+    fn derived_copies_live_outside_providers() {
+        // "libera spazio" cancella solo `providers/`: una copia ricavata in
+        // locale sta altrove apposta, per non sparire con l'originale.
+        assert_eq!(
+            as_string(derived_size_dir("gallica", "v1", "500").unwrap()),
+            "derived/gallica/v1/500"
         );
     }
 

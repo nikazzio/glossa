@@ -32,6 +32,10 @@ reqwest = { version = "0.12", features = ["json", "cookies"] }
 # Windows, macOS e Linux restano come sono. Solo i formati che servono davvero:
 # le biblioteche IIIF servono JPEG, e la PNG è l'unica altra che capiti.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+# Ridimensionamento con le istruzioni vettoriali del processore: stesso
+# risultato del filtro Lanczos già in uso, diverse volte più veloce. Puro
+# Rust anche questa: nessuna libreria di sistema in più da compilare.
+fast_image_resize = { version = "6", features = ["image"] }
 url = "2"
 keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
 tauri-plugin-dialog = "2"
@@ -50,6 +54,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 sqlite-vec = "0.1.6"
 thiserror = "1"
 schemars = { version = "0.8", features = ["derive"] }
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"

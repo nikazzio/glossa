@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use reqwest::Client;
@@ -10,7 +11,7 @@ use super::network::NetworkProfile;
 use super::resolvers::{self, Strength};
 use super::search::{self, SearchEndpoints};
 use super::{find_provider, IIIFProvider, SearchMode};
-use crate::download::courtesy::{Courtesy, Signals, Turn};
+use crate::download::courtesy::{Courtesy, Lane, Signals, Turn};
 use tauri::Manager;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -35,6 +36,20 @@ pub struct ManifestPreview {
     pub subjects: Vec<String>,
     pub item_count: Option<usize>,
     pub material_type: Option<String>,
+    /// Autori, curatori o traduttori oltre al primo (`creator`), quando il
+    /// manifesto stesso li dichiara nel proprio `metadata`.
+    pub contributors: Vec<String>,
+    pub publisher: Option<String>,
+    /// Licenza o stato del diritto d'autore, quando il manifesto lo dichiara.
+    pub rights: Vec<String>,
+    pub physical_description: Option<String>,
+    /// Fondo/istituto conservatore, quando il manifesto stesso lo dichiara nel
+    /// proprio `metadata` — a differenza della ricerca, qui non c'è una
+    /// risposta strutturata della biblioteca da cui leggerlo con certezza.
+    pub holding_institution: Option<String>,
+    /// La pagina web pensata per un lettore umano: nello standard IIIF è
+    /// `homepage`, non il manifesto stesso (`manifest_url`).
+    pub page_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -71,6 +86,21 @@ pub struct DiscoveryResult {
     /// Collegamento alla scheda del catalogo cartaceo/archivistico, quando
     /// distinta dalla pagina di lettura online.
     pub catalog_url: Option<String>,
+    /// La pagina web dell'opera sul sito della biblioteca, pensata per un
+    /// lettore umano — non il manifesto IIIF (`manifest_url`, un documento
+    /// tecnico) né la scheda del catalogo cartaceo (`catalog_url`).
+    pub page_url: Option<String>,
+    /// **Tutto il resto che la biblioteca ha detto** e che non ha un campo suo.
+    ///
+    /// Le biblioteche restituiscono molto più di quello che l'interfaccia
+    /// mostra, e rifare la ricerca domani per recuperare un dato che avevamo già
+    /// in mano è lavoro sprecato — oltre che una risposta che potrebbe non
+    /// essere più la stessa. Qui si conserva com'è arrivato: chiave così come la
+    /// nomina la biblioteca, valori in elenco perché molti campi si ripetono.
+    /// Non è una struttura su cui costruire logica: è un deposito. Quando un
+    /// dato serve davvero, gli si dà un campo proprio.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub raw: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -153,6 +183,41 @@ fn metadata_value(value: &Value, key: &str) -> Option<String> {
         })
 }
 
+/// Come `metadata_value`, ma per le etichette che il manifesto dichiara con
+/// più valori insieme (es. più responsabili, più licenze): il primo valore
+/// non basta, e `metadata_value` lo scarterebbe.
+fn metadata_values(value: &Value, key: &str) -> Vec<String> {
+    value
+        .get("metadata")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|entry| {
+            text(entry.get("label")).is_some_and(|label| label.eq_ignore_ascii_case(key))
+        })
+        .flat_map(|entry| texts(entry.get("value")))
+        .collect()
+}
+
+/// La pagina web pensata per un lettore umano (`homepage` nello standard
+/// IIIF Presentation API), non il manifesto tecnico.
+fn homepage_url(value: &Value) -> Option<String> {
+    let homepage = value.get("homepage")?;
+    let first = match homepage {
+        Value::Array(values) => values.first()?,
+        other => other,
+    };
+    // `id`/`@id` prima: un `homepage` IIIF è un oggetto con più campi
+    // (`type`, `format`, `label`...) e `text()` prenderebbe il primo trovato
+    // in ordine alfabetico delle chiavi, non necessariamente l'indirizzo.
+    first
+        .get("id")
+        .or_else(|| first.get("@id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| text(Some(first)))
+}
+
 fn thumbnail_url(value: &Value) -> Option<String> {
     let thumbnail = value.get("thumbnail")?;
     text(Some(thumbnail))
@@ -171,7 +236,12 @@ fn thumbnail_url(value: &Value) -> Option<String> {
 }
 
 fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
-    let title = text(value.get("label"))
+    // Gallica mette la segnatura in `label` (il campo che lo standard IIIF
+    // userebbe per il titolo) e il titolo vero solo dentro `metadata` — non è
+    // un caso isolato, va cercato lì per primo e ripiegare su `label`/`title`
+    // solo se la biblioteca non dichiara affatto un titolo nei metadati.
+    let title = metadata_value(&value, "title")
+        .or_else(|| text(value.get("label")))
         .or_else(|| text(value.get("title")))
         .unwrap_or_default();
     let item_count = value
@@ -204,6 +274,23 @@ fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
             .or_else(|| metadata_value(&value, "genre"))
             .or_else(|| metadata_value(&value, "object type"))
             .or_else(|| metadata_value(&value, "material type")),
+        contributors: {
+            let mut found = metadata_values(&value, "contributor");
+            found.extend(metadata_values(&value, "contributors"));
+            found
+        },
+        publisher: metadata_value(&value, "publisher"),
+        rights: {
+            let mut found = metadata_values(&value, "rights");
+            found.extend(metadata_values(&value, "license"));
+            found
+        },
+        physical_description: metadata_value(&value, "extent")
+            .or_else(|| metadata_value(&value, "physical description")),
+        holding_institution: metadata_value(&value, "repository")
+            .or_else(|| metadata_value(&value, "holding institution"))
+            .or_else(|| metadata_value(&value, "institution")),
+        page_url: homepage_url(&value),
     }
 }
 
@@ -228,7 +315,11 @@ impl Gate<'_> {
             stop: &never_stops,
             courtesy_wait: &waiting,
         };
-        self.courtesy.wait_turn(&host, self.profile, &signals).await
+        // Una ricerca è quello che l'utente sta aspettando a schermo, non
+        // un'acquisizione in blocco: passa dalla corsia della pagina.
+        self.courtesy
+            .wait_turn(&host, self.profile, Lane::Page, &signals)
+            .await
     }
 }
 
@@ -247,15 +338,24 @@ async fn resolve_manifest(
     let _turn = wait_if_gated(gate, &manifest_url).await;
     let response = client
         .get(&manifest_url)
+        // Verificato su Gallica: senza dichiarare di volere JSON, il server
+        // risponde 500 con una pagina di errore invece del manifesto.
+        .header(reqwest::header::ACCEPT, "application/json")
         .send()
         .await
-        .map_err(|_| "The manifest could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery manifest request failed url={manifest_url} error={error}");
+            "The manifest could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "The manifest could not be read.".to_string())?;
-    let value = response
-        .json::<Value>()
-        .await
-        .map_err(|_| "The manifest is not valid JSON.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery manifest response failed url={manifest_url} error={error}");
+            "The manifest could not be read.".to_string()
+        })?;
+    let value = response.json::<Value>().await.map_err(|error| {
+        log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
+        "The manifest is not valid JSON.".to_string()
+    })?;
 
     Ok(manifest_preview(manifest_url, value))
 }
@@ -277,8 +377,16 @@ async fn enrich_from_manifest(
     if result.creator.is_some() {
         return result;
     }
-    let Ok(preview) = resolve_manifest(client, result.manifest_url.clone(), gate).await else {
-        return result;
+    let preview = match resolve_manifest(client, result.manifest_url.clone(), gate).await {
+        Ok(preview) => preview,
+        Err(error) => {
+            log::warn!(
+                "discovery enrichment skipped id={} manifest={} error={error}",
+                result.id,
+                result.manifest_url
+            );
+            return result;
+        }
     };
     DiscoveryResult {
         creator: preview.creator,
@@ -307,6 +415,72 @@ async fn enrich_results(
     enriched
 }
 
+/// Le chiavi della risposta di Internet Archive che hanno già un campo loro in
+/// `DiscoveryResult`. Servono solo a non ripetere in `raw` quello che è già
+/// stato letto: quando un dato di `raw` merita un campo proprio, il suo nome va
+/// aggiunto qui.
+const ARCHIVE_MAPPED_FIELDS: [&str; 15] = [
+    "identifier",
+    "title",
+    "creator",
+    "year",
+    "description",
+    "mediatype",
+    "collection",
+    "language",
+    "volume",
+    "subject",
+    "imagecount",
+    "publisher",
+    "contributor",
+    "licenseurl",
+    "rights",
+];
+
+/// La dichiarazione di diritti come la fa questa biblioteca: a volte l'indirizzo
+/// di una licenza (`licenseurl`), a volte una frase (`rights`), spesso una sola
+/// delle due e ogni tanto entrambe. Si tengono tutte, senza ripetizioni.
+fn archive_rights(document: &Value) -> Vec<String> {
+    let mut rights = texts(document.get("licenseurl"));
+    for claim in texts(document.get("rights")) {
+        if !rights.contains(&claim) {
+            rights.push(claim);
+        }
+    }
+    rights
+}
+
+/// Un valore della risposta ridotto a elenco di stringhe. Questa biblioteca
+/// manda lo stesso campo ora come stringa, ora come elenco, ora come numero o
+/// booleano: qui si uniforma la **forma**, mai il nome, che resta quello scelto
+/// dalla biblioteca.
+fn raw_strings(value: &Value) -> Vec<String> {
+    match value {
+        Value::Null => Vec::new(),
+        Value::String(text) => vec![text.clone()],
+        Value::Bool(flag) => vec![flag.to_string()],
+        Value::Number(number) => vec![number.to_string()],
+        Value::Array(values) => values.iter().flat_map(raw_strings).collect(),
+        Value::Object(_) => vec![value.to_string()],
+    }
+}
+
+/// Tutto quello che la biblioteca ha detto e che non è finito in un campo suo.
+/// Si scorre la risposta così com'è arrivata invece di elencare i nomi attesi:
+/// il giorno in cui la biblioteca aggiunge un campo, quel campo arriva da solo.
+fn archive_extra_fields(document: &Value) -> BTreeMap<String, Vec<String>> {
+    document
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(key, _)| !ARCHIVE_MAPPED_FIELDS.contains(&key.as_str()))
+        .filter_map(|(key, value)| {
+            let values = raw_strings(value);
+            (!values.is_empty()).then(|| (key.clone(), values))
+        })
+        .collect()
+}
+
 async fn search_archive(
     client: &Client,
     query: &str,
@@ -319,29 +493,34 @@ async fn search_archive(
         .get(base_url)
         .query(&[
             ("q", query),
-            // Tutti i campi utili in una richiesta sola: chiederne uno in più
-            // non costa niente, e andarlo a recuperare dopo costerebbe una
-            // richiesta per risultato. `imagecount` è il numero di pagine, che
-            // è il dato con cui si decide se scaricare un'opera.
-            (
-                "fl[]",
-                "identifier,title,creator,year,date,publisher,description,mediatype,collection,\
-                 language,subject,volume,imagecount,downloads,item_size,licenseurl,rights,\
-                 contributor,source,call_number",
-            ),
+            // Si chiede **tutto** quello che la biblioteca ha indicizzato, non
+            // un elenco di campi scelti. Misurato sul servizio vero, a regime,
+            // su venti risultati: chiedere i venti campi di prima costava
+            // 0,68 s e 12,6 KB, chiederli tutti costa 0,86 s e 43 KB. Sono
+            // +0,24 s una volta sola per ricerca, contro una richiesta in più
+            // *per ogni opera* il giorno in cui serve un dato che non avevamo
+            // chiesto — e che nel frattempo può essere cambiato. Quello che non
+            // ha un campo suo resta in `raw`, così com'è arrivato.
+            ("fl[]", "*"),
             ("rows", "20"),
             ("page", &page.to_string()),
             ("output", "json"),
         ])
         .send()
         .await
-        .map_err(|_| "Internet Archive could not be reached.".to_string())?
+        .map_err(|error| {
+            log::warn!("discovery archive request failed error={error}");
+            "Internet Archive could not be reached.".to_string()
+        })?
         .error_for_status()
-        .map_err(|_| "Internet Archive search failed.".to_string())?;
-    let value = response
-        .json::<Value>()
-        .await
-        .map_err(|_| "Internet Archive returned invalid data.".to_string())?;
+        .map_err(|error| {
+            log::warn!("discovery archive response failed error={error}");
+            "Internet Archive search failed.".to_string()
+        })?;
+    let value = response.json::<Value>().await.map_err(|error| {
+        log::warn!("discovery archive body failed error={error}");
+        "Internet Archive returned invalid data.".to_string()
+    })?;
 
     // Il servizio risponde 200 anche quando è il suo motore di ricerca a non
     // rispondere: senza questo, un guasto della biblioteca si legge come
@@ -371,12 +550,14 @@ async fn search_archive(
                 subjects: texts(document.get("subject")),
                 item_count: count(document.get("imagecount")),
                 manifest_url: format!("https://iiif.archive.org/iiif/{id}/manifest.json"),
-                contributors: Vec::new(),
+                contributors: texts(document.get("contributor")),
                 publisher: text(document.get("publisher")),
-                rights: text(document.get("licenseurl")).into_iter().collect(),
+                rights: archive_rights(document),
                 physical_description: None,
                 holding_institution: None,
                 catalog_url: None,
+                page_url: Some(format!("https://archive.org/details/{id}")),
+                raw: archive_extra_fields(document),
                 id,
             })
         })
@@ -629,6 +810,90 @@ mod tests {
         assert!(preview.title.is_empty());
     }
 
+    #[test]
+    fn manifest_preview_prefers_the_metadata_title_over_a_label_that_is_really_a_shelfmark() {
+        // Verificato su un manifesto vero di Gallica: `label` è la segnatura
+        // ("BnF, département Littérature et art, V-22944"), il titolo vero
+        // sta solo dentro `metadata` con etichetta "Title".
+        let preview = manifest_preview(
+            "https://gallica.bnf.fr/iiif/ark:/12148/bpt6k3282120/manifest.json".to_string(),
+            serde_json::json!({
+                "label": "BnF, département Littérature et art, V-22944",
+                "metadata": [
+                    {"label": "Shelfmark", "value": "Bibliothèque nationale de France, département Littérature et art, V-22944"},
+                    {"label": "Title", "value": "Le guidon des capitaines"},
+                ],
+            }),
+        );
+
+        assert_eq!(preview.title, "Le guidon des capitaines");
+    }
+
+    #[test]
+    fn manifest_preview_reads_source_metadata_when_the_manifest_declares_it() {
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({
+                "label": "Book of Hours",
+                "metadata": [
+                    {"label": "Contributor", "value": ["Jane Editor", "John Translator"]},
+                    {"label": "Publisher", "value": "Example Press"},
+                    {"label": "Rights", "value": "CC BY 4.0"},
+                    {"label": "Extent", "value": "120 folios"},
+                    {"label": "Repository", "value": "Example Library, MS 42"},
+                ],
+                "homepage": [{"id": "https://example.test/read/42", "type": "Text"}],
+            }),
+        );
+
+        assert_eq!(preview.contributors, vec!["Jane Editor", "John Translator"]);
+        assert_eq!(preview.publisher.as_deref(), Some("Example Press"));
+        assert_eq!(preview.rights, vec!["CC BY 4.0"]);
+        assert_eq!(preview.physical_description.as_deref(), Some("120 folios"));
+        assert_eq!(
+            preview.holding_institution.as_deref(),
+            Some("Example Library, MS 42")
+        );
+        assert_eq!(
+            preview.page_url.as_deref(),
+            Some("https://example.test/read/42")
+        );
+    }
+
+    #[test]
+    fn manifest_preview_without_declared_metadata_leaves_the_new_fields_empty() {
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({"label": "Bare Manifest"}),
+        );
+
+        assert!(preview.contributors.is_empty());
+        assert!(preview.publisher.is_none());
+        assert!(preview.rights.is_empty());
+        assert!(preview.physical_description.is_none());
+        assert!(preview.holding_institution.is_none());
+        assert!(preview.page_url.is_none());
+    }
+
+    #[test]
+    fn homepage_url_reads_the_id_not_another_field_that_sorts_first() {
+        // `format` viene prima di `id` in ordine alfabetico: se si leggesse il
+        // primo valore testuale trovato invece di cercare `id` di proposito,
+        // qui si prenderebbe "text/html" invece dell'indirizzo vero.
+        let preview = manifest_preview(
+            "https://example.test/manifest.json".to_string(),
+            serde_json::json!({
+                "label": "Book of Hours",
+                "homepage": [{"format": "text/html", "id": "https://example.test/read/42"}],
+            }),
+        );
+
+        assert_eq!(
+            preview.page_url.as_deref(),
+            Some("https://example.test/read/42")
+        );
+    }
+
     #[tokio::test]
     async fn archive_search_returns_normalized_results() {
         let server = MockServer::start().await;
@@ -653,6 +918,10 @@ mod tests {
         assert_eq!(
             outcome.results[0].manifest_url,
             "https://iiif.archive.org/iiif/ms-1/manifest.json"
+        );
+        assert_eq!(
+            outcome.results[0].page_url.as_deref(),
+            Some("https://archive.org/details/ms-1")
         );
     }
 

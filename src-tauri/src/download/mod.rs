@@ -138,27 +138,10 @@ async fn enqueue(
         )
         .ok();
 
-    // Un lavoro per digitalizzazione. Chiederlo due volte non ne apre due e
-    // non è un errore: si ritrova quello che c'è già, che è quello che l'utente
-    // voleva vedere.
+    // Un lavoro per digitalizzazione: non se ne aprono due sullo stesso libro.
     let id = job_id(&version_id);
     let existing = crate::jobs::store::get(&conn, &id)?;
     drop(conn);
-
-    if let Some(job) = existing {
-        if !job.status.is_terminal() {
-            return Ok(job);
-        }
-        // Un lavoro finito che si rilancia riparte **da capo**: il punto
-        // salvato parla di pagine che nel frattempo possono essere state
-        // cancellate per liberare spazio, e riprendendo da lì non
-        // tornerebbero mai più. Le pagine ancora sul disco costano un controllo
-        // a testa e vengono saltate lo stesso.
-        jobs.0.retry(&id, true).await?;
-        let conn = jobs.0.connection()?;
-        return crate::jobs::store::get(&conn, &id)?
-            .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());
-    }
 
     let config = serde_json::json!({
         "providerKey": provider_key,
@@ -167,6 +150,34 @@ async fn enqueue(
         "sizeTag": size_tag,
         "thumbnailEdge": thumbnail_edge,
     });
+
+    if let Some(job) = existing {
+        if !job.status.is_terminal() {
+            // Chiedere di nuovo la **stessa** misura non è un errore: si
+            // ritrova il lavoro in corso, che è quello che si voleva vedere.
+            // Chiederne un'altra mentre questo scrive sì: due misure insieme
+            // significherebbero due lavori sullo stesso libro, e finora la
+            // richiesta veniva ignorata in silenzio.
+            if size_of_config(&job.config).as_deref() == Some(size_tag.as_str()) {
+                return Ok(job);
+            }
+            return Err(format!(
+                "download_in_progress:{}",
+                size_of_config(&job.config).unwrap_or_default()
+            ));
+        }
+        // Un lavoro finito che si rilancia riparte **da capo**, con la
+        // configurazione appena chiesta: il punto salvato parla di pagine che
+        // nel frattempo possono essere state cancellate, e la misura di prima
+        // non è quella di adesso — rilanciarlo senza riscriverla rifaceva la
+        // misura vecchia senza dirlo.
+        jobs.0
+            .relaunch_with_config(&id, &config.to_string())
+            .await?;
+        let conn = jobs.0.connection()?;
+        return crate::jobs::store::get(&conn, &id)?
+            .ok_or_else(|| "il lavoro è sparito subito dopo essere stato ripreso".to_string());
+    }
 
     jobs.0
         .submit(&NewJob {
@@ -180,6 +191,15 @@ async fn enqueue(
             message: title,
         })
         .await
+}
+
+/// La misura scritta nella configurazione di un lavoro, quando c'è.
+fn size_of_config(config: &str) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(config)
+        .ok()?
+        .get("sizeTag")?
+        .as_str()
+        .map(str::to_string)
 }
 
 /// Il lato lungo delle miniature, come lo dice l'impostazione. Un valore
