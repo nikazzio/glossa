@@ -37,7 +37,8 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'context',         label: t('help.sections.context') },
     { id: 'audit',           label: t('help.sections.audit') },
     { id: 'projects',        label: t('help.sections.projects') },
-    { id: 'storage',         label: t('help.sections.storage') },
+    { id: 'sources',         label: t('help.sections.sources') },
+{ id: 'storage',         label: t('help.sections.storage') },
     { id: 'providers',       label: t('help.sections.providers') },
     { id: 'ollama',          label: t('help.sections.ollama') },
     { id: 'glossary',        label: t('help.sections.library') },
@@ -94,6 +95,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'context'         && <ContextSection />}
               {activeSection === 'audit'           && <AuditSection />}
               {activeSection === 'projects'        && <ProjectsSection />}
+              {activeSection === 'sources'         && <SourcesSection />}
               {activeSection === 'storage'         && <StorageSection />}
               {activeSection === 'providers'       && <ProvidersSection />}
               {activeSection === 'ollama'          && <OllamaSection />}
@@ -503,6 +505,58 @@ function AuditSection() {
  * impostazioni, perché lì il testo lungo affolla i comandi: le impostazioni
  * dicono cosa fanno, l'aiuto spiega perché.
  */
+/**
+ * Biblioteca: ricerca, catalogo, scheda dell'opera, visore.
+ *
+ * Sta prima di «Archiviazione e lavori», che continua a raccontare deposito,
+ * coda, misure e ritmo di rete: qui c'è cosa si fa con una fonte, là come il
+ * programma la conserva.
+ */
+function SourcesSection() {
+  const { t } = useTranslation();
+  return (
+    <>
+      <SectionTitle>{t('help.sources.title')}</SectionTitle>
+      <P>{t('help.sources.intro')}</P>
+
+      <SubTitle>{t('help.sources.levelsTitle')}</SubTitle>
+      <P>{t('help.sources.levelsDesc')}</P>
+
+      <SubTitle>{t('help.sources.searchTitle')}</SubTitle>
+      <P>{t('help.sources.searchDesc')}</P>
+
+      <SubTitle>{t('help.sources.addTitle')}</SubTitle>
+      <P>{t('help.sources.addDesc')}</P>
+
+      <SubTitle>{t('help.sources.rowTitle')}</SubTitle>
+      <P>{t('help.sources.rowDesc')}</P>
+
+      <SubTitle>{t('help.sources.filtersTitle')}</SubTitle>
+      <P>{t('help.sources.filtersDesc')}</P>
+
+      <SubTitle>{t('help.sources.recordTitle')}</SubTitle>
+      <P>{t('help.sources.recordDesc')}</P>
+
+      <SubTitle>{t('help.sources.editTitle')}</SubTitle>
+      <P>{t('help.sources.editDesc')}</P>
+
+      <SubTitle>{t('help.sources.viewerTitle')}</SubTitle>
+      <P>{t('help.sources.viewerDesc')}</P>
+
+      <SubTitle>{t('help.sources.originTitle')}</SubTitle>
+      <P>{t('help.sources.originDesc')}</P>
+
+      <SubTitle>{t('help.sources.localOnlyTitle')}</SubTitle>
+      <P>{t('help.sources.localOnlyDesc')}</P>
+
+      <SubTitle>{t('help.sources.archiveTitle')}</SubTitle>
+      <P>{t('help.sources.archiveDesc')}</P>
+
+      <Tip title={t('help.sources.limitsTitle')}>{t('help.sources.limitsDesc')}</Tip>
+    </>
+  );
+}
+
 function StorageSection() {
   const { t } = useTranslation();
   return (
