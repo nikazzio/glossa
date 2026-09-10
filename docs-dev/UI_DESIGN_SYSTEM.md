@@ -146,7 +146,12 @@ solo**.
 - `tabs`/`activeTab`/`onTabChange`: barra tab a roving tabindex (`TabButton`),
   le frecce/Home/End saltano le tab disattivate.
 - `actions`: contenuto a destra della barra tab (etichetta della tab attiva,
-  comandi contestuali) — libero, ogni uso ci mette il suo.
+  comandi contestuali) — libero, ogni uso ci mette il suo. **L'etichetta della
+  tab attiva ci va sempre**: le linguette sono icone, e senza il nome accanto
+  restano leggibili solo al passaggio del mouse. È la forma già usata dal
+  pannello Insight, dalla finestra delle risorse linguistiche e dalla
+  configurazione della pipeline; la scheda opera in Biblioteca era l'unica
+  senza.
 - `panelIcon`/`panelLabel`: se presenti, mostrano sopra la barra tab
   un'intestazione con il comando di collassa/espandi (`collapsed`/
   `onCollapsedChange`) e uno slot `headerActions` per comandi accanto (es.
@@ -205,6 +210,45 @@ dalla mappa semantica esistente. Conteggi cliccabili usano una primitiva
 interattiva.
 
 ## Pattern di layout
+
+### Intestazione di un'area
+
+Ogni area globale apre con il **titolo grande** in `font-display` corsivo
+(`text-4xl md:text-5xl`): Traduzioni, Trascrizioni, Analisi, Biblioteca. I
+comandi propri dell'elenco (vista, ordinamento) stanno in fondo alla stessa
+riga, allineati alla base del titolo. La Biblioteca usava una `SectionLabel`
+piccola con icona: era l'unica area a non somigliare alle altre.
+
+### Provenienza di un dato: parola + pallino
+
+Quando un'informazione ha più provenienze possibili, la **parola** dice solo la
+distinzione che cambia qualcosa per chi legge, e il **colore del pallino** porta
+il dettaglio. Nel visore: «File locale» / «File online» come parole, pallino
+neutro per il deposito, `editorial-running` (oro) per la cache,
+`editorial-success` per la biblioteca appena interpellata. Il suggerimento
+scrive la provenienza per esteso.
+
+Per il pallino **non** si usa `editorial-warning`: su un cerchio da sei pixel
+l'ocra profonda legge come un rosso scuro, cioè come un avviso. `warning` resta
+per gli avvisi veri, che sono testo.
+
+Un indicatore di provenienza non deve dipendere da un orologio. La versione
+precedente si accendeva solo entro trenta secondi dall'ultima risposta —
+contando anche le immagini lette dal disco — e su un libro tutto online restava
+spento quasi sempre.
+
+### Completamento in una riga di elenco
+
+Quanto di una cosa è già disponibile si dice con una **riga di dati a
+separatori** più una **barra corta a larghezza fissa** (`w-10`, spessore 3 px)
+con il conteggio accanto in `tabular-nums`: `100%` in verde a completamento
+pieno, `120/328` in oro a metà, barra assente quando non c'è niente. La barra
+non si stende per tutta la larghezza della riga: è un dato fra gli altri, non un
+elemento grafico. I dati si troncano prima della barra, che resta visibile.
+
+Nella riga di un elenco i dati **si concatenano** con «·» (biblioteca · pagine ·
+misure · spazio): è l'opposto della regola sulle righe di dettaglio in colonna
+stretta, e la differenza è la larghezza disponibile.
 
 ### Barre filtro
 
