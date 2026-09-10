@@ -26,8 +26,7 @@ export type SettingsTab =
   | 'storage'
   | 'backup'
   | 'jobs'
-  | 'download'
-  | 'libraries';
+  | 'library';
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -119,6 +118,9 @@ interface UiState {
   projectFlyoutWidth: number;
   /** Colonna informazioni della scheda opera in Biblioteca. */
   librarySourceInspectorWidth: number;
+  /** Colonna filtri del catalogo Biblioteca. */
+  libraryCatalogFiltersWidth: number;
+  libraryCatalogFiltersCollapsed: boolean;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   location: AppLocation;
   setTraceStageId: (id: string | null) => void;
@@ -165,6 +167,8 @@ interface UiState {
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
   setLibrarySourceInspectorWidth: (width: number) => void;
+  setLibraryCatalogFiltersWidth: (width: number) => void;
+  setLibraryCatalogFiltersCollapsed: (collapsed: boolean) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
 }
 
@@ -312,6 +316,8 @@ export const useUiStore = create<UiState>()(
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       librarySourceInspectorWidth: 400,
+      libraryCatalogFiltersWidth: 320,
+      libraryCatalogFiltersCollapsed: false,
       pendingAnnotationAnchor: null,
       location: dashboardLocation(),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
@@ -490,6 +496,8 @@ export const useUiStore = create<UiState>()(
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
       setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
+      setLibraryCatalogFiltersWidth: (width) => set({ libraryCatalogFiltersWidth: width }),
+      setLibraryCatalogFiltersCollapsed: (collapsed) => set({ libraryCatalogFiltersCollapsed: collapsed }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
@@ -556,6 +564,8 @@ export const useUiStore = create<UiState>()(
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,
+        libraryCatalogFiltersWidth: state.libraryCatalogFiltersWidth,
+        libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
         libraryView: state.libraryView,

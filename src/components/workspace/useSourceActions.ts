@@ -18,7 +18,7 @@ import type { LibraryCatalogEntry } from '../../types';
 
 interface SourceActionHandlers {
   /** L'opera è stata tolta dalla Biblioteca: la scheda non esiste più. */
-  onRemove: () => void;
+  onRemove: () => void | Promise<void>;
   onSetArchived: (archived: boolean) => Promise<void>;
   /** Qualcosa sul disco è cambiato: il catalogo va riletto. */
   onRefresh: () => void;
@@ -236,7 +236,7 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
         // tornerebbero da lì senza ricontattare la biblioteca.
         await forgetVersionCache(entry.versionId);
       }
-      handlers.onRemove();
+      await handlers.onRemove();
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);
       if (reason.includes('version_work_in_progress')) {

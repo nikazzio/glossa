@@ -540,6 +540,9 @@ function StorageSection() {
       <SubTitle>{t('help.storage.countingTitle')}</SubTitle>
       <P>{t('help.storage.countingDesc')}</P>
 
+      <SubTitle>{t('help.storage.readingTitle')}</SubTitle>
+      <P>{t('help.storage.readingDesc')}</P>
+
       <SubTitle>{t('help.storage.optimizeTitle')}</SubTitle>
       <P>{t('help.storage.optimizeDesc')}</P>
 

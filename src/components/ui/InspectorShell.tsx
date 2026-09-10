@@ -39,6 +39,8 @@ interface InspectorShellProps {
   /** Altri comandi nell'intestazione, accanto a collassa/espandi (es. chiudi
    *  la scheda) — solo quando c'è un'intestazione (`panelLabel` presente). */
   headerActions?: ReactNode;
+  /** Informazione compatta che resta sotto il comando di riapertura. */
+  collapsedContent?: ReactNode;
   children: ReactNode;
 }
 
@@ -61,6 +63,7 @@ export function InspectorShell({
   collapsed = false,
   onCollapsedChange,
   headerActions,
+  collapsedContent,
   children,
 }: InspectorShellProps) {
   const { t } = useTranslation();
@@ -81,6 +84,7 @@ export function InspectorShell({
             <PanelRightOpen size={14} />
           </IconButton>
         </div>
+        {collapsedContent}
       </div>
     );
   }
@@ -141,27 +145,29 @@ export function InspectorShell({
           {headerActions && <div className="ml-auto flex shrink-0 items-center gap-1">{headerActions}</div>}
         </div>
       )}
-      <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
-        <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex flex-1 items-center gap-1">
-          {tabs.map((tab) => (
-            <TabButton
-              key={tab.id}
-              buttonId={`inspector-tab-button-${tab.id}`}
-              active={activeTab === tab.id}
-              disabled={tab.disabled}
-              onClick={() => activate(tab.id)}
-              onKeyDown={(event) => handleKeyDown(tab.id, event)}
-              label={tab.label}
-              icon={tab.icon}
-              controls={`inspector-tab-panel-${tab.id}`}
-              buttonRef={(el) => { tabButtonRefs.current[tab.id] = el; }}
-            />
-          ))}
+      {tabs.length > 0 && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
+          <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex flex-1 items-center gap-1">
+            {tabs.map((tab) => (
+              <TabButton
+                key={tab.id}
+                buttonId={`inspector-tab-button-${tab.id}`}
+                active={activeTab === tab.id}
+                disabled={tab.disabled}
+                onClick={() => activate(tab.id)}
+                onKeyDown={(event) => handleKeyDown(tab.id, event)}
+                label={tab.label}
+                icon={tab.icon}
+                controls={`inspector-tab-panel-${tab.id}`}
+                buttonRef={(el) => { tabButtonRefs.current[tab.id] = el; }}
+              />
+            ))}
+          </div>
+          {actions}
         </div>
-        {actions}
-      </div>
+      )}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar">
-        {ownsPanelSemantics ? (
+        {ownsPanelSemantics && tabs.length > 0 ? (
           <div
             id={`inspector-tab-panel-${activeTab}`}
             role="tabpanel"

@@ -488,6 +488,25 @@ impl JobEngine {
         Ok(())
     }
 
+    /// Rilancia un lavoro da capo con una configurazione nuova.
+    ///
+    /// L'identificativo di uno scaricamento è uno per digitalizzazione, per non
+    /// aprirne due sullo stesso libro. Ma chiedere «ora scaricalo a 3000» dopo
+    /// averlo scaricato a 2000 è una richiesta diversa: senza riscrivere la
+    /// configurazione, il rilancio rifaceva la misura di prima e sembrava che
+    /// il comando non facesse niente.
+    pub async fn relaunch_with_config(&self, id: &str, config: &str) -> Result<(), String> {
+        let guard = self.db_guard().await?;
+        let conn = guard.conn()?;
+        log::info!("job relaunched with new config id={id}");
+        store::set_config(conn, id, config)?;
+        store::requeue(conn, id, true)?;
+        store::reset_attempts(conn, id)?;
+        self.observer.notify(conn, id);
+        self.wake.notify_one();
+        Ok(())
+    }
+
     /// Toglie dall'elenco i lavori già finiti.
     pub async fn forget_finished(&self, id: Option<&str>) -> Result<usize, String> {
         let guard = self.db_guard().await?;

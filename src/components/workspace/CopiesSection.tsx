@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Eraser, Loader2, Minimize2, ShieldCheck } from 'lucide-react';
+import { Download, Eraser, Eye, HardDrive, Loader2, Minimize2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ClickPopover, CopyButton, IconButton, Select, StatBlock } from '../ui';
+import { ClickPopover, CopyButton, IconButton, SectionLabel, Select, StatBlock, StatRow } from '../ui';
 import { useJobsStore } from '../../stores/jobsStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
@@ -15,7 +15,6 @@ import {
 import {
   DEFAULT_SIZE_CAP,
   getVersionSizeCap,
-  MAX_SIZE_CAP,
   setVersionSizeCap,
   SIZE_CAPS,
 } from '../../services/downloadSettingsService';
@@ -23,17 +22,8 @@ import { confirm } from '../../stores/confirmStore';
 import { freeVersionPages, freeVersionSize } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { humanSize } from '../../utils';
+import { resolutionLabel } from '../../utils/resolutionLabel';
 import type { LibraryCatalogEntry, LibrarySourceDetail, LibrarySourceVersion } from '../../types';
-
-/** L'etichetta di una risoluzione — con l'unità di misura, non il numero
- *  grezzo, e "Massima disponibile" per l'ultimo scalino della scala. */
-export function resolutionLabel(tag: string, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (tag === MAX_SIZE_CAP) return t('settings.download.sizeCapMax');
-  // Solo un numero è davvero un lato lungo in pixel: una biblioteca può
-  // dichiarare una risoluzione fuori scala con un'etichetta propria (es.
-  // "full"), e inventarle un'unità di misura sarebbe falso.
-  return /^\d+$/.test(tag) ? t('settings.download.pixels', { value: tag }) : tag;
-}
 
 /** Quanto c'è sul computer, per una copia: le risoluzioni presenti, quale è
  *  la principale, quante pagine e quanto pesano. */
@@ -60,10 +50,23 @@ export function CopiesSection({
   detail,
   entry,
   onRefresh,
+  openVersionId = null,
+  viewedLocalSize = null,
+  onViewLocalSize,
+  reloadToken = 0,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
   onRefresh: () => void;
+  /** Cambia quando qualcosa fuori da questa scheda ha toccato i file — una
+   *  pagina conservata dal visore: le versioni locali si rileggono. */
+  reloadToken?: number;
+  /** La digitalizzazione che il visore sta mostrando: solo le sue versioni
+   *  locali si possono aprire da qui. */
+  openVersionId?: string | null;
+  /** La versione locale che il visore sta leggendo, quando è stata scelta. */
+  viewedLocalSize?: string | null;
+  onViewLocalSize?: (sizeTag: string | null) => void;
 }) {
   const { t } = useTranslation();
 
@@ -74,48 +77,71 @@ export function CopiesSection({
     <ul className="divide-y divide-editorial-border/70">
       {detail.versions.map((version) => (
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-            {t(`areas.library.versionKindLabels.${version.versionKind}`)}
-          </span>
-
-          {version.sourceUrl && (
-            <span className="flex items-start gap-1">
-              <a
-                href={version.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="min-w-0 flex-1 truncate font-display text-sm italic text-editorial-accent underline underline-offset-2"
-              >
-                {version.sourceUrl}
-              </a>
-              <CopyButton text={version.sourceUrl} size="xs" />
+          <div>
+            <span className="block truncate font-display text-sm italic text-editorial-ink">
+              {version.label}
             </span>
-          )}
+            <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              {t(`areas.library.versionKindLabels.${version.versionKind}`)}
+            </span>
+          </div>
 
           <CopyDetails
             version={version}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
+            reloadToken={reloadToken}
+            isOpenInViewer={version.id === openVersionId}
+            viewedLocalSize={viewedLocalSize}
+            onViewLocalSize={onViewLocalSize}
           />
+
+          {version.sourceUrl && (
+            <details className="border-t border-editorial-border/70 pt-2">
+              <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
+                {t('areas.library.technicalData')}
+              </summary>
+              <span className="mt-2 flex items-start gap-1">
+                <a
+                  href={version.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 flex-1 truncate text-xs text-editorial-accent underline underline-offset-2"
+                >
+                  {version.sourceUrl}
+                </a>
+                <CopyButton text={version.sourceUrl} size="xs" />
+              </span>
+            </details>
+          )}
         </li>
       ))}
     </ul>
   );
 }
 
-/** Quanto c'è sul computer di questa copia, a ogni risoluzione. La copia che
- *  descrive la riga di catalogo lo sa già (`entry`, letto dal deposito una
- *  volta per tutta la Biblioteca): rileggerlo qui sprecherebbe un viaggio sul
- *  disco identico. Le altre copie (un PDF a parte, un'altra edizione) non
- *  hanno quella lettura pronta: la chiedono al motore, una per copia. */
+/** Quanto c'è sul computer di questa copia, a ogni risoluzione: lo chiede al
+ *  motore, che legge le cartelle. La riga di catalogo ne porta una fotografia,
+ *  scattata all'apertura della Biblioteca, e serve solo per il conteggio
+ *  atteso e la chiave della biblioteca: dopo uno scaricamento o una
+ *  compressione quella fotografia è vecchia, e mostrarla significava non far
+ *  comparire la versione appena creata. */
 function CopyDetails({
   version,
   entry,
   onRefresh,
+  reloadToken,
+  isOpenInViewer,
+  viewedLocalSize,
+  onViewLocalSize,
 }: {
   version: LibrarySourceVersion;
   entry?: LibraryCatalogEntry;
   onRefresh: () => void;
+  reloadToken: number;
+  isOpenInViewer: boolean;
+  viewedLocalSize: string | null;
+  onViewLocalSize?: (sizeTag: string | null) => void;
 }) {
   const { t } = useTranslation();
   const jobs = useJobsStore((state) => state.jobs);
@@ -124,8 +150,13 @@ function CopyDetails({
   const [reloadTick, setReloadTick] = useState(0);
   const providerKeyRef = useRef<string | null>(null);
 
+  // Si rilegge anche quando il catalogo l'aveva già dato: dopo una
+  // compressione o una cancellazione la lista delle misure è cambiata, e la
+  // fotografia scattata dal catalogo all'apertura non lo sa.
+  // Sempre dal deposito, anche quando il catalogo aveva già una fotografia:
+  // dopo una compressione, uno scaricamento o una cancellazione le cartelle
+  // sono cambiate, e quella fotografia è di prima.
   useEffect(() => {
-    if (entry) return;
     let cancelled = false;
     void versionInventory(version.id).then((result) => {
       if (!cancelled) {
@@ -144,9 +175,15 @@ function CopyDetails({
     return () => {
       cancelled = true;
     };
-  }, [entry, version.id, reloadTick]);
+  }, [version.id, reloadTick, reloadToken]);
 
   const reload = () => setReloadTick((tick) => tick + 1);
+
+  /** Un lavoro ha cambiato i file: rilegge il deposito e la riga di catalogo. */
+  const reloadAll = () => {
+    reload();
+    onRefresh();
+  };
 
   const providerKey = async () => {
     if (providerKeyRef.current) return providerKeyRef.current;
@@ -155,12 +192,28 @@ function CopyDetails({
     return key;
   };
 
-  const inventory: CopyInventory = entry
-    ? { sizes: entry.sizes, principal: entry.principalSize, localPages: entry.localPages, localBytes: entry.localBytes }
-    : fetched ?? emptyInventory();
+  const inventory: CopyInventory = fetched ?? emptyInventory();
+  const reading = fetched === null;
   const expectedPages = entry?.expectedPages ?? version.expectedPages ?? 0;
   const { sizes, principal, localPages, localBytes } = inventory;
+  // Le pagine contate dal deposito, oppure le cartelle di misura quando
+  // l'inventario non risponde ma il catalogo sa già che c'è qualcosa.
+  const hasLocalPages = localPages > 0 || sizes.some((size) => size.pages > 0);
   const runningDownload = jobs.some((job) => job.id === `download:${version.id}` && !isTerminal(job));
+  const lastDownload = jobs.find((job) => job.id === `download:${version.id}`);
+  // Uno scaricamento o una compressione finiti hanno cambiato le cartelle: la
+  // lista delle versioni locali va riletta, altrimenti la copia appena
+  // ricavata non compare finché non si riapre l'opera.
+  const finishedJobs = jobs.filter(
+    (job) =>
+      (job.id === `download:${version.id}` || job.id.startsWith(`optimize:${version.id}:`)) &&
+      isTerminal(job),
+  ).length;
+
+  useEffect(() => {
+    if (finishedJobs === 0) return;
+    setReloadTick((tick) => tick + 1);
+  }, [finishedJobs]);
 
   const startDownload = async () => {
     if (!version.sourceUrl) return;
@@ -233,68 +286,104 @@ function CopyDetails({
     }
   };
 
+  const freeSizeRow = (size: SizeFolder) => async () => {
+    const confirmed = await confirm({
+      title: t('areas.library.freeSizeTitle', { size: humanSize(size.bytes) }),
+      message: t('areas.library.freeSizeMessage'),
+      confirmLabel: t('areas.library.freeSpaceConfirm'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    try {
+      const freed = await freeVersionSize(await providerKey(), version.id, size.sizeTag, size.derived);
+      toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
+      reloadAll();
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason.includes('version_work_in_progress')) {
+        toast.info(t('areas.library.filesBusy'));
+        return;
+      }
+      toast.error(t('areas.library.freeSpaceFailed'), { description: reason });
+    }
+  };
+
   return (
-    <div className="space-y-4 border-t border-editorial-border/60 pt-3">
-      {localBytes > 0 && <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />}
+    <div className="space-y-8 border-t border-editorial-border/60 pt-4">
+      {/* Prima si prende, poi si guarda cosa si ha: lo scaricamento sta in
+          cima perché è il gesto con cui questa scheda comincia. */}
+      <section className="space-y-3">
+        <SectionLabel icon={Download} label={t('areas.library.downloadSection')} />
+        {/* Solo le digitalizzazioni a immagini si scaricano: per un PDF o un
+            file di altro tipo lo scaricamento chiederebbe alla biblioteca un
+            manifesto che non esiste, e il lavoro finirebbe in errore. */}
+        {version.versionKind === 'iiif_manifest' ? (
+          <DownloadRow
+            version={version}
+            existingSizes={sizes}
+            expectedPages={expectedPages}
+            disabled={busy || runningDownload || !version.sourceUrl}
+          />
+        ) : (
+          <p className="text-xs text-editorial-muted">{t('areas.library.downloadOnlyImages')}</p>
+        )}
+      </section>
 
-      <div className="flex items-center gap-1.5">
-        <IconButton onClick={() => void verify()} disabled={busy || localPages === 0} title={t('areas.library.verify')}>
-          <ShieldCheck size={16} />
-        </IconButton>
-        <IconButton onClick={() => void freeSpace()} disabled={busy || localPages === 0} title={t('areas.library.freeSpace')}>
-          <Eraser size={16} />
-        </IconButton>
-        <CompressPopover version={version} sizes={sizes} onRefresh={reload} />
-      </div>
+      {/* I comandi restano sempre in vista, spenti quando non c'è niente sul
+          computer: dentro l'elenco delle versioni sparivano del tutto quando
+          l'inventario del deposito non risponde, e allora non si poteva più né
+          verificare né liberare spazio. */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel icon={HardDrive} label={t('areas.library.localVersionsSection')} />
+          <div className="flex items-center gap-1">
+            <IconButton
+              size="sm"
+              onClick={() => void verify()}
+              disabled={busy || !hasLocalPages}
+              title={t('areas.library.verify')}
+            >
+              <ShieldCheck size={13} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              onClick={() => void freeSpace()}
+              disabled={busy || !hasLocalPages}
+              title={t('areas.library.freeSpace')}
+            >
+              <Eraser size={13} />
+            </IconButton>
+          </div>
+        </div>
 
-      {sizes.length > 0 && (
-        <div className="space-y-1">
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-            {t('areas.library.resolutionsSection')}
-          </span>
-          <div className="space-y-1">
+        <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />
+
+        {!reading && !hasLocalPages && (
+          <p className="text-xs text-editorial-muted">
+            {lastDownload?.status === 'error'
+              ? t('areas.library.localVersionLastDownloadFailed')
+              : t('areas.library.localVersionNeverDownloaded')}
+          </p>
+        )}
+
+        {sizes.length > 0 && (
+          <div className="space-y-4 pt-1">
             {sizes.map((size) => (
               <ResolutionRow
                 key={`${size.sizeTag}-${size.derived ? 'derived' : 'native'}`}
+                version={version}
                 size={size}
+                allSizes={sizes}
+                onCompressed={reloadAll}
                 expectedPages={expectedPages}
-                isPrincipal={size.sizeTag === principal}
-                onFree={async () => {
-                  const confirmed = await confirm({
-                    title: t('areas.library.freeSizeTitle', { size: humanSize(size.bytes) }),
-                    message: t('areas.library.freeSizeMessage'),
-                    confirmLabel: t('areas.library.freeSpaceConfirm'),
-                    danger: true,
-                  });
-                  if (!confirmed) return;
-                  try {
-                    const freed = await freeVersionSize(await providerKey(), version.id, size.sizeTag, size.derived);
-                    toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
-                    reload();
-                    onRefresh();
-                  } catch (error: unknown) {
-                    const reason = error instanceof Error ? error.message : String(error);
-                    if (reason.includes('version_work_in_progress')) {
-                      toast.info(t('areas.library.filesBusy'));
-                      return;
-                    }
-                    toast.error(t('areas.library.freeSpaceFailed'), { description: reason });
-                  }
-                }}
+                viewing={isOpenInViewer && viewedLocalSize === size.sizeTag}
+                onView={isOpenInViewer && onViewLocalSize ? onViewLocalSize : undefined}
+                onFree={freeSizeRow(size)}
               />
             ))}
           </div>
-        </div>
-      )}
-
-      <DownloadRow
-        version={version}
-        existingSizes={sizes}
-        expectedPages={expectedPages}
-        disabled={busy || runningDownload || !version.sourceUrl}
-      />
-
-      <PageActionsPlaceholder />
+        )}
+      </section>
     </div>
   );
 }
@@ -303,15 +392,27 @@ function CopyDetails({
  *  dichiarate), quanto occupa, se è l'originale o una copia ricavata in
  *  locale, e il comando per liberare solo questa — senza toccare le altre. */
 function ResolutionRow({
+  version,
   size,
+  allSizes,
   expectedPages,
-  isPrincipal,
+  viewing,
+  onView,
   onFree,
+  onCompressed,
 }: {
+  version: LibrarySourceVersion;
   size: SizeFolder;
+  /** Tutte le versioni locali di questa copia: servono a non proporre una
+   *  misura d'arrivo che esiste già. */
+  allSizes: SizeFolder[];
   expectedPages: number;
-  isPrincipal: boolean;
+  /** Vero quando il visore sta leggendo proprio questa versione. */
+  viewing: boolean;
+  /** Presente solo per la digitalizzazione aperta nel visore. */
+  onView?: (sizeTag: string) => void;
   onFree: () => Promise<void>;
+  onCompressed: () => void;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -320,36 +421,77 @@ function ResolutionRow({
     expectedPages > 0
       ? t('areas.library.resolutionPages', { done: size.pages, total: expectedPages })
       : t('areas.library.pageCount', { count: size.pages });
+  // Le pagine che la biblioteca dichiara di non servire non sono un buco: una
+  // versione con tutte quelle servite è completa, ed è lo stesso conto che fa
+  // la disponibilità nel catalogo.
+  const complete = expectedPages > 0 && size.pages + size.missing >= expectedPages;
 
   return (
-    <div className="flex items-center justify-between gap-2 py-1">
-      <span className="min-w-0 flex-1 truncate font-display text-sm italic text-editorial-ink">
-        {resolutionLabel(size.sizeTag, t)}
-        {isPrincipal && (
-          <span className="ml-1.5 font-sans text-[10px] not-italic uppercase tracking-[0.08em] text-editorial-muted">
-            {t('areas.library.resolutionPrincipal')}
-          </span>
+    <div className="space-y-2 border-t border-editorial-border/60 pt-3 first:border-t-0 first:pt-0">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate font-display text-sm italic text-editorial-ink">
+          {resolutionLabel(size.sizeTag, t)}
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          {onView && (
+            <IconButton
+              size="sm"
+              tone={viewing ? 'accent' : 'default'}
+              onClick={() => onView(size.sizeTag)}
+              ariaPressed={viewing}
+              disabled={viewing || size.pages === 0}
+              title={t(viewing ? 'areas.library.localVersionBeingRead' : 'areas.library.localVersionRead')}
+            >
+              <Eye size={13} />
+            </IconButton>
+          )}
+          {/* Una copia già ridotta non si ricomprime: il motore la rifiuta, e
+              offrire il comando prometterebbe qualcosa che non succede. */}
+          {!size.derived && size.pages > 0 && (
+            <CompressPopover
+              version={version}
+              sourceTag={size.sizeTag}
+              sizes={allSizes}
+              onRefresh={onCompressed}
+            />
+          )}
+          <IconButton
+            size="sm"
+            onClick={() => {
+              setBusy(true);
+              void onFree().finally(() => setBusy(false));
+            }}
+            disabled={busy}
+            title={t('areas.library.freeSizeAction', { size: resolutionLabel(size.sizeTag, t) })}
+          >
+            <Eraser size={13} />
+          </IconButton>
+        </span>
+      </div>
+      {/* Una riga per informazione: su una riga sola erano quattro dati
+          separati da punti, illeggibili in una colonna stretta. */}
+      <dl className="space-y-1 pl-0.5">
+        <StatRow
+          label={t('areas.library.localVersionOrigin')}
+          value={
+            size.derived
+              ? t('areas.library.localVersionDerived')
+              : t('areas.library.localVersionDownloaded')
+          }
+        />
+        <StatRow label={t('areas.library.pagesField')} value={pagesLabel} />
+        <StatRow label={t('areas.library.localVersionSpace')} value={humanSize(size.bytes)} />
+        <StatRow
+          label={t('areas.library.statusField')}
+          value={t(complete ? 'areas.library.localVersionComplete' : 'areas.library.localVersionPartial')}
+        />
+        {size.missing > 0 && (
+          <StatRow
+            label={t('areas.library.localVersionNotServedLabel')}
+            value={String(size.missing)}
+          />
         )}
-        {size.derived && (
-          <span className="ml-1.5 font-sans text-[10px] not-italic uppercase tracking-[0.08em] text-editorial-accent">
-            {t('areas.library.derivedLabel')}
-          </span>
-        )}
-      </span>
-      <span className="shrink-0 text-xs text-editorial-muted">
-        {pagesLabel} · {humanSize(size.bytes)}
-      </span>
-      <IconButton
-        size="sm"
-        onClick={() => {
-          setBusy(true);
-          void onFree().finally(() => setBusy(false));
-        }}
-        disabled={busy}
-        title={t('areas.library.freeSizeAction')}
-      >
-        <Eraser size={13} />
-      </IconButton>
+      </dl>
     </div>
   );
 }
@@ -407,9 +549,17 @@ function DownloadRow({
       applyChange(job);
       toast.success(t('areas.library.downloadQueued'));
     } catch (error: unknown) {
-      toast.error(t('areas.library.downloadFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
+      const reason = error instanceof Error ? error.message : String(error);
+      // Il motore tiene un lavoro per digitalizzazione: chiedere una misura
+      // diversa mentre ne sta scaricando un'altra va detto, non ignorato.
+      const running = reason.match(/download_in_progress:(.*)$/);
+      if (running) {
+        toast.info(
+          t('areas.library.downloadInProgress', { size: resolutionLabel(running[1].trim(), t) }),
+        );
+        return;
+      }
+      toast.error(t('areas.library.downloadFailed'), { description: reason });
     } finally {
       setDownloading(false);
     }
@@ -436,16 +586,21 @@ function DownloadRow({
   );
 }
 
-/** Ricava una copia compressa da una risoluzione già scaricata: sceglie da
- *  quale partire (solo se ce n'è più di una), a quale misura arrivare — solo
- *  quelle più piccole della fonte, e solo quelle che non esistono già — e a
- *  che qualità. L'originale non lo tocca mai: la copia nasce a parte. */
+/** Ricava una copia ridotta **dalla versione locale su cui si apre**: la fonte
+ *  è quella riga, non una scelta dentro il pannello — nell'intestazione della
+ *  sezione non si capiva quale versione si stesse comprimendo. Si scelgono solo
+ *  la misura d'arrivo (fra quelle più piccole della fonte e non ancora
+ *  presenti) e la qualità. L'originale non si tocca mai: la copia nasce a
+ *  parte. */
 function CompressPopover({
   version,
+  sourceTag,
   sizes,
   onRefresh,
 }: {
   version: LibrarySourceVersion;
+  /** La versione locale da cui partire: la riga che ospita il comando. */
+  sourceTag: string;
   sizes: SizeFolder[];
   onRefresh: () => void;
 }) {
@@ -453,28 +608,18 @@ function CompressPopover({
   const applyChange = useJobsStore((state) => state.applyChange);
   const jobs = useJobsStore((state) => state.jobs);
   const [open, setOpen] = useState(false);
-  const [sourceTag, setSourceTag] = useState<string | null>(null);
   const [targetEdge, setTargetEdge] = useState<number | null>(null);
   const [quality, setQuality] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const nativeSizes = sizes.filter((size) => !size.derived);
   const running = jobs.some((job) => job.id.startsWith(`optimize:${version.id}:`) && !isTerminal(job));
 
   useEffect(() => {
-    if (!open) return;
-    if (!sourceTag || !nativeSizes.some((size) => size.sizeTag === sourceTag)) {
-      setSourceTag(nativeSizes[0]?.sizeTag ?? null);
-    }
-    if (quality === null) {
-      void getOptimizeQuality().then(setQuality);
-    }
-    // Si aggiorna solo quando il pannello si apre: mentre resta aperto, la
-    // scelta di Niki non deve saltare da sotto i piedi.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    if (!open || quality !== null) return;
+    void getOptimizeQuality().then(setQuality);
+  }, [open, quality]);
 
-  const sourceNumeric = sourceTag && /^\d+$/.test(sourceTag) ? Number(sourceTag) : null;
+  const sourceNumeric = /^\d+$/.test(sourceTag) ? Number(sourceTag) : null;
   const existingTags = new Set(sizes.map((size) => size.sizeTag));
   const targetOptions: number[] = OPTIMIZE_LONG_EDGES.filter((edge) => {
     if (existingTags.has(String(edge))) return false;
@@ -485,10 +630,10 @@ function CompressPopover({
     if (targetEdge !== null && targetOptions.includes(targetEdge)) return;
     setTargetEdge(targetOptions[targetOptions.length - 1] ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceTag, targetOptions.join(',')]);
+  }, [targetOptions.join(',')]);
 
   const confirmCompress = async () => {
-    if (!sourceTag || targetEdge === null || quality === null) return;
+    if (targetEdge === null || quality === null) return;
     setBusy(true);
     try {
       const job = await enqueueOptimization(version.id, sourceTag, targetEdge, quality);
@@ -508,30 +653,25 @@ function CompressPopover({
     }
   };
 
-  if (nativeSizes.length === 0) return null;
-
   return (
     <ClickPopover
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <IconButton disabled={running} title={t('areas.library.compressAction')} ariaPressed={open}>
-          <Minimize2 size={16} className={running ? 'animate-spin' : undefined} />
+        <IconButton
+          size="sm"
+          disabled={running}
+          title={t('areas.library.compressAction', { size: resolutionLabel(sourceTag, t) })}
+          ariaPressed={open}
+        >
+          <Minimize2 size={13} className={running ? 'animate-spin' : undefined} />
         </IconButton>
       }
     >
       <div className="flex min-w-56 flex-col gap-2 p-3">
-        {nativeSizes.length > 1 && (
-          <label className="flex flex-col gap-1 text-[11px] text-editorial-muted">
-            {t('areas.library.compressSourceLabel')}
-            <Select
-              value={sourceTag ?? ''}
-              onChange={setSourceTag}
-              ariaLabel={t('areas.library.compressSourceLabel')}
-              options={nativeSizes.map((size) => ({ value: size.sizeTag, label: resolutionLabel(size.sizeTag, t) }))}
-            />
-          </label>
-        )}
+        <span className="text-[11px] text-editorial-muted">
+          {t('areas.library.compressFrom', { size: resolutionLabel(sourceTag, t) })}
+        </span>
         <label className="flex flex-col gap-1 text-[11px] text-editorial-muted">
           {t('areas.library.compressTargetLabel')}
           <Select
@@ -564,24 +704,5 @@ function CompressPopover({
         )}
       </div>
     </ClickPopover>
-  );
-}
-
-/** Spazio riservato per i comandi sulla singola pagina — disattivato finché
- *  il visore non esiste: quando arriverà, i comandi vanno qui, non altrove. */
-function PageActionsPlaceholder() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center justify-between gap-2 border-t border-dashed border-editorial-border/50 pt-3 text-xs text-editorial-muted">
-      <span>{t('areas.library.pageActionsLabel')}</span>
-      <div className="flex items-center gap-1">
-        <IconButton size="sm" disabled title={t('areas.library.pageActionsComingSoon')}>
-          <Download size={13} />
-        </IconButton>
-        <IconButton size="sm" disabled title={t('areas.library.pageActionsComingSoon')}>
-          <Minimize2 size={13} />
-        </IconButton>
-      </div>
-    </div>
   );
 }

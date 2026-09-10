@@ -178,6 +178,76 @@ pub async fn cached_image(
     Ok(served(&app, &request, source, bytes))
 }
 
+/// Conserva nel deposito la pagina che il visore ha gia' aperto.
+///
+/// I byte passano dalla stessa risoluzione deposito/cache/rete del visore: di
+/// norma sono gia' in memoria e il comando deve solo validarli e promuoverli.
+#[tauri::command]
+pub async fn keep_viewer_page(
+    app: tauri::AppHandle,
+    writes: tauri::State<'_, crate::db::DbWriteCoordinator>,
+    request: CacheRequest,
+) -> Result<bool, String> {
+    let (version_id, index, size, provider_key) = match &request {
+        CacheRequest::Page {
+            version_id,
+            index,
+            size,
+            provider_key: Some(provider_key),
+            ..
+        } if size != THUMB_SIZE => (
+            version_id.as_str(),
+            *index,
+            size.as_str(),
+            provider_key.as_str(),
+        ),
+        _ => return Err("pagina_non_conservabile".to_string()),
+    };
+    let _write_guard = writes.lock().await;
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
+    if crate::jobs::store::has_active_version_work(&conn, version_id)? {
+        return Err("version_work_in_progress".to_string());
+    }
+    drop(conn);
+
+    let (_, bytes) = resolve_and_release(&app, &request).await?;
+    let root = crate::vault::commands::root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let folder = root.join(crate::vault::layout::version_dir(provider_key, version_id)?);
+    let size_dir = folder.join(crate::vault::layout::PAGES_DIR).join(size);
+    let target = size_dir.join(crate::vault::layout::page_file_name(index));
+    if target.is_file() {
+        return Ok(false);
+    }
+    let staging = root
+        .join(crate::vault::layout::STAGING_DIR)
+        .join(format!("viewer-{version_id}"));
+    let staged = staging.join(format!("page-{index:04}.jpg"));
+    let checksum = crate::download::vault_io::stage_and_promote(
+        &staged,
+        &target,
+        &bytes,
+        crate::vault::integrity::FileKind::Image,
+    )
+    .map_err(|error| error.message)?;
+    let record = crate::download::sidecar::PageRecord {
+        index,
+        label: None,
+        got: image_dimensions(&bytes),
+        bytes: Some(bytes.len() as u64),
+        checksum: Some(checksum),
+        at: crate::download::vault_io::now_secs(),
+        note: None,
+    };
+    if let Err(error) = crate::download::sidecar::append(&size_dir, &record) {
+        log::warn!("viewer page sidecar not written index={index} error={error}");
+    }
+    keep_thumbnail_in_vault(&app, &folder, index, &bytes);
+    Ok(true)
+}
+
 /// Da dove è arrivata l'ultima volta l'immagine chiesta così: deposito, memoria
 /// di lavoro o biblioteca.
 ///
@@ -540,12 +610,18 @@ fn from_vault_exact(
     Ok(None)
 }
 
-/// La stessa pagina in una cartella più grande, rimpicciolita sul momento e
-/// messa in cache: meglio del deposito che chiedere alla biblioteca una cosa che
-/// abbiamo già in casa più bella.
+/// La stessa pagina in una cartella più grande: meglio del deposito che chiedere
+/// alla biblioteca una cosa che abbiamo già in casa più bella.
 ///
-/// È anche il modo in cui nasce la miniatura di un libro scaricato prima che le
-/// miniature esistessero: si ricava dalla pagina, non si scarica.
+/// **Per una pagina si serve la copia grande com'è**, senza rimpicciolirla: se
+/// una pagina è sul computer a una misura migliore di quella chiesta, è quella
+/// che si vede. La misura scelta nelle impostazioni dice cosa chiedere alla
+/// biblioteca, non quanto degradare ciò che si possiede già.
+///
+/// Per una miniatura invece la riduzione resta: una fila di miniature a piena
+/// risoluzione sarebbe centinaia di megabyte per navigare. È anche il modo in
+/// cui nasce la miniatura di un libro scaricato prima che le miniature
+/// esistessero: si ricava dalla pagina, non si scarica.
 fn from_vault_larger(
     app: &tauri::AppHandle,
     request: &CacheRequest,
@@ -561,11 +637,18 @@ fn from_vault_larger(
     let Ok(root) = crate::vault::commands::root_of(app) else {
         return Ok(None);
     };
+    let is_thumbnail = size == THUMB_SIZE;
     for folder in version_folders(&root, version_id) {
         let pages = folder.join(crate::vault::layout::PAGES_DIR);
         let Some(bytes) = larger_in_vault(&pages, index, wanted)? else {
             continue;
         };
+        if !is_thumbnail {
+            // Non si mette in cache: sono byte di un file già sul computer, e
+            // conservarli sotto la chiave della misura chiesta direbbe il falso
+            // a chi poi legge la cache per sapere cosa c'è a quella misura.
+            return Ok(Some(bytes));
+        }
         let smaller = crate::images::resize_jpeg(&bytes, wanted, DOWNSCALE_QUALITY)
             .map_err(|error| error.to_string())?;
         store(app, request, &smaller, Some("image/jpeg".to_string()));

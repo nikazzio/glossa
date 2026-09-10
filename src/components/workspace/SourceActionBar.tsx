@@ -21,12 +21,9 @@ interface SourceActionBarProps {
 }
 
 /**
- * I comandi di un'opera nella riga del catalogo. Solo archivia e rimuovi
- * restano icone dirette — sono i due che si usano scorrendo l'elenco;
- * scarica/verifica/ottimizza/libera spazio vivono già, uguali, nella tab
- * Copie digitali della scheda, quindi qui stanno in un menu invece di
- * affollare la riga con comandi che servono solo quando si è aperto il
- * libro.
+ * I comandi di un'opera nella riga del catalogo. Restano raccolti in un solo
+ * menu: archiviare o rimuovere non sono azioni da ripetere visivamente su ogni
+ * riga, mentre lo stato dello scaricamento resta leggibile a colpo d'occhio.
  */
 export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBarProps) {
   const { t } = useTranslation();
@@ -39,7 +36,7 @@ export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBar
   return (
     <div className="flex shrink-0 items-center gap-1">
       {/* Solo l'avanzamento di uno scaricamento in corso: che le immagini
-          siano sul computer lo dice già l'icona sotto il titolo, e dirlo due
+          siano sul computer lo dice già la riga sotto il titolo, e dirlo due
           volte sulla stessa riga non aggiunge niente. */}
       <span className="mr-1 flex h-6 w-6 items-center justify-center text-[11px] text-editorial-muted">
         {runningJob && (
@@ -83,27 +80,27 @@ export function SourceActionBar({ entry, actions, size = 'sm' }: SourceActionBar
             onClick={() => { setMenuOpen(false); void actions.freeSpace(); }}
             disabled={busy || !hasLocalPages}
           />
+          <div className="my-1 border-t border-editorial-border/70" />
+          <MenuActionRow
+            icon={archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+            label={archived ? t('areas.library.restore') : t('areas.library.archive')}
+            onClick={() => {
+              setMenuOpen(false);
+              void actions.toggleArchived();
+            }}
+            disabled={busy}
+          />
+          <MenuActionRow
+            icon={<Trash2 size={14} />}
+            label={t('areas.library.remove')}
+            onClick={() => {
+              setMenuOpen(false);
+              void actions.askRemoval();
+            }}
+            tone="danger"
+          />
         </div>
       </ClickPopover>
-
-      <IconButton
-        size={size}
-        tone={archived ? 'accent' : 'default'}
-        ariaPressed={archived}
-        disabled={busy}
-        onClick={() => void actions.toggleArchived()}
-        title={archived ? t('areas.library.restore') : t('areas.library.archive')}
-      >
-        {archived ? <ArchiveRestore size={icon} /> : <Archive size={icon} />}
-      </IconButton>
-      <IconButton
-        size={size}
-        tone="danger"
-        onClick={() => void actions.askRemoval()}
-        title={t('areas.library.remove')}
-      >
-        <Trash2 size={icon} />
-      </IconButton>
     </div>
   );
 }

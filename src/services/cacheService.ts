@@ -198,6 +198,11 @@ export async function imageSource(request: CacheRequest): Promise<ImageSource | 
   return source === 'vault' || source === 'cache' || source === 'network' ? source : null;
 }
 
+export async function keepViewerPage(request: CacheRequest): Promise<boolean> {
+  if (request.kind !== 'page' || request.size === THUMB_SIZE) return false;
+  return invoke<boolean>('keep_viewer_page', { request });
+}
+
 export async function cacheUsage(): Promise<CacheUsage> {
   return invoke<CacheUsage>('cache_usage');
 }

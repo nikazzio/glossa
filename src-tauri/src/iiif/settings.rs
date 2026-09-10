@@ -61,6 +61,33 @@ pub struct Profile {
     pub used_by: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum SizePolicy {
+    #[default]
+    Auto,
+    ReadyOnly,
+    Exact,
+}
+
+impl SizePolicy {
+    pub fn parse(value: &str) -> Self {
+        match value.trim() {
+            "readyOnly" => Self::ReadyOnly,
+            "exact" => Self::Exact,
+            _ => Self::Auto,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::ReadyOnly => "readyOnly",
+            Self::Exact => "exact",
+        }
+    }
+}
+
 /// Una biblioteca e il ritmo che ha scelto.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +96,7 @@ pub struct Library {
     pub key: String,
     pub label: String,
     pub profile_id: String,
+    pub size_policy: SizePolicy,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -279,6 +307,14 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
             .map(|(_, profile)| profile.clone())
             .unwrap_or_else(|| DEFAULT_PROFILE_ID.to_string())
     };
+    let policies = size_policies(conn)?;
+    let policy_of = |key: &str| {
+        policies
+            .iter()
+            .find(|(library, _)| library == key)
+            .map(|(_, policy)| *policy)
+            .unwrap_or_default()
+    };
 
     let mut libraries: Vec<Library> = super::PROVIDERS
         .iter()
@@ -286,20 +322,87 @@ pub fn list_libraries(conn: &Connection) -> Result<Vec<Library>, String> {
             key: provider.key.to_string(),
             label: provider.label.to_string(),
             profile_id: profile_of(provider.key),
+            size_policy: policy_of(provider.key),
         })
         .collect();
 
-    libraries.extend(
-        chosen
-            .iter()
-            .filter(|(key, _)| super::find_provider(key).is_none())
-            .map(|(key, profile)| Library {
-                key: key.clone(),
-                label: key.clone(),
-                profile_id: profile.clone(),
-            }),
-    );
+    let extra_keys = chosen
+        .iter()
+        .map(|(key, _)| key.clone())
+        .chain(policies.iter().map(|(key, _)| key.clone()))
+        .filter(|key| super::find_provider(key).is_none())
+        .fold(Vec::new(), |mut keys, key| {
+            if !keys.contains(&key) {
+                keys.push(key);
+            }
+            keys
+        });
+    libraries.extend(extra_keys.into_iter().map(|key| Library {
+        profile_id: profile_of(&key),
+        size_policy: policy_of(&key),
+        label: key.clone(),
+        key,
+    }));
     Ok(libraries)
+}
+
+fn size_policies(conn: &Connection) -> Result<Vec<(String, SizePolicy)>, String> {
+    let mut statement = conn
+        .prepare("SELECT library_key, policy FROM library_size_policies")
+        .map_err(|error| format!("politiche di misura: {error}"))?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|error| format!("politiche di misura: {error}"))?;
+    Ok(rows
+        .filter_map(Result::ok)
+        .map(|(key, policy)| (key, SizePolicy::parse(&policy)))
+        .collect())
+}
+
+pub fn effective_size_policy(
+    conn: &Connection,
+    provider_key: &str,
+    host: Option<&str>,
+) -> SizePolicy {
+    chosen_size_policy(conn, provider_key)
+        .or_else(|| host.and_then(|value| chosen_size_policy(conn, value)))
+        .unwrap_or_default()
+}
+
+fn chosen_size_policy(conn: &Connection, library_key: &str) -> Option<SizePolicy> {
+    conn.query_row(
+        "SELECT policy FROM library_size_policies WHERE library_key = ?1",
+        params![library_key],
+        |row| row.get::<_, String>(0),
+    )
+    .optional()
+    .ok()
+    .flatten()
+    .map(|value| SizePolicy::parse(&value))
+}
+
+pub fn set_library_size_policy(
+    conn: &Connection,
+    library_key: &str,
+    policy: SizePolicy,
+) -> Result<(), String> {
+    if policy == SizePolicy::Auto {
+        conn.execute(
+            "DELETE FROM library_size_policies WHERE library_key = ?1",
+            params![library_key],
+        )
+        .map_err(|error| format!("politica di misura: {error}"))?;
+    } else {
+        conn.execute(
+            "INSERT INTO library_size_policies (library_key, policy) VALUES (?1, ?2) \
+             ON CONFLICT(library_key) DO UPDATE SET policy = excluded.policy",
+            params![library_key, policy.as_str()],
+        )
+        .map_err(|error| format!("politica di misura: {error}"))?;
+    }
+    Ok(())
 }
 
 /// Salva un profilo, nuovo o esistente, con i valori riportati dentro i
@@ -510,7 +613,9 @@ mod tests {
                  builtin INTEGER NOT NULL DEFAULT 0, values_json TEXT NOT NULL, \
                  updated_at DATETIME);
              CREATE TABLE library_network_profiles (library_key TEXT PRIMARY KEY, \
-                 profile_id TEXT NOT NULL);",
+                 profile_id TEXT NOT NULL);
+             CREATE TABLE library_size_policies (library_key TEXT PRIMARY KEY, \
+                 policy TEXT NOT NULL);",
         )
         .unwrap();
         ensure_builtin_profiles(&conn).unwrap();

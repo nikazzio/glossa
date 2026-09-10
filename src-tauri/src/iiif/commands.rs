@@ -5,7 +5,7 @@
 //! del frontend perché **il tetto sulle richieste insieme va applicato dove i
 //! valori si usano**, non solo dove si scelgono.
 
-use super::settings::{self, Library, Profile, ProfileInput};
+use super::settings::{self, Library, Profile, ProfileInput, SizePolicy};
 
 fn connection(app: &tauri::AppHandle) -> Result<rusqlite::Connection, String> {
     crate::db::open_connection(&crate::storage_config::db_path(app)?)
@@ -81,6 +81,20 @@ pub async fn set_library_network_profile(
     let _write_guard = write_coordinator.lock().await;
     let conn = connection(&app)?;
     settings::set_library_profile(&conn, &library_key, &profile_id)?;
+    forget_cached_profiles(&app);
+    snapshot(&conn)
+}
+
+#[tauri::command]
+pub async fn set_library_size_policy(
+    app: tauri::AppHandle,
+    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
+    library_key: String,
+    policy: String,
+) -> Result<NetworkSettings, String> {
+    let _write_guard = write_coordinator.lock().await;
+    let conn = connection(&app)?;
+    settings::set_library_size_policy(&conn, &library_key, SizePolicy::parse(&policy))?;
     forget_cached_profiles(&app);
     snapshot(&conn)
 }

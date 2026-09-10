@@ -38,7 +38,6 @@ vi.mock('../../services/iiifViewerService', () => {
   return {
     fetchViewerManifest,
     fetchViewerManifestWithRetry: fetchViewerManifest,
-    // Nessuna delle biblioteche dei test ricava le immagini su richiesta.
     buildsImagesOnDemand: () => false,
     wholePageAttempts: (_page: unknown, localSize: string | null) => [localSize ?? '1000'],
     fetchIiifBytes: vi.fn(),
