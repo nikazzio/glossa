@@ -5,8 +5,8 @@ description: Public documentation for the Glossa desktop app.
 
 hero:
   name: Glossa
-  text: Editorial translation for long-form text
-  tagline: Desktop translation workflow for scholars, editors, and long-form review — staged translation, chunk-aware document processing, audit, glossary, and phrase memory in one local desktop app.
+  text: Sources, research and editorial translation
+  tagline: A desktop workbench in beta for collecting and reading sources, organising research and translating long texts with review, glossaries and phrase memory.
   image:
     src: /glossa-app-icon.png
     alt: Glossa
@@ -30,6 +30,13 @@ features:
     details: Import plain text, Markdown, DOCX, or PDF, chunk the text, and process it progressively instead of pasting the whole work into a chat box.
 ---
 
+## A beta in development
+
+Library and translation workflows are available. The transcription studio,
+OCR/HTR, Export Studio and Analysis remain unfinished. Version 2.x does not
+mean the full product is complete. Guides follow main and can be ahead of
+downloadable builds: see [beta status](./project/status).
+
 ## Read this first
 
 - [Download the app](./intro/getting-started#download-the-app) to install the right release for Windows, macOS, or Linux
@@ -43,6 +50,8 @@ features:
 
 ## What Glossa covers
 
+- Source library, IIIF reader and offline access to saved images
+- Workspaces, persistent downloads and whole-app backups
 - Standard mode for a single translation pass plus audit
 - Editorial mode for translation, refinement, formatting, and review
 - DeepL Hybrid mode for a DeepL first pass and LLM refinement

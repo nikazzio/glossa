@@ -4,6 +4,9 @@ title: Getting started
 
 # Getting started
 
+Glossa is in beta: read the [current status and limitations](../project/status).
+Guides follow main and can describe features newer than your installed build.
+
 Glossa is a Tauri desktop app. You run it locally, configure a translation
 pipeline, import or prepare source text, and work chunk by chunk: test one
 representative passage first, then run the full batch.
@@ -19,14 +22,14 @@ If you want to use Glossa, the correct path is to download a binary release from
 Useful links:
 
 - [Latest release](https://github.com/nikazzio/glossa/releases/latest)
-- Current release as of July 25, 2026: [`glossa-v1.3.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.3.0)
+- Read the selected release notes: its number does not certify beta completion.
 
 ## Prerequisites
 
-- Node.js 18 or newer
-- Rust 1.77 or newer
+- Node.js and npm at the versions declared in [`package.json`](https://github.com/nikazzio/glossa/blob/main/package.json), `engines` field
+- Current stable Rust
 - `npm` for frontend dependencies
-- Linux users also need the Tauri system libraries listed in the root `README.md`
+- Linux users also need the system libraries listed in the [development guide](https://github.com/nikazzio/glossa#develop)
 
 ## Develop from source
 

@@ -1,7 +1,13 @@
 # Architettura di prodotto Glossa 2.0
 
 Stato: decisione architetturale per #180  
-Ultimo aggiornamento: 2026-08-22
+Ultimo aggiornamento: 2026-09-10
+
+Questo documento descrive il prodotto verso cui evolve la beta, non un elenco
+di funzioni già disponibili. La numerazione 2.x deriva da prove di rilascio.
+Biblioteca e traduzione sono operative; Studio di trascrizione, OCR/HTR,
+bridge, Export Studio e Analisi richiedono ancora completamento.
+Stato implementato in ARCHITECTURE.md; ordine e criteri in ROADMAP_2_0.md.
 
 ## 1. Scopo
 
@@ -418,7 +424,11 @@ raccolti in #383 servono come riferimenti secondari di funzionalità e UI/UX.
 - Traduzioni continua a mostrare tutti i progetti;
 - Workspace continua a mostrare il proprio sottoinsieme;
 - aggiungere i punti d'ingresso vuoti di Biblioteca, Trascrizioni e Analisi;
-- nessuna modifica distruttiva ai progetti 1.x.
+- preservare i dati di lavoro locali: progetti, traduzioni, glossari, memoria di
+  frasi, annotazioni e catalogo delle fonti non si perdono per un cambio di
+  schema, e un consolidamento della baseline passa da un backup applicativo
+  reimportabile. Quello che la beta privata **non** promette è la compatibilità
+  con ogni formato sperimentale prodotto lungo la strada.
 
 ### Passo C — modello fonti e collegamenti
 
@@ -440,9 +450,10 @@ raccolti in #383 servono come riferimenti secondari di funzionalità e UI/UX.
 - Analisi, dataset e model registry;
 - Export Studio contestuale e artifact history.
 
-Ogni passo deve lasciare l'app utilizzabile e il database recuperabile. La
-migrazione fisica dettagliata e la strategia di backup appartengono a #212,
-#344 e #345.
+Ogni passo deve lasciare l'app utilizzabile e il database recuperabile.
+La strategia corrente di schema e backup è in ARCHITECTURE.md. Le issue
+#212, #344 e #345 conservano la storia, non impongono compatibilità con
+formati precedenti.
 
 ## 12. Decisioni chiuse e questioni demandate
 
@@ -458,7 +469,11 @@ migrazione fisica dettagliata e la strategia di backup appartengono a #212,
 - stato di navigazione tipizzato prima di valutare una libreria di routing;
 - nessuna nuova libreria grafica necessaria per la foundation.
 
-### Demandate alle issue specialistiche
+### Riferimenti alle issue specialistiche
+
+Questo elenco include lavoro già integrato: schema, risorse condivise, lavori e
+raccolta della provenienza. Non va letto come elenco di attività aperte; i
+residui aggiornati sono nella roadmap.
 
 - schema fisico, indici e migrazioni: #211 e #212;
 - risorse condivise e regole precise di ereditarietà: #213;

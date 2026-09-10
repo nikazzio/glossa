@@ -1,7 +1,7 @@
 # Glossa — Istruzioni per lo sviluppo
 
 ## Stato del progetto
-Sviluppo attivo (pre-1.0). Priorità assoluta modalità documento/editoriale. UI sandbox tocca solo regressioni bloccanti.
+Beta privata in sviluppo, senza una base di utenti esterni. La numerazione 2.x deriva da prove di rilascio automatico e non indica completezza. Obiettivo: completare Biblioteca → Trascrizioni → Traduzioni → Export, preservando la modalità documento/editoriale. Ordine in docs-dev/ROADMAP_2_0.md. Scriptoria resta riferimento tecnico per fonti, deposito, lavori, trascrizione ed export. UI sandbox tocca solo regressioni bloccanti.
 
 ## Stack
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite
@@ -26,8 +26,19 @@ Sviluppo attivo (pre-1.0). Priorità assoluta modalità documento/editoriale. UI
   pertinenti al task; non leggere tutta `docs-dev` per default.
 - **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche flussi, comandi Tauri, schemi DB, store Zustand.
 - **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di ogni modifica visiva.
-- **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` inizio sessione, aggiorna obbligatorio fine task/feature. Aggiorna help in-app per modifiche funzionali.
-- **Docs pubbliche VitePress**: Aggiorna `docs/` (IT) e `docs/en/` (EN) quando aggiungi/rimuovi/modifichi funzionalità utente, workflow, comportamento interfaccia. Sito pubblicato su GitHub Pages. Se aggiungi pagina, aggiorna sidebar in `docs/.vitepress/config.ts`.
+- **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` inizio sessione, aggiorna obbligatorio fine task/feature.
+
+### Regola di documentazione (OBBLIGATORIA, non negoziabile)
+
+Ogni funzionalità nuova, rimossa o cambiata nel comportamento visibile va documentata **in tre posti nello stesso task**, prima di considerarlo finito:
+
+1. **Guida in-app** — `src/components/help/HelpGuide.tsx` più le stringhe `help.*` in `src/i18n/it.json` **e** `src/i18n/en.json`. Se serve una sezione nuova, aggiungila all'elenco di navigazione, al selettore di rendering e al tipo `HelpSection` in `src/stores/uiStore.ts`.
+2. **Documentazione pubblica VitePress** — `docs/` (IT) **e** `docs/en/` (EN), pubblicata su GitHub Pages. Pagina nuova ⇒ voce in entrambe le barre laterali di `docs/.vitepress/config.ts`. Verifica con `npx vitepress build docs`, che fallisce sui collegamenti morti.
+3. **Documentazione di sviluppo** — il documento pertinente secondo la tabella in `docs-dev/README.md`: architettura per flussi, comandi e schema; design system per regole visive; roadmap per il lavoro che resta.
+
+Nessuna delle tre è opzionale né rimandabile a un task successivo: una funzione non documentata è una funzione che nessuno sa usare e che verrà riprogettata da capo fra un mese. Vale anche per le correzioni che cambiano cosa l'utente vede, non solo per le funzioni nuove.
+
+Le tre superfici hanno destinatari diversi e non si copiano fra loro: la guida in-app spiega cosa fare mentre l'utente è nell'applicazione; la documentazione pubblica spiega il percorso completo e i limiti attuali; `docs-dev` registra invarianti e decisioni tecniche. Descrivi sempre il comportamento presente e i limiti veri, mai la cronologia dello sviluppo.
 
 ## Comunicazione con l'utente (CRITICO)
 Niki non scrive codice, non riconosce nomi tecnici. Spiegazioni utente:
