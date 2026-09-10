@@ -22,7 +22,6 @@ import {
   InspectorShell,
   LinkChip,
   PopoverItem,
-  SectionLabel,
   Spinner,
   Tooltip,
 } from '../ui';
@@ -38,6 +37,7 @@ import { LibraryFilterBar } from './LibraryFilterBar';
 import { LibrarySourcePage } from './LibrarySourcePage';
 import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
+import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import {
   EMPTY_LIBRARY_FILTERS,
@@ -359,8 +359,10 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           >
             <Panel id="library-catalog" minSize={CATALOG_MIN} className="flex min-w-0 flex-col">
               <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
-                <div className="flex items-center justify-between gap-3 px-5 pt-5 md:px-6">
-                  <SectionLabel icon={BookOpenText} label={t('areas.library.title')} />
+                <div className="flex items-end justify-between gap-3 px-5 pt-5 md:px-6">
+                  <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+                    {t('areas.library.title')}
+                  </h1>
                   {catalog.length > 0 && (
                     <div className="flex items-center gap-1">
                       <IconButton
@@ -564,26 +566,38 @@ function CatalogEntryRow({
 
   const authorDate = [entry.creator, entry.date].filter(Boolean).join(' \u00b7 ');
   const summary = actions.summary;
-  const availability =
+  /**
+   * La riga tecnica sotto il titolo: pagine, misure presenti, spazio.
+   *
+   * Numeri e unità, niente frasi: quanto del libro è sul computer lo dice la
+   * barra sotto, non una parola ripetuta su ogni riga del catalogo. Le misure
+   * si elencano tutte («2000+4000 px») invece di chiamare «risoluzione piena»
+   * quella che è solo un'altra misura.
+   */
+  const facts: string[] = [];
+  if (entry.expectedPages !== null && entry.expectedPages > 0) {
+    facts.push(t('areas.library.pageCountShort', { count: entry.expectedPages }));
+  }
+  const localSizes = entry.sizes
+    .filter((size) => size.pages > 0)
+    .map((size) => size.sizeTag);
+  if (entry.localPages > 0 && localSizes.length > 0) {
+    facts.push(t('areas.library.sizesShort', { sizes: localSizes.join('+') }));
+  }
+  if (entry.localBytes > 0) facts.push(humanSize(entry.localBytes));
+  if (entry.localPages === 0) facts.push(t('areas.library.availabilityRemoteShort'));
+  const factsLine = facts.join(' \u00b7 ');
+  // La barra c'è solo quando qualcosa è sul computer: su un libro tutto online
+  // sarebbe una barra vuota su ogni riga, cioè rumore.
+  const total = summary.expectedPages > 0 ? summary.expectedPages : entry.expectedPages ?? 0;
+  const done = Math.min(summary.presentPages, total > 0 ? total : summary.presentPages);
+  const progress = total > 0 ? Math.min(1, done / total) : null;
+  const progressLabel =
     summary.availability === 'complete'
-      ? t('areas.library.localImagesAll')
-      : summary.availability === 'partial'
-        ? t('areas.library.localImagesSome', {
-          done: summary.presentPages,
-          total: summary.expectedPages,
-        })
-        : t('areas.library.availabilityRemote');
-  const pageCount =
-    entry.expectedPages !== null && entry.expectedPages > 0
-      ? t('areas.library.pageCount', { count: entry.expectedPages })
-      : null;
-  // Le pagine tenute in un'altra misura sono un'aggiunta, non un buco: senza
-  // dirlo, un libro completo con tre pagine a risoluzione piena sembrava avere
-  // più file del dovuto e nessuno sapeva perché.
-  const extra = entry.sizes
-    .filter((size) => size.sizeTag !== entry.principalSize && size.pages > 0)
-    .reduce((total, size) => total + size.pages, 0);
-  const extraNote = extra > 0 ? t('areas.library.extraFullSize', { count: extra }) : null;
+      ? '100%'
+      : progress !== null
+        ? `${done}/${total}`
+        : String(done);
 
   return (
     <article
@@ -622,12 +636,27 @@ function CatalogEntryRow({
                 {providerLabel}
               </span>
             )}
-            <span className="mt-1 block truncate text-xs text-editorial-muted">
-              {pageCount}
-              {pageCount && ' \u00b7 '}
-              {availability}
-              {extraNote && ' \u00b7 '}
-              {extraNote}
+            {/* Dati e completamento sulla stessa riga: la barra è un dato fra
+                gli altri, non un elemento grafico da stendere per tutta la
+                larghezza. Larghezza fissa e corta, così due righe vicine si
+                confrontano a occhio. */}
+            <span className="mt-1 flex items-center gap-2 text-xs text-editorial-muted">
+              <span className="min-w-0 truncate">{factsLine}</span>
+              {entry.localPages > 0 && (
+                <>
+                  <span className="h-[3px] w-10 shrink-0 overflow-hidden rounded-full bg-editorial-border">
+                    <span
+                      className={`block h-full rounded-full ${
+                        summary.availability === 'complete'
+                          ? 'bg-editorial-success'
+                          : 'bg-editorial-running'
+                      }`}
+                      style={{ width: `${Math.round((progress ?? 1) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="shrink-0 tabular-nums">{progressLabel}</span>
+                </>
+              )}
             </span>
           </span>
         </button>

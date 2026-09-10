@@ -169,10 +169,12 @@ export function LibrarySourcePage({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
-      {/* Una riga sola: identità dell'opera a sinistra, digitalizzazione al
+      {/* Una riga sola: identità dell'opera a sinistra, copia digitale aperta al
           centro, comandi a destra. Le due colonne laterali hanno la stessa
           quota, così il centro resta centrato davvero anche con un titolo
-          lungo, che si tronca invece di spostarlo. */}
+          lungo, che si tronca invece di spostarlo. La parola
+          «Digitalizzazione» non si scrive: resta come etichetta per chi legge
+          con la voce, perché a schermo il nome della biblioteca basta. */}
       <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-editorial-border px-3">
         <div className="flex min-w-0 items-center gap-3">
           <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
@@ -191,9 +193,6 @@ export function LibrarySourcePage({
 
         {manifestVersion ? (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-editorial-muted">
-              {t('areas.library.digitalizationLabel')}
-            </span>
             {iiifVersions.length > 1 ? (
               <Select
                 value={manifestVersion.id}
@@ -206,7 +205,10 @@ export function LibrarySourcePage({
                 className="min-w-0 max-w-[14rem]"
               />
             ) : (
-              <span className="min-w-0 truncate text-xs text-editorial-ink">
+              <span
+                className="min-w-0 truncate text-xs text-editorial-ink"
+                aria-label={t('areas.library.digitalizationLabel')}
+              >
                 {providerLabel ?? manifestVersion.label}
               </span>
             )}
@@ -314,6 +316,11 @@ export function LibrarySourcePage({
           tabs={INSPECTOR_TABS.map((tab) => ({ ...tab, label: t(tab.labelKey) }))}
           activeTab={activeTab}
           onTabChange={(id) => setActiveTab(id as InspectorTabId)}
+          actions={
+            <span className="font-display text-sm italic text-editorial-ink">
+              {t(INSPECTOR_TABS.find((tab) => tab.id === activeTab)?.labelKey ?? 'areas.library.infoTab')}
+            </span>
+          }
           panelIcon={<Info size={15} />}
           panelLabel={t('areas.library.inspectorPanelTitle')}
           collapsed={inspectorCollapsed}

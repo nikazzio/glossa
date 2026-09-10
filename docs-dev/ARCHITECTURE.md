@@ -468,10 +468,33 @@ pixel oppure `thumb`. L'ordine è fisso:
 1. il file nel deposito a quella misura (`thumb` guarda la cartella
    `thumbnails/`, che «libera spazio» non cancella);
 2. la cache;
-3. una copia più grande nel deposito, rimpicciolita sul momento e messa in
-   cache — è anche il modo in cui nasce la miniatura di un libro scaricato
-   prima che le miniature esistessero;
+3. una copia più grande nel deposito. **Per una pagina si serve com'è**: se la
+   pagina esiste sul computer a una misura migliore di quella chiesta, è quella
+   che si vede, e non entra in cache (sarebbero byte di un file già sul disco,
+   registrati sotto la chiave di un'altra misura). Per `thumb` la riduzione
+   resta e finisce in cache — è anche il modo in cui nasce la miniatura di un
+   libro scaricato prima che le miniature esistessero;
 4. `remote_url`, con la cortesia del profilo della biblioteca.
+
+**La misura scelta nelle impostazioni dice cosa chiedere alla biblioteca, non
+come mostrare quello che si possiede.** Fra due copie locali vince sempre la
+migliore, senza preferenze da salvare per opera: è la regola decisa il
+9 settembre 2026 al posto dell'apertura preferita persistita.
+
+**La provenienza a schermo: due parole, tre pallini.** La scritta dice solo se
+il file è dell'utente («File locale») o no («File online»); il colore del
+pallino dice quale dei tre rami della scala ha risposto — neutro deposito,
+giallo cache, verde biblioteca. Il pallino **non** dipende più da un orologio:
+l'indicatore vecchio si accendeva solo entro 30 s dall'ultima risposta, e
+`lastAnswerAt` conta le risposte di *qualunque* provenienza, quindi su un libro
+tutto online restava spento quasi sempre. La misura nel suggerimento è il lato
+lungo dell'immagine aperta letto da OpenSeadragon, non la misura chiesta: da
+quando una copia locale più grande viene servita com'è, le due divergono.
+
+**Leggere solo i file locali** non è un ramo nuovo di questa scala: il visore
+omette `remote_url` dalla richiesta, quindi il punto 4 non esiste e il motore
+risponde che la pagina non è disponibile in locale. La scelta vale per il libro
+aperto e non viene salvata.
 
 L'indirizzo remoto **non** entra nella chiave di cache: dice dove andarla a
 prendere, non quale immagine è. Un deposito irraggiungibile vale come «qui non

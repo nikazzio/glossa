@@ -610,12 +610,18 @@ fn from_vault_exact(
     Ok(None)
 }
 
-/// La stessa pagina in una cartella più grande, rimpicciolita sul momento e
-/// messa in cache: meglio del deposito che chiedere alla biblioteca una cosa che
-/// abbiamo già in casa più bella.
+/// La stessa pagina in una cartella più grande: meglio del deposito che chiedere
+/// alla biblioteca una cosa che abbiamo già in casa più bella.
 ///
-/// È anche il modo in cui nasce la miniatura di un libro scaricato prima che le
-/// miniature esistessero: si ricava dalla pagina, non si scarica.
+/// **Per una pagina si serve la copia grande com'è**, senza rimpicciolirla: se
+/// una pagina è sul computer a una misura migliore di quella chiesta, è quella
+/// che si vede. La misura scelta nelle impostazioni dice cosa chiedere alla
+/// biblioteca, non quanto degradare ciò che si possiede già.
+///
+/// Per una miniatura invece la riduzione resta: una fila di miniature a piena
+/// risoluzione sarebbe centinaia di megabyte per navigare. È anche il modo in
+/// cui nasce la miniatura di un libro scaricato prima che le miniature
+/// esistessero: si ricava dalla pagina, non si scarica.
 fn from_vault_larger(
     app: &tauri::AppHandle,
     request: &CacheRequest,
@@ -631,11 +637,18 @@ fn from_vault_larger(
     let Ok(root) = crate::vault::commands::root_of(app) else {
         return Ok(None);
     };
+    let is_thumbnail = size == THUMB_SIZE;
     for folder in version_folders(&root, version_id) {
         let pages = folder.join(crate::vault::layout::PAGES_DIR);
         let Some(bytes) = larger_in_vault(&pages, index, wanted)? else {
             continue;
         };
+        if !is_thumbnail {
+            // Non si mette in cache: sono byte di un file già sul computer, e
+            // conservarli sotto la chiave della misura chiesta direbbe il falso
+            // a chi poi legge la cache per sapere cosa c'è a quella misura.
+            return Ok(Some(bytes));
+        }
         let smaller = crate::images::resize_jpeg(&bytes, wanted, DOWNSCALE_QUALITY)
             .map_err(|error| error.to_string())?;
         store(app, request, &smaller, Some("image/jpeg".to_string()));

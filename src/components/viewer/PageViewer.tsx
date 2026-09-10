@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  HardDrive,
   HardDriveDownload,
   Images,
   PanelLeftClose,
@@ -41,9 +42,7 @@ import {
 } from '../../services/cacheService';
 import { keepViewerPage } from '../../services/cacheService';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
-import { useNetworkActivity } from '../../services/networkActivity';
 import { errorMessage, logger } from '../../utils/logger';
-import { resolutionLabel } from '../../utils/resolutionLabel';
 import { toast } from 'sonner';
 
 /** Dove si è arrivati nel libro, per chi sta fuori dal visore. */
@@ -119,10 +118,6 @@ const TILE_UPGRADE_FACTOR = 1.2;
  */
 const MAX_MAGNIFICATION = 6;
 
-/** Entro questo tempo dall'ultima risposta la biblioteca è ancora "collegata".
- * Più lungo di una pagina lenta, più corto di una pausa fra due sfogliate. */
-const ONLINE_FOR_MS = 30_000;
-
 /**
  * Il visore IIIF remoto (Blocco 1 del piano locale): pagina singola, zoom a
  * tasselli via OpenSeadragon, tutto passato dal ponte controllato. File
@@ -172,6 +167,23 @@ export function PageViewer({
   /** Vero mentre la pagina aperta sta entrando nel deposito. */
   const [savingPage, setSavingPage] = useState(false);
   /**
+   * Leggere solo quello che è sul computer.
+   *
+   * Non è un'impostazione salvata: vale per il libro aperto e si spegne
+   * chiudendolo. Tecnicamente basta non dare alla richiesta l'indirizzo remoto:
+   * il motore prova deposito e memoria di lavoro e poi si ferma, invece di
+   * andare a chiedere la pagina alla biblioteca.
+   */
+  const [localOnly, setLocalOnly] = useState(false);
+  /**
+   * Il lato lungo, in pixel, dell'immagine che si sta guardando.
+   *
+   * Non coincide più con la misura chiesta: quando sul computer c'è una copia
+   * più grande viene servita com'è. Lo si legge dall'immagine aperta, che è
+   * l'unico posto dove il numero è vero.
+   */
+  const [shownEdge, setShownEdge] = useState<number | null>(null);
+  /**
    * La richiesta a schermo, leggibile da una promessa che finisce dopo.
    *
    * Conservare una pagina dura: nel frattempo si può voltare pagina, e senza
@@ -180,6 +192,16 @@ export function PageViewer({
    */
   const shownRequest = useRef<CacheRequest | null>(null);
   shownRequest.current = pageRequest;
+  /**
+   * Chi vuole sapere a che pagina siamo, senza far parte delle dipendenze.
+   *
+   * La scheda dell'opera passa una funzione scritta sul posto: cambia identità
+   * a ogni suo ridisegno — per esempio **cambiando linguetta** — e averla fra
+   * le dipendenze dell'apertura faceva ricaricare da capo la pagina che si
+   * stava già guardando.
+   */
+  const onPageChangeRef = useRef(onPageChange);
+  onPageChangeRef.current = onPageChange;
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -192,6 +214,7 @@ export function PageViewer({
     setCurrentIndex(0);
     setPageError(null);
     setPageLoading(false);
+    setLocalOnly(false);
     // I contatori dei tentativi **non** si azzerano qui: l'effetto che carica
     // il manifesto li ha fra le dipendenze, e riportarli a zero gli faceva
     // chiedere due volte lo stesso manifesto — megabyte, sulla corsia della
@@ -339,7 +362,9 @@ export function PageViewer({
           versionId,
           index: page.index,
           size,
-          remoteUrl: pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
+          remoteUrl: localOnly
+            ? undefined
+            : pageSourceUrl(page.imageService, size, manifest?.presentation2 ?? false),
           providerKey,
         };
         try {
@@ -359,12 +384,21 @@ export function PageViewer({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
       opened = true;
+      viewer.addOnceHandler('open', () => {
+        if (cancelled) return;
+        const size = viewer.world.getItemAt(0)?.getContentSize();
+        if (size) setShownEdge(Math.round(Math.max(size.x, size.y)));
+      });
       viewer.open({ type: 'image', url: objectUrl } as unknown as OpenSeadragon.TileSourceSpecifier);
-      logger.debug('library.viewer.wholePageShown', {
+      logger.info('library.viewer.wholePageShown', {
+        sourceId,
+        versionId,
         index: page.index,
+        size: request.kind === 'page' ? request.size : '',
         bytes: bytes.byteLength,
         ms: Math.round(performance.now() - openedAt),
         local: Boolean(localSize),
+        localOnly,
       });
       // Da dove sono arrivati davvero quei byte lo sa solo il motore, e non
       // può viaggiare insieme a loro: si chiede subito dopo, sulla stessa
@@ -373,6 +407,13 @@ export function PageViewer({
         .then((source) => {
           if (cancelled) return;
           setPageOrigin({ source, size: request.kind === 'page' ? request.size : '' });
+          logger.info('library.viewer.pageOrigin', {
+            sourceId,
+            versionId,
+            index: page.index,
+            size: request.kind === 'page' ? request.size : '',
+            from: source ?? 'unknown',
+          });
           // Credevamo di leggere dal computer e la pagina è arrivata dalla
           // biblioteca: qualcuno ha cancellato quella copia mentre stavamo
           // leggendo. La pagina si vede comunque — il motore ha già ripiegato
@@ -438,7 +479,7 @@ export function PageViewer({
       setPageError(null);
       if (!announced) {
         announced = true;
-        onPageChange?.({ index: currentIndex, label: page.label, total });
+        onPageChangeRef.current?.({ index: currentIndex, label: page.label, total });
         void setLastViewedPage(sourceId, currentIndex).catch((error) => {
           logger.warn('library.viewer.lastPageSaveFailed', {
             message: errorMessage(error),
@@ -489,6 +530,7 @@ export function PageViewer({
     // arriva la farebbe leggere come se valesse per l'immagine a schermo.
     setPageOrigin(null);
     setPageRequest(null);
+    setShownEdge(null);
     void openWholePage().catch(givingUp);
 
     return () => {
@@ -508,11 +550,11 @@ export function PageViewer({
     sourceId,
     versionId,
     localSize,
+    localOnly,
     manifest,
     currentIndex,
     pageAttempt,
     refreshLocalSize,
-    onPageChange,
     total,
   ]);
 
@@ -557,6 +599,7 @@ export function PageViewer({
           <ViewerToolbar
             fromDisk={localSize !== null}
             origin={pageOrigin}
+            shownEdge={shownEdge}
             index={currentIndex}
             total={total}
             label={page?.label ?? null}
@@ -587,12 +630,12 @@ export function PageViewer({
                   ? 'saved'
                   : 'available'
             }
-            // La misura non è quella delle impostazioni: è quella con cui la
-            // pagina è arrivata, perché il comando riusa i byte già a schermo
-            // senza chiederli di nuovo. Dirla evita di ritrovarsi una versione
-            // locale a una misura che non si era scelta.
-            keepSize={pageRequest?.kind === 'page' ? pageRequest.size : null}
             savingPage={savingPage}
+            localOnly={localOnly}
+            onToggleLocalOnly={() => {
+              logger.info('library.viewer.localOnlyChanged', { sourceId, localOnly: !localOnly });
+              setLocalOnly(!localOnly);
+            }}
             onDownloadPage={() => {
               const saved = pageRequest;
               if (!saved || saved.kind !== 'page') return;
@@ -607,9 +650,23 @@ export function PageViewer({
                   }
                   void refreshLocalSize();
                   onPageKept?.();
+                  logger.info('library.viewer.pageKept', {
+                    sourceId,
+                    versionId,
+                    index: saved.index,
+                    size: saved.size,
+                    from: pageOrigin?.source ?? 'unknown',
+                  });
                   toast.success(t('areas.library.viewerPageDownloaded'));
                 })
                 .catch((error: unknown) => {
+                  logger.error('library.viewer.pageKeepFailed', {
+                    sourceId,
+                    versionId,
+                    index: saved.index,
+                    size: saved.size,
+                    message: errorMessage(error),
+                  });
                   toast.error(t('areas.library.viewerPageDownloadFailed'), {
                     description: errorMessage(error),
                   });
@@ -674,9 +731,11 @@ export function PageViewer({
                 icon={<Images size={24} />}
                 message={t('areas.library.viewerLoadError')}
                 hint={
-                  pageError === TILE_LOAD_FAILED
-                    ? t('areas.library.viewerTileLoadErrorHint')
-                    : t('areas.library.viewerLoadErrorHint')
+                  localOnly
+                    ? t('areas.library.viewerNotLocal')
+                    : pageError === TILE_LOAD_FAILED
+                      ? t('areas.library.viewerTileLoadErrorHint')
+                      : t('areas.library.viewerLoadErrorHint')
                 }
               />
               <IconButton size="sm" onClick={() => setPageAttempt((n) => n + 1)} title={t('areas.library.viewerRetry')}>
@@ -695,6 +754,8 @@ interface ViewerToolbarProps {
   fromDisk: boolean;
   /** Da dove arriva la pagina a schermo, quando il motore l'ha detto. */
   origin: { source: ImageSource | null; size: string } | null;
+  /** Il lato lungo in pixel dell'immagine a schermo, quando è noto. */
+  shownEdge: number | null;
   index: number;
   total: number;
   label: string | null;
@@ -714,12 +775,12 @@ interface ViewerToolbarProps {
    * comando dichiarava sul computer una pagina appena chiesta alla biblioteca.
    */
   keepState: 'unavailable' | 'available' | 'saved';
-  /** La misura con cui la pagina a schermo è arrivata, cioè quella con cui
-   *  verrebbe conservata. */
-  keepSize: string | null;
   /** Vero mentre la pagina aperta sta entrando nel deposito. */
   savingPage: boolean;
   onDownloadPage: () => void;
+  /** Vero quando la lettura è limitata ai file già sul computer. */
+  localOnly: boolean;
+  onToggleLocalOnly: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
 }
@@ -727,11 +788,11 @@ interface ViewerToolbarProps {
 /**
  * Da dove arriva **la pagina che si sta guardando**, e a che misura.
  *
- * Tre provenienze, che vanno dette diverse: il deposito sul computer, la
- * memoria di lavoro, la biblioteca. Dire «Online» sfogliando dal disco era
- * falso; dire «Dal computer» per una pagina ripresa dalla memoria di lavoro di
- * un libro che non possiedi lo è altrettanto. Il verde acceso vale solo per la
- * biblioteca, e significa che ha risposto da poco.
+ * Due parole, tre pallini. La scritta risponde alla sola domanda che cambia
+ * qualcosa per chi legge — questo file è mio o no — e una pagina presa dalla
+ * cache non è sua, perché chiudendo il libro non resta. Il colore dice il
+ * dettaglio senza allungare la barra: neutro per il file sul computer, giallo
+ * per la cache, verde quando la pagina è appena arrivata dalla biblioteca.
  *
  * Finché la provenienza non è nota si dice quello che si sa: se il libro è sul
  * disco, il disco.
@@ -739,47 +800,47 @@ interface ViewerToolbarProps {
 function ConnectionBadge({
   fromDisk,
   origin,
+  shownEdge,
 }: {
   fromDisk: boolean;
   origin: { source: ImageSource | null; size: string } | null;
+  shownEdge: number | null;
 }) {
   const { t } = useTranslation();
-  const lastAnswerAt = useNetworkActivity((state) => state.lastAnswerAt);
-  const [now, setNow] = useState(() => Date.now());
   const source = origin?.source ?? (fromDisk ? 'vault' : null);
   const fromLibrary = source === 'network';
+  const fromCache = source === 'cache';
+  const onDisk = source === 'vault';
 
-  useEffect(() => {
-    // L'orologio serve solo a spegnere il verde quando la biblioteca smette di
-    // rispondere: quello che è già in casa non ha niente da spegnere.
-    if (!fromLibrary) return;
-    const timer = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(timer);
-  }, [fromLibrary]);
-
-  const answeredRecently = lastAnswerAt !== null && now - lastAnswerAt <= ONLINE_FOR_MS;
-  const lit = fromLibrary && answeredRecently;
-  const label =
-    source === 'vault'
-      ? t('areas.library.viewerFromDisk')
-      : source === 'cache'
-        ? t('areas.library.viewerFromMemory')
-        : source === 'network'
-          ? t('areas.library.viewerFromLibrary')
-          : t('areas.library.viewerOnline');
+  const dotClass = fromLibrary
+    ? 'bg-editorial-success'
+    : fromCache
+      // Oro, non l'ocra profonda degli avvisi: su un pallino da sei pixel
+      // `warning` legge come un rosso scuro, e questo non è un avviso.
+      ? 'bg-editorial-running'
+      : 'bg-editorial-border';
+  const label = onDisk ? t('areas.library.viewerFromDisk') : t('areas.library.viewerOnline');
+  // La misura è quella dei pixel arrivati davvero: da quando una copia locale
+  // più grande viene servita com'è, la misura chiesta non è più quella che si
+  // sta guardando.
+  const size = shownEdge !== null ? String(shownEdge) : (origin?.size ?? null);
+  const detail = fromLibrary
+    ? t('areas.library.viewerOriginLibrary')
+    : fromCache
+      ? t('areas.library.viewerOriginCache')
+      : onDisk
+        ? t('areas.library.viewerOriginVault')
+        : label;
 
   return (
     <Tooltip
-      label={origin ? t('areas.library.viewerOriginSize', { size: origin.size }) : label}
+      label={size ? `${detail} · ${t('areas.library.viewerOriginSize', { size })}` : detail}
       side="bottom"
     >
       <span
-        className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${lit ? 'text-editorial-success' : 'text-editorial-muted'}`}
+        className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${fromLibrary ? 'text-editorial-success' : 'text-editorial-muted'}`}
       >
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${lit ? 'bg-editorial-success' : 'bg-editorial-border'}`}
-          aria-hidden="true"
-        />
+        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
         {label}
       </span>
     </Tooltip>
@@ -789,6 +850,7 @@ function ConnectionBadge({
 function ViewerToolbar({
   fromDisk,
   origin,
+  shownEdge,
   index,
   total,
   label,
@@ -802,9 +864,10 @@ function ViewerToolbar({
   onZoomToFit,
   onZoomToActualSize,
   keepState,
-  keepSize,
   savingPage,
   onDownloadPage,
+  localOnly,
+  onToggleLocalOnly,
   thumbnailsOpen,
   onToggleThumbnails,
 }: ViewerToolbarProps) {
@@ -856,14 +919,23 @@ function ViewerToolbar({
       {/* La provenienza è uno stato, non un comando: sta in mezzo, fra il
           contesto a sinistra e i comandi a destra. */}
       <div className="mx-auto shrink-0">
-        <ConnectionBadge fromDisk={fromDisk} origin={origin} />
+        <ConnectionBadge fromDisk={fromDisk} origin={origin} shownEdge={shownEdge} />
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        <IconButton
+          size="sm"
+          tone={localOnly ? 'accent' : 'default'}
+          ariaPressed={localOnly}
+          onClick={onToggleLocalOnly}
+          title={t(localOnly ? 'areas.library.viewerLocalOnlyOff' : 'areas.library.viewerLocalOnly')}
+        >
+          <HardDrive size={14} />
+        </IconButton>
         <PageKeepButton
           saving={savingPage}
           state={keepState}
-          size={keepSize}
+          edge={shownEdge}
           onDownload={onDownloadPage}
         />
         <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
@@ -922,16 +994,20 @@ function ViewerToolbar({
 function PageKeepButton({
   saving,
   state,
-  size,
+  edge,
   onDownload,
 }: {
   saving: boolean;
   state: 'unavailable' | 'available' | 'saved';
-  size: string | null;
+  /** Il lato lungo in pixel dell'immagine a schermo: è quella che verrebbe
+   *  salvata, quindi è l'unico numero che ha senso mostrare qui. Il nome
+   *  della misura chiesta («la più grande disponibile») non dice niente a chi
+   *  guarda una pagina già aperta. */
+  edge: number | null;
   onDownload: () => void;
 }) {
   const { t } = useTranslation();
-  const sizeLabel = size ? resolutionLabel(size, t) : null;
+  const sizeLabel = edge !== null ? String(edge) : null;
 
   if (saving) {
     return (

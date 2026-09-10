@@ -39,7 +39,7 @@ La Biblioteca mostra **sempre tutti i libri**: è un catalogo, non la vista di u
 
 Su ogni scheda, accanto ai comandi, vedi **a quali workspace appartiene** quel libro: un'etichetta per ognuno. Cliccarne una lo scollega da lì; il comando accanto apre l'elenco dei workspace dove non è ancora, per collegarlo. **Un'opera può stare in più workspace insieme** e non viene mai duplicata: collegarla in due posti non fa due copie, né dei dati né dei file.
 
-Sulla riga restano diretti solo **archivia** ed **elimina**; scarica, verifica, riduci le immagini e libera spazio sono nel menu "···" — sono comandi che si usano più spesso aprendo il libro, dalla tab Digitalizzazioni, che stare a scorrerli riga per riga.
+Sulla riga non c'è nessun comando diretto: stanno tutti nel menu "···" — scarica, verifica, riduci le immagini, libera spazio, e più in basso, dopo un filo di separazione, archivia e togli. Sono comandi che si usano più spesso aprendo il libro, dalla tab Digitalizzazioni, che scorrendo il catalogo, e tenere il cestino fuori dal menu significava averlo a un clic di distanza su ogni riga.
 
 I **filtri** vivono in una colonna a destra, che si ridimensiona e si richiude come gli altri pannelli laterali: la larghezza e lo stato aperto o chiuso si ricordano, e quando è chiusa un conteggio dice quanti filtri sono attivi. In cima c'è la ricerca — scrivi titolo o autore — e sotto tipo di opera, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente, e le tendine offrono solo i valori davvero presenti nel tuo catalogo. Il comando con la gomma azzera tutto.
 
@@ -47,7 +47,7 @@ I **filtri** vivono in una colonna a destra, che si ridimensiona e si richiude c
 
 **Viste salvate** — Il comando col segnalibro apre le viste salvate: dai un nome alla combinazione di filtri che stai usando e la ritrovi lì, con un clic. Ogni vista si può eliminare. Una vista salvata quando i filtri erano diversi continua a funzionare: quello che non si riconosce più torna semplicemente neutro.
 
-**Immagini sul computer** — Nella riga di ogni opera, accanto al numero di pagine, un'**icona tonda verde** dice cosa hai già scaricato: piena quando ci sono tutte le immagini, tratteggiata con il conteggio accanto quando ne manca qualcuna. Se non c'è icona, l'opera esiste solo in rete. Passandoci sopra Glossa lo scrive per esteso.
+**Immagini sul computer** — Sotto il titolo, ogni riga porta una **riga di dati**: biblioteca, pagine dichiarate, misure presenti sul computer e spazio occupato — per esempio `Vatican Library · 328 p. · 2000+4000 px · 742 MB`. Se non hai niente in locale l'ultima voce è `online`. Quando qualcosa c'è, in fondo alla stessa riga compare una **barra corta** con il conteggio accanto: verde e `100%` a libro completo, gialla e `120/328` quando ne mancano.
 
 **Collezioni** — Una collezione è un'etichetta che raccoglie opere. Si aggiunge dalla scheda dell'opera, e un'opera può stare in **più collezioni insieme**: non si fonde e non si duplica niente, e togliere un'etichetta non tocca né l'opera né le altre collezioni. Dalla barra di ricerca puoi mostrare solo le opere di una collezione.
 
@@ -67,9 +67,9 @@ biblioteca.
 Il comando di scaricamento nel visore conserva **solo la pagina aperta**, usando
 gli stessi byte che stai già guardando: non la chiede una seconda volta. Mentre
 salva, l'icona gira; quando la pagina è sul computer il comando lascia il posto a
-un segno verde, che è uno stato e non un pulsante spento. Il suggerimento dice
-sempre **a che misura** conserva — quella con cui la pagina è arrivata, che su un
-libro ancora tutto online può essere diversa da quella impostata. La tab
+un segno verde, che è uno stato e non un pulsante spento. Il suggerimento scrive **quanti pixel** verranno
+salvati: sono quelli della pagina che hai davanti, che su un libro ancora tutto
+online possono non coincidere con la misura impostata. La tab
 Digitalizzazioni si aggiorna subito: spazio, conteggio e versioni locali non
 aspettano la riapertura dell'opera.
 
@@ -77,7 +77,11 @@ I comandi del visore stanno tutti a destra — conserva la pagina, riduci,
 ingrandisci, altre opzioni di zoom — la provenienza dell'immagine sta al centro e
 la navigazione fra le pagine a sinistra, con le miniature.
 
-Al centro della barra c'è scritto **da dove arriva la pagina che stai guardando**, e sono tre cose diverse: **File locale** quando è tua, **Memoria temporanea** quando è una pagina già vista di un libro che non hai scaricato, **Biblioteca online** quando è appena arrivata — verde finché la biblioteca risponde, smorzato quando non arriva niente. Passandoci sopra leggi anche a quale misura è stata chiesta.
+Al centro della barra c'è scritto **da dove arriva la pagina che stai guardando**, e le parole sono due: **File locale** quando la pagina è sul tuo computer, **File online** quando non lo è. Il pallino accanto dice il resto: spento per un file tuo, **giallo** quando la pagina arriva dalla cache — l'hai già vista in questa sessione, ma chiudendo non resta — e **verde** quando è appena arrivata dalla biblioteca. Passandoci sopra leggi la provenienza per esteso e i pixel che stai davvero guardando.
+
+Fra i comandi a destra, accanto a quello che conserva la pagina, c'è **leggere solo i file locali**: acceso, il visore non chiede più niente alla biblioteca e su una pagina che non hai compare un avviso al posto dell'immagine; spento, le pagine mancanti tornano ad arrivare dalla biblioteca. Vale per il libro aperto e si spegne chiudendolo.
+
+Se di una pagina hai sul computer una misura migliore di quella impostata, è quella che vedi: la misura scelta nelle impostazioni dice cosa chiedere alla biblioteca, non quanto peggiorare quello che possiedi già.
 
 Se cancelli le pagine locali mentre stai leggendo, Glossa si accorge da sé che quella copia non c'è più: la pagina resta leggibile, e le successive vengono chieste alla biblioteca invece di essere cercate in una cartella che non esiste.
 
@@ -87,7 +91,7 @@ Se cancelli le pagine locali mentre stai leggendo, Glossa si accorge da sé che 
 
 ## Scaricare una fonte
 
-Nel catalogo ogni riga dice **quante pagine sono davvero sul computer**: *solo online*, *34 pagine su 210 sul computer*, oppure *tutte le pagine sul computer*.
+Nel catalogo la barra in fondo a ogni riga dice **quante pagine sono davvero sul computer**: assente quando non c'è niente in locale, `34/210` quando è a metà, `100%` quando c'è tutto.
 
 Il comando **scarica** mette in coda il lavoro vero: puoi cambiare schermata, metterlo in pausa, riprenderlo. Mentre gira, al posto del comando compare la percentuale; nel pannello dei lavori in basso trovi la stessa cosa con il nome dell'opera e quanto ha scaricato.
 
@@ -103,7 +107,7 @@ Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Ar
 
 ## Controllare e liberare spazio
 
-Ogni riga della Biblioteca ha sei comandi, sempre presenti: **scarica**, **verifica**, **riduci le immagini**, **libera spazio**, **archivia**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
+Il menu "···" di ogni riga ha sempre gli stessi sei comandi: **scarica**, **verifica**, **riduci le immagini**, **libera spazio**, **archivia**, **togli**. Quelli che in quel momento non servono restano al loro posto, spenti — così sai sempre cosa si può fare.
 
 **Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le pagine già presenti non vengono richieste di nuovo.
 

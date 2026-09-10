@@ -210,7 +210,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
 
     expect(screen.getByText('Book of Hours')).toBeInTheDocument();
-    expect(screen.getByText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
+    expect(screen.getByText('34/210')).toBeInTheDocument();
   });
 
   it('un libro completo per quanto la biblioteca serve non è chiamato incompleto', () => {
@@ -229,7 +229,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
   it('accoda subito l’ottimizzazione e mostra il lavoro', async () => {
@@ -278,10 +278,10 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.localImagesSome/)).toBeInTheDocument();
+    expect(screen.getByText('308/328')).toBeInTheDocument();
   });
 
-  it('le pagine prese a risoluzione piena sono un aggiunta, non un buco', () => {
+  it('le misure presenti si elencano tutte, senza chiamarne una «risoluzione piena»', () => {
     useSourceLibraryStore.setState({
       catalog: [
         entry({
@@ -298,8 +298,8 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
-    expect(screen.getByText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
+    expect(screen.getByText(/areas\.library\.sizesShort/)).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
   it('due misure con lo stesso numero di pagine non rendono casuale quale sia la principale', () => {
@@ -323,8 +323,9 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
 
-    // L'aggiunta è la cartella `2000`, cioè quella che **non** è principale.
-    expect(screen.getByText(/areas\.library\.extraFullSize/)).toBeInTheDocument();
+    // Nessuna delle due è «l'aggiunta»: si elencano tutt'e due, e la riga non
+    // deve scegliere una principale per raccontarlo.
+    expect(screen.getByText(/areas\.library\.sizesShort/)).toBeInTheDocument();
   });
 
   it('dice quante pagine ha l opera senza doverla aprire', () => {
@@ -512,7 +513,7 @@ describe('LibraryCatalogArea', () => {
     openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
-    expect(screen.getByText(/areas\.library\.localImagesAll/)).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
   it('verifica e libera spazio ci sono sempre, spenti quando non c\u2019è niente in locale', () => {
