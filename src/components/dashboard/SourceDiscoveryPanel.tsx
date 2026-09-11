@@ -123,7 +123,16 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
   // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
   // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
   const pageCount = card.itemCount !== null ? t('dashboard.discovery.pagesCount', { count: card.itemCount }) : null;
-  const metaParts = [card.creator, card.date, ...(expanded ? [] : [pageCount]), sourceTypeLabel(card, providerLabel)].filter(Boolean) as string[];
+  // La segnatura sta con data e biblioteca perché è spesso l'unica cosa che
+  // distingue due copie della stessa opera: la Bodleian ha una manciata di
+  // «Divine comedy» con lo stesso titolo e lo stesso autore.
+  const metaParts = [
+    card.creator,
+    card.date,
+    card.holdingInstitution,
+    ...(expanded ? [] : [pageCount]),
+    sourceTypeLabel(card, providerLabel),
+  ].filter(Boolean) as string[];
 
   return (
     <motion.article
