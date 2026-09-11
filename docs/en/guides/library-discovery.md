@@ -26,7 +26,8 @@ Libraries do not have the same capabilities, and Glossa states what each one acc
 - **Vatican Library** — the shelfmark, however you write it (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` all reach the same manuscript), the address of the reading page, or words to search its catalogue.
 - **Gallica** — the ARK identifier, a Gallica address in any shape, or words to search by title. If you type a word that looks like an identifier, Gallica searches first: better a few results than a work that does not exist.
 - **e-codices** — the compound shelfmark (`bbb-0264`), the address of the reading page, or words to search.
-- **the other libraries listed** — for now only the full IIIF manifest address.
+- **Library of Congress** — keywords, or the address of a catalogue item (`loc.gov/item/...`, `loc.gov/resource/...`). The catalogue holds far more than Glossa can open: results without a readable reproduction are not listed.
+- **the other libraries listed** — only the full IIIF manifest address. They state it in the search field's example, instead of promising a search they do not have.
 
 Results appear as a list, each with a thumbnail and essential data: author, date, **how many pages the work has**, and which library it comes from. The page count is visible without expanding the row, because that is what makes you decide whether the work is worth a look. When the catalogue does not declare it — which happens with manuscripts — the entry is simply absent, rather than showing a zero that would be untrue. Selecting a result expands the row to show its full title, description, and all available metadata.
 
@@ -189,7 +190,7 @@ The page size is a cap, not an obligation: pages already smaller are taken as th
 ## Current limitations
 
 - **PDF** — a PDF digitisation appears among the copies, with its name and the link to the library, but it is not downloaded and not read inside Glossa. The download command is not offered for those copies, instead of letting it fail. Importing the text of a PDF into a translation project is a different thing, and it already works.
-- **Search** — four libraries have real search; the others accept only the full manifest address. There is no search across several libraries yet.
+- **Search** — five libraries have real search (Internet Archive, Vatican, Gallica, e-codices, Library of Congress); the others accept only the full manifest address and say so. There is no search across several libraries yet.
 - **Single page** — saving the open page is possible; choosing the size for that page, replacing it, deleting it or selecting several from the thumbnails are still to be completed.
 - **Download restrictions** declared by institutions are not enforced automatically yet.
 

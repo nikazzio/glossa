@@ -24,6 +24,7 @@ pub struct SearchEndpoints {
     pub gallica_sru: String,
     pub vatican_search: String,
     pub ecodices_search: String,
+    pub loc_search: String,
     /// Radice degli indirizzi dei manifesti della Vaticana: la pagina di
     /// ricerca non dà autore, data o lingua, e i risultati vengono
     /// arricchiti leggendo il manifesto di ognuno.
@@ -41,6 +42,7 @@ impl Default for SearchEndpoints {
             gallica_sru: "https://gallica.bnf.fr/SRU".to_string(),
             vatican_search: "https://digi.vatlib.it/mss/search".to_string(),
             ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
+            loc_search: "https://www.loc.gov/search/".to_string(),
             vatican_manifest_base: "https://digi.vatlib.it".to_string(),
             vatican_home: "https://digi.vatlib.it/mss/".to_string(),
         }
@@ -52,9 +54,11 @@ const PAGE_SIZE: u32 = 20;
 
 /// Esegue la ricerca della biblioteca, se ne ha una.
 ///
-/// Una biblioteca senza ricerca non è un errore: vuol dire che da lì si arriva
-/// solo con una segnatura o un indirizzo, e chi chiama lo racconta come
-/// «nessun risultato».
+/// Una biblioteca senza ricerca non arriva qui: nel registro ha
+/// `search_handler: None` e `supports_search: false`, e chi chiama si ferma
+/// prima. Ogni gestore elencato qui è implementato davvero — il ramo che
+/// rispondeva «nessun risultato» per le biblioteche mai scritte faceva passare
+/// per catalogo vuoto una funzione che non esisteva.
 pub async fn run(
     client: &Client,
     handler: SearchHandlerKind,
@@ -67,10 +71,14 @@ pub async fn run(
         SearchHandlerKind::Gallica => gallica(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Vatican => vatican(client, endpoints, query, gate).await,
         SearchHandlerKind::Ecodices => ecodices(client, endpoints, query, gate).await,
-        _ => Ok(SearchPage {
-            results: Vec::new(),
-            has_more: false,
-        }),
+        SearchHandlerKind::Loc => loc(client, endpoints, query, page, gate).await,
+        // Internet Archive aveva un percorso suo, da prima che questo modulo
+        // esistesse: la funzione resta dov'è, ma la si chiama da qui come le
+        // altre, così esiste un punto solo in cui si cerca.
+        SearchHandlerKind::ArchiveOrg => {
+            super::discovery::search_archive(client, &endpoints.archive_search, query, page, gate)
+                .await
+        }
     }
 }
 
@@ -489,6 +497,138 @@ fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult
 }
 
 // ── e-codices: pagina di ricerca ─────────────────────────────────────────
+
+// ── Library of Congress: catalogo in JSON ────────────────────────────────
+
+/// La ricerca del sito, chiesta in JSON (`fo=json`).
+///
+/// Il catalogo contiene molto più di quello che Glossa sa aprire — registrazioni
+/// sonore, mappe, giornali microfilmati — e la scheda non dichiara se esista un
+/// manifesto IIIF. Si tiene solo quello che ha un indirizzo di elemento
+/// (`/item/<id>/`), da cui il manifesto si costruisce per convenzione, come fa
+/// Scriptoria (`resolvers/search/loc.py` e `resolvers/loc.py`). Chiedere più
+/// schede di quelle che servono è voluto: una buona parte viene scartata qui.
+async fn loc(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    page: u32,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let wanted = PAGE_SIZE as usize;
+    let asked = (wanted * 5).min(100).to_string();
+    let _turn = super::discovery::wait_if_gated(gate, &endpoints.loc_search).await;
+    let value = client
+        .get(&endpoints.loc_search)
+        .query(&[
+            ("q", query),
+            ("fo", "json"),
+            ("sp", &page.max(1).to_string()),
+            ("c", &asked),
+        ])
+        .send()
+        .await
+        .map_err(|error| {
+            log::warn!("discovery loc request failed error={error}");
+            "The Library of Congress could not be reached.".to_string()
+        })?
+        .error_for_status()
+        .map_err(|error| {
+            log::warn!("discovery loc response failed error={error}");
+            "The Library of Congress search failed.".to_string()
+        })?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| {
+            log::warn!("discovery loc body failed error={error}");
+            "The Library of Congress returned invalid data.".to_string()
+        })?;
+
+    let entries = value
+        .get("results")
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    let mut results = Vec::new();
+    for entry in entries {
+        let Some(page_url) = loc_page_url(entry) else {
+            continue;
+        };
+        let Some(id) = resolvers::loc_item_id(&page_url) else {
+            continue;
+        };
+        if results.len() >= wanted {
+            break;
+        }
+        results.push(DiscoveryResult {
+            title: loc_first_string(entry.get("title")).unwrap_or_else(|| id.clone()),
+            creator: loc_first_string(entry.get("contributor")),
+            date: loc_first_string(entry.get("date")),
+            description: loc_first_string(entry.get("description")),
+            thumbnail_url: loc_first_string(entry.get("image_url")),
+            media_type: loc_first_string(entry.get("original_format")),
+            collection: loc_first_string(entry.get("partof")),
+            language: loc_first_string(entry.get("language")),
+            volume: None,
+            subjects: loc_strings(entry.get("subject")),
+            item_count: None,
+            manifest_url: resolvers::loc_manifest_url(&id),
+            contributors: loc_strings(entry.get("contributor")),
+            publisher: None,
+            rights: loc_strings(entry.get("rights")),
+            physical_description: None,
+            holding_institution: None,
+            catalog_url: None,
+            page_url: Some(page_url),
+            raw: BTreeMap::new(),
+            id,
+        });
+    }
+
+    let has_more = entries.len() > results.len();
+    log::info!("discovery loc search found={}", results.len());
+    Ok(SearchPage { has_more, results })
+}
+
+/// L'indirizzo della scheda: il catalogo lo mette in `id`, e su qualche
+/// risposta in `url`.
+fn loc_page_url(entry: &serde_json::Value) -> Option<String> {
+    ["id", "url"]
+        .into_iter()
+        .find_map(|field| loc_first_string(entry.get(field)))
+        .filter(|value| value.starts_with("http"))
+}
+
+/// Il catalogo dà lo stesso campo ora come stringa, ora come elenco.
+fn loc_first_string(value: Option<&serde_json::Value>) -> Option<String> {
+    match value? {
+        serde_json::Value::String(text) => Some(text.trim().to_string()),
+        serde_json::Value::Array(items) => items.iter().find_map(|item| {
+            item.as_str()
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .map(str::to_string)
+        }),
+        _ => None,
+    }
+    .filter(|text| !text.is_empty())
+}
+
+fn loc_strings(value: Option<&serde_json::Value>) -> Vec<String> {
+    match value {
+        Some(serde_json::Value::Array(items)) => items
+            .iter()
+            .filter_map(|item| item.as_str())
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .map(str::to_string)
+            .collect(),
+        Some(serde_json::Value::String(text)) if !text.trim().is_empty() => {
+            vec![text.trim().to_string()]
+        }
+        _ => Vec::new(),
+    }
+}
 
 async fn ecodices(
     client: &Client,

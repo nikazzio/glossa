@@ -440,51 +440,10 @@ const ARCHIVE_MAPPED_FIELDS: [&str; 15] = [
 /// La dichiarazione di diritti come la fa questa biblioteca: a volte l'indirizzo
 /// di una licenza (`licenseurl`), a volte una frase (`rights`), spesso una sola
 /// delle due e ogni tanto entrambe. Si tengono tutte, senza ripetizioni.
-fn archive_rights(document: &Value) -> Vec<String> {
-    let mut rights = texts(document.get("licenseurl"));
-    for claim in texts(document.get("rights")) {
-        if !rights.contains(&claim) {
-            rights.push(claim);
-        }
-    }
-    rights
-}
-
-/// Un valore della risposta ridotto a elenco di stringhe. Questa biblioteca
-/// manda lo stesso campo ora come stringa, ora come elenco, ora come numero o
-/// booleano: qui si uniforma la **forma**, mai il nome, che resta quello scelto
-/// dalla biblioteca.
-fn raw_strings(value: &Value) -> Vec<String> {
-    match value {
-        Value::Null => Vec::new(),
-        Value::String(text) => vec![text.clone()],
-        Value::Bool(flag) => vec![flag.to_string()],
-        Value::Number(number) => vec![number.to_string()],
-        Value::Array(values) => values.iter().flat_map(raw_strings).collect(),
-        Value::Object(_) => vec![value.to_string()],
-    }
-}
-
-/// Tutto quello che la biblioteca ha detto e che non è finito in un campo suo.
-/// Si scorre la risposta così com'è arrivata invece di elencare i nomi attesi:
-/// il giorno in cui la biblioteca aggiunge un campo, quel campo arriva da solo.
-fn archive_extra_fields(document: &Value) -> BTreeMap<String, Vec<String>> {
-    document
-        .as_object()
-        .into_iter()
-        .flatten()
-        .filter(|(key, _)| !ARCHIVE_MAPPED_FIELDS.contains(&key.as_str()))
-        .filter_map(|(key, value)| {
-            let values = raw_strings(value);
-            (!values.is_empty()).then(|| (key.clone(), values))
-        })
-        .collect()
-}
-
-async fn search_archive(
+pub(super) async fn search_archive(
     client: &Client,
-    query: &str,
     base_url: &str,
+    query: &str,
     page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
@@ -492,7 +451,12 @@ async fn search_archive(
     let response = client
         .get(base_url)
         .query(&[
-            ("q", query),
+            // Solo testi: l'indice di archive.org contiene anche audio, video,
+            // software e copie di siti, e per quelli l'indirizzo del manifesto
+            // costruito per convenzione non esiste — il risultato si vedrebbe e
+            // non si aprirebbe. Stesso filtro di Scriptoria
+            // (`resolvers/search/archive_org.py`).
+            ("q", &format!("({query}) AND mediatype:texts") as &str),
             // Si chiede **tutto** quello che la biblioteca ha indicizzato, non
             // un elenco di campi scelti. Misurato sul servizio vero, a regime,
             // su venti risultati: chiedere i venti campi di prima costava
@@ -577,6 +541,48 @@ async fn search_archive(
     })
 }
 
+fn archive_rights(document: &Value) -> Vec<String> {
+    let mut rights = texts(document.get("licenseurl"));
+    for claim in texts(document.get("rights")) {
+        if !rights.contains(&claim) {
+            rights.push(claim);
+        }
+    }
+    rights
+}
+
+/// Un valore della risposta ridotto a elenco di stringhe. Questa biblioteca
+/// manda lo stesso campo ora come stringa, ora come elenco, ora come numero o
+/// booleano: qui si uniforma la **forma**, mai il nome, che resta quello scelto
+/// dalla biblioteca.
+fn raw_strings(value: &Value) -> Vec<String> {
+    match value {
+        Value::Null => Vec::new(),
+        Value::String(text) => vec![text.clone()],
+        Value::Bool(flag) => vec![flag.to_string()],
+        Value::Number(number) => vec![number.to_string()],
+        Value::Array(values) => values.iter().flat_map(raw_strings).collect(),
+        Value::Object(_) => vec![value.to_string()],
+    }
+}
+
+/// Tutto quello che la biblioteca ha detto e che non è finito in un campo suo.
+/// Si scorre la risposta così com'è arrivata invece di elencare i nomi attesi:
+/// il giorno in cui la biblioteca aggiunge un campo, quel campo arriva da solo.
+fn archive_extra_fields(document: &Value) -> BTreeMap<String, Vec<String>> {
+    document
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(key, _)| !ARCHIVE_MAPPED_FIELDS.contains(&key.as_str()))
+        .filter_map(|(key, value)| {
+            let values = raw_strings(value);
+            (!values.is_empty()).then(|| (key.clone(), values))
+        })
+        .collect()
+}
+
+
 /// Come si arriva da quello che l'utente ha scritto a un risultato.
 ///
 /// Due strade, nell'ordine che la biblioteca dichiara: **riconoscere** ciò che
@@ -629,15 +635,9 @@ async fn discover_with(
         return Ok(nothing());
     }
 
-    let search = match provider.key {
-        // Internet Archive ha il suo servizio da prima di questo modulo.
-        "archive_org" => {
-            search_archive(client, value, &endpoints.archive_search, page, gate).await?
-        }
-        _ => match provider.search_handler {
-            Some(handler) => search::run(client, handler, endpoints, value, page, gate).await?,
-            None => return Ok(nothing()),
-        },
+    let search = match provider.search_handler {
+        Some(handler) => search::run(client, handler, endpoints, value, page, gate).await?,
+        None => return Ok(nothing()),
     };
 
     if !search.results.is_empty() {
@@ -922,6 +922,93 @@ mod tests {
         assert_eq!(
             outcome.results[0].page_url.as_deref(),
             Some("https://archive.org/details/ms-1")
+        );
+    }
+
+    #[tokio::test]
+    async fn the_archive_search_asks_only_for_texts() {
+        // L'indice contiene anche audio, video e software: per quelli
+        // l'indirizzo del manifesto costruito per convenzione non esiste, e il
+        // risultato si vedrebbe senza potersi aprire.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search"))
+            .and(query_param("q", "(manuscript) AND mediatype:texts"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(
+                serde_json::json!({"response": {"docs": [{"identifier": "ms-1", "title": "Manuscript"}]}}),
+            ))
+            .mount(&server)
+            .await;
+        let provider = find_provider("archive_org").expect("provider exists");
+
+        let outcome = discover_with(
+            &Client::new(),
+            provider,
+            "manuscript",
+            &SearchEndpoints {
+                archive_search: format!("{}/search", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn the_library_of_congress_keeps_only_what_has_a_manifest() {
+        // Il catalogo elenca anche materiale senza un indirizzo di elemento —
+        // registrazioni sonore, schede di collezione — e per quello non esiste
+        // nessun manifesto da costruire: va scartato qui, non mostrato e poi
+        // fallito all'apertura.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search/"))
+            .and(query_param("fo", "json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "results": [
+                    {
+                        "id": "https://www.loc.gov/item/2021667925/",
+                        "title": "Book of Hours",
+                        "contributor": ["Anonymous"],
+                        "date": "1490",
+                        "image_url": ["https://tile.loc.gov/thumb.jpg"],
+                    },
+                    {"id": "https://www.loc.gov/collections/early-books/", "title": "Una collezione"},
+                    {"title": "Senza indirizzo"},
+                ]
+            })))
+            .mount(&server)
+            .await;
+        let provider = find_provider("loc").expect("provider exists");
+
+        let outcome = discover_with(
+            &Client::new(),
+            provider,
+            "book of hours",
+            &SearchEndpoints {
+                loc_search: format!("{}/search/", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(outcome.results[0].id, "2021667925");
+        assert_eq!(
+            outcome.results[0].manifest_url,
+            "https://www.loc.gov/item/2021667925/manifest.json"
+        );
+        assert_eq!(outcome.results[0].creator.as_deref(), Some("Anonymous"));
+        assert_eq!(
+            outcome.results[0].thumbnail_url.as_deref(),
+            Some("https://tile.loc.gov/thumb.jpg")
         );
     }
 

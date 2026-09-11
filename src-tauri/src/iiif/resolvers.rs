@@ -61,10 +61,50 @@ pub fn resolve(kind: ResolverKind, input: &str) -> Option<Resolution> {
         ResolverKind::Gallica => gallica(value),
         ResolverKind::Ecodices => ecodices(value),
         ResolverKind::ArchiveOrg => archive_org(value),
+        ResolverKind::Loc => loc(value),
         // Le altre biblioteche non hanno ancora un riconoscimento proprio:
         // vale l'indirizzo completo, come prima.
         _ => direct_url(value),
     }
+}
+
+/// Library of Congress: dall'indirizzo di un elemento al suo manifesto.
+///
+/// Il catalogo usa due forme, `/item/<id>/` e `/resource/<id>/`, e sulle
+/// riproduzioni aggiunge il numero della pagina in coda all'identificativo
+/// (`:sp12`), che non fa parte dell'elemento. Un identificativo nudo non basta:
+/// senza il resto dell'indirizzo non si distingue da una parola da cercare.
+/// Stesso riconoscimento di Scriptoria (`resolvers/loc.py`).
+fn loc(value: &str) -> Option<Resolution> {
+    let id = loc_item_id(value)?;
+    Some(Resolution::strong(loc_manifest_url(&id), id))
+}
+
+/// L'identificativo dell'elemento dentro un indirizzo della Library of
+/// Congress, senza il numero di pagina.
+pub fn loc_item_id(value: &str) -> Option<String> {
+    let url = url::Url::parse(value.trim()).ok()?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return None;
+    }
+    let host = url.host_str()?.to_ascii_lowercase();
+    if host != "loc.gov" && !host.ends_with(".loc.gov") {
+        return None;
+    }
+    let mut segments = url.path_segments()?;
+    let id = loop {
+        let segment = segments.next()?;
+        if segment.eq_ignore_ascii_case("item") || segment.eq_ignore_ascii_case("resource") {
+            break segments.next()?;
+        }
+    };
+    let id = id.split_once(":sp").map_or(id, |(head, _)| head);
+    (!id.is_empty()).then(|| id.to_string())
+}
+
+/// Il manifesto si costruisce dall'identificativo: il catalogo non lo dichiara.
+pub fn loc_manifest_url(id: &str) -> String {
+    format!("https://www.loc.gov/item/{id}/manifest.json")
 }
 
 /// Un indirizzo incollato vale per qualunque biblioteca: è già il manifesto.
@@ -440,9 +480,43 @@ mod tests {
     }
 
     #[test]
+    fn the_library_of_congress_address_becomes_its_manifest() {
+        for written in [
+            "https://www.loc.gov/item/2021667925/",
+            "https://www.loc.gov/resource/2021667925/?sp=3",
+            "https://loc.gov/item/2021667925",
+        ] {
+            let resolved = resolve(ResolverKind::Loc, written).expect("indirizzo riconosciuto");
+            assert_eq!(resolved.doc_id, "2021667925", "scritto come {written}");
+            assert_eq!(
+                resolved.manifest_url,
+                "https://www.loc.gov/item/2021667925/manifest.json"
+            );
+        }
+    }
+
+    #[test]
+    fn the_page_number_is_not_part_of_the_library_of_congress_item() {
+        // Sulle riproduzioni il catalogo attacca `:sp12` all'identificativo:
+        // è la pagina che stai guardando, non l'opera.
+        let resolved = resolve(ResolverKind::Loc, "https://www.loc.gov/resource/gdc.123:sp12/")
+            .expect("indirizzo riconosciuto");
+        assert_eq!(resolved.doc_id, "gdc.123");
+    }
+
+    #[test]
+    fn a_bare_word_is_not_a_library_of_congress_address() {
+        // Senza l'indirizzo intero, «2021667925» non si distingue da una
+        // parola da cercare: restituire un manifesto inventato manderebbe il
+        // visore su una pagina che non esiste.
+        assert!(resolve(ResolverKind::Loc, "2021667925").is_none());
+        assert!(resolve(ResolverKind::Loc, "https://example.org/item/123").is_none());
+    }
+
+    #[test]
     fn a_pasted_manifest_address_works_for_libraries_without_their_own_recognition() {
         let resolved = resolve(
-            ResolverKind::Harvard,
+            ResolverKind::Generic,
             "https://iiif.lib.harvard.edu/manifests/drs:1234",
         )
         .expect("indirizzo diretto");

@@ -15,12 +15,6 @@ import { relativeDateUnit } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 
-// Le biblioteche il cui riconoscimento e la cui ricerca sono davvero
-// implementati lato backend (v. src-tauri/src/iiif/search.rs): elenco a mano
-// perché `supportsSearch` del provider è vero anche per le biblioteche che
-// non cercano ancora, dichiarazione preesistente e fuori scopo qui.
-const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org', 'vatican', 'gallica', 'ecodices']);
-
 function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
   const mediaType = !isManifest(card) ? card.mediaType : null;
   return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
@@ -267,10 +261,13 @@ export function SourceDiscoveryPanel() {
   useEffect(() => {
     listIIIFProviders()
       .then((items) => {
-        const ready = items.filter((provider) => READY_DISCOVERY_PROVIDERS.has(provider.key));
-        setProviders(ready);
+        // Nessun elenco a mano: il registro del motore dichiara quello che ogni
+        // biblioteca sa fare davvero — chi non cerca lo dice con
+        // `supportsSearch` falso e con un esempio che chiede l'indirizzo del
+        // manifesto. Una copia qui si sarebbe scollata al primo provider nuovo.
+        setProviders(items);
         const current = useDiscoverySearchStore.getState().providerKey;
-        if (!ready.some((provider) => provider.key === current) && ready[0]) setProviderKey(ready[0].key);
+        if (!items.some((provider) => provider.key === current) && items[0]) setProviderKey(items[0].key);
       })
       .catch((error: unknown) => {
         logger.error('discovery providers load failed', { error: errorMessage(error) });

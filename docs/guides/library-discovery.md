@@ -26,7 +26,8 @@ Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta cia
 - **Biblioteca Vaticana** — la segnatura, scritta come ti viene (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` portano allo stesso manoscritto), l'indirizzo della pagina di lettura, oppure parole da cercare nel suo catalogo.
 - **Gallica** — l'identificativo ARK, un indirizzo di Gallica in qualunque forma, oppure parole da cercare per titolo. Se scrivi una parola che somiglia a un identificativo, Gallica cerca prima: meglio qualche risultato che un'opera inesistente.
 - **e-codices** — la segnatura composta (`bbb-0264`), l'indirizzo della pagina di lettura, oppure parole da cercare.
-- **le altre biblioteche in elenco** — per ora solo l'indirizzo completo del manifesto IIIF.
+- **Library of Congress** — parole di ricerca, oppure l'indirizzo di un elemento del catalogo (`loc.gov/item/...`, `loc.gov/resource/...`). Il catalogo contiene molto più di quello che Glossa sa aprire: i risultati senza una riproduzione leggibile non compaiono.
+- **le altre biblioteche in elenco** — soltanto l'indirizzo completo del manifesto IIIF. Lo dichiarano nell'esempio del campo di ricerca, invece di promettere una ricerca che non hanno.
 
 I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
 
@@ -189,7 +190,7 @@ La misura delle pagine è un tetto, non un obbligo: le pagine già più piccole 
 ## Limiti attuali
 
 - **PDF** — una digitalizzazione in PDF compare fra le copie, con il suo nome e il collegamento alla biblioteca, ma non si scarica e non si legge dentro Glossa. Il comando di scaricamento non viene offerto per quelle copie, invece di lasciarlo fallire. Importare il testo di un PDF in un progetto di traduzione è un'altra cosa, e funziona già.
-- **Ricerca** — quattro biblioteche hanno una ricerca vera; le altre accettano solo l'indirizzo completo del manifesto. Non esiste ancora una ricerca su più biblioteche insieme.
+- **Ricerca** — cinque biblioteche hanno una ricerca vera (Internet Archive, Vaticana, Gallica, e-codices, Library of Congress); le altre accettano solo l'indirizzo completo del manifesto e lo dichiarano. Non esiste ancora una ricerca su più biblioteche insieme.
 - **Singola pagina** — salvare la pagina aperta è possibile; scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una dalle miniature sono lavori ancora da completare.
 - **Divieti di scaricamento** dichiarati dalle istituzioni non sono ancora applicati automaticamente.
 
