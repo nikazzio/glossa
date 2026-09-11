@@ -28,7 +28,6 @@ pub struct SearchEndpoints {
     pub harvard_search: String,
     pub cambridge_search: String,
     pub bodleian_search: String,
-    pub heidelberg_search: String,
     pub estense_search: String,
     pub institut_search: String,
     /// Radice degli indirizzi dei manifesti della Vaticana: la pagina di
@@ -52,10 +51,10 @@ impl Default for SearchEndpoints {
             harvard_search: "https://api.lib.harvard.edu/v2/items.json".to_string(),
             cambridge_search: "https://cudl.lib.cam.ac.uk/search".to_string(),
             bodleian_search: "https://digital.bodleian.ox.ac.uk/search/".to_string(),
-            heidelberg_search: "https://digi.ub.uni-heidelberg.de/diglitData/search".to_string(),
             estense_search:
-                "https://jarvis.edl.beniculturali.it/meta/api/cultural-items/search".to_string(),
-            institut_search: "https://bibnum.institutdefrance.fr/records".to_string(),
+                "https://jarvis.edl.beniculturali.it/meta/culturalItems/search/findBySgttOrAutnOrPressmark"
+                    .to_string(),
+            institut_search: "https://bibnum.institutdefrance.fr/records/default".to_string(),
             vatican_manifest_base: "https://digi.vatlib.it".to_string(),
             vatican_home: "https://digi.vatlib.it/mss/".to_string(),
         }
@@ -88,7 +87,6 @@ pub async fn run(
         SearchHandlerKind::Harvard => harvard(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Cambridge => cambridge(client, endpoints, query, gate).await,
         SearchHandlerKind::Bodleian => bodleian(client, endpoints, query, gate).await,
-        SearchHandlerKind::Heidelberg => heidelberg(client, endpoints, query, gate).await,
         SearchHandlerKind::Estense => estense(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Institut => institut(client, endpoints, query, gate).await,
         // Internet Archive aveva un percorso suo, da prima che questo modulo
@@ -543,7 +541,14 @@ async fn fetch_text(
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery {library} response failed error={error}");
-            format!("The {library} search failed.")
+            match error.status().map(|status| status.as_u16()) {
+                // Alcune biblioteche stanno dietro a un controllo anti-robot:
+                // la richiesta non è sbagliata, è respinta perché automatica.
+                Some(401 | 403) => format!("{library} refused an automated request."),
+                Some(429) => format!("{library} is asking to slow down: too many requests."),
+                Some(status) if status >= 500 => format!("{library} is not responding."),
+                _ => format!("The {library} search failed."),
+            }
         })?
         .text()
         .await
@@ -762,8 +767,9 @@ async fn bodleian(
             .get("surfaceCount")
             .and_then(serde_json::Value::as_u64)
             .map(|count| count as usize);
-        result.thumbnail_url = loc_first_string(member.get("thumbnail"))
-            .or_else(|| member.pointer("/thumbnail/id").and_then(|value| value.as_str().map(str::to_string)));
+        result.thumbnail_url = member
+            .get("thumbnail")
+            .and_then(super::discovery::thumbnail_of);
         result.page_url = page_url.map(str::to_string);
         result.publisher = Some("Bodleian Libraries".to_string());
         results.push(result);
@@ -772,64 +778,6 @@ async fn bodleian(
         }
     }
     log::info!("discovery bodleian search found={}", results.len());
-    Ok(SearchPage {
-        has_more: false,
-        results,
-    })
-}
-
-/// Heidelberg: la ricerca del sito porta ai visori `diglit`, e da lì al
-/// manifesto.
-async fn heidelberg(
-    client: &Client,
-    endpoints: &SearchEndpoints,
-    query: &str,
-    gate: Option<&Gate<'_>>,
-) -> Result<SearchPage, String> {
-    if let Some(direct) = resolvers::resolve(super::ResolverKind::Heidelberg, query) {
-        return Ok(SearchPage {
-            has_more: false,
-            results: vec![result_from(
-                direct.doc_id.clone(),
-                direct.doc_id,
-                direct.manifest_url,
-            )],
-        });
-    }
-
-    let body = fetch_text(
-        client,
-        &endpoints.heidelberg_search,
-        &[("q", query)],
-        None,
-        "Heidelberg University Library",
-        gate,
-    )
-    .await?;
-
-    let mut seen = std::collections::BTreeSet::new();
-    let mut results = Vec::new();
-    for chunk in body.split("/diglit/").skip(1) {
-        let id = chunk
-            .split(['"', '\'', '?', '#', '/'])
-            .next()
-            .unwrap_or_default()
-            .trim()
-            .to_ascii_lowercase();
-        // `iiif` non è un libro: è il pezzo di indirizzo del servizio immagini.
-        if id.is_empty() || id == "iiif" || !seen.insert(id.clone()) {
-            continue;
-        }
-        results.push(result_from(
-            id.clone(),
-            id.clone(),
-            resolvers::heidelberg_manifest_url(&id),
-        ));
-        if results.len() >= PAGE_SIZE as usize {
-            break;
-        }
-    }
-    log::info!("discovery heidelberg search found={}", results.len());
     Ok(SearchPage {
         has_more: false,
         results,
@@ -870,11 +818,14 @@ async fn estense(
         let Some(id) = estense_uuid_of(item) else {
             continue;
         };
-        let title = loc_first_string(item.get("title")).unwrap_or_else(|| id.clone());
+        // Il catalogo non usa i nomi consueti: il titolo è `sgtt` e la
+        // segnatura `pressmark`. Autore e data non ci sono in questa risposta:
+        // arrivano dalla lettura del manifesto, come per la Vaticana.
+        let title = loc_first_string(item.get("sgtt"))
+            .or_else(|| loc_first_string(item.get("pressmark")))
+            .unwrap_or_else(|| id.clone());
         let mut result = result_from(id.clone(), title, resolvers::estense_manifest_url(&id));
-        result.creator = loc_first_string(item.get("author"));
-        result.date = loc_first_string(item.get("date"));
-        result.description = loc_first_string(item.get("description"));
+        result.holding_institution = loc_first_string(item.get("pressmark"));
         results.push(result);
     }
 

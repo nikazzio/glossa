@@ -218,8 +218,17 @@ fn homepage_url(value: &Value) -> Option<String> {
         .or_else(|| text(Some(first)))
 }
 
-fn thumbnail_url(value: &Value) -> Option<String> {
-    let thumbnail = value.get("thumbnail")?;
+pub(super) fn thumbnail_url(value: &Value) -> Option<String> {
+    thumbnail_of(value.get("thumbnail")?)
+}
+
+/// L'indirizzo di una miniatura, comunque la biblioteca l'abbia scritta: una
+/// stringa, un oggetto con `id` o `@id`, oppure un elenco di oggetti — che è la
+/// forma di IIIF 3 e quella che usa Digital Bodleian.
+pub(super) fn thumbnail_of(thumbnail: &Value) -> Option<String> {
+    if let Value::Array(items) = thumbnail {
+        return items.iter().find_map(thumbnail_of);
+    }
     text(Some(thumbnail))
         .or_else(|| {
             thumbnail
@@ -233,6 +242,7 @@ fn thumbnail_url(value: &Value) -> Option<String> {
                 .and_then(Value::as_str)
                 .map(str::to_string)
         })
+        .filter(|url| url.starts_with("http"))
 }
 
 fn manifest_preview(manifest_url: String, value: Value) -> ManifestPreview {
@@ -374,7 +384,10 @@ async fn enrich_from_manifest(
     gate: Option<&Gate<'_>>,
     result: DiscoveryResult,
 ) -> DiscoveryResult {
-    if result.creator.is_some() {
+    // Si va a leggere il manifesto solo se manca qualcosa che lui può dare.
+    // Una copertina assente è il caso più visibile: senza, la riga del
+    // catalogo resta con il segnaposto anche dopo aver aggiunto l'opera.
+    if result.creator.is_some() && result.thumbnail_url.is_some() {
         return result;
     }
     let preview = match resolve_manifest(client, result.manifest_url.clone(), gate).await {
@@ -389,7 +402,8 @@ async fn enrich_from_manifest(
         }
     };
     DiscoveryResult {
-        creator: preview.creator,
+        creator: result.creator.or(preview.creator),
+        thumbnail_url: result.thumbnail_url.or(preview.thumbnail_url),
         date: result.date.or(preview.date),
         language: result.language.or(preview.language),
         volume: result.volume.or(preview.volume),
@@ -641,16 +655,12 @@ async fn discover_with(
     };
 
     if !search.results.is_empty() {
-        // Solo la Vaticana, per ora: la sua pagina di ricerca non porta
-        // autore, data o lingua, e il suo indirizzo dei manifesti è
-        // configurabile per le prove. Le altre biblioteche che cercano già
-        // danno tutto da sole (Gallica) o aspettano lo stesso trattamento in
-        // un secondo momento (e-codices).
-        let results = if provider.key == "vatican" {
-            enrich_results(client, gate, search.results).await
-        } else {
-            search.results
-        };
+        // Chi ha già detto tutto non viene riletto: `enrich_from_manifest` si
+        // ferma da sé se la scheda ha autore e copertina. Chi non li dà —
+        // Vaticana, e le biblioteche le cui pagine di ricerca elencano solo i
+        // collegamenti — paga una lettura del manifesto per risultato, che è il
+        // prezzo di una riga leggibile invece di un segnaposto.
+        let results = enrich_results(client, gate, search.results).await;
         return Ok(DiscoveryOutcome {
             cached_at: None,
             status: DiscoveryStatus::Results,
@@ -1134,7 +1144,7 @@ mod tests {
             .and(query_param("page", "0"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "_embedded": {"culturalItems": [
-                    {"uuid": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "title": "Bibbia di Borso"},
+                    {"uuid": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "sgtt": "Bibbia di Borso", "pressmark": "V.G.12"},
                 ]},
                 "page": {"totalPages": 3}
             })))

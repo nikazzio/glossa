@@ -30,7 +30,7 @@ Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta cia
 - **Harvard Library** — parole di ricerca, oppure il gettone dell'oggetto (`drs:123456`, `ids:123456`), che compare anche dentro gli indirizzi del suo visore. Il numero del catalogo generale non vale: non porta a una riproduzione.
 - **Cambridge University Digital Library** — parole di ricerca, l'indirizzo del visore, oppure la segnatura nella forma con i trattini (`MS-ADD-03996`).
 - **Digital Bodleian** — parole di ricerca oppure l'indirizzo dell'oggetto. È l'unica che dichiara da sé l'indirizzo del manifesto di ogni risultato, invece di farlo ricavare dall'identificativo.
-- **Heidelberg** — parole di ricerca, la segnatura (`cpg848`) o l'indirizzo del visore.
+- **Heidelberg** — la segnatura (`cpg848`) o l'indirizzo del visore. Non cerca per parole: la sua ricerca per il pubblico non è interrogabile da un programma.
 - **Biblioteca Estense** — parole di ricerca oppure l'identificativo dell'opera, anche preso da un indirizzo del visore Mirador.
 - **Institut de France** — parole di ricerca, il numero della scheda (`17837`) o un suo indirizzo.
 - **Indirizzo IIIF diretto** — l'indirizzo completo di un manifesto, di qualunque istituzione, anche non in elenco.

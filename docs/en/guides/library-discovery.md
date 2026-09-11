@@ -30,7 +30,7 @@ Libraries do not have the same capabilities, and Glossa states what each one acc
 - **Harvard Library** — keywords, or the object token (`drs:123456`, `ids:123456`), which also appears inside its viewer addresses. The general catalogue number does not work: it does not lead to a reproduction.
 - **Cambridge University Digital Library** — keywords, the viewer address, or the shelfmark in its dashed form (`MS-ADD-03996`).
 - **Digital Bodleian** — keywords or the object address. It is the only one that declares the manifest address of each result itself, instead of having it derived from the identifier.
-- **Heidelberg** — keywords, the shelfmark (`cpg848`) or the viewer address.
+- **Heidelberg** — the shelfmark (`cpg848`) or the viewer address. No keyword search: its public search cannot be queried by a program.
 - **Biblioteca Estense** — keywords or the work identifier, including one taken from a Mirador viewer address.
 - **Institut de France** — keywords, the record number (`17837`) or one of its addresses.
 - **Direct IIIF URL** — the full address of a manifest, from any institution, including ones not listed.
