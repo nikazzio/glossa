@@ -25,6 +25,12 @@ pub struct SearchEndpoints {
     pub vatican_search: String,
     pub ecodices_search: String,
     pub loc_search: String,
+    pub harvard_search: String,
+    pub cambridge_search: String,
+    pub bodleian_search: String,
+    pub heidelberg_search: String,
+    pub estense_search: String,
+    pub institut_search: String,
     /// Radice degli indirizzi dei manifesti della Vaticana: la pagina di
     /// ricerca non dà autore, data o lingua, e i risultati vengono
     /// arricchiti leggendo il manifesto di ognuno.
@@ -43,6 +49,13 @@ impl Default for SearchEndpoints {
             vatican_search: "https://digi.vatlib.it/mss/search".to_string(),
             ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
             loc_search: "https://www.loc.gov/search/".to_string(),
+            harvard_search: "https://api.lib.harvard.edu/v2/items.json".to_string(),
+            cambridge_search: "https://cudl.lib.cam.ac.uk/search".to_string(),
+            bodleian_search: "https://digital.bodleian.ox.ac.uk/search/".to_string(),
+            heidelberg_search: "https://digi.ub.uni-heidelberg.de/diglitData/search".to_string(),
+            estense_search:
+                "https://jarvis.edl.beniculturali.it/meta/api/cultural-items/search".to_string(),
+            institut_search: "https://bibnum.institutdefrance.fr/records".to_string(),
             vatican_manifest_base: "https://digi.vatlib.it".to_string(),
             vatican_home: "https://digi.vatlib.it/mss/".to_string(),
         }
@@ -72,6 +85,12 @@ pub async fn run(
         SearchHandlerKind::Vatican => vatican(client, endpoints, query, gate).await,
         SearchHandlerKind::Ecodices => ecodices(client, endpoints, query, gate).await,
         SearchHandlerKind::Loc => loc(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Harvard => harvard(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Cambridge => cambridge(client, endpoints, query, gate).await,
+        SearchHandlerKind::Bodleian => bodleian(client, endpoints, query, gate).await,
+        SearchHandlerKind::Heidelberg => heidelberg(client, endpoints, query, gate).await,
+        SearchHandlerKind::Estense => estense(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Institut => institut(client, endpoints, query, gate).await,
         // Internet Archive aveva un percorso suo, da prima che questo modulo
         // esistesse: la funzione resta dov'è, ma la si chiama da qui come le
         // altre, così esiste un punto solo in cui si cerca.
@@ -497,6 +516,438 @@ fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult
 }
 
 // ── e-codices: pagina di ricerca ─────────────────────────────────────────
+
+// ── Le sei biblioteche portate da Scriptoria ─────────────────────────────
+
+/// Una risposta di testo, con i guasti raccontati con il nome della biblioteca.
+async fn fetch_text(
+    client: &Client,
+    url: &str,
+    params: &[(&str, &str)],
+    accept: Option<&str>,
+    library: &str,
+    gate: Option<&Gate<'_>>,
+) -> Result<String, String> {
+    let _turn = super::discovery::wait_if_gated(gate, url).await;
+    let mut request = client.get(url).query(params);
+    if let Some(accept) = accept {
+        request = request.header("Accept", accept);
+    }
+    request
+        .send()
+        .await
+        .map_err(|error| {
+            log::warn!("discovery {library} request failed error={error}");
+            format!("{library} could not be reached.")
+        })?
+        .error_for_status()
+        .map_err(|error| {
+            log::warn!("discovery {library} response failed error={error}");
+            format!("The {library} search failed.")
+        })?
+        .text()
+        .await
+        .map_err(|error| {
+            log::warn!("discovery {library} body failed error={error}");
+            format!("{library} returned invalid data.")
+        })
+}
+
+async fn fetch_json(
+    client: &Client,
+    url: &str,
+    params: &[(&str, &str)],
+    accept: Option<&str>,
+    library: &str,
+    gate: Option<&Gate<'_>>,
+) -> Result<serde_json::Value, String> {
+    let body = fetch_text(client, url, params, accept, library, gate).await?;
+    serde_json::from_str(&body).map_err(|error| {
+        log::warn!("discovery {library} json failed error={error}");
+        format!("{library} returned invalid data.")
+    })
+}
+
+/// Una scheda con i soli campi che la biblioteca ha davvero dato.
+fn result_from(id: String, title: String, manifest_url: String) -> DiscoveryResult {
+    DiscoveryResult {
+        id,
+        title,
+        creator: None,
+        date: None,
+        description: None,
+        thumbnail_url: None,
+        media_type: None,
+        collection: None,
+        language: None,
+        volume: None,
+        subjects: Vec::new(),
+        item_count: None,
+        manifest_url,
+        contributors: Vec::new(),
+        publisher: None,
+        rights: Vec::new(),
+        physical_description: None,
+        holding_institution: None,
+        catalog_url: None,
+        page_url: None,
+        raw: BTreeMap::new(),
+    }
+}
+
+/// Harvard: la sua interfaccia dei dati non dichiara i manifesti in un campo
+/// suo, ma li nomina dentro le schede. Si cercano i gettoni `drs:`/`ids:` nel
+/// testo della risposta, come fa Scriptoria (`resolvers/search/harvard.py`), e
+/// si chiedono più schede di quelle che servono perché molte non ne hanno.
+async fn harvard(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    page: u32,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let wanted = PAGE_SIZE as usize;
+    let limit = (wanted * 10).min(100);
+    let start = (page.max(1) as usize - 1) * limit;
+    let body = fetch_text(
+        client,
+        &endpoints.harvard_search,
+        &[
+            ("q", query),
+            ("limit", &limit.to_string()),
+            ("start", &start.to_string()),
+        ],
+        None,
+        "Harvard Library",
+        gate,
+    )
+    .await?;
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut results = Vec::new();
+    for chunk in body.split("iiif.lib.harvard.edu/manifests/").skip(1) {
+        let Some(token) = resolvers::harvard_token(chunk.split('"').next().unwrap_or_default())
+        else {
+            continue;
+        };
+        if !seen.insert(token.clone()) {
+            continue;
+        }
+        results.push(result_from(
+            token.clone(),
+            token.clone(),
+            resolvers::harvard_manifest_url(&token),
+        ));
+        if results.len() >= wanted {
+            break;
+        }
+    }
+    log::info!("discovery harvard search found={}", results.len());
+    Ok(SearchPage {
+        has_more: false,
+        results,
+    })
+}
+
+/// Cambridge: la pagina di ricerca elenca i libri con un collegamento al
+/// visore (`/view/<id>`), da cui il manifesto si costruisce.
+async fn cambridge(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    // Una segnatura scritta per esteso è già l'opera: chiederla al motore di
+    // ricerca costerebbe una richiesta per sapere quello che sappiamo già.
+    if let Some(direct) = resolvers::resolve(super::ResolverKind::Cambridge, query) {
+        return Ok(SearchPage {
+            has_more: false,
+            results: vec![result_from(
+                direct.doc_id.clone(),
+                direct.doc_id,
+                direct.manifest_url,
+            )],
+        });
+    }
+
+    let body = fetch_text(
+        client,
+        &endpoints.cambridge_search,
+        &[("keyword", query)],
+        None,
+        "Cambridge University Digital Library",
+        gate,
+    )
+    .await?;
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut results = Vec::new();
+    for chunk in body.split("/view/").skip(1) {
+        let id = chunk
+            .split(['"', '\'', '?', '#', '/'])
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_uppercase();
+        if id.is_empty() || !seen.insert(id.clone()) {
+            continue;
+        }
+        let title = strip_tags(between(chunk, ">", '<').unwrap_or_default().as_str());
+        let title = if title.trim().is_empty() {
+            id.clone()
+        } else {
+            title.trim().to_string()
+        };
+        results.push(result_from(
+            id.clone(),
+            title,
+            resolvers::cambridge_manifest_url(&id),
+        ));
+        if results.len() >= PAGE_SIZE as usize {
+            break;
+        }
+    }
+    log::info!("discovery cambridge search found={}", results.len());
+    Ok(SearchPage {
+        has_more: false,
+        results,
+    })
+}
+
+/// Bodleian: la ricerca sa rispondere in JSON-LD, e lì il manifesto di ogni
+/// risultato è dichiarato. È l'unica delle sei che non lo fa indovinare.
+async fn bodleian(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let value = fetch_json(
+        client,
+        &endpoints.bodleian_search,
+        &[("q", query)],
+        Some("application/ld+json"),
+        "Digital Bodleian",
+        gate,
+    )
+    .await?;
+
+    let mut results = Vec::new();
+    for member in value
+        .get("member")
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    {
+        let Some(manifest_url) = member
+            .pointer("/manifest/id")
+            .and_then(serde_json::Value::as_str)
+        else {
+            continue;
+        };
+        let page_url = member.get("id").and_then(serde_json::Value::as_str);
+        let Some(id) = page_url.and_then(resolvers::bodleian_uuid) else {
+            continue;
+        };
+        let fields = member.get("displayFields");
+        let title = fields
+            .and_then(|fields| loc_first_string(fields.get("title")))
+            .or_else(|| loc_first_string(member.get("shelfmark")))
+            .unwrap_or_else(|| id.clone());
+        let mut result = result_from(id, title, manifest_url.to_string());
+        result.creator = fields.and_then(|fields| loc_first_string(fields.get("people")));
+        result.date = fields.and_then(|fields| loc_first_string(fields.get("dateStatement")));
+        result.description = fields.and_then(|fields| loc_first_string(fields.get("snippet")));
+        result.item_count = member
+            .get("surfaceCount")
+            .and_then(serde_json::Value::as_u64)
+            .map(|count| count as usize);
+        result.thumbnail_url = loc_first_string(member.get("thumbnail"))
+            .or_else(|| member.pointer("/thumbnail/id").and_then(|value| value.as_str().map(str::to_string)));
+        result.page_url = page_url.map(str::to_string);
+        result.publisher = Some("Bodleian Libraries".to_string());
+        results.push(result);
+        if results.len() >= PAGE_SIZE as usize {
+            break;
+        }
+    }
+    log::info!("discovery bodleian search found={}", results.len());
+    Ok(SearchPage {
+        has_more: false,
+        results,
+    })
+}
+
+/// Heidelberg: la ricerca del sito porta ai visori `diglit`, e da lì al
+/// manifesto.
+async fn heidelberg(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    if let Some(direct) = resolvers::resolve(super::ResolverKind::Heidelberg, query) {
+        return Ok(SearchPage {
+            has_more: false,
+            results: vec![result_from(
+                direct.doc_id.clone(),
+                direct.doc_id,
+                direct.manifest_url,
+            )],
+        });
+    }
+
+    let body = fetch_text(
+        client,
+        &endpoints.heidelberg_search,
+        &[("q", query)],
+        None,
+        "Heidelberg University Library",
+        gate,
+    )
+    .await?;
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut results = Vec::new();
+    for chunk in body.split("/diglit/").skip(1) {
+        let id = chunk
+            .split(['"', '\'', '?', '#', '/'])
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase();
+        // `iiif` non è un libro: è il pezzo di indirizzo del servizio immagini.
+        if id.is_empty() || id == "iiif" || !seen.insert(id.clone()) {
+            continue;
+        }
+        results.push(result_from(
+            id.clone(),
+            id.clone(),
+            resolvers::heidelberg_manifest_url(&id),
+        ));
+        if results.len() >= PAGE_SIZE as usize {
+            break;
+        }
+    }
+    log::info!("discovery heidelberg search found={}", results.len());
+    Ok(SearchPage {
+        has_more: false,
+        results,
+    })
+}
+
+/// Biblioteca Estense: catalogo in JSON, con le schede dentro `_embedded`.
+async fn estense(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    page: u32,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    // Le pagine del suo catalogo contano da zero.
+    let index = (page.max(1) - 1).to_string();
+    let value = fetch_json(
+        client,
+        &endpoints.estense_search,
+        &[
+            ("text", query),
+            ("size", &PAGE_SIZE.to_string()),
+            ("page", &index),
+        ],
+        None,
+        "Biblioteca Estense",
+        gate,
+    )
+    .await?;
+
+    let mut results = Vec::new();
+    for item in value
+        .pointer("/_embedded/culturalItems")
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    {
+        let Some(id) = estense_uuid_of(item) else {
+            continue;
+        };
+        let title = loc_first_string(item.get("title")).unwrap_or_else(|| id.clone());
+        let mut result = result_from(id.clone(), title, resolvers::estense_manifest_url(&id));
+        result.creator = loc_first_string(item.get("author"));
+        result.date = loc_first_string(item.get("date"));
+        result.description = loc_first_string(item.get("description"));
+        results.push(result);
+    }
+
+    let total = value
+        .pointer("/page/totalPages")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(1);
+    log::info!("discovery estense search found={}", results.len());
+    Ok(SearchPage {
+        has_more: u64::from(page.max(1)) < total,
+        results,
+    })
+}
+
+/// L'identificativo di una scheda dell'Estense, dove che sia scritto: il
+/// catalogo lo mette ora in `uuid`, ora dentro l'indirizzo del manifesto.
+fn estense_uuid_of(item: &serde_json::Value) -> Option<String> {
+    for field in ["uuid", "id", "manifest", "manifestUrl"] {
+        if let Some(value) = loc_first_string(item.get(field)) {
+            if let Some(uuid) = resolvers::estense_uuid(&value) {
+                return Some(uuid);
+            }
+        }
+    }
+    None
+}
+
+/// Institut de France: la pagina delle schede porta agli identificativi
+/// numerici, da cui il manifesto si costruisce.
+async fn institut(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let body = fetch_text(
+        client,
+        &endpoints.institut_search,
+        &[("search", query)],
+        None,
+        "Institut de France",
+        gate,
+    )
+    .await?;
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut results = Vec::new();
+    for chunk in body.split("/records/item/").skip(1) {
+        let id: String = chunk.chars().take_while(char::is_ascii_digit).collect();
+        if id.is_empty() || !seen.insert(id.clone()) {
+            continue;
+        }
+        let title = strip_tags(between(chunk, ">", '<').unwrap_or_default().as_str());
+        let title = if title.trim().is_empty() {
+            id.clone()
+        } else {
+            title.trim().to_string()
+        };
+        results.push(result_from(
+            id.clone(),
+            title,
+            resolvers::institut_manifest_url(&id),
+        ));
+        if results.len() >= PAGE_SIZE as usize {
+            break;
+        }
+    }
+    log::info!("discovery institut search found={}", results.len());
+    Ok(SearchPage {
+        has_more: false,
+        results,
+    })
+}
 
 // ── Library of Congress: catalogo in JSON ────────────────────────────────
 

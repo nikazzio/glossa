@@ -62,6 +62,12 @@ pub fn resolve(kind: ResolverKind, input: &str) -> Option<Resolution> {
         ResolverKind::Ecodices => ecodices(value),
         ResolverKind::ArchiveOrg => archive_org(value),
         ResolverKind::Loc => loc(value),
+        ResolverKind::Harvard => harvard(value),
+        ResolverKind::Cambridge => cambridge(value),
+        ResolverKind::Bodleian => bodleian(value),
+        ResolverKind::Heidelberg => heidelberg(value),
+        ResolverKind::Estense => estense(value),
+        ResolverKind::Institut => institut(value),
         // Le altre biblioteche non hanno ancora un riconoscimento proprio:
         // vale l'indirizzo completo, come prima.
         _ => direct_url(value),
@@ -105,6 +111,191 @@ pub fn loc_item_id(value: &str) -> Option<String> {
 /// Il manifesto si costruisce dall'identificativo: il catalogo non lo dichiara.
 pub fn loc_manifest_url(id: &str) -> String {
     format!("https://www.loc.gov/item/{id}/manifest.json")
+}
+
+/// Harvard: il manifesto si costruisce dal gettone `drs:` o `ids:`.
+///
+/// Il gettone compare tanto in un indirizzo quanto scritto da solo, ed è
+/// l'unica forma che identifica l'oggetto: il numero di catalogo Alma è
+/// un'altra cosa e non porta a un manifesto. Come `resolvers/harvard.py`.
+fn harvard(value: &str) -> Option<Resolution> {
+    let token = harvard_token(value)?;
+    Some(Resolution::strong(harvard_manifest_url(&token), token))
+}
+
+/// `drs:123456` o `ids:123456`, ovunque si trovi, con il numero fra sei e
+/// dodici cifre: più corto è un'altra cosa.
+pub fn harvard_token(value: &str) -> Option<String> {
+    let lower = value.trim().to_ascii_lowercase();
+    for prefix in ["drs:", "ids:"] {
+        let mut from = 0;
+        while let Some(found) = lower[from..].find(prefix) {
+            let start = from + found + prefix.len();
+            let digits: String = lower[start..]
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect();
+            if (6..=12).contains(&digits.len()) {
+                return Some(format!("{}{digits}", prefix));
+            }
+            from = start.max(from + 1);
+        }
+    }
+    None
+}
+
+pub fn harvard_manifest_url(token: &str) -> String {
+    format!("https://iiif.lib.harvard.edu/manifests/{token}")
+}
+
+/// Cambridge: dall'indirizzo del visore, o da una segnatura scritta nella sua
+/// forma con i trattini (`MS-ADD-03996`). Come `resolvers/cambridge.py`.
+fn cambridge(value: &str) -> Option<Resolution> {
+    let id = cambridge_id(value)?;
+    Some(Resolution::strong(cambridge_manifest_url(&id), id))
+}
+
+pub fn cambridge_id(value: &str) -> Option<String> {
+    let text = value.trim();
+    if let Some(id) = segment_after(text, "/view/") {
+        return Some(id.to_ascii_uppercase());
+    }
+    // Una segnatura nuda vale solo se ha la forma con i trattini: almeno tre
+    // gruppi e una lettera. Senza questo, una parola qualunque diventerebbe un
+    // identificativo e manderebbe il visore su un manifesto che non esiste.
+    let candidate = text.to_ascii_uppercase();
+    let groups: Vec<&str> = candidate.split('-').collect();
+    let well_formed = groups.len() >= 3
+        && groups
+            .iter()
+            .all(|group| !group.is_empty() && group.chars().all(|c| c.is_ascii_alphanumeric()))
+        && candidate.chars().any(|c| c.is_ascii_alphabetic());
+    well_formed.then_some(candidate)
+}
+
+pub fn cambridge_manifest_url(id: &str) -> String {
+    format!("https://cudl.lib.cam.ac.uk/iiif/{id}")
+}
+
+/// Bodleian: gli oggetti sono identificati da un UUID, che sta
+/// nell'indirizzo del visore. Come `resolvers/oxford.py`.
+fn bodleian(value: &str) -> Option<Resolution> {
+    let id = bodleian_uuid(value)?;
+    Some(Resolution::strong(bodleian_manifest_url(&id), id))
+}
+
+pub fn bodleian_uuid(value: &str) -> Option<String> {
+    let text = value.trim();
+    let candidate = segment_after(text, "/objects/")
+        .or_else(|| segment_after(text, "/manifest/"))
+        .map(|segment| segment.trim_end_matches(".json").to_string())
+        .unwrap_or_else(|| text.to_string());
+    is_uuid(&candidate).then(|| candidate.to_ascii_lowercase())
+}
+
+pub fn bodleian_manifest_url(uuid: &str) -> String {
+    format!("https://iiif.bodleian.ox.ac.uk/iiif/manifest/{uuid}.json")
+}
+
+/// Otto-quattro-quattro-quattro-dodici cifre esadecimali.
+fn is_uuid(value: &str) -> bool {
+    let groups: Vec<&str> = value.split('-').collect();
+    let sizes = [8, 4, 4, 4, 12];
+    groups.len() == 5
+        && groups
+            .iter()
+            .zip(sizes)
+            .all(|(group, size)| group.len() == size && group.chars().all(|c| c.is_ascii_hexdigit()))
+}
+
+/// Heidelberg: identificativi `cpg123` e simili, o l'indirizzo del visore
+/// `diglit`. Come `resolvers/heidelberg.py`.
+fn heidelberg(value: &str) -> Option<Resolution> {
+    let id = heidelberg_id(value)?;
+    Some(Resolution::strong(heidelberg_manifest_url(&id), id))
+}
+
+pub fn heidelberg_id(value: &str) -> Option<String> {
+    let text = value.trim();
+    if let Some(id) = segment_after(text, "/diglit/iiif/").or_else(|| segment_after(text, "/diglit/"))
+    {
+        let id = id.to_ascii_lowercase();
+        return (!id.is_empty()).then_some(id);
+    }
+    let lower = text.to_ascii_lowercase();
+    for prefix in ["cpgr", "cpg", "cpl", "cpb"] {
+        if let Some(rest) = lower.strip_prefix(prefix) {
+            if rest.len() >= 2 && rest.chars().all(|c| c.is_ascii_digit()) {
+                return Some(lower.clone());
+            }
+        }
+    }
+    None
+}
+
+pub fn heidelberg_manifest_url(id: &str) -> String {
+    format!("https://digi.ub.uni-heidelberg.de/diglit/iiif/{id}/manifest.json")
+}
+
+/// Biblioteca Estense: gli oggetti stanno su Jarvis e sono identificati da un
+/// UUID, che compare nell'indirizzo del manifesto o del visore Mirador.
+/// Come `resolvers/estense.py`.
+fn estense(value: &str) -> Option<Resolution> {
+    let id = estense_uuid(value)?;
+    Some(Resolution::strong(estense_manifest_url(&id), id))
+}
+
+pub fn estense_uuid(value: &str) -> Option<String> {
+    let text = value.trim();
+    for candidate in text
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+        .chain(std::iter::once(text))
+    {
+        if is_uuid(candidate) {
+            return Some(candidate.to_ascii_lowercase());
+        }
+    }
+    None
+}
+
+pub fn estense_manifest_url(uuid: &str) -> String {
+    format!("https://jarvis.edl.beniculturali.it/meta/iiif/{uuid}/manifest")
+}
+
+/// Institut de France: identificativo numerico, indirizzo del visore o della
+/// scheda. Come `resolvers/institut.py`.
+fn institut(value: &str) -> Option<Resolution> {
+    let id = institut_id(value)?;
+    Some(Resolution::strong(institut_manifest_url(&id), id))
+}
+
+pub fn institut_id(value: &str) -> Option<String> {
+    let text = value.trim();
+    for marker in ["/viewer/", "/iiif/", "/records/item/"] {
+        if let Some(segment) = segment_after(text, marker) {
+            let digits: String = segment.chars().take_while(char::is_ascii_digit).collect();
+            if !digits.is_empty() {
+                return Some(digits);
+            }
+        }
+    }
+    let is_number = text.len() >= 3 && text.chars().all(|c| c.is_ascii_digit());
+    is_number.then(|| text.to_string())
+}
+
+pub fn institut_manifest_url(id: &str) -> String {
+    format!("https://bibnum.institutdefrance.fr/iiif/{id}/manifest")
+}
+
+/// Il pezzo di indirizzo che segue un marcatore, fino alla barra successiva.
+fn segment_after<'a>(value: &'a str, marker: &str) -> Option<&'a str> {
+    let start = value.find(marker)? + marker.len();
+    let rest = &value[start..];
+    let end = rest
+        .find(['/', '?', '#'])
+        .unwrap_or(rest.len());
+    let segment = &rest[..end];
+    (!segment.is_empty()).then_some(segment)
 }
 
 /// Un indirizzo incollato vale per qualunque biblioteca: è già il manifesto.
@@ -511,6 +702,107 @@ mod tests {
         // visore su una pagina che non esiste.
         assert!(resolve(ResolverKind::Loc, "2021667925").is_none());
         assert!(resolve(ResolverKind::Loc, "https://example.org/item/123").is_none());
+    }
+
+    #[test]
+    fn harvard_reads_the_token_wherever_it_is_written() {
+        for written in [
+            "drs:123456",
+            "https://iiif.lib.harvard.edu/manifests/drs:123456",
+            "https://iiif.lib.harvard.edu/manifests/view/drs:123456",
+        ] {
+            let resolved = resolve(ResolverKind::Harvard, written).expect("gettone riconosciuto");
+            assert_eq!(resolved.doc_id, "drs:123456", "scritto come {written}");
+            assert_eq!(
+                resolved.manifest_url,
+                "https://iiif.lib.harvard.edu/manifests/drs:123456"
+            );
+        }
+        // Il numero di catalogo non porta a un manifesto: è un'altra cosa.
+        assert!(resolve(ResolverKind::Harvard, "990123456780203941").is_none());
+        assert!(resolve(ResolverKind::Harvard, "drs:12").is_none());
+    }
+
+    #[test]
+    fn cambridge_accepts_the_viewer_address_and_a_shelfmark_with_dashes() {
+        let from_url = resolve(ResolverKind::Cambridge, "https://cudl.lib.cam.ac.uk/view/MS-ADD-03996/1")
+            .expect("indirizzo del visore");
+        assert_eq!(from_url.doc_id, "MS-ADD-03996");
+        assert_eq!(
+            from_url.manifest_url,
+            "https://cudl.lib.cam.ac.uk/iiif/MS-ADD-03996"
+        );
+
+        let from_shelfmark =
+            resolve(ResolverKind::Cambridge, "ms-add-03996").expect("segnatura con i trattini");
+        assert_eq!(from_shelfmark.doc_id, "MS-ADD-03996");
+
+        // Due parole separate da un trattino non sono una segnatura.
+        assert!(resolve(ResolverKind::Cambridge, "book-hours").is_none());
+        assert!(resolve(ResolverKind::Cambridge, "libro d'ore").is_none());
+    }
+
+    #[test]
+    fn bodleian_works_are_identified_by_uuid() {
+        let resolved = resolve(
+            ResolverKind::Bodleian,
+            "https://digital.bodleian.ox.ac.uk/objects/080f88f5-7586-4b8a-8064-63ab3495393c/",
+        )
+        .expect("indirizzo del visore");
+        assert_eq!(resolved.doc_id, "080f88f5-7586-4b8a-8064-63ab3495393c");
+        assert_eq!(
+            resolved.manifest_url,
+            "https://iiif.bodleian.ox.ac.uk/iiif/manifest/080f88f5-7586-4b8a-8064-63ab3495393c.json"
+        );
+        assert!(resolve(ResolverKind::Bodleian, "080f88f5-7586").is_none());
+    }
+
+    #[test]
+    fn heidelberg_reads_its_own_shelfmarks_and_viewer_addresses() {
+        for (written, expected) in [
+            ("cpg123", "cpg123"),
+            ("CPG123", "cpg123"),
+            ("https://digi.ub.uni-heidelberg.de/diglit/cpg848", "cpg848"),
+            (
+                "https://digi.ub.uni-heidelberg.de/diglit/iiif/cpg848/manifest.json",
+                "cpg848",
+            ),
+        ] {
+            let resolved = resolve(ResolverKind::Heidelberg, written).expect("riconosciuto");
+            assert_eq!(resolved.doc_id, expected, "scritto come {written}");
+        }
+        assert!(resolve(ResolverKind::Heidelberg, "codice palatino").is_none());
+    }
+
+    #[test]
+    fn estense_finds_the_uuid_inside_the_address() {
+        let resolved = resolve(
+            ResolverKind::Estense,
+            "https://jarvis.edl.beniculturali.it/images/viewers/mirador/?manifest=https://jarvis.edl.beniculturali.it/meta/iiif/0a1b2c3d-4e5f-6789-abcd-ef0123456789/manifest",
+        )
+        .expect("uuid dentro l'indirizzo");
+        assert_eq!(resolved.doc_id, "0a1b2c3d-4e5f-6789-abcd-ef0123456789");
+        assert_eq!(
+            resolved.manifest_url,
+            "https://jarvis.edl.beniculturali.it/meta/iiif/0a1b2c3d-4e5f-6789-abcd-ef0123456789/manifest"
+        );
+    }
+
+    #[test]
+    fn institut_accepts_the_number_and_the_addresses_that_contain_it() {
+        for written in [
+            "17837",
+            "https://bibnum.institutdefrance.fr/viewer/17837",
+            "https://bibnum.institutdefrance.fr/records/item/17837-un-manoscritto",
+        ] {
+            let resolved = resolve(ResolverKind::Institut, written).expect("riconosciuto");
+            assert_eq!(resolved.doc_id, "17837", "scritto come {written}");
+            assert_eq!(
+                resolved.manifest_url,
+                "https://bibnum.institutdefrance.fr/iiif/17837/manifest"
+            );
+        }
+        assert!(resolve(ResolverKind::Institut, "12").is_none());
     }
 
     #[test]

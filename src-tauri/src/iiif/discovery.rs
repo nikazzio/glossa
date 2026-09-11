@@ -1013,6 +1013,187 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn bodleian_takes_the_manifest_the_catalogue_declares() {
+        // È l'unica delle sei che lo dichiara: le altre lo costruiscono
+        // dall'identificativo, qui si legge e basta.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search/"))
+            .and(header("accept", "application/ld+json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "member": [
+                    {
+                        "id": "https://digital.bodleian.ox.ac.uk/objects/080f88f5-7586-4b8a-8064-63ab3495393c/",
+                        "manifest": {"id": "https://iiif.bodleian.ox.ac.uk/iiif/manifest/080f88f5-7586-4b8a-8064-63ab3495393c.json"},
+                        "displayFields": {"title": ["Book of Hours"], "people": ["Anonymous"]},
+                        "surfaceCount": 328,
+                    },
+                    {"id": "https://digital.bodleian.ox.ac.uk/objects/senza-manifesto/"},
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("bodleian").expect("provider exists"),
+            "book of hours",
+            &SearchEndpoints {
+                bodleian_search: format!("{}/search/", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(outcome.results[0].title, "Book of Hours");
+        assert_eq!(outcome.results[0].item_count, Some(328));
+    }
+
+    #[tokio::test]
+    async fn cambridge_reads_the_viewer_links_out_of_the_results_page() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<ul>
+                   <li><a href="/view/MS-ADD-03996/1">Book of Hours</a></li>
+                   <li><a href="/view/MS-ADD-03996/4">Book of Hours</a></li>
+                   <li><a href="/collections/christian-works">Una collezione</a></li>
+                   </ul>"#,
+            ))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("cambridge").expect("provider exists"),
+            "book of hours",
+            &SearchEndpoints {
+                cambridge_search: format!("{}/search", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        // Due collegamenti alla stessa opera sono una riga sola.
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(outcome.results[0].id, "MS-ADD-03996");
+        assert_eq!(
+            outcome.results[0].manifest_url,
+            "https://cudl.lib.cam.ac.uk/iiif/MS-ADD-03996"
+        );
+    }
+
+    #[tokio::test]
+    async fn harvard_finds_the_manifests_named_inside_the_records() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/items.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "items": {"mods": [
+                    {"titleInfo": {"title": "Book of Hours"},
+                     "location": {"url": "https://iiif.lib.harvard.edu/manifests/drs:123456"}},
+                    {"titleInfo": {"title": "Senza riproduzione"}},
+                ]}
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("harvard").expect("provider exists"),
+            "book of hours",
+            &SearchEndpoints {
+                harvard_search: format!("{}/items.json", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(outcome.results[0].id, "drs:123456");
+    }
+
+    #[tokio::test]
+    async fn estense_pages_start_from_zero() {
+        // Il suo catalogo conta le pagine da zero: chiedere la prima come «1»
+        // salterebbe i primi venti risultati senza dirlo.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search"))
+            .and(query_param("page", "0"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "_embedded": {"culturalItems": [
+                    {"uuid": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "title": "Bibbia di Borso"},
+                ]},
+                "page": {"totalPages": 3}
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("estense").expect("provider exists"),
+            "bibbia",
+            &SearchEndpoints {
+                estense_search: format!("{}/search", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(outcome.results[0].title, "Bibbia di Borso");
+        assert!(outcome.has_more);
+    }
+
+    #[tokio::test]
+    async fn institut_reads_the_record_numbers_out_of_its_page() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/records"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                r#"<a href="/records/item/17837-un-manoscritto">Un manoscritto</a>
+                   <a href="/records/item/17837-un-manoscritto">Un manoscritto</a>"#,
+            ))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("institut").expect("provider exists"),
+            "manoscritto",
+            &SearchEndpoints {
+                institut_search: format!("{}/records", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(
+            outcome.results[0].manifest_url,
+            "https://bibnum.institutdefrance.fr/iiif/17837/manifest"
+        );
+    }
+
+    #[tokio::test]
     async fn a_broken_search_backend_is_not_an_empty_result() {
         // Archive.org risponde 200 anche quando è il suo motore di ricerca a
         // non rispondere: letto come «nessun risultato» manderebbe a cercare

@@ -27,7 +27,13 @@ Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta cia
 - **Gallica** — l'identificativo ARK, un indirizzo di Gallica in qualunque forma, oppure parole da cercare per titolo. Se scrivi una parola che somiglia a un identificativo, Gallica cerca prima: meglio qualche risultato che un'opera inesistente.
 - **e-codices** — la segnatura composta (`bbb-0264`), l'indirizzo della pagina di lettura, oppure parole da cercare.
 - **Library of Congress** — parole di ricerca, oppure l'indirizzo di un elemento del catalogo (`loc.gov/item/...`, `loc.gov/resource/...`). Il catalogo contiene molto più di quello che Glossa sa aprire: i risultati senza una riproduzione leggibile non compaiono.
-- **le altre biblioteche in elenco** — soltanto l'indirizzo completo del manifesto IIIF. Lo dichiarano nell'esempio del campo di ricerca, invece di promettere una ricerca che non hanno.
+- **Harvard Library** — parole di ricerca, oppure il gettone dell'oggetto (`drs:123456`, `ids:123456`), che compare anche dentro gli indirizzi del suo visore. Il numero del catalogo generale non vale: non porta a una riproduzione.
+- **Cambridge University Digital Library** — parole di ricerca, l'indirizzo del visore, oppure la segnatura nella forma con i trattini (`MS-ADD-03996`).
+- **Digital Bodleian** — parole di ricerca oppure l'indirizzo dell'oggetto. È l'unica che dichiara da sé l'indirizzo del manifesto di ogni risultato, invece di farlo ricavare dall'identificativo.
+- **Heidelberg** — parole di ricerca, la segnatura (`cpg848`) o l'indirizzo del visore.
+- **Biblioteca Estense** — parole di ricerca oppure l'identificativo dell'opera, anche preso da un indirizzo del visore Mirador.
+- **Institut de France** — parole di ricerca, il numero della scheda (`17837`) o un suo indirizzo.
+- **Indirizzo IIIF diretto** — l'indirizzo completo di un manifesto, di qualunque istituzione, anche non in elenco.
 
 I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
 
@@ -190,7 +196,7 @@ La misura delle pagine è un tetto, non un obbligo: le pagine già più piccole 
 ## Limiti attuali
 
 - **PDF** — una digitalizzazione in PDF compare fra le copie, con il suo nome e il collegamento alla biblioteca, ma non si scarica e non si legge dentro Glossa. Il comando di scaricamento non viene offerto per quelle copie, invece di lasciarlo fallire. Importare il testo di un PDF in un progetto di traduzione è un'altra cosa, e funziona già.
-- **Ricerca** — cinque biblioteche hanno una ricerca vera (Internet Archive, Vaticana, Gallica, e-codices, Library of Congress); le altre accettano solo l'indirizzo completo del manifesto e lo dichiarano. Non esiste ancora una ricerca su più biblioteche insieme.
+- **Ricerca** — tutte le biblioteche in elenco hanno una ricerca propria, ma con capacità diverse: alcune trovano per parole, altre soprattutto per segnatura o identificativo, e quello che accettano è scritto nell'esempio del campo. Non esiste ancora una ricerca su più biblioteche insieme.
 - **Singola pagina** — salvare la pagina aperta è possibile; scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una dalle miniature sono lavori ancora da completare.
 - **Divieti di scaricamento** dichiarati dalle istituzioni non sono ancora applicati automaticamente.
 
