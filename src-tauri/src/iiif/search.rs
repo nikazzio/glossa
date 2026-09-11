@@ -697,15 +697,9 @@ async fn cambridge(
         if id.is_empty() || !seen.insert(id.clone()) {
             continue;
         }
-        let title = strip_tags(between(chunk, ">", '<').unwrap_or_default().as_str());
-        let title = if title.trim().is_empty() {
-            id.clone()
-        } else {
-            title.trim().to_string()
-        };
         results.push(result_from(
             id.clone(),
-            title,
+            link_text(chunk).unwrap_or_else(|| id.clone()),
             resolvers::cambridge_manifest_url(&id),
         ));
         if results.len() >= PAGE_SIZE as usize {
@@ -755,14 +749,27 @@ async fn bodleian(
             continue;
         };
         let fields = member.get("displayFields");
-        let title = fields
-            .and_then(|fields| loc_first_string(fields.get("title")))
-            .or_else(|| loc_first_string(member.get("shelfmark")))
+        // I campi arrivano con le parole cercate marcate (`<em>`): sono
+        // evidenziazioni della ricerca, non parte del titolo.
+        let field = |name: &str| {
+            fields
+                .and_then(|fields| loc_first_string(fields.get(name)))
+                .map(|value| strip_tags(&value))
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+        };
+        let shelfmark = loc_first_string(member.get("shelfmark")).map(|value| strip_tags(&value));
+        let title = field("title")
+            .or_else(|| shelfmark.clone())
             .unwrap_or_else(|| id.clone());
         let mut result = result_from(id, title, manifest_url.to_string());
-        result.creator = fields.and_then(|fields| loc_first_string(fields.get("people")));
-        result.date = fields.and_then(|fields| loc_first_string(fields.get("dateStatement")));
-        result.description = fields.and_then(|fields| loc_first_string(fields.get("snippet")));
+        result.creator = field("people");
+        result.date = field("dateStatement");
+        result.description = field("snippet");
+        // La segnatura è quello che distingue due copie della stessa opera:
+        // di «Divine comedy» la Bodleian ne ha una manciata.
+        result.holding_institution = shelfmark;
+        result.language = field("languages");
         result.item_count = member
             .get("surfaceCount")
             .and_then(serde_json::Value::as_u64)
@@ -878,15 +885,9 @@ async fn institut(
         if id.is_empty() || !seen.insert(id.clone()) {
             continue;
         }
-        let title = strip_tags(between(chunk, ">", '<').unwrap_or_default().as_str());
-        let title = if title.trim().is_empty() {
-            id.clone()
-        } else {
-            title.trim().to_string()
-        };
         results.push(result_from(
             id.clone(),
-            title,
+            link_text(chunk).unwrap_or_else(|| id.clone()),
             resolvers::institut_manifest_url(&id),
         ));
         if results.len() >= PAGE_SIZE as usize {
@@ -1156,6 +1157,42 @@ fn local_name(raw: &[u8]) -> String {
 }
 
 /// Il testo fra un segno di apertura e il primo carattere di chiusura.
+/// Il testo scritto dentro un collegamento, saltando quello che sta dentro
+/// altri tag (un'icona, una miniatura) e fermandosi alla prima frase vera.
+///
+/// Serve alle biblioteche la cui pagina di risultati elenca i libri come
+/// collegamenti: il titolo è lì, e senza leggerlo la riga mostrerebbe il numero
+/// della scheda al posto del nome dell'opera.
+fn link_text(chunk: &str) -> Option<String> {
+    let mut rest = chunk;
+    for _ in 0..6 {
+        let start = rest.find('>')? + 1;
+        rest = &rest[start..];
+        let end = rest.find('<').unwrap_or(rest.len());
+        let text = unescape(rest[..end].trim());
+        if !text.is_empty() {
+            return Some(text);
+        }
+        rest = &rest[end..];
+    }
+    None
+}
+
+/// Le entità più comuni nei titoli: senza, un'apostrofo diventa `&#39;`.
+fn unescape(value: &str) -> String {
+    value
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn between(haystack: &str, after: &str, until: char) -> Option<String> {
     let start = haystack.find(after)? + after.len();
     let rest = &haystack[start..];

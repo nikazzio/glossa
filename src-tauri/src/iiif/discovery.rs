@@ -386,8 +386,12 @@ async fn enrich_from_manifest(
 ) -> DiscoveryResult {
     // Si va a leggere il manifesto solo se manca qualcosa che lui può dare.
     // Una copertina assente è il caso più visibile: senza, la riga del
-    // catalogo resta con il segnaposto anche dopo aver aggiunto l'opera.
-    if result.creator.is_some() && result.thumbnail_url.is_some() {
+    // catalogo resta con il segnaposto anche dopo aver aggiunto l'opera. Un
+    // titolo uguale all'identificativo è l'altro: vuol dire che la pagina dei
+    // risultati non lo dichiarava, e mostrare un numero al posto del nome
+    // dell'opera rende l'elenco illeggibile.
+    let titled = result.title != result.id;
+    if result.creator.is_some() && result.thumbnail_url.is_some() && titled {
         return result;
     }
     let preview = match resolve_manifest(client, result.manifest_url.clone(), gate).await {
@@ -402,6 +406,7 @@ async fn enrich_from_manifest(
         }
     };
     DiscoveryResult {
+        title: if titled { result.title } else { preview.title },
         creator: result.creator.or(preview.creator),
         thumbnail_url: result.thumbnail_url.or(preview.thumbnail_url),
         date: result.date.or(preview.date),
