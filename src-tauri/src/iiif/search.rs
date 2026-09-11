@@ -26,7 +26,6 @@ pub struct SearchEndpoints {
     pub ecodices_search: String,
     pub loc_search: String,
     pub harvard_search: String,
-    pub cambridge_search: String,
     pub bodleian_search: String,
     pub estense_search: String,
     pub institut_search: String,
@@ -49,7 +48,6 @@ impl Default for SearchEndpoints {
             ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
             loc_search: "https://www.loc.gov/search/".to_string(),
             harvard_search: "https://api.lib.harvard.edu/v2/items.json".to_string(),
-            cambridge_search: "https://cudl.lib.cam.ac.uk/search".to_string(),
             bodleian_search: "https://digital.bodleian.ox.ac.uk/search/".to_string(),
             estense_search:
                 "https://jarvis.edl.beniculturali.it/meta/culturalItems/search/findBySgttOrAutnOrPressmark"
@@ -85,7 +83,6 @@ pub async fn run(
         SearchHandlerKind::Ecodices => ecodices(client, endpoints, query, gate).await,
         SearchHandlerKind::Loc => loc(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Harvard => harvard(client, endpoints, query, page, gate).await,
-        SearchHandlerKind::Cambridge => cambridge(client, endpoints, query, gate).await,
         SearchHandlerKind::Bodleian => bodleian(client, endpoints, query, gate).await,
         SearchHandlerKind::Estense => estense(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Institut => institut(client, endpoints, query, gate).await,
@@ -648,65 +645,6 @@ async fn harvard(
         }
     }
     log::info!("discovery harvard search found={}", results.len());
-    Ok(SearchPage {
-        has_more: false,
-        results,
-    })
-}
-
-/// Cambridge: la pagina di ricerca elenca i libri con un collegamento al
-/// visore (`/view/<id>`), da cui il manifesto si costruisce.
-async fn cambridge(
-    client: &Client,
-    endpoints: &SearchEndpoints,
-    query: &str,
-    gate: Option<&Gate<'_>>,
-) -> Result<SearchPage, String> {
-    // Una segnatura scritta per esteso è già l'opera: chiederla al motore di
-    // ricerca costerebbe una richiesta per sapere quello che sappiamo già.
-    if let Some(direct) = resolvers::resolve(super::ResolverKind::Cambridge, query) {
-        return Ok(SearchPage {
-            has_more: false,
-            results: vec![result_from(
-                direct.doc_id.clone(),
-                direct.doc_id,
-                direct.manifest_url,
-            )],
-        });
-    }
-
-    let body = fetch_text(
-        client,
-        &endpoints.cambridge_search,
-        &[("keyword", query)],
-        None,
-        "Cambridge University Digital Library",
-        gate,
-    )
-    .await?;
-
-    let mut seen = std::collections::BTreeSet::new();
-    let mut results = Vec::new();
-    for chunk in body.split("/view/").skip(1) {
-        let id = chunk
-            .split(['"', '\'', '?', '#', '/'])
-            .next()
-            .unwrap_or_default()
-            .trim()
-            .to_ascii_uppercase();
-        if id.is_empty() || !seen.insert(id.clone()) {
-            continue;
-        }
-        results.push(result_from(
-            id.clone(),
-            link_text(chunk).unwrap_or_else(|| id.clone()),
-            resolvers::cambridge_manifest_url(&id),
-        ));
-        if results.len() >= PAGE_SIZE as usize {
-            break;
-        }
-    }
-    log::info!("discovery cambridge search found={}", results.len());
     Ok(SearchPage {
         has_more: false,
         results,

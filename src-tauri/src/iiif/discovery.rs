@@ -1069,44 +1069,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn cambridge_reads_the_viewer_links_out_of_the_results_page() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/search"))
-            .respond_with(ResponseTemplate::new(200).set_body_string(
-                r#"<ul>
-                   <li><a href="/view/MS-ADD-03996/1">Book of Hours</a></li>
-                   <li><a href="/view/MS-ADD-03996/4">Book of Hours</a></li>
-                   <li><a href="/collections/christian-works">Una collezione</a></li>
-                   </ul>"#,
-            ))
-            .mount(&server)
-            .await;
-
-        let outcome = discover_with(
-            &Client::new(),
-            find_provider("cambridge").expect("provider exists"),
-            "book of hours",
-            &SearchEndpoints {
-                cambridge_search: format!("{}/search", server.uri()),
-                ..SearchEndpoints::default()
-            },
-            1,
-            None,
-        )
-        .await
-        .expect("search resolves");
-
-        // Due collegamenti alla stessa opera sono una riga sola.
-        assert_eq!(outcome.results.len(), 1);
-        assert_eq!(outcome.results[0].id, "MS-ADD-03996");
-        assert_eq!(
-            outcome.results[0].manifest_url,
-            "https://cudl.lib.cam.ac.uk/iiif/MS-ADD-03996"
-        );
-    }
-
-    #[tokio::test]
     async fn harvard_finds_the_manifests_named_inside_the_records() {
         let server = MockServer::start().await;
         Mock::given(method("GET"))

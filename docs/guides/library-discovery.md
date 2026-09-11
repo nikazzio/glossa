@@ -28,7 +28,7 @@ Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta cia
 - **e-codices** — la segnatura composta (`bbb-0264`), l'indirizzo della pagina di lettura, oppure parole da cercare.
 - **Library of Congress** — parole di ricerca, oppure l'indirizzo di un elemento del catalogo (`loc.gov/item/...`, `loc.gov/resource/...`). Il catalogo contiene molto più di quello che Glossa sa aprire: i risultati senza una riproduzione leggibile non compaiono.
 - **Harvard Library** — parole di ricerca, oppure il gettone dell'oggetto (`drs:123456`, `ids:123456`), che compare anche dentro gli indirizzi del suo visore. Il numero del catalogo generale non vale: non porta a una riproduzione.
-- **Cambridge University Digital Library** — parole di ricerca, l'indirizzo del visore, oppure la segnatura nella forma con i trattini (`MS-ADD-03996`).
+- **Cambridge University Digital Library** — l'indirizzo del visore oppure la segnatura nella forma con i trattini (`MS-ADD-03996`). Non cerca per parole: il suo sito blocca le richieste automatiche dopo poche ricerche.
 - **Digital Bodleian** — parole di ricerca oppure l'indirizzo dell'oggetto. È l'unica che dichiara da sé l'indirizzo del manifesto di ogni risultato, invece di farlo ricavare dall'identificativo.
 - **Heidelberg** — la segnatura (`cpg848`) o l'indirizzo del visore. Non cerca per parole: la sua ricerca per il pubblico non è interrogabile da un programma.
 - **Biblioteca Estense** — parole di ricerca oppure l'identificativo dell'opera, anche preso da un indirizzo del visore Mirador.

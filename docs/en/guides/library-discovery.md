@@ -28,7 +28,7 @@ Libraries do not have the same capabilities, and Glossa states what each one acc
 - **e-codices** — the compound shelfmark (`bbb-0264`), the address of the reading page, or words to search.
 - **Library of Congress** — keywords, or the address of a catalogue item (`loc.gov/item/...`, `loc.gov/resource/...`). The catalogue holds far more than Glossa can open: results without a readable reproduction are not listed.
 - **Harvard Library** — keywords, or the object token (`drs:123456`, `ids:123456`), which also appears inside its viewer addresses. The general catalogue number does not work: it does not lead to a reproduction.
-- **Cambridge University Digital Library** — keywords, the viewer address, or the shelfmark in its dashed form (`MS-ADD-03996`).
+- **Cambridge University Digital Library** — the viewer address or the shelfmark in its dashed form (`MS-ADD-03996`). No keyword search: its site blocks automated requests after a few queries.
 - **Digital Bodleian** — keywords or the object address. It is the only one that declares the manifest address of each result itself, instead of having it derived from the identifier.
 - **Heidelberg** — the shelfmark (`cpg848`) or the viewer address. No keyword search: its public search cannot be queried by a program.
 - **Biblioteca Estense** — keywords or the work identifier, including one taken from a Mirador viewer address.

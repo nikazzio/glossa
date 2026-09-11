@@ -56,7 +56,9 @@ describe('SourceDiscoveryPanel', () => {
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('dashboard.discovery.searchFailed');
+    // Il motivo arriva dal motore: una biblioteca che rifiuta una richiesta
+    // automatica e una spenta non sono lo stesso guasto.
+    expect(await screen.findByRole('alert')).toHaveTextContent('offline');
     expect(screen.queryByText('dashboard.discovery.notFound')).not.toBeInTheDocument();
   });
 

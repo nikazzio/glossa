@@ -1,12 +1,20 @@
 # Ricerca federata e Dashboard operativa
 
-Proposta di implementazione · 11 settembre 2026.
+Piano unico di implementazione · aggiornato il 12 settembre 2026.
 
-Questo documento è un piano, non descrive funzionalità già implementate.
-Preparato sul branch `feat/library-providers-verify`, base `4c1919c`, mentre
-sono in corso modifiche locali ai provider e alla ricerca singola. Prima di
-implementare, rileggere quelle parti: firme e capacità possono essere cambiate.
-Il piano non richiede di interrompere o riscrivere il lavoro sui provider.
+Questo documento descrive funzionalità da implementare. Integra le decisioni
+sui job per provider, il monitor delle ricerche, i risultati progressivi e la
+Dashboard. Non occorrono documenti integrativi.
+
+La base esaminata era `feat/library-providers-verify`, commit `4c1919c`,
+con modifiche locali in corso alla ricerca singola. Prima di implementare,
+rileggere i contratti attuali: il lavoro sui provider prosegue indipendentemente.
+Non sovrascrivere parser, capacità o firme aggiornate usando questo snapshot.
+
+Decisioni vincolanti: ogni invio crea una ricerca persistita e un job per
+provider selezionato; più ricerche possono restare attive; i risultati arrivano
+progressivamente; avviare B non cancella A; si può controllare e rilanciare un
+solo provider. Riutilizzare la coda lavori e le primitive UI esistenti.
 
 ## 1. Risultato di prodotto
 
@@ -63,34 +71,79 @@ federazione completa pronta da copiare. La UI resta quella di Glossa.
 Durante il lavoro sui singoli adapter, consultare i relativi moduli e fixture
 di Scriptoria, verificando separatamente le capacità reali delle biblioteche.
 
-## 3. Ricerca: composizione della schermata
+## 3. Modello della ricerca e superfici UI
 
-Wireframe concettuale, non una prescrizione di pixel. Le parole fra parentesi
-quadre spiegano icone con tooltip, non pulsanti testuali da introdurre.
+### Ricerca, esecuzione e risultato
+
+| Livello | Esempio | Responsabilità |
+| --- | --- | --- |
+| Ricerca | «Erbario · manoscritti · 1500–1600» | Snapshot immutabile dei criteri, provider, riepilogo e risultati |
+| Esecuzione provider | «Gallica nella ricerca Erbario» | Job indipendente, avanzamento, errori, pagine e comandi |
+| Risultato | Scheda di un manoscritto | Provenienza dalla ricerca e dal provider, azioni bibliografiche |
+
+Una ricerca è un contenitore persistito e osservabile, non un job padre che
+occupa un worker in attesa dei figli. Ogni provider ha il suo job nel sistema
+esistente. Non usare `dependsOnJobId` per rappresentare appartenenza: indica
+una dipendenza di esecuzione e renderebbe seriale ciò che deve essere concorrente.
+
+Tutti i job vengono accodati subito; il motore li avvia entro i limiti globali
+e di cortesia delle biblioteche. Asincrono non significa senza limiti.
+
+### Pagina ricerca: risultati al centro, monitor a destra
+
+La colonna destra usa due schede: **Criteri** e **Esecuzione**. Prima dell'invio
+si vede Criteri; dopo l'invio Esecuzione mostra i provider. La scheda attiva
+ha etichetta visibile, secondo il design system. L'utente può tornare ai criteri
+senza cambiare lo snapshot della ricerca in corso: modificare e inviare crea
+una nuova ricerca, non riconfigura job già avviati.
 
 ```text
-Biblioteca                           [Catalogo] [Cerca nelle biblioteche]
-Cerca nelle biblioteche                          [Ricerche salvate]
-
-Parole chiave [________________________________] [Cerca / Ferma]
-6 biblioteche selezionate · 2 criteri             [Mostra criteri]
+Cerca nelle biblioteche                   [Elenco ricerche] [Nuova]
+Erbario · manoscritti · 1500–1600
+In corso · 3/5 provider terminati · 48 risultati ricevuti
 ──────────────────────────────────────────────────────────────────
-Risultati                               │ Criteri
-42 ricevuti · 4/6 biblioteche risposte    │ Titolo     [___________]
-2 ancora in ricerca                     │ Autore     [___________]
-                                        │ Editore    [___________]
-[copertina] Titolo dell'opera            │ Natura     [Tutte    v]
-Autore · data · biblioteca               │ Anno da [____] a [____]
-Manoscritto · 120 pagine   [Dettagli][+]  │ Lingua     [Tutte    v]
-──────────────────────────────────────  │
-[copertina] Seconda opera                │ Biblioteche
-...                                     │ [x] Gallica
-                                        │ [x] Vaticana
-[Carica altri risultati]                 │ [ ] Internet Archive
-                                        │ Copertura dei criteri
-──────────────────────────────────────────────────────────────────
-Barra di stato e pannello lavori esistenti
+Risultati                                 │ Esecuzione
+32 verificati · 16 non verificabili        │ Gallica       In corso
+[Biblioteca: tutte v] [Ordine v]           │ 22 record · pagina 2
+                                          │              [Pausa][Ferma]
+[copertina] Titolo                         │ Vaticana      Completata
+Autore · anno · biblioteca                 │ 18 record     [Ripeti]
+Gallica · questa ricerca                   │ Archive       Fallita
+[Dettaglio] [Aggiungi]                     │ 8 parziali    [Riprova]
+                                          │ e-codices     In attesa
+...                                       │ ...
+──────────────────────────────────────────│ Statistiche
+8 nuovi risultati disponibili [Mostra]     │ Ricevuti 48 · distinti 45
+                                          │ Visibili 32 · esclusi 13
 ```
+
+Parole tra parentesi quadre: descrizioni dei controlli, non pulsanti testuali
+da introdurre. Riutilizzare `IconButton`, `TabStrip`/`InspectorShell`,
+`StatRow`, `StatBlock`, `Select`, `Menu` e pannelli esistenti.
+Su finestra stretta il monitor si apre nello stesso dialog dei criteri,
+con le stesse schede; riepilogo compatto sempre visibile sopra i risultati.
+
+### Elenco ricerche: tutte quelle lanciate
+
+Destinazione interna alla ricerca, raggiungibile da un comando con conteggio
+di ricerche attive. Elenco a righe: titolo/query, orario, stato, provider
+terminati/selezionati, risultati distinti, errori e comando per aprire.
+Filtri: Tutte, In corso, Con errori, Terminate; ordinamento per avvio recente.
+
+L'espansione di una riga mostra i job provider con gli stessi controlli della
+pagina risultati. Riusare una sola componente per queste righe. Da qualunque
+ricerca si torna all'elenco senza interrompere nulla. La selezione della
+ricerca visualizzata è distinta dalle ricerche attive nel motore.
+
+### Pannello lavori e Dashboard
+
+Nel pannello lavori esistente aggiungere il filtro per tipo Ricerca e
+raggruppare i job per ricerca; una riga provider apre la ricerca e il relativo
+filtro risultati. L'indicatore globale resta unico.
+
+La Dashboard mostra «Ricerche: 2 in corso, 1 con errori» e poche ricerche
+recenti, con accesso al monitor. Non incorpora l'intero elenco dei risultati.
+Non duplicare logiche di stato o retry fra Dashboard, monitor e pannello lavori.
 
 ### Layout e interazioni
 
@@ -98,7 +151,8 @@ Barra di stato e pannello lavori esistenti
 - Risultati in elenco come vista iniziale: confronto di autore, data e origine
   prima delle copertine. Nessun mosaico come requisito della prima versione.
 - Colonna destra ridimensionabile e richiudibile, sul modello dei filtri del
-  catalogo. Campi e selezione provider nello stesso pannello, in sezioni.
+  catalogo, con schede Criteri ed Esecuzione. Campi e selezione provider sono
+  sezioni della scheda Criteri.
 - Su finestra stretta: pannello criteri in `Dialog`, con gli stessi campi e
   la stessa bozza. Una sola istanza accessibile; non duplicare form nascosti.
 - Breakpoint proposto sullo spazio disponibile della vista: sotto circa 900 px
@@ -206,97 +260,38 @@ remoti restano per provider, con `exact/estimate/unknown`; non sommarli come
 opere uniche. Una pagina remota interamente esclusa dai filtri non è la fine:
 rispettare `hasMore` e mostrare «Nessuna corrispondenza in questa pagina».
 
-## 5. Federazione: architettura proposta
+## 5. Risultati intelligibili mentre arrivano
 
-```text
-Form + selezione provider
-          │ snapshot validato
-          ▼
-Servizio ricerca federata Rust
-  ├─ pianifica copertura filtri
-  ├─ limita concorrenza globale
-  └─ adapter singoli + cortesia/cache già esistenti
-          │ pagine parziali + errori indipendenti
-          ▼
-Sessione di ricerca → elenco, stato provider, dettaglio
-          │ comando esplicito
-          ▼
-Aggiunta al catalogo/workspace esistente
-```
+Riutilizzare la scheda attuale: copertina, titolo, autore, data, metadati,
+dettaglio, aggiunta al catalogo/workspace. Aggiungere:
 
-Nuovo coordinatore sottile in Rust. Estrarre dal comando Tauri singolo il
-servizio richiamabile senza invocare comandi IPC dall'interno del backend.
-La rete resta nel backend, i parser restano negli adapter. Non inviare HTTP
-direttamente dal browser e non introdurre un secondo client non regolato.
+- biblioteca di origine sempre leggibile;
+- stato «Già in Biblioteca», indipendente dalla ricerca che l'ha trovata;
+- indicazione di criteri non verificabili quando pertinente;
+- provenienza completa nel dettaglio: ricerca, provider, esecuzione, orario
+  di ricezione, eventuale cache. Non mostrare UUID o dettagli tecnici nella riga;
+- se il risultato è presentato fuori dalla sua ricerca, titolo della ricerca
+  e comando per aprirla. Dentro la pagina il titolo nell'intestazione evita
+  di ripetere la stessa informazione su cinquanta righe.
 
-La ricerca è interattiva ed effimera: non creare un job persistente per ogni
-query. Il servizio vive a livello app durante la sessione; cambiare schermata
-non annulla, Ferma sì. Chiudere l'app termina la ricerca; risultati non promessi
-al riavvio. Download e acquisizioni continuano a usare la coda persistente.
+### Regola di stabilità visiva
 
-### Contratti orientativi, da allineare al lavoro provider
+1. La prima pagina ricevuta compare subito, senza aspettare gli altri provider.
+2. Gli arrivi successivi aggiornano subito contatori e monitor.
+3. In ordine d'arrivo, appendere in fondo senza cambiare le righe precedenti,
+   la posizione di scorrimento o l'espansione selezionata.
+4. Se l'utente sta leggendo una parte lontana dalla fine, mostrare «N nuovi
+   risultati» con comando per raggiungere il primo nuovo elemento. Non scorrere da soli.
+5. Con ordinamento titolo/data, congelare l'ordine visibile: i nuovi record
+   entrano in un gruppo «Nuovi risultati». Il comando Aggiorna ordinamento
+   li integra conservando come ancora l'id della riga in lettura.
+6. Nessun ordinamento globale per rilevanza ricavato da punteggi non confrontabili.
+7. Selezione e focus basati su identità stabile, non sull'indice nell'elenco.
 
-```ts
-type SearchCriteria = {
-  query?: string;
-  title?: string;
-  author?: string;
-  publisher?: string;
-  material?: 'manuscript' | 'printed' | 'other';
-  yearFrom?: number;
-  yearTo?: number;
-  language?: string;
-};
-type SearchRequest = {
-  requestId: string; // creato dal chiamante, prima della sottoscrizione
-  providerKeys: string[];
-  criteria: SearchCriteria;
-  strictRemoteFilters: boolean;
-  fresh: boolean;
-};
-type ProviderSearchState = {
-  providerKey: string;
-  state: 'queued' | 'searching' | 'ready' | 'empty' |
-         'failed' | 'cancelled' | 'unsupported';
-  hasMore: boolean;
-  nextCursor?: string; // opaco; può rappresentare una pagina numerica
-  received: number;
-  cachedAt?: number;
-  error?: { code: string; message: string; retryable: boolean };
-};
-type SearchEvent = {
-  requestId: string;
-  providerKey: string;
-  attempt: number;
-  sequence: number;
-  kind: 'page' | 'status' | 'error';
-  // payload discriminato e validato nella versione implementativa
-};
-```
-
-Comandi proposti: `plan_federated_search`, `start_federated_search`,
-`load_more_search_results`, `retry_search_provider`, `cancel_federated_search`,
-`get_search_snapshot`. Riutilizzare nomi/contratti già introdotti nel frattempo.
-Il piano deve verificare di nuovo le capacità all'avvio; una versione del
-registro impedisce di eseguire uno snapshot pianificato su capacità superate.
-
-Sottoscrivere prima di start; snapshot con numero sequenza per recuperare eventi
-persi o rimontaggi. Ignorare requestId vecchi, tentativi superati e sequenze già
-viste. La cancellazione raggiunge richieste HTTP, attese e coda; nessun evento
-tardivo riporta una richiesta cancellata a searching. Se resta in corso una
-pagina di un provider, non programmarne un'altra per la stessa sessione.
-
-Budget iniziali proposti: massimo 3 provider attivi, una pagina per provider
-per giro, al massimo 20 risultati per pagina se supportato. Gli adapter possono
-avere pagine fisse: non scartare record per forzare 20 e poi saltare il resto.
-Riutilizzare timeout e attese di cortesia; una fonte lenta non blocca le altre.
-Non aumentare i limiti già misurati per soddisfare questi valori proposti.
-
-Ogni pressione di «Carica altri» programma un giro dei provider con hasMore;
-nessuna scansione automatica dell'intero catalogo. Per filtri locali selettivi,
-dire che altre pagine potrebbero contenere corrispondenze. Budget sessione
-proposto 1000 record ricevuti; al limite chiedere di affinare, senza troncare
-silenziosamente una pagina. Virtualizzazione sopra una soglia misurata.
+Filtro rapido per biblioteca sopra i risultati: filtra quanto già ricevuto,
+non ferma i job. Distinguere questo comando dalla scelta dei provider nel form.
+Gli errori sono righe nel monitor; non sostituiscono l'intera lista e non
+generano una raffica di toast. Aggiornamenti accessibili raggruppati per pagina.
 
 ### Cache e identità
 
@@ -312,16 +307,196 @@ Duplicati certi nella stessa pagina o fra pagine non vengono ripetuti; mantenere
 origini multiple se si raggruppa lo stesso manifesto. Non normalizzare URL
 eliminando parametri che potrebbero distinguere una copia o una risorsa.
 
-### Ordinamento progressivo
+## 6. Job, stati e monitoraggio
 
-Prima versione: ordine stabile d'arrivo delle pagine, ordine remoto all'interno
-di ogni pagina. Etichetta «Ordine di arrivo», nessuna falsa rilevanza globale.
-Appendere senza spostare righe già lette; provider veloci non possono caricare
-altre pagine da soli. Ordinamento alternativo titolo/data/biblioteca disponibile
-a ricerca ferma o giro terminato, sui soli risultati caricati. Record con data
-ignota in fondo. Ranking aggregato e raggruppamenti bibliografici sono successivi.
+### Stati: esecuzione e copertura sono due cose diverse
 
-## 6. Dashboard: centro di lavoro
+Riusare gli stati già presenti: queued, running, pausing, paused, cancelling,
+cancelled, completed, error. Attesa di cortesia/retry è una ragione dello stato
+esistente, con orario del prossimo tentativo quando noto; non un errore definitivo.
+
+| Stato mostrato della ricerca | Regola aggregata |
+| --- | --- |
+| In corso | Almeno un job sta eseguendo o completando pausa/annullamento |
+| In attesa | Nessuno esegue, ma esistono job accodati o in attesa di retry |
+| In pausa | Nessuno esegue/attende automaticamente e almeno uno è in pausa |
+| Completata | Tutte le esecuzioni correnti dei provider sono completed |
+| Con errori | Tutte ferme e almeno una error; indicare i risultati parziali disponibili |
+| Interrotta | Nessun job attivo, almeno uno cancelled e nessuno error |
+
+Durante l'attività un contatore «1 errore» resta visibile accanto a In corso:
+la precedenza dello stato non nasconde i guasti. Zero risultati è un successo
+vuoto se il provider ha risposto correttamente, non un fallimento.
+
+Una ricerca completata significa che è finito il lavoro richiesto, non che è
+stato esaminato l'intero catalogo. Mostrare anche una copertura distinta:
+esaurita, altre pagine disponibili, limite raggiunto, interrotta o sconosciuta.
+Se un provider restituisce 20 risultati con hasMore, può aver completato il
+budget richiesto e avere ancora pagine da cercare.
+
+### Statistiche della ricerca
+
+Riepilogo compatto sempre visibile; dettaglio nel monitor.
+
+| Misura | Definizione |
+| --- | --- |
+| Provider | Selezionati, accodati, attivi, riusciti, falliti, interrotti |
+| Ricevuti | Record delle pagine uniche acquisite nelle esecuzioni correnti |
+| Distinti | Ricevuti dopo deduplicazione per identità certa |
+| Corrispondenze | Distinti verificati rispetto ai criteri |
+| Non verificabili | Distinti con metadati insufficienti, mostrabili separatamente |
+| Esclusi | Distinti che non soddisfano almeno un criterio |
+| Tempo trascorso | Avvio ricerca → adesso/fine, non somma delle durate concorrenti |
+| Primo risultato | Avvio → primo record ricevuto |
+| Per provider | Pagine lette, record, tempo, retry, stato cache e copertura |
+
+Invariante: distinti = corrispondenze + non verificabili + esclusi, con
+classificazione esclusiva. Filtri puramente visivi hanno un conteggio a parte.
+Retry automatici che rigiocano una pagina non gonfiano i record ricevuti.
+Statistiche delle esecuzioni precedenti sono consultabili nello storico,
+non sommate ai risultati correnti della ricerca.
+
+Non mostrare percentuali o tempo residuo dell'intero catalogo senza un totale
+affidabile. «3 provider terminati su 5» è progresso di esecuzione, non «60%
+delle opere trovate». Totali dichiarati dalle biblioteche rimangono separati
+e marcati stimati/esatti/sconosciuti.
+
+### Controlli per un solo provider
+
+| Comando | Semantica |
+| --- | --- |
+| Pausa | Sospende cooperativamente il job; conserva pagine e checkpoint |
+| Riprendi | Continua l'esecuzione in pausa dal checkpoint valido |
+| Annulla | Arresta questo job; conserva risultati parziali, non tocca gli altri |
+| Riprova | Per un errore: nuova esecuzione collegata, riprende la pagina non completata se il cursore è riutilizzabile |
+| Ripeti da capo | Per errore, successo o annullamento: nuova esecuzione dalla prima pagina, stessi criteri |
+| Carica altri | Per successo con hasMore: nuova esecuzione di continuazione, dal cursore successivo |
+
+Il retry automatico di trasporto resta interno allo stesso job, con contatore
+e attesa gestiti dal motore. Il rilancio manuale crea un nuovo job/esecuzione
+per conservare storia e identità, invece di riscrivere il vecchio esito.
+L'API generica attuale può riaccodare lo stesso id: per la ricerca non usare
+quel comportamento senza uno storico separato verificabile.
+
+Vincolo: una sola esecuzione non terminale per coppia ricerca/provider.
+Comandi idempotenti, protetti nel backend: doppio clic non crea due lavori.
+Ripeti su job attivo richiede prima di fermarlo; non sovrapporre generazioni.
+
+Ripeti da capo non cambia criteri: per cambiarli creare una nuova ricerca.
+Può offrire «Aggiorna dal catalogo» per bypassare la cache, chiarendo la scelta.
+Il vecchio insieme di risultati resta visibile come precedente durante il
+rilancio; il nuovo flusso lo sostituisce a livello di intera esecuzione, senza
+mescolare vecchie e nuove pagine. Se fallisce, conservare entrambi gli insiemi
+distinti e scegliere esplicitamente quale visualizzare. Lo stato deve dire
+che il nuovo tentativo è fallito anche se si stanno leggendo i risultati vecchi.
+
+Riprendi e Carica altri possono invece ereditare pagine già acquisite nello
+stesso insieme logico: riferimenti alle pagine, non copie dei record. Un cursore
+scaduto richiede Ripeti da capo, senza unione silenziosa di cataloghi cambiati.
+
+Comandi globali: Pausa attive, Riprendi in pausa, Annulla attive, Riprova fallite.
+Mostrare quanti job saranno interessati. Riprova fallite non rilancia successi
+o provider annullati volontariamente. Consentire retry automatico disattivabile
+per esecuzione con limiti validati, mantenendo comunque la cortesia di rete.
+
+### Paginazione e durata del lavoro
+
+Prima versione: un job provider acquisisce una pagina remota e termina. I job
+partono insieme e pubblicano ciascuno la sua pagina appena pronta. Carica altri
+crea una continuazione solo per i provider richiesti con hasMore.
+Questo mantiene un limite esplicito senza trasformare una ricerca in crawler.
+
+Estensione prevista: budget di più pagine per job, con checkpoint/pubblicazione
+dopo ogni pagina. «Successo» riguarda il budget richiesto. Non cambiare questo
+budget mentre il job gira. La UI deve mostrare quante pagine sono state richieste.
+Un provider con dimensione pagina fissa conserva la pagina intera.
+
+Molte ricerche simultanee condividono limiti per host/provider e classe Network.
+Serve equità: evitare che una ricerca lunga occupi tutti i posti. Nessun pool
+per ricerca che moltiplica il limite globale; riusare la cortesia del lettore
+e degli scaricamenti e la precedenza della pagina aperta.
+
+## 7. Architettura, persistenza ed eventi
+
+Il coordinatore Rust pianifica la copertura dei filtri e crea atomicamente
+ricerca, esecuzioni e job. Gli handler riusano i servizi di ricerca singoli,
+gli adapter, la cache e la cortesia; niente richieste HTTP dalla webview.
+Estrarre il servizio richiamabile dal comando singolo se necessario, senza
+invocare comandi IPC da altri comandi backend.
+
+Comandi proposti: plan_search, create_search, list_searches,
+get_search_snapshot, list_search_results, retry_provider_search,
+restart_provider_search, continue_provider_search. Pause/resume/cancel usano
+il motore esistente. Il piano di copertura filtri è rivalidato all'avvio
+contro la versione del registro provider. Richieste con chiave idempotente
+non producono due ricerche per un doppio clic.
+
+```text
+Form → piano filtri → ricerca persistita
+                          ├─ job provider A → pagine persistite
+                          ├─ job provider B → pagine persistite
+                          └─ job provider C → errore / retry
+                                      │
+                         eventi + snapshot dal database
+                                      │
+                    risultati / monitor / Dashboard
+```
+
+Estensioni proposte del modello dati, da tradurre in migrazione secondo le
+regole del repo al momento dell'implementazione:
+
+- `search_runs`: id, titolo, snapshot criteri/provider, versione contratto,
+  avvio, archiviazione. Stato aggregato derivato, non aggiornato a mano da ogni worker.
+- `search_provider_executions`: id, ricerca, provider, jobId, generazione,
+  predecessore, modalità first/retry/restart/continue, versione adapter,
+  insieme risultati e checkpoint. Vincolo contro due esecuzioni attive.
+- `search_result_pages`: insieme, provider, chiave pagina/cursore, ordine,
+  stato cache, istante acquisizione, payload normalizzato e riferimenti.
+- risultati indicizzati/deduplicati per insieme + provider + id remoto;
+  non creare una fonte della Biblioteca finché l'utente non la aggiunge.
+
+Creazione ricerca + esecuzioni + job accodati atomica: un errore di inserimento
+non lascia metà provider avviati. Riutilizzare il coordinamento delle scritture;
+può servire un'operazione batch di creazione nella coda esistente.
+
+Commit di pagina + risultati + checkpoint nella stessa transazione; evento
+dopo il commit. Gli eventi sono invalidazioni/delta piccoli, non l'unica copia
+dei risultati. Snapshot paginabile dal database per apertura, riavvio e recupero.
+Non inserire tutte le schede nel campo detail del job.
+
+Ogni evento contiene searchId, executionId, jobId, generazione e sequenza.
+Il frontend filtra per ricerca selezionata; gli altri eventi aggiornano il
+monitor globale. Una risposta vecchia non può aggiornare il nuovo tentativo.
+Sottoscrivere prima dello snapshot, poi applicare solo eventi successivi alla
+versione letta. Pagina ripetuta dopo crash: inserimento idempotente.
+
+La navigazione non ferma i job. Alla chiusura applicare le regole esistenti di
+pausa e recupero; al riavvio mostrare ricerche e risultati persistiti, senza
+ripartire automaticamente di default. Non promettere esecuzione con app chiusa.
+Per cursor/sessioni remote non durevoli segnalare la necessità di ricominciare.
+
+Archiviare una ricerca la nasconde dall'elenco principale; non cancella fonti
+acquisite. Eliminazione storia: consentita solo senza job attivi, con conferma
+del perimetro e senza cancellare opere/immagini. «Pulisci lavori terminati»
+non deve distruggere lo storico delle ricerche: conservarne gli esiti o impedire
+la rimozione dei job referenziati. Definire la stessa politica per backup:
+prima implementazione include ricerche persistite nel backup dati e invalida
+la ripresa automatica dopo restore; i cursori non sono garanzia di riprendibilità.
+
+### Riutilizzo verificato e lavoro necessario
+
+Il sistema corrente espone JobStatus, ResourceClass.Network, configurazione,
+checkpoint, attemptCount, errorKind, attese di retry ed eventi `jobs:updated`.
+Il motore registra handler per tipo. JobsPanel, JobsIndicator, jobsStore e
+AppStatusBar costituiscono la superficie comune da estendere.
+
+Non risultano sufficienti da soli per storico ricerca, risultati persistiti
+e relazione ricerca/provider: questi sono contratti nuovi del dominio ricerca.
+`listActiveJobs` e la finestra dei lavori recenti non sostituiscono l'elenco
+storico. `dependsOnJobId` non è una parentela. Il controllo di cancel attuale
+è cooperativo: verificare esplicitamente il passaggio ai client HTTP/attese.
+
+## 8. Dashboard: centro di lavoro
 
 ```text
 Dashboard                  [Tutti i workspace v] [Cerca fonti] [Nuovo]
@@ -355,6 +530,10 @@ Lavori è un riepilogo del pannello già esistente, con gli stessi comandi e sta
 Non creare una seconda coda, una console alternativa o retry con logica propria.
 Le attività recenti riportano esiti utili, non ogni evento tecnico.
 
+Il riepilogo ricerche del monitor compare accanto al riepilogo lavori, con
+accesso a ricerche attive, recenti e con errori. Nessuna lista risultati nella
+Dashboard.
+
 Niente grafici ornamentali, punteggi di produttività, widget trascinabili o
 feed illimitato. Quattro blocchi stabili, liste brevi e comandi «Apri elenco».
 Su spazio stretto: Riprendi → Attenzione → Lavori → Attività → riepilogo.
@@ -379,7 +558,7 @@ automaticamente le sezioni mentre l'utente le sta leggendo.
 - Preferenze visive e filtro possono persistere; dati derivati si rileggono.
   Nessuna nuova tabella di contatori canonici mantenuti manualmente.
 
-## 7. Componenti e accessibilità
+## 9. Componenti e accessibilità
 
 | Necessità | Primitiva da riutilizzare |
 | --- | --- |
@@ -408,26 +587,29 @@ arrivi di rete. Riga risultato non diventa un pulsante contenente altri pulsanti
 area informativa e comandi sono elementi fratelli. Ritorno al chiamante dopo
 chiusura pannello o aggiunta. Verificare tastiera, screen reader, temi e zoom.
 
-## 8. Stato, navigazione e persistenza
+## 10. Navigazione e stato frontend
 
-Estensione proposta della posizione Biblioteca: discriminare catalogo, ricerca
-e dettaglio. Mantenere validi i vecchi `libraryLocation({ itemId })` attraverso
-helper di compatibilità, oppure migrare tutte le chiamate in un task dedicato.
-Aggiornare confronto, breadcrumb, evidenziazione rail e test insieme. Non
-introdurre una quinta area globale solo per la ricerca.
+Estendere la posizione Biblioteca per distinguere catalogo, ricerca selezionata,
+elenco ricerche e dettaglio fonte. Conservare helper compatibili con gli accessi
+esistenti, oppure migrare tutte le chiamate in un task dedicato. Aggiornare
+insieme breadcrumb, confronto delle posizioni, rail e test.
 
-Un solo store di ricerca conserva bozza, richiesta inviata, snapshot provider,
-risultati, selezione ed espansione. Stato HTTP non dentro uiStore. Nel backend
-una sessione attiva con snapshot limitato; frontend osserva, non duplica la
-macchina di retry. La nuova ricerca cancella la precedente dopo validazione.
+La ricerca selezionata nella UI non è la sola ricerca attiva. Uno store conserva
+bozza, searchId selezionato, snapshot e preferenze di presentazione; il database
+è la fonte dei risultati e il motore governa esecuzione/retry. Evitare di caricare
+in memoria tutti i risultati di tutte le ricerche per mostrare il monitor.
 
-Ricerche salvate: seconda iterazione, query e criteri versionati, provider
-selezionati e nome; non salvare risultati come patrimonio acquisito. Caricare
-una ricerca salvata riempie il form, non avvia rete. Provider rimossi/filtri
-cambiati richiedono un avviso; non alterare silenziosamente la richiesta.
-Preferenze selezione provider persistibili già nella prima iterazione.
+Ritorno a una ricerca: ripristinare filtri visivi, espansione e ancora di scroll.
+Le impostazioni visive stanno nello stato UI; gli stati dei job non vengono
+ricostruiti da spinner locali. Nuovo invio crea un nuovo snapshot immutabile;
+modificare il form non riconfigura job già accodati.
 
-## 9. Integrazione col lavoro parallelo sui provider
+Le ricerche lanciate e i loro risultati persistono già nel nucleo del progetto.
+I preset di criteri salvati sono una funzione separata e successiva: nome,
+versione, criteri e provider, senza risultati. Aprire un preset riempie il form
+senza avviare rete. Provider rimossi e filtri cambiati richiedono un avviso.
+
+## 11. Integrazione col lavoro parallelo sui provider
 
 Prima del coordinatore concordare questo minimo, senza imporre subito refactor:
 
@@ -446,53 +628,63 @@ con fixture. Toccare i file provider in modifica solo dopo integrazione del
 lavoro corrente. Non promettere titolo/autore/editore remoti per tutti solo
 perché l'interfaccia contiene quei campi.
 
-## 10. Sequenza implementativa in task verificabili
+## 12. Task implementativi e dipendenze
 
-Ogni task deve mantenere utilizzabile la ricerca singola. I percorsi nuovi qui
-indicati sono suggerimenti, non file già esistenti. Nessun taglio unico di
-migliaia di righe necessario.
+Ogni task mantiene utilizzabile la ricerca singola. I percorsi nuovi sono
+suggerimenti da adattare al codice integrato; non sono componenti già esistenti.
 
-| Task | Intervento e punti di contatto | Criterio di chiusura |
+| Task | Intervento | Criterio di chiusura |
 | --- | --- | --- |
-| F0 Contratti | `types.ts`, registro provider e servizio singolo dopo il lavoro parallelo; nuovo modulo tipi di ricerca | Fixture per almeno 3 provider con capacità diverse; errori/filtri/pagine concordati |
-| F1 Destinazione ricerca | `appLocation.ts`, `App.tsx`, shell, nuova area ricerca; spostare composizione del pannello attuale | Ricerca singola funziona dalla Biblioteca, ritorno conserva stato; Dashboard ha comando d'accesso |
-| F2 Coordinatore | Nuovo `iiif/federated.rs` e bridge; servizio singolo estratto se necessario | Due esiti positivi e un errore arrivano indipendenti; stop e nuova query non contaminano risultati |
-| F3 Form e provider | Nuovi componenti `components/discovery/`; evoluzione store | Selezione, bozza, invio, copertura criteri e modalità singola coerenti |
-| F4 Filtri e date | Nuovo modulo normalizzazione/valutazione con fixture | Remote/local/ignoto distinti; date e natura non inventate; nessun filtro perso |
-| F5 Risultati progressivi | Riutilizzo righe e aggiunta; paging/dedup/cache | Più pagine senza duplicati; nessun falso totale; riprova solo fonte fallita |
-| D1 Dashboard | Ridistribuire `AppDashboard`, componenti di blocco; query esistenti | Nessun modulo di ricerca incorporato; Riprendi, Attenzione, Lavori, Attività funzionano |
-| D2 Dati Dashboard | Servizio read-model dedicato, query/filtri e invalidazioni | Scope coerente; errore di un blocco isolato; dati non confondono revisioni e frammenti |
-| F6 Preferenze e salvataggi | Preferenze provider, poi ricerche salvate versionate | Riapertura non scatena rete; provider spariti gestiti esplicitamente |
-| Q1 Consolidamento | Test integrazione, prova desktop, guide IT/EN e help | Tutti gli scenari sotto verificati; nessuna regressione ricerca singola |
+| F0 Contratti | Registro e adapter dopo il lavoro parallelo; tipi ricerca/esecuzione/pagina, capacità filtri e idempotenza | Fixture di tre provider con capacità diverse; semantiche concordate |
+| F1 Navigazione | appLocation, App, shell e area ricerca; riuso del pannello singolo | Ricerca dalla Biblioteca, elenco ricerche e ritorno con stato conservato |
+| F2 Persistenza e job | Schema ricerca, creazione batch atomica, handler provider e checkpoint | Successo parziale, crash, cancel e due ricerche concorrenti isolati |
+| F3 Form e copertura | Componenti discovery, selezione provider, bozza e piano filtri | Invio crea una ricerca; nessun criterio ignorato o job riconfigurato |
+| F4 Normalizzazione | Date, natura, autore/editore e valutazione locale | Remote/local/ignoto distinti, conteggi esclusivi verificati |
+| F5 Risultati e monitor | Righe esistenti, eventi, pagine, storico e comandi provider | Arrivi stabili, retry selettivo, continuazione e statistiche coerenti |
+| D1 Dashboard | Redistribuire AppDashboard e riusare blocchi/jobsStore | Riprendi, Attenzione, Lavori, Attività e riepilogo ricerche operativi |
+| D2 Dati Dashboard | Query/read-model, filtri workspace e invalidazioni | Errori isolati e conteggi corretti senza polling continuo |
+| F6 Preferenze | Selezione provider persistibile; poi preset di ricerca versionati | Riapertura senza rete automatica; capacità cambiate segnalate |
+| Q1 Consolidamento | Test, prova desktop, guide IT/EN e help | Scenari sotto verificati, ricerca singola senza regressioni |
 
-D1 può iniziare dopo F1, mentre F2–F5 avanzano. D2 non dipende da nuove
-capacità dei provider. Le ricerche salvate possono seguire il primo rilascio
-della federazione; selezione provider e filtri richiesti fanno parte del nucleo.
+D1 può iniziare dopo F1; il riepilogo ricerche si collega dopo F2.
+D2 non dipende da nuove capacità dei provider. Storico delle ricerche, risultati
+persistiti e monitor fanno parte del nucleo, non sono rinviati a F6.
+
 
 ### Scenari obbligatori
 
-1. Tre provider: rapido, lento e fallito; risultati immediatamente utilizzabili.
-2. Query A, poi B; risposta tardiva di A ignorata anche dopo retry.
-3. Stop durante richiesta, attesa di cortesia e caricamento pagina successiva.
-4. Tutti falliti distinto da zero risultati; un errore non cancella i successi.
-5. Titolo/autore/editore combinati, filtro non supportato, data assente o incerta.
-6. Pagina con zero corrispondenze locali ma hasMore vero.
-7. Stesso id in due provider non collide; stesso titolo non fonde opere.
-8. Stesso manifesto già in catalogo: collegamento workspace senza nuova copia.
-9. Cache fresca/vecchia, refresh esplicito e cambio criteri non riusano risultati errati.
-10. Cambio schermata durante ricerca e ritorno; listener non duplicati.
-11. Nessun provider selezionato; provider nuovo, rimosso o senza ricerca.
-12. Dashboard vuota, filtro workspace, oggetto eliminato, query fallita singolarmente.
-13. Dashboard con soli libri e nessuna chiave LLM: nessun falso blocco.
-14. Tastiera, zoom 200%, tema scuro, titoli lunghi, risultati virtualizzati e focus.
+1. A e B attive insieme; aprire B non perde o annulla risultati di A.
+2. Cinque job accodati; tre rispondono, uno fallisce, uno aspetta cortesia.
+3. Riprova di un solo provider: altri successi e job non cambiano.
+4. Evento tardivo del tentativo vecchio non altera il nuovo o i suoi conteggi.
+5. Zero risultati completato distinto da errore senza risultati.
+6. Errore dopo una pagina: parziali leggibili, checkpoint ripetibile senza duplicati.
+7. Ripeti da capo: vecchi e nuovi risultati distinti; errore nuovo non nascosto.
+8. Doppio invio/retry/continua: un solo job per chiave idempotente.
+9. Scroll, focus e riga espansa stabili mentre arrivano pagine da altri provider.
+10. Ordinamento alfabetico attivo: nuovi record non spostano il testo in lettura.
+11. Riavvio fra commit pagina ed evento: snapshot ricostruisce risultati corretti.
+12. Rimozione storia/pulizia job/restore: nessuna fonte acquisita viene eliminata.
+13. Statistiche distinguono record, duplicati, filtri, tentativi ed esiti correnti.
+14. Carica altri dopo completed con hasMore: stato torna attivo per la continuazione,
+    senza cancellare la storia della pagina precedente.
+15. Titolo/autore/editore combinati; data assente/incerta; filtro non supportato.
+16. Pagina senza corrispondenze locali ma hasMore vero: continuazione possibile.
+17. Stesso id in due provider non collide; stesso titolo non fonde edizioni.
+18. Manifesto già acquisito: collegamento workspace senza nuova copia.
+19. Cache, aggiornamento esplicito e cambio criteri mantengono identità corrette.
+20. Nessun provider selezionato; provider nuovo/rimosso/senza ricerca gestito.
+21. Dashboard vuota, filtro workspace, oggetto eliminato ed errore di un blocco.
+22. Solo libri e nessuna chiave LLM: nessun falso blocco.
+23. Tastiera, temi, zoom 200%, titoli lunghi e virtualizzazione con focus stabile.
 
-Backend con fixture HTTP deterministiche; frontend con eventi simulati fuori
-ordine; prove vive mirate dopo stabilizzazione degli adapter. Non mettere
-cataloghi esterni variabili come requisito dei test CI. Misurare tempo al
-primo risultato, richieste per provider, annullamento, memoria e fluidità lista:
-le latenze delle biblioteche non diventano SLA inventati per l'interfaccia.
+Backend con fixture HTTP deterministiche; frontend con eventi fuori ordine.
+Le prove vive seguono la stabilizzazione degli adapter, non sostituiscono i
+test ripetibili. Misurare tempo al primo risultato, annullamento, memoria,
+richieste per provider e fluidità. Non promettere latenze delle biblioteche.
+Non eseguire build o suite durante la sola scrittura del piano.
 
-## 11. Istruzioni per chi implementa con un LLM
+## 13. Istruzioni per chi implementa con un LLM
 
 Affidare un task della tabella per volta. Nel prompt indicare task, contratti
 già integrati, file in scope e scenari di accettazione. Prima leggere codice

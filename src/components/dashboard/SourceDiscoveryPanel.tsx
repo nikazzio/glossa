@@ -300,12 +300,12 @@ export function SourceDiscoveryPanel() {
     setExpandedId(null);
     setPage(1);
     setOutcome(null);
-    setSearchError(false);
+    setSearchError(null);
     try {
       setOutcome(await discoverIIIF(providerKey, input.trim(), 1, fresh));
     } catch (error: unknown) {
       logger.warn('discovery search failed', { providerKey, error: errorMessage(error) });
-      setSearchError(true);
+      setSearchError(errorMessage(error));
     } finally {
       setSearching(false);
     }
@@ -320,7 +320,7 @@ export function SourceDiscoveryPanel() {
     if (!outcome || searching) return;
     const nextPage = page + 1;
     setSearching(true);
-    setSearchError(false);
+    setSearchError(null);
     try {
       const next = await discoverIIIF(providerKey, input.trim(), nextPage);
       // Alcuni cataloghi — Internet Archive fra questi — restituiscono lo
@@ -330,7 +330,7 @@ export function SourceDiscoveryPanel() {
       setPage(nextPage);
     } catch (error: unknown) {
       logger.warn('discovery load more failed', { providerKey, page: nextPage, error: errorMessage(error) });
-      setSearchError(true);
+      setSearchError(errorMessage(error));
     } finally {
       setSearching(false);
     }
@@ -376,7 +376,11 @@ export function SourceDiscoveryPanel() {
         </p>
       )}
       {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
-      {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}
+      {searchError && (
+        <p className="mt-4 text-sm text-editorial-danger" role="alert">
+          {searchError}
+        </p>
+      )}
       {cards.length > 0 && (
         <div className="mt-4">
           {cards.map((card) => (
