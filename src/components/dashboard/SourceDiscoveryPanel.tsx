@@ -375,7 +375,16 @@ export function SourceDiscoveryPanel() {
           </IconButton>
         </p>
       )}
-      {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
+      {outcome?.status === 'not_found' && (
+        <p className="mt-4 text-sm text-editorial-muted">
+          {/* Una biblioteca che non cerca non ha «nessun risultato»: non ha
+              proprio cercato, e continuare a scrivere parole non cambierà
+              niente. Lo dice, invece di lasciar credere a un catalogo vuoto. */}
+          {selectedProvider && !selectedProvider.supportsSearch
+            ? t('dashboard.discovery.onlyDirect')
+            : t('dashboard.discovery.notFound')}
+        </p>
+      )}
       {searchError && (
         <p className="mt-4 text-sm text-editorial-danger" role="alert">
           {searchError}

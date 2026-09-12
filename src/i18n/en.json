@@ -1301,7 +1301,8 @@
       "noWorkspaces": "No workspace available. Create one before linking a source.",
       "alreadyLinked": "Already linked",
       "fromCache": "results from {{when}}",
-      "searchAgain": "Search again, skipping the kept results"
+      "searchAgain": "Search again, skipping the kept results",
+      "onlyDirect": "This library does not search by keyword: it only opens with the identifier or address shown in the example above. Its search either cannot be queried by a program, or refuses automated requests."
     },
     "stats": {
       "projects": "Projects",

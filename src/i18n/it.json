@@ -1301,7 +1301,8 @@
       "noWorkspaces": "Nessun workspace disponibile. Creane uno prima di collegare una fonte.",
       "alreadyLinked": "Già collegato",
       "fromCache": "risultati di {{when}}",
-      "searchAgain": "Cerca di nuovo, saltando i risultati conservati"
+      "searchAgain": "Cerca di nuovo, saltando i risultati conservati",
+      "onlyDirect": "Questa biblioteca non cerca per parole: apre solo con l'identificativo o l'indirizzo che l'esempio qui sopra mostra. La sua ricerca non è interrogabile da un programma, oppure rifiuta le richieste automatiche."
     },
     "stats": {
       "projects": "Progetti",
