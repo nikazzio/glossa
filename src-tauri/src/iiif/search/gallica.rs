@@ -325,8 +325,6 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
     })
 }
 
-// ── Vaticana: pagina di ricerca dei manoscritti ──────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;

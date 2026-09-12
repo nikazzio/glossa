@@ -120,8 +120,6 @@ fn ecodices_thumbnail(chunk: &str) -> Option<String> {
     Some(format!("{base}/{path}/full/180,/0/default.jpg"))
 }
 
-// ── Aiuti ────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;

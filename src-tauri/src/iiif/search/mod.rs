@@ -134,8 +134,6 @@ pub async fn run(
     }
 }
 
-// ── Gallica: servizio SRU ────────────────────────────────────────────────
-
 /// Una risposta di testo, con i guasti raccontati con il nome della biblioteca.
 pub(super) async fn fetch_text(
     client: &Client,

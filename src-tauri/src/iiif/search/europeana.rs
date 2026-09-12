@@ -82,7 +82,13 @@ pub(super) async fn europeana(
         // Chi conserva l'originale non è chi ha risposto alla ricerca.
         result.holding_institution = first_string(item.get("dataProvider"));
         result.rights = strings(item.get("rights"));
-        result.page_url = first_string(item.get("guid"));
+        // **Non** si usa `guid`: Europeana ci attacca la chiave come parametro
+        // di tracciamento, e quell'indirizzo finirebbe nel database e sotto gli
+        // occhi. La pagina si costruisce dall'identificativo.
+        result.page_url = Some(format!(
+            "https://www.europeana.eu/item{}",
+            record_id.trim_end_matches('/')
+        ));
         results.push(result);
     }
 
@@ -111,5 +117,3 @@ fn europeana_manifest(item: &serde_json::Value, record_id: &str) -> Option<Strin
     let path = record_id.trim_matches('/');
     (!path.is_empty()).then(|| format!("https://iiif.europeana.eu/presentation/{path}/manifest"))
 }
-
-// ── Library of Congress: catalogo in JSON ────────────────────────────────

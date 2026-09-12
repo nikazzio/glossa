@@ -103,10 +103,6 @@ fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult
     results
 }
 
-// ── e-codices: pagina di ricerca ─────────────────────────────────────────
-
-// ── Le sei biblioteche portate da Scriptoria ─────────────────────────────
-
 #[cfg(test)]
 mod tests {
     use super::*;

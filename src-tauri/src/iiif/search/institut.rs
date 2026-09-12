@@ -46,5 +46,3 @@ pub(super) async fn institut(
         results,
     })
 }
-
-// ── Wellcome Collection: catalogo con filtro sul digitalizzato ───────────

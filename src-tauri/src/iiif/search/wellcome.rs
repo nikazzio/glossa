@@ -127,5 +127,3 @@ fn wellcome_labels(value: Option<&serde_json::Value>) -> Vec<String> {
         })
         .unwrap_or_default()
 }
-
-// ── Europeana: molte biblioteche in una richiesta sola ───────────────────
