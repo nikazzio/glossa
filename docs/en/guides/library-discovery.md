@@ -18,9 +18,22 @@ Three different levels, kept apart because they answer different questions.
 
 ## Search for a source
 
-Search starts from the Dashboard: choose a library, type what you are looking for, start it with the search icon. Searching downloads nothing.
+Search starts from the Dashboard: choose a source, type what you are looking for, start it with the search icon. Searching downloads nothing.
 
-Libraries do not have the same capabilities, and Glossa states what each one accepts:
+### Four kinds of source
+
+In the picker, sources sit in four groups, because they answer differently and it helps to know before typing:
+
+- **Collections** (`◈`) — not libraries: they index material from many institutions. Searching them finds works held elsewhere, and Glossa states who holds each original. These are Europeana and Internet Archive.
+- **Libraries** — they answer for their own holdings and search by keyword. Most sources are here.
+- **Search on hold** (`⏸`) — the search exists but the service refuses automated requests. Today that is Harvard. The work still opens if you type its identifier.
+- **By identifier only** (`#`) — they have no search to query: they open with an identifier or an address. These are Heidelberg, e-rara, e-manuscripta and the direct IIIF address.
+
+Pick a source that does not search and a line appears under the field saying what it accepts: you do not have to remember.
+
+**Where search starts when you open Glossa** is set in Settings → Library → Libraries. The default is "the last one I used"; during the session the source you pick in the panel wins anyway.
+
+Sources do not have the same capabilities, and Glossa states what each one accepts:
 
 - **Europeana** — keywords, or the link of one of its records, which opens the work without needing the key. Not a library but the index of hundreds of European institutions: it finds a work without knowing in advance who holds it. It needs its own key, free of charge, pasted into **Settings → Library → Libraries**. Glossa keeps only results that declare a readable reproduction, and states for each who holds the original, which may be a different institution from the one that answered.
 - **Wellcome Collection** — keywords. Its catalogue also describes books kept in stores and never digitised: Glossa asks from the start only for those with a reproduction, so every result you see can be opened.

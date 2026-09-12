@@ -60,6 +60,40 @@ pub enum SearchHandlerKind {
     ArchiveOrg,
 }
 
+/// Che cosa è una fonte, non che cosa sa fare.
+///
+/// Una raccolta indicizza il materiale di altre istituzioni: cercandoci dentro
+/// si trovano opere conservate altrove, e chi le conserva va detto risultato per
+/// risultato. Una biblioteca risponde del proprio fondo. L'indirizzo diretto non
+/// è né l'una né l'altra: è la via d'uscita per qualunque istituzione, anche non
+/// in elenco.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProviderKind {
+    Aggregator,
+    Library,
+    DirectUrl,
+}
+
+/// Come ci si arriva, oggi.
+///
+/// Distingue due cose che sembrano uguali e non lo sono: una fonte che **non
+/// ha** una ricerca interrogabile da un programma, e una che ce l'ha ma la
+/// rifiuta a chi non è un browser. La prima non cambierà scrivendo codice; la
+/// seconda può tornare, e dirlo evita di riprovare all'infinito o di
+/// dimenticarsene.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SearchAvailability {
+    /// Cerca per parole.
+    Searchable,
+    /// Si apre solo con un identificativo o un indirizzo: non esiste una
+    /// ricerca da interrogare.
+    DirectOnly,
+    /// La ricerca esiste ma il servizio respinge le richieste automatiche.
+    Paused,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderFilterOption {
@@ -91,6 +125,12 @@ pub struct IIIFProvider {
     pub search_mode: SearchMode,
     pub supports_direct_resolution: bool,
     pub supports_search: bool,
+    /// Raccolta, biblioteca o indirizzo diretto: serve alla schermata per
+    /// raggruppare le fonti, e a chi legge i risultati per sapere che
+    /// cercando in una raccolta l'istituzione che conserva è un'altra.
+    pub kind: ProviderKind,
+    /// Perché una fonte non cerca, quando non cerca.
+    pub availability: SearchAvailability,
     pub filters: &'static [ProviderFilter],
 }
 
@@ -121,6 +161,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Aggregator,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -135,6 +177,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -149,6 +193,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -163,6 +209,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: GALLICA_FILTERS,
     },
     IIIFProvider {
@@ -177,6 +225,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -191,6 +241,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -205,6 +257,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
         filters: &[],
     },
     IIIFProvider {
@@ -219,6 +273,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -236,6 +292,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -250,6 +308,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -264,6 +324,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Paused,
         filters: &[],
     },
     IIIFProvider {
@@ -278,6 +340,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -292,6 +356,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Aggregator,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -309,6 +375,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         // dichiara, invece di offrire una ricerca che restituirebbe sempre
         // niente.
         supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
         filters: &[],
     },
     IIIFProvider {
@@ -323,6 +391,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
         filters: &[],
     },
     IIIFProvider {
@@ -337,6 +407,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -351,6 +423,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         supports_search: false,
+        kind: ProviderKind::DirectUrl,
+        availability: SearchAvailability::DirectOnly,
         filters: &[],
     },
 ];
@@ -392,6 +466,36 @@ mod tests {
         assert!(generic.supports_direct_resolution);
         assert!(!generic.supports_search);
         assert_eq!(generic.resolver, ResolverKind::Generic);
+    }
+
+    #[test]
+    fn what_a_source_declares_and_why_it_cannot_search_agree() {
+        for provider in PROVIDERS {
+            let searchable = provider.availability == SearchAvailability::Searchable;
+            assert_eq!(
+                provider.supports_search, searchable,
+                "{}: dichiara ricerca {} ma disponibilità {:?}",
+                provider.key, provider.supports_search, provider.availability
+            );
+            // Una fonte che cerca deve avere chi la cerca: il contrario è la
+            // risposta vuota silenziosa che si era già pagata una volta.
+            assert_eq!(
+                provider.search_handler.is_some(),
+                searchable,
+                "{}: gestore e disponibilità non concordano",
+                provider.key
+            );
+        }
+    }
+
+    #[test]
+    fn only_the_direct_address_is_neither_a_library_nor_a_collection() {
+        let neither: Vec<&str> = PROVIDERS
+            .iter()
+            .filter(|provider| provider.kind == ProviderKind::DirectUrl)
+            .map(|provider| provider.key)
+            .collect();
+        assert_eq!(neither, vec!["generic"]);
     }
 
     #[test]

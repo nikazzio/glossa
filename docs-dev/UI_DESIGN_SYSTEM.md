@@ -250,6 +250,23 @@ Nella riga di un elenco i dati **si concatenano** con «·» (biblioteca · pagi
 misure · spazio): è l'opposto della regola sulle righe di dettaglio in colonna
 stretta, e la differenza è la larghezza disponibile.
 
+### Elenchi di fonti eterogenee
+
+Quando una tendina raccoglie voci che si comportano in modo diverso, il gruppo
+viene prima del segno: `Select` accetta un `group` per voce e raccoglie le voci
+**consecutive** con lo stesso gruppo, senza riordinarle — l'ordine è quello di
+chi costruisce l'elenco, non una sorpresa del componente.
+
+Il segno accanto al nome serve dove non c'è spazio per una frase (la tendina di
+sistema non accetta marcatori grafici). Il suo significato non si lascia
+indovinare: sotto il campo compare una riga che lo spiega **per la voce
+scelta**, non una legenda di tutti i simboli che nessuno legge.
+
+Nel pannello di ricerca delle fonti i gruppi sono quattro: raccolte (`◈`),
+biblioteche, ricerca ferma (`⏸`), solo per identificativo (`#`). Sono quattro
+comportamenti diversi, non quattro categorie decorative: chi sceglie deve sapere
+se cercare per parole ha senso prima di scrivere.
+
 ### Barre filtro
 
 - Label attiva in `font-display italic`.

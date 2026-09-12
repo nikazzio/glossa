@@ -5,6 +5,7 @@ import { TabStrip, type TabStripItem } from '../ui';
 import { LibraryImagesSection } from './LibraryImagesSection';
 import { LibraryLibrariesSection } from './LibraryLibrariesSection';
 import { EuropeanaKeySection } from './EuropeanaKeySection';
+import { DefaultSearchSourceSection } from './DefaultSearchSourceSection';
 import { LibraryProfilesSection } from './LibraryProfilesSection';
 import { useLibraryNetworkSettings, type NetworkProfileDraft } from '../../hooks/useLibraryNetworkSettings';
 
@@ -84,6 +85,7 @@ export function LibrarySettingsTab({
               onChooseProfile={(key, profileId) => void chooseProfile(key, profileId)}
               onChooseSizePolicy={(key, policy) => void chooseSizePolicy(key, policy)}
             />
+            <DefaultSearchSourceSection />
             {/* Sta con le biblioteche, non con le chiavi dei modelli: è una
                 fonte, e chi la cerca la cerca qui. */}
             <EuropeanaKeySection />

@@ -9,6 +9,7 @@ import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
@@ -23,6 +24,33 @@ import { CachedThumbnail } from '../common/CachedThumbnail';
  * risolve riprovando, un limite di velocità sì, un servizio spento si riprova
  * più tardi.
  */
+/**
+ * L'ordine in cui le fonti compaiono nella tendina, e il segno che le
+ * distingue.
+ *
+ * Sono quattro cose diverse e prima si somigliavano tutte: una raccolta
+ * indicizza il materiale di altre istituzioni, una biblioteca risponde del
+ * proprio fondo, una fonte ferma ha una ricerca che il servizio respinge, e
+ * una che apre soltanto per identificativo non ha proprio una ricerca da
+ * interrogare. Il segno sta accanto al nome perché nella tendina di sistema
+ * non c'è altro spazio; il significato è scritto sotto il campo.
+ */
+const SOURCE_GROUPS = [
+  { id: 'aggregator', mark: '◈' },
+  { id: 'library', mark: '' },
+  { id: 'paused', mark: '⏸' },
+  { id: 'directOnly', mark: '#' },
+] as const;
+
+type SourceGroupId = (typeof SOURCE_GROUPS)[number]['id'];
+
+function groupOf(provider: IIIFProvider): SourceGroupId {
+  if (provider.availability === 'paused') return 'paused';
+  if (provider.kind === 'aggregator') return 'aggregator';
+  if (provider.availability === 'directOnly') return 'directOnly';
+  return 'library';
+}
+
 const SEARCH_ERRORS: Record<string, string> = {
   search_refused: 'dashboard.discovery.errorRefused',
   search_rate_limited: 'dashboard.discovery.errorRateLimited',
@@ -308,8 +336,18 @@ export function SourceDiscoveryPanel() {
         // senza biblioteche.
         const list = Array.isArray(items) ? items : [];
         setProviders(list);
-        const current = useDiscoverySearchStore.getState().providerKey;
-        if (!list.some((provider) => provider.key === current) && list[0]) setProviderKey(list[0].key);
+        // La fonte preferita vale all'avvio, non a ogni ricerca: durante la
+        // sessione comanda quella scelta a mano, altrimenti cambiarla sarebbe
+        // impossibile.
+        const { providerKey: current, touched } = useDiscoverySearchStore.getState();
+        const preferred = useUiStore.getState().defaultSearchProvider;
+        const wanted = !touched && preferred ? preferred : current;
+        const exists = (key: string) => list.some((provider) => provider.key === key);
+        if (exists(wanted)) {
+          if (wanted !== current) setProviderKey(wanted);
+        } else if (list[0]) {
+          setProviderKey(list[0].key);
+        }
       })
       .catch((error: unknown) => {
         logger.error('discovery providers load failed', { error: errorMessage(error) });
@@ -319,6 +357,22 @@ export function SourceDiscoveryPanel() {
   }, [setProviderKey]);
 
   const selectedProvider = providers.find((provider) => provider.key === providerKey);
+  // Le fonti si vedono raggruppate: raccolte, biblioteche che cercano, fonti
+  // ferme, fonti che aprono solo per identificativo. L'ordine dentro ogni
+  // gruppo è quello del registro, che è l'ordine deciso dal motore.
+  const sourceOptions = useMemo(
+    () =>
+      SOURCE_GROUPS.flatMap(({ id, mark }) =>
+        providers
+          .filter((provider) => groupOf(provider) === id)
+          .map((provider) => ({
+            value: provider.key,
+            label: mark ? `${mark} ${provider.label}` : provider.label,
+            group: t(`dashboard.discovery.group.${id}`),
+          })),
+      ),
+    [providers, t],
+  );
   const cards = useMemo<SourceCard[]>(() => {
     if (!outcome) return [];
     return outcome.manifest ? [{ ...outcome.manifest, id: outcome.manifest.manifestUrl }] : outcome.results;
@@ -372,12 +426,27 @@ export function SourceDiscoveryPanel() {
   return (
     <section className="flex h-full min-h-0 flex-col">
       <form className="flex shrink-0 items-center gap-2 border-y border-editorial-border py-3" onSubmit={submit}>
-        <Select value={providerKey} onChange={(value) => { setProviderKey(value); setOutcome(null); }} options={providers.map((provider) => ({ value: provider.key, label: provider.label }))} ariaLabel={t('dashboard.discovery.source')} disabled={loading || providers.length === 0} />
+        <Select
+          value={providerKey}
+          onChange={(value) => {
+            useDiscoverySearchStore.setState({ touched: true });
+            setProviderKey(value);
+            setOutcome(null);
+          }}
+          options={sourceOptions}
+          ariaLabel={t('dashboard.discovery.source')}
+          disabled={loading || providers.length === 0}
+        />
         <input value={input} onChange={(event) => setInput(event.target.value)} aria-label={t('dashboard.discovery.input')} placeholder={selectedProvider?.placeholder ?? t('dashboard.discovery.input')} className="min-w-0 flex-1 bg-transparent px-2 py-2 font-display text-xl italic text-editorial-ink outline-none placeholder:text-editorial-muted/70 focus-visible:ring-2 focus-visible:ring-editorial-accent" />
         <IconButton title={t('dashboard.discovery.submit')} type="submit" disabled={loading || searching || !input.trim()}>
           {searching ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
       </form>
+      {selectedProvider && groupOf(selectedProvider) !== 'library' && (
+        <p className="mt-2 text-xs text-editorial-muted">
+          {t(`dashboard.discovery.groupHint.${groupOf(selectedProvider)}`)}
+        </p>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
       {searching && !outcome && (
         <div className="flex min-h-64 items-center justify-center" role="status">

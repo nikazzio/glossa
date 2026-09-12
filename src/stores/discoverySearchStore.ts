@@ -3,6 +3,9 @@ import type { IIIFDiscoveryOutcome } from '../types';
 
 interface DiscoverySearchState {
   providerKey: string;
+  /** Vero appena l'utente sceglie una fonte a mano: da quel momento la
+   *  preferenza non gliela cambia più sotto le mani. */
+  touched: boolean;
   input: string;
   outcome: IIIFDiscoveryOutcome | null;
   page: number;
@@ -24,6 +27,7 @@ interface DiscoverySearchState {
  * pannello), ma non persiste su disco — si azzera solo al riavvio app. */
 export const useDiscoverySearchStore = create<DiscoverySearchState>((set) => ({
   providerKey: 'archive_org',
+  touched: false,
   input: '',
   outcome: null,
   page: 1,

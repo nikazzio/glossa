@@ -18,9 +18,22 @@ Tre livelli diversi, che la Biblioteca tiene distinti perché rispondono a doman
 
 ## Cercare una fonte
 
-La ricerca parte dalla Dashboard: scegli la biblioteca, scrivi cosa cerchi, avvia con l'icona di ricerca. La ricerca non scarica materiale.
+La ricerca parte dalla Dashboard: scegli la fonte, scrivi cosa cerchi, avvia con l'icona di ricerca. La ricerca non scarica materiale.
 
-Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
+### Quattro tipi di fonte
+
+Nella tendina le fonti stanno in quattro gruppi, perché rispondono in modo diverso e conviene saperlo prima di scrivere:
+
+- **Raccolte** (`◈`) — non sono biblioteche: indicizzano il materiale di molte istituzioni. Cercandoci dentro trovi opere conservate altrove, e di ogni risultato Glossa dice chi conserva l'originale. Sono Europeana e Internet Archive.
+- **Biblioteche** — rispondono del proprio fondo e cercano per parole. Sono la maggior parte.
+- **Ricerca ferma** (`⏸`) — la ricerca esiste ma il servizio respinge le richieste automatiche. Oggi è il caso di Harvard. L'opera si apre lo stesso scrivendo il suo identificativo.
+- **Solo per identificativo** (`#`) — non hanno una ricerca da interrogare: si aprono con un identificativo o un indirizzo. Sono Heidelberg, e-rara, e-manuscripta e l'indirizzo IIIF diretto.
+
+Scegliendo una fonte che non cerca, sotto il campo compare una riga che dice cosa accetta: non devi ricordartelo.
+
+**Da dove parte la ricerca quando apri Glossa** si sceglie in Impostazioni → Biblioteca → Biblioteche. La scelta predefinita è «l'ultima che ho usato»; durante la sessione vale comunque la fonte che scegli nel pannello.
+
+Le fonti non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
 
 - **Europeana** — parole di ricerca, oppure il collegamento di una sua scheda, che apre l'opera senza bisogno della chiave. Non è una biblioteca ma l'indice di centinaia di istituzioni europee: serve a trovare un'opera senza sapere in anticipo chi la conserva. Richiede una chiave propria, gratuita, che si incolla in **Impostazioni → Biblioteca → Biblioteche**. Glossa tiene solo i risultati che dichiarano una riproduzione leggibile, e per ognuno dice chi conserva l'originale, che può essere un'istituzione diversa da quella che ha risposto.
 - **Wellcome Collection** — parole di ricerca. Il suo catalogo descrive anche libri conservati in magazzino e mai digitalizzati: Glossa chiede fin dall'inizio soltanto quelli con una riproduzione, così i risultati che vedi si aprono tutti.

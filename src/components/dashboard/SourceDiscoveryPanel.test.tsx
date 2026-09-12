@@ -37,7 +37,8 @@ vi.mock('../../services/libraryService', () => ({
 }));
 
 const PROVIDERS = [
-  { key: 'archive_org', label: 'Internet Archive', aliases: [], placeholder: 'Search', isEnabled: true, resolver: 'archive_org', searchHandler: 'archive_org', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, filters: [] },
+  { key: 'archive_org', label: 'Internet Archive', aliases: [], placeholder: 'Search', isEnabled: true, resolver: 'archive_org', searchHandler: 'archive_org', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, kind: 'aggregator', availability: 'searchable', filters: [] },
+  { key: 'heidelberg', label: 'Heidelberg', aliases: [], placeholder: 'e.g. cpg848', isEnabled: true, resolver: 'heidelberg', searchHandler: null, searchMode: 'fallback', supportsDirectResolution: true, supportsSearch: false, kind: 'library', availability: 'directOnly', filters: [] },
 ];
 
 describe('SourceDiscoveryPanel', () => {
@@ -84,6 +85,22 @@ describe('SourceDiscoveryPanel', () => {
     await user.click(second);
     expect(first).toHaveAttribute('aria-expanded', 'false');
     expect(second).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('raggruppa le fonti e dice cosa aspettarsi da quelle che non cercano', async () => {
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    // I gruppi esistono nella tendina: una raccolta e una biblioteca che apre
+    // solo per identificativo non sono la stessa cosa.
+    const picker = await screen.findByRole('combobox', { name: 'dashboard.discovery.source' });
+    expect(screen.getByRole('group', { name: 'dashboard.discovery.group.aggregator' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'dashboard.discovery.group.directOnly' })).toBeInTheDocument();
+
+    // Scegliendo quella che non cerca, la schermata lo scrive invece di
+    // lasciare credere a un catalogo vuoto.
+    await user.selectOptions(picker, 'heidelberg');
+    expect(screen.getByText('dashboard.discovery.groupHint.directOnly')).toBeInTheDocument();
   });
 
   it('mette in evidenza da dove viene ogni risultato, senza aprire la riga', async () => {
