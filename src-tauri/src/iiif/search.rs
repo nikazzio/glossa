@@ -25,7 +25,11 @@ pub struct SearchEndpoints {
     pub vatican_search: String,
     pub ecodices_search: String,
     pub loc_search: String,
-    pub harvard_search: String,
+    pub europeana_search: String,
+    pub wellcome_search: String,
+    /// La chiave di Europeana, quando è stata salvata: senza, la sua ricerca
+    /// non parte e lo dice invece di fallire come un guasto di rete.
+    pub europeana_key: Option<String>,
     pub bodleian_search: String,
     pub estense_search: String,
     pub institut_search: String,
@@ -47,7 +51,9 @@ impl Default for SearchEndpoints {
             vatican_search: "https://digi.vatlib.it/mss/search".to_string(),
             ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
             loc_search: "https://www.loc.gov/search/".to_string(),
-            harvard_search: "https://api.lib.harvard.edu/v2/items.json".to_string(),
+            europeana_search: "https://api.europeana.eu/record/v2/search.json".to_string(),
+            wellcome_search: "https://api.wellcomecollection.org/catalogue/v2/works".to_string(),
+            europeana_key: None,
             bodleian_search: "https://digital.bodleian.ox.ac.uk/search/".to_string(),
             estense_search:
                 "https://jarvis.edl.beniculturali.it/meta/culturalItems/search/findBySgttOrAutnOrPressmark"
@@ -82,7 +88,8 @@ pub async fn run(
         SearchHandlerKind::Vatican => vatican(client, endpoints, query, gate).await,
         SearchHandlerKind::Ecodices => ecodices(client, endpoints, query, gate).await,
         SearchHandlerKind::Loc => loc(client, endpoints, query, page, gate).await,
-        SearchHandlerKind::Harvard => harvard(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Europeana => europeana(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Wellcome => wellcome(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Bodleian => bodleian(client, endpoints, query, gate).await,
         SearchHandlerKind::Estense => estense(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Institut => institut(client, endpoints, query, gate).await,
@@ -597,60 +604,6 @@ fn result_from(id: String, title: String, manifest_url: String) -> DiscoveryResu
     }
 }
 
-/// Harvard: la sua interfaccia dei dati non dichiara i manifesti in un campo
-/// suo, ma li nomina dentro le schede. Si cercano i gettoni `drs:`/`ids:` nel
-/// testo della risposta, come fa Scriptoria (`resolvers/search/harvard.py`), e
-/// si chiedono più schede di quelle che servono perché molte non ne hanno.
-async fn harvard(
-    client: &Client,
-    endpoints: &SearchEndpoints,
-    query: &str,
-    page: u32,
-    gate: Option<&Gate<'_>>,
-) -> Result<SearchPage, String> {
-    let wanted = PAGE_SIZE as usize;
-    let limit = (wanted * 10).min(100);
-    let start = (page.max(1) as usize - 1) * limit;
-    let body = fetch_text(
-        client,
-        &endpoints.harvard_search,
-        &[
-            ("q", query),
-            ("limit", &limit.to_string()),
-            ("start", &start.to_string()),
-        ],
-        None,
-        "Harvard Library",
-        gate,
-    )
-    .await?;
-
-    let mut seen = std::collections::BTreeSet::new();
-    let mut results = Vec::new();
-    for chunk in body.split("iiif.lib.harvard.edu/manifests/").skip(1) {
-        let Some(token) = resolvers::harvard_token(chunk.split('"').next().unwrap_or_default())
-        else {
-            continue;
-        };
-        if !seen.insert(token.clone()) {
-            continue;
-        }
-        results.push(result_from(
-            token.clone(),
-            token.clone(),
-            resolvers::harvard_manifest_url(&token),
-        ));
-        if results.len() >= wanted {
-            break;
-        }
-    }
-    log::info!("discovery harvard search found={}", results.len());
-    Ok(SearchPage {
-        has_more: false,
-        results,
-    })
-}
-
 /// Bodleian: la ricerca sa rispondere in JSON-LD, e lì il manifesto di ogni
 /// risultato è dichiarato. È l'unica delle sei che non lo fa indovinare.
 async fn bodleian(
@@ -839,6 +792,236 @@ async fn institut(
     })
 }
 
+// ── Wellcome Collection: catalogo con filtro sul digitalizzato ───────────
+
+/// Wellcome ha un'interfaccia pensata per chi programma, aperta e senza chiave.
+///
+/// Il suo catalogo descrive anche i libri che stanno in magazzino e non sono
+/// stati digitalizzati: su una ricerca di prova, quattro risultati su cinque.
+/// Il filtro `items.locations.locationType=iiif-presentation` li toglie **alla
+/// fonte**, quindi non si scartano dopo averli mostrati, e ogni risultato porta
+/// già l'indirizzo del suo manifesto.
+async fn wellcome(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    page: u32,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let value = fetch_json(
+        client,
+        &endpoints.wellcome_search,
+        &[
+            ("query", query),
+            ("pageSize", &PAGE_SIZE.to_string()),
+            ("page", &page.max(1).to_string()),
+            ("include", "items,production,languages,subjects"),
+            ("items.locations.locationType", "iiif-presentation"),
+        ],
+        None,
+        "Wellcome Collection",
+        gate,
+    )
+    .await?;
+
+    let mut results = Vec::new();
+    for work in value
+        .get("results")
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    {
+        let Some(id) = work.get("id").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let Some(manifest_url) = wellcome_manifest(work) else {
+            continue;
+        };
+        let title = loc_first_string(work.get("title")).unwrap_or_else(|| id.to_string());
+        let mut result = result_from(id.to_string(), title, manifest_url);
+        result.creator = wellcome_first_label(work.pointer("/production/0/agents"));
+        result.date = wellcome_first_label(work.pointer("/production/0/dates"));
+        result.description = loc_first_string(work.get("description"));
+        result.physical_description = loc_first_string(work.get("physicalDescription"));
+        result.media_type = work
+            .pointer("/workType/label")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string);
+        result.language = work
+            .pointer("/languages/0/label")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string);
+        result.subjects = wellcome_labels(work.get("subjects"));
+        result.thumbnail_url = work
+            .pointer("/thumbnail/url")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string);
+        result.holding_institution = loc_first_string(work.get("referenceNumber"));
+        result.page_url = Some(format!("https://wellcomecollection.org/works/{id}"));
+        result.publisher = Some("Wellcome Collection".to_string());
+        results.push(result);
+    }
+
+    let total = value
+        .get("totalResults")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    log::info!("discovery wellcome search found={}", results.len());
+    Ok(SearchPage {
+        has_more: u64::from(page.max(1) * PAGE_SIZE) < total,
+        results,
+    })
+}
+
+/// L'indirizzo del manifesto sta fra i luoghi dove l'opera si trova: uno di
+/// quelli è la riproduzione digitale, gli altri sono scaffali veri.
+fn wellcome_manifest(work: &serde_json::Value) -> Option<String> {
+    work.get("items")?
+        .as_array()?
+        .iter()
+        .filter_map(|item| item.get("locations")?.as_array().cloned())
+        .flatten()
+        .find(|location| {
+            location
+                .pointer("/locationType/id")
+                .and_then(serde_json::Value::as_str)
+                == Some("iiif-presentation")
+        })
+        .and_then(|location| {
+            location
+                .get("url")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+        })
+}
+
+/// Wellcome descrive persone, date e soggetti come oggetti con un'etichetta.
+fn wellcome_first_label(value: Option<&serde_json::Value>) -> Option<String> {
+    value?
+        .as_array()?
+        .iter()
+        .find_map(|entry| entry.get("label").and_then(serde_json::Value::as_str))
+        .map(str::to_string)
+}
+
+fn wellcome_labels(value: Option<&serde_json::Value>) -> Vec<String> {
+    value
+        .and_then(serde_json::Value::as_array)
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(|entry| entry.get("label").and_then(serde_json::Value::as_str))
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+// ── Europeana: molte biblioteche in una richiesta sola ───────────────────
+
+/// Europeana non è una biblioteca: è l'indice di centinaia di istituzioni
+/// europee. Serve a trovare un'opera senza sapere in anticipo chi la conserva.
+///
+/// Due avvertenze che si riflettono nel codice. La prima: non tutto quello che
+/// indicizza è leggibile: si tengono **solo i risultati che dichiarano un
+/// manifesto IIIF**, gli altri sarebbero schede che non si aprono. La seconda:
+/// chi ha trovato il libro, chi lo conserva e chi serve le immagini possono
+/// essere tre soggetti diversi, e vanno detti distinti — l'istituzione che
+/// conserva finisce nel campo del fondo, non spacciata per la provenienza
+/// delle immagini.
+async fn europeana(
+    client: &Client,
+    endpoints: &SearchEndpoints,
+    query: &str,
+    page: u32,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let Some(key) = endpoints.europeana_key.as_deref().filter(|key| !key.is_empty()) else {
+        return Err("Europeana needs its own key: add it in Settings → Library.".to_string());
+    };
+    // Le sue pagine si contano per riga di partenza, non per numero di pagina.
+    let start = ((page.max(1) - 1) * PAGE_SIZE + 1).to_string();
+    let value = fetch_json(
+        client,
+        &endpoints.europeana_search,
+        &[
+            ("wskey", key),
+            ("query", query),
+            ("rows", &PAGE_SIZE.to_string()),
+            ("start", &start),
+            // `rich` porta anteprime e collegamenti; senza, mancano le
+            // copertine e l'indirizzo della scheda.
+            ("profile", "rich"),
+            // Solo materiale con una riproduzione: una scheda senza immagini
+            // non si apre in Glossa.
+            ("media", "true"),
+            ("qf", "TYPE:TEXT"),
+        ],
+        None,
+        "Europeana",
+        gate,
+    )
+    .await?;
+
+    let mut results = Vec::new();
+    for item in value
+        .get("items")
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    {
+        let Some(record_id) = item.get("id").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        let Some(manifest_url) = europeana_manifest(item, record_id) else {
+            continue;
+        };
+        let title = loc_first_string(item.get("title"))
+            .unwrap_or_else(|| record_id.trim_matches('/').to_string());
+        let mut result = result_from(
+            record_id.trim_matches('/').replace('/', ":"),
+            title,
+            manifest_url,
+        );
+        result.creator = loc_first_string(item.get("dcCreatorLangAware"))
+            .or_else(|| loc_first_string(item.get("dcCreator")));
+        result.date = loc_first_string(item.get("year"));
+        result.description = loc_first_string(item.get("dcDescription"));
+        result.thumbnail_url = loc_first_string(item.get("edmPreview"));
+        result.language = loc_first_string(item.get("language"));
+        // Chi conserva l'originale non è chi ha risposto alla ricerca.
+        result.holding_institution = loc_first_string(item.get("dataProvider"));
+        result.rights = loc_strings(item.get("rights"));
+        result.page_url = loc_first_string(item.get("guid"));
+        results.push(result);
+    }
+
+    let total = value
+        .get("totalResults")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    log::info!("discovery europeana search found={}", results.len());
+    Ok(SearchPage {
+        has_more: u64::from(page.max(1) * PAGE_SIZE) < total,
+        results,
+    })
+}
+
+/// Il manifesto di un risultato: quello dichiarato dall'istituzione, se c'è,
+/// altrimenti quello che Europeana pubblica per ogni record.
+fn europeana_manifest(item: &serde_json::Value, record_id: &str) -> Option<String> {
+    let declared = loc_strings(item.get("dctermsIsReferencedBy"))
+        .into_iter()
+        .find(|url| url.contains("manifest"));
+    if declared.is_some() {
+        return declared;
+    }
+    // Europeana serve un manifesto per ogni record che ha immagini; `media`
+    // nella richiesta garantisce che ne abbia.
+    let path = record_id.trim_matches('/');
+    (!path.is_empty()).then(|| format!("https://iiif.europeana.eu/presentation/{path}/manifest"))
+}
+
 // ── Library of Congress: catalogo in JSON ────────────────────────────────
 
 /// La ricerca del sito, chiesta in JSON (`fo=json`).
@@ -858,32 +1041,20 @@ async fn loc(
 ) -> Result<SearchPage, String> {
     let wanted = PAGE_SIZE as usize;
     let asked = (wanted * 5).min(100).to_string();
-    let _turn = super::discovery::wait_if_gated(gate, &endpoints.loc_search).await;
-    let value = client
-        .get(&endpoints.loc_search)
-        .query(&[
+    let value = fetch_json(
+        client,
+        &endpoints.loc_search,
+        &[
             ("q", query),
             ("fo", "json"),
             ("sp", &page.max(1).to_string()),
             ("c", &asked),
-        ])
-        .send()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery loc request failed error={error}");
-            "The Library of Congress could not be reached.".to_string()
-        })?
-        .error_for_status()
-        .map_err(|error| {
-            log::warn!("discovery loc response failed error={error}");
-            "The Library of Congress search failed.".to_string()
-        })?
-        .json::<serde_json::Value>()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery loc body failed error={error}");
-            "The Library of Congress returned invalid data.".to_string()
-        })?;
+        ],
+        None,
+        "The Library of Congress",
+        gate,
+    )
+    .await?;
 
     let entries = value
         .get("results")

@@ -68,6 +68,9 @@ pub fn resolve(kind: ResolverKind, input: &str) -> Option<Resolution> {
         ResolverKind::Heidelberg => heidelberg(value),
         ResolverKind::Estense => estense(value),
         ResolverKind::Institut => institut(value),
+        ResolverKind::ERara => e_rara(value),
+        ResolverKind::EManuscripta => e_manuscripta(value),
+        ResolverKind::Mdz => mdz(value),
         // Le altre biblioteche non hanno ancora un riconoscimento proprio:
         // vale l'indirizzo completo, come prima.
         _ => direct_url(value),
@@ -285,6 +288,80 @@ pub fn institut_id(value: &str) -> Option<String> {
 
 pub fn institut_manifest_url(id: &str) -> String {
     format!("https://bibnum.institutdefrance.fr/iiif/{id}/manifest")
+}
+
+/// e-rara: gli stampati antichi svizzeri. L'identificativo è numerico e sta
+/// nell'indirizzo della scheda o del visore; il manifesto si costruisce da lì.
+///
+/// Non ha una ricerca interrogabile da un programma — la sua pagina risponde
+/// con un controllo anti-robot — quindi questa è l'unica strada, ed è
+/// dichiarata nel registro.
+fn e_rara(value: &str) -> Option<Resolution> {
+    let id = swiss_platform_id(value, "e-rara.ch")?;
+    Some(Resolution::strong(
+        format!("https://www.e-rara.ch/i3f/v20/{id}/manifest"),
+        id,
+    ))
+}
+
+/// e-manuscripta: i manoscritti svizzeri, stessa piattaforma di e-rara e
+/// stessa forma degli indirizzi.
+fn e_manuscripta(value: &str) -> Option<Resolution> {
+    let id = swiss_platform_id(value, "e-manuscripta.ch")?;
+    Some(Resolution::strong(
+        format!("https://www.e-manuscripta.ch/i3f/v20/{id}/manifest"),
+        id,
+    ))
+}
+
+/// L'identificativo numerico di un'opera sulle due piattaforme svizzere.
+///
+/// Lo si prende dall'indirizzo — `/content/titleinfo/123`, `/content/zoom/123`,
+/// `/i3f/v20/123/manifest` — oppure da un numero scritto da solo, che lì è la
+/// forma con cui la scheda si cita.
+fn swiss_platform_id(value: &str, host: &str) -> Option<String> {
+    let text = value.trim();
+    if text.chars().all(|c| c.is_ascii_digit()) && text.len() >= 3 {
+        return Some(text.to_string());
+    }
+    if !text.contains(host) {
+        return None;
+    }
+    for marker in ["/titleinfo/", "/zoom/", "/structure/", "/pageview/", "/i3f/v20/"] {
+        if let Some(segment) = segment_after(text, marker) {
+            let digits: String = segment.chars().take_while(char::is_ascii_digit).collect();
+            if digits.len() >= 3 {
+                return Some(digits);
+            }
+        }
+    }
+    None
+}
+
+/// Monaco (MDZ): gli identificativi cominciano per `bsb` e il manifesto sta
+/// sul loro servizio IIIF. Anche qui niente ricerca automatizzabile: c'è la
+/// raccolta dei metadati, che è un'altra cosa.
+fn mdz(value: &str) -> Option<Resolution> {
+    let id = mdz_id(value)?;
+    Some(Resolution::strong(
+        format!("https://api.digitale-sammlungen.de/iiif/presentation/v2/{id}/manifest"),
+        id,
+    ))
+}
+
+fn mdz_id(value: &str) -> Option<String> {
+    let text = value.trim();
+    let candidate = ["/view/", "/details/", "/presentation/v2/", "/presentation/v3/"]
+        .into_iter()
+        .find_map(|marker| segment_after(text, marker))
+        .unwrap_or(text);
+    let lower = candidate.to_ascii_lowercase();
+    let id: String = lower
+        .strip_prefix("bsb")?
+        .chars()
+        .take_while(char::is_ascii_alphanumeric)
+        .collect();
+    (id.len() >= 5).then(|| format!("bsb{id}"))
 }
 
 /// Il pezzo di indirizzo che segue un marcatore, fino alla barra successiva.
@@ -803,6 +880,55 @@ mod tests {
             );
         }
         assert!(resolve(ResolverKind::Institut, "12").is_none());
+    }
+
+    #[test]
+    fn the_swiss_platforms_take_the_number_of_the_record() {
+        for (kind, written, host) in [
+            (ResolverKind::ERara, "198", "e-rara"),
+            (
+                ResolverKind::ERara,
+                "https://www.e-rara.ch/zut/content/titleinfo/198",
+                "e-rara",
+            ),
+            (
+                ResolverKind::ERara,
+                "https://www.e-rara.ch/i3f/v20/198/manifest",
+                "e-rara",
+            ),
+            (ResolverKind::EManuscripta, "992548", "e-manuscripta"),
+            (
+                ResolverKind::EManuscripta,
+                "https://www.e-manuscripta.ch/zuz/content/zoom/992548",
+                "e-manuscripta",
+            ),
+        ] {
+            let resolved = resolve(kind, written).expect("riconosciuto");
+            assert!(
+                resolved.manifest_url.contains(host) && resolved.manifest_url.ends_with("/manifest"),
+                "scritto come {written}"
+            );
+        }
+        // Un indirizzo di un'altra piattaforma non diventa un'opera svizzera.
+        assert!(resolve(ResolverKind::ERara, "https://example.org/titleinfo/198").is_none());
+    }
+
+    #[test]
+    fn munich_records_start_with_bsb() {
+        for written in [
+            "bsb00026283",
+            "BSB00026283",
+            "https://www.digitale-sammlungen.de/en/view/bsb00026283",
+            "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00026283/manifest",
+        ] {
+            let resolved = resolve(ResolverKind::Mdz, written).expect("riconosciuto");
+            assert_eq!(resolved.doc_id, "bsb00026283", "scritto come {written}");
+            assert_eq!(
+                resolved.manifest_url,
+                "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00026283/manifest"
+            );
+        }
+        assert!(resolve(ResolverKind::Mdz, "26283").is_none());
     }
 
     #[test]

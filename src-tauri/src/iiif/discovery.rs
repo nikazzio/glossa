@@ -692,6 +692,10 @@ async fn discover_with(
     Ok(nothing())
 }
 
+/// Il nome con cui la chiave di Europeana sta nel portachiavi, lo stesso che
+/// usa la schermata delle impostazioni.
+pub const EUROPEANA_KEY_ID: &str = "europeana";
+
 #[tauri::command]
 pub async fn discover_iiif(
     app: tauri::AppHandle,
@@ -741,15 +745,14 @@ pub async fn discover_iiif(
         courtesy: &courtesy,
         profile: &profile,
     };
-    let outcome = discover_with(
-        &client()?,
-        provider,
-        &input,
-        &SearchEndpoints::default(),
-        page,
-        Some(&gate),
-    )
-    .await;
+    // La chiave di Europeana vive nel portachiavi del sistema, come quelle dei
+    // modelli: si legge al momento della ricerca e non viene mai scritta nel
+    // database né nei registri.
+    let endpoints = SearchEndpoints {
+        europeana_key: crate::keystore::get_api_key(&app, EUROPEANA_KEY_ID).ok(),
+        ..SearchEndpoints::default()
+    };
+    let outcome = discover_with(&client()?, provider, &input, &endpoints, page, Some(&gate)).await;
 
     if let Ok(found) = &outcome {
         // Un risultato vuoto non si conserva: il più delle volte è un guasto
@@ -1069,39 +1072,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn harvard_finds_the_manifests_named_inside_the_records() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/items.json"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                "items": {"mods": [
-                    {"titleInfo": {"title": "Book of Hours"},
-                     "location": {"url": "https://iiif.lib.harvard.edu/manifests/drs:123456"}},
-                    {"titleInfo": {"title": "Senza riproduzione"}},
-                ]}
-            })))
-            .mount(&server)
-            .await;
-
-        let outcome = discover_with(
-            &Client::new(),
-            find_provider("harvard").expect("provider exists"),
-            "book of hours",
-            &SearchEndpoints {
-                harvard_search: format!("{}/items.json", server.uri()),
-                ..SearchEndpoints::default()
-            },
-            1,
-            None,
-        )
-        .await
-        .expect("search resolves");
-
-        assert_eq!(outcome.results.len(), 1);
-        assert_eq!(outcome.results[0].id, "drs:123456");
-    }
-
-    #[tokio::test]
     async fn estense_pages_start_from_zero() {
         // Il suo catalogo conta le pagine da zero: chiedere la prima come «1»
         // salterebbe i primi venti risultati senza dirlo.
@@ -1167,6 +1137,116 @@ mod tests {
         assert_eq!(
             outcome.results[0].manifest_url,
             "https://bibnum.institutdefrance.fr/iiif/17837/manifest"
+        );
+    }
+
+    #[tokio::test]
+    async fn wellcome_keeps_only_what_has_been_digitised() {
+        // Il catalogo descrive anche i libri che stanno in magazzino: senza il
+        // filtro, quattro risultati su cinque sarebbero schede che non si
+        // aprono.
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/works"))
+            .and(query_param("items.locations.locationType", "iiif-presentation"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "totalResults": 1,
+                "results": [{
+                    "id": "r32p4n5s",
+                    "title": "Anatomy",
+                    "thumbnail": {"url": "https://iiif.wellcomecollection.org/thumb.jpg"},
+                    "items": [{"locations": [
+                        {"locationType": {"id": "closed-stores"}, "url": ""},
+                        {"locationType": {"id": "iiif-presentation"},
+                         "url": "https://iiif.wellcomecollection.org/presentation/v2/b22396147"},
+                    ]}],
+                    "production": [{"agents": [{"label": "Vesalius"}], "dates": [{"label": "1543"}]}],
+                }]
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("wellcome").expect("provider exists"),
+            "anatomy",
+            &SearchEndpoints {
+                wellcome_search: format!("{}/works", server.uri()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        assert_eq!(
+            outcome.results[0].manifest_url,
+            "https://iiif.wellcomecollection.org/presentation/v2/b22396147"
+        );
+        assert_eq!(outcome.results[0].creator.as_deref(), Some("Vesalius"));
+        assert_eq!(outcome.results[0].date.as_deref(), Some("1543"));
+    }
+
+    #[tokio::test]
+    async fn europeana_without_a_key_says_so_instead_of_failing_like_a_network_fault() {
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("europeana").expect("provider exists"),
+            "dante",
+            &SearchEndpoints::default(),
+            1,
+            None,
+        )
+        .await;
+
+        let error = outcome.expect_err("senza chiave non si cerca");
+        assert!(error.contains("key"), "messaggio: {error}");
+    }
+
+    #[tokio::test]
+    async fn europeana_keeps_only_results_that_declare_a_manifest() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search.json"))
+            .and(query_param("wskey", "chiave-di-prova"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "totalResults": 2,
+                "items": [
+                    {
+                        "id": "/9200518/ark__12148_bpt6k1512245f",
+                        "title": ["Divina commedia"],
+                        "dataProvider": ["Bibliothèque nationale de France"],
+                        "edmPreview": ["https://api.europeana.eu/thumbnail/x.jpg"],
+                        "dctermsIsReferencedBy": ["https://iiif.europeana.eu/presentation/9200518/ark__12148_bpt6k1512245f/manifest"],
+                    },
+                    {"title": ["Senza identificativo"]},
+                ]
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = discover_with(
+            &Client::new(),
+            find_provider("europeana").expect("provider exists"),
+            "dante",
+            &SearchEndpoints {
+                europeana_search: format!("{}/search.json", server.uri()),
+                europeana_key: Some("chiave-di-prova".to_string()),
+                ..SearchEndpoints::default()
+            },
+            1,
+            None,
+        )
+        .await
+        .expect("search resolves");
+
+        assert_eq!(outcome.results.len(), 1);
+        // Chi conserva l'originale non è chi ha risposto alla ricerca.
+        assert_eq!(
+            outcome.results[0].holding_institution.as_deref(),
+            Some("Bibliothèque nationale de France")
         );
     }
 

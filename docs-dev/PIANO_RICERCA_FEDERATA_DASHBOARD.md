@@ -4,10 +4,13 @@ Piano unico di implementazione · aggiornato il 12 settembre 2026.
 
 Questo documento descrive funzionalità da implementare. Integra le decisioni
 sui job per provider, il monitor delle ricerche, i risultati progressivi e la
-Dashboard. Non occorrono documenti integrativi.
+Dashboard. Include biblioteche dirette, aggregatori e una visione dell'intero
+software. Non occorrono documenti integrativi. Le capacità riportate distinguono
+prove operative riferite dall'utente, codice osservato e documentazione pubblica:
+non costituiscono una nuova verifica live di tutti gli endpoint.
 
-La base esaminata era `feat/library-providers-verify`, commit `4c1919c`,
-con modifiche locali in corso alla ricerca singola. Prima di implementare,
+La base esaminata era `feat/library-providers-verify`, commit `ce8b378`,
+con le ultime modifiche alla ricerca singola integrate nel branch esaminato. Prima di implementare,
 rileggere i contratti attuali: il lavoro sui provider prosegue indipendentemente.
 Non sovrascrivere parser, capacità o firme aggiornate usando questo snapshot.
 
@@ -22,7 +25,7 @@ Tre destinazioni con responsabilità riconoscibili:
 
 | Destinazione | Domanda a cui risponde |
 | --- | --- |
-| Dashboard | Dove ero arrivato? Cosa richiede attenzione? Cosa sta lavorando? |
+| Dashboard | Cosa contiene Glossa? Dove ero arrivato? Cosa richiede attenzione? |
 | Biblioteca → Cerca nelle biblioteche | Quali fonti esistono nei cataloghi esterni? |
 | Biblioteca → Catalogo personale | Quali fonti ho raccolto e quali pagine possiedo? |
 
@@ -41,7 +44,7 @@ non un filtro dei cataloghi remoti.
 | Codice attuale | Conseguenza per il piano |
 | --- | --- |
 | `src/components/dashboard/AppDashboard.tsx` | La ricerca occupa la colonna principale; Riprendi, Attenzione e attività esistono già a lato. Redistribuire responsabilità, non rifare tutto. |
-| `src/components/dashboard/SourceDiscoveryPanel.tsx` | Riutilizzare risultati, anteprima, aggiunta al catalogo/workspace e riconoscimento delle fonti già presenti. File attualmente in modifica. |
+| `src/components/dashboard/SourceDiscoveryPanel.tsx` | Riutilizzare risultati, anteprima, aggiunta al catalogo/workspace e riconoscimento delle fonti già presenti. Verificare il contratto integrato prima di estrarre componenti. |
 | `src/stores/discoverySearchStore.ts` | Conserva una ricerca singola in memoria fra navigazioni. Evolvere verso sessione federata, senza duplicare lo stato. |
 | `src/services/iiifProviderService.ts` | Espone `listIIIFProviders` e `discoverIIIF(providerKey,input,page,fresh)`. Contratto singolo da preservare finché usato. |
 | `src-tauri/src/iiif/mod.rs` | Registro con `supports_search`, risoluzione diretta, strategia e filtri dichiarati. È la fonte delle capacità; niente elenco parallelo in React. |
@@ -54,6 +57,32 @@ Attenzione a due definizioni attuali: il conteggio di attenzione conta righe di
 traduzione, non necessariamente singoli problemi; i progetti recenti sono
 ordinati per modifica, non per ultima apertura. Non rinominare queste misure
 senza cambiare anche il dato che le sostiene.
+
+### Biblioteche e aggregatori: base aggiornata
+
+| Fonte | Evidenza disponibile | Conseguenza |
+| --- | --- | --- |
+| Internet Archive, Vaticana, Gallica, e-codices, Institut de France, Bodleian | Ricerca funzionante nelle prove riferite | Prima federazione sui provider già funzionanti |
+| Estense | Ricerca funzionante; copertine non ancora disponibili | Risultati utilizzabili senza miniatura; problema immagini separato |
+| Cambridge, Heidelberg | Ricerca libera non operativa; percorso diretto disponibile | Non selezionabili per testo finché un adapter supportato è verificato |
+| Library of Congress | API JSON pubblica; il codice usa già `/search/` con `fo=json`, ma le prove non danno risposte utili | Diagnosticare risposta/rete/limiti, non progettare un'API mancante |
+| Harvard | API LibraryCloud pubblica, già usata dal codice; problemi nelle prove | 429/blocco IP sono da diagnosticare, non cause dimostrate |
+| Europeana | API di ricerca documentata con chiave; copertura IIIF variabile | Primo aggregatore candidato, con attivazione esplicita e prova di copertura |
+| Biblissima | Documentazione IIIF e relazioni specialistiche | Candidato successivo: verificare prima accesso alla ricerca e completezza dei manifesti |
+
+IIIF permette accesso/presentazione delle risorse; non garantisce una ricerca
+testuale. OAI-PMH permette raccolta periodica di metadati; non equivale a una
+API di ricerca interattiva. Non introdurre scraping o aggiramenti anti-bot
+come fallback nascosto. Un errore occasionale non disabilita permanentemente
+una biblioteca; distinguere capacità, configurazione e ultimo esito operativo.
+
+Fonti primarie: [LoC](https://www.loc.gov/apis/json-and-yaml/requests/endpoints/),
+[Harvard](https://library.harvard.edu/services-tools/harvard-library-apis-datasets),
+[Heidelberg](https://www.ub.uni-heidelberg.de/helios/kataloge/datenschnittstellen.html),
+[Europeana API](https://api.europeana.eu/en),
+[chiavi Europeana](https://www.europeana.eu/en/how-to-register-for-and-manage-an-api-key),
+[Biblissima](https://doc.biblissima.fr/api/api-presentation/).
+Esistenza delle API e affidabilità dalla rete dell'utente sono verifiche diverse.
 
 ### Scriptoria: riferimento consultato
 
@@ -103,8 +132,8 @@ Erbario · manoscritti · 1500–1600
 In corso · 3/5 provider terminati · 48 risultati ricevuti
 ──────────────────────────────────────────────────────────────────
 Risultati                                 │ Esecuzione
-32 verificati · 16 non verificabili        │ Gallica       In corso
-[Biblioteca: tutte v] [Ordine v]           │ 22 record · pagina 2
+32 verificati · 8 non verificabili         │ Gallica       In corso
+[Tutti/Diretti/Aggregatori] [Ordine v]     │ 22 record · pagina 2
                                           │              [Pausa][Ferma]
 [copertina] Titolo                         │ Vaticana      Completata
 Autore · anno · biblioteca                 │ 18 record     [Ripeti]
@@ -114,7 +143,8 @@ Gallica · questa ricerca                   │ Archive       Fallita
 ...                                       │ ...
 ──────────────────────────────────────────│ Statistiche
 8 nuovi risultati disponibili [Mostra]     │ Ricevuti 48 · distinti 45
-                                          │ Visibili 32 · esclusi 13
+                                          │ Verificati 32 · ignoti 8
+                                          │ Esclusi 5
 ```
 
 Parole tra parentesi quadre: descrizioni dei controlli, non pulsanti testuali
@@ -169,21 +199,57 @@ Non duplicare logiche di stato o retry fra Dashboard, monitor e pannello lavori.
 - Copertine caricate tramite il ponte/cache esistente, solo vicino alla viewport.
   L'errore della miniatura non rende inutilizzabile la scheda.
 
-### Selezione biblioteche
+### Biblioteche e aggregatori: una pagina, due gruppi
 
-Mostrare tutte le biblioteche del registro: selezionabili quelle abilitate con
-ricerca reale, non selezionabili quelle che accettano solo un collegamento,
-con spiegazione «Apertura da collegamento disponibile». Queste ultime restano
-raggiungibili nel percorso dedicato alla risoluzione diretta.
+Non creare due prodotti di ricerca. Nel pannello Criteri separare:
 
-Al primo uso selezionare tutte le biblioteche idonee; in seguito ricordare la
-selezione esplicita. Le nuove biblioteche vengono segnalate, non aggiunte di
-nascosto alle preferenze salvate. Disponibili seleziona tutte/nessuna tramite
-comandi neutri. Disabilitare in questa ricerca non cambia il registro né il
-profilo di rete della biblioteca.
+- **Biblioteche e archivi diretti**: adapter che interrogano il catalogo della
+  fonte. Internet Archive resta qui come archivio interrogato direttamente,
+  pur raccogliendo materiali di molte istituzioni.
+- **Aggregatori**: servizi di scoperta che indicizzano altre istituzioni,
+  inizialmente Europeana se configurata. Non sono biblioteche conservatrici.
 
-La riga provider mostra nome, stato e risultati ricevuti; errore e riprova
-sono individuali. Il riepilogo generale non genera un toast per ogni errore.
+Al primo uso selezionare i provider diretti abilitati e idonei; aggregatori
+disattivati, con spiegazione della possibile sovrapposizione. In seguito
+ricordare la selezione esplicita; nuovi provider solo segnalati.
+Comandi tutte/nessuna agiscono sul gruppo dichiarato, non su entrambi di nascosto.
+Consentire ricerca diretta, solo aggregatori o mista nello stesso form.
+
+Ogni riga mostra capacità e disponibilità: Pronta, Chiave richiesta, Solo
+collegamento, Disabilitata. L'ultimo errore è un'informazione separata, datata.
+La chiave si configura nelle impostazioni secondo il deposito sicuro esistente:
+mai dentro snapshot, eventi, log o URL mostrati. Non promettere attivazione
+immediata delle chiavi di progetto Europeana. Se la configurazione cambia
+fra anteprima e invio, rivalidare e chiedere di confermare le fonti rimaste;
+nessuna esclusione silenziosa.
+
+**Estendi agli aggregatori** apre la bozza con criteri copiati e aggregatori
+disponibili da confermare. L'invio crea una ricerca sorella collegata tramite
+`searchGroupId` e `derivedFromSearchId`: non modifica la ricerca iniziale,
+non rilancia le biblioteche già interrogate e non parte automaticamente a zero
+risultati. Funziona anche mentre la prima ricerca è attiva.
+
+L'elenco ricerche può espandere il gruppo «Erbario» nelle ricerche «Biblioteche»
+e «Estensione aggregatori», ciascuna con stato e statistiche proprie.
+La vista combinata del gruppo è una proiezione, non una terza esecuzione:
+mostra quali ricerche include e consente di tornare a ciascuna.
+Un normale cambio di criteri crea invece una nuova ricerca indipendente;
+nessun raggruppamento automatico basato sulla somiglianza del testo.
+
+**Un job per servizio selezionato**: Europeana produce un job Europeana, non
+centinaia di job per istituzioni indicizzate. Nessuna espansione automatica
+verso i siti trovati. Monitor, pause, retry e cortesia restano gli stessi.
+
+Distinguere due scelte:
+1. **Dove cercare**: servizi interrogati, fissati nello snapshot.
+2. **Istituzione conservatrice**: criterio bibliografico, se supportato.
+   Togliere Gallica dai servizi non esclude record BnF trovati via Europeana.
+   Per questo serve un criterio esplicito sull'istituzione, con copertura
+   remota/locale/non verificabile dichiarata come per gli altri campi.
+
+Le fonti senza ricerca restano visibili ma non selezionabili, con accesso
+al percorso diretto. Non modificare il registro per una preferenza della ricerca.
+Errori e riprova sono individuali, senza un toast per ogni fonte.
 
 ### Collegamento o segnatura
 
@@ -205,7 +271,8 @@ sulla risoluzione diretta per ciascun provider.
 | Natura | Tutte, manoscritto, stampa, altro; PDF/IIIF non sono natura dell'originale |
 | Anno da/a | Estremi inclusivi, riferiti a produzione/pubblicazione dell'originale |
 | Lingua | Valori normalizzati con etichetta leggibile; mantenere il dato originale |
-| Biblioteca | Insieme esplicito delle sorgenti interrogate |
+| Dove cercare | Servizi selezionati nei gruppi diretti/aggregatori |
+| Istituzione conservatrice | Identità bibliografica distinta dal servizio interrogato; alias e dato originale conservati |
 
 Campi diversi si combinano in AND; più valori nello stesso filtro in OR.
 Per la prima versione natura e lingua possono essere a scelta singola.
@@ -288,8 +355,9 @@ dettaglio, aggiunta al catalogo/workspace. Aggiungere:
 6. Nessun ordinamento globale per rilevanza ricavato da punteggi non confrontabili.
 7. Selezione e focus basati su identità stabile, non sull'indice nell'elenco.
 
-Filtro rapido per biblioteca sopra i risultati: filtra quanto già ricevuto,
-non ferma i job. Distinguere questo comando dalla scelta dei provider nel form.
+Controlli sopra i risultati: Tutti / Diretti / Aggregatori, istituzione,
+Solo fonti leggibili in Glossa e ordinamento. Filtrano quanto già ricevuto,
+non fermano i job. Distinguere questo comando dalla scelta dei provider nel form.
 Gli errori sono righe nel monitor; non sostituiscono l'intera lista e non
 generano una raffica di toast. Aggiornamenti accessibili raggruppati per pagina.
 
@@ -306,6 +374,57 @@ automatica per titolo/autore: due edizioni o digitalizzazioni restano distinte.
 Duplicati certi nella stessa pagina o fra pagine non vengono ripetuti; mantenere
 origini multiple se si raggruppa lo stesso manifesto. Non normalizzare URL
 eliminando parametri che potrebbero distinguere una copia o una risorsa.
+
+### Provenienza e accessibilità: tre identità, non una sola etichetta
+
+Ogni occorrenza conserva separatamente servizio di scoperta, istituzione
+conservatrice e risorsa digitale/host delle immagini. Esempio di riga:
+«Bibliothèque nationale de France · trovata tramite Europeana».
+Nel dettaglio: record originale, eventuale collegamento alla biblioteca,
+manifesti disponibili, ricerca/esecuzione e data di acquisizione. Se
+l'istituzione non è nota, scrivere «Istituzione non indicata», non Europeana.
+
+Il contratto corrente orientato a IIIF richiede un manifesto: **prima di
+accettare record solo bibliografici occorre estenderlo**, senza URL inventati.
+Proposta: identificatore record e URL catalografico, istituzione nullable,
+lista di risorse digitali con tipo/URL/provenienza e stato di verifica.
+Una risorsa può avere più digitalizzazioni: selezione esplicita, non prima
+voce presa automaticamente. Un manifesto parziale non rappresenta l'opera intera.
+
+Due dimensioni indipendenti:
+- corrispondenza ai criteri: verificata / non verificabile / esclusa;
+- accesso: IIIF da verificare / leggibile / solo catalogo esterno /
+  accesso fallito nell'ultima verifica, con istante e motivo.
+
+La prima versione mostra tutti i record utili, con filtro «Solo fonti
+leggibili in Glossa» che include soltanto risorse validate. I non verificati
+non sono «senza IIIF». Per un record esterno mostrare Apri nel catalogo;
+non abilitare aggiunta al lettore finché non esiste una risorsa supportata.
+Non introdurre implicitamente un nuovo catalogo locale di segnalibri.
+
+L'arricchimento del dettaglio è lazy, in coda limitata per host, cancellabile
+e memorizzato in cache; una miniatura non giustifica scaricare tutti i manifesti.
+La ricerca può riuscire mentre immagini o manifesto della biblioteca sono
+bloccati: l'aggregatore non aggira il problema di accesso all'originale.
+
+### Duplicati fra diretti e aggregatori
+
+Persistenza per occorrenza: provider + record remoto, esecuzione e risorse.
+Raggruppare nella vista soltanto la stessa risorsa digitale dimostrata da
+manifesto identico o alias verificato. Titolo/autore/segnatura simili non bastano:
+esemplari diversi, edizioni e manifesti sintetici restano separati.
+
+Una riga può indicare «Trovato in 2 fonti» ed espandere entrambe le occorrenze.
+Campi discordanti conservano provenienza; non sovrascrivere il record diretto
+con quello aggregato. Se almeno un'occorrenza verifica tutti i criteri, il
+gruppo è una corrispondenza; altrimenti è non verificabile se almeno una lo è,
+oppure escluso. Non costruire una corrispondenza combinando campi di record
+che singolarmente non soddisfano i criteri.
+
+I contatori per provider contano occorrenze, quelli combinati gruppi distinti:
+non sono sommabili. Un nuovo duplicato aggiorna l'origine della riga esistente
+senza spostarla; un raggruppamento scoperto dopo arricchimento viene applicato
+con Aggiorna risultati, preservando l'ancora. Niente fusioni distruttive.
 
 ## 6. Job, stati e monitoraggio
 
@@ -342,7 +461,7 @@ Riepilogo compatto sempre visibile; dettaglio nel monitor.
 | --- | --- |
 | Provider | Selezionati, accodati, attivi, riusciti, falliti, interrotti |
 | Ricevuti | Record delle pagine uniche acquisite nelle esecuzioni correnti |
-| Distinti | Ricevuti dopo deduplicazione per identità certa |
+| Distinti | Gruppi di risorse con identità certa; record senza identità condivisa restano singoli |
 | Corrispondenze | Distinti verificati rispetto ai criteri |
 | Non verificabili | Distinti con metadati insufficienti, mostrabili separatamente |
 | Esclusi | Distinti che non soddisfano almeno un criterio |
@@ -352,6 +471,9 @@ Riepilogo compatto sempre visibile; dettaglio nel monitor.
 
 Invariante: distinti = corrispondenze + non verificabili + esclusi, con
 classificazione esclusiva. Filtri puramente visivi hanno un conteggio a parte.
+Per i gruppi usare la regola sulle occorrenze della sezione 5; non valutare
+criteri su un record sintetico composto da metadati discordanti. Il riepilogo
+indica sempre se riguarda una ricerca o il gruppo di ricerche collegato.
 Retry automatici che rigiocano una pagina non gonfiano i record ricevuti.
 Statistiche delle esecuzioni precedenti sono consultabili nello storico,
 non sommate ai risultati correnti della ricerca.
@@ -445,14 +567,16 @@ Form → piano filtri → ricerca persistita
 Estensioni proposte del modello dati, da tradurre in migrazione secondo le
 regole del repo al momento dell'implementazione:
 
-- `search_runs`: id, titolo, snapshot criteri/provider, versione contratto,
+- `search_runs`: id, titolo, searchGroupId, derivedFromSearchId nullable,
+  snapshot criteri/provider/ambito istituzioni, versione contratto,
   avvio, archiviazione. Stato aggregato derivato, non aggiornato a mano da ogni worker.
 - `search_provider_executions`: id, ricerca, provider, jobId, generazione,
   predecessore, modalità first/retry/restart/continue, versione adapter,
   insieme risultati e checkpoint. Vincolo contro due esecuzioni attive.
 - `search_result_pages`: insieme, provider, chiave pagina/cursore, ordine,
   stato cache, istante acquisizione, payload normalizzato e riferimenti.
-- risultati indicizzati/deduplicati per insieme + provider + id remoto;
+- occorrenze indicizzate per insieme + provider + id remoto, risorse digitali
+  e alias verificati separati; raggruppamento come proiezione non distruttiva;
   non creare una fonte della Biblioteca finché l'utente non la aggiunge.
 
 Creazione ricerca + esecuzioni + job accodati atomica: un errore di inserimento
@@ -496,67 +620,113 @@ e relazione ricerca/provider: questi sono contratti nuovi del dominio ricerca.
 storico. `dependsOnJobId` non è una parentela. Il controllo di cancel attuale
 è cooperativo: verificare esplicitamente il passaggio ai client HTTP/attese.
 
-## 8. Dashboard: centro di lavoro
+## 8. Dashboard: visione d'insieme di Glossa
+
+La Dashboard risponde a quattro domande: cosa possiedo, dove proseguire, cosa
+sta lavorando, cosa richiede intervento. Non è una ricerca travestita né una
+seconda schermata di impostazioni. Ricerca e monitor restano raggiungibili
+con comandi contestuali, senza form o risultati nella Dashboard.
 
 ```text
-Dashboard                  [Tutti i workspace v] [Cerca fonti] [Nuovo]
-──────────────────────────────────────────────────────────────────
-Riprendi                                  │ Richiede attenzione
-Opera / progetto · workspace              │ Scaricamento fallito [Apri]
-Ultima modifica · punto di ripresa [Apri]  │ Frammenti da rivedere [Apri]
-...                                       │
-──────────────────────────────────────────│ Lavori
-Attività recente                          │ 1 in corso · 2 in pausa
-Fonte conservata · 10:24                   │ Nome · progresso [Pannello]
-Traduzione completata · ieri              │
-──────────────────────────────────────────────────────────────────
-Riepilogo: fonti raccolte · progetti · frammenti completati
+Dashboard                      [Tutti i workspace v] [Cerca fonti]
+─────────────────────────────────────────────────────────────────
+Patrimonio
+Fonti raccolte · Trascrizioni · Progetti di traduzione · Workspace
+─────────────────────────────────────────────────────────────────
+Riprendi                              │ Richiede attenzione
+Opera / progetto · workspace          │ Operazione fallita [Apri]
+Ultima modifica · destinazione        │ Frammenti da rivedere [Apri]
+──────────────────────────────────────│
+Workspace                             │ In esecuzione
+Nome · fonti · progetti · attenzione  │ Lavori · stato e avanzamento
+[Apri workspace]                       │ Ricerche · 2 attive, 1 errore
+──────────────────────────────────────│ [Apri monitor]
+Attività recente                      │
+Fonte aggiunta · traduzione conclusa  │
+─────────────────────────────────────────────────────────────────
+Stato locale · dati aggiornati alle … · [Dettagli]
 ```
 
-Riprendi è il blocco principale, non un contatore. Prima versione mostra
-progetti modificati di recente con etichetta esatta; aggiungere fonti solo se
-esiste un timestamp affidabile di apertura. Un numero di pagina memorizzato
-non dimostra quando il libro è stato letto. Se necessario introdurre un piccolo
-registro locale di ultima apertura, non un clickstream.
+Comandi fra parentesi quadre indicano azioni da rendere con primitive esistenti.
+Quattro livelli visivi: riepilogo compatto, Riprendi/Attenzione predominanti,
+workspace/attività, stato locale secondario. Niente griglia di dieci KPI,
+grafici ornamentali, punteggio di produttività o widget trascinabili.
+Liste limitate con Apri elenco; dimensioni stabili durante gli aggiornamenti.
 
-Attenzione raccoglie situazioni azionabili, con una destinazione precisa:
-errori di lavori, revisione di traduzioni e problemi di salvataggio realmente
-conosciuti. Un lavoro in pausa non è un errore. Un giudizio negativo non è
-automaticamente un guasto: distinguere «Da rivedere» da «Operazione fallita».
-Niente obbligo di configurare chiavi LLM per consultare fonti; eventuale avviso
-credenziali compare nel contesto di una traduzione che ne ha bisogno.
+### Copertura funzionale e significato dei dati
 
-Lavori è un riepilogo del pannello già esistente, con gli stessi comandi e stati.
-Non creare una seconda coda, una console alternativa o retry con logica propria.
-Le attività recenti riportano esiti utili, non ogni evento tecnico.
+| Area | Cosa mostrare | Destinazione e limiti |
+| --- | --- | --- |
+| Biblioteca | Fonti distinte raccolte; disponibilità locale solo se nota | Catalogo; non contare risultati di ricerca non aggiunti |
+| Trascrizioni | Documenti presenti e lavori pertinenti, se interrogabili | Documento concreto; l'area catalogo è attualmente placeholder, nessun collegamento morto |
+| Traduzioni | Progetti, completamento dei frammenti correnti, revisione | Progetto o elenco filtrato; revisioni storiche non gonfiano i totali |
+| Workspace | Elenco breve con patrimonio e attività associati | Workspace preciso; fonti condivise contate una volta nel totale globale |
+| Ricerche e lavori | Ricerche attive/errori, job e ultimo esito | Monitor unico; una ricerca con tre job non è quattro lavori |
+| Analisi | Solo funzionalità e dati realmente disponibili | L'area attuale è placeholder: non presentare statistiche o avanzamento fittizi |
+| Risorse ed esportazioni | Ultime operazioni concluse, disponibilità dei dati locali | Artefatto apribile se esiste; evitare scansione disco a ogni apertura |
 
-Il riepilogo ricerche del monitor compare accanto al riepilogo lavori, con
-accesso a ricerche attive, recenti e con errori. Nessuna lista risultati nella
-Dashboard.
+Se una misura manca, ometterla oppure indicare «Non ancora disponibile» nel
+dettaglio pertinente; non usare zero. La Dashboard non deve aspettare che tutte
+le aree siano complete per essere utile. Una sezione futura non diventa un
+invito cliccabile a una schermata vuota.
 
-Niente grafici ornamentali, punteggi di produttività, widget trascinabili o
-feed illimitato. Quattro blocchi stabili, liste brevi e comandi «Apri elenco».
-Su spazio stretto: Riprendi → Attenzione → Lavori → Attività → riepilogo.
-Nel layout ampio Attenzione resta visibile sopra la piega. Non riordinare
-automaticamente le sezioni mentre l'utente le sta leggendo.
+**Riprendi.** Prima versione: progetti modificati recentemente, con etichetta
+esatta. Per ultima apertura di fonte/documento serve un dato dedicato affidabile:
+una pagina memorizzata non prova quando il libro è stato letto. Eventuale
+registro locale minimale separato dalla provenienza semantica, non clickstream.
+Aprire conserva workspace, documento e punto di ripresa disponibili.
 
-### Stato e dati della Dashboard
+**Attenzione.** Solo situazioni azionabili: job falliti, frammenti da rivedere,
+problemi di salvataggio effettivamente rilevati. Separare revisione editoriale
+da errori tecnici; una pausa volontaria non è un problema. I conteggi attuali
+di righe con valutazioni negative non sono conteggi di singoli problemi:
+definire revisioni correnti e regole di risoluzione prima di pubblicare il dato.
+Raggruppare errori della stessa ricerca, con dettaglio per provider.
 
-- Ogni blocco ha loading/ready/empty/error indipendente; il guasto di un
-  riepilogo non cancella tutti gli altri come può accadere con un unico Promise.all.
-- Totali null/errore non diventano zero. Distinguere caricamento da «Nessun progetto».
-- Filtro workspace applicato a TUTTE le query pertinenti. Lavori senza legame
-  dimostrabile restano globali e dichiarati, non attribuiti per supposizione.
-- Un'origine condivisa non si moltiplica nei totali globali. Definire esplicitamente
-  se il conteggio è di progetti, traduzioni, frammenti o revisioni correnti.
-- Attenzione: contare frammenti da rivedere, con regole sui problemi risolti;
-  non mostrare COUNT delle righe come numero di problemi individuali.
-- Aggiornamento su eventi dominio e rientro nella pagina; invalidazioni aggregate,
-  niente polling rapido né query a ogni token di streaming.
-- Riprendi apre il corretto workspace/progetto con il percorso già disponibile.
-  Oggetto eliminato: messaggio e refresh del blocco, senza crash o destinazione casuale.
-- Preferenze visive e filtro possono persistere; dati derivati si rileggono.
-  Nessuna nuova tabella di contatori canonici mantenuti manualmente.
+**In esecuzione.** Stessi stati e comandi della coda; riepilogo ricerca separato
+ma riferito agli stessi job, non sommato. Aprire una ricerca seleziona il monitor.
+Non mostrare percentuali aggregate fra download, traduzioni e ricerche.
+I lavori globali restano dichiarati globali anche filtrando un workspace.
+
+**Attività.** Esiti semantici: fonte aggiunta, trascrizione prodotta, traduzione
+conclusa, esportazione terminata, ricerca conclusa. Riutilizzare i fatti di
+provenienza locali già esistenti dove coprono l'evento; completare solo i fatti
+mancanti necessari. Nessun evento per token, click o percentuale. Esplicitare la
+finestra temporale, per esempio ultimi 7 giorni, distinta dai totali del patrimonio.
+
+**Stato locale.** Dettaglio su lavori bloccati, configurazioni necessarie e,
+solo con dati persistiti affidabili, ultimo backup riuscito e spazio occupato.
+L'esistenza di `exported_at` in un backup non prova che l'app conosca l'ultimo
+backup riuscito. Eventuali misure disco sono cache datate, aggiornabili a richiesta.
+Non interrogare continuamente biblioteche o modelli per mostrare pallini verdi.
+Mostrare «Ultimo esito noto», non «Servizio online» senza verifica corrente.
+Credenziali LLM mancanti non sono un allarme per chi legge soltanto libri.
+Costi eventuali: intervallo e valuta espliciti, stime distinte da addebiti;
+nessuna somma di valute o dato sconosciuto trasformato in zero. Non sono un
+requisito bloccante della prima Dashboard.
+
+### Layout, ambito e robustezza
+
+Su spazio stretto: Patrimonio → Riprendi → Attenzione → In esecuzione →
+Workspace → Attività → Stato locale. Su desktop mantenere Attenzione visibile
+senza dover cercare in fondo. Dettagli operativi progressivamente espandibili,
+nessun riordino automatico dei blocchi mentre si leggono.
+
+- Dashboard globale all'apertura; filtro workspace esplicito, senza cambiare
+  il workspace operativo. Applicarlo a tutte le query con legame dimostrabile.
+  Ricerca esterna, configurazione e spazio disco sono globali e dichiarati tali.
+- Ogni blocco ha loading/ready/empty/error indipendente: niente unico
+  Promise.all che annulla tutti i risultati se una query fallisce.
+- Separare totali del patrimonio, stato corrente e attività nel periodo.
+  Ogni query documenta unità, ambito, deduplicazione e istante di aggiornamento.
+- Query/read-model derivati dal database e dai fatti esistenti; nessuna nuova
+  tabella di contatori canonici aggiornata manualmente dai worker.
+- Eventi dominio e rientro nella pagina invalidano soltanto i blocchi pertinenti,
+  con aggiornamenti raggruppati. Nessun polling rapido né query per token.
+- Oggetto rimosso: messaggio e refresh del blocco, non navigazione casuale.
+  Stato vuoto utile con una singola azione coerente; errori con riprova locale.
+- Preferenze visive persistibili; dati derivati riletti. Limiti e paginazione
+  impediscono di caricare tutto l'archivio per mostrare cinque righe.
 
 ## 9. Componenti e accessibilità
 
@@ -564,7 +734,7 @@ automaticamente le sezioni mentre l'utente le sta leggendo.
 | --- | --- |
 | Cerca, ferma, riprova, aggiorna, aggiungi | `IconButton` neutro con tooltip e nome accessibile |
 | Catalogo / ricerca e dettaglio a schede | `TabStrip` / `InspectorShell`, etichetta della scheda attiva visibile |
-| Biblioteche abilitate | `ToggleRow`, non pill create per questa schermata |
+| Servizi diretti e aggregatori, in gruppi distinti | `ToggleRow`, non pill create per questa schermata |
 | Natura, lingua, ordinamento | `Select` o `SegmentedControl` secondo spazio e numero opzioni |
 | Criteri e campi | `SettingRow`, `FIELD_CLASSNAME`, `FIELD_NUMBER_CLASSNAME` |
 | Informazioni bibliografiche | `StatRow` / `StatBlock` |
@@ -604,7 +774,7 @@ Le impostazioni visive stanno nello stato UI; gli stati dei job non vengono
 ricostruiti da spinner locali. Nuovo invio crea un nuovo snapshot immutabile;
 modificare il form non riconfigura job già accodati.
 
-Le ricerche lanciate e i loro risultati persistono già nel nucleo del progetto.
+Nel nucleo da implementare, ricerche lanciate e risultati devono persistere.
 I preset di criteri salvati sono una funzione separata e successiva: nome,
 versione, criteri e provider, senza risultati. Aprire un preset riempie il form
 senza avviare rete. Provider rimossi e filtri cambiati richiedono un avviso.
@@ -635,20 +805,52 @@ suggerimenti da adattare al codice integrato; non sono componenti già esistenti
 
 | Task | Intervento | Criterio di chiusura |
 | --- | --- | --- |
-| F0 Contratti | Registro e adapter dopo il lavoro parallelo; tipi ricerca/esecuzione/pagina, capacità filtri e idempotenza | Fixture di tre provider con capacità diverse; semantiche concordate |
+| F0 Contratti | Registro e adapter; tipi ricerca/gruppo/esecuzione/pagina, occorrenze e risorse opzionali, capacità e configurazione | Fixture diretta, aggregata e solo bibliografica; niente manifesti inventati |
 | F1 Navigazione | appLocation, App, shell e area ricerca; riuso del pannello singolo | Ricerca dalla Biblioteca, elenco ricerche e ritorno con stato conservato |
 | F2 Persistenza e job | Schema ricerca, creazione batch atomica, handler provider e checkpoint | Successo parziale, crash, cancel e due ricerche concorrenti isolati |
-| F3 Form e copertura | Componenti discovery, selezione provider, bozza e piano filtri | Invio crea una ricerca; nessun criterio ignorato o job riconfigurato |
+| F3 Form e copertura | Gruppi diretti/aggregatori, istituzione distinta, configurazione, bozza e piano filtri | Invio validato; nessun criterio ignorato né job riconfigurato |
 | F4 Normalizzazione | Date, natura, autore/editore e valutazione locale | Remote/local/ignoto distinti, conteggi esclusivi verificati |
-| F5 Risultati e monitor | Righe esistenti, eventi, pagine, storico e comandi provider | Arrivi stabili, retry selettivo, continuazione e statistiche coerenti |
-| D1 Dashboard | Redistribuire AppDashboard e riusare blocchi/jobsStore | Riprendi, Attenzione, Lavori, Attività e riepilogo ricerche operativi |
-| D2 Dati Dashboard | Query/read-model, filtri workspace e invalidazioni | Errori isolati e conteggi corretti senza polling continuo |
+| F5 Risultati e monitor | Eventi, pagine, storico, provenienza, raggruppamenti certi e accessibilità digitale | Arrivi stabili, retry selettivo; occorrenze/gruppi distinti e nessuna fusione falsa |
+| A1 Aggregatore pilota | Europeana dietro configurazione; fixture, limiti, paginazione, record/manifesti e filtri verificati | Un job Europeana; nessun fan-out alle istituzioni; errore immagini separato |
+| A2 Estensione collegata | Ricerca sorella, elenco gruppi e vista combinata | Criteri originali immutabili, nessun rilancio dei diretti, statistiche riconciliabili |
+| D1 Dati Dashboard | Query/read-model per patrimonio, workspace, attività e attenzione; contratti per ambito e unità | Dati reali, errori isolati, placeholder esclusi, deduplicazione verificata |
+| D2 Dashboard UI | Gerarchia panoramica, Riprendi, Attenzione, lavori/ricerche e attività; primitive esistenti | Destinazioni valide, layout adattivo, nessuna duplicazione di coda o ricerca |
 | F6 Preferenze | Selezione provider persistibile; poi preset di ricerca versionati | Riapertura senza rete automatica; capacità cambiate segnalate |
 | Q1 Consolidamento | Test, prova desktop, guide IT/EN e help | Scenari sotto verificati, ricerca singola senza regressioni |
 
-D1 può iniziare dopo F1; il riepilogo ricerche si collega dopo F2.
-D2 non dipende da nuove capacità dei provider. Storico delle ricerche, risultati
-persistiti e monitor fanno parte del nucleo, non sono rinviati a F6.
+Ordine consigliato: F0 → F2 → F1/F3/F4 → F5 → A1 → A2 → Q1.
+F1/F3/F4 possono essere divisi in piccoli task dopo contratti stabili.
+D1 è indipendente dai nuovi provider; D2 segue D1 e si collega a F2/F5 per
+i riepiloghi delle ricerche. F6 segue il form stabile; i preset sono successivi.
+Storico, risultati persistiti e monitor sono nel nucleo, non rimandati a F6.
+
+Prima consegna utile: federazione dei diretti già funzionanti, monitor persistito
+e Dashboard con dati reali. Seconda: Europeana con provenienza e record
+bibliografici gestiti correttamente. Terza: estensione collegata e vista combinata.
+Una chiave o un endpoint aggregatore indisponibile non blocca la prima consegna.
+
+### Nuove fonti: ordine proposto, non promessa di supporto
+
+| Priorità | Fonte | Porta di ingresso e condizione |
+| --- | --- | --- |
+| Alta | Wellcome Collection | API catalogo pubblica senza autenticazione; verificare mapping filtri, `items` e manifesti su campioni pertinenti |
+| Alta per contenuto storico | e-rara, e-manuscripta | IIIF e interfacce documentate; distinguere harvesting da ricerca live; percorso diretto prima se necessario |
+| Successiva | MDZ / Bayerische Staatsbibliothek | IIIF documentato; validare separatamente ricerca, copertura e limiti immagini/OCR |
+| Specialistica | Biblissima | Verificare endpoint di ricerca utilizzabile e manifesti completi/parziali prima di abilitare il provider |
+
+Fonti: [Wellcome catalogo](https://developers.wellcomecollection.org/api/catalogue),
+[Wellcome API repository](https://github.com/wellcomecollection/catalogue-api),
+[e-rara interfacce](https://www.e-rara.ch/wiki/apiinfo),
+[e-manuscripta](https://www.e-manuscripta.ch/wiki/aboutEmanuscripta),
+[MDZ interfacce](https://www.digitale-sammlungen.de/de/schnittstellen),
+[Biblissima vademecum](https://doc.biblissima.fr/vademecum-biblissima/).
+
+Per ogni candidato richiedere fixture e prova manuale controllata: query,
+paginazione, filtri, istituzione, risorsa apribile, limiti/condizioni e errori.
+Wellcome ignora parametri query sconosciuti: una risposta HTTP riuscita non
+dimostra che il filtro sia applicato. Europeana va campionata sulle collezioni
+utili all'utente: non presumere copertura completa di Bodleian, BnF o Estense.
+Non rendere queste aggiunte un prerequisito del coordinatore federato.
 
 
 ### Scenari obbligatori
@@ -677,6 +879,25 @@ persistiti e monitor fanno parte del nucleo, non sono rinviati a F6.
 21. Dashboard vuota, filtro workspace, oggetto eliminato ed errore di un blocco.
 22. Solo libri e nessuna chiave LLM: nessun falso blocco.
 23. Tastiera, temi, zoom 200%, titoli lunghi e virtualizzazione con focus stabile.
+
+24. Stesso manifesto via diretto ed Europeana: due occorrenze, una riga combinata,
+    statistiche provider conservate; stesso titolo con manifesti diversi resta distinto.
+25. Deselezionare Gallica non esclude BnF via aggregatore; filtro istituzione
+    distinto e copertura non verificabile dichiarata.
+26. Aggregatore riuscito ma immagini bloccate; metadati visibili, nessun falso
+    fallimento del job di ricerca e nessuna falsa aggiunta al lettore.
+27. Record senza manifesto, manifesto non verificato e manifesto parziale:
+    stati/azioni diversi; niente URL fittizi né eliminazione silenziosa.
+28. Chiave mancante/scaduta o capacità cambiata fra piano e avvio: validazione,
+    nessuna credenziale nei log e nessuna fonte saltata senza conferma.
+29. Estensione mentre i diretti girano: nuova ricerca collegata, job indipendenti,
+    nessuna mutazione dello snapshot; vista combinata senza doppi conteggi.
+30. Dashboard con fonte condivisa fra workspace, ricerca globale, area placeholder
+    e attività fuori periodo: unità/ambiti corretti e nessun collegamento morto.
+31. Arricchimento che scopre un duplicato: aggiornamento esplicito stabile,
+    provenienze conservate e conteggi ricalcolati con la stessa regola.
+32. Dashboard con tre job appartenenti a una ricerca: tre lavori e una ricerca,
+    mai quattro lavori; dati mancanti distinti da zero.
 
 Backend con fixture HTTP deterministiche; frontend con eventi fuori ordine.
 Le prove vive seguono la stabilizzazione degli adapter, non sostituiscono i

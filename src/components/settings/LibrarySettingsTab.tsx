@@ -4,6 +4,7 @@ import { Gauge, Landmark, Ruler } from 'lucide-react';
 import { TabStrip, type TabStripItem } from '../ui';
 import { LibraryImagesSection } from './LibraryImagesSection';
 import { LibraryLibrariesSection } from './LibraryLibrariesSection';
+import { EuropeanaKeySection } from './EuropeanaKeySection';
 import { LibraryProfilesSection } from './LibraryProfilesSection';
 import { useLibraryNetworkSettings, type NetworkProfileDraft } from '../../hooks/useLibraryNetworkSettings';
 
@@ -77,11 +78,16 @@ export function LibrarySettingsTab({
         )}
 
         {subTab === 'libraries' && (
-          <LibraryLibrariesSection
-            settings={settings}
-            onChooseProfile={(key, profileId) => void chooseProfile(key, profileId)}
-            onChooseSizePolicy={(key, policy) => void chooseSizePolicy(key, policy)}
-          />
+          <div className="space-y-8">
+            <LibraryLibrariesSection
+              settings={settings}
+              onChooseProfile={(key, profileId) => void chooseProfile(key, profileId)}
+              onChooseSizePolicy={(key, policy) => void chooseSizePolicy(key, policy)}
+            />
+            {/* Sta con le biblioteche, non con le chiavi dei modelli: è una
+                fonte, e chi la cerca la cerca qui. */}
+            <EuropeanaKeySection />
+          </div>
         )}
 
         {subTab === 'images' && <LibraryImagesSection />}

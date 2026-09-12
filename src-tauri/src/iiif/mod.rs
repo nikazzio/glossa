@@ -35,6 +35,9 @@ pub enum ResolverKind {
     Heidelberg,
     Estense,
     Institut,
+    ERara,
+    EManuscripta,
+    Mdz,
     ArchiveOrg,
     Generic,
 }
@@ -43,10 +46,11 @@ pub enum ResolverKind {
 #[serde(rename_all = "snake_case")]
 pub enum SearchHandlerKind {
     Vatican,
+    Europeana,
+    Wellcome,
     Gallica,
     Ecodices,
     Loc,
-    Harvard,
     Bodleian,
     Estense,
     Institut,
@@ -99,6 +103,37 @@ const GALLICA_FILTERS: &[ProviderFilter] = &[ProviderFilter {
     options: GALLICA_FILTER_OPTIONS,
 }];
 pub const PROVIDERS: &[IIIFProvider] = &[
+    IIIFProvider {
+        key: "europeana",
+        network: network::CAUTIOUS,
+        label: "Europeana",
+        aliases: &["europeana"],
+        placeholder: "e.g. dante divina commedia",
+        is_enabled: true,
+        // Non è una biblioteca: è l'indice di centinaia di istituzioni. Un
+        // indirizzo incollato vale come per chiunque altro, ma il suo mestiere
+        // è la ricerca.
+        resolver: ResolverKind::Generic,
+        search_handler: Some(SearchHandlerKind::Europeana),
+        search_mode: SearchMode::SearchFirst,
+        supports_direct_resolution: true,
+        supports_search: true,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "wellcome",
+        network: network::CAUTIOUS,
+        label: "Wellcome Collection",
+        aliases: &["wellcome"],
+        placeholder: "e.g. anatomy",
+        is_enabled: true,
+        resolver: ResolverKind::Generic,
+        search_handler: Some(SearchHandlerKind::Wellcome),
+        search_mode: SearchMode::SearchFirst,
+        supports_direct_resolution: true,
+        supports_search: true,
+        filters: &[],
+    },
     IIIFProvider {
         key: "vatican",
         network: network::VATICAN,
@@ -222,10 +257,10 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         placeholder: "e.g. drs:123456",
         is_enabled: true,
         resolver: ResolverKind::Harvard,
-        search_handler: Some(SearchHandlerKind::Harvard),
+        search_handler: None,
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
-        supports_search: true,
+        supports_search: false,
         filters: &[],
     },
     IIIFProvider {
@@ -254,6 +289,53 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "e_rara",
+        network: network::CAUTIOUS,
+        label: "e-rara",
+        aliases: &["e-rara", "erara"],
+        placeholder: "e.g. 198",
+        is_enabled: true,
+        resolver: ResolverKind::ERara,
+        search_handler: None,
+        search_mode: SearchMode::Direct,
+        supports_direct_resolution: true,
+        // La sua pagina di ricerca risponde con un controllo anti-robot: si
+        // dichiara, invece di offrire una ricerca che restituirebbe sempre
+        // niente.
+        supports_search: false,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "e_manuscripta",
+        network: network::CAUTIOUS,
+        label: "e-manuscripta",
+        aliases: &["e-manuscripta", "emanuscripta"],
+        placeholder: "e.g. 992548",
+        is_enabled: true,
+        resolver: ResolverKind::EManuscripta,
+        search_handler: None,
+        search_mode: SearchMode::Direct,
+        supports_direct_resolution: true,
+        supports_search: false,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "mdz",
+        network: network::CAUTIOUS,
+        label: "Bayerische Staatsbibliothek (MDZ)",
+        aliases: &["mdz", "bsb", "digitale-sammlungen"],
+        placeholder: "e.g. bsb00026283",
+        is_enabled: true,
+        resolver: ResolverKind::Mdz,
+        search_handler: None,
+        search_mode: SearchMode::Direct,
+        supports_direct_resolution: true,
+        // Pubblica manifesti e raccolta dei metadati, non una ricerca
+        // interrogabile in tempo reale.
+        supports_search: false,
         filters: &[],
     },
     IIIFProvider {
@@ -299,9 +381,11 @@ mod tests {
 
     #[test]
     fn registry_is_stable_and_has_a_generic_direct_url_provider() {
+        // L'ordine è quello che si vede nella tendina: prima l'aggregatore, che
+        // cerca in molte istituzioni insieme, poi le singole biblioteche.
         assert_eq!(
             PROVIDERS.first().map(|provider| provider.key),
-            Some("vatican")
+            Some("europeana")
         );
         let generic = find_provider("generic").expect("generic provider must exist");
         assert!(generic.supports_direct_resolution);
