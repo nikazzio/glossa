@@ -69,7 +69,6 @@ pub(super) async fn wellcome(
             .map(str::to_string);
         result.holding_institution = Some("Wellcome Collection".to_string());
         result.page_url = Some(format!("https://wellcomecollection.org/works/{id}"));
-        result.publisher = Some("Wellcome Collection".to_string());
         results.push(result);
     }
 

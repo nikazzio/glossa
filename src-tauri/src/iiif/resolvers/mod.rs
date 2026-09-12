@@ -350,10 +350,12 @@ fn swiss_platform_id(value: &str, host: &str) -> Option<String> {
 /// raccolta dei metadati, che è un'altra cosa.
 fn mdz(value: &str) -> Option<Resolution> {
     let id = mdz_id(value)?;
-    Some(Resolution::strong(
-        format!("https://api.digitale-sammlungen.de/iiif/presentation/v2/{id}/manifest"),
-        id,
-    ))
+    Some(Resolution::strong(mdz_manifest_url(&id), id))
+}
+
+/// Il manifesto di un'opera di Monaco, dal suo identificativo.
+pub fn mdz_manifest_url(id: &str) -> String {
+    format!("https://api.digitale-sammlungen.de/iiif/presentation/v2/{id}/manifest")
 }
 
 fn mdz_id(value: &str) -> Option<String> {

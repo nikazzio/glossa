@@ -72,7 +72,12 @@ pub(super) async fn bodleian(
             .get("thumbnail")
             .and_then(super::super::discovery::thumbnail_of);
         result.page_url = page_url.map(str::to_string);
-        result.publisher = Some("Bodleian Libraries".to_string());
+        // L'istituzione che conserva sta nel suo campo: come editore avrebbe
+        // detto che la Bodleian ha stampato un manoscritto del Trecento.
+        result.holding_institution = result
+            .holding_institution
+            .clone()
+            .or_else(|| Some("Bodleian Libraries".to_string()));
         results.push(result);
         if results.len() >= PAGE_SIZE as usize {
             break;

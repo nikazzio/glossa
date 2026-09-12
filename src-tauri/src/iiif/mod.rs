@@ -47,6 +47,8 @@ pub enum ResolverKind {
 #[serde(rename_all = "snake_case")]
 pub enum SearchHandlerKind {
     Vatican,
+    Cambridge,
+    Mdz,
     Europeana,
     Wellcome,
     Gallica,
@@ -213,10 +215,10 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         placeholder: "e.g. MS-ADD-03996",
         is_enabled: true,
         resolver: ResolverKind::Cambridge,
-        search_handler: None,
+        search_handler: Some(SearchHandlerKind::Cambridge),
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
-        supports_search: false,
+        supports_search: true,
         filters: &[],
     },
     IIIFProvider {
@@ -331,12 +333,10 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         placeholder: "e.g. bsb00026283",
         is_enabled: true,
         resolver: ResolverKind::Mdz,
-        search_handler: None,
-        search_mode: SearchMode::Direct,
+        search_handler: Some(SearchHandlerKind::Mdz),
+        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
-        // Pubblica manifesti e raccolta dei metadati, non una ricerca
-        // interrogabile in tempo reale.
-        supports_search: false,
+        supports_search: true,
         filters: &[],
     },
     IIIFProvider {

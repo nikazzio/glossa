@@ -14,12 +14,14 @@ use super::discovery::{DiscoveryResult, Gate, SearchPage};
 use super::SearchHandlerKind;
 
 mod bodleian;
+mod cambridge;
 mod ecodices;
 mod estense;
 mod europeana;
 mod gallica;
 mod institut;
 mod loc;
+mod mdz;
 mod vatican;
 mod wellcome;
 
@@ -32,7 +34,9 @@ pub struct SearchEndpoints {
     pub vatican_search: String,
     pub ecodices_search: String,
     pub loc_search: String,
+    pub cambridge_search: String,
     pub europeana_search: String,
+    pub mdz_search: String,
     pub wellcome_search: String,
     /// La chiave di Europeana, quando è stata salvata: senza, la sua ricerca
     /// non parte e lo dice invece di fallire come un guasto di rete.
@@ -58,7 +62,9 @@ impl Default for SearchEndpoints {
             vatican_search: "https://digi.vatlib.it/mss/search".to_string(),
             ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
             loc_search: "https://www.loc.gov/search/".to_string(),
+            cambridge_search: "https://search.cudl.lib.cam.ac.uk/items".to_string(),
             europeana_search: "https://api.europeana.eu/record/v2/search.json".to_string(),
+            mdz_search: "https://bsb.alma.exlibrisgroup.com/view/sru/49BVB_BSB".to_string(),
             wellcome_search: "https://api.wellcomecollection.org/catalogue/v2/works".to_string(),
             europeana_key: None,
             bodleian_search: "https://digital.bodleian.ox.ac.uk/search/".to_string(),
@@ -115,6 +121,10 @@ pub async fn run(
         SearchHandlerKind::Vatican => vatican::vatican(client, endpoints, query, gate).await,
         SearchHandlerKind::Ecodices => ecodices::ecodices(client, endpoints, query, gate).await,
         SearchHandlerKind::Loc => loc::loc(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Mdz => mdz::mdz(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Cambridge => {
+            cambridge::cambridge(client, endpoints, query, page, gate).await
+        }
         SearchHandlerKind::Europeana => {
             europeana::europeana(client, endpoints, query, page, gate).await
         }
