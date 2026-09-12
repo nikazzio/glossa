@@ -36,11 +36,6 @@ const SEARCH_ERRORS: Record<string, string> = {
   manifest_invalid: 'dashboard.discovery.errorManifestInvalid',
 };
 
-function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
-  const mediaType = !isManifest(card) ? card.mediaType : null;
-  return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
-}
-
 /** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del
  * catalogo, e riordinarlo per deduplicare cambierebbe quello che l'utente
  * vede. */
@@ -144,15 +139,21 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
   // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
   // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
   const pageCount = card.itemCount !== null ? t('dashboard.discovery.pagesCount', { count: card.itemCount }) : null;
-  // La segnatura sta con data e biblioteca perché è spesso l'unica cosa che
-  // distingue due copie della stessa opera: la Bodleian ha una manciata di
-  // «Divine comedy» con lo stesso titolo e lo stesso autore.
+  // **Da dove viene l'opera**, in evidenza e per prima: cercando su un
+  // aggregatore i risultati arrivano da istituzioni diverse, e saperlo senza
+  // aprire la riga è la differenza fra scorrere e dover controllare uno per
+  // uno. Quando l'istituzione non è dichiarata vale chi ha risposto alla
+  // ricerca, che è sempre noto.
+  // Aperta la riga, l'istituzione è già fra i dati della scheda: ripeterla qui
+  // sarebbe la stessa frase due volte. Lì in evidenza resta chi ha risposto
+  // alla ricerca, che con un aggregatore non è la stessa cosa.
+  const origin = (expanded ? providerLabel : card.holdingInstitution) || providerLabel;
+  const mediaType = !isManifest(card) ? card.mediaType : null;
   const metaParts = [
     card.creator,
     card.date,
-    card.holdingInstitution,
+    mediaType,
     ...(expanded ? [] : [pageCount]),
-    sourceTypeLabel(card, providerLabel),
   ].filter(Boolean) as string[];
 
   return (
@@ -187,12 +188,18 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
           {expanded ? (
             <span className="min-w-0 flex-1 pt-0.5">
               <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
-              <span className="mt-1 block text-xs text-editorial-muted">{metaParts.join(' · ')}</span>
+              <span className="mt-1 block text-xs text-editorial-muted">
+                <strong className="font-semibold text-editorial-ink">{origin}</strong>
+                {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
+              </span>
             </span>
           ) : (
             <span className="min-w-0 flex-1">
               <span className="block truncate font-display italic text-editorial-ink">{title}</span>
-              <span className="mt-0.5 block truncate text-xs text-editorial-muted">{metaParts.join(' · ')}</span>
+              <span className="mt-0.5 block truncate text-xs text-editorial-muted">
+                <strong className="font-semibold text-editorial-ink">{origin}</strong>
+                {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
+              </span>
             </span>
           )}
         </button>
@@ -295,9 +302,14 @@ export function SourceDiscoveryPanel() {
         // biblioteca sa fare davvero — chi non cerca lo dice con
         // `supportsSearch` falso e con un esempio che chiede l'indirizzo del
         // manifesto. Una copia qui si sarebbe scollata al primo provider nuovo.
-        setProviders(items);
+        // Il motore può rispondere con qualcosa che non è un elenco — succede
+        // nelle prove del browser, dove il ponte è simulato: senza questo
+        // controllo la schermata si schianta al primo disegno invece di restare
+        // senza biblioteche.
+        const list = Array.isArray(items) ? items : [];
+        setProviders(list);
         const current = useDiscoverySearchStore.getState().providerKey;
-        if (!items.some((provider) => provider.key === current) && items[0]) setProviderKey(items[0].key);
+        if (!list.some((provider) => provider.key === current) && list[0]) setProviderKey(list[0].key);
       })
       .catch((error: unknown) => {
         logger.error('discovery providers load failed', { error: errorMessage(error) });

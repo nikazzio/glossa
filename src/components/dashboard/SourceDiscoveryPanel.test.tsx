@@ -86,6 +86,44 @@ describe('SourceDiscoveryPanel', () => {
     expect(second).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('mette in evidenza da dove viene ogni risultato, senza aprire la riga', async () => {
+    // Cercando su un aggregatore i risultati arrivano da istituzioni diverse:
+    // saperlo scorrendo l'elenco è la differenza fra decidere e controllare
+    // una riga per volta.
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results',
+      providerKey: 'europeana',
+      manifest: null,
+      hasMore: false,
+      results: [
+        {
+          ...RESULT_EXTRAS,
+          id: 'e-1',
+          title: 'Divina commedia',
+          creator: null,
+          date: null,
+          description: null,
+          thumbnailUrl: null,
+          mediaType: null,
+          collection: null,
+          language: null,
+          volume: null,
+          subjects: [],
+          manifestUrl: 'https://iiif.europeana.eu/presentation/1/2/manifest',
+          holdingInstitution: 'Biblioteca Estense Universitaria',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'dante');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+
+    const origin = await screen.findByText('Biblioteca Estense Universitaria');
+    expect(origin.tagName).toBe('STRONG');
+  });
+
   it('shows every metadata field when a list row expands, not just title and author', async () => {
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'gallica', manifest: null, hasMore: false,

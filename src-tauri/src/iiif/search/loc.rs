@@ -15,6 +15,11 @@ use super::{fetch_json, first_string, strings, SearchEndpoints, PAGE_SIZE};
 /// (`/item/<id>/`), da cui il manifesto si costruisce per convenzione, come fa
 /// Scriptoria (`resolvers/search/loc.py` e `resolvers/loc.py`). Chiedere più
 /// schede di quelle che servono è voluto: una buona parte viene scartata qui.
+///
+/// **Il manifesto non viene verificato**: controllarne uno per risultato
+/// significherebbe venti richieste in più per ogni ricerca. Un elemento senza
+/// riproduzione passa quindi il filtro e si scopre aprendolo — la lettura del
+/// manifesto che completa autore e copertina lo lascerà spoglio.
 pub(super) async fn loc(
     client: &Client,
     endpoints: &SearchEndpoints,

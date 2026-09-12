@@ -125,6 +125,41 @@ Fonti: [Biblissima+ — API Presentation](https://doc.biblissima.fr/api/api-pres
 
 Per ogni biblioteca verificare separatamente tre passaggi: **trovo l'opera, apro il libro corretto, leggo le pagine**. Una ricerca con molte schede e poche fonti utilizzabili non è necessariamente un'integrazione riuscita.
 
+## Aggiornamento 12 settembre 2026 (dopo l'implementazione)
+
+Le raccomandazioni di questo resoconto sono state seguite. Stato reale al
+termine del lavoro, verificato interrogando i servizi:
+
+- **Wellcome Collection** aggiunta, come suggeriva la priorità 1. La sua
+  interfaccia risponde senza registrazione, e il filtro
+  `items.locations.locationType=iiif-presentation` toglie alla fonte i libri
+  mai digitalizzati: su una ricerca di prova erano quattro su cinque.
+- **Europeana** aggiunta, con chiave nel portachiavi del sistema. Si tengono
+  solo i risultati che dichiarano una riproduzione; l'istituzione che conserva
+  l'originale è mostrata a parte da chi ha risposto alla ricerca.
+- **e-rara, e-manuscripta, Bayerische Staatsbibliothek** aggiunte per apertura
+  diretta. Come il resoconto prevedeva, nessuna delle tre offre una ricerca
+  interrogabile: le prime due rispondono con un controllo anti-robot, Monaco
+  pubblica manifesti e raccolta dei metadati.
+- **Library of Congress**: l'API esiste ed è documentata, come qui si diceva.
+  Dalla rete di sviluppo ogni percorso risponde con un controllo anti-robot,
+  compreso il JSON di un singolo elemento noto: è un blocco dell'indirizzo di
+  provenienza, non l'assenza di un'interfaccia.
+- **Harvard**: l'interfaccia esiste e i parametri usati sono quelli
+  documentati. Risponde «troppe richieste» a ogni tentativo, da due reti
+  diverse e senza indicare quando riprovare: la ricerca è stata disattivata e
+  resta il riconoscimento del gettone.
+- **Cambridge**: confermato che non emerge una ricerca pubblica utilizzabile.
+  Il filtro del sito blocca dopo poche richieste, quindi la ricerca libera è
+  stata disattivata e resta l'apertura per segnatura.
+- **Biblissima+** non è stato affrontato: resta da studiare, come qui si
+  raccomandava, prima di pianificarne l'integrazione.
+
+Il filtro «Solo fonti leggibili in Glossa» non è stato costruito: per ora si
+scartano alla fonte i risultati senza riproduzione, che è la stessa promessa
+mantenuta con meno interfaccia. Resta una proposta valida per quando si vorrà
+mostrare anche le schede bibliografiche.
+
 ## Punti da sottoporre alla prossima analisi
 
 - Quale endpoint usa oggi ciascun provider e quale capacità documentata copre?

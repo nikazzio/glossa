@@ -134,6 +134,22 @@ pub async fn run(
     }
 }
 
+/// Il motivo di un rifiuto, letto dallo stato della risposta.
+///
+/// Sta qui e non dentro ogni gestore perché la conseguenza è la stessa per
+/// tutte le biblioteche: un controllo anti-robot non si risolve riprovando, un
+/// limite di velocità sì, un servizio spento si riprova più tardi. Una
+/// biblioteca che classificasse a modo suo darebbe il consiglio sbagliato.
+pub(crate) fn reason_for(error: &reqwest::Error) -> String {
+    match error.status().map(|status| status.as_u16()) {
+        Some(401 | 403) => SEARCH_REFUSED,
+        Some(429) => SEARCH_RATE_LIMITED,
+        Some(status) if status >= 500 => SEARCH_UNAVAILABLE,
+        _ => SEARCH_FAILED,
+    }
+    .to_string()
+}
+
 /// Una risposta di testo, con i guasti raccontati con il nome della biblioteca.
 pub(super) async fn fetch_text(
     client: &Client,
@@ -158,15 +174,7 @@ pub(super) async fn fetch_text(
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery {library} response failed error={error}");
-            match error.status().map(|status| status.as_u16()) {
-                // Alcune biblioteche stanno dietro a un controllo anti-robot:
-                // la richiesta non è sbagliata, è respinta perché automatica.
-                Some(401 | 403) => SEARCH_REFUSED,
-                Some(429) => SEARCH_RATE_LIMITED,
-                Some(status) if status >= 500 => SEARCH_UNAVAILABLE,
-                _ => SEARCH_FAILED,
-            }
-            .to_string()
+            reason_for(&error)
         })?
         .text()
         .await

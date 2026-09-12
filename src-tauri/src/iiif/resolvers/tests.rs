@@ -347,6 +347,14 @@ fn a_europeana_page_link_opens_the_work_without_the_key() {
     }
     // Una parola da cercare non è una scheda.
     assert!(resolve(ResolverKind::Europeana, "divina commedia").is_none());
+    // E nemmeno l'indirizzo di un altro sito che per caso contiene `/item/`:
+    // aprirlo come scheda di Europeana manderebbe il visore su un manifesto
+    // inventato invece di cercare quelle parole.
+    assert!(resolve(
+        ResolverKind::Europeana,
+        "https://example.org/item/2020903/work"
+    )
+    .is_none());
 }
 
 #[test]

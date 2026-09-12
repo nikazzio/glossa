@@ -4,7 +4,7 @@ import { KeyRound, Check, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { IconButton, SectionLabel, SettingRow } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
-import { settingsService } from '../../services/llmService';
+import { settingsService, type ApiKeyStorage } from '../../services/llmService';
 import { errorMessage, logger } from '../../utils/logger';
 
 /** Il nome con cui la chiave sta nel portachiavi, lo stesso che usa il motore. */
@@ -23,6 +23,10 @@ export function EuropeanaKeySection() {
   const [saved, setSaved] = useState(false);
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  /** Dove la chiave è finita davvero: il portachiavi non c'è su ogni sistema,
+   *  e il ripiego cifrato su file protegge meno. Dirlo cambia cosa l'utente
+   *  può aspettarsi, quindi non si tace. */
+  const [storage, setStorage] = useState<ApiKeyStorage | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,10 +48,15 @@ export function EuropeanaKeySection() {
     if (!key) return;
     setBusy(true);
     try {
-      await settingsService.saveApiKey(EUROPEANA, key);
+      const where = await settingsService.saveApiKey(EUROPEANA, key);
       setSaved(true);
+      setStorage(where);
       setValue('');
-      toast.success(t('settings.library.europeanaSaved'));
+      if (where === 'file') {
+        toast.warning(t('settings.library.europeanaSavedFallback'));
+      } else {
+        toast.success(t('settings.library.europeanaSaved'));
+      }
     } catch (error: unknown) {
       toast.error(t('settings.library.europeanaSaveFailed'), {
         description: errorMessage(error),
@@ -62,6 +71,7 @@ export function EuropeanaKeySection() {
     try {
       await settingsService.deleteApiKey(EUROPEANA);
       setSaved(false);
+      setStorage(null);
       toast.success(t('settings.library.europeanaForgotten'));
     } catch (error: unknown) {
       toast.error(t('settings.library.europeanaForgetFailed'), {
@@ -79,7 +89,11 @@ export function EuropeanaKeySection() {
         <SettingRow
           label={t('settings.library.europeanaKey')}
           hint={
-            saved ? t('settings.library.europeanaKeySavedHint') : t('settings.library.europeanaKeyHint')
+            !saved
+              ? t('settings.library.europeanaKeyHint')
+              : storage === 'file'
+                ? t('settings.library.europeanaKeySavedFileHint')
+                : t('settings.library.europeanaKeySavedHint')
           }
         >
           <div className="flex shrink-0 items-center gap-2">

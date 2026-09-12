@@ -46,7 +46,7 @@ pub(super) async fn gallica(
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery gallica response failed error={error}");
-            super::SEARCH_FAILED.to_string()
+            super::reason_for(&error)
         })?;
     let body = response.text().await.map_err(|error| {
         log::warn!("discovery gallica body failed error={error}");

@@ -75,7 +75,7 @@ pub(crate) async fn search_archive(
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery archive response failed error={error}");
-            crate::iiif::search::SEARCH_FAILED.to_string()
+            crate::iiif::search::reason_for(&error)
         })?;
     let value = response.json::<Value>().await.map_err(|error| {
         log::warn!("discovery archive body failed error={error}");
@@ -270,8 +270,8 @@ mod tests {
 
         let outcome = search_archive(
             &Client::new(),
-            "dante",
             &format!("{}/advancedsearch.php", server.uri()),
+            "dante",
             1,
             None,
         )

@@ -67,7 +67,7 @@ pub(super) async fn wellcome(
             .pointer("/thumbnail/url")
             .and_then(serde_json::Value::as_str)
             .map(str::to_string);
-        result.holding_institution = first_string(work.get("referenceNumber"));
+        result.holding_institution = Some("Wellcome Collection".to_string());
         result.page_url = Some(format!("https://wellcomecollection.org/works/{id}"));
         result.publisher = Some("Wellcome Collection".to_string());
         results.push(result);

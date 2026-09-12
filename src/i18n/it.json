@@ -726,7 +726,9 @@
       "europeanaSaved": "Chiave di Europeana salvata",
       "europeanaSaveFailed": "Non è stato possibile salvare la chiave",
       "europeanaForgotten": "Chiave di Europeana rimossa",
-      "europeanaForgetFailed": "Non è stato possibile togliere la chiave"
+      "europeanaForgetFailed": "Non è stato possibile togliere la chiave",
+      "europeanaSavedFallback": "Chiave salvata, ma non nel portachiavi del sistema: qui non è disponibile, e Glossa l'ha messa in un file cifrato sul computer.",
+      "europeanaKeySavedFileHint": "La chiave è salvata in un file cifrato sul computer, perché il portachiavi del sistema non è disponibile qui: protegge meno del portachiavi. Non si rilegge da questa schermata e non entra nei backup."
     }
   },
   "ollama": {

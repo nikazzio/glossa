@@ -726,7 +726,9 @@
       "europeanaSaved": "Europeana key saved",
       "europeanaSaveFailed": "The key could not be saved",
       "europeanaForgotten": "Europeana key removed",
-      "europeanaForgetFailed": "The key could not be removed"
+      "europeanaForgetFailed": "The key could not be removed",
+      "europeanaSavedFallback": "Key saved, but not in the system keychain: it is not available here, so Glossa put it in an encrypted file on this computer.",
+      "europeanaKeySavedFileHint": "The key is stored in an encrypted file on this computer, because the system keychain is not available here: that protects it less than the keychain. It is never read back from this screen and never ends up in a backup."
     }
   },
   "ollama": {

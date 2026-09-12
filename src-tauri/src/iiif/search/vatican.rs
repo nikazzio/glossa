@@ -37,7 +37,7 @@ pub(super) async fn vatican(
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery vatican response failed error={error}");
-            super::SEARCH_FAILED.to_string()
+            super::reason_for(&error)
         })?
         .text()
         .await

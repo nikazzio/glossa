@@ -257,14 +257,27 @@ async fn enrich_from_manifest(
     }
 }
 
+/// Quanti manifesti si leggono insieme mentre si completano i risultati.
+///
+/// Uno per volta, una pagina di venti risultati scarni diventava venti
+/// richieste in fila — e su una biblioteca lenta venti attese, con la ricerca
+/// che sembrava piantata. Quattro insieme è un compromesso: la cortesia verso
+/// il singolo servizio la impone comunque il suo profilo di rete, che sta più
+/// in basso e non viene scavalcato da qui.
+const ENRICHMENT_AT_ONCE: usize = 4;
+
 pub(super) async fn enrich_results(
     client: &Client,
     gate: Option<&Gate<'_>>,
     results: Vec<DiscoveryResult>,
 ) -> Vec<DiscoveryResult> {
     let mut enriched = Vec::with_capacity(results.len());
-    for result in results {
-        enriched.push(enrich_from_manifest(client, gate, result).await);
+    for group in results.chunks(ENRICHMENT_AT_ONCE) {
+        let batch = group
+            .iter()
+            .cloned()
+            .map(|result| enrich_from_manifest(client, gate, result));
+        enriched.extend(futures_util::future::join_all(batch).await);
     }
     enriched
 }

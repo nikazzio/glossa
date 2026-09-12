@@ -9,8 +9,9 @@ software. Non occorrono documenti integrativi. Le capacità riportate distinguon
 prove operative riferite dall'utente, codice osservato e documentazione pubblica:
 non costituiscono una nuova verifica live di tutti gli endpoint.
 
-La base esaminata era `feat/library-providers-verify`, commit `ce8b378`,
-con le ultime modifiche alla ricerca singola integrate nel branch esaminato. Prima di implementare,
+Base aggiornata: `feat/library-providers-verify`, PR #464, commit `5118cf9`.
+Durante la verifica sono comparse ulteriori modifiche locali di altri lavori:
+non sono state alterate né considerate già pubblicate nella PR. Prima di implementare,
 rileggere i contratti attuali: il lavoro sui provider prosegue indipendentemente.
 Non sovrascrivere parser, capacità o firme aggiornate usando questo snapshot.
 
@@ -48,7 +49,7 @@ non un filtro dei cataloghi remoti.
 | `src/stores/discoverySearchStore.ts` | Conserva una ricerca singola in memoria fra navigazioni. Evolvere verso sessione federata, senza duplicare lo stato. |
 | `src/services/iiifProviderService.ts` | Espone `listIIIFProviders` e `discoverIIIF(providerKey,input,page,fresh)`. Contratto singolo da preservare finché usato. |
 | `src-tauri/src/iiif/mod.rs` | Registro con `supports_search`, risoluzione diretta, strategia e filtri dichiarati. È la fonte delle capacità; niente elenco parallelo in React. |
-| `src-tauri/src/iiif/discovery.rs` | Risultati normalizzati, metadati, provenienza provider, `has_more`, `cached_at`; non contiene ancora un contratto federato completo. |
+| `src-tauri/src/iiif/discovery/mod.rs`, `discovery/manifest.rs`, `search/` | Moduli ora separati per dominio/provider; riusarli. Risultati normalizzati e cache esistenti, contratto federato ancora da implementare. |
 | `src/navigation/appLocation.ts` | Posizione tipizzata; workspace operativo e filtro sono già distinti. |
 | `src/services/projectService.ts` | Query per progetti recenti, run, riepiloghi e attenzione già presenti; prevalentemente globali e centrate sulla traduzione. |
 | `src/stores/jobsStore.ts` | Snapshot/eventi e classificazione lavori esistenti. Riutilizzarli anche nella Dashboard. |
@@ -63,11 +64,15 @@ senza cambiare anche il dato che le sostiene.
 | Fonte | Evidenza disponibile | Conseguenza |
 | --- | --- | --- |
 | Internet Archive, Vaticana, Gallica, e-codices, Institut de France, Bodleian | Ricerca funzionante nelle prove riferite | Prima federazione sui provider già funzionanti |
-| Estense | Ricerca funzionante; copertine non ancora disponibili | Risultati utilizzabili senza miniatura; problema immagini separato |
-| Cambridge, Heidelberg | Ricerca libera non operativa; percorso diretto disponibile | Non selezionabili per testo finché un adapter supportato è verificato |
+| Estense | Ricerca funzionante; arricchimento copertine aggiunto nella PR | Errore immagini separato dalla ricerca; evitare attesa di tutti i manifesti |
+| Cambridge | Ricerca disabilitata in Glossa; API del visore individuata e provata con successo in questa analisi | Candidato prioritario per nuovo adapter JSON, non riattivare lo scraping |
+| Heidelberg | Apertura diretta; OAI-PMH DWork risponde alla prova Identify | Possibile indice aggiornabile; ricerca live supportata ancora da verificare |
 | Library of Congress | API JSON pubblica; il codice usa già `/search/` con `fo=json`, ma le prove non danno risposte utili | Diagnosticare risposta/rete/limiti, non progettare un'API mancante |
-| Harvard | API LibraryCloud pubblica, già usata dal codice; problemi nelle prove | 429/blocco IP sono da diagnosticare, non cause dimostrate |
-| Europeana | API di ricerca documentata con chiave; copertura IIIF variabile | Primo aggregatore candidato, con attivazione esplicita e prova di copertura |
+| Harvard | Ricerca disabilitata nella PR; nuova richiesta minima restituisce 429 | Apertura drs:/ids: conservata; assistenza ufficiale e accessi alternativi da valutare |
+| Europeana | Ricerca e apertura scheda già implementate; chiave nelle impostazioni | A1 integra e consolida l'adapter esistente, non lo riscrive |
+| Wellcome Collection | Ricerca e apertura URL già implementate; filtro IIIF documentato | Riutilizzare subito; correggere semantica autore/editore e verificare accessibilità |
+| e-rara, e-manuscripta | Apertura diretta già implementata; OAI-PMH risponde a Identify | Indici opzionali aggiornabili, non falsa ricerca live |
+| Bayerische Staatsbibliothek | Apertura diretta già implementata; ricerca ufficiale SRU provata con successo | Candidato prioritario per adapter SRU e collegamento al manifesto |
 | Biblissima | Documentazione IIIF e relazioni specialistiche | Candidato successivo: verificare prima accesso alla ricerca e completezza dei manifesti |
 
 IIIF permette accesso/presentazione delle risorse; non garantisce una ricerca
@@ -811,7 +816,7 @@ suggerimenti da adattare al codice integrato; non sono componenti già esistenti
 | F3 Form e copertura | Gruppi diretti/aggregatori, istituzione distinta, configurazione, bozza e piano filtri | Invio validato; nessun criterio ignorato né job riconfigurato |
 | F4 Normalizzazione | Date, natura, autore/editore e valutazione locale | Remote/local/ignoto distinti, conteggi esclusivi verificati |
 | F5 Risultati e monitor | Eventi, pagine, storico, provenienza, raggruppamenti certi e accessibilità digitale | Arrivi stabili, retry selettivo; occorrenze/gruppi distinti e nessuna fusione falsa |
-| A1 Aggregatore pilota | Europeana dietro configurazione; fixture, limiti, paginazione, record/manifesti e filtri verificati | Un job Europeana; nessun fan-out alle istituzioni; errore immagini separato |
+| A1 Aggregatore pilota | Integrare Europeana già presente; consolidare sicurezza, fixture, paginazione e verifica risorse | Un job Europeana; nessun fan-out alle istituzioni; errore immagini separato |
 | A2 Estensione collegata | Ricerca sorella, elenco gruppi e vista combinata | Criteri originali immutabili, nessun rilancio dei diretti, statistiche riconciliabili |
 | D1 Dati Dashboard | Query/read-model per patrimonio, workspace, attività e attenzione; contratti per ambito e unità | Dati reali, errori isolati, placeholder esclusi, deduplicazione verificata |
 | D2 Dashboard UI | Gerarchia panoramica, Riprendi, Attenzione, lavori/ricerche e attività; primitive esistenti | Destinazioni valide, layout adattivo, nessuna duplicazione di coda o ricerca |
@@ -829,13 +834,15 @@ e Dashboard con dati reali. Seconda: Europeana con provenienza e record
 bibliografici gestiti correttamente. Terza: estensione collegata e vista combinata.
 Una chiave o un endpoint aggregatore indisponibile non blocca la prima consegna.
 
-### Nuove fonti: ordine proposto, non promessa di supporto
+### Recuperare le ricerche mancanti: verifiche del 12 settembre 2026
 
 | Priorità | Fonte | Porta di ingresso e condizione |
 | --- | --- | --- |
-| Alta | Wellcome Collection | API catalogo pubblica senza autenticazione; verificare mapping filtri, `items` e manifesti su campioni pertinenti |
-| Alta per contenuto storico | e-rara, e-manuscripta | IIIF e interfacce documentate; distinguere harvesting da ricerca live; percorso diretto prima se necessario |
-| Successiva | MDZ / Bayerische Staatsbibliothek | IIIF documentato; validare separatamente ricerca, copertura e limiti immagini/OCR |
+| Alta | Cambridge | API JSON del visore individuata nel codice ufficiale e interrogata con successo; sostituire l'adapter HTML, previa validazione del contratto |
+| Alta | MDZ / Bayerische Staatsbibliothek | SRU ufficiale interrogabile e provato; collegare il record bibliografico alla sua riproduzione, non a una descrizione secondaria |
+| Già disponibile | Wellcome Collection | Consolidare mapping bibliografico e accessibilità; non è più una biblioteca da aggiungere |
+| Successiva e opzionale | e-rara, e-manuscripta, Heidelberg | OAI-PMH documentato; Identify riuscito per tutte. Progettare prima un pilota di indice limitato, non un download completo automatico |
+| Diagnosi/assistenza | Harvard, Library of Congress | Nuove richieste minime: rispettivamente 429 e 403 con challenge. Non insistere né provare ad aggirare i controlli |
 | Specialistica | Biblissima | Verificare endpoint di ricerca utilizzabile e manifesti completi/parziali prima di abilitare il provider |
 
 Fonti: [Wellcome catalogo](https://developers.wellcomecollection.org/api/catalogue),
@@ -851,6 +858,94 @@ Wellcome ignora parametri query sconosciuti: una risposta HTTP riuscita non
 dimostra che il filtro sia applicato. Europeana va campionata sulle collezioni
 utili all'utente: non presumere copertura completa di Bodleian, BnF o Estense.
 Non rendere queste aggiunte un prerequisito del coordinatore federato.
+
+**Cambridge — percorso concreto.** Il [visore ufficiale](https://github.com/cambridge-collection/cudl-viewer)
+configura `searchURL=https://search.cudl.lib.cam.ac.uk/`; il
+[servizio di ricerca ufficiale](https://github.com/cambridge-collection/cudl-search)
+espone `GET /items`. Prova minima senza chiave: `q=newton` restituisce JSON.
+Seconda prova con `fq=itemLevel:true`, `fq=hasImage:Yes`, `rows=8`: 8 record
+ricevuti, totale remoto 248. Esempi: `MS-ADD-09597-00009-00001`,
+«Newton's Fluxions», e `MS-TRINITY-R-00004-00048-C`, «Newton's Notebook».
+Il servizio accetta pagine da 8 o 20: `rows=1` viene riportato a 20.
+Senza filtro di livello possono comparire pagine interne: non contare ogni
+pagina come un libro. Usare `fileID` per il resolver esistente, preservando
+istituzione, titolo e segnatura; validare paginazione, filtri e apertura IIIF
+prima di abilitare la ricerca. Due richieste riuscite non garantiscono SLA
+o assenza di limiti: documentare l'uso e chiedere conferma ai gestori se necessario.
+
+**Monaco — percorso concreto.** [BSB-SRU](https://www.bsb-muenchen.de/bsblab/datenschnittstellen/bsb-sru/)
+documenta ricerca CQL, paginazione e formati MARCXML/MODS/DC. Endpoint:
+`https://bsb.alma.exlibrisgroup.com/view/sru/49BVB_BSB`.
+Prova `operation=searchRetrieve`, `version=1.2`, `query=all_for_ui=BSB-Hss`,
+`maximumRecords=1`, `recordSchema=marcxml`: risposta bibliografica valida.
+Seconda query `all_for_ui=bsb00046575`: record «Confessionum libri XIII —
+BSB Clm 14350», con collegamento alla riproduzione `bsb00046575`.
+Il record contiene anche link a cataloghi che DESCRIVONO il manoscritto:
+non estrarre indiscriminatamente il primo identificatore bsb. Mappare relazione
+alla riproduzione, MARC 856 e identificatori locali con fixture; non promettere
+che tutti i risultati siano digitalizzati. L'apertura IIIF completa non è stata
+ritestata in questa analisi. È errato concludere «Monaco non ha una ricerca API».
+
+**e-rara, e-manuscripta, Heidelberg — indice aggiornabile.** Risposte OAI-PMH
+Identify valide rispettivamente da `https://www.e-rara.ch/oai`,
+`https://www.e-manuscripta.ch/oai` e
+`https://digi.ub.uni-heidelberg.de/cgi-bin/digioai.cgi`.
+Questo verifica il servizio di identificazione, non un harvesting completo.
+[e-rara](https://www.e-rara.ch/wiki/apiinfo),
+[e-manuscripta](https://www.e-manuscripta.ch/wiki/apiinfo?lang=de) e
+[Heidelberg](https://www.ub.uni-heidelberg.de/helios/kataloge/datenschnittstellen.html)
+documentano raccolta metadati e collegamenti alle risorse.
+Proposta successiva: scegliere un fondo limitato, verificare formati/set e
+licenze, raccogliere metadati con checkpoint e ricerca locale indicizzata.
+Mostrare sempre fondo coperto e ultimo aggiornamento. Le date OAI from/until
+sono modifiche dei record, NON anni di produzione delle opere. I servizi
+Identify provati dichiarano `deletedRecord=no`: servono riconciliazione e
+gestione dei record spariti, non fiducia in tombstone inesistenti.
+Indice locale o servizio condiviso è una decisione di prodotto distinta:
+nessuna infrastruttura centrale o raccolta massiva autorizzata da questo piano.
+
+**Harvard e LoC.** Harvard dichiara limiti e offre
+[LibraryCloud e assistenza](https://harvardwiki.atlassian.net/wiki/spaces/LibraryStaffDoc/pages/43286729/LibraryCloud),
+oltre a [snapshot bibliografici e PRESTO](https://library.harvard.edu/services-tools/harvard-library-apis-datasets).
+PRESTO può richiedere registrazione IP; gli snapshot non garantiscono immagini
+IIIF e sono troppo grandi per scaricarli automaticamente in ogni installazione.
+Prima scelta: segnalazione riproducibile al supporto, senza inviarla in questo task.
+LoC documenta [limiti variabili e challenge anche sotto soglia](https://www.loc.gov/apis/json-and-yaml/working-within-limits/):
+cache, bassa concorrenza e attese rispettose sono necessarie, non garantiscono
+lo sblocco. Mantenere apertura diretta e ricerca web manuale nel browser;
+non presentare Europeana come sostituto completo delle collezioni americane.
+
+### Rilievi sulla PR #464 da chiudere prima della federazione
+
+Revisione riferita al commit `5118cf9`; modifiche locali successive richiedono
+verifica separata. Nessuna correzione al codice applicata durante questa analisi.
+
+- **Sicurezza:** `search/mod.rs:154` e `:160` registrano l'errore reqwest
+  completo della richiesta Europeana con `wskey`. Può includere la chiave
+  nell'URL e finire nei log persistenti, anche dopo la correzione di `guid`.
+  Rimuovere URL/segreti prima del logging; test con chiave fittizia e risposta
+  401/429. La documentazione della dipendenza locale conferma il rischio e
+  l'operazione `without_url`. Non ho letto né usato la chiave reale dell'utente.
+- **Accesso Europeana:** `search/europeana.rs:108` genera un manifesto anche
+  senza riferimento dichiarato. La costruzione segue una convenzione ufficiale,
+  ma `media=true` non valida pagine effettivamente leggibili in Glossa.
+  Non affermare «solo manifesti dichiarati e verificati»: validare struttura,
+  media supportati e completezza, mantenendo stato di accesso distinto.
+  [Manifesti Europeana](https://europeana.atlassian.net/wiki/spaces/EF/pages/2398912540).
+- **Metadati Wellcome:** `search/wellcome.rs:53` usa gli agenti di produzione
+  come autore; `:72` assegna sempre Wellcome come editore. Mappare ruoli e
+  contributori del catalogo: altrimenti i futuri filtri autore/editore mentono.
+  Nella PR `:70` usa inoltre la segnatura come istituzione; una correzione
+  locale a quest'ultimo campo è già comparsa durante la revisione.
+- **Progressività:** `discovery/manifest.rs:260` arricchisce i risultati in
+  sequenza prima di restituire la pagina. Pubblicare prima i record disponibili,
+  poi arricchirli con coda limitata; non basta avvolgere questo percorso in un job
+  per ottenere subito risultati quando molti manifesti sono lenti.
+- **CI:** al momento del controllo lint, frontend e backend risultano verdi,
+  ma [test-e2e è fallito](https://github.com/nikazzio/glossa/actions/runs/34664255406/job/103472856223).
+  Due scenari non trovano l'intestazione Dashboard dopo la creazione workspace.
+  Non è dimostrato se sia regressione dell'app o aspettativa obsoleta del test;
+  non dichiarare «tutti i controlli verdi» né ignorare il fallimento.
 
 
 ### Scenari obbligatori

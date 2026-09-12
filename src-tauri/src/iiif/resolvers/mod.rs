@@ -384,6 +384,17 @@ fn mdz_id(value: &str) -> Option<String> {
 /// dalla ricerca, che invece chiede la chiave.
 fn europeana(value: &str) -> Option<Resolution> {
     let text = value.trim();
+    // Solo indirizzi di Europeana: senza questo controllo un indirizzo
+    // qualunque che contenga `/item/` diventerebbe una scheda, e il visore
+    // andrebbe su un manifesto inventato invece di cercare quelle parole.
+    let url = url::Url::parse(text).ok()?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return None;
+    }
+    let host = url.host_str()?.to_ascii_lowercase();
+    if host != "europeana.eu" && !host.ends_with(".europeana.eu") {
+        return None;
+    }
     let rest = ["/item/", "/presentation/"]
         .into_iter()
         .find_map(|marker| text.split_once(marker).map(|(_, rest)| rest))?;
