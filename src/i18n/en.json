@@ -1302,7 +1302,16 @@
       "alreadyLinked": "Already linked",
       "fromCache": "results from {{when}}",
       "searchAgain": "Search again, skipping the kept results",
-      "onlyDirect": "This library does not search by keyword: it only opens with the identifier or address shown in the example above. Its search either cannot be queried by a program, or refuses automated requests."
+      "onlyDirect": "This library does not search by keyword: it only opens with the identifier or address shown in the example above. Its search either cannot be queried by a program, or refuses automated requests.",
+      "errorRefused": "This library refused the request because it was automated. Retrying will not help: you can still open a work by pasting its address.",
+      "errorRateLimited": "This library is asking to slow down: too many requests. Try again in a few minutes.",
+      "errorUnavailable": "The library's service is not responding. Try again later.",
+      "errorUnreachable": "The library could not be reached. Check your internet connection.",
+      "errorInvalidData": "The library answered in a format Glossa does not recognise.",
+      "errorKeyMissing": "Europeana needs its own key: add it in Settings → Library → Libraries.",
+      "errorManifestUnreachable": "The book could not be reached at the library.",
+      "errorManifestUnreadable": "The library did not return the book.",
+      "errorManifestInvalid": "The book arrived in a format Glossa does not recognise."
     },
     "stats": {
       "projects": "Projects",

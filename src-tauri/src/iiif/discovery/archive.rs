@@ -70,16 +70,16 @@ pub(crate) async fn search_archive(
         .await
         .map_err(|error| {
             log::warn!("discovery archive request failed error={error}");
-            "Internet Archive could not be reached.".to_string()
+            crate::iiif::search::SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery archive response failed error={error}");
-            "Internet Archive search failed.".to_string()
+            crate::iiif::search::SEARCH_FAILED.to_string()
         })?;
     let value = response.json::<Value>().await.map_err(|error| {
         log::warn!("discovery archive body failed error={error}");
-        "Internet Archive returned invalid data.".to_string()
+        crate::iiif::search::SEARCH_INVALID_DATA.to_string()
     })?;
 
     // Il servizio risponde 200 anche quando è il suo motore di ricerca a non
@@ -87,7 +87,7 @@ pub(crate) async fn search_archive(
     // «nessun risultato», che manda a cercare l'errore dalla parte sbagliata.
     if let Some(error) = value.get("error").and_then(Value::as_str) {
         log::warn!("discovery archive search failed error={error}");
-        return Err("Internet Archive search is not responding.".to_string());
+        return Err(crate::iiif::search::SEARCH_UNAVAILABLE.to_string());
     }
 
     let results = value

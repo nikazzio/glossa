@@ -190,16 +190,16 @@ pub(crate) async fn resolve_manifest(
         .await
         .map_err(|error| {
             log::warn!("discovery manifest request failed url={manifest_url} error={error}");
-            "The manifest could not be reached.".to_string()
+            crate::iiif::search::MANIFEST_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery manifest response failed url={manifest_url} error={error}");
-            "The manifest could not be read.".to_string()
+            crate::iiif::search::MANIFEST_UNREADABLE.to_string()
         })?;
     let value = response.json::<Value>().await.map_err(|error| {
         log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
-        "The manifest is not valid JSON.".to_string()
+        crate::iiif::search::MANIFEST_INVALID.to_string()
     })?;
 
     Ok(manifest_preview(manifest_url, value))

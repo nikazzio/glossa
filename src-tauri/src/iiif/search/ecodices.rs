@@ -27,18 +27,18 @@ pub(super) async fn ecodices(
         .await
         .map_err(|error| {
             log::warn!("discovery ecodices request failed error={error}");
-            "e-codices could not be reached.".to_string()
+            super::SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery ecodices response failed error={error}");
-            "The e-codices search failed.".to_string()
+            super::SEARCH_FAILED.to_string()
         })?
         .text()
         .await
         .map_err(|error| {
             log::warn!("discovery ecodices body failed error={error}");
-            "e-codices returned invalid data.".to_string()
+            super::SEARCH_INVALID_DATA.to_string()
         })?;
 
     let results = parse_ecodices_results(&body);

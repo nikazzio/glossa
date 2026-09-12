@@ -1302,7 +1302,16 @@
       "alreadyLinked": "Già collegato",
       "fromCache": "risultati di {{when}}",
       "searchAgain": "Cerca di nuovo, saltando i risultati conservati",
-      "onlyDirect": "Questa biblioteca non cerca per parole: apre solo con l'identificativo o l'indirizzo che l'esempio qui sopra mostra. La sua ricerca non è interrogabile da un programma, oppure rifiuta le richieste automatiche."
+      "onlyDirect": "Questa biblioteca non cerca per parole: apre solo con l'identificativo o l'indirizzo che l'esempio qui sopra mostra. La sua ricerca non è interrogabile da un programma, oppure rifiuta le richieste automatiche.",
+      "errorRefused": "Questa biblioteca ha respinto la richiesta perché automatica. Non si risolve riprovando: si può aprire l'opera incollando il suo indirizzo.",
+      "errorRateLimited": "Questa biblioteca chiede di rallentare: troppe richieste. Riprova fra qualche minuto.",
+      "errorUnavailable": "Il servizio della biblioteca non risponde. Riprova più tardi.",
+      "errorUnreachable": "Non è stato possibile raggiungere la biblioteca. Controlla il collegamento a internet.",
+      "errorInvalidData": "La biblioteca ha risposto in un formato che Glossa non riconosce.",
+      "errorKeyMissing": "Europeana chiede una chiave propria: aggiungila in Impostazioni → Biblioteca → Biblioteche.",
+      "errorManifestUnreachable": "Non è stato possibile raggiungere il libro presso la biblioteca.",
+      "errorManifestUnreadable": "La biblioteca non ha restituito il libro.",
+      "errorManifestInvalid": "Il libro è arrivato in un formato che Glossa non riconosce."
     },
     "stats": {
       "projects": "Progetti",

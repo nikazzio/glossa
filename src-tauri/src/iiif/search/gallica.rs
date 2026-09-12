@@ -41,16 +41,16 @@ pub(super) async fn gallica(
         .await
         .map_err(|error| {
             log::warn!("discovery gallica request failed error={error}");
-            "Gallica could not be reached.".to_string()
+            super::SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery gallica response failed error={error}");
-            "Gallica search failed.".to_string()
+            super::SEARCH_FAILED.to_string()
         })?;
     let body = response.text().await.map_err(|error| {
         log::warn!("discovery gallica body failed error={error}");
-        "Gallica returned invalid data.".to_string()
+        super::SEARCH_INVALID_DATA.to_string()
     })?;
 
     let (results, total) = parse_gallica_sru(&body);

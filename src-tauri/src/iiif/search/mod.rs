@@ -73,6 +73,26 @@ impl Default for SearchEndpoints {
 }
 
 /// Quante schede si chiedono per pagina di risultati.
+/// I motivi per cui una ricerca non riesce, come codici e non come frasi.
+///
+/// La schermata li traduce: un messaggio scritto qui arriverebbe in inglese a
+/// chi usa Glossa in italiano. Sono distinti perché portano a decisioni
+/// diverse — un rifiuto automatico non si risolve riprovando, un limite di
+/// velocità sì, un servizio spento si riprova più tardi.
+pub const SEARCH_REFUSED: &str = "search_refused";
+pub const SEARCH_RATE_LIMITED: &str = "search_rate_limited";
+pub const SEARCH_UNAVAILABLE: &str = "search_unavailable";
+pub const SEARCH_UNREACHABLE: &str = "search_unreachable";
+pub const SEARCH_INVALID_DATA: &str = "search_invalid_data";
+pub const SEARCH_FAILED: &str = "search_failed";
+/// Europeana è l'unica che chiede una chiave: senza, non si parte nemmeno.
+pub const SEARCH_KEY_MISSING: &str = "search_key_missing";
+/// Aprire un'opera è un'altra cosa dal cercarla: un manifesto che non arriva
+/// non è un catalogo che non risponde, e chi legge deve poterli distinguere.
+pub const MANIFEST_UNREACHABLE: &str = "manifest_unreachable";
+pub const MANIFEST_UNREADABLE: &str = "manifest_unreadable";
+pub const MANIFEST_INVALID: &str = "manifest_invalid";
+
 pub(super) const PAGE_SIZE: u32 = 20;
 
 /// Esegue la ricerca della biblioteca, se ne ha una.
@@ -135,7 +155,7 @@ pub(super) async fn fetch_text(
         .await
         .map_err(|error| {
             log::warn!("discovery {library} request failed error={error}");
-            format!("{library} could not be reached.")
+            SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
@@ -143,17 +163,18 @@ pub(super) async fn fetch_text(
             match error.status().map(|status| status.as_u16()) {
                 // Alcune biblioteche stanno dietro a un controllo anti-robot:
                 // la richiesta non è sbagliata, è respinta perché automatica.
-                Some(401 | 403) => format!("{library} refused an automated request."),
-                Some(429) => format!("{library} is asking to slow down: too many requests."),
-                Some(status) if status >= 500 => format!("{library} is not responding."),
-                _ => format!("The {library} search failed."),
+                Some(401 | 403) => SEARCH_REFUSED,
+                Some(429) => SEARCH_RATE_LIMITED,
+                Some(status) if status >= 500 => SEARCH_UNAVAILABLE,
+                _ => SEARCH_FAILED,
             }
+            .to_string()
         })?
         .text()
         .await
         .map_err(|error| {
             log::warn!("discovery {library} body failed error={error}");
-            format!("{library} returned invalid data.")
+            SEARCH_INVALID_DATA.to_string()
         })
 }
 
@@ -168,7 +189,7 @@ pub(super) async fn fetch_json(
     let body = fetch_text(client, url, params, accept, library, gate).await?;
     serde_json::from_str(&body).map_err(|error| {
         log::warn!("discovery {library} json failed error={error}");
-        format!("{library} returned invalid data.")
+        SEARCH_INVALID_DATA.to_string()
     })
 }
 

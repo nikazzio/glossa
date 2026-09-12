@@ -27,7 +27,7 @@ pub(super) async fn europeana(
         .as_deref()
         .filter(|key| !key.is_empty())
     else {
-        return Err("Europeana needs its own key: add it in Settings → Library.".to_string());
+        return Err(super::SEARCH_KEY_MISSING.to_string());
     };
     // Le sue pagine si contano per riga di partenza, non per numero di pagina.
     let start = ((page.max(1) - 1) * PAGE_SIZE + 1).to_string();

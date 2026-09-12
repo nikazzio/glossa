@@ -49,16 +49,17 @@ describe('SourceDiscoveryPanel', () => {
   });
 
   it('shows a distinct error when discovery fails', async () => {
-    mockDiscover.mockRejectedValueOnce(new Error('offline'));
+    mockDiscover.mockRejectedValueOnce(new Error('search_refused'));
     const user = userEvent.setup();
     render(<SourceDiscoveryPanel />);
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
 
-    // Il motivo arriva dal motore: una biblioteca che rifiuta una richiesta
-    // automatica e una spenta non sono lo stesso guasto.
-    expect(await screen.findByRole('alert')).toHaveTextContent('offline');
+    // Il motivo arriva dal motore come codice e viene tradotto: una biblioteca
+    // che rifiuta una richiesta automatica e una spenta non sono lo stesso
+    // guasto, e chi legge deve poterli distinguere nella propria lingua.
+    expect(await screen.findByRole('alert')).toHaveTextContent('dashboard.discovery.errorRefused');
     expect(screen.queryByText('dashboard.discovery.notFound')).not.toBeInTheDocument();
   });
 

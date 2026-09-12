@@ -15,6 +15,27 @@ import { relativeDateUnit } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 
+/**
+ * I motivi per cui una ricerca non riesce, come li dichiara il motore.
+ *
+ * Sono codici e non frasi perché la stessa causa va detta nella lingua di chi
+ * legge, e perché portano a decisioni diverse: un rifiuto automatico non si
+ * risolve riprovando, un limite di velocità sì, un servizio spento si riprova
+ * più tardi.
+ */
+const SEARCH_ERRORS: Record<string, string> = {
+  search_refused: 'dashboard.discovery.errorRefused',
+  search_rate_limited: 'dashboard.discovery.errorRateLimited',
+  search_unavailable: 'dashboard.discovery.errorUnavailable',
+  search_unreachable: 'dashboard.discovery.errorUnreachable',
+  search_invalid_data: 'dashboard.discovery.errorInvalidData',
+  search_failed: 'dashboard.discovery.searchFailed',
+  search_key_missing: 'dashboard.discovery.errorKeyMissing',
+  manifest_unreachable: 'dashboard.discovery.errorManifestUnreachable',
+  manifest_unreadable: 'dashboard.discovery.errorManifestUnreadable',
+  manifest_invalid: 'dashboard.discovery.errorManifestInvalid',
+};
+
 function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
   const mediaType = !isManifest(card) ? card.mediaType : null;
   return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
@@ -387,7 +408,9 @@ export function SourceDiscoveryPanel() {
       )}
       {searchError && (
         <p className="mt-4 text-sm text-editorial-danger" role="alert">
-          {searchError}
+          {/* Un codice che non conosciamo si mostra com'è: nasconderlo dietro
+              un messaggio generico toglierebbe l'unica traccia utile. */}
+          {SEARCH_ERRORS[searchError] ? t(SEARCH_ERRORS[searchError]) : searchError}
         </p>
       )}
       {cards.length > 0 && (

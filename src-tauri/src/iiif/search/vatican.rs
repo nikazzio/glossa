@@ -32,18 +32,18 @@ pub(super) async fn vatican(
         .await
         .map_err(|error| {
             log::warn!("discovery vatican request failed error={error}");
-            "The Vatican Library could not be reached.".to_string()
+            super::SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery vatican response failed error={error}");
-            "The Vatican Library search failed.".to_string()
+            super::SEARCH_FAILED.to_string()
         })?
         .text()
         .await
         .map_err(|error| {
             log::warn!("discovery vatican body failed error={error}");
-            "The Vatican Library returned invalid data.".to_string()
+            super::SEARCH_INVALID_DATA.to_string()
         })?;
 
     let results = parse_vatican_results(&body, &endpoints.vatican_manifest_base);
