@@ -18,15 +18,40 @@ Tre livelli diversi, che la Biblioteca tiene distinti perché rispondono a doman
 
 ## Cercare una fonte
 
-La ricerca parte dalla Dashboard: scegli la biblioteca, scrivi cosa cerchi, avvia con l'icona di ricerca. La ricerca non scarica materiale.
+La ricerca parte dalla Dashboard: scegli la fonte, scrivi cosa cerchi, avvia con l'icona di ricerca. La ricerca non scarica materiale.
 
-Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
+### Quattro tipi di fonte
 
+Nella tendina le fonti stanno in quattro gruppi, perché rispondono in modo diverso e conviene saperlo prima di scrivere:
+
+- **Raccolte** (`◈`) — non sono biblioteche: indicizzano il materiale di molte istituzioni. Cercandoci dentro trovi opere conservate altrove, e di ogni risultato Glossa dice chi conserva l'originale. Sono Europeana e Internet Archive.
+- **Biblioteche** — rispondono del proprio fondo e cercano per parole. Sono la maggior parte.
+- **Ricerca ferma** (`⏸`) — la ricerca esiste ma il servizio respinge le richieste automatiche. Oggi è il caso di Harvard. L'opera si apre lo stesso scrivendo il suo identificativo.
+- **Solo per identificativo** (`#`) — non hanno una ricerca da interrogare: si aprono con un identificativo o un indirizzo. Sono Heidelberg, e-rara, e-manuscripta e l'indirizzo IIIF diretto.
+
+Scegliendo una fonte che non cerca, sotto il campo compare una riga che dice cosa accetta: non devi ricordartelo.
+
+**Da dove parte la ricerca quando apri Glossa** si sceglie in Impostazioni → Biblioteca → Biblioteche. La scelta predefinita è «l'ultima che ho usato»; durante la sessione vale comunque la fonte che scegli nel pannello.
+
+Le fonti non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
+
+- **Europeana** — parole di ricerca, oppure il collegamento di una sua scheda, che apre l'opera senza bisogno della chiave. Non è una biblioteca ma l'indice di centinaia di istituzioni europee: serve a trovare un'opera senza sapere in anticipo chi la conserva. Richiede una chiave propria, gratuita, che si incolla in **Impostazioni → Biblioteca → Biblioteche**. Glossa tiene solo i risultati che dichiarano una riproduzione leggibile, e per ognuno dice chi conserva l'originale, che può essere un'istituzione diversa da quella che ha risposto.
+- **Wellcome Collection** — parole di ricerca. Il suo catalogo descrive anche libri conservati in magazzino e mai digitalizzati: Glossa chiede fin dall'inizio soltanto quelli con una riproduzione, così i risultati che vedi si aprono tutti.
 - **Internet Archive** — parole di ricerca, oppure l'indirizzo della pagina di dettaglio.
 - **Biblioteca Vaticana** — la segnatura, scritta come ti viene (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` portano allo stesso manoscritto), l'indirizzo della pagina di lettura, oppure parole da cercare nel suo catalogo.
 - **Gallica** — l'identificativo ARK, un indirizzo di Gallica in qualunque forma, oppure parole da cercare per titolo. Se scrivi una parola che somiglia a un identificativo, Gallica cerca prima: meglio qualche risultato che un'opera inesistente.
 - **e-codices** — la segnatura composta (`bbb-0264`), l'indirizzo della pagina di lettura, oppure parole da cercare.
-- **le altre biblioteche in elenco** — per ora solo l'indirizzo completo del manifesto IIIF.
+- **Library of Congress** — parole di ricerca, oppure l'indirizzo di un elemento del catalogo (`loc.gov/item/...`, `loc.gov/resource/...`). Il catalogo contiene molto più di quello che Glossa sa aprire: restano fuori i risultati che non portano a un elemento, mentre quelli che ci portano possono comunque rivelarsi senza riproduzione quando li apri.
+- **Harvard Library** — il gettone dell'oggetto (`drs:123456`, `ids:123456`), che compare anche dentro gli indirizzi del suo visore. Non cerca per parole: la sua interfaccia risponde «troppe richieste» a ogni tentativo, provata da due reti diverse. Il numero del catalogo generale non vale: non porta a una riproduzione.
+- **Cambridge University Digital Library** — parole di ricerca, l'indirizzo del visore oppure la segnatura nella forma con i trattini (`MS-ADD-03996`). La ricerca passa dal servizio che usa il suo stesso visore, non dalla pagina pubblica, che blocca le richieste automatiche. Compaiono solo le opere con riproduzione, contate una volta e non pagina per pagina.
+- **Digital Bodleian** — parole di ricerca oppure l'indirizzo dell'oggetto. È l'unica che dichiara da sé l'indirizzo del manifesto di ogni risultato, invece di farlo ricavare dall'identificativo.
+- **Heidelberg** — la segnatura (`cpg848`) o l'indirizzo del visore. Non cerca per parole: la sua ricerca per il pubblico non è interrogabile da un programma.
+- **Biblioteca Estense** — parole di ricerca oppure l'identificativo dell'opera, anche preso da un indirizzo del visore Mirador.
+- **Institut de France** — parole di ricerca, il numero della scheda (`17837`) o un suo indirizzo.
+- **e-rara** — il numero della scheda (`198`) o un suo indirizzo. Sono gli stampati antichi svizzeri. Non cerca per parole: la sua pagina di ricerca risponde con un controllo anti-robot.
+- **e-manuscripta** — il numero della scheda (`992548`) o un suo indirizzo, per i manoscritti svizzeri. Stessa piattaforma di e-rara, stesso limite sulla ricerca.
+- **Bayerische Staatsbibliothek (MDZ)** — parole di ricerca, l'identificativo di Monaco (`bsb00026283`) o un suo indirizzo. La ricerca interroga il catalogo ufficiale, che risponde con schede bibliografiche: compaiono solo le schede che dichiarano una riproduzione, e si apre quella, non i cataloghi a stampa che descrivono lo stesso manoscritto.
+- **Indirizzo IIIF diretto** — l'indirizzo completo di un manifesto, di qualunque istituzione, anche non in elenco.
 
 I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
 
@@ -189,7 +214,7 @@ La misura delle pagine è un tetto, non un obbligo: le pagine già più piccole 
 ## Limiti attuali
 
 - **PDF** — una digitalizzazione in PDF compare fra le copie, con il suo nome e il collegamento alla biblioteca, ma non si scarica e non si legge dentro Glossa. Il comando di scaricamento non viene offerto per quelle copie, invece di lasciarlo fallire. Importare il testo di un PDF in un progetto di traduzione è un'altra cosa, e funziona già.
-- **Ricerca** — quattro biblioteche hanno una ricerca vera; le altre accettano solo l'indirizzo completo del manifesto. Non esiste ancora una ricerca su più biblioteche insieme.
+- **Ricerca** — cercano per parole Europeana, Wellcome Collection, Internet Archive, Vaticana, Gallica, e-codices, Digital Bodleian, Biblioteca Estense, Institut de France, Cambridge, la Bayerische Staatsbibliothek e la Library of Congress; quest'ultima dipende dalla tua rete, perché risponde a un programma solo quando non lo scambia per un robot. Aprono soltanto per identificativo o indirizzo Harvard, Heidelberg, e-rara ed e-manuscripta, e lo dichiarano nell'esempio del campo: le loro ricerche non sono interrogabili da un programma o rifiutano le richieste automatiche. Non esiste ancora una ricerca che interroghi più fonti insieme, ma Europeana ne copre molte in una sola richiesta.
 - **Singola pagina** — salvare la pagina aperta è possibile; scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una dalle miniature sono lavori ancora da completare.
 - **Divieti di scaricamento** dichiarati dalle istituzioni non sono ancora applicati automaticamente.
 

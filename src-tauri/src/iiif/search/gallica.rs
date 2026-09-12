@@ -1,82 +1,16 @@
-//! Cercare per titolo dentro una biblioteca.
-//!
-//! Ogni istituzione risponde a modo suo: Gallica ha un servizio di ricerca
-//! vero (SRU, XML), la Vaticana ed e-codices hanno solo le loro pagine di
-//! ricerca, da cui si leggono i risultati. Il comportamento è quello già
-//! collaudato in Scriptoria (`resolvers/search/{gallica,vatican,ecodices}.py`),
-//! riscritto qui senza librerie di regex né di parsing HTML: le forme cercate
-//! sono poche e fisse, e una dipendenza in più costerebbe più di quanto risolve.
+//! Gallica: il servizio SRU della Biblioteca nazionale di Francia.
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use reqwest::Client;
 use std::collections::BTreeMap;
 
-use super::discovery::{DiscoveryResult, Gate, SearchPage};
-use super::resolvers;
-use super::{ResolverKind, SearchHandlerKind};
+use super::super::discovery::{DiscoveryResult, Gate, SearchPage};
+use super::super::resolvers;
+use super::super::ResolverKind;
+use super::{local_name, SearchEndpoints, PAGE_SIZE};
 
-/// Gli indirizzi dei servizi di ricerca. Sono un valore e non costanti sparse
-/// perché le prove devono poterli puntare a un server finto.
-#[derive(Clone, Debug)]
-pub struct SearchEndpoints {
-    pub archive_search: String,
-    pub gallica_sru: String,
-    pub vatican_search: String,
-    pub ecodices_search: String,
-    /// Radice degli indirizzi dei manifesti della Vaticana: la pagina di
-    /// ricerca non dà autore, data o lingua, e i risultati vengono
-    /// arricchiti leggendo il manifesto di ognuno.
-    pub vatican_manifest_base: String,
-    /// La pagina normale del catalogo, visitata prima della ricerca: senza
-    /// prima passarci, il sito rifiuta la ricerca come se non venisse da un
-    /// browser vero.
-    pub vatican_home: String,
-}
-
-impl Default for SearchEndpoints {
-    fn default() -> Self {
-        Self {
-            archive_search: "https://archive.org/advancedsearch.php".to_string(),
-            gallica_sru: "https://gallica.bnf.fr/SRU".to_string(),
-            vatican_search: "https://digi.vatlib.it/mss/search".to_string(),
-            ecodices_search: "https://www.e-codices.unifr.ch/en/search/all".to_string(),
-            vatican_manifest_base: "https://digi.vatlib.it".to_string(),
-            vatican_home: "https://digi.vatlib.it/mss/".to_string(),
-        }
-    }
-}
-
-/// Quante schede si chiedono per pagina di risultati.
-const PAGE_SIZE: u32 = 20;
-
-/// Esegue la ricerca della biblioteca, se ne ha una.
-///
-/// Una biblioteca senza ricerca non è un errore: vuol dire che da lì si arriva
-/// solo con una segnatura o un indirizzo, e chi chiama lo racconta come
-/// «nessun risultato».
-pub async fn run(
-    client: &Client,
-    handler: SearchHandlerKind,
-    endpoints: &SearchEndpoints,
-    query: &str,
-    page: u32,
-    gate: Option<&Gate<'_>>,
-) -> Result<SearchPage, String> {
-    match handler {
-        SearchHandlerKind::Gallica => gallica(client, endpoints, query, page, gate).await,
-        SearchHandlerKind::Vatican => vatican(client, endpoints, query, gate).await,
-        SearchHandlerKind::Ecodices => ecodices(client, endpoints, query, gate).await,
-        _ => Ok(SearchPage {
-            results: Vec::new(),
-            has_more: false,
-        }),
-    }
-}
-
-// ── Gallica: servizio SRU ────────────────────────────────────────────────
-
-async fn gallica(
+pub(super) async fn gallica(
     client: &Client,
     endpoints: &SearchEndpoints,
     query: &str,
@@ -92,7 +26,7 @@ async fn gallica(
     // nell'autore o altrove, come un coautore che sul sito compare e qui no.
     let cql = format!("gallica all \"{cleaned}\"");
 
-    let _turn = super::discovery::wait_if_gated(gate, &endpoints.gallica_sru).await;
+    let _turn = super::super::discovery::wait_if_gated(gate, &endpoints.gallica_sru).await;
     let response = client
         .get(&endpoints.gallica_sru)
         .query(&[
@@ -107,16 +41,16 @@ async fn gallica(
         .await
         .map_err(|error| {
             log::warn!("discovery gallica request failed error={error}");
-            "Gallica could not be reached.".to_string()
+            super::SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery gallica response failed error={error}");
-            "Gallica search failed.".to_string()
+            super::reason_for(&error)
         })?;
     let body = response.text().await.map_err(|error| {
         log::warn!("discovery gallica body failed error={error}");
-        "Gallica returned invalid data.".to_string()
+        super::SEARCH_INVALID_DATA.to_string()
     })?;
 
     let (results, total) = parse_gallica_sru(&body);
@@ -391,252 +325,6 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
     })
 }
 
-// ── Vaticana: pagina di ricerca dei manoscritti ──────────────────────────
-
-async fn vatican(
-    client: &Client,
-    endpoints: &SearchEndpoints,
-    query: &str,
-    gate: Option<&Gate<'_>>,
-) -> Result<SearchPage, String> {
-    // La ricerca vive di una sessione aperta da questa pagina: senza averla
-    // visitata prima, il sito la rifiuta come se non venisse da un browser
-    // vero. Un guasto qui non è motivo per rinunciare subito: la richiesta
-    // sotto proverà comunque, e dirà lei se la biblioteca non risponde.
-    let _home_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_home).await;
-    if let Err(error) = client.get(&endpoints.vatican_home).send().await {
-        log::warn!("discovery vatican home visit failed error={error}");
-    }
-
-    let _search_turn = super::discovery::wait_if_gated(gate, &endpoints.vatican_search).await;
-    let body = client
-        .get(&endpoints.vatican_search)
-        .query(&[("k_f", "0"), ("k_v", query)])
-        .header("Referer", &endpoints.vatican_home)
-        .send()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery vatican request failed error={error}");
-            "The Vatican Library could not be reached.".to_string()
-        })?
-        .error_for_status()
-        .map_err(|error| {
-            log::warn!("discovery vatican response failed error={error}");
-            "The Vatican Library search failed.".to_string()
-        })?
-        .text()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery vatican body failed error={error}");
-            "The Vatican Library returned invalid data.".to_string()
-        })?;
-
-    let results = parse_vatican_results(&body, &endpoints.vatican_manifest_base);
-    log::info!("discovery vatican search found={}", results.len());
-    Ok(SearchPage {
-        // La pagina di ricerca della Vaticana non dichiara un totale: si
-        // mostra quello che ha dato, senza promettere una pagina successiva.
-        has_more: false,
-        results,
-    })
-}
-
-fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult> {
-    let mut results = Vec::new();
-    for chunk in body.split("row-search-result-record").skip(1) {
-        let Some(doc_id) = between(chunk, "/mss/edition/", '"') else {
-            continue;
-        };
-        if !doc_id.starts_with("MSS_") {
-            continue;
-        }
-        let title = between(chunk, "class=\"link-search-result-record-view\">", '<')
-            .map(|value| strip_tags(&value))
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| doc_id.clone());
-        let description =
-            between(chunk, "<div class=\"title\">", '<').map(|value| strip_tags(&value));
-        let thumbnail = between(chunk, "<img src=\"/pub/digit/", '"')
-            .map(|rest| format!("https://digi.vatlib.it/pub/digit/{rest}"));
-
-        results.push(DiscoveryResult {
-            title,
-            creator: None,
-            date: None,
-            description,
-            thumbnail_url: thumbnail,
-            media_type: Some("manuscript".to_string()),
-            collection: None,
-            language: None,
-            volume: None,
-            subjects: Vec::new(),
-            item_count: None,
-            manifest_url: format!("{manifest_base}/iiif/{doc_id}/manifest.json"),
-            contributors: Vec::new(),
-            publisher: None,
-            rights: Vec::new(),
-            physical_description: None,
-            holding_institution: None,
-            catalog_url: None,
-            page_url: Some(format!("https://digi.vatlib.it/view/{doc_id}")),
-            // Questa ricerca si legge raschiando la pagina web: non c'è una
-            // risposta strutturata da cui conservare il resto.
-            raw: BTreeMap::new(),
-            id: doc_id,
-        });
-    }
-    results
-}
-
-// ── e-codices: pagina di ricerca ─────────────────────────────────────────
-
-async fn ecodices(
-    client: &Client,
-    endpoints: &SearchEndpoints,
-    query: &str,
-    gate: Option<&Gate<'_>>,
-) -> Result<SearchPage, String> {
-    let _turn = super::discovery::wait_if_gated(gate, &endpoints.ecodices_search).await;
-    let body = client
-        .get(&endpoints.ecodices_search)
-        .query(&[
-            ("sQueryString", query),
-            ("sSearchField", "fullText"),
-            ("iResultsPerPage", &PAGE_SIZE.to_string()),
-            ("sSortField", "score"),
-        ])
-        .send()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery ecodices request failed error={error}");
-            "e-codices could not be reached.".to_string()
-        })?
-        .error_for_status()
-        .map_err(|error| {
-            log::warn!("discovery ecodices response failed error={error}");
-            "The e-codices search failed.".to_string()
-        })?
-        .text()
-        .await
-        .map_err(|error| {
-            log::warn!("discovery ecodices body failed error={error}");
-            "e-codices returned invalid data.".to_string()
-        })?;
-
-    let results = parse_ecodices_results(&body);
-    log::info!("discovery ecodices search found={}", results.len());
-    Ok(SearchPage {
-        has_more: false,
-        results,
-    })
-}
-
-fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
-    let mut results = Vec::new();
-    for chunk in body.split("<div class=\"search-result\">").skip(1) {
-        let Some(viewer_url) =
-            ecodices_facsimile_href(chunk).filter(|href| href.contains("e-codices"))
-        else {
-            continue;
-        };
-        let Some(resolved) = resolvers::resolve(ResolverKind::Ecodices, &viewer_url) else {
-            continue;
-        };
-        let title = between(chunk, "<div class=\"document-ms-title\">", '<')
-            .or_else(|| between(chunk, "<div class=\"document-headline\">", '<'))
-            .map(|value| strip_tags(&value))
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| resolved.doc_id.clone());
-        let collection = between(chunk, "<div class=\"collection-shelfmark\">", '<')
-            .map(|value| strip_tags(&value));
-        let description = between(chunk, "<p class=\"document-summary-search\">", '<')
-            .map(|value| strip_tags(&value));
-
-        results.push(DiscoveryResult {
-            title,
-            creator: None,
-            date: None,
-            description,
-            thumbnail_url: ecodices_thumbnail(chunk),
-            media_type: Some("manuscript".to_string()),
-            collection,
-            language: None,
-            volume: None,
-            subjects: Vec::new(),
-            item_count: None,
-            manifest_url: resolved.manifest_url,
-            contributors: Vec::new(),
-            publisher: None,
-            rights: Vec::new(),
-            physical_description: None,
-            holding_institution: None,
-            catalog_url: None,
-            page_url: Some(viewer_url),
-            // Come la Vaticana: pagina web raschiata, niente risposta
-            // strutturata da conservare.
-            raw: BTreeMap::new(),
-            id: resolved.doc_id,
-        });
-    }
-    results
-}
-
-/// Il primo link del risultato porta all'anteprima, non alla scheda: il vero
-/// indirizzo dell'opera è quello etichettato «Facsimile».
-fn ecodices_facsimile_href(chunk: &str) -> Option<String> {
-    let marker_start = chunk.find(">Facsimile</a>")?;
-    let before = &chunk[..marker_start];
-    let href_start = before.rfind("<a href=\"")? + "<a href=\"".len();
-    let href = before[href_start..].trim_end_matches('"');
-    (!href.is_empty()).then(|| href.to_string())
-}
-
-fn ecodices_thumbnail(chunk: &str) -> Option<String> {
-    let base = between(chunk, "image-server-base-url=\"", '"')?;
-    let path = between(chunk, "image-file-path=\"", '"')?;
-    let base = base.trim_end_matches('/');
-    let path = path.trim_start_matches('/');
-    if base.is_empty() || path.is_empty() {
-        return None;
-    }
-    Some(format!("{base}/{path}/full/180,/0/default.jpg"))
-}
-
-// ── Aiuti ────────────────────────────────────────────────────────────────
-
-/// Il nome dell'elemento senza il suo prefisso (`dc:title` → `title`).
-fn local_name(raw: &[u8]) -> String {
-    let name = String::from_utf8_lossy(raw);
-    match name.rsplit_once(':') {
-        Some((_, local)) => local.to_string(),
-        None => name.to_string(),
-    }
-}
-
-/// Il testo fra un segno di apertura e il primo carattere di chiusura.
-fn between(haystack: &str, after: &str, until: char) -> Option<String> {
-    let start = haystack.find(after)? + after.len();
-    let rest = &haystack[start..];
-    let end = rest.find(until)?;
-    let value = rest[..end].trim();
-    (!value.is_empty()).then(|| value.to_string())
-}
-
-/// Toglie eventuali marcatori rimasti dentro un valore letto da una pagina.
-fn strip_tags(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    let mut inside = false;
-    for character in value.chars() {
-        match character {
-            '<' => inside = true,
-            '>' => inside = false,
-            _ if !inside => out.push(character),
-            _ => {}
-        }
-    }
-    out.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -849,91 +537,5 @@ mod tests {
         let (results, total) = parse_gallica_sru("<srw:records><srw:record>");
         assert!(results.is_empty());
         assert_eq!(total, 0);
-    }
-
-    #[test]
-    fn vatican_results_carry_shelfmark_title_and_cover() {
-        let html = r#"
-          <div class="row-search-result-record">
-            <a href="/mss/edition/MSS_Vat.lat.3225" class="link-search-result-record-view">Vergilius Vaticanus</a>
-            <div class="title">Membranaceo, sec. IV</div>
-            <img src="/pub/digit/MSS_Vat.lat.3225/cover/cover.jpg" />
-          </div>"#;
-
-        let results = parse_vatican_results(html, "https://digi.vatlib.it");
-
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "MSS_Vat.lat.3225");
-        assert_eq!(results[0].title, "Vergilius Vaticanus");
-        assert_eq!(
-            results[0].manifest_url,
-            "https://digi.vatlib.it/iiif/MSS_Vat.lat.3225/manifest.json"
-        );
-        assert_eq!(
-            results[0].thumbnail_url.as_deref(),
-            Some("https://digi.vatlib.it/pub/digit/MSS_Vat.lat.3225/cover/cover.jpg")
-        );
-        assert_eq!(
-            results[0].page_url.as_deref(),
-            Some("https://digi.vatlib.it/view/MSS_Vat.lat.3225")
-        );
-    }
-
-    #[test]
-    fn a_vatican_page_without_manuscripts_gives_nothing() {
-        assert!(parse_vatican_results(
-            "<html><body>nessun risultato</body></html>",
-            "https://digi.vatlib.it"
-        )
-        .is_empty());
-    }
-
-    #[test]
-    fn ecodices_results_become_manifests_with_their_shelfmark() {
-        let html = r#"
-          <div class="search-result">
-            <a href="https://www.e-codices.unifr.ch/en/bbb/0264">Facsimile</a>
-            <div class="collection-shelfmark">Burgerbibliothek, Cod. 264</div>
-            <div class="document-ms-title">Titus Livius</div>
-            <p class="document-summary-search">Manoscritto del secolo XI</p>
-            <div image-server-base-url="https://www.e-codices.unifr.ch/loris/" image-file-path="bbb/bbb-0264/bbb-0264_001.jp2"></div>
-          </div>"#;
-
-        let results = parse_ecodices_results(html);
-
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "bbb-0264");
-        assert_eq!(results[0].title, "Titus Livius");
-        assert_eq!(
-            results[0].manifest_url,
-            "https://www.e-codices.unifr.ch/metadata/iiif/bbb-0264/manifest.json"
-        );
-        assert_eq!(
-            results[0].thumbnail_url.as_deref(),
-            Some("https://www.e-codices.unifr.ch/loris/bbb/bbb-0264/bbb-0264_001.jp2/full/180,/0/default.jpg")
-        );
-        assert_eq!(
-            results[0].page_url.as_deref(),
-            Some("https://www.e-codices.unifr.ch/en/bbb/0264")
-        );
-    }
-
-    #[test]
-    fn ecodices_generic_search_result_ignores_the_preview_link_before_facsimile() {
-        // Un risultato di ricerca generica (non per segnatura) mette prima un
-        // link all'anteprima e solo dopo quello «Facsimile»: prendere il primo
-        // link del blocco, invece di cercare quello con questa etichetta,
-        // porta a un indirizzo che non risolve a nessuna opera.
-        let html = r#"
-          <div class="search-result">
-            <a href="https://www.e-codices.unifr.ch/en/searchresult/list/one/hba/chart0161" class="search-result-preview-image"></a>
-            <a href="https://www.e-codices.unifr.ch/en/hba/chart0161">Facsimile</a>
-            <div class="document-ms-title">Graduale</div>
-          </div>"#;
-
-        let results = parse_ecodices_results(html);
-
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "hba-chart0161");
     }
 }

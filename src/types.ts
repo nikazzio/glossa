@@ -20,6 +20,15 @@ export interface IIIFProviderFilter {
   options: IIIFProviderFilterOption[];
 }
 
+/** Che cosa è una fonte: una raccolta che indicizza altre istituzioni, una
+ *  biblioteca che risponde del proprio fondo, o l'indirizzo diretto. */
+export type IIIFProviderKind = 'aggregator' | 'library' | 'directUrl';
+
+/** Come ci si arriva oggi: cercando per parole, solo con un identificativo
+ *  perché una ricerca da interrogare non esiste, oppure con la ricerca ferma
+ *  perché il servizio respinge le richieste automatiche. */
+export type IIIFSearchAvailability = 'searchable' | 'directOnly' | 'paused';
+
 export interface IIIFProvider {
   key: string;
   label: string;
@@ -31,6 +40,8 @@ export interface IIIFProvider {
   searchMode: IIIFSearchMode;
   supportsDirectResolution: boolean;
   supportsSearch: boolean;
+  kind: IIIFProviderKind;
+  availability: IIIFSearchAvailability;
   filters: IIIFProviderFilter[];
 }
 

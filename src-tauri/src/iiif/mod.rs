@@ -20,17 +20,25 @@ pub enum SearchMode {
 /// provider metadata never needs to know about a caller or UI surface.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+/// Il riconoscimento proprio di una biblioteca. Chi non ce l'ha usa `Generic`,
+/// cioè accetta l'indirizzo completo del manifesto: non è una mancanza
+/// nascosta, il registro lo dichiara con `supports_direct_resolution` e con
+/// l'esempio mostrato nel campo di ricerca.
 pub enum ResolverKind {
     Vatican,
+    Europeana,
     Gallica,
-    Institut,
+    Ecodices,
+    Loc,
+    Harvard,
+    Cambridge,
     Bodleian,
     Heidelberg,
-    Cambridge,
-    Ecodices,
     Estense,
-    Harvard,
-    Loc,
+    Institut,
+    ERara,
+    EManuscripta,
+    Mdz,
     ArchiveOrg,
     Generic,
 }
@@ -39,16 +47,51 @@ pub enum ResolverKind {
 #[serde(rename_all = "snake_case")]
 pub enum SearchHandlerKind {
     Vatican,
-    Gallica,
-    Institut,
-    Bodleian,
-    Heidelberg,
     Cambridge,
+    Mdz,
+    Europeana,
+    Wellcome,
+    Gallica,
     Ecodices,
-    Estense,
-    Harvard,
     Loc,
+    Bodleian,
+    Estense,
+    Institut,
     ArchiveOrg,
+}
+
+/// Che cosa è una fonte, non che cosa sa fare.
+///
+/// Una raccolta indicizza il materiale di altre istituzioni: cercandoci dentro
+/// si trovano opere conservate altrove, e chi le conserva va detto risultato per
+/// risultato. Una biblioteca risponde del proprio fondo. L'indirizzo diretto non
+/// è né l'una né l'altra: è la via d'uscita per qualunque istituzione, anche non
+/// in elenco.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProviderKind {
+    Aggregator,
+    Library,
+    DirectUrl,
+}
+
+/// Come ci si arriva, oggi.
+///
+/// Distingue due cose che sembrano uguali e non lo sono: una fonte che **non
+/// ha** una ricerca interrogabile da un programma, e una che ce l'ha ma la
+/// rifiuta a chi non è un browser. La prima non cambierà scrivendo codice; la
+/// seconda può tornare, e dirlo evita di riprovare all'infinito o di
+/// dimenticarsene.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SearchAvailability {
+    /// Cerca per parole.
+    Searchable,
+    /// Si apre solo con un identificativo o un indirizzo: non esiste una
+    /// ricerca da interrogare.
+    DirectOnly,
+    /// La ricerca esiste ma il servizio respinge le richieste automatiche.
+    Paused,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -82,6 +125,12 @@ pub struct IIIFProvider {
     pub search_mode: SearchMode,
     pub supports_direct_resolution: bool,
     pub supports_search: bool,
+    /// Raccolta, biblioteca o indirizzo diretto: serve alla schermata per
+    /// raggruppare le fonti, e a chi legge i risultati per sapere che
+    /// cercando in una raccolta l'istituzione che conserva è un'altra.
+    pub kind: ProviderKind,
+    /// Perché una fonte non cerca, quando non cerca.
+    pub availability: SearchAvailability,
     pub filters: &'static [ProviderFilter],
 }
 
@@ -98,6 +147,41 @@ const GALLICA_FILTERS: &[ProviderFilter] = &[ProviderFilter {
 }];
 pub const PROVIDERS: &[IIIFProvider] = &[
     IIIFProvider {
+        key: "europeana",
+        network: network::CAUTIOUS,
+        label: "Europeana",
+        aliases: &["europeana"],
+        placeholder: "e.g. dante divina commedia",
+        is_enabled: true,
+        // Non è una biblioteca: è l'indice di centinaia di istituzioni. Il suo
+        // mestiere è la ricerca, ma il collegamento di una sua scheda apre
+        // l'opera senza chiedere la chiave.
+        resolver: ResolverKind::Europeana,
+        search_handler: Some(SearchHandlerKind::Europeana),
+        search_mode: SearchMode::SearchFirst,
+        supports_direct_resolution: true,
+        supports_search: true,
+        kind: ProviderKind::Aggregator,
+        availability: SearchAvailability::Searchable,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "wellcome",
+        network: network::CAUTIOUS,
+        label: "Wellcome Collection",
+        aliases: &["wellcome"],
+        placeholder: "e.g. anatomy",
+        is_enabled: true,
+        resolver: ResolverKind::Generic,
+        search_handler: Some(SearchHandlerKind::Wellcome),
+        search_mode: SearchMode::SearchFirst,
+        supports_direct_resolution: true,
+        supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
+        filters: &[],
+    },
+    IIIFProvider {
         key: "vatican",
         network: network::VATICAN,
         label: "Vatican Library",
@@ -109,6 +193,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -123,6 +209,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: GALLICA_FILTERS,
     },
     IIIFProvider {
@@ -137,6 +225,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -148,9 +238,11 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Bodleian,
         search_handler: Some(SearchHandlerKind::Bodleian),
-        search_mode: SearchMode::Direct,
+        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -161,10 +253,12 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         placeholder: "e.g. cpg123",
         is_enabled: true,
         resolver: ResolverKind::Heidelberg,
-        search_handler: Some(SearchHandlerKind::Heidelberg),
+        search_handler: None,
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
-        supports_search: true,
+        supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
         filters: &[],
     },
     IIIFProvider {
@@ -179,6 +273,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -196,6 +292,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -203,13 +301,15 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         network: network::CAUTIOUS,
         label: "Biblioteca Estense",
         aliases: &["estense", "edl", "modena"],
-        placeholder: "e.g. A.M.02.12.A",
+        placeholder: "e.g. 0a1b2c3d-4e5f-6789-abcd-ef0123456789",
         is_enabled: true,
         resolver: ResolverKind::Estense,
         search_handler: Some(SearchHandlerKind::Estense),
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -217,13 +317,15 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         network: network::CAUTIOUS,
         label: "Harvard Library",
         aliases: &["harvard"],
-        placeholder: "e.g. DRS ID or IIIF URL",
+        placeholder: "e.g. drs:123456",
         is_enabled: true,
         resolver: ResolverKind::Harvard,
-        search_handler: Some(SearchHandlerKind::Harvard),
+        search_handler: None,
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
-        supports_search: true,
+        supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Paused,
         filters: &[],
     },
     IIIFProvider {
@@ -238,6 +340,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -252,6 +356,59 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
+        kind: ProviderKind::Aggregator,
+        availability: SearchAvailability::Searchable,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "e_rara",
+        network: network::CAUTIOUS,
+        label: "e-rara",
+        aliases: &["e-rara", "erara"],
+        placeholder: "e.g. 198",
+        is_enabled: true,
+        resolver: ResolverKind::ERara,
+        search_handler: None,
+        search_mode: SearchMode::Direct,
+        supports_direct_resolution: true,
+        // La sua pagina di ricerca risponde con un controllo anti-robot: si
+        // dichiara, invece di offrire una ricerca che restituirebbe sempre
+        // niente.
+        supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "e_manuscripta",
+        network: network::CAUTIOUS,
+        label: "e-manuscripta",
+        aliases: &["e-manuscripta", "emanuscripta"],
+        placeholder: "e.g. 992548",
+        is_enabled: true,
+        resolver: ResolverKind::EManuscripta,
+        search_handler: None,
+        search_mode: SearchMode::Direct,
+        supports_direct_resolution: true,
+        supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "mdz",
+        network: network::CAUTIOUS,
+        label: "Bayerische Staatsbibliothek (MDZ)",
+        aliases: &["mdz", "bsb", "digitale-sammlungen"],
+        placeholder: "e.g. bsb00026283",
+        is_enabled: true,
+        resolver: ResolverKind::Mdz,
+        search_handler: Some(SearchHandlerKind::Mdz),
+        search_mode: SearchMode::Fallback,
+        supports_direct_resolution: true,
+        supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
         filters: &[],
     },
     IIIFProvider {
@@ -266,6 +423,8 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         supports_search: false,
+        kind: ProviderKind::DirectUrl,
+        availability: SearchAvailability::DirectOnly,
         filters: &[],
     },
 ];
@@ -297,14 +456,46 @@ mod tests {
 
     #[test]
     fn registry_is_stable_and_has_a_generic_direct_url_provider() {
+        // L'ordine è quello che si vede nella tendina: prima l'aggregatore, che
+        // cerca in molte istituzioni insieme, poi le singole biblioteche.
         assert_eq!(
             PROVIDERS.first().map(|provider| provider.key),
-            Some("vatican")
+            Some("europeana")
         );
         let generic = find_provider("generic").expect("generic provider must exist");
         assert!(generic.supports_direct_resolution);
         assert!(!generic.supports_search);
         assert_eq!(generic.resolver, ResolverKind::Generic);
+    }
+
+    #[test]
+    fn what_a_source_declares_and_why_it_cannot_search_agree() {
+        for provider in PROVIDERS {
+            let searchable = provider.availability == SearchAvailability::Searchable;
+            assert_eq!(
+                provider.supports_search, searchable,
+                "{}: dichiara ricerca {} ma disponibilità {:?}",
+                provider.key, provider.supports_search, provider.availability
+            );
+            // Una fonte che cerca deve avere chi la cerca: il contrario è la
+            // risposta vuota silenziosa che si era già pagata una volta.
+            assert_eq!(
+                provider.search_handler.is_some(),
+                searchable,
+                "{}: gestore e disponibilità non concordano",
+                provider.key
+            );
+        }
+    }
+
+    #[test]
+    fn only_the_direct_address_is_neither_a_library_nor_a_collection() {
+        let neither: Vec<&str> = PROVIDERS
+            .iter()
+            .filter(|provider| provider.kind == ProviderKind::DirectUrl)
+            .map(|provider| provider.key)
+            .collect();
+        assert_eq!(neither, vec!["generic"]);
     }
 
     #[test]

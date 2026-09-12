@@ -18,15 +18,40 @@ Three different levels, kept apart because they answer different questions.
 
 ## Search for a source
 
-Search starts from the Dashboard: choose a library, type what you are looking for, start it with the search icon. Searching downloads nothing.
+Search starts from the Dashboard: choose a source, type what you are looking for, start it with the search icon. Searching downloads nothing.
 
-Libraries do not have the same capabilities, and Glossa states what each one accepts:
+### Four kinds of source
 
+In the picker, sources sit in four groups, because they answer differently and it helps to know before typing:
+
+- **Collections** (`◈`) — not libraries: they index material from many institutions. Searching them finds works held elsewhere, and Glossa states who holds each original. These are Europeana and Internet Archive.
+- **Libraries** — they answer for their own holdings and search by keyword. Most sources are here.
+- **Search on hold** (`⏸`) — the search exists but the service refuses automated requests. Today that is Harvard. The work still opens if you type its identifier.
+- **By identifier only** (`#`) — they have no search to query: they open with an identifier or an address. These are Heidelberg, e-rara, e-manuscripta and the direct IIIF address.
+
+Pick a source that does not search and a line appears under the field saying what it accepts: you do not have to remember.
+
+**Where search starts when you open Glossa** is set in Settings → Library → Libraries. The default is "the last one I used"; during the session the source you pick in the panel wins anyway.
+
+Sources do not have the same capabilities, and Glossa states what each one accepts:
+
+- **Europeana** — keywords, or the link of one of its records, which opens the work without needing the key. Not a library but the index of hundreds of European institutions: it finds a work without knowing in advance who holds it. It needs its own key, free of charge, pasted into **Settings → Library → Libraries**. Glossa keeps only results that declare a readable reproduction, and states for each who holds the original, which may be a different institution from the one that answered.
+- **Wellcome Collection** — keywords. Its catalogue also describes books kept in stores and never digitised: Glossa asks from the start only for those with a reproduction, so every result you see can be opened.
 - **Internet Archive** — keywords, or the address of the detail page.
 - **Vatican Library** — the shelfmark, however you write it (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` all reach the same manuscript), the address of the reading page, or words to search its catalogue.
 - **Gallica** — the ARK identifier, a Gallica address in any shape, or words to search by title. If you type a word that looks like an identifier, Gallica searches first: better a few results than a work that does not exist.
 - **e-codices** — the compound shelfmark (`bbb-0264`), the address of the reading page, or words to search.
-- **the other libraries listed** — for now only the full IIIF manifest address.
+- **Library of Congress** — keywords, or the address of a catalogue item (`loc.gov/item/...`, `loc.gov/resource/...`). The catalogue holds far more than Glossa can open: results that do not point at an item are left out, while those that do may still turn out to have no reproduction when you open them.
+- **Harvard Library** — the object token (`drs:123456`, `ids:123456`), which also appears inside its viewer addresses. No keyword search: its interface answers "too many requests" to every attempt, tried from two different networks. The general catalogue number does not work: it does not lead to a reproduction.
+- **Cambridge University Digital Library** — keywords, the viewer address or the shelfmark in its dashed form (`MS-ADD-03996`). Search goes through the same service its own viewer uses, not the public page, which blocks automated requests. Only works with a reproduction appear, counted once rather than page by page.
+- **Digital Bodleian** — keywords or the object address. It is the only one that declares the manifest address of each result itself, instead of having it derived from the identifier.
+- **Heidelberg** — the shelfmark (`cpg848`) or the viewer address. No keyword search: its public search cannot be queried by a program.
+- **Biblioteca Estense** — keywords or the work identifier, including one taken from a Mirador viewer address.
+- **Institut de France** — keywords, the record number (`17837`) or one of its addresses.
+- **e-rara** — the record number (`198`) or one of its addresses. Swiss early printed books. No keyword search: its search page answers with a bot check.
+- **e-manuscripta** — the record number (`992548`) or one of its addresses, for Swiss manuscripts. Same platform as e-rara, same limit on search.
+- **Bayerische Staatsbibliothek (MDZ)** — keywords, the Munich identifier (`bsb00026283`) or one of its addresses. Search queries the official catalogue, which answers with bibliographic records: only records that declare a reproduction appear, and that is what opens — not the printed catalogues describing the same manuscript.
+- **Direct IIIF URL** — the full address of a manifest, from any institution, including ones not listed.
 
 Results appear as a list, each with a thumbnail and essential data: author, date, **how many pages the work has**, and which library it comes from. The page count is visible without expanding the row, because that is what makes you decide whether the work is worth a look. When the catalogue does not declare it — which happens with manuscripts — the entry is simply absent, rather than showing a zero that would be untrue. Selecting a result expands the row to show its full title, description, and all available metadata.
 
@@ -189,7 +214,7 @@ The page size is a cap, not an obligation: pages already smaller are taken as th
 ## Current limitations
 
 - **PDF** — a PDF digitisation appears among the copies, with its name and the link to the library, but it is not downloaded and not read inside Glossa. The download command is not offered for those copies, instead of letting it fail. Importing the text of a PDF into a translation project is a different thing, and it already works.
-- **Search** — four libraries have real search; the others accept only the full manifest address. There is no search across several libraries yet.
+- **Search** — keyword search works on Europeana, Wellcome Collection, Internet Archive, Vatican, Gallica, e-codices, Digital Bodleian, Biblioteca Estense, Institut de France, Cambridge, the Bayerische Staatsbibliothek and the Library of Congress; that last one depends on your network, because it answers a program only when it does not take it for a robot. Harvard, Heidelberg, e-rara and e-manuscripta open by identifier or address only, and say so in the field's example: their searches either cannot be queried by a program or refuse automated requests. There is still no single search across several sources, but Europeana covers many of them in one request.
 - **Single page** — saving the open page is possible; choosing the size for that page, replacing it, deleting it or selecting several from the thumbnails are still to be completed.
 - **Download restrictions** declared by institutions are not enforced automatically yet.
 

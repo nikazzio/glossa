@@ -9,22 +9,60 @@ import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 
-// Le biblioteche il cui riconoscimento e la cui ricerca sono davvero
-// implementati lato backend (v. src-tauri/src/iiif/search.rs): elenco a mano
-// perché `supportsSearch` del provider è vero anche per le biblioteche che
-// non cercano ancora, dichiarazione preesistente e fuori scopo qui.
-const READY_DISCOVERY_PROVIDERS = new Set(['generic', 'archive_org', 'vatican', 'gallica', 'ecodices']);
+/**
+ * I motivi per cui una ricerca non riesce, come li dichiara il motore.
+ *
+ * Sono codici e non frasi perché la stessa causa va detta nella lingua di chi
+ * legge, e perché portano a decisioni diverse: un rifiuto automatico non si
+ * risolve riprovando, un limite di velocità sì, un servizio spento si riprova
+ * più tardi.
+ */
+/**
+ * L'ordine in cui le fonti compaiono nella tendina, e il segno che le
+ * distingue.
+ *
+ * Sono quattro cose diverse e prima si somigliavano tutte: una raccolta
+ * indicizza il materiale di altre istituzioni, una biblioteca risponde del
+ * proprio fondo, una fonte ferma ha una ricerca che il servizio respinge, e
+ * una che apre soltanto per identificativo non ha proprio una ricerca da
+ * interrogare. Il segno sta accanto al nome perché nella tendina di sistema
+ * non c'è altro spazio; il significato è scritto sotto il campo.
+ */
+const SOURCE_GROUPS = [
+  { id: 'aggregator', mark: '◈' },
+  { id: 'library', mark: '' },
+  { id: 'paused', mark: '⏸' },
+  { id: 'directOnly', mark: '#' },
+] as const;
 
-function sourceTypeLabel(card: SourceCard, providerLabel: string): string {
-  const mediaType = !isManifest(card) ? card.mediaType : null;
-  return mediaType ? `${providerLabel} · ${mediaType}` : providerLabel;
+type SourceGroupId = (typeof SOURCE_GROUPS)[number]['id'];
+
+function groupOf(provider: IIIFProvider): SourceGroupId {
+  if (provider.availability === 'paused') return 'paused';
+  if (provider.kind === 'aggregator') return 'aggregator';
+  if (provider.availability === 'directOnly') return 'directOnly';
+  return 'library';
 }
+
+const SEARCH_ERRORS: Record<string, string> = {
+  search_refused: 'dashboard.discovery.errorRefused',
+  search_rate_limited: 'dashboard.discovery.errorRateLimited',
+  search_unavailable: 'dashboard.discovery.errorUnavailable',
+  search_unreachable: 'dashboard.discovery.errorUnreachable',
+  search_invalid_data: 'dashboard.discovery.errorInvalidData',
+  search_failed: 'dashboard.discovery.searchFailed',
+  search_key_missing: 'dashboard.discovery.errorKeyMissing',
+  manifest_unreachable: 'dashboard.discovery.errorManifestUnreachable',
+  manifest_unreadable: 'dashboard.discovery.errorManifestUnreadable',
+  manifest_invalid: 'dashboard.discovery.errorManifestInvalid',
+};
 
 /** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del
  * catalogo, e riordinarlo per deduplicare cambierebbe quello che l'utente
@@ -129,7 +167,22 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
   // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
   // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
   const pageCount = card.itemCount !== null ? t('dashboard.discovery.pagesCount', { count: card.itemCount }) : null;
-  const metaParts = [card.creator, card.date, ...(expanded ? [] : [pageCount]), sourceTypeLabel(card, providerLabel)].filter(Boolean) as string[];
+  // **Da dove viene l'opera**, in evidenza e per prima: cercando su un
+  // aggregatore i risultati arrivano da istituzioni diverse, e saperlo senza
+  // aprire la riga è la differenza fra scorrere e dover controllare uno per
+  // uno. Quando l'istituzione non è dichiarata vale chi ha risposto alla
+  // ricerca, che è sempre noto.
+  // Aperta la riga, l'istituzione è già fra i dati della scheda: ripeterla qui
+  // sarebbe la stessa frase due volte. Lì in evidenza resta chi ha risposto
+  // alla ricerca, che con un aggregatore non è la stessa cosa.
+  const origin = (expanded ? providerLabel : card.holdingInstitution) || providerLabel;
+  const mediaType = !isManifest(card) ? card.mediaType : null;
+  const metaParts = [
+    card.creator,
+    card.date,
+    mediaType,
+    ...(expanded ? [] : [pageCount]),
+  ].filter(Boolean) as string[];
 
   return (
     <motion.article
@@ -163,12 +216,18 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
           {expanded ? (
             <span className="min-w-0 flex-1 pt-0.5">
               <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
-              <span className="mt-1 block text-xs text-editorial-muted">{metaParts.join(' · ')}</span>
+              <span className="mt-1 block text-xs text-editorial-muted">
+                <strong className="font-semibold text-editorial-ink">{origin}</strong>
+                {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
+              </span>
             </span>
           ) : (
             <span className="min-w-0 flex-1">
               <span className="block truncate font-display italic text-editorial-ink">{title}</span>
-              <span className="mt-0.5 block truncate text-xs text-editorial-muted">{metaParts.join(' · ')}</span>
+              <span className="mt-0.5 block truncate text-xs text-editorial-muted">
+                <strong className="font-semibold text-editorial-ink">{origin}</strong>
+                {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
+              </span>
             </span>
           )}
         </button>
@@ -267,10 +326,28 @@ export function SourceDiscoveryPanel() {
   useEffect(() => {
     listIIIFProviders()
       .then((items) => {
-        const ready = items.filter((provider) => READY_DISCOVERY_PROVIDERS.has(provider.key));
-        setProviders(ready);
-        const current = useDiscoverySearchStore.getState().providerKey;
-        if (!ready.some((provider) => provider.key === current) && ready[0]) setProviderKey(ready[0].key);
+        // Nessun elenco a mano: il registro del motore dichiara quello che ogni
+        // biblioteca sa fare davvero — chi non cerca lo dice con
+        // `supportsSearch` falso e con un esempio che chiede l'indirizzo del
+        // manifesto. Una copia qui si sarebbe scollata al primo provider nuovo.
+        // Il motore può rispondere con qualcosa che non è un elenco — succede
+        // nelle prove del browser, dove il ponte è simulato: senza questo
+        // controllo la schermata si schianta al primo disegno invece di restare
+        // senza biblioteche.
+        const list = Array.isArray(items) ? items : [];
+        setProviders(list);
+        // La fonte preferita vale all'avvio, non a ogni ricerca: durante la
+        // sessione comanda quella scelta a mano, altrimenti cambiarla sarebbe
+        // impossibile.
+        const { providerKey: current, touched } = useDiscoverySearchStore.getState();
+        const preferred = useUiStore.getState().defaultSearchProvider;
+        const wanted = !touched && preferred ? preferred : current;
+        const exists = (key: string) => list.some((provider) => provider.key === key);
+        if (exists(wanted)) {
+          if (wanted !== current) setProviderKey(wanted);
+        } else if (list[0]) {
+          setProviderKey(list[0].key);
+        }
       })
       .catch((error: unknown) => {
         logger.error('discovery providers load failed', { error: errorMessage(error) });
@@ -280,6 +357,22 @@ export function SourceDiscoveryPanel() {
   }, [setProviderKey]);
 
   const selectedProvider = providers.find((provider) => provider.key === providerKey);
+  // Le fonti si vedono raggruppate: raccolte, biblioteche che cercano, fonti
+  // ferme, fonti che aprono solo per identificativo. L'ordine dentro ogni
+  // gruppo è quello del registro, che è l'ordine deciso dal motore.
+  const sourceOptions = useMemo(
+    () =>
+      SOURCE_GROUPS.flatMap(({ id, mark }) =>
+        providers
+          .filter((provider) => groupOf(provider) === id)
+          .map((provider) => ({
+            value: provider.key,
+            label: mark ? `${mark} ${provider.label}` : provider.label,
+            group: t(`dashboard.discovery.group.${id}`),
+          })),
+      ),
+    [providers, t],
+  );
   const cards = useMemo<SourceCard[]>(() => {
     if (!outcome) return [];
     return outcome.manifest ? [{ ...outcome.manifest, id: outcome.manifest.manifestUrl }] : outcome.results;
@@ -294,12 +387,12 @@ export function SourceDiscoveryPanel() {
     setExpandedId(null);
     setPage(1);
     setOutcome(null);
-    setSearchError(false);
+    setSearchError(null);
     try {
       setOutcome(await discoverIIIF(providerKey, input.trim(), 1, fresh));
     } catch (error: unknown) {
       logger.warn('discovery search failed', { providerKey, error: errorMessage(error) });
-      setSearchError(true);
+      setSearchError(errorMessage(error));
     } finally {
       setSearching(false);
     }
@@ -314,7 +407,7 @@ export function SourceDiscoveryPanel() {
     if (!outcome || searching) return;
     const nextPage = page + 1;
     setSearching(true);
-    setSearchError(false);
+    setSearchError(null);
     try {
       const next = await discoverIIIF(providerKey, input.trim(), nextPage);
       // Alcuni cataloghi — Internet Archive fra questi — restituiscono lo
@@ -324,7 +417,7 @@ export function SourceDiscoveryPanel() {
       setPage(nextPage);
     } catch (error: unknown) {
       logger.warn('discovery load more failed', { providerKey, page: nextPage, error: errorMessage(error) });
-      setSearchError(true);
+      setSearchError(errorMessage(error));
     } finally {
       setSearching(false);
     }
@@ -333,12 +426,27 @@ export function SourceDiscoveryPanel() {
   return (
     <section className="flex h-full min-h-0 flex-col">
       <form className="flex shrink-0 items-center gap-2 border-y border-editorial-border py-3" onSubmit={submit}>
-        <Select value={providerKey} onChange={(value) => { setProviderKey(value); setOutcome(null); }} options={providers.map((provider) => ({ value: provider.key, label: provider.label }))} ariaLabel={t('dashboard.discovery.source')} disabled={loading || providers.length === 0} />
+        <Select
+          value={providerKey}
+          onChange={(value) => {
+            useDiscoverySearchStore.setState({ touched: true });
+            setProviderKey(value);
+            setOutcome(null);
+          }}
+          options={sourceOptions}
+          ariaLabel={t('dashboard.discovery.source')}
+          disabled={loading || providers.length === 0}
+        />
         <input value={input} onChange={(event) => setInput(event.target.value)} aria-label={t('dashboard.discovery.input')} placeholder={selectedProvider?.placeholder ?? t('dashboard.discovery.input')} className="min-w-0 flex-1 bg-transparent px-2 py-2 font-display text-xl italic text-editorial-ink outline-none placeholder:text-editorial-muted/70 focus-visible:ring-2 focus-visible:ring-editorial-accent" />
         <IconButton title={t('dashboard.discovery.submit')} type="submit" disabled={loading || searching || !input.trim()}>
           {searching ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
       </form>
+      {selectedProvider && groupOf(selectedProvider) !== 'library' && (
+        <p className="mt-2 text-xs text-editorial-muted">
+          {t(`dashboard.discovery.groupHint.${groupOf(selectedProvider)}`)}
+        </p>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
       {searching && !outcome && (
         <div className="flex min-h-64 items-center justify-center" role="status">
@@ -369,8 +477,23 @@ export function SourceDiscoveryPanel() {
           </IconButton>
         </p>
       )}
-      {outcome?.status === 'not_found' && <p className="mt-4 text-sm text-editorial-muted">{t('dashboard.discovery.notFound')}</p>}
-      {searchError && <p className="mt-4 text-sm text-editorial-danger" role="alert">{t('dashboard.discovery.searchFailed')}</p>}
+      {outcome?.status === 'not_found' && (
+        <p className="mt-4 text-sm text-editorial-muted">
+          {/* Una biblioteca che non cerca non ha «nessun risultato»: non ha
+              proprio cercato, e continuare a scrivere parole non cambierà
+              niente. Lo dice, invece di lasciar credere a un catalogo vuoto. */}
+          {selectedProvider && !selectedProvider.supportsSearch
+            ? t('dashboard.discovery.onlyDirect')
+            : t('dashboard.discovery.notFound')}
+        </p>
+      )}
+      {searchError && (
+        <p className="mt-4 text-sm text-editorial-danger" role="alert">
+          {/* Un codice che non conosciamo si mostra com'è: nasconderlo dietro
+              un messaggio generico toglierebbe l'unica traccia utile. */}
+          {SEARCH_ERRORS[searchError] ? t(SEARCH_ERRORS[searchError]) : searchError}
+        </p>
+      )}
       {cards.length > 0 && (
         <div className="mt-4">
           {cards.map((card) => (
