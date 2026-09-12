@@ -97,6 +97,7 @@ fn parse_vatican_results(body: &str, manifest_base: &str) -> Vec<DiscoveryResult
             // Questa ricerca si legge raschiando la pagina web: non c'è una
             // risposta strutturata da cui conservare il resto.
             raw: BTreeMap::new(),
+            openable: None,
             id: doc_id,
         });
     }

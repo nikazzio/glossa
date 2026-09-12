@@ -81,6 +81,7 @@ pub(super) async fn loc(
             catalog_url: None,
             page_url: Some(page_url),
             raw: BTreeMap::new(),
+            openable: None,
             id,
         });
     }

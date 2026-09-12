@@ -17,3 +17,17 @@ export async function discoverIIIF(
 ): Promise<IIIFDiscoveryOutcome> {
   return invoke<IIIFDiscoveryOutcome>('discover_iiif', { providerKey, input, page, fresh });
 }
+
+/**
+ * Se un risultato si apre davvero.
+ *
+ * `null` vuol dire «non si sa»: il servizio non ha risposto, o ha risposto in
+ * un modo che non dice niente sull'opera. Solo `false` significa che la
+ * biblioteca dichiara di non avere quel libro.
+ */
+export async function probeManifest(
+  providerKey: string,
+  manifestUrl: string,
+): Promise<boolean | null> {
+  return invoke<boolean | null>('probe_manifest', { providerKey, manifestUrl });
+}
