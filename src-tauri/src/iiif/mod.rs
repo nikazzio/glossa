@@ -26,6 +26,7 @@ pub enum SearchMode {
 /// l'esempio mostrato nel campo di ricerca.
 pub enum ResolverKind {
     Vatican,
+    Europeana,
     Gallica,
     Ecodices,
     Loc,
@@ -110,10 +111,10 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         aliases: &["europeana"],
         placeholder: "e.g. dante divina commedia",
         is_enabled: true,
-        // Non è una biblioteca: è l'indice di centinaia di istituzioni. Un
-        // indirizzo incollato vale come per chiunque altro, ma il suo mestiere
-        // è la ricerca.
-        resolver: ResolverKind::Generic,
+        // Non è una biblioteca: è l'indice di centinaia di istituzioni. Il suo
+        // mestiere è la ricerca, ma il collegamento di una sua scheda apre
+        // l'opera senza chiedere la chiave.
+        resolver: ResolverKind::Europeana,
         search_handler: Some(SearchHandlerKind::Europeana),
         search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,

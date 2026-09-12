@@ -22,7 +22,7 @@ La ricerca parte dalla Dashboard: scegli la biblioteca, scrivi cosa cerchi, avvi
 
 Le biblioteche non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
 
-- **Europeana** — parole di ricerca. Non è una biblioteca ma l'indice di centinaia di istituzioni europee: serve a trovare un'opera senza sapere in anticipo chi la conserva. Richiede una chiave propria, gratuita, che si incolla in **Impostazioni → Biblioteca → Biblioteche**. Glossa tiene solo i risultati che dichiarano una riproduzione leggibile, e per ognuno dice chi conserva l'originale, che può essere un'istituzione diversa da quella che ha risposto.
+- **Europeana** — parole di ricerca, oppure il collegamento di una sua scheda, che apre l'opera senza bisogno della chiave. Non è una biblioteca ma l'indice di centinaia di istituzioni europee: serve a trovare un'opera senza sapere in anticipo chi la conserva. Richiede una chiave propria, gratuita, che si incolla in **Impostazioni → Biblioteca → Biblioteche**. Glossa tiene solo i risultati che dichiarano una riproduzione leggibile, e per ognuno dice chi conserva l'originale, che può essere un'istituzione diversa da quella che ha risposto.
 - **Wellcome Collection** — parole di ricerca. Il suo catalogo descrive anche libri conservati in magazzino e mai digitalizzati: Glossa chiede fin dall'inizio soltanto quelli con una riproduzione, così i risultati che vedi si aprono tutti.
 - **Internet Archive** — parole di ricerca, oppure l'indirizzo della pagina di dettaglio.
 - **Biblioteca Vaticana** — la segnatura, scritta come ti viene (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` portano allo stesso manoscritto), l'indirizzo della pagina di lettura, oppure parole da cercare nel suo catalogo.

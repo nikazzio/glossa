@@ -71,6 +71,7 @@ pub fn resolve(kind: ResolverKind, input: &str) -> Option<Resolution> {
         ResolverKind::ERara => e_rara(value),
         ResolverKind::EManuscripta => e_manuscripta(value),
         ResolverKind::Mdz => mdz(value),
+        ResolverKind::Europeana => europeana(value),
         // Le altre biblioteche non hanno ancora un riconoscimento proprio:
         // vale l'indirizzo completo, come prima.
         _ => direct_url(value),
@@ -373,6 +374,31 @@ fn mdz_id(value: &str) -> Option<String> {
         .take_while(char::is_ascii_alphanumeric)
         .collect();
     (id.len() >= 5).then(|| format!("bsb{id}"))
+}
+
+/// Europeana: dall'indirizzo di una scheda al manifesto che lei stessa serve.
+///
+/// Un record è identificato da due pezzi — l'insieme di dati e l'opera dentro
+/// quell'insieme — e il manifesto li ripete nello stesso ordine. Incollare il
+/// collegamento di una pagina di Europeana apre quindi l'opera senza passare
+/// dalla ricerca, che invece chiede la chiave.
+fn europeana(value: &str) -> Option<Resolution> {
+    let text = value.trim();
+    let rest = ["/item/", "/presentation/"]
+        .into_iter()
+        .find_map(|marker| text.split_once(marker).map(|(_, rest)| rest))?;
+    let mut parts = rest.split('/');
+    let dataset = parts.next()?;
+    let local = parts.next()?;
+    let local = local.split(['?', '#']).next().unwrap_or(local);
+    if dataset.is_empty() || local.is_empty() || !dataset.chars().all(|c| c.is_ascii_alphanumeric())
+    {
+        return None;
+    }
+    Some(Resolution::strong(
+        format!("https://iiif.europeana.eu/presentation/{dataset}/{local}/manifest"),
+        format!("{dataset}:{local}"),
+    ))
 }
 
 /// Il pezzo di indirizzo che segue un marcatore, fino alla barra successiva.

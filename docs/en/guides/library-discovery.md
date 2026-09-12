@@ -22,7 +22,7 @@ Search starts from the Dashboard: choose a library, type what you are looking fo
 
 Libraries do not have the same capabilities, and Glossa states what each one accepts:
 
-- **Europeana** — keywords. Not a library but the index of hundreds of European institutions: it finds a work without knowing in advance who holds it. It needs its own key, free of charge, pasted into **Settings → Library → Libraries**. Glossa keeps only results that declare a readable reproduction, and states for each who holds the original, which may be a different institution from the one that answered.
+- **Europeana** — keywords, or the link of one of its records, which opens the work without needing the key. Not a library but the index of hundreds of European institutions: it finds a work without knowing in advance who holds it. It needs its own key, free of charge, pasted into **Settings → Library → Libraries**. Glossa keeps only results that declare a readable reproduction, and states for each who holds the original, which may be a different institution from the one that answered.
 - **Wellcome Collection** — keywords. Its catalogue also describes books kept in stores and never digitised: Glossa asks from the start only for those with a reproduction, so every result you see can be opened.
 - **Internet Archive** — keywords, or the address of the detail page.
 - **Vatican Library** — the shelfmark, however you write it (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` all reach the same manuscript), the address of the reading page, or words to search its catalogue.

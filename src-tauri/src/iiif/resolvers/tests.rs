@@ -332,6 +332,24 @@ fn munich_records_start_with_bsb() {
 }
 
 #[test]
+fn a_europeana_page_link_opens_the_work_without_the_key() {
+    for written in [
+        "https://www.europeana.eu/en/item/2020903/KKSgb2947_37",
+        "https://www.europeana.eu/it/item/2020903/KKSgb2947_37?query=dante",
+        "https://iiif.europeana.eu/presentation/2020903/KKSgb2947_37/manifest",
+    ] {
+        let resolved = resolve(ResolverKind::Europeana, written).expect("riconosciuto");
+        assert_eq!(
+            resolved.manifest_url,
+            "https://iiif.europeana.eu/presentation/2020903/KKSgb2947_37/manifest",
+            "scritto come {written}"
+        );
+    }
+    // Una parola da cercare non è una scheda.
+    assert!(resolve(ResolverKind::Europeana, "divina commedia").is_none());
+}
+
+#[test]
 fn a_pasted_manifest_address_works_for_libraries_without_their_own_recognition() {
     let resolved = resolve(
         ResolverKind::Generic,
