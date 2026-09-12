@@ -96,6 +96,14 @@ pub struct DiscoveryResult {
     /// lettore umano — non il manifesto IIIF (`manifest_url`, un documento
     /// tecnico) né la scheda del catalogo cartaceo (`catalog_url`).
     pub page_url: Option<String>,
+    /// Se quel libro si apre davvero, quando lo si sa.
+    ///
+    /// `None` vuol dire «non controllato»: la maggior parte dei cataloghi
+    /// elenca anche materiale che non ha una riproduzione, e scoprirlo aprendo
+    /// una scheda per volta è il modo più lento. `Some(false)` si scrive solo
+    /// quando la biblioteca ha risposto che quel libro non c'è — un servizio
+    /// fermo o una rete lenta riguardano oggi, non l'opera.
+    pub openable: Option<bool>,
     /// **Tutto il resto che la biblioteca ha detto** e che non ha un campo suo.
     ///
     /// Le biblioteche restituiscono molto più di quello che l'interfaccia
@@ -159,6 +167,12 @@ impl Gate<'_> {
     /// Il turno va **tenuto** per tutta la durata della richiesta: è ciò che
     /// limita quante ne partono insieme verso lo stesso host.
     async fn wait(&self, url: &str) -> Option<Turn> {
+        self.wait_in(url, Lane::Page).await
+    }
+
+    /// Lo stesso turno, ma in una corsia scelta: un controllo che nessuno sta
+    /// aspettando non deve togliere il posto alla pagina che si sta guardando.
+    async fn wait_in(&self, url: &str, lane: Lane) -> Option<Turn> {
         let host = crate::download::fetch::host_of(url).ok()?;
         let never_stops = || false;
         let waiting = AtomicBool::new(false);
@@ -169,7 +183,7 @@ impl Gate<'_> {
         // Una ricerca è quello che l'utente sta aspettando a schermo, non
         // un'acquisizione in blocco: passa dalla corsia della pagina.
         self.courtesy
-            .wait_turn(&host, self.profile, Lane::Page, &signals)
+            .wait_turn(&host, self.profile, lane, &signals)
             .await
     }
 }
@@ -177,6 +191,15 @@ impl Gate<'_> {
 pub(super) async fn wait_if_gated(gate: Option<&Gate<'_>>, url: &str) -> Option<Turn> {
     match gate {
         Some(gate) => gate.wait(url).await,
+        None => None,
+    }
+}
+
+/// Il turno per un lavoro che nessuno sta aspettando: passa dalla corsia delle
+/// miniature, quella che non toglie mai il posto alla pagina aperta.
+pub(super) async fn wait_aside(gate: Option<&Gate<'_>>, url: &str) -> Option<Turn> {
+    match gate {
+        Some(gate) => gate.wait_in(url, Lane::Thumbnail).await,
         None => None,
     }
 }
@@ -269,6 +292,53 @@ async fn discover_with(
     }
 
     Ok(nothing())
+}
+
+/// Se un risultato si apre davvero, chiesto per una riga sola.
+///
+/// Un catalogo elenca anche materiale che non ha una riproduzione: la scheda
+/// c'è, il libro digitalizzato no. Scoprirlo aprendo una riga per volta è il
+/// modo più lento; chiederlo per tutte le righe sarebbe una raffica di
+/// richieste per informazioni che nessuno ha chiesto.
+///
+/// Questo comando sta nel mezzo: lo chiama la schermata **solo per le righe che
+/// stanno sotto gli occhi**, passa dalla corsia che non toglie il posto alla
+/// pagina aperta, e non ritenta. Risponde `Some(false)` soltanto quando la
+/// biblioteca dichiara che quel libro non c'è: un servizio fermo o una rete
+/// lenta riguardano oggi, e restano `None`.
+#[tauri::command]
+pub async fn probe_manifest(
+    app: tauri::AppHandle,
+    provider_key: String,
+    manifest_url: String,
+) -> Result<Option<bool>, String> {
+    let profile = crate::db::open_connection(&crate::storage_config::db_path(&app)?)
+        .map(|conn| crate::iiif::settings::effective_profile(&conn, &provider_key, None))
+        .unwrap_or(super::network::CAUTIOUS);
+    let courtesy = app.state::<std::sync::Arc<Courtesy>>().inner().clone();
+    let gate = Gate {
+        courtesy: &courtesy,
+        profile: &profile,
+    };
+    let client = client()?;
+    let _turn = wait_aside(Some(&gate), &manifest_url).await;
+    // Basta l'intestazione: il manifesto intero può pesare megabyte, e qui
+    // interessa solo se esiste.
+    let outcome = client
+        .head(&manifest_url)
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()
+        .await;
+    Ok(match outcome {
+        Ok(response) if response.status().is_success() => Some(true),
+        Ok(response) if matches!(response.status().as_u16(), 404 | 410) => {
+            log::info!("discovery probe missing url={manifest_url}");
+            Some(false)
+        }
+        // Qualunque altra risposta — un rifiuto, un'attesa scaduta, un metodo
+        // non accettato — non dice niente sull'opera.
+        Ok(_) | Err(_) => None,
+    })
 }
 
 /// Il nome con cui la chiave di Europeana sta nel portachiavi, lo stesso che

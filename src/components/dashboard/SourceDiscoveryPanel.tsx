@@ -15,6 +15,8 @@ import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
+import { useOpenableProbe } from '../../hooks/useOpenableProbe';
+import { useSeenOnce } from '../../hooks/useSeenOnce';
 
 /**
  * I motivi per cui una ricerca non riesce, come li dichiara il motore.
@@ -155,8 +157,33 @@ const THUMBNAIL_SIZE = {
   expanded: `h-32 ${THUMBNAIL_WIDTH_EXPANDED}`,
 };
 
+/**
+ * Il segno di un risultato che non si apre, o che si sta controllando.
+ *
+ * Un esito negativo **segna la riga, non la nasconde**: la scheda esiste e può
+ * servire, quello che manca è la riproduzione. E si scrive solo quando la
+ * biblioteca lo dichiara: un servizio fermo non diventa un'opera assente.
+ */
+function OpenableMark({ openable, checking }: { openable: boolean | null; checking: boolean }) {
+  const { t } = useTranslation();
+  if (checking) return <span className="ml-2 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
+  if (openable !== false) return null;
+  return (
+    <span className="ml-2 text-editorial-warning" title={t('dashboard.discovery.notOpenableHint')}>
+      {t('dashboard.discovery.notOpenable')}
+    </span>
+  );
+}
+
 function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: RowProps) {
   const { t } = useTranslation();
+  // La riga si controlla solo quando entra nello schermo: un elenco di venti
+  // risultati scorso a metà non deve costare venti richieste.
+  const { ref: rowRef, seen } = useSeenOnce<HTMLElement>();
+  // Una scheda ricavata aprendo direttamente un indirizzo si è già aperta: non
+  // c'è niente da controllare.
+  const declaredOpenable = isManifest(card) ? true : card.openable;
+  const { openable, checking } = useOpenableProbe(providerKey, card.manifestUrl, declaredOpenable, seen);
   const title = card.title || t('dashboard.discovery.untitled');
   // Il collegamento alla pagina web e quello al catalogo cartaceo sono
   // indirizzi veri: si aprono, non si leggono come le altre etichette.
@@ -186,6 +213,7 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
 
   return (
     <motion.article
+      ref={rowRef}
       layout
       transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
       className={
@@ -219,6 +247,7 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
               <span className="mt-1 block text-xs text-editorial-muted">
                 <strong className="font-semibold text-editorial-ink">{origin}</strong>
                 {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
+                <OpenableMark openable={openable} checking={checking} />
               </span>
             </span>
           ) : (
@@ -227,6 +256,7 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
               <span className="mt-0.5 block truncate text-xs text-editorial-muted">
                 <strong className="font-semibold text-editorial-ink">{origin}</strong>
                 {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
+                <OpenableMark openable={openable} checking={checking} />
               </span>
             </span>
           )}
@@ -357,6 +387,10 @@ export function SourceDiscoveryPanel() {
   }, [setProviderKey]);
 
   const selectedProvider = providers.find((provider) => provider.key === providerKey);
+  // I risultati a schermo appartengono alla fonte che ha risposto, non a
+  // quella scelta adesso nella tendina: cambiare fonte senza cercare di nuovo
+  // non deve far chiedere le copertine e i controlli alla biblioteca sbagliata.
+  const resultsProviderKey = outcome?.providerKey ?? providerKey;
   // Le fonti si vedono raggruppate: raccolte, biblioteche che cercano, fonti
   // ferme, fonti che aprono solo per identificativo. L'ordine dentro ogni
   // gruppo è quello del registro, che è l'ordine deciso dal motore.
@@ -500,11 +534,11 @@ export function SourceDiscoveryPanel() {
             <SourceListRow
               key={card.id}
               card={card}
-              providerKey={providerKey}
-              providerLabel={selectedProvider?.label ?? ''}
+              providerKey={resultsProviderKey}
+              providerLabel={providers.find((provider) => provider.key === resultsProviderKey)?.label ?? ''}
               expanded={expandedId === card.id}
               onToggle={() => setExpandedId((current) => current === card.id ? null : card.id)}
-              onAddToLibrary={() => void addFromDiscovery(card, undefined, providerKey)}
+              onAddToLibrary={() => void addFromDiscovery(card, undefined, resultsProviderKey)}
               onAddToWorkspace={() => setWorkspacePickerCard(card)}
               adding={addingUrls.has(card.manifestUrl)}
               alreadyAdded={isAlreadyInLibrary(card.manifestUrl)}
@@ -542,7 +576,7 @@ export function SourceDiscoveryPanel() {
                     type="button"
                     disabled={linked}
                     onClick={() => {
-                      if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, providerKey);
+                      if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, resultsProviderKey);
                       setWorkspacePickerCard(null);
                     }}
                     className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:hover:bg-transparent"
