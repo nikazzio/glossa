@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, Hint, IconButton, PopoverItem, Select, Spinner, StatBlock, Tooltip } from '../ui';
+import { Dialog, Hint, IconButton, PopoverItem, Select, Spinner, StatBlock } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
@@ -216,6 +216,9 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // sarebbe la stessa frase due volte. Lì in evidenza resta chi ha risposto
   // alla ricerca, che con un aggregatore non è la stessa cosa.
   const origin = (expanded ? providerLabel : card.holdingInstitution) || providerLabel;
+  // «Bibliothèque nationale de France, département X, 8-K-5072» è istituto,
+  // fondo e segnatura in una stringa sola: in riga chiusa vale il primo.
+  const shortOrigin = expanded ? origin : origin.split(',')[0].trim();
   const mediaType = !isManifest(card) ? card.mediaType : null;
   const metaParts = [
     card.creator,
@@ -253,11 +256,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
             <span className="min-w-0 flex-1 pt-0.5">
               <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
               <span className="mt-1 block text-xs text-editorial-muted">
-                {/* Chi conserva l'opera e chi ha risposto alla ricerca possono
-                    essere due soggetti diversi: il secondo sta nel suggerimento. */}
-                <Tooltip label={t('federation.respondedBy', { source: providerLabel })}>
-                  <strong className="font-semibold text-editorial-ink">{origin}</strong>
-                </Tooltip>
+                <strong className="font-semibold text-editorial-ink">{origin}</strong>
                 {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
                 <OpenableMark openable={openable} checking={checking} />
               </span>
@@ -266,9 +265,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
             <span className="min-w-0 flex-1">
               <span className="block truncate font-display italic text-editorial-ink">{title}</span>
               <span className="mt-0.5 block truncate text-xs text-editorial-muted">
-                <Tooltip label={t('federation.respondedBy', { source: providerLabel })}>
-                  <strong className="font-semibold text-editorial-ink">{origin}</strong>
-                </Tooltip>
+                <strong className="font-semibold text-editorial-ink">{shortOrigin}</strong>
                 {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
                 <OpenableMark openable={openable} checking={checking} />
               </span>

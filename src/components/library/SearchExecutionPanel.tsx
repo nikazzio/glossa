@@ -111,16 +111,18 @@ export function SearchExecutionPanel({ run, providers, busy, providerFilter, onP
                 title={t('federation.executionHistory')}
                 onClick={() => setHistory(history === job.id ? null : job.id)}><History size={13} /></IconButton>
             </div>
-            {history === job.id && <div className="space-y-1 border-t border-editorial-border/60 pt-2">
-              {previous.map((entry) => <div key={entry.job.id} className="flex min-w-0 items-center gap-2 text-xs text-editorial-muted">
+            {/* I tentativi appartengono alla fonte aperta: stessa misura del
+                testo, nessuna linea che li faccia sembrare un'altra biblioteca. */}
+            {history === job.id && <ul className="space-y-0.5 pl-5">
+              {previous.map((entry) => <li key={entry.job.id} className="flex min-w-0 items-center gap-2 text-xs text-editorial-muted">
                 <StateMark status={entry.job.status} />
                 <span className="min-w-0 flex-1 truncate">
                   {t('federation.generation', { count: entry.generation })}
                   {entry.job.createdAt ? ` · ${formatDateTime(entry.job.createdAt)}` : ''}
                 </span>
-                <IconButton title={t('federation.viewExecution')} onClick={() => onViewExecution(entry.job.id)} size="xs"><Eye size={13} /></IconButton>
-              </div>)}
-            </div>}
+                <IconButton title={t('federation.viewExecution')} onClick={() => onViewExecution(entry.job.id)} size="xs"><Eye size={12} /></IconButton>
+              </li>)}
+            </ul>}
           </div>
         </div>;
       })}

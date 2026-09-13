@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Activity, ArrowDown, ArrowUpDown, CheckCircle2, EyeOff, FilePlus, Globe, HelpCircle, History, Layers, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUpDown, CheckCircle2, EyeOff, FilePlus, Globe, HelpCircle, History, Layers, RefreshCw, Search, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
@@ -172,7 +172,6 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         {/* Le parole cercate stanno già nel campo qui sopra: ripeterle qui
             rubava una riga e non aggiungeva niente. */}
         <div className="space-y-2 border-b border-editorial-border p-3">
-          {historical && <div className="flex items-center gap-2 text-xs text-editorial-warning"><span>{t('federation.historical')}</span><IconButton title={t('federation.currentResults')} onClick={() => {setHistorical(null);setByTitle(false);}}><Activity size={16} /></IconButton></div>}
           {/* Due numeri leggibili, il resto al passaggio del mouse: prima erano
               cinque dati in fila che nessuno decifrava. */}
           <div className="flex flex-wrap items-center gap-3 text-xs text-editorial-muted" role="status" aria-live="polite">
@@ -190,10 +189,13 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
             {failed.length > 0 && <Hint label={`${t('federation.failedHint')} — ${failed.map((execution) => label(execution.providerKey)).join(' · ')}`}>
               <span className="text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
             </Hint>}
+            {historical && <span className="text-editorial-warning">{t('federation.historical')}</span>}
           </div>
           {/* Filtri come comandi allineati a destra: una parola ciascuno, il
               significato al passaggio del mouse. */}
           <div className="flex flex-wrap items-center justify-end gap-1" role="group" aria-label={t('federation.filterLabel')}>
+            {historical && <IconButton size="sm" tone="accent" title={t('federation.currentResults')}
+              onClick={() => { setHistorical(null); setByTitle(false); }}><Undo2 size={14} /></IconButton>}
             {providerFilter !== 'all' && <IconButton size="sm" tone="accent" title={t('federation.allSources')}
               onClick={() => setProviderFilter('all')}><Globe size={14} /></IconButton>}
             {VISIBILITY_FILTERS.map(({ value, icon: Icon }) => (

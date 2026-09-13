@@ -113,8 +113,7 @@
       "match": "Only results that meet every criterion the catalogue states.",
       "unknown": "Only results where the deciding field is missing: the catalogue does not state it, or the date is approximate.",
       "excluded": "Only the results the criteria rule out, useful to understand why they are missing."
-    },
-    "respondedBy": "Answered by {{source}}"
+    }
   },
   "overview": {
     "transcriptions": "Transcriptions",

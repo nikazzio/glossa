@@ -113,8 +113,7 @@
       "match": "Solo i risultati che rispettano tutti i criteri dichiarati dal catalogo.",
       "unknown": "Solo i risultati su cui manca il dato per decidere: il catalogo non lo dichiara o la data è approssimata.",
       "excluded": "Solo i risultati che i criteri escludono: utile per capire perché non compaiono."
-    },
-    "respondedBy": "Ha risposto {{source}}"
+    }
   },
   "overview": {
     "transcriptions": "Trascrizioni",
