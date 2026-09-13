@@ -40,15 +40,12 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       <div className="flex shrink-0 items-center gap-1">
         <Hint label={t('federation.draftHint')} size="xs" />
         <IconButton type="submit" title={t('federation.launch')}
-          disabled={busy || !criteria.query.trim() || !selected.length}><Search size={18} /></IconButton>
+          disabled={busy || !selected.length}><Search size={18} /></IconButton>
       </div>
     </div>
 
     <section className="space-y-3">
-      <div className="flex items-center gap-1.5">
-        <SectionLabel icon={Info} label={t('federation.localGroup')} />
-        <Hint label={t('federation.localHint')} size="xs" />
-      </div>
+      <SectionLabel icon={Info} label={t('federation.localGroup')} hint={t('federation.localHint')} />
       {LOCAL_TEXT_FIELDS.map(field)}
       <label className="block space-y-1.5">
         <FieldLabel block>{t('federation.fields.material')}</FieldLabel>
@@ -72,8 +69,8 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       if (!group.length) return null;
       return <section key={kind} className="space-y-3">
         <div className="flex items-center gap-1.5">
-          <SectionLabel icon={kind === 'library' ? BookOpen : Globe} label={t(`federation.${kind}`)} />
-          {kind === 'aggregator' && <Hint label={t('federation.aggregatorHint')} size="xs" />}
+          <SectionLabel icon={kind === 'library' ? BookOpen : Globe} label={t(`federation.${kind}`)}
+            hint={kind === 'aggregator' ? t('federation.aggregatorHint') : undefined} />
         </div>
         <div className="divide-y divide-editorial-border/50 border-y border-editorial-border/70">
           {group.map((provider) => <div key={provider.key} className="py-2">

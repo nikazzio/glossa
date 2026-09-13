@@ -84,6 +84,11 @@ La spiegazione di un campo, di un comando o di un'etichetta di stato. È un
 comando vero: al passaggio del mouse e al fuoco da tastiera mostra il testo, e
 premendolo lo tiene aperto finché non si preme di nuovo.
 
+- **La spiegazione la porta l'elemento che spiega.** Il titolo di sezione
+  (`SectionLabel` con `hint`), l'etichetta di una riga (`SettingRow`,
+  `StatRow`), il nome di un blocco: si apre passandoci sopra o premendolo. La
+  «i» separata resta solo dove non c'è un'etichetta a cui attaccarla — per
+  esempio accanto a un gruppo di comandi.
 - Senza `children` mostra la «i» consueta; con `children` è l'elemento passato
   a portare la spiegazione (un nome che va spiegato, un'etichetta di stato).
 - Sostituisce ovunque i **pulsanti finti**: un `IconButton` senza azione, che

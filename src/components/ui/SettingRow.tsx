@@ -25,11 +25,12 @@ export function SettingRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
+      {/* La spiegazione la porta l'etichetta stessa: si apre passandoci sopra
+          o premendola, senza una «i» in più accanto a ogni riga. */}
       <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-editorial-ink">
-        <span className="min-w-0 truncate">{label}</span>
-        {/* La spiegazione si raggiunge anche da tastiera, e premerla la apre:
-            un comando che non fa niente è una promessa non mantenuta. */}
-        {hint && <Hint label={hint} size="xs" />}
+        {hint
+          ? <Hint label={hint}><span className="min-w-0 truncate">{label}</span></Hint>
+          : <span className="min-w-0 truncate">{label}</span>}
       </span>
       {/* Il comando non si allarga a spese dell'etichetta: un campo a larghezza
           piena riduceva «Nome» a «No…». */}

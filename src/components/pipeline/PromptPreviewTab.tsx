@@ -29,11 +29,13 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
-            {title}
-          </span>
-          {hint && (
-            <Hint label={hint} size="xs" side="bottom" />
+          {/* La spiegazione la porta il titolo del blocco. */}
+          {hint ? (
+            <Hint label={`${title} — ${hint}`} side="bottom">
+              <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{title}</span>
+            </Hint>
+          ) : (
+            <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{title}</span>
           )}
         </div>
         <span
