@@ -8,6 +8,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 
 const mockListProviders = vi.fn();
 const mockDiscover = vi.fn();
+const mockProbe = vi.fn();
 
 const RESULT_EXTRAS = {
   itemCount: null,
@@ -23,6 +24,7 @@ const RESULT_EXTRAS = {
 vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: () => mockListProviders(),
   discoverIIIF: (...args: unknown[]) => mockDiscover(...args),
+  probeManifest: (...args: unknown[]) => mockProbe(...args),
 }));
 
 vi.mock('../../services/libraryService', () => ({
@@ -47,6 +49,7 @@ describe('SourceDiscoveryPanel', () => {
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     mockListProviders.mockResolvedValue(PROVIDERS);
+    mockProbe.mockResolvedValue(null);
   });
 
   it('shows a distinct error when discovery fails', async () => {
@@ -361,5 +364,45 @@ describe('risultati doppi dai cataloghi', () => {
 
     await waitFor(() => expect(screen.getAllByText('Diari')).toHaveLength(1));
     expect(screen.getByText('Altro')).toBeInTheDocument();
+  });
+
+  it('marks a result the library says it does not have, without hiding it', async () => {
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'assente', title: 'Solo in catalogo', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/assente', openable: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+
+    // La scheda esiste e resta consultabile: quello che manca è la
+    // riproduzione, e va detto sulla riga invece di farla sparire.
+    expect(await screen.findByText('Solo in catalogo')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.discovery.notOpenable')).toBeInTheDocument();
+    // Il motore lo aveva già scoperto leggendo il manifesto: nessun controllo
+    // in più.
+    expect(mockProbe).not.toHaveBeenCalled();
+  });
+
+  it('checks a result the library did not tell us about', async () => {
+    mockProbe.mockResolvedValue(false);
+    mockDiscover.mockResolvedValueOnce({
+      status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
+      results: [
+        { id: 'ignoto', title: 'Da verificare', creator: null, date: null, description: null, thumbnailUrl: null, mediaType: null, collection: null, language: null, volume: null, subjects: [], ...RESULT_EXTRAS, manifestUrl: 'https://example.test/ignoto' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<SourceDiscoveryPanel />);
+
+    await user.type(await screen.findByRole('textbox'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
+
+    expect(await screen.findByText('dashboard.discovery.notOpenable')).toBeInTheDocument();
+    expect(mockProbe).toHaveBeenCalledWith('archive_org', 'https://example.test/ignoto');
   });
 });

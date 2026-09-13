@@ -53,6 +53,12 @@ Sources do not have the same capabilities, and Glossa states what each one accep
 - **Bayerische Staatsbibliothek (MDZ)** — keywords, the Munich identifier (`bsb00026283`) or one of its addresses. Search queries the official catalogue, which answers with bibliographic records: only records that declare a reproduction appear, and that is what opens — not the printed catalogues describing the same manuscript.
 - **Direct IIIF URL** — the full address of a manifest, from any institution, including ones not listed.
 
+### Results that do not open
+
+A catalogue also lists works the library holds a record for but no reproduction of. As you scroll, Glossa checks the results you are looking at — only those, a couple at a time, with no retries — and writes **“checking”** next to the row while it does, then **“not viewable”** when the library states it does not hold that book.
+
+The row stays where it is: the catalogue record can still be useful, and hiding it would remove real information. A service that is down, a slow network, or a timeout never produce that note: they are about today, not about the work.
+
 Results appear as a list, each with a thumbnail and essential data: author, date, **how many pages the work has**, and which library it comes from. The page count is visible without expanding the row, because that is what makes you decide whether the work is worth a look. When the catalogue does not declare it — which happens with manuscripts — the entry is simply absent, rather than showing a zero that would be untrue. Selecting a result expands the row to show its full title, description, and all available metadata.
 
 For every result Glossa keeps **everything the library said**, including data no screen shows today: searching again tomorrow to recover it would be wasted work, and the library might not give it back the same.

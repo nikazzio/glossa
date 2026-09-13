@@ -118,6 +118,7 @@ pub(crate) async fn search_archive(
                 catalog_url: None,
                 page_url: Some(format!("https://archive.org/details/{id}")),
                 raw: archive_extra_fields(document),
+                openable: None,
                 id,
             })
         })

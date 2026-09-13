@@ -103,6 +103,15 @@ export interface IIIFDiscoveryResult {
    * (`catalogUrl`). */
   pageUrl: string | null;
   /**
+   * Se quel libro si apre davvero, quando lo si sa.
+   *
+   * `null` è «non controllato»: un catalogo elenca anche materiale che non ha
+   * una riproduzione. `false` si scrive solo quando la biblioteca dichiara di
+   * non avere quel libro — un servizio fermo o una rete lenta riguardano oggi,
+   * non l'opera.
+   */
+  openable?: boolean | null;
+  /**
    * Tutto il resto che la biblioteca ha dichiarato e che non ha un campo suo,
    * com'è arrivato. Il motore lo omette quando è vuoto, quindi qui è
    * facoltativo. Non è una struttura su cui costruire logica: è un deposito.

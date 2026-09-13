@@ -53,6 +53,12 @@ Le fonti non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
 - **Bayerische Staatsbibliothek (MDZ)** — parole di ricerca, l'identificativo di Monaco (`bsb00026283`) o un suo indirizzo. La ricerca interroga il catalogo ufficiale, che risponde con schede bibliografiche: compaiono solo le schede che dichiarano una riproduzione, e si apre quella, non i cataloghi a stampa che descrivono lo stesso manoscritto.
 - **Indirizzo IIIF diretto** — l'indirizzo completo di un manifesto, di qualunque istituzione, anche non in elenco.
 
+### Risultati che non si aprono
+
+Un catalogo elenca anche opere di cui la biblioteca conserva la scheda ma non una riproduzione. Mentre scorri l'elenco Glossa controlla i risultati che stai guardando — solo quelli, uno alla volta, senza ritentare — e scrive **«in verifica»** accanto alla riga durante il controllo, poi **«non consultabile»** quando la biblioteca dichiara di non avere quel libro.
+
+La riga resta al suo posto: la scheda bibliografica può servire lo stesso, e nasconderla toglierebbe un'informazione vera. Un servizio fermo, una rete lenta o un tempo scaduto non fanno mai comparire quella scritta: riguardano oggi, non l'opera.
+
 I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
 
 Di ogni risultato Glossa conserva **tutto quello che la biblioteca ha detto**, anche i dati che nessuna schermata mostra oggi: rifare la ricerca domani per recuperarli sarebbe lavoro sprecato, e la biblioteca potrebbe non ridarli uguali.

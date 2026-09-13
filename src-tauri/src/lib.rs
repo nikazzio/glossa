@@ -219,6 +219,7 @@ pub fn run() {
             deepl::commands::delete_deepl_glossary,
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
+            iiif::discovery::probe_manifest,
             iiif::commands::list_network_settings,
             httpcache::commands::network_probe,
             iiif::commands::save_network_profile,

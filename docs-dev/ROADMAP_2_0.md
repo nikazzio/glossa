@@ -74,7 +74,9 @@ Issue: #183, #187, #397, #459, #462, #413; shell generale #210.
 - Rendere visibili log generali, salvataggio e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca
-  aggregata (#395) viene dopo la verifica dei singoli provider.
+  aggregata (#395) viene dopo la verifica dei singoli provider. I risultati
+  dichiarano già se il libro si apre: l'assenza si scrive solo quando la
+  biblioteca risponde che non ce l'ha, e segna la riga senza nasconderla.
 - Completare e-rara, e-manuscripta e Wellcome; implementare ricerca reale per
   le biblioteche oggi limitate al manifesto diretto. Procedere secondo fonti
   realmente usate, non attivare un provider perché presente nel registro.

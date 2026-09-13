@@ -321,6 +321,7 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         catalog_url: record.relation.as_deref().and_then(extract_url),
         page_url: Some(page_url),
         raw: record.extra,
+        openable: None,
         id: resolved.doc_id,
     })
 }

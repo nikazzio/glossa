@@ -29,7 +29,7 @@ compare the version shown in the app with the
 | Source → translation | The approved-transcription bridge is not complete |
 | Library PDFs | Copies can be listed, but downloading and reading them is unavailable |
 | Individual pages | Saving the open page works; advanced actions and multiple selection are unfinished |
-| Search | Capabilities vary by library; full aggregated search is unavailable |
+| Search | Capabilities vary by library; full aggregated search is unavailable. Results with no reproduction are marked “not viewable” rather than hidden |
 | Workspace transfer | Backup covers the whole app; single-workspace import/export is unfinished |
 | Export Studio and Analysis | Advanced workflows remain in development |
 

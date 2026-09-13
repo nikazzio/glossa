@@ -175,11 +175,37 @@ pub(super) fn manifest_preview(manifest_url: String, value: Value) -> ManifestPr
     }
 }
 
+/// Perché un libro non si è aperto.
+///
+/// La differenza che conta è fra **non c'è** e **non è arrivato**: un libro che
+/// la biblioteca dichiara di non avere non comparirà mai, e dirlo è
+/// un'informazione; una risposta che non arriva oggi può arrivare domani, e
+/// spacciarla per assenza sarebbe una bugia che resta scritta.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ManifestFailure {
+    /// La biblioteca ha risposto che quel libro non c'è.
+    Missing,
+    /// Non si sa: rete, attesa scaduta, servizio fermo, risposta illeggibile.
+    Unknown,
+}
+
 pub(crate) async fn resolve_manifest(
     client: &Client,
     manifest_url: String,
     gate: Option<&Gate<'_>>,
 ) -> Result<ManifestPreview, String> {
+    read_manifest(client, manifest_url, gate)
+        .await
+        .map_err(|(reason, _)| reason)
+}
+
+/// Come `resolve_manifest`, ma dice anche **perché** non è riuscito: serve a
+/// chi deve decidere se segnare un risultato come non apribile.
+pub(crate) async fn read_manifest(
+    client: &Client,
+    manifest_url: String,
+    gate: Option<&Gate<'_>>,
+) -> Result<ManifestPreview, (String, ManifestFailure)> {
     let _turn = wait_if_gated(gate, &manifest_url).await;
     let response = client
         .get(&manifest_url)
@@ -190,16 +216,37 @@ pub(crate) async fn resolve_manifest(
         .await
         .map_err(|error| {
             log::warn!("discovery manifest request failed url={manifest_url} error={error}");
-            crate::iiif::search::MANIFEST_UNREACHABLE.to_string()
+            (
+                crate::iiif::search::MANIFEST_UNREACHABLE.to_string(),
+                ManifestFailure::Unknown,
+            )
         })?
         .error_for_status()
         .map_err(|error| {
             log::warn!("discovery manifest response failed url={manifest_url} error={error}");
-            crate::iiif::search::MANIFEST_UNREADABLE.to_string()
+            // Solo un rifiuto definitivo dice che il libro non c'è. Un 429 o un
+            // guasto del servizio riguardano oggi, non l'opera.
+            let missing = matches!(
+                error.status().map(|status| status.as_u16()),
+                Some(404 | 410)
+            );
+            (
+                crate::iiif::search::MANIFEST_UNREADABLE.to_string(),
+                if missing {
+                    ManifestFailure::Missing
+                } else {
+                    ManifestFailure::Unknown
+                },
+            )
         })?;
     let value = response.json::<Value>().await.map_err(|error| {
         log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
-        crate::iiif::search::MANIFEST_INVALID.to_string()
+        (
+            crate::iiif::search::MANIFEST_INVALID.to_string(),
+            // Una risposta illeggibile non è un libro assente: spesso è una
+            // pagina di errore o di verifica al posto del manifesto.
+            ManifestFailure::Unknown,
+        )
     })?;
 
     Ok(manifest_preview(manifest_url, value))
@@ -229,18 +276,27 @@ async fn enrich_from_manifest(
     if result.creator.is_some() && result.thumbnail_url.is_some() && titled {
         return result;
     }
-    let preview = match resolve_manifest(client, result.manifest_url.clone(), gate).await {
+    let preview = match read_manifest(client, result.manifest_url.clone(), gate).await {
         Ok(preview) => preview,
-        Err(error) => {
+        Err((error, failure)) => {
             log::warn!(
                 "discovery enrichment skipped id={} manifest={} error={error}",
                 result.id,
                 result.manifest_url
             );
-            return result;
+            return DiscoveryResult {
+                openable: match failure {
+                    ManifestFailure::Missing => Some(false),
+                    ManifestFailure::Unknown => result.openable,
+                },
+                ..result
+            };
         }
     };
     DiscoveryResult {
+        // Il manifesto è stato letto: quel libro si apre, e la riga non ha più
+        // bisogno di essere controllata.
+        openable: Some(true),
         title: if titled { result.title } else { preview.title },
         creator: result.creator.or(preview.creator),
         thumbnail_url: result.thumbnail_url.or(preview.thumbnail_url),
@@ -458,5 +514,96 @@ mod tests {
             outcome.results[0].holding_institution.as_deref(),
             Some("Bibliothèque nationale de France")
         );
+    }
+
+    /// Un risultato appena arrivato dalla ricerca: senza copertina, quindi da
+    /// completare leggendo il manifesto.
+    fn bare_result(manifest_url: String) -> DiscoveryResult {
+        DiscoveryResult {
+            id: "libro-1".to_string(),
+            title: "Confessiones".to_string(),
+            creator: None,
+            date: None,
+            description: None,
+            thumbnail_url: None,
+            media_type: None,
+            collection: None,
+            language: None,
+            volume: None,
+            subjects: Vec::new(),
+            item_count: None,
+            manifest_url,
+            contributors: Vec::new(),
+            publisher: None,
+            rights: Vec::new(),
+            physical_description: None,
+            holding_institution: None,
+            catalog_url: None,
+            page_url: None,
+            raw: std::collections::BTreeMap::new(),
+            openable: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_work_the_library_says_it_does_not_have_is_marked_not_dropped() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/missing/manifest.json"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let enriched = enrich_from_manifest(
+            &Client::new(),
+            None,
+            bare_result(format!("{}/missing/manifest.json", server.uri())),
+        )
+        .await;
+
+        assert_eq!(enriched.openable, Some(false));
+        // La scheda resta: il catalogo la descrive, manca la riproduzione.
+        assert_eq!(enriched.title, "Confessiones");
+    }
+
+    #[tokio::test]
+    async fn a_service_that_is_down_says_nothing_about_the_work() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/busy/manifest.json"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+
+        let enriched = enrich_from_manifest(
+            &Client::new(),
+            None,
+            bare_result(format!("{}/busy/manifest.json", server.uri())),
+        )
+        .await;
+
+        assert_eq!(enriched.openable, None);
+    }
+
+    #[tokio::test]
+    async fn a_manifest_that_opens_needs_no_further_check() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/good/manifest.json"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"label": "Confessiones", "items": [{}]})),
+            )
+            .mount(&server)
+            .await;
+
+        let enriched = enrich_from_manifest(
+            &Client::new(),
+            None,
+            bare_result(format!("{}/good/manifest.json", server.uri())),
+        )
+        .await;
+
+        assert_eq!(enriched.openable, Some(true));
     }
 }

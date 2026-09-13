@@ -30,7 +30,7 @@ precedente: confronta la versione nell'app con le
 | Fonte → traduzione | Passaggio dalla trascrizione approvata non ancora completo |
 | PDF in Biblioteca | Le copie possono comparire, ma download e lettura non sono disponibili |
 | Singole pagine | Conservazione della pagina aperta disponibile; gestione avanzata e selezione multipla da completare |
-| Ricerca | Capacità diverse per biblioteca; nessuna ricerca aggregata completa |
+| Ricerca | Capacità diverse per biblioteca; nessuna ricerca aggregata completa. I risultati senza riproduzione vengono segnati «non consultabile» invece di essere nascosti |
 | Trasferimento workspace | Il backup riguarda tutta l'app; import/export di un solo workspace da costruire |
 | Export Studio e Analisi | Percorsi avanzati ancora in sviluppo |
 

@@ -93,6 +93,7 @@ fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
             // Come la Vaticana: pagina web raschiata, niente risposta
             // strutturata da conservare.
             raw: BTreeMap::new(),
+            openable: None,
             id: resolved.doc_id,
         });
     }

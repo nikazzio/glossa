@@ -393,19 +393,39 @@ spazzino delle cartelle orfane coprono ora anche `derived/`.
 
 ### Riconoscimento e ricerca per biblioteca
 
-Il riconoscimento (`iiif/resolvers.rs`) porta segnatura, identificativo o
+Il riconoscimento (`iiif/resolvers/`) porta segnatura, identificativo o
 indirizzo al manifesto senza toccare la rete, e dichiara quanto è sicuro:
 `Strong` quando la forma è inequivocabile, `Weak` quando somiglia a un testo di
 ricerca. Le biblioteche `SearchFirst` usano solo i riconoscimenti sicuri, e il
 riconoscimento incerto resta come ultima risorsa quando la ricerca non trova
 niente.
 
-La ricerca (`iiif/search.rs`) è per biblioteca: Gallica dal suo servizio SRU,
-Vaticana ed e-codices dalle loro pagine di ricerca. Gli indirizzi dei servizi
+La ricerca (`iiif/search/`, un file per biblioteca) è per biblioteca: Gallica
+dal suo servizio SRU, Vaticana ed e-codices dalle loro pagine di ricerca. Gli indirizzi dei servizi
 sono un valore iniettabile, così le prove li puntano a un server finto. Il
 riferimento di comportamento è Scriptoria
 (`resolvers/{vatican,gallica,ecodices}.py` e i rispettivi `search/`), adattato:
 niente librerie di regex né di parsing HTML.
+
+### Se un risultato si apre davvero
+
+Un catalogo elenca anche materiale che non ha una riproduzione. `DiscoveryResult`
+porta `openable: Option<bool>` con tre stati non intercambiabili: `None` è «non
+controllato», `Some(true)` è un manifesto letto, `Some(false)` si scrive **solo**
+quando la biblioteca risponde 404 o 410. Qualunque altro esito — 429, 503, rete
+caduta, JSON illeggibile — è `ManifestFailure::Unknown` e lascia il valore
+com'era: un servizio fermo riguarda oggi, non l'opera.
+
+L'arricchimento dei risultati (`iiif/discovery/manifest.rs`) registra l'esito
+gratis, perché il manifesto lo apre comunque per prendere copertina, titolo e
+autore mancanti. Per i risultati già completi il manifesto non si apre, quindi
+resta `None`: lì interviene il comando `probe_manifest`, una richiesta HEAD in
+corsia `Lane::Thumbnail` tramite `Gate::wait_aside`, che non ruba mai il posto
+alla pagina che l'utente sta guardando.
+
+Il frontend lo chiede solo per le righe entrate nello schermo, due alla volta,
+senza ritentare, e tiene gli esiti per tutta la sessione. Un esito negativo
+**segna la riga, non la nasconde**: la scheda bibliografica resta un dato vero.
 
 ## Risultati delle prove di rete
 

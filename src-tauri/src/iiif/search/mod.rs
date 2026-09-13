@@ -233,6 +233,7 @@ pub(super) fn result_from(id: String, title: String, manifest_url: String) -> Di
         catalog_url: None,
         page_url: None,
         raw: BTreeMap::new(),
+        openable: None,
     }
 }
 
