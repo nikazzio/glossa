@@ -524,6 +524,7 @@ function SourcesSection() {
       <P>{t('help.sources.federationCriteria')}</P>
       <P>{t('help.sources.federationFields')}</P>
       <P>{t('help.sources.federationRun')}</P>
+      <P>{t('help.sources.federationOutcome')}</P>
       <P>{t('help.sources.federationHistory')}</P>
       <P>{t('help.sources.federationExtend')}</P>
       <P>{t('help.sources.federationBackup')}</P>

@@ -120,6 +120,9 @@ interface RowProps {
   onAddToWorkspace: () => void;
   adding: boolean;
   alreadyAdded: boolean;
+  /** Quello che la riga dice in più quando la ricerca interroga più fonti:
+   *  quante copie della stessa opera sono arrivate e da quali biblioteche. */
+  note?: string;
 }
 
 /** Tutte le informazioni disponibili per una scheda, etichetta/valore. */
@@ -183,7 +186,7 @@ function OpenableMark({ openable, checking }: { openable: boolean | null; checki
   );
 }
 
-export function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: RowProps) {
+export function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded, note }: RowProps) {
   const { t } = useTranslation();
   // La riga si controlla solo quando entra nello schermo: un elenco di venti
   // risultati scorso a metà non deve costare venti richieste.
@@ -222,6 +225,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
     card.date,
     mediaType,
     ...(expanded ? [] : [pageCount]),
+    note,
   ].filter(Boolean) as string[];
 
   return (

@@ -37,7 +37,15 @@ export function SearchExecutionPanel({ run, providers, busy, act, onViewExecutio
           label={providers.find((p) => p.key === execution.providerKey)?.label ?? execution.providerKey} />
         {/* Colonna stretta: i dati stanno su righe proprie, non concatenati. */}
         <dl className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
-          <StatRow label={t('federation.stateLabel')} value={t(`jobs.status.${job.status}`)} />
+          {/* L'oro è il colore delle attività in corso: una fonte che sta
+              lavorando si distingue senza leggere. */}
+          <StatRow label={t('federation.stateLabel')} value={
+            job.status === 'running'
+              ? <span className="text-editorial-running">{t(`jobs.status.${job.status}`)}</span>
+              : job.status === 'error'
+                ? <span className="text-editorial-danger">{t(`jobs.status.${job.status}`)}</span>
+                : t(`jobs.status.${job.status}`)
+          } />
           <StatRow label={t('federation.pageLabel')} value={String(execution.page)} />
           <StatRow label={t('federation.receivedLabel')} value={String(execution.received)} />
           <StatRow label={t('federation.generationLabel')} value={String(execution.generation)} />

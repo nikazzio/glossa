@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface StatRowProps {
   label: string;
-  value: string;
+  /** Testo, oppure un elemento quando il valore porta con sé un colore di stato. */
+  value: ReactNode;
   info?: string;
 }
 

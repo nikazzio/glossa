@@ -14,7 +14,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { dashboardLocation } from '../../navigation/appLocation';
 import type { IIIFProvider } from '../../types';
 import { formatDateTime } from '../../utils';
-import { Dialog, EmptyState, IconButton, InspectorShell, PopoverItem, Select, Spinner } from '../ui';
+import { Dialog, EmptyState, IconButton, InspectorShell, PopoverItem, Select, Spinner, Tooltip } from '../ui';
 import { SEARCH_ERRORS, SourceListRow } from '../dashboard/SourceDiscoveryPanel';
 import { SearchCriteriaPanel } from './SearchCriteriaPanel';
 import { SearchExecutionPanel } from './SearchExecutionPanel';
@@ -111,11 +111,16 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     total: selected?.providers.length ?? 0,
     unknown: groups.filter((group) => group.match === 'unknown').length,
   }), [resultPages, groups, visible, selected]);
+  // Chi guarda i risultati deve sapere che una biblioteca non ha risposto:
+  // altrimenti «dodici risultati» si legge come «tutto quello che c'è».
+  const failed = useMemo(() => selected
+    ? currentExecutions(selected).filter((execution) => execution.job.status === 'error')
+    : [], [selected]);
   const virtualizer = useVirtualizer({ count: visible.length, getScrollElement: () => scroll.current,
     estimateSize: () => 72, getItemKey: (index) => visible[index].id, overscan: 5 });
   const tabs = [
     { id: 'criteria', label: t('federation.criteria'), icon: <SlidersHorizontal size={16} /> },
-    { id: 'execution', label: t('federation.execution'), icon: <Activity size={16} /> },
+    { id: 'execution', label: selected ? `${t('federation.execution')} · ${summary.complete}/${summary.total}` : t('federation.execution'), icon: <Activity size={16} /> },
     { id: 'history', label: t('federation.history'), icon: <History size={16} /> },
   ];
   const extensionPossible = selected && (draft.providers ?? []).some((key) => !selected.providers.includes(key) && providers.some((p) => p.key === key && p.kind === 'aggregator'));
@@ -136,6 +141,9 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           <h2 className="break-words font-display text-xl italic text-editorial-ink">{selected.criteria.query}</h2>
           {historical && <div className="flex items-center gap-2 text-xs text-editorial-warning"><span>{t('federation.historical')}</span><IconButton title={t('federation.currentResults')} onClick={() => {setHistorical(null);setSorted(null);}}><Activity size={16} /></IconButton></div>}
           <p className="text-xs text-editorial-muted" role="status" aria-live="polite">{t('federation.summary', summary)}</p>
+          {failed.length > 0 && <Tooltip label={failed.map((execution) => label(execution.providerKey)).join(' · ')}>
+            <span className="text-xs text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
+          </Tooltip>}
           <div className="flex flex-wrap items-center gap-2">
             <Select value={visibility} onChange={setVisibility} ariaLabel={t('federation.metadata')}
               options={['all', 'match', 'unknown', 'excluded'].map((value) => ({ value, label: t(`federation.visibility.${value}`) }))} />
@@ -154,14 +162,18 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
               const group = occurrence ? {...original,card:occurrence.card,providerKey:occurrence.providerKey} : original;
               return <div key={item.key} data-index={item.index} ref={virtualizer.measureElement}
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.start}px)` }}>
-                <p className="px-3 pt-2 text-xs text-editorial-muted">{group.origins.map((key) => label(key)).join(' · ')} · {t(`federation.visibility.${group.match}`)}</p>
+
                 {expanded === group.id && group.occurrences.length > 1 && <div className="px-3 py-1">
                   <Select ariaLabel={t('federation.occurrence')} value={String(occurrenceChoice[group.id] ?? -1)}
                     onChange={(value) => setOccurrenceChoice((current) => ({...current,[group.id]:Number(value)}))}
                     options={[{value:'-1',label:t('federation.bestOccurrence')},...group.occurrences.map((entry,index) => ({value:String(index),label:label(entry.providerKey)}))]} />
                 </div>}
                 <SourceListRow card={group.card} providerKey={group.providerKey}
-                  providerLabel={label(group.providerKey)}
+                  providerLabel={group.origins.map((key) => label(key)).join(' · ')}
+                  note={[
+                    group.occurrences.length > 1 ? t('federation.copies', { count: group.occurrences.length }) : null,
+                    group.match === 'unknown' ? t('federation.visibility.unknown') : null,
+                  ].filter(Boolean).join(' · ') || undefined}
                   expanded={expanded === group.id} onToggle={() => setExpanded(expanded === group.id ? null : group.id)}
                   onAddToLibrary={() => void library.addFromDiscovery(group.card, undefined, group.providerKey)}
                   onAddToWorkspace={() => setPicker(group)} adding={library.addingUrls.has(group.card.manifestUrl)}

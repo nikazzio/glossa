@@ -88,7 +88,11 @@
     "receivedLabel": "Records received",
     "generationLabel": "Run",
     "coverageLabel": "Coverage",
-    "stateLabel": "State"
+    "stateLabel": "State",
+    "copies": "{{count}} copies",
+    "copies_one": "{{count}} copy",
+    "failedSources_one": "{{count}} source did not answer",
+    "failedSources_other": "{{count}} sources did not answer"
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -2142,7 +2146,8 @@
       "archiveDesc": "Archiving takes the work out of the list without touching pages already downloaded; to see archived works you switch on the command among the filters. Glossa then asks whether you also want to free the space, and you can say no. The removal command instead deletes everything: record, links, vault content and the pages kept in the cache too, and it has no second thoughts. To keep the work and only recover space, the command is \"free space\".",
       "limitsTitle": "What is not possible yet",
       "limitsDesc": "A PDF digitisation appears among the copies but is not downloaded and not read inside Glossa; importing the text of a PDF into a translation project is a different thing and already works. Keyword search works on Europeana, Internet Archive, Wellcome Collection, the Vatican Library, Gallica, e-codices, Digital Bodleian, Biblioteca Estense, Institut de France, Cambridge, the Bayerische Staatsbibliothek and the Library of Congress; Harvard, Heidelberg, e-rara, e-manuscripta and the direct IIIF address open by identifier or address only. Searching several sources at once starts from a single screen, but the bibliographic filters still apply to the data that came back, not to equivalent remote fields. Of a single page you can save the open one: choosing the size for that page, replacing it, deleting it or selecting several are still to be completed.",
-      "federationCriteria": "In the criteria column the launch control stays at the top, in view while you type and pick sources. Labels sit above their fields and read in full. Sources that cannot be searched by words are grouped together at the bottom: the reason appears on hover."
+      "federationCriteria": "In the criteria column the launch control stays at the top, in view while you type and pick sources. Labels sit above their fields and read in full. Sources that cannot be searched by words are grouped together at the bottom: the reason appears on hover.",
+      "federationOutcome": "Above the results, next to the counts, you see how many sources did not answer; hovering gives the detail. A result row states which libraries it came from and, when several copies of the same work arrived, how many. In the monitor a source that is working is recognisable by its colour, and the tab name carries how many sources have finished out of the total."
     },
     "storage": {
       "title": "Storage and background jobs",

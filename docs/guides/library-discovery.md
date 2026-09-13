@@ -28,6 +28,8 @@ Negli stessi criteri scegli parole chiave, biblioteche e raccolte. Le raccolte n
 
 Avvia crea una ricerca indipendente. Ogni fonte lavora su una pagina e pubblica i risultati appena pronti. Esecuzione mostra stati, errori e comandi per fonte: pausa, ripresa, annullamento, riprova, ripeti dalla prima pagina e carica altri. Lo storico conserva criteri, risultati ed esecuzioni anche cambiando schermata o riaprendo Glossa; i lavori non continuano con l’app chiusa.
 
+Sopra i risultati, accanto ai conteggi, compare quante fonti non hanno risposto, con l'elenco al passaggio del mouse: una ricerca incompleta non si legge più come completa. Ogni riga dice da quali biblioteche è arrivata e, quando la stessa opera è arrivata da più fonti, quante copie ci sono. Nel monitor la fonte che sta lavorando si distingue dal colore e il nome della scheda porta quante fonti hanno finito sul totale.
+
 Estendi alle raccolte usa i criteri della ricerca visibile e solo le raccolte selezionate che non erano già incluse, creando una ricerca collegata. I risultati raggruppano soltanto manifesti identici; biblioteca interrogata e istituzione di conservazione restano distinte. Nell’ordine per titolo i nuovi risultati si integrano esplicitamente. Lo storico delle esecuzioni permette di consultare risultati precedenti senza mescolarli con quelli correnti.
 
 Il backup include ricerche e risultati; prima del ripristino metti in pausa le ricerche. Dopo il ripristino non ripartono automaticamente. I risultati non diventano opere del catalogo finché non li aggiungi.

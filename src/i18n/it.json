@@ -88,7 +88,11 @@
     "receivedLabel": "Record ricevuti",
     "generationLabel": "Esecuzione",
     "coverageLabel": "Copertura",
-    "stateLabel": "Stato"
+    "stateLabel": "Stato",
+    "copies": "{{count}} copie",
+    "copies_one": "{{count}} copia",
+    "failedSources_one": "{{count}} fonte non ha risposto",
+    "failedSources_other": "{{count}} fonti non hanno risposto"
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -2142,7 +2146,8 @@
       "archiveDesc": "Archiviare toglie l'opera dall'elenco senza toccare le pagine già scaricate; per rivedere le archiviate si accende il comando fra i filtri. Subito dopo Glossa chiede se vuoi anche liberare lo spazio, e puoi dire di no. Il comando che rimuove invece elimina tutto: scheda, collegamenti, deposito e anche le pagine tenute in cache, e non ha ripensamenti. Per tenere l'opera e recuperare solo spazio il comando è «libera spazio».",
       "limitsTitle": "Cosa non si può ancora fare",
       "limitsDesc": "Una digitalizzazione in PDF compare fra le copie ma non si scarica e non si legge dentro Glossa; importare il testo di un PDF in un progetto di traduzione è un'altra cosa e funziona già. Cercano per parole Europeana, Internet Archive, Wellcome Collection, la Biblioteca Vaticana, Gallica, e-codices, Digital Bodleian, la Biblioteca Estense, l'Institut de France, Cambridge, la Bayerische Staatsbibliothek e la Library of Congress; Harvard, Heidelberg, e-rara, e-manuscripta e l'indirizzo IIIF diretto si aprono soltanto per identificativo o indirizzo. La ricerca su più fonti insieme parte da una sola schermata, ma i filtri bibliografici restano applicati ai dati ricevuti, non a campi remoti equivalenti. Della singola pagina si può salvare quella aperta: scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una sono lavori ancora da completare.",
-      "federationCriteria": "Nella colonna dei criteri il comando di avvio resta in cima, sempre in vista mentre scrivi e scegli le fonti. Le etichette stanno sopra ai campi e si leggono per intero. Le fonti che non cercano per parole sono raccolte in fondo in un gruppo solo: il motivo compare al passaggio del mouse."
+      "federationCriteria": "Nella colonna dei criteri il comando di avvio resta in cima, sempre in vista mentre scrivi e scegli le fonti. Le etichette stanno sopra ai campi e si leggono per intero. Le fonti che non cercano per parole sono raccolte in fondo in un gruppo solo: il motivo compare al passaggio del mouse.",
+      "federationOutcome": "Sopra i risultati, accanto ai conteggi, compare quante fonti non hanno risposto: il dettaglio si legge passandoci sopra. La riga di un risultato dice da quali biblioteche è arrivato e, quando esistono più copie della stessa opera, quante sono. Nel monitor la fonte che sta lavorando si riconosce dal colore, e il nome della scheda porta quante fonti hanno finito sul totale."
     },
     "storage": {
       "title": "Archiviazione e lavori in background",

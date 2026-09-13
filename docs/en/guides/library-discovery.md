@@ -28,6 +28,8 @@ In the same criteria you choose keywords, libraries and aggregators. Aggregators
 
 Start creates an independent search. Each source processes one page and publishes its results when ready. Execution shows states, errors and per-source pause, resume, cancel, retry, restart and load-more controls. History retains criteria, results and executions across navigation and restarts; jobs do not run while the app is closed.
 
+Above the results, next to the counts, you see how many sources did not answer, with the list on hover: an incomplete search no longer reads as a complete one. Each row states which libraries it came from and, when the same work arrived from several sources, how many copies there are. In the monitor a working source stands out by colour, and the tab name carries how many sources have finished out of the total.
+
 Extend to aggregators reuses the visible search criteria and only selected aggregators not already included, creating a linked search. Results group only identical manifests; queried provider and holding institution remain distinct. In title order, new results are integrated explicitly. Execution history allows previous results to be inspected separately from current results.
 
 Backups include searches and results; pause searches before restoring. Restored searches do not restart automatically. Results are not catalogue works until you add them.
