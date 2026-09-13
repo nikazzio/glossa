@@ -4,93 +4,57 @@ title: Import and export
 
 # Import and export
 
-Glossa is designed for real documents, not just pasted snippets.
+Import creates a project’s source text. Export generates a document from
+pipeline segments. Neither operation replaces an
+[application backup](./backup-and-restore).
 
-## Import
+## Import formats
 
-Supported input formats include:
+| Format | Processing | File limit |
+| --- | --- | --- |
+| TXT | UTF-8 text | 50 MiB |
+| Markdown | UTF-8 text with Markdown structure | 50 MiB |
+| DOCX | Experimental structured extraction to Markdown | 100 MiB |
+| PDF | Extraction of text available in the file | 50 MiB |
 
-- `.txt`
-- `.md`
-- `.docx` — converted to Markdown via structured extraction (experimental feature). Limit: **100 MB**.
-- `.pdf` — extracted as plain text. Limit: **50 MB**.
+Limits use multiples of 1024 bytes. Unrecognised extensions are read as plain
+text when selected through **All files** in the file dialog. This does not
+add support for binary or structured formats such as ODT or RTF. Non-UTF-8
+text is rejected with an encoding error.
 
-Plain text has a **50 MB** limit. Any other extension is read as plain text —
-pick **All files** in the picker's type menu to see it. Be aware, though: a
-format with internal markup such as `.rtf` or `.odt` arrives with its
-formatting codes inside the text, because Glossa does not yet have a dedicated
-reader for those formats.
+The system dialog can select files from any accessible directory, including
+external drives. The preview lets you check extraction and segmentation
+before confirming. A PDF containing only images does not provide text through
+this extraction path; import does not perform OCR.
 
-**From any folder.** Import is not limited to Documents, Downloads, or Desktop:
-pick a file from wherever you keep it, including working folders and external
-drives.
+## Source footnotes
 
-If a text file is not UTF-8 encoded, Glossa tells you instead of importing
-mangled characters: reopen it in a text editor, save it as UTF-8, and try again.
+DOCX and Markdown footnotes are retained separately. The pipeline receives
+the body text without their markers or contents. Translating and positioning
+footnotes requires manual work. See [Annotations and notes](../guides/annotations).
 
-During import, Glossa lets you review segmentation before the document becomes
-the active chunk list.
+## Export formats
 
-## Import expectations
+| Format | Contents |
+| --- | --- |
+| TXT | Translation text; the Markdown option can flatten its structure to plain text |
+| Markdown | Text and markup, including annotations when supplied to export |
+| HTML | A document generated from Markdown |
+| DOCX | A document generated from Markdown by the backend |
+| Bilingual Markdown | Source and translation per segment, completed assessment ratings and audit findings |
 
-- Plain text is the simplest path when structure is minimal.
-- Markdown is best when headings and formatting matter.
-- DOCX and PDF are useful for real editorial material, but always review the preview before running the pipeline.
+Standard formats use the source text where a segment has no translation.
+**Export does not certify that a translation is complete.** Bilingual export
+explicitly marks missing translations and does not insert annotations through
+the same path as Markdown export.
 
-## Imported footnotes
+## Separators and formatting
 
-If a DOCX or Markdown file contains footnotes, Glossa keeps them with the project
-but leaves them outside automatic translation. The model receives the body text,
-not the footnote content. After translation, review and place footnotes manually:
-in real translations they often need different wording and position.
+Segment separators are available only for TXT and Markdown. HTML, DOCX and
+bilingual output use their own composition rules. DOCX output is generated
+from the current Markdown text and does not necessarily recreate the imported
+document’s layout.
 
-See also [Annotations](../guides/annotations) for the distinction between imported
-source notes and annotations created during review.
-
-## Backups
-
-The backup lives in **Settings → Backup** and covers the whole of Glossa, not a
-single workspace.
-
-Before asking to replace local data, Glossa checks that a backup is complete and
-compatible. An incomplete or altered file, or one made by a newer version, is
-rejected without changing anything.
-
-## Data location
-
-The app database contains projects, glossaries, and settings. Under
-**Settings → Data** you can see the folder in use and choose another one.
-Glossa first copies the database, verifies the copy, and only then records the
-new location. The original is never deleted automatically, and the new
-location is used after restarting the app.
-
-This operation covers the app database. Future Library materials such as
-downloaded scans and images are not yet part of the move.
-
-## Export
-
-Typical export targets include:
-
-- plain text (`.txt`)
-- Markdown (`.md`)
-- HTML
-- DOCX
-- bilingual Markdown
-
-## What export is for
-
-- Plain text for a stripped final output
-- Markdown for editable text workflows
-- HTML for review or publishing pipelines
-- DOCX for office/editorial handoff
-- Bilingual Markdown for side-by-side source and translation review, including quality rating and judge issues for completed chunks
-
-## Chunk separators
-
-Separators (blank line, horizontal rule `---`, asterisks `***`) are available **only for `.txt` and `.md`** exports. They do not apply to HTML, DOCX, or the bilingual format.
-
-## Practical rules
-
-- Use Markdown import when structure matters and you want headings preserved.
-- Check the preview before confirming chunking on long files.
-- Export only after review is complete; export is the handoff step, not the review step.
+Before delivery, check incomplete segments, annotations, footnotes and the
+structure of the generated file. Cancelling the save dialog does not create
+an export.

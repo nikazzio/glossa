@@ -1,113 +1,71 @@
 ---
-title: Getting started
+title: Installation and first project
 ---
 
-# Getting started
+# Installation and first project
 
-Glossa is in beta: read the [current status and limitations](../project/status).
-Guides follow main and can describe features newer than your installed build.
+Glossa is a desktop application for consulting digitised sources and translating
+documents with language models. Its React frontend communicates with a Rust
+backend through Tauri, and working data is stored in a local SQLite database.
 
-Glossa is a Tauri desktop app. You run it locally, configure a translation
-pipeline, import or prepare source text, and work chunk by chunk: test one
-representative passage first, then run the full batch.
+This documentation follows the `main` branch and may cover features newer than
+your installed release. See [project status](../project/status) for the current
+beta limitations.
 
-## Download the app
+## Installation
 
-If you want to use Glossa, the correct path is to download a binary release from GitHub. The repository is for development and contribution, not the primary end-user install path.
+Download the package for your operating system from
+[GitHub Releases](https://github.com/nikazzio/glossa/releases). Distribution
+formats include Windows installers, macOS disk images, and AppImage, DEB and
+RPM packages for Linux. Check the assets attached to your chosen release.
 
-- Windows: `.exe` installer or `.msi` package
-- macOS: `.dmg`
-- Linux: `.AppImage`, `.deb`, or `.rpm`
+Remote translation services require their own credentials. Local processing
+requires a running Ollama server and a downloaded model. Configure your
+connection under **Settings → Provider**.
 
-Useful links:
+## Your first translation project
 
-- [Latest release](https://github.com/nikazzio/glossa/releases/latest)
-- Read the selected release notes: its number does not certify beta completion.
+1. Create a workspace: a group of projects and shared resources.
+2. Create a project in that workspace and import a document.
+3. Check the extracted text and segment boundaries in the import preview.
+4. Set the languages, pipeline mode, providers and models for the active stages.
+5. Run a test on a representative segment and compare the result with the source.
+6. Process the remaining segments, review the translations and export the document.
 
-## Prerequisites
+The [translation guide](../guides/document-pipeline) explains execution and
+segment states. To work with digitised material, start with
+[source search](../guides/source-search).
 
-- Node.js and npm at the versions declared in [`package.json`](https://github.com/nikazzio/glossa/blob/main/package.json), `engines` field
-- Current stable Rust
-- `npm` for frontend dependencies
-- Linux users also need the system libraries listed in the [development guide](https://github.com/nikazzio/glossa#develop)
+## Running from source
 
-## Develop from source
-
-Clone the repository only if you want to develop Glossa, test local changes, or contribute code.
+Development requires Node.js `^20.19.0` or `>=22.12.0`, npm `>=11`, Rust and
+the Tauri system dependencies. Node.js and npm requirements are declared in
+`package.json`; system dependencies are listed in the
+[README](https://github.com/nikazzio/glossa#develop).
 
 ```bash
 git clone https://github.com/nikazzio/glossa.git
 cd glossa
 npm install
-```
-
-## Run the desktop app in development
-
-```bash
 npm run tauri:dev
 ```
 
-This starts the Vite frontend and the Tauri shell together.
+`tauri:dev` starts both Vite and the desktop application.
+`npm run tauri:build` produces distribution packages using the release configuration.
 
-## Build the app locally
-
-```bash
-npm run tauri:build
-```
-
-## Run the docs locally
+## Local documentation and deployment
 
 ```bash
 npm run docs:start
-```
-
-Build the static docs site with:
-
-```bash
 npm run docs:build
 ```
 
-## Recommended first-run path
+The first command starts VitePress at `127.0.0.1:3001`; the second generates
+the site in `docs/.vitepress/dist`. Italian content lives in `docs/` and English
+content in `docs/en/`. Navigation and locales are configured in
+`docs/.vitepress/config.ts`.
 
-1. Open the app and configure your provider credentials in **Settings**.
-2. Create or open a workspace and then create a project.
-3. Set the source and target languages.
-4. Choose a provider and model for the first stage.
-5. Import a document. For a short trial, import or paste only a sample and use **Test** on one chunk.
-6. Run a test chunk before launching a full batch.
-
-## What you should configure first
-
-- **Provider keys** in Settings
-- **Pipeline mode**: Standard for simpler jobs, Editorial for multi-stage refinement, DeepL Hybrid when you want a DeepL first pass followed by LLM refinement
-- **Glossary** if terminology is non-negotiable
-- **Chunking** if the source text is long or structurally sensitive
-
-## Local docs and app scope
-
-- `docs/` is the public static site
-- `docs-dev/` holds internal notes for maintainers
-- `src/` and `src-tauri/` are the actual application codebases
-
-## Development checks
-
-```bash
-npm run lint:all
-npm test
-npm run build
-```
-
-Backend checks are run from `src-tauri/`:
-
-```bash
-cargo check --all-targets
-cargo test
-```
-
-## Next steps
-
-- Read the [document pipeline guide](../guides/document-pipeline)
-- Read [glossary and phrase memory](../guides/glossary-and-memory)
-- Read [audit and review](../guides/audit-review)
-- Review [keyboard shortcuts](../guides/keyboard-shortcuts)
-- Check [provider support](../reference/provider-support)
+The documentation workflow deploys to GitHub Pages after a push to `main`
+that changes a configured path, including `docs/`, the workflow itself or the
+npm manifests. Merges that do not affect those paths do not trigger deployment.
+Internal development notes live in `docs-dev/`.

@@ -1,66 +1,45 @@
 ---
-title: Beta status
+title: Project status
 ---
 
-# Beta status
+# Project status
 
-Glossa is in beta. Version numbers, including 2.x, do not certify that all
-planned features are complete: numbering advanced during automated release tests.
-
-These guides follow development on main. Your downloaded build may be older:
-compare the version shown in the app with the
+Glossa is in private beta. Version numbers do not indicate that every planned
+feature is complete. This site documents code merged into `main`; compare
+your installed version with the
 [release notes](https://github.com/nikazzio/glossa/releases).
 
-## Available today
+## Available features
 
-- Search several sources at once from the Dashboard, through independent jobs with
-  progressive results; inspect history and errors, and retry one source.
-  Bibliographic filters use the metadata that came back.
-- Use a three-tab Dashboard: an overview with collapsible boxes and a graphical jobs
-  summary, search across several sources, and search on a single source.
-- Use the Library purely as the catalogue of the works you keep, with a filter column
-  that collapses itself when the window is too narrow.
-- Create workspaces and projects, import text and translate it in stages.
-- Test a passage before processing a document, then edit and review.
-- Use glossaries, phrase memory, annotations and translation history.
-- Search supported libraries and organise sources in a personal catalogue.
-- Read IIIF images, keep local versions and read available pages offline.
-- Follow, pause and resume downloads; verify and optimise local images.
-- Export translations and back up the whole application.
+- Dashboard summaries and single-source or multi-source search with persistent history.
+- A catalogue of works with editable metadata, collections and workspace links.
+- IIIF viewing, downloads, local versions, image reduction and integrity checks.
+- Translation workspaces and projects with text import and segmentation.
+- Standard, Editorial and DeepL Hybrid pipelines with revision and assessment.
+- Dictionaries, phrase memory, examples, annotations and translation history.
+- Translation export and application-data backups.
 
-## Still being completed
+## Current limitations
 
-| Area | Current limitation |
+| Area | Limitation |
 | --- | --- |
-| Transcription | Full studio, page correction workflow and OCR/HTR remain in development |
-| Source → translation | The approved-transcription bridge is not complete |
-| Library PDFs | Copies can be listed, but downloading and reading them is unavailable |
-| Individual pages | Saving the open page works; advanced actions and multiple selection are unfinished |
-| Search | Capabilities vary by library: twelve search by words, the others open by identifier or address only. Bibliographic filters work on the metadata that came back, not on equivalent remote fields. Results with no reproduction are marked “not viewable” rather than hidden |
-| Workspace transfer | Backup covers the whole app; single-workspace import/export is unfinished |
+| Transcription | The transcription studio, OCR/HTR and page-level revision do not yet form a complete workflow |
+| Source to translation | Transfer from an approved transcription to translation is incomplete |
+| PDFs in the Library | Metadata is available; downloading and integrated viewing are not |
+| Individual pages | Saving the current page is supported; advanced management and multiple-page selection are incomplete |
+| Search | Capabilities vary by source; metadata filtering is local and coverage depends on the queried services |
+| Workspace transfer | Backups replace application data rather than exporting and importing one workspace |
 | Export Studio and Analysis | Advanced workflows remain in development |
 
-Importing text from a PDF into a translation project already works. This is
-separate from reading a PDF in the Library. A scanned PDF needs text recognition,
-which is not yet a complete workflow.
+PDF text extraction for translation is available and separate from PDF viewing
+in the Library. It does not recognise text in scanned images.
 
-## Data and backups
+## Data preservation
 
-Current backups do not accept earlier formats. Restore replaces all application
-data; it does not merge workspaces. Vault images and provider credentials are
-excluded. Keep important source materials separately, including those that may
-stop being available online.
+Restoration accepts only the current backup schema and replaces local data.
+Credentials, images and exported files require separate handling. Read
+[Backup and restore](../reference/backup-and-restore) before using it.
 
-Password-protected backups are encrypted; the Glossa-only format is obfuscated,
-not encrypted. Read [Storage and jobs](../guides/storage-and-jobs) before restoring
-data or changing the vault.
-
-## Towards completion
-
-The target workflow is source → reading → transcription → reviewed translation
-→ export. Features arrive progressively; a visible area does not mean every
-action is available.
-
-The [development roadmap](https://github.com/nikazzio/glossa/blob/main/docs-dev/ROADMAP_2_0.md)
-records order, dependencies and acceptance criteria. When reporting an issue,
-include the app version, operating system, attempted action and outcome.
+The [roadmap](https://github.com/nikazzio/glossa/blob/main/docs-dev/ROADMAP_2_0.md)
+records priorities and dependencies for remaining work. A navigation entry
+does not imply that its workflow is already usable.

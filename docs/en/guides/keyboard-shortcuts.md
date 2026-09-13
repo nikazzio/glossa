@@ -4,24 +4,26 @@ title: Keyboard shortcuts
 
 # Keyboard shortcuts
 
-Glossa listens for the same shortcut set on Windows, Linux, and macOS.
-On macOS, use `Cmd` where the interface shows `Ctrl`.
+Global shortcuts use `Ctrl` on Windows and Linux. On macOS you can use `Cmd`.
+Except for `Ctrl + Enter`, they are not intercepted while focus is in a text
+field, select control or editable text area.
 
-## Core shortcuts
+| Shortcut | Action | Conditions |
+| --- | --- | --- |
+| `Ctrl + Enter` | Starts the selected translation action | Segment mode requires a selected segment; also works inside text fields |
+| `Ctrl + S` | Saves the project and modified language resources | Requires an existing project; project saving is deferred while processing |
+| `Ctrl + E` | Opens export | Requires at least one segment |
+| `Ctrl + ,` | Opens pipeline configuration | Outside editable fields |
+| `Ctrl + H` | Opens this section of the in-app guide | Outside editable fields |
+| `Ctrl + 1` … `Ctrl + 9` | Selects one of the first nine segments | The segment must exist |
+| `Esc` | Closes the active dialog or menu | Depends on the open control |
 
-| Shortcut | Action |
-|---|---|
-| `Ctrl + Enter` | Run the pipeline, or run a dry test if the pipeline is in Test mode |
-| `Ctrl + S` | Save the current project and any dirty library items |
-| `Ctrl + E` | Open export for the current document when chunks are available |
-| `Ctrl + ,` | Open the configuration drawer |
-| `Ctrl + H` | Open the help view on the shortcuts section |
-| `Ctrl + 1` to `Ctrl + 9` | Jump to the corresponding chunk |
-| `Esc` | Close the current modal or overlay |
+While a project is processing, the save command reports that project saving
+is deferred; modified language resources can still be saved. This shortcut
+does not name or create a project for an unsaved draft.
 
-## Notes
+## Navigating controls
 
-- `Ctrl + Enter` works even when the focus is inside text inputs.
-- Chunk switching only reaches the first nine chunks directly from the keyboard.
-- Saving is deferred when a project is running and the project cannot be written yet.
-- The app shows `Ctrl` in the UI; on macOS that means `Cmd`.
+Use `Tab` to reach controls and `Enter` or `Space` to activate them. Tab bars
+support arrow keys, `Home` and `End`. Icon-button tooltips describe their
+action and, where relevant, explain why it is unavailable.

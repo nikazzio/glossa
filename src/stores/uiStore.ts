@@ -7,7 +7,28 @@ export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'gl
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
 export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references' | 'promptPreview';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
-export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'sources' | 'storage' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
+/**
+ * Gli argomenti della guida, raccolti nei gruppi in cui compaiono nel menu.
+ *
+ * Sorgente unica: il tipo, l'elenco del menu e il controllo di ciò che arriva
+ * da fuori nascono tutti da qui. Prima l'elenco viveva in tre posti e un
+ * argomento aggiunto solo ai testi restava invisibile.
+ */
+export const HELP_GROUPS = [
+  { id: 'start', sections: ['overview', 'projects'] },
+  { id: 'sources', sections: ['search', 'sources', 'storage', 'backup'] },
+  { id: 'translation', sections: ['pipeline', 'features', 'glossary', 'memory', 'audit', 'annotations', 'context'] },
+  { id: 'support', sections: ['providers', 'ollama', 'shortcuts', 'troubleshooting'] },
+] as const;
+
+export type HelpSection = (typeof HELP_GROUPS)[number]['sections'][number];
+
+export const HELP_SECTIONS: readonly HelpSection[] = HELP_GROUPS.flatMap((group) => group.sections);
+
+/** Un argomento che non esiste apre la panoramica invece di lasciare il vuoto. */
+export function asHelpSection(value: string | undefined): HelpSection {
+  return HELP_SECTIONS.includes(value as HelpSection) ? (value as HelpSection) : 'overview';
+}
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
@@ -522,7 +543,7 @@ export const useUiStore = create<UiState>()(
               };
             case 'help':
               return {
-                showHelp: true, helpSection: (tab as HelpSection) ?? 'overview',
+                showHelp: true, helpSection: asHelpSection(tab),
                 showSettings: false, showConfigDrawer: false,
                 showDocumentDrawer: false, showChunkDrawer: false, activePanel: 'help' as const,
               };

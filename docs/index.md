@@ -1,63 +1,44 @@
 ---
 layout: home
-title: Glossa
-description: Documentazione pubblica dell'app desktop Glossa.
-
+title: "Documentazione di Glossa"
+description: "Documentazione tecnica dell’applicazione desktop: organizzazione delle fonti, elaborazione dei testi, revisione e gestione dei dati."
 hero:
   name: Glossa
-  text: Fonti, studio e traduzione editoriale
-  tagline: Un ambiente desktop in beta per raccogliere e leggere fonti, organizzare la ricerca e tradurre testi lunghi con revisione, glossari e memoria di frasi.
+  text: "Fonti digitali e traduzione"
+  tagline: "Documentazione tecnica dell’applicazione desktop: organizzazione delle fonti, elaborazione dei testi, revisione e gestione dei dati."
   image:
     src: /glossa-app-icon.png
     alt: Glossa
   actions:
     - theme: brand
-      text: Per iniziare
+      text: "Installazione"
       link: /intro/getting-started
     - theme: alt
-      text: Guida workflow
+      text: "Traduzione dei documenti"
       link: /guides/document-pipeline
-    - theme: alt
-      text: GitHub
-      link: https://github.com/nikazzio/glossa
-
 features:
-  - title: Workflow prima di tutto
-    details: Configura una pipeline, prova un chunk, esegui il batch e revisiona il risultato senza uscire dallo stesso workspace documento.
-  - title: Controllo editoriale
-    details: Tieni visibili provider, prompt, glossario, audit e note mentre lavori sui passaggi più difficili.
-  - title: Supporto ai testi lunghi
-    details: Importa testo, Markdown, DOCX o PDF, segmenta il contenuto e processalo progressivamente invece di incollare tutto in una chat.
+  - title: "Biblioteca"
+    details: "Ricerca nelle fonti supportate, catalogo bibliografico, lettore IIIF e versioni locali delle immagini."
+  - title: "Traduzione e revisione"
+    details: "Pipeline configurabili, glossari, memoria di frasi e controlli di qualità per documenti suddivisi in frammenti."
+  - title: "Dati e integrazioni"
+    details: "Ambiti dei workspace, servizi linguistici, lavori in background, formati di esportazione e backup."
 ---
 
-## Una beta in evoluzione
+## Consultare la documentazione
 
-La Biblioteca e la traduzione sono operative. Studio di trascrizione, OCR/HTR,
-Export Studio e Analisi sono ancora da completare. Il numero 2.x non indica
-che l'intero prodotto sia finito. Le guide seguono main e possono precedere
-la versione scaricabile: consulta lo [stato della beta](./project/status).
+Inizia da [Installazione e primo progetto](./intro/getting-started), quindi
+consulta [Workspace e progetti](./guides/projects-and-workspace) per gli ambiti
+dei dati. Per le fonti digitali, segui [Ricerca delle fonti](./guides/source-search)
+e [Biblioteca e lettore IIIF](./guides/library-discovery). Per i testi, consulta
+[Traduzione di un documento](./guides/document-pipeline) e
+[Valutazione e revisione](./guides/audit-review).
 
-## Leggi prima questi
+I riferimenti descrivono parametri, formati e limiti delle integrazioni. La
+guida integrata nell’applicazione contiene le procedure operative per l’utente.
 
-- [Scarica l'app](./intro/getting-started#scarica-lapp) per installare la release giusta per Windows, macOS o Linux
-- [Per iniziare](./intro/getting-started) per installazione, sviluppo e build locale
-- [Pipeline documento](./guides/document-pipeline) per il workflow end-to-end
-- [LLM e pipeline](./guides/llm-and-pipelines) per capire come ragionano i modelli e perché Glossa divide il lavoro in stadi
-- [Progetti e workspace](./guides/projects-and-workspace) per stato, salvataggi e risorse condivise
-- [Glossario e phrase memory](./guides/glossary-and-memory) per il controllo terminologico
-- [Audit e revisione](./guides/audit-review) per output del judge, iterazione e review loop
-- [Risoluzione problemi](./reference/troubleshooting) per i guasti più comuni
+## Versione documentata
 
-## Cosa copre Glossa
-
-- Biblioteca delle fonti, lettore IIIF e immagini disponibili offline
-- Workspace, scaricamenti persistenti e backup dell'applicazione
-- Modalità Standard per una singola traduzione più audit
-- Modalità Editoriale per traduzione, refine, format e review
-- Modalità DeepL Hybrid per prima passata DeepL e rifinitura LLM
-- Elaborazione documenti a chunk con run di test e di produzione
-- Glossario vincolante e phrase memory riutilizzabile
-- Annotazioni tipizzate ancorate al testo tradotto
-- Inferenza cloud, locale e personalizzata tramite Gemini, OpenAI, Anthropic, DeepSeek, DeepL, Ollama ed endpoint OpenAI-compatibili
-
-> Questo è il sito pubblico. Le note interne di architettura e design restano in `docs-dev/`.
+Il sito segue `main`. Glossa è in beta privata e la versione installata può
+precedere le funzioni descritte. Consulta lo [stato del progetto](./project/status)
+e le [note di rilascio](./project/changelog).

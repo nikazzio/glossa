@@ -1,97 +1,61 @@
 ---
-title: Context and caching
+title: Context and prompt caching
 ---
 
-# Context and caching
+# Context and prompt caching
 
-Glossa uses two mechanisms to keep translations consistent across chunks and limit
-inference costs: a document reference block that gives each chunk access to the
-source text of its neighbours, and a layered prompt structure that lets providers
-cache as much as possible between calls.
+Document context supplies references for translating a segment. Prompt caching
+can reduce the processing cost of repeated request content. These are separate
+mechanisms: including context does not mean the provider has cached it.
 
-This page describes the technical behavior. For the product reasoning behind the
-pipeline design, read [LLMs and pipelines](./llm-and-pipelines) first.
+## Document context
 
-## Document context per chunk
+Each segment can reference a group of source segments. Glossa builds a context
+block from those references and explicitly identifies the segment to translate.
+The block may cover a short document in full or a group of neighbouring
+passages in a longer document.
 
-When translating a chunk, Glossa automatically sends the source text of adjacent
-chunks as a reference block. The model uses it to keep terminology, names, pronouns,
-and style consistent across chunk boundaries — without having to see the full
-document at once.
+Draft revision also receives the source. Formatting uses only translated text
+with a dedicated prompt. Consistency review builds its context from translations
+rather than the original text.
 
-For short documents the block covers the entire source; for longer documents it
-covers a sliding window of adjacent chunks. The block is provided as context only:
-the model receives explicit instructions to translate only the current chunk, not
-the reference block content.
+## Block order
 
-## Layered prompt caching
+For translation and revision, the system message preserves this order:
 
-Each prompt contains three reusable layers, followed by the variable current chunk
-or the output from the previous stage. This structure helps the provider reuse as
-much previously computed context as possible:
+1. Static instructions: persona, structural rules, glossary and examples.
+2. Shared document context.
+3. Stage-specific instructions, including any selected memory references.
 
-| Layer | Content | Caching |
-|---|---|---|
-| 1 | Persona, structural rules, glossary | Cached once per run |
-| 2 | Document reference block | Cached per group of adjacent chunks |
-| 3 | Stage-specific instructions | Sent each call — the smallest part |
+The user message contains the text to process and, for revision, the previous
+draft. The order `static → blob → stage-instructions` keeps the reusable prefix
+contiguous. Inserting variable content before the shared context would reduce
+the amount that can be reused.
 
-The current chunk text comes after these layers. It changes on every call, so it is
-not the part Glossa tries to make cacheable.
+## Adapter behaviour
 
-## Stage isolation
+| Provider | Implemented behaviour |
+| --- | --- |
+| OpenAI | Derives a key from the provider, model and prefix; forwards explicit `in_memory` or `24h` retention when configured |
+| Anthropic | Adds `cache_control` to eligible blocks only when caching is enabled; can request a one-hour TTL |
+| Gemini | Can create and reuse cached content for eligible prefixes |
+| DeepSeek | Reads cache token counts reported in the response |
+| Ollama | Does not provide the same billed-cache metrics as remote providers |
 
-Each stage receives exactly the information it needs — nothing more. This prevents
-inadvertent re-translation and keeps each stage focused on its specific task.
+These behaviours describe Glossa’s integration. Actual cache availability,
+duration and pricing depend on the service and model; they cannot be inferred
+from a model family name alone.
 
-| Stage | Receives |
-|---|---|
-| Translation | Source text of current chunk + reference block |
-| Refine | Source text + reference block + translation output |
-| Format | Translated text only — no source, no reference block |
-| Coherence audit | Adjacent translated chunks — no source |
+## Configuration and inspection
 
-The Format stage receives only the translation by design: if it also received the
-source, the model might re-translate instead of cleaning formatting only.
+Anthropic caching is disabled by default. Enable it when you expect to reuse
+a prefix, and consider extended retention in light of the interval between
+requests. Cache writes may incur a charge, so a prefix that is never reused
+does not necessarily save money.
 
-## What this means in practice
+Statistics display usage data returned by providers. An identical prefix does
+not guarantee a cache hit: size, model, expiry and service policies may affect
+reuse. Use the segment preview to inspect messages and the console to review
+requests that have been executed.
 
-After the first chunk in a group is processed, subsequent chunks in the same group
-cost less because the provider reuses the already-cached layers. On long documents
-with many chunks the savings are significant, especially in Editorial mode where
-three stages run per chunk.
-
-## Cache retention by model
-
-Cache lifetime varies by provider and model. OpenAI, for example, distinguishes
-two policies:
-
-- **Full models**: extended retention up to 24 hours — subsequent chunks benefit
-  from a previous run's warm cache even across sessions.
-- **Mini/nano models**: in-memory retention — the prefix expires after 5–10 minutes
-  of inactivity.
-
-This explains why the Refine stage (typically on a mini model) may show 0% cache
-hits even with an identical prompt: if more than 10 minutes pass between chunks,
-the cache has already expired.
-
-The figures above (24 hours, 5–10 minutes) reflect observed behaviour and are not contractual guarantees — providers may change them without notice. Check your provider's documentation for the retention policy of the model you are using.
-
-## Anthropic: opt-in caching with extended TTL
-
-Unlike other providers, Anthropic caching is **off by default** and must be turned
-on by hand in the pipeline settings. Reason: with Glossa's typical usage pattern
-(one chunk at a time, often minutes or hours apart) the default 5-minute cache
-would almost always expire before it's reread, and turning it on without a reason
-would only cost the write surcharge, never save anything.
-
-If needed, you can also extend the cache lifetime to 1 hour instead of the default
-5 minutes — useful when a slow stage sits between two Anthropic chunks in the
-pipeline (e.g. a local provider). It costs double on writes instead of 1.25x. See
-[Pipeline config](../reference/pipeline-config) for details on both controls.
-
-## See also
-
-- [Pipeline config](../reference/pipeline-config) — how to configure stages and models
-- [LLMs and pipelines](./llm-and-pipelines) — theoretical principles behind chunks, stages, and the judge
-- [Audit and review](./audit-review) — how the judge evaluates each chunk's output
+Prompt caching is separate from the [Library’s network cache](./storage-and-jobs).

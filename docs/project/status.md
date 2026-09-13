@@ -1,67 +1,45 @@
 ---
-title: Stato della beta
+title: Stato del progetto
 ---
 
-# Stato della beta
+# Stato del progetto
 
-Glossa è in beta. Il numero di versione, compreso 2.x, non certifica che tutte
-le funzioni previste siano pronte: la numerazione è cresciuta durante le prove
-del sistema di rilascio automatico.
-
-Queste guide seguono lo sviluppo su main. Una versione scaricata può essere
-precedente: confronta la versione nell'app con le
+Glossa è in beta privata. La numerazione delle versioni non indica che tutte
+le funzioni previste siano complete. Questo sito documenta il codice integrato
+su `main`; confronta la versione installata con le
 [note di rilascio](https://github.com/nikazzio/glossa/releases).
 
-## Cosa puoi fare oggi
+## Funzioni disponibili
 
-- Cercare dalla Dashboard in più fonti insieme, con lavori indipendenti e risultati
-  progressivi; consultare storico, errori e ripetere una sola fonte. Filtri
-  bibliografici sui metadati ricevuti.
-- Usare la Dashboard a tre linguette: quadro d'insieme con riquadri richiudibili e
-  riepilogo grafico dei lavori, ricerca su più fonti, ricerca su una fonte sola.
-- Consultare in Biblioteca il solo catalogo delle opere conservate, con la colonna
-  dei filtri che si richiude da sola quando la finestra è troppo stretta.
-- Creare workspace e progetti, importare testi e tradurli per passaggi.
-- Provare un frammento prima dell'intero documento, correggere e revisionare.
-- Usare glossari, memoria di frasi, note e storico delle traduzioni.
-- Cercare nelle biblioteche supportate e organizzare le fonti nel catalogo.
-- Sfogliare immagini IIIF, conservarle e leggere quelle presenti senza rete.
-- Seguire, interrompere e riprendere scaricamenti; verificare e ridurre immagini.
-- Esportare traduzioni e salvare un backup dell'intera applicazione.
+- Dashboard con riepiloghi e ricerca singola o su più fonti, con storico persistente.
+- Catalogo delle opere, metadati modificabili, collezioni e collegamenti ai workspace.
+- Lettura IIIF, download, versioni locali, riduzione e verifica delle immagini.
+- Workspace e progetti di traduzione con importazione e segmentazione del testo.
+- Pipeline Standard, Editoriale e DeepL Hybrid, con revisione e valutazione.
+- Dizionari, memoria di frasi, esempi, annotazioni e storico delle traduzioni.
+- Esportazione delle traduzioni e backup dei dati applicativi.
 
-## Cosa resta da completare
+## Limiti attuali
 
-| Ambito | Limite attuale |
+| Ambito | Limite |
 | --- | --- |
-| Trascrizioni | Studio completo, correzione per pagina e OCR/HTR ancora in sviluppo |
-| Fonte → traduzione | Passaggio dalla trascrizione approvata non ancora completo |
-| PDF in Biblioteca | Le copie possono comparire, ma download e lettura non sono disponibili |
-| Singole pagine | Conservazione della pagina aperta disponibile; gestione avanzata e selezione multipla da completare |
-| Ricerca | Capacità diverse per biblioteca: dodici cercano per parole, le altre si aprono solo per identificativo o indirizzo. I filtri bibliografici lavorano sui dati ricevuti, non su campi remoti equivalenti. I risultati senza riproduzione vengono segnati «non consultabile» invece di essere nascosti |
-| Trasferimento workspace | Il backup riguarda tutta l'app; import/export di un solo workspace da costruire |
+| Trascrizione | Studio di trascrizione, OCR/HTR e revisione per pagina non costituiscono ancora un percorso completo |
+| Dalla fonte alla traduzione | Il trasferimento da una trascrizione approvata alla traduzione è incompleto |
+| PDF nella Biblioteca | Metadati disponibili; download e lettura integrata non disponibili |
+| Singole pagine | Salvataggio della pagina aperta disponibile; gestione avanzata e selezione multipla incomplete |
+| Ricerca | Capacità diverse per fonte; filtri locali sui metadati e copertura dipendente dai servizi interrogati |
+| Trasferimento di un workspace | Il backup sostituisce i dati dell’applicazione; non esporta e importa un singolo workspace |
 | Export Studio e Analisi | Percorsi avanzati ancora in sviluppo |
 
-Importare il testo di un PDF in un progetto di traduzione è già possibile:
-è distinto dal leggere un PDF nella Biblioteca. Un PDF di sole scansioni
-richiede riconoscimento del testo, che non è ancora un percorso completo.
+L’estrazione di testo da PDF per traduzione è disponibile e distinta dalla
+lettura dei PDF in Biblioteca. Non esegue riconoscimento del testo nelle scansioni.
 
-## Dati e backup
+## Conservazione dei dati
 
-I backup attuali non accettano i formati precedenti. Il ripristino sostituisce
-i dati dell'intera applicazione; non unisce due workspace. Le immagini del
-deposito e le credenziali dei provider non sono incluse. Conserva separatamente
-i materiali che vuoi tenere, anche se non saranno più scaricabili dalla fonte.
+Il ripristino accetta solo lo schema corrente del backup e sostituisce i dati
+locali. Credenziali, immagini ed esportazioni richiedono gestione separata.
+Consulta [Backup e ripristino](../reference/backup-and-restore) prima di usarlo.
 
-Il formato con password protegge il backup; quello apribile solo da Glossa è
-offuscato, non cifrato. Leggi [Archiviazione e lavori](../guides/storage-and-jobs)
-prima di ripristinare o cambiare deposito.
-
-## Verso il completamento
-
-Il percorso obiettivo è fonte → lettura → trascrizione → traduzione revisionata
-→ esportazione. Le capacità arrivano progressivamente; una sezione visibile
-non significa che tutte le azioni siano già disponibili.
-
-La [roadmap di sviluppo](https://github.com/nikazzio/glossa/blob/main/docs-dev/ROADMAP_2_0.md)
-indica ordine, dipendenze e criteri. Per segnalare un problema, includi versione,
-sistema operativo, operazione tentata ed esito.
+La [roadmap](https://github.com/nikazzio/glossa/blob/main/docs-dev/ROADMAP_2_0.md)
+documenta priorità e dipendenze del lavoro restante. La presenza di una voce
+di navigazione non implica che il relativo percorso sia già utilizzabile.

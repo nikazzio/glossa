@@ -1,49 +1,61 @@
 ---
-title: Phrase memory
+title: Memoria di frasi ed esempi
 ---
 
-# Phrase memory
+# Memoria di frasi ed esempi
 
-La phrase memory aiuta Glossa a riutilizzare frammenti sorgente-target già approvati
-quando ricompare una formulazione simile.
+La memoria di frasi conserva coppie di testo sorgente e traduzione approvata
+per riutilizzarle nei progetti del workspace. La ricerca di corrispondenze,
+la loro selezione per il prompt e il salvataggio di nuove frasi sono operazioni
+separate.
 
-> Questa pagina è una panoramica rapida. Per il workflow completo, leggi [Glossario e phrase memory](./glossary-and-memory).
+## Recupero dei riferimenti
 
-## Cosa memorizza
+Quando la funzione è attiva, Glossa cerca corrispondenze per i frammenti del
+documento. La ricerca usa le risorse accessibili al workspace e non modifica
+né traduzioni né frasi salvate.
 
-- Frasi sorgente brevi
-- Frasi target approvate
-- Valori di confidenza della coppia estratta
+La scheda **Riferimenti** mostra i risultati e permette di regolare la soglia
+di somiglianza. Solo le coppie selezionate vengono incluse nella successiva
+richiesta per quel frammento. Se esistono risultati ma nessuno è selezionato,
+l’avvio segnala che la traduzione procederà senza quei riferimenti.
 
-## Come funziona
+Le coppie sono aggiunte alle istruzioni della fase, dopo il prefisso statico
+e il contesto documentale. Non modificano i blocchi condivisi predisposti
+per la cache. La somiglianza indica una possibile pertinenza, non l’equivalenza
+semantica o l’adeguatezza della resa al contesto corrente.
 
-Il pannello del frammento ha due schede distinte, per due momenti diversi del lavoro:
+## Creazione e revisione delle frasi
 
-**Scheda Memoria — creare nuove frasi**: una frase entra nella raccolta solo da un frammento che hai **bloccato** (la traduzione è definitiva). Le frasi già salvate in precedenza per quel frammento si caricano da sole all'apertura della scheda, già spuntate ed etichettate "già salvata". Blocca il frammento, premi "Estrai frasi" (bottone separato) per farne proporre di nuove da Glossa: si aggiungono a quelle già mostrate, senza doppioni identici. Rivedi ogni riga — spunta/togli la spunta, correggi il testo se serve — e puoi anche aggiungerne manualmente. Il bottone "Salva" è sempre visibile in alto: quando lo premi, salva tutto ciò che in quel momento è spuntato — se hai tolto la spunta a una frase già salvata, viene rimossa davvero dalla raccolta (non serve un pulsante separato per eliminarla). Se cambi frammento a metà revisione, il lavoro non confermato resta lì ad aspettarti quando torni su quel frammento.
+1. Rivedi la traduzione e blocca il frammento.
+2. Apri **Memoria**: le coppie già salvate vengono caricate e selezionate.
+3. Usa **Estrai frasi** per ottenere nuove proposte, oppure aggiungi coppie manualmente.
+4. Correggi i testi e seleziona le coppie da conservare.
+5. Salva per applicare la selezione.
 
-**Scheda Riferimenti — riusare frasi già salvate**: qui vedi le corrispondenze trovate per il frammento aperto, con una soglia di somiglianza regolabile. Solo le corrispondenze che spunti vengono davvero inviate come riferimento la prossima volta che traduci o rilanci quel frammento — quelle trovate ma non spuntate restano visibili ma ignorate. Il glossario del progetto non è ripetuto qui: è sempre visibile per intero nella scheda dedicata del pannello a destra.
+L’estrazione non salva automaticamente. Togliere la selezione a una coppia
+già salvata e confermare ne provoca la rimozione dalla raccolta. Le modifiche
+non confermate restano nella bozza del frammento quando si passa a un altro
+frammento durante la revisione; non equivalgono a un salvataggio permanente.
 
-## Quando evitarla
+## Ambito
 
-Disattiva o ignora i match quando il testo cambia registro, voce narrante o dominio.
-La somiglianza lessicale non basta: una frase recuperata deve avere senso nel chunk
-corrente e nel documento che stai traducendo.
+Le frasi estratte mantengono il collegamento alla traduzione di origine.
+Spostando quella traduzione in un altro workspace, le frasi la seguono.
+Le risorse importate e collegate possono essere condivise secondo i collegamenti
+del workspace. La scheda **Frasi** delle Risorse linguistiche permette di
+consultare la raccolta.
 
-## Buone pratiche
+## Esempi di stile
 
-- Mantieni stabile il testo sorgente per ottenere un riuso affidabile delle frasi.
-- Tratta la phrase memory come un supporto, non come sostituto del giudizio editoriale.
-- Controlla i match selezionati prima di usarli in produzione.
+Gli esempi di traduzione sono coppie di frammenti completi usate per orientare
+registro e stile della pipeline. Non vengono recuperati in base alla
+somiglianza del frammento corrente.
 
-## Esempi di traduzione (diverso dalla phrase memory)
+Da un frammento bloccato, il comando **Usa come esempio di stile** nella scheda
+Audit aggiunge la coppia alle impostazioni della pipeline. Qui puoi modificarla
+o rimuoverla. Il limite è cinque esempi; poiché entrano nel contesto statico,
+la loro lunghezza contribuisce alla dimensione delle richieste.
 
-Oltre alle singole frasi, puoi fissare 2-3 traduzioni intere di un frammento come esempio
-di stile per l'intera pipeline: servono a orientare registro e tono su ogni frammento
-successivo, non a suggerire coppie puntuali come la phrase memory.
-
-Per aggiungerne uno: blocca un frammento con la traduzione che ritieni un buon esempio —
-di solito dopo aver controllato la scheda Audit e verificato che vada tutto bene — poi
-nella stessa scheda Audit premi il bottone "Usa come esempio di stile", che mostra anche
-quanti esempi hai già salvato. L'esempio compare da subito nelle Impostazioni della
-pipeline, dove puoi rivederlo, accorciarlo o rimuoverlo. Un piccolo tetto (5 esempi) evita
-di appesantire inutilmente ogni traduzione successiva.
+Usa il [glossario](./glossary-and-memory) per le rese obbligatorie e i
+riferimenti di memoria per formulazioni pertinenti al singolo passaggio.

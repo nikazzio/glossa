@@ -1,72 +1,52 @@
 ---
-title: Annotations
+title: Annotations and notes
 ---
 
-# Annotations
+# Annotations and notes
 
-Annotations let you attach structured notes to translated chunks so editorial
-feedback stays close to the text it refers to and survives project reload.
+Annotations record observations about a segment and can refer to a specific
+passage in the translation. They are stored separately from the text, so a
+note can be edited or removed without rewriting the translation.
 
-## Annotation types
+## Types
 
-| Type | When to use |
-|---|---|
-| **Comment** | General observation, editorial decision worth keeping |
-| **Doubt** | Open interpretation question — uncertain but not blocking |
-| **Problem** | Real error that needs fixing before locking the chunk |
-| **Approved** | Chunk reviewed and closed after manual reading and audit |
+| Type | Use |
+| --- | --- |
+| Comment | An observation or editorial decision |
+| Doubt | An interpretation that needs checking |
+| Problem | An error requiring action |
+| Approved | A note recording the outcome of review |
 
-## How to create an annotation
+The Approved type does not replace **Lock translation**. Annotations describe
+review work; locking controls whether a segment can be reprocessed.
 
-- **With text selection**: right-click any text in the translation panel and choose
-  *Add annotation*. The selected phrase is pre-filled as the anchor.
-- **From a judge finding**: every issue in the audit output has a direct button to
-  convert it to an annotation, with type, anchor, and text already filled in.
-- **Without an anchor**: open the chunk notes panel and add a free annotation not
-  linked to a specific passage.
+## Creating an annotation
 
-## Where they appear
+Select a passage in the translation and choose **Add annotation** from the
+context menu. The selected text becomes the note’s anchor. You can also add
+an unanchored note in the segment’s **Notes** tab or convert an audit finding
+into an annotation.
 
-Annotations are visible in the **Notes** tab of the Insights panel, grouped by
-chunk. In the rendered translation view, each annotation with an anchor inserts a
-GFM marker (`[^a1]`, `[^a2]`, …) immediately after the anchored phrase, with the
-note definition at the bottom of the chunk. The saved translation text is never
-modified — markers exist only in the rendered view and disappear if the annotation
-is deleted.
+Segment notes are in the project sidebar. They are separate from notes about
+a bibliographic work, which belong to its Library record.
 
-## What annotations are for
+## Display and export
 
-- Mark unresolved wording without losing the review context
-- Capture editorial decisions made during audit
-- Track judge findings that require manual follow-up
-- Anchor a comment to a specific phrase instead of the whole chunk
+In the translation preview, anchored annotations can appear as Markdown
+footnotes (`[^a1]`, `[^a2]` and so on). These markers are composed for display;
+they are not inserted into the saved translation text. If the anchor text
+changes, check that the note still refers to the correct passage.
 
-## Common workflow
+Markdown-based exports can include annotations as footnotes. Bilingual export
+uses its own structure containing source, translation and audit results.
+See [Import and export](../reference/import-export).
 
-1. Run a test chunk and open the judge output.
-2. Convert findings that need editorial work into annotations.
-3. Edit the translation manually where needed.
-4. Add **Comment** notes for decisions you want to keep.
-5. Use **Approved** only after manual reading and a clean audit.
+## Source-document footnotes
 
-## Imported document footnotes
+Footnotes imported from Markdown or DOCX are retained with the project and
+displayed in the source. Their markers and contents are excluded from the
+text sent to the translation pipeline.
 
-If you import a DOCX or Markdown file with footnotes, Glossa separates them
-completely from the translation pipeline: the model receives only the body text,
-without inline markers or footnote content. The original footnotes are saved with
-the project and remain visible in the source editor. After translation you manage
-footnotes manually: adapt their text to the target language and place them where
-they make sense in the translated text, which may differ from the original.
-
-> In a translation, a footnote can rarely occupy the same position as in the
-> original, and its text should be rewritten rather than literally translated.
-> Keeping footnotes out of the pipeline leaves the decision on position and
-> wording to you.
-
-## Practical rules
-
-- Use **Problem** for real blockers, **Doubt** for open interpretation questions.
-- Use **Approved** sparingly: it signals the chunk is genuinely closed.
-- Anchoring matters: the note should point to the exact phrase you reviewed.
-- Prefer short factual notes over long discussions inside a chunk.
-- Source notes extracted from the document remain separate from user annotations.
+Source footnotes and reviewer annotations are separate data. To include a
+footnote in the final translation, review its wording and insert it in the
+appropriate position: the pipeline does not translate or reposition it automatically.

@@ -1802,397 +1802,576 @@
     "buildFailed": "Non sono riuscito a costruire l'anteprima."
   },
   "help": {
-    "title": "Guida Utente",
+    "title": "Guida utente",
     "eyebrow": "Documentazione",
-    "sections": {
-      "overview": "Panoramica",
-      "pipeline": "Pipeline",
-      "features": "Funzionalità",
-      "streaming": "Streaming",
-      "context": "Contesto e caching",
-      "audit": "Audit",
-      "projects": "Progetti",
-      "providers": "Provider",
-      "ollama": "Ollama",
-      "glossary": "Risorse linguistiche",
-      "library": "Risorse linguistiche",
-      "sources": "Biblioteca",
-      "shortcuts": "Interfaccia",
-      "troubleshooting": "Risoluzione problemi",
-      "design": "Design System",
-      "storage": "Archiviazione e lavori"
+    "navigation": "Argomenti della guida",
+    "groups": {
+      "start": "Per iniziare",
+      "sources": "Fonti e dati",
+      "translation": "Traduzione e revisione",
+      "support": "Configurazione e assistenza"
     },
-    "overview": {
-      "title": "Cos'è Glossa?",
-      "p1": "Glossa è un workspace di traduzione assistita da modelli linguistici, pensato per traduttori professionisti, filologi e studiosi che lavorano su testi lunghi. Il documento viene segmentato in chunk, ogni chunk attraversa una pipeline configurabile e il risultato viene controllato da un giudice automatico.",
-      "p2": "L'app è un'applicazione desktop locale: i progetti, i dizionari e i template di prompt restano sulla tua macchina. Le chiavi API dei provider remoti vengono salvate nel portachiavi del sistema operativo quando disponibile; se non lo è, Glossa usa un file locale cifrato. Ollama permette di restare completamente offline.",
-      "flowTitle": "Flusso editoriale tipico",
-      "step1": "Importi o incolli il documento sorgente e regoli la segmentazione nell'anteprima di importazione.",
-      "step2": "Scegli modalità Standard o Editoriale e configuri provider, modello e prompt per ogni stage.",
-      "step3": "Testa la pipeline su un singolo chunk (modalità Test), poi passa alla modalità Produzione per elaborare l'intero documento con streaming in tempo reale.",
-      "step4": "Il Giudice AI valuta ciascun chunk e — opzionalmente — un audit di coerenza analizza il documento intero.",
-      "step5": "Rivedi e correggi la traduzione candidata nel workspace, poi rivaluta o blocca il chunk come definitivo.",
-      "step6": "Esporti in .txt, .md, .html, .docx o .md bilingue per pubblicazione o revisione esterna.",
-      "p3": "Provider e modello sono indipendenti per ogni stage e per il giudice: puoi mescolare un modello veloce per la traduzione e uno più potente per refine o audit, oppure restare in locale con Ollama.",
-      "nav": "Navigazione: in alto il breadcrumb (Glossa // workspace // progetto) riporta alla Dashboard, all'area Traduzioni o al workspace corretto. Nella home la barra sinistra mostra Dashboard, aree e workspace; chiusa lascia visibili soltanto Dashboard e le aree. Nel progetto la barra sinistra raccoglie titolo, cambio progetto, navigazione fra chunk, pipeline, comando di traduzione e schede Audit/Note/Memoria/Riferimenti; in basso restano Workspace, Impostazioni, Importa ed Esporta. Il pannello Insight a destra contiene le informazioni sull'intero documento. Le barre si ridimensionano trascinando il bordo e si riducono a icone. A barra chiusa, il marchio Glossa diventa il pulsante di riapertura al passaggio del mouse o con il focus da tastiera.",
-      "dashboardTitle": "La Dashboard",
-      "dashboardTabs": "La Dashboard ha tre linguette: il quadro d'insieme, la ricerca su più fonti insieme e la ricerca su una fonte sola o per identificativo. Si carica soltanto la linguetta che stai guardando.",
-      "dashboardDesc": "Il quadro d'insieme raccoglie cinque riquadri con la stessa cornice: che cosa riprendere, con opere e traduzioni in due gruppi distinti; che cosa richiede attenzione; i lavori in corso divisi per stato; le ricerche più recenti; le attività recenti. Ogni riquadro si apre e si chiude dal comando a destra della sua intestazione e resta come lo hai lasciato.",
-      "dashboardScope": "Il filtro in alto restringe patrimonio, ripresa e attenzione a un workspace; lavori e ricerche restano globali, perché non appartengono a un workspace solo. Un riquadro che non riesce a leggere lo dice al suo posto, senza mostrare zeri inventati."
-    },
-    "pipeline": {
-      "title": "Pipeline di traduzione",
-      "intro": "La pipeline è la sequenza di stage che processa ogni chunk. Si configura nel pannello di configurazione (icona ingranaggio nella barra laterale del progetto) che ha cinque tab: Impostazioni, Traduzione, Controllo qualità, Registro Termini e Prompt Preview.",
-      "modesTitle": "Modalità Standard e Editoriale",
-      "modesDesc": "La modalità della pipeline si sceglie nel tab Impostazioni e definisce quali stage vengono eseguiti su ogni chunk. La scelta è bloccata se ci sono già traduzioni in corso o completate.",
-      "modeStandardName": "Standard",
-      "modeStandardStages": "traduzione → audit",
-      "modeStandardDesc": "Un solo passaggio di traduzione seguito dalla valutazione del giudice. Veloce ed economico, adatto a bozze e a testi tecnici dove non serve un secondo passaggio stilistico.",
-      "modeEditorialName": "Editoriale",
-      "modeEditorialStages": "traduzione → refine → format → audit",
-      "modeEditorialDesc": "Pipeline a tre passaggi: una prima traduzione, un refine che migliora resa e fluidità, un format che applica solo pulizia tecnica (punteggiatura, spazi, markdown) senza vedere glossario o persona. Pensato per testi letterari o accademici dove la qualità conta più del costo.",
-      "modeDeeplName": "DeepL Hybrid",
-      "modeDeeplStages": "DeepL → LLM Refine → Judge",
-      "modeDeeplDesc": "Stage 1 traduce con DeepL API (veloce e preciso). Stage 2 LLM opzionale raffina lo stile. Richiede API key DeepL nelle Impostazioni.",
-      "configTitle": "Coppia linguistica e persona",
-      "configDesc": "Nel tab Impostazioni scegli lingue sorgente e destinazione (pulsante di scambio per invertire) e — opzionalmente — una persona, un opener libero del system prompt che descrive voce, dominio e stile del traduttore. Quando la persona è attiva, la coppia linguistica viene letta dalla persona stessa.",
-      "stagesTitle": "Stage di traduzione e audit",
-      "stagesDesc": "Nei tab Traduzione e Controllo qualità configuri provider, modello, prompt e parametri di runtime per ogni stage. I controlli sono identici tra gli stage; la differenza è il ruolo (traduzione, refine, format, giudice, coerenza) e il prompt iniziale fornito come default.",
-      "previewTitle": "Anteprima del prompt",
-      "previewDesc": "Il tab Prompt Preview mostra, per ogni stage attivo, la struttura del prompt finale: la parte cacheabile (system prompt + glossario + contesto blob), le istruzioni dello stage, i blocchi runtime (sorgente, risultato dello stage precedente) e i vincoli glossario. Serve a vedere esattamente cosa verrà inviato al modello prima di lanciare la pipeline.",
-      "runTitle": "Esecuzione",
-      "runDesc": "La run bar nel workspace documento ha un toggle Test / Produzione. In modalità Test la pipeline viene eseguita su un singolo chunk e lo segna come anteprima — la configurazione resta modificabile. Quando sei soddisfatto, passa a Produzione e clicca Play per elaborare tutti i chunk pronti in sequenza con streaming; il giudice si avvia automaticamente alla fine. Puoi annullare in qualsiasi momento.",
-      "editTitle": "Revisione e iterazione",
-      "editDesc": "La traduzione candidata è modificabile inline. Dopo le correzioni manuali puoi cliccare 'Rivaluta' nel pannello audit per rilanciare il giudice solo sul chunk modificato, oppure 'Blocca traduzione' (spunta verde) per marcarlo come definitivo e proteggerlo da rielaborazioni accidentali.",
-      "tipTitle": "Consiglio: mescola i provider",
-      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-5), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche.",
-      "temperatureTitle": "Temperature per stage e per il giudice",
-      "temperatureDesc": "Accanto al controllo di ragionamento (dove presente), ogni stage e il giudice hanno uno slider facoltativo di temperature: quanto il modello varia rispetto alla risposta più probabile. Per Anthropic e Gemini è sempre disponibile (0-1 per Anthropic, 0-2 per Gemini). Per OpenAI e DeepSeek compare solo quando il ragionamento per quella fase è su \"nessuno\" o il modello non ragiona affatto — questi due rifiutano o ignorano il parametro mentre stanno ragionando attivamente. Se non lo tocchi resta a 0 (massima precisione).",
-      "advancedOptionsTitle": "Opzioni JSON avanzate",
-      "advancedOptionsDesc": "Le opzioni avanzate di Ollama devono essere un oggetto JSON, per esempio { \"num_ctx\": 8192 }. Un elenco, un valore singolo o JSON incompleto non viene salvato: Glossa mostra l'errore senza alterare la configurazione valida precedente."
-    },
-    "features": {
-      "title": "Funzionalità",
-      "intro": "Riferimento delle aree più importanti dell'interfaccia. Ogni voce descrive cosa fa, dove si trova e quando ti torna utile.",
-      "documentWorkspaceTitle": "Workspace documento",
-      "documentWorkspaceDesc": "È la modalità principale dell'app. Dopo aver importato un documento, il workspace mostra il frammento corrente su due pagine affiancate: a sinistra il testo originale, a destra la traduzione candidata. Nella barra a sinistra trovi la navigazione tra frammenti, gli stati delle fasi della pipeline accanto al pulsante di traduzione e, quando disponibili, la stima di costo e il consumo reale del frammento corrente. Sopra il documento restano gli indicatori dei frammenti e un pulsante di opzioni vista; a destra il pannello Insight raccoglie indice, ricerca, statistiche, coerenza e glossario. La modalità si attiva anche con un solo frammento.",
-      "chunkIndicatorsTitle": "Indicatori dei frammenti",
-      "chunkIndicatorsDesc": "Ogni cerchio è cliccabile. Il segno centrale distingue da tradurre, in elaborazione, completato ed errore. I quattro segnali agli angoli indicano, nell'ordine: problemi audit irrisolti in alto a sinistra, note in alto a destra, traduzione bloccata in basso a sinistra, traduzione da aggiornare dopo una modifica della sorgente in basso a destra. Il triangolo sotto indica il frammento corrente. Passa il mouse o usa la tastiera per leggere il riepilogo completo e i conteggi.",
-      "documentToolsTitle": "Strumenti dell'editor",
-      "documentToolsDesc": "Ogni pagina (originale e candidata) ha controlli di gestione allineati al titolo: ricerca nel testo, blocco della traduzione (candidata), abilitazione modifica dell'originale, scelta dello stage da visualizzare, confronto tra stadi. Un pulsante menu apre i controlli di testo (scrittura/anteprima/affiancata, dimensione, formattazione Markdown, copia) in una lista verticale. Sulla traduzione candidata, la spunta verde la blocca come definitiva; il badge di stato di ogni stage apre una modale con l'output completo (trace).",
-      "markdownToolsTitle": "Toolbar Markdown",
-      "markdownToolsDesc": "Il pulsante menu ⋮ nella riga di controlli apre la toolbar Markdown: modalità scrittura/anteprima/affiancata (split), dimensione testo e bottoni di formattazione (grassetto, corsivo, titoli, elenchi, nota). Il pulsante ? apre questa guida. Tutti i controlli di testo sono in questo menu.",
-      "insightsTitle": "Pannello Insight",
-      "insightsDesc": "È il pannello a destra del progetto: raccoglie le schede Indice, Cerca, Statistiche, Coerenza e Glossario per metriche e ricerca su tutto il documento. Le informazioni sul frammento selezionato (Riferimenti, Anteprima, Audit, Memoria, Note) sono invece nella barra a sinistra, vicino ai comandi della pipeline: Audit e Memoria si attivano solo dopo che il frammento è stato tradotto.",
-      "statsTitle": "Statistiche di sessione",
-      "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e cache hit rate per la sessione corrente. Il riepilogo suddivide il consumo per operazione — ogni stage della pipeline (es. Translation, Refine, Format), l'Audit e la Coerenza — mostrando il modello usato e la percentuale di token serviti dalla cache per ciascuno.",
-      "operationsLogTitle": "Log operazioni strutturato",
-      "operationsLogDesc": "La Console Operazioni si apre dalla barra di stato in basso e registra ogni evento significativo: prompt inviato, completamento di uno stage, errori, retry, audit e coerenza. Ogni voce ha scope, livello e — quando rilevante — il chunk interessato. Le voci di prompt contengono system e user prompt completi in un campo espandibile, così puoi ispezionare esattamente la richiesta inviata.",
-      "phraseMemoryTitle": "Phrase Memory",
-      "phraseMemoryDesc": "La Phrase Memory è specifica del workspace di traduzione: raccoglie coppie frase sorgente → frase tradotta e le usa per suggerire rese coerenti nei documenti successivi dello stesso workspace. Il pannello del frammento ha due schede distinte: Memoria (per estrarre e curare nuove frasi) e Riferimenti (per cercare e riusare frasi già salvate). Il glossario del progetto è sempre visibile per intero in un'altra scheda del pannello a destra.",
-      "phraseMemoryAutomationTitle": "Automatismi visibili",
-      "phraseMemoryAutomationDesc": "Quando la Phrase Memory è attiva, Glossa cerca match in background all'apertura o al cambio del documento, ma questa ricerca è solo lettura: mostra badge e suggerimenti, non modifica traduzioni né database. I match trovati non entrano nel prompt finché non li selezioni nella scheda Riferimenti. Una frase entra invece nella raccolta solo dalla scheda Memoria, e solo da un frammento che hai bloccato: blocca, estrai, rivedi (accetta/scarta/correggi, anche a mano), conferma. Nessun salvataggio è mai automatico.",
-      "phraseMemoryTipTitle": "Regola operativa",
-      "phraseMemoryTipDesc": "Se vedi match ma non li selezioni, la pipeline parte senza usarli e Glossa ti avvisa prima del lancio. Usa i checkbox per decidere cosa includere nel prompt; salva in memoria solo le frasi che hai rivisto e confermato dalla scheda Memoria di un frammento bloccato.",
-      "fewShotTitle": "Esempi di traduzione",
-      "fewShotDesc": "Diversi dalla Phrase Memory: qui fissi 2-3 traduzioni intere di un frammento come esempio di stile per l'intera pipeline, non singole coppie frase. Blocca un frammento con una resa che consideri esemplare — di solito dopo aver controllato la scheda Audit — poi nella stessa scheda Audit premi \"Usa come esempio di stile\": il bottone mostra anche quanti esempi hai già salvato. L'esempio compare subito nelle Impostazioni della pipeline, dove puoi rivederlo, accorciarlo o rimuoverlo. Un tetto di 5 esempi evita di appesantire le traduzioni successive.",
-      "anthropicCacheTitle": "Cache Anthropic",
-      "anthropicCacheDesc": "Per i provider Anthropic la cache del prompt è spenta di default: accendila nelle Impostazioni della pipeline solo se lavori più frammenti in rapida successione, altrimenti pagheresti solo il sovrapprezzo di scrittura senza mai risparmiare. Se nella pipeline c'è uno stage lento tra un frammento Anthropic e l'altro, puoi anche estendere la durata della cache a 1 ora invece dei 5 minuti di default (costa il doppio in scrittura invece di 1,25 volte).",
-      "configDrawerTitle": "Pannello di configurazione",
-      "configDrawerDesc": "Si apre con l'icona ingranaggio. Ha cinque tab: Impostazioni (modalità, coppia linguistica, persona, rifinitura prompt), Traduzione (stage di traduzione e refine/format quando in modalità editoriale), Controllo qualità (giudice e prompt di coerenza), Registro Termini (glossario assegnato al progetto), Prompt Preview (anteprima del prompt finale per ogni stage).",
-      "modalsTitle": "Modali unificate",
-      "modalsDesc": "Settings, Risorse linguistiche, Progetti, Save dialog, Preflight check e questa guida condividono la stessa shell editoriale: bordo arrotondato, header con icona e titolo, body scrollabile, footer con pulsante Chiudi e una X in alto a destra. Ogni modale può essere chiusa sia dalla X sia dal pulsante in basso.",
-      "appearanceTitle": "Aspetto e tipografia",
-      "appearanceDesc": "In Impostazioni → Tipografia scegli il font dell'intera interfaccia tra Plus Jakarta Sans (predefinito), Geist, Inter e IBM Plex Sans. La scelta si applica subito a tutta la UI e viene ricordata tra le sessioni. I valori serif editoriali (titoli e dati in corsivo) restano in Elstob e non vengono toccati. Nella stessa schermata regoli anche layout di lettura ed evidenziazioni.",
-      "personaTitle": "Persona di progetto",
-      "personaDesc": "Una persona è un opener libero del system prompt che sostituisce il default 'Sei un esperto traduttore X → Y'. La attivi nel tab Impostazioni del pannello di configurazione. Quando è attiva, la coppia linguistica viene gestita dalla persona stessa e gli override per singolo stage non si applicano. Le persone si possono salvare e caricare come template.",
-      "templatesTitle": "Template di prompt",
-      "templatesDesc": "Ogni prompt — di traduzione, audit, coerenza o persona — può essere salvato come template riutilizzabile. Il segnalibro (+) salva il prompt corrente con un nome; il libro aperto carica un template salvato. I template sono separati per contesto (Stage / Audit / Persona): un template salvato come Stage non appare nel selettore di Audit e viceversa.",
-      "refineTitle": "Rifinitura del prompt",
-      "refineDesc": "Accanto a ogni prompt c'è una bacchetta magica che invia il testo corrente a un modello LLM per riscriverlo. Il provider e il modello usati vengono mostrati come etichetta `provider · modello` sotto il pulsante, così sai sempre con cosa stai rifinendo. Il risultato sostituisce il prompt nella textarea — modificabile o annullabile con Ctrl+Z.",
-      "refineGatingTitle": "Gating delle API key",
-      "refineGatingDesc": "Se il provider remoto scelto per la rifinitura non ha una API key configurata, il pulsante bacchetta è disabilitato e il tooltip lo segnala. Ollama è sempre abilitato perché gira localmente. Nel tab Impostazioni del pannello di configurazione, un avviso elenca i provider remoti privi di chiave o conferma che la rifinitura è pronta.",
-      "promptPreviewTitle": "Anteprima del prompt finale",
-      "promptPreviewDesc": "Il tab Prompt Preview del pannello di configurazione mostra, per ogni stage attivo, la struttura del prompt che verrà inviato: prima la parte cacheabile (system prompt, glossario, contesto blob), poi le istruzioni specifiche dello stage, infine i blocchi runtime (testo sorgente, risultato dello stage precedente, vincoli glossario). Permette di vedere ordine, blocchi cacheabili e placeholder senza dover avviare la pipeline.",
-      "segmentationTitle": "Importazione e segmentazione",
-      "segmentationDesc": "All'importazione di un file (.txt, .md, .docx, .pdf), Glossa apre un dialog di anteprima dove regoli come il documento viene suddiviso in chunk prima di entrare nel workspace. La segmentazione del workspace è poi fissa per quell'esecuzione: torna qui se vuoi cambiarla.",
-      "segmentationControlsTitle": "Controlli di segmentazione",
-      "segmentationControlsDesc": "La barra di icone offre: Auto-segmentazione (forbici) — abilita la suddivisione per conteggio parole; Heading-aware (cancelletto, solo Markdown) — unisce i titoli isolati al paragrafo successivo, così i titoli non vengono tradotti da soli. Il campo numerico imposta le parole per chunk (default in Impostazioni → Segmentazione). Il range min–max accanto al campo viene dalle stesse impostazioni e impedisce chunk troppo corti o troppo lunghi.",
-      "segmentationCardTitle": "Vista a schede",
-      "segmentationCardDesc": "La vista predefinita mostra ogni chunk come scheda. Un bordo ambra indica anomalie (chunk fuori dal range min–max). Espandi una scheda per leggerne il testo completo. L'icona di rotazione si accende in ambra quando ci sono modifiche manuali pendenti — cliccala per ricalcolare i chunk mantenendo gli aggiustamenti.",
-      "segmentationEditorTitle": "Editor segmenti avanzato",
-      "segmentationEditorDesc": "Il toggle in alto a destra passa all'editor segmenti: documento intero come singola colonna scorrevole, confini chunk come divisori orizzontali numerati. Tra due paragrafi puoi cliccare '+' per aggiungere un confine, '×' su un confine esistente per rimuoverlo. Le forbici sui paragrafi lunghi li dividono a metà. Tutte le modifiche sono non distruttive: tornare alla vista a schede preserva le decisioni manuali.",
-      "chunkActionsTitle": "Confini chunk fissi nel workspace",
-      "chunkActionsDesc": "Una volta caricato il documento, i confini dei chunk sono fissi per quell'esecuzione: non sono più presenti azioni inline per dividere o unire chunk nel workspace documento o nel drawer Insights. Per ridefinire la segmentazione, torna all'anteprima di importazione o reimporta il documento.",
-      "tokenTitle": "Conteggio token e costo stimato",
-      "tokenDesc": "Il tab Statistiche nel pannello Insight mostra token totali e costo stimato della sessione in tempo reale, calcolato sui prezzi ufficiali dei provider. I conteggi sono separati per stage e per giudice. Per Ollama il costo è zero perché l'inferenza è locale.",
-      "exportTitle": "Esportazione",
-      "exportDesc": "Quando ci sono chunk completati, il pulsante Esporta in fondo alla barra sinistra del progetto apre un dialog dove scegli formato (.txt, .md, .html, .docx, .md bilingue). Il separatore tra chunk (riga vuota, HR o asterischi) è disponibile solo per i formati testuali (.txt e .md). L'export .md bilingue include sorgente, traduzione, valutazione dell'audit e problemi rilevati per ogni chunk.",
-      "watchdogTitle": "Rilevamento chunk bloccati",
-      "watchdogDesc": "Un watchdog in background monitora i chunk rimasti in stato 'in elaborazione' più del previsto. Se un chunk sembra bloccato — ad esempio un modello Ollama che lavora su un contesto molto ampio — un avviso compare nel tab Indice con un pulsante Annulla per interrompere solo quel chunk senza fermare l'intera pipeline.",
-      "footnotesTitle": "Note a piè di pagina",
-      "footnotesDesc": "Quando importi un documento DOCX o Markdown con note a piè di pagina, Glossa le separa completamente dal processo di traduzione. Il modello riceve solo il corpo del testo, senza il contenuto delle note e senza i marcatori inline — testo pulito. Il documento originale, visibile nell'editor, mantiene marcatori e note esattamente come apparivano. Il testo delle note viene salvato con il progetto. Dopo la traduzione dovrai gestire le note manualmente: decidere quali riportare, adattarne il testo alla lingua di destinazione e posizionarle dove ha senso nel testo tradotto, che può differire dalla posizione nell'originale.",
-      "footnotesTipTitle": "Perché le note non vengono tradotte automaticamente",
-      "footnotesTipDesc": "In una traduzione, una nota a piè di pagina spesso non può essere collocata nella stessa posizione dell'originale, e il suo testo va riscritto più che tradotto letteralmente. Tenerle fuori dalla pipeline impedisce al modello di prendere decisioni arbitrarie su posizione e formulazione. Rimani tu a decidere.",
-      "annotationsTitle": "Annotazioni ai chunk",
-      "annotationsDesc": "La scheda Note nella barra sinistra del progetto consente di allegare note strutturate ai singoli chunk. Ogni annotazione ha un tipo (Commento, Dubbio, Problema, Approvato), un testo descrittivo e una frase ancora opzionale che la collega a un passaggio specifico della traduzione. Fai clic destro su qualsiasi testo nel pannello di traduzione e scegli «Aggiungi annotazione» per crearne una con la frase selezionata già precompilata come ancora. I problemi rilevati dall'audit hanno anche un pulsante diretto per convertirli in annotazione con ancora e contenuto già compilati. Le annotazioni sono salvate per pipeline nel database e sopravvivono al ricaricamento del progetto.",
-      "annotationsTipTitle": "Note a piè di pagina nella vista renderizzata",
-      "annotationsTipDesc": "Quando un'annotazione ha una frase ancora, Glossa inserisce dinamicamente un marcatore GFM ([^a1], [^a2], …) subito dopo quella frase nella vista renderizzata della traduzione. La definizione della nota appare in fondo al chunk. Il testo della traduzione salvato non viene mai modificato — le note esistono solo nel rendering e scompaiono se l'annotazione viene eliminata."
-    },
-    "context": {
-      "title": "Contesto e caching",
-      "intro": "Glossa usa due meccanismi per mantenere le traduzioni coerenti tra chunk e contenere i costi di inferenza: un blocco di riferimento documentale che dà a ogni chunk accesso al testo sorgente dei vicini, e una struttura del prompt a strati che permette ai provider di fare caching il più possibile tra le chiamate.",
-      "blobTitle": "Contesto documentale per chunk",
-      "blobDesc": "Quando traduce un chunk, Glossa invia automaticamente il testo sorgente dei chunk vicini come blocco di riferimento. Il modello lo usa per mantenere coerenti terminologia, nomi, pronomi e stile attraverso i confini dei chunk — senza dover vedere l'intero documento in una sola volta. Per documenti brevi il blocco di riferimento copre tutto il sorgente; per documenti più lunghi copre una finestra scorrevole di chunk adiacenti. Il blocco viene fornito solo come contesto: il modello riceve istruzioni esplicite di tradurre solo il chunk corrente, non il contenuto del blocco di riferimento.",
-      "cachingTitle": "Caching del prompt a strati",
-      "cachingDesc": "Ogni prompt è strutturato in tre strati in modo che il provider possa riusare il più possibile il contesto già calcolato:",
-      "layer1Label": "Strato 1",
-      "layer1Desc": "Persona, regole strutturali e glossario — identici per ogni chunk del run. Vengono cachati una volta all'inizio e riusati per tutte le chiamate successive.",
-      "layer2Label": "Strato 2",
-      "layer2Desc": "Blocco di riferimento documentale — condiviso da tutti i chunk dello stesso gruppo di vicini. Cachato per gruppo: tutti gli stage di quei chunk beneficiano della cache anche per questo strato.",
-      "layer3Label": "Strato 3",
-      "layer3Desc": "Istruzioni specifiche dello stage — inviate di volta in volta, ma sono la parte più piccola del prompt, quindi il costo è minimo.",
-      "isolationTitle": "Isolamento degli stage",
-      "isolationDesc": "Ogni stage riceve esattamente le informazioni di cui ha bisogno — niente di più. Questo evita ritraduzione involontaria e mantiene ogni stage focalizzato sul suo compito specifico:",
-      "stageTranslation": "Traduzione",
-      "stageTranslationDesc": "Riceve il testo sorgente del chunk corrente e il blocco di riferimento documentale. Produce la prima traduzione.",
-      "stageRefine": "Refine",
-      "stageRefineDesc": "Riceve il testo sorgente, il blocco di riferimento e l'output dello stage di traduzione. Può confrontare originale e bozza per migliorare fluidità e fedeltà.",
-      "stageFormat": "Format",
-      "stageFormatDesc": "Riceve solo il testo tradotto dallo stage precedente — non il testo sorgente, non il blocco di riferimento. Questo impedisce al modello di ritradurre invece di limitarsi alla pulizia della formattazione.",
-      "stageCoherence": "Audit coerenza",
-      "stageCoherenceDesc": "Confronta i chunk tradotti tra di loro — non con il sorgente. Riceve un blocco di riferimento di vicini già tradotti per individuare derive terminologiche e rotture di continuità nel documento.",
-      "tipTitle": "Cosa significa in pratica",
-      "tipDesc": "Dopo che il primo chunk di un gruppo viene elaborato, i chunk successivi dello stesso gruppo costano meno perché il provider riusa gli strati cachati. Su documenti lunghi con molti chunk il risparmio è significativo, specialmente in modalità editoriale dove tre stage vengono eseguiti per chunk.",
-      "cacheRetentionTitle": "Cache retention per modello",
-      "cacheRetentionDesc": "OpenAI distingue due politiche di cache. I modelli completi (gpt-5.4 e superiori) usano la extended retention: il prefisso rimane in cache fino a 24 ore, quindi ogni chunk successivo beneficia del riscaldamento del run precedente. I modelli mini e nano usano invece la in-memory retention: il prefisso scade dopo 5–10 minuti di inattività. Questo spiega perché Refine (tipicamente su gpt-5.4-mini) può mostrare 0% di cache hit anche quando il prompt è identico: se sono passati più di 10 minuti tra un chunk e il successivo, la cache è già scaduta.",
-      "previewTitle": "Anteprima del messaggio per un chunk",
-      "previewDesc": "Nel pannello Chunk, la scheda Anteprima mostra il messaggio completo e reale che verrebbe inviato al motore per il chunk aperto: scegli una fase della pipeline e costruiscilo a comando. Non parte nessuna elaborazione né alcun costo — utile per controllare cosa riceverà davvero il modello prima di lanciare la traduzione."
-    },
-    "streaming": {
-      "title": "Streaming in tempo reale",
-      "p1": "Con Ollama (inferenza locale) i token vengono trasmessi in tempo reale: il testo appare mentre viene generato, dando feedback immediato. Con i provider remoti (Gemini, OpenAI, Anthropic, DeepSeek) la risposta arriva intera al completamento — non c'è streaming token per token. In entrambi i casi la pipeline aggiorna lo stato del chunk non appena lo stage termina.",
-      "p2": "Per Ollama il backend Rust apre un canale Server-Sent Events e Tauri trasmette i token al frontend con latenza minima. Per gli stage strutturati (giudice, coerenza) — indipendentemente dal provider — il JSON viene analizzato solo dopo il completamento della risposta, sia essa streamata o completa.",
-      "p3": "In caso di errore transitorio, il sistema riprova con backoff esponenziale fino a tre tentativi. I timeout non vengono ritentati: se il modello sta ancora elaborando una risposta lunga, Glossa attende invece di accodare una nuova richiesta."
-    },
-    "audit": {
-      "title": "Audit e qualità",
-      "intro": "Glossa ha due livelli di audit. Il Giudice AI valuta ogni chunk subito dopo gli stage di traduzione. L'audit di coerenza è un secondo passaggio opzionale che esamina l'intero documento. Le categorie di problemi che il giudice produce sono cinque:",
-      "glossaryLabel": "Glossario",
-      "accuracyLabel": "Fedeltà",
-      "fluencyLabel": "Fluidità",
-      "grammarLabel": "Grammatica",
-      "consistencyLabel": "Coerenza",
-      "glossaryIssue": "La traduzione si discosta dai termini definiti nel Registro Termini assegnato al progetto.",
-      "accuracyIssue": "Il significato del testo sorgente non è reso fedelmente: omissioni, aggiunte, contro-sensi.",
-      "fluencyIssue": "La resa è goffa o innaturale nella lingua di destinazione, anche se tecnicamente corretta.",
-      "grammarIssue": "Errori grammaticali, concordanze sbagliate, problemi sintattici nell'output.",
-      "consistencyIssue": "Lo stesso termine o struttura è reso in modo incoerente rispetto agli altri chunk del documento.",
-      "reeval": "Dopo aver corretto manualmente una traduzione candidata, clicca 'Rivaluta' nel pannello audit per rilanciare il giudice solo su quel chunk. Permette di iterare fino alla qualità desiderata senza rieseguire l'intera pipeline.",
-      "issuesNav": "Le schede problema nell'audit aprono direttamente il chunk interessato e — quando il giudice fornisce informazioni testuali — provano a focalizzare la frase rilevante con un'euristica di ricerca.",
-      "schemaTitle": "La forma della risposta",
-      "schemaDesc": "Il giudice deve rispondere in una forma precisa — valutazione, elenco di problemi, tipo e gravità di ognuno — e quella forma è una sola per tutti i provider. Con i modelli locali Glossa la impone mentre la risposta viene generata, così il modello non può nemmeno formularla fuori formato; con i servizi in rete la dichiara nella richiesta. Per lo stesso motivo, al giudizio la temperatura resta a zero sui modelli locali qualunque valore tu imposti: una risposta legata a uno schema dev'essere prevedibile, e due esecuzioni sullo stesso testo non devono dare verdetti diversi per caso. Le traduzioni continuano a usare la temperatura che hai scelto, e l'avviso te lo dice dove il campo si compila.",
-      "coherenceTitle": "Audit di coerenza (livello documento)",
-      "coherenceDesc": "L'audit di coerenza è un passaggio separato, lanciato manualmente dopo il completamento di tutti i chunk. Analizza un chunk alla volta (con il contesto dei chunk vicini per non perdere la visione d'insieme), non l'intero documento in un'unica soluzione. Usa il Prompt Coerenza dal tab Controllo qualità. Il risultato appare nel tab Coerenza del pannello Insight e identifica incoerenze terminologiche o stilistiche tra chunk diversi — ad esempio lo stesso termine reso in modi diversi in punti diversi del documento."
-    },
-    "projects": {
-      "title": "Progetti",
-      "intro": "Ogni progetto di traduzione appartiene a un workspace. Phrase Memory e glossari possono essere condivisi fra i progetti dello stesso workspace; la configurazione resta specifica della pipeline aperta. L'area Traduzioni mostra invece tutti i progetti di tutti i workspace.",
-      "workspaceIdentityTitle": "Segno del workspace",
-      "workspaceIdentityDesc": "Nelle impostazioni del workspace scegli uno dei segni storico-editoriali disponibili, prima di nome e descrizione. Il segno identifica il workspace nelle liste progetto, nelle Risorse linguistiche e nella barra laterale; nelle aree globali affianca la più piccola icona del tipo di elemento. Le icone di Traduzioni, Biblioteca, Trascrizioni e Analisi restano riservate alle rispettive aree; non sono disponibili icone personalizzate.",
-      "createTitle": "Crea un progetto",
-      "createDesc": "Dalla pagina del workspace o dall'area Traduzioni puoi creare un progetto; dalla pagina del workspace puoi anche aprire o eliminare quelli che gli appartengono. Il nuovo progetto viene creato nel workspace scelto.",
-      "saveTitle": "Salva il lavoro",
-      "saveDesc": "Glossa salva automaticamente dopo le modifiche significative; la barra di stato mostra se il progetto è salvato e l'orario dell'ultimo salvataggio. Puoi anche forzare il salvataggio con Ctrl+S. Quando riapri un progetto, configurazione, stage, glossario, chunk, traduzioni e note vengono ripristinati.",
-      "importExportTitle": "Importa ed esporta",
-      "importExportDesc": "Usa Importa in fondo alla barra sinistra del progetto per scegliere un file (.txt, .md, .docx, .pdf) come sorgente, da qualsiasi cartella. Scegliendo All files nel menù dei tipi puoi importare anche altre estensioni, che vengono lette come testo semplice. Quando ci sono chunk completati, Esporta nella stessa barra apre il dialog con formati e separatori. L'eliminazione di un progetto rimuove anche pipeline, traduzioni, log e collegamenti salvati del progetto.",
-      "autosaveTitle": "Salvataggio automatico",
-      "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
-      "scopeTitle": "Cosa contiene un workspace",
-      "scopeDesc": "Un workspace raccoglie il tuo materiale in due modi. Ci abitano le traduzioni e le trascrizioni: ognuna sta in un solo workspace, ed è da lì che prende dizionari e memoria di frasi. Ci sono collegati i libri, i dizionari e le frasi importate, che possono stare in più workspace insieme senza mai essere duplicati. Lo stesso dizionario si usa dove serve, e se in un workspace una voce va tradotta diversamente la correggi lì: la correzione vale solo in quel workspace e l'originale non cambia. La Biblioteca mostra sempre tutti i libri, con i workspace a cui appartengono sulla scheda. Un workspace finito si può mettere da parte invece di eliminarlo; eliminandolo se ne vanno solo le traduzioni e le trascrizioni che ci abitavano, mentre libri, dizionari e frasi restano.",
-      "backupTitle": "Backup e ripristino",
-      "backupDesc": "In Impostazioni, la scheda Archiviazione salva un backup o ripristina da uno salvato, in un file .glossa-backup. I due comandi sono icone: passa il mouse o raggiungile da tastiera per leggerne la descrizione. Il backup riguarda tutto Glossa, non un workspace solo, e il ripristino sostituisce ogni workspace presente. Prima di chiedere conferma e prima di toccare i dati, Glossa verifica che il file sia completo, integro e compatibile: un backup alterato, incompleto o creato da una versione più recente viene rifiutato senza modificare il lavoro corrente."
-    },
-    "providers": {
-      "title": "Provider LLM",
-      "intro": "Glossa supporta provider cloud, locali ed endpoint OpenAI-compatibili personalizzati. Ogni stage e il giudice possono usare un provider e un modello indipendenti. Le chiavi API si configurano nel pannello Impostazioni.",
-      "geminiModels": "Famiglia Gemini",
-      "openaiModels": "Famiglia GPT",
-      "anthropicModels": "Famiglia Claude",
-      "deepseekModels": "Famiglia DeepSeek",
-      "ollamaModels": "Modello locale installato",
-      "customModels": "Modello a testo libero",
-      "geminiNote": "Modelli Google. Throughput alto, costi contenuti, buona qualità su lingue europee. Ottimi per traduzione di volume e per refine veloce.",
-      "openaiNote": "Modelli OpenAI. Resa elegante e versatile, buona gestione delle sfumature stilistiche. Adatti come refine letterario o come giudice rigoroso.",
-      "anthropicNote": "Modelli Claude. Eccellenti su testi sfumati, letterari e su lingue meno comuni; tendono a preservare bene tono e registro. Forte come refine e giudice.",
-      "deepseekNote": "Lab AI cinese. Prezzi molto competitivi, buon supporto multilingue. Ottima alternativa a Gemini per traduzione di volume.",
-      "ollamaNote": "Inferenza locale, nessuna chiave API, nessun dato fuori dalla tua macchina. Qualità dipende dal modello installato; consigliato per documenti sensibili o lavoro offline.",
-      "customNote": "Endpoint OpenAI-compatibili definiti dall'utente: OpenRouter, Groq, LM Studio, vLLM, proxy aziendali e simili. Configurabili in Impostazioni → Custom. Il modello si scrive a mano nello stage; la chiave API (se richiesta) viene salvata nel portachiavi.",
-      "gatingTitle": "Disponibilità delle chiavi",
-      "gatingDesc": "Le funzioni che richiedono un provider remoto — rifinitura del prompt, preflight, esecuzione della pipeline su un provider non-Ollama — sono disabilitate finché la corrispondente API key non è stata configurata in Impostazioni. Lo stato della chiave compare come etichetta `provider · modello` accanto ai controlli e come avviso nel tab Impostazioni della pipeline. Ollama e gli endpoint custom senza autenticazione sono sempre abilitati.",
-      "customValidationTitle": "Convalida degli endpoint personalizzati",
-      "customValidationDesc": "Per salvare o testare un profilo servono nome e URL base completi. Gli endpoint remoti devono usare HTTPS; HTTP è ammesso soltanto per servizi locali su localhost, 127.0.0.1 o ::1. Un profilo incompleto o remoto non sicuro viene rifiutato prima che Glossa invii credenziali o richieste.",
-      "security": "Le chiavi API vengono salvate nel portachiavi del sistema operativo (GNOME Keyring su Linux, Portachiavi su macOS, Gestione Credenziali su Windows) quando disponibile. Se il portachiavi non è accessibile, Glossa usa un file locale cifrato protetto da una chiave locale alla macchina. In nessun caso le chiavi vengono scritte in chiaro su disco né inviate altrove se non all'endpoint del provider corrispondente."
-    },
-    "ollama": {
-      "title": "Usare Ollama",
-      "intro": "Ollama esegue LLM open-source sulla tua macchina. Nessuna chiave API, nessun dato esce dal computer. Adatto a documenti riservati e a lavoro completamente offline.",
-      "installTitle": "Installa Ollama",
-      "installDesc": "Scarica da ollama.com o usa lo script di installazione:",
-      "pullTitle": "Scarica un modello",
-      "pullDesc": "Scarica i modelli che vuoi usare. Esempio di scelta popolare per la traduzione:",
-      "serveTitle": "Avvia il server",
-      "serveDesc": "Ollama deve essere in esecuzione in background. Su sistemi che non lo avviano automaticamente:",
-      "useTitle": "Configura in Glossa",
-      "useDesc": "Apri Impostazioni — la sezione Ollama mostra lo stato della connessione e i modelli disponibili. Seleziona 'ollama' come provider in qualsiasi stage o giudice e scegli un modello dal menu a tendina del componente stage.",
-      "recommendedTitle": "Modelli consigliati per la traduzione",
-      "recommendedDesc": "Per traduzione generale: llama3.2 (3B), qwen2.5 (7B), gemma3 (9B). Per qualità superiore su macchine potenti: llama3.3:70b o qwen2.5:32b. Modelli sotto i 3B parametri tendono a produrre traduzioni di qualità inferiore — preferiscili solo per esperimenti veloci.",
-      "thinkTitle": "Modalità Think",
-      "thinkDesc": "Alcuni modelli Ollama supportano un passaggio di ragionamento esteso prima di rispondere. Nella sezione Ollama delle Impostazioni puoi impostare il livello Think: off, basso, medio o alto. Un livello più alto può migliorare la qualità a costo di tempo e token. Abilitalo solo per modelli che supportano esplicitamente il thinking — su modelli standard non ha effetto."
-    },
-    "glossary": {
-      "title": "Risorse linguistiche: dizionari e modelli",
-      "intro": "La finestra delle Risorse linguistiche (pulsante nella barra del workspace) appartiene al workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
-      "libraryTitle": "Dizionari del workspace",
-      "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna. Lo stesso dizionario si può collegare a più workspace: resta uno solo, e le voci che aggiungi si vedono ovunque sia collegato. Se in un workspace una voce va tradotta diversamente, correggila lì: vale solo in quel workspace e l'originale non cambia.",
-      "iiifTitle": "Biblioteca delle fonti",
-      "iiifDesc": "Dalla Dashboard scegli un archivio e cerca una fonte; apri una scheda per vederne tutti i dati e carica altri risultati quando disponibili. La Biblioteca conterrà solo le fonti aggiunte: download, cache e collegamenti ai workspace arriveranno nel prossimo incremento.",
-      "csvTitle": "Importa da CSV/TSV",
-      "csvDesc": "Il pulsante Upload accanto a ogni dizionario apre un wizard che mostra l'anteprima delle prime righe e chiede la strategia: 'Aggiungi/aggiorna' integra senza toccare i termini esistenti, 'Sostituisci tutto' cancella e reimporta. Le intestazioni riconosciute sono termine/source/from per il termine sorgente, traduzione/target/to per la traduzione (case-insensitive); la colonna notes è opzionale.",
-      "projectTitle": "Glossario per progetto",
-      "projectDesc": "Nel pannello di configurazione, tab Registro Termini, puoi selezionare il dizionario assegnato al progetto e modificare le voci inline. Le modifiche agiscono sul dizionario condiviso: lo stesso dizionario può essere assegnato a più progetti e le voci sono in comune. Il pulsante Salva appare appena ci sono modifiche pendenti.",
-      "highlightTitle": "Evidenziazione termini",
-      "highlightDesc": "Il controllo Evidenziatore abilita o disabilita tutte le evidenziazioni. La scheda Glossario del pannello Insight mostra sempre la legenda: blu sottolineato per un termine del glossario nel sorgente, verde per una traduzione presente correttamente, rosa per una traduzione attesa mancante. I match della ricerca sono gialli. I colori sono personalizzabili in Impostazioni → Evidenziazioni; passa il mouse sul termine per vedere traduzione attesa e note.",
-      "searchTitle": "Ricerca nel documento",
-      "searchDesc": "Il tab Cerca nel pannello Insight permette di cercare una parola o frase in tutti i chunk contemporaneamente: nel testo sorgente, nella traduzione e nei risultati dell'audit. Ogni risultato mostra un badge con il tipo di match (sorgente / traduzione / audit) e uno snippet con il testo evidenziato in grassetto. Cliccando un risultato il workspace si porta al chunk corrispondente, dove il termine cercato appare anche evidenziato in giallo nel testo.",
-      "auditTitle": "Audit e glossario",
-      "auditDesc": "Il Giudice AI verifica esplicitamente l'aderenza al dizionario assegnato e segnala come problema di categoria 'glossario' ogni deviazione, con severità e correzione suggerita. Particolarmente utile per testi tecnici, giuridici o accademici dove la terminologia deve essere stabile.",
-      "templatesTitle": "Modelli di prompt",
-      "templatesDesc": "Nel tab Modelli Prompt delle Risorse linguistiche gestisci la raccolta globale dei template, divisi per contesto: Stage (per prompt di traduzione, refine, format), Audit (per giudice e coerenza), Persona (per opener del system prompt). Crea un template specificando nome, contesto e testo; usa la bacchetta nella form di creazione per rifinire il testo con un modello LLM. I template salvati sono richiamabili nei pulsanti segnalibro accanto a ogni prompt corrispondente."
-    },
-    "shortcuts": {
-      "title": "Riferimento interfaccia",
-      "keyboardTitle": "Scorciatoie da tastiera",
-      "runPipeline": "Avvia la pipeline",
-      "exportFile": "Apri il dialogo di esportazione",
-      "goToChunk": "Vai al chunk N",
-      "closeModal": "Chiudi modale / annulla",
-      "toolbarTitle": "Barra laterale, workspace e editor",
-      "openProjects": "Torna al workspace — fondo della barra del progetto",
-      "importFile": "Importa un file sorgente — fondo della barra del progetto",
-      "openConfig": "Apri il pannello di configurazione della pipeline",
-      "saveProject": "Salva il progetto corrente",
-      "openLibrary": "Apri le Risorse linguistiche (dizionari e modelli) — barra del progetto",
-      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN)",
-      "openSettings": "Apri Impostazioni (provider, tipografia, dati) — fondo della barra",
-      "openHelp": "Apri questa guida",
-      "openInsights": "Apri il pannello Insight",
-      "toggleEditorTools": "Mostra / nasconde la toolbar degli editor",
-      "markdownHelp": "Punto interrogativo — apre la guida della toolbar Markdown",
-      "lockTranslation": "Blocca / sblocca la traduzione candidata come definitiva",
-      "phraseMemory": "Memoria/Riferimenti — Memoria estrae e salva nuove frasi da un frammento bloccato; Riferimenti mostra i match trovati e il glossario, seleziona quelli da usare nella prossima esecuzione",
-      "openStageTrace": "Apri la modale con l'output completo di uno stage",
-      "exportTitle": "Esportazione (barra laterale, richiede chunk completati)",
-      "exportDesc": "Apre il dialog di esportazione con formato e separatore tra chunk",
-      "promptToolsTitle": "Strumenti dei prompt",
-      "refineButton": "Bacchetta — rifinisce il prompt usando il provider/modello mostrato a fianco",
-      "saveTemplate": "Segnalibro (+) — salva il prompt come template",
-      "loadTemplate": "Libro aperto — carica un template salvato"
-    },
-    "troubleshooting": {
-      "title": "Risoluzione problemi",
-      "desc": "Quando qualcosa non funziona, controlla prima i log strutturati. Sono testuali, fai pure copia/incolla in una segnalazione.",
-      "logFileTitle": "Directory dei log",
-      "logFileDesc": "Glossa scrive un log rotativo chiamato \"glossa\" in questa directory. Allegalo o copialo quando segnali un bug.",
-      "rustLogTitle": "Log dettagliato",
-      "rustLogDesc": "Imposta la variabile d'ambiente RUST_LOG per sovrascrivere il livello di log a runtime:",
-      "dataLocationTitle": "Dove sono i miei dati",
-      "dataLocationDesc": "Il database dell'app (progetti, glossari, impostazioni) vive in una cartella predefinita del sistema. Nelle Impostazioni, scheda \"Dati\", puoi vedere la posizione attuale e spostarla altrove: lo spostamento copia prima i dati e verifica la copia prima di usarla, l'originale non viene mai cancellato automaticamente."
+    "articles": {
+      "pipeline": {
+        "title": "Tradurre un documento",
+        "intro": "La pipeline è la sequenza di fasi che produce e valuta una traduzione. Ogni frammento del documento viene elaborato separatamente.",
+        "blocks": [
+          {
+            "title": "Scegliere la modalità",
+            "paragraphs": [
+              "Standard esegue una traduzione e una valutazione. Editoriale aggiunge la revisione della bozza, chiamata Refine, e la formattazione, chiamata Format. DeepL Hybrid usa DeepL per la prima traduzione, con revisione LLM facoltativa e valutazione LLM.",
+              "Configura la modalità prima di produrre risultati. Quando l’elaborazione o le traduzioni presenti impediscono il cambio, il controllo è bloccato."
+            ]
+          },
+          {
+            "title": "Configurare le fasi",
+            "paragraphs": [],
+            "steps": [
+              "Apri la configurazione della pipeline e imposta lingua sorgente e destinazione.",
+              "Se usi una persona, descrivi ruolo, lingue e registro desiderati: questo testo sostituisce l’introduzione predefinita delle istruzioni.",
+              "Nelle schede Traduzione e Controllo qualità scegli provider, modello e istruzioni delle fasi attive.",
+              "Assegna il glossario e controlla i riferimenti di memoria selezionati.",
+              "Consulta l’anteprima del prompt per verificare le istruzioni prima dell’esecuzione."
+            ]
+          },
+          {
+            "title": "Provare e avviare",
+            "paragraphs": [
+              "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
+              "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
+              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non bloccati può sostituirne il risultato."
+            ]
+          },
+          {
+            "title": "Riutilizzare le istruzioni",
+            "paragraphs": [
+              "Salva un prompt come modello per riutilizzarlo in altri lavori. I modelli sono distinti per contesto, per esempio traduzione, valutazione o persona.",
+              "Il comando con la bacchetta riscrive il prompt tramite il servizio configurato. Rileggi il testo proposto prima di usarlo: è un’elaborazione del modello e può modificare le tue istruzioni."
+            ]
+          }
+        ]
+      },
+      "features": {
+        "title": "Importare, modificare ed esportare",
+        "intro": "La vista documento affianca originale e traduzione. I comandi dell’editor permettono di modificare il testo, controllare la formattazione e confrontare i risultati delle fasi.",
+        "blocks": [
+          {
+            "title": "Importare e dividere il testo",
+            "paragraphs": [
+              "Usa Importa nella barra del progetto. Sono supportati TXT e Markdown fino a 50 MiB, DOCX fino a 100 MiB e PDF fino a 50 MiB. L’estrazione DOCX è sperimentale; i PDF devono contenere testo, non soltanto immagini.",
+              "Controlla l’anteprima prima di confermare. La segmentazione automatica divide il testo secondo una lunghezza obiettivo in parole. Per Markdown sono disponibili opzioni dedicate ai titoli.",
+              "Scegli una dimensione adatta al testo e rivedi i confini dei frammenti. Un file di testo con codifica diversa da UTF-8 deve essere convertito prima dell’importazione."
+            ]
+          },
+          {
+            "title": "Modificare e formattare",
+            "paragraphs": [
+              "Il menu dell’editor raccoglie modalità di scrittura, anteprima e vista affiancata, dimensione del testo, copia e strumenti Markdown. Usa i comandi per grassetto, corsivo, titoli, elenchi e note.",
+              "Puoi ispezionare gli output delle fasi e confrontarli per capire dove è cambiato il testo. Abilita la modifica dell’originale solo quando devi correggere il sorgente: la traduzione viene segnalata come da aggiornare.",
+              "Impostazioni → Tipografia regola caratteri, dimensioni, interlinea e aspetto. Le impostazioni delle traduzioni comprendono layout ed evidenziazioni."
+            ]
+          },
+          {
+            "title": "Leggere gli indicatori",
+            "paragraphs": [
+              "I cerchi sopra il documento selezionano i frammenti. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
+              "Gli indicatori agli angoli segnalano problemi dell’audit, note, blocco della traduzione e modifiche al sorgente. Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
+              "Il pannello Insight contiene indice, ricerca, statistiche, coerenza e glossario del documento. La barra del frammento contiene invece Riferimenti, Anteprima, Audit, Memoria e Note."
+            ]
+          },
+          {
+            "title": "Esportare",
+            "paragraphs": [
+              "Apri Esporta e scegli TXT, Markdown, HTML, DOCX o Markdown bilingue. I separatori tra frammenti si applicano solo a TXT e Markdown.",
+              "Controlla i frammenti incompleti: nei formati ordinari il testo sorgente può essere usato al posto di una traduzione mancante. Il formato bilingue mostra originale, traduzione ed eventuali risultati dell’audit.",
+              "L’esportazione non ricrea necessariamente l’impaginazione del documento importato. Rivedi il file prodotto, comprese note e annotazioni, prima della consegna."
+            ]
+          }
+        ]
+      },
+      "glossary": {
+        "title": "Dizionari e glossario",
+        "intro": "Un dizionario raccoglie termini e traduzioni richieste. Assegnandolo al progetto, lo usi come glossario della pipeline.",
+        "blocks": [
+          {
+            "title": "Preparare un dizionario",
+            "paragraphs": [],
+            "steps": [
+              "Apri Risorse linguistiche nel workspace e seleziona Dizionari.",
+              "Crea un dizionario o scegli una risorsa esistente.",
+              "Inserisci termine sorgente, resa richiesta ed eventuali note. Puoi anche importare CSV o TSV, controllando anteprima e modalità di integrazione o sostituzione.",
+              "Assegna il dizionario al progetto e controlla le voci nella scheda Glossario del pannello Insight."
+            ]
+          },
+          {
+            "title": "Condividere le voci",
+            "paragraphs": [
+              "Collegare un dizionario a più workspace mantiene una risorsa condivisa. Crea copia produce invece un dizionario indipendente.",
+              "Una correzione o esclusione locale vale solo nel workspace corrente. Usa questa possibilità quando la stessa parola richiede una resa diversa in un altro progetto di ricerca."
+            ]
+          },
+          {
+            "title": "Controllare l’applicazione dei termini",
+            "paragraphs": [
+              "La pipeline riceve istruzioni per rispettare il glossario. Controlla comunque il risultato: il modello può ignorare o applicare male una voce.",
+              "La legenda della scheda Glossario distingue termini sorgente, rese trovate e rese mancanti. Le evidenziazioni mostrano corrispondenze testuali, non una verifica del significato.",
+              "Il glossario indica rese richieste. La memoria di frasi suggerisce invece riferimenti da selezionare per ciascun frammento."
+            ]
+          }
+        ]
+      },
+      "memory": {
+        "title": "Memoria di frasi ed esempi",
+        "intro": "La memoria di frasi permette di riutilizzare coppie bilingui approvate. Trovare una corrispondenza non significa usarla o salvarla automaticamente.",
+        "blocks": [
+          {
+            "title": "Usare frasi già salvate",
+            "paragraphs": [
+              "Apri Riferimenti nel frammento. Se la memoria è attiva, Glossa cerca corrispondenze nelle risorse del workspace. Puoi regolare la soglia di somiglianza.",
+              "Seleziona solo le coppie pertinenti. Entreranno nella richiesta quando tradurrai o rielaborerai il frammento. Le coppie non selezionate restano escluse."
+            ]
+          },
+          {
+            "title": "Salvare nuove frasi",
+            "paragraphs": [],
+            "steps": [
+              "Rivedi e blocca la traduzione del frammento.",
+              "Apri Memoria. Le frasi già salvate compaiono selezionate.",
+              "Premi Estrai frasi per ottenere proposte, oppure inserisci una coppia manualmente.",
+              "Correggi i testi e seleziona le coppie da conservare.",
+              "Salva la selezione. Una frase già salvata che hai deselezionato viene rimossa dalla raccolta."
+            ]
+          },
+          {
+            "title": "Usare un esempio di stile",
+            "paragraphs": [
+              "Un esempio di stile comprende un intero frammento e la sua traduzione. Serve a orientare la pipeline, mentre la memoria recupera singole coppie pertinenti.",
+              "Dopo aver bloccato un frammento, apri Audit e usa il comando per aggiungerlo come esempio. Nelle impostazioni della pipeline puoi rivederlo o rimuoverlo. Puoi conservarne fino a cinque."
+            ]
+          }
+        ]
+      },
+      "audit": {
+        "title": "Rivedere la traduzione",
+        "intro": "La scheda Audit raccoglie la valutazione automatica del frammento. Usala per individuare passaggi da controllare, confrontando sempre originale e traduzione.",
+        "blocks": [
+          {
+            "title": "Esaminare e correggere",
+            "paragraphs": [],
+            "steps": [
+              "Apri Audit dopo la traduzione e leggi le segnalazioni su terminologia, fedeltà, fluidità, grammatica e coerenza.",
+              "Verifica ogni segnalazione sul testo. Il collegamento al passaggio può non individuare la frase esatta.",
+              "Correggi la traduzione oppure riesegui la fase che richiede una revisione.",
+              "Usa Rivaluta per aggiornare il giudizio senza eseguire tutta la traduzione.",
+              "Blocca la traduzione quando la consideri approvata."
+            ]
+          },
+          {
+            "title": "Controllare la coerenza del documento",
+            "paragraphs": [
+              "Dopo aver completato i frammenti, avvia il controllo di coerenza dal pannello Insight. Confronta i passaggi tradotti per rilevare variazioni di terminologia e stile.",
+              "Questo controllo è separato dalla verifica di fedeltà rispetto all’originale. Una valutazione positiva non sostituisce la revisione umana."
+            ]
+          }
+        ]
+      },
+      "annotations": {
+        "title": "Annotazioni e note",
+        "intro": "Usa le annotazioni per conservare decisioni, dubbi e problemi accanto al frammento interessato.",
+        "blocks": [
+          {
+            "title": "Aggiungere una nota",
+            "paragraphs": [
+              "Seleziona un passaggio della traduzione e scegli Aggiungi annotazione dal menu contestuale. Puoi anche inserire una nota senza selezione nella scheda Note del frammento.",
+              "Le segnalazioni dell’audit possono essere convertite in annotazioni. Scegli Commento, Dubbio, Problema o Approvato secondo lo scopo della nota.",
+              "Approvato è un tipo di nota: non blocca la traduzione. Usa il comando di blocco quando vuoi proteggerla dalla rielaborazione."
+            ]
+          },
+          {
+            "title": "Rivedere i riferimenti",
+            "paragraphs": [
+              "Le annotazioni ancorate appaiono come note nell’anteprima. Se modifichi la frase a cui si riferiscono, controlla che il collegamento sia ancora corretto.",
+              "Le note dell’opera nella Biblioteca sono separate dalle annotazioni della traduzione."
+            ]
+          },
+          {
+            "title": "Gestire le note importate",
+            "paragraphs": [
+              "Le note a piè di pagina importate da Markdown o DOCX restano nel progetto, ma non vengono tradotte automaticamente. La pipeline riceve il corpo del testo senza marcatori e contenuti delle note.",
+              "Per includerle nella traduzione finale, rivedine il testo e inseriscile nella posizione appropriata. Controlla il risultato nel file esportato."
+            ]
+          }
+        ]
+      },
+      "context": {
+        "title": "Contesto e costi",
+        "intro": "Per tradurre un frammento, Glossa può fornire al modello anche passaggi vicini, terminologia ed esempi. Questi riferimenti aiutano a mantenere continuità nel documento.",
+        "blocks": [
+          {
+            "title": "Controllare cosa viene inviato",
+            "paragraphs": [
+              "Nella scheda Anteprima del frammento scegli una fase e costruisci il messaggio. Puoi leggerne le istruzioni e il testo senza chiamare il modello o generare costi di traduzione.",
+              "La revisione riceve originale e bozza. La formattazione riceve solo il testo tradotto. La verifica di coerenza confronta invece i passaggi tradotti."
+            ]
+          },
+          {
+            "title": "Interpretare cache e consumo",
+            "paragraphs": [
+              "Alcuni servizi possono riutilizzare parti ripetute delle richieste tramite una cache. Il risparmio dipende dal servizio, dal modello e dal riuso effettivo: non è garantito.",
+              "La cache Anthropic è disattivata per impostazione predefinita. Puoi abilitarla nella pipeline e scegliere una durata estesa, valutando quanto spesso riusi le stesse istruzioni.",
+              "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati."
+            ]
+          }
+        ]
+      },
+      "providers": {
+        "title": "Configurare i servizi",
+        "intro": "Configura i servizi in Impostazioni → Provider, poi scegli il provider e il modello nelle fasi della pipeline.",
+        "blocks": [
+          {
+            "title": "Servizi remoti",
+            "paragraphs": [
+              "Glossa integra Gemini, OpenAI, Anthropic e DeepSeek per le fasi LLM. DeepL serve alla prima traduzione in DeepL Hybrid. Ogni servizio richiede la propria chiave e un account abilitato all’uso delle sue API.",
+              "La disponibilità dipende anche da modello, quote e connessione. Verifica una configurazione con un frammento prima di avviare un documento lungo.",
+              "Le chiavi sono conservate nel portachiavi del sistema quando disponibile, altrimenti in un archivio locale cifrato. I backup non le includono."
+            ]
+          },
+          {
+            "title": "Endpoint personalizzati",
+            "paragraphs": [
+              "Nella sezione Custom crea un profilo con nome e URL base. Indica se richiede una chiave e prova la connessione. Nella fase scegli il profilo e scrivi il nome del modello.",
+              "Gli indirizzi remoti devono usare HTTPS. HTTP è accettato soltanto per localhost, 127.0.0.1 e ::1. Le opzioni disponibili dipendono dal servizio compatibile configurato."
+            ]
+          },
+          {
+            "title": "Parametri e disponibilità dei comandi",
+            "paragraphs": [
+              "Temperatura e ragionamento dipendono dal modello. Una temperatura bassa riduce la variabilità, ma non garantisce una traduzione corretta. Alcune combinazioni non permettono di regolarla.",
+              "Se un comando è disabilitato, leggine il suggerimento: può mancare una chiave o un requisito del progetto. Correggi quel requisito prima di riprovare."
+            ]
+          }
+        ]
+      },
+      "ollama": {
+        "title": "Usare Ollama",
+        "intro": "Ollama permette di eseguire modelli sul tuo computer o su un server che hai configurato. Per lavorare senza inviare testo a servizi remoti, usa un server locale per tutte le operazioni necessarie.",
+        "blocks": [
+          {
+            "title": "Collegare il server",
+            "paragraphs": [],
+            "steps": [
+              "Installa Ollama e scarica un modello compatibile con il tuo hardware.",
+              "Avvia il server Ollama, se la tua installazione non lo avvia automaticamente.",
+              "Apri Impostazioni → Provider → Ollama e verifica l’URL e lo stato della connessione.",
+              "Aggiorna l’elenco dei modelli, quindi scegli Ollama e il modello nelle fasi desiderate.",
+              "Prova un frammento e controlla tempi, qualità e consumo di memoria."
+            ]
+          },
+          {
+            "title": "Regolare il modello",
+            "paragraphs": [
+              "Un modello più grande richiede più memoria e può impiegare più tempo. Se l’elaborazione è troppo lenta, riduci la lunghezza dei frammenti o usa un modello che il computer riesce a eseguire agevolmente.",
+              "Usa le opzioni Think solo se supportate dal modello. Le opzioni avanzate devono essere un oggetto JSON valido; un valore non valido non viene salvato.",
+              "Per la valutazione strutturata, Glossa imposta la temperatura di Ollama a zero. Questa impostazione non garantisce giudizi identici o corretti."
+            ]
+          }
+        ]
+      },
+      "shortcuts": {
+        "title": "Scorciatoie e comandi",
+        "intro": "Su macOS usa Cmd al posto di Ctrl. Le scorciatoie globali, tranne Ctrl + Invio, non intervengono mentre scrivi in un campo modificabile.",
+        "blocks": [
+          {
+            "title": "Traduzione e progetto",
+            "paragraphs": [
+              "Ctrl + Invio avvia l’azione di traduzione selezionata, anche da un campo di testo. In modalità frammento deve essere selezionato un frammento.",
+              "Ctrl + S salva il progetto esistente e le risorse linguistiche modificate. Il salvataggio del progetto attende se è in corso un’elaborazione.",
+              "Ctrl + E apre l’esportazione quando il documento contiene frammenti. Ctrl + virgola apre la configurazione della pipeline."
+            ]
+          },
+          {
+            "title": "Navigazione",
+            "paragraphs": [
+              "Ctrl + 1 fino a Ctrl + 9 seleziona uno dei primi nove frammenti. Ctrl + H apre questa sezione della guida.",
+              "Tab sposta il focus tra i controlli. Invio o Spazio li attiva. Nelle barre di schede usa le frecce, Home ed End. Esc chiude la finestra o il menu aperto.",
+              "Passa il puntatore su un comando a icona, o raggiungilo con la tastiera, per leggere la descrizione e gli eventuali requisiti."
+            ]
+          }
+        ]
+      },
+      "troubleshooting": {
+        "title": "Risolvere un problema",
+        "intro": "Leggi il messaggio visualizzato e identifica l’operazione che non è riuscita. Cambia un’impostazione alla volta per verificare la causa.",
+        "blocks": [
+          {
+            "title": "La traduzione non parte",
+            "paragraphs": [
+              "Controlla credenziali, modello e connessione del provider scelto. Per Ollama verifica che il server sia avviato e che il modello sia installato. Per DeepL controlla anche quota e glossario remoto.",
+              "Se il messaggio riguarda la memoria o il tempo di elaborazione, prova un frammento più breve. Se riguarda la qualità, confronta gli output delle fasi prima di cambiare modello e prompt."
+            ]
+          },
+          {
+            "title": "Una fonte o una pagina non si apre",
+            "paragraphs": [
+              "Verifica che la fonte accetti il tipo di ricerca usato. Una ricerca senza risultati e una fonte che non ha risposto sono esiti diversi: controlla il monitor.",
+              "Nel visore controlla la lettura dei soli file locali, la versione selezionata e il collegamento del disco del deposito. Le pagine assenti possono richiedere una connessione alla biblioteca."
+            ]
+          },
+          {
+            "title": "Il lavoro sembra fermo",
+            "paragraphs": [
+              "Apri i dettagli del lavoro. In attesa può indicare un limite temporaneo del servizio; In pausa richiede una ripresa. Un errore mostra invece il motivo e gli eventuali comandi per riprovare.",
+              "Se il salvataggio del progetto fallisce, controlla cartella dati e spazio libero. Non considerare salvate le modifiche finché la barra di stato non lo conferma."
+            ]
+          },
+          {
+            "title": "Raccogliere informazioni",
+            "paragraphs": [
+              "Per segnalare un problema, annota versione, sistema operativo, azione eseguita e messaggio ricevuto. La console nella barra di stato permette di consultare le operazioni.",
+              "I dettagli delle richieste possono contenere il testo del documento. Controllali prima di condividerli. La cartella dei log è indicata qui sotto."
+            ]
+          }
+        ]
+      },
+      "overview": {
+        "title": "Primi passi",
+        "intro": "Glossa permette di raccogliere fonti digitali, leggere riproduzioni e tradurre documenti con l’assistenza di modelli linguistici. Questa guida spiega come usare le funzioni disponibili nella versione corrente.",
+        "blocks": [
+          {
+            "title": "Per iniziare una traduzione",
+            "paragraphs": [],
+            "steps": [
+              "Apri Impostazioni → Provider e configura il servizio che vuoi usare. Per Ollama, verifica che il server sia avviato e che un modello sia installato.",
+              "Crea un workspace e un progetto al suo interno. Il workspace raccoglie progetti e risorse da usare insieme.",
+              "Importa un documento e controlla il testo e la suddivisione in frammenti nell’anteprima.",
+              "Configura lingue e pipeline, quindi prova la traduzione su un frammento.",
+              "Rivedi il risultato, elabora gli altri frammenti ed esporta il documento."
+            ]
+          },
+          {
+            "title": "Orientarsi nell’applicazione",
+            "paragraphs": [
+              "La Dashboard mostra attività recenti, elementi da controllare e lavori in corso. Le altre due schede permettono di cercare fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
+              "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
+              "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere."
+            ]
+          },
+          {
+            "title": "Dati e funzioni disponibili",
+            "paragraphs": [
+              "I dati di lavoro sono salvati sul computer. Se usi un servizio remoto, i testi necessari all’operazione vengono inviati a quel servizio. Per lavorare solo in locale, controlla anche i servizi scelti per valutazione, memoria e rifinitura dei prompt.",
+              "Glossa è in beta privata. Trascrizione, riconoscimento del testo nelle scansioni e alcuni percorsi avanzati sono ancora incompleti. L’importazione del testo da PDF è disponibile, ma non esegue OCR."
+            ]
+          }
+        ]
+      },
+      "projects": {
+        "title": "Workspace e progetti",
+        "intro": "Un workspace organizza progetti e risorse condivise. Ogni progetto di traduzione appartiene a un solo workspace.",
+        "blocks": [
+          {
+            "title": "Creare e riconoscere un progetto",
+            "paragraphs": [
+              "Crea un progetto dalla pagina del workspace o dall’area Traduzioni, scegliendo il workspace di destinazione. Nome, descrizione e icona del workspace si modificano nelle sue impostazioni.",
+              "Un progetto può contenere più pipeline con impostazioni e risultati distinti. Scegli la pipeline su cui vuoi lavorare prima di modificare la configurazione."
+            ]
+          },
+          {
+            "title": "Salvare il lavoro",
+            "paragraphs": [
+              "I progetti già creati vengono salvati automaticamente dopo le modifiche, quando l’elaborazione consente il salvataggio. Controlla lo stato nella barra inferiore: un errore di salvataggio richiede attenzione.",
+              "Puoi richiedere un salvataggio con Ctrl + S, fuori dai campi di testo. Su macOS usa Cmd. Durante l’elaborazione, il salvataggio del progetto viene rimandato."
+            ]
+          },
+          {
+            "title": "Condividere e spostare",
+            "paragraphs": [
+              "Opere e dizionari possono essere collegati a più workspace senza creare copie. Le correzioni terminologiche locali valgono solo nel workspace in cui le applichi.",
+              "Spostando una traduzione, il testo resta invariato e le frasi estratte la seguono. Da quel momento usa le risorse del nuovo workspace. I costi delle operazioni precedenti restano attribuiti al workspace di origine."
+            ]
+          },
+          {
+            "title": "Archiviare o eliminare",
+            "paragraphs": [
+              "Archivia un workspace per conservarlo senza mostrarlo nell’elenco attivo. Prima di eliminarlo puoi scegliere se archiviarlo, trasferire il contenuto o rimuoverlo.",
+              "Eliminare un progetto rimuove i suoi dati di traduzione. Le opere e i dizionari collegati a un workspace restano nel catalogo generale. Il backup riguarda tutti i workspace e non serve a trasferirne uno solo."
+            ]
+          }
+        ]
+      },
+      "search": {
+        "title": "Cercare fonti",
+        "intro": "Apri la Dashboard per cercare opere nelle fonti supportate. I risultati vengono aggiunti alla Biblioteca solo quando lo decidi.",
+        "blocks": [
+          {
+            "title": "Cercare in più fonti",
+            "paragraphs": [],
+            "steps": [
+              "Apri Ricerca federata e inserisci le parole chiave.",
+              "Seleziona le biblioteche. Le raccolte, come Europeana e Internet Archive, vanno selezionate esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
+              "Avvia la ricerca. I risultati compaiono man mano che le fonti rispondono.",
+              "Controlla il riepilogo delle fonti e la scheda di esecuzione prima di considerare completa la ricerca."
+            ]
+          },
+          {
+            "title": "Interpretare filtri e risultati",
+            "paragraphs": [
+              "Titolo, autore, lingua, materiale, date e altri filtri restringono i dati ricevuti. Non cercano gli stessi campi in tutti i cataloghi remoti. Se una fonte non fornisce il dato, la corrispondenza può restare non verificabile.",
+              "Una scheda può esistere senza una riproduzione leggibile. Durante il controllo compare lo stato di verifica; una riproduzione dichiarata assente viene indicata come non consultabile. Un errore di rete non significa che l’opera sia assente.",
+              "Ogni risultato conserva la provenienza. Il servizio che restituisce la scheda può essere diverso dall’istituzione che conserva l’opera."
+            ]
+          },
+          {
+            "title": "Usare un indirizzo o un identificativo",
+            "paragraphs": [
+              "Apri la ricerca singola, scegli la fonte e segui l’esempio nel campo. Puoi usare, secondo la fonte, parole chiave, segnatura, identificativo o indirizzo.",
+              "Alcune fonti permettono solo l’apertura diretta: il pannello lo indica. Per un manifesto di un’istituzione non elencata, scegli l’indirizzo IIIF diretto."
+            ]
+          },
+          {
+            "title": "Conservare e riprendere una ricerca",
+            "paragraphs": [
+              "Aggiungi alla Biblioteca salva la scheda. Aggiungi a un workspace salva anche il collegamento al workspace scelto. Lo stesso manifesto non viene duplicato.",
+              "Lo storico conserva criteri, risultati e tentativi. Nel monitor puoi agire sulla singola fonte, riprovare dopo un errore o caricare altre pagine. Estendi alle raccolte avvia una ricerca collegata sulle sole raccolte nuove selezionate.",
+              "Puoi cambiare schermata mentre i lavori proseguono. Chiudendo Glossa si fermano; lo storico resta disponibile alla riapertura."
+            ]
+          }
+        ]
+      },
+      "sources": {
+        "title": "Usare la Biblioteca",
+        "intro": "La Biblioteca è il catalogo delle opere che hai conservato. Da qui puoi organizzarle, consultarne i dati e leggere le immagini.",
+        "blocks": [
+          {
+            "title": "Trovare un’opera nel catalogo",
+            "paragraphs": [
+              "Alterna elenco e griglia e usa i filtri per restringere il catalogo. Puoi salvare una combinazione di filtri come vista. Includi le opere archiviate quando vuoi recuperare un elemento messo da parte.",
+              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file."
+            ]
+          },
+          {
+            "title": "Consultare e correggere la scheda",
+            "paragraphs": [
+              "Apri un’opera. Il pannello accanto al visore contiene Opera, Digitalizzazioni, Organizzazione e Note. Le note dell’opera si salvano automaticamente.",
+              "Puoi correggere titolo, autore, data e lingua. La correzione resta separata dall’originale e può essere rimossa. Risincronizza con la biblioteca acquisisce nuovamente i dati e cancella le correzioni manuali; conserva note e immagini."
+            ]
+          },
+          {
+            "title": "Leggere le pagine",
+            "paragraphs": [
+              "Usa miniature, frecce o numero di pagina per spostarti. Lo zoom ingrandisce l’immagine; Glossa ricorda la posizione di lettura.",
+              "File locale indica una pagina nel deposito; File online indica una pagina letta senza una copia permanente. Il suggerimento mostra provenienza e dimensioni effettive.",
+              "Attiva la lettura dei soli file locali per impedire al visore di richiedere immagini alla biblioteca. Le pagine mancanti mostrano un avviso. L’opzione si disattiva quando chiudi l’opera."
+            ]
+          },
+          {
+            "title": "Scaricare e conservare",
+            "paragraphs": [
+              "In Digitalizzazioni scegli la risoluzione e avvia il download dell’opera. Una risoluzione diversa crea un’altra versione locale. Puoi scegliere quale versione aprire.",
+              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata.",
+              "Le copie PDF possono comparire nella scheda, ma non sono ancora leggibili o scaricabili dalla Biblioteca."
+            ]
+          },
+          {
+            "title": "Archiviare, liberare spazio o eliminare",
+            "paragraphs": [
+              "Archivia nasconde l’opera dall’elenco attivo e conserva i file. La successiva proposta di liberare spazio è facoltativa.",
+              "Libera spazio elimina le pagine scaricate e conserva la scheda. Eliminare una versione locale rimuove solo quella versione. Eliminare l’opera rimuove invece scheda, collegamenti e file, senza cestino.",
+              "Prima di eliminare file, completa o annulla i lavori che li stanno usando. Metterli in pausa non basta."
+            ]
+          }
+        ]
+      },
+      "storage": {
+        "title": "Download e archiviazione",
+        "intro": "I download, le verifiche e la riduzione delle immagini vengono eseguiti come lavori in background. Puoi seguirli dalla barra di stato.",
+        "blocks": [
+          {
+            "title": "Controllare i lavori",
+            "paragraphs": [
+              "Apri il pannello dei lavori in basso a destra. Ogni voce mostra avanzamento e stato; espandila per leggere dettagli, tentativi ed errori.",
+              "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
+              "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
+              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori."
+            ]
+          },
+          {
+            "title": "Scegliere la risoluzione",
+            "paragraphs": [
+              "In Impostazioni → Biblioteca → Immagini scegli dimensioni delle pagine e delle miniature. La scelta fatta sulla singola opera prevale sul valore generale.",
+              "La dimensione indica il lato lungo desiderato. Secondo il servizio e la modalità scelta, l’immagine ricevuta può essere più grande o più piccola. Risoluzione massima richiede il dettaglio disponibile completo.",
+              "I file già scaricati non cambiano. Per ottenere una versione più piccola senza riscaricare, usa la riduzione delle immagini: crea una nuova copia e conserva l’originale. Elimina una delle versioni solo dopo aver controllato il risultato."
+            ]
+          },
+          {
+            "title": "Cartella dati e deposito",
+            "paragraphs": [
+              "Impostazioni → Dati distingue la cartella dati, con progetti e catalogo, dal deposito delle immagini. Il deposito può essere su un disco esterno.",
+              "Cambiare la cartella dati copia il database e richiede il riavvio per usare la nuova posizione. Cambiare deposito non sposta i download esistenti: scegli una cartella vuota o un deposito Glossa già presente.",
+              "Mantieni il database su disco locale. Se sincronizzi il deposito, imposta il servizio perché conservi i file anche sul computer: i soli segnaposto online non bastano."
+            ]
+          },
+          {
+            "title": "Verificare i file e svuotare la cache",
+            "paragraphs": [
+              "La verifica rapida controlla se i file sono presenti. La verifica completa ne controlla anche il contenuto. I risultati distinguono file integri, mancanti, corrotti e senza opera associata.",
+              "La verifica non cancella né riscarica automaticamente. La pulizia dei file senza opera richiede un comando separato.",
+              "La cache conserva temporaneamente immagini e risposte di ricerca. Puoi svuotarla dalle impostazioni di archiviazione senza eliminare le pagine scaricate nel deposito. Per conservare un’opera, usa il download."
+            ]
+          },
+          {
+            "title": "Regolare le richieste alle biblioteche",
+            "paragraphs": [
+              "In Impostazioni → Biblioteca, assegna a ciascuna biblioteca un profilo di rete e una modalità di richiesta delle immagini. I profili regolano concorrenza, frequenza, tentativi e attesa.",
+              "Le modifiche ai profili richiedono salvataggio esplicito. Aumentare i limiti non garantisce download più veloci: il servizio può rallentare o rifiutare le richieste."
+            ]
+          }
+        ]
+      },
+      "backup": {
+        "title": "Backup e ripristino",
+        "intro": "Il backup conserva i dati di tutti i workspace in un file. Non comprende le immagini del deposito, i documenti esportati o le credenziali dei servizi.",
+        "blocks": [
+          {
+            "title": "Creare un backup",
+            "paragraphs": [
+              "Il file contiene schede delle opere, annotazioni, trascrizioni, traduzioni con il loro storico, glossari e memoria di frasi, ricerche con i risultati ottenuti, storico delle operazioni, servizi configurati a mano ed elenco dei documenti esportati."
+            ],
+            "steps": [
+              "Apri Impostazioni → Backup.",
+              "Scegli il backup con password per proteggere il contenuto, oppure il formato Solo Glossa, che non è cifrato.",
+              "Scegli dove salvare il file e attendi la conferma.",
+              "Se hai usato una password, conserva anche il codice di recupero mostrato al termine, fuori dall’applicazione."
+            ]
+          },
+          {
+            "title": "Ripristinare",
+            "paragraphs": [
+              "Sospendi le ricerche in corso, scegli il file da ripristinare e, se richiesto, inserisci password o codice di recupero. Glossa controlla che il backup sia valido e compatibile prima della conferma.",
+              "Il ripristino sostituisce i dati di tutti i workspace presenti. Non unisce due raccolte e non importa un solo workspace. Se vuoi conservare la situazione attuale, crea prima un altro backup.",
+              "Per un backup cifrato, perdere sia password sia codice di recupero rende il contenuto irrecuperabile."
+            ]
+          },
+          {
+            "title": "Recuperare immagini e connessioni",
+            "paragraphs": [
+              "I file già nel deposito restano sul disco. Dopo il ripristino Glossa li verifica e può proporti di scaricare quelli mancanti, alle risoluzioni registrate.",
+              "Il recupero dipende dalla disponibilità delle biblioteche. Conserva una copia separata delle immagini e dei documenti esportati che vuoi proteggere. Su una nuova installazione reinserisci anche le chiavi dei servizi."
+            ]
+          }
+        ]
+      }
     },
     "version": {
-      "check": "Controlla aggiornamenti",
-      "upToDate": "Aggiornato",
-      "updateAvailable": "Aggiornamento disponibile: {{tag}}",
-      "error": "Controllo non riuscito"
+      "check": "Verifica la versione pubblicata",
+      "upToDate": "Questa versione corrisponde all’ultima release pubblicata.",
+      "updateAvailable": "Ultima release pubblicata: {{tag}}",
+      "error": "Impossibile verificare la release. Riprova quando la connessione è disponibile."
     },
-    "sources": {
-      "federationTitle": "Cercare fonti dalla Dashboard",
-      "federationDesc": "La ricerca sta nella Dashboard. Una linguetta interroga più fonti insieme; l'altra tiene il percorso per una biblioteca sola, un indirizzo o una segnatura.",
-      "federationFields": "Scegli parole chiave, biblioteche e raccolte. Le raccolte non sono mai selezionate da sole ed Europeana chiede la sua chiave. Titolo, autore, editore, istituzione, lingua, materiale e anni filtrano i dati ricevuti, non sono campi remoti equivalenti: date incerte e dati mancanti restano non verificabili. I suggerimenti lo spiegano al passaggio del mouse e da tastiera.",
-      "federationRun": "Avvia crea una ricerca indipendente. Ogni fonte lavora su una pagina e pubblica i risultati appena sono pronti. Esecuzione mostra stati, errori e i comandi per ogni fonte: pausa, ripresa, annullamento, riprova, ripeti dalla prima pagina e carica altri.",
-      "federationHistory": "Lo storico conserva criteri, risultati ed esecuzioni anche cambiando schermata o riaprendo Glossa; i lavori non proseguono con l'applicazione chiusa. Dallo storico delle esecuzioni rivedi i risultati di un tentativo precedente senza mescolarli con quelli correnti.",
-      "federationExtend": "Estendi alle raccolte riusa i criteri della ricerca che stai guardando e aggiunge solo le raccolte scelte che non erano già incluse, creando una ricerca collegata. I risultati si raggruppano solo quando sono la stessa copia: la biblioteca interrogata e l'istituzione che conserva l'originale restano distinte.",
-      "federationBackup": "Il backup include ricerche e risultati. Metti in pausa le ricerche prima di ripristinare, perché dopo il ripristino non ripartono da sole. I risultati non diventano opere del catalogo finché non li aggiungi.",
-      "title": "Biblioteca",
-      "intro": "La Biblioteca è il catalogo delle fonti che hai scelto di conservare: la scheda bibliografica di ogni opera, le copie digitali che le biblioteche mettono a disposizione, le immagini presenti sul tuo computer e i collegamenti ai workspace. La Biblioteca è soltanto il catalogo: non ha linguette, e le fonti nuove si cercano dalla Dashboard.",
-      "levelsTitle": "Opera, digitalizzazione e versione locale",
-      "levelsDesc": "Tre livelli distinti. L'opera è il libro come oggetto bibliografico: titolo, autore, data, segnatura. La digitalizzazione è la copia prodotta da una biblioteca; due biblioteche che hanno fotografato lo stesso manoscritto danno due opere separate nel catalogo, perché hanno segnature diverse, mentre la stessa biblioteca può offrire la stessa copia come sequenza di immagini e come PDF. La versione locale è l'insieme delle immagini che hai sul computer a una certa misura in pixel: dello stesso libro puoi averne più di una, quella scaricata dalla biblioteca e quella ridotta da Glossa per occupare meno spazio.",
-      "searchTitle": "Cercare e cosa accetta ogni biblioteca",
-      "searchDesc": "Le biblioteche non hanno le stesse capacità e Glossa dichiara cosa accetta ciascuna. Europeana è l'indice di centinaia di istituzioni europee e cerca per parole: chiede una chiave propria, gratuita, che si incolla in Impostazioni → Biblioteca → Biblioteche, e di ogni risultato dice chi conserva l'originale, che può essere un'istituzione diversa da quella che ha risposto. Wellcome Collection cerca per parole e Glossa le chiede fin dall'inizio soltanto le opere digitalizzate, perché il suo catalogo descrive anche libri mai riprodotti. Internet Archive prende parole di ricerca o l'indirizzo della pagina di dettaglio. La Biblioteca Vaticana prende la segnatura scritta in qualunque forma, l'indirizzo della pagina di lettura o parole da cercare nel suo catalogo. Gallica prende l'identificativo ARK, un suo indirizzo o parole da cercare per titolo. e-codices prende la segnatura composta, l'indirizzo della pagina di lettura o parole da cercare. La Library of Congress prende parole di ricerca o l'indirizzo di un elemento del suo catalogo, e scarta i risultati senza una riproduzione leggibile. Cambridge cerca per parole passando dal servizio che usa il suo stesso visore, e conta le opere una volta invece che pagina per pagina. La Bayerische Staatsbibliothek cerca nel catalogo ufficiale e tiene solo le schede che dichiarano una riproduzione, aprendo quella e non i cataloghi a stampa che descrivono lo stesso manoscritto. Digital Bodleian, la Biblioteca Estense e l'Institut de France cercano per parole. Harvard con il gettone drs: o ids:, Heidelberg con la segnatura, e-rara ed e-manuscripta con il numero della scheda aprono soltanto per identificativo o indirizzo: la loro ricerca non è interrogabile da un programma o rifiuta le richieste automatiche. Resta poi l'indirizzo IIIF diretto, che accetta il manifesto completo di qualunque istituzione. La ricerca non scarica niente, e di ogni risultato Glossa conserva tutto quello che la biblioteca ha risposto, anche i dati che nessuna schermata mostra oggi. Nella tendina le fonti stanno in quattro gruppi: raccolte, che indicizzano il materiale di molte istituzioni e portano il segno ◈; biblioteche, che rispondono del proprio fondo e cercano per parole; ricerca ferma, con il segno ⏸, quando la ricerca esiste ma il servizio respinge le richieste automatiche; solo per identificativo, con il segno #, quando una ricerca da interrogare non esiste. Scegliendo una fonte che non cerca, sotto il campo compare una riga che dice cosa accetta. Da dove parte una ricerca nuova quando apri Glossa si sceglie in Impostazioni → Biblioteca → Biblioteche; durante la sessione vale comunque la fonte scelta nel pannello. Un catalogo elenca anche opere di cui la biblioteca ha la scheda ma non la riproduzione: mentre scorri l'elenco Glossa controlla i risultati che stai guardando e scrive «in verifica» accanto alla riga, poi «non consultabile» quando la biblioteca dichiara di non avere quel libro. La riga resta al suo posto, perché la scheda può servire lo stesso; un servizio fermo o una rete lenta non fanno comparire quella scritta.",
-      "addTitle": "Aggiungere una fonte",
-      "addDesc": "Un risultato si aggiunge al catalogo da solo, oppure collegandolo subito a un workspace. Una fonte è unica per manifesto: aggiungerla di nuovo non crea un duplicato, collega soltanto il workspace nuovo. Un'opera può stare in più workspace e in più collezioni insieme, e non viene mai duplicata: né i dati né i file.",
-      "rowTitle": "Che cosa dice una riga del catalogo",
-      "rowDesc": "Tutta la parte informativa della riga — copertina, titolo, dati — apre l'opera con un clic, allo stesso modo in elenco e in griglia. Sotto il titolo c'è una riga di dati a separatori: biblioteca di provenienza, pagine dichiarate, misure presenti sul computer e spazio occupato; se non hai niente in locale l'ultima voce è «online». Quando qualcosa c'è, in fondo alla riga compare una barra corta con il conteggio accanto, verde e «100%» a libro completo, gialla e «120/328» quando ne mancano. I comandi che agiscono sui file e sulla scheda stanno tutti nel menu, con archivia e togli staccati dagli altri da un filo di separazione; sulla riga restano soltanto le etichette dei collegamenti a workspace e collezioni.",
-      "filtersTitle": "Filtri, ordinamento, viste salvate e collezioni",
-      "filtersDesc": "I filtri vivono in una colonna a destra che si ridimensiona e si richiude come gli altri pannelli laterali; larghezza e stato si ricordano, e a colonna chiusa un conteggio dice quanti filtri sono attivi. Quando la finestra diventa troppo stretta perché elenco e filtri stiano insieme, la colonna si richiude da sola e si riapre quando lo spazio torna; se la chiudi tu, resta chiusa. Ci sono ricerca nel catalogo, tipo di opera, lingua, biblioteca, disponibilità, workspace e collezione, più l'ordinamento per titolo, autore o data di aggiunta. Lingua e biblioteca offrono soltanto i valori presenti davvero nel tuo catalogo; tipo di opera e disponibilità elencano sempre tutte le voci previste, e workspace e collezione elencano quelli che hai creato anche se nessuna opera li usa. Il comando col segnalibro salva la combinazione di filtri come vista, richiamabile con un clic. Una collezione è un'etichetta che raccoglie opere della stessa ricerca senza spostarle, e una stessa opera può stare in più collezioni.",
-      "recordTitle": "La scheda dell'opera",
-      "recordDesc": "La scheda si apre a tutta pagina: al centro il visore, a destra una colonna a linguette ridimensionabile e richiudibile. In cima, a sinistra il titolo con la data, al centro quale digitalizzazione stai leggendo — con il collegamento al sito della biblioteca e, se ce n'è più di una, la tendina per cambiarla — a destra i comandi dell'opera. Le linguette sono quattro: Opera con i dati bibliografici, dove un campo non dichiarato mostra «—» invece di sparire e i campi rari stanno sotto «Altri metadati» e i riferimenti interni sotto «Dati tecnici»; Digitalizzazioni con lo scaricamento e le versioni locali, una riga ciascuna con i propri comandi; Organizzazione con workspace e collezioni; Note con un editor che salva da sé.",
-      "editTitle": "Correggere i dati e risincronizzare",
-      "editDesc": "Titolo, autore, data e lingua si correggono a mano: il comando con la matita apre il campo, Invio salva, Esc annulla. Il dato originale non viene mai sovrascritto: la correzione vive a parte, un segno accanto all'etichetta la dichiara, passandoci sopra leggi cosa diceva la biblioteca e un comando riporta all'originale. Il comando che risincronizza chiede di nuovo la scheda alla biblioteca e riscrive i dati con quelli appena ricevuti: le correzioni fatte a mano vengono cancellate e vanno rifatte, mentre le note e le pagine scaricate restano.",
-      "viewerTitle": "Leggere un libro",
-      "viewerDesc": "Il visore sfoglia il libro pagina per pagina, con le miniature a sinistra, il campo per saltare a un numero e lo zoom. Glossa ricorda dove eri arrivato. Se il libro è sul computer le pagine si leggono dal disco, senza nessuna richiesta alla biblioteca; se non c'è niente la pagina si chiede in una volta sola come immagine intera, e solo ingrandendo oltre la sua nitidezza il visore passa al dettaglio a pezzi. Se di una pagina hai una misura migliore di quella impostata vedi quella: la misura nelle impostazioni dice cosa chiedere alla biblioteca, non quanto peggiorare ciò che possiedi già. Il comando che salva la pagina aperta riusa i byte che stai guardando e scrive nel suggerimento quanti pixel verranno salvati. Sfogliando un libro scaricato a metà i buchi si riempiono da soli, e la linguetta Digitalizzazioni si aggiorna subito.",
-      "originTitle": "Da dove arriva la pagina",
-      "originDesc": "Al centro della barra del visore due parole dicono se il file è tuo: «File locale» quando la pagina è sul computer, «File online» quando non lo è. Il pallino accanto porta il dettaglio: spento per un file tuo, giallo quando la pagina arriva dalla cache — l'hai già vista in questa sessione, ma chiudendo non resta — verde quando è appena arrivata dalla biblioteca. Il suggerimento scrive la provenienza per esteso e i pixel davvero a schermo.",
-      "localOnlyTitle": "Leggere solo i file locali",
-      "localOnlyDesc": "Fra i comandi a destra, accanto a quello che salva la pagina, c'è l'interruttore che limita la lettura a quello che è sul computer. Acceso, il visore non chiede più niente alla biblioteca e su una pagina che non hai compare un avviso al posto dell'immagine; spento, le pagine mancanti tornano ad arrivare. Vale per il libro aperto e si spegne chiudendolo.",
-      "archiveTitle": "Archiviare e togliere",
-      "archiveDesc": "Archiviare toglie l'opera dall'elenco senza toccare le pagine già scaricate; per rivedere le archiviate si accende il comando fra i filtri. Subito dopo Glossa chiede se vuoi anche liberare lo spazio, e puoi dire di no. Il comando che rimuove invece elimina tutto: scheda, collegamenti, deposito e anche le pagine tenute in cache, e non ha ripensamenti. Per tenere l'opera e recuperare solo spazio il comando è «libera spazio».",
-      "limitsTitle": "Cosa non si può ancora fare",
-      "limitsDesc": "Una digitalizzazione in PDF compare fra le copie ma non si scarica e non si legge dentro Glossa; importare il testo di un PDF in un progetto di traduzione è un'altra cosa e funziona già. Cercano per parole Europeana, Internet Archive, Wellcome Collection, la Biblioteca Vaticana, Gallica, e-codices, Digital Bodleian, la Biblioteca Estense, l'Institut de France, Cambridge, la Bayerische Staatsbibliothek e la Library of Congress; Harvard, Heidelberg, e-rara, e-manuscripta e l'indirizzo IIIF diretto si aprono soltanto per identificativo o indirizzo. La ricerca su più fonti insieme parte da una sola schermata, ma i filtri bibliografici restano applicati ai dati ricevuti, non a campi remoti equivalenti. Della singola pagina si può salvare quella aperta: scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una sono lavori ancora da completare.",
-      "federationCriteria": "Nella colonna dei criteri il comando di avvio resta in cima, sempre in vista mentre scrivi e scegli le fonti. Le etichette stanno sopra ai campi e si leggono per intero. Le fonti che non cercano per parole sono raccolte in fondo in un gruppo solo: il motivo compare al passaggio del mouse.",
-      "federationOutcome": "Sopra i risultati, accanto ai conteggi, compare quante fonti non hanno risposto: il dettaglio si legge passandoci sopra. La riga di un risultato dice da quali biblioteche è arrivato e, quando esistono più copie della stessa opera, quante sono. Nel monitor la fonte che sta lavorando si riconosce dal colore, e il nome della scheda porta quante fonti hanno finito sul totale."
-    },
-    "storage": {
-      "title": "Archiviazione e lavori in background",
-      "intro": "Glossa tiene i dati in due posti distinti e svolge le operazioni lunghe in una coda che puoi fermare e riprendere.",
-      "twoFoldersTitle": "Due cartelle, non una",
-      "twoFoldersDesc": "La cartella dati contiene il database: schede, traduzioni, glossari. È piccola e va tenuta su un disco locale. La cartella del deposito contiene le immagini e i documenti scaricati dalle biblioteche: sono gigabyte e possono stare altrove, anche su un disco esterno. Separarle protegge il database, che su una cartella sincronizzata rischia di corrompersi.",
-      "chooseTitle": "Cambiare cartella",
-      "chooseDesc": "In Impostazioni → Archiviazione. La finestra di scelta la apre Glossa stessa. Una cartella che contiene già altro viene rifiutata: serve una cartella vuota, oppure una che sia già un deposito Glossa, che viene ricollegato senza copiare niente. Cambiare cartella non sposta i file già scaricati.",
-      "cloudTitle": "Cartelle sincronizzate",
-      "cloudDesc": "Il deposito può stare su Drive, OneDrive o iCloud, ma solo se il client tiene una copia vera sul disco. In modalità solo online i file risultano presenti e sono vuoti: Glossa direbbe che una fonte è completa mentre non c'è niente. Il database non va mai messo lì.",
-      "jobsTitle": "La coda dei lavori",
-      "jobsDesc": "Scaricamenti, verifiche e generazioni lunghe non bloccano l'applicazione: diventano lavori in coda. In Impostazioni → Archiviazione trovi anche la verifica del deposito, rapida o completa: diventa un lavoro come gli altri e non cancella né riscarica niente da sola.",
-      "jobsWhereTitle": "Dove si vedono",
-      "jobsWhereDesc": "Nella barra in basso a destra, in ogni sezione. Il clic apre il pannello con l'elenco: in corso, in attesa, terminati oggi. Ogni riga porta il nome dell'opera, a che punto è e quanto ha scaricato. Nel pannello ogni riga dice cosa sta facendo il lavoro in quel momento: avvio, lettura del manifesto, scaricamento. Cliccando una riga si apre e mostra i dettagli: il tetto della misura, l'host, i tentativi, gli orari, e della pagina appena passata la misura chiesta per lei e le dimensioni arrivate.",
-      "jobsControlTitle": "Come si comandano",
-      "jobsControlDesc": "Pausa, ripresa, annullamento e nuovo tentativo per ciascun lavoro, o per tutti insieme dai comandi in cima al pannello. La pausa non è istantanea: il lavoro finisce il pezzo in corso, lo salva e si ferma.",
-      "downloadTitle": "Scaricare una fonte",
-      "downloadDesc": "In Biblioteca ogni riga dice quante pagine sono davvero sul computer. Il comando scarica mette in coda il lavoro e mostra la percentuale mentre gira. Quando una fonte è tutta sul computer il comando sparisce e resta un segno di spunta: non c'è più niente da chiedere alla biblioteca. Glossa calcola da sé la misura da chiedere: dalle dimensioni della pagina dichiarate dal manifesto ricava la larghezza che porta il lato lungo alla misura scelta, e chiede quella — una richiesta per pagina, nessuna trattativa. All'avvio di ogni libro fa una domanda sola alla biblioteca, per sapere se tiene già pronte le misure ridotte: dove le tiene, chiederne una è il doppio più veloce. Se la misura viene rifiutata, prende la pagina intera e la conserva così com'è: non rimpicciolisce niente da sé, perché ridurre un'immagine le fa perdere qualcosa e non deve succedere alle tue spalle. Quel libro occupa più spazio, e lo recuperi quando vuoi con il comando che riduce le immagini. Il rifiuto si paga una volta per libro, non a ogni pagina. Da ogni pagina scaricata Glossa ricava la sua miniatura, senza chiedere niente alla biblioteca: servono a sfogliare il libro senza rete.",
-      "downloadPolicyTitle": "Scegliere la misura delle pagine",
-      "downloadPolicyDesc": "In Impostazioni → Biblioteca → Immagini scegli quanto grandi vuoi le pagine, quanto grandi le miniature e con quali valori ricavare le versioni ridotte. La misura delle pagine è un tetto: Glossa calcola per ogni pagina la larghezza che porta il suo lato lungo a quel numero, e le pagine già più piccole le prende come sono. Se scegli «massima» non c'è niente da calcolare, si prende tutto il dettaglio disponibile: un libro intero occupa circa il triplo dello spazio. Il modo in cui quella misura viene chiesta si decide biblioteca per biblioteca, nella linguetta Biblioteche. La stessa scelta si può fare sulla singola opera, aprendo la sua scheda in Biblioteca, e lì vince: la misura dipende dal materiale, non da chi conserva il libro. Le pagine già scaricate restano come sono, e chiedere una misura diversa da quella presente crea una seconda versione locale accanto alla prima.",
-      "countingTitle": "Come si legge «quante pagine ho»",
-      "countingDesc": "Il conteggio che vedi in Biblioteca è quello dei file che stanno davvero sul tuo computer: Glossa guarda la cartella, non un elenco tenuto a parte. Quante pagine ha il libro lo dice il suo indice, e Glossa lo registra sia scaricandolo sia aprendolo nel visore. Se una pagina la biblioteca non la serve — capita, e non è un guasto tuo — non viene contata come mancante: il libro risulta completo per quanto la biblioteca serve. Nella tab Digitalizzazioni ogni versione presente sul computer ha la sua riga, che dichiara da dove viene, quante pagine ha sulle dichiarate, quanto occupa e se è completa.",
-      "readingTitle": "Leggere un libro e conservarne una pagina",
-      "readingDesc": "Il visore usa quello che hai sul computer: se il libro è scaricato le pagine si leggono dal disco, senza nessuna richiesta alla biblioteca. Quando di versioni locali ce n'è più di una, quella che stai leggendo è segnata nella tab Digitalizzazioni, e da lì puoi passare a un'altra: la pagina si ricarica da quella cartella, e le pagine che quella versione non ha vengono comunque chieste alla biblioteca. I comandi del visore stanno a destra, la provenienza dell'immagine al centro e la navigazione a sinistra. Al centro la provenienza dice due parole: File locale quando la pagina è sul tuo computer, File online quando non lo è. Il pallino dice il resto — spento per un file tuo, giallo quando la pagina arriva dalla cache, verde quando è appena arrivata dalla biblioteca — e il suggerimento scrive la provenienza per esteso e i pixel che stai guardando davvero. In cima alla scheda, al centro fra il titolo e i comandi dell'opera, c'è scritto quale copia digitale stai leggendo, con il collegamento al sito della biblioteca e, quando ce n'è più di una, il menu per cambiarla. Fra i comandi a destra, accanto a quello che conserva la pagina, c'è leggere solo i file locali: acceso, il visore non chiede più niente alla biblioteca e su una pagina che non hai compare un avviso al posto dell'immagine; vale per il libro aperto e si spegne chiudendolo. Se di una pagina hai una misura migliore di quella impostata, vedi quella: la misura scelta nelle impostazioni dice cosa chiedere alla biblioteca, non quanto peggiorare ciò che possiedi già. Il comando che conserva la pagina aperta riusa i byte che stai già guardando, senza chiederli una seconda volta: mentre salva l'icona gira, e a pagina conservata resta un segno verde invece di un pulsante spento. Il suggerimento scrive quanti pixel verranno salvati: sono quelli della pagina che hai davanti, che su un libro ancora tutto online possono non coincidere con la misura impostata.",
-      "optimizeTitle": "Ridurre le immagini per liberare spazio",
-      "optimizeDesc": "Un libro scaricato alla massima risoluzione può occupare molto più del necessario. Nella tab Digitalizzazioni della scheda dell'opera, ogni versione locale porta il proprio comando: parte da quella versione e ne ricava una più piccola alla misura e qualità scelte, senza modificarla. Le due restano affiancate, ognuna con il proprio comando per cancellare soltanto lei e per leggerla nel visore. Dura minuti su un libro lungo: è un lavoro come lo scaricamento, e lo segui dal pannello in basso, con pausa e annullamento. Se una pagina non può essere elaborata, il lavoro lo segnala e indica quante pagine non sono riuscite.",
-      "removeTitle": "Togliere un'opera dalla Biblioteca",
-      "removeDesc": "Il comando togli elimina l'opera per intero: la scheda, i collegamenti ai workspace e tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate. Se uno scaricamento o un'ottimizzazione è ancora attivo, prima deve concludersi o essere annullato. Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è libera spazio: cancella le pagine e lascia il resto, così il libro resta sfogliabile.",
-      "checkTitle": "Le due verifiche del deposito",
-      "checkDesc": "La verifica rapida guarda soltanto se i file ci sono: è questione di millisecondi. La completa apre ogni file, ne controlla la forma e confronta l'impronta con quella registrata quando è arrivato, quindi è l'unica che riconosce un file troncato o marcito sul disco; in cambio è lenta in proporzione ai gigabyte. Se niente è danneggiato i due conteggi coincidono e cambia solo il tempo. Nella coda dei lavori ogni verifica dice quale delle due è. L'esito dell'ultimo controllo resta nelle impostazioni finché non ne fai un altro, e accanto ai file che non appartengono a nessuna opera c'è il comando per cancellarli: Glossa riguarda il deposito nel momento in cui premi e ti dice quanti ne ha tolti davvero.",
-      "cacheTitle": "Cache di rete",
-      "cacheDesc": "Quello che guardi senza scaricarlo — le copertine nei risultati di ricerca, le copertine in Biblioteca, le risposte delle ricerche — non viene chiesto ogni volta alla biblioteca: Glossa lo tiene da parte. Serve a due cose: le copertine si vedono anche nell'applicazione installata, e una ricerca ripetuta non ripassa dalla rete. Questa roba non è tua: non conta come scaricata, non entra in un backup e viene buttata quando serve spazio, a partire da quella che non guardi da più tempo. Il tetto e la durata delle ricerche si cambiano in Impostazioni → Dati, dove si vede anche quanto occupa adesso e c'è il comando per svuotarla. Il modo di tenere un libro resta scaricarlo. Sopra i risultati di una ricerca vedi da quando risale quello che stai guardando, e accanto c'è il comando per rifarla davvero.",
-      "backupTitle": "Il backup",
-      "backupDesc": "Impostazioni → Backup salva tutto ciò che non si riscarica: schede delle opere, annotazioni, trascrizioni, traduzioni con lo storico, glossari e memoria di frasi, ricerche con i loro risultati, storico delle operazioni, servizi configurati a mano ed elenco degli export prodotti. Restano fuori i file veri — immagini e documenti esportati — e le chiavi dei servizi, che non escono dal portachiavi del sistema: dopo il ripristino Glossa propone di riscaricare le immagini. Il lucchetto crea un file cifrato con password; alla fine mostra un codice di recupero, da conservare fuori dall'app. Puoi selezionarlo oppure usare il pulsante di copia accanto. Password o codice aprono il file, ma se li perdi entrambi il backup non si recupera. L'altra icona salva un file solo per Glossa: evita aperture casuali ma non protegge dati riservati. Il ripristino sostituisce tutto Glossa, non un workspace solo, e accetta soltanto i backup del formato corrente.",
-      "librariesTitle": "Come Glossa tratta le biblioteche",
-      "librariesDesc": "Ogni biblioteca ha i suoi tempi. Sono pochi ritmi diversi applicati a molte biblioteche, quindi in Impostazioni → Biblioteca → Configurazioni si governano come profili, e ogni profilo ha cinque valori: quante pagine partono insieme, quante richieste al minuto, quanto stare fermi dopo un rifiuto e — fra le avanzate — quanti tentativi fare e quanto attendere una biblioteca lenta. Ogni valore spiega la propria conseguenza al passaggio del mouse, e le modifiche si salvano con un comando esplicito: finché non lo premi, accanto al titolo resta scritto che c'è qualcosa da salvare. Due profili arrivano con Glossa, con i valori provati sul campo: Normale, che usano quasi tutte, e Lento, tarato sulla più severa. Nella linguetta Biblioteche, per ogni biblioteca scegli il profilo e la modalità di richiesta delle immagini: Automatico, che è la scelta consigliata, Solo formati già pronti, oppure Misura precisa. Un profilo in uso non si elimina finché non sposti le biblioteche che lo seguono, e i due che arrivano con l'applicazione non si eliminano affatto. Le richieste insieme non superano mai quattro, qualunque cosa si scriva: il limite dipende dal server della biblioteca e serve a non farsi bloccare, e un posto resta sempre alla pagina che stai leggendo.",
-      "jobsRestartTitle": "Chiudere e riaprire",
-      "jobsRestartDesc": "Chiudendo Glossa i lavori si fermano e viene chiesta conferma. Alla riapertura nessuno riparte da solo: li ritrovi fermi e decidi tu. Solo gli scaricamenti possono ripartire in automatico, se accendi l'opzione in Impostazioni → Lavori.",
-      "limitsTitle": "Quanti insieme",
-      "limitsDesc": "In Impostazioni → Lavori si decide quanti lavori girano insieme, separatamente per scaricamenti, elaborazioni, scritture su disco, servizi linguistici e generazione documenti. Il limite degli scaricamenti dipende dal server della biblioteca, non dalla potenza del computer: alzarlo troppo fa scattare blocchi temporanei.",
-      "waitingTitle": "Fermo non vuol dire rotto",
-      "waitingDesc": "Un lavoro può restare immobile per minuti rispettando i limiti di una biblioteca. In quel caso l'indicatore dice «in attesa» e la barra non si muove: non è un errore, e riprende da solo. Fermo però non è una cosa sola: se sei tu a mettere in pausa, ovunque compare «in pausa» e non «riprovo da solo», che vale soltanto dopo un errore di rete; e il tempo mostrato in quel caso è quello che manca al tentativo, non alla fine del lavoro."
+    "logs": {
+      "title": "Cartella dei log",
+      "loading": "Lettura del percorso…",
+      "unavailable": "Percorso dei log non disponibile."
     }
   },
   "library": {

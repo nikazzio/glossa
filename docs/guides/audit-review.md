@@ -1,77 +1,61 @@
 ---
-title: Audit e revisione
+title: Valutazione e revisione
 ---
 
-# Audit e revisione
+# Valutazione e revisione
 
-Glossa non si ferma alla generazione di una bozza. Esegue anche uno stage judge
-per ispezionare i problemi di qualità chunk per chunk.
+La valutazione automatica, indicata come **Audit** nell’interfaccia, confronta
+la traduzione del frammento con il sorgente. La verifica di coerenza è un
+controllo separato sulle traduzioni del documento. Entrambe producono
+segnalazioni da verificare durante la revisione.
 
-Il giudice è separato dalla generazione perché un modello che produce una bozza non
-dovrebbe essere l'unico controllo della propria bozza. La guida [LLM e pipeline](./llm-and-pipelines)
-spiega il principio generale.
+## Risposta del valutatore
 
-## Cosa restituisce il giudice
+La risposta comprende una valutazione complessiva e un elenco di problemi
+con categoria, gravità e descrizione. Le categorie riguardano glossario,
+fedeltà, fluidità, grammatica e coerenza. Quando sono disponibili riferimenti
+testuali, l’interfaccia tenta di individuare il passaggio interessato.
 
-- Valutazione complessiva di qualità
-- Issue strutturate
-- Correzioni suggerite
-- Problemi di terminologia, accuratezza, grammatica e fluidità
+Il backend usa uno schema di risposta comune. OpenAI, Anthropic, Gemini e
+Ollama ricevono i rispettivi parametri per l’output strutturato. DeepSeek e gli
+endpoint personalizzati usano la modalità JSON e la validazione locale.
+Una risposta non interpretabile viene segnalata come errore.
 
-I problemi di **coerenza fra frammenti** arrivano invece dalla verifica di
-coerenza, che è un passaggio a parte con un suo prompt.
+Per l’output vincolato allo schema, l’adattatore Ollama imposta la temperatura
+a zero, sovrascrivendo il valore configurato. Ciò non garantisce giudizi
+identici né valutazioni corrette; il rispetto dello schema riguarda il formato.
 
-### La forma della risposta è la stessa per tutti
+## Procedura di revisione
 
-Il giudice deve rispondere in una forma precisa — valutazione, elenco di
-problemi, tipo e gravità di ognuno — e quella forma è **una sola**, valida per
-ogni provider. Con i modelli locali Glossa la impone al momento della
-generazione, così il modello non può nemmeno formulare una risposta fuori
-formato; con i provider cloud la dichiara nella richiesta.
+1. Apri la scheda **Audit** del frammento tradotto.
+2. Confronta ciascuna segnalazione con originale e traduzione.
+3. Correggi il testo manualmente o riesegui la fase pertinente.
+4. Usa **Rivaluta** per aggiornare il giudizio senza ritradurre.
+5. Registra le decisioni e i dubbi nelle **Note**.
+6. Blocca la traduzione quando la revisione è conclusa.
 
-Per lo stesso motivo, **al giudizio la temperatura resta a zero** sui modelli
-locali, qualunque valore sia impostato: una risposta vincolata a uno schema deve
-essere prevedibile, e due esecuzioni sullo stesso testo non devono dare verdetti
-diversi per caso. Le traduzioni continuano a usare la temperatura che hai
-scelto, e nelle impostazioni del giudice un avviso lo dice dove il campo si
-compila.
+Un problema dell’audit può essere convertito in annotazione. La ricerca del
+passaggio usa il testo fornito dal modello e può non trovare la posizione
+esatta. Il blocco della traduzione è una scelta del revisore, distinta
+dall’esito automatico e dal tipo di annotazione.
 
-## Cosa fare dopo un passaggio di audit
+## Coerenza del documento
 
-| Esito | Mossa successiva |
-|---|---|
-| Problemi minori di formulazione | Correggi a mano e poi rilancia l'audit |
-| Drift terminologico sistematico | Correggi [glossario o selezione phrase memory](./glossary-and-memory) |
-| Interpretazione sbagliata | Rivedi il prompt di traduzione o la scelta del provider |
-| Rumore di formattazione | Restringi il format stage invece di compensare nell'audit |
+Dopo aver completato i frammenti, avvia il controllo di coerenza. Esamina
+le traduzioni con il contesto dei frammenti vicini, senza confrontarle con
+il sorgente. Usa il prompt dedicato in **Controllo qualità** e presenta
+i risultati nella scheda **Coerenza** del pannello Insight.
 
-## Ciclo di review
+Questo controllo può evidenziare variazioni terminologiche o stilistiche tra
+passaggi. Non sostituisce l’audit di fedeltà del singolo frammento.
 
-1. Esegui un chunk di test o un batch completo.
-2. Apri l'output audit per il chunk.
-3. Leggi la lista issue confrontandola con sorgente e traduzione.
-4. Correggi a mano, rilancia uno stage oppure solo l'audit.
-5. Converti i problemi persistenti in [annotazioni](./annotations) se richiedono tracking editoriale.
+## Interpretazione dei risultati
 
-## Quando fidarsi del judge
+Una valutazione positiva non equivale a un’approvazione editoriale. In caso
+di segnalazioni ripetute, controlla istruzioni, termini assegnati e riferimenti
+di memoria prima di modificare i criteri del valutatore. Per localizzare
+l’origine di un errore, confronta gli output delle diverse fasi.
 
-Il giudice va usato come seconda passata, non come autorità finale.
-
-- Fidati per intercettare drift terminologici ripetuti o omissioni evidenti.
-- Verifica a mano registro, interpretazione e casi filologici sottili.
-- Se continua a produrre rumore, stringi il prompt o semplifica gli stage precedenti.
-
-## Strategia di review per documenti lunghi
-
-- Usa presto il **Test** mode per calibrare la pipeline su chunk rappresentativi.
-- Usa annotazioni per marcare passaggi irrisolti senza perdere il contesto.
-- Usa i coherence check quando il documento dipende dalla coerenza cross-chunk.
-- Esporta solo quando l'elenco chunk non contiene più issue aperte.
-- Blocca i chunk stabili solo dopo lettura manuale e audit.
-
-## Vedi anche
-
-- [Annotazioni](./annotations) — come tracciare e ancorare issue editoriali per chunk
-- [Glossario e phrase memory](./glossary-and-memory) — per controllare il drift terminologico a monte
-- [LLM e pipeline](./llm-and-pipelines) — perché il judge è uno stadio separato
-- [Contesto e caching](./context-and-caching) — come Glossa mantiene coerenza tra chunk
+Vedi [Annotazioni e note](./annotations) per conservare le decisioni e
+[Configurazione della pipeline](../reference/pipeline-config) per i parametri
+del controllo qualità.
