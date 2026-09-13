@@ -47,7 +47,6 @@
     "waiting": "Attesa dei limiti di rete",
     "sortTitle": "Ordina per titolo",
     "arrivalOrder": "Torna all'ordine di arrivo",
-    "historyHint": "Ricerche persistite, caricate 50 alla volta. Ogni ricerca mantiene criteri, fonti ed esecuzioni proprie.",
     "fields": {
       "query": "Parole chiave",
       "title": "Titolo",
@@ -113,6 +112,11 @@
       "match": "Solo i risultati che rispettano tutti i criteri dichiarati dal catalogo.",
       "unknown": "Solo i risultati su cui manca il dato per decidere: il catalogo non lo dichiara o la data è approssimata.",
       "excluded": "Solo i risultati che i criteri escludono: utile per capire perché non compaiono."
+    },
+    "tabHint": {
+      "execution": "Come sta rispondendo ogni fonte di questa ricerca: stato, pagina raggiunta, quanto è arrivato e i comandi per intervenire su una sola biblioteca.",
+      "history": "Le ricerche già fatte, caricate cinquanta alla volta. Ognuna conserva criteri, fonti ed esecuzioni proprie; aprendone una si torna all'esecuzione.",
+      "criteria": "I criteri che restringono la ricerca e le fonti da interrogare. Valgono per la prossima ricerca: non cambiano quelle già avviate."
     }
   },
   "overview": {

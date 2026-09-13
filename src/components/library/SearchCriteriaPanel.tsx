@@ -36,9 +36,12 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
     {/* Il comando di avvio non sta in fondo a una colonna che scorre: resta in
         vista mentre si scrivono i criteri e si scelgono le fonti. */}
     <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-editorial-border bg-surface-panel px-4 py-2.5">
-      <span className="min-w-0 truncate text-xs text-editorial-muted">{t('federation.selectedCount', { count: selected.length })}</span>
+      {/* La spiegazione la porta il conteggio delle fonti, che è il testo a cui
+          si riferisce: i criteri valgono per la prossima ricerca. */}
+      <span className="min-w-0 truncate text-xs text-editorial-muted">
+        <Hint label={t('federation.draftHint')}>{t('federation.selectedCount', { count: selected.length })}</Hint>
+      </span>
       <div className="flex shrink-0 items-center gap-1">
-        <Hint label={t('federation.draftHint')} size="xs" />
         <IconButton type="submit" title={t('federation.launch')}
           disabled={busy || !selected.length}><Search size={18} /></IconButton>
       </div>
@@ -55,13 +58,12 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       </label>
       <div className="grid grid-cols-2 gap-3">
         {(['yearFrom', 'yearTo'] as const).map((key) => <label key={key} className="block space-y-1.5">
-          <FieldLabel block>{t(`federation.fields.${key}`)}</FieldLabel>
+          <FieldLabel block hint={t('federation.dateHint')}>{t(`federation.fields.${key}`)}</FieldLabel>
           <input type="number" min={1} max={9999} step={1} className={FIELD_NUMBER_CLASSNAME}
             aria-label={t(`federation.fields.${key}`)} value={criteria[key] ?? ''}
             onChange={(event) => setCriteria({ ...criteria, [key]: event.target.value === '' ? null : Number(event.target.value) })} />
         </label>)}
       </div>
-      <Hint label={t('federation.dateHint')} size="xs" />
     </section>
 
     {(['library', 'aggregator'] as const).map((kind) => {

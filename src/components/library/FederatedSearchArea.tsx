@@ -241,7 +241,9 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     </section>
     <aside className="flex min-h-0 min-w-0 flex-col border-t border-editorial-border bg-surface-panel lg:border-l lg:border-t-0">
       <InspectorShell ariaLabel={t('federation.title')} tabs={tabs} activeTab={tab} onTabChange={setTab}
-        actions={<span className="font-display text-sm italic text-editorial-ink">{tabs.find((item) => item.id === tab)?.label}</span>}>
+        actions={<span className="font-display text-sm italic text-editorial-ink">
+          <Hint label={t(`federation.tabHint.${tab}`)}>{tabs.find((item) => item.id === tab)?.label}</Hint>
+        </span>}>
         {tab === 'criteria' && <SearchCriteriaPanel providers={providers} busy={busy}
           onSubmit={() => launch(false, { ...draft.criteria, query: keywords })} />}
         {tab === 'execution' && (selected ? <SearchExecutionPanel run={selected} providers={providers} busy={busy}
@@ -251,7 +253,6 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           setHistorical({searchId:selected.id,executionId,pages:previousPages}); setByTitle(false);
         })} /> : <p className="p-4 text-sm text-editorial-muted">{t('federation.empty')}</p>)}
         {tab === 'history' && <div className="divide-y divide-editorial-border p-3">
-          <Hint label={t('federation.historyHint')} size="xs" />
           {runs.map((run) => <div key={run.id} className="flex flex-col py-2">
             <PopoverItem label={`${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}`}
               onSelect={() => { navigate(dashboardLocation({ view: 'search', searchId: run.id })); setTab('execution'); }} />

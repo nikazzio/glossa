@@ -47,7 +47,6 @@
     "waiting": "Waiting for network limits",
     "sortTitle": "Sort by title",
     "arrivalOrder": "Back to arrival order",
-    "historyHint": "Persistent searches, loaded 50 at a time. Each search retains its criteria, sources and executions.",
     "fields": {
       "query": "Keywords",
       "title": "Title",
@@ -113,6 +112,11 @@
       "match": "Only results that meet every criterion the catalogue states.",
       "unknown": "Only results where the deciding field is missing: the catalogue does not state it, or the date is approximate.",
       "excluded": "Only the results the criteria rule out, useful to understand why they are missing."
+    },
+    "tabHint": {
+      "execution": "How each source of this search is answering: state, page reached, how much arrived, and the controls that act on a single library.",
+      "history": "The searches already made, loaded fifty at a time. Each keeps its own criteria, sources and runs; opening one returns you to the execution tab.",
+      "criteria": "The criteria that narrow the search and the sources to query. They apply to the next search: they do not change the ones already started."
     }
   },
   "overview": {
