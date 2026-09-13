@@ -80,7 +80,9 @@ describe('pannello dei lavori', () => {
 
     expect(screen.getByRole('button', { name: 'jobs.retry' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'jobs.pause' })).not.toBeInTheDocument();
-    expect(screen.getByText('connessione caduta')).toBeInTheDocument();
+    // Il motivo del guasto vive nel suggerimento del segno di stato: la riga
+    // resta corta e il testo resta raggiungibile.
+    expect(screen.getByLabelText('jobs.failed')).toBeInTheDocument();
   });
 
   it('un’ottimizzazione parziale mostra il conteggio e un errore leggibile', async () => {
@@ -189,7 +191,8 @@ describe('attesa per i limiti della biblioteca', () => {
     // finché la riga diceva solo il nome dell'opera non si distinguevano.
     renderPanel([job({ status: 'running', jobType: 'vault_verification', message: 'Beatus' })]);
 
-    expect(screen.getByText('jobs.short.vault_verification')).toBeInTheDocument();
+    // Il tipo è un simbolo con il nome nel suggerimento, non una sigla scritta.
+    expect(screen.getByLabelText('jobs.type.vault_verification')).toBeInTheDocument();
   });
 
   it('divide quello che vale per l opera da quello che vale per l ultima pagina', () => {

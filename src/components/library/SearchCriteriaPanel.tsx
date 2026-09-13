@@ -24,11 +24,11 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
     setProviders(selected.includes(key) ? selected.filter((item) => item !== key) : [...selected, key]);
   const searchable = providers.filter((provider) => provider.supportsSearch);
   const unavailable = providers.filter((provider) => !provider.supportsSearch);
-  const field = (key: 'query' | typeof LOCAL_TEXT_FIELDS[number]) => (
+  const field = (key: typeof LOCAL_TEXT_FIELDS[number]) => (
     <label key={key} className="block space-y-1.5">
       <FieldLabel block>{t(`federation.fields.${key}`)}</FieldLabel>
       <input className={FIELD_CLASSNAME} value={criteria[key]} maxLength={1000}
-        aria-label={t(`federation.fields.${key}`)} required={key === 'query'}
+        aria-label={t(`federation.fields.${key}`)}
         onChange={(event) => setCriteria({ ...criteria, [key]: event.target.value })} />
     </label>
   );
@@ -43,14 +43,6 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
           disabled={busy || !criteria.query.trim() || !selected.length}><Search size={18} /></IconButton>
       </div>
     </div>
-
-    <section className="space-y-3">
-      <div className="flex items-center gap-1.5">
-        <SectionLabel icon={Search} label={t('federation.remoteGroup')} />
-        <Hint label={t('federation.queryHint')} size="xs" />
-      </div>
-      {field('query')}
-    </section>
 
     <section className="space-y-3">
       <div className="flex items-center gap-1.5">

@@ -14,8 +14,10 @@ non vengono aggiunti alla Biblioteca.
 Le due ricerche si aprono dalla barra a sinistra, come voci sotto Dashboard.
 
 Le parole chiave si scrivono nel campo in cima alla pagina e la ricerca parte
-dal comando accanto. Il comando successivo apre i **criteri avanzati** in una
-finestra: lì si restringe la ricerca e si scelgono le fonti. Le biblioteche e le
+dal comando accanto. Il comando successivo apre i **criteri avanzati**, terza
+scheda della colonna di destra: lì si restringe la ricerca e si scelgono le
+fonti. Un altro comando avvia una ricerca nuova, svuotando parole e criteri e
+lasciando le fonti scelte. Le biblioteche e le
 raccolte aggregate sono selezionabili separatamente; Europeana e Internet Archive
 non vengono inclusi automaticamente nella selezione iniziale delle biblioteche.
 Europeana richiede una chiave in **Impostazioni → Biblioteca → Biblioteche**.

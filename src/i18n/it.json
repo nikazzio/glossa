@@ -97,7 +97,16 @@
     "occurrence": "Copia da usare",
     "bestOccurrence": "Copia migliore",
     "advanced": "Criteri avanzati",
-    "queryPlaceholder": "Cerca per parole chiave nelle fonti scelte"
+    "queryPlaceholder": "Cerca per parole chiave nelle fonti scelte",
+    "resultsShort_one": "{{count}} risultato",
+    "resultsShort_other": "{{count}} risultati",
+    "resultsHint": "{{visible}} visibili con i filtri attuali, su {{unique}} opere distinte ricavate da {{received}} schede ricevute: le copie della stessa opera contano una volta sola.",
+    "sourcesShort": "{{complete}}/{{total}} fonti",
+    "sourcesHint": "Fonti che hanno finito di rispondere sul totale interrogato. Finché non sono tutte, l'elenco può ancora crescere.",
+    "unknownShort_one": "{{count}} non verificabile",
+    "unknownShort_other": "{{count}} non verificabili",
+    "unknownHint": "Risultati che i filtri non possono confermare né escludere, perché il catalogo non dichiara quel dato o la data è approssimata.",
+    "failedHint": "Queste fonti non hanno risposto: quello che elencano manca dai risultati."
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -2241,8 +2250,9 @@
             "steps": [
               "Apri Ricerca federata dalla barra a sinistra, sotto Dashboard.",
               "Scrivi le parole chiave nel campo in alto e avvia con il comando accanto.",
-              "Per restringere la ricerca — titolo, autore, editore, istituzione, lingua, tipo, anni — e per scegliere le fonti, apri i criteri avanzati dal comando accanto al campo. Le raccolte, come Europeana e Internet Archive, vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
-              "I risultati compaiono man mano che le fonti rispondono. Controlla il riepilogo e la scheda dell'esecuzione prima di considerare completa la ricerca."
+              "Per restringere la ricerca — titolo, autore, editore, istituzione, lingua, tipo, anni — e per scegliere le fonti, apri i criteri avanzati: sono la terza scheda della colonna di destra. Le raccolte, come Europeana e Internet Archive, vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
+              "I risultati compaiono man mano che le fonti rispondono. La scheda Esecuzione ha una riga per fonte: il segno dice come sta andando, il numero quanto è arrivato, e aprendo la riga trovi pagina, copertura, comandi e tentativi precedenti.",
+              "Il comando della nuova ricerca svuota parole e criteri, lasciando le fonti che avevi scelto."
             ]
           },
           {

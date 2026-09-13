@@ -97,7 +97,16 @@
     "occurrence": "Copy to use",
     "bestOccurrence": "Best copy",
     "advanced": "Advanced criteria",
-    "queryPlaceholder": "Search by keywords in the chosen sources"
+    "queryPlaceholder": "Search by keywords in the chosen sources",
+    "resultsShort_one": "{{count}} result",
+    "resultsShort_other": "{{count}} results",
+    "resultsHint": "{{visible}} visible with the current filters, out of {{unique}} distinct works drawn from {{received}} records received: copies of the same work count once.",
+    "sourcesShort": "{{complete}}/{{total}} sources",
+    "sourcesHint": "Sources that finished answering, out of those queried. Until all of them have, the list can still grow.",
+    "unknownShort_one": "{{count}} unverifiable",
+    "unknownShort_other": "{{count}} unverifiable",
+    "unknownHint": "Results the filters can neither confirm nor rule out, because the catalogue does not state that field or the date is approximate.",
+    "failedHint": "These sources did not answer: whatever they list is missing from the results."
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -2241,8 +2250,9 @@
             "steps": [
               "Open Federated search from the left-hand rail, under Dashboard.",
               "Type your keywords in the field at the top and start with the control beside it.",
-              "To narrow the search — title, author, publisher, institution, language, type, years — and to choose the sources, open the advanced criteria from the control beside the field. Collections such as Europeana and Internet Archive must be chosen explicitly; Europeana needs a key in the Library settings.",
-              "Results appear as each source answers. Check the summary and the execution tab before treating the search as complete."
+              "To narrow the search — title, author, publisher, institution, language, type, years — and to choose the sources, open the advanced criteria: they are the third tab of the right-hand column. Collections such as Europeana and Internet Archive must be chosen explicitly; Europeana needs a key in the Library settings.",
+              "Results appear as each source answers. The Execution tab has one row per source: the mark says how it is going, the number how much arrived, and opening the row shows page, coverage, controls and earlier attempts.",
+              "The new-search control clears the words and the criteria, keeping the sources you had chosen."
             ]
           },
           {

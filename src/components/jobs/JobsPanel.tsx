@@ -1,7 +1,10 @@
-import { ChevronRight, Pause, Play, RotateCcw, Trash2, X } from 'lucide-react';
+import {
+  Ban, CheckCircle2, ChevronRight, Download, Layers, Pause, Play, RotateCcw, Search,
+  ShieldCheck, Trash2, Wand2, X, XCircle, type LucideIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton } from '../ui';
+import { IconButton, Tooltip } from '../ui';
 import { useUiStore } from '../../stores/uiStore';
 import { dashboardLocation } from '../../navigation/appLocation';
 import {
@@ -98,10 +101,14 @@ function JobRow({ job }: { job: Job }) {
           />
         </IconButton>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="shrink-0 rounded-sm border border-editorial-border px-1 py-px text-[10px] uppercase tracking-wide text-editorial-muted">
-            {t(`jobs.short.${job.jobType}`, { defaultValue: job.jobType })}
+          <Tooltip label={t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })}>
+            <span className="shrink-0 text-editorial-muted" aria-label={t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })} role="img">
+              <JobTypeIcon jobType={job.jobType} />
+            </span>
+          </Tooltip>
+          <span className="min-w-0 flex-1 truncate text-xs text-editorial-ink">
+            {searchId ? <SearchJobLabel message={description} /> : description}
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs text-editorial-ink">{description}</span>
           {detail.units && (
             <span className="shrink-0 whitespace-nowrap font-mono text-xs text-editorial-muted">
               {detail.units.done}/{detail.units.total}
@@ -364,6 +371,31 @@ interface DetailField {
   wide?: boolean;
 }
 
+/** «Biblioteca · parole cercate»: chi risponde si legge, cosa si cerca si cita. */
+function SearchJobLabel({ message }: { message: string }) {
+  const separator = message.indexOf(' · ');
+  if (separator < 0) return <>{message}</>;
+  return (
+    <>
+      <span className="font-semibold text-editorial-ink">{message.slice(0, separator)}</span>
+      {' '}
+      <span className="font-display italic text-editorial-muted">«{message.slice(separator + 3)}»</span>
+    </>
+  );
+}
+
+const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
+  provider_search: Search,
+  source_download: Download,
+  source_optimize: Wand2,
+  vault_verification: ShieldCheck,
+};
+
+function JobTypeIcon({ jobType }: { jobType: string }) {
+  const Icon = JOB_TYPE_ICONS[jobType] ?? Layers;
+  return <Icon size={13} aria-hidden />;
+}
+
 function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   const { t } = useTranslation();
 
@@ -379,10 +411,26 @@ function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
     return <span className="text-editorial-warning">{t('jobs.waitingForLibrary')}</span>;
   }
   if (job.status === 'error') {
-    return <span className="text-editorial-danger">{job.error ?? t('jobs.failed')}</span>;
+    return (
+      <Tooltip label={job.error ?? t('jobs.failed')}>
+        <span className="text-editorial-danger"><XCircle size={14} aria-label={t('jobs.failed')} /></span>
+      </Tooltip>
+    );
   }
-  if (job.status === 'completed') return <span className="text-editorial-success">{t('jobs.done')}</span>;
-  if (job.status === 'cancelled') return <span>{t('jobs.cancelled')}</span>;
+  if (job.status === 'completed') {
+    return (
+      <Tooltip label={t('jobs.done')}>
+        <span className="text-editorial-success"><CheckCircle2 size={14} aria-label={t('jobs.done')} /></span>
+      </Tooltip>
+    );
+  }
+  if (job.status === 'cancelled') {
+    return (
+      <Tooltip label={t('jobs.cancelled')}>
+        <span className="text-editorial-muted"><Ban size={14} aria-label={t('jobs.cancelled')} /></span>
+      </Tooltip>
+    );
+  }
   if (job.status === 'pausing') return <span>{t('jobs.pausing')}</span>;
   if (job.status === 'cancelling') return <span>{t('jobs.cancelling')}</span>;
   if (job.status === 'paused') return <span>{t('jobs.paused')}</span>;

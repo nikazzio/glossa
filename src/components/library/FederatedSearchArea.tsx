@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Activity, ArrowDown, ArrowUpDown, Globe, History, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUpDown, FilePlus, Globe, History, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
-import { createSearch, currentExecutions, groupResults, occurrenceKey, searchResults, searchStatus, type SearchCriteria, type SearchResultGroup, type SearchResultPage } from '../../services/federatedSearchService';
+import { EMPTY_SEARCH, createSearch, currentExecutions, groupResults, occurrenceKey, searchResults, searchStatus, type SearchCriteria, type SearchResultGroup, type SearchResultPage } from '../../services/federatedSearchService';
 import { listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
@@ -14,7 +14,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { dashboardLocation } from '../../navigation/appLocation';
 import type { IIIFProvider } from '../../types';
 import { formatDateTime } from '../../utils';
-import { Dialog, EmptyState, Hint, IconButton, InspectorShell, PopoverItem, Select, Spinner, Tooltip } from '../ui';
+import { Dialog, EmptyState, Hint, IconButton, InspectorShell, PopoverItem, Select, Spinner } from '../ui';
 import { SEARCH_ERRORS, SourceListRow } from '../dashboard/SourceDiscoveryPanel';
 import { SearchCriteriaPanel } from './SearchCriteriaPanel';
 import { SearchExecutionPanel } from './SearchExecutionPanel';
@@ -31,8 +31,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const [tab, setTab] = useState('execution');
   // Le parole cercate stanno nella barra; il resto dei criteri dietro un comando.
   const [keywords, setKeywords] = useState('');
-  const [criteriaOpen, setCriteriaOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+    const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   // La copia scelta si ricorda per identità: le occorrenze si ricostruiscono
   // a ogni pagina che arriva, e una posizione punterebbe a un'altra biblioteca.
@@ -96,9 +95,16 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     logger.info('federation.search.created', { searchId: run.id, providers: chosen.length, extension, derivedFromId: request.derivedFromId });
     pending.current = null;
     navigate(dashboardLocation({ view: 'search', searchId: run.id }));
-    setCriteriaOpen(false);
     setTab('execution');
   });
+  /** Nuova ricerca: si torna al foglio bianco, senza perdere le fonti scelte. */
+  const startNew = () => {
+    setKeywords('');
+    draft.setCriteria(EMPTY_SEARCH);
+    setHistorical(null);
+    setTab('execution');
+    navigate(dashboardLocation({ view: 'search' }));
+  };
   const resultPages = historical && historical.searchId === searchId ? historical.pages : pages;
   const providerLabels = useMemo(() => new Map(providers.map((provider) => [provider.key, provider.label])), [providers]);
   const label = (key: string) => providerLabels.get(key) ?? key;
@@ -129,6 +135,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const tabs = [
     { id: 'execution', label: selected ? `${t('federation.execution')} · ${summary.complete}/${summary.total}` : t('federation.execution'), icon: <Activity size={16} /> },
     { id: 'history', label: t('federation.history'), icon: <History size={16} /> },
+    { id: 'criteria', label: t('federation.advanced'), icon: <SlidersHorizontal size={16} /> },
   ];
   const extensionPossible = selected && (draft.providers ?? []).some((key) => !selected.providers.includes(key) && providers.some((p) => p.key === key && p.kind === 'aggregator'));
   return <div className="grid h-full min-h-0 w-full min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
@@ -143,7 +150,10 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         <IconButton type="submit" title={t('federation.launch')} disabled={busy || !keywords.trim() || !(draft.providers ?? []).length}>
           {busy ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
-        <IconButton title={t('federation.advanced')} ariaPressed={criteriaOpen} onClick={() => setCriteriaOpen(true)}><SlidersHorizontal size={16} /></IconButton>
+        <IconButton title={t('federation.advanced')} ariaPressed={tab === 'criteria'}
+          tone={tab === 'criteria' ? 'accent' : 'default'}
+          onClick={() => setTab(tab === 'criteria' ? 'execution' : 'criteria')}><SlidersHorizontal size={16} /></IconButton>
+        <IconButton title={t('federation.new')} onClick={startNew}><FilePlus size={16} /></IconButton>
         <IconButton title={t('federation.extend')} disabled={!extensionPossible || busy} onClick={() => launch(true)}><Globe size={16} /></IconButton>
         <IconButton title={t('federation.refresh')} onClick={refresh} disabled={loading}><RefreshCw size={16} /></IconButton>
       </form>
@@ -151,13 +161,28 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
       {!selected && !loading && <EmptyState icon={<Search size={20} />} message={t('federation.empty')} />}
       {loading && !selected && <Spinner size={24} />}
       {selected && <>
+        {/* Le parole cercate stanno già nel campo qui sopra: ripeterle qui
+            rubava una riga e non aggiungeva niente. */}
         <div className="space-y-2 border-b border-editorial-border p-3">
-          <h2 className="break-words font-display text-xl italic text-editorial-ink">{selected.criteria.query}</h2>
           {historical && <div className="flex items-center gap-2 text-xs text-editorial-warning"><span>{t('federation.historical')}</span><IconButton title={t('federation.currentResults')} onClick={() => {setHistorical(null);setByTitle(false);}}><Activity size={16} /></IconButton></div>}
-          <p className="text-xs text-editorial-muted" role="status" aria-live="polite">{t('federation.summary', summary)}</p>
-          {failed.length > 0 && <Tooltip label={failed.map((execution) => label(execution.providerKey)).join(' · ')}>
-            <span className="text-xs text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
-          </Tooltip>}
+          {/* Due numeri leggibili, il resto al passaggio del mouse: prima erano
+              cinque dati in fila che nessuno decifrava. */}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-editorial-muted" role="status" aria-live="polite">
+            <Hint label={t('federation.resultsHint', summary)}>
+              <span>{t('federation.resultsShort', { count: summary.visible })}</span>
+            </Hint>
+            <Hint label={t('federation.sourcesHint', summary)}>
+              <span className={summary.complete === summary.total ? 'text-editorial-success' : undefined}>
+                {t('federation.sourcesShort', summary)}
+              </span>
+            </Hint>
+            {summary.unknown > 0 && <Hint label={t('federation.unknownHint')}>
+              <span className="text-editorial-warning">{t('federation.unknownShort', { count: summary.unknown })}</span>
+            </Hint>}
+            {failed.length > 0 && <Hint label={`${t('federation.failedHint')} — ${failed.map((execution) => label(execution.providerKey)).join(' · ')}`}>
+              <span className="text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
+            </Hint>}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={visibility} onChange={setVisibility} ariaLabel={t('federation.metadata')}
               options={['all', 'match', 'unknown', 'excluded'].map((value) => ({ value, label: t(`federation.visibility.${value}`) }))} />
@@ -201,6 +226,8 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     <aside className="flex min-h-0 min-w-0 flex-col border-t border-editorial-border bg-surface-panel lg:border-l lg:border-t-0">
       <InspectorShell ariaLabel={t('federation.title')} tabs={tabs} activeTab={tab} onTabChange={setTab}
         actions={<span className="font-display text-sm italic text-editorial-ink">{tabs.find((item) => item.id === tab)?.label}</span>}>
+        {tab === 'criteria' && <SearchCriteriaPanel providers={providers} busy={busy}
+          onSubmit={() => launch(false, { ...draft.criteria, query: keywords })} />}
         {tab === 'execution' && (selected ? <SearchExecutionPanel run={selected} providers={providers} busy={busy} act={(work) => void act(work)} onViewExecution={(executionId) => void act(async () => {
           const previousPages = await searchResults(selected.id,executionId);
           setHistorical({searchId:selected.id,executionId,pages:previousPages}); setByTitle(false);
@@ -215,9 +242,6 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         </div>}
       </InspectorShell>
     </aside>
-    <Dialog open={criteriaOpen} onOpenChange={setCriteriaOpen} title={t('federation.advanced')} closeLabel={t('common.close')}>
-      <SearchCriteriaPanel providers={providers} busy={busy} onSubmit={() => launch()} />
-    </Dialog>
     <Dialog open={picker !== null} onOpenChange={(open) => { if (!open) setPicker(null); }} title={t('dashboard.discovery.addToWorkspace')} closeLabel={t('common.close')}>
       {!workspaces.length && <p className="text-sm text-editorial-muted">{t('dashboard.discovery.noWorkspaces')}</p>}
       {workspaces.map((workspace) => <div key={workspace.id} className="flex">

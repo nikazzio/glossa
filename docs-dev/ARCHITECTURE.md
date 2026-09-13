@@ -27,9 +27,10 @@ annulla lavori.
 
 Nella ricerca federata le parole cercate stanno nella barra in cima, con avvio,
 criteri avanzati, estensione e aggiornamento; gli altri criteri e la scelta
-delle fonti vivono in una finestra (`SearchCriteriaPanel` dentro `Dialog`). La
-colonna di destra tiene esecuzione e storico: l'elenco delle ricerche non è
-duplicato da una tendina.
+delle fonti sono la terza scheda della colonna di destra, insieme a esecuzione e
+storico; l'elenco delle ricerche non è duplicato da una tendina. Il pannello di
+esecuzione è una riga per fonte — segno di stato, nome, record ricevuti — che si
+apre sui dati completi, i comandi e i tentativi precedenti.
 La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
 Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.

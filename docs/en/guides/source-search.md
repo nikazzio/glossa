@@ -14,8 +14,10 @@ them to the Library.
 Both searches open from the left-hand rail, as entries under Dashboard.
 
 Keywords go in the field at the top of the page, and the control beside it
-starts the search. The next control opens the **advanced criteria** in a window,
-where you narrow the search and choose the sources. Libraries and aggregators are
+starts the search. The next control opens the **advanced criteria**, the third tab
+of the right-hand column, where you narrow the search and choose the sources.
+Another control starts a new search, clearing the words and the criteria while
+keeping the chosen sources. Libraries and aggregators are
 selected separately; Europeana and Internet Archive are not automatically
 included in the initial library selection. Europeana requires an API key under
 **Settings → Library → Libraries**.
