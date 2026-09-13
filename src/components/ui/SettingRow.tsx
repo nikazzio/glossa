@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { Info } from 'lucide-react';
-import { Tooltip } from './Tooltip';
+import { Hint } from './Hint';
 
 /**
  * La riga di un'impostazione: etichetta a sinistra, comando a destra, e la
@@ -28,20 +27,9 @@ export function SettingRow({
     <div className="flex items-center justify-between gap-3 py-2.5">
       <span className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-editorial-ink">
         <span className="min-w-0 truncate">{label}</span>
-        {hint && (
-          // Un pulsante e non un riquadro qualsiasi: la spiegazione si deve
-          // poter raggiungere da tastiera, e su un elemento non attivabile il
-          // suggerimento non si apre mai.
-          <Tooltip label={hint}>
-            <button
-              type="button"
-              aria-label={hint}
-              className="shrink-0 rounded-full text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <Info size={12} />
-            </button>
-          </Tooltip>
-        )}
+        {/* La spiegazione si raggiunge anche da tastiera, e premerla la apre:
+            un comando che non fa niente è una promessa non mantenuta. */}
+        {hint && <Hint label={hint} size="xs" />}
       </span>
       {/* Il comando non si allarga a spese dell'etichetta: un campo a larghezza
           piena riduceva «Nome» a «No…». */}

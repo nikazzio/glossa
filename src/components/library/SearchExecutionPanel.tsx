@@ -5,7 +5,7 @@ import { cancelJob, isTerminal, pauseJob, resumeJob } from '../../services/jobsS
 import type { IIIFProvider } from '../../types';
 import { useState } from 'react';
 import { formatDateTime } from '../../utils';
-import { IconButton, SectionLabel, StatBlock, StatRow } from '../ui';
+import { Hint, IconButton, SectionLabel, StatBlock, StatRow } from '../ui';
 import { SEARCH_ERRORS } from '../dashboard/SourceDiscoveryPanel';
 
 export function SearchExecutionPanel({ run, providers, busy, act, onViewExecution }: {
@@ -24,7 +24,7 @@ export function SearchExecutionPanel({ run, providers, busy, act, onViewExecutio
     </div>
     <div className="flex items-center gap-1.5">
       <SectionLabel icon={Info} label={t('federation.localGroup')} />
-      <IconButton title={t('federation.localHint')} size="xs"><Info size={13} /></IconButton>
+      <Hint label={t('federation.localHint')} size="xs" />
     </div>
     {Object.entries(run.criteria).filter(([key, value]) => key !== 'query' && value !== '' && value !== null).map(([key, value]) => (
       <StatBlock key={key} label={t(`federation.fields.${key}`)} value={key === 'material' ? t(`federation.material.${value}`) : String(value)} />

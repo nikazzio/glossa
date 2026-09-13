@@ -1,9 +1,9 @@
-import { Eye, FileText, Info, Languages, Network, Wand2 } from 'lucide-react';
+import { Eye, FileText, Languages, Network, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
 import { buildPromptPreviewStages, type PromptPreviewBlock, type PromptPreviewStage } from './promptPreview';
-import { IconButton } from '../ui';
+import { IconButton, Hint } from '../ui';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -33,9 +33,7 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
             {title}
           </span>
           {hint && (
-            <IconButton size="xs" title={hint} tooltipSide="bottom">
-              <Info size={8} aria-hidden />
-            </IconButton>
+            <Hint label={hint} size="xs" side="bottom" />
           )}
         </div>
         <span

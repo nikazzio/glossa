@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, IconButton, PopoverItem, Select, Spinner, StatBlock, Tooltip } from '../ui';
+import { Dialog, Hint, IconButton, PopoverItem, Select, Spinner, StatBlock } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
@@ -173,17 +173,13 @@ function OpenableMark({ openable, checking }: { openable: boolean | null; checki
   if (checking) return <span className="ml-2 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
   if (openable !== false) return null;
   return (
-    // Un pulsante e non un riquadro qualsiasi: la spiegazione si deve poter
-    // raggiungere da tastiera, come nelle righe di impostazione.
-    <Tooltip label={t('dashboard.discovery.notOpenableHint')}>
-      <button
-        type="button"
-        aria-label={`${t('dashboard.discovery.notOpenable')} — ${t('dashboard.discovery.notOpenableHint')}`}
-        className="ml-2 rounded text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
+    // L'etichetta porta la spiegazione: premerla la apre, così vale anche per
+    // chi non usa il mouse.
+    <span className="ml-2 text-editorial-warning">
+      <Hint label={`${t('dashboard.discovery.notOpenable')} — ${t('dashboard.discovery.notOpenableHint')}`}>
         {t('dashboard.discovery.notOpenable')}
-      </button>
-    </Tooltip>
+      </Hint>
+    </span>
   );
 }
 

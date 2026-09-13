@@ -137,7 +137,8 @@
       "error": "Failed",
       "cancelled": "Cancelled"
     },
-    "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter."
+    "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
+    "title": "Overview"
   },
   "app": {
     "title": "Glossa // Pipeline",

@@ -2,7 +2,7 @@ import { BookOpen, Globe, Info, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IIIFProvider } from '../../types';
 import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
-import { FIELD_CLASSNAME, FIELD_NUMBER_CLASSNAME, FieldLabel, IconButton, SectionLabel, Select, Tooltip, ToggleRow } from '../ui';
+import { FIELD_CLASSNAME, FIELD_NUMBER_CLASSNAME, FieldLabel, Hint, IconButton, SectionLabel, Select, ToggleRow } from '../ui';
 
 const LOCAL_TEXT_FIELDS = ['title', 'author', 'publisher', 'institution', 'language'] as const;
 
@@ -38,7 +38,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
     <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-2 border-b border-editorial-border bg-surface-panel px-4 py-2.5">
       <span className="min-w-0 truncate text-xs text-editorial-muted">{t('federation.selectedCount', { count: selected.length })}</span>
       <div className="flex shrink-0 items-center gap-1">
-        <IconButton title={t('federation.draftHint')} size="xs"><Info size={14} /></IconButton>
+        <Hint label={t('federation.draftHint')} size="xs" />
         <IconButton type="submit" title={t('federation.launch')}
           disabled={busy || !criteria.query.trim() || !selected.length}><Search size={18} /></IconButton>
       </div>
@@ -47,7 +47,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
     <section className="space-y-3">
       <div className="flex items-center gap-1.5">
         <SectionLabel icon={Search} label={t('federation.remoteGroup')} />
-        <IconButton title={t('federation.queryHint')} size="xs"><Info size={13} /></IconButton>
+        <Hint label={t('federation.queryHint')} size="xs" />
       </div>
       {field('query')}
     </section>
@@ -55,7 +55,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
     <section className="space-y-3">
       <div className="flex items-center gap-1.5">
         <SectionLabel icon={Info} label={t('federation.localGroup')} />
-        <IconButton title={t('federation.localHint')} size="xs"><Info size={13} /></IconButton>
+        <Hint label={t('federation.localHint')} size="xs" />
       </div>
       {LOCAL_TEXT_FIELDS.map(field)}
       <label className="block space-y-1.5">
@@ -72,7 +72,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
             onChange={(event) => setCriteria({ ...criteria, [key]: event.target.value === '' ? null : Number(event.target.value) })} />
         </label>)}
       </div>
-      <IconButton title={t('federation.dateHint')} size="xs"><Info size={13} /></IconButton>
+      <Hint label={t('federation.dateHint')} size="xs" />
     </section>
 
     {(['library', 'aggregator'] as const).map((kind) => {
@@ -81,7 +81,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       return <section key={kind} className="space-y-3">
         <div className="flex items-center gap-1.5">
           <SectionLabel icon={kind === 'library' ? BookOpen : Globe} label={t(`federation.${kind}`)} />
-          {kind === 'aggregator' && <IconButton title={t('federation.aggregatorHint')} size="xs"><Info size={13} /></IconButton>}
+          {kind === 'aggregator' && <Hint label={t('federation.aggregatorHint')} size="xs" />}
         </div>
         <div className="divide-y divide-editorial-border/50 border-y border-editorial-border/70">
           {group.map((provider) => <div key={provider.key} className="py-2">
@@ -95,9 +95,11 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
     {unavailable.length > 0 && <section className="space-y-2">
       <SectionLabel icon={Info} label={t('federation.unavailableGroup', { count: unavailable.length })} />
       <p className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-editorial-muted">
-        {unavailable.map((provider) => <Tooltip key={provider.key} label={t(unavailableHintKey(provider))}>
-          <span className="rounded border border-dashed border-editorial-border px-1.5 py-0.5">{provider.label}</span>
-        </Tooltip>)}
+        {unavailable.map((provider) => (
+          <Hint key={provider.key} label={`${provider.label} — ${t(unavailableHintKey(provider))}`}>
+            <span className="rounded border border-dashed border-editorial-border px-1.5 py-0.5">{provider.label}</span>
+          </Hint>
+        ))}
       </p>
     </section>}
   </form>;

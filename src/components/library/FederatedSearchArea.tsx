@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Activity, ArrowDown, ArrowUpDown, Globe, History, Info, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUpDown, Globe, History, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
@@ -14,7 +14,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { dashboardLocation } from '../../navigation/appLocation';
 import type { IIIFProvider } from '../../types';
 import { formatDateTime } from '../../utils';
-import { Dialog, EmptyState, IconButton, InspectorShell, PopoverItem, Select, Spinner, Tooltip } from '../ui';
+import { Dialog, EmptyState, Hint, IconButton, InspectorShell, PopoverItem, Select, Spinner, Tooltip } from '../ui';
 import { SEARCH_ERRORS, SourceListRow } from '../dashboard/SourceDiscoveryPanel';
 import { SearchCriteriaPanel } from './SearchCriteriaPanel';
 import { SearchExecutionPanel } from './SearchExecutionPanel';
@@ -198,7 +198,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           setHistorical({searchId:selected.id,executionId,pages:previousPages}); setByTitle(false);
         })} /> : <p className="p-4 text-sm text-editorial-muted">{t('federation.empty')}</p>)}
         {tab === 'history' && <div className="divide-y divide-editorial-border p-3">
-          <IconButton title={t('federation.historyHint')} size="xs"><Info size={14} /></IconButton>
+          <Hint label={t('federation.historyHint')} size="xs" />
           {runs.map((run) => <div key={run.id} className="flex flex-col py-2">
             <PopoverItem label={`${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}`} onSelect={() => navigate(dashboardLocation({ view: 'search', searchId: run.id }))} />
             <span className="px-3 text-xs text-editorial-muted">{formatDateTime(run.createdAt)} · {t('federation.selectedCount', { count: run.providers.length })}</span>

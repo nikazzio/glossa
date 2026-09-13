@@ -137,7 +137,8 @@
       "error": "Non riuscito",
       "cancelled": "Annullato"
     },
-    "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace."
+    "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace.",
+    "title": "Panoramica"
   },
   "app": {
     "title": "Glossa // Pipeline",

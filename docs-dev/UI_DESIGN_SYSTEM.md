@@ -78,6 +78,22 @@ Usare per ogni comando icon-only. Include tooltip, focus e varianti canoniche.
 - In righe flex può richiedere `className="shrink-0"`.
 - Nessun `<button>` raw per comandi visivi dell'app.
 
+### Hint
+
+La spiegazione di un campo, di un comando o di un'etichetta di stato. È un
+comando vero: al passaggio del mouse e al fuoco da tastiera mostra il testo, e
+premendolo lo tiene aperto finché non si preme di nuovo.
+
+- Senza `children` mostra la «i» consueta; con `children` è l'elemento passato
+  a portare la spiegazione (un nome che va spiegato, un'etichetta di stato).
+- Sostituisce ovunque i **pulsanti finti**: un `IconButton` senza azione, che
+  serviva solo a trasportare un `title`. Chi naviga da tastiera ci arrivava,
+  sentiva annunciare un pulsante, premeva Invio e non succedeva niente.
+- `SettingRow` e `StatRow` lo usano al posto dei loro pulsanti scritti a mano.
+- Regola: **nessun comando senza azione**. Se un elemento esiste solo per
+  mostrare un testo, o è `Hint`, oppure non è un comando e allora non deve
+  essere raggiungibile come tale.
+
 ### Tooltip
 
 `IconButton` integra già il tooltip. Per testo troncato, badge o elementi
