@@ -15,6 +15,8 @@ fn database() -> Connection {
         "../../migrations/0004_search_page_execution.sql"
     ))
     .unwrap();
+    conn.execute_batch(include_str!("../../migrations/0005_search_page_repair.sql"))
+        .unwrap();
     conn.execute_batch("PRAGMA foreign_keys=ON").unwrap();
     conn
 }

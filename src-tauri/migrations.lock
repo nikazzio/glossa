@@ -1,0 +1,15 @@
+# Impronta delle migrazioni già distribuite.
+#
+# Una migrazione applicata non si modifica mai: chi la cambia rompe ogni
+# database che l'ha già eseguita, che al riavvio si rifiuta di aprirsi.
+# Per correggere una migrazione se ne aggiunge una nuova.
+#
+# La prova `migrations_are_frozen` confronta questo file con i file veri.
+# Aggiungendo una migrazione si aggiunge qui la sua riga; per tutto il
+# resto, se la prova fallisce il rimedio non è aggiornare questo file.
+
+0001_baseline_2_0.sql 59e73d936eeff7f4
+0002_federated_search.sql 37485641014a2a86
+0003_search_page_counters.sql 65637312119cddf5
+0004_search_page_execution.sql 8d100ea935837963
+0005_search_page_repair.sql e3392257476663ad
