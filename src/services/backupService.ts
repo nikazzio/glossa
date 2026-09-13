@@ -26,8 +26,10 @@ import {
  * ripristino rifiuta i backup che dichiarano più di questo numero, ed è l'unico
  * modo che una versione vecchia ha di non aprire un file che non capisce.
  * Versione 4: include ricerche persistite, esecuzioni e pagine dei risultati.
+ * Versione 5: include annotazioni, provider personalizzati, storico delle
+ * operazioni ed elenco degli artefatti prodotti (i file restano fuori).
  */
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export type BackupOptions =
   | { privacy: 'glossaOnly' }
@@ -100,6 +102,10 @@ const DEFERRED_REFS: Partial<
   Record<BackupTable, ReadonlyArray<{ column: string; target: string }>>
 > = {
   search_runs: [{ column: 'derived_from_id', target: 'search_runs' }],
+  // Il registro cita il frammento e l'artefatto cita il lavoro che l'ha
+  // prodotto: righe che possono non esserci più, o non essere nel backup.
+  operation_logs: [{ column: 'chunk_id', target: 'translations' }],
+  artifacts: [{ column: 'job_id', target: 'jobs' }],
   translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
   transcription_segments: [
     { column: 'approved_revision_id', target: 'transcription_revisions' },
@@ -108,6 +114,7 @@ const DEFERRED_REFS: Partial<
 };
 
 const DELETE_ORDER = [
+  'artifacts',
   'search_pages',
   'search_executions',
   'search_runs',
@@ -116,6 +123,7 @@ const DELETE_ORDER = [
   'phrase_memory',
   'derived_metrics',
   'provenance_events',
+  'operation_logs',
   'translation_revisions',
   'translations',
   'translation_origins',
@@ -136,10 +144,12 @@ const DELETE_ORDER = [
   'sources',
   'glossary_entries',
   'project_glossaries',
+  'annotations',
   'pipelines',
   'projects',
   'glossaries',
   'prompt_templates',
+  'custom_providers',
   'app_settings',
   'workspaces',
 ] as const;

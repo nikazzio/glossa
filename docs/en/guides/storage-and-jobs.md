@@ -298,10 +298,16 @@ pausing is not enough.
 
 ## The backup
 
-**Settings → Backup** saves a file with everything that
-cannot be downloaded again: the works' records, notes, transcriptions,
-translations with their history, glossaries, phrase memory and the record of the
-work done.
+**Settings → Backup** saves a file with everything that cannot be downloaded
+again: work records, annotations, transcriptions, translations with their
+history, glossaries and phrase memory, the searches with the results they
+produced, the operations log, the services you configured by hand, and the list
+of exports produced.
+
+**The files themselves and the keys stay out.** Images and exported documents
+are not in the file — the list of exports is, so after a restore you still know
+what you had produced even though the files are gone — and service keys never
+leave the system keychain: they must be entered again after a restore.
 
 **It covers the whole of Glossa, not a single workspace.** The file holds every
 workspace you have, and restoring replaces them all.

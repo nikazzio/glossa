@@ -308,8 +308,15 @@ concludersi o essere annullato; metterlo in pausa non basta.
 ## Il backup
 
 **Impostazioni → Backup** salva un file con tutto
-quello che non si riscarica: schede delle opere, note, trascrizioni, traduzioni
-con il loro storico, glossari, memoria di frasi e il registro del lavoro svolto.
+quello che non si riscarica: schede delle opere, annotazioni, trascrizioni,
+traduzioni con il loro storico, glossari e memoria di frasi, le ricerche con i
+risultati che hanno prodotto, lo storico delle operazioni, i servizi che hai
+configurato a mano e l'elenco degli export prodotti.
+
+**Restano fuori i file veri e le chiavi.** Immagini e documenti esportati non
+entrano nel file — l'elenco degli export sì, quindi dopo un ripristino sai cosa
+avevi prodotto anche se i file non ci sono — e le chiavi dei servizi non escono
+mai dal portachiavi del sistema: dopo il ripristino vanno reinserite.
 
 **Riguarda tutto Glossa, non un workspace solo.** Il file contiene ogni
 workspace che hai, e il ripristino li sostituisce tutti.

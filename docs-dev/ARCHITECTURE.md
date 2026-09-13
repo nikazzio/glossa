@@ -87,6 +87,12 @@ in `uiStore.dashboardSections`, persistito. Il filtro workspace della Dashboard 
 stato locale del componente e restringe solo patrimonio, ripresa e attenzione;
 lavori e ricerche restano globali.
 
+Backup dati versione 5: oltre alle ricerche, include annotazioni, provider
+personalizzati, storico delle operazioni ed elenco degli artefatti. Le colonne
+che citano righe assenti (frammento di un registro, lavoro di un artefatto) si
+riscrivono a fine ripristino solo quando la riga esiste. Restano fuori i file
+del deposito e le chiavi, che vivono nel portachiavi del sistema.
+
 Backup dati versione 4: snapshot atomico delle quattro tabelle correlate,
 inclusi soltanto i job di ricerca. Il ripristino richiede ricerche ferme e mette
 in pausa quelle non terminali; azzera dipendenze e riferimenti locali dei job.
