@@ -88,7 +88,8 @@ export function AppDashboard() {
               detail={project.workspace_name} label={t('overview.openProject')}
               onOpen={() => void openProject(project.id, project.workspace_id)} />)}
           </> : null)}
-          {sources.data?.length === 0 && projects.data?.length === 0 &&
+          {(sources.data?.length ?? 0) === 0 && (projects.data?.length ?? 0) === 0 &&
+            !sources.loading && !projects.loading && !sources.error && !projects.error &&
             <EmptyState icon={<BookOpenText size={18} />} message={t('dashboard.resumeEmpty')} className={EMPTY_CLASSNAME} />}
         </DashboardSection>
 

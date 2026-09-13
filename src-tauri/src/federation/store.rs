@@ -143,7 +143,7 @@ fn page_counters(
     let mut stmt = conn
         .prepare(&format!(
             "SELECT p.result_set_id,p.page,p.received,p.has_more,e.generation \
-             FROM search_pages p JOIN search_executions e ON e.id=p.execution_id \
+             FROM search_pages p LEFT JOIN search_executions e ON e.id=p.execution_id \
              WHERE p.result_set_id IN ({marks})"
         ))
         .map_err(|e| e.to_string())?;
@@ -156,7 +156,7 @@ fn page_counters(
                 r.get::<_, u32>(1)?,
                 r.get::<_, i64>(2)? as usize,
                 r.get::<_, bool>(3)?,
-                r.get::<_, u32>(4)?,
+                r.get::<_, Option<u32>>(4)?.unwrap_or(0),
             ))
         })
         .map_err(|e| e.to_string())?;
@@ -265,7 +265,11 @@ pub fn save_page(
     page: &SearchPage,
 ) -> Result<(), String> {
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
-    tx.execute("INSERT OR IGNORE INTO search_pages(result_set_id,page,payload,received,has_more,execution_id) VALUES(?1,?2,?3,?4,?5,?6)",
+    // Riparare invece di ignorare: una pagina rimasta senza esecuzione non
+    // sarebbe più né contata né mostrata, e nessun tentativo la riscriverebbe.
+    tx.execute("INSERT INTO search_pages(result_set_id,page,payload,received,has_more,execution_id) VALUES(?1,?2,?3,?4,?5,?6) \
+         ON CONFLICT(result_set_id,page) DO UPDATE SET execution_id=excluded.execution_id \
+         WHERE search_pages.execution_id IS NULL",
         params![config.result_set_id,config.page,serde_json::to_string(page).map_err(|e|e.to_string())?,
             page.results.len() as i64,page.has_more,job_id]).map_err(|e|e.to_string())?;
     crate::jobs::store::save_checkpoint(&tx, job_id, "page_committed")?;
@@ -280,8 +284,8 @@ fn pages_for_set(conn: &Connection, set: &str, generation: u32) -> Result<Vec<St
     let mut stmt = conn
         .prepare(
             "SELECT p.page,json_extract(p.payload,'$.results'),p.received_at,e.id \
-             FROM search_pages p JOIN search_executions e ON e.id=p.execution_id \
-             WHERE p.result_set_id=?1 AND e.generation<=?2 ORDER BY p.page",
+             FROM search_pages p LEFT JOIN search_executions e ON e.id=p.execution_id \
+             WHERE p.result_set_id=?1 AND COALESCE(e.generation,0)<=?2 ORDER BY p.page",
         )
         .map_err(|e| e.to_string())?;
     let pages = stmt
@@ -290,7 +294,7 @@ fn pages_for_set(conn: &Connection, set: &str, generation: u32) -> Result<Vec<St
                 r.get::<_, u32>(0)?,
                 r.get::<_, Option<String>>(1)?,
                 r.get::<_, String>(2)?,
-                r.get::<_, String>(3)?,
+                r.get::<_, Option<String>>(3)?.unwrap_or_default(),
             ))
         })
         .map_err(|e| e.to_string())?

@@ -92,7 +92,10 @@
     "copies": "{{count}} copies",
     "copies_one": "{{count}} copy",
     "failedSources_one": "{{count}} source did not answer",
-    "failedSources_other": "{{count}} sources did not answer"
+    "failedSources_other": "{{count}} sources did not answer",
+    "staleExecution": "A newer run replaced this one: check the source's updated state.",
+    "occurrence": "Copy to use",
+    "bestOccurrence": "Best copy"
   },
   "overview": {
     "transcriptions": "Transcriptions",

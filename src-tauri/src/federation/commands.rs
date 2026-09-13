@@ -150,7 +150,9 @@ pub async fn list_searches(
     offset: Option<u32>,
     limit: Option<u32>,
 ) -> Result<Vec<SearchRun>, String> {
-    let limit = limit.unwrap_or(HISTORY_PAGE).clamp(1, HISTORY_PAGE);
+    // Una in più della pagina è ammessa: è così che la schermata scopre se
+    // esiste un seguito senza chiedere una pagina intera in più.
+    let limit = limit.unwrap_or(HISTORY_PAGE).clamp(1, HISTORY_PAGE + 1);
     jobs.0
         .with_read(|conn| store::list(conn, offset.unwrap_or(0), limit))
         .await
@@ -223,8 +225,10 @@ pub async fn relaunch_provider_search(
                 .iter()
                 .find(|e| e.provider_key == old.provider_key)
                 .ok_or("federation.missingJob")?;
+            // Un rilancio su un'esecuzione superata non è un successo silenzioso:
+            // chi ha cliccato deve sapere che intanto è cambiata.
             if latest.job.id != execution_id {
-                return Ok(((), Vec::new()));
+                return Err("federation.staleExecution".into());
             }
             if !old.job.status.is_terminal() {
                 return Err("federation.stopFirst".into());

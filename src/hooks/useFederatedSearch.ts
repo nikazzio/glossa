@@ -57,13 +57,15 @@ export function useFederatedSearch(id?: string, limit: number = HISTORY_PAGE) {
             tailPages = historyPages - 1;
             lastPageSize = fetched.at(-1)?.length ?? 0;
           }
+          // Una in più di quelle che servono: così «carica altre» compare solo
+          // quando davvero ce n'è un'altra, invece che a pagina piena.
           const [head,snapshot] = await Promise.all([
-            listSearches(0, headSize),
+            listSearches(0, headSize + 1),
             id ? getSearch(id,resultsVersion) : null,
           ]);
           if (disposed || epoch !== generation.current) break;
-          setRuns(mergeRuns(head,tail));
-          setHasMore((tailPages > 0 ? lastPageSize : head.length) === (tailPages > 0 ? HISTORY_PAGE : headSize));
+          setRuns(mergeRuns(head.slice(0,headSize),tail));
+          setHasMore(tailPages > 0 ? lastPageSize === HISTORY_PAGE : head.length > headSize);
           setSelected(snapshot?.run ?? null);
           if (snapshot?.pages) setPages(snapshot.pages);
           resultsVersion=snapshot?.resultsVersion;

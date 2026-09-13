@@ -64,6 +64,7 @@ export const SEARCH_ERRORS: Record<string, string> = {
   manifest_unreachable: 'dashboard.discovery.errorManifestUnreachable',
   manifest_unreadable: 'dashboard.discovery.errorManifestUnreadable',
   manifest_invalid: 'dashboard.discovery.errorManifestInvalid',
+  'federation.staleExecution': 'federation.staleExecution',
 };
 
 /** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del

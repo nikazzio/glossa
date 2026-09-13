@@ -37,12 +37,15 @@ export function useOpenableProbe(providerKey: string, manifestUrl: string,
       created.promise = (async () => {
         const release = await takeTurn();
         try {
-          if (created.users === 0) return null;
+          // Chi si è iscritto mentre aspettavamo il turno vuole comunque la
+          // risposta: si rinuncia solo se davvero non guarda più nessuno.
+          if (created.users === 0) { pending.delete(key); return null; }
           const outcome = await probeManifest(providerKey,manifestUrl);
           known.set(key,outcome);
           return outcome;
         } catch {
-          known.set(key,null);
+          // Un guasto di rete riguarda adesso, non l'opera: se lo ricordassimo
+          // la riga non verrebbe più controllata per tutta la sessione.
           logger.debug('discovery.probe.failed',{providerKey,code:'probe_failed'});
           return null;
         } finally {

@@ -101,6 +101,13 @@ export function matchesCriteria(card: IIIFDiscoveryResult, criteria: SearchCrite
   return unknown ? 'unknown' : 'match';
 }
 
+/** Identità di una copia dentro un gruppo: biblioteca che ha risposto più
+ *  identificativo del record. Sopravvive al raggruppamento, che si rifà a ogni
+ *  pagina che arriva. */
+export function occurrenceKey(entry: { providerKey: string; card: IIIFDiscoveryResult }): string {
+  return `${entry.providerKey}\u0000${entry.card.id}`;
+}
+
 export interface SearchResultGroup {
   id: string; card: IIIFDiscoveryResult; providerKey: string;
   origins: string[]; match: Match;
