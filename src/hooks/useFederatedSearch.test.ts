@@ -21,7 +21,7 @@ it('does not let an old response replace a newly selected search', async () => {
   let resolveOld: (value: unknown) => void = () => {};
   mocks.snapshot.mockImplementation((id) => id === 'old' ? new Promise((resolve) => {resolveOld=resolve;}) : Promise.resolve({run:{id:'new'},pages:[]}));
   const {result,rerender}=renderHook(({id}) => useFederatedSearch(id),{initialProps:{id:'old'}});
-  await waitFor(() => expect(mocks.snapshot).toHaveBeenCalledWith('old'));
+  await waitFor(() => expect(mocks.snapshot).toHaveBeenCalledWith('old', undefined));
   rerender({id:'new'});
   await waitFor(() => expect(result.current.selected?.id).toBe('new'));
   await act(async () => resolveOld({run:{id:'old'},pages:[]}));

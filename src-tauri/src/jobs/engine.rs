@@ -326,6 +326,10 @@ pub struct JobEngine {
     /// secondo, e riaprire il database ogni volta significa due aperture al
     /// secondo per tutta la durata della sessione.
     database: tokio::sync::Mutex<Option<Connection>>,
+    /// Connessione di sola lettura riusata dai comandi che interrogano: le
+    /// schermate rileggono a ogni evento dei lavori, e aprire il database ogni
+    /// volta ripeterebbe le PRAGMA di apertura decine di volte al minuto.
+    reads: tokio::sync::Mutex<Option<Connection>>,
 }
 
 impl JobEngine {
@@ -346,6 +350,7 @@ impl JobEngine {
             backoff: BackoffProfile::default(),
             wake: Notify::new(),
             database: tokio::sync::Mutex::new(None),
+            reads: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -394,6 +399,22 @@ impl JobEngine {
         open(&self.db_path)
     }
 
+    /// Legge riusando una sola connessione. Le letture restano in fila fra
+    /// loro; le scritture passano dalla coda del motore e non le aspettano.
+    pub async fn with_read<T>(
+        &self,
+        work: impl FnOnce(&Connection) -> Result<T, String>,
+    ) -> Result<T, String> {
+        let mut slot = self.reads.lock().await;
+        if slot.is_none() {
+            *slot = Some(open(&self.db_path)?);
+        }
+        let conn = slot
+            .as_ref()
+            .ok_or_else(|| "connessione al database non disponibile".to_string())?;
+        work(conn)
+    }
+
     /// Domain records and queued jobs become visible together. Publish only
     /// after commit, while the write coordinator still excludes the scheduler.
     pub async fn submit_transaction<T>(
@@ -411,7 +432,9 @@ impl JobEngine {
             store::create(&tx, job)?;
         }
         tx.commit().map_err(|e| e.to_string())?;
-        for job in jobs { self.observer.notify(conn, &job.id); }
+        for job in jobs {
+            self.observer.notify(conn, &job.id);
+        }
         self.wake.notify_one();
         Ok(value)
     }
@@ -607,9 +630,9 @@ impl JobEngine {
                     }
                     Some(handler) => match handler.recovery() {
                         Recovery::Resumable => {
-                            let downloadable =
-                                handler.resource_class() == ResourceClass::Network && auto_resume
-                                    && job.job_type != crate::federation::JOB_TYPE;
+                            let downloadable = handler.resource_class() == ResourceClass::Network
+                                && auto_resume
+                                && job.job_type != crate::federation::JOB_TYPE;
                             if downloadable {
                                 requeued += 1;
                                 store::requeue(conn, &job.id, false)?;

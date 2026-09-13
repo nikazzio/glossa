@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '../ui';
 import { useUiStore } from '../../stores/uiStore';
-import { libraryLocation } from '../../navigation/appLocation';
+import { dashboardLocation } from '../../navigation/appLocation';
 import {
   formatEta,
   isTerminal,
@@ -126,7 +126,7 @@ function JobRow({ job }: { job: Job }) {
           <JobStateLabel job={job} eta={eta} />
         </span>
         <div className="flex shrink-0 items-center gap-1">
-          {searchId && <IconButton title={t('federation.open')} onClick={() => navigate(libraryLocation({view:'search',searchId}))}><ChevronRight size={14} /></IconButton>}
+          {searchId && <IconButton title={t('federation.open')} onClick={() => navigate(dashboardLocation({view:'search',searchId}))}><ChevronRight size={14} /></IconButton>}
           {job.status === 'running' && (
             <IconButton title={t('jobs.pause')} onClick={() => void pause(job.id)}>
               <Pause size={11} />

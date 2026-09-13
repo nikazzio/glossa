@@ -5,8 +5,8 @@ mod store;
 #[cfg(test)]
 mod tests;
 
-use serde::{Deserialize, Serialize};
 pub use handler::SearchJob;
+use serde::{Deserialize, Serialize};
 pub const JOB_TYPE: &str = "provider_search";
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -34,12 +34,26 @@ impl Criteria {
         if !matches!(self.material.as_str(), "" | "manuscript" | "printed") {
             return Err("federation.invalidRequest".into());
         }
-        for field in [&self.query, &self.title, &self.author, &self.publisher,
-            &self.institution, &self.language, &self.material] {
-            if field.len() > 1000 { return Err("federation.criteriaTooLong".into()); }
+        for field in [
+            &self.query,
+            &self.title,
+            &self.author,
+            &self.publisher,
+            &self.institution,
+            &self.language,
+            &self.material,
+        ] {
+            if field.len() > 1000 {
+                return Err("federation.criteriaTooLong".into());
+            }
         }
-        if self.year_from.into_iter().chain(self.year_to).any(|year| year == 0 || year > 9999)
-            || matches!((self.year_from,self.year_to), (Some(a),Some(b)) if a>b) {
+        if self
+            .year_from
+            .into_iter()
+            .chain(self.year_to)
+            .any(|year| year == 0 || year > 9999)
+            || matches!((self.year_from,self.year_to), (Some(a),Some(b)) if a>b)
+        {
             return Err("federation.invalidYears".into());
         }
         Ok(())
@@ -89,7 +103,10 @@ pub struct ResultPage {
     pub execution_id: String,
     pub received_at: String,
     pub page: u32,
-    pub results: Vec<crate::iiif::discovery::DiscoveryResult>,
+    /// I risultati passano com'erano stati salvati: rileggerli come strutture
+    /// per riscriverli identici costerebbe due conversioni per ogni pagina, a
+    /// ogni aggiornamento della schermata.
+    pub results: Box<serde_json::value::RawValue>,
 }
 
 pub fn new_id() -> String {
@@ -99,7 +116,14 @@ pub fn new_id() -> String {
 }
 
 /// Stable structured envelope; never include criteria, URLs, credentials or raw responses.
-pub fn log_event(event: &str, search_id: &str, execution_id: &str, provider: &str, page: u32, details: serde_json::Value) {
+pub fn log_event(
+    event: &str,
+    search_id: &str,
+    execution_id: &str,
+    provider: &str,
+    page: u32,
+    details: serde_json::Value,
+) {
     log::info!(target: "federation", "{}", serde_json::json!({
         "event": event, "domain": "federation", "searchId": search_id,
         "executionId": execution_id, "provider": provider, "page": page, "details": details

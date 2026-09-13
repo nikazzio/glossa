@@ -12,7 +12,7 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { libraryLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
+import { dashboardLocation, libraryLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
 import { formatDateTime } from '../../utils';
 import { DashboardSection } from './DashboardSection';
 import { JobsOverviewChart } from './JobsOverviewChart';
@@ -26,7 +26,8 @@ export function AppDashboard() {
   const { t } = useTranslation();
   const navigate = useUiStore((s) => s.navigate);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const jobs = useJobsStore((s) => s.jobs);
+  const allJobs = useJobsStore((s) => s.jobs);
+  const jobs = allJobs.filter((job) => job.jobType !== 'provider_search');
   const [scope, setScope] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const counts = useDashboardResource(dashboardCounts, scope, revision);
@@ -34,7 +35,9 @@ export function AppDashboard() {
   const projects = useDashboardResource(recentProjects, scope, revision);
   const attention = useDashboardResource(attentionProjects, scope, revision);
   const facts = useDashboardResource(recentFacts, scope, revision);
-  const searches = useFederatedSearch();
+  // Il riquadro ne mostra cinque: chiederne cinquanta a ogni evento dei lavori
+  // sarebbe dieci volte il lavoro per lo stesso schermo.
+  const searches = useFederatedSearch(undefined, RECENT_SEARCHES);
   const openJobs = () => { const ui = useUiStore.getState(); ui.setDrawerTab('jobs'); ui.setShowConsoleDrawer(true); };
   const openProject = async (id: string, workspaceId: string) => {
     try { await useProjectStore.getState().openProjectInWorkspace(id, workspaceId); }
@@ -53,13 +56,12 @@ export function AppDashboard() {
     { key: 'workspaces' as const, label: t('overview.workspaces'), open: scope ? () => navigate(workspaceLocation(scope)) : null },
   ];
   return <main className="h-full min-h-0 flex-1 overflow-y-auto bg-editorial-bg px-5 py-5 custom-scrollbar md:px-6">
-    <header className="flex flex-wrap items-end justify-between gap-3">
-      <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">{t('dashboard.title')}</h1>
+    <header className="flex flex-wrap items-center justify-end gap-3">
       <div className="flex items-center gap-2">
         <Select value={scope ?? ''} onChange={(value) => setScope(value || null)} ariaLabel={t('overview.scope')}
           options={[{ value: '', label: t('overview.global') }, ...workspaces.map((w) => ({ value: w.id, label: w.name }))]} />
         <IconButton title={t('dashboard.refresh')} onClick={() => { setRevision((v) => v + 1); searches.refresh(); }}><RefreshCw size={16} /></IconButton>
-        <IconButton title={t('federation.launch')} onClick={() => navigate(libraryLocation({ view: 'search' }))}><Search size={18} /></IconButton>
+        <IconButton title={t('federation.launch')} onClick={() => navigate(dashboardLocation({ view: 'search' }))}><Search size={18} /></IconButton>
       </div>
     </header>
 
@@ -99,9 +101,9 @@ export function AppDashboard() {
                 ? <>
                   {searches.runs.slice(0, RECENT_SEARCHES).map((run) => <DashboardRow key={run.id} title={run.criteria.query}
                     detail={`${t('jobs.status.' + searchStatus(run))} · ${formatDateTime(run.createdAt)}`}
-                    label={t('federation.open')} onOpen={() => navigate(libraryLocation({ view: 'search', searchId: run.id }))} />)}
+                    label={t('federation.open')} onOpen={() => navigate(dashboardLocation({ view: 'search', searchId: run.id }))} />)}
                   <div className="flex justify-end pt-1">
-                    <IconButton size="sm" title={t('federation.viewAll')} onClick={() => navigate(libraryLocation({ view: 'search' }))}><ArrowRight size={16} /></IconButton>
+                    <IconButton size="sm" title={t('federation.viewAll')} onClick={() => navigate(dashboardLocation({ view: 'search' }))}><ArrowRight size={16} /></IconButton>
                   </div>
                 </>
                 : <EmptyState icon={<Search size={18} />} message={t('federation.empty')} className={EMPTY_CLASSNAME} />}

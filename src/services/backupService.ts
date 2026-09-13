@@ -25,7 +25,7 @@ import {
  * Si alza quando cambia **cosa** c'è dentro, non quando cambia una colonna: un
  * ripristino rifiuta i backup che dichiarano più di questo numero, ed è l'unico
  * modo che una versione vecchia ha di non aprire un file che non capisce.
- * Alzata a 3 con le pagine logiche delle fonti.
+ * Versione 4: include ricerche persistite, esecuzioni e pagine dei risultati.
  */
 const SCHEMA_VERSION = 4;
 
@@ -331,12 +331,14 @@ export async function restoreBackup(
 }
 
 function validateBackup(json: unknown): BackupPayload {
+  // Private beta: unsupported formats are rejected explicitly, before any write.
+  if (json && typeof json === 'object' && 'schema_version' in json &&
+      typeof json.schema_version === 'number' && json.schema_version !== SCHEMA_VERSION) {
+    throw new Error('incompatible_schema_version');
+  }
   const parsed = backupPayloadSchema.safeParse(json);
   if (!parsed.success) {
     throw new Error('invalid_backup');
-  }
-  if (parsed.data.schema_version > SCHEMA_VERSION) {
-    throw new Error('incompatible_schema_version');
   }
   return parsed.data;
 }

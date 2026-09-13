@@ -184,7 +184,10 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         );
     }
 
-    engine.register(crate::federation::JOB_TYPE, Arc::new(crate::federation::SearchJob(app.clone())));
+    engine.register(
+        crate::federation::JOB_TYPE,
+        Arc::new(crate::federation::SearchJob(app.clone())),
+    );
     engine.load_limits()?;
     let engine = Arc::new(engine);
     app.manage(JobsState(Arc::clone(&engine)));

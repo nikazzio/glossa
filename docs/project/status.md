@@ -14,10 +14,13 @@ precedente: confronta la versione nell'app con le
 
 ## Cosa puoi fare oggi
 
-- Cercare in più fonti con lavori indipendenti e risultati progressivi; consultare
-  storico, errori e ripetere una sola fonte. Filtri bibliografici sui metadati ricevuti.
-- Usare la Dashboard compatta con sezioni richiudibili e riepilogo grafico dei lavori.
-
+- Cercare dalla Dashboard in più fonti insieme, con lavori indipendenti e risultati
+  progressivi; consultare storico, errori e ripetere una sola fonte. Filtri
+  bibliografici sui metadati ricevuti.
+- Usare la Dashboard a tre linguette: quadro d'insieme con riquadri richiudibili e
+  riepilogo grafico dei lavori, ricerca su più fonti, ricerca su una fonte sola.
+- Consultare in Biblioteca il solo catalogo delle opere conservate, con la colonna
+  dei filtri che si richiude da sola quando la finestra è troppo stretta.
 - Creare workspace e progetti, importare testi e tradurli per passaggi.
 - Provare un frammento prima dell'intero documento, correggere e revisionare.
 - Usare glossari, memoria di frasi, note e storico delle traduzioni.
@@ -34,7 +37,7 @@ precedente: confronta la versione nell'app con le
 | Fonte → traduzione | Passaggio dalla trascrizione approvata non ancora completo |
 | PDF in Biblioteca | Le copie possono comparire, ma download e lettura non sono disponibili |
 | Singole pagine | Conservazione della pagina aperta disponibile; gestione avanzata e selezione multipla da completare |
-| Ricerca | Capacità diverse per biblioteca; nessuna ricerca aggregata completa. I risultati senza riproduzione vengono segnati «non consultabile» invece di essere nascosti |
+| Ricerca | Capacità diverse per biblioteca: dodici cercano per parole, le altre si aprono solo per identificativo o indirizzo. I filtri bibliografici lavorano sui dati ricevuti, non su campi remoti equivalenti. I risultati senza riproduzione vengono segnati «non consultabile» invece di essere nascosti |
 | Trasferimento workspace | Il backup riguarda tutta l'app; import/export di un solo workspace da costruire |
 | Export Studio e Analisi | Percorsi avanzati ancora in sviluppo |
 

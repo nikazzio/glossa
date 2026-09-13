@@ -18,9 +18,13 @@ Three different levels, kept apart because they answer different questions.
 
 ## Search for a source
 
-Search lives in Library: Federated search queries selected sources; Single source / identifier retains the route for one library, a URL or a shelfmark. Dashboard summarises holdings and activity with collapsible sections, workspace scope and a jobs chart.
+Search lives in the Dashboard, not in the Library. The Dashboard has three tabs: the overview, search across several sources at once, and search on a single source or by identifier, which remains the route for one library, an address or a shelfmark.
 
-In Criteria the launch control stays at the top of the column, in view while you type and pick sources, next to how many sources are selected. Labels sit above their fields, so they read in full even in a narrow column. Sources that cannot be searched by words no longer take one row each: they are grouped at the bottom, with the reason on hover. In Criteria choose keywords, libraries and aggregators. Aggregators are never selected automatically; Europeana requires a key. Title, author, publisher, institution, language, material and years filter returned metadata, not equivalent remote fields. Uncertain dates and missing data remain unverifiable. Hover and keyboard hints explain these limits.
+The Library is the catalogue of the works you have already kept: it no longer has tabs of its own.
+
+In Criteria the launch control stays at the top of the column, in view while you type and pick sources, next to how many sources are selected. Labels sit above their fields, so they read in full even in a narrow column. Sources that cannot be searched by words no longer take one row each: they are grouped at the bottom, with the reason on hover.
+
+In the same criteria you choose keywords, libraries and aggregators. Aggregators are never selected for you; Europeana requires a key. Title, author, publisher, institution, language, material and years filter the metadata that came back, not equivalent remote fields. Uncertain dates and missing data stay unverifiable. Hover and keyboard hints explain these limits.
 
 Start creates an independent search. Each source processes one page and publishes its results when ready. Execution shows states, errors and per-source pause, resume, cancel, retry, restart and load-more controls. History retains criteria, results and executions across navigation and restarts; jobs do not run while the app is closed.
 
@@ -228,7 +232,7 @@ The page size is a cap, not an obligation: pages already smaller are taken as th
 ## Current limitations
 
 - **PDF** — a PDF digitisation appears among the copies, with its name and the link to the library, but it is not downloaded and not read inside Glossa. The download command is not offered for those copies, instead of letting it fail. Importing the text of a PDF into a translation project is a different thing, and it already works.
-- **Search** — keyword search works on Europeana, Wellcome Collection, Internet Archive, Vatican, Gallica, e-codices, Digital Bodleian, Biblioteca Estense, Institut de France, Cambridge, the Bayerische Staatsbibliothek and the Library of Congress; that last one depends on your network, because it answers a program only when it does not take it for a robot. Harvard, Heidelberg, e-rara and e-manuscripta open by identifier or address only, and say so in the field's example: their searches either cannot be queried by a program or refuse automated requests. There is still no single search across several sources, but Europeana covers many of them in one request.
+- **Search** — keyword search works on Europeana, Wellcome Collection, Internet Archive, Vatican, Gallica, e-codices, Digital Bodleian, Biblioteca Estense, Institut de France, Cambridge, the Bayerische Staatsbibliothek and the Library of Congress; that last one depends on your network, because it answers a program only when it does not take it for a robot. Harvard, Heidelberg, e-rara and e-manuscripta open by identifier or address only, and say so in the field's example: their searches either cannot be queried by a program or refuse automated requests. Searching several sources at once now starts from a single screen, with one independent job per source; the bibliographic filters still apply to the metadata that came back, not to equivalent remote fields.
 - **Single page** — saving the open page is possible; choosing the size for that page, replacing it, deleting it or selecting several from the thumbnails are still to be completed.
 - **Download restrictions** declared by institutions are not enforced automatically yet.
 

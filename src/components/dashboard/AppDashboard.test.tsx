@@ -25,7 +25,7 @@ describe('Dashboard overview', () => {
     expect(await screen.findByText('12')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button',{name:'federation.launch'}));
-    expect(useUiStore.getState().location).toMatchObject({area:'library',view:'search'});
+    expect(useUiStore.getState().location).toMatchObject({area:'dashboard',view:'search'});
   });
   it('opens a recent translation in its own workspace', async () => {
     mocks.projects.mockResolvedValue([{id:'p',name:'Dante',workspace_id:'w',workspace_name:'Workspace'}]);

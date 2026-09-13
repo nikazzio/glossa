@@ -169,9 +169,17 @@ function OpenableMark({ openable, checking }: { openable: boolean | null; checki
   if (checking) return <span className="ml-2 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
   if (openable !== false) return null;
   return (
-    <Tooltip label={t('dashboard.discovery.notOpenableHint')}><span tabIndex={0} className="ml-2 text-editorial-warning">
-      {t('dashboard.discovery.notOpenable')}
-    </span></Tooltip>
+    // Un pulsante e non un riquadro qualsiasi: la spiegazione si deve poter
+    // raggiungere da tastiera, come nelle righe di impostazione.
+    <Tooltip label={t('dashboard.discovery.notOpenableHint')}>
+      <button
+        type="button"
+        aria-label={`${t('dashboard.discovery.notOpenable')} — ${t('dashboard.discovery.notOpenableHint')}`}
+        className="ml-2 rounded text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      >
+        {t('dashboard.discovery.notOpenable')}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -189,7 +197,12 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // indirizzi veri: si aprono, non si leggono come le altre etichette.
   const pageUrl = !isManifest(card) ? card.pageUrl : null;
   const catalogUrl = !isManifest(card) ? card.catalogUrl : null;
-  const stats = sourceStats(card, t, { includeCatalogUrl: false });
+  // I dati della scheda servono solo a riga aperta: calcolarli sempre significa
+  // una quindicina di traduzioni per ogni riga dell'elenco, a ogni disegno.
+  const stats = useMemo(
+    () => (expanded ? sourceStats(card, t, { includeCatalogUrl: false }) : []),
+    [expanded, card, t],
+  );
   // Il numero di pagine sta già fra i dati della scheda aperta: nella riga
   // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
   // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
@@ -214,7 +227,6 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   return (
     <motion.article
       ref={rowRef}
-      layout
       transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
       className={
         expanded
@@ -491,7 +503,7 @@ export function SourceDiscoveryPanel() {
       {outcome?.cachedAt !== undefined && outcome.cachedAt !== null && (
         // Un risultato conservato non si distingue da uno appena arrivato, e
         // senza saperlo non si può decidere se vale la pena rifare la ricerca.
-        <p className="mt-3 flex items-center gap-2 text-[11px] text-editorial-muted">
+        <p className="mt-3 flex items-center gap-2 text-xs text-editorial-muted">
           <span>
             {t('dashboard.discovery.fromCache', {
               when: t(`common.relative.${cachedUnit.key}`, { count: cachedUnit.count ?? 0 }),

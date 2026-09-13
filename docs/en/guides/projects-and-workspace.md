@@ -31,7 +31,11 @@ Glossa separates application settings, workspace resources, and per-project pipe
 
 ## The dashboard
 
-The dashboard holds four boxes sharing one frame: what to resume (recently changed works and translations, in two separate groups), what needs attention, running jobs by state, and the most recent searches. Each box opens and closes from the control on the right of its header and stays as you left it after Glossa is closed. At the top, the workspace filter narrows holdings, resume and attention; jobs and searches stay global, because they do not belong to a single workspace. Explanations live in the hint beside each box title, not in fixed paragraphs. A box that cannot read its data says so in place: it shows no invented zero and does not blank the others.
+The dashboard has three tabs: the overview, search across several sources at once, and search on a single source or by identifier. Only the tab you are looking at is loaded, so a search left open does not keep reading while you work elsewhere.
+
+The overview holds five boxes sharing one frame: what to resume (recently changed works and translations, in two separate groups), what needs attention, running jobs by state, the most recent searches, and recent activity. Each box opens and closes from the control on the right of its header and stays as you left it after Glossa is closed.
+
+At the top, the workspace filter narrows holdings, resume and attention; jobs and searches stay global, because they do not belong to a single workspace. Explanations live in the hint beside each box title, not in fixed paragraphs. A box that cannot read its data says so in place: it shows no invented zero and does not blank the others.
 
 ## Compact navigation
 

@@ -31,7 +31,11 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 
 ## La Dashboard
 
-La Dashboard raccoglie quattro riquadri con la stessa cornice: che cosa riprendere (opere e traduzioni modificate di recente, in due gruppi distinti), che cosa richiede attenzione, i lavori in corso per stato e le ricerche più recenti. Ogni riquadro si apre e si chiude dal comando a destra della sua intestazione e resta come lo hai lasciato anche dopo aver chiuso Glossa. In alto, il filtro workspace restringe patrimonio, ripresa e attenzione; lavori e ricerche restano globali, perché non appartengono a un workspace solo. Le spiegazioni stanno nel suggerimento accanto al titolo di ogni riquadro, non in paragrafi fissi. Un riquadro che non riesce a leggere lo dice al suo posto: non mostra zero e non spegne gli altri.
+La Dashboard ha tre linguette: il quadro d'insieme, la ricerca su più fonti insieme e la ricerca su una fonte sola o per identificativo. Si carica soltanto la linguetta che stai guardando, così una ricerca lasciata aperta non continua a leggere mentre guardi altro.
+
+Il quadro d'insieme raccoglie cinque riquadri con la stessa cornice: che cosa riprendere (opere e traduzioni modificate di recente, in due gruppi distinti), che cosa richiede attenzione, i lavori in corso per stato, le ricerche più recenti e le attività recenti. Ogni riquadro si apre e si chiude dal comando a destra della sua intestazione e resta come lo hai lasciato anche dopo aver chiuso Glossa.
+
+In alto, il filtro workspace restringe patrimonio, ripresa e attenzione; lavori e ricerche restano globali, perché non appartengono a un workspace solo. Le spiegazioni stanno nel suggerimento accanto al titolo di ogni riquadro, non in paragrafi fissi. Un riquadro che non riesce a leggere lo dice al suo posto: non mostra zero e non spegne gli altri.
 
 ## Navigazione compatta
 

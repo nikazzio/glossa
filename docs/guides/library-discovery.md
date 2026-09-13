@@ -18,9 +18,13 @@ Tre livelli diversi, che la Biblioteca tiene distinti perché rispondono a doman
 
 ## Cercare una fonte
 
-La ricerca è in Biblioteca: Ricerca federata interroga le fonti selezionate, Ricerca singola / identificativo mantiene il percorso per una biblioteca, un indirizzo o una segnatura. La Dashboard riassume patrimonio e attività, con sezioni richiudibili, filtro workspace e grafico dei lavori.
+La ricerca sta nella Dashboard, non in Biblioteca. La Dashboard ha tre linguette: il quadro d'insieme, la ricerca su più fonti insieme e la ricerca su una fonte sola o per identificativo, che resta il percorso per una biblioteca, un indirizzo o una segnatura.
 
-In Criteri il comando di avvio resta in cima alla colonna, sempre in vista mentre scrivi e scegli le fonti; accanto trovi quante fonti hai selezionato. Le etichette stanno sopra ai campi, quindi si leggono per intero anche con la colonna stretta. Le fonti che non cercano per parole non occupano una riga ciascuna: stanno raccolte in fondo, e il motivo compare al passaggio del mouse. In Criteri scegli parole chiave, biblioteche e raccolte. Le raccolte non sono selezionate automaticamente; Europeana richiede la chiave. Titolo, autore, editore, istituzione, lingua, materiale e anni filtrano i metadati ricevuti: non sono campi remoti equivalenti. Date incerte e dati mancanti restano non verificabili. I suggerimenti spiegano questi limiti al passaggio e da tastiera.
+La Biblioteca è soltanto il catalogo delle opere che hai già conservato: non ha più linguette proprie.
+
+In Criteri il comando di avvio resta in cima alla colonna, sempre in vista mentre scrivi e scegli le fonti; accanto trovi quante fonti hai selezionato. Le etichette stanno sopra ai campi, quindi si leggono per intero anche con la colonna stretta. Le fonti che non cercano per parole non occupano una riga ciascuna: stanno raccolte in fondo, e il motivo compare al passaggio del mouse.
+
+Negli stessi criteri scegli parole chiave, biblioteche e raccolte. Le raccolte non sono selezionate automaticamente; Europeana richiede la chiave. Titolo, autore, editore, istituzione, lingua, materiale e anni filtrano i metadati ricevuti: non sono campi remoti equivalenti. Date incerte e dati mancanti restano non verificabili. I suggerimenti spiegano questi limiti al passaggio del mouse e da tastiera.
 
 Avvia crea una ricerca indipendente. Ogni fonte lavora su una pagina e pubblica i risultati appena pronti. Esecuzione mostra stati, errori e comandi per fonte: pausa, ripresa, annullamento, riprova, ripeti dalla prima pagina e carica altri. Lo storico conserva criteri, risultati ed esecuzioni anche cambiando schermata o riaprendo Glossa; i lavori non continuano con l’app chiusa.
 

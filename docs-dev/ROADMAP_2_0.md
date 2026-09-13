@@ -6,9 +6,11 @@ Aggiornata: 13 settembre 2026.
 
 Prima implementazione di #395/#396: ricerca persistente con un job per pagina e
 provider, risultati progressivi, filtri locali dichiarati, raccolte opt-in ed
-estensione collegata, monitor/storico/rilanci, backup dei risultati. Dashboard
-separata con patrimonio, attività, attenzione, sezioni richiudibili e grafico
-degli stati dei lavori. La ricerca singola resta disponibile in Biblioteca.
+estensione collegata, monitor/storico/rilanci, backup dei risultati. Le tre
+viste stanno nella Dashboard a linguette: quadro d'insieme (patrimonio, ripresa,
+attenzione, lavori, ricerche recenti, attività), ricerca federata e ricerca
+singola/identificativo. Monta solo la linguetta visibile. La Biblioteca è
+tornata area unica con il solo catalogo.
 
 Il piano dettagliato resta riferimento per il consolidamento, non promessa di
 funzioni già presenti. Restano: piano capacità per campo e filtri remoti nativi;
@@ -16,7 +18,9 @@ retry automatici configurabili; archiviazione/eliminazione delle ricerche;
 paginazione server dei risultati (lo storico delle ricerche è già paginato);
 consultazione affiancata delle occorrenze; statistiche temporali più complete;
 unificazione della ricerca singola per parole sul nuovo motore; riepiloghi per
-workspace e stato locale della Dashboard. Il pannello log generale resta #413.
+workspace. Il filtro workspace della Dashboard resta stato locale, non
+persistito, e non entra nella posizione di navigazione. Il pannello log generale
+resta #413.
 Nessuna ricerca OAI massiva, crawler o aggiramento di controlli anti-bot.
 
 ## Cosa significa completare Glossa

@@ -214,8 +214,8 @@ pub(crate) async fn read_manifest(
         .header(reqwest::header::ACCEPT, "application/json")
         .send()
         .await
-        .map_err(|error| {
-            log::warn!("discovery manifest request failed url={manifest_url} error={error}");
+        .map_err(|_error| {
+            log::warn!("discovery manifest request failed");
             (
                 crate::iiif::search::MANIFEST_UNREACHABLE.to_string(),
                 ManifestFailure::Unknown,
@@ -223,7 +223,10 @@ pub(crate) async fn read_manifest(
         })?
         .error_for_status()
         .map_err(|error| {
-            log::warn!("discovery manifest response failed url={manifest_url} error={error}");
+            log::warn!(
+                "discovery manifest response failed status={:?}",
+                error.status()
+            );
             // Solo un rifiuto definitivo dice che il libro non c'è. Un 429 o un
             // guasto del servizio riguardano oggi, non l'opera.
             let missing = matches!(
@@ -239,8 +242,8 @@ pub(crate) async fn read_manifest(
                 },
             )
         })?;
-    let value = response.json::<Value>().await.map_err(|error| {
-        log::warn!("discovery manifest parse failed url={manifest_url} error={error}");
+    let value = response.json::<Value>().await.map_err(|_error| {
+        log::warn!("discovery manifest parse failed");
         (
             crate::iiif::search::MANIFEST_INVALID.to_string(),
             // Una risposta illeggibile non è un libro assente: spesso è una

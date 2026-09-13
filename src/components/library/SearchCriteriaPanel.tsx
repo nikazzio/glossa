@@ -2,7 +2,7 @@ import { BookOpen, Globe, Info, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IIIFProvider } from '../../types';
 import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
-import { FIELD_CLASSNAME, FieldLabel, IconButton, SectionLabel, Select, Tooltip, ToggleRow } from '../ui';
+import { FIELD_CLASSNAME, FIELD_NUMBER_CLASSNAME, FieldLabel, IconButton, SectionLabel, Select, Tooltip, ToggleRow } from '../ui';
 
 const LOCAL_TEXT_FIELDS = ['title', 'author', 'publisher', 'institution', 'language'] as const;
 
@@ -27,7 +27,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
   const field = (key: 'query' | typeof LOCAL_TEXT_FIELDS[number]) => (
     <label key={key} className="block space-y-1.5">
       <FieldLabel block>{t(`federation.fields.${key}`)}</FieldLabel>
-      <input className={`${FIELD_CLASSNAME} text-xs`} value={criteria[key]} maxLength={1000}
+      <input className={FIELD_CLASSNAME} value={criteria[key]} maxLength={1000}
         aria-label={t(`federation.fields.${key}`)} required={key === 'query'}
         onChange={(event) => setCriteria({ ...criteria, [key]: event.target.value })} />
     </label>
@@ -39,7 +39,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       <span className="min-w-0 truncate text-xs text-editorial-muted">{t('federation.selectedCount', { count: selected.length })}</span>
       <div className="flex shrink-0 items-center gap-1">
         <IconButton title={t('federation.draftHint')} size="xs"><Info size={14} /></IconButton>
-        <IconButton type="submit" tone="accent" title={t('federation.launch')}
+        <IconButton type="submit" title={t('federation.launch')}
           disabled={busy || !criteria.query.trim() || !selected.length}><Search size={18} /></IconButton>
       </div>
     </div>
@@ -67,12 +67,12 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       <div className="grid grid-cols-2 gap-3">
         {(['yearFrom', 'yearTo'] as const).map((key) => <label key={key} className="block space-y-1.5">
           <FieldLabel block>{t(`federation.fields.${key}`)}</FieldLabel>
-          <input type="number" min={1} max={9999} step={1} className={`${FIELD_CLASSNAME} text-xs`}
+          <input type="number" min={1} max={9999} step={1} className={FIELD_NUMBER_CLASSNAME}
             aria-label={t(`federation.fields.${key}`)} value={criteria[key] ?? ''}
             onChange={(event) => setCriteria({ ...criteria, [key]: event.target.value === '' ? null : Number(event.target.value) })} />
         </label>)}
       </div>
-      <p className="text-xs text-editorial-muted">{t('federation.dateHint')}</p>
+      <IconButton title={t('federation.dateHint')} size="xs"><Info size={13} /></IconButton>
     </section>
 
     {(['library', 'aggregator'] as const).map((kind) => {
@@ -96,7 +96,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
       <SectionLabel icon={Info} label={t('federation.unavailableGroup', { count: unavailable.length })} />
       <p className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-editorial-muted">
         {unavailable.map((provider) => <Tooltip key={provider.key} label={t(unavailableHintKey(provider))}>
-          <span tabIndex={0} className="rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">{provider.label}</span>
+          <span className="rounded border border-dashed border-editorial-border px-1.5 py-0.5">{provider.label}</span>
         </Tooltip>)}
       </p>
     </section>}

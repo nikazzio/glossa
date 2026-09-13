@@ -1,7 +1,16 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const initDatabase = vi.hoisted(() => vi.fn(async () => {}));
+const roots = vi.hoisted(() => [] as Root[]);
+vi.mock('react-dom/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-dom/client')>();
+  return {...actual,createRoot: (...args: Parameters<typeof actual.createRoot>) => {
+    const root=actual.createRoot(...args); roots.push(root); return root;
+  }};
+});
+afterEach(() => { act(() => { for (const root of roots.splice(0)) root.unmount(); }); });
 
 vi.mock('./App.tsx', () => ({ default: () => <div>Glossa</div> }));
 vi.mock('./services/dbService.ts', () => ({ initDatabase }));

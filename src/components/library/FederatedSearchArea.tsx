@@ -11,7 +11,7 @@ import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
-import { libraryLocation } from '../../navigation/appLocation';
+import { dashboardLocation } from '../../navigation/appLocation';
 import type { IIIFProvider } from '../../types';
 import { formatDateTime } from '../../utils';
 import { Dialog, EmptyState, IconButton, InspectorShell, PopoverItem, Select, Spinner } from '../ui';
@@ -31,6 +31,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const [tab, setTab] = useState('criteria');
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [occurrenceChoice, setOccurrenceChoice] = useState<Record<string,number>>({});
   const [visibility, setVisibility] = useState('all');
   const [providerFilter, setProviderFilter] = useState('all');
   const [sorted, setSorted] = useState<SearchResultGroup[] | null>(null);
@@ -54,7 +55,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   }, [t]);
   useEffect(() => { setSorted(null); setExpanded(null); setProviderFilter('all'); setHistorical(null); }, [searchId]);
   useEffect(() => {
-    if (library.error) { toast.error(t('dashboard.discovery.addToLibraryFailed')); library.clearError(); }
+    if (library.error) { toast.error(t('dashboard.discovery.addToLibraryFailed')); useSourceLibraryStore.getState().clearError(); }
   }, [library.error, library.clearError, t]);
   useEffect(() => {
     let disposed = false;
@@ -88,28 +89,42 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     const run = await createSearch({ ...request, id: pending.current.id });
     logger.info('federation.search.created', { searchId: run.id, providers: chosen.length, extension, derivedFromId: request.derivedFromId });
     pending.current = null;
-    navigate(libraryLocation({ view: 'search', searchId: run.id }));
+    navigate(dashboardLocation({ view: 'search', searchId: run.id }));
     setTab('execution');
   });
   const resultPages = historical && historical.searchId === searchId ? historical.pages : pages;
+  const historyOptions = useMemo(() => [{ value: '', label: t('federation.new') },
+    ...runs.map((run) => ({ value: run.id, label: `${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}` }))], [runs, t]);
+  const providerLabels = useMemo(() => new Map(providers.map((provider) => [provider.key, provider.label])), [providers]);
+  const label = (key: string) => providerLabels.get(key) ?? key;
   const groups = useMemo(() => selected ? groupResults(resultPages.filter((page) => providerFilter === 'all' || page.providerKey === providerFilter), selected.criteria) : [], [resultPages, selected, providerFilter]);
   const visible = useMemo(() => (sorted ?? groups).filter((g) =>
     (visibility === 'all' ? g.match !== 'excluded' : g.match === visibility) &&
     (providerFilter === 'all' || g.origins.includes(providerFilter))), [groups, sorted, visibility, providerFilter]);
+  // Quattro conteggi su migliaia di risultati: si rifanno quando arrivano
+  // pagine nuove, non a ogni disegno della schermata.
+  const summary = useMemo(() => ({
+    received: resultPages.reduce((sum, page) => sum + page.results.length, 0),
+    unique: groups.length,
+    visible: visible.length,
+    complete: selected ? currentExecutions(selected).filter((e) => e.job.status === 'completed').length : 0,
+    total: selected?.providers.length ?? 0,
+    unknown: groups.filter((group) => group.match === 'unknown').length,
+  }), [resultPages, groups, visible, selected]);
   const virtualizer = useVirtualizer({ count: visible.length, getScrollElement: () => scroll.current,
-    estimateSize: () => 96, getItemKey: (index) => visible[index].id, overscan: 5 });
+    estimateSize: () => 72, getItemKey: (index) => visible[index].id, overscan: 5 });
   const tabs = [
     { id: 'criteria', label: t('federation.criteria'), icon: <SlidersHorizontal size={16} /> },
     { id: 'execution', label: t('federation.execution'), icon: <Activity size={16} /> },
     { id: 'history', label: t('federation.history'), icon: <History size={16} /> },
   ];
   const extensionPossible = selected && (draft.providers ?? []).some((key) => !selected.providers.includes(key) && providers.some((p) => p.key === key && p.kind === 'aggregator'));
-  return <div className="grid h-full min-h-0 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_24rem] lg:overflow-hidden">
+  return <div className="grid h-full min-h-0 w-full min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
     <section className="flex min-h-96 min-w-0 flex-col lg:min-h-0">
       <div className="flex flex-wrap items-center gap-2 border-b border-editorial-border p-3">
-        <Select value={searchId ?? ''} ariaLabel={t('federation.history')} onChange={(id) => navigate(libraryLocation({ view: 'search', searchId: id || undefined }))}
-          options={[{ value: '', label: t('federation.new') }, ...runs.map((run) => ({ value: run.id, label: `${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}` }))]} />
-        <IconButton title={t('federation.new')} onClick={() => { navigate(libraryLocation({ view: 'search' })); setTab('criteria'); }}><Search size={16} /></IconButton>
+        <Select value={searchId ?? ''} ariaLabel={t('federation.history')} onChange={(id) => navigate(dashboardLocation({ view: 'search', searchId: id || undefined }))}
+          options={historyOptions} />
+        <IconButton title={t('federation.new')} onClick={() => { navigate(dashboardLocation({ view: 'search' })); setTab('criteria'); }}><Search size={16} /></IconButton>
         <IconButton title={t('federation.extend')} disabled={!extensionPossible || busy} onClick={() => launch(true)}><Globe size={16} /></IconButton>
         <IconButton title={t('federation.refresh')} onClick={refresh} disabled={loading}><RefreshCw size={16} /></IconButton>
       </div>
@@ -120,16 +135,12 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         <div className="space-y-2 border-b border-editorial-border p-3">
           <h2 className="break-words font-display text-xl italic text-editorial-ink">{selected.criteria.query}</h2>
           {historical && <div className="flex items-center gap-2 text-xs text-editorial-warning"><span>{t('federation.historical')}</span><IconButton title={t('federation.currentResults')} onClick={() => {setHistorical(null);setSorted(null);}}><Activity size={16} /></IconButton></div>}
-          <p className="text-xs text-editorial-muted" role="status" aria-live="polite">{t('federation.summary', {
-            received: resultPages.reduce((sum, p) => sum + p.results.length, 0), unique: groups.length,
-            visible: visible.length, complete: currentExecutions(selected).filter((e) => e.job.status === 'completed').length,
-            total: selected.providers.length, unknown: groups.filter((g) => g.match === 'unknown').length,
-          })}</p>
+          <p className="text-xs text-editorial-muted" role="status" aria-live="polite">{t('federation.summary', summary)}</p>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={visibility} onChange={setVisibility} ariaLabel={t('federation.metadata')}
               options={['all', 'match', 'unknown', 'excluded'].map((value) => ({ value, label: t(`federation.visibility.${value}`) }))} />
             <Select value={providerFilter} onChange={(value) => {setProviderFilter(value);setSorted(null);}} ariaLabel={t('dashboard.discovery.source')}
-              options={[{ value: 'all', label: t('federation.allProviders') }, ...selected.providers.map((key) => ({ value: key, label: providers.find((p) => p.key === key)?.label ?? key }))]} />
+              options={[{ value: 'all', label: t('federation.allProviders') }, ...selected.providers.map((key) => ({ value: key, label: label(key) }))]} />
             <IconButton title={sorted ? t('federation.arrivalOrder') : t('federation.sortTitle')} onClick={() => setSorted(sorted ? null : [...groups].sort((a,b) => a.card.title.localeCompare(b.card.title)))}><ArrowUpDown size={16} /></IconButton>
             {sorted && <IconButton title={t('federation.integrate')} onClick={() => setSorted([...groups].sort((a,b) => a.card.title.localeCompare(b.card.title)))}><ArrowDown size={16} /></IconButton>}
           </div>
@@ -138,12 +149,19 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           {visible.length === 0 && <EmptyState icon={<Search size={20} />} message={t('federation.noVisible')} />}
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((item) => {
-              const group = visible[item.index];
+              const original = visible[item.index];
+              const occurrence = original.occurrences[occurrenceChoice[original.id] ?? -1];
+              const group = occurrence ? {...original,card:occurrence.card,providerKey:occurrence.providerKey} : original;
               return <div key={item.key} data-index={item.index} ref={virtualizer.measureElement}
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.start}px)` }}>
-                <p className="px-3 pt-2 text-xs text-editorial-muted">{group.origins.map((key) => providers.find((p) => p.key === key)?.label ?? key).join(' · ')} · {t(`federation.visibility.${group.match}`)}</p>
+                <p className="px-3 pt-2 text-xs text-editorial-muted">{group.origins.map((key) => label(key)).join(' · ')} · {t(`federation.visibility.${group.match}`)}</p>
+                {expanded === group.id && group.occurrences.length > 1 && <div className="px-3 py-1">
+                  <Select ariaLabel={t('federation.occurrence')} value={String(occurrenceChoice[group.id] ?? -1)}
+                    onChange={(value) => setOccurrenceChoice((current) => ({...current,[group.id]:Number(value)}))}
+                    options={[{value:'-1',label:t('federation.bestOccurrence')},...group.occurrences.map((entry,index) => ({value:String(index),label:label(entry.providerKey)}))]} />
+                </div>}
                 <SourceListRow card={group.card} providerKey={group.providerKey}
-                  providerLabel={providers.find((p) => p.key === group.providerKey)?.label ?? group.providerKey}
+                  providerLabel={label(group.providerKey)}
                   expanded={expanded === group.id} onToggle={() => setExpanded(expanded === group.id ? null : group.id)}
                   onAddToLibrary={() => void library.addFromDiscovery(group.card, undefined, group.providerKey)}
                   onAddToWorkspace={() => setPicker(group)} adding={library.addingUrls.has(group.card.manifestUrl)}
@@ -154,7 +172,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         </div>
       </>}
     </section>
-    <aside className="min-h-0 border-t border-editorial-border bg-surface-panel lg:border-l lg:border-t-0">
+    <aside className="flex min-h-0 min-w-0 flex-col border-t border-editorial-border bg-surface-panel lg:border-l lg:border-t-0">
       <InspectorShell ariaLabel={t('federation.title')} tabs={tabs} activeTab={tab} onTabChange={setTab}
         actions={<span className="font-display text-sm italic text-editorial-ink">{tabs.find((item) => item.id === tab)?.label}</span>}>
         {tab === 'criteria' && <SearchCriteriaPanel providers={providers} busy={busy} onSubmit={() => launch()} />}
@@ -165,7 +183,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         {tab === 'history' && <div className="divide-y divide-editorial-border p-3">
           <IconButton title={t('federation.historyHint')} size="xs"><Info size={14} /></IconButton>
           {runs.map((run) => <div key={run.id} className="flex flex-col py-2">
-            <PopoverItem label={`${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}`} onSelect={() => navigate(libraryLocation({ view: 'search', searchId: run.id }))} />
+            <PopoverItem label={`${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}`} onSelect={() => navigate(dashboardLocation({ view: 'search', searchId: run.id }))} />
             <span className="px-3 text-xs text-editorial-muted">{formatDateTime(run.createdAt)} · {t('federation.selectedCount', { count: run.providers.length })}</span>
           </div>)}
           {hasMore && <IconButton title={t('dashboard.discovery.loadMore')} disabled={loading} onClick={loadMore}><ArrowDown size={16} /></IconButton>}

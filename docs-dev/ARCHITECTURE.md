@@ -4,8 +4,12 @@ Ultimo aggiornamento: 2026-09-13.
 
 ## Ricerca federata e Dashboard
 
-La Biblioteca separa catalogo, ricerca federata e ricerca singola/identificativo.
-La posizione tipizzata include `view` e `searchId`; navigare non annulla lavori.
+Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, ricerca
+federata e ricerca singola/identificativo. Solo la linguetta visibile monta, così
+una ricerca nascosta non continua a leggere. Contratto di navigazione: la
+variante `dashboard` di `AppLocation` porta `view` e `searchId`; la variante
+`library` porta solo `itemId` e `workspaceFilter` e non ha più concetto di
+linguetta. Navigare non annulla lavori.
 La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
 Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
@@ -56,16 +60,20 @@ payload. Gli eventi ravvicinati del motore si raggruppano in una sola lettura
 la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed
 esito, senza criteri né indirizzi.
 
-La Biblioteca è un'area a linguette (catalogo, ricerca federata, ricerca
-singola) e il titolo in alto mostra la linguetta attiva. Le colonne
+La Biblioteca è tornata un'area unica con il solo catalogo
+(`LibraryCatalogArea`): nessuna linguetta. Le colonne
 ridimensionabili hanno larghezze minime in pixel: sotto la loro somma la
 colonna dei filtri si richiude da sola e si riapre quando lo spazio torna,
 mentre una chiusura decisa dall'utente resta. Ogni contenitore intermedio di
 un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
 barre di scorrimento orizzontali.
 
-La Dashboard è fatta di riquadri con la stessa cornice, due per colonna;
-apertura e chiusura di ciascuno vivono nello store UI persistito.
+Il quadro d'insieme della Dashboard è fatto di cinque riquadri con la stessa
+cornice (`DashboardSection`), distribuiti su due colonne: ripresa, ricerche
+recenti, attività, attenzione e lavori. Apertura e chiusura di ciascuno vivono
+in `uiStore.dashboardSections`, persistito. Il filtro workspace della Dashboard è
+stato locale del componente e restringe solo patrimonio, ripresa e attenzione;
+lavori e ricerche restano globali.
 
 Backup dati versione 4: snapshot atomico delle quattro tabelle correlate,
 inclusi soltanto i job di ricerca. Il ripristino richiede ricerche ferme e mette

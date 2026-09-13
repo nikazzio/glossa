@@ -23,10 +23,10 @@ import { useChunksStore } from './stores/chunksStore';
 import { usePipelineStore } from './stores/pipelineStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
-import { AppDashboard } from './components/dashboard/AppDashboard';
+import { DashboardArea } from './components/dashboard/DashboardArea';
 import { WorkspaceOverview } from './components/workspace/WorkspaceOverview';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
-import { LibraryArea } from './components/library/LibraryArea';
+import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
 import { TranscriptionsCatalogArea } from './components/workspace/TranscriptionsCatalogArea';
 import { AnalysisArea } from './components/workspace/AnalysisArea';
 import { importTextFile } from './services/fileService';
@@ -500,7 +500,7 @@ export default function App() {
                 {location.area === 'translations' ? (
                   <TranslationsArea />
                 ) : location.area === 'library' ? (
-                  <LibraryArea location={location} />
+                  <LibraryCatalogArea itemId={location.itemId} />
                 ) : location.area === 'transcriptions' ? (
                   <TranscriptionsCatalogArea />
                 ) : location.area === 'analysis' ? (
@@ -508,7 +508,7 @@ export default function App() {
                 ) : location.area === 'workspace' ? (
                   <WorkspaceOverview />
                 ) : (
-                  <AppDashboard />
+                  <DashboardArea location={location.area === 'dashboard' ? location : {area:'dashboard'}} />
                 )}
                 <PanelTransitionVeil
                   panelKey={

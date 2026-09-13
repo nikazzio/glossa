@@ -13,10 +13,13 @@ compare the version shown in the app with the
 
 ## Available today
 
-- Search multiple sources through independent jobs with progressive results;
-  inspect history and errors, and retry one source. Bibliographic filters use returned metadata.
-- Use a compact Dashboard with collapsible sections and a graphical jobs summary.
-
+- Search several sources at once from the Dashboard, through independent jobs with
+  progressive results; inspect history and errors, and retry one source.
+  Bibliographic filters use the metadata that came back.
+- Use a three-tab Dashboard: an overview with collapsible boxes and a graphical jobs
+  summary, search across several sources, and search on a single source.
+- Use the Library purely as the catalogue of the works you keep, with a filter column
+  that collapses itself when the window is too narrow.
 - Create workspaces and projects, import text and translate it in stages.
 - Test a passage before processing a document, then edit and review.
 - Use glossaries, phrase memory, annotations and translation history.
@@ -33,7 +36,7 @@ compare the version shown in the app with the
 | Source → translation | The approved-transcription bridge is not complete |
 | Library PDFs | Copies can be listed, but downloading and reading them is unavailable |
 | Individual pages | Saving the open page works; advanced actions and multiple selection are unfinished |
-| Search | Capabilities vary by library; full aggregated search is unavailable. Results with no reproduction are marked “not viewable” rather than hidden |
+| Search | Capabilities vary by library: twelve search by words, the others open by identifier or address only. Bibliographic filters work on the metadata that came back, not on equivalent remote fields. Results with no reproduction are marked “not viewable” rather than hidden |
 | Workspace transfer | Backup covers the whole app; single-workspace import/export is unfinished |
 | Export Studio and Analysis | Advanced workflows remain in development |
 

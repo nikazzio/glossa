@@ -9,7 +9,8 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 
 use super::{JobError, JobRecord, JobStatus};
 
-const COLUMNS: &str = "id, job_type, status, priority, progress, message, config, checkpoint, \
+pub(crate) const COLUMNS: &str =
+    "id, job_type, status, priority, progress, message, config, checkpoint, \
      attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, phase, \
      detail, depends_on_job_id, next_attempt_at, created_at, updated_at, workspace_id";
 
@@ -28,7 +29,7 @@ pub struct NewJob {
     pub message: Option<String>,
 }
 
-fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
+pub(crate) fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
     let status: String = row.get(2)?;
     Ok(JobRecord {
         id: row.get(0)?,

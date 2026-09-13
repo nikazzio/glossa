@@ -1,10 +1,11 @@
-import { ArrowDown, Eye, Info, Pause, Play, RefreshCw, RotateCcw, Square } from 'lucide-react';
+import { ArrowDown, BookOpen, ChevronDown, Eye, Info, Loader, Pause, Play, RefreshCw, RotateCcw, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { currentExecutions, type SearchRun, relaunchSearch } from '../../services/federatedSearchService';
 import { cancelJob, isTerminal, pauseJob, resumeJob } from '../../services/jobsService';
 import type { IIIFProvider } from '../../types';
+import { useState } from 'react';
 import { formatDateTime } from '../../utils';
-import { IconButton, SectionLabel, StatBlock } from '../ui';
+import { IconButton, SectionLabel, StatBlock, StatRow } from '../ui';
 import { SEARCH_ERRORS } from '../dashboard/SourceDiscoveryPanel';
 
 export function SearchExecutionPanel({ run, providers, busy, act, onViewExecution }: {
@@ -13,6 +14,7 @@ export function SearchExecutionPanel({ run, providers, busy, act, onViewExecutio
   onViewExecution: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState<string | null>(null);
   return <div className="space-y-5 p-4">
     <StatBlock label={t('federation.criteria')} value={run.criteria.query} />
     <div className="flex items-center gap-1">
@@ -31,10 +33,17 @@ export function SearchExecutionPanel({ run, providers, busy, act, onViewExecutio
       const job = execution.job;
       const terminal = isTerminal(job);
       return <section key={job.id} className="space-y-2 border-t border-editorial-border pt-3">
-        <h3 className="font-display text-lg italic text-editorial-ink">{providers.find((p) => p.key === execution.providerKey)?.label ?? execution.providerKey}</h3>
-        <p className="text-xs text-editorial-muted">{t(`jobs.status.${job.status}`)} · {t('federation.pageCount', { page: execution.page, count: execution.received })}</p>
-        <p className="text-xs text-editorial-muted">{t('federation.generation', { count: execution.generation })}</p>
-        {terminal && <p className="text-xs text-editorial-muted">{t(execution.hasMore ? 'federation.moreAvailable' : job.status === 'completed' ? 'federation.exhausted' : 'federation.partial')}</p>}
+        <SectionLabel icon={job.status === 'running' ? Loader : BookOpen}
+          label={providers.find((p) => p.key === execution.providerKey)?.label ?? execution.providerKey} />
+        {/* Colonna stretta: i dati stanno su righe proprie, non concatenati. */}
+        <dl className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+          <StatRow label={t('federation.stateLabel')} value={t(`jobs.status.${job.status}`)} />
+          <StatRow label={t('federation.pageLabel')} value={String(execution.page)} />
+          <StatRow label={t('federation.receivedLabel')} value={String(execution.received)} />
+          <StatRow label={t('federation.generationLabel')} value={String(execution.generation)} />
+          {terminal && <StatRow label={t('federation.coverageLabel')}
+            value={t(execution.hasMore ? 'federation.moreAvailable' : job.status === 'completed' ? 'federation.exhausted' : 'federation.partial')} />}
+        </dl>
         {job.error && <p className="break-words text-xs text-editorial-danger" role="alert">{t(SEARCH_ERRORS[job.error] ?? job.error)}</p>}
         {job.waitingReason && <p className="text-xs text-editorial-muted">{t('federation.waiting')}</p>}
         <div className="flex flex-wrap gap-1">
@@ -45,14 +54,20 @@ export function SearchExecutionPanel({ run, providers, busy, act, onViewExecutio
           {terminal && <IconButton title={t('federation.restart')} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'restart'))}><RefreshCw size={14} /></IconButton>}
           {job.status === 'completed' && execution.hasMore && <IconButton title={t('dashboard.discovery.loadMore')} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'continue'))}><ArrowDown size={14} /></IconButton>}
         </div>
-        <details className="text-xs text-editorial-muted">
-          <summary className="cursor-pointer focus-visible:ring-2 focus-visible:ring-editorial-accent">{t('federation.executionHistory')}</summary>
+        <div className="flex items-center gap-2 text-xs text-editorial-muted">
+          <span>{t('federation.executionHistory')}</span>
+          <IconButton title={t('federation.executionHistory')} size="xs" aria-expanded={open === job.id}
+            aria-controls={`execution-history-${job.id}`} onClick={() => setOpen(open === job.id ? null : job.id)}>
+            <ChevronDown size={14} className={open === job.id ? '' : '-rotate-90'} />
+          </IconButton>
+        </div>
+        <div id={`execution-history-${job.id}`} hidden={open !== job.id} className="text-xs text-editorial-muted">
           {run.executions.filter((e) => e.providerKey === execution.providerKey).map((e) => <div key={e.job.id} className="py-1">
             {t('federation.generation', { count: e.generation })} · {t(`jobs.status.${e.job.status}`)}
             {e.job.createdAt ? ` · ${formatDateTime(e.job.createdAt)}` : ''}
             <IconButton title={t('federation.viewExecution')} onClick={() => onViewExecution(e.job.id)} size="xs"><Eye size={14} /></IconButton>
           </div>)}
-        </details>
+        </div>
       </section>;
     })}
   </div>;

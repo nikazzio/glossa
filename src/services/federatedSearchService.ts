@@ -39,10 +39,11 @@ export interface SearchResultPage {
   providerKey: string; executionId: string; receivedAt: string;
   page: number; results: IIIFDiscoveryResult[];
 }
-export const listSearches = (offset = 0): Promise<SearchRun[]> =>
-  command('list_searches', { offset }, () => invoke<SearchRun[]>('list_searches', { offset }));
-export const getSearch = (id: string): Promise<{run: SearchRun; pages: SearchResultPage[]}> =>
-  command('get_search_snapshot', { searchId: id }, () => invoke<{run: SearchRun; pages: SearchResultPage[]}>('get_search_snapshot', { id }));
+export const listSearches = (offset = 0, limit?: number): Promise<SearchRun[]> =>
+  command('list_searches', { offset, limit: limit ?? null }, () =>
+    invoke<SearchRun[]>('list_searches', { offset, limit }));
+export const getSearch = (id: string, knownVersion?: string): Promise<{run: SearchRun; pages: SearchResultPage[] | null; resultsVersion:string}> =>
+  command('get_search_snapshot', { searchId: id }, () => invoke<{run: SearchRun; pages: SearchResultPage[] | null; resultsVersion:string}>('get_search_snapshot', { id, knownVersion }));
 export const searchResults = (id: string, executionId: string): Promise<SearchResultPage[]> =>
   command('list_search_results', { searchId: id, executionId }, () => invoke<SearchResultPage[]>('list_search_results', { id, executionId }));
 export const createSearch = (request: {
@@ -53,11 +54,11 @@ export const relaunchSearch = (id: string, executionId: string, mode: 'retry' | 
   command('relaunch_provider_search', { searchId: id, executionId, mode }, () => invoke<SearchRun>('relaunch_provider_search', { id, executionId, mode }));
 
 export function currentExecutions(run: SearchRun): SearchExecution[] {
-  return run.providers.flatMap((key) => {
-    const found = run.executions.filter((e) => e.providerKey === key)
-      .sort((a,b) => b.generation-a.generation)[0];
-    return found ? [found] : [];
-  });
+  const latest=new Map<string,SearchExecution>();
+  for (const execution of run.executions) {
+    if ((latest.get(execution.providerKey)?.generation ?? 0) < execution.generation) latest.set(execution.providerKey,execution);
+  }
+  return run.providers.flatMap((key) => { const execution=latest.get(key); return execution ? [execution] : []; });
 }
 export function searchStatus(run: SearchRun): Job['status'] {
   const states = currentExecutions(run).map((e) => e.job.status);
@@ -82,7 +83,7 @@ export function matchesCriteria(card: IIIFDiscoveryResult, criteria: SearchCrite
   }
   if (criteria.material) {
     const material = card.mediaType?.toLowerCase() ?? '';
-    const declared = /manuscri|handschrift/.test(material) ? 'manuscript'
+    const declared = /manuscri|manoscritt|handschrift/.test(material) ? 'manuscript'
       : /print|imprim|stampa|druck/.test(material) ? 'printed' : null;
     if (!declared) unknown = true;
     else if (declared !== criteria.material) return 'excluded';

@@ -191,7 +191,9 @@ function OverviewSection() {
       <P>{t('help.overview.nav')}</P>
 
       <SubTitle>{t('help.overview.dashboardTitle')}</SubTitle>
+      <P>{t('help.overview.dashboardTabs')}</P>
       <P>{t('help.overview.dashboardDesc')}</P>
+      <P>{t('help.overview.dashboardScope')}</P>
       <VersionWidget />
     </>
   );
@@ -520,6 +522,11 @@ function SourcesSection() {
       <SubTitle>{t('help.sources.federationTitle')}</SubTitle>
       <P>{t('help.sources.federationDesc')}</P>
       <P>{t('help.sources.federationCriteria')}</P>
+      <P>{t('help.sources.federationFields')}</P>
+      <P>{t('help.sources.federationRun')}</P>
+      <P>{t('help.sources.federationHistory')}</P>
+      <P>{t('help.sources.federationExtend')}</P>
+      <P>{t('help.sources.federationBackup')}</P>
 
       <SubTitle>{t('help.sources.levelsTitle')}</SubTitle>
       <P>{t('help.sources.levelsDesc')}</P>
