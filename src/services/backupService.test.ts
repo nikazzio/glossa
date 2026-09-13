@@ -93,7 +93,12 @@ describe('cosa porta con sé un backup', () => {
     expect(BACKUP_TABLES).toContain('source_pages');
     expect(BACKUP_TABLES).toContain('transcription_revisions');
     expect(BACKUP_TABLES).not.toContain('assets');
-    expect(BACKUP_TABLES).not.toContain('jobs');
+    // Le ricerche salvate portano con sé i propri lavori: senza, al ripristino
+    // resterebbero criteri e risultati senza l'esecuzione che li ha prodotti.
+    expect(BACKUP_TABLES).toContain('jobs');
+    expect(BACKUP_TABLES).toContain('search_runs');
+    expect(BACKUP_TABLES).toContain('search_executions');
+    expect(BACKUP_TABLES).toContain('search_pages');
   });
 });
 

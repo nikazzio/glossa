@@ -1,4 +1,132 @@
 {
+  "federation": {
+    "viewExecution": "Mostra risultati di questa esecuzione",
+    "historical": "Risultati di un’esecuzione precedente · stato corrente nel monitor",
+    "currentResults": "Torna ai risultati correnti",
+    "moreAvailable": "Altre pagine disponibili",
+    "exhausted": "Pagine richieste terminate · nessun seguito dichiarato",
+    "partial": "Copertura parziale",
+    "pauseAll": "Metti in pausa le fonti attive di questa ricerca",
+    "resumeAll": "Riprendi le fonti in pausa di questa ricerca",
+    "retryFailed": "Riprova solo le fonti fallite di questa ricerca",
+    "details": "Mostra / nascondi dettagli",
+    "stopBeforeRestore": "Metti in pausa le ricerche prima di ripristinare il backup.",
+    "material": {
+      "all": "Tutti",
+      "manuscript": "Manoscritti",
+      "printed": "Libri a stampa"
+    },
+    "title": "Ricerca federata",
+    "catalog": "Catalogo",
+    "single": "Ricerca singola / identificativo",
+    "criteria": "Criteri",
+    "execution": "Esecuzione",
+    "history": "Ricerche",
+    "new": "Nuova ricerca",
+    "launch": "Avvia ricerca",
+    "open": "Apri ricerca",
+    "extend": "Estendi alle raccolte selezionate · stessi criteri, nuova ricerca collegata",
+    "refresh": "Aggiorna",
+    "library": "Biblioteche",
+    "aggregator": "Raccolte",
+    "selectedCount": "{{count}} fonti selezionate",
+    "draftHint": "I criteri modificati valgono per una nuova ricerca; non cambiano le esecuzioni già lanciate.",
+    "queryHint": "Parole inviate ai cataloghi selezionati. Per indirizzi e segnature usa Ricerca singola / identificativo.",
+    "localHint": "Questi criteri filtrano i metadati ricevuti: non interrogano campi remoti equivalenti. Metadati assenti o date incerte restano non verificabili; la copertura dipende dal catalogo.",
+    "dateHint": "Intervallo inclusivo. Date espresse per secolo, approssimate o non dichiarate restano non verificabili.",
+    "aggregatorHint": "Le raccolte indicizzano più istituzioni e possono sovrapporsi alle biblioteche. Non sono selezionate automaticamente. Europeana richiede la chiave nelle impostazioni.",
+    "providersFailed": "Impossibile leggere le fonti disponibili.",
+    "readFailed": "Impossibile aggiornare le ricerche. I dati visibili possono non essere aggiornati.",
+    "empty": "Imposta i criteri e seleziona le fonti per avviare una ricerca.",
+    "noVisible": "Nessun risultato visibile per questi criteri. Controlla esecuzioni e metadati non verificabili.",
+    "retry": "Riprova la pagina non riuscita · nuova esecuzione",
+    "restart": "Ripeti dalla prima pagina aggiornando dal catalogo · conserva lo storico",
+    "pageCount": "Pagina {{page}} · {{count}} record acquisiti",
+    "generation": "Esecuzione {{count}}",
+    "executionHistory": "Esecuzioni precedenti",
+    "waiting": "Attesa dei limiti di rete",
+    "summary": "{{visible}} visibili · {{unique}} distinti / {{received}} ricevuti · {{unknown}} non verificabili · {{complete}}/{{total}} fonti terminate",
+    "metadata": "Corrispondenza dei metadati",
+    "allProviders": "Tutte le fonti",
+    "sortTitle": "Ordina per titolo",
+    "arrivalOrder": "Ordine di arrivo · aggiornamento progressivo",
+    "integrate": "Integra nuovi risultati nell’ordinamento",
+    "sortedHint": "L’elenco ordinato resta fermo durante la lettura. Integra i nuovi risultati con il comando accanto.",
+    "historyHint": "Ricerche persistite, caricate 50 alla volta. Ogni ricerca mantiene criteri, fonti ed esecuzioni proprie.",
+    "fields": {
+      "query": "Parole chiave",
+      "title": "Titolo",
+      "author": "Autore",
+      "publisher": "Editore",
+      "institution": "Istituzione",
+      "language": "Lingua",
+      "material": "Tipo dichiarato",
+      "yearFrom": "Dall’anno",
+      "yearTo": "All’anno"
+    },
+    "visibility": {
+      "all": "Corrispondenze e non verificabili",
+      "match": "Corrispondenza verificata",
+      "unknown": "Metadati insufficienti",
+      "excluded": "Escluso dai criteri"
+    },
+    "queryRequired": "Inserisci parole chiave.",
+    "criteriaTooLong": "Un criterio supera 1000 caratteri.",
+    "invalidYears": "Verifica l’intervallo degli anni.",
+    "useDirect": "Apri gli indirizzi dalla ricerca singola.",
+    "invalidRequest": "Richiesta non valida: controlla criteri e fonti.",
+    "providerUnavailable": "Questa fonte non supporta la ricerca.",
+    "missingJob": "Esecuzione non disponibile.",
+    "stopFirst": "Ferma l’esecuzione prima di ripeterla.",
+    "useSearchControls": "Riprova dal monitor della ricerca.",
+    "remoteGroup": "Inviato ai cataloghi",
+    "localGroup": "Filtri sui dati ricevuti",
+    "unavailableGroup_one": "{{count}} fonte non interrogabile per parole",
+    "unavailableGroup_other": "{{count}} fonti non interrogabili per parole",
+    "viewAll": "Vedi tutte le ricerche"
+  },
+  "overview": {
+    "transcriptions": "Trascrizioni",
+    "workspaces": "Workspace",
+    "scope": "Ambito",
+    "global": "Tutti i workspace",
+    "subtitle": "Patrimonio e attività di Glossa",
+    "patrimony": "Patrimonio",
+    "openSource": "Apri opera",
+    "openProject": "Apri traduzione",
+    "openJobs": "Apri lavori",
+    "jobsSummary": "Globali: {{active}} attivi · {{failed}} con errori",
+    "searchGlobal": "Ricerche e lavori sono globali, indipendenti dal filtro workspace. Le ricerche con più fonti non si sommano ai loro lavori.",
+    "resumeHint": "Opere e progetti modificati recentemente, non necessariamente aperti per ultimi.",
+    "attentionHint": "Frammenti da rivedere e lavori che richiedono intervento. I grafici contano i lavori, non il completamento delle opere.",
+    "activityHint": "Ultimi 8 fatti registrati, non un registro di clic o navigazione.",
+    "events": {
+      "job": {
+        "started": "Lavoro avviato",
+        "finished": "Lavoro terminato"
+      },
+      "translation": {
+        "approved": "Traduzione approvata",
+        "approval_withdrawn": "Approvazione ritirata"
+      },
+      "workspace": {
+        "moved": "Elemento spostato"
+      }
+    },
+    "entities": {
+      "source": "Opera",
+      "job": "Lavoro",
+      "project": "Traduzione",
+      "workspace": "Workspace"
+    },
+    "outcomes": {
+      "success": "Riuscito",
+      "completed": "Completato",
+      "error": "Non riuscito",
+      "cancelled": "Annullato"
+    },
+    "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace."
+  },
   "app": {
     "title": "Glossa // Pipeline",
     "brand": "Glossa",
@@ -887,7 +1015,7 @@
       "title": "Biblioteca",
       "sidebarHint": "Testi e catalogo",
       "emptyMessage": "La tua Biblioteca è ancora vuota.",
-      "emptyHint": "Le fonti trovate dalla Dashboard finiscono qui.",
+      "emptyHint": "Le fonti aggiunte dalle ricerche finiscono qui.",
       "kind": "Tipo di opera",
       "linkWorkspace": "Collega a {{name}}",
       "unlinkWorkspace": "Scollega da {{name}}",
@@ -1352,6 +1480,15 @@
       "success": "Esecuzione completata",
       "warn": "Esecuzione parziale o annullata",
       "error": "Esecuzione fallita"
+    },
+    "refresh": "Aggiorna la Dashboard",
+    "openArea": "Apri {{area}}",
+    "jobsTitle": "Lavori in corso",
+    "resumeSources": "Opere",
+    "resumeProjects": "Traduzioni",
+    "section": {
+      "collapse": "Chiudi {{section}}",
+      "expand": "Apri {{section}}"
     }
   },
   "files": {
@@ -1685,7 +1822,9 @@
       "step5": "Rivedi e correggi la traduzione candidata nel workspace, poi rivaluta o blocca il chunk come definitivo.",
       "step6": "Esporti in .txt, .md, .html, .docx o .md bilingue per pubblicazione o revisione esterna.",
       "p3": "Provider e modello sono indipendenti per ogni stage e per il giudice: puoi mescolare un modello veloce per la traduzione e uno più potente per refine o audit, oppure restare in locale con Ollama.",
-      "nav": "Navigazione: in alto il breadcrumb (Glossa // workspace // progetto) riporta alla Dashboard, all'area Traduzioni o al workspace corretto. Nella home la barra sinistra mostra Dashboard, aree e workspace; chiusa lascia visibili soltanto Dashboard e le aree. Nel progetto la barra sinistra raccoglie titolo, cambio progetto, navigazione fra chunk, pipeline, comando di traduzione e schede Audit/Note/Memoria/Riferimenti; in basso restano Workspace, Impostazioni, Importa ed Esporta. Il pannello Insight a destra contiene le informazioni sull'intero documento. Le barre si ridimensionano trascinando il bordo e si riducono a icone. A barra chiusa, il marchio Glossa diventa il pulsante di riapertura al passaggio del mouse o con il focus da tastiera."
+      "nav": "Navigazione: in alto il breadcrumb (Glossa // workspace // progetto) riporta alla Dashboard, all'area Traduzioni o al workspace corretto. Nella home la barra sinistra mostra Dashboard, aree e workspace; chiusa lascia visibili soltanto Dashboard e le aree. Nel progetto la barra sinistra raccoglie titolo, cambio progetto, navigazione fra chunk, pipeline, comando di traduzione e schede Audit/Note/Memoria/Riferimenti; in basso restano Workspace, Impostazioni, Importa ed Esporta. Il pannello Insight a destra contiene le informazioni sull'intero documento. Le barre si ridimensionano trascinando il bordo e si riducono a icone. A barra chiusa, il marchio Glossa diventa il pulsante di riapertura al passaggio del mouse o con il focus da tastiera.",
+      "dashboardTitle": "La Dashboard",
+      "dashboardDesc": "La Dashboard raccoglie quattro riquadri con la stessa cornice: che cosa riprendere, con opere e traduzioni in due gruppi distinti; che cosa richiede attenzione; i lavori in corso divisi per stato; le ricerche più recenti. Ogni riquadro si apre e si chiude dal comando a destra della sua intestazione e resta come lo hai lasciato. Il filtro in alto restringe patrimonio, ripresa e attenzione a un workspace; lavori e ricerche restano globali. Un riquadro che non riesce a leggere lo dice al suo posto, senza mostrare zeri inventati."
     },
     "pipeline": {
       "title": "Pipeline di traduzione",
@@ -1963,8 +2102,10 @@
       "error": "Controllo non riuscito"
     },
     "sources": {
+      "federationTitle": "Ricerca federata e Dashboard",
+      "federationDesc": "La ricerca è in Biblioteca: Ricerca federata interroga le fonti selezionate, Ricerca singola / identificativo mantiene il percorso per una biblioteca, un indirizzo o una segnatura. La Dashboard riassume patrimonio e attività, con sezioni richiudibili, filtro workspace e grafico dei lavori.\nIn Criteri scegli parole chiave, biblioteche e raccolte. Le raccolte non sono selezionate automaticamente; Europeana richiede la chiave. Titolo, autore, editore, istituzione, lingua, materiale e anni filtrano i metadati ricevuti: non sono campi remoti equivalenti. Date incerte e dati mancanti restano non verificabili. I suggerimenti spiegano questi limiti al passaggio e da tastiera.\nAvvia crea una ricerca indipendente. Ogni fonte lavora su una pagina e pubblica i risultati appena pronti. Esecuzione mostra stati, errori e comandi per fonte: pausa, ripresa, annullamento, riprova, ripeti dalla prima pagina e carica altri. Lo storico conserva criteri, risultati ed esecuzioni anche cambiando schermata o riaprendo Glossa; i lavori non continuano con l’app chiusa.\nEstendi alle raccolte usa i criteri della ricerca visibile e solo le raccolte selezionate che non erano già incluse, creando una ricerca collegata. I risultati raggruppano soltanto manifesti identici; biblioteca interrogata e istituzione di conservazione restano distinte. Nell’ordine per titolo i nuovi risultati si integrano esplicitamente. Lo storico delle esecuzioni permette di consultare risultati precedenti senza mescolarli con quelli correnti.\nIl backup include ricerche e risultati; prima del ripristino metti in pausa le ricerche. Dopo il ripristino non ripartono automaticamente. I risultati non diventano opere del catalogo finché non li aggiungi.",
       "title": "Biblioteca",
-      "intro": "La Biblioteca è il catalogo delle fonti che hai scelto di conservare: la scheda bibliografica di ogni opera, le copie digitali che le biblioteche mettono a disposizione, le immagini presenti sul tuo computer e i collegamenti ai workspace. La ricerca di fonti nuove parte dalla Dashboard; qui trovi quelle già aggiunte.",
+      "intro": "La Biblioteca è il catalogo delle fonti che hai scelto di conservare: la scheda bibliografica di ogni opera, le copie digitali che le biblioteche mettono a disposizione, le immagini presenti sul tuo computer e i collegamenti ai workspace. La Biblioteca contiene Catalogo, Ricerca federata e Ricerca singola / identificativo.",
       "levelsTitle": "Opera, digitalizzazione e versione locale",
       "levelsDesc": "Tre livelli distinti. L'opera è il libro come oggetto bibliografico: titolo, autore, data, segnatura. La digitalizzazione è la copia prodotta da una biblioteca; due biblioteche che hanno fotografato lo stesso manoscritto danno due opere separate nel catalogo, perché hanno segnature diverse, mentre la stessa biblioteca può offrire la stessa copia come sequenza di immagini e come PDF. La versione locale è l'insieme delle immagini che hai sul computer a una certa misura in pixel: dello stesso libro puoi averne più di una, quella scaricata dalla biblioteca e quella ridotta da Glossa per occupare meno spazio.",
       "searchTitle": "Cercare e cosa accetta ogni biblioteca",
@@ -1988,7 +2129,8 @@
       "archiveTitle": "Archiviare e togliere",
       "archiveDesc": "Archiviare toglie l'opera dall'elenco senza toccare le pagine già scaricate; per rivedere le archiviate si accende il comando fra i filtri. Subito dopo Glossa chiede se vuoi anche liberare lo spazio, e puoi dire di no. Il comando che rimuove invece elimina tutto: scheda, collegamenti, deposito e anche le pagine tenute in cache, e non ha ripensamenti. Per tenere l'opera e recuperare solo spazio il comando è «libera spazio».",
       "limitsTitle": "Cosa non si può ancora fare",
-      "limitsDesc": "Una digitalizzazione in PDF compare fra le copie ma non si scarica e non si legge dentro Glossa; importare il testo di un PDF in un progetto di traduzione è un'altra cosa e funziona già. Quattro biblioteche hanno una ricerca vera, le altre accettano solo l'indirizzo del manifesto, e non esiste ancora una ricerca su più biblioteche insieme. Della singola pagina si può salvare quella aperta: scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una sono lavori ancora da completare."
+      "limitsDesc": "Una digitalizzazione in PDF compare fra le copie ma non si scarica e non si legge dentro Glossa; importare il testo di un PDF in un progetto di traduzione è un'altra cosa e funziona già. Quattro biblioteche hanno una ricerca vera, le altre accettano solo l'indirizzo del manifesto, e non esiste ancora una ricerca su più biblioteche insieme. Della singola pagina si può salvare quella aperta: scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una sono lavori ancora da completare.",
+      "federationCriteria": "Nella colonna dei criteri il comando di avvio resta in cima, sempre in vista mentre scrivi e scegli le fonti. Le etichette stanno sopra ai campi e si leggono per intero. Le fonti che non cercano per parole sono raccolte in fondo in un gruppo solo: il motivo compare al passaggio del mouse."
     },
     "storage": {
       "title": "Archiviazione e lavori in background",
@@ -2403,6 +2545,16 @@
     "title": "Console"
   },
   "jobs": {
+    "status": {
+      "queued": "In coda",
+      "running": "In corso",
+      "pausing": "Sospensione",
+      "paused": "In pausa",
+      "cancelling": "Annullamento",
+      "cancelled": "Interrotta",
+      "completed": "Completata",
+      "error": "Con errori"
+    },
     "tab": "Lavori",
     "drawerTabs": "Messaggi e lavori",
     "openPanel": "Lavori in background",
@@ -2429,6 +2581,7 @@
     "emptyTitle": "Nessun lavoro in corso",
     "emptyDescription": "Scaricamenti e verifiche compaiono qui mentre lavori.",
     "type": {
+      "provider_search": "Ricerca biblioteca",
       "debug_counter": "Prova di sviluppo",
       "debug_restart_only": "Prova di sviluppo (da rifare)",
       "source_download": "Scaricamento pagine",
@@ -2454,6 +2607,7 @@
     "dismiss": "Togli dall'elenco",
     "clearFinished": "Svuota i terminati ({{count}})",
     "short": {
+      "provider_search": "Ricerca biblioteca",
       "source_download": "pagine",
       "vault_verification": "verifica",
       "debug_counter": "prova",

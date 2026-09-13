@@ -18,7 +18,15 @@ Three different levels, kept apart because they answer different questions.
 
 ## Search for a source
 
-Search starts from the Dashboard: choose a source, type what you are looking for, start it with the search icon. Searching downloads nothing.
+Search lives in Library: Federated search queries selected sources; Single source / identifier retains the route for one library, a URL or a shelfmark. Dashboard summarises holdings and activity with collapsible sections, workspace scope and a jobs chart.
+
+In Criteria the launch control stays at the top of the column, in view while you type and pick sources, next to how many sources are selected. Labels sit above their fields, so they read in full even in a narrow column. Sources that cannot be searched by words no longer take one row each: they are grouped at the bottom, with the reason on hover. In Criteria choose keywords, libraries and aggregators. Aggregators are never selected automatically; Europeana requires a key. Title, author, publisher, institution, language, material and years filter returned metadata, not equivalent remote fields. Uncertain dates and missing data remain unverifiable. Hover and keyboard hints explain these limits.
+
+Start creates an independent search. Each source processes one page and publishes its results when ready. Execution shows states, errors and per-source pause, resume, cancel, retry, restart and load-more controls. History retains criteria, results and executions across navigation and restarts; jobs do not run while the app is closed.
+
+Extend to aggregators reuses the visible search criteria and only selected aggregators not already included, creating a linked search. Results group only identical manifests; queried provider and holding institution remain distinct. In title order, new results are integrated explicitly. Execution history allows previous results to be inspected separately from current results.
+
+Backups include searches and results; pause searches before restoring. Restored searches do not restart automatically. Results are not catalogue works until you add them.
 
 ### Four kinds of source
 
@@ -96,7 +104,7 @@ The commands that act on files and on the record all live in the **"···"** me
 
 ### Filters, sorting and saved views
 
-**Filters** live in a right-hand column that resizes and collapses like the other side panels: its width and open state are remembered, and when it is closed a count says how many filters are active. Search sits at the top — type a title or an author — and below it work type, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only those in no workspace at all. Filters work on what you already have in front of you, with no reload. Language and source library only offer values actually present in your catalogue; work type and availability always list every supported entry, and workspace and collection list the ones you created even when no work uses them. The eraser command clears everything.
+**Filters** live in a right-hand column that resizes and collapses like the other side panels: its width and open state are remembered, and when it is closed a count says how many filters are active. Search sits at the top — type a title or an author — and below it work type, language, source library, availability, workspace and collection. The workspace filter shows the works linked to the one you pick, or — with the last entry — only those in no workspace at all. Filters work on what you already have in front of you, with no reload. Language and source library only offer values actually present in your catalogue; work type and availability always list every supported entry, and workspace and collection list the ones you created even when no work uses them. The eraser command clears everything. When the window becomes too narrow for the list and the filters together, the filter column collapses itself to a strip of icons and reopens when the room comes back: the list no longer runs off the edge. If you close it yourself, it stays closed.
 
 **Sorting** — The last dropdown decides the order: by title (as it starts), by author (works without an author go last) or by date added, newest first. The chosen order is part of saved views too.
 

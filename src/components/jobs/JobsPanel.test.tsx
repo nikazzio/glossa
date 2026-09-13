@@ -204,7 +204,8 @@ describe('attesa per i limiti della biblioteca', () => {
         }),
       }),
     ]);
-    fireEvent.click(screen.getByText('Beatus, 34/210'));
+    // I dettagli si aprono dal comando dedicato: la riga non è più un pulsante.
+    fireEvent.click(screen.getByRole('button', { name: 'federation.details' }));
 
     expect(screen.getByText('jobs.detail.groupWork')).toBeInTheDocument();
     expect(screen.getByText('jobs.detail.groupLast')).toBeInTheDocument();

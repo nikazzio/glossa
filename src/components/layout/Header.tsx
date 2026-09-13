@@ -105,6 +105,15 @@ export function Header() {
     location.area === 'library' && location.itemId && librarySourceDetail?.source.id === location.itemId
       ? librarySourceDetail.source.title
       : null;
+  // La Biblioteca ha tre schede: senza questo segmento il titolo diceva
+  // «Biblioteca» sia mentre si sfoglia il catalogo sia mentre una ricerca su
+  // più fonti sta rispondendo, cioè non diceva dove si è.
+  const librarySection =
+    location.area === 'library' && location.view === 'search'
+      ? t('federation.title')
+      : location.area === 'library' && location.view === 'direct'
+        ? t('federation.single')
+        : null;
   const backToContextLabel = t(globalArea ? GLOBAL_AREA_BACK_KEYS[globalArea] : 'sidebar.backToWorkspace');
 
   /**
@@ -172,6 +181,22 @@ export function Header() {
                     </span>
                     <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
                       {currentProjectName}
+                    </span>
+                  </motion.span>
+                ) : librarySection ? (
+                  <motion.span
+                    key="library-section-segment"
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
+                    className="flex min-w-0 items-baseline gap-2.5"
+                  >
+                    <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                      //
+                    </span>
+                    <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {librarySection}
                     </span>
                   </motion.span>
                 ) : librarySourceTitle ? (

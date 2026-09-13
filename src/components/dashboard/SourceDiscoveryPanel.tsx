@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, IconButton, Select, Spinner, StatBlock } from '../ui';
+import { Dialog, IconButton, PopoverItem, Select, Spinner, StatBlock, Tooltip } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
@@ -53,7 +53,7 @@ function groupOf(provider: IIIFProvider): SourceGroupId {
   return 'library';
 }
 
-const SEARCH_ERRORS: Record<string, string> = {
+export const SEARCH_ERRORS: Record<string, string> = {
   search_refused: 'dashboard.discovery.errorRefused',
   search_rate_limited: 'dashboard.discovery.errorRateLimited',
   search_unavailable: 'dashboard.discovery.errorUnavailable',
@@ -169,13 +169,13 @@ function OpenableMark({ openable, checking }: { openable: boolean | null; checki
   if (checking) return <span className="ml-2 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
   if (openable !== false) return null;
   return (
-    <span className="ml-2 text-editorial-warning" title={t('dashboard.discovery.notOpenableHint')}>
+    <Tooltip label={t('dashboard.discovery.notOpenableHint')}><span tabIndex={0} className="ml-2 text-editorial-warning">
       {t('dashboard.discovery.notOpenable')}
-    </span>
+    </span></Tooltip>
   );
 }
 
-function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: RowProps) {
+export function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: RowProps) {
   const { t } = useTranslation();
   // La riga si controlla solo quando entra nello schermo: un elenco di venti
   // risultati scorso a metà non deve costare venti richieste.
@@ -223,12 +223,7 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
       }
     >
       <div className={`flex gap-3 px-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>
-        <button
-          type="button"
-          aria-expanded={expanded}
-          onClick={onToggle}
-          className="flex min-w-0 flex-1 gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
+        <div className="flex min-w-0 flex-1 gap-3 text-left">
           <span
             className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox transition-all duration-200 ${
               expanded ? THUMBNAIL_SIZE.expanded : THUMBNAIL_SIZE.closed
@@ -260,7 +255,8 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
               </span>
             </span>
           )}
-        </button>
+        </div>
+        <IconButton title={t('federation.details')} aria-expanded={expanded} onClick={onToggle} size="sm"><ChevronDown size={14} className={expanded ? 'rotate-180' : ''} /></IconButton>
         <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />
       </div>
       <AnimatePresence initial={false}>
@@ -571,24 +567,20 @@ export function SourceDiscoveryPanel() {
               {workspaces.map((workspace) => {
                 const linked = workspacePickerLinkedIds?.includes(workspace.id) ?? false;
                 return (
-                  <button
-                    key={workspace.id}
-                    type="button"
-                    disabled={linked}
-                    onClick={() => {
+                  <div key={workspace.id} className="flex items-center gap-2">
+                  <PopoverItem label={workspace.name} disabled={linked}
+                    onSelect={() => {
                       if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, resultsProviderKey);
                       setWorkspacePickerCard(null);
                     }}
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    <span className="min-w-0 truncate font-display text-base italic text-editorial-ink">{workspace.name}</span>
+                  />
                     {linked && (
                       <span className="flex shrink-0 items-center gap-1 text-[11px] uppercase tracking-[0.1em] text-editorial-accent">
                         <Check size={14} />
                         {t('dashboard.discovery.alreadyLinked')}
                       </span>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>

@@ -10,7 +10,7 @@ export type GlobalArea = 'library' | 'transcriptions' | 'translations' | 'analys
 export type AppLocation =
   | { area: 'dashboard' }
   | { area: 'workspace'; workspaceId: string }
-  | { area: 'library'; itemId?: string; workspaceFilter?: string }
+  | { area: 'library'; itemId?: string; workspaceFilter?: string; view?: 'search' | 'direct'; searchId?: string }
   | { area: 'transcriptions'; documentId?: string; workspaceFilter?: string }
   | { area: 'translations'; projectId?: string; workspaceFilter?: string }
   | { area: 'analysis'; workspaceFilter?: string };
@@ -30,7 +30,7 @@ export function workspaceLocation(workspaceId: string): AppLocation {
   return { area: 'workspace', workspaceId };
 }
 
-export function libraryLocation(opts?: { itemId?: string; workspaceFilter?: string }): AppLocation {
+export function libraryLocation(opts?: { itemId?: string; workspaceFilter?: string; view?: 'search' | 'direct'; searchId?: string }): AppLocation {
   return { area: 'library', ...opts };
 }
 

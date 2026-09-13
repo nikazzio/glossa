@@ -1,6 +1,78 @@
 # Glossa — riferimento architetturale
 
-Ultimo aggiornamento: 2026-09-10.
+Ultimo aggiornamento: 2026-09-13.
+
+## Ricerca federata e Dashboard
+
+La Biblioteca separa catalogo, ricerca federata e ricerca singola/identificativo.
+La posizione tipizzata include `view` e `searchId`; navigare non annulla lavori.
+La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
+sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
+Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
+Sezioni richiudibili con comandi condivisi; grafico a barre degli stati dei lavori,
+non una percentuale di completamento fra operazioni eterogenee.
+
+`federation/` riusa registry, adapter di ricerca, cache, cortesia e JobEngine.
+Migrazione `0002_federated_search.sql`: `search_runs`, `search_executions`,
+`search_pages`. Una ricerca contiene criteri immutabili e provider; un job
+`provider_search` acquisisce una pagina. Creazione ricerca/esecuzioni/job atomica
+tramite `submit_transaction`; pagina e checkpoint si salvano nella stessa transazione.
+Gli eventi `jobs:updated` invalidano gli snapshot solo dopo il commit.
+Il client si sottoscrive prima di leggere; se arriva un evento durante la lettura,
+la ripete. Snapshot di ricerca e risultati coerente nella stessa transazione.
+
+Comandi: `create_search`, `list_searches`, `get_search_snapshot`,
+`list_search_results`, `relaunch_provider_search`, `export_search_history`.
+Pausa/ripresa/annullamento usano la coda esistente. Retry manuale, restart e
+continuazione creano nuove generazioni; confronto sulla generazione corrente
+impedisce doppi rilanci. I comandi generici non possono creare o ritentare questi
+job senza il dominio. Le ricerche accodate/interrotte si recuperano in pausa,
+anche se l’autoripresa degli scaricamenti è abilitata. Nessuna esecuzione ad app chiusa.
+
+Solo le parole chiave vengono inviate ai cataloghi. Gli altri criteri sono
+post-filtri espliciti sui metadati: assenza/approssimazione resta `unknown`, non
+una corrispondenza inventata. Materiale generico «text» non prova manoscritto
+o stampato. Un match deve appartenere a una singola occorrenza completa.
+Deduplicazione esclusivamente per manifesto identico; le occorrenze originali
+restano conservate. Risultati virtualizzati; ordinamento per titolo su snapshot
+integrato esplicitamente, distinto dal flusso in ordine di arrivo.
+
+Raccolte escluse dalla selezione iniziale. L’estensione crea una ricerca sorella
+con criteri identici e sole raccolte non già incluse. Nessuna importazione nel
+catalogo senza azione esplicita. Le prove di consultabilità esistenti restano
+limitate alle righe visibili.
+
+Log strutturati `domain=federation`: creazione, avvio, cache, pagina salvata,
+recupero, pausa, annullamento, errore e richiesta di rilancio, correlati da
+searchId/executionId/provider/page. Mai criteri, URL o chiavi nei nuovi log.
+Durata, conteggio e stato cache stanno nei dettagli del job; i fatti semantici
+del suo ciclo di vita sono registrati dal motore. Console generale ancora #413.
+
+Copertura di un'esecuzione (record ricevuti, pagine ulteriori) dalle colonne
+`received`/`has_more` di `search_pages`, scritte quando la pagina arriva
+(`0003_search_page_counters.sql`): elencare le ricerche non riapre nessun
+payload. Gli eventi ravvicinati del motore si raggruppano in una sola lettura
+(250 ms); le pagine di storico già lette non si rileggono a ogni evento, solo
+la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed
+esito, senza criteri né indirizzi.
+
+La Biblioteca è un'area a linguette (catalogo, ricerca federata, ricerca
+singola) e il titolo in alto mostra la linguetta attiva. Le colonne
+ridimensionabili hanno larghezze minime in pixel: sotto la loro somma la
+colonna dei filtri si richiude da sola e si riapre quando lo spazio torna,
+mentre una chiusura decisa dall'utente resta. Ogni contenitore intermedio di
+un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
+barre di scorrimento orizzontali.
+
+La Dashboard è fatta di riquadri con la stessa cornice, due per colonna;
+apertura e chiusura di ciascuno vivono nello store UI persistito.
+
+Backup dati versione 4: snapshot atomico delle quattro tabelle correlate,
+inclusi soltanto i job di ricerca. Il ripristino richiede ricerche ferme e mette
+in pausa quelle non terminali; azzera dipendenze e riferimenti locali dei job.
+Pulire lavori terminati non elimina i job referenziati dalle ricerche.
+Lo storico si carica 50 ricerche alla volta; risultati delle vecchie esecuzioni
+consultabili separatamente. Limiti residui elencati nella roadmap, non impliciti.
 
 Questo documento descrive struttura corrente e invarianti tecniche. Decisioni di
 prodotto in `PRODUCT_ARCHITECTURE_2_0.md`; regole visive in

@@ -14,6 +14,10 @@ precedente: confronta la versione nell'app con le
 
 ## Cosa puoi fare oggi
 
+- Cercare in più fonti con lavori indipendenti e risultati progressivi; consultare
+  storico, errori e ripetere una sola fonte. Filtri bibliografici sui metadati ricevuti.
+- Usare la Dashboard compatta con sezioni richiudibili e riepilogo grafico dei lavori.
+
 - Creare workspace e progetti, importare testi e tradurli per passaggi.
 - Provare un frammento prima dell'intero documento, correggere e revisionare.
 - Usare glossari, memoria di frasi, note e storico delle traduzioni.

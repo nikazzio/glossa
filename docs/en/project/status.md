@@ -13,6 +13,10 @@ compare the version shown in the app with the
 
 ## Available today
 
+- Search multiple sources through independent jobs with progressive results;
+  inspect history and errors, and retry one source. Bibliographic filters use returned metadata.
+- Use a compact Dashboard with collapsible sections and a graphical jobs summary.
+
 - Create workspaces and projects, import text and translate it in stages.
 - Test a passage before processing a document, then edit and review.
 - Use glossaries, phrase memory, annotations and translation history.

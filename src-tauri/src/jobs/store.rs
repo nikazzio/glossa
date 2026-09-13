@@ -145,6 +145,7 @@ pub fn interrupted(conn: &Connection) -> Result<Vec<JobRecord>, String> {
         conn,
         &format!(
             "SELECT {COLUMNS} FROM jobs WHERE status IN ('running', 'pausing', 'cancelling') \
+             OR (job_type = 'provider_search' AND status = 'queued') \
              ORDER BY created_at"
         ),
         params![],
@@ -374,11 +375,11 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
 pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
     let removed = match id {
         Some(id) => conn.execute(
-            "DELETE FROM jobs WHERE id = ?1 AND status IN ('completed', 'cancelled', 'error')",
+            "DELETE FROM jobs WHERE id = ?1 AND job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
             params![id],
         ),
         None => conn.execute(
-            "DELETE FROM jobs WHERE status IN ('completed', 'cancelled', 'error')",
+            "DELETE FROM jobs WHERE job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
             [],
         ),
     }

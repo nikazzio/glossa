@@ -1,6 +1,23 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 10 settembre 2026.
+Aggiornata: 13 settembre 2026.
+
+## Ricerca e Dashboard: consegna corrente e consolidamento
+
+Prima implementazione di #395/#396: ricerca persistente con un job per pagina e
+provider, risultati progressivi, filtri locali dichiarati, raccolte opt-in ed
+estensione collegata, monitor/storico/rilanci, backup dei risultati. Dashboard
+separata con patrimonio, attività, attenzione, sezioni richiudibili e grafico
+degli stati dei lavori. La ricerca singola resta disponibile in Biblioteca.
+
+Il piano dettagliato resta riferimento per il consolidamento, non promessa di
+funzioni già presenti. Restano: piano capacità per campo e filtri remoti nativi;
+retry automatici configurabili; archiviazione/eliminazione delle ricerche;
+paginazione server dei risultati (lo storico delle ricerche è già paginato);
+consultazione affiancata delle occorrenze; statistiche temporali più complete;
+unificazione della ricerca singola per parole sul nuovo motore; riepiloghi per
+workspace e stato locale della Dashboard. Il pannello log generale resta #413.
+Nessuna ricerca OAI massiva, crawler o aggiramento di controlli anti-bot.
 
 ## Cosa significa completare Glossa
 

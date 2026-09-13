@@ -189,6 +189,9 @@ function OverviewSection() {
 
       <P>{t('help.overview.p3')}</P>
       <P>{t('help.overview.nav')}</P>
+
+      <SubTitle>{t('help.overview.dashboardTitle')}</SubTitle>
+      <P>{t('help.overview.dashboardDesc')}</P>
       <VersionWidget />
     </>
   );
@@ -513,6 +516,10 @@ function SourcesSection() {
     <>
       <SectionTitle>{t('help.sources.title')}</SectionTitle>
       <P>{t('help.sources.intro')}</P>
+
+      <SubTitle>{t('help.sources.federationTitle')}</SubTitle>
+      <P>{t('help.sources.federationDesc')}</P>
+      <P>{t('help.sources.federationCriteria')}</P>
 
       <SubTitle>{t('help.sources.levelsTitle')}</SubTitle>
       <P>{t('help.sources.levelsDesc')}</P>

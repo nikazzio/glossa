@@ -132,12 +132,13 @@ pub struct DiscoveryOutcome {
     pub has_more: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SearchPage {
     pub results: Vec<DiscoveryResult>,
     pub has_more: bool,
 }
 
-fn client() -> Result<Client, String> {
+pub(crate) fn client() -> Result<Client, String> {
     Client::builder()
         .timeout(Duration::from_secs(15))
         // Alcune biblioteche (la Vaticana fra queste) rifiutano le richieste

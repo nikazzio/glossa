@@ -117,6 +117,9 @@ interface UiState {
   projectContextUserExpanded: boolean;
   dashboardSidebarCollapsed: boolean;
   dashboardSidebarWidth: number;
+  /** Sezioni della Dashboard aperte o chiuse, per chiave di sezione: tornando
+   *  alla Dashboard si ritrova la pagina come la si era lasciata. */
+  dashboardSections: Record<string, boolean>;
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
   /** Colonna informazioni della scheda opera in Biblioteca. */
@@ -167,6 +170,7 @@ interface UiState {
   setActiveProjectPanel: (panel: ProjectPanelTab) => void;
   setProjectContextCollapsed: (collapsed: boolean) => void;
   setDashboardSidebarCollapsed: (collapsed: boolean) => void;
+  setDashboardSection: (section: string, open: boolean) => void;
   setDashboardSidebarWidth: (width: number) => void;
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
@@ -317,6 +321,7 @@ export const useUiStore = create<UiState>()(
       projectContextCollapsed: false,
       projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
+      dashboardSections: {},
       dashboardSidebarWidth: 240,
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
@@ -498,6 +503,8 @@ export const useUiStore = create<UiState>()(
       setProjectContextCollapsed: (collapsed) =>
         set({ projectContextCollapsed: collapsed, projectContextUserExpanded: !collapsed }),
       setDashboardSidebarCollapsed: (collapsed) => set({ dashboardSidebarCollapsed: collapsed }),
+      setDashboardSection: (section, open) =>
+        set((state) => ({ dashboardSections: { ...state.dashboardSections, [section]: open } })),
       setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
@@ -568,6 +575,7 @@ export const useUiStore = create<UiState>()(
         projectContextUserExpanded: state.projectContextUserExpanded,
         dashboardSidebarCollapsed: state.dashboardSidebarCollapsed,
         dashboardSidebarWidth: state.dashboardSidebarWidth,
+        dashboardSections: state.dashboardSections,
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,

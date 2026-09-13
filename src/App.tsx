@@ -26,7 +26,7 @@ import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { AppDashboard } from './components/dashboard/AppDashboard';
 import { WorkspaceOverview } from './components/workspace/WorkspaceOverview';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
-import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
+import { LibraryArea } from './components/library/LibraryArea';
 import { TranscriptionsCatalogArea } from './components/workspace/TranscriptionsCatalogArea';
 import { AnalysisArea } from './components/workspace/AnalysisArea';
 import { importTextFile } from './services/fileService';
@@ -500,7 +500,7 @@ export default function App() {
                 {location.area === 'translations' ? (
                   <TranslationsArea />
                 ) : location.area === 'library' ? (
-                  <LibraryCatalogArea itemId={location.itemId} />
+                  <LibraryArea location={location} />
                 ) : location.area === 'transcriptions' ? (
                   <TranscriptionsCatalogArea />
                 ) : location.area === 'analysis' ? (

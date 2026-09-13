@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDashboard } from './AppDashboard';
@@ -6,135 +6,48 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 
-vi.mock('./SourceDiscoveryPanel', () => ({ SourceDiscoveryPanel: () => null }));
+const mocks=vi.hoisted(() => ({counts:vi.fn(),sources:vi.fn(),facts:vi.fn(),projects:vi.fn(),attention:vi.fn()}));
+vi.mock('../../services/dashboardService', () => ({dashboardCounts:mocks.counts,recentSources:mocks.sources,recentFacts:mocks.facts}));
+vi.mock('../../services/projectService', () => ({listRecentProjectsAllWorkspaces:mocks.projects,listProjectsNeedingAttention:mocks.attention}));
+vi.mock('../../hooks/useFederatedSearch', () => ({useFederatedSearch:() => ({runs:[],loading:false,error:null,refresh:vi.fn()})}));
 
-vi.mock('../../hooks/useProviderKeyStatus', () => ({
-  useProviderKeyStatus: () => ({
-    statuses: { openai: true, anthropic: false },
-    isLoading: false,
-    refresh: vi.fn(),
-  }),
-}));
-
-const mockListRecent = vi.fn();
-const mockListRuns = vi.fn();
-const mockListAttention = vi.fn();
-const mockOverviewStats = vi.fn();
-vi.mock('../../services/projectService', () => ({
-  listRecentProjectsAllWorkspaces: (...args: unknown[]) => mockListRecent(...args),
-  listRecentPipelineRuns: (...args: unknown[]) => mockListRuns(...args),
-  listProjectsNeedingAttention: (...args: unknown[]) => mockListAttention(...args),
-  getDashboardOverviewStats: () => mockOverviewStats(),
-}));
-
-const mockCountGlossaryEntries = vi.fn();
-vi.mock('../../services/glossaryService', () => ({
-  countGlossaryEntries: () => mockCountGlossaryEntries(),
-}));
-
-const mockCountPhraseMemoryEntries = vi.fn();
-vi.mock('../../services/phraseMemoryService', () => ({
-  countPhraseMemoryEntries: () => mockCountPhraseMemoryEntries(),
-}));
-
-const originalProjectState = useProjectStore.getState();
-const originalWorkspaceState = useWorkspaceStore.getState();
-
-const WS_ALPHA = { id: 'ws-1', name: 'Alpha' };
-const WS_BETA = { id: 'ws-2', name: 'Beta' };
-
-describe('AppDashboard', () => {
+describe('Dashboard overview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useUiStore.setState({ location: { area: 'dashboard' } });
-    mockListRecent.mockResolvedValue([]);
-    mockListRuns.mockResolvedValue([]);
-    mockListAttention.mockResolvedValue([]);
-    mockOverviewStats.mockResolvedValue({ totalProjects: 0, totalChunks: 0, completedChunks: 0 });
-    mockCountGlossaryEntries.mockResolvedValue(0);
-    mockCountPhraseMemoryEntries.mockResolvedValue(0);
-    useProjectStore.setState({
-      ...originalProjectState,
-      openProjectInWorkspace: vi.fn().mockResolvedValue(undefined),
-    });
-    useWorkspaceStore.setState({
-      ...originalWorkspaceState,
-      workspaces: [WS_ALPHA, WS_BETA] as never,
-      activeWorkspace: WS_ALPHA as never,
-    });
+    for(const mock of [mocks.sources,mocks.facts,mocks.projects,mocks.attention]) mock.mockResolvedValue([]);
+    mocks.counts.mockResolvedValue({sources:12,transcriptions:3,projects:4,workspaces:2});
+    useUiStore.setState({location:{area:'dashboard'}});
+    useWorkspaceStore.setState({workspaces:[{id:'w',name:'Workspace'}] as never});
+    useProjectStore.setState({openProjectInWorkspace:vi.fn().mockResolvedValue(undefined)});
   });
-
-  it('shows recent projects across workspaces with their accessible workspace icon', async () => {
-    mockListRecent.mockResolvedValue([
-      { id: 'p1', name: 'Fiore dei Liberi', updated_at: '2026-07-15T10:00:00.000Z', workspace_id: 'ws-2', workspace_name: 'Beta' },
-    ]);
-
+  it('shows actual holdings and links search without rendering a search form', async () => {
     render(<AppDashboard />);
-
-    const projectRow = (await screen.findByText('Fiore dei Liberi')).closest('button');
-    expect(projectRow).not.toBeNull();
-    expect(within(projectRow as HTMLElement).getByLabelText('Beta')).toBeInTheDocument();
-  });
-
-  it('resuming a project delegates to the store with its id and workspace', async () => {
-    mockListRecent.mockResolvedValue([
-      { id: 'p1', name: 'Fiore dei Liberi', updated_at: '2026-07-15T10:00:00.000Z', workspace_id: 'ws-2', workspace_name: 'Beta' },
-    ]);
-
-    render(<AppDashboard />);
-    await userEvent.click(await screen.findByText('Fiore dei Liberi'));
-
-    await waitFor(() => {
-      expect(useProjectStore.getState().openProjectInWorkspace).toHaveBeenCalledWith('p1', 'ws-2');
-    });
-  });
-
-  it('shows empty states for resume, activity and attention when there is no data', async () => {
-    render(<AppDashboard />);
-
-    expect(await screen.findByText('dashboard.resumeEmpty')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.activityEmpty')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.attentionEmpty')).toBeInTheDocument();
-  });
-
-  it('shows recent pipeline runs with their outcome', async () => {
-    mockListRuns.mockResolvedValue([
-      { at: '2026-07-15T10:00:00.000Z', level: 'success', project_id: 'p1', project_name: 'Fiore dei Liberi', workspace_id: 'ws-1', workspace_name: 'Alpha' },
-    ]);
-
-    render(<AppDashboard />);
-
-    expect(await screen.findByText('dashboard.runOutcome.success')).toBeInTheDocument();
-  });
-
-  it('shows the overview tiles with real aggregate numbers', async () => {
-    mockOverviewStats.mockResolvedValue({ totalProjects: 12, totalChunks: 300, completedChunks: 210 });
-    mockCountPhraseMemoryEntries.mockResolvedValue(48);
-    mockCountGlossaryEntries.mockResolvedValue(120);
-
-    render(<AppDashboard />);
-
     expect(await screen.findByText('12')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.stats.chunksValue')).toBeInTheDocument();
-    expect(screen.getByText('48')).toBeInTheDocument();
-    expect(screen.getByText('120')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button',{name:'federation.launch'}));
+    expect(useUiStore.getState().location).toMatchObject({area:'library',view:'search'});
   });
-
-  it('shows projects needing attention and opens one on click', async () => {
-    mockListAttention.mockResolvedValue([
-      { project_id: 'p1', project_name: 'Fiore dei Liberi', workspace_id: 'ws-2', workspace_name: 'Beta', issue_count: 3 },
-    ]);
-
+  it('opens a recent translation in its own workspace', async () => {
+    mocks.projects.mockResolvedValue([{id:'p',name:'Dante',workspace_id:'w',workspace_name:'Workspace'}]);
     render(<AppDashboard />);
-
-    const row = (await screen.findByText('Fiore dei Liberi')).closest('button');
-    expect(row).not.toBeNull();
-    expect(within(row as HTMLElement).getByLabelText('Beta')).toBeInTheDocument();
-
-    await userEvent.click(row as HTMLElement);
-
-    await waitFor(() => {
-      expect(useProjectStore.getState().openProjectInWorkspace).toHaveBeenCalledWith('p1', 'ws-2');
-    });
+    await screen.findByText('Dante');
+    await userEvent.click(screen.getByRole('button',{name:'overview.openProject'}));
+    expect(useProjectStore.getState().openProjectInWorkspace).toHaveBeenCalledWith('p','w');
+  });
+  it('keeps other sections available if holdings cannot be read', async () => {
+    mocks.counts.mockRejectedValue(new Error('offline'));
+    mocks.projects.mockResolvedValue([{id:'p',name:'Dante',workspace_id:'w',workspace_name:'Workspace'}]);
+    render(<AppDashboard />);
+    expect(await screen.findByText('Dante')).toBeInTheDocument();
+    expect(await screen.findByText('dashboard.loadFailed')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(4);
+  });
+  it('allows sections to collapse with keyboard-accessible controls', async () => {
+    render(<AppDashboard />);
+    const control=screen.getByRole('button',{name:'dashboard.section.expand'});
+    expect(control).toHaveAttribute('aria-expanded','false');
+    await userEvent.click(control);
+    expect(control).toHaveAttribute('aria-expanded','true');
+    await waitFor(() => expect(screen.getByText('dashboard.activityEmpty')).toBeVisible());
   });
 });

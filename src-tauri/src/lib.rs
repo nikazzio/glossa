@@ -3,6 +3,7 @@ mod db;
 mod deepl;
 mod documents;
 mod download;
+mod federation;
 mod httpcache;
 mod iiif;
 mod images;
@@ -154,6 +155,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            federation::commands::create_search,
+            federation::commands::export_search_history,
+            federation::commands::list_searches,
+            federation::commands::get_search_snapshot,
+            federation::commands::list_search_results,
+            federation::commands::relaunch_provider_search,
             db::backup_database_file,
             backup::write_backup,
             backup::read_backup,

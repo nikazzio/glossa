@@ -29,6 +29,10 @@ Glossa separates application settings, workspace resources, and per-project pipe
 5. Import a document and run test chunks.
 6. Save as you iterate.
 
+## The dashboard
+
+The dashboard holds four boxes sharing one frame: what to resume (recently changed works and translations, in two separate groups), what needs attention, running jobs by state, and the most recent searches. Each box opens and closes from the control on the right of its header and stays as you left it after Glossa is closed. At the top, the workspace filter narrows holdings, resume and attention; jobs and searches stay global, because they do not belong to a single workspace. Explanations live in the hint beside each box title, not in fixed paragraphs. A box that cannot read its data says so in place: it shows no invented zero and does not blank the others.
+
 ## Compact navigation
 
 You can collapse the side rail to leave more room for the content. Inside a project, the previous/next chunk controls and the translation action remain available; the technical chunk number no longer occupies space in the rail. On the collapsed Dashboard, Dashboard, every area, and workspace icons remain visible: areas that are not available yet are visible but cannot be selected.

@@ -41,6 +41,10 @@ export const BACKUP_TABLES = [
   'library_size_policies',
   'phrase_memory',
   'source_phrase_embeddings',
+  'jobs',
+  'search_runs',
+  'search_executions',
+  'search_pages',
 ] as const;
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];

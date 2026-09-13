@@ -166,7 +166,7 @@ export function InspectorShell({
           {actions}
         </div>
       )}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto custom-scrollbar">
         {ownsPanelSemantics && tabs.length > 0 ? (
           <div
             id={`inspector-tab-panel-${activeTab}`}

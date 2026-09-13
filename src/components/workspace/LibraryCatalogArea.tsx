@@ -26,6 +26,7 @@ import {
   Tooltip,
 } from '../ui';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
+import { logger } from '../../utils/logger';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -59,6 +60,7 @@ const FILTERS_COLLAPSED = 56;
 const FILTERS_MIN = 280;
 const FILTERS_MAX = 440;
 const CATALOG_MIN = 420;
+const SEPARATOR_WIDTH = 6;
 
 function clampWidth(width: number, min: number, max: number) {
   return Math.min(Math.max(width, min), max);
@@ -122,6 +124,10 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const [filtersPanel, setFiltersPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const initialFiltersWidth = useRef(clampWidth(filtersWidth || 320, FILTERS_MIN, FILTERS_MAX));
+  const catalogArea = useRef<HTMLDivElement>(null);
+  // Chiusi dallo spazio, non da chi guarda: riaprendosi la finestra tornano
+  // come erano, mentre una chiusura decisa a mano resta.
+  const collapsedByWidth = useRef(false);
 
   useEffect(() => {
     void loadCatalog();
@@ -164,6 +170,29 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     if (!filtersCollapsed && filtersPanel.isCollapsed()) filtersPanel.expand();
   }, [filtersCollapsed, filtersPanel]);
 
+  // Sotto la somma delle due larghezze minime nessuna colonna può più
+  // stringersi: senza questo, i filtri uscivano dal bordo e comparivano le
+  // barre di scorrimento orizzontali.
+  useEffect(() => {
+    const element = catalogArea.current;
+    if (!element || !filtersPanel) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const narrow = entry.contentRect.width < CATALOG_MIN + FILTERS_MIN + SEPARATOR_WIDTH;
+      if (narrow && !filtersPanel.isCollapsed()) {
+        collapsedByWidth.current = true;
+        filtersPanel.collapse();
+        setFiltersCollapsed(true);
+        logger.debug('library.filters.autoCollapsed', { width: Math.round(entry.contentRect.width) });
+      } else if (!narrow && collapsedByWidth.current && filtersPanel.isCollapsed()) {
+        collapsedByWidth.current = false;
+        filtersPanel.expand();
+        setFiltersCollapsed(false);
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [filtersPanel, setFiltersCollapsed]);
+
   const changeFilters = (next: LibraryFilters) => {
     setFilters(next);
     const nextWorkspaceFilter =
@@ -190,6 +219,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
 
   const toggleFiltersCollapsed = (next: boolean) => {
     if (!filtersPanel) return;
+    collapsedByWidth.current = false;
     if (next) filtersPanel.collapse();
     else filtersPanel.expand();
     setFiltersCollapsed(next);
@@ -351,6 +381,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           exit={{ opacity: 0, y: -yOffset }}
           transition={transition}
           className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
+          ref={catalogArea}
         >
           <Group
             orientation="horizontal"
