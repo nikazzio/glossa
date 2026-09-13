@@ -17,11 +17,19 @@ dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
 ## Ricerca federata e Dashboard
 
 Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, ricerca
-federata e ricerca singola/identificativo. Solo la linguetta visibile monta, così
-una ricerca nascosta non continua a leggere. Contratto di navigazione: la
-variante `dashboard` di `AppLocation` porta `view` e `searchId`; la variante
-`library` porta solo `itemId` e `workspaceFilter` e non ha più concetto di
-linguetta. Navigare non annulla lavori.
+federata e ricerca singola/identificativo. Si scelgono dalla barra a sinistra,
+come voci sotto la Dashboard (`WorkspaceRailNext`), non da una fila di linguette
+dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
+continua a leggere. Contratto di navigazione: la variante `dashboard` di
+`AppLocation` porta `view` e `searchId`; la variante `library` porta solo
+`itemId` e `workspaceFilter` e non ha più concetto di linguetta. Navigare non
+annulla lavori.
+
+Nella ricerca federata le parole cercate stanno nella barra in cima, con avvio,
+criteri avanzati, estensione e aggiornamento; gli altri criteri e la scelta
+delle fonti vivono in una finestra (`SearchCriteriaPanel` dentro `Dialog`). La
+colonna di destra tiene esecuzione e storico: l'elenco delle ricerche non è
+duplicato da una tendina.
 La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
 Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.

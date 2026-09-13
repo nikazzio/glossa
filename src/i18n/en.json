@@ -95,7 +95,9 @@
     "failedSources_other": "{{count}} sources did not answer",
     "staleExecution": "A newer run replaced this one: check the source's updated state.",
     "occurrence": "Copy to use",
-    "bestOccurrence": "Best copy"
+    "bestOccurrence": "Best copy",
+    "advanced": "Advanced criteria",
+    "queryPlaceholder": "Search by keywords in the chosen sources"
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -2237,10 +2239,10 @@
             "title": "Searching multiple sources",
             "paragraphs": [],
             "steps": [
-              "Open Federated search and enter your keywords.",
-              "Select libraries. Aggregators such as Europeana and Internet Archive must be selected explicitly; Europeana requires a key in Library settings.",
-              "Start the search. Results appear as sources respond.",
-              "Check the source summary and execution tab before treating the search as complete."
+              "Open Federated search from the left-hand rail, under Dashboard.",
+              "Type your keywords in the field at the top and start with the control beside it.",
+              "To narrow the search — title, author, publisher, institution, language, type, years — and to choose the sources, open the advanced criteria from the control beside the field. Collections such as Europeana and Internet Archive must be chosen explicitly; Europeana needs a key in the Library settings.",
+              "Results appear as each source answers. Check the summary and the execution tab before treating the search as complete."
             ]
           },
           {
@@ -2261,6 +2263,7 @@
           {
             "title": "Keeping and resuming a search",
             "paragraphs": [
+              "The search history lives in the tab on the right: from there you reopen an earlier search with its criteria, results and attempts.",
               "Add to Library saves the record. Add to workspace also links it to the chosen workspace. The same manifest is not duplicated.",
               "History retains criteria, results and attempts. Use the monitor to control an individual source, retry after an error or load more pages. Extend to aggregators starts a linked search using only newly selected aggregators.",
               "You can switch screens while jobs continue. Closing Glossa stops them; history remains available when you reopen it."

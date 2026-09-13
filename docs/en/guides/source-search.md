@@ -11,10 +11,17 @@ them to the Library.
 
 ## Searching multiple sources
 
-Set keywords and sources in the criteria panel. Libraries and aggregators are
+Both searches open from the left-hand rail, as entries under Dashboard.
+
+Keywords go in the field at the top of the page, and the control beside it
+starts the search. The next control opens the **advanced criteria** in a window,
+where you narrow the search and choose the sources. Libraries and aggregators are
 selected separately; Europeana and Internet Archive are not automatically
 included in the initial library selection. Europeana requires an API key under
 **Settings → Library → Libraries**.
+
+Earlier searches reopen from the **Searches** tab in the right-hand column,
+which keeps their criteria, results and attempts.
 
 Starting a search records its criteria. Each provider’s result page is processed
 as an independent job, so a slow or failed source does not prevent others from

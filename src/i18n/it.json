@@ -95,7 +95,9 @@
     "failedSources_other": "{{count}} fonti non hanno risposto",
     "staleExecution": "Questa esecuzione è stata superata da una più recente: guarda lo stato aggiornato della fonte.",
     "occurrence": "Copia da usare",
-    "bestOccurrence": "Copia migliore"
+    "bestOccurrence": "Copia migliore",
+    "advanced": "Criteri avanzati",
+    "queryPlaceholder": "Cerca per parole chiave nelle fonti scelte"
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -2237,10 +2239,10 @@
             "title": "Cercare in più fonti",
             "paragraphs": [],
             "steps": [
-              "Apri Ricerca federata e inserisci le parole chiave.",
-              "Seleziona le biblioteche. Le raccolte, come Europeana e Internet Archive, vanno selezionate esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
-              "Avvia la ricerca. I risultati compaiono man mano che le fonti rispondono.",
-              "Controlla il riepilogo delle fonti e la scheda di esecuzione prima di considerare completa la ricerca."
+              "Apri Ricerca federata dalla barra a sinistra, sotto Dashboard.",
+              "Scrivi le parole chiave nel campo in alto e avvia con il comando accanto.",
+              "Per restringere la ricerca — titolo, autore, editore, istituzione, lingua, tipo, anni — e per scegliere le fonti, apri i criteri avanzati dal comando accanto al campo. Le raccolte, come Europeana e Internet Archive, vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
+              "I risultati compaiono man mano che le fonti rispondono. Controlla il riepilogo e la scheda dell'esecuzione prima di considerare completa la ricerca."
             ]
           },
           {
@@ -2261,6 +2263,7 @@
           {
             "title": "Conservare e riprendere una ricerca",
             "paragraphs": [
+              "Lo storico delle ricerche vive nella scheda a destra: da lì riapri una ricerca precedente con i suoi criteri, i risultati e i tentativi.",
               "Aggiungi alla Biblioteca salva la scheda. Aggiungi a un workspace salva anche il collegamento al workspace scelto. Lo stesso manifesto non viene duplicato.",
               "Lo storico conserva criteri, risultati e tentativi. Nel monitor puoi agire sulla singola fonte, riprovare dopo un errore o caricare altre pagine. Estendi alle raccolte avvia una ricerca collegata sulle sole raccolte nuove selezionate.",
               "Puoi cambiare schermata mentre i lavori proseguono. Chiudendo Glossa si fermano; lo storico resta disponibile alla riapertura."

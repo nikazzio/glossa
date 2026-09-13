@@ -4,7 +4,7 @@ import { Activity, ArrowDown, ArrowUpDown, Globe, History, RefreshCw, Search, Sl
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
-import { createSearch, currentExecutions, groupResults, occurrenceKey, searchResults, searchStatus, type SearchResultGroup, type SearchResultPage } from '../../services/federatedSearchService';
+import { createSearch, currentExecutions, groupResults, occurrenceKey, searchResults, searchStatus, type SearchCriteria, type SearchResultGroup, type SearchResultPage } from '../../services/federatedSearchService';
 import { listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
@@ -28,7 +28,10 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const library = useSourceLibraryStore();
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const [providers, setProviders] = useState<IIIFProvider[]>([]);
-  const [tab, setTab] = useState('criteria');
+  const [tab, setTab] = useState('execution');
+  // Le parole cercate stanno nella barra; il resto dei criteri dietro un comando.
+  const [keywords, setKeywords] = useState('');
+  const [criteriaOpen, setCriteriaOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   // La copia scelta si ricorda per identità: le occorrenze si ricostruiscono
@@ -56,6 +59,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     return () => { disposed = true; };
   }, [t]);
   useEffect(() => { setByTitle(false); setExpanded(null); setProviderFilter('all'); setHistorical(null); }, [searchId]);
+  useEffect(() => { setKeywords(selected?.criteria.query ?? draft.criteria.query); }, [selected?.criteria.query, draft.criteria.query]);
   useEffect(() => {
     if (library.error) { toast.error(t('dashboard.discovery.addToLibraryFailed')); useSourceLibraryStore.getState().clearError(); }
   }, [library.error, library.clearError, t]);
@@ -80,8 +84,8 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
       logger.warn('federation.action.failed', { searchId, code: SEARCH_ERRORS[code] ? code : 'command_failed' });
     } finally { setBusy(false); }
   };
-  const launch = (extension = false) => void act(async () => {
-    const criteria = extension && selected ? selected.criteria : draft.criteria;
+  const launch = (extension = false, override?: SearchCriteria) => void act(async () => {
+    const criteria = extension && selected ? selected.criteria : override ?? draft.criteria;
     const chosen = extension && selected
       ? (draft.providers ?? []).filter((key) => providers.some((p) => p.key === key && p.kind === 'aggregator') && !selected.providers.includes(key))
       : draft.providers ?? [];
@@ -92,11 +96,10 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     logger.info('federation.search.created', { searchId: run.id, providers: chosen.length, extension, derivedFromId: request.derivedFromId });
     pending.current = null;
     navigate(dashboardLocation({ view: 'search', searchId: run.id }));
+    setCriteriaOpen(false);
     setTab('execution');
   });
   const resultPages = historical && historical.searchId === searchId ? historical.pages : pages;
-  const historyOptions = useMemo(() => [{ value: '', label: t('federation.new') },
-    ...runs.map((run) => ({ value: run.id, label: `${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}` }))], [runs, t]);
   const providerLabels = useMemo(() => new Map(providers.map((provider) => [provider.key, provider.label])), [providers]);
   const label = (key: string) => providerLabels.get(key) ?? key;
   const groups = useMemo(() => selected ? groupResults(resultPages.filter((page) => providerFilter === 'all' || page.providerKey === providerFilter), selected.criteria) : [], [resultPages, selected, providerFilter]);
@@ -124,20 +127,26 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const virtualizer = useVirtualizer({ count: visible.length, getScrollElement: () => scroll.current,
     estimateSize: () => 72, getItemKey: (index) => visible[index].id, overscan: 5 });
   const tabs = [
-    { id: 'criteria', label: t('federation.criteria'), icon: <SlidersHorizontal size={16} /> },
     { id: 'execution', label: selected ? `${t('federation.execution')} · ${summary.complete}/${summary.total}` : t('federation.execution'), icon: <Activity size={16} /> },
     { id: 'history', label: t('federation.history'), icon: <History size={16} /> },
   ];
   const extensionPossible = selected && (draft.providers ?? []).some((key) => !selected.providers.includes(key) && providers.some((p) => p.key === key && p.kind === 'aggregator'));
   return <div className="grid h-full min-h-0 w-full min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
     <section className="flex min-h-96 min-w-0 flex-col lg:min-h-0">
-      <div className="flex flex-wrap items-center gap-2 border-b border-editorial-border p-3">
-        <Select value={searchId ?? ''} ariaLabel={t('federation.history')} onChange={(id) => navigate(dashboardLocation({ view: 'search', searchId: id || undefined }))}
-          options={historyOptions} />
-        <IconButton title={t('federation.new')} onClick={() => { navigate(dashboardLocation({ view: 'search' })); setTab('criteria'); }}><Search size={16} /></IconButton>
+      {/* Si cerca da qui, come nella ricerca per indirizzo: una parola e via.
+          I criteri fini stanno dietro un comando, non davanti a tutti. */}
+      <form className="flex shrink-0 items-center gap-2 border-b border-editorial-border px-3 py-2"
+        onSubmit={(event) => { event.preventDefault(); draft.setCriteria({ ...draft.criteria, query: keywords }); launch(false, { ...draft.criteria, query: keywords }); }}>
+        <input value={keywords} onChange={(event) => setKeywords(event.target.value)}
+          aria-label={t('federation.fields.query')} placeholder={t('federation.queryPlaceholder')}
+          className="min-w-0 flex-1 bg-transparent px-2 py-2 font-display text-xl italic text-editorial-ink outline-none placeholder:text-editorial-muted/70 focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+        <IconButton type="submit" title={t('federation.launch')} disabled={busy || !keywords.trim() || !(draft.providers ?? []).length}>
+          {busy ? <Spinner size={16} /> : <Search size={16} />}
+        </IconButton>
+        <IconButton title={t('federation.advanced')} ariaPressed={criteriaOpen} onClick={() => setCriteriaOpen(true)}><SlidersHorizontal size={16} /></IconButton>
         <IconButton title={t('federation.extend')} disabled={!extensionPossible || busy} onClick={() => launch(true)}><Globe size={16} /></IconButton>
         <IconButton title={t('federation.refresh')} onClick={refresh} disabled={loading}><RefreshCw size={16} /></IconButton>
-      </div>
+      </form>
       {error && <p role="alert" className="p-3 text-sm text-editorial-danger">{t('federation.readFailed')}</p>}
       {!selected && !loading && <EmptyState icon={<Search size={20} />} message={t('federation.empty')} />}
       {loading && !selected && <Spinner size={24} />}
@@ -192,7 +201,6 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     <aside className="flex min-h-0 min-w-0 flex-col border-t border-editorial-border bg-surface-panel lg:border-l lg:border-t-0">
       <InspectorShell ariaLabel={t('federation.title')} tabs={tabs} activeTab={tab} onTabChange={setTab}
         actions={<span className="font-display text-sm italic text-editorial-ink">{tabs.find((item) => item.id === tab)?.label}</span>}>
-        {tab === 'criteria' && <SearchCriteriaPanel providers={providers} busy={busy} onSubmit={() => launch()} />}
         {tab === 'execution' && (selected ? <SearchExecutionPanel run={selected} providers={providers} busy={busy} act={(work) => void act(work)} onViewExecution={(executionId) => void act(async () => {
           const previousPages = await searchResults(selected.id,executionId);
           setHistorical({searchId:selected.id,executionId,pages:previousPages}); setByTitle(false);
@@ -207,6 +215,9 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         </div>}
       </InspectorShell>
     </aside>
+    <Dialog open={criteriaOpen} onOpenChange={setCriteriaOpen} title={t('federation.advanced')} closeLabel={t('common.close')}>
+      <SearchCriteriaPanel providers={providers} busy={busy} onSubmit={() => launch()} />
+    </Dialog>
     <Dialog open={picker !== null} onOpenChange={(open) => { if (!open) setPicker(null); }} title={t('dashboard.discovery.addToWorkspace')} closeLabel={t('common.close')}>
       {!workspaces.length && <p className="text-sm text-editorial-muted">{t('dashboard.discovery.noWorkspaces')}</p>}
       {workspaces.map((workspace) => <div key={workspace.id} className="flex">

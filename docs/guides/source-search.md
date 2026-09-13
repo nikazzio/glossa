@@ -11,10 +11,17 @@ non vengono aggiunti alla Biblioteca.
 
 ## Ricerca su più fonti
 
-Imposta parole chiave e fonti nella colonna dei criteri. Le biblioteche e le
+Le due ricerche si aprono dalla barra a sinistra, come voci sotto Dashboard.
+
+Le parole chiave si scrivono nel campo in cima alla pagina e la ricerca parte
+dal comando accanto. Il comando successivo apre i **criteri avanzati** in una
+finestra: lì si restringe la ricerca e si scelgono le fonti. Le biblioteche e le
 raccolte aggregate sono selezionabili separatamente; Europeana e Internet Archive
 non vengono inclusi automaticamente nella selezione iniziale delle biblioteche.
 Europeana richiede una chiave in **Impostazioni → Biblioteca → Biblioteche**.
+
+Le ricerche già fatte si riaprono dalla scheda **Ricerche** nella colonna di
+destra, che conserva criteri, risultati e tentativi.
 
 L’avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascun
 provider viene elaborata come lavoro indipendente: una fonte lenta o in errore

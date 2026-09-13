@@ -6,8 +6,11 @@ import {
   FilePen,
   LayoutDashboard,
   LibraryBig,
+  Link2,
   PanelLeftClose,
   Plus,
+  Search,
+  type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../../stores/projectStore';
@@ -60,6 +63,56 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
         label={t('dashboard.title')}
         hint={t('dashboard.navHint')}
       />
+      <DashboardViews collapsed={collapsed} />
+    </div>
+  );
+}
+
+/**
+ * Le tre viste della Dashboard: panoramica, ricerca su più fonti e ricerca per
+ * indirizzo. Stanno qui, sotto la voce a cui appartengono, invece di occupare
+ * una riga di linguette dentro la pagina.
+ */
+const DASHBOARD_VIEWS: { view?: 'search' | 'direct'; labelKey: string; icon: LucideIcon }[] = [
+  { labelKey: 'overview.title', icon: LayoutDashboard },
+  { view: 'search', labelKey: 'federation.title', icon: Search },
+  { view: 'direct', labelKey: 'federation.single', icon: Link2 },
+];
+
+function DashboardViews({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation();
+  const location = useUiStore((state) => state.location);
+  const navigate = useUiStore((state) => state.navigate);
+  const current = location.area === 'dashboard' ? location.view : undefined;
+
+  return (
+    <div className={collapsed ? 'mt-1 space-y-0.5' : 'mt-0.5 space-y-0.5 pl-4'}>
+      {DASHBOARD_VIEWS.map(({ view, labelKey, icon: Icon }) => {
+        const active = location.area === 'dashboard' && current === view;
+        return (
+          <ShellNavItem
+            key={labelKey}
+            active={active}
+            collapsed={collapsed}
+            onClick={() => navigate(dashboardLocation(view ? { view } : undefined))}
+            ariaCurrent={active ? 'page' : undefined}
+            icon={
+              <span
+                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                  collapsed ? 'h-8 w-8' : 'h-5 w-5'
+                } ${
+                  active
+                    ? 'border-editorial-accent text-editorial-accent'
+                    : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-accent'
+                }`}
+              >
+                <Icon size={collapsed ? 13 : 11} />
+              </span>
+            }
+            label={t(labelKey)}
+          />
+        );
+      })}
     </div>
   );
 }

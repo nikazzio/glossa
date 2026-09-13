@@ -168,14 +168,18 @@ export function Header() {
                       type="button"
                       onClick={handleContextClick}
                       disabled={isProcessing}
-                      className="flex min-w-0 items-center gap-2 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                      className="flex min-w-0 items-baseline gap-2 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
                     >
                       {!isGlobalAreaContext && projectWorkspace && (
-                        <WorkspaceIcon
-                          iconKey={projectWorkspace.iconKey}
-                          size={16}
-                          className="shrink-0 text-editorial-accent"
-                        />
+                        // Un'icona non ha linea di base: si appoggia a mano a
+                        // quella del testo, sennò la riga si legge disallineata.
+                        <span className="shrink-0 translate-y-[0.12em]">
+                          <WorkspaceIcon
+                            iconKey={projectWorkspace.iconKey}
+                            size={16}
+                            className="text-editorial-accent"
+                          />
+                        </span>
                       )}
                       <span className="truncate">{contextLabel}</span>
                     </button>
