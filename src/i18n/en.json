@@ -1,14 +1,14 @@
 {
   "federation": {
     "viewExecution": "Show results from this execution",
-    "historical": "Previous execution results · current status in monitor",
+    "historical": "You are looking at an earlier attempt",
     "currentResults": "Return to current results",
     "moreAvailable": "More pages available",
-    "exhausted": "Requested pages finished · no further pages declared",
-    "partial": "Partial coverage",
-    "pauseAll": "Pause active sources in this search",
-    "resumeAll": "Resume paused sources in this search",
-    "retryFailed": "Retry only failed sources in this search",
+    "exhausted": "No further pages",
+    "partial": "Incomplete coverage",
+    "pauseAll": "Pause every source",
+    "resumeAll": "Resume the paused sources",
+    "retryFailed": "Retry the sources that did not answer",
     "details": "Show / hide details",
     "stopBeforeRestore": "Pause searches before restoring a backup.",
     "material": {
@@ -25,7 +25,7 @@
     "new": "New search",
     "launch": "Start search",
     "open": "Open search",
-    "extend": "Extend to selected aggregators · same criteria, new linked search",
+    "extend": "Extend to the chosen collections",
     "refresh": "Refresh",
     "library": "Libraries",
     "aggregator": "Aggregators",
@@ -39,19 +39,14 @@
     "readFailed": "Unable to refresh searches. Visible data may be out of date.",
     "empty": "Set criteria and select sources to start searching.",
     "noVisible": "No visible results for these criteria. Check executions and unverifiable metadata.",
-    "retry": "Retry the failed page · new execution",
-    "restart": "Restart from page one with fresh catalogue data · retain history",
+    "retry": "Retry this page",
+    "restart": "Run this library again",
     "pageCount": "Page {{page}} · {{count}} records received",
     "generation": "Execution {{count}}",
     "executionHistory": "Previous executions",
     "waiting": "Waiting for network limits",
-    "summary": "{{visible}} visible · {{unique}} distinct / {{received}} received · {{unknown}} unverifiable · {{complete}}/{{total}} sources finished",
-    "metadata": "Metadata matching",
-    "allProviders": "All sources",
     "sortTitle": "Sort by title",
-    "arrivalOrder": "Arrival order · live updates",
-    "integrate": "Integrate new results into sorted list",
-    "sortedHint": "The sorted list stays still while you read. Use the adjacent command to integrate new results.",
+    "arrivalOrder": "Back to arrival order",
     "historyHint": "Persistent searches, loaded 50 at a time. Each search retains its criteria, sources and executions.",
     "fields": {
       "query": "Keywords",
@@ -65,10 +60,10 @@
       "yearTo": "To year"
     },
     "visibility": {
-      "all": "Matches and unverifiable",
-      "match": "Verified match",
-      "unknown": "Insufficient metadata",
-      "excluded": "Excluded by criteria"
+      "all": "All",
+      "match": "Verified",
+      "unknown": "To verify",
+      "excluded": "Excluded"
     },
     "queryRequired": "Enter keywords.",
     "criteriaTooLong": "A criterion exceeds 1000 characters.",
@@ -106,7 +101,20 @@
     "unknownShort_one": "{{count}} unverifiable",
     "unknownShort_other": "{{count}} unverifiable",
     "unknownHint": "Results the filters can neither confirm nor rule out, because the catalogue does not state that field or the date is approximate.",
-    "failedHint": "These sources did not answer: whatever they list is missing from the results."
+    "failedHint": "These sources did not answer: whatever they list is missing from the results.",
+    "restartHint": "Asks this library again from its first results, without reusing the answers already received. Earlier attempts stay available.",
+    "retryHint": "Repeats only the page that failed, leaving the pages already received.",
+    "extendHint": "Searches the same words in the selected collections that were not included, as a linked search.",
+    "onlyThisSource": "Show only results from this source",
+    "allSources": "Show results from every source",
+    "filterLabel": "Filter the results",
+    "visibilityHint": {
+      "all": "Shows the results the filters confirm and those they cannot verify.",
+      "match": "Only results that meet every criterion the catalogue states.",
+      "unknown": "Only results where the deciding field is missing: the catalogue does not state it, or the date is approximate.",
+      "excluded": "Only the results the criteria rule out, useful to understand why they are missing."
+    },
+    "respondedBy": "Answered by {{source}}"
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -2250,8 +2258,9 @@
             "steps": [
               "Open Federated search from the left-hand rail, under Dashboard.",
               "Type your keywords in the field at the top and start with the control beside it.",
-              "To narrow the search — title, author, publisher, institution, language, type, years — and to choose the sources, open the advanced criteria: they are the third tab of the right-hand column. Collections such as Europeana and Internet Archive must be chosen explicitly; Europeana needs a key in the Library settings.",
-              "Results appear as each source answers. The Execution tab has one row per source: the mark says how it is going, the number how much arrived, and opening the row shows page, coverage, controls and earlier attempts.",
+              "To narrow the search and choose the sources, open the advanced criteria, the third tab of the right-hand column. Collections must be chosen explicitly; Europeana needs a key in the Library settings.",
+              "Results appear as each source answers. The controls to the right of the counts filter what you see — everything, verified only, to verify only, excluded only — and sort by title; hovering explains each one.",
+              "The Execution tab has one row per source: the mark says how it is going and the number how much arrived. Opening the row shows page and coverage, the controls to stop, resume, run again or ask for more pages, the control that shows only that source's results, and the earlier attempts.",
               "The new-search control clears the words and the criteria, keeping the sources you had chosen."
             ]
           },

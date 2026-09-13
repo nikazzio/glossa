@@ -1,4 +1,4 @@
-import { ArrowDown, CheckCircle2, ChevronDown, CircleDashed, Eye, Loader, Pause, PauseCircle, Play, RefreshCw, RotateCcw, Square, XCircle } from 'lucide-react';
+import { ArrowDown, CheckCircle2, ChevronDown, CircleDashed, Eye, Filter, History, Loader, Pause, PauseCircle, Play, RefreshCw, RotateCcw, Square, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { currentExecutions, type SearchExecution, type SearchRun, relaunchSearch } from '../../services/federatedSearchService';
@@ -36,13 +36,16 @@ function StateMark({ status }: { status: SearchExecution['job']['status'] }) {
  * Una riga per fonte: segno di stato, nome, quanto è arrivato. Il resto — pagina,
  * esecuzione, copertura, comandi e tentativi precedenti — si apre cliccando.
  */
-export function SearchExecutionPanel({ run, providers, busy, act, onViewExecution }: {
+export function SearchExecutionPanel({ run, providers, busy, providerFilter, onProviderFilter, act, onViewExecution }: {
   run: SearchRun; providers: IIIFProvider[]; busy: boolean;
+  providerFilter: string;
+  onProviderFilter: (providerKey: string) => void;
   act: (work: () => Promise<unknown>) => void;
   onViewExecution: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
+  const [history, setHistory] = useState<string | null>(null);
   const executions = currentExecutions(run);
   const label = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
   const filters = Object.entries(run.criteria)
@@ -90,11 +93,25 @@ export function SearchExecutionPanel({ run, providers, busy, act, onViewExecutio
               {(job.status === 'running' || job.status === 'queued') && <IconButton size="sm" title={t('jobs.pause')} disabled={busy} onClick={() => act(() => pauseJob(job.id))}><Pause size={13} /></IconButton>}
               {job.status === 'paused' && <IconButton size="sm" title={t('jobs.resume')} disabled={busy} onClick={() => act(() => resumeJob(job.id))}><Play size={13} /></IconButton>}
               {!terminal && <IconButton size="sm" title={t('jobs.cancel')} disabled={busy || job.status === 'cancelling'} onClick={() => act(() => cancelJob(job.id))}><Square size={13} /></IconButton>}
-              {job.status === 'error' && <IconButton size="sm" title={t('federation.retry')} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'retry'))}><RotateCcw size={13} /></IconButton>}
-              {terminal && <IconButton size="sm" title={t('federation.restart')} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'restart'))}><RefreshCw size={13} /></IconButton>}
+              {job.status === 'error' && <IconButton size="sm" title={`${t('federation.retry')} — ${t('federation.retryHint')}`} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'retry'))}><RotateCcw size={13} /></IconButton>}
+              {terminal && <IconButton size="sm" title={`${t('federation.restart')} — ${t('federation.restartHint')}`} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'restart'))}><RefreshCw size={13} /></IconButton>}
               {job.status === 'completed' && execution.hasMore && <IconButton size="sm" title={t('dashboard.discovery.loadMore')} disabled={busy} onClick={() => act(() => relaunchSearch(run.id, job.id, 'continue'))}><ArrowDown size={13} /></IconButton>}
+              {/* I risultati di una sola fonte si chiedono da qui: prima era una
+                  tendina lontana dalla fonte che si voleva guardare. */}
+              <IconButton size="sm" ariaPressed={providerFilter === execution.providerKey}
+                tone={providerFilter === execution.providerKey ? 'accent' : 'default'}
+                title={providerFilter === execution.providerKey ? t('federation.allSources') : t('federation.onlyThisSource')}
+                onClick={() => onProviderFilter(providerFilter === execution.providerKey ? 'all' : execution.providerKey)}><Filter size={13} /></IconButton>
+              {/* I risultati di questa esecuzione si guardano da qui, accanto ai
+                  comandi della fonte che li ha prodotti. */}
+              <IconButton size="sm" title={t('federation.viewExecution')} disabled={busy}
+                onClick={() => onViewExecution(job.id)}><Eye size={13} /></IconButton>
+              <IconButton size="sm" ariaPressed={history === job.id}
+                tone={history === job.id ? 'accent' : 'default'}
+                title={t('federation.executionHistory')}
+                onClick={() => setHistory(history === job.id ? null : job.id)}><History size={13} /></IconButton>
             </div>
-            {previous.length > 1 && <div className="space-y-1">
+            {history === job.id && <div className="space-y-1 border-t border-editorial-border/60 pt-2">
               {previous.map((entry) => <div key={entry.job.id} className="flex min-w-0 items-center gap-2 text-xs text-editorial-muted">
                 <StateMark status={entry.job.status} />
                 <span className="min-w-0 flex-1 truncate">

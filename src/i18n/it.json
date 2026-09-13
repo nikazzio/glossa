@@ -1,14 +1,14 @@
 {
   "federation": {
     "viewExecution": "Mostra risultati di questa esecuzione",
-    "historical": "Risultati di un’esecuzione precedente · stato corrente nel monitor",
+    "historical": "Stai guardando un tentativo precedente",
     "currentResults": "Torna ai risultati correnti",
-    "moreAvailable": "Altre pagine disponibili",
-    "exhausted": "Pagine richieste terminate · nessun seguito dichiarato",
-    "partial": "Copertura parziale",
-    "pauseAll": "Metti in pausa le fonti attive di questa ricerca",
-    "resumeAll": "Riprendi le fonti in pausa di questa ricerca",
-    "retryFailed": "Riprova solo le fonti fallite di questa ricerca",
+    "moreAvailable": "Ci sono altre pagine",
+    "exhausted": "Nessuna altra pagina",
+    "partial": "Copertura incompleta",
+    "pauseAll": "Metti in pausa tutte le fonti",
+    "resumeAll": "Riprendi le fonti in pausa",
+    "retryFailed": "Riprova le fonti che non hanno risposto",
     "details": "Mostra / nascondi dettagli",
     "stopBeforeRestore": "Metti in pausa le ricerche prima di ripristinare il backup.",
     "material": {
@@ -25,7 +25,7 @@
     "new": "Nuova ricerca",
     "launch": "Avvia ricerca",
     "open": "Apri ricerca",
-    "extend": "Estendi alle raccolte selezionate · stessi criteri, nuova ricerca collegata",
+    "extend": "Estendi alle raccolte scelte",
     "refresh": "Aggiorna",
     "library": "Biblioteche",
     "aggregator": "Raccolte",
@@ -39,19 +39,14 @@
     "readFailed": "Impossibile aggiornare le ricerche. I dati visibili possono non essere aggiornati.",
     "empty": "Imposta i criteri e seleziona le fonti per avviare una ricerca.",
     "noVisible": "Nessun risultato visibile per questi criteri. Controlla esecuzioni e metadati non verificabili.",
-    "retry": "Riprova la pagina non riuscita · nuova esecuzione",
-    "restart": "Ripeti dalla prima pagina aggiornando dal catalogo · conserva lo storico",
+    "retry": "Riprova questa pagina",
+    "restart": "Rifai la ricerca su questa biblioteca",
     "pageCount": "Pagina {{page}} · {{count}} record acquisiti",
     "generation": "Esecuzione {{count}}",
     "executionHistory": "Esecuzioni precedenti",
     "waiting": "Attesa dei limiti di rete",
-    "summary": "{{visible}} visibili · {{unique}} distinti / {{received}} ricevuti · {{unknown}} non verificabili · {{complete}}/{{total}} fonti terminate",
-    "metadata": "Corrispondenza dei metadati",
-    "allProviders": "Tutte le fonti",
     "sortTitle": "Ordina per titolo",
-    "arrivalOrder": "Ordine di arrivo · aggiornamento progressivo",
-    "integrate": "Integra nuovi risultati nell’ordinamento",
-    "sortedHint": "L’elenco ordinato resta fermo durante la lettura. Integra i nuovi risultati con il comando accanto.",
+    "arrivalOrder": "Torna all'ordine di arrivo",
     "historyHint": "Ricerche persistite, caricate 50 alla volta. Ogni ricerca mantiene criteri, fonti ed esecuzioni proprie.",
     "fields": {
       "query": "Parole chiave",
@@ -65,10 +60,10 @@
       "yearTo": "All’anno"
     },
     "visibility": {
-      "all": "Corrispondenze e non verificabili",
-      "match": "Corrispondenza verificata",
-      "unknown": "Metadati insufficienti",
-      "excluded": "Escluso dai criteri"
+      "all": "Tutti",
+      "match": "Verificati",
+      "unknown": "Da verificare",
+      "excluded": "Esclusi"
     },
     "queryRequired": "Inserisci parole chiave.",
     "criteriaTooLong": "Un criterio supera 1000 caratteri.",
@@ -106,7 +101,20 @@
     "unknownShort_one": "{{count}} non verificabile",
     "unknownShort_other": "{{count}} non verificabili",
     "unknownHint": "Risultati che i filtri non possono confermare né escludere, perché il catalogo non dichiara quel dato o la data è approssimata.",
-    "failedHint": "Queste fonti non hanno risposto: quello che elencano manca dai risultati."
+    "failedHint": "Queste fonti non hanno risposto: quello che elencano manca dai risultati.",
+    "restartHint": "Interroga di nuovo questa biblioteca partendo dai primi risultati, senza riusare le risposte già ricevute. I tentativi precedenti restano consultabili.",
+    "retryHint": "Ripete solo la pagina che non è riuscita, senza rifare quelle già arrivate.",
+    "extendHint": "Cerca le stesse parole anche nelle raccolte selezionate che non erano incluse, in una ricerca collegata.",
+    "onlyThisSource": "Mostra solo i risultati di questa fonte",
+    "allSources": "Mostra i risultati di tutte le fonti",
+    "filterLabel": "Filtra i risultati",
+    "visibilityHint": {
+      "all": "Mostra i risultati che i filtri confermano e quelli che non può verificare.",
+      "match": "Solo i risultati che rispettano tutti i criteri dichiarati dal catalogo.",
+      "unknown": "Solo i risultati su cui manca il dato per decidere: il catalogo non lo dichiara o la data è approssimata.",
+      "excluded": "Solo i risultati che i criteri escludono: utile per capire perché non compaiono."
+    },
+    "respondedBy": "Ha risposto {{source}}"
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -2250,8 +2258,9 @@
             "steps": [
               "Apri Ricerca federata dalla barra a sinistra, sotto Dashboard.",
               "Scrivi le parole chiave nel campo in alto e avvia con il comando accanto.",
-              "Per restringere la ricerca — titolo, autore, editore, istituzione, lingua, tipo, anni — e per scegliere le fonti, apri i criteri avanzati: sono la terza scheda della colonna di destra. Le raccolte, come Europeana e Internet Archive, vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
-              "I risultati compaiono man mano che le fonti rispondono. La scheda Esecuzione ha una riga per fonte: il segno dice come sta andando, il numero quanto è arrivato, e aprendo la riga trovi pagina, copertura, comandi e tentativi precedenti.",
+              "Per restringere la ricerca e scegliere le fonti apri i criteri avanzati, terza scheda della colonna di destra. Le raccolte vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
+              "I risultati compaiono man mano che le fonti rispondono. I comandi a destra della riga dei numeri filtrano quello che vedi — tutti, solo verificati, solo da verificare, solo esclusi — e ordinano per titolo; il significato di ciascuno compare al passaggio del mouse.",
+              "La scheda Esecuzione ha una riga per fonte: il segno dice come sta andando e il numero quanto è arrivato. Aprendo la riga trovi pagina e copertura, i comandi per fermare, riprendere, rifare o chiedere altre pagine, il comando per vedere solo i risultati di quella fonte e quello per i tentativi precedenti.",
               "Il comando della nuova ricerca svuota parole e criteri, lasciando le fonti che avevi scelto."
             ]
           },

@@ -23,7 +23,12 @@ included in the initial library selection. Europeana requires an API key under
 **Settings → Library → Libraries**.
 
 Earlier searches reopen from the **Searches** tab in the right-hand column,
-which keeps their criteria, results and attempts.
+which keeps their criteria, results and attempts; opening one returns you to the
+execution tab.
+
+Above the results, on the right, controls filter what you see — everything,
+verified only, to verify only, excluded only — and sort by title. Each control
+explains itself on hover.
 
 Starting a search records its criteria. Each provider’s result page is processed
 as an independent job, so a slow or failed source does not prevent others from

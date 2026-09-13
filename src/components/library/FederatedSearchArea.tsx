@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Activity, ArrowDown, ArrowUpDown, FilePlus, Globe, History, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUpDown, CheckCircle2, EyeOff, FilePlus, Globe, HelpCircle, History, Layers, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
@@ -19,6 +19,14 @@ import { SEARCH_ERRORS, SourceListRow } from '../dashboard/SourceDiscoveryPanel'
 import { SearchCriteriaPanel } from './SearchCriteriaPanel';
 import { SearchExecutionPanel } from './SearchExecutionPanel';
 import { logger } from '../../utils/logger';
+
+/** I filtri sono comandi icona: il nome e il significato stanno nel suggerimento. */
+const VISIBILITY_FILTERS = [
+  { value: 'all', icon: Layers },
+  { value: 'match', icon: CheckCircle2 },
+  { value: 'unknown', icon: HelpCircle },
+  { value: 'excluded', icon: EyeOff },
+] as const;
 
 export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const { t } = useTranslation();
@@ -183,13 +191,19 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
               <span className="text-editorial-danger">{t('federation.failedSources', { count: failed.length })}</span>
             </Hint>}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={visibility} onChange={setVisibility} ariaLabel={t('federation.metadata')}
-              options={['all', 'match', 'unknown', 'excluded'].map((value) => ({ value, label: t(`federation.visibility.${value}`) }))} />
-            <Select value={providerFilter} onChange={(value) => {setProviderFilter(value);setByTitle(false);}} ariaLabel={t('dashboard.discovery.source')}
-              options={[{ value: 'all', label: t('federation.allProviders') }, ...selected.providers.map((key) => ({ value: key, label: label(key) }))]} />
-            <IconButton title={byTitle ? t('federation.arrivalOrder') : t('federation.sortTitle')} ariaPressed={byTitle}
-              tone={byTitle ? 'accent' : 'default'} onClick={() => setByTitle(!byTitle)}><ArrowUpDown size={16} /></IconButton>
+          {/* Filtri come comandi allineati a destra: una parola ciascuno, il
+              significato al passaggio del mouse. */}
+          <div className="flex flex-wrap items-center justify-end gap-1" role="group" aria-label={t('federation.filterLabel')}>
+            {providerFilter !== 'all' && <IconButton size="sm" tone="accent" title={t('federation.allSources')}
+              onClick={() => setProviderFilter('all')}><Globe size={14} /></IconButton>}
+            {VISIBILITY_FILTERS.map(({ value, icon: Icon }) => (
+              <IconButton key={value} size="sm" ariaPressed={visibility === value}
+                tone={visibility === value ? 'accent' : 'default'}
+                title={`${t(`federation.visibility.${value}`)} — ${t(`federation.visibilityHint.${value}`)}`}
+                onClick={() => setVisibility(value)}><Icon size={14} /></IconButton>
+            ))}
+            <IconButton size="sm" title={byTitle ? t('federation.arrivalOrder') : t('federation.sortTitle')} ariaPressed={byTitle}
+              tone={byTitle ? 'accent' : 'default'} onClick={() => setByTitle(!byTitle)}><ArrowUpDown size={14} /></IconButton>
           </div>
         </div>
         <div ref={scroll} className="min-h-0 flex-1 overflow-auto custom-scrollbar">
@@ -228,14 +242,17 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         actions={<span className="font-display text-sm italic text-editorial-ink">{tabs.find((item) => item.id === tab)?.label}</span>}>
         {tab === 'criteria' && <SearchCriteriaPanel providers={providers} busy={busy}
           onSubmit={() => launch(false, { ...draft.criteria, query: keywords })} />}
-        {tab === 'execution' && (selected ? <SearchExecutionPanel run={selected} providers={providers} busy={busy} act={(work) => void act(work)} onViewExecution={(executionId) => void act(async () => {
+        {tab === 'execution' && (selected ? <SearchExecutionPanel run={selected} providers={providers} busy={busy}
+          providerFilter={providerFilter} onProviderFilter={(key) => { setProviderFilter(key); setByTitle(false); }}
+          act={(work) => void act(work)} onViewExecution={(executionId) => void act(async () => {
           const previousPages = await searchResults(selected.id,executionId);
           setHistorical({searchId:selected.id,executionId,pages:previousPages}); setByTitle(false);
         })} /> : <p className="p-4 text-sm text-editorial-muted">{t('federation.empty')}</p>)}
         {tab === 'history' && <div className="divide-y divide-editorial-border p-3">
           <Hint label={t('federation.historyHint')} size="xs" />
           {runs.map((run) => <div key={run.id} className="flex flex-col py-2">
-            <PopoverItem label={`${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}`} onSelect={() => navigate(dashboardLocation({ view: 'search', searchId: run.id }))} />
+            <PopoverItem label={`${run.criteria.query} · ${t(`jobs.status.${searchStatus(run)}`)}`}
+              onSelect={() => { navigate(dashboardLocation({ view: 'search', searchId: run.id })); setTab('execution'); }} />
             <span className="px-3 text-xs text-editorial-muted">{formatDateTime(run.createdAt)} · {t('federation.selectedCount', { count: run.providers.length })}</span>
           </div>)}
           {hasMore && <IconButton title={t('dashboard.discovery.loadMore')} disabled={loading} onClick={loadMore}><ArrowDown size={16} /></IconButton>}

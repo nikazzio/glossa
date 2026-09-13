@@ -23,7 +23,12 @@ non vengono inclusi automaticamente nella selezione iniziale delle biblioteche.
 Europeana richiede una chiave in **Impostazioni → Biblioteca → Biblioteche**.
 
 Le ricerche già fatte si riaprono dalla scheda **Ricerche** nella colonna di
-destra, che conserva criteri, risultati e tentativi.
+destra, che conserva criteri, risultati e tentativi; aprendone una si torna alla
+scheda dell'esecuzione.
+
+Sopra i risultati, a destra, i comandi filtrano quello che vedi — tutti, solo
+verificati, solo da verificare, solo esclusi — e ordinano per titolo. Ogni
+comando spiega il proprio significato al passaggio del mouse.
 
 L’avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascun
 provider viene elaborata come lavoro indipendente: una fonte lenta o in errore
