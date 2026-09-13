@@ -538,7 +538,36 @@
     "confirmDeleteMessage": "\"{{name}}\" will be permanently removed along with all its translations.",
     "configurePipeline": "Configure pipeline",
     "changePipeline": "Switch pipeline",
-    "sectionTitle": "Pipeline"
+    "sectionTitle": "Pipeline",
+    "deepl": {
+      "confirmDeleteGlossaryTitle": "Delete the DeepL glossary?",
+      "confirmDeleteGlossaryMessage": "The glossary “{{name}}” will be permanently deleted from DeepL. This cannot be undone.",
+      "optionsTitle": "Options",
+      "preserveFormatting": "Keep formatting",
+      "showBilledCharacters": "Show billed characters",
+      "sectionTranslation": "DeepL translation",
+      "modelType": "Translation mode",
+      "preferQuality": "Quality (recommended)",
+      "qualityOnly": "Quality only",
+      "latency": "Speed",
+      "formality": "Register",
+      "formalityDefault": "Default",
+      "formalityPreferMore": "Formal, where the language supports it",
+      "formalityMore": "Formal",
+      "formalityPreferLess": "Informal, where the language supports it",
+      "formalityLess": "Informal",
+      "glossary": "DeepL glossary",
+      "noGlossary": "No glossary",
+      "deleteGlossary": "Delete the DeepL glossary",
+      "context": "Translation context",
+      "contextPlaceholder": "Optional text that helps DeepL understand what the document is about",
+      "glossaryUploaded": "Glossary uploaded to DeepL",
+      "glossaryUploadFailed": "Uploading the glossary to DeepL failed",
+      "uploadGlossaryTooltip": "Upload the Glossa glossary to DeepL",
+      "uploadGlossaryLabel": "Upload to DeepL",
+      "keyRequired": "Needs the DeepL key, entered in Settings"
+    },
+    "configSections": "Configuration sections"
   },
   "audit": {
     "title": "Audit Logs",
@@ -2552,7 +2581,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyFailed": "Copy failed",
-    "newRun": "new run"
+    "newRun": "new run",
+    "grouped": "Group",
+    "filters": "Filters"
   },
   "resume": {
     "title": "Translation interrupted",
@@ -2870,5 +2901,8 @@
     "retryNow": "Retry now",
     "retryingIn": "retrying on its own in {{eta}}",
     "retrying": "retrying on its own"
+  },
+  "models": {
+    "provider": "Model service"
   }
 }

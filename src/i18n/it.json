@@ -538,7 +538,36 @@
     "confirmDeleteMessage": "\"{{name}}\" verrà rimossa definitivamente insieme a tutte le sue traduzioni.",
     "configurePipeline": "Configura pipeline",
     "changePipeline": "Cambia pipeline",
-    "sectionTitle": "Pipeline"
+    "sectionTitle": "Pipeline",
+    "deepl": {
+      "confirmDeleteGlossaryTitle": "Eliminare il glossario DeepL?",
+      "confirmDeleteGlossaryMessage": "Il glossario «{{name}}» verrà eliminato definitivamente da DeepL. L'azione non è reversibile.",
+      "optionsTitle": "Opzioni",
+      "preserveFormatting": "Mantieni la formattazione",
+      "showBilledCharacters": "Mostra i caratteri fatturati",
+      "sectionTranslation": "Traduzione DeepL",
+      "modelType": "Modalità di traduzione",
+      "preferQuality": "Qualità (consigliata)",
+      "qualityOnly": "Solo qualità",
+      "latency": "Velocità",
+      "formality": "Registro",
+      "formalityDefault": "Predefinito",
+      "formalityPreferMore": "Formale, se la lingua lo prevede",
+      "formalityMore": "Formale",
+      "formalityPreferLess": "Informale, se la lingua lo prevede",
+      "formalityLess": "Informale",
+      "glossary": "Glossario DeepL",
+      "noGlossary": "Nessun glossario",
+      "deleteGlossary": "Elimina il glossario DeepL",
+      "context": "Contesto della traduzione",
+      "contextPlaceholder": "Testo facoltativo che aiuta DeepL a capire di che cosa parla il documento",
+      "glossaryUploaded": "Glossario caricato su DeepL",
+      "glossaryUploadFailed": "Caricamento del glossario su DeepL non riuscito",
+      "uploadGlossaryTooltip": "Carica su DeepL il glossario di Glossa",
+      "uploadGlossaryLabel": "Carica su DeepL",
+      "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni"
+    },
+    "configSections": "Sezioni della configurazione"
   },
   "audit": {
     "title": "Log Audit",
@@ -2552,7 +2581,9 @@
     "copy": "Copia",
     "copied": "Copiato",
     "copyFailed": "Copia fallita",
-    "newRun": "nuova esecuzione"
+    "newRun": "nuova esecuzione",
+    "grouped": "Raggruppa",
+    "filters": "Filtri"
   },
   "resume": {
     "title": "Traduzione interrotta",
@@ -2870,5 +2901,8 @@
     "retryNow": "Riprova adesso",
     "retryingIn": "riprovo da solo fra {{eta}}",
     "retrying": "riprovo da solo"
+  },
+  "models": {
+    "provider": "Servizio del modello"
   }
 }
