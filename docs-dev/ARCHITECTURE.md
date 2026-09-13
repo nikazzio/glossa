@@ -2,6 +2,18 @@
 
 Ultimo aggiornamento: 2026-09-13.
 
+## Migrazioni: una volta applicate non si toccano
+
+Il programma confronta l'impronta di ogni migrazione che ha eseguito: se il
+file cambia, il database non si apre più e l'unico rimedio è ricostruirlo. Una
+correzione a una migrazione già distribuita si scrive quindi in una migrazione
+nuova, idempotente sui database che l'hanno già superata.
+
+`src-tauri/migrations.lock` elenca nome e impronta di ogni migrazione; la prova
+`migrations_are_frozen` confronta il lucchetto con i file e fallisce sia quando
+una migrazione dichiarata è cambiata o sparita, sia quando ne compare una non
+dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
+
 ## Ricerca federata e Dashboard
 
 Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, ricerca
