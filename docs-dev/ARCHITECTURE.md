@@ -38,8 +38,8 @@ Sezioni richiudibili con comandi condivisi; grafico a barre degli stati dei lavo
 non una percentuale di completamento fra operazioni eterogenee.
 
 `federation/` riusa registry, adapter di ricerca, cache, cortesia e JobEngine.
-Migrazione `0002_federated_search.sql`: `search_runs`, `search_executions`,
-`search_pages`. Una ricerca contiene criteri immutabili e provider; un job
+Tabelle nella baseline (`0001_baseline_2_0.sql`): `search_runs`,
+`search_executions`, `search_pages`. Una ricerca contiene criteri immutabili e provider; un job
 `provider_search` acquisisce una pagina. Creazione ricerca/esecuzioni/job atomica
 tramite `submit_transaction`; pagina e checkpoint si salvano nella stessa transazione.
 Gli eventi `jobs:updated` invalidano gli snapshot solo dopo il commit.
@@ -74,8 +74,7 @@ Durata, conteggio e stato cache stanno nei dettagli del job; i fatti semantici
 del suo ciclo di vita sono registrati dal motore. Console generale ancora #413.
 
 Copertura di un'esecuzione (record ricevuti, pagine ulteriori) dalle colonne
-`received`/`has_more` di `search_pages`, scritte quando la pagina arriva
-(`0003_search_page_counters.sql`): elencare le ricerche non riapre nessun
+`received`/`has_more` di `search_pages`, scritte quando la pagina arriva: elencare le ricerche non riapre nessun
 payload. Gli eventi ravvicinati del motore si raggruppano in una sola lettura
 (250 ms); le pagine di storico già lette non si rileggono a ogni evento, solo
 la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed

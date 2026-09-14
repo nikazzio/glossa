@@ -5,18 +5,6 @@ fn database() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))
         .unwrap();
-    conn.execute_batch(include_str!("../../migrations/0002_federated_search.sql"))
-        .unwrap();
-    conn.execute_batch(include_str!(
-        "../../migrations/0003_search_page_counters.sql"
-    ))
-    .unwrap();
-    conn.execute_batch(include_str!(
-        "../../migrations/0004_search_page_execution.sql"
-    ))
-    .unwrap();
-    conn.execute_batch(include_str!("../../migrations/0005_search_page_repair.sql"))
-        .unwrap();
     conn.execute_batch("PRAGMA foreign_keys=ON").unwrap();
     conn
 }
