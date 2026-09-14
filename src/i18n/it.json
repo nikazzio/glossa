@@ -1338,7 +1338,8 @@
       "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
-      "viewOnline": "Online"
+      "viewOnline": "Online",
+      "openShownPage": "Apri questa pagina come la serve la biblioteca"
     },
     "transcriptions": {
       "title": "Trascrizioni",

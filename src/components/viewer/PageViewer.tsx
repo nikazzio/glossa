@@ -9,6 +9,7 @@ import {
   ExternalLink,
   HardDrive,
   HardDriveDownload,
+  Image,
   Images,
   PanelLeftClose,
   PanelLeftOpen,
@@ -316,6 +317,14 @@ export function PageViewer({
   }, []);
 
   const page = manifest?.pages[currentIndex] ?? null;
+  // L'immagine di **questa** pagina sul server della biblioteca: è quella che
+  // si sta guardando, alla misura con cui è stata chiesta. Serve per aprirla
+  // nel browser, per copiarne l'indirizzo, per mostrarla a qualcuno.
+  const shownPageUrl =
+    pageRequest?.kind === 'page' && page
+      ? (pageRequest.remoteUrl
+        ?? pageSourceUrl(page.imageService, pageRequest.size, manifest?.presentation2 ?? false))
+      : null;
   const total = manifest?.pages.length ?? 0;
   const goToIndex = useCallback(
     (index: number) => {
@@ -681,6 +690,7 @@ export function PageViewer({
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
             libraryPageUrl={libraryPageUrl}
+            shownPageUrl={shownPageUrl}
           />
         )}
         <div
@@ -790,6 +800,7 @@ interface ViewerToolbarProps {
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
   libraryPageUrl?: string | null;
+  shownPageUrl?: string | null;
 }
 
 /**
@@ -878,6 +889,7 @@ function ViewerToolbar({
   thumbnailsOpen,
   onToggleThumbnails,
   libraryPageUrl,
+  shownPageUrl,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
@@ -946,9 +958,18 @@ function ViewerToolbar({
           edge={shownEdge}
           onDownload={onDownloadPage}
         />
-        {/* L'opera sul sito della biblioteca: il collegamento c'era solo in una
-            riga della scheda, cioè lontano da dove serve — qui si sta
-            leggendo, ed è qui che viene il dubbio. */}
+        {/* Due uscite diverse, accanto al comando che salva: questa pagina
+            com'è servita dalla biblioteca, e l'opera intera sul loro sito. */}
+        {shownPageUrl && (
+          <IconLink
+            size="sm"
+            href={shownPageUrl}
+            title={t('areas.library.openShownPage')}
+            tooltipSide="bottom"
+          >
+            <Image size={14} />
+          </IconLink>
+        )}
         {libraryPageUrl && (
           <IconLink
             size="sm"

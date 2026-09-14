@@ -1338,7 +1338,8 @@
       "downloadOnlyImages": "For now Glossa only downloads image digitisations. For this one you can read the record and open it on the library site.",
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
-      "viewOnline": "Online"
+      "viewOnline": "Online",
+      "openShownPage": "Open this page as the library serves it"
     },
     "transcriptions": {
       "title": "Transcriptions",
