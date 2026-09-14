@@ -1026,7 +1026,8 @@
       "monthsAgo_other": "{{count}} mesi fa",
       "yearsAgo_one": "{{count}} anno fa",
       "yearsAgo_other": "{{count}} anni fa"
-    }
+    },
+    "openLinkFailed": "Non è stato possibile aprire il collegamento nel browser."
   },
   "projects": {
     "title": "Progetti",
