@@ -98,7 +98,10 @@ fn log_files(dir: &PathBuf) -> Result<Vec<PathBuf>, String> {
 fn matches(line: &LogLine, query: &LogQuery, needle: Option<&str>) -> bool {
     if line.from_app {
         if let Some(prefixes) = &query.target_prefixes {
-            if !prefixes.iter().any(|prefix| line.target.starts_with(prefix)) {
+            if !prefixes
+                .iter()
+                .any(|prefix| line.target.starts_with(prefix))
+            {
                 return false;
             }
         }
@@ -119,10 +122,7 @@ fn matches(line: &LogLine, query: &LogQuery, needle: Option<&str>) -> bool {
 
 /// Le righe che soddisfano i filtri, dalla più recente all'indietro.
 #[tauri::command]
-pub async fn read_app_log(
-    app: tauri::AppHandle,
-    query: LogQuery,
-) -> Result<Vec<LogLine>, String> {
+pub async fn read_app_log(app: tauri::AppHandle, query: LogQuery) -> Result<Vec<LogLine>, String> {
     let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
     if !dir.exists() {
         return Ok(Vec::new());
@@ -165,10 +165,9 @@ mod tests {
 
     #[test]
     fn parses_a_real_line() {
-        let line = parse_line(
-            "[2026-09-14][12:05:49][federation][INFO] {\"event\":\"search.created\"}",
-        )
-        .expect("riga riconosciuta");
+        let line =
+            parse_line("[2026-09-14][12:05:49][federation][INFO] {\"event\":\"search.created\"}")
+                .expect("riga riconosciuta");
         assert_eq!(line.timestamp, "2026-09-14 12:05:49");
         assert_eq!(line.target, "federation");
         assert_eq!(line.level, "INFO");
@@ -203,10 +202,17 @@ mod tests {
 
     #[test]
     fn dependencies_stay_out_unless_asked() {
-        let query = LogQuery { limit: 10, ..LogQuery::default() };
+        let query = LogQuery {
+            limit: 10,
+            ..LogQuery::default()
+        };
         let dependency = parse_line("[2026-09-14][12:05:49][sqlx::query][WARN] slow").unwrap();
         assert!(!matches(&dependency, &query, None));
-        let asking = LogQuery { limit: 10, include_dependencies: true, ..LogQuery::default() };
+        let asking = LogQuery {
+            limit: 10,
+            include_dependencies: true,
+            ..LogQuery::default()
+        };
         assert!(matches(&dependency, &asking, None));
     }
 

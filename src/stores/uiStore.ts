@@ -154,6 +154,14 @@ interface UiState {
   /** Colonna filtri del catalogo Biblioteca. */
   libraryCatalogFiltersWidth: number;
   libraryCatalogFiltersCollapsed: boolean;
+  /** Le sezioni della Panoramica, nell'ordine e nella colonna in cui l'utente
+   *  le ha messe. Due elenchi e non uno solo: una sezione appartiene a una
+   *  colonna, e spostarla dentro la sua o nell'altra dev'essere la stessa
+   *  operazione con lo stesso risultato visibile. */
+  dashboardSectionColumns: { left: string[]; right: string[] };
+  /** Colonna dei lavori nella Panoramica. */
+  dashboardJobsWidth: number;
+  dashboardJobsCollapsed: boolean;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   location: AppLocation;
   setTraceStageId: (id: string | null) => void;
@@ -206,6 +214,9 @@ interface UiState {
   setLibrarySourceInspectorWidth: (width: number) => void;
   setLibraryCatalogFiltersWidth: (width: number) => void;
   setLibraryCatalogFiltersCollapsed: (collapsed: boolean) => void;
+  setDashboardSectionColumns: (columns: { left: string[]; right: string[] }) => void;
+  setDashboardJobsWidth: (width: number) => void;
+  setDashboardJobsCollapsed: (collapsed: boolean) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
 }
 
@@ -362,6 +373,12 @@ export const useUiStore = create<UiState>()(
       librarySourceInspectorWidth: 400,
       libraryCatalogFiltersWidth: 320,
       libraryCatalogFiltersCollapsed: false,
+      dashboardSectionColumns: {
+        left: ['resume', 'searches', 'activity'],
+        right: ['attention', 'jobs'],
+      },
+      dashboardJobsWidth: 380,
+      dashboardJobsCollapsed: false,
       pendingAnnotationAnchor: null,
       location: dashboardLocation(),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
@@ -547,6 +564,9 @@ export const useUiStore = create<UiState>()(
       setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
       setLibraryCatalogFiltersWidth: (width) => set({ libraryCatalogFiltersWidth: width }),
       setLibraryCatalogFiltersCollapsed: (collapsed) => set({ libraryCatalogFiltersCollapsed: collapsed }),
+      setDashboardSectionColumns: (columns) => set({ dashboardSectionColumns: columns }),
+      setDashboardJobsWidth: (width) => set({ dashboardJobsWidth: width }),
+      setDashboardJobsCollapsed: (collapsed) => set({ dashboardJobsCollapsed: collapsed }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
@@ -617,6 +637,9 @@ export const useUiStore = create<UiState>()(
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,
         libraryCatalogFiltersWidth: state.libraryCatalogFiltersWidth,
         libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
+        dashboardSectionColumns: state.dashboardSectionColumns,
+        dashboardJobsWidth: state.dashboardJobsWidth,
+        dashboardJobsCollapsed: state.dashboardJobsCollapsed,
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
         systemLogAreas: state.systemLogAreas,

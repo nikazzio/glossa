@@ -160,8 +160,7 @@
       "cancelled": "Cancelled"
     },
     "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
-    "title": "Overview",
-    "openJobsHistory": "Open the job history"
+    "title": "Overview"
   },
   "app": {
     "title": "Glossa // Pipeline",
@@ -1553,7 +1552,12 @@
     "resumeProjects": "Translations",
     "section": {
       "collapse": "Collapse {{section}}",
-      "expand": "Expand {{section}}"
+      "expand": "Expand {{section}}",
+      "move": "Move the section"
+    },
+    "board": {
+      "left": "Left column",
+      "right": "Right column"
     }
   },
   "files": {
@@ -2213,7 +2217,8 @@
             "paragraphs": [
               "The Dashboard shows recent activity, items requiring attention and current jobs. Its other two tabs search across multiple sources or within one source, including by identifier.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
-              "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed."
+              "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed.",
+              "The Dashboard cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
             ]
           },
           {
@@ -2361,8 +2366,10 @@
           {
             "title": "Reviewing and deleting past jobs",
             "paragraphs": [
-              "The bottom panel shows running jobs and recently finished ones. To see everything that ran before, open the history from the jobs card on the Dashboard: it lists them all, with filters by status and by type.",
-              "No job is ever deleted automatically: they stay until you delete them, one row at a time or all finished ones at once. Search jobs are the exception — they stay as long as the search they belong to, otherwise its history would lose pieces."
+              "The bottom panel shows running, waiting and recently finished jobs: it is the view of what is happening now. The bin command in its header takes the finished rows out of the view, so new jobs read clearly; it deletes nothing.",
+              "The full list lives in the right-hand column of the Overview, and can be narrowed, widened or closed with the command at the top left of the column. Every row expands like in the bottom panel, with phase, attempts, times and error.",
+              "At the top of the column there is a free-text search and two rows of commands: the first picks how the job went (running, succeeded, failed, interrupted), the second the kind of work. Several choices can be on at once.",
+              "The bin at the top of the column deletes the finished jobs the filters are showing: with the filters off that is all of them, with a filter on only those. No job is ever deleted automatically. Search jobs are the exception — they stay as long as the search they belong to, otherwise its history would lose pieces."
             ]
           },
           {
@@ -2876,7 +2883,6 @@
     "waitingForLibrary": "waiting · library limits",
     "commandFailed": "Command failed",
     "dismiss": "Remove from the list",
-    "clearFinished": "Clear finished ({{count}})",
     "short": {
       "provider_search": "Library search",
       "source_download": "pages",
@@ -2940,7 +2946,8 @@
     },
     "retryNow": "Retry now",
     "retryingIn": "retrying on its own in {{eta}}",
-    "retrying": "retrying on its own"
+    "retrying": "retrying on its own",
+    "hideFinished": "Hide the {{count}} finished from the panel"
   },
   "models": {
     "provider": "Model service"
@@ -2970,20 +2977,29 @@
   },
   "jobsHistory": {
     "title": "Job history",
-    "statusFilter": "Status",
-    "typeFilter": "Type",
-    "allStatuses": "All statuses",
-    "allTypes": "All types",
+    "searchPlaceholder": "Search the jobs",
+    "reload": "Read the list again",
+    "outcome": {
+      "active": "Running or waiting",
+      "completed": "Succeeded",
+      "error": "Failed",
+      "cancelled": "Interrupted"
+    },
+    "clearFilters": "Clear the filters",
     "count": "{{shown}} of {{total}}",
     "delete": "Delete",
-    "clearFinished": "Delete all finished",
+    "clearShown": "Delete the finished ones shown",
+    "clearAll": "Delete all finished",
     "deleteConfirmTitle": "Delete this job?",
     "deleteConfirmMessage": "The row disappears from the history. Anything the job produced stays where it is.",
-    "clearConfirmTitle": "Delete every finished job?",
-    "clearConfirmMessage": "Jobs still running stay, and so do those a stored search still depends on.",
+    "clearShownConfirmTitle": "Delete the finished jobs you are looking at?",
+    "clearShownConfirmMessage": "Only finished jobs matching the active filters go. Jobs still running stay, and so do those a stored search still depends on.",
     "loading": "Reading the history",
     "loadMore": "Load more",
     "empty": "No job matches these filters.",
-    "failed": "The job history could not be read."
+    "failed": "The job history could not be read.",
+    "deleteBlocked": "Nothing was deleted: a job that belongs to a search stays as long as the search does.",
+    "cleared_one": "{{count}} job deleted.",
+    "cleared_other": "{{count}} jobs deleted."
   }
 }

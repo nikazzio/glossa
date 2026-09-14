@@ -139,14 +139,26 @@ l'applicazione, alla voce di risoluzione dei problemi.
 ## Storico dei jobs e retention
 
 Il pannello in basso è la vista operativa: mostra i jobs non ancora conclusi e
-quelli terminati nelle ultime 24 ore, con pausa, ripresa e retry.
+quelli terminati nelle ultime 24 ore, con pausa, ripresa e retry. Il comando con
+il cestino nella sua intestazione **toglie dalla vista** le righe concluse, così
+i jobs nuovi si leggono senza rumore: non cancella niente, e un job nascosto che
+riparte ricompare da solo. La pulizia vale per la sessione in corso.
 
-Lo **storico completo** si apre dal riquadro dei jobs nella Dashboard ed elenca
-tutto ciò che è passato dalla coda, con filtri per stato e per tipo e lettura a
-pagine. È lì che si cerca un job di mesi prima e si legge com'è finito.
+Lo **storico completo** sta nella colonna a destra della Panoramica: elenca tutto
+ciò che è passato dalla coda, si legge a pagine e si può stringere, allargare o
+chiudere come le altre colonne laterali. Ogni riga si apre come nel pannello in
+basso, con fase, tentativi, orari, esito ed errore.
+
+In cima alla colonna ci sono la ricerca a testo libero sul nome del job e due
+file di comandi: la prima filtra per esito (in corso, riuscito, fallito,
+interrotto), la seconda per tipo di lavoro. Più scelte possono essere attive
+insieme; lo stato di ogni riga è un simbolo con la spiegazione al passaggio del
+mouse, non una parola.
 
 Nessun job viene eliminato automaticamente e non esiste un tetto al numero di
-righe conservate. L'eliminazione è sempre esplicita: la singola riga dallo
-storico, oppure tutti i conclusi con un comando. Restano i jobs a cui è ancora
-appesa un'altra superficie — oggi le esecuzioni di una ricerca salvata, che
-verranno eliminate insieme alla ricerca stessa.
+righe conservate. L'eliminazione è sempre esplicita: la singola riga, oppure —
+con il cestino in cima alla colonna — **tutti i conclusi che i filtri stanno
+mostrando**, quindi tutti se i filtri sono spenti e solo quelli selezionati
+altrimenti. Restano i jobs a cui è ancora appesa un'altra superficie — oggi le
+esecuzioni di una ricerca salvata, che verranno eliminate insieme alla ricerca
+stessa.

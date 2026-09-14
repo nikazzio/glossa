@@ -21,6 +21,7 @@ import {
   IconButton,
   InspectorShell,
   LinkChip,
+  ListReveal,
   PopoverItem,
   Spinner,
   Tooltip,
@@ -448,9 +449,9 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                         : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
                     }
                   >
-                    {filteredCatalog.map((entry) => (
+                    {filteredCatalog.map((entry, index) => (
+                      <ListReveal key={entry.source.id} index={index}>
                       <CatalogEntryRow
-                        key={entry.source.id}
                         entry={entry}
                         view={view}
                         providerLabel={providers.find((provider) => provider.key === entry.providerKey)?.label}
@@ -467,6 +468,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                           void changeCollection(entry.source.id, collectionId, member)
                         }
                       />
+                      </ListReveal>
                     ))}
                   </div>
                 )}

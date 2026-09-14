@@ -569,6 +569,13 @@ impl JobEngine {
         store::forget_finished(guard.conn()?, id)
     }
 
+    /// Come `forget_finished`, ma su tutto ciò che i filtri della vista
+    /// completa selezionano.
+    pub async fn forget_matching(&self, filter: &store::JobFilter) -> Result<usize, String> {
+        let guard = self.db_guard().await?;
+        store::forget_matching(guard.conn()?, filter)
+    }
+
     fn control_of(&self, id: &str) -> Arc<JobControl> {
         let mut controls = match self.controls.lock() {
             Ok(guard) => guard,

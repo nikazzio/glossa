@@ -208,6 +208,7 @@ pub fn run() {
             jobs::commands::cancel_job,
             jobs::commands::retry_job,
             jobs::commands::clear_finished_jobs,
+            jobs::commands::clear_matching_jobs,
             download::enqueue_source_download,
             download::inventory::version_inventory,
             download::inventory::library_inventory,

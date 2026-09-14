@@ -82,15 +82,19 @@ pub async fn list_jobs(
     jobs: State<'_, JobsState>,
     statuses: Option<Vec<String>>,
     job_types: Option<Vec<String>>,
+    query: Option<String>,
     limit: usize,
     offset: usize,
 ) -> Result<JobsPage, String> {
-    let statuses = statuses.unwrap_or_default();
-    let job_types = job_types.unwrap_or_default();
+    let filter = store::JobFilter {
+        statuses: statuses.unwrap_or_default(),
+        job_types: job_types.unwrap_or_default(),
+        query,
+    };
     let conn = jobs.0.connection()?;
     Ok(JobsPage {
-        jobs: store::list_all(&conn, &statuses, &job_types, limit, offset)?,
-        total: store::count_all(&conn, &statuses, &job_types)?,
+        jobs: store::list_all(&conn, &filter, limit, offset)?,
+        total: store::count_all(&conn, &filter)?,
     })
 }
 
@@ -139,6 +143,24 @@ pub async fn clear_finished_jobs(
     id: Option<String>,
 ) -> Result<usize, String> {
     jobs.0.forget_finished(id.as_deref()).await
+}
+
+/// Elimina i job conclusi che soddisfano i filtri della vista completa: chi
+/// guarda solo i falliti di una ricerca può buttarli tutti senza scorrere le
+/// pagine una per una.
+#[tauri::command]
+pub async fn clear_matching_jobs(
+    jobs: State<'_, JobsState>,
+    statuses: Option<Vec<String>>,
+    job_types: Option<Vec<String>>,
+    query: Option<String>,
+) -> Result<usize, String> {
+    let filter = store::JobFilter {
+        statuses: statuses.unwrap_or_default(),
+        job_types: job_types.unwrap_or_default(),
+        query,
+    };
+    jobs.0.forget_matching(&filter).await
 }
 
 /// Mette in coda la verifica rapida del deposito, se l'impostazione è accesa.

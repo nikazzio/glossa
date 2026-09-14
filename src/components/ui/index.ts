@@ -28,3 +28,4 @@ export { InspectorShell, type InspectorTab } from './InspectorShell';
 export { ContrastBadge } from './ContrastBadge';
 export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';
+export { ListReveal } from './ListReveal';

@@ -300,6 +300,35 @@ se cercare per parole ha senso prima di scrivere.
 - Selezione tramite `tone="accent"`.
 - Ordine e posizione restano stabili tra viste equivalenti.
 
+### Movimento
+
+Tutti i movimenti nascono dai token in `components/layout/motion.ts`
+(`EASE_EDITORIAL`, `MOTION_DURATION`, `MOTION_SHIFT`, `LIST_STAGGER`): durate
+brevi (0,18 s), spostamenti di pochi pixel, nessun rimbalzo. Sono schermate di
+lavoro attraversate decine di volte al giorno: un movimento lungo diventa
+un'attesa, e la seconda volta è già di troppo.
+
+- Cambio area: il contenuto entra con dissolvenza e `MOTION_SHIFT` di scivolo,
+  senza uscita animata — tenere montate due aree insieme costerebbe letture
+  doppie.
+- Elenchi: `ListReveal` sfalsa le righe di `LIST_STAGGER`, e il ritardo smette
+  di crescere dopo `LIST_STAGGER_MAX`.
+- Riquadri richiudibili: altezza animata con `AnimatePresence`; chiuso, il
+  contenuto **non resta** nel DOM, altrimenti lo raggiungerebbe il tabulatore.
+- `MotionConfig reducedMotion="user"` sta alla radice dell'applicazione: nessun
+  componente deve ricordarsi di rispettare la preferenza di sistema, ma chi
+  anima l'altezza aggiunge comunque il proprio controllo, perché lì la
+  preferenza cambia il fotogramma iniziale e non solo la durata.
+
+### Riordino a trascinamento
+
+Dove l'ordine è una preferenza dell'utente (i riquadri della Panoramica), si
+trascina da una **maniglia** dedicata e non dall'intera intestazione: l'header
+porta già comandi, e un'intera superficie trascinabile trasforma ogni click
+mancato in uno spostamento. La maniglia arriva al riquadro tramite contesto
+(`sectionDragHandle`), così la sezione non sa niente del trascinamento. Ordine e
+colonna vivono in `uiStore` e sopravvivono alla chiusura.
+
 ### Shell e pannelli
 
 - Sidebar e rail usano larghezze persistite nello store UI.

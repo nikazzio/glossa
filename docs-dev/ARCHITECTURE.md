@@ -316,17 +316,37 @@ append-only su file, si filtrano, non si riscrivono dall'interfaccia. Il tab
 significa retention, non filtro di vista.
 
 - `list_active_jobs`: vista operativa del panel — job non terminali più quelli
-  conclusi nelle ultime 24 ore.
-- `list_jobs`: storico completo, filtrato per stato e tipo e paginato, con il
-  totale. Vive come vista della Dashboard, raggiunta dal riquadro dei job; la
-  lettura analitica degli stessi dati (durate, tassi di errore, throughput) è
-  materiale dell'area Analisi quando nascerà (#379), non un secondo elenco.
-- `clear_finished_jobs`: elimina i job terminali. La regola è data-driven —
-  si tenta la `DELETE` e si salta chi viola una foreign key — non un elenco di
-  `job_type` scritto a mano, che sarebbe rimasto indietro al primo tipo nuovo
-  (traduzione #469, OCR #220). Oggi l'unico caso che resiste è il job di
-  ricerca, referenziato da `search_executions`: morirà con la sua ricerca
-  quando arriverà l'archiviazione delle ricerche.
+  conclusi nelle ultime 24 ore. Il panel nasconde in più i job che l'utente ha
+  tolto dalla vista (`jobsStore.dismissed`): è stato di sessione, non retention,
+  e un job che torna non terminale rientra da solo.
+- `list_jobs`: storico completo, filtrato per stato, tipo e testo del messaggio
+  e paginato, con il totale. Vive nella colonna destra della Panoramica
+  (`JobsHistoryList` dentro `InspectorShell`, larghezza e collasso persistiti in
+  `uiStore`); la lettura analitica degli stessi dati (durate, tassi di errore,
+  throughput) è materiale dell'area Analisi quando nascerà (#379), non un
+  secondo elenco.
+- `clear_finished_jobs`: elimina i job terminali, tutti o uno solo.
+- `clear_matching_jobs`: elimina i job terminali che soddisfano gli **stessi**
+  filtri dell'elenco (`store::JobFilter`, condiviso da elenco, conteggio ed
+  eliminazione): «elimina quello che vedo» non può divergere da quello che si
+  vede.
+- La regola di cancellazione è data-driven — si tenta la `DELETE` e si salta chi
+  viola una foreign key — non un elenco di `job_type` scritto a mano, che
+  sarebbe rimasto indietro al primo tipo nuovo (traduzione #469, OCR #220). Oggi
+  l'unico caso che resiste è il job di ricerca, referenziato da
+  `search_executions`: morirà con la sua ricerca quando arriverà
+  l'archiviazione delle ricerche.
+
+La Panoramica tiene in `uiStore` anche la disposizione dei riquadri
+(`dashboardSectionColumns`: due elenchi, sinistra e destra) e la geometria della
+colonna dei lavori (`dashboardJobsWidth`, `dashboardJobsCollapsed`). Il riordino
+usa `@dnd-kit/core` e `@dnd-kit/sortable`; un riquadro nuovo nel codice che
+l'ordine salvato non conosce compare in fondo alla colonna sinistra invece di
+sparire.
+
+La riga di un job è un solo componente (`JobRow`): pannello in basso ed elenco
+completo la condividono, e cambia solo cosa fa il comando in coda — togliere la
+riga dalla vista nel pannello, eliminarla dal deposito nell'elenco.
 
 Nessuna cancellazione automatica e nessun tetto di righe, come per lo storico
 delle operazioni.

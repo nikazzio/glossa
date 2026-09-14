@@ -21,7 +21,12 @@ import { useUiStore } from '../../stores/uiStore';
  */
 export function JobsIndicator() {
   const { t } = useTranslation();
-  const jobs = useJobsStore((state) => state.jobs);
+  const allJobs = useJobsStore((state) => state.jobs);
+  const dismissed = useJobsStore((state) => state.dismissed);
+  // Svuotato il pannello, il conteggio in barra deve andarsene con le righe:
+  // «4 lavori non riusciti» accanto a un pannello vuoto non è un promemoria,
+  // è un errore che non si riesce a spegnere.
+  const jobs = allJobs.filter((job) => !dismissed.includes(job.id));
   const showDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowDrawer = useUiStore((state) => state.setShowConsoleDrawer);
   const setDrawerTab = useUiStore((state) => state.setDrawerTab);
