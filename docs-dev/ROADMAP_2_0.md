@@ -7,9 +7,10 @@ Aggiornata: 13 settembre 2026.
 Prima implementazione di #395/#396: ricerca persistente con un job per pagina e
 provider, risultati progressivi, filtri locali dichiarati, raccolte opt-in ed
 estensione collegata, monitor/storico/rilanci, backup dei risultati. Le tre
-viste stanno nella Dashboard a linguette: quadro d'insieme (patrimonio, ripresa,
-attenzione, lavori, ricerche recenti, attività), ricerca federata e ricerca
-singola/identificativo. Monta solo la linguetta visibile. La Biblioteca è
+viste stanno nella Dashboard come voci di nav laterale, non come linguette
+interne: quadro d'insieme (patrimonio, ripresa, attenzione, lavori, ricerche
+recenti, attività), ricerca federata e ricerca singola/identificativo. Monta
+solo la vista attiva. La Biblioteca è
 tornata area unica con il solo catalogo.
 
 Il piano dettagliato resta riferimento per il consolidamento, non promessa di
