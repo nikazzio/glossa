@@ -71,6 +71,8 @@ pub fn resolve(kind: ResolverKind, input: &str) -> Option<Resolution> {
         ResolverKind::ERara => e_rara(value),
         ResolverKind::EManuscripta => e_manuscripta(value),
         ResolverKind::Mdz => mdz(value),
+        ResolverKind::Nls => nls(value),
+        ResolverKind::Glasgow => glasgow(value),
         ResolverKind::Europeana => europeana(value),
         // Le altre biblioteche non hanno ancora un riconoscimento proprio:
         // vale l'indirizzo completo, come prima.
@@ -209,6 +211,85 @@ fn is_uuid(value: &str) -> bool {
         && groups.iter().zip(sizes).all(|(group, size)| {
             group.len() == size && group.chars().all(|c| c.is_ascii_hexdigit())
         })
+}
+
+/// National Library of Scotland: identificativo numerico, indirizzo del
+/// portale o indirizzo del manifesto.
+///
+/// Il portale di consultazione sta dietro un controllo anti-robot e non si
+/// interroga; i manifesti e l'albero delle raccolte, invece, sono pubblici e
+/// rispondono. Da qui si passa quindi sempre per l'identificativo.
+fn nls(value: &str) -> Option<Resolution> {
+    let id = nls_id(value)?;
+    Some(Resolution::strong(nls_manifest_url(&id), id))
+}
+
+pub fn nls_id(value: &str) -> Option<String> {
+    let text = value.trim();
+    let candidate = segment_after(text, "/manifest/")
+        .and_then(|_| nls_id_from_manifest_url(text))
+        .or_else(|| {
+            text.rsplit('/')
+                .find(|segment| !segment.is_empty() && *segment != "manifest.json")
+                .map(|segment| segment.to_string())
+        })
+        .unwrap_or_else(|| text.to_string());
+    let digits = candidate.trim();
+    (digits.len() >= 6 && digits.chars().all(|c| c.is_ascii_digit())).then(|| digits.to_string())
+}
+
+/// Nell'indirizzo di un manifesto l'identificativo è l'ultimo segmento prima
+/// di `manifest.json`: i segmenti che lo precedono sono solo lo scaffale.
+fn nls_id_from_manifest_url(value: &str) -> Option<String> {
+    let after = value.split("/manifest/").nth(1)?;
+    after
+        .split('/')
+        .rfind(|segment| !segment.is_empty() && *segment != "manifest.json")
+        .map(|segment| segment.to_string())
+}
+
+/// L'identificativo si spezza in gruppi di quattro cifre finché ne restano più
+/// di quattro: `133475158` diventa `1334/7515/133475158`, `74464117` diventa
+/// `7446/74464117`. È la forma che il servizio usa davvero, verificata su
+/// entrambe le lunghezze.
+pub fn nls_manifest_url(id: &str) -> String {
+    let mut prefix = String::new();
+    let mut rest = id;
+    while rest.len() > 4 {
+        let (head, tail) = rest.split_at(4);
+        prefix.push_str(head);
+        prefix.push('/');
+        rest = tail;
+    }
+    format!("https://view.nls.uk/manifest/{prefix}{id}/manifest.json")
+}
+
+/// University of Glasgow: la piattaforma pubblica i manifesti su un dominio
+/// proprio, con un identificativo esadecimale a cinque gruppi.
+///
+/// La scheda del portale non contiene l'identificativo in una forma che si
+/// possa ricavare senza aprire la pagina: si incolla l'indirizzo del manifesto,
+/// che la scheda stessa offre con il suo comando «IIIF Manifest».
+fn glasgow(value: &str) -> Option<Resolution> {
+    let id = glasgow_uuid(value)?;
+    Some(Resolution::strong(glasgow_manifest_url(&id), id))
+}
+
+pub fn glasgow_uuid(value: &str) -> Option<String> {
+    let text = value.trim();
+    for candidate in text
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+        .chain(std::iter::once(text))
+    {
+        if is_uuid(candidate) {
+            return Some(candidate.to_ascii_lowercase());
+        }
+    }
+    None
+}
+
+pub fn glasgow_manifest_url(uuid: &str) -> String {
+    format!("https://iiif.quartexcollections.com/uofg/iiif/{uuid}/manifest")
 }
 
 /// Heidelberg: identificativi `cpg123` e simili, o l'indirizzo del visore

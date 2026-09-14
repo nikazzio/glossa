@@ -50,7 +50,7 @@ import {
   type LibraryFilters,
 } from '../../utils/libraryCatalogFilters';
 import { libraryLocation, withWorkspaceFilter } from '../../navigation/appLocation';
-import type { LibraryCatalogEntry, SourceCollection, SourceField, Workspace } from '../../types';
+import type { IIIFProvider, LibraryCatalogEntry, SourceCollection, SourceField, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
   itemId?: string;
@@ -122,7 +122,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       state.jobs.filter((job) => job.jobType === 'source_download' && isTerminal(job)).length,
   );
   const [filters, setFilters] = useState(EMPTY_LIBRARY_FILTERS);
-  const [providers, setProviders] = useState<{ key: string; label: string }[]>([]);
+  const [providers, setProviders] = useState<IIIFProvider[]>([]);
   const [filtersPanel, setFiltersPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const initialFiltersWidth = useRef(clampWidth(filtersWidth || 320, FILTERS_MIN, FILTERS_MAX));
@@ -146,9 +146,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
 
   useEffect(() => {
     void listIIIFProviders()
-      .then((list) =>
-        setProviders(list.map((provider) => ({ key: provider.key, label: provider.label }))),
-      )
+      .then((list) => setProviders(list))
       .catch(() => setProviders([]));
   }, []);
 
@@ -355,6 +353,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
             detail={detail}
             entry={catalog.find((item) => item.source.id === itemId)}
             providerLabel={providers.find((provider) => provider.key === detail.providerKey)?.label}
+            provider={providers.find((provider) => provider.key === detail.providerKey)}
             workspaces={workspaces}
             onBack={openCatalogue}
             onRemoved={() => removeAndLeave(itemId)}

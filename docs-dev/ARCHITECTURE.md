@@ -37,6 +37,24 @@ Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
 Sezioni richiudibili con comandi condivisi; grafico a barre degli stati dei lavori,
 non una percentuale di completamento fra operazioni eterogenee.
 
+Il registro delle biblioteche (`iiif::PROVIDERS`) è un record per fonte: rete,
+riconoscimento, gestore di ricerca, capacità dichiarate e `site_search`, cioè la
+pagina di ricerca della biblioteca sul suo sito con `{query}` dove vanno le
+parole. Serve da via d'uscita quando la ricerca interna non basta — quello che
+una biblioteca espone a un programma quasi mai è tutto il suo catalogo — e si
+apre dalla ricerca singola, dai risultati vuoti, dai risultati di una sola fonte
+e dalla scheda di un'opera senza indirizzo proprio. Un solo componente
+(`ProviderSiteLink`) per tutti e quattro i punti; l'assenza della pagina è
+dichiarata dal record, non decisa dalla schermata.
+
+La Biblioteca nazionale scozzese non ha un catalogo interrogabile utile: il suo
+portale rifiuta le richieste automatiche, e il servizio del catalogo (Alma SRU)
+risponde ma non collega i record alla copia digitalizzata. La ricerca gira
+quindi sull'albero pubblico delle raccolte IIIF (`view.nls.uk/collections`),
+letto una volta e tenuto in memoria per sei ore. L'Università di Glasgow
+pubblica i manifesti (piattaforma Quartex) ma non offre né raccolta IIIF né
+ricerca interrogabile: è dichiarata `DirectOnly`.
+
 `federation/` riusa registry, adapter di ricerca, cache, cortesia e JobEngine.
 Tabelle nella baseline (`0001_baseline_2_0.sql`): `search_runs`,
 `search_executions`, `search_pages`. Una ricerca contiene criteri immutabili e provider; un job

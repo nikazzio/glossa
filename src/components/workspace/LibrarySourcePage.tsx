@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
+import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import {
   ClickPopover,
   IconButton,
@@ -46,6 +47,7 @@ import { MarkdownEditor } from '../common';
 import { PageViewer } from '../viewer/PageViewer';
 import { useDebounce } from '../../hooks/useDebounce';
 import type {
+  IIIFProvider,
   LibraryCatalogEntry,
   LibrarySourceDetail,
   SourceCollection,
@@ -70,6 +72,8 @@ interface LibrarySourcePageProps {
   /** Etichetta leggibile della biblioteca, già risolta dal chiamante
    *  (che ha già l'elenco provider caricato per il filtro del catalogo). */
   providerLabel?: string;
+  /** La biblioteca di provenienza, per riaprirla sul suo sito. */
+  provider?: IIIFProvider;
   workspaces: Workspace[];
   onBack: () => void;
   onRemoved: () => Promise<void>;
@@ -91,6 +95,7 @@ export function LibrarySourcePage({
   detail,
   entry,
   providerLabel,
+  provider,
   workspaces,
   onBack,
   onRemoved,
@@ -222,6 +227,9 @@ export function LibrarySourcePage({
                 <ExternalLink size={13} />
               </IconLink>
             )}
+            {/* Senza l'indirizzo dell'opera resta la porta della biblioteca:
+                si cerca lì e si torna con l'indirizzo giusto. */}
+            {!libraryPageUrl && <ProviderSiteLink provider={provider} tooltipSide="bottom" />}
           </div>
         ) : (
           <span />

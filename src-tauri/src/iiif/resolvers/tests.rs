@@ -366,3 +366,54 @@ fn a_pasted_manifest_address_works_for_libraries_without_their_own_recognition()
     .expect("indirizzo diretto");
     assert_eq!(resolved.strength, Strength::Strong);
 }
+
+#[test]
+fn the_scottish_identifier_is_recognised_in_all_its_forms() {
+    let expected = "https://view.nls.uk/manifest/1334/7515/133475158/manifest.json";
+    for input in [
+        "133475158",
+        "https://digital.nls.uk/133475158",
+        "https://view.nls.uk/manifest/1334/7515/133475158/manifest.json",
+    ] {
+        let resolved = resolve(ResolverKind::Nls, input).expect(input);
+        assert_eq!(resolved.manifest_url, expected, "input: {input}");
+        assert_eq!(resolved.doc_id, "133475158");
+        assert_eq!(resolved.strength, Strength::Strong);
+    }
+}
+
+#[test]
+fn a_shorter_scottish_identifier_uses_one_shelf_segment_only() {
+    // Otto cifre: un solo gruppo davanti, nove: due. È la forma vera del
+    // servizio, provata su entrambe le lunghezze.
+    let resolved = resolve(ResolverKind::Nls, "74464117").expect("riconosciuto");
+    assert_eq!(
+        resolved.manifest_url,
+        "https://view.nls.uk/manifest/7446/74464117/manifest.json"
+    );
+}
+
+#[test]
+fn words_are_not_a_scottish_identifier() {
+    assert!(resolve(ResolverKind::Nls, "beatus").is_none());
+    assert!(resolve(ResolverKind::Nls, "12345").is_none());
+}
+
+#[test]
+fn glasgow_reads_the_identifier_from_the_manifest_address() {
+    let expected =
+        "https://iiif.quartexcollections.com/uofg/iiif/240023ec-d936-40c3-8f28-85416f86db21/manifest";
+    for input in [
+        "240023ec-d936-40c3-8f28-85416f86db21",
+        "https://iiif.quartexcollections.com/uofg/iiif/240023EC-D936-40C3-8F28-85416F86DB21/manifest",
+    ] {
+        let resolved = resolve(ResolverKind::Glasgow, input).expect(input);
+        assert_eq!(resolved.manifest_url, expected, "input: {input}");
+    }
+    // La scheda del portale non porta l'identificativo: non si inventa.
+    assert!(resolve(
+        ResolverKind::Glasgow,
+        "https://digitalresearchcollections.glasgow.ac.uk/Documents/Detail/managers-order-book/2131"
+    )
+    .is_none());
+}

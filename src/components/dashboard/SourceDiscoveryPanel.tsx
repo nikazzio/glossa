@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import { toast } from 'sonner';
 import { Dialog, Hint, IconButton, PopoverItem, Select, Spinner, StatBlock } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
@@ -487,6 +488,9 @@ export function SourceDiscoveryPanel() {
         <IconButton title={t('dashboard.discovery.submit')} type="submit" disabled={loading || searching || !input.trim()}>
           {searching ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
+        {/* La via d'uscita: quello che Glossa vede di una biblioteca non è
+            tutto il suo catalogo, e nel dubbio si cerca a casa loro. */}
+        <ProviderSiteLink provider={selectedProvider} query={input} tooltipSide="bottom" />
       </form>
       {selectedProvider && groupOf(selectedProvider) !== 'library' && (
         <p className="mt-2 text-xs text-editorial-muted">

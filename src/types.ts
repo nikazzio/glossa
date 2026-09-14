@@ -42,6 +42,9 @@ export interface IIIFProvider {
   supportsSearch: boolean;
   kind: IIIFProviderKind;
   availability: IIIFSearchAvailability;
+  /** La pagina di ricerca della biblioteca sul suo sito, con `{query}` dove
+   *  vanno le parole scritte. Vuota dove non esiste. */
+  siteSearch: string;
   filters: IIIFProviderFilter[];
 }
 
