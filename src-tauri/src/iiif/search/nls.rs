@@ -11,7 +11,7 @@
 //! esposto, e la schermata lo dice.
 
 use reqwest::Client;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -40,10 +40,13 @@ struct CachedIndex {
     entries: Vec<Entry>,
 }
 
-static INDEX: OnceLock<Mutex<Option<CachedIndex>>> = OnceLock::new();
+/// L'albero letto, per radice. La chiave è l'indirizzo della radice e non un
+/// valore solo: le prove puntano a un server finto diverso ognuna, e un albero
+/// unico le farebbe leggere i dati della prova precedente.
+static INDEX: OnceLock<Mutex<HashMap<String, CachedIndex>>> = OnceLock::new();
 
-fn cache() -> &'static Mutex<Option<CachedIndex>> {
-    INDEX.get_or_init(|| Mutex::new(None))
+fn cache() -> &'static Mutex<HashMap<String, CachedIndex>> {
+    INDEX.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 pub(super) async fn nls(
@@ -138,21 +141,25 @@ async fn index(
     endpoints: &SearchEndpoints,
     gate: Option<&Gate<'_>>,
 ) -> Result<Vec<Entry>, String> {
+    let root = endpoints.nls_collections.clone();
     if let Some(cached) = cache().lock().ok().and_then(|guard| {
         guard
-            .as_ref()
-            .filter(|i| i.read_at.elapsed() < INDEX_TTL)
-            .map(|i| i.entries.clone())
+            .get(&root)
+            .filter(|index| index.read_at.elapsed() < INDEX_TTL)
+            .map(|index| index.entries.clone())
     }) {
         return Ok(cached);
     }
 
     let entries = read_tree(client, endpoints, gate).await?;
     if let Ok(mut guard) = cache().lock() {
-        *guard = Some(CachedIndex {
-            read_at: Instant::now(),
-            entries: entries.clone(),
-        });
+        guard.insert(
+            root,
+            CachedIndex {
+                read_at: Instant::now(),
+                entries: entries.clone(),
+            },
+        );
     }
     Ok(entries)
 }
@@ -185,7 +192,10 @@ async fn read_tree(
                 let label = label_of(&collection).or_else(|| label_of(child));
                 collect_manifests(&collection, label.as_deref(), &mut entries);
             }
-            Err(reason) => log::warn!("discovery nls collection skipped url={url} reason={reason}"),
+            Err(reason) => log::warn!(
+                "discovery nls collection skipped url={} reason={reason}",
+                without_query(url)
+            ),
         }
     }
 
@@ -249,6 +259,12 @@ fn label_of(value: &serde_json::Value) -> Option<String> {
     .filter(|text| !text.is_empty())
 }
 
+/// L'indirizzo senza la sua coda: quale raccolta ha fallito si deve sapere,
+/// ma ciò che sta dopo `?` può contenere firme, e nel log non ci va.
+fn without_query(url: &str) -> &str {
+    url.split('?').next().unwrap_or(url)
+}
+
 async fn fetch_json(
     client: &Client,
     url: &str,
@@ -260,18 +276,27 @@ async fn fetch_json(
         .send()
         .await
         .map_err(|error| {
-            log::warn!("discovery nls request failed url={url} error={error}");
+            log::warn!(
+                "discovery nls request failed url={} error={error}",
+                without_query(url)
+            );
             super::SEARCH_UNREACHABLE.to_string()
         })?
         .error_for_status()
         .map_err(|error| {
-            log::warn!("discovery nls response failed url={url} error={error}");
+            log::warn!(
+                "discovery nls response failed url={} error={error}",
+                without_query(url)
+            );
             super::reason_for(&error)
         })?
         .json::<serde_json::Value>()
         .await
         .map_err(|error| {
-            log::warn!("discovery nls body failed url={url} error={error}");
+            log::warn!(
+                "discovery nls body failed url={} error={error}",
+                without_query(url)
+            );
             super::SEARCH_INVALID_DATA.to_string()
         })
 }
@@ -279,6 +304,10 @@ async fn fetch_json(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wiremock::{
+        matchers::{method, path},
+        Mock, MockServer, ResponseTemplate,
+    };
 
     fn entry(title: &str, collection: Option<&str>) -> Entry {
         Entry {
@@ -337,5 +366,147 @@ mod tests {
         assert!(entries
             .iter()
             .all(|entry| entry.collection.as_deref() == Some("Raccolta")));
+    }
+
+    #[tokio::test]
+    async fn the_tree_is_read_down_to_the_works_and_paginated() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/top.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "@type": "sc:Collection",
+                "collections": [
+                    { "@id": format!("{}/one.json", server.uri()),
+                      "@type": "sc:Collection", "label": "Manoscritti" }
+                ]
+            })))
+            .mount(&server)
+            .await;
+        let works: Vec<serde_json::Value> = (0..25)
+            .map(|index| {
+                serde_json::json!({
+                    "@id": format!("https://view.nls.uk/manifest/1334/7515/13347{index:04}/manifest.json"),
+                    "@type": "sc:Manifest",
+                    "label": format!("Mandeville {index}")
+                })
+            })
+            .collect();
+        Mock::given(method("GET"))
+            .and(path("/one.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "@type": "sc:Collection", "label": "Manoscritti", "manifests": works
+            })))
+            .mount(&server)
+            .await;
+        let endpoints = SearchEndpoints {
+            nls_collections: format!("{}/top.json", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let first = nls(&Client::new(), &endpoints, "mandeville", 1, None)
+            .await
+            .expect("la ricerca risponde");
+        assert_eq!(first.results.len(), PAGE_SIZE as usize);
+        assert!(first.has_more);
+        assert_eq!(first.results[0].collection.as_deref(), Some("Manoscritti"));
+        assert_eq!(first.results[0].id, "133470000");
+
+        let second = nls(&Client::new(), &endpoints, "mandeville", 2, None)
+            .await
+            .expect("la seconda pagina risponde");
+        assert_eq!(second.results.len(), 5);
+        assert!(!second.has_more);
+    }
+
+    #[tokio::test]
+    async fn a_collection_that_fails_does_not_stop_the_others() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/top.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "@type": "sc:Collection",
+                "collections": [
+                    { "@id": format!("{}/rotta.json", server.uri()),
+                      "@type": "sc:Collection", "label": "Rotta" },
+                    { "@id": format!("{}/buona.json", server.uri()),
+                      "@type": "sc:Collection", "label": "Buona" }
+                ]
+            })))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/rotta.json"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/buona.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "@type": "sc:Collection", "label": "Buona",
+                "manifests": [{
+                    "@id": "https://view.nls.uk/manifest/7446/74464117/manifest.json",
+                    "@type": "sc:Manifest", "label": "Forth Bridge illustrations"
+                }]
+            })))
+            .mount(&server)
+            .await;
+        let endpoints = SearchEndpoints {
+            nls_collections: format!("{}/top.json", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let page = nls(&Client::new(), &endpoints, "forth", 1, None)
+            .await
+            .expect("la ricerca risponde con quello che ha");
+        assert_eq!(page.results.len(), 1);
+        assert_eq!(page.results[0].id, "74464117");
+    }
+
+    #[tokio::test]
+    async fn a_root_that_does_not_answer_is_a_failure_not_an_empty_result() {
+        // Zero risultati e servizio irraggiungibile sono due cose diverse: la
+        // seconda non deve leggersi come «la biblioteca non ha niente».
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/top.json"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+        let endpoints = SearchEndpoints {
+            nls_collections: format!("{}/top.json", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        assert!(nls(&Client::new(), &endpoints, "qualsiasi", 1, None)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn the_tree_is_read_once_and_then_reused() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/top.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "@type": "sc:Collection",
+                "manifests": [{
+                    "@id": "https://view.nls.uk/manifest/7446/74464117/manifest.json",
+                    "@type": "sc:Manifest", "label": "Forth Bridge illustrations"
+                }]
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let endpoints = SearchEndpoints {
+            nls_collections: format!("{}/top.json", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        for _ in 0..3 {
+            nls(&Client::new(), &endpoints, "forth", 1, None)
+                .await
+                .expect("la ricerca risponde");
+        }
+        // `expect(1)` sul finto: tre ricerche, una lettura sola.
     }
 }

@@ -218,7 +218,11 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           {visible.length === 0 && <div className="flex flex-col items-center gap-3 py-2">
             <EmptyState icon={<Search size={20} />} message={t('federation.noVisible')} />
             <div className="flex flex-wrap items-center justify-center gap-1">
-              {providers.filter((provider) => selected?.providers.includes(provider.key))
+              {/* Con una fonte sola sott'occhio si esce verso quella: offrire
+                  anche le altre risponderebbe a una domanda non fatta. */}
+              {providers.filter((provider) => (providerFilter === 'all'
+                ? selected?.providers.includes(provider.key)
+                : provider.key === providerFilter))
                 .map((provider) => <ProviderSiteLink key={provider.key} provider={provider}
                   query={selected?.criteria.query} />)}
             </div>
