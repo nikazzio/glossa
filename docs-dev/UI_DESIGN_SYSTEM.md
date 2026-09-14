@@ -76,7 +76,12 @@ Usare per ogni comando icon-only. Include tooltip, focus e varianti canoniche.
   navigazione da tastiera (freccie/Home/End) salta i tab disattivati invece
   di poterli attivare.
 - In righe flex può richiedere `className="shrink-0"`.
-- Nessun `<button>` raw per comandi visivi dell'app.
+- Nessun `<button>` raw per comandi visivi dell'app. Unica eccezione: la
+  **disclosure row** di un accordion, dove il target è la riga intera
+  (`aria-expanded` + `aria-controls` sul `<button>`, chevron come affordance).
+  Ridurre il target alla sola chevron peggiora usabilità e hit area senza
+  guadagnare niente in accessibilità. Vale per la riga, non per le azioni
+  dentro la riga, che restano `IconButton`.
 
 ### Hint
 
