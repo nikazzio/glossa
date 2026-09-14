@@ -31,3 +31,17 @@ export async function probeManifest(
 ): Promise<boolean | null> {
   return invoke<boolean | null>('probe_manifest', { providerKey, manifestUrl });
 }
+
+/**
+ * Il manifesto così come la biblioteca lo pubblica.
+ *
+ * È la sua dichiarazione sull'opera — pagine, misure, diritti, provenienza — e
+ * nei dati tecnici della scheda si legge per intero invece di ricostruirla da
+ * quello che il visore ne mostra.
+ */
+export async function readManifestText(
+  providerKey: string,
+  manifestUrl: string,
+): Promise<string> {
+  return invoke<string>('read_iiif_manifest_text', { providerKey, manifestUrl });
+}

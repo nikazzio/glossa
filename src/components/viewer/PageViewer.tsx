@@ -9,7 +9,6 @@ import {
   ExternalLink,
   HardDrive,
   HardDriveDownload,
-  Image,
   Images,
   PanelLeftClose,
   PanelLeftOpen,
@@ -43,6 +42,7 @@ import {
   type ImageSource,
 } from '../../services/cacheService';
 import { keepViewerPage } from '../../services/cacheService';
+import { libraryPageUrl } from '../../services/libraryLinks';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { errorMessage, logger } from '../../utils/logger';
 import { toast } from 'sonner';
@@ -52,6 +52,9 @@ export interface ViewerPagePosition {
   index: number;
   label: string | null;
   total: number;
+  /** L'immagine di questa pagina come la serve la biblioteca, alla misura con
+   *  cui è stata chiesta: fuori dal visore serve per darne l'indirizzo. */
+  imageUrl: string | null;
 }
 
 interface PageViewerProps {
@@ -77,9 +80,6 @@ interface PageViewerProps {
   /** Una pagina è appena entrata nel deposito: chi mostra le versioni locali
    *  deve rileggerle, perché spazio e conteggio sono cambiati. */
   onPageKept?: () => void;
-  /** La pagina dell'opera sul sito della biblioteca: da qui si esce a leggerla
-   *  a casa loro, senza tornare alla scheda per cercare il collegamento. */
-  libraryPageUrl?: string | null;
 }
 
 /**
@@ -138,7 +138,6 @@ export function PageViewer({
   onLocalSizeChange,
   onPageChange,
   onPageKept,
-  libraryPageUrl,
 }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -317,14 +316,11 @@ export function PageViewer({
   }, []);
 
   const page = manifest?.pages[currentIndex] ?? null;
-  // L'immagine di **questa** pagina sul server della biblioteca: è quella che
-  // si sta guardando, alla misura con cui è stata chiesta. Serve per aprirla
-  // nel browser, per copiarne l'indirizzo, per mostrarla a qualcuno.
-  const shownPageUrl =
-    pageRequest?.kind === 'page' && page
-      ? (pageRequest.remoteUrl
-        ?? pageSourceUrl(page.imageService, pageRequest.size, manifest?.presentation2 ?? false))
-      : null;
+  // Il visore della biblioteca aperto su **questa** pagina. Non l'immagine
+  // grezza: chi esce vuole vedere la pagina dove la biblioteca la mostra, con
+  // il suo sfoglio e i suoi dati. Esiste solo dove la forma dell'indirizzo è
+  // stata verificata, e dove manca non si mostra niente.
+  const shownPageUrl = libraryPageUrl(providerKey, manifestUrl, currentIndex);
   const total = manifest?.pages.length ?? 0;
   const goToIndex = useCallback(
     (index: number) => {
@@ -493,7 +489,20 @@ export function PageViewer({
       setPageError(null);
       if (!announced) {
         announced = true;
-        onPageChangeRef.current?.({ index: currentIndex, label: page.label, total });
+        onPageChangeRef.current?.({
+          index: currentIndex,
+          label: page.label,
+          total,
+          // La misura è quella con cui la pagina è stata davvero chiesta;
+          // finché non lo si sa, quella che il visore chiederebbe.
+          imageUrl: pageSourceUrl(
+            page.imageService,
+            shownRequest.current?.kind === 'page'
+              ? shownRequest.current.size
+              : wholePageAttempts(page, null, buildsImagesOnDemand(providerKey))[0],
+            manifest?.presentation2 ?? false,
+          ),
+        });
         void setLastViewedPage(sourceId, currentIndex).catch((error) => {
           logger.warn('library.viewer.lastPageSaveFailed', {
             message: errorMessage(error),
@@ -689,7 +698,6 @@ export function PageViewer({
             }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
-            libraryPageUrl={libraryPageUrl}
             shownPageUrl={shownPageUrl}
           />
         )}
@@ -799,7 +807,6 @@ interface ViewerToolbarProps {
   onToggleLocalOnly: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
-  libraryPageUrl?: string | null;
   shownPageUrl?: string | null;
 }
 
@@ -888,7 +895,6 @@ function ViewerToolbar({
   onToggleLocalOnly,
   thumbnailsOpen,
   onToggleThumbnails,
-  libraryPageUrl,
   shownPageUrl,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
@@ -965,16 +971,6 @@ function ViewerToolbar({
             size="sm"
             href={shownPageUrl}
             title={t('areas.library.openShownPage')}
-            tooltipSide="bottom"
-          >
-            <Image size={14} />
-          </IconLink>
-        )}
-        {libraryPageUrl && (
-          <IconLink
-            size="sm"
-            href={libraryPageUrl}
-            title={t('areas.library.openOnLibrarySite')}
             tooltipSide="bottom"
           >
             <ExternalLink size={14} />

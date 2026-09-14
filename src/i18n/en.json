@@ -1339,7 +1339,18 @@
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
       "viewOnline": "Online",
-      "openShownPage": "Open this page as the library serves it"
+      "openShownPage": "Open this page in the library's own viewer",
+      "technicalLinkOpen": "Open in the browser",
+      "technicalLinks": {
+        "manifest": "IIIF manifest",
+        "item": "Work page",
+        "catalog": "Catalogue record",
+        "shownPage": "Open page",
+        "shownImage": "Page image",
+        "librarySite": "Library site"
+      },
+      "manifestContent": "Show the manifest",
+      "manifestContentFailed": "The manifest could not be read from the library."
     },
     "transcriptions": {
       "title": "Transcriptions",

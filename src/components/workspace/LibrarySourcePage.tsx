@@ -22,6 +22,8 @@ import {
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from '../library/ProviderSiteLink';
+import { libraryItemUrl } from '../../services/libraryLinks';
+import { type ShownPage } from './VersionTechnicalData';
 import {
   ClickPopover,
   IconButton,
@@ -116,8 +118,17 @@ export function LibrarySourcePage({
   const [selectedVersionId, setSelectedVersionId] = useState(initialManifestVersion?.id ?? '');
   const manifestVersion =
     iiifVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
-  const libraryPageUrl = detail.pageUrl ?? detail.catalogUrl;
+  // L'opera sul sito della biblioteca: quello che ha dichiarato lei, e in
+  // mancanza quello che si ricava dall'indirizzo del manifesto per le fonti di
+  // cui la forma è verificata. Trovato il libro, la ricerca generica della
+  // biblioteca non serve più: si mostra solo quando non c'è nient'altro.
+  const libraryPageUrl =
+    detail.pageUrl
+    ?? detail.catalogUrl
+    ?? libraryItemUrl(manifestVersion?.providerKey ?? null, manifestVersion?.sourceUrl ?? '');
   const creatorDate = [detail.creator, detail.date].filter(Boolean).join(' · ');
+  /** La pagina aperta nel visore: i dati tecnici ne mostrano gli indirizzi. */
+  const [shownPage, setShownPage] = useState<ShownPage | null>(null);
   const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
   const inspectorWidth = useUiStore((state) => state.librarySourceInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setLibrarySourceInspectorWidth);
@@ -217,25 +228,27 @@ export function LibrarySourcePage({
                 {providerLabel ?? manifestVersion.label}
               </span>
             )}
-            {libraryPageUrl && (
-              <IconLink
-                size="sm"
-                href={libraryPageUrl}
-                title={t('areas.library.openOnLibrarySite')}
-                tooltipSide="bottom"
-              >
-                <ExternalLink size={13} />
-              </IconLink>
-            )}
-            {/* Senza l'indirizzo dell'opera resta la porta della biblioteca:
-                si cerca lì e si torna con l'indirizzo giusto. */}
-            {!libraryPageUrl && <ProviderSiteLink provider={provider} tooltipSide="bottom" />}
           </div>
         ) : (
           <span />
         )}
 
-        <div className="flex items-center justify-end">
+        {/* Le uscite verso la biblioteca stanno con i comandi, a destra: in
+            mezzo rubavano larghezza al titolo, che è la cosa che si legge. */}
+        <div className="flex items-center justify-end gap-1">
+          {libraryPageUrl && (
+            <IconLink
+              size="sm"
+              href={libraryPageUrl}
+              title={t('areas.library.openOnLibrarySite')}
+              tooltipSide="bottom"
+            >
+              <ExternalLink size={13} />
+            </IconLink>
+          )}
+          {/* Senza l'indirizzo dell'opera resta la porta della biblioteca:
+              si cerca lì e si torna con l'indirizzo giusto. */}
+          {!libraryPageUrl && <ProviderSiteLink provider={provider} tooltipSide="bottom" />}
           {entry && (
             <SourceHeaderActions
               entry={entry}
@@ -262,8 +275,8 @@ export function LibrarySourcePage({
             preferredLocalSize={chosenLocalSize}
             onLocalSizeChange={setReadingLocalSize}
             onPageKept={() => setKeptPages((count) => count + 1)}
-            libraryPageUrl={libraryPageUrl}
             onPageChange={(position) => {
+              setShownPage({ index: position.index, imageUrl: position.imageUrl });
               // Il manifesto letto dal visore dice quante pagine ha il libro, e
               // il motore lo registra. La scheda però tiene in mano il numero
               // di prima — a volte «1», dichiarato dalla ricerca — e diceva
@@ -363,6 +376,8 @@ export function LibrarySourcePage({
                   viewedLocalSize={readingLocalSize}
                   onViewLocalSize={setChosenLocalSize}
                   reloadToken={keptPages}
+                  provider={provider}
+                  shownPage={shownPage}
                 />
               ) : (
                 <>

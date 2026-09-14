@@ -58,9 +58,10 @@ In lettura online carica prima un’immagine della pagina e può richiedere
 tessere di maggior dettaglio quando lo zoom lo richiede. Ingrandire una copia
 locale non ne aumenta la risoluzione.
 
-Nella barra del visore un comando apre l’opera sul sito della biblioteca, nel
-browser: prima quel collegamento esisteva solo fra le informazioni della scheda,
-lontano da dove serve.
+Nella barra del visore un comando apre **la pagina che stai guardando** nel
+visore della biblioteca, dove la forma dell’indirizzo è verificata — oggi
+Gallica e Internet Archive. Il collegamento all’opera intera sta in alto nella
+scheda, accanto agli altri comandi.
 
 L’indicatore **File locale / File online** distingue il deposito dalla lettura
 remota. Il suggerimento specifica provenienza, eventuale cache e dimensioni
@@ -103,3 +104,10 @@ un PDF in un progetto di traduzione è una funzione distinta. La gestione
 avanzata delle singole pagine e la selezione multipla sono ancora incomplete.
 Le restrizioni di scaricamento dichiarate dalle istituzioni non sono applicate
 automaticamente: consulta le condizioni della fonte.
+
+Nella scheda, sotto **Copie digitali**, la sezione richiudibile «Dati tecnici»
+raccoglie tutti gli indirizzi di quella copia — manifesto IIIF, pagina
+dell’opera, scheda di catalogo, pagina aperta nel visore della biblioteca,
+immagine di quella pagina, sito della biblioteca — ognuno copiabile e apribile
+nel browser. Da lì si può anche leggere il manifesto per esteso, così come la
+biblioteca lo pubblica.
