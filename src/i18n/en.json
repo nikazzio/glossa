@@ -1349,8 +1349,11 @@
         "shownImage": "Page image",
         "librarySite": "Library site"
       },
-      "manifestContent": "Show the manifest",
-      "manifestContentFailed": "The manifest could not be read from the library."
+      "manifestContent": "Read the library manifest",
+      "manifestContentFailed": "The manifest could not be read from the library.",
+      "manifestPages": "Pages",
+      "manifestSummary": "Description",
+      "manifestRights": "Rights"
     },
     "transcriptions": {
       "title": "Transcriptions",

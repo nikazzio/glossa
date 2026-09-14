@@ -185,13 +185,13 @@ export function LibrarySourcePage({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
-      {/* Una riga sola: identità dell'opera a sinistra, copia digitale aperta al
-          centro, comandi a destra. Le due colonne laterali hanno la stessa
-          quota, così il centro resta centrato davvero anche con un titolo
-          lungo, che si tronca invece di spostarlo. La parola
-          «Digitalizzazione» non si scrive: resta come etichetta per chi legge
-          con la voce, perché a schermo il nome della biblioteca basta. */}
-      <header className="grid h-14 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-editorial-border px-3">
+      {/* Una riga sola: identità dell'opera a sinistra, tutto il resto a
+          destra — biblioteca, uscite verso il suo sito, comandi dell'opera. Il
+          titolo prende lo spazio che avanza e si tronca solo quando serve
+          davvero. La parola «Digitalizzazione» non si scrive: resta come
+          etichetta per chi legge con la voce, perché a schermo il nome della
+          biblioteca basta. */}
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3">
         <div className="flex min-w-0 items-center gap-3">
           <IconButton size="sm" onClick={onBack} title={t('areas.library.backToCatalogue')}>
             <ArrowLeft size={15} />
@@ -207,35 +207,28 @@ export function LibrarySourcePage({
           </div>
         </div>
 
-        {manifestVersion ? (
-          <div className="flex min-w-0 items-center gap-2">
-            {iiifVersions.length > 1 ? (
-              <Select
-                value={manifestVersion.id}
-                onChange={setSelectedVersionId}
-                ariaLabel={t('areas.library.digitalizationLabel')}
-                options={iiifVersions.map((version) => ({
-                  value: version.id,
-                  label: version.label,
-                }))}
-                className="min-w-0 max-w-[14rem]"
-              />
-            ) : (
-              <span
-                className="min-w-0 truncate text-xs text-editorial-ink"
-                aria-label={t('areas.library.digitalizationLabel')}
-              >
-                {providerLabel ?? manifestVersion.label}
-              </span>
-            )}
-          </div>
-        ) : (
-          <span />
-        )}
-
-        {/* Le uscite verso la biblioteca stanno con i comandi, a destra: in
-            mezzo rubavano larghezza al titolo, che è la cosa che si legge. */}
-        <div className="flex items-center justify-end gap-1">
+        {/* Biblioteca e uscite stanno con i comandi, a destra: al centro
+            rubavano larghezza al titolo, che è la cosa che si legge. */}
+        <div className="flex shrink-0 items-center justify-end gap-1">
+          {manifestVersion && (iiifVersions.length > 1 ? (
+            <Select
+              value={manifestVersion.id}
+              onChange={setSelectedVersionId}
+              ariaLabel={t('areas.library.digitalizationLabel')}
+              options={iiifVersions.map((version) => ({
+                value: version.id,
+                label: version.label,
+              }))}
+              className="min-w-0 max-w-[12rem]"
+            />
+          ) : (
+            <span
+              className="mr-1 max-w-[12rem] truncate text-xs text-editorial-ink"
+              aria-label={t('areas.library.digitalizationLabel')}
+            >
+              {providerLabel ?? manifestVersion.label}
+            </span>
+          ))}
           {libraryPageUrl && (
             <IconLink
               size="sm"

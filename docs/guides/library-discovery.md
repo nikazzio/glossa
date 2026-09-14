@@ -106,8 +106,12 @@ Le restrizioni di scaricamento dichiarate dalle istituzioni non sono applicate
 automaticamente: consulta le condizioni della fonte.
 
 Nella scheda, sotto **Copie digitali**, la sezione richiudibile «Dati tecnici»
-raccoglie tutti gli indirizzi di quella copia — manifesto IIIF, pagina
+raccoglie tutti gli indirizzi di quella copia — manifest IIIF, pagina
 dell’opera, scheda di catalogo, pagina aperta nel visore della biblioteca,
-immagine di quella pagina, sito della biblioteca — ognuno copiabile e apribile
-nel browser. Da lì si può anche leggere il manifesto per esteso, così come la
-biblioteca lo pubblica.
+immagine di quella pagina, sito della biblioteca — ognuno riconoscibile dal suo
+segno, copiabile e apribile nel browser. Gli indirizzi lunghi si leggono per
+esteso al passaggio del mouse.
+
+Da lì si chiede anche il manifest della biblioteca: non viene riversato com’è —
+per quello c’è il suo indirizzo — ma letto e mostrato come dichiarazione
+sull’opera, con numero di pagine, descrizione, voci del catalogo e diritti.

@@ -103,5 +103,10 @@ the source’s conditions of use.
 On the item page, under **Digital copies**, the collapsible «Technical data»
 section gathers every address of that copy — IIIF manifest, work page,
 catalogue record, the open page in the library's viewer, the image of that page,
-the library site — each one copyable and openable in the browser. The manifest
-itself can be read there in full, exactly as the library publishes it.
+the library site — each marked by its own symbol, copyable and openable in the
+browser. Long addresses read in full on hover.
+
+The library's manifest can be requested there too: it is not dumped as it comes
+— its address is right above for that — but read and shown as the library's
+statement about the work, with page count, description, catalogue entries and
+rights.

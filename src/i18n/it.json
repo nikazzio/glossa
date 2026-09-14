@@ -1342,15 +1342,18 @@
       "openShownPage": "Apri questa pagina nel visore della biblioteca",
       "technicalLinkOpen": "Apri nel browser",
       "technicalLinks": {
-        "manifest": "Manifesto IIIF",
+        "manifest": "Manifest IIIF",
         "item": "Pagina dell'opera",
         "catalog": "Scheda di catalogo",
         "shownPage": "Pagina aperta",
         "shownImage": "Immagine della pagina",
         "librarySite": "Sito della biblioteca"
       },
-      "manifestContent": "Mostra il manifesto",
-      "manifestContentFailed": "Non è stato possibile leggere il manifesto dalla biblioteca."
+      "manifestContent": "Leggi il manifest della biblioteca",
+      "manifestContentFailed": "Non è stato possibile leggere il manifest dalla biblioteca.",
+      "manifestPages": "Pagine",
+      "manifestSummary": "Descrizione",
+      "manifestRights": "Diritti"
     },
     "transcriptions": {
       "title": "Trascrizioni",

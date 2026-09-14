@@ -47,6 +47,20 @@ e dalla scheda di un'opera senza indirizzo proprio. Un solo componente
 (`ProviderSiteLink`) per tutti e quattro i punti; l'assenza della pagina è
 dichiarata dal record, non decisa dalla schermata.
 
+Dall'indirizzo del manifesto si torna alle pagine pubbliche della biblioteca
+(`services/libraryLinks.ts`): scheda dell'opera e visore aperto su una pagina
+precisa, oggi per Gallica — che numera le pagine da uno — e Internet Archive —
+che conta i fogli da zero. È il percorso inverso del riconoscimento, e vale solo
+dove la forma è stata verificata sul servizio vero: un indirizzo costruito per
+analogia porta su una pagina che non esiste.
+
+Il comando `read_iiif_manifest_text` restituisce il manifesto così com'è, con la
+stessa cortesia di rete del resto e un tetto di 4 MB; `services/manifestSummary.ts`
+lo legge nelle due versioni del formato (2: `sequences`/stringhe, 3:
+`items`/etichette per lingua) e ne ricava titolo, descrizione, pagine, voci e
+diritti. A schermo va quello, non il documento grezzo: il grezzo è a un click,
+dal suo indirizzo.
+
 La Biblioteca nazionale scozzese non ha un catalogo interrogabile utile: il suo
 portale rifiuta le richieste automatiche, e il servizio del catalogo (Alma SRU)
 risponde ma non collega i record alla copia digitalizzata. La ricerca gira
