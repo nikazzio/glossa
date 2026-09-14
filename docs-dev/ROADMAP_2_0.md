@@ -92,9 +92,13 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   rete ridotte alle tre leve utili più due avanzate; misure delle immagini nella
   riga della biblioteca; righe delle versioni locali con origine, copertura,
   spazio e stati distinti; nomi corretti a schermo. Dal visore si apre la pagina
-  che si sta guardando sul sito della biblioteca. **Resta**: «riscarica questa
-  pagina», che dipende da una decisione della #459, e il segnale di
-  preriscaldamento che nessuno legge — o si collega o si cancella.
+  che si sta guardando sul sito della biblioteca. **Resta** un punto solo:
+  «riscarica questa pagina», che dipende da una decisione della #459. Il segnale
+  `needs_viewer_warmup` non è un residuo: la manopola morta è sparita dalle
+  impostazioni, il preriscaldamento della Vaticana è implementato nel suo
+  gestore di ricerca (visita della pagina del catalogo e `Referer`), e il
+  segnale resta dichiarato come segnaposto per quando anche lo scaricamento
+  dovrà aprire una sessione.
 - #459 (azioni sulla pagina e selezione multipla, «Fase A»): **quasi tutta da
   fare**. Esiste solo «tieni questa pagina» alla misura mostrata. Mancano scelta
   della misura, sostituzione, riduzione, eliminazione di una versione locale
