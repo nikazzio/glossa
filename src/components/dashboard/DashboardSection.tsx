@@ -24,7 +24,11 @@ export function DashboardSection({ id, label, icon, hint, children, initiallyOpe
       <SectionLabel icon={icon} label={label} hint={hint} />
       <IconButton
         title={open ? t('dashboard.section.collapse', { section: label }) : t('dashboard.section.expand', { section: label })}
-        aria-expanded={open} aria-controls={panelId} onClick={() => setSection(id, !open)} size="sm" className="ml-auto"
+        aria-expanded={open}
+        // Chiuso il riquadro non esiste nel documento: un riferimento a un id
+        // assente manda a sbattere chi naviga con la tastiera o con un lettore.
+        aria-controls={open ? panelId : undefined}
+        onClick={() => setSection(id, !open)} size="sm" className="ml-auto"
       >
         <ChevronDown size={16} className={open ? '' : '-rotate-90'} />
       </IconButton>

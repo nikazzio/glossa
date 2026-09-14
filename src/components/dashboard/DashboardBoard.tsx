@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -49,6 +49,10 @@ export function DashboardBoard({ sections }: { sections: BoardSection[] }) {
   const columns = useUiStore((state) => state.dashboardSectionColumns);
   const setColumns = useUiStore((state) => state.setDashboardSectionColumns);
   const [dragging, setDragging] = useState<string | null>(null);
+  // La colonna di partenza: durante il trascinamento quella corrente è già
+  // cambiata, e riordinare di nuovo all'arrivo farebbe scavalcare la sezione
+  // su cui si è lasciato.
+  const originColumn = useRef<ColumnId | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: DRAG_START_DISTANCE } }),
@@ -96,22 +100,25 @@ export function DashboardBoard({ sections }: { sections: BoardSection[] }) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     setDragging(null);
+    const origin = originColumn.current;
+    originColumn.current = null;
     const { active, over } = event;
     if (!over) return;
-    const from = columnOf(String(active.id));
-    const to = targetColumn(String(over.id));
-    if (!from || !to) return;
-    if (from !== to) {
-      setColumns(placed);
-      return;
-    }
-    const oldIndex = placed[from].indexOf(String(active.id));
-    const newIndex = placed[to].indexOf(String(over.id));
+    const column = columnOf(String(active.id));
+    if (!column) return;
+    // Cambiata colonna, la sezione è già al suo posto: il passaggio l'ha
+    // collocata mentre si trascinava, e qui non c'è più niente da spostare.
+    if (origin !== column) return;
+    const oldIndex = placed[column].indexOf(String(active.id));
+    const newIndex = placed[column].indexOf(String(over.id));
     if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
-    setColumns({ ...placed, [from]: arrayMove(placed[from], oldIndex, newIndex) });
+    setColumns({ ...placed, [column]: arrayMove(placed[column], oldIndex, newIndex) });
   };
 
-  const handleDragStart = (event: DragStartEvent) => setDragging(String(event.active.id));
+  const handleDragStart = (event: DragStartEvent) => {
+    originColumn.current = columnOf(String(event.active.id));
+    setDragging(String(event.active.id));
+  };
 
   return (
     <DndContext

@@ -189,6 +189,11 @@ solo**.
 - `ownsPanelSemantics` (default vero): falso solo se `children` porta già un
   proprio wrapper `role="tabpanel"` per tab (più componenti di contenuto,
   ognuno con la sua identità — come i tab del documento).
+- `bodyScrolls` (default vero): falso quando il contenuto porta già il proprio
+  contenitore scorrevole — per esempio una barra di filtri fissa sopra un elenco
+  lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
+  scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
+  destinazioni e nessuna delle due si comporta come ci si aspetta.
 
 ### SettingRow e campi
 

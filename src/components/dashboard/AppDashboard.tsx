@@ -212,6 +212,7 @@ export function AppDashboard() {
         collapsed={jobsCollapsed}
         onCollapsedChange={toggleJobsCollapsed}
         ownsPanelSemantics={false}
+        bodyScrolls={false}
         collapsedContent={
           /* Chiusa, la striscia dice comunque cosa nasconde: senza il segno
              resterebbe un bordo muto accanto al comando di riapertura. */

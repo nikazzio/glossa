@@ -41,6 +41,13 @@ interface InspectorShellProps {
   headerActions?: ReactNode;
   /** Informazione compatta che resta sotto il comando di riapertura. */
   collapsedContent?: ReactNode;
+  /**
+   * Falso quando il contenuto porta già il proprio contenitore scorrevole (per
+   * esempio una barra di filtri fissa sopra un elenco lungo): due aree che
+   * scorrono una dentro l'altra dividono la rotellina e i tasti fra due
+   * destinazioni, e il design system ne vuole una sola.
+   */
+  bodyScrolls?: boolean;
   children: ReactNode;
 }
 
@@ -64,6 +71,7 @@ export function InspectorShell({
   onCollapsedChange,
   headerActions,
   collapsedContent,
+  bodyScrolls = true,
   children,
 }: InspectorShellProps) {
   const { t } = useTranslation();
@@ -168,7 +176,7 @@ export function InspectorShell({
           <div className="min-w-0 flex-1 truncate text-right">{actions}</div>
         </div>
       )}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto custom-scrollbar">
+      <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${bodyScrolls ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'}`}>
         {ownsPanelSemantics && tabs.length > 0 ? (
           <div
             id={`inspector-tab-panel-${activeTab}`}

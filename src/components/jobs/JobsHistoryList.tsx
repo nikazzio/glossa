@@ -53,11 +53,12 @@ export function JobsHistoryList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  // Un lavoro che nasce o che finisce cambia questo elenco: si rilegge quando
-  // la coda cambia davvero, non a intervalli.
-  const queueSignal = useJobsStore(
-    (state) => `${state.jobs.length}:${state.jobs.filter(isTerminal).length}`,
-  );
+  // Un lavoro che nasce o che finisce cambia *quali* righe stanno in pagina:
+  // solo allora si rilegge il deposito. Gli aggiornamenti continui — percentuale
+  // che sale, messaggio che cambia — non fanno una nuova interrogazione: la
+  // riga in pagina prende la versione viva, che è la stessa cosa senza il costo.
+  const liveJobs = useJobsStore((state) => state.jobs);
+  const queueSignal = `${liveJobs.length}:${liveJobs.filter(isTerminal).length}`;
   // Eliminare qui toglie la riga anche dal pannello in basso: è lo stesso
   // lavoro, e lasciarcelo fino al riavvio sarebbe una riga che non esiste più.
   const clearFinished = useJobsStore((state) => state.clearFinished);
@@ -138,7 +139,10 @@ export function JobsHistoryList() {
   }
 
   const hasFilters = outcomes.length > 0 || jobTypes.length > 0 || query !== '';
-  const deletable = jobs.some(isTerminal);
+  // La riga mostra sempre lo stato più recente: quella letta dal deposito è di
+  // quando è arrivata la pagina, e un lavoro che nel frattempo è avanzato
+  // resterebbe fermo a schermo.
+  const rows = jobs.map((job) => liveJobs.find((live) => live.id === job.id) ?? job);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -164,7 +168,10 @@ export function JobsHistoryList() {
             size="sm"
             tone="danger"
             title={hasFilters ? t('jobsHistory.clearShown') : t('jobsHistory.clearAll')}
-            disabled={!deletable}
+            // Non si guarda cosa c'è in questa pagina: la cancellazione lavora
+            // su tutto l'insieme filtrato, e con cinquanta lavori attivi in
+            // testa il comando risultava spento mentre c'era da eliminare.
+            disabled={total === 0}
             onClick={() => void removeShown()}
           >
             <Trash2 size={13} />
@@ -219,7 +226,7 @@ export function JobsHistoryList() {
         )}
 
         <ul className="flex flex-col gap-1">
-          {jobs.map((job, index) => (
+          {rows.map((job, index) => (
             <li key={job.id}>
               <ListReveal index={index}>
                 <JobRow job={job} onRemove={() => void removeOne(job)} removeLabel={t('jobsHistory.delete')} singleColumn />

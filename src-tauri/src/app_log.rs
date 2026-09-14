@@ -70,18 +70,52 @@ fn parse_line(line: &str) -> Option<LogLine> {
         timestamp: format!("{date} {time}"),
         target: target.to_string(),
         level: level.to_string(),
-        message: message.to_string(),
+        message: redact_urls(message),
         from_app: is_app_target(target),
     })
+}
+
+/// Toglie la parte dopo `?` da ogni indirizzo scritto nel messaggio.
+///
+/// Nella coda di una richiesta stanno firme, sessioni e chiavi delle
+/// biblioteche: il file su disco le contiene già, ma mostrarle in una finestra
+/// che si fotografa per segnalare un guasto le fa uscire di casa. Il percorso
+/// resta — serve a capire *cosa* è stato chiesto — e sparisce solo ciò che
+/// autentica.
+fn redact_urls(message: &str) -> String {
+    let mut out = String::with_capacity(message.len());
+    let mut rest = message;
+    while let Some(start) = rest.find("http://").or_else(|| rest.find("https://")) {
+        let (before, from_url) = rest.split_at(start);
+        out.push_str(before);
+        let end = from_url
+            .find(|c: char| c.is_whitespace())
+            .unwrap_or(from_url.len());
+        let (url, after) = from_url.split_at(end);
+        match url.split_once('?') {
+            Some((base, _)) => {
+                out.push_str(base);
+                out.push_str("?[nascosto]");
+            }
+            None => out.push_str(url),
+        }
+        rest = after;
+    }
+    out.push_str(rest);
+    out
 }
 
 /// I file del log, dal più recente al più vecchio. Il corrente non ha data nel
 /// nome, i ruotati sì, e l'ordine alfabetico decrescente li mette in ordine di
 /// tempo perché la data è scritta `YYYY-MM-DD_HH-MM-SS`.
 fn log_files(dir: &PathBuf) -> Result<Vec<PathBuf>, String> {
+    // Un errore di lettura non si scarta: un file che sparisce dall'elenco e
+    // un file che non c'è darebbero lo stesso storico parziale, senza dirlo.
     let mut rotated: Vec<PathBuf> = std::fs::read_dir(dir)
         .map_err(|e| e.to_string())?
-        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .map(|entry| entry.map(|entry| entry.path()).map_err(|e| e.to_string()))
+        .collect::<Result<Vec<PathBuf>, String>>()?
+        .into_iter()
         .filter(|path| path.extension().is_some_and(|ext| ext == "log"))
         .collect();
     rotated.sort();
@@ -138,7 +172,14 @@ pub async fn read_app_log(app: tauri::AppHandle, query: LogQuery) -> Result<Vec<
     for path in log_files(&dir)? {
         // Un file ruotato pesa 5 MB: si legge intero, ma si smette appena il
         // tratto richiesto è completo invece di aprire anche i precedenti.
-        let content = std::fs::read_to_string(&path).unwrap_or_default();
+        let content = std::fs::read_to_string(&path).map_err(|e| {
+            format!(
+                "Failed to read the log file {}: {e}",
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("?")
+            )
+        })?;
         for line in content.lines().rev() {
             let Some(parsed) = parse_line(line) else {
                 continue;
@@ -173,6 +214,26 @@ mod tests {
         assert_eq!(line.level, "INFO");
         assert_eq!(line.message, "{\"event\":\"search.created\"}");
         assert!(line.from_app);
+    }
+
+    #[test]
+    fn the_query_string_of_an_address_never_reaches_the_window() {
+        let line = parse_line(
+            "[2026-09-14][12:05:49][glossa_lib::download][DEBUG] request ok url=https://digi.vatlib.it/iiif/MSS_Vat.lat.3225/manifest.json?token=segreto&exp=12",
+        )
+        .expect("riga riconosciuta");
+        assert!(line
+            .message
+            .contains("MSS_Vat.lat.3225/manifest.json?[nascosto]"));
+        assert!(!line.message.contains("segreto"));
+    }
+
+    #[test]
+    fn an_address_without_a_query_string_stays_whole() {
+        let line =
+            parse_line("[2026-09-14][12:05:49][federation][INFO] http://example.org/a/b poi altro")
+                .expect("riga riconosciuta");
+        assert_eq!(line.message, "http://example.org/a/b poi altro");
     }
 
     #[test]

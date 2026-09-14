@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { toast } from 'sonner';
 import i18next from 'i18next';
 import { logger } from '../utils/logger';
@@ -46,8 +47,9 @@ interface JobsState {
   clearFinished: (id?: string) => Promise<number>;
   /** Lavori nascosti dal pannello in basso: righe tolte dalla vista, non dal
    *  deposito. Si eliminano davvero solo dall'elenco completo in Panoramica.
-   *  La lista vive finché dura la sessione: al riavvio il pannello riparte da
-   *  quello che c'è, senza portarsi dietro le pulizie di ieri. */
+   *  La scelta resta dopo il riavvio — una riga tolta che tornava da sola era
+   *  una pulizia che non serviva a niente — e si ripulisce da sé quando il
+   *  lavoro sparisce dal deposito o torna a girare. */
   dismissed: string[];
   dismiss: (ids: string[]) => void;
 }
@@ -74,13 +76,20 @@ function replace(jobs: Job[], changed: Job): Job[] {
   return known ? jobs.map((job) => (job.id === changed.id ? changed : job)) : [...jobs, changed];
 }
 
-export const useJobsStore = create<JobsState>((set, get) => ({
+export const useJobsStore = create<JobsState>()(persist((set, get) => ({
   jobs: [],
   isLoaded: false,
 
   load: async () => {
     const jobs = await listActiveJobs();
-    set({ jobs, isLoaded: true });
+    // La lista dei nascosti non cresce all'infinito: si tiene solo ciò che
+    // esiste ancora nel deposito, il resto sarebbe memoria di righe morte.
+    const alive = new Set(jobs.map((job) => job.id));
+    set((state) => ({
+      jobs,
+      isLoaded: true,
+      dismissed: state.dismissed.filter((id) => alive.has(id)),
+    }));
   },
 
   subscribe: async () => onJobChanged((job) => get().applyChange(job)),
@@ -124,6 +133,13 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     await get().load();
     return removed;
   },
+}), {
+  // Solo le righe tolte dalla vista: i lavori arrivano dal deposito a ogni
+  // avvio, salvarne una copia qui vorrebbe dire mostrarne di vecchi finché
+  // la prima lettura non arriva.
+  name: 'glossa-jobs-panel',
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({ dismissed: state.dismissed }),
 }));
 
 /** In corso davvero: sta girando, o si sta fermando. */
