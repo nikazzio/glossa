@@ -110,6 +110,10 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   stato» che la #459 consolida: conviene dopo, non prima.
 - #471 (biblioteche scozzesi) e #472 (membri del consorzio IIIF): la prima
   consegnata con #473, la seconda è l'elenco ordinato di chi manca.
+- #474 (scheda a template fisso): tutti i campi sempre visibili e compilabili a
+  mano, con sezione principale aperta e il resto richiudibile. Il motore accetta
+  già una correzione per ogni campo; il lavoro è di schermata. **Prossimo in
+  ordine**, prima della Fase A.
 
 - Verificare i percorsi già presenti e correggere le regressioni prima di
   aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
