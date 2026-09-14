@@ -134,7 +134,12 @@ export function AppDashboard() {
           <JobsOverviewChart jobs={jobs} />
           <div className="flex items-center justify-between gap-3 border-t border-editorial-border pt-2.5">
             <p className="text-xs text-editorial-muted">{t('overview.jobsSummary', { active: jobs.filter((job) => !isTerminal(job)).length, failed: jobs.filter((job) => job.status === 'error').length })}</p>
-            <IconButton size="sm" title={t('overview.openJobs')} onClick={openJobs}><Activity size={16} /></IconButton>
+            <div className="flex items-center gap-1">
+              {/* Due destinazioni diverse: il panel per agire su ciò che gira
+                  adesso, lo storico per cercare un job passato ed eliminarlo. */}
+              <IconButton size="sm" title={t('overview.openJobs')} onClick={openJobs}><Activity size={16} /></IconButton>
+              <IconButton size="sm" title={t('overview.openJobsHistory')} onClick={() => navigate(dashboardLocation({ view: 'jobs' }))}><History size={16} /></IconButton>
+            </div>
           </div>
         </DashboardSection>
       </div>

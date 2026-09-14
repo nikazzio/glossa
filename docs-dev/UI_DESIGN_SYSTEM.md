@@ -367,6 +367,16 @@ Niente colori neon o valori locali.
 - Aree scroll console: `.terminal-scrollbar`.
 - Header: riga chrome con titolo, stato e chiusura; toolbar separata.
 - Drawer ridimensionabile tra 160 e 520 px, altezza persistita.
+- Testata e toolbar sono primitive condivise (`components/console/ConsoleChrome`
+  e `ConsoleToolbar`): titolo, conteggio righe visibili, stato, chiusura; sotto,
+  ricerca sempre visibile, gruppi di filtri richiudibili e comandi a destra.
+  Ogni console nuova le riusa — due console con filtri disposti diversamente
+  sono due console che si imparano due volte.
+- Filtro spento = testo barrato in `terminal-dim`, non colore assente: lo stato
+  si legge senza distinguere le tinte.
+- Il pannello in basso ha tre schede — messaggi della pipeline (solo dentro una
+  traduzione), log di sistema e lavori — e ricorda l'ultima usata. Fuori da una
+  traduzione ripiega sul log di sistema, mai su una scheda vuota.
 
 ## Controllo prima di aggiungere UI
 

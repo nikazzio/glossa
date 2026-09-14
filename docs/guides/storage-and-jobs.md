@@ -115,3 +115,38 @@ soggette al limite di spazio, senza la stessa scadenza temporale. In
 **Impostazioni → Dati** puoi modificare questi valori e svuotare la
 cache. La cache non aumenta il conteggio delle pagine scaricate e non entra
 nel [backup](../reference/backup-and-restore).
+
+
+## Messaggi e log di sistema
+
+Il pannello in basso raccoglie tre schede: i messaggi della traduzione in corso,
+il **log di sistema** e i lavori. Il log di sistema è disponibile in ogni area e
+mostra quanto il programma ha scritto mentre lavorava — ricerche nelle
+biblioteche, scaricamenti, deposito, salvataggi — leggendo direttamente il file
+di log dell'applicazione, compresi i file ruotati delle sessioni precedenti.
+
+I filtri restringono per area (Biblioteca, Traduzione, Lavori, Interfaccia) e
+per livello (errore, attenzione, info, debug); la ricerca lavora sul testo della
+riga. Le righe prodotte dalle librerie di terze parti — interrogazioni al
+database, portachiavi, connessioni di rete — restano nascoste finché non le si
+richiede esplicitamente: da sole costituiscono la maggior parte del file.
+
+«Svuota la vista» ripulisce la finestra e non tocca il file su disco: ricaricando,
+le righe tornano. «Carica le precedenti» prosegue la lettura all'indietro.
+Il percorso della cartella dei log resta indicato nella guida dentro
+l'applicazione, alla voce di risoluzione dei problemi.
+
+## Storico dei jobs e retention
+
+Il pannello in basso è la vista operativa: mostra i jobs non ancora conclusi e
+quelli terminati nelle ultime 24 ore, con pausa, ripresa e retry.
+
+Lo **storico completo** si apre dal riquadro dei jobs nella Dashboard ed elenca
+tutto ciò che è passato dalla coda, con filtri per stato e per tipo e lettura a
+pagine. È lì che si cerca un job di mesi prima e si legge com'è finito.
+
+Nessun job viene eliminato automaticamente e non esiste un tetto al numero di
+righe conservate. L'eliminazione è sempre esplicita: la singola riga dallo
+storico, oppure tutti i conclusi con un comando. Restano i jobs a cui è ancora
+appesa un'altra superficie — oggi le esecuzioni di una ricerca salvata, che
+verranno eliminate insieme alla ricerca stessa.

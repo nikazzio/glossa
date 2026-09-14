@@ -59,12 +59,39 @@ pub async fn create_job(
     jobs.0.submit(&job).await
 }
 
-/// I lavori non ancora finiti. Lo storico completo non serve finché non c'è
-/// l'area Analisi (#379).
+/// I job non ancora finiti, più quelli conclusi nelle ultime 24 ore: è la
+/// vista operativa del panel. Lo storico completo sta in `list_jobs`.
 #[tauri::command]
 pub async fn list_active_jobs(jobs: State<'_, JobsState>) -> Result<Vec<JobRecord>, String> {
     let conn = jobs.0.connection()?;
     store::list_active(&conn)
+}
+
+/// Una pagina dello storico completo, con quanti job soddisfano i filtri.
+#[derive(serde::Serialize)]
+pub struct JobsPage {
+    pub jobs: Vec<JobRecord>,
+    pub total: usize,
+}
+
+/// Tutti i job, filtrati e paginati: la vista completa della Dashboard, dove si
+/// cerca un job di mesi fa e lo si elimina riga per riga. Il database non
+/// scarta mai un job da solo, quindi qui si legge a pagine.
+#[tauri::command]
+pub async fn list_jobs(
+    jobs: State<'_, JobsState>,
+    statuses: Option<Vec<String>>,
+    job_types: Option<Vec<String>>,
+    limit: usize,
+    offset: usize,
+) -> Result<JobsPage, String> {
+    let statuses = statuses.unwrap_or_default();
+    let job_types = job_types.unwrap_or_default();
+    let conn = jobs.0.connection()?;
+    Ok(JobsPage {
+        jobs: store::list_all(&conn, &statuses, &job_types, limit, offset)?,
+        total: store::count_all(&conn, &statuses, &job_types)?,
+    })
 }
 
 #[tauri::command]
@@ -102,7 +129,10 @@ pub async fn retry_job(
     jobs.0.retry(&id, from_scratch.unwrap_or(false)).await
 }
 
-/// Toglie dall'elenco i lavori finiti. Senza `id` li toglie tutti.
+/// Elimina i job conclusi: senza `id` tutti quelli eliminabili, con `id` solo
+/// quello. Un job a cui è ancora appesa un'altra superficie — oggi le
+/// esecuzioni di una ricerca — resta, e a dirlo è la foreign key, non un elenco
+/// di tipi scritto a mano.
 #[tauri::command]
 pub async fn clear_finished_jobs(
     jobs: State<'_, JobsState>,

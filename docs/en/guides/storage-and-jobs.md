@@ -109,3 +109,38 @@ subject to the size limit without the same time-based expiry. Change these
 values or clear the cache under **Settings → Data**. Cached data does not
 increase downloaded-page counts and is excluded from
 [backups](../reference/backup-and-restore).
+
+
+## Messages and system log
+
+The bottom panel holds three tabs: messages from the running translation, the
+**system log**, and jobs. The system log is available in every area and shows
+what the program wrote while working — library searches, downloads, storage,
+saves — reading the application log file directly, including the rotated files
+from previous sessions.
+
+Filters narrow by area (Library, Translation, Jobs, Interface) and by level
+(error, warning, info, debug); the search box works on the text of each line.
+Lines produced by third-party libraries — database queries, keyring, network
+connections — stay hidden until explicitly requested: on their own they are most
+of the file.
+
+"Clear the view" empties the window without touching the file on disk: reloading
+brings the lines back. "Load earlier messages" continues reading backwards. The
+log folder path is shown in the in-app guide, under troubleshooting.
+
+## Job history and retention
+
+The bottom panel is the operational view: it shows jobs that have not finished
+yet plus those completed in the last 24 hours, with pause, resume and retry.
+
+The **full history** opens from the jobs card on the Dashboard and lists
+everything that went through the queue, with filters by status and type and
+paged reading. That is where you look for a job from months ago and read how it
+ended.
+
+No job is ever deleted automatically and there is no cap on the number of rows
+kept. Deletion is always explicit: a single row from the history, or every
+finished job with one command. Jobs another surface still depends on stay —
+today the executions of a stored search, which will be removed together with the
+search itself.

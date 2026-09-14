@@ -160,7 +160,8 @@
       "cancelled": "Cancelled"
     },
     "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
-    "title": "Overview"
+    "title": "Overview",
+    "openJobsHistory": "Open the job history"
   },
   "app": {
     "title": "Glossa // Pipeline",
@@ -2177,6 +2178,13 @@
             ]
           },
           {
+            "title": "Reading the program's messages",
+            "paragraphs": [
+              "The bottom panel has three tabs: messages from the running translation, the system log, and jobs. The system log opens anywhere and shows what the program wrote while working: searches, downloads, storage, saves.",
+              "Filters narrow by area and by level, and the search box works on the text of each line. Third-party library lines stay hidden until you ask for them: on their own they are most of the file. Clearing the view empties the window without touching the file on disk, and reloading brings the lines back."
+            ]
+          },
+          {
             "title": "Collecting information",
             "paragraphs": [
               "When reporting a problem, include the version, operating system, action taken and message received. The status-bar console provides access to operations.",
@@ -2348,6 +2356,13 @@
               "Pause requests a stop at the next checkpoint; Resume continues from there. Cancel ends the job and keeps files already saved. After a failure, you can start another attempt.",
               "Waiting may indicate a library rate limit. A countdown refers to the next attempt, not the end of the download. Paused means the job needs to be resumed.",
               "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs."
+            ]
+          },
+          {
+            "title": "Reviewing and deleting past jobs",
+            "paragraphs": [
+              "The bottom panel shows running jobs and recently finished ones. To see everything that ran before, open the history from the jobs card on the Dashboard: it lists them all, with filters by status and by type.",
+              "No job is ever deleted automatically: they stay until you delete them, one row at a time or all finished ones at once. Search jobs are the exception — they stay as long as the search they belong to, otherwise its history would lose pieces."
             ]
           },
           {
@@ -2771,7 +2786,7 @@
     "discoveryMore": "more available",
     "discoveryPages_one": "{{count}} page",
     "discoveryPages_other": "{{count}} pages",
-    "panelToggle": "Messages and jobs",
+    "panelToggle": "Logs and jobs",
     "workspaceFilter": "· filter: {{name}}",
     "network": {
       "label": "Network to the libraries",
@@ -2797,8 +2812,8 @@
     "transcription": "Transcription"
   },
   "console": {
-    "toggle": "Console log",
-    "title": "Console"
+    "toggle": "Translation log",
+    "title": "Translation log"
   },
   "jobs": {
     "status": {
@@ -2812,7 +2827,7 @@
       "error": "With errors"
     },
     "tab": "Jobs",
-    "drawerTabs": "Messages and jobs",
+    "drawerTabs": "Logs and jobs",
     "openPanel": "Background jobs",
     "activeCount_one": "{{count}} job",
     "activeCount_other": "{{count}} jobs",
@@ -2929,5 +2944,46 @@
   },
   "models": {
     "provider": "Model service"
+  },
+  "systemLog": {
+    "tab": "System",
+    "title": "System log",
+    "reload": "Reload from file",
+    "clearView": "Clear the view",
+    "loadMore": "Load earlier messages",
+    "loading": "Reading",
+    "empty": "No messages match these filters.",
+    "readFailed": "The message file could not be read.",
+    "area": {
+      "library": "Library",
+      "translation": "Translation",
+      "jobs": "Jobs",
+      "interface": "Interface",
+      "dependencies": "Libraries"
+    },
+    "level": {
+      "ERROR": "error",
+      "WARN": "warning",
+      "INFO": "info",
+      "DEBUG": "debug"
+    }
+  },
+  "jobsHistory": {
+    "title": "Job history",
+    "statusFilter": "Status",
+    "typeFilter": "Type",
+    "allStatuses": "All statuses",
+    "allTypes": "All types",
+    "count": "{{shown}} of {{total}}",
+    "delete": "Delete",
+    "clearFinished": "Delete all finished",
+    "deleteConfirmTitle": "Delete this job?",
+    "deleteConfirmMessage": "The row disappears from the history. Anything the job produced stays where it is.",
+    "clearConfirmTitle": "Delete every finished job?",
+    "clearConfirmMessage": "Jobs still running stay, and so do those a stored search still depends on.",
+    "loading": "Reading the history",
+    "loadMore": "Load more",
+    "empty": "No job matches these filters.",
+    "failed": "The job history could not be read."
   }
 }

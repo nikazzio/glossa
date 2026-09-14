@@ -160,7 +160,8 @@
       "cancelled": "Annullato"
     },
     "jobsHint": "Conta i lavori per stato, non il completamento delle opere. Lavori e ricerche restano globali, fuori dal filtro workspace.",
-    "title": "Panoramica"
+    "title": "Panoramica",
+    "openJobsHistory": "Apri lo storico dei jobs"
   },
   "app": {
     "title": "Glossa // Pipeline",
@@ -2177,6 +2178,13 @@
             ]
           },
           {
+            "title": "Leggere i messaggi del programma",
+            "paragraphs": [
+              "Il pannello in basso ha tre schede: i messaggi della traduzione in corso, il log di sistema e i lavori. Il log di sistema si apre ovunque e mostra quello che il programma ha scritto mentre lavorava: ricerche, scaricamenti, deposito, salvataggi.",
+              "I filtri restringono per area e per livello, e la ricerca funziona sul testo della riga. Le righe delle librerie di terze parti restano nascoste finché non le chiedi: da sole sono la maggior parte del file. Svuota la vista ripulisce la finestra senza toccare il file su disco, e ricaricando le righe tornano."
+            ]
+          },
+          {
             "title": "Raccogliere informazioni",
             "paragraphs": [
               "Per segnalare un problema, annota versione, sistema operativo, azione eseguita e messaggio ricevuto. La console nella barra di stato permette di consultare le operazioni.",
@@ -2348,6 +2356,13 @@
               "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
               "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
               "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori."
+            ]
+          },
+          {
+            "title": "Rivedere ed eliminare i jobs passati",
+            "paragraphs": [
+              "Il pannello in basso mostra i jobs in corso e quelli conclusi da poco. Per vedere tutti quelli passati apri lo storico dal riquadro dei jobs nella Dashboard: c'è l'elenco completo, con filtri per stato e per tipo.",
+              "Nessun job viene eliminato da solo: restano finché non li elimini tu, riga per riga o tutti i conclusi insieme. Fanno eccezione i jobs di una ricerca, che restano finché resta la ricerca a cui appartengono, altrimenti il suo storico perderebbe pezzi."
             ]
           },
           {
@@ -2771,7 +2786,7 @@
     "discoveryMore": "altri disponibili",
     "discoveryPages_one": "{{count}} pagina",
     "discoveryPages_other": "{{count}} pagine",
-    "panelToggle": "Messaggi e lavori",
+    "panelToggle": "Log e jobs",
     "workspaceFilter": "· filtro: {{name}}",
     "network": {
       "label": "Rete verso le biblioteche",
@@ -2797,8 +2812,8 @@
     "transcription": "Trascrizione"
   },
   "console": {
-    "toggle": "Console log",
-    "title": "Console"
+    "toggle": "Log traduzione",
+    "title": "Log traduzione"
   },
   "jobs": {
     "status": {
@@ -2811,8 +2826,8 @@
       "completed": "Completata",
       "error": "Con errori"
     },
-    "tab": "Lavori",
-    "drawerTabs": "Messaggi e lavori",
+    "tab": "Jobs",
+    "drawerTabs": "Log e jobs",
     "openPanel": "Lavori in background",
     "activeCount_one": "{{count}} lavoro",
     "activeCount_other": "{{count}} lavori",
@@ -2929,5 +2944,46 @@
   },
   "models": {
     "provider": "Servizio del modello"
+  },
+  "systemLog": {
+    "tab": "Sistema",
+    "title": "Log di sistema",
+    "reload": "Ricarica dal file",
+    "clearView": "Svuota la vista",
+    "loadMore": "Carica le precedenti",
+    "loading": "Lettura in corso",
+    "empty": "Nessun messaggio con questi filtri.",
+    "readFailed": "Non è stato possibile leggere il file dei messaggi.",
+    "area": {
+      "library": "Biblioteca",
+      "translation": "Traduzione",
+      "jobs": "Lavori",
+      "interface": "Interfaccia",
+      "dependencies": "Librerie"
+    },
+    "level": {
+      "ERROR": "errore",
+      "WARN": "attenzione",
+      "INFO": "info",
+      "DEBUG": "debug"
+    }
+  },
+  "jobsHistory": {
+    "title": "Storico jobs",
+    "statusFilter": "Stato",
+    "typeFilter": "Tipo",
+    "allStatuses": "Tutti gli stati",
+    "allTypes": "Tutti i tipi",
+    "count": "{{shown}} di {{total}}",
+    "delete": "Elimina",
+    "clearFinished": "Elimina tutti i conclusi",
+    "deleteConfirmTitle": "Eliminare questo job?",
+    "deleteConfirmMessage": "La riga sparisce dallo storico. I dati prodotti dal job restano dove sono.",
+    "clearConfirmTitle": "Eliminare tutti i job conclusi?",
+    "clearConfirmMessage": "Restano i job ancora in corso e quelli a cui è appesa una ricerca nello storico.",
+    "loading": "Lettura dello storico",
+    "loadMore": "Carica altri",
+    "empty": "Nessun job con questi filtri.",
+    "failed": "Non è stato possibile leggere lo storico dei jobs."
   }
 }

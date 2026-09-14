@@ -216,7 +216,7 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
   );
 }
 
-function jobTypeLabel(job: Job, t: (key: string, options?: Record<string, unknown>) => string): string {
+export function jobTypeLabel(job: Job, t: (key: string, options?: Record<string, unknown>) => string): string {
   const base = t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType });
   if (job.jobType !== 'vault_verification') return base;
   try {
@@ -391,7 +391,7 @@ const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
   vault_verification: ShieldCheck,
 };
 
-function JobTypeIcon({ jobType }: { jobType: string }) {
+export function JobTypeIcon({ jobType }: { jobType: string }) {
   const Icon = JOB_TYPE_ICONS[jobType] ?? Layers;
   return <Icon size={13} aria-hidden />;
 }

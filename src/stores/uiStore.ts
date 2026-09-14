@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DocumentLayoutPreference } from '../types';
 import { dashboardLocation, locationsEqual, type AppLocation } from '../navigation/appLocation';
+import type { LogFilterKey } from '../components/console/logAreas';
+import type { LogLevel } from '../services/appLogService';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -116,7 +118,11 @@ interface UiState {
    * lavori in background. Log e lavori sono le due facce della stessa domanda,
    * "cosa sta facendo il programma", quindi stanno nello stesso posto.
    */
-  drawerTab: 'console' | 'jobs';
+  drawerTab: 'console' | 'jobs' | 'system';
+  /** Aree e livelli scelti nella scheda Sistema, ricordati fra le sessioni:
+   *  chi guarda il log torna sempre sullo stesso sottoinsieme. */
+  systemLogAreas: LogFilterKey[];
+  systemLogLevels: LogLevel[];
   /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
   libraryView: 'list' | 'grid';
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
@@ -176,7 +182,9 @@ interface UiState {
   setShowInsightPanel: (show: boolean) => void;
   setChunkRailTab: (tab: ChunkRailTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
-  setDrawerTab: (tab: 'console' | 'jobs') => void;
+  setDrawerTab: (tab: 'console' | 'jobs' | 'system') => void;
+  setSystemLogAreas: (areas: LogFilterKey[]) => void;
+  setSystemLogLevels: (levels: LogLevel[]) => void;
   setLibraryView: (view: 'list' | 'grid') => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
@@ -325,6 +333,11 @@ export const useUiStore = create<UiState>()(
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
       drawerTab: 'console',
+      // Di partenza le aree del programma senza le librerie di terze parti,
+      // che da sole sono l'87% delle righe scritte, e i livelli che dicono
+      // qualcosa a chi non sta diagnosticando un guasto.
+      systemLogAreas: ['library', 'translation', 'jobs', 'interface'],
+      systemLogLevels: ['ERROR', 'WARN', 'INFO'],
       libraryView: 'list',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
@@ -448,6 +461,8 @@ export const useUiStore = create<UiState>()(
       setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
       setDrawerTab: (tab) => set({ drawerTab: tab }),
+      setSystemLogAreas: (areas) => set({ systemLogAreas: areas }),
+      setSystemLogLevels: (levels) => set({ systemLogLevels: levels }),
       setLibraryView: (view) => set({ libraryView: view }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
@@ -604,6 +619,8 @@ export const useUiStore = create<UiState>()(
         libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
         consoleDrawerHeight: state.consoleDrawerHeight,
         drawerTab: state.drawerTab,
+        systemLogAreas: state.systemLogAreas,
+        systemLogLevels: state.systemLogLevels,
         libraryView: state.libraryView,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,

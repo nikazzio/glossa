@@ -65,6 +65,29 @@ export async function listActiveJobs(): Promise<Job[]> {
   return Array.isArray(answer) ? answer : [];
 }
 
+export interface JobsPage {
+  jobs: Job[];
+  /** Quanti job soddisfano i filtri, non quanti ne sono arrivati in questa pagina. */
+  total: number;
+}
+
+export interface JobsQuery {
+  statuses?: JobStatus[];
+  jobTypes?: string[];
+  limit: number;
+  offset: number;
+}
+
+export async function listJobs(query: JobsQuery): Promise<JobsPage> {
+  const answer = await invoke<JobsPage | null>('list_jobs', {
+    statuses: query.statuses ?? null,
+    jobTypes: query.jobTypes ?? null,
+    limit: query.limit,
+    offset: query.offset,
+  });
+  return answer ?? { jobs: [], total: 0 };
+}
+
 export async function getJob(id: string): Promise<Job | null> {
   return invoke<Job | null>('get_job', { id });
 }

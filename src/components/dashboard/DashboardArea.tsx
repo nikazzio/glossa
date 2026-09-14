@@ -3,12 +3,19 @@ import { type AppLocation } from '../../navigation/appLocation';
 import { FederatedSearchArea } from '../library/FederatedSearchArea';
 import { AppDashboard } from './AppDashboard';
 import { SourceDiscoveryPanel } from './SourceDiscoveryPanel';
+import { JobsHistoryArea } from '../jobs/JobsHistoryArea';
 
 /** Only the visible tab mounts: hidden searches and summaries do not keep reading. */
 export function DashboardArea({ location }: { location: Extract<AppLocation, {area:'dashboard'}> }) {
   const { t } = useTranslation();
   const view = location.view ?? 'overview';
-  const label = view === 'search' ? t('federation.title') : view === 'direct' ? t('federation.single') : t('overview.title');
+  const label = view === 'search'
+    ? t('federation.title')
+    : view === 'direct'
+      ? t('federation.single')
+      : view === 'jobs'
+        ? t('jobsHistory.title')
+        : t('overview.title');
   return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
     {/* Le tre viste stanno nella barra a sinistra, sotto la Dashboard: qui
         resta il titolo dell'area con il nome della vista aperta. */}
@@ -17,7 +24,10 @@ export function DashboardArea({ location }: { location: Extract<AppLocation, {ar
       {view !== 'overview' && <span className="font-display text-xl italic text-editorial-muted">{label}</span>}
     </div>
     <div className="flex min-h-0 min-w-0 flex-1">
-      {view === 'overview' ? <AppDashboard /> : view === 'search' ? <FederatedSearchArea searchId={location.searchId} /> : <div className="h-full min-w-0 flex-1 overflow-y-auto p-5 custom-scrollbar"><SourceDiscoveryPanel /></div>}
+      {view === 'overview' && <AppDashboard />}
+      {view === 'search' && <FederatedSearchArea searchId={location.searchId} />}
+      {view === 'jobs' && <JobsHistoryArea />}
+      {view === 'direct' && <div className="h-full min-w-0 flex-1 overflow-y-auto p-5 custom-scrollbar"><SourceDiscoveryPanel /></div>}
     </div>
   </div>;
 }

@@ -374,18 +374,100 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
 /// Sono righe di storico che il pannello mostra per la giornata; quando
 /// diventano rumore si buttano. `id` limita la pulizia a un lavoro solo.
 pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
-    let removed = match id {
-        Some(id) => conn.execute(
-            "DELETE FROM jobs WHERE id = ?1 AND job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
-            params![id],
-        ),
-        None => conn.execute(
-            "DELETE FROM jobs WHERE job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
-            [],
-        ),
+    // Si cancella ciò da cui non dipende nient'altro: un job di ricerca regge
+    // ancora la sua esecuzione nello storico, e la foreign key lo dice al posto
+    // nostro. Prima la regola era un elenco di tipi scritto qui dentro, che
+    // sarebbe rimasto indietro al primo tipo nuovo.
+    let candidates: Vec<String> = {
+        let mut statement = conn
+            .prepare(
+                "SELECT id FROM jobs \
+                 WHERE status IN ('completed', 'cancelled', 'error') \
+                   AND (?1 IS NULL OR id = ?1)",
+            )
+            .map_err(|e| format!("Failed to prepare the jobs query: {e}"))?;
+        let rows = statement
+            .query_map(params![id], |row| row.get::<_, String>(0))
+            .map_err(|e| format!("Failed to read the jobs: {e}"))?;
+        rows.collect::<rusqlite::Result<Vec<String>>>()
+            .map_err(|e| format!("Failed to read the jobs: {e}"))?
+    };
+
+    let mut removed = 0usize;
+    for candidate in candidates {
+        match conn.execute("DELETE FROM jobs WHERE id = ?1", params![candidate]) {
+            Ok(count) => removed += count,
+            Err(rusqlite::Error::SqliteFailure(error, _))
+                if error.code == rusqlite::ErrorCode::ConstraintViolation => {}
+            Err(error) => return Err(format!("Failed to clear finished jobs: {error}")),
+        }
     }
-    .map_err(|error| format!("Failed to clear finished jobs: {error}"))?;
     Ok(removed)
+}
+
+/// I filtri della vista completa, tradotti in `IN (?, ?, …)` con i valori
+/// legati: un elenco vuoto significa «nessun filtro», non «nessun risultato».
+fn in_clause(column: &str, values: &[String]) -> String {
+    if values.is_empty() {
+        return "1".to_string();
+    }
+    let placeholders = vec!["?"; values.len()].join(",");
+    format!("{column} IN ({placeholders})")
+}
+
+/// Tutti i job, dal più recente, con i filtri della vista completa. `limit` e
+/// `offset` esistono perché la tabella non si svuota mai da sola: leggere
+/// l'intero storico per mostrarne venti righe è uno spreco che cresce con l'uso.
+pub fn list_all(
+    conn: &Connection,
+    statuses: &[String],
+    job_types: &[String],
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<JobRecord>, String> {
+    let sql = format!(
+        "SELECT {COLUMNS} FROM jobs WHERE {} AND {} \
+         ORDER BY COALESCE(finished_at, created_at) DESC, created_at DESC \
+         LIMIT ? OFFSET ?",
+        in_clause("status", statuses),
+        in_clause("job_type", job_types),
+    );
+    let mut values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    for status in statuses {
+        values.push(Box::new(status.clone()));
+    }
+    for job_type in job_types {
+        values.push(Box::new(job_type.clone()));
+    }
+    values.push(Box::new(limit as i64));
+    values.push(Box::new(offset as i64));
+    query_many(conn, &sql, rusqlite::params_from_iter(values.iter()))
+}
+
+/// Quanti job esistono con quei filtri: l'elenco completo deve poter dire
+/// quanti ne restano indietro, non solo mostrare la pagina corrente.
+pub fn count_all(
+    conn: &Connection,
+    statuses: &[String],
+    job_types: &[String],
+) -> Result<usize, String> {
+    let sql = format!(
+        "SELECT COUNT(*) FROM jobs WHERE {} AND {}",
+        in_clause("status", statuses),
+        in_clause("job_type", job_types),
+    );
+    let mut values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    for status in statuses {
+        values.push(Box::new(status.clone()));
+    }
+    for job_type in job_types {
+        values.push(Box::new(job_type.clone()));
+    }
+    conn.query_row(&sql, rusqlite::params_from_iter(values.iter()), |row| {
+        row.get::<_, i64>(0)
+    })
+    .map(|count| count as usize)
+    .map_err(|e| format!("Failed to count the jobs: {e}"))
 }
 
 pub fn read_setting(conn: &Connection, key: &str) -> Result<Option<String>, String> {

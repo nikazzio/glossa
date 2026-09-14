@@ -307,13 +307,52 @@ tutta la cronologia log del frammento rimosso. Con `SET NULL` il log resta
 disponibile per analisi a livello progetto/modello, perde solo il riferimento
 al frammento specifico che non esiste più.
 
+## Jobs: viste e retention
+
+Tre superfici distinte, due nature diverse. Il **System log** è log vero: righe
+append-only su file, si filtrano, non si riscrivono dall'interfaccia. Il tab
+**Jobs** e il tab **Log traduzione** sono viste su record di dominio (`jobs`,
+`operation_logs`): righe di database che cambiano nel tempo, dove «svuota»
+significa retention, non filtro di vista.
+
+- `list_active_jobs`: vista operativa del panel — job non terminali più quelli
+  conclusi nelle ultime 24 ore.
+- `list_jobs`: storico completo, filtrato per stato e tipo e paginato, con il
+  totale. Vive come vista della Dashboard, raggiunta dal riquadro dei job; la
+  lettura analitica degli stessi dati (durate, tassi di errore, throughput) è
+  materiale dell'area Analisi quando nascerà (#379), non un secondo elenco.
+- `clear_finished_jobs`: elimina i job terminali. La regola è data-driven —
+  si tenta la `DELETE` e si salta chi viola una foreign key — non un elenco di
+  `job_type` scritto a mano, che sarebbe rimasto indietro al primo tipo nuovo
+  (traduzione #469, OCR #220). Oggi l'unico caso che resiste è il job di
+  ricerca, referenziato da `search_executions`: morirà con la sua ricerca
+  quando arriverà l'archiviazione delle ricerche.
+
+Nessuna cancellazione automatica e nessun tetto di righe, come per lo storico
+delle operazioni.
+
 ## Log tecnico (debug, non i log operazioni)
 
 Distinto da "Log operazioni e costi" sopra: quello è specifico per le chiamate
 ai modelli linguistici (costi/token, visibile nel pannello Operazioni), questo
-è il log tecnico generico per diagnosticare guasti — non ha ancora una vista
-in-app (finisce nel log di sistema/OS via `tauri-plugin-log`; unificarlo in
-una console generale consultabile è #413, non ancora fatto).
+è il log tecnico generico per diagnosticare guasti. Finisce nel file scritto da
+`tauri-plugin-log` (cartella log dell'app, rotazione a tre file da 5 MB) e si
+consulta dentro Glossa nella scheda **Sistema** del pannello in basso (#413).
+
+La scheda Sistema legge il file, non una seconda coda in memoria: comando
+`read_app_log`, che scorre i file dal più recente all'indietro e applica alla
+lettura livelli, testo cercato, prefissi di target e salto delle righe già
+mostrate. Le righe delle dipendenze (`sqlx`, `keyring`, `hyper`, `reqwest`) sono
+l'87% del file e restano fuori finché non si chiedono. Le origini del programma
+(`federation`, `glossa_lib::*`, `webview`) si raggruppano in quattro aree lato
+interfaccia (`src/components/console/logAreas.ts`): Biblioteca, Traduzione,
+Lavori, Interfaccia. «Svuota la vista» agisce solo su ciò che è a schermo: il
+file non si riscrive mai dall'interfaccia.
+
+I messaggi del frontend arrivano nello stesso file solo da quando `log:default`
+sta fra i permessi in `capabilities/default.json`: senza quel permesso le
+chiamate del `logger` venivano rifiutate e restavano nella sola console del
+browser.
 
 - **Frontend**: `logger` in `src/utils/logger.ts` (`debug/info/warn/error`).
   `errorMessage(error)` legge il messaggio da un errore intercettato in un
