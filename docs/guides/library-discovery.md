@@ -58,6 +58,10 @@ In lettura online carica prima un’immagine della pagina e può richiedere
 tessere di maggior dettaglio quando lo zoom lo richiede. Ingrandire una copia
 locale non ne aumenta la risoluzione.
 
+Nella barra del visore un comando apre l’opera sul sito della biblioteca, nel
+browser: prima quel collegamento esisteva solo fra le informazioni della scheda,
+lontano da dove serve.
+
 L’indicatore **File locale / File online** distingue il deposito dalla lettura
 remota. Il suggerimento specifica provenienza, eventuale cache e dimensioni
 dell’immagine. La cache del visore non equivale a uno scaricamento permanente.

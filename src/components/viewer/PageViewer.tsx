@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  ExternalLink,
   HardDrive,
   HardDriveDownload,
   Images,
@@ -19,7 +20,7 @@ import {
   Focus,
   MoreHorizontal,
 } from 'lucide-react';
-import { ClickPopover, EmptyState, IconButton, MenuActionRow, Spinner, Tooltip } from '../ui';
+import { ClickPopover, EmptyState, IconButton, IconLink, MenuActionRow, Spinner, Tooltip } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { ThumbnailRail } from './ThumbnailRail';
 import { createControlledIiifTileSource } from './iiifTileBridge';
@@ -75,6 +76,9 @@ interface PageViewerProps {
   /** Una pagina è appena entrata nel deposito: chi mostra le versioni locali
    *  deve rileggerle, perché spazio e conteggio sono cambiati. */
   onPageKept?: () => void;
+  /** La pagina dell'opera sul sito della biblioteca: da qui si esce a leggerla
+   *  a casa loro, senza tornare alla scheda per cercare il collegamento. */
+  libraryPageUrl?: string | null;
 }
 
 /**
@@ -133,6 +137,7 @@ export function PageViewer({
   onLocalSizeChange,
   onPageChange,
   onPageKept,
+  libraryPageUrl,
 }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -675,6 +680,7 @@ export function PageViewer({
             }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
+            libraryPageUrl={libraryPageUrl}
           />
         )}
         <div
@@ -783,6 +789,7 @@ interface ViewerToolbarProps {
   onToggleLocalOnly: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
+  libraryPageUrl?: string | null;
 }
 
 /**
@@ -870,6 +877,7 @@ function ViewerToolbar({
   onToggleLocalOnly,
   thumbnailsOpen,
   onToggleThumbnails,
+  libraryPageUrl,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
@@ -938,6 +946,19 @@ function ViewerToolbar({
           edge={shownEdge}
           onDownload={onDownloadPage}
         />
+        {/* L'opera sul sito della biblioteca: il collegamento c'era solo in una
+            riga della scheda, cioè lontano da dove serve — qui si sta
+            leggendo, ed è qui che viene il dubbio. */}
+        {libraryPageUrl && (
+          <IconLink
+            size="sm"
+            href={libraryPageUrl}
+            title={t('areas.library.openOnLibrarySite')}
+            tooltipSide="bottom"
+          >
+            <ExternalLink size={14} />
+          </IconLink>
+        )}
         <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
           <ZoomOut size={14} />

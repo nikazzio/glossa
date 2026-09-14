@@ -54,6 +54,10 @@ the reading position. It uses local images when available. Online reading
 loads a page image first and may request higher-detail tiles as you zoom in.
 Enlarging a local image does not increase its resolution.
 
+A command in the viewer toolbar opens the work on the library's own site in the
+browser: that link used to live only among the item's information, far from
+where it is needed.
+
 The **Local file / Online file** indicator distinguishes repository files from
 remote reading. Its tooltip provides the source, cache status and image
 dimensions. Viewer caching is not a permanent download.

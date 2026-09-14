@@ -372,7 +372,7 @@ mod tests {
     async fn the_tree_is_read_down_to_the_works_and_paginated() {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("/top.json"))
+            .and(path("/top-pagine.json"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "@type": "sc:Collection",
                 "collections": [
@@ -399,7 +399,7 @@ mod tests {
             .mount(&server)
             .await;
         let endpoints = SearchEndpoints {
-            nls_collections: format!("{}/top.json", server.uri()),
+            nls_collections: format!("{}/top-pagine.json", server.uri()),
             ..SearchEndpoints::default()
         };
 
@@ -422,7 +422,7 @@ mod tests {
     async fn a_collection_that_fails_does_not_stop_the_others() {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("/top.json"))
+            .and(path("/top-parziale.json"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "@type": "sc:Collection",
                 "collections": [
@@ -451,7 +451,7 @@ mod tests {
             .mount(&server)
             .await;
         let endpoints = SearchEndpoints {
-            nls_collections: format!("{}/top.json", server.uri()),
+            nls_collections: format!("{}/top-parziale.json", server.uri()),
             ..SearchEndpoints::default()
         };
 
@@ -468,12 +468,12 @@ mod tests {
         // seconda non deve leggersi come «la biblioteca non ha niente».
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("/top.json"))
+            .and(path("/top-muta.json"))
             .respond_with(ResponseTemplate::new(503))
             .mount(&server)
             .await;
         let endpoints = SearchEndpoints {
-            nls_collections: format!("{}/top.json", server.uri()),
+            nls_collections: format!("{}/top-muta.json", server.uri()),
             ..SearchEndpoints::default()
         };
 
@@ -486,7 +486,7 @@ mod tests {
     async fn the_tree_is_read_once_and_then_reused() {
         let server = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("/top.json"))
+            .and(path("/top-riuso.json"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "@type": "sc:Collection",
                 "manifests": [{
@@ -498,7 +498,7 @@ mod tests {
             .mount(&server)
             .await;
         let endpoints = SearchEndpoints {
-            nls_collections: format!("{}/top.json", server.uri()),
+            nls_collections: format!("{}/top-riuso.json", server.uri()),
             ..SearchEndpoints::default()
         };
 

@@ -262,6 +262,7 @@ export function LibrarySourcePage({
             preferredLocalSize={chosenLocalSize}
             onLocalSizeChange={setReadingLocalSize}
             onPageKept={() => setKeptPages((count) => count + 1)}
+            libraryPageUrl={libraryPageUrl}
             onPageChange={(position) => {
               // Il manifesto letto dal visore dice quante pagine ha il libro, e
               // il motore lo registra. La scheda però tiene in mano il numero
