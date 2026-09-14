@@ -52,14 +52,20 @@ export function SearchExecutionPanel({ run, providers, busy, providerFilter, onP
     .filter(([key, value]) => key !== 'query' && value !== '' && value !== null)
     .map(([key, value]) => `${t(`federation.fields.${key}`)}: ${key === 'material' ? t(`federation.material.${value}`) : String(value)}`);
 
+  // Nessun comando senza azione: i tre comandi d'insieme restano premibili solo
+  // finché esiste almeno un'esecuzione che li può eseguire davvero.
+  const pausable = executions.filter((e) => ['queued','running'].includes(e.job.status));
+  const resumable = executions.filter((e) => e.job.status === 'paused');
+  const retryable = executions.filter((e) => e.job.status === 'error');
+
   return <div className="flex min-w-0 flex-col gap-3 p-3">
     <div className="flex items-center gap-1">
-      <IconButton title={t('federation.pauseAll')} disabled={busy} size="sm"
-        onClick={() => act(() => Promise.all(executions.filter((e) => ['queued','running'].includes(e.job.status)).map((e) => pauseJob(e.job.id))))}><Pause size={14} /></IconButton>
-      <IconButton title={t('federation.resumeAll')} disabled={busy} size="sm"
-        onClick={() => act(() => Promise.all(executions.filter((e) => e.job.status === 'paused').map((e) => resumeJob(e.job.id))))}><Play size={14} /></IconButton>
-      <IconButton title={t('federation.retryFailed')} disabled={busy} size="sm"
-        onClick={() => act(() => Promise.all(executions.filter((e) => e.job.status === 'error').map((e) => relaunchSearch(run.id,e.job.id,'retry'))))}><RotateCcw size={14} /></IconButton>
+      <IconButton title={t('federation.pauseAll')} disabled={busy || pausable.length === 0} size="sm"
+        onClick={() => act(() => Promise.all(pausable.map((e) => pauseJob(e.job.id))))}><Pause size={14} /></IconButton>
+      <IconButton title={t('federation.resumeAll')} disabled={busy || resumable.length === 0} size="sm"
+        onClick={() => act(() => Promise.all(resumable.map((e) => resumeJob(e.job.id))))}><Play size={14} /></IconButton>
+      <IconButton title={t('federation.retryFailed')} disabled={busy || retryable.length === 0} size="sm"
+        onClick={() => act(() => Promise.all(retryable.map((e) => relaunchSearch(run.id,e.job.id,'retry'))))}><RotateCcw size={14} /></IconButton>
       {filters.length > 0 && <span className="ml-auto"><Hint label={`${t('federation.localHint')} — ${filters.join(' · ')}`} size="xs" /></span>}
     </div>
 

@@ -9,7 +9,12 @@ import { Tooltip, type TooltipSide } from './Tooltip';
  * Prima erano pulsanti che non facevano niente: chi naviga da tastiera ci
  * arrivava, sentiva annunciare un pulsante, premeva Invio e non succedeva
  * nulla. Qui premere apre la spiegazione e la lascia aperta finché non si
- * preme di nuovo o si sposta il fuoco, così il comando mantiene la promessa.
+ * preme di nuovo, non si esce col fuoco o non si preme Esc.
+ *
+ * Due stati distinti di proposito: `hovered` è l'apertura passeggera del
+ * passaggio del mouse, `pinned` quella voluta col click. Tenendone uno solo,
+ * il passaggio del mouse apriva e il click che doveva fissare chiudeva, e
+ * l'uscita del mouse chiudeva anche ciò che era stato fissato.
  *
  * Senza `children` mostra la «i» consueta; con `children` è l'elemento passato
  * a portare la spiegazione (un'etichetta di stato, un nome che va spiegato).
@@ -20,17 +25,22 @@ export function Hint({ label, size = 'xs', side, children }: {
   side?: TooltipSide;
   children?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const close = () => { setPinned(false); setHovered(false); };
   return (
-    <Tooltip label={label} side={side} open={open} onOpenChange={setOpen}>
+    <Tooltip label={label} side={side} open={pinned || hovered}
+      onOpenChange={(next) => { if (!pinned) setHovered(next); }}>
       <IconButton
         title=""
         ariaLabel={label}
-        ariaPressed={open}
+        ariaPressed={pinned}
         size={size}
         tone={children ? 'default' : undefined}
         className={children ? 'rounded border-none px-1 py-0' : undefined}
-        onClick={() => setOpen(!open)}
+        onClick={() => { setPinned(!pinned); setHovered(false); }}
+        onBlur={close}
+        onKeyDown={(event) => { if (event.key === 'Escape') close(); }}
       >
         {children ?? <Info size={13} aria-hidden />}
       </IconButton>
