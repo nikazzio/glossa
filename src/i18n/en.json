@@ -1,4 +1,167 @@
 {
+  "federation": {
+    "viewExecution": "Show results from this execution",
+    "historical": "You are looking at an earlier attempt",
+    "currentResults": "Return to current results",
+    "moreAvailable": "More pages available",
+    "exhausted": "No further pages",
+    "partial": "Incomplete coverage",
+    "pauseAll": "Pause every source",
+    "resumeAll": "Resume the paused sources",
+    "retryFailed": "Retry the sources that did not answer",
+    "details": "Show / hide details",
+    "stopBeforeRestore": "Pause searches before restoring a backup.",
+    "material": {
+      "all": "All",
+      "manuscript": "Manuscripts",
+      "printed": "Printed books"
+    },
+    "title": "Federated search",
+    "catalog": "Catalogue",
+    "single": "Single source / identifier",
+    "criteria": "Criteria",
+    "execution": "Execution",
+    "history": "Searches",
+    "new": "New search",
+    "launch": "Start search",
+    "open": "Open search",
+    "extend": "Extend to the chosen collections",
+    "refresh": "Refresh",
+    "library": "Libraries",
+    "aggregator": "Aggregators",
+    "selectedCount": "{{count}} selected sources",
+    "draftHint": "Edited criteria apply to a new search; they do not change running searches.",
+    "queryHint": "Keywords sent to selected catalogues. Use Single source / identifier for URLs and shelfmarks.",
+    "localHint": "These criteria filter returned metadata, not equivalent remote fields. Missing metadata and uncertain dates remain unverifiable; coverage depends on each catalogue.",
+    "dateHint": "Inclusive range. Century-based, approximate and missing dates remain unverifiable.",
+    "aggregatorHint": "Aggregators index multiple institutions and may overlap with libraries. They are never selected automatically. Europeana requires a key in settings.",
+    "providersFailed": "Unable to load available sources.",
+    "readFailed": "Unable to refresh searches. Visible data may be out of date.",
+    "empty": "Set criteria and select sources to start searching.",
+    "noVisible": "No visible results for these criteria. Check executions and unverifiable metadata.",
+    "retry": "Retry this page",
+    "restart": "Run this library again",
+    "pageCount": "Page {{page}} · {{count}} records received",
+    "generation": "Execution {{count}}",
+    "executionHistory": "Previous executions",
+    "waiting": "Waiting for network limits",
+    "sortTitle": "Sort by title",
+    "arrivalOrder": "Back to arrival order",
+    "fields": {
+      "query": "Keywords",
+      "title": "Title",
+      "author": "Author",
+      "publisher": "Publisher",
+      "institution": "Institution",
+      "language": "Language",
+      "material": "Declared type",
+      "yearFrom": "From year",
+      "yearTo": "To year"
+    },
+    "visibility": {
+      "all": "All",
+      "match": "Verified",
+      "unknown": "To verify",
+      "excluded": "Excluded"
+    },
+    "queryRequired": "Enter keywords.",
+    "criteriaTooLong": "A criterion exceeds 1000 characters.",
+    "invalidYears": "Check the year range.",
+    "useDirect": "Open URLs in single-source search.",
+    "invalidRequest": "Invalid request: check criteria and sources.",
+    "providerUnavailable": "This source does not support search.",
+    "missingJob": "Execution unavailable.",
+    "stopFirst": "Stop the execution before restarting.",
+    "useSearchControls": "Retry from the search monitor.",
+    "remoteGroup": "Sent to catalogues",
+    "localGroup": "Filters on received data",
+    "unavailableGroup_one": "{{count}} source cannot be searched by words",
+    "unavailableGroup_other": "{{count}} sources cannot be searched by words",
+    "viewAll": "See every search",
+    "pageLabel": "Page",
+    "receivedLabel": "Records received",
+    "generationLabel": "Run",
+    "coverageLabel": "Coverage",
+    "stateLabel": "State",
+    "copies": "{{count}} copies",
+    "copies_one": "{{count}} copy",
+    "failedSources_one": "{{count}} source did not answer",
+    "failedSources_other": "{{count}} sources did not answer",
+    "staleExecution": "A newer run replaced this one: check the source's updated state.",
+    "occurrence": "Copy to use",
+    "bestOccurrence": "Best copy",
+    "advanced": "Advanced criteria",
+    "queryPlaceholder": "Search by keywords in the chosen sources",
+    "resultsShort_one": "{{count}} result",
+    "resultsShort_other": "{{count}} results",
+    "resultsHint": "{{visible}} visible with the current filters, out of {{unique}} distinct works drawn from {{received}} records received: copies of the same work count once.",
+    "sourcesShort": "{{complete}}/{{total}} sources",
+    "sourcesHint": "Sources that finished answering, out of those queried. Until all of them have, the list can still grow.",
+    "unknownShort_one": "{{count}} unverifiable",
+    "unknownShort_other": "{{count}} unverifiable",
+    "unknownHint": "Results the filters can neither confirm nor rule out, because the catalogue does not state that field or the date is approximate.",
+    "failedHint": "These sources did not answer: whatever they list is missing from the results.",
+    "restartHint": "Asks this library again from its first results, without reusing the answers already received. Earlier attempts stay available.",
+    "retryHint": "Repeats only the page that failed, leaving the pages already received.",
+    "extendHint": "Searches the same words in the selected collections that were not included, as a linked search.",
+    "onlyThisSource": "Show only results from this source",
+    "allSources": "Show results from every source",
+    "filterLabel": "Filter the results",
+    "visibilityHint": {
+      "all": "Shows the results the filters confirm and those they cannot verify.",
+      "match": "Only results that meet every criterion the catalogue states.",
+      "unknown": "Only results where the deciding field is missing: the catalogue does not state it, or the date is approximate.",
+      "excluded": "Only the results the criteria rule out, useful to understand why they are missing."
+    },
+    "tabHint": {
+      "execution": "How each source of this search is answering: state, page reached, how much arrived, and the controls that act on a single library.",
+      "history": "The searches already made, loaded fifty at a time. Each keeps its own criteria, sources and runs; opening one returns you to the execution tab.",
+      "criteria": "The criteria that narrow the search and the sources to query. They apply to the next search: they do not change the ones already started."
+    }
+  },
+  "overview": {
+    "transcriptions": "Transcriptions",
+    "workspaces": "Workspaces",
+    "scope": "Scope",
+    "global": "All workspaces",
+    "subtitle": "Glossa collections and activity",
+    "patrimony": "Collections",
+    "openSource": "Open work",
+    "openProject": "Open translation",
+    "openJobs": "Open jobs",
+    "jobsSummary": "Global: {{active}} active · {{failed}} failed",
+    "searchGlobal": "Searches and jobs are global, independent of the workspace filter. Multi-source searches are not added to their job counts.",
+    "resumeHint": "Recently modified works and projects, not necessarily recently opened.",
+    "attentionHint": "Chunks to review and jobs requiring intervention. Charts count jobs, not work completion.",
+    "activityHint": "Latest 8 recorded facts, not a click or navigation log.",
+    "events": {
+      "job": {
+        "started": "Job started",
+        "finished": "Job finished"
+      },
+      "translation": {
+        "approved": "Translation approved",
+        "approval_withdrawn": "Approval withdrawn"
+      },
+      "workspace": {
+        "moved": "Item moved"
+      }
+    },
+    "entities": {
+      "source": "Work",
+      "job": "Job",
+      "project": "Translation",
+      "workspace": "Workspace"
+    },
+    "outcomes": {
+      "success": "Succeeded",
+      "completed": "Completed",
+      "error": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "jobsHint": "Counts jobs by state, not how complete a work is. Jobs and searches stay global, outside the workspace filter.",
+    "title": "Overview"
+  },
   "app": {
     "title": "Glossa // Pipeline",
     "brand": "Glossa",
@@ -397,7 +560,36 @@
     "confirmDeleteMessage": "\"{{name}}\" will be permanently removed along with all its translations.",
     "configurePipeline": "Configure pipeline",
     "changePipeline": "Switch pipeline",
-    "sectionTitle": "Pipeline"
+    "sectionTitle": "Pipeline",
+    "deepl": {
+      "confirmDeleteGlossaryTitle": "Delete the DeepL glossary?",
+      "confirmDeleteGlossaryMessage": "The glossary “{{name}}” will be permanently deleted from DeepL. This cannot be undone.",
+      "optionsTitle": "Options",
+      "preserveFormatting": "Keep formatting",
+      "showBilledCharacters": "Show billed characters",
+      "sectionTranslation": "DeepL translation",
+      "modelType": "Translation mode",
+      "preferQuality": "Quality (recommended)",
+      "qualityOnly": "Quality only",
+      "latency": "Speed",
+      "formality": "Register",
+      "formalityDefault": "Default",
+      "formalityPreferMore": "Formal, where the language supports it",
+      "formalityMore": "Formal",
+      "formalityPreferLess": "Informal, where the language supports it",
+      "formalityLess": "Informal",
+      "glossary": "DeepL glossary",
+      "noGlossary": "No glossary",
+      "deleteGlossary": "Delete the DeepL glossary",
+      "context": "Translation context",
+      "contextPlaceholder": "Optional text that helps DeepL understand what the document is about",
+      "glossaryUploaded": "Glossary uploaded to DeepL",
+      "glossaryUploadFailed": "Uploading the glossary to DeepL failed",
+      "uploadGlossaryTooltip": "Upload the Glossa glossary to DeepL",
+      "uploadGlossaryLabel": "Upload to DeepL",
+      "keyRequired": "Needs the DeepL key, entered in Settings"
+    },
+    "configSections": "Configuration sections"
   },
   "audit": {
     "title": "Audit Logs",
@@ -887,7 +1079,7 @@
       "title": "Library",
       "sidebarHint": "Texts and catalogues",
       "emptyMessage": "Your Library is still empty.",
-      "emptyHint": "Sources found from the Dashboard end up here.",
+      "emptyHint": "Sources added from searches appear here.",
       "kind": "Work type",
       "linkWorkspace": "Link to {{name}}",
       "unlinkWorkspace": "Unlink from {{name}}",
@@ -1352,6 +1544,15 @@
       "success": "Run completed",
       "warn": "Run partial or cancelled",
       "error": "Run failed"
+    },
+    "refresh": "Refresh the dashboard",
+    "openArea": "Open {{area}}",
+    "jobsTitle": "Jobs running",
+    "resumeSources": "Works",
+    "resumeProjects": "Translations",
+    "section": {
+      "collapse": "Collapse {{section}}",
+      "expand": "Expand {{section}}"
     }
   },
   "files": {
@@ -1653,384 +1854,579 @@
     "buildFailed": "Couldn't build the preview."
   },
   "help": {
-    "title": "User Guide",
+    "title": "User guide",
     "eyebrow": "Documentation",
-    "sections": {
-      "overview": "Overview",
-      "pipeline": "Pipeline",
-      "features": "Features",
-      "streaming": "Streaming",
-      "context": "Context & caching",
-      "audit": "Audit",
-      "projects": "Projects",
-      "providers": "Providers",
-      "ollama": "Ollama",
-      "glossary": "Language resources",
-      "library": "Language resources",
-      "sources": "Library",
-      "shortcuts": "Interface",
-      "troubleshooting": "Troubleshooting",
-      "design": "Design System",
-      "storage": "Storage and jobs"
+    "navigation": "Guide topics",
+    "groups": {
+      "start": "Getting started",
+      "sources": "Sources and data",
+      "translation": "Translation and review",
+      "support": "Setup and support"
     },
-    "overview": {
-      "title": "What is Glossa?",
-      "p1": "Glossa is an LLM-assisted translation workspace built for professional translators, philologists, and scholars working on long texts. The document is segmented into chunks, each chunk goes through a configurable pipeline, and the result is reviewed by an automatic judge.",
-      "p2": "The app is a local desktop application: projects, dictionaries, and prompt templates stay on your machine. Remote provider API keys are stored in the operating system keychain when available; if the keychain is inaccessible, Glossa uses an encrypted local file instead. Ollama lets you stay fully offline.",
-      "flowTitle": "Typical editorial workflow",
-      "step1": "Import or paste the source document and tune segmentation in the import preview.",
-      "step2": "Pick Standard or Editorial mode and configure provider, model, and prompt for each stage.",
-      "step3": "Test the pipeline on a single chunk first (Test mode), then switch to Production mode to process the full document with real-time streaming.",
-      "step4": "The AI Judge evaluates each chunk; optionally, a coherence audit reviews the whole document.",
-      "step5": "Review and correct the candidate translation in the workspace, then re-evaluate or lock the chunk.",
-      "step6": "Export in .txt, .md, .html, .docx, or bilingual .md for publication or external review.",
-      "p3": "Provider and model are independent for every stage and for the judge: you can mix a fast model for translation with a stronger one for refine or audit, or stay fully local with Ollama.",
-      "nav": "Navigation: the breadcrumb at the top (Glossa // workspace // project) returns to the Dashboard, Translations area, or correct workspace. On the home shell, the left rail shows Dashboard, areas, and workspaces; collapsed, it keeps only Dashboard and the areas. Inside a project, the left rail contains the title, project switcher, chunk navigation, pipeline, translation action, and Audit/Notes/Memory/References tabs; Workspace, Settings, Import, and Export remain at the bottom. The right Insight panel contains document-wide information. Rails resize from their edge and collapse to icons. When collapsed, the Glossa mark becomes the reopen button on hover or keyboard focus."
-    },
-    "pipeline": {
-      "title": "Translation pipeline",
-      "intro": "The pipeline is the sequence of stages applied to each chunk. You configure it in the configuration panel (gear icon in the project sidebar), which has five tabs: Settings, Translation, Quality Control, Term Registry, and Prompt Preview.",
-      "modesTitle": "Standard and Editorial modes",
-      "modesDesc": "Pipeline mode is chosen in the Settings tab and defines which stages run on every chunk. The choice is locked once translations are in progress or complete.",
-      "modeStandardName": "Standard",
-      "modeStandardStages": "translation → audit",
-      "modeStandardDesc": "A single translation pass followed by the judge. Fast and cheap, suited to drafts and technical text where a stylistic second pass isn't needed.",
-      "modeEditorialName": "Editorial",
-      "modeEditorialStages": "translation → refine → format → audit",
-      "modeEditorialDesc": "Three-pass pipeline: an initial translation, a refine that improves rendering and fluency, and a format pass that only applies technical cleanup (punctuation, spacing, markdown) without seeing glossary or persona. Designed for literary or academic texts where quality matters more than cost.",
-      "modeDeeplName": "DeepL Hybrid",
-      "modeDeeplStages": "DeepL → LLM Refine → Judge",
-      "modeDeeplDesc": "Stage 1 translates with DeepL API (fast and accurate). Optional LLM Stage 2 refines style. Requires a DeepL API key in Settings.",
-      "configTitle": "Language pair and persona",
-      "configDesc": "In the Settings tab you pick source and target languages (swap button to reverse) and — optionally — a persona, a free-form system prompt opener describing voice, domain, and style of the translator. When the persona is active, the language pair is read from the persona itself.",
-      "stagesTitle": "Translation and audit stages",
-      "stagesDesc": "In the Translation and Quality Control tabs you configure provider, model, prompt, and runtime parameters for each stage. Controls are identical across stages; what differs is the role (translation, refine, format, judge, coherence) and the default prompt seeded for it.",
-      "previewTitle": "Prompt preview",
-      "previewDesc": "The Prompt Preview tab shows the structure of the final prompt for every active stage: the cacheable part (system prompt + glossary + blob context), the stage instructions, the runtime blocks (source, previous stage result), and the glossary constraints. Use it to inspect exactly what will be sent to the model before launching the pipeline.",
-      "runTitle": "Running",
-      "runDesc": "The run bar in the document workspace has a Test / Production toggle. In Test mode the pipeline runs on a single chunk and marks it as preview — configuration stays unlocked. When satisfied, switch to Production and click Play to process all ready chunks sequentially with token-level streaming; the judge runs automatically at the end. You can cancel at any time.",
-      "editTitle": "Review and iteration",
-      "editDesc": "The candidate translation is editable inline. After manual corrections you can click 'Re-evaluate' in the audit panel to rerun the judge on the edited chunk only, or 'Lock translation' (green tick) to mark it final and protect it from accidental reprocessing.",
-      "tipTitle": "Tip: mix providers",
-      "tipDesc": "Use a fast model for translation (Gemini Flash, DeepSeek, light Ollama models), a capable model for refine (Claude Sonnet, GPT-5), a strict model for the judge. Stage choices are independent and costs are aggregated in the stats panel.",
-      "temperatureTitle": "Temperature for stages and the judge",
-      "temperatureDesc": "Next to the reasoning control (where present), every stage and the judge have an optional temperature slider: how much the model varies from the most likely response. For Anthropic and Gemini it's always available (0-1 for Anthropic, 0-2 for Gemini). For OpenAI and DeepSeek it only appears when reasoning for that stage is set to \"none\" or the model doesn't reason at all — both reject or ignore the parameter while actively reasoning. If you don't touch it, it stays at 0 (maximum precision).",
-      "advancedOptionsTitle": "Advanced JSON options",
-      "advancedOptionsDesc": "Advanced Ollama options must be a JSON object, for example { \"num_ctx\": 8192 }. A list, a single value, or incomplete JSON is not saved: Glossa shows the error without altering the previous valid configuration."
-    },
-    "features": {
-      "title": "Features",
-      "intro": "Reference of the most important areas of the interface. Each entry describes what it does, where it lives, and when it's useful.",
-      "documentWorkspaceTitle": "Document workspace",
-      "documentWorkspaceDesc": "The primary mode of the app. After importing a document, the workspace shows the current chunk on two side-by-side pages: source text on the left, candidate translation on the right. The left rail holds chunk navigation, pipeline stage states next to the translate button, and, when available, the cost estimate and the current chunk's real usage. Above the document are the chunk indicators and a view-options button; the right Insight panel contains index, search, statistics, coherence, and glossary. This mode is also used for a single chunk.",
-      "chunkIndicatorsTitle": "Chunk indicators",
-      "chunkIndicatorsDesc": "Every circle is clickable. Its central mark distinguishes ready, processing, completed, and error. The four corner signals mean: unresolved audit issues at top left, notes at top right, locked translation at bottom left, and translation needing an update after a source edit at bottom right. The triangle underneath marks the current chunk. Hover or use the keyboard to read the complete summary and counts.",
-      "documentToolsTitle": "Editor tools",
-      "documentToolsDesc": "Each page (source and candidate) has management controls aligned to the title: text search, lock translation (candidate only), enable source editing, choose stage to display, and compare stages. A menu button opens text controls (write/preview/split modes, text size, Markdown formatting, copy) in a dropdown. On the candidate translation, the green tick locks it as final; each stage status badge opens a modal with the full output (trace).",
-      "markdownToolsTitle": "Markdown toolbar",
-      "markdownToolsDesc": "The menu button ⋮ in the controls row opens the Markdown toolbar: write/preview/split modes, text size, and formatting buttons (bold, italic, headings, lists, note). The ? button opens this guide. All text controls are in this menu.",
-      "insightsTitle": "Insights panel",
-      "insightsDesc": "The panel on the right of the project: gathers the Index, Search, Stats, Coherence, and Glossary tabs for whole-document metrics and search. Information about the selected fragment (References, Preview, Audit, Memory, Notes) lives instead in the left rail, next to the pipeline controls: Audit and Memory only turn on once the fragment has been translated.",
-      "statsTitle": "Session stats",
-      "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and cache hit rate for the current session. The breakdown is per operation — each pipeline stage (e.g. Translation, Refine, Format), Audit, and Coherence — showing the model used and the percentage of tokens served from cache for each.",
-      "operationsLogTitle": "Structured operations log",
-      "operationsLogDesc": "The Operations Console opens from the bottom status bar and records every significant event: prompt sent, stage completion, errors, retries, audit, and coherence. Each entry has a scope, level, and — when relevant — the chunk involved. Prompt entries store the full system and user prompts in an expandable field, so you can inspect the exact request sent.",
-      "phraseMemoryTitle": "Phrase Memory",
-      "phraseMemoryDesc": "Phrase Memory is specific to the translation workspace: it stores source phrase → translated phrase pairs and uses them to suggest consistent renderings in later documents in the same workspace. The segment panel has two separate tabs: Memory (to extract and curate new phrases) and References (to search and reuse already-saved phrases). The project glossary is always shown in full in another tab of the right-hand panel.",
-      "phraseMemoryAutomationTitle": "Visible automation",
-      "phraseMemoryAutomationDesc": "When Phrase Memory is enabled, Glossa searches for matches in the background when the document opens or changes, but this search is read-only: it shows badges and suggestions, and does not modify translations or the database. Found matches are not added to the prompt until you select them on the References tab. A phrase only enters the collection from the Memory tab, and only from a segment you have locked: lock, extract, review (accept/discard/fix, or add manually), confirm. Nothing is ever saved automatically.",
-      "phraseMemoryTipTitle": "Operating rule",
-      "phraseMemoryTipDesc": "If matches are visible but not selected, the pipeline runs without using them and Glossa warns you before launch. Use the checkboxes to decide what enters the prompt; only save phrases you've reviewed and confirmed from the Memory tab of a locked segment.",
-      "fewShotTitle": "Translation examples",
-      "fewShotDesc": "Different from Phrase Memory: here you pin 2-3 whole segment translations as a style example for the entire pipeline, not single phrase pairs. Lock a segment whose rendering you consider exemplary — usually after checking the Audit tab — then in that same Audit tab click \"Use as style example\": the button also shows how many examples you've saved so far. The example shows up right away in the pipeline Settings, where you can review it, shorten it, or remove it. A cap of 5 examples keeps following translations from being weighed down.",
-      "anthropicCacheTitle": "Anthropic caching",
-      "anthropicCacheDesc": "For Anthropic providers, prompt caching is off by default: turn it on in the pipeline Settings only if you're working through multiple chunks in quick succession, otherwise you'd only pay the write surcharge without ever saving. If a slow stage sits between two Anthropic chunks in the pipeline, you can also extend the cache lifetime to 1 hour instead of the default 5 minutes (it costs double on writes instead of 1.25x).",
-      "configDrawerTitle": "Configuration panel",
-      "configDrawerDesc": "Opens with the gear icon. Five tabs: Settings (mode, language pair, persona, refine readiness), Translation (translation stage and refine/format when in editorial mode), Quality Control (judge and coherence prompts), Term Registry (glossary assigned to the project), Prompt Preview (preview of the final prompt for every stage).",
-      "modalsTitle": "Unified modals",
-      "modalsDesc": "Settings, Language resources, Projects, Save dialog, Preflight check, and this guide share the same editorial shell: rounded border, header with icon and title, scrollable body, footer with a Close button and an X in the top-right. Every modal can be closed from either the X or the footer button.",
-      "appearanceTitle": "Appearance and typography",
-      "appearanceDesc": "Under Settings → Typography you choose the font for the whole interface among Plus Jakarta Sans (default), Geist, Inter, and IBM Plex Sans. The choice applies to the UI immediately and is remembered across sessions. Editorial serif values (italic headings and data) stay in Elstob and are left untouched. The same screen also holds the reading layout and highlight controls.",
-      "personaTitle": "Per-project persona",
-      "personaDesc": "A persona is a free-form system prompt opener that replaces the default 'You are an expert X → Y translator'. You enable it in the Settings tab of the configuration panel. When active, the language pair is owned by the persona itself and per-stage overrides do not apply. Personas can be saved and loaded as templates.",
-      "templatesTitle": "Prompt templates",
-      "templatesDesc": "Every prompt — translation, audit, coherence, or persona — can be saved as a reusable template. The bookmark (+) saves the current prompt under a name; the open book loads a saved template. Templates are scoped by context (Stage / Audit / Persona): a template saved as Stage does not show up in the Audit picker and vice versa.",
-      "refineTitle": "Prompt refinement",
-      "refineDesc": "Next to every prompt sits a magic wand that sends the current text to an LLM to be rewritten. The provider and model used are shown as a `provider · model` label next to the button, so you always know what's doing the refining. The result replaces the prompt in the textarea — editable or undoable with Ctrl+Z.",
-      "refineGatingTitle": "API key gating",
-      "refineGatingDesc": "If the remote provider chosen for refinement has no API key configured, the wand button is disabled and the tooltip says so. Ollama is always enabled because it runs locally. In the Settings tab of the configuration panel, an inline notice lists the remote providers missing a key, or confirms that refinement is ready.",
-      "promptPreviewTitle": "Final prompt preview",
-      "promptPreviewDesc": "The Prompt Preview tab of the configuration panel shows, for each active stage, the structure of the prompt that will be sent: first the cacheable part (system prompt, glossary, blob context), then the stage-specific instructions, then the runtime blocks (source text, previous stage result, glossary constraints). Lets you see ordering, cacheable blocks, and placeholders without running the pipeline.",
-      "segmentationTitle": "Import and segmentation",
-      "segmentationDesc": "When you import a file (.txt, .md, .docx, .pdf), Glossa opens an import preview where you can fine-tune how the document is split into chunks before it enters the workspace. Segmentation in the workspace is fixed for that run: come back here if you want to change it.",
-      "segmentationControlsTitle": "Segmentation controls",
-      "segmentationControlsDesc": "The icon bar provides: Auto-segment (scissors) — enables splitting by word count; Heading-aware (hash, Markdown only) — attaches standalone headings to the next paragraph so headings are never translated in isolation. The number field sets words per chunk (default in Settings → Segmentation). The min–max range next to the field comes from the same settings and prevents chunks that are too short or too long.",
-      "segmentationCardTitle": "Card view",
-      "segmentationCardDesc": "The default view shows each chunk as a card. An amber border flags anomalies (chunk outside the min–max range). Expand a card to read its full text. The rotate icon glows amber when manual edits are pending — click it to recompute chunks while keeping your adjustments.",
-      "segmentationEditorTitle": "Advanced segment editor",
-      "segmentationEditorDesc": "The top-right toggle switches to the segment editor: whole document as a single scrolling column, chunk boundaries as numbered horizontal dividers. Between any two paragraphs you can click '+' to add a boundary, '×' on an existing boundary to remove it. Scissors on long paragraphs split them in half. All edits are lossless: switching back to card view preserves manual decisions.",
-      "chunkActionsTitle": "Chunk boundaries are fixed in the workspace",
-      "chunkActionsDesc": "Once the document is loaded, chunk boundaries are fixed for that run: there are no inline split or merge actions in the document workspace or the Insights drawer. To redefine segmentation, go back to the import preview or reimport the document.",
-      "tokenTitle": "Token count and estimated cost",
-      "tokenDesc": "The Statistics tab in the Insight panel shows total tokens and estimated session cost in real time, computed against official provider pricing. Counts are separated per stage and per judge. For Ollama the cost is zero because inference is local.",
-      "exportTitle": "Export",
-      "exportDesc": "When there are completed chunks, the Export button at the bottom of the project's left rail opens a dialog where you pick format (.txt, .md, .html, .docx, bilingual .md). The chunk separator (blank line, HR, or asterisks) is available only for text formats (.txt and .md). The bilingual .md export includes source, translation, audit rating, and flagged issues for every chunk.",
-      "watchdogTitle": "Stuck-chunk detection",
-      "watchdogDesc": "A background watchdog monitors chunks that linger in the 'processing' state longer than expected. If a chunk appears stuck — for example an Ollama model working on a very long context — a warning appears in the Index tab with a Cancel button to abort just that chunk without stopping the whole pipeline.",
-      "footnotesTitle": "Footnotes",
-      "footnotesDesc": "When you import a DOCX or Markdown document with footnotes, Glossa separates them entirely from the translation process. Both the note text and the inline position markers are removed from what the model receives — the model sees clean body text only. The original document, shown in the editor, retains markers and notes exactly as they appeared. The note content is saved with the project. After translation you will need to handle footnotes manually: decide which notes to carry over, adapt their text to the target language, and place them where they make sense in the translated text — which may differ from their position in the original.",
-      "footnotesTipTitle": "Why notes are not translated automatically",
-      "footnotesTipDesc": "In a translation, a footnote often cannot be placed at the same position as in the original, and its text may need to be rewritten rather than translated word for word. Keeping notes out of the pipeline prevents the model from making arbitrary decisions about their placement and wording. You stay in control.",
-      "annotationsTitle": "Chunk annotations",
-      "annotationsDesc": "The Notes tab in the project's left rail lets you attach structured notes to individual chunks. Each annotation has a type (Comment, Doubt, Problem, Approved), a body text, and an optional anchor phrase that links it to a specific passage in the translation. Right-click any text in the translation pane and choose «Add annotation» to create one with the selected phrase pre-filled as the anchor. Audit issues also have a direct button to convert them into an annotation with anchor and content already filled in. Annotations are saved per-pipeline in the database and survive project reload.",
-      "annotationsTipTitle": "Inline footnotes in the rendered view",
-      "annotationsTipDesc": "When an annotation has an anchor phrase, Glossa inserts a GFM footnote marker ([^a1], [^a2], …) right after that phrase in the rendered translation view. The footnote definition appears at the bottom of the chunk. The stored draft is never modified — footnotes exist only in the rendered preview and disappear if the annotation is deleted."
-    },
-    "context": {
-      "title": "Context & caching",
-      "intro": "Glossa uses two mechanisms to keep translations coherent across chunks and keep inference costs low: a reference document block that gives each chunk access to its neighbors' source text, and a layered prompt structure that lets providers cache as much as possible between calls.",
-      "blobTitle": "Document context per chunk",
-      "blobDesc": "When translating a chunk, Glossa automatically sends the source text of nearby chunks alongside it as a reference block. The model uses this to maintain consistent terminology, names, pronouns, and style across chunk boundaries — without needing to see the whole document at once. For short documents the reference block covers the entire source text; for longer ones it covers a sliding window of neighbors. The reference block is provided as context only: the model is instructed to translate solely the current chunk, not the reference content.",
-      "cachingTitle": "Layered prompt caching",
-      "cachingDesc": "Every prompt is structured in three layers so the provider can reuse as much previously computed context as possible:",
-      "layer1Label": "Layer 1",
-      "layer1Desc": "Persona, structural rules, and glossary — identical for every chunk in the run. Cached once at the start and reused for all subsequent calls.",
-      "layer2Label": "Layer 2",
-      "layer2Desc": "Reference document block — shared by all chunks in the same neighbor group. Cached per group, so all stages for those chunks hit the cache for this layer too.",
-      "layer3Label": "Layer 3",
-      "layer3Desc": "Stage-specific instructions — sent fresh each time but are the smallest part of the prompt, so the cost is minimal.",
-      "isolationTitle": "Stage isolation",
-      "isolationDesc": "Each stage receives exactly the information it needs — no more. This prevents unintended retranslation and keeps each stage focused on its specific task:",
-      "stageTranslation": "Translation",
-      "stageTranslationDesc": "Receives the source text of the current chunk and the reference document block. Produces the first-pass translation.",
-      "stageRefine": "Refine",
-      "stageRefineDesc": "Receives the source text, the reference block, and the output of the translation stage. Can compare original and draft to improve fluency and fidelity.",
-      "stageFormat": "Format",
-      "stageFormatDesc": "Receives only the translated text from the previous stage — not the source text, not the reference block. This prevents the model from retranslating instead of just cleaning up formatting.",
-      "stageCoherence": "Coherence audit",
-      "stageCoherenceDesc": "Compares translated chunks against each other — not against the source. Receives a reference block of already-translated neighbors to spot terminology drift and continuity breaks across the document.",
-      "tipTitle": "What this means in practice",
-      "tipDesc": "After the first chunk in a group is processed, subsequent chunks in the same group cost less because the provider reuses the cached layers. On long documents with many chunks the savings are significant, especially in editorial mode where three stages run per chunk.",
-      "cacheRetentionTitle": "Cache retention per model",
-      "cacheRetentionDesc": "OpenAI uses two different cache policies. Full models (gpt-5.4 and above) use extended retention: the prefix stays cached for up to 24 hours, so each subsequent chunk benefits from the previous run's warm cache. Mini and nano models use in-memory retention only: the prefix expires after 5–10 minutes of inactivity. This explains why Refine (typically on gpt-5.4-mini) can show 0% cache hit even when the prompt is identical: if more than ~10 minutes passed between chunks, the cache has already expired.",
-      "previewTitle": "Previewing the message for a chunk",
-      "previewDesc": "In the Chunk panel, the Preview tab shows the actual, complete message that would be sent to the engine for the open chunk: pick a pipeline stage and build it on demand. Nothing runs and nothing is charged — useful for checking exactly what the model will receive before launching the translation."
-    },
-    "streaming": {
-      "title": "Real-time streaming",
-      "p1": "With Ollama (local inference) tokens are streamed in real time: text appears as it is generated, giving immediate feedback. With remote providers (Gemini, OpenAI, Anthropic, DeepSeek) the response arrives in full once complete — there is no token-by-token streaming. In both cases the pipeline updates the chunk status as soon as the stage finishes.",
-      "p2": "For Ollama the Rust backend opens a Server-Sent Events channel and Tauri relays tokens to the frontend with minimal latency. For structured stages (judge, coherence) — regardless of provider — the JSON is parsed only after the full response is received, whether streamed or not.",
-      "p3": "On transient errors the system retries with exponential backoff up to three attempts. Timeouts are not retried: if the model is still computing a long response, Glossa waits rather than queuing a new request."
-    },
-    "audit": {
-      "title": "Audit and quality",
-      "intro": "Glossa has two audit layers. The AI Judge evaluates each chunk right after the translation stages. The coherence audit is an optional second pass that examines the entire document. The judge produces five issue categories:",
-      "glossaryLabel": "Glossary",
-      "accuracyLabel": "Accuracy",
-      "fluencyLabel": "Fluency",
-      "grammarLabel": "Grammar",
-      "consistencyLabel": "Consistency",
-      "glossaryIssue": "The translation deviates from the terms defined in the Term Registry assigned to the project.",
-      "accuracyIssue": "The source meaning is not faithfully rendered: omissions, additions, contradictions.",
-      "fluencyIssue": "The rendering is awkward or unnatural in the target language, even if technically correct.",
-      "grammarIssue": "Grammatical mistakes, incorrect agreements, syntactic problems in the output.",
-      "consistencyIssue": "The same term or structure is rendered inconsistently across chunks in the document.",
-      "reeval": "After manually fixing a candidate translation, click 'Re-evaluate' in the audit panel to rerun the judge on that chunk only. Lets you iterate to the desired quality without running the full pipeline.",
-      "issuesNav": "Issue cards open the affected chunk directly, and — when the judge returns textual cues — try to focus on the relevant sentence with a search heuristic.",
-      "schemaTitle": "The shape of the answer",
-      "schemaDesc": "The judge has to answer in a precise shape — a rating, a list of issues, the type and severity of each — and that shape is a single one for every provider. With local models Glossa enforces it while the answer is generated, so the model cannot even phrase it outside the format; with online services it is declared in the request. For the same reason, at judging time the temperature stays at zero on local models whatever value you set: an answer bound to a schema has to be predictable, and two runs on the same text must not give different verdicts by chance. Translations keep using the temperature you chose, and the note says so where the field is filled in.",
-      "coherenceTitle": "Coherence audit (document level)",
-      "coherenceDesc": "The coherence audit is a separate pass, launched manually after all chunks are complete. It analyses one chunk at a time (with neighboring chunks as context, so it doesn't lose the bigger picture), not the whole document in a single pass. It uses the Coherence Prompt from the Quality Control tab. Results appear in the Coherence tab of the Insights panel and surface terminological or stylistic inconsistencies between chunks — for example the same term rendered differently in different places."
-    },
-    "projects": {
-      "title": "Projects",
-      "intro": "Every translation project belongs to a workspace. Phrase Memory and glossaries can be shared by projects in the same workspace; configuration remains specific to the open pipeline. The Translations area lists projects from every workspace.",
-      "workspaceIdentityTitle": "Workspace mark",
-      "workspaceIdentityDesc": "In workspace settings, choose one of the available historical-editorial marks before the name and description. The mark identifies the workspace in project lists, the language resources, and the side rail; in global areas it accompanies the smaller icon for the item's type. The Translations, Library, Transcriptions, and Analysis icons remain reserved for their respective areas; custom icons are not available.",
-      "createTitle": "Create a project",
-      "createDesc": "You can create a project from a workspace page or the Translations area; the workspace page also lets you open or delete its projects. The new project is created in the workspace you choose.",
-      "saveTitle": "Save your work",
-      "saveDesc": "Glossa saves automatically after meaningful changes; the status bar shows whether the project is saved and the time of the latest save. You can also force a save with Ctrl+S. When you reopen a project, configuration, stages, glossary, chunks, translations, and notes are restored.",
-      "importExportTitle": "Import and export",
-      "importExportDesc": "Use Import at the bottom of the project's left rail to choose a file (.txt, .md, .docx, .pdf) as the source, from any folder. Picking All files in the type menu also lets you import other extensions, which are read as plain text. When chunks are completed, Export in the same rail opens the dialog with formats and separators. Deleting a project also removes its pipelines, translations, logs, and saved project links.",
-      "autosaveTitle": "Autosave",
-      "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
-      "scopeTitle": "What a workspace holds",
-      "scopeDesc": "A workspace gathers your material in two ways. Translations and transcriptions live in it: each one belongs to a single workspace, and that is where it takes its dictionaries and phrase memory from. Books, dictionaries and imported phrases are linked to it, and can sit in several workspaces at once without ever being duplicated. The same dictionary is used wherever you need it, and if one workspace needs an entry translated differently you correct it there: the correction applies only in that workspace and the original does not change. The Library always shows every book, with the workspaces it belongs to on its card. A finished workspace can be set aside instead of deleted; deleting it takes away only the translations and transcriptions that lived there, while books, dictionaries and phrases stay.",
-      "backupTitle": "Backup and restore",
-      "backupDesc": "In Settings, the Storage tab saves a backup or restores from a saved one, through a .glossa-backup file. The two commands are icons: hover them or reach them with the keyboard to read their descriptions. A backup covers the whole of Glossa, not a single workspace, and restoring replaces every workspace you have. Before asking for confirmation and before touching any data, Glossa verifies that the file is complete, intact, and compatible: an altered, incomplete, or newer-version backup is rejected without changing the current work."
-    },
-    "providers": {
-      "title": "LLM providers",
-      "intro": "Glossa supports cloud providers, local inference, and user-defined OpenAI-compatible endpoints. Each stage and the judge can use an independent provider and model. API keys are configured in the Settings panel.",
-      "geminiModels": "Gemini family",
-      "openaiModels": "GPT family",
-      "anthropicModels": "Claude family",
-      "deepseekModels": "DeepSeek family",
-      "ollamaModels": "Any local installed model",
-      "customModels": "Free-text model name",
-      "geminiNote": "Google models. High throughput, low cost, solid quality on European languages. Great for high-volume translation and fast refine.",
-      "openaiNote": "OpenAI models. Elegant and versatile, good handling of stylistic nuance. Suited as a literary refine pass or a strict judge.",
-      "anthropicNote": "Claude models. Excellent on nuanced, literary text and less-common languages; tend to preserve tone and register. Strong refine and judge.",
-      "deepseekNote": "Chinese AI lab. Very competitive pricing, good multilingual support. A solid alternative to Gemini for volume translation.",
-      "ollamaNote": "Local inference, no API key, no data leaves the machine. Quality depends on the installed model; recommended for sensitive documents or offline work.",
-      "customNote": "User-defined OpenAI-compatible endpoints: OpenRouter, Groq, LM Studio, vLLM, corporate proxies, and similar. Configure them in Settings → Custom. The model name is entered freely per stage; the API key (if required) is stored in the OS keychain.",
-      "gatingTitle": "Key availability",
-      "gatingDesc": "Features that require a remote provider — prompt refinement, preflight checks, running the pipeline on a non-Ollama provider — are disabled until the corresponding API key is configured in Settings. Key status appears as a `provider · model` label next to controls and as an inline notice in the pipeline Settings tab. Ollama and custom endpoints with no authentication are always enabled.",
-      "customValidationTitle": "Custom endpoint validation",
-      "customValidationDesc": "A profile needs a complete name and base URL before it can be saved or tested. Remote endpoints must use HTTPS; HTTP is allowed only for local services on localhost, 127.0.0.1, or ::1. An incomplete or insecure remote profile is rejected before Glossa sends credentials or requests.",
-      "security": "API keys are stored in the operating system keychain (GNOME Keyring on Linux, Keychain on macOS, Credential Manager on Windows) when available. If the keychain is not accessible, Glossa uses an encrypted local file protected by a machine-local key. Keys are never written to disk in plain text, and never sent anywhere except the corresponding provider endpoint."
-    },
-    "ollama": {
-      "title": "Using Ollama",
-      "intro": "Ollama runs open-source LLMs on your own machine. No API key, no data leaves the computer. Suited to confidential documents and fully offline work.",
-      "installTitle": "Install Ollama",
-      "installDesc": "Download from ollama.com or use the install script:",
-      "pullTitle": "Pull a model",
-      "pullDesc": "Pull the models you want to use. Example of a popular pick for translation:",
-      "serveTitle": "Start the server",
-      "serveDesc": "Ollama must be running in the background. On systems that don't autostart it:",
-      "useTitle": "Configure in Glossa",
-      "useDesc": "Open Settings — the Ollama section shows connection status and installed models. Pick 'ollama' as the provider in any stage or judge and select a model from the stage's dropdown.",
-      "recommendedTitle": "Recommended models for translation",
-      "recommendedDesc": "For general translation: llama3.2 (3B), qwen2.5 (7B), gemma3 (9B). For higher quality on capable machines: llama3.3:70b or qwen2.5:32b. Models under 3B parameters tend to produce lower-quality translations — keep them for quick experiments.",
-      "thinkTitle": "Think mode",
-      "thinkDesc": "Some Ollama models support an extended reasoning step before responding. In the Ollama section of Settings you can set the Think level: off, low, medium, or high. Higher levels can improve quality at the cost of time and tokens. Only enable it for models that explicitly support thinking — on standard models it has no effect."
-    },
-    "glossary": {
-      "title": "Language resources: dictionaries and templates",
-      "intro": "The Language resources panel (workspace bar button) belongs to the active workspace: the title shows the active workspace name. It has three tabs: Dictionaries (glossaries scoped to the workspace), Prompt Templates (global templates filterable by workflow), and Phrases (workspace phrase memory).",
-      "libraryTitle": "Workspace dictionaries",
-      "libraryDesc": "In the Dictionaries tab you can create new dictionaries, rename them with double-click, duplicate (Fork), delete, import terms from CSV/TSV, and edit entries inline by expanding a dictionary. A dictionary can be assigned as the active glossary of the current project with the Assign button. The same dictionary can be linked to several workspaces: it stays one dictionary, and the entries you add show up everywhere it is linked. If one workspace needs an entry translated differently, correct it there: it applies only in that workspace and the original does not change.",
-      "iiifTitle": "Source Library",
-      "iiifDesc": "From the Dashboard, choose an archive and search for a source; open a card to view all of its data and load more results when available. The Library will contain only added sources: downloads, caching, and workspace links will arrive in the next increment.",
-      "csvTitle": "Import from CSV/TSV",
-      "csvDesc": "The Upload button next to each dictionary opens a wizard that previews the first rows and asks for a strategy: 'Add/update' merges without touching existing terms, 'Replace all' wipes and reimports. Recognised headers: term/source/from for the source term, translation/target/to for the translation (case-insensitive); the notes column is optional.",
-      "projectTitle": "Per-project glossary",
-      "projectDesc": "In the configuration panel, Term Registry tab, you can pick the dictionary assigned to the project and edit entries inline. Edits act on the shared dictionary: the same dictionary can be assigned to multiple projects and entries are shared. The Save button appears as soon as there are pending changes.",
-      "highlightTitle": "Term highlighting",
-      "highlightDesc": "The Highlighter control enables or disables all highlights. The Glossary tab in the Insight panel always shows the legend: blue underline for a source glossary term, green for an expected translation found correctly, and pink for a missing expected translation. Search matches are yellow. Colours are customisable in Settings → Highlights; hover a term to see its expected translation and notes.",
-      "searchTitle": "Document search",
-      "searchDesc": "The Search tab in the Insights panel lets you search for a word or phrase across all chunks at once — in the source text, translation, and audit findings. Each result shows a badge indicating where the match was found (source / translation / audit) and a snippet with the matched text in bold. Clicking a result jumps the workspace to that chunk, where the search term also appears highlighted in yellow.",
-      "auditTitle": "Audit and glossary",
-      "auditDesc": "The AI Judge explicitly checks adherence to the assigned dictionary and flags every deviation as a 'glossary' category issue, with severity and suggested fix. Particularly useful for technical, legal, or academic texts where terminology must remain stable.",
-      "templatesTitle": "Prompt templates",
-      "templatesDesc": "In the Prompt Templates tab of the language resources you manage the global collection of templates, scoped by context: Stage (for translation, refine, format prompts), Audit (for judge and coherence), Persona (for system prompt openers). Create a template by setting name, context, and text; use the wand in the creation form to refine the text with an LLM. Saved templates are recallable via the bookmark buttons next to each matching prompt."
-    },
-    "shortcuts": {
-      "title": "Interface reference",
-      "keyboardTitle": "Keyboard shortcuts",
-      "runPipeline": "Run pipeline",
-      "exportFile": "Open export dialog",
-      "goToChunk": "Go to chunk N",
-      "closeModal": "Close modal / cancel",
-      "toolbarTitle": "Sidebar, workspace and editor",
-      "openProjects": "Return to the workspace — bottom of the project rail",
-      "importFile": "Import a source file — bottom of the project rail",
-      "openConfig": "Open the pipeline configuration panel",
-      "saveProject": "Save the current project",
-      "openLibrary": "Open the language resources (dictionaries and templates) — project rail",
-      "switchLang": "Switch interface language (IT / EN)",
-      "openSettings": "Open Settings (providers, typography, data) — bottom of the rail",
-      "openHelp": "Open this guide",
-      "openInsights": "Open the Insights panel",
-      "toggleEditorTools": "Show / hide the editor toolbars",
-      "markdownHelp": "Question mark — opens the Markdown toolbar guide",
-      "lockTranslation": "Lock / unlock the candidate translation as final",
-      "phraseMemory": "Memory/References — Memory extracts and saves new phrases from a locked segment; References shows found matches and the glossary, select which ones to use in the next run",
-      "openStageTrace": "Open the modal with a stage's full output",
-      "exportTitle": "Export (requires completed chunks)",
-      "exportDesc": "Opens the export dialog with format and chunk separator",
-      "promptToolsTitle": "Prompt tools",
-      "refineButton": "Wand — refines the prompt using the provider/model shown next to it",
-      "saveTemplate": "Bookmark (+) — save the prompt as a template",
-      "loadTemplate": "Open book — load a saved template"
-    },
-    "troubleshooting": {
-      "title": "Troubleshooting",
-      "desc": "When something doesn't work, check the structured logs first. They're plain text — feel free to copy/paste them into a bug report.",
-      "logFileTitle": "Log directory",
-      "logFileDesc": "Glossa writes a rotating log named \"glossa\" in this directory. Attach or copy it when reporting a bug.",
-      "rustLogTitle": "Verbose logging",
-      "rustLogDesc": "Set the RUST_LOG environment variable to override the runtime log level:",
-      "dataLocationTitle": "Where is my data",
-      "dataLocationDesc": "The app's database (projects, glossaries, settings) lives in a default system folder. In Settings, under the \"Data\" tab, you can see the current location and move it elsewhere: moving it copies the data first and verifies the copy before using it — the original is never deleted automatically."
+    "articles": {
+      "pipeline": {
+        "title": "Translating a document",
+        "intro": "A pipeline is the sequence of stages that produces and assesses a translation. Each document segment is processed separately.",
+        "blocks": [
+          {
+            "title": "Choosing a mode",
+            "paragraphs": [
+              "Standard runs translation and assessment. Editorial adds draft revision, called Refine, and formatting, called Format. DeepL Hybrid uses DeepL for the initial translation, with optional LLM revision and LLM assessment.",
+              "Choose the mode before producing results. The control is locked when processing or existing translations prevent a change."
+            ]
+          },
+          {
+            "title": "Configuring stages",
+            "paragraphs": [],
+            "steps": [
+              "Open pipeline configuration and set the source and target languages.",
+              "If you use a persona, describe the intended role, languages and register. This text replaces the default opening instructions.",
+              "In Translation and Quality control, choose the providers, models and instructions for active stages.",
+              "Assign the glossary and check selected memory references.",
+              "Inspect the prompt preview before running the pipeline."
+            ]
+          },
+          {
+            "title": "Testing and running",
+            "paragraphs": [
+              "Use Test on a representative segment to inspect the result while keeping configuration editable. Then switch to production and choose whether to process one segment or several.",
+              "The estimate beside the controls applies to the selected action. It is approximate: usage depends on the submitted text and response. Statistics show available usage data after processing.",
+              "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unlocked segments can replace their results."
+            ]
+          },
+          {
+            "title": "Reusing instructions",
+            "paragraphs": [
+              "Save a prompt as a template to reuse it in other work. Templates are separated by context, such as translation, assessment or persona.",
+              "The wand control rewrites the prompt through the configured service. Review the proposed text before using it: it is model-generated and may change your instructions."
+            ]
+          }
+        ]
+      },
+      "features": {
+        "title": "Importing, editing and exporting",
+        "intro": "The document view places source and translation side by side. Editor controls let you edit text, check formatting and compare stage outputs.",
+        "blocks": [
+          {
+            "title": "Importing and dividing text",
+            "paragraphs": [
+              "Use Import in the project sidebar. Supported formats are TXT and Markdown up to 50 MiB, DOCX up to 100 MiB and PDF up to 50 MiB. DOCX extraction is experimental; PDFs must contain text rather than images alone.",
+              "Check the preview before confirming. Automatic segmentation divides text using a target word count. Markdown provides additional heading options.",
+              "Choose a size appropriate for the text and review segment boundaries. Text files using an encoding other than UTF-8 must be converted before import."
+            ]
+          },
+          {
+            "title": "Editing and formatting",
+            "paragraphs": [
+              "The editor menu provides writing, preview and split views, text size, copying and Markdown tools. Use the controls for bold, italic, headings, lists and footnotes.",
+              "Inspect and compare stage outputs to see where the text changed. Enable source editing only when you need to correct the original; its translation will be flagged for updating.",
+              "Settings → Typography controls fonts, size, line spacing and appearance. Translation settings include layout and highlighting."
+            ]
+          },
+          {
+            "title": "Reading status indicators",
+            "paragraphs": [
+              "The circles above the document select segments. The central mark shows whether a segment is ready, processing, completed or in error.",
+              "Corner indicators identify audit findings, notes, a locked translation and source changes. The triangle marks the current segment. The tooltip provides a full summary.",
+              "The Insight panel contains the document index, search, statistics, consistency and glossary. The segment sidebar contains References, Preview, Audit, Memory and Notes."
+            ]
+          },
+          {
+            "title": "Exporting",
+            "paragraphs": [
+              "Open Export and choose TXT, Markdown, HTML, DOCX or bilingual Markdown. Segment separators apply only to TXT and Markdown.",
+              "Check incomplete segments: standard formats may use the source text where a translation is missing. Bilingual format shows the source, translation and any audit results.",
+              "Export does not necessarily recreate the imported document’s layout. Review the generated file, including footnotes and annotations, before delivery."
+            ]
+          }
+        ]
+      },
+      "glossary": {
+        "title": "Dictionaries and glossary",
+        "intro": "A dictionary contains terms and their required translations. Assign it to a project to use it as the pipeline glossary.",
+        "blocks": [
+          {
+            "title": "Preparing a dictionary",
+            "paragraphs": [],
+            "steps": [
+              "Open Language Resources in the workspace and select Dictionaries.",
+              "Create a dictionary or choose an existing resource.",
+              "Enter the source term, required translation and any notes. You can also import CSV or TSV, checking the preview and whether to merge or replace entries.",
+              "Assign the dictionary to the project and check its entries in the Insight panel’s Glossary tab."
+            ]
+          },
+          {
+            "title": "Sharing entries",
+            "paragraphs": [
+              "Linking a dictionary to several workspaces keeps one shared resource. Create copy produces an independent dictionary instead.",
+              "A local override or exclusion applies only in the current workspace. Use this when a term needs different wording in another research context."
+            ]
+          },
+          {
+            "title": "Checking terminology",
+            "paragraphs": [
+              "The pipeline receives instructions to follow the glossary. Still check the result: a model may ignore or misapply an entry.",
+              "The Glossary legend distinguishes source terms, matching translations and missing translations. Highlighting shows textual matches, not a check of meaning.",
+              "The glossary specifies required wording. Phrase memory instead suggests references to select for each segment."
+            ]
+          }
+        ]
+      },
+      "memory": {
+        "title": "Phrase memory and examples",
+        "intro": "Phrase memory lets you reuse approved bilingual pairs. Finding a match does not mean it is automatically used or saved.",
+        "blocks": [
+          {
+            "title": "Using saved phrases",
+            "paragraphs": [
+              "Open References for the segment. When memory is enabled, Glossa searches the workspace’s resources for matches. You can adjust the similarity threshold.",
+              "Select only relevant pairs. They will be included when you translate or reprocess the segment. Unselected pairs are excluded."
+            ]
+          },
+          {
+            "title": "Saving new phrases",
+            "paragraphs": [],
+            "steps": [
+              "Review and lock the segment’s translation.",
+              "Open Memory. Previously saved phrases appear selected.",
+              "Choose Extract phrases to generate proposals, or enter a pair manually.",
+              "Edit the text and select the pairs to keep.",
+              "Save the selection. A previously saved phrase that you deselected is removed from the collection."
+            ]
+          },
+          {
+            "title": "Using a style example",
+            "paragraphs": [
+              "A style example contains an entire segment and its translation. It guides the pipeline, while phrase memory retrieves individual relevant pairs.",
+              "After locking a segment, open Audit and use the control to add it as an example. Review or remove it in pipeline settings. You can keep up to five examples."
+            ]
+          }
+        ]
+      },
+      "audit": {
+        "title": "Reviewing a translation",
+        "intro": "The Audit tab contains the segment’s automated assessment. Use it to identify passages that need checking, always comparing the source and translation.",
+        "blocks": [
+          {
+            "title": "Checking and correcting",
+            "paragraphs": [],
+            "steps": [
+              "Open Audit after translation and read findings about terminology, accuracy, fluency, grammar and consistency.",
+              "Check each finding against the text. A passage link may not locate the exact phrase.",
+              "Edit the translation or rerun the stage that needs revision.",
+              "Use Re-evaluate to update the assessment without translating everything again.",
+              "Lock the translation when you approve it."
+            ]
+          },
+          {
+            "title": "Checking document consistency",
+            "paragraphs": [
+              "After completing the segments, run the consistency check from the Insight panel. It compares translated passages for terminology and style variations.",
+              "This check is separate from assessing accuracy against the source. A positive rating does not replace human review."
+            ]
+          }
+        ]
+      },
+      "annotations": {
+        "title": "Annotations and notes",
+        "intro": "Use annotations to keep decisions, questions and problems with the relevant segment.",
+        "blocks": [
+          {
+            "title": "Adding a note",
+            "paragraphs": [
+              "Select a passage in the translation and choose Add annotation from the context menu. You can also add an unanchored note in the segment’s Notes tab.",
+              "Audit findings can be converted into annotations. Choose Comment, Doubt, Problem or Approved according to the note’s purpose.",
+              "Approved is a note type; it does not lock the translation. Use the lock control to protect a translation from reprocessing."
+            ]
+          },
+          {
+            "title": "Checking anchors",
+            "paragraphs": [
+              "Anchored annotations appear as footnotes in the preview. If you edit the phrase they refer to, check that the anchor remains correct.",
+              "Notes about a Library work are separate from translation annotations."
+            ]
+          },
+          {
+            "title": "Handling imported footnotes",
+            "paragraphs": [
+              "Footnotes imported from Markdown or DOCX remain in the project but are not translated automatically. The pipeline receives the body text without footnote markers or contents.",
+              "To include them in the final translation, review their wording and insert them in the appropriate position. Check the exported file."
+            ]
+          }
+        ]
+      },
+      "context": {
+        "title": "Context and costs",
+        "intro": "When translating a segment, Glossa can also supply neighbouring passages, terminology and examples. These references help maintain continuity across the document.",
+        "blocks": [
+          {
+            "title": "Checking what is sent",
+            "paragraphs": [
+              "In the segment’s Preview tab, choose a stage and build its message. Read the instructions and text without calling the model or incurring translation charges.",
+              "Revision receives the source and draft. Formatting receives only translated text. Consistency review compares translated passages."
+            ]
+          },
+          {
+            "title": "Understanding caching and usage",
+            "paragraphs": [
+              "Some services can reuse repeated request content through a cache. Savings depend on the service, model and actual reuse; they are not guaranteed.",
+              "Anthropic caching is off by default. You can enable it in the pipeline and choose extended retention, considering how often you reuse the same instructions.",
+              "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead."
+            ]
+          }
+        ]
+      },
+      "providers": {
+        "title": "Configuring providers",
+        "intro": "Configure services under Settings → Provider, then choose a provider and model for each pipeline stage.",
+        "blocks": [
+          {
+            "title": "Remote services",
+            "paragraphs": [
+              "Glossa integrates Gemini, OpenAI, Anthropic and DeepSeek for LLM stages. DeepL supplies the initial translation in DeepL Hybrid. Each service requires its own key and an account with API access.",
+              "Availability also depends on the model, quota and connection. Check a configuration on one segment before processing a long document.",
+              "Keys are kept in the system credential store when available, otherwise in an encrypted local store. Backups exclude them."
+            ]
+          },
+          {
+            "title": "Custom endpoints",
+            "paragraphs": [
+              "In Custom, create a profile with a name and base URL. Specify whether it requires a key and test the connection. Select that profile in the stage and enter the model name.",
+              "Remote addresses must use HTTPS. HTTP is accepted only for localhost, 127.0.0.1 and ::1. Available options depend on the compatible service you configure."
+            ]
+          },
+          {
+            "title": "Parameters and unavailable controls",
+            "paragraphs": [
+              "Temperature and reasoning depend on the model. A low temperature reduces variation but does not guarantee a correct translation. Some combinations do not allow it to be adjusted.",
+              "If a control is disabled, read its tooltip: a key or project requirement may be missing. Resolve that requirement before trying again."
+            ]
+          }
+        ]
+      },
+      "ollama": {
+        "title": "Using Ollama",
+        "intro": "Ollama runs models on your computer or a server you configure. To work without sending text to remote services, use a local server for all required operations.",
+        "blocks": [
+          {
+            "title": "Connecting the server",
+            "paragraphs": [],
+            "steps": [
+              "Install Ollama and download a model compatible with your hardware.",
+              "Start the Ollama server if your installation does not start it automatically.",
+              "Open Settings → Provider → Ollama and check the URL and connection status.",
+              "Refresh the model list, then select Ollama and the model for the required stages.",
+              "Try one segment and check speed, quality and memory usage."
+            ]
+          },
+          {
+            "title": "Adjusting the model",
+            "paragraphs": [
+              "Larger models require more memory and may take longer. If processing is too slow, shorten the segments or use a model your computer can run comfortably.",
+              "Use Think options only when the model supports them. Advanced options must be a valid JSON object; invalid values are not saved.",
+              "For structured assessment, Glossa sets Ollama’s temperature to zero. This does not guarantee identical or correct assessments."
+            ]
+          }
+        ]
+      },
+      "shortcuts": {
+        "title": "Shortcuts and controls",
+        "intro": "On macOS, use Cmd instead of Ctrl. Global shortcuts, except Ctrl + Enter, do not apply while you are typing in an editable field.",
+        "blocks": [
+          {
+            "title": "Translation and project",
+            "paragraphs": [
+              "Ctrl + Enter starts the selected translation action, including from a text field. Segment mode requires a selected segment.",
+              "Ctrl + S saves the existing project and modified language resources. Project saving waits while processing is active.",
+              "Ctrl + E opens export when the document has segments. Ctrl + comma opens pipeline configuration."
+            ]
+          },
+          {
+            "title": "Navigation",
+            "paragraphs": [
+              "Ctrl + 1 through Ctrl + 9 selects one of the first nine segments. Ctrl + H opens this guide section.",
+              "Tab moves focus between controls. Enter or Space activates them. Use arrow keys, Home and End in tab bars. Esc closes the open dialog or menu.",
+              "Hover over an icon control, or focus it with the keyboard, to read its description and any requirements."
+            ]
+          }
+        ]
+      },
+      "troubleshooting": {
+        "title": "Solving a problem",
+        "intro": "Read the displayed message and identify the operation that failed. Change one setting at a time to check the cause.",
+        "blocks": [
+          {
+            "title": "Translation will not start",
+            "paragraphs": [
+              "Check the selected provider’s credentials, model and connection. For Ollama, confirm that the server is running and the model is installed. For DeepL, also check quota and the remote glossary.",
+              "If the message concerns memory or processing time, try a shorter segment. For quality problems, compare stage outputs before changing both model and prompt."
+            ]
+          },
+          {
+            "title": "A source or page will not open",
+            "paragraphs": [
+              "Check that the source accepts the search type you used. No results and a source that failed to respond are different outcomes; inspect the monitor.",
+              "In the viewer, check local-only reading, the selected version and whether the repository drive is connected. Missing pages may require a library connection."
+            ]
+          },
+          {
+            "title": "Work appears to have stopped",
+            "paragraphs": [
+              "Open the job details. Waiting may indicate a temporary service limit; Paused requires resuming. An error instead shows its cause and any retry controls.",
+              "If saving fails, check the data directory and free disk space. Treat changes as unsaved until the status bar confirms completion."
+            ]
+          },
+          {
+            "title": "Collecting information",
+            "paragraphs": [
+              "When reporting a problem, include the version, operating system, action taken and message received. The status-bar console provides access to operations.",
+              "Request details may contain document text. Review them before sharing. The log directory is shown below."
+            ]
+          }
+        ]
+      },
+      "overview": {
+        "title": "Getting started",
+        "intro": "Glossa lets you collect digital sources, read digitised works and translate documents with help from language models. This guide explains how to use the features available in the current version.",
+        "blocks": [
+          {
+            "title": "Starting a translation",
+            "paragraphs": [],
+            "steps": [
+              "Open Settings → Provider and configure the service you want to use. For Ollama, check that the server is running and a model is installed.",
+              "Create a workspace and a project within it. A workspace groups projects and resources used together.",
+              "Import a document and check its text and segment boundaries in the preview.",
+              "Set the languages and pipeline, then try translating one segment.",
+              "Review the result, process the remaining segments and export the document."
+            ]
+          },
+          {
+            "title": "Finding your way around",
+            "paragraphs": [
+              "The Dashboard shows recent activity, items requiring attention and current jobs. Its other two tabs search across multiple sources or within one source, including by identifier.",
+              "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
+              "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed."
+            ]
+          },
+          {
+            "title": "Data and available features",
+            "paragraphs": [
+              "Working data is saved on your computer. When you use a remote service, the text needed for the operation is sent to that service. For local-only processing, also check the services selected for assessment, memory and prompt refinement.",
+              "Glossa is in private beta. Transcription, text recognition in scans and some advanced workflows remain incomplete. PDF text import is available, but it does not perform OCR."
+            ]
+          }
+        ]
+      },
+      "projects": {
+        "title": "Workspaces and projects",
+        "intro": "A workspace organises projects and shared resources. Each translation project belongs to one workspace.",
+        "blocks": [
+          {
+            "title": "Creating and identifying a project",
+            "paragraphs": [
+              "Create a project from a workspace page or the Translations area, choosing its destination workspace. Change the workspace name, description and icon in its settings.",
+              "A project can contain multiple pipelines with separate settings and results. Select the pipeline you want to work on before changing its configuration."
+            ]
+          },
+          {
+            "title": "Saving your work",
+            "paragraphs": [
+              "Existing projects are saved automatically after changes when processing allows it. Check the status bar: a save error needs attention.",
+              "You can request a save with Ctrl + S outside text fields. Use Cmd on macOS. Project saving is deferred while processing is active."
+            ]
+          },
+          {
+            "title": "Sharing and moving",
+            "paragraphs": [
+              "Works and dictionaries can be linked to several workspaces without creating copies. Local terminology overrides apply only in the workspace where you make them.",
+              "Moving a translation leaves its text unchanged and moves its extracted phrases with it. It then uses the new workspace’s resources. Earlier operation costs remain attributed to the original workspace."
+            ]
+          },
+          {
+            "title": "Archiving or deleting",
+            "paragraphs": [
+              "Archive a workspace to retain it outside the active list. Before deletion, you can choose to archive it, transfer its contents or remove them.",
+              "Deleting a project removes its translation data. Works and dictionaries linked to a workspace remain in the general catalogue. Backups cover all workspaces and are not a way to transfer just one."
+            ]
+          }
+        ]
+      },
+      "search": {
+        "title": "Finding sources",
+        "intro": "Open the Dashboard to search supported sources. Results are added to the Library only when you choose to keep them.",
+        "blocks": [
+          {
+            "title": "Searching multiple sources",
+            "paragraphs": [],
+            "steps": [
+              "Open Federated search from the left-hand rail, under Dashboard.",
+              "Type your keywords in the field at the top and start with the control beside it.",
+              "To narrow the search and choose the sources, open the advanced criteria, the third tab of the right-hand column. Collections must be chosen explicitly; Europeana needs a key in the Library settings.",
+              "Results appear as each source answers. The controls to the right of the counts filter what you see — everything, verified only, to verify only, excluded only — and sort by title; hovering explains each one.",
+              "The Execution tab has one row per source: the mark says how it is going and the number how much arrived. Opening the row shows page and coverage, the controls to stop, resume, run again or ask for more pages, the control that shows only that source's results, and the earlier attempts.",
+              "The new-search control clears the words and the criteria, keeping the sources you had chosen."
+            ]
+          },
+          {
+            "title": "Understanding filters and results",
+            "paragraphs": [
+              "Title, author, language, material, dates and other filters narrow the returned data. They do not search equivalent fields in every remote catalogue. If a source omits a value, a match may remain unverified.",
+              "A record may exist without an accessible digital copy. A check status appears while Glossa verifies it; a copy explicitly reported as absent is marked unavailable. A network error does not mean the work is absent.",
+              "Each result retains its provenance. The service returning the record may differ from the institution holding the work."
+            ]
+          },
+          {
+            "title": "Using an address or identifier",
+            "paragraphs": [
+              "Open single-source search, choose the source and follow the example in the field. Depending on the source, you can use keywords, a shelfmark, an identifier or a URL.",
+              "Some sources support direct opening only; the panel indicates this. For a manifest from an institution not listed, choose Direct IIIF URL."
+            ]
+          },
+          {
+            "title": "Keeping and resuming a search",
+            "paragraphs": [
+              "The search history lives in the tab on the right: from there you reopen an earlier search with its criteria, results and attempts.",
+              "Add to Library saves the record. Add to workspace also links it to the chosen workspace. The same manifest is not duplicated.",
+              "History retains criteria, results and attempts. Use the monitor to control an individual source, retry after an error or load more pages. Extend to aggregators starts a linked search using only newly selected aggregators.",
+              "You can switch screens while jobs continue. Closing Glossa stops them; history remains available when you reopen it."
+            ]
+          }
+        ]
+      },
+      "sources": {
+        "title": "Using the Library",
+        "intro": "The Library is the catalogue of works you have kept. Use it to organise them, inspect their metadata and read their images.",
+        "blocks": [
+          {
+            "title": "Finding a catalogue entry",
+            "paragraphs": [
+              "Switch between list and grid views and use filters to narrow the catalogue. You can save a filter combination as a view. Include archived works to find an item you have set aside.",
+              "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files."
+            ]
+          },
+          {
+            "title": "Reading and editing the record",
+            "paragraphs": [
+              "Open a work. The panel beside the viewer contains Work, Digitisations, Organisation and Notes. Notes about the work are saved automatically.",
+              "You can correct the title, author, date and language. Each override is separate from the original and can be removed. Resynchronise with the library retrieves fresh data and clears manual overrides while retaining notes and images."
+            ]
+          },
+          {
+            "title": "Reading pages",
+            "paragraphs": [
+              "Use thumbnails, arrows or the page-number field to navigate. Zoom enlarges the image, and Glossa remembers your reading position.",
+              "Local file identifies a page in the repository; Online file identifies a page read without a permanent copy. The tooltip shows its source and actual dimensions.",
+              "Enable local-only reading to prevent the viewer from requesting images from the library. Missing pages display a notice. The option resets when you close the work."
+            ]
+          },
+          {
+            "title": "Downloading and saving",
+            "paragraphs": [
+              "In Digitisations, choose a resolution and start downloading the work. A different resolution creates another local version. You can choose which version to open.",
+              "Save page keeps only the displayed image at the dimensions shown in the tooltip. It does not request a new image at the configured resolution.",
+              "PDF copies may appear in the record, but Library viewing and downloading are not yet available for them."
+            ]
+          },
+          {
+            "title": "Archiving, freeing space or deleting",
+            "paragraphs": [
+              "Archive hides the work from the active list and keeps its files. The subsequent offer to free space is optional.",
+              "Free space removes downloaded pages while keeping the record. Deleting a local version removes only that version. Deleting the work removes its record, links and files without a recycle bin.",
+              "Before deleting files, finish or cancel jobs that use them. Pausing is not enough."
+            ]
+          }
+        ]
+      },
+      "storage": {
+        "title": "Downloads and storage",
+        "intro": "Downloads, integrity checks and image reduction run as background jobs. Follow their progress from the status bar.",
+        "blocks": [
+          {
+            "title": "Managing jobs",
+            "paragraphs": [
+              "Open the jobs panel at the bottom right. Each entry shows progress and status; expand it for details, attempts and errors.",
+              "Pause requests a stop at the next checkpoint; Resume continues from there. Cancel ends the job and keeps files already saved. After a failure, you can start another attempt.",
+              "Waiting may indicate a library rate limit. A countdown refers to the next attempt, not the end of the download. Paused means the job needs to be resumed.",
+              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs."
+            ]
+          },
+          {
+            "title": "Choosing a resolution",
+            "paragraphs": [
+              "Under Settings → Library → Images, choose page and thumbnail dimensions. A setting made for an individual work overrides the general value.",
+              "The size specifies the desired long edge. Depending on the service and request mode, the received image may be larger or smaller. Maximum resolution requests all available detail.",
+              "Existing downloads are unchanged. To obtain a smaller version without downloading again, use image reduction: it creates a new copy and retains the original. Delete a version only after checking the result."
+            ]
+          },
+          {
+            "title": "Data directory and file repository",
+            "paragraphs": [
+              "Settings → Data separates the data directory, containing projects and catalogue data, from the image repository. The repository can be on an external drive.",
+              "Changing the data directory copies the database and requires a restart to use the new location. Changing the repository does not move existing downloads: choose an empty directory or an existing Glossa repository.",
+              "Keep the database on a local drive. If you synchronise the repository, configure the service to retain files on your computer; online placeholders are not enough."
+            ]
+          },
+          {
+            "title": "Checking files and clearing the cache",
+            "paragraphs": [
+              "A quick check verifies that files exist. A full check also inspects their contents. Results distinguish intact, missing, corrupt and unassociated files.",
+              "Verification does not automatically delete or download files. Cleaning up files without an associated work requires a separate command.",
+              "The cache temporarily retains images and search responses. Clear it in storage settings without deleting downloaded repository pages. To keep a work permanently, download it."
+            ]
+          },
+          {
+            "title": "Adjusting library requests",
+            "paragraphs": [
+              "Under Settings → Library, assign a network profile and image request mode to each library. Profiles control concurrency, request rate, retries and waiting periods.",
+              "Profile changes require an explicit save. Higher limits do not guarantee faster downloads: the service may slow or reject requests."
+            ]
+          }
+        ]
+      },
+      "backup": {
+        "title": "Backup and restore",
+        "intro": "A backup keeps data from all workspaces in one file. It excludes repository images, exported documents and service credentials.",
+        "blocks": [
+          {
+            "title": "Creating a backup",
+            "paragraphs": [
+              "The file holds work records, annotations, transcriptions, translations with their history, glossaries and phrase memory, searches with the results they returned, the operations log, services configured by hand, and the list of exported documents."
+            ],
+            "steps": [
+              "Open Settings → Backup.",
+              "Choose password protection to encrypt the contents, or Glossa-only format, which is not encrypted.",
+              "Choose where to save the file and wait for confirmation.",
+              "For a password-protected backup, also keep the recovery code shown after saving somewhere outside the application."
+            ]
+          },
+          {
+            "title": "Restoring a backup",
+            "paragraphs": [
+              "Pause active searches, select the backup file and enter its password or recovery code if required. Glossa checks that the backup is valid and compatible before asking for confirmation.",
+              "Restoring replaces data in all existing workspaces. It does not merge collections or import one workspace. Create another backup first if you need to retain the current state.",
+              "If both the password and recovery code are lost, encrypted backup contents cannot be recovered."
+            ]
+          },
+          {
+            "title": "Recovering images and connections",
+            "paragraphs": [
+              "Files already in the repository remain on disk. After restoration, Glossa checks them and may offer to download missing files at their recorded resolutions.",
+              "Recovery depends on the libraries remaining available. Keep separate copies of images and exported documents you need to preserve. On a new installation, also re-enter service keys."
+            ]
+          }
+        ]
+      }
     },
     "version": {
-      "check": "Check for updates",
-      "upToDate": "Up to date",
-      "updateAvailable": "Update available: {{tag}}",
-      "error": "Could not check"
+      "check": "Check the published release",
+      "upToDate": "This version matches the latest published release.",
+      "updateAvailable": "Latest published release: {{tag}}",
+      "error": "Unable to check the release. Try again when a connection is available."
     },
-    "sources": {
-      "title": "Library",
-      "intro": "The Library is the catalogue of the sources you chose to keep: the bibliographic record of every work, the digital copies libraries make available, the images on your computer and the links to your workspaces. Searching for new sources starts from the Dashboard; here you find the ones already added.",
-      "levelsTitle": "Work, digitisation and local version",
-      "levelsDesc": "Three distinct levels. The work is the book as a bibliographic object: title, author, date, shelfmark. The digitisation is the copy produced by a library; two libraries that photographed the same manuscript give two separate works in the catalogue, because their shelfmarks differ, while the same library may offer the same copy as a sequence of images and as a PDF. The local version is the set of images on your computer at a given size in pixels: you can hold more than one for the same book, the one downloaded from the library and the one Glossa derived to take less space.",
-      "searchTitle": "Searching, and what each library accepts",
-      "searchDesc": "Libraries do not have the same capabilities and Glossa states what each one accepts. Europeana is the index of hundreds of European institutions and searches by keyword: it needs its own free key, pasted into Settings → Library → Libraries, and for every result it states who holds the original, which may be a different institution from the one that answered. Wellcome Collection searches by keyword and Glossa asks it only for digitised works from the start, because its catalogue also describes books that were never reproduced. Internet Archive takes keywords or the address of the detail page. The Vatican Library takes the shelfmark in any shape, the address of the reading page, or words to search its catalogue. Gallica takes the ARK identifier, one of its addresses, or words to search by title. e-codices takes the compound shelfmark, the address of the reading page, or words to search. The Library of Congress takes keywords or the address of one of its catalogue items, and discards results without a readable reproduction. Cambridge searches by keyword through the same service its own viewer uses, and counts works once rather than page by page. The Bayerische Staatsbibliothek searches the official catalogue and keeps only records that declare a reproduction, opening that one and not the printed catalogues describing the same manuscript. Digital Bodleian, Biblioteca Estense and Institut de France search by keyword. Harvard with the drs: or ids: token, Heidelberg with the shelfmark, e-rara and e-manuscripta with the record number open by identifier or address only: their search cannot be queried by a program or refuses automated requests. The direct IIIF entry still accepts a full manifest address from any institution. Searching downloads nothing, and for every result Glossa keeps everything the library answered, including data no screen shows today. In the picker, sources sit in four groups: collections, which index material from many institutions and carry the ◈ mark; libraries, which answer for their own holdings and search by keyword; search on hold, marked ⏸, when the search exists but the service refuses automated requests; and by identifier only, marked #, when there is no search to query. Pick a source that does not search and a line under the field says what it accepts. Where a new search starts when you open Glossa is set in Settings → Library → Libraries; during the session the source picked in the panel wins anyway. A catalogue also lists works the library has a record for but no reproduction of: as you scroll, Glossa checks the results you are looking at and writes “checking” next to the row, then “not viewable” when the library states it does not hold that book. The row stays where it is, because the record can still be useful; a service that is down or a slow network never produces that note.",
-      "addTitle": "Adding a source",
-      "addDesc": "A result can be added to the catalogue on its own, or linked to a workspace right away. A source is unique per manifest: adding it again creates no duplicate, it only links the new workspace. A work can sit in several workspaces and several collections at once, and is never duplicated: neither the data nor the files.",
-      "rowTitle": "What a catalogue row says",
-      "rowDesc": "The whole informative part of the row — cover, title, data — opens the work with one click, the same way in list and in grid. Under the title there is a data line with separators: source library, declared pages, sizes present on your computer and space used; with nothing local, the last entry reads \"online\". When something is there, a short bar appears at the end of the row with the count beside it, green and \"100%\" for a complete book, amber and \"120/328\" when pages are missing. The commands that act on files and on the record all live in the menu, with archive and remove separated from the others by a dividing line; only the workspace and collection link chips stay on the row itself.",
-      "filtersTitle": "Filters, sorting, saved views and collections",
-      "filtersDesc": "Filters live in a right-hand column that resizes and collapses like the other side panels; width and state are remembered, and when it is closed a count says how many filters are active. There are catalogue search, work type, language, library, availability, workspace and collection, plus sorting by title, author or date added. Language and library only offer values actually present in your catalogue; work type and availability always list every supported entry, and workspace and collection list the ones you created even when no work uses them. The bookmark command saves the filter combination as a view, recalled with one click. A collection is a label that gathers works from the same research without moving them, and one work can sit in several collections.",
-      "recordTitle": "The work's record",
-      "recordDesc": "The record opens full width: the viewer in the middle, on the right a resizable, collapsible column in tabs. At the top, the title with its date on the left, in the middle which digitisation you are reading — with the link to the library site and, if there is more than one, the dropdown to switch — and the work's commands on the right. There are four tabs: Work with the bibliographic data, where an undeclared field shows \"—\" instead of disappearing and rare fields sit under \"Other metadata\" and internal references under \"Technical data\"; Digitisations with the download and the local versions, one row each with its own commands; Organisation with workspaces and collections; Notes with an editor that saves on its own.",
-      "editTitle": "Correcting data and resyncing",
-      "editDesc": "Title, author, date and language can be corrected by hand: the pencil command opens the field, Enter saves, Esc cancels. The original data is never overwritten: the correction lives separately, a mark next to the label states it, hovering it you read what the library said, and a command restores the original. The resync command asks the library for the record again and rewrites the data with what just arrived: corrections made by hand are discarded and must be redone, while notes and downloaded pages stay.",
-      "viewerTitle": "Reading a book",
-      "viewerDesc": "The viewer browses the book page by page, with thumbnails on the left, a field to jump to a number and zoom. Glossa remembers where you were. If the book is on your computer, pages are read from disk with no request to the library; if you have nothing, the page is requested in one go as a whole image, and only magnifying beyond its sharpness does the viewer switch to tiled detail. If a page is on your computer at a better size than the one you set, that is the one you see: the size in the settings says what to ask the library for, not how much to degrade what you already own. The command that saves the open page reuses the bytes you are looking at and writes in its tooltip how many pixels will be saved. Browsing a half-downloaded book, the gaps fill themselves, and the Digitisations tab updates right away.",
-      "originTitle": "Where the page comes from",
-      "originDesc": "In the middle of the viewer bar, two words say whether the file is yours: \"Local file\" when the page is on your computer, \"Online file\" when it is not. The dot beside them carries the detail: off for a file of yours, amber when the page comes from the cache — you already saw it in this session, but it will not survive closing — green when it has just arrived from the library. The tooltip writes the full origin and the pixels actually on screen.",
-      "localOnlyTitle": "Reading local files only",
-      "localOnlyDesc": "Among the commands on the right, next to the one that saves the page, there is the switch that limits reading to what is on your computer. Switched on, the viewer stops asking the library anything and a page you do not have shows a notice instead of the image; switched off, missing pages arrive again. It applies to the open book and turns off when you close it.",
-      "archiveTitle": "Archiving and removing",
-      "archiveDesc": "Archiving takes the work out of the list without touching pages already downloaded; to see archived works you switch on the command among the filters. Glossa then asks whether you also want to free the space, and you can say no. The removal command instead deletes everything: record, links, vault content and the pages kept in the cache too, and it has no second thoughts. To keep the work and only recover space, the command is \"free space\".",
-      "limitsTitle": "What is not possible yet",
-      "limitsDesc": "A PDF digitisation appears among the copies but is not downloaded and not read inside Glossa; importing the text of a PDF into a translation project is a different thing and already works. Four libraries have real search, the others accept only the manifest address, and there is no search across several libraries yet. Of a single page you can save the open one: choosing the size for that page, replacing it, deleting it or selecting several are still to be completed."
-    },
-    "storage": {
-      "title": "Storage and background jobs",
-      "intro": "Glossa keeps data in two distinct places and runs long operations in a queue you can pause and resume.",
-      "twoFoldersTitle": "Two folders, not one",
-      "twoFoldersDesc": "The data folder holds the database: records, translations, glossaries. It is small and belongs on a local disk. The vault folder holds images and documents downloaded from libraries: those are gigabytes and can live elsewhere, even on an external drive. Keeping them apart protects the database, which risks corruption inside a synced folder.",
-      "chooseTitle": "Changing folder",
-      "chooseDesc": "In Settings → Storage. Glossa opens the picker itself. A folder that already holds something else is refused: use an empty one, or one that is already a Glossa vault, which gets reconnected without copying anything. Changing folder does not move files already downloaded.",
-      "cloudTitle": "Synced folders",
-      "cloudDesc": "The vault can sit on Drive, OneDrive or iCloud, but only if the client keeps a real copy on disk. In online-only mode files look present and are empty: Glossa would call a source complete while nothing is there. Never put the database there.",
-      "jobsTitle": "The job queue",
-      "jobsDesc": "Downloads, checks and long generations do not block the app: they become queued jobs. Settings → Storage also has the vault check, quick or full: it becomes a job like the others and never deletes or re-downloads anything on its own.",
-      "jobsWhereTitle": "Where to see them",
-      "jobsWhereDesc": "In the bottom bar on the right, in every section. Clicking opens the panel with the list: running, waiting, finished today. Every row carries the work's name, how far it got and how much it downloaded. In the panel every row says what the job is doing right now: starting, reading the manifest, downloading. Clicking a row opens it and shows the details: the size ceiling, the host, attempts, timestamps, and for the page that just went through, the size asked for it and the dimensions that arrived.",
-      "jobsControlTitle": "How to control them",
-      "jobsControlDesc": "Pause, resume, cancel and retry per job, or for all of them from the controls at the top of the panel. Pausing is not instant: the job finishes the current piece, saves it and stops.",
-      "downloadTitle": "Downloading a source",
-      "downloadDesc": "Every row in the Library says how many pages are actually on your computer. The download command queues the job and shows the percentage while it runs. When a source is entirely on your computer the command disappears and a tick takes its place: there is nothing left to ask the library. Glossa works out the size to ask for on its own: from the page dimensions declared in the manifest it derives the width that brings the long side to the chosen size, and asks for that — one request per page, no negotiation. At the start of every book it asks the library a single question, to find out whether it keeps reduced sizes ready: where it does, asking for one is twice as fast. If the size is refused, it takes the whole page and keeps it exactly as it is: it never shrinks anything on its own, because shrinking an image loses something and that must not happen behind your back. That book takes more room, and you get it back whenever you want with the command that shrinks images. That refusal is paid once per book, not on every page. From every page it downloads, Glossa derives its thumbnail without asking the library for anything: thumbnails let you browse the book offline.",
-      "downloadPolicyTitle": "Choosing the page size",
-      "downloadPolicyDesc": "In Settings → Library → Images you choose how large you want the pages, how large the thumbnails, and with which values to derive the reduced versions. The page size is a ceiling: for every page Glossa computes the width that brings its long side to that number, and pages already smaller are taken as they are. If you choose \"largest\" there is nothing to compute, all the available detail is taken: a whole book takes about three times the room. How that size is requested is decided library by library, in the Libraries tab. The same choice can be made on the single work, by opening its record in the Library, and there it wins: the size depends on the material, not on who keeps the book. Pages already downloaded stay as they are, and asking for a size other than the one present creates a second local version next to the first.",
-      "countingTitle": "How «how many pages do I have» is read",
-      "countingDesc": "The count you see in the Library is the one of the files actually on your computer: Glossa looks at the folder, not at a list kept aside. How many pages the book has is stated by its index, and Glossa records it both when downloading and when opening the book in the viewer. If the library does not serve a page — it happens, and it is not your fault — it does not count as missing: the book counts as complete for as much as the library serves. In the Digitisations tab every version present on your computer has its own row, stating where it comes from, how many pages it has out of those declared, how much room it takes and whether it is complete.",
-      "readingTitle": "Reading a book and keeping one page",
-      "readingDesc": "The viewer uses what you have on your computer: if the book is downloaded, the pages are read from disk, with no request to the library at all. When there is more than one local version, the one you are reading is marked in the Digitisations tab, and from there you can switch to another: the page reloads from that folder, and pages that version does not hold are still requested from the library. The viewer's commands sit on the right, the image's origin in the middle and navigation on the left. In the middle the origin says two words: Local file when the page is on your computer, Online file when it is not. The dot says the rest — off for a file of yours, amber when the page comes from the cache, green when it has just arrived from the library — and the tooltip writes the full origin and the pixels you are actually looking at. At the top of the record, between the title and the work's commands, it says which digitisation you are reading, with the link to the library site and, when there is more than one, the menu to switch. Among the commands on the right, next to the one that keeps the page, there is read local files only: switched on, the viewer stops asking the library anything and a page you do not have shows a notice instead of the image; it applies to the open book and turns off when you close it. If a page is on your computer at a better size than the one you set, that is the one you see: the size chosen in the settings says what to ask the library for, not how much to degrade what you already own. The command that keeps the open page reuses the bytes you are already looking at, without requesting them twice: while it saves the icon spins, and once the page is kept a green mark stays instead of a disabled button. The tooltip writes how many pixels will be saved: those of the page in front of you, which on a book still entirely online may not match the configured size.",
-      "optimizeTitle": "Shrinking images to free up space",
-      "optimizeDesc": "A book downloaded at full resolution can take far more room than it needs. In the Digitisations tab of the work's record, every local version carries its own command: it starts from that version and derives a smaller one at the chosen size and quality, without changing it. The two stay side by side, each with its own command to delete only itself and to read it in the viewer. It takes minutes on a long book: it is a job like a download, and you follow it from the panel at the bottom, with pause and cancel. If a page cannot be processed, the job says so and reports how many pages failed.",
-      "removeTitle": "Removing a work from the Library",
-      "removeDesc": "The remove command deletes the work entirely: the record, its workspace links and everything it has in the vault — manifest, thumbnails and downloaded pages. If a download or optimisation is still active, let it finish or cancel it first. To keep the work and only get the space back, the command is free space: it deletes the pages and leaves the rest, so the book stays browsable.",
-      "checkTitle": "The two vault checks",
-      "checkDesc": "The quick check only looks at whether the files are there: a matter of milliseconds. The full one opens every file, checks its shape and compares its fingerprint with the one recorded when it arrived, so it is the only one that catches a file truncated or gone rotten on disk; in exchange it is slow in proportion to the gigabytes. If nothing is damaged the two counts match and only the time differs. In the job queue every check says which of the two it is. The outcome of the last check stays in the settings until you run another one, and next to the files belonging to no work there is the command to delete them: Glossa looks at the vault again the moment you press and tells you how many it really removed.",
-      "cacheTitle": "Network cache",
-      "cacheDesc": "What you look at without downloading it — the covers in search results, the covers in the Library, the search responses themselves — is not requested from the library every time: Glossa keeps it aside. This does two things: covers show up in the installed application too, and repeating a search does not go back to the network. This material is not yours: it never counts as downloaded, it is never part of a backup, and it gets dropped when space is needed, starting with whatever has gone unread the longest. The size limit and how long searches are kept live in Settings → Data, along with how much is used right now and the command to empty it. The way to keep a book is still to download it. Above search results you can see how old what you are looking at is, and next to it there is the command to run it again for real.",
-      "backupTitle": "The backup",
-      "backupDesc": "Settings → Backup saves the data that cannot be downloaded again. Images stay outside the file and Glossa can offer to download them again after restoring. The lock creates a password-encrypted file; after saving it shows a recovery code, which you should keep outside the app. You can select it or use the copy button beside it. Either the password or code opens the file, but losing both makes the backup unrecoverable. The other icon saves a file only Glossa opens: it prevents accidental opening but does not protect sensitive material. Restoring replaces all of Glossa, not one workspace.",
-      "librariesTitle": "How Glossa treats libraries",
-      "librariesDesc": "Every library has its own pace. These are a few different paces applied to many libraries, so Settings → Library → Settings governs them as profiles, and every profile has five values: how many pages start together, how many requests per minute, how long to stay still after a refusal and — among the advanced ones — how many attempts to make and how long to wait for a slow library. Every value explains its own consequence on hover, and changes are saved with an explicit command: until you press it, next to the title it stays written that something needs saving. Two profiles ship with Glossa, with values proven in the field: Normal, used by almost all of them, and Slow, tuned on the strictest one. In the Libraries tab, for each library you choose the profile and the image request mode: Automatic, which is the recommended choice, Ready-made formats only, or Exact size. A profile in use cannot be deleted until you move the libraries that follow it, and the two that ship with the application cannot be deleted at all. Requests at the same time never go above four, whatever you write: the limit depends on the library's server and it keeps you from being blocked, and one seat always stays with the page you are reading.",
-      "jobsRestartTitle": "Closing and reopening",
-      "jobsRestartDesc": "Closing Glossa stops the jobs and asks for confirmation. On reopening nothing restarts on its own: you find them stopped and decide. Only downloads can restart automatically, if you turn the option on in Settings → Jobs.",
-      "limitsTitle": "How many at once",
-      "limitsDesc": "Settings → Jobs decides how many jobs run together, separately for downloads, processing, disk writes, language services and document generation. The download limit depends on the library's server, not on your computer: raising it too much triggers temporary blocks.",
-      "waitingTitle": "Stopped does not mean broken",
-      "waitingDesc": "A job can sit still for minutes while respecting a library's limits. The indicator then says \"waiting\" and the bar does not move: it is not an error, and it resumes by itself. Still is not one single thing, though: when you pause it yourself, everywhere says «paused» and not «retrying on its own», which only happens after a network error; and the time shown in that case is the time left to the attempt, not to the end of the job."
+    "logs": {
+      "title": "Log directory",
+      "loading": "Loading directory…",
+      "unavailable": "Log directory unavailable."
     }
   },
   "library": {
@@ -2210,7 +2606,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyFailed": "Copy failed",
-    "newRun": "new run"
+    "newRun": "new run",
+    "grouped": "Group",
+    "filters": "Filters"
   },
   "resume": {
     "title": "Translation interrupted",
@@ -2403,6 +2801,16 @@
     "title": "Console"
   },
   "jobs": {
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "pausing": "Pausing",
+      "paused": "Paused",
+      "cancelling": "Cancelling",
+      "cancelled": "Interrupted",
+      "completed": "Completed",
+      "error": "With errors"
+    },
     "tab": "Jobs",
     "drawerTabs": "Messages and jobs",
     "openPanel": "Background jobs",
@@ -2429,6 +2837,7 @@
     "emptyTitle": "No jobs running",
     "emptyDescription": "Downloads and checks show up here while you work.",
     "type": {
+      "provider_search": "Library search",
       "debug_counter": "Development test",
       "debug_restart_only": "Development test (restart only)",
       "source_download": "Page download",
@@ -2454,6 +2863,7 @@
     "dismiss": "Remove from the list",
     "clearFinished": "Clear finished ({{count}})",
     "short": {
+      "provider_search": "Library search",
       "source_download": "pages",
       "vault_verification": "check",
       "debug_counter": "test",
@@ -2516,5 +2926,8 @@
     "retryNow": "Retry now",
     "retryingIn": "retrying on its own in {{eta}}",
     "retrying": "retrying on its own"
+  },
+  "models": {
+    "provider": "Model service"
   }
 }

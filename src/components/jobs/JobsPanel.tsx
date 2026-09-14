@@ -1,7 +1,12 @@
-import { ChevronRight, Pause, Play, RotateCcw, Trash2, X } from 'lucide-react';
+import {
+  Ban, CheckCircle2, ChevronRight, Download, Layers, Pause, Play, RotateCcw, Search,
+  ShieldCheck, Trash2, Wand2, X, XCircle, type LucideIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TerminalIconButton } from './TerminalIconButton';
+import { IconButton, Tooltip } from '../ui';
+import { useUiStore } from '../../stores/uiStore';
+import { dashboardLocation } from '../../navigation/appLocation';
 import {
   formatEta,
   isTerminal,
@@ -31,12 +36,12 @@ export function JobsPanel({ panelId, labelledBy }: { panelId: string; labelledBy
       id={panelId}
       role="tabpanel"
       aria-labelledby={labelledBy}
-      className="terminal-scrollbar h-full overflow-y-auto bg-terminal-bg px-3 py-2"
+      className="custom-scrollbar h-full overflow-y-auto bg-editorial-bg px-3 py-2"
     >
       {isEmpty ? (
         <div className="flex h-full flex-col items-center justify-center gap-1.5 px-6 py-12 text-center">
-          <p className="text-sm text-terminal-secondary">{t('jobs.emptyTitle')}</p>
-          <p className="text-xs text-terminal-muted">{t('jobs.emptyDescription')}</p>
+          <p className="text-sm text-editorial-muted">{t('jobs.emptyTitle')}</p>
+          <p className="text-xs text-editorial-muted">{t('jobs.emptyDescription')}</p>
         </div>
       ) : (
         <>
@@ -54,7 +59,7 @@ function JobsSection({ title, jobs }: { title: string; jobs: Job[] }) {
 
   return (
     <section className="mb-3 last:mb-0">
-      <h3 className="mb-1 text-[11px] uppercase tracking-wide text-terminal-secondary">{title}</h3>
+      <h3 className="mb-1 text-[11px] uppercase tracking-wide text-editorial-muted">{title}</h3>
       <ul className="flex flex-col gap-1">
         {jobs.map((job) => (
           <li key={job.id}>
@@ -75,34 +80,40 @@ function JobRow({ job }: { job: Job }) {
   const retry = useJobsStore((state) => state.retry);
   const clearFinished = useJobsStore((state) => state.clearFinished);
 
+  const navigate = useUiStore((state) => state.navigate);
+  let searchId: string | undefined;
+  if (job.jobType === 'provider_search') {
+    try { const config: unknown = JSON.parse(job.config); if (config && typeof config === 'object' && 'searchId' in config && typeof config.searchId === 'string') searchId = config.searchId; } catch { /* Invalid config remains inspectable in job details. */ }
+  }
   const waitingToRetry = isWaitingToRetry(job);
   const eta = formatEta(job.etaSeconds);
   const detail = parseJobDetail(job.detail);
   const description = job.message ?? jobTypeLabel(job, t);
 
   return (
-    <div className="rounded border border-terminal-line bg-terminal-chrome">
+    <div className="rounded border border-editorial-border bg-surface-panel">
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <button
-          type="button"
-          onClick={() => setOpen((current) => !current)}
-          aria-expanded={open}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
-        >
+        <IconButton title={t('federation.details')} aria-expanded={open} onClick={() => setOpen((current) => !current)} size="xs">
           <ChevronRight
             size={11}
-            className={`shrink-0 text-terminal-dim motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
+            className={`shrink-0 text-editorial-muted motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
             aria-hidden="true"
           />
-          <span className="shrink-0 rounded-sm border border-terminal-line px-1 py-px text-[10px] uppercase tracking-wide text-terminal-secondary">
-            {t(`jobs.short.${job.jobType}`, { defaultValue: job.jobType })}
+        </IconButton>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Tooltip label={t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })}>
+            <span className="shrink-0 text-editorial-muted" aria-label={t(`jobs.type.${job.jobType}`, { defaultValue: job.jobType })} role="img">
+              <JobTypeIcon jobType={job.jobType} />
+            </span>
+          </Tooltip>
+          <span className="min-w-0 flex-1 truncate text-xs text-editorial-ink">
+            {searchId ? <SearchJobLabel message={description} /> : description}
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs text-terminal-ink">{description}</span>
           {detail.units && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-editorial-muted">
               {detail.units.done}/{detail.units.total}
               {detail.unavailable !== undefined && detail.unavailable > 0 && (
-                <span className="text-terminal-muted">
+                <span className="text-editorial-muted">
                   {' '}
                   · {t('jobs.detail.unavailableShort', { count: detail.unavailable })}
                 </span>
@@ -110,52 +121,53 @@ function JobRow({ job }: { job: Job }) {
             </span>
           )}
           {detail.bytes && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-terminal-muted">
+            <span className="shrink-0 whitespace-nowrap font-mono text-xs text-editorial-muted">
               {humanSize(detail.bytes.downloaded)}
               {detail.bytes.estimated > 0 && ` / ~${humanSize(detail.bytes.estimated)}`}
 {detail.speed !== undefined && detail.speed > 0 && ` · ${humanSize(detail.speed)}/s`}
             </span>
           )}
-        </button>
+        </div>
 
-        <span className="shrink-0 whitespace-nowrap text-xs text-terminal-muted">
+        <span className="shrink-0 whitespace-nowrap text-xs text-editorial-muted">
           <JobStateLabel job={job} eta={eta} />
         </span>
         <div className="flex shrink-0 items-center gap-1">
+          {searchId && <IconButton title={t('federation.open')} onClick={() => navigate(dashboardLocation({view:'search',searchId}))}><ChevronRight size={14} /></IconButton>}
           {job.status === 'running' && (
-            <TerminalIconButton label={t('jobs.pause')} onClick={() => void pause(job.id)}>
+            <IconButton title={t('jobs.pause')} onClick={() => void pause(job.id)}>
               <Pause size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
           {job.status === 'paused' && (
-            <TerminalIconButton label={t('jobs.resume')} onClick={() => void resume(job.id)}>
+            <IconButton title={t('jobs.resume')} onClick={() => void resume(job.id)}>
               <Play size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
           {waitingToRetry && (
-            <TerminalIconButton label={t('jobs.retryNow')} onClick={() => void resume(job.id)}>
+            <IconButton title={t('jobs.retryNow')} onClick={() => void resume(job.id)}>
               <Play size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
           {waitingToRetry && (
-            <TerminalIconButton label={t('jobs.pause')} onClick={() => void pause(job.id)}>
+            <IconButton title={t('jobs.pause')} onClick={() => void pause(job.id)}>
               <Pause size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
-          {job.status === 'error' && (
-            <TerminalIconButton label={t('jobs.retry')} onClick={() => void retry(job.id)}>
+          {job.status === 'error' && job.jobType !== 'provider_search' && (
+            <IconButton title={t('jobs.retry')} onClick={() => void retry(job.id)}>
               <RotateCcw size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
           {!isTerminal(job) && (
-            <TerminalIconButton label={t('jobs.cancel')} tone="danger" onClick={() => void cancel(job.id)}>
+            <IconButton title={t('jobs.cancel')} tone="danger" onClick={() => void cancel(job.id)}>
               <X size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
-          {isTerminal(job) && (
-            <TerminalIconButton label={t('jobs.dismiss')} onClick={() => void clearFinished(job.id)}>
+          {isTerminal(job) && job.jobType !== 'provider_search' && (
+            <IconButton title={t('jobs.dismiss')} onClick={() => void clearFinished(job.id)}>
               <Trash2 size={11} />
-            </TerminalIconButton>
+            </IconButton>
           )}
         </div>
       </div>
@@ -182,24 +194,23 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
 
   return (
     <div className={`flex min-w-0 items-baseline gap-3 ${wide ? 'sm:col-span-2' : ''}`}>
-      <span className="w-28 shrink-0 text-[11px] uppercase leading-5 tracking-wide text-terminal-secondary">
+      <span className="w-28 shrink-0 text-[11px] uppercase leading-5 tracking-wide text-editorial-muted">
         {label}
       </span>
       <span
-        className={`min-w-0 flex-1 font-mono text-xs leading-5 text-terminal-ink ${
+        className={`min-w-0 flex-1 font-mono text-xs leading-5 text-editorial-ink ${
           wide && (open || !long) ? 'whitespace-normal break-words' : 'truncate'
         }`}
       >
         {value}
       </span>
       {long && (
-        <button
-          type="button"
+        <IconButton title={open ? t('jobs.detail.foldLess') : t('jobs.detail.foldMore')}
           onClick={() => setOpen((current) => !current)}
-          className="shrink-0 text-[11px] uppercase tracking-wide text-terminal-accent underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+          size="xs"
         >
-          {open ? t('jobs.detail.foldLess') : t('jobs.detail.foldMore')}
-        </button>
+          <ChevronRight size={14} className={open ? 'rotate-90' : ''} />
+        </IconButton>
       )}
     </div>
   );
@@ -321,7 +332,7 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
     : [];
 
   return (
-    <div className="flex flex-col gap-2 border-t border-terminal-line pt-2">
+    <div className="flex flex-col gap-2 border-t border-editorial-border pt-2">
       <FieldGroup title={t('jobs.detail.groupWork')} fields={work} />
       {lastUnit.length > 0 && (
         <FieldGroup title={t('jobs.detail.groupLast')} fields={lastUnit} />
@@ -333,7 +344,7 @@ function JobDetails({ job, detail }: { job: Job; detail: JobDetail }) {
 function FieldGroup({ title, fields }: { title: string; fields: DetailField[] }) {
   return (
     <section>
-      <h4 className="mb-1.5 border-b border-terminal-line pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-terminal-accent">
+      <h4 className="mb-1.5 border-b border-editorial-border pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-editorial-accent">
         {title}
       </h4>
       <div className="grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2">
@@ -360,25 +371,66 @@ interface DetailField {
   wide?: boolean;
 }
 
+/** «Biblioteca · parole cercate»: chi risponde si legge, cosa si cerca si cita. */
+function SearchJobLabel({ message }: { message: string }) {
+  const separator = message.indexOf(' · ');
+  if (separator < 0) return <>{message}</>;
+  return (
+    <>
+      <span className="font-semibold text-editorial-ink">{message.slice(0, separator)}</span>
+      {' '}
+      <span className="font-display italic text-editorial-muted">«{message.slice(separator + 3)}»</span>
+    </>
+  );
+}
+
+const JOB_TYPE_ICONS: Record<string, LucideIcon> = {
+  provider_search: Search,
+  source_download: Download,
+  source_optimize: Wand2,
+  vault_verification: ShieldCheck,
+};
+
+function JobTypeIcon({ jobType }: { jobType: string }) {
+  const Icon = JOB_TYPE_ICONS[jobType] ?? Layers;
+  return <Icon size={13} aria-hidden />;
+}
+
 function JobStateLabel({ job, eta }: { job: Job; eta: string | null }) {
   const { t } = useTranslation();
 
   if (isWaitingToRetry(job)) {
     const countdown = formatEta(retryCountdownSeconds(job));
     return (
-      <span className="text-terminal-warn">
+      <span className="text-editorial-warning">
         {countdown ? t('jobs.retryingIn', { eta: countdown }) : t('jobs.retrying')}
       </span>
     );
   }
   if (isWaitingForLibrary(job)) {
-    return <span className="text-terminal-warn">{t('jobs.waitingForLibrary')}</span>;
+    return <span className="text-editorial-warning">{t('jobs.waitingForLibrary')}</span>;
   }
   if (job.status === 'error') {
-    return <span className="text-terminal-error">{job.error ?? t('jobs.failed')}</span>;
+    return (
+      <Tooltip label={job.error ?? t('jobs.failed')}>
+        <span className="text-editorial-danger"><XCircle size={14} aria-label={t('jobs.failed')} /></span>
+      </Tooltip>
+    );
   }
-  if (job.status === 'completed') return <span className="text-terminal-success">{t('jobs.done')}</span>;
-  if (job.status === 'cancelled') return <span>{t('jobs.cancelled')}</span>;
+  if (job.status === 'completed') {
+    return (
+      <Tooltip label={t('jobs.done')}>
+        <span className="text-editorial-success"><CheckCircle2 size={14} aria-label={t('jobs.done')} /></span>
+      </Tooltip>
+    );
+  }
+  if (job.status === 'cancelled') {
+    return (
+      <Tooltip label={t('jobs.cancelled')}>
+        <span className="text-editorial-muted"><Ban size={14} aria-label={t('jobs.cancelled')} /></span>
+      </Tooltip>
+    );
+  }
   if (job.status === 'pausing') return <span>{t('jobs.pausing')}</span>;
   if (job.status === 'cancelling') return <span>{t('jobs.cancelling')}</span>;
   if (job.status === 'paused') return <span>{t('jobs.paused')}</span>;
@@ -395,13 +447,13 @@ function JobProgress({ job }: { job: Job }) {
   const stalled = isWaitingToRetry(job) || isWaitingForLibrary(job) || job.status === 'paused';
 
   return (
-    <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-terminal-line">
+    <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-editorial-border">
       <div
         role="progressbar"
         aria-valuenow={Math.round(job.progress * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
-        className={`h-full min-w-[2px] ${stalled ? 'bg-terminal-warn' : 'bg-terminal-accent motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear'}`}
+        className={`h-full min-w-[2px] ${stalled ? 'bg-editorial-warning' : 'bg-editorial-accent motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear'}`}
         style={{ width: `${Math.min(100, Math.round(job.progress * 100))}%` }}
       />
     </div>

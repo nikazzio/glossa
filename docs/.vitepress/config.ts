@@ -2,79 +2,223 @@ import { defineConfig } from 'vitepress';
 
 const sidebarIt = [
   {
-    text: 'Inizio',
-    items: [{ text: 'Per iniziare', link: '/intro/getting-started' }],
+    "text": "Per iniziare",
+    "items": [
+      {
+        "text": "Installazione e primo progetto",
+        "link": "/intro/getting-started"
+      },
+      {
+        "text": "Workspace e progetti",
+        "link": "/guides/projects-and-workspace"
+      }
+    ]
   },
   {
-    text: 'Guide',
-    items: [
-      { text: 'Pipeline documento', link: '/guides/document-pipeline' },
-      { text: 'LLM e pipeline', link: '/guides/llm-and-pipelines' },
-      { text: 'Progetti e workspace', link: '/guides/projects-and-workspace' },
-      { text: 'Biblioteca e fonti IIIF', link: '/guides/library-discovery' },
-      { text: 'Archiviazione e lavori', link: '/guides/storage-and-jobs' },
-      { text: 'Glossario e phrase memory', link: '/guides/glossary-and-memory' },
-      { text: 'Phrase memory', link: '/guides/phrase-memory' },
-      { text: 'Audit e revisione', link: '/guides/audit-review' },
-      { text: 'Contesto e caching', link: '/guides/context-and-caching' },
-      { text: 'Annotazioni', link: '/guides/annotations' },
-      { text: 'Scorciatoie da tastiera', link: '/guides/keyboard-shortcuts' },
-    ],
+    "text": "Fonti e archiviazione",
+    "items": [
+      {
+        "text": "Ricerca delle fonti",
+        "link": "/guides/source-search"
+      },
+      {
+        "text": "Biblioteca e lettore IIIF",
+        "link": "/guides/library-discovery"
+      },
+      {
+        "text": "Archiviazione e lavori",
+        "link": "/guides/storage-and-jobs"
+      },
+      {
+        "text": "Backup e ripristino",
+        "link": "/reference/backup-and-restore"
+      }
+    ]
   },
   {
-    text: 'Riferimento',
-    items: [
-      { text: 'Configurazione pipeline', link: '/reference/pipeline-config' },
-      { text: 'Provider supportati', link: '/reference/provider-support' },
-      { text: 'Import ed export', link: '/reference/import-export' },
-      { text: 'Risoluzione problemi', link: '/reference/troubleshooting' },
-    ],
+    "text": "Traduzione e revisione",
+    "items": [
+      {
+        "text": "Traduzione di un documento",
+        "link": "/guides/document-pipeline"
+      },
+      {
+        "text": "Modello di elaborazione",
+        "link": "/guides/llm-and-pipelines"
+      },
+      {
+        "text": "Dizionari e glossario",
+        "link": "/guides/glossary-and-memory"
+      },
+      {
+        "text": "Memoria di frasi ed esempi",
+        "link": "/guides/phrase-memory"
+      },
+      {
+        "text": "Valutazione e revisione",
+        "link": "/guides/audit-review"
+      },
+      {
+        "text": "Annotazioni e note",
+        "link": "/guides/annotations"
+      },
+      {
+        "text": "Contesto e cache dei prompt",
+        "link": "/guides/context-and-caching"
+      }
+    ]
   },
   {
-    text: 'Progetto',
-    items: [{ text: 'Stato della beta', link: '/project/status' }, { text: 'Changelog', link: '/project/changelog' }],
+    "text": "Riferimento",
+    "items": [
+      {
+        "text": "Configurazione della pipeline",
+        "link": "/reference/pipeline-config"
+      },
+      {
+        "text": "Servizi di traduzione",
+        "link": "/reference/provider-support"
+      },
+      {
+        "text": "Importazione ed esportazione",
+        "link": "/reference/import-export"
+      },
+      {
+        "text": "Scorciatoie da tastiera",
+        "link": "/guides/keyboard-shortcuts"
+      },
+      {
+        "text": "Risoluzione dei problemi",
+        "link": "/reference/troubleshooting"
+      }
+    ]
   },
+  {
+    "text": "Progetto",
+    "items": [
+      {
+        "text": "Stato del progetto",
+        "link": "/project/status"
+      },
+      {
+        "text": "Versioni e note di rilascio",
+        "link": "/project/changelog"
+      }
+    ]
+  }
 ];
 
 const sidebarEn = [
   {
-    text: 'Getting started',
-    items: [{ text: 'Getting started', link: '/en/intro/getting-started' }],
+    "text": "Getting started",
+    "items": [
+      {
+        "text": "Installation and first project",
+        "link": "/en/intro/getting-started"
+      },
+      {
+        "text": "Workspaces and projects",
+        "link": "/en/guides/projects-and-workspace"
+      }
+    ]
   },
   {
-    text: 'Guides',
-    items: [
-      { text: 'Document pipeline', link: '/en/guides/document-pipeline' },
-      { text: 'LLMs and pipelines', link: '/en/guides/llm-and-pipelines' },
-      { text: 'Projects and workspace', link: '/en/guides/projects-and-workspace' },
-      { text: 'Library and IIIF sources', link: '/en/guides/library-discovery' },
-      { text: 'Storage and jobs', link: '/en/guides/storage-and-jobs' },
-      { text: 'Glossary and phrase memory', link: '/en/guides/glossary-and-memory' },
-      { text: 'Phrase memory', link: '/en/guides/phrase-memory' },
-      { text: 'Audit and review', link: '/en/guides/audit-review' },
-      { text: 'Context and caching', link: '/en/guides/context-and-caching' },
-      { text: 'Annotations', link: '/en/guides/annotations' },
-      { text: 'Keyboard shortcuts', link: '/en/guides/keyboard-shortcuts' },
-    ],
+    "text": "Sources and storage",
+    "items": [
+      {
+        "text": "Source search",
+        "link": "/en/guides/source-search"
+      },
+      {
+        "text": "Library and IIIF viewer",
+        "link": "/en/guides/library-discovery"
+      },
+      {
+        "text": "Storage and jobs",
+        "link": "/en/guides/storage-and-jobs"
+      },
+      {
+        "text": "Backup and restore",
+        "link": "/en/reference/backup-and-restore"
+      }
+    ]
   },
   {
-    text: 'Reference',
-    items: [
-      { text: 'Pipeline config', link: '/en/reference/pipeline-config' },
-      { text: 'Provider support', link: '/en/reference/provider-support' },
-      { text: 'Import and export', link: '/en/reference/import-export' },
-      { text: 'Troubleshooting', link: '/en/reference/troubleshooting' },
-    ],
+    "text": "Translation and review",
+    "items": [
+      {
+        "text": "Translating a document",
+        "link": "/en/guides/document-pipeline"
+      },
+      {
+        "text": "Processing model",
+        "link": "/en/guides/llm-and-pipelines"
+      },
+      {
+        "text": "Dictionaries and glossary",
+        "link": "/en/guides/glossary-and-memory"
+      },
+      {
+        "text": "Phrase memory and examples",
+        "link": "/en/guides/phrase-memory"
+      },
+      {
+        "text": "Assessment and review",
+        "link": "/en/guides/audit-review"
+      },
+      {
+        "text": "Annotations and notes",
+        "link": "/en/guides/annotations"
+      },
+      {
+        "text": "Context and prompt caching",
+        "link": "/en/guides/context-and-caching"
+      }
+    ]
   },
   {
-    text: 'Project',
-    items: [{ text: 'Beta status', link: '/en/project/status' }, { text: 'Changelog', link: '/en/project/changelog' }],
+    "text": "Reference",
+    "items": [
+      {
+        "text": "Pipeline configuration",
+        "link": "/en/reference/pipeline-config"
+      },
+      {
+        "text": "Translation providers",
+        "link": "/en/reference/provider-support"
+      },
+      {
+        "text": "Import and export",
+        "link": "/en/reference/import-export"
+      },
+      {
+        "text": "Keyboard shortcuts",
+        "link": "/en/guides/keyboard-shortcuts"
+      },
+      {
+        "text": "Troubleshooting",
+        "link": "/en/reference/troubleshooting"
+      }
+    ]
   },
+  {
+    "text": "Project",
+    "items": [
+      {
+        "text": "Project status",
+        "link": "/en/project/status"
+      },
+      {
+        "text": "Versions and release notes",
+        "link": "/en/project/changelog"
+      }
+    ]
+  }
 ];
 
 export default defineConfig({
   title: 'Glossa',
-  description: 'Documentazione desktop per il workflow di traduzione di Glossa.',
+  description: 'Documentazione tecnica di Glossa: fonti digitali, traduzione, revisione e gestione dei dati.',
   base: '/glossa/',
   cleanUrls: true,
   lastUpdated: true,
@@ -83,11 +227,11 @@ export default defineConfig({
       label: 'Italiano',
       lang: 'it',
       title: 'Glossa',
-      description: 'Documentazione desktop per il workflow di traduzione di Glossa.',
+      description: 'Documentazione tecnica di Glossa: fonti digitali, traduzione, revisione e gestione dei dati.',
       themeConfig: {
         nav: [
           { text: 'Inizia qui', link: '/intro/getting-started' },
-          { text: 'Workflow', link: '/guides/document-pipeline' },
+          { text: 'Traduzione', link: '/guides/document-pipeline' },
           { text: 'Riferimento', link: '/reference/pipeline-config' },
           { text: 'GitHub', link: 'https://github.com/nikazzio/glossa' },
         ],
@@ -123,11 +267,11 @@ export default defineConfig({
       lang: 'en',
       link: '/en/',
       title: 'Glossa',
-      description: 'Desktop documentation for the Glossa translation workflow.',
+      description: 'Technical documentation for Glossa: digital sources, translation, review and data management.',
       themeConfig: {
         nav: [
           { text: 'Start here', link: '/en/intro/getting-started' },
-          { text: 'Workflow', link: '/en/guides/document-pipeline' },
+          { text: 'Translation', link: '/en/guides/document-pipeline' },
           { text: 'Reference', link: '/en/reference/pipeline-config' },
           { text: 'GitHub', link: 'https://github.com/nikazzio/glossa' },
         ],

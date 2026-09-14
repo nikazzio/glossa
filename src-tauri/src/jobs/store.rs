@@ -9,7 +9,8 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 
 use super::{JobError, JobRecord, JobStatus};
 
-const COLUMNS: &str = "id, job_type, status, priority, progress, message, config, checkpoint, \
+pub(crate) const COLUMNS: &str =
+    "id, job_type, status, priority, progress, message, config, checkpoint, \
      attempt_count, max_attempts, error, error_kind, eta_seconds, waiting_reason, phase, \
      detail, depends_on_job_id, next_attempt_at, created_at, updated_at, workspace_id";
 
@@ -28,7 +29,7 @@ pub struct NewJob {
     pub message: Option<String>,
 }
 
-fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
+pub(crate) fn row_to_record(row: &Row<'_>) -> rusqlite::Result<JobRecord> {
     let status: String = row.get(2)?;
     Ok(JobRecord {
         id: row.get(0)?,
@@ -145,6 +146,7 @@ pub fn interrupted(conn: &Connection) -> Result<Vec<JobRecord>, String> {
         conn,
         &format!(
             "SELECT {COLUMNS} FROM jobs WHERE status IN ('running', 'pausing', 'cancelling') \
+             OR (job_type = 'provider_search' AND status = 'queued') \
              ORDER BY created_at"
         ),
         params![],
@@ -374,11 +376,11 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
 pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
     let removed = match id {
         Some(id) => conn.execute(
-            "DELETE FROM jobs WHERE id = ?1 AND status IN ('completed', 'cancelled', 'error')",
+            "DELETE FROM jobs WHERE id = ?1 AND job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
             params![id],
         ),
         None => conn.execute(
-            "DELETE FROM jobs WHERE status IN ('completed', 'cancelled', 'error')",
+            "DELETE FROM jobs WHERE job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
             [],
         ),
     }

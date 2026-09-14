@@ -289,9 +289,9 @@ export function PipelineConfig({
         targetLang: toDeeplCode(config.targetLanguage),
         entries: config.glossary.map((e) => ({ source: e.term, target: e.translation })),
       });
-      toast.success(t('pipeline.deepl.glossaryUploaded', 'Glossario caricato su DeepL'));
+      toast.success(t('pipeline.deepl.glossaryUploaded'));
     } catch (err: unknown) {
-      toast.error(t('pipeline.deepl.glossaryUploadFailed', 'Caricamento glossario DeepL fallito'), {
+      toast.error(t('pipeline.deepl.glossaryUploadFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     } finally {
@@ -546,7 +546,7 @@ export function PipelineConfig({
                     tone={isUploadingGlossaryToDeepL ? 'muted' : 'default'}
                     onClick={handleUploadGlossaryToDeepL}
                     disabled={isUploadingGlossaryToDeepL}
-                    title={t('pipeline.deepl.uploadGlossaryTooltip', 'Carica glossario Glossa su DeepL')}
+                    title={t('pipeline.deepl.uploadGlossaryTooltip')}
                     className="shrink-0"
                   >
                     {isUploadingGlossaryToDeepL
@@ -554,7 +554,7 @@ export function PipelineConfig({
                       : <Upload size={13} />}
                   </IconButton>
                   <span className="text-xs font-sans text-editorial-muted">
-                    {t('pipeline.deepl.uploadGlossaryLabel', 'Carica su DeepL')}
+                    {t('pipeline.deepl.uploadGlossaryLabel')}
                   </span>
                 </div>
               )}

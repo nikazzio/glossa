@@ -72,7 +72,7 @@ const t = (key: string) => key;
 function backupWith(appSettings: Array<{ key: string; value: string }>): string {
   return JSON.stringify({
     glossa_version: '0.9.0',
-    schema_version: 3,
+    schema_version: 5,
     exported_at: '2026-06-08T19:11:42.971Z',
     // Tutte le tabelle dichiarate, vuote tranne quella in prova.
     tables: {
@@ -93,7 +93,18 @@ describe('cosa porta con sé un backup', () => {
     expect(BACKUP_TABLES).toContain('source_pages');
     expect(BACKUP_TABLES).toContain('transcription_revisions');
     expect(BACKUP_TABLES).not.toContain('assets');
-    expect(BACKUP_TABLES).not.toContain('jobs');
+    // Le ricerche salvate portano con sé i propri lavori: senza, al ripristino
+    // resterebbero criteri e risultati senza l'esecuzione che li ha prodotti.
+    expect(BACKUP_TABLES).toContain('jobs');
+    expect(BACKUP_TABLES).toContain('search_runs');
+    expect(BACKUP_TABLES).toContain('search_executions');
+    expect(BACKUP_TABLES).toContain('search_pages');
+    // Dati scritti da chi usa il programma: senza, un ripristino li perde in
+    // silenzio. I file degli artefatti restano fuori, il loro elenco no.
+    expect(BACKUP_TABLES).toContain('annotations');
+    expect(BACKUP_TABLES).toContain('custom_providers');
+    expect(BACKUP_TABLES).toContain('operation_logs');
+    expect(BACKUP_TABLES).toContain('artifacts');
   });
 });
 
@@ -159,7 +170,7 @@ describe('le colonne che il ripristino rimette', () => {
     // workspace a cui appartiene un dizionario.
     fsState.raw = JSON.stringify({
       glossa_version: '1.4.0',
-      schema_version: 1,
+      schema_version: 5,
       exported_at: '2026-08-17T09:00:00.000Z',
       tables: {
         ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
@@ -184,7 +195,7 @@ describe('le colonne che il ripristino rimette', () => {
     liveSchema.glossaries = [];
     fsState.raw = JSON.stringify({
       glossa_version: '1.4.0',
-      schema_version: 1,
+      schema_version: 5,
       exported_at: '2026-08-17T09:00:00.000Z',
       tables: Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
     });
@@ -207,7 +218,7 @@ describe('i puntatori che al momento dell inserimento non possono valere', () =>
     // nemmeno `INSERT OR IGNORE`. Svuotarlo e basta perdeva l'approvazione.
     fsState.raw = JSON.stringify({
       glossa_version: '1.4.0',
-      schema_version: 1,
+      schema_version: 5,
       exported_at: '2026-08-17T09:00:00.000Z',
       tables: {
         ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
@@ -247,7 +258,7 @@ describe('riferimenti a cose che il backup non porta', () => {
     // sparirebbe il registro che il backup serve a salvare.
     fsState.raw = JSON.stringify({
       glossa_version: '1.2.1',
-      schema_version: 1,
+      schema_version: 5,
       exported_at: '2026-07-21T12:00:00.000Z',
       tables: {
         ...Object.fromEntries(BACKUP_TABLES.map((table) => [table, []])),
@@ -280,7 +291,7 @@ describe('il ripristino', () => {
   it('rejects an incomplete backup before opening the replacement confirmation or changing data', async () => {
     fsState.raw = JSON.stringify({
       glossa_version: '1.2.1',
-      schema_version: 1,
+      schema_version: 5,
       exported_at: '2026-07-21T12:00:00.000Z',
       tables: { workspaces: [] },
     });
@@ -291,7 +302,7 @@ describe('il ripristino', () => {
   });
 
   it('rejects a backup created by a newer schema before changing data', async () => {
-    fsState.raw = backupWith([]).replace('"schema_version":3', '"schema_version":99');
+    fsState.raw = backupWith([]).replace('"schema_version":5', '"schema_version":99');
 
     await expect(restoreBackup(t)).rejects.toThrow('incompatible_schema_version');
     expect(confirm).not.toHaveBeenCalled();

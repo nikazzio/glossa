@@ -414,3 +414,67 @@ mod tests {
         assert_eq!(json_array_as_blob(&array), None);
     }
 }
+
+/// Il lucchetto delle migrazioni: una migrazione già distribuita non si tocca.
+///
+/// Modificarla rompe ogni database che l'ha già eseguita — `sqlx` confronta
+/// l'impronta di ciò che ha applicato e, se non coincide, rifiuta di aprire il
+/// file. Succede al riavvio, sul computer di chi usa il programma, e l'unico
+/// rimedio è ricostruire il database. Per correggere una migrazione se ne
+/// aggiunge una nuova.
+#[cfg(test)]
+mod migration_lock {
+    /// Impronta stabile nel tempo: non dipende dalla versione del compilatore.
+    fn fingerprint(data: &[u8]) -> String {
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for byte in data {
+            hash ^= *byte as u64;
+            hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        format!("{hash:016x}")
+    }
+
+    #[test]
+    fn migrations_are_frozen() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let locked: Vec<(String, String)> = std::fs::read_to_string(root.join("migrations.lock"))
+            .expect("migrations.lock leggibile")
+            .lines()
+            .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
+            .map(|line| {
+                let (name, hash) = line.split_once(' ').expect("riga «nome impronta»");
+                (name.trim().to_string(), hash.trim().to_string())
+            })
+            .collect();
+
+        let mut present: Vec<std::path::PathBuf> = std::fs::read_dir(root.join("migrations"))
+            .expect("cartella migrations")
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.extension().is_some_and(|ext| ext == "sql"))
+            .collect();
+        present.sort();
+
+        for (name, expected) in &locked {
+            let path = root.join("migrations").join(name);
+            let content = std::fs::read(&path).unwrap_or_else(|_| {
+                panic!("la migrazione {name} è sparita: un file già applicato non si rimuove")
+            });
+            assert_eq!(
+                &fingerprint(&content),
+                expected,
+                "la migrazione {name} è già stata applicata e ora è diversa. \
+                 Non aggiornare migrations.lock: annulla la modifica e mettila \
+                 in una migrazione nuova, altrimenti ogni database esistente \
+                 smette di aprirsi."
+            );
+        }
+
+        for path in &present {
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            assert!(
+                locked.iter().any(|(locked_name, _)| locked_name == &name),
+                "la migrazione {name} non è in migrations.lock: aggiungila con la sua impronta"
+            );
+        }
+    }
+}

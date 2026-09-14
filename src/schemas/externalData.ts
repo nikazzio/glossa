@@ -16,7 +16,9 @@ export const BACKUP_TABLES = [
   'projects',
   'app_settings',
   'prompt_templates',
+  'custom_providers',
   'pipelines',
+  'annotations',
   'project_glossaries',
   'glossary_entries',
   'sources',
@@ -34,6 +36,7 @@ export const BACKUP_TABLES = [
   'translation_origins',
   'translations',
   'translation_revisions',
+  'operation_logs',
   'provenance_events',
   'derived_metrics',
   'network_profiles',
@@ -41,6 +44,11 @@ export const BACKUP_TABLES = [
   'library_size_policies',
   'phrase_memory',
   'source_phrase_embeddings',
+  'jobs',
+  'search_runs',
+  'search_executions',
+  'search_pages',
+  'artifacts',
 ] as const;
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];

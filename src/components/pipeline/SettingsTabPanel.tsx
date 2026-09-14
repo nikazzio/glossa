@@ -101,7 +101,7 @@ export function SettingsTabPanel({
                 disabled={!deeplKeyConfigured || translationsExist || isProcessing}
                 title={
                   !deeplKeyConfigured
-                    ? t('pipeline.deepl.keyRequired', 'Richiede API key DeepL (Impostazioni)')
+                    ? t('pipeline.deepl.keyRequired')
                     : t('pipeline.mode.deepl-hybrid', 'DeepL Hybrid')
                 }
                 role="radio"

@@ -1,98 +1,62 @@
 ---
-title: Import ed export
+title: Importazione ed esportazione
 ---
 
-# Import ed export
+# Importazione ed esportazione
 
-Glossa è pensata per documenti reali, non solo per frammenti incollati.
+L’importazione crea il testo sorgente di un progetto. L’esportazione genera
+un documento a partire dai frammenti della pipeline. Nessuna delle due
+operazioni sostituisce il [backup dell’applicazione](./backup-and-restore).
 
-## Import
+## Formati di importazione
 
-I formati di input supportati includono:
+| Formato | Elaborazione | Limite del file |
+| --- | --- | --- |
+| TXT | Testo UTF-8 | 50 MiB |
+| Markdown | Testo UTF-8 con struttura Markdown | 50 MiB |
+| DOCX | Estrazione strutturata in Markdown, sperimentale | 100 MiB |
+| PDF | Estrazione del testo disponibile nel file | 50 MiB |
 
-- `.txt`
-- `.md`
-- `.docx` — conversione in Markdown via estrazione strutturata (funzionalità sperimentale). Limite: **100 MB**.
-- `.pdf` — estrazione come testo piano. Limite: **50 MB**.
+I limiti sono calcolati in multipli di 1024 byte. Le estensioni non riconosciute
+vengono lette come testo semplice scegliendo **All files** nella finestra di
+apertura; questo non aggiunge supporto a formati binari o strutturati come ODT
+o RTF. Un testo non UTF-8 viene rifiutato con un errore di codifica.
 
-Il testo semplice ha un limite di **50 MB**. Qualsiasi altra estensione viene
-letta come testo semplice: seleziona **All files** nel menù dei tipi della
-finestra per vederla. Attenzione, però: un formato con marcatura interna, come
-`.rtf` o `.odt`, arriva con i suoi codici di formattazione dentro il testo,
-perché Glossa non ha ancora un lettore dedicato per quei formati.
+La finestra di sistema permette di scegliere file da qualsiasi cartella
+accessibile, anche su dischi esterni. L’anteprima consente di controllare
+estrazione e segmentazione prima di confermare. Un PDF composto soltanto da
+immagini non fornisce testo tramite questa estrazione: l’importazione non
+esegue OCR.
 
-**Da qualsiasi cartella.** L'import non è limitato a Documenti, Download o
-Scrivania: puoi pescare un file da dove preferisci, comprese le cartelle di
-lavoro e i dischi esterni.
+## Note sorgente
 
-Se il file di testo non è codificato in UTF-8, Glossa te lo dice invece di
-importare caratteri sbagliati: riaprilo con un editor, salvalo in UTF-8 e
-riprova.
+Le note a piè di pagina di DOCX e Markdown sono conservate separatamente.
+La pipeline riceve il corpo del testo senza i loro marcatori e contenuti.
+La traduzione e il posizionamento delle note richiedono intervento manuale.
+Vedi [Annotazioni e note](../guides/annotations).
 
-Durante l'import, Glossa ti permette di rivedere la segmentazione prima che il
-documento diventi la lista chunk attiva.
+## Formati di esportazione
 
-## Cosa aspettarsi dall'import
+| Formato | Contenuto |
+| --- | --- |
+| TXT | Testo della traduzione; l’opzione Markdown può convertirne la struttura in testo semplice |
+| Markdown | Testo e marcatura, con annotazioni quando fornite all’esportazione |
+| HTML | Documento generato dal Markdown |
+| DOCX | Documento generato dal Markdown tramite il backend |
+| Markdown bilingue | Originale e traduzione per frammento, valutazione completata e segnalazioni dell’audit |
 
-- Il plain text è il percorso più semplice quando la struttura è minima.
-- Markdown è la scelta migliore quando contano heading e formattazione.
-- DOCX e PDF sono utili per materiale editoriale reale, ma controlla sempre l'anteprima prima di avviare la pipeline.
+Nei formati ordinari, se un frammento non ha testo tradotto viene utilizzato
+il sorgente. **L’esportazione non certifica che la traduzione sia completa.**
+Il formato bilingue indica esplicitamente l’assenza di una traduzione e
+non inserisce le annotazioni con lo stesso percorso degli export Markdown.
 
-## Note a piè di pagina importate
+## Separatori e formattazione
 
-Se un DOCX o un Markdown contiene note a piè di pagina, Glossa le conserva con il
-progetto ma le tiene fuori dalla traduzione automatica. Il modello riceve il corpo
-del testo, non il contenuto delle note. Dopo la traduzione, rivedi e riposiziona le
-note manualmente: nelle traduzioni reali spesso cambiano formulazione e posizione.
+I separatori tra frammenti sono disponibili solo per TXT e Markdown.
+HTML, DOCX e bilingue applicano la propria composizione. Il risultato DOCX
+deriva dal testo Markdown corrente e non ricostruisce necessariamente
+l’impaginazione del documento importato.
 
-Vedi anche [Annotazioni](../guides/annotations) per la distinzione tra note sorgente
-importate e annotazioni create durante la revisione.
-
-## Backup
-
-Il backup si trova in **Impostazioni → Backup** e riguarda tutto Glossa,
-non un workspace solo.
-
-Prima di chiederti di sostituire i dati locali, Glossa controlla che il backup sia
-completo e compatibile. Un file incompleto, alterato o creato da una versione più
-recente viene rifiutato senza modificare niente.
-
-## Posizione dei dati
-
-Il database dell'app contiene progetti, glossari e impostazioni. In
-**Impostazioni → Dati** puoi vedere la cartella utilizzata e sceglierne
-un'altra. Glossa copia prima il database, verifica l'integrità della copia e
-solo allora registra la nuova posizione. L'originale non viene cancellato
-automaticamente e la nuova posizione entra in uso dopo il riavvio.
-
-Questa operazione riguarda il database dell'app. I futuri materiali della
-Biblioteca, come scansioni e immagini scaricate, non fanno ancora parte dello
-spostamento.
-
-## Export
-
-I target di export tipici includono:
-
-- plain text (`.txt`)
-- Markdown (`.md`)
-- HTML
-- DOCX
-- Markdown bilingue
-
-## A cosa serve l'export
-
-- Plain text per un output finale essenziale
-- Markdown per workflow testuali modificabili
-- HTML per review o pipeline di pubblicazione
-- DOCX per handoff d'ufficio o editoriale
-- Markdown bilingue per review affiancata di sorgente e traduzione, include rating qualità e issues del giudice per i chunk completati
-
-## Separatori di chunk
-
-I separatori (riga vuota, separatore orizzontale `---`, asterischi `***`) sono disponibili **solo per `.txt` e `.md`**. Non si applicano a HTML, DOCX o al formato bilingue.
-
-## Regole pratiche
-
-- Usa l'import Markdown quando la struttura conta e vuoi preservare gli heading.
-- Controlla l'anteprima prima di confermare il chunking su file lunghi.
-- Esporta solo a review conclusa; l'export è il passaggio di consegna, non quello di revisione.
+Prima della consegna, verifica frammenti incompleti, annotazioni, note e
+struttura del file prodotto. Annullare la finestra di salvataggio non genera
+un’esportazione.

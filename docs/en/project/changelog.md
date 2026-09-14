@@ -1,14 +1,22 @@
 ---
-title: Changelog
+title: Versions and release notes
 ---
 
-# Changelog
+# Versions and release notes
 
-The canonical changelog for Glossa lives in the repository root `CHANGELOG.md`
-and is maintained by `release-please`.
+Published changes are recorded in the
+[repository changelog](https://github.com/nikazzio/glossa/blob/main/CHANGELOG.md),
+maintained by the release process using `release-please`.
+[GitHub Releases](https://github.com/nikazzio/glossa/releases) provides the
+notes and packages associated with each version.
 
-- Latest changelog entries: [CHANGELOG.md](https://github.com/nikazzio/glossa/blob/main/CHANGELOG.md)
-- GitHub releases: [Releases](https://github.com/nikazzio/glossa/releases)
+## Choosing the right reference
 
-When the project ships a new release, the changelog and the GitHub Release
-should stay in sync.
+- To install or update Glossa, read the selected release’s notes and choose
+  the package for your operating system.
+- For behaviour documented on `main`, use this site’s guides.
+- To distinguish available features from incomplete work, see
+  [project status](./status).
+
+Documentation and application packages have separate publication cycles.
+A feature described here may not yet be included in the latest downloadable release.

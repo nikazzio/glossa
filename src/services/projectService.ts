@@ -115,7 +115,7 @@ export async function listAllProjects(): Promise<WorkspaceProject[]> {
 }
 
 /** Ultimi progetti toccati in TUTTI i workspace — alimenta il blocco Riprendi della Dashboard. */
-export async function listRecentProjectsAllWorkspaces(limit: number): Promise<RecentProject[]> {
+export async function listRecentProjectsAllWorkspaces(limit: number, workspaceId: string | null = null): Promise<RecentProject[]> {
   return select<RecentProject>(
     `SELECT
        p.id,
@@ -125,9 +125,10 @@ export async function listRecentProjectsAllWorkspaces(limit: number): Promise<Re
        w.name AS workspace_name
      FROM projects p
      JOIN workspaces w ON w.id = p.workspace_id
+     WHERE $2 IS NULL OR p.workspace_id=$2
      ORDER BY p.updated_at DESC
      LIMIT $1`,
-    [limit],
+    [limit, workspaceId],
   );
 }
 
@@ -184,7 +185,7 @@ export interface ProjectNeedingAttention {
 }
 
 /** Progetti con frammenti da rivedere (giudizio scarso/critico o problemi aperti) — alimenta la Dashboard. */
-export async function listProjectsNeedingAttention(limit: number): Promise<ProjectNeedingAttention[]> {
+export async function listProjectsNeedingAttention(limit: number, workspaceId: string | null = null): Promise<ProjectNeedingAttention[]> {
   return select<ProjectNeedingAttention>(
     `SELECT
        p.id AS project_id,
@@ -196,12 +197,12 @@ export async function listProjectsNeedingAttention(limit: number): Promise<Proje
      JOIN pipelines pi ON pi.id = t.pipeline_id
      JOIN projects p ON p.id = pi.project_id
      JOIN workspaces w ON w.id = p.workspace_id
-     WHERE t.judge_rating IN ('critical', 'poor')
-        OR (t.judge_issues IS NOT NULL AND t.judge_issues != '[]' AND t.judge_issues != '')
+     WHERE ($2 IS NULL OR p.workspace_id=$2) AND (t.judge_rating IN ('critical', 'poor')
+        OR (t.judge_issues IS NOT NULL AND t.judge_issues != '[]' AND t.judge_issues != ''))
      GROUP BY p.id
      ORDER BY issue_count DESC
      LIMIT $1`,
-    [limit],
+    [limit, workspaceId],
   );
 }
 

@@ -16,6 +16,10 @@ interface TooltipProps {
    * spezzerebbe le colonne.
    */
   variant?: 'note' | 'panel';
+  /** Controllo esterno dell'apertura: serve dove il suggerimento è anche il
+   *  contenuto di un comando, e premerlo deve farlo restare aperto. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const TOOLTIP_BASE =
@@ -33,13 +37,15 @@ export function Tooltip({
   side = 'top',
   offset = 14,
   variant = 'note',
+  open,
+  onOpenChange,
 }: TooltipProps) {
   if (label === null || label === undefined || label === '') return <>{children}</>;
   const box = `${TOOLTIP_BASE} ${TOOLTIP_VARIANT[variant]}`;
 
   return (
     <RadixTooltip.Provider delayDuration={150} skipDelayDuration={300}>
-      <RadixTooltip.Root>
+      <RadixTooltip.Root open={open} onOpenChange={onOpenChange}>
         <RadixTooltip.Trigger asChild>
           <span className={`inline-flex ${className}`.trim()}>{children}</span>
         </RadixTooltip.Trigger>

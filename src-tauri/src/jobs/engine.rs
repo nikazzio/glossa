@@ -326,6 +326,10 @@ pub struct JobEngine {
     /// secondo, e riaprire il database ogni volta significa due aperture al
     /// secondo per tutta la durata della sessione.
     database: tokio::sync::Mutex<Option<Connection>>,
+    /// Connessione di sola lettura riusata dai comandi che interrogano: le
+    /// schermate rileggono a ogni evento dei lavori, e aprire il database ogni
+    /// volta ripeterebbe le PRAGMA di apertura decine di volte al minuto.
+    reads: tokio::sync::Mutex<Option<Connection>>,
 }
 
 impl JobEngine {
@@ -346,6 +350,7 @@ impl JobEngine {
             backoff: BackoffProfile::default(),
             wake: Notify::new(),
             database: tokio::sync::Mutex::new(None),
+            reads: tokio::sync::Mutex::new(None),
         }
     }
 
@@ -392,6 +397,46 @@ impl JobEngine {
 
     pub fn connection(&self) -> Result<Connection, String> {
         open(&self.db_path)
+    }
+
+    /// Legge riusando una sola connessione. Le letture restano in fila fra
+    /// loro; le scritture passano dalla coda del motore e non le aspettano.
+    pub async fn with_read<T>(
+        &self,
+        work: impl FnOnce(&Connection) -> Result<T, String>,
+    ) -> Result<T, String> {
+        let mut slot = self.reads.lock().await;
+        if slot.is_none() {
+            *slot = Some(open(&self.db_path)?);
+        }
+        let conn = slot
+            .as_ref()
+            .ok_or_else(|| "connessione al database non disponibile".to_string())?;
+        work(conn)
+    }
+
+    /// Domain records and queued jobs become visible together. Publish only
+    /// after commit, while the write coordinator still excludes the scheduler.
+    pub async fn submit_transaction<T>(
+        &self,
+        work: impl FnOnce(&Connection) -> Result<(T, Vec<NewJob>), String>,
+    ) -> Result<T, String> {
+        let guard = self.db_guard().await?;
+        let conn = guard.conn()?;
+        let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+        let (value, jobs) = work(&tx)?;
+        for job in &jobs {
+            if !self.handlers.contains_key(&job.job_type) {
+                return Err(format!("unknown job type: {}", job.job_type));
+            }
+            store::create(&tx, job)?;
+        }
+        tx.commit().map_err(|e| e.to_string())?;
+        for job in jobs {
+            self.observer.notify(conn, &job.id);
+        }
+        self.wake.notify_one();
+        Ok(value)
     }
 
     /// Mette un lavoro in coda e sveglia l'orchestratore.
@@ -464,6 +509,11 @@ impl JobEngine {
     pub async fn resume(&self, id: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
+        if let Some(job) = store::get(conn, id)? {
+            if job.job_type == crate::federation::JOB_TYPE && job.status != JobStatus::Paused {
+                return Err("federation.stopFirst".into());
+            }
+        }
         log::info!("job resumed id={id}");
         store::requeue(conn, id, false)?;
         // Riprendere non è ritentare: il conto dei tentativi ricomincia.
@@ -477,6 +527,9 @@ impl JobEngine {
     pub async fn retry(&self, id: &str, from_scratch: bool) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
+        if store::get(conn, id)?.is_some_and(|job| job.job_type == crate::federation::JOB_TYPE) {
+            return Err("federation.useSearchControls".into());
+        }
         log::info!("job relaunched id={id} from_scratch={from_scratch}");
         store::requeue(conn, id, from_scratch)?;
         // Un rilancio chiesto dall'utente riparte con tutti i tentativi a
@@ -498,6 +551,9 @@ impl JobEngine {
     pub async fn relaunch_with_config(&self, id: &str, config: &str) -> Result<(), String> {
         let guard = self.db_guard().await?;
         let conn = guard.conn()?;
+        if store::get(conn, id)?.is_some_and(|job| job.job_type == crate::federation::JOB_TYPE) {
+            return Err("federation.useSearchControls".into());
+        }
         log::info!("job relaunched with new config id={id}");
         store::set_config(conn, id, config)?;
         store::requeue(conn, id, true)?;
@@ -574,8 +630,9 @@ impl JobEngine {
                     }
                     Some(handler) => match handler.recovery() {
                         Recovery::Resumable => {
-                            let downloadable =
-                                handler.resource_class() == ResourceClass::Network && auto_resume;
+                            let downloadable = handler.resource_class() == ResourceClass::Network
+                                && auto_resume
+                                && job.job_type != crate::federation::JOB_TYPE;
                             if downloadable {
                                 requeued += 1;
                                 store::requeue(conn, &job.id, false)?;

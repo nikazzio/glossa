@@ -218,7 +218,7 @@ describe('projectService — listProjectsNeedingAttention', () => {
 
     expect(dbMocks.select).toHaveBeenCalledWith(
       expect.stringContaining("judge_rating IN ('critical', 'poor')"),
-      [8],
+      [8, null],
     );
     expect(result[0]).toMatchObject({ project_id: 'proj-1', issue_count: 3 });
   });

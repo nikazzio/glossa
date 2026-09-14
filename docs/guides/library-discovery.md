@@ -1,227 +1,101 @@
 ---
-title: Biblioteca e fonti IIIF
+title: Biblioteca e lettore IIIF
 ---
 
-# Biblioteca e fonti IIIF
-
-La Biblioteca è il catalogo personale delle fonti che hai scelto di conservare. Contiene la scheda bibliografica di ogni opera, le copie digitali che le biblioteche mettono a disposizione, le immagini che hai scaricato sul computer e i collegamenti ai tuoi workspace.
-
-Questa guida segue il percorso completo: cercare una fonte, aggiungerla al catalogo, leggerla nel visore, scaricarla, gestire lo spazio che occupa. Le impostazioni che governano misure e ritmo di rete sono descritte in [Archiviazione e lavori](/guides/storage-and-jobs).
-
-## Opera, digitalizzazione e versione locale
-
-Tre livelli diversi, che la Biblioteca tiene distinti perché rispondono a domande diverse.
-
-- **Opera** — il libro come oggetto bibliografico: titolo, autore, data, lingua, segnatura. È la scheda del catalogo.
-- **Digitalizzazione** — la copia digitale prodotta da una biblioteca. Due biblioteche che hanno fotografato lo stesso manoscritto danno due opere distinte nel catalogo, perché hanno segnature diverse; la stessa biblioteca può invece offrire la stessa copia in formati diversi, per esempio come sequenza di immagini e come PDF.
-- **Versione locale** — le immagini che hai sul tuo computer, a una certa misura in pixel. Dello stesso libro puoi averne più di una: quella scaricata dalla biblioteca e quella ridotta da Glossa per occupare meno spazio.
-
-## Cercare una fonte
-
-La ricerca parte dalla Dashboard: scegli la fonte, scrivi cosa cerchi, avvia con l'icona di ricerca. La ricerca non scarica materiale.
-
-### Quattro tipi di fonte
-
-Nella tendina le fonti stanno in quattro gruppi, perché rispondono in modo diverso e conviene saperlo prima di scrivere:
-
-- **Raccolte** (`◈`) — non sono biblioteche: indicizzano il materiale di molte istituzioni. Cercandoci dentro trovi opere conservate altrove, e di ogni risultato Glossa dice chi conserva l'originale. Sono Europeana e Internet Archive.
-- **Biblioteche** — rispondono del proprio fondo e cercano per parole. Sono la maggior parte.
-- **Ricerca ferma** (`⏸`) — la ricerca esiste ma il servizio respinge le richieste automatiche. Oggi è il caso di Harvard. L'opera si apre lo stesso scrivendo il suo identificativo.
-- **Solo per identificativo** (`#`) — non hanno una ricerca da interrogare: si aprono con un identificativo o un indirizzo. Sono Heidelberg, e-rara, e-manuscripta e l'indirizzo IIIF diretto.
-
-Scegliendo una fonte che non cerca, sotto il campo compare una riga che dice cosa accetta: non devi ricordartelo.
-
-**Da dove parte la ricerca quando apri Glossa** si sceglie in Impostazioni → Biblioteca → Biblioteche. La scelta predefinita è «l'ultima che ho usato»; durante la sessione vale comunque la fonte che scegli nel pannello.
-
-Le fonti non hanno le stesse capacità, e Glossa dichiara cosa accetta ciascuna:
-
-- **Europeana** — parole di ricerca, oppure il collegamento di una sua scheda, che apre l'opera senza bisogno della chiave. Non è una biblioteca ma l'indice di centinaia di istituzioni europee: serve a trovare un'opera senza sapere in anticipo chi la conserva. Richiede una chiave propria, gratuita, che si incolla in **Impostazioni → Biblioteca → Biblioteche**. Glossa tiene solo i risultati che dichiarano una riproduzione leggibile, e per ognuno dice chi conserva l'originale, che può essere un'istituzione diversa da quella che ha risposto.
-- **Wellcome Collection** — parole di ricerca. Il suo catalogo descrive anche libri conservati in magazzino e mai digitalizzati: Glossa chiede fin dall'inizio soltanto quelli con una riproduzione, così i risultati che vedi si aprono tutti.
-- **Internet Archive** — parole di ricerca, oppure l'indirizzo della pagina di dettaglio.
-- **Biblioteca Vaticana** — la segnatura, scritta come ti viene (`Urb. lat. 1779`, `urb-lat-1779`, `Urblat1779` portano allo stesso manoscritto), l'indirizzo della pagina di lettura, oppure parole da cercare nel suo catalogo.
-- **Gallica** — l'identificativo ARK, un indirizzo di Gallica in qualunque forma, oppure parole da cercare per titolo. Se scrivi una parola che somiglia a un identificativo, Gallica cerca prima: meglio qualche risultato che un'opera inesistente.
-- **e-codices** — la segnatura composta (`bbb-0264`), l'indirizzo della pagina di lettura, oppure parole da cercare.
-- **Library of Congress** — parole di ricerca, oppure l'indirizzo di un elemento del catalogo (`loc.gov/item/...`, `loc.gov/resource/...`). Il catalogo contiene molto più di quello che Glossa sa aprire: restano fuori i risultati che non portano a un elemento, mentre quelli che ci portano possono comunque rivelarsi senza riproduzione quando li apri.
-- **Harvard Library** — il gettone dell'oggetto (`drs:123456`, `ids:123456`), che compare anche dentro gli indirizzi del suo visore. Non cerca per parole: la sua interfaccia risponde «troppe richieste» a ogni tentativo, provata da due reti diverse. Il numero del catalogo generale non vale: non porta a una riproduzione.
-- **Cambridge University Digital Library** — parole di ricerca, l'indirizzo del visore oppure la segnatura nella forma con i trattini (`MS-ADD-03996`). La ricerca passa dal servizio che usa il suo stesso visore, non dalla pagina pubblica, che blocca le richieste automatiche. Compaiono solo le opere con riproduzione, contate una volta e non pagina per pagina.
-- **Digital Bodleian** — parole di ricerca oppure l'indirizzo dell'oggetto. È l'unica che dichiara da sé l'indirizzo del manifesto di ogni risultato, invece di farlo ricavare dall'identificativo.
-- **Heidelberg** — la segnatura (`cpg848`) o l'indirizzo del visore. Non cerca per parole: la sua ricerca per il pubblico non è interrogabile da un programma.
-- **Biblioteca Estense** — parole di ricerca oppure l'identificativo dell'opera, anche preso da un indirizzo del visore Mirador.
-- **Institut de France** — parole di ricerca, il numero della scheda (`17837`) o un suo indirizzo.
-- **e-rara** — il numero della scheda (`198`) o un suo indirizzo. Sono gli stampati antichi svizzeri. Non cerca per parole: la sua pagina di ricerca risponde con un controllo anti-robot.
-- **e-manuscripta** — il numero della scheda (`992548`) o un suo indirizzo, per i manoscritti svizzeri. Stessa piattaforma di e-rara, stesso limite sulla ricerca.
-- **Bayerische Staatsbibliothek (MDZ)** — parole di ricerca, l'identificativo di Monaco (`bsb00026283`) o un suo indirizzo. La ricerca interroga il catalogo ufficiale, che risponde con schede bibliografiche: compaiono solo le schede che dichiarano una riproduzione, e si apre quella, non i cataloghi a stampa che descrivono lo stesso manoscritto.
-- **Indirizzo IIIF diretto** — l'indirizzo completo di un manifesto, di qualunque istituzione, anche non in elenco.
-
-### Risultati che non si aprono
-
-Un catalogo elenca anche opere di cui la biblioteca conserva la scheda ma non una riproduzione. Mentre scorri l'elenco Glossa controlla i risultati che stai guardando — solo quelli, uno alla volta, senza ritentare — e scrive **«in verifica»** accanto alla riga durante il controllo, poi **«non consultabile»** quando la biblioteca dichiara di non avere quel libro.
-
-La riga resta al suo posto: la scheda bibliografica può servire lo stesso, e nasconderla toglierebbe un'informazione vera. Un servizio fermo, una rete lenta o un tempo scaduto non fanno mai comparire quella scritta: riguardano oggi, non l'opera.
-
-I risultati appaiono in un elenco, ognuno con miniatura e dati essenziali: autore, data, **quante pagine ha l'opera** e da quale biblioteca viene. Il numero di pagine si vede senza aprire la riga, perché è quello che fa decidere se vale la pena guardarla. Quando il catalogo non lo dichiara — succede con i manoscritti — la voce non compare, invece di scrivere uno zero che sarebbe falso. Selezionando un risultato, la riga si apre e mostra titolo completo, descrizione e tutti i metadati disponibili.
-
-Di ogni risultato Glossa conserva **tutto quello che la biblioteca ha detto**, anche i dati che nessuna schermata mostra oggi: rifare la ricerca domani per recuperarli sarebbe lavoro sprecato, e la biblioteca potrebbe non ridarli uguali.
-
-## Aggiungere una fonte al catalogo
-
-Ogni risultato ha due comandi:
-
-- **Aggiungi alla Biblioteca** — la salva nel catalogo personale, senza collegarla a nessun workspace.
-- **Aggiungi a un workspace** — apre l'elenco dei tuoi workspace: scegline uno per collegare subito la fonte lì, oltre a salvarla in Biblioteca.
-
-Una fonte è unica per manifesto: aggiungerla di nuovo non crea un duplicato, collega semplicemente il nuovo workspace scelto.
-
-## Il catalogo
-
-La Biblioteca è un catalogo, non la vista di un workspace: mostra le opere di tutti i workspace insieme. Le opere archiviate restano fuori finché non chiedi di vederle, con il comando apposito fra i filtri. Il comando sopra i risultati alterna vista a elenco e vista a griglia.
-
-### Che cosa dice una riga
-
-Tutta la parte informativa della riga — copertina, titolo, dati — apre l'opera con un clic, e si comporta allo stesso modo in elenco e in griglia.
-
-Sotto il titolo c'è una **riga di dati** a separatori: biblioteca di provenienza, pagine dichiarate, misure presenti sul computer, spazio occupato. Per esempio:
-
-```
-Vatican Library · 328 p. · 2000+4000 px · 742 MB
-```
-
-Se non hai niente in locale l'ultima voce è `online`. Quando qualcosa c'è, in fondo alla stessa riga compare una **barra corta** con il conteggio accanto: verde e `100%` a libro completo, gialla e `120/328` quando ne mancano.
-
-Sotto la riga di dati stanno le **etichette dei collegamenti**: i workspace a cui l'opera appartiene e le collezioni di cui fa parte. Cliccarne una la scollega; i due comandi accanto aprono l'elenco dei workspace e delle collezioni dove l'opera non è ancora. **Un'opera può stare in più workspace e in più collezioni insieme** e non viene mai duplicata: collegarla in due posti non fa due copie, né dei dati né dei file.
-
-### I comandi della riga
-
-I comandi che agiscono sui file e sulla scheda stanno tutti nel menu **«···»** — scarica, verifica, riduci le immagini, libera spazio, e più in basso, dopo un filo di separazione, archivia e togli. Restano sulla riga soltanto i collegamenti: le etichette dei workspace e delle collezioni, con i due comandi per aggiungerne. Quelli che in quel momento non servono restano al loro posto, spenti, così sai sempre cosa si può fare. Tenere il cestino fuori dal menu significherebbe averlo a un clic di distanza su ogni riga di un catalogo lungo.
-
-### Filtri, ordinamento e viste salvate
-
-I **filtri** vivono in una colonna a destra, che si ridimensiona e si richiude come gli altri pannelli laterali: la larghezza e lo stato aperto o chiuso si ricordano, e quando è chiusa un conteggio dice quanti filtri sono attivi. In cima c'è la ricerca — scrivi titolo o autore — e sotto tipo di opera, lingua, biblioteca di provenienza, disponibilità, workspace e collezione. Il filtro workspace mostra le opere collegate a quello che scegli, oppure — con l'ultima voce — solo quelle che non stanno in nessun workspace. I filtri lavorano su quello che hai già davanti, senza ricaricare niente. Lingua e biblioteca di provenienza offrono soltanto i valori davvero presenti nel tuo catalogo; tipo di opera e disponibilità elencano sempre tutte le voci previste, e workspace e collezione elencano quelli che hai creato anche se nessuna opera li usa. Il comando con la gomma azzera tutto.
-
-**Ordinamento** — L'ultima tendina decide l'ordine: per titolo (come parte), per autore (le opere senza autore vanno in fondo) oppure per data di aggiunta, dalla più recente. L'ordine scelto entra anche nelle viste salvate.
-
-**Viste salvate** — Il comando col segnalibro apre le viste salvate: dai un nome alla combinazione di filtri che stai usando e la ritrovi lì, con un clic. Ogni vista si può eliminare. Una vista salvata quando i filtri erano diversi continua a funzionare: quello che non si riconosce più torna semplicemente neutro.
-
-**Collezioni** — Una collezione è un'etichetta che raccoglie opere, e serve a tenere insieme materiali della stessa ricerca senza spostarli. Si aggiunge dalla riga del catalogo o dalla scheda dell'opera, e un'opera può stare in più collezioni insieme: non si fonde e non si duplica niente, e togliere un'etichetta non tocca né l'opera né le altre collezioni.
-
-## La scheda dell'opera
-
-Cliccando la parte informativa di una riga si apre la **scheda dell'opera**, a tutta pagina. La schermata è divisa in due: al centro il visore delle pagine, a destra una colonna di informazioni a linguette che si può ridimensionare e richiudere.
-
-In cima, su una riga sola: a sinistra il comando per tornare al catalogo, il titolo e la data; al centro **quale digitalizzazione stai leggendo**, con il collegamento al sito della biblioteca e, quando ce n'è più di una, la tendina per cambiarla; a destra i comandi dell'opera. La copia aperta è sempre dichiarata, anche quando è l'unica.
-
-### Le quattro linguette
-
-- **Opera** — i dati bibliografici: titolo, tipo di opera, autore, data, lingua, editore, altri responsabili, diritti, descrizione fisica, soggetti, volume, descrizione, luogo di origine, provenienza, note, serie o collana, genere e forma, identificativo standard, copertura, opere collegate. Un campo che la biblioteca non dichiara mostra «—» e non sparisce, così ogni scheda si legge allo stesso modo. I campi che compaiono raramente stanno sotto **Altri metadati**; i riferimenti interni — indirizzo del manifesto, protocollo, identificativi tecnici — stanno sotto **Dati tecnici**, chiuso all'apertura e con il comando per copiarli.
-- **Digitalizzazioni** — le copie digitali registrate e le versioni locali. In cima il comando di scaricamento con la misura; sotto, una riga per ogni versione presente sul computer.
-- **Organizzazione** — i workspace e le collezioni a cui l'opera è collegata.
-- **Note** — un editor con formattazione per le tue annotazioni sull'opera. Si apre in anteprima e salva da sé; lo stato del salvataggio è scritto accanto al titolo.
-
-Accanto alle icone delle linguette è scritto il nome di quella aperta, come negli altri pannelli dell'applicazione.
-
-### Correggere i dati bibliografici
-
-Titolo, autore, data e lingua si correggono a mano: il comando con la matita apre il campo, Invio salva, Esc annulla. Un campo corretto porta un segno accanto all'etichetta; passandoci sopra leggi cosa diceva la biblioteca, e il comando accanto al valore riporta all'originale.
-
-**Il dato originale non viene mai sovrascritto**: la correzione vive a parte, quindi si può sempre tornare indietro. Riscrivere esattamente il valore della biblioteca non lascia nessun segno di correzione, perché non c'è niente da segnalare. Gli altri campi non hanno ancora un comando di modifica in questa scheda.
-
-**Risincronizza con la biblioteca** — Il comando nell'intestazione della sezione dei dati richiede di nuovo la scheda alla biblioteca e riscrive i dati con quelli appena ricevuti. **Le correzioni fatte a mano vengono cancellate**: dopo la risincronizzazione la scheda dice quello che dice la biblioteca, e se ti serviva un titolo diverso va corretto di nuovo. Restano le note che hai scritto e restano le pagine scaricate: la risincronizzazione riguarda i dati bibliografici, non i file.
-
-### Le versioni locali
-
-Ogni versione presente sul computer ha la sua riga, che dichiara la misura in pixel, l'origine (scaricata dalla biblioteca o creata da Glossa), la copertura in pagine, lo spazio occupato e lo stato. I comandi stanno **su quella riga** — leggila nel visore, riducila, cancella soltanto lei — perché nell'intestazione della sezione non si capirebbe su quale versione agiscono.
-
-L'elenco si rilegge sempre dal deposito, quindi una versione appena creata compare subito, senza riaprire l'opera.
-
-## Il visore delle pagine
-
-Sfogli il libro pagina per pagina, con le miniature nella colonna a sinistra. La barra del visore tiene la navigazione a sinistra — comando per aprire e chiudere le miniature, pagina precedente e successiva, campo per saltare a un numero, numero della pagina corrente — la provenienza dell'immagine al centro e i comandi a destra.
-
-Glossa ricorda dove eri arrivato: riaprendo il libro torni a quella pagina.
-
-### Da dove arriva l'immagine
-
-Al centro della barra c'è scritto **da dove arriva la pagina che stai guardando**, e le parole sono due: **File locale** quando la pagina è sul tuo computer, **File online** quando non lo è. Il pallino accanto dice il resto: spento per un file tuo, **giallo** quando la pagina arriva dalla cache — l'hai già vista in questa sessione, ma chiudendo non resta — e **verde** quando è appena arrivata dalla biblioteca. Passandoci sopra leggi la provenienza per esteso e i pixel che stai davvero guardando.
-
-Il visore **usa quello che hai sul computer**. Se hai scaricato il libro, le pagine e le miniature si leggono dal disco: compaiono subito, non costano nessuna richiesta alla biblioteca e funzionano anche senza collegamento. Se non hai niente, la pagina si chiede alla biblioteca **in una volta sola**, come immagine intera: è il modo più rapido di vederla.
-
-Se di una pagina hai sul computer una misura migliore di quella impostata, è quella che vedi: la misura scelta nelle impostazioni dice cosa chiedere alla biblioteca, non quanto peggiorare quello che possiedi già.
-
-Se cancelli le pagine locali mentre stai leggendo, Glossa si accorge da sé che quella copia non c'è più: la pagina resta leggibile, e le successive vengono chieste alla biblioteca invece di essere cercate in una cartella che non esiste.
-
-### Leggere solo i file locali
-
-Fra i comandi a destra, accanto a quello che salva la pagina, c'è **leggere solo i file locali**: acceso, il visore non chiede più niente alla biblioteca e su una pagina che non hai compare un avviso al posto dell'immagine; spento, le pagine mancanti tornano ad arrivare dalla biblioteca. Vale per il libro aperto e si spegne chiudendolo.
-
-### Salvare la pagina aperta
-
-Il comando che salva la pagina conserva **solo quella aperta**, usando gli stessi byte che stai già guardando: non la chiede una seconda volta. Mentre salva, l'icona gira; quando la pagina è sul computer il comando lascia il posto a un segno verde, che è uno stato e non un pulsante spento. Il suggerimento scrive **quanti pixel** verranno salvati: sono quelli della pagina che hai davanti, che su un libro ancora tutto online possono non coincidere con la misura impostata.
-
-La linguetta Digitalizzazioni si aggiorna subito: spazio, conteggio e versioni locali non aspettano la riapertura dell'opera.
-
-**Sfogliando un libro scaricato a metà, i buchi si riempiono da soli.** Le pagine che mancavano restano sul computer senza che tu lanci niente: il conteggio nella scheda cresce mentre leggi, e riaprendo quelle pagine non costano nessuna richiesta.
-
-### Zoom e dettaglio
-
-Lo zoom arriva ben oltre la dimensione reale della pagina: ingrandendo molto l'immagine sgrana, ma una nota a margine si legge. Leggendo online, superata la dimensione reale Glossa passa da sola al dettaglio vero chiesto alla biblioteca. Su un libro letto dal disco l'ingrandimento resta quello della misura con cui l'hai scaricato: più grande si vede, non più nitido.
-
-Quando l'indice del libro dichiara misure già pronte, Glossa usa la più piccola che resta nitida nel visore. Altrimenti usa subito un dimezzamento della pagina, senza aspettare una richiesta tecnica aggiuntiva prima di mostrarti l'immagine. Le miniature già apparse restano disponibili mentre scorri avanti e indietro; anche le pagine già viste vengono riprese dalla cache, non dalla biblioteca.
-
-Alcune biblioteche costruiscono le immagini nel momento in cui gliele chiedi: là la prima apertura può richiedere un minuto, e Glossa ribussa una volta invece di arrendersi. Su quelle biblioteche capita che una singola pagina, a una certa misura, non arrivi mai: Glossa la richiede in un'altra misura, che di solito arriva, invece di dichiararla guasta. L'avviso sull'attesa lunga compare solo dove quella spiegazione è vera.
-
-## Scaricare una fonte
-
-Il comando **scarica** mette in coda il lavoro vero: puoi cambiare schermata, metterlo in pausa, riprenderlo. Mentre gira, al posto del comando compare la percentuale; nel pannello dei lavori in basso trovi la stessa cosa con il nome dell'opera e quanto ha scaricato.
-
-Quando una fonte è tutta sul computer il comando **sparisce**, e al suo posto resta un segno di spunta: non c'è niente da chiedere alla biblioteca, e con i limiti di cortesia un manoscritto intero può costare un quarto d'ora di rete.
-
-**A che risoluzione** — Glossa **calcola** la misura da chiedere: dalle dimensioni della pagina, che il manifesto della biblioteca dichiara, ricava la larghezza che porta il lato lungo alla misura scelta nelle impostazioni, e chiede quella. Non c'è nessuna trattativa e nessuna richiesta in più per pagina.
-
-All'avvio di ogni libro fa una domanda sola alla biblioteca, che costa qualche secondo su un lavoro di ore, e serve a sapere se quella biblioteca tiene già pronte le misure ridotte: se le tiene, chiedergliene una vale il doppio della velocità. Se la domanda non riceve risposta si va avanti col calcolo, che funziona ovunque.
-
-Se la biblioteca rifiuta la misura chiesta, Glossa prende la pagina alla sua dimensione piena e **la conserva così com'è**: non rimpicciolisce niente da sé, perché ridurre un'immagine le fa perdere qualcosa e non è una cosa che deve succedere alle tue spalle. Quel libro occuperà più spazio, e quando vuoi lo recuperi con il comando che riduce le immagini. Il rifiuto si paga **una volta per libro**, non a ogni pagina.
-
-Chiedere una misura diversa da una già presente crea una **seconda versione locale** accanto alla prima, non sostituisce quella che hai. Se uno scaricamento per quel libro è già in corso, il comando lo dice invece di ignorare la richiesta.
-
-Con i limiti di alcune biblioteche lo scaricamento è lento per scelta: vedi [Archiviazione e lavori](/guides/storage-and-jobs).
-
-## Controllare e liberare spazio
-
-**Verifica** confronta quello che Glossa ha registrato con quello che c'è davvero sul disco. Se manca qualcosa te lo dice e ti propone di riscaricarlo: le pagine già presenti non vengono richieste di nuovo.
-
-Da ogni pagina che scarica Glossa ricava la sua **miniatura**, senza chiedere niente in più alla biblioteca: servono a sfogliare il libro senza rete. Finché non scarichi, le miniature si guardano online come le pagine.
-
-**Riduci le immagini** parte da una versione locale e ne ricava una più piccola alla misura e qualità scelte, senza modificare l'originale. Le due restano affiancate, ognuna con i propri comandi.
-
-**Libera spazio** cancella le pagine scaricate, subito e per davvero. Restano la scheda, il manifesto e le miniature, quindi il libro resta sfogliabile e le pagine si riscaricano quando servono. La conferma dice quanto stai liberando.
-
-## Archiviare un'opera
-
-Quando un'opera non ti serve più tutti i giorni ma non vuoi perderla, **archiviala**: sparisce dall'elenco senza uscire dalla Biblioteca. Per rivedere le archiviate accendi il comando con la cassetta fra i filtri; da lì lo stesso comando sulla riga la riporta in catalogo.
-
-Archiviare riguarda **solo l'elenco**: le pagine già scaricate restano dov'erano. Siccome è il momento in cui te ne accorgi, subito dopo Glossa ti chiede se vuoi anche liberare lo spazio che quell'opera occupa. Puoi dire di no e farlo più tardi, o non farlo mai: niente viene cancellato senza che tu lo chieda.
-
-## Togliere una fonte
-
-Il comando di rimozione toglie l'opera **per intero**: la scheda, i collegamenti ai workspace, tutto quello che ha nel deposito — manifesto, miniature e pagine scaricate — **e anche le pagine tenute in cache**. È l'unico momento in cui Glossa butta via quello che ha messo da parte: così lo spazio si libera davvero, e riaggiungendo la stessa opera le pagine tornano a essere chieste alla biblioteca. La conferma dice quanto spazio stai eliminando.
-
-Se vuoi tenere l'opera e recuperare solo lo spazio, il comando è un altro: **libera spazio**. Se invece vuoi solo toglierla di mezzo senza perderla, **archiviala**: la rimozione non ha ripensamenti, l'archivio sì.
-
-## Le impostazioni della Biblioteca
-
-Stanno in **Impostazioni → Biblioteca**, in tre linguette:
-
-- **Biblioteche** — una riga per biblioteca, con il profilo di rete che segue e il modo in cui le si chiedono le immagini.
-- **Immagini** — la misura delle pagine, quella delle miniature e i valori con cui si ricavano le versioni ridotte.
-- **Configurazioni** — i profili di rete, cioè i ritmi condivisi da più biblioteche, con salvataggio esplicito.
-
-La misura delle pagine è un tetto, non un obbligo: le pagine già più piccole si prendono come sono. La stessa scelta si può fare sulla singola opera, e lì vince, perché la misura dipende dal materiale e non da chi conserva il libro. I dettagli dei profili e delle manopole di rete sono in [Archiviazione e lavori](/guides/storage-and-jobs).
-
-## Limiti attuali
-
-- **PDF** — una digitalizzazione in PDF compare fra le copie, con il suo nome e il collegamento alla biblioteca, ma non si scarica e non si legge dentro Glossa. Il comando di scaricamento non viene offerto per quelle copie, invece di lasciarlo fallire. Importare il testo di un PDF in un progetto di traduzione è un'altra cosa, e funziona già.
-- **Ricerca** — cercano per parole Europeana, Wellcome Collection, Internet Archive, Vaticana, Gallica, e-codices, Digital Bodleian, Biblioteca Estense, Institut de France, Cambridge, la Bayerische Staatsbibliothek e la Library of Congress; quest'ultima dipende dalla tua rete, perché risponde a un programma solo quando non lo scambia per un robot. Aprono soltanto per identificativo o indirizzo Harvard, Heidelberg, e-rara ed e-manuscripta, e lo dichiarano nell'esempio del campo: le loro ricerche non sono interrogabili da un programma o rifiutano le richieste automatiche. Non esiste ancora una ricerca che interroghi più fonti insieme, ma Europeana ne copre molte in una sola richiesta.
-- **Singola pagina** — salvare la pagina aperta è possibile; scegliere la misura per quella pagina, sostituirla, eliminarla o selezionarne più di una dalle miniature sono lavori ancora da completare.
-- **Divieti di scaricamento** dichiarati dalle istituzioni non sono ancora applicati automaticamente.
-
-Lo stato aggiornato di quello che manca è nella pagina [Stato della beta](/project/status).
+# Biblioteca e lettore IIIF
+
+La Biblioteca contiene le fonti aggiunte al catalogo personale, i relativi
+metadati e i collegamenti ai workspace. La [ricerca](./source-search) si trova
+nella Dashboard. IIIF è il protocollo usato per descrivere e visualizzare molte
+delle riproduzioni digitali supportate: il manifesto contiene metadati, sequenza
+delle pagine e riferimenti alle immagini.
+
+## Struttura del catalogo
+
+| Elemento | Funzione |
+| --- | --- |
+| Opera | Scheda bibliografica con titolo, autore, data, lingua e identificativi |
+| Digitalizzazione | Rappresentazione digitale collegata alla scheda, per esempio un manifesto IIIF o un PDF |
+| Versione locale | Immagini di una digitalizzazione conservate nel deposito a una determinata risoluzione |
+
+Il catalogo non unifica automaticamente opere sulla base del titolo. L’identità
+del manifesto evita di aggiungere due volte la stessa fonte. Più versioni locali
+possono appartenere alla stessa digitalizzazione, anche se prodotte tramite
+riduzione delle immagini anziché scaricamento.
+
+## Organizzazione
+
+Le viste a elenco e a griglia mostrano provenienza, pagine dichiarate,
+risoluzioni locali, spazio occupato e collegamenti. Un conteggio non disponibile
+non equivale a zero. I filtri permettono di restringere il catalogo e di
+includere le opere archiviate; una vista salvata conserva una combinazione di
+filtri. Le collezioni raggruppano opere senza spostarle o duplicarle.
+
+Un’opera può essere collegata a più workspace e collezioni. Rimuovere un
+collegamento non elimina la scheda né i file. I comandi per scaricare,
+verificare, ridurre le immagini, liberare spazio, archiviare ed eliminare sono
+nel menu dell’opera.
+
+## Scheda dell’opera
+
+La scheda affianca il visore a un pannello con quattro sezioni:
+
+- **Opera:** metadati bibliografici, campi aggiuntivi e riferimenti tecnici.
+- **Digitalizzazioni:** copie registrate, scaricamenti e versioni locali.
+- **Organizzazione:** collegamenti a workspace e collezioni.
+- **Note:** annotazioni sull’opera con salvataggio automatico.
+
+Titolo, autore, data e lingua possono essere corretti manualmente. Le correzioni
+sono memorizzate separatamente dal dato originale e possono essere rimosse.
+**Risincronizza con la biblioteca** acquisisce nuovamente i metadati e cancella
+le correzioni manuali. Note e file scaricati restano invariati.
+
+## Lettura delle pagine
+
+Il visore offre miniature, navigazione per numero di pagina e zoom; ricorda
+la posizione di lettura. Utilizza le immagini locali quando disponibili.
+In lettura online carica prima un’immagine della pagina e può richiedere
+tessere di maggior dettaglio quando lo zoom lo richiede. Ingrandire una copia
+locale non ne aumenta la risoluzione.
+
+L’indicatore **File locale / File online** distingue il deposito dalla lettura
+remota. Il suggerimento specifica provenienza, eventuale cache e dimensioni
+dell’immagine. La cache del visore non equivale a uno scaricamento permanente.
+
+Attivando la lettura dei soli file locali, le pagine assenti mostrano un avviso
+e il visore non richiede immagini alla biblioteca. L’opzione vale per l’opera
+aperta e si disattiva alla chiusura.
+
+## Conservazione e versioni
+
+Il comando per salvare la pagina aperta conserva i byte già visualizzati.
+Non richiede una nuova immagine alla risoluzione configurata: le dimensioni
+effettive sono indicate nel suggerimento. Durante la lettura di una versione
+scaricata parzialmente, le pagine mancanti acquisite possono completarla.
+
+Lo scaricamento dell’intera digitalizzazione crea un lavoro in background.
+Una risoluzione diversa produce una versione locale distinta. Ogni versione
+ha comandi propri per aprirla, ridurla o eliminarla. Le regole di dimensionamento
+sono descritte in [Archiviazione e lavori](./storage-and-jobs).
+
+## Archiviazione ed eliminazione
+
+| Azione | Effetto |
+| --- | --- |
+| Archivia | Nasconde l’opera dal catalogo attivo e conserva i file; l’eventuale liberazione dello spazio richiede una scelta separata |
+| Libera spazio | Elimina le immagini scaricate, conservando scheda, manifesto e miniature |
+| Elimina una versione locale | Rimuove solo i file della versione selezionata |
+| Elimina l’opera | Rimuove scheda, collegamenti, deposito dell’opera e relativa cache |
+
+L’eliminazione non prevede un cestino. Le operazioni distruttive sui file
+richiedono che i lavori che possono modificarli siano conclusi o annullati;
+la sola pausa non è sufficiente.
+
+## Limiti
+
+Le digitalizzazioni PDF possono essere registrate, ma il loro download e la
+lettura nella Biblioteca non sono disponibili. L’importazione del testo di
+un PDF in un progetto di traduzione è una funzione distinta. La gestione
+avanzata delle singole pagine e la selezione multipla sono ancora incomplete.
+Le restrizioni di scaricamento dichiarate dalle istituzioni non sono applicate
+automaticamente: consulta le condizioni della fonte.

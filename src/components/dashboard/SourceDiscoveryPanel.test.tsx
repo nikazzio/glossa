@@ -1,10 +1,18 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../test/i18n-mock';
 import { SourceDiscoveryPanel } from './SourceDiscoveryPanel';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+
+/** Il titolo non è più un pulsante: la riga si apre dal comando dedicato. */
+async function expandControl(title: string | RegExp) {
+  const heading = await screen.findByText(title);
+  const row = heading.closest('article');
+  if (!row) throw new Error('row not found');
+  return within(row).getByRole('button', { name: 'federation.details' });
+}
 
 const mockListProviders = vi.fn();
 const mockDiscover = vi.fn();
@@ -80,8 +88,8 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    const first = await screen.findByRole('button', { name: /First source/ });
-    const second = screen.getByRole('button', { name: /Second source/ });
+    const first = await expandControl(/First source/);
+    const second = await expandControl(/Second source/);
 
     await user.click(first);
     await waitFor(() => expect(first).toHaveAttribute('aria-expanded', 'true'));
@@ -166,7 +174,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'cavalcabo');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    await user.click(await screen.findByRole('button', { name: /Le guidon des capitaines/ }));
+    await user.click(await expandControl(/Le guidon des capitaines/));
 
     expect(screen.getByText('Cavalcabo, Girolamo · Villamont, Jacques de. Traducteur')).toBeInTheDocument();
     expect(screen.getByText('Claude Le Villain (Rouen)')).toBeInTheDocument();
@@ -195,7 +203,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    const row = await screen.findByRole('button', { name: /First source/ });
+    const row = await expandControl(/First source/);
 
     expect(row).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText(/372 pages/)).toBeInTheDocument();
@@ -213,7 +221,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    await screen.findByRole('button', { name: /First source/ });
+    await screen.findByText(/First source/);
 
     expect(screen.queryByText(/page/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/\b0\b/)).not.toBeInTheDocument();
@@ -232,7 +240,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    await screen.findByRole('button', { name: /First source/ });
+    await screen.findByText(/First source/);
 
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToLibrary' }));
 
@@ -257,7 +265,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    await screen.findByRole('button', { name: /First source/ });
+    await screen.findByText(/First source/);
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToLibrary' }));
 
     expect(vi.mocked(libraryService.addSourceToLibrary).mock.calls[0][0].workspaceId).toBeUndefined();
@@ -277,7 +285,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    await screen.findByRole('button', { name: /First source/ });
+    await screen.findByText(/First source/);
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToWorkspace' }));
     await user.click(await screen.findByRole('button', { name: 'Archivio' }));
 
@@ -312,7 +320,7 @@ describe('SourceDiscoveryPanel', () => {
 
     await user.type(await screen.findByRole('textbox'), 'Fiore');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
-    await screen.findByRole('button', { name: /First source/ });
+    await screen.findByText(/First source/);
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.addToWorkspace' }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Archivio/ })).toBeDisabled());

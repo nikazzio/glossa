@@ -1,76 +1,61 @@
 ---
-title: Audit and review
+title: Assessment and review
 ---
 
-# Audit and review
+# Assessment and review
 
-Glossa does not stop at generating a draft. It also runs a judge stage so you
-can inspect quality issues chunk by chunk.
+Automated assessment, labelled **Audit** in the interface, compares a segment’s
+translation with its source. The consistency check is a separate review of
+translations across the document. Both produce findings for a reviewer to assess.
 
-The judge is separate from generation because the model that produced a draft should
-not be the only reviewer of that draft. [LLMs and pipelines](./llm-and-pipelines)
-explains the general principle.
+## Evaluator output
 
-## What the judge reports
+The response includes an overall rating and findings with a category,
+severity and description. Categories cover glossary compliance, accuracy,
+fluency, grammar and consistency. When textual references are available,
+the interface attempts to locate the relevant passage.
 
-- Overall quality rating
-- Structured issues
-- Suggested fixes
-- Terminology, accuracy, grammar and fluency concerns
+The backend uses a shared response schema. OpenAI, Anthropic, Gemini and
+Ollama receive their respective structured-output parameters. DeepSeek and
+custom endpoints use JSON mode with local validation. A response that cannot
+be interpreted is reported as an error.
 
-**Consistency across segments** comes from the coherence check instead, which is
-a separate pass with its own prompt.
+For schema-constrained output, the Ollama adapter sets temperature to zero,
+overriding the configured value. This does not guarantee identical or correct
+assessments; schema compliance concerns the response format.
 
-### The shape of the answer is the same for everyone
+## Review procedure
 
-The judge has to answer in a precise shape — a rating, a list of issues, the
-type and severity of each — and that shape is **a single one**, valid for every
-provider. With local models Glossa enforces it while the answer is generated, so
-the model cannot even phrase an answer outside the format; with cloud providers
-it is declared in the request.
+1. Open the translated segment’s **Audit** tab.
+2. Compare each finding with the source and translation.
+3. Edit the text manually or rerun the relevant stage.
+4. Use **Re-evaluate** to update the assessment without translating again.
+5. Record decisions and unresolved questions in **Notes**.
+6. Lock the translation when review is complete.
 
-For the same reason, **at judging time the temperature stays at zero** on local
-models, whatever value is set: an answer bound to a schema has to be
-predictable, and two runs on the same text must not give different verdicts by
-chance. Translations keep using the temperature you chose, and a note in the
-judge's settings says so where the field is filled in.
+An audit finding can be converted into an annotation. Passage lookup uses
+text supplied by the model and may not find the exact location. Locking a
+translation is a reviewer decision, separate from the automated rating and
+annotation type.
 
-## What to do after an audit pass
+## Document consistency
 
-| Outcome | Next move |
-|---|---|
-| Minor wording issues | Edit manually, then re-run audit |
-| Systematic terminology drift | Fix glossary or phrase-memory selection |
-| Wrong interpretation | Revisit the translation prompt or provider choice |
-| Formatting noise | Narrow the format stage instead of compensating in audit |
+After completing the segments, run the consistency check. It examines
+translations with neighbouring translated segments as context, without
+comparing them with the source. It uses the dedicated prompt under
+**Quality Control** and displays results in the Insight panel’s
+**Coherence** tab.
 
-## Review loop
+This check can identify terminology or style variations between passages.
+It does not replace a segment-level accuracy assessment.
 
-1. Run a test chunk or full batch.
-2. Open the audit output for the chunk.
-3. Read the issue list against the source and translated text.
-4. Edit manually, re-run a stage, or re-run audit only.
-5. Convert persistent issues into annotations if they need editorial tracking.
+## Interpreting results
 
-## When to trust the judge
+A positive rating is not editorial approval. If findings recur, check the
+instructions, assigned terminology and memory references before changing
+the evaluator’s criteria. Compare stage outputs to identify where an error
+was introduced.
 
-The judge is best used as a second pass, not as the final authority.
-
-- Trust it for spotting repeated terminology drift or obvious omissions.
-- Verify it manually on nuanced register, interpretation, or philological edge cases.
-- If it keeps reporting noise, tighten the prompt or simplify the earlier stages.
-
-## Review strategy for long documents
-
-- Use **Test** mode early to calibrate the pipeline on representative chunks.
-- Use annotations to mark unresolved passages without losing context.
-- Use coherence checks when the document depends on cross-chunk consistency.
-- Export only after the chunk list is no longer carrying unresolved issues.
-- Lock stable chunks only after they have survived both manual reading and audit review.
-
-## See also
-
-- [Annotations](./annotations) — how to track and anchor editorial findings per chunk
-- [Glossary and phrase memory](./glossary-and-memory) — for controlling terminology drift upstream
-- [LLMs and pipelines](./llm-and-pipelines) — why the judge is a separate stage
-- [Context and caching](./context-and-caching) — how Glossa keeps consistency across chunks
+See [Annotations and notes](./annotations) for recording decisions and
+[Pipeline configuration](../reference/pipeline-config) for quality-control
+parameters.

@@ -1,143 +1,78 @@
 ---
-title: Pipeline config
+title: Pipeline configuration
 ---
 
-# Pipeline config
+# Pipeline configuration
 
-Glossa separates pipeline configuration from document content so you can tune
-the run before starting a batch.
+Configuration belongs to a project’s pipeline. Service credentials and
+connections belong to application settings.
 
-If you want to understand why controls are split by stage, also read
-[LLMs and pipelines](../guides/llm-and-pipelines): it explains why translation,
-refinement, formatting, and judging have different responsibilities.
+## Sections
 
-## Main controls
+| Section | Parameters |
+| --- | --- |
+| Settings | Mode, languages, persona, examples and general options |
+| Translation | Providers, models, prompts and generation-stage options |
+| Quality Control | Evaluator and consistency check |
+| Term registry | Assigned glossary |
+| Prompt Preview | Request structure for active stages |
 
-- Source language
-- Target language
-- Pipeline mode
-- Provider and model per stage
-- Translation instructions
-- Persona
-- Glossary / term registry
-- Phrase-memory settings
-- Audit / judge settings
+Standard, Editorial and DeepL Hybrid modes are described in the
+[translation workflow](../guides/document-pipeline).
 
-## Typical configuration surfaces
+## Languages and persona
 
-| Surface | What you usually set there |
-|---|---|
-| Settings tab | Languages, run mode, general defaults, persona |
-| Translation tab | Stage prompts, models, provider-specific options |
-| Audit tab | Judge model, judge prompt, coherence prompt |
-| Glossary area | Assigned glossary and term entries |
+Set source and target languages. A persona is free text that replaces the
+default opening of the system message. It can specify role, subject area,
+languages and register. When enabled, it should state the intended language
+pair and instructions accurately.
 
-## What usually changes first
+Prompts can be saved as reusable templates, organised by context. Prompt
+refinement sends the current text to a configured model and places a revised
+version in the field. It requires a connection and any credentials needed
+by the selected provider.
 
-If a run is not good enough, change these in order:
+## Model parameters
 
-1. Translation prompt
-2. Provider or model
-3. Glossary entries
-4. Phrase-memory retrieval
-5. Judge prompt
+Each LLM stage selects its provider and model independently. Available controls
+depend on capabilities declared in the application.
 
-Leave everything else alone until you know which part is causing the failure.
+- **Temperature:** controls sampling variability without guaranteeing accuracy
+  or repeatability. Supported ranges are 0–1 for Anthropic and 0–2 for Gemini,
+  OpenAI and DeepSeek.
+- **Reasoning:** when requested for OpenAI or DeepSeek, the adapter omits
+  the temperature parameter.
+- **Ollama:** provides context, generation and reasoning options according
+  to the model. Advanced options must be a valid JSON object, such as
+  `{ "num_ctx": 8192 }`.
+- **Ollama assessment:** schema-constrained requests set temperature to zero,
+  even when another value is configured.
 
-## Pipeline modes
+Invalid JSON does not replace the previous configuration. Check the meaning
+of service-specific options for the model you use.
 
-| Mode | Description |
-|---|---|
-| Standard | Single translation pass plus audit |
-| Editorial | Translation, refine, and formatting stages before audit |
-| DeepL Hybrid | DeepL first pass, optional LLM refinement, and LLM audit |
+## DeepL Hybrid
 
-## Stage-level advice
+The first stage uses DeepL settings: language, formality where supported,
+translation mode and remote glossary. Its API key is separate from the keys
+used by revision and assessment LLMs. DeepL quota or glossary errors must be
+resolved with that service before the sequence can complete.
 
-- Keep the translation stage focused on accuracy and basic style.
-- In DeepL Hybrid, use the DeepL stage for the first draft and keep LLM prompts/models separate for refinement and judging.
-- Use refine for rewriting, not for first-pass translation.
-- Keep format narrow so it does not silently alter meaning.
-- Use the judge to report issues, not to replace human review.
+## Examples and context
 
-## Advanced Ollama options
+A pipeline can hold up to five translation examples, added from a locked
+segment’s Audit tab and edited in settings. [Phrase memory](../guides/phrase-memory)
+instead supplies references selected for an individual segment.
+[Prompt caching](../guides/context-and-caching) has provider-specific rules.
 
-Use the advanced JSON block only when the local provider has given you specific
-options to send. It must contain a **JSON object**: a list, a single value, or
-invalid JSON is not saved in the pipeline configuration.
+## Cost estimates
 
-## Execution rules
+The configuration estimate covers the entire document, including consistency
+review when configured. In the document sidebar, the estimate follows the
+selected action. Details distinguish stages and models.
 
-- Test mode processes one chunk and leaves the configuration editable.
-- Production mode processes the full document.
-- A cancelled run resumes from the already completed chunks when possible.
-
-## Stability advice
-
-- Change one major variable at a time.
-- Save the pipeline before large batch runs.
-- If a project is stable, clone or rename a pipeline before experimenting.
-
-## When to change config
-
-Change the configuration before a full run if you need a different provider,
-prompt, or glossary behavior. If you only need to inspect a result, prefer Test
-mode over changing the whole pipeline.
-
-## Cost estimate
-
-In the pipeline settings panel, hovering over the info icon next to the estimated cost shows a per-stage breakdown with the approximate cost in dollars.
-
-In the document view's left rail, next to chunk navigation, a panel always shows two rows: the estimate for whatever action you're about to run, and — once the open chunk has already been translated — its real usage (actual tokens and cost, read after the call completes). Hovering over the real-usage row shows the per-stage breakdown when available.
-
-- In the pipeline settings panel the estimate always covers **the whole document**, including the coherence check if configured.
-- In the document view's left rail, the estimate follows whatever is about to happen: in "translate chunk" mode it covers only the selected chunk, in "run all" mode it covers the whole document.
-- This is an approximation based on word count and the chosen model's per-token price: the real cost (shown in the row below, after translation) may vary slightly.
-- DeepL stages are measured in billed characters by DeepL: Glossa can show those after the run, but the dollar estimate remains based on token-priced LLM providers.
-
-## Temperature for stages and the judge
-
-Next to the reasoning control (where present), every stage and the judge have an
-optional temperature control — how much the model varies from the most likely
-response. Low value = more deterministic, repeatable output; high value = more variation.
-
-- **Anthropic** and **Gemini**: always available, range 0–1 for Anthropic, 0–2 for Gemini.
-- **OpenAI** and **DeepSeek**: only available when reasoning for that stage is set to
-  "none" or the model doesn't reason at all — both providers reject or ignore the
-  parameter while actively reasoning. Range 0–2.
-
-If you don't touch the control it stays at 0 (maximum precision). Raise it for more
-stylistic variety, keep it low for technical or philological translation where precision
-matters.
-
-## Translation examples (few-shot)
-
-In the pipeline settings you can keep a small set of whole translations (cap of 5,
-2-3 recommended) picked by hand as a style example for the whole run — different
-from phrase memory, which suggests one-off sentence pairs.
-
-To add one: in the chunk's Audit tab, after locking it with a rendering you consider
-exemplary, press the dedicated button (it also shows how many examples you've
-already saved). The example shows up immediately here in the settings, where you
-can review, shorten, or remove it.
-
-## Anthropic caching with extended TTL
-
-For Anthropic providers, prompt caching is **off by default** and must be turned on
-explicitly in the pipeline settings:
-
-- With Glossa's typical usage pattern (one chunk at a time, often minutes or hours
-  apart), the default cache would expire before it's ever reread — turning it on
-  without a reason would only cost the write surcharge, never save anything.
-- Turn caching on only if you're working through chunks in quick succession.
-- If a slow stage sits between two Anthropic chunks in the pipeline (e.g. a local
-  provider), extend the cache lifetime to 1 hour instead of the 5-minute default —
-  it costs double on writes instead of 1.25x, but avoids losing the cache while
-  waiting on the slow stage.
-
-## See also
-
-- [Provider support](./provider-support) — provider comparison and model selection guide
-- [LLMs and pipelines](../guides/llm-and-pipelines) — principles behind stage separation
-- [Document pipeline](../guides/document-pipeline) — how settings apply to the end-to-end workflow
-- [Context and caching](../guides/context-and-caching) — how the prompt is structured to optimise costs
+Estimates use an approximate word-to-token conversion and the model prices
+recorded in Glossa. Usage shown after execution uses token counts returned
+by the service; the associated cost is still Glossa’s calculation, not an
+invoice. DeepL reports billed characters, which are not LLM tokens and are
+not included in the same dollar estimate.

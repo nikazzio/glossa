@@ -43,6 +43,9 @@ pub async fn create_job(
     jobs: State<'_, JobsState>,
     request: NewJobRequest,
 ) -> Result<JobRecord, String> {
+    if request.job_type == crate::federation::JOB_TYPE {
+        return Err("federation.useSearchControls".into());
+    }
     let job = NewJob {
         id: request.id.unwrap_or_else(new_job_id),
         job_type: request.job_type,
@@ -181,6 +184,10 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         );
     }
 
+    engine.register(
+        crate::federation::JOB_TYPE,
+        Arc::new(crate::federation::SearchJob(app.clone())),
+    );
     engine.load_limits()?;
     let engine = Arc::new(engine);
     app.manage(JobsState(Arc::clone(&engine)));

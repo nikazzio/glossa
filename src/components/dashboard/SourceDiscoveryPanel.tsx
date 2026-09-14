@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, IconButton, Select, Spinner, StatBlock } from '../ui';
+import { Dialog, Hint, IconButton, PopoverItem, Select, Spinner, StatBlock } from '../ui';
 import { discoverIIIF, listIIIFProviders } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { isManifest, type IIIFProvider, type SourceCard } from '../../types';
@@ -53,7 +53,7 @@ function groupOf(provider: IIIFProvider): SourceGroupId {
   return 'library';
 }
 
-const SEARCH_ERRORS: Record<string, string> = {
+export const SEARCH_ERRORS: Record<string, string> = {
   search_refused: 'dashboard.discovery.errorRefused',
   search_rate_limited: 'dashboard.discovery.errorRateLimited',
   search_unavailable: 'dashboard.discovery.errorUnavailable',
@@ -64,6 +64,7 @@ const SEARCH_ERRORS: Record<string, string> = {
   manifest_unreachable: 'dashboard.discovery.errorManifestUnreachable',
   manifest_unreadable: 'dashboard.discovery.errorManifestUnreadable',
   manifest_invalid: 'dashboard.discovery.errorManifestInvalid',
+  'federation.staleExecution': 'federation.staleExecution',
 };
 
 /** Scarta i doppioni tenendo il primo arrivato: l'ordine dei risultati è del
@@ -120,6 +121,9 @@ interface RowProps {
   onAddToWorkspace: () => void;
   adding: boolean;
   alreadyAdded: boolean;
+  /** Quello che la riga dice in più quando la ricerca interroga più fonti:
+   *  quante copie della stessa opera sono arrivate e da quali biblioteche. */
+  note?: string;
 }
 
 /** Tutte le informazioni disponibili per una scheda, etichetta/valore. */
@@ -169,13 +173,17 @@ function OpenableMark({ openable, checking }: { openable: boolean | null; checki
   if (checking) return <span className="ml-2 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
   if (openable !== false) return null;
   return (
-    <span className="ml-2 text-editorial-warning" title={t('dashboard.discovery.notOpenableHint')}>
-      {t('dashboard.discovery.notOpenable')}
+    // L'etichetta porta la spiegazione: premerla la apre, così vale anche per
+    // chi non usa il mouse.
+    <span className="ml-2 text-editorial-warning">
+      <Hint label={`${t('dashboard.discovery.notOpenable')} — ${t('dashboard.discovery.notOpenableHint')}`}>
+        {t('dashboard.discovery.notOpenable')}
+      </Hint>
     </span>
   );
 }
 
-function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded }: RowProps) {
+export function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded, note }: RowProps) {
   const { t } = useTranslation();
   // La riga si controlla solo quando entra nello schermo: un elenco di venti
   // risultati scorso a metà non deve costare venti richieste.
@@ -189,7 +197,12 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
   // indirizzi veri: si aprono, non si leggono come le altre etichette.
   const pageUrl = !isManifest(card) ? card.pageUrl : null;
   const catalogUrl = !isManifest(card) ? card.catalogUrl : null;
-  const stats = sourceStats(card, t, { includeCatalogUrl: false });
+  // I dati della scheda servono solo a riga aperta: calcolarli sempre significa
+  // una quindicina di traduzioni per ogni riga dell'elenco, a ogni disegno.
+  const stats = useMemo(
+    () => (expanded ? sourceStats(card, t, { includeCatalogUrl: false }) : []),
+    [expanded, card, t],
+  );
   // Il numero di pagine sta già fra i dati della scheda aperta: nella riga
   // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
   // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
@@ -203,18 +216,21 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
   // sarebbe la stessa frase due volte. Lì in evidenza resta chi ha risposto
   // alla ricerca, che con un aggregatore non è la stessa cosa.
   const origin = (expanded ? providerLabel : card.holdingInstitution) || providerLabel;
+  // «Bibliothèque nationale de France, département X, 8-K-5072» è istituto,
+  // fondo e segnatura in una stringa sola: in riga chiusa vale il primo.
+  const shortOrigin = expanded ? origin : origin.split(',')[0].trim();
   const mediaType = !isManifest(card) ? card.mediaType : null;
   const metaParts = [
     card.creator,
     card.date,
     mediaType,
     ...(expanded ? [] : [pageCount]),
+    note,
   ].filter(Boolean) as string[];
 
   return (
     <motion.article
       ref={rowRef}
-      layout
       transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
       className={
         expanded
@@ -223,12 +239,7 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
       }
     >
       <div className={`flex gap-3 px-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>
-        <button
-          type="button"
-          aria-expanded={expanded}
-          onClick={onToggle}
-          className="flex min-w-0 flex-1 gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
+        <div className="flex min-w-0 flex-1 gap-3 text-left">
           <span
             className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox transition-all duration-200 ${
               expanded ? THUMBNAIL_SIZE.expanded : THUMBNAIL_SIZE.closed
@@ -254,13 +265,14 @@ function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, o
             <span className="min-w-0 flex-1">
               <span className="block truncate font-display italic text-editorial-ink">{title}</span>
               <span className="mt-0.5 block truncate text-xs text-editorial-muted">
-                <strong className="font-semibold text-editorial-ink">{origin}</strong>
+                <strong className="font-semibold text-editorial-ink">{shortOrigin}</strong>
                 {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
                 <OpenableMark openable={openable} checking={checking} />
               </span>
             </span>
           )}
-        </button>
+        </div>
+        <IconButton title={t('federation.details')} aria-expanded={expanded} onClick={onToggle} size="sm"><ChevronDown size={14} className={expanded ? 'rotate-180' : ''} /></IconButton>
         <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />
       </div>
       <AnimatePresence initial={false}>
@@ -495,7 +507,7 @@ export function SourceDiscoveryPanel() {
       {outcome?.cachedAt !== undefined && outcome.cachedAt !== null && (
         // Un risultato conservato non si distingue da uno appena arrivato, e
         // senza saperlo non si può decidere se vale la pena rifare la ricerca.
-        <p className="mt-3 flex items-center gap-2 text-[11px] text-editorial-muted">
+        <p className="mt-3 flex items-center gap-2 text-xs text-editorial-muted">
           <span>
             {t('dashboard.discovery.fromCache', {
               when: t(`common.relative.${cachedUnit.key}`, { count: cachedUnit.count ?? 0 }),
@@ -571,24 +583,20 @@ export function SourceDiscoveryPanel() {
               {workspaces.map((workspace) => {
                 const linked = workspacePickerLinkedIds?.includes(workspace.id) ?? false;
                 return (
-                  <button
-                    key={workspace.id}
-                    type="button"
-                    disabled={linked}
-                    onClick={() => {
+                  <div key={workspace.id} className="flex items-center gap-2">
+                  <PopoverItem label={workspace.name} disabled={linked}
+                    onSelect={() => {
                       if (workspacePickerCard) void addFromDiscovery(workspacePickerCard, workspace.id, resultsProviderKey);
                       setWorkspacePickerCard(null);
                     }}
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    <span className="min-w-0 truncate font-display text-base italic text-editorial-ink">{workspace.name}</span>
+                  />
                     {linked && (
                       <span className="flex shrink-0 items-center gap-1 text-[11px] uppercase tracking-[0.1em] text-editorial-accent">
                         <Check size={14} />
                         {t('dashboard.discovery.alreadyLinked')}
                       </span>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>

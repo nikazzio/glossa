@@ -7,7 +7,28 @@ export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'gl
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
 export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references' | 'promptPreview';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
-export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'sources' | 'storage' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
+/**
+ * Gli argomenti della guida, raccolti nei gruppi in cui compaiono nel menu.
+ *
+ * Sorgente unica: il tipo, l'elenco del menu e il controllo di ciò che arriva
+ * da fuori nascono tutti da qui. Prima l'elenco viveva in tre posti e un
+ * argomento aggiunto solo ai testi restava invisibile.
+ */
+export const HELP_GROUPS = [
+  { id: 'start', sections: ['overview', 'projects'] },
+  { id: 'sources', sections: ['search', 'sources', 'storage', 'backup'] },
+  { id: 'translation', sections: ['pipeline', 'features', 'glossary', 'memory', 'audit', 'annotations', 'context'] },
+  { id: 'support', sections: ['providers', 'ollama', 'shortcuts', 'troubleshooting'] },
+] as const;
+
+export type HelpSection = (typeof HELP_GROUPS)[number]['sections'][number];
+
+export const HELP_SECTIONS: readonly HelpSection[] = HELP_GROUPS.flatMap((group) => group.sections);
+
+/** Un argomento che non esiste apre la panoramica invece di lasciare il vuoto. */
+export function asHelpSection(value: string | undefined): HelpSection {
+  return HELP_SECTIONS.includes(value as HelpSection) ? (value as HelpSection) : 'overview';
+}
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
@@ -117,6 +138,9 @@ interface UiState {
   projectContextUserExpanded: boolean;
   dashboardSidebarCollapsed: boolean;
   dashboardSidebarWidth: number;
+  /** Sezioni della Dashboard aperte o chiuse, per chiave di sezione: tornando
+   *  alla Dashboard si ritrova la pagina come la si era lasciata. */
+  dashboardSections: Record<string, boolean>;
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
   /** Colonna informazioni della scheda opera in Biblioteca. */
@@ -167,6 +191,7 @@ interface UiState {
   setActiveProjectPanel: (panel: ProjectPanelTab) => void;
   setProjectContextCollapsed: (collapsed: boolean) => void;
   setDashboardSidebarCollapsed: (collapsed: boolean) => void;
+  setDashboardSection: (section: string, open: boolean) => void;
   setDashboardSidebarWidth: (width: number) => void;
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
@@ -317,6 +342,7 @@ export const useUiStore = create<UiState>()(
       projectContextCollapsed: false,
       projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
+      dashboardSections: {},
       dashboardSidebarWidth: 240,
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
@@ -498,6 +524,8 @@ export const useUiStore = create<UiState>()(
       setProjectContextCollapsed: (collapsed) =>
         set({ projectContextCollapsed: collapsed, projectContextUserExpanded: !collapsed }),
       setDashboardSidebarCollapsed: (collapsed) => set({ dashboardSidebarCollapsed: collapsed }),
+      setDashboardSection: (section, open) =>
+        set((state) => ({ dashboardSections: { ...state.dashboardSections, [section]: open } })),
       setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
@@ -515,7 +543,7 @@ export const useUiStore = create<UiState>()(
               };
             case 'help':
               return {
-                showHelp: true, helpSection: (tab as HelpSection) ?? 'overview',
+                showHelp: true, helpSection: asHelpSection(tab),
                 showSettings: false, showConfigDrawer: false,
                 showDocumentDrawer: false, showChunkDrawer: false, activePanel: 'help' as const,
               };
@@ -568,6 +596,7 @@ export const useUiStore = create<UiState>()(
         projectContextUserExpanded: state.projectContextUserExpanded,
         dashboardSidebarCollapsed: state.dashboardSidebarCollapsed,
         dashboardSidebarWidth: state.dashboardSidebarWidth,
+        dashboardSections: state.dashboardSections,
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,

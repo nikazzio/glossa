@@ -1,125 +1,70 @@
 ---
-title: Per iniziare
+title: Installazione e primo progetto
 ---
 
-# Per iniziare
+# Installazione e primo progetto
 
-Glossa è in beta: consulta lo [stato e i limiti attuali](../project/status).
-Le guide seguono main e possono descrivere funzioni più recenti della versione installata.
+Glossa è un’applicazione desktop per consultare fonti digitalizzate e tradurre
+documenti con modelli linguistici. Il frontend React comunica con un backend
+Rust tramite Tauri; i dati di lavoro sono conservati in un database SQLite locale.
 
-Glossa è un'app desktop Tauri. Gira in locale: configuri una pipeline di traduzione,
-importi o prepari il testo sorgente e lavori per chunk, testando prima un passaggio
-rappresentativo e poi lanciando il batch completo.
+La documentazione segue il branch `main` e può descrivere funzioni successive
+alla versione installata. Consulta lo [stato del progetto](../project/status)
+per conoscere i limiti della beta.
 
-> **Nota terminologica**: questa documentazione mantiene in inglese i termini tecnici
-> usati nell'interfaccia — *chunk*, *stage*, *batch*, *run*, *provider* — perché sono
-> i nomi effettivi che vedi nell'app. Tutte le spiegazioni sono in italiano.
+## Installazione
 
-## Scarica l'app
+Scarica il pacchetto per il tuo sistema dalla pagina delle
+[release](https://github.com/nikazzio/glossa/releases). Sono previsti installer
+per Windows, immagini disco per macOS e pacchetti AppImage, DEB e RPM per Linux;
+verifica gli allegati della release scelta.
 
-Se vuoi usare Glossa, il percorso corretto è scaricare una release binaria da GitHub. Il repository serve per sviluppo e contributi, non come percorso principale per gli utenti finali.
+Per usare un servizio di traduzione remoto occorrono le relative credenziali.
+Per l’elaborazione locale occorrono un server Ollama in esecuzione e un modello
+già scaricato. La scelta si configura in **Impostazioni → Provider**.
 
-- Windows: installer `.exe` oppure pacchetto `.msi`
-- macOS: `.dmg`
-- Linux: `.AppImage`, `.deb` oppure `.rpm`
+## Primo progetto di traduzione
 
-Link utili:
+1. Crea un workspace, cioè un gruppo di progetti e risorse condivise.
+2. Crea un progetto nel workspace e importa un documento.
+3. Controlla il testo estratto e la suddivisione in frammenti nell’anteprima.
+4. Configura lingue, modalità della pipeline, provider e modelli per le fasi attive.
+5. Esegui una prova su un frammento rappresentativo e confronta il risultato con l’originale.
+6. Avvia l’elaborazione degli altri frammenti, rivedi le traduzioni ed esporta il documento.
 
-- [Ultima release](https://github.com/nikazzio/glossa/releases/latest)
-- Leggi le note della versione scelta: il numero non certifica la fine della beta.
+La [guida alla traduzione](../guides/document-pipeline) descrive stati e
+comportamento dell’esecuzione. Per lavorare con riproduzioni digitali, parti
+dalla [ricerca delle fonti](../guides/source-search).
 
-## Per sviluppatori e contributori
+## Sviluppo da sorgente
 
-Le sezioni seguenti riguardano chi vuole modificare il codice, testare modifiche locali
-o contribuire al progetto. Se stai solo usando Glossa, salta al
-[primo percorso consigliato](#primo-percorso-consigliato).
-
-### Prerequisiti
-
-- Node.js e npm nelle versioni dichiarate in [`package.json`](https://github.com/nikazzio/glossa/blob/main/package.json), campo `engines`
-- Rust stable aggiornato
-- `npm` per le dipendenze frontend
-- Su Linux servono anche le librerie di sistema indicate nella [guida di sviluppo](https://github.com/nikazzio/glossa#develop)
-
-### Sviluppo da sorgente
-
-Clona il repository solo se vuoi sviluppare Glossa, testare modifiche locali o contribuire al codice.
+Sono richiesti Node.js `^20.19.0` oppure `>=22.12.0`, npm `>=11`, Rust e le
+dipendenze di sistema Tauri. I vincoli Node.js e npm sono dichiarati in
+`package.json`; le istruzioni per le dipendenze di sistema sono nel
+[README](https://github.com/nikazzio/glossa#develop).
 
 ```bash
 git clone https://github.com/nikazzio/glossa.git
 cd glossa
 npm install
-```
-
-### Avvia l'app desktop in sviluppo
-
-```bash
 npm run tauri:dev
 ```
 
-Questo comando avvia insieme il frontend Vite e la shell Tauri.
+`tauri:dev` avvia sia Vite sia l’applicazione desktop. `npm run tauri:build`
+genera i pacchetti di distribuzione usando la configurazione di rilascio.
 
-### Build locale dell'app
-
-```bash
-npm run tauri:build
-```
-
-### Avvia la documentazione in locale
+## Documentazione locale e pubblicazione
 
 ```bash
 npm run docs:start
-```
-
-Per buildare il sito statico:
-
-```bash
 npm run docs:build
 ```
 
-### Check di sviluppo
+Il primo comando avvia VitePress su `127.0.0.1:3001`; il secondo genera il sito
+in `docs/.vitepress/dist`. I contenuti italiani sono in `docs/`, quelli inglesi
+in `docs/en/`; navigazione e lingue sono configurate in `docs/.vitepress/config.ts`.
 
-```bash
-npm run lint:all
-npm test
-npm run build
-```
-
-Controlli backend, da eseguire da `src-tauri/`:
-
-```bash
-cargo check --all-targets
-cargo test
-```
-
----
-
-## Primo percorso consigliato
-
-1. Apri l'app e configura le credenziali provider in **Settings**.
-2. Crea o apri un workspace e poi crea un progetto.
-3. Imposta lingua sorgente e lingua target.
-4. Scegli provider e modello per il primo stage.
-5. Importa un documento. Per una prova breve, importa o incolla solo un campione e usa **Test** su un chunk.
-6. Esegui un chunk di test prima di lanciare un batch completo.
-
-## Cosa configurare per prima cosa
-
-- **Chiavi provider** in Settings
-- **Modalità pipeline**: Standard per lavori più semplici, Editoriale per rifinitura multi-stage, DeepL Hybrid quando vuoi una prima passata DeepL seguita da rifinitura LLM
-- **Glossario** se la terminologia è vincolante
-- **Chunking** se il testo sorgente è lungo o strutturalmente delicato
-
-## Ambito docs e codice
-
-- `docs/` contiene il sito pubblico statico
-- `docs-dev/` contiene note interne per i maintainer
-- `src/` e `src-tauri/` sono i codebase reali dell'app
-
-## Prossimi passi
-
-- Leggi la [guida pipeline documento](../guides/document-pipeline)
-- Leggi [glossario e phrase memory](../guides/glossary-and-memory)
-- Leggi [audit e revisione](../guides/audit-review)
-- Consulta le [scorciatoie da tastiera](../guides/keyboard-shortcuts)
-- Controlla i [provider supportati](../reference/provider-support)
+Il workflow GitHub Actions della documentazione pubblica il sito su GitHub Pages
+dopo un push su `main` che modifica i percorsi configurati, fra cui `docs/`,
+il workflow stesso e i manifesti npm. Un merge che non modifica questi percorsi
+non avvia la pubblicazione. Le note interne di sviluppo sono in `docs-dev/`.

@@ -4,63 +4,92 @@ title: Troubleshooting
 
 # Troubleshooting
 
-This page covers the common failures you are likely to hit while setting up or running Glossa.
+To diagnose a problem, identify the operation, the message received and the
+service involved. Keep other parameters unchanged while investigating one cause.
 
-## The app does not start
+## Connection or credentials
 
-- Verify `npm install` completed successfully
-- Re-run `npm run tauri:dev`
-- On Linux, install the Tauri system packages listed in the root `README.md`
+If a stage does not start, check its key, model and, for Custom, selected
+profile under **Settings → Provider**. Authentication errors, unavailable
+models and exhausted quotas require different actions. Custom remote endpoints
+must use HTTPS; HTTP is accepted only for supported local addresses.
 
-## The app opens but shows a connection error
+For Ollama, check the server URL, connection status and installed model.
+`ollama list` lists installed models; `ollama serve` starts the server when
+your installation does not already manage it. For inference timeouts, check
+context size and available resources.
 
-- The dev server uses a dedicated port (`48123`); if another process already holds it, Vite stops with a readable error instead of opening a broken window
-- If the message points to a port other than 48123, override it: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` (Linux/macOS) — on Windows PowerShell `$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev`, on cmd.exe `set GLOSSA_DEV_PORT=9999 && npm run tauri:dev`
-- This only applies to running from source: the installed app (`.deb`/`.AppImage`/`.msi`/`.dmg`) has no dev server and is not affected
+In DeepL Hybrid, distinguish failures in the initial DeepL stage from failures
+in subsequent LLM stages. An exhausted character quota or incompatible remote
+glossary cannot be fixed by changing the evaluator’s prompt.
 
-## A provider does not run
+## Empty or incomplete search
 
-- Check that the API key exists in Settings
-- Verify that the selected model is valid for that provider
-- Keep the provider fixed while debugging; do not change prompt and provider at the same time
+Check that the source supports keyword search and that an identifier follows
+the displayed example. In federated search, check how many sources completed
+and which failed. Filters operate on returned metadata; missing values can
+leave a result unverified.
 
-## The audit is noisy or inconsistent
+A record without an accessible digital copy is marked unavailable. A network
+error does not establish that the work is absent. If results came from the
+cache, use refresh to request a new response.
 
-- Re-test on one representative chunk
-- Simplify the translation prompt before rewriting the judge prompt
-- Remove weak phrase-memory matches
-- Check whether the glossary is too vague to enforce consistently
+## Missing pages and waiting jobs
 
-## Ollama is unavailable
+Check whether the viewer is restricted to local files and whether the selected
+version contains the page. Also check that the repository drive is connected.
+For missing or damaged files, run a repository check and review any recovery
+offer.
 
-- Start the local server with `ollama serve`
-- Verify the model is installed with `ollama list`
-- Use a smaller model or reduce chunk size if local inference is timing out
+A waiting job may be observing a network limit; its details show whether a
+retry is scheduled. A paused job instead requires an explicit resume. Before
+deleting files used by a paused job, cancel the job: pausing preserves its
+ability to resume writing.
 
-## DeepL Hybrid does not start
+## Import or translation problems
 
-- Verify that the DeepL API key is configured in Settings.
-- Check DeepL character quota and plan status: quota errors stop the stage before LLM refinement.
-- If a DeepL glossary cannot be created, check that the language pair is supported by DeepL glossaries.
-- If LLM refinement works but the DeepL stage fails, debug DeepL separately: do not change prompt, judge, and LLM provider in the same attempt.
+A UTF-8 error requires converting the text file to that encoding. For DOCX
+and PDF, check the extracted text before translating. A scanned PDF requires
+OCR outside the current import workflow.
 
-## The output quality is unstable
+If the translation is unsuitable, test a representative segment and compare
+stage outputs. Check the glossary, selected references and instructions.
+Inconsistent assessments must be checked against the text; do not apply a
+change solely because a model proposed it.
 
-- Move back to Test mode
-- Reduce prompt complexity
-- Tighten the glossary to mandatory terms only
-- Review phrase-memory matches before reusing them
+## Saving and backups
 
-## A document import looks wrong
+If the status bar reports a failed save, check access to the data directory
+and available disk space. Treat changes as unsaved until completion is shown.
 
-- Re-open the import preview and inspect the chunking
-- Prefer Markdown import when headings and structure matter
-- Use smaller chunk sizes if long passages are being grouped too aggressively
+An incompatible or invalid backup is rejected before restoration. An encrypted
+archive requires a password or recovery code. Missing images after restoration
+do not necessarily indicate a failure: repository files are
+[excluded from backups](./backup-and-restore).
 
-## Build or CI problems
+## Running from source
 
-- `npm run lint:all` checks TypeScript types and ESLint rules for the frontend
-- `npm test` runs the frontend test suite
-- `npm run docs:build` validates the VitePress site
-- `cargo check --all-targets` and `cargo test` validate the Tauri backend
-- The docs site is static; if it breaks, verify `docs/.vitepress/config.ts`, markdown links, and public assets first
+This section concerns development, not installed packages. Vite uses port
+`48123`; a port conflict prevents startup. To select another port:
+
+```bash
+# Linux and macOS
+GLOSSA_DEV_PORT=9999 npm run tauri:dev
+```
+
+```powershell
+# Windows PowerShell
+$env:GLOSSA_DEV_PORT=9999
+npm run tauri:dev
+```
+
+Also check the dependencies in the [installation guide](../intro/getting-started).
+Distributed desktop packages do not use the development server.
+
+## Reporting a problem
+
+Include the Glossa version, operating system, action taken, expected result
+and actual message. The operations console shows stages and requests; the
+in-app guide provides the log directory. Prompt details may contain document
+text, so review them before sharing. For additional technical diagnostics,
+the application can be started with `RUST_LOG=debug`.

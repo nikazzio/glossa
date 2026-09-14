@@ -1,49 +1,59 @@
 ---
-title: Phrase memory
+title: Phrase memory and examples
 ---
 
-# Phrase memory
+# Phrase memory and examples
 
-Phrase memory helps Glossa reuse previously approved source-target fragments
-when similar wording appears again.
+Phrase memory stores source text and approved translation pairs for reuse
+within a workspace. Finding matches, selecting them for a prompt and saving
+new phrases are separate operations.
 
-> This page is a compact overview. For the full workflow, read [Glossary and phrase memory](./glossary-and-memory).
+## Retrieving references
 
-## What it stores
+When enabled, Glossa searches for matches for the document’s segments using
+resources available to the workspace. This search changes neither translations
+nor saved phrases.
 
-- Short source phrases
-- Approved target phrases
-- Confidence values for the extracted pair
+The **References** tab displays matches and lets you adjust the similarity
+threshold. Only selected pairs are included in the next request for that
+segment. If matches exist but none are selected, starting translation warns
+that those references will not be used.
 
-## How it is used
+Pairs are appended to stage instructions after the static prefix and document
+context. They do not change the shared blocks prepared for caching. Similarity
+indicates possible relevance, not semantic equivalence or suitability for the
+current context.
 
-The segment panel has two separate tabs, for two different moments of the work:
+## Creating and reviewing phrases
 
-**Memory tab — creating new phrases**: a phrase only enters the collection from a segment you have **locked** (the translation is final). Phrases already saved for that segment load automatically when you open the tab, already checked and labeled "already saved". Lock the segment and click "Extract phrases" (a separate button) to have Glossa propose new ones: they are added below the ones already shown, without identical duplicates. Review each row — check/uncheck it, fix the text if needed — and you can also add pairs manually. The "Save" button is always visible at the top: pressing it saves whatever is checked at that moment — if you unchecked an already-saved phrase, it is genuinely removed from the collection (no separate delete button needed). If you switch to another segment mid-review, the unconfirmed work is still there waiting for you when you come back.
+1. Review the translation and lock the segment.
+2. Open **Memory**: previously saved pairs are loaded and selected.
+3. Use **Extract phrases** to generate proposals, or add pairs manually.
+4. Edit the text and select the pairs to retain.
+5. Save to apply the selection.
 
-**References tab — reusing already-saved phrases**: here you see the matches found for the open segment, with an adjustable similarity threshold. Only the matches you check are actually sent as reference the next time you translate or rerun that segment — matches that are found but left unchecked stay visible but are ignored. The project glossary isn't repeated here: it's always shown in full in its own tab on the right-hand panel.
+Extraction does not save automatically. Deselecting a previously saved pair
+and saving removes it from the collection. Unconfirmed edits remain in the
+segment’s draft when you switch segments during review; this is not a
+permanent save.
 
-## When to avoid it
+## Scope
 
-Disable or ignore matches when the text changes register, narrative voice, or domain.
-Lexical similarity is not enough: a retrieved phrase must make sense in the current
-chunk and in the document you are translating.
+Extracted phrases retain their link to the originating translation. Moving
+that translation to another workspace moves its phrases with it. Imported,
+linked resources can be shared through workspace links. The **Phrases** tab
+in Language Resources provides access to the collection.
 
-## Good practice
+## Style examples
 
-- Keep the source text stable when you want reliable phrase reuse.
-- Treat phrase memory as a helper, not an automatic replacement for editorial judgment.
-- Review the selected matches before relying on them in production.
+Translation examples are complete source and translation segment pairs used
+to guide a pipeline’s register and style. They are not retrieved according
+to similarity with the current segment.
 
-## Translation examples (different from phrase memory)
+For a locked segment, **Use as a style example** in the Audit tab adds the
+pair to pipeline settings, where it can be edited or removed. The limit is
+five examples. Since they form part of the static context, their length
+contributes to request size.
 
-Beyond single phrases, you can pin 2-3 whole segment translations as a style example
-for the entire pipeline: they steer register and tone on every following segment,
-rather than suggesting specific pairs like phrase memory does.
-
-To add one: lock a segment whose translation you consider a good example — usually
-after checking the Audit tab and confirming it looks right — then in that same Audit
-tab click "Use as style example", which also shows how many examples you've saved so
-far. The example shows up right away in the pipeline Settings, where you can review it,
-shorten it, or remove it. A small cap (5 examples) keeps every following translation
-from being weighed down unnecessarily.
+Use the [glossary](./glossary-and-memory) for mandatory terminology and memory
+references for wording relevant to an individual passage.

@@ -8,7 +8,7 @@
 export type GlobalArea = 'library' | 'transcriptions' | 'translations' | 'analysis';
 
 export type AppLocation =
-  | { area: 'dashboard' }
+  | { area: 'dashboard'; view?: 'search' | 'direct'; searchId?: string }
   | { area: 'workspace'; workspaceId: string }
   | { area: 'library'; itemId?: string; workspaceFilter?: string }
   | { area: 'transcriptions'; documentId?: string; workspaceFilter?: string }
@@ -22,8 +22,8 @@ export const GLOBAL_AREAS: readonly GlobalArea[] = [
   'analysis',
 ];
 
-export function dashboardLocation(): AppLocation {
-  return { area: 'dashboard' };
+export function dashboardLocation(opts?: { view?: 'search' | 'direct'; searchId?: string }): AppLocation {
+  return { area: 'dashboard', ...opts };
 }
 
 export function workspaceLocation(workspaceId: string): AppLocation {

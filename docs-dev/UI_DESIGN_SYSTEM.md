@@ -76,7 +76,33 @@ Usare per ogni comando icon-only. Include tooltip, focus e varianti canoniche.
   navigazione da tastiera (freccie/Home/End) salta i tab disattivati invece
   di poterli attivare.
 - In righe flex può richiedere `className="shrink-0"`.
-- Nessun `<button>` raw per comandi visivi dell'app.
+- Nessun `<button>` raw per comandi visivi dell'app. Unica eccezione: la
+  **disclosure row** di un accordion, dove il target è la riga intera
+  (`aria-expanded` + `aria-controls` sul `<button>`, chevron come affordance).
+  Ridurre il target alla sola chevron peggiora usabilità e hit area senza
+  guadagnare niente in accessibilità. Vale per la riga, non per le azioni
+  dentro la riga, che restano `IconButton`.
+
+### Hint
+
+La spiegazione di un campo, di un comando o di un'etichetta di stato. È un
+comando vero: al passaggio del mouse e al fuoco da tastiera mostra il testo, e
+premendolo lo tiene aperto finché non si preme di nuovo.
+
+- **La spiegazione la porta l'elemento che spiega.** Il titolo di sezione
+  (`SectionLabel` con `hint`), l'etichetta di una riga (`SettingRow`,
+  `StatRow`), il nome di un blocco: si apre passandoci sopra o premendolo. La
+  «i» separata resta solo dove non c'è un'etichetta a cui attaccarla — per
+  esempio accanto a un gruppo di comandi.
+- Senza `children` mostra la «i» consueta; con `children` è l'elemento passato
+  a portare la spiegazione (un nome che va spiegato, un'etichetta di stato).
+- Sostituisce ovunque i **pulsanti finti**: un `IconButton` senza azione, che
+  serviva solo a trasportare un `title`. Chi naviga da tastiera ci arrivava,
+  sentiva annunciare un pulsante, premeva Invio e non succedeva niente.
+- `SettingRow` e `StatRow` lo usano al posto dei loro pulsanti scritti a mano.
+- Regola: **nessun comando senza azione**. Se un elemento esiste solo per
+  mostrare un testo, o è `Hint`, oppure non è un comando e allora non deve
+  essere raggiungibile come tale.
 
 ### Tooltip
 

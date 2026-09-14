@@ -25,9 +25,11 @@ import {
  * Si alza quando cambia **cosa** c'è dentro, non quando cambia una colonna: un
  * ripristino rifiuta i backup che dichiarano più di questo numero, ed è l'unico
  * modo che una versione vecchia ha di non aprire un file che non capisce.
- * Alzata a 3 con le pagine logiche delle fonti.
+ * Versione 4: include ricerche persistite, esecuzioni e pagine dei risultati.
+ * Versione 5: include annotazioni, provider personalizzati, storico delle
+ * operazioni ed elenco degli artefatti prodotti (i file restano fuori).
  */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 5;
 
 export type BackupOptions =
   | { privacy: 'glossaOnly' }
@@ -99,6 +101,11 @@ const DANGLING_REFS: Partial<Record<BackupTable, readonly string[]>> = {
 const DEFERRED_REFS: Partial<
   Record<BackupTable, ReadonlyArray<{ column: string; target: string }>>
 > = {
+  search_runs: [{ column: 'derived_from_id', target: 'search_runs' }],
+  // Il registro cita il frammento e l'artefatto cita il lavoro che l'ha
+  // prodotto: righe che possono non esserci più, o non essere nel backup.
+  operation_logs: [{ column: 'chunk_id', target: 'translations' }],
+  artifacts: [{ column: 'job_id', target: 'jobs' }],
   translations: [{ column: 'approved_revision_id', target: 'translation_revisions' }],
   transcription_segments: [
     { column: 'approved_revision_id', target: 'transcription_revisions' },
@@ -107,10 +114,16 @@ const DEFERRED_REFS: Partial<
 };
 
 const DELETE_ORDER = [
+  'artifacts',
+  'search_pages',
+  'search_executions',
+  'search_runs',
+  'jobs',
   'source_phrase_embeddings',
   'phrase_memory',
   'derived_metrics',
   'provenance_events',
+  'operation_logs',
   'translation_revisions',
   'translations',
   'translation_origins',
@@ -131,10 +144,12 @@ const DELETE_ORDER = [
   'sources',
   'glossary_entries',
   'project_glossaries',
+  'annotations',
   'pipelines',
   'projects',
   'glossaries',
   'prompt_templates',
+  'custom_providers',
   'app_settings',
   'workspaces',
 ] as const;
@@ -192,8 +207,10 @@ export async function writeBackup(options: BackupOptions = { privacy: 'glossaOnl
 
   const tables: Record<string, Record<string, unknown>[]> = {};
   for (const table of INSERT_ORDER) {
+    if (['jobs','search_runs','search_executions','search_pages'].includes(table)) continue;
     tables[table] = await select<Record<string, unknown>>(`SELECT * FROM ${table}`);
   }
+  Object.assign(tables, await invoke('export_search_history'));
 
   const downloaded = await downloadedSources();
   const payload: BackupPayload = {
@@ -244,6 +261,8 @@ export async function restoreBackup(
     danger: true,
   });
   if (!ok) return null;
+  const activeSearches = await select<{ count: number }>("SELECT COUNT(*) AS count FROM jobs WHERE job_type='provider_search' AND status IN ('queued','running','pausing','cancelling')");
+  if ((activeSearches[0]?.count ?? 0) > 0) throw new Error(t('federation.stopBeforeRestore'));
 
   // Le colonne si chiedono prima di aprire la transazione: dentro si scrive e
   // basta, le letture passano da un'altra connessione.
@@ -254,6 +273,10 @@ export async function restoreBackup(
 
   await runInTransaction(async (run) => {
     for (const table of DELETE_ORDER) {
+      if (table === 'jobs') {
+        await run("DELETE FROM jobs WHERE job_type='provider_search'");
+        continue;
+      }
       if (table === 'app_settings') {
         // Never touch the running DB's migration marker — deleting it here
         // leaves app_settings with no schema_version row at all, which reads
@@ -267,6 +290,7 @@ export async function restoreBackup(
       const rows = payload.tables[table] ?? [];
       const allowed = columnsByTable.get(table) ?? new Set<string>();
       for (const row of rows) {
+        if (table === 'jobs' && row.job_type !== 'provider_search') continue;
         if (table === 'app_settings' && row.key === DB_MIGRATION_SETTING_KEY) {
           continue;
         }
@@ -281,7 +305,12 @@ export async function restoreBackup(
         const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
         await run(
           `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`,
-          cols.map((c) => (emptied(c) ? null : row[c])),
+          cols.map((c) => {
+            if (emptied(c)) return null;
+            if (table === 'jobs' && c === 'status' && !['completed','error','cancelled'].includes(String(row.status))) return 'paused';
+            if (table === 'jobs' && (c === 'next_attempt_at' || c === 'depends_on_job_id' || c.startsWith('owner_') || c === 'workspace_id')) return null;
+            return row[c];
+          }),
         );
       }
     }
@@ -312,12 +341,14 @@ export async function restoreBackup(
 }
 
 function validateBackup(json: unknown): BackupPayload {
+  // Private beta: unsupported formats are rejected explicitly, before any write.
+  if (json && typeof json === 'object' && 'schema_version' in json &&
+      typeof json.schema_version === 'number' && json.schema_version !== SCHEMA_VERSION) {
+    throw new Error('incompatible_schema_version');
+  }
   const parsed = backupPayloadSchema.safeParse(json);
   if (!parsed.success) {
     throw new Error('invalid_backup');
-  }
-  if (parsed.data.schema_version > SCHEMA_VERSION) {
-    throw new Error('incompatible_schema_version');
   }
   return parsed.data;
 }

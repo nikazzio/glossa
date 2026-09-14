@@ -1,79 +1,63 @@
 ---
-title: Provider support
+title: Translation providers
 ---
 
-# Provider support
+# Translation providers
 
-Glossa supports cloud providers, local inference, DeepL for the first translation pass,
-and user-defined OpenAI-compatible endpoints. The supported set in the app includes:
+Glossa integrates remote LLM services, Ollama and OpenAI-compatible endpoints.
+DeepL is available as the initial stage in DeepL Hybrid mode. This table
+describes implemented roles without ranking model quality by brand.
 
-- Gemini
-- OpenAI
-- Anthropic
-- DeepSeek
-- DeepL API
-- Ollama
-- Custom endpoints (any OpenAI-compatible API)
+| Provider | Configuration | Role |
+| --- | --- | --- |
+| Gemini | API key and model | LLM stages and assessment |
+| OpenAI | API key and model | LLM stages and assessment |
+| Anthropic | API key and model | LLM stages and assessment |
+| DeepSeek | API key and model | LLM stages and assessment |
+| DeepL | API key and translation options | Initial translation in DeepL Hybrid |
+| Ollama | Server URL and installed model | LLM stages and assessment |
+| Custom | Endpoint profile, model and credentials if required | Stages supported by the configured service |
 
-## Local versus cloud versus custom
+## Credentials
 
-| Provider type | Notes |
-|---|---|
-| Cloud | Best when you need managed APIs, remote capacity, and less machine setup |
-| DeepL | Dedicated stage for DeepL Hybrid mode; it is not used as an LLM model for refinement, judging, or coherence |
-| Ollama | Local-first option for offline or private setups on your own hardware |
-| Custom | Third-party or self-hosted OpenAI-compatible endpoints (OpenRouter, Groq, LM Studio, vLLM, corporate proxies) |
+Open **Settings → Provider**. Keys are stored in the operating system’s
+credential store when available; otherwise Glossa uses an encrypted local
+store. Keys are not included in application backups.
+
+Requests send the text and context required by a stage to its selected provider.
+Choosing Ollama for translation does not make other operations local: also
+check the evaluator, prompt refinement and any memory services. An Ollama
+server configured on another computer receives requests at that address.
 
 ## Custom endpoints
 
-Via **Settings → Custom** you can define arbitrary endpoint profiles. Each profile has:
+A Custom profile contains a name, base URL, authentication requirement and
+associated key. The name and URL must be valid before saving or testing.
+Remote endpoints require HTTPS; HTTP is accepted only for `localhost`,
+`127.0.0.1` and `::1`.
 
-- **Name** — a descriptive label for the profile
-- **Base URL** — the root of the OpenAI-compatible endpoint (e.g. `https://openrouter.ai/api/v1`)
-- **Requires API key** — toggle; when on, the key is stored in the OS keychain
-- **Test connection** — verifies the endpoint is reachable with a model of your choice
+In a stage, select Custom, choose the profile and enter the model identifier.
+OpenAI compatibility describes the protocol; it does not guarantee support
+for every option or response format. Use the connection test and a segment
+trial to verify the configuration.
 
-To save or test a profile, both its name and base URL must be complete and valid.
-Glossa does not keep an incomplete profile or one with an unrecognizable address.
+## Ollama
 
-To protect API keys, remote endpoints must use `https://`. `http://` is
-accepted only for services on the local machine: `localhost`, `127.0.0.1`, and
-`::1`. An insecure remote profile is rejected before Glossa sends credentials
-or requests.
+Install Ollama and download a model suitable for your hardware using the
+instructions for your distribution. Configure its server URL in Glossa and
+refresh the model list. The server must be running before processing; if
+your installation does not start it automatically, use `ollama serve`.
 
-In the pipeline stage, selecting the *Custom* provider shows a second dropdown to choose the profile and a free-text field for the model name.
+Performance and capabilities depend on the model, available memory and
+request length. Use reasoning options only with models that support them.
+A standard local server does not require an API key.
 
-## Provider selection guide
+## Selection and diagnosis
 
-| Need | Practical choice |
-|---|---|
-| Lowest setup friction | Cloud provider with an API key |
-| Fast first translation with controlled terminology | DeepL Hybrid with a DeepL glossary, followed by LLM refinement when needed |
-| Local-only workflow | Ollama |
-| Heavy review and reasoning | Larger hosted models or a strong local model if hardware allows it |
-| Corpus-scale consistency | Stable provider/model choice across the whole project |
+Evaluate a model on representative passages, considering accuracy, register,
+glossary compliance, latency and usage. Keep the assessment criteria fixed
+while comparing configurations. Model availability, quotas and pricing depend
+on the service; the application’s catalogue does not replace your account’s
+terms.
 
-## Model selection criteria
-
-The right model depends on the type of work and expected volume:
-
-- **High volume, technical or repetitive text** — use each provider's *flash* or *mini* models (e.g. Gemini Flash, GPT-4o Mini). They are fast, cost-effective, and accurate enough for structured content.
-- **Literary refinement or stylistically dense text** — prefer *flagship* or *reasoning* models (e.g. Gemini Pro, GPT-4o, Claude Sonnet/Opus). They handle tone, register, and nuance more reliably.
-- **Audit stage and quality judgement** — use models with strong *judge* capabilities (critical evaluation), typically flagship models with a long context window. A mini model in the audit stage tends to produce poorly calibrated judgements.
-- **Corpus consistency** — avoid changing the model mid-project if you want stylistically homogeneous output.
-- **DeepL Hybrid** — DeepL does not use an LLM model picker: you configure register, translation mode, DeepL glossary, then choose the LLM model separately for refinement and judging.
-
-## Operational differences
-
-- Cloud providers depend on API keys and network stability.
-- DeepL depends on API key status, billed character quota, and supported language pairs.
-- Ollama depends on local server availability and local hardware budget.
-- Different providers may behave differently on long contexts, formatting, and review strictness.
-
-## Practical guidance
-
-- Use the same provider/model combination consistently within a project when you want stable output.
-- In DeepL Hybrid, keep the refinement and judge model stable as well: DeepL covers the first draft, not the critical review.
-- If a provider is unavailable, verify the API key or local server before changing the rest of the pipeline.
-- Keep the provider choice documented in the project if the project is meant to be shared later.
-- If Ollama is slow or unstable, reduce chunk size or switch to a smaller local model before changing prompts.
+See [Troubleshooting](./troubleshooting) for connection, quota and response errors.

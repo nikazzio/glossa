@@ -9,6 +9,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import {
   analysisLocation,
+  dashboardLocation,
   isGlobalArea,
   libraryLocation,
   transcriptionsLocation,
@@ -96,8 +97,18 @@ export function Header() {
       ? 'translations'
       : null;
   const isGlobalAreaContext = globalArea !== null;
-  const contextLabel = globalArea ? t(GLOBAL_AREA_LABEL_KEYS[globalArea]) : workspaceLabel;
-  const showContextBreadcrumb = Boolean(currentProjectId || location.area !== 'dashboard');
+  // La Dashboard ha tre schede: dentro una scheda il nome dell'area torna
+  // visibile e riporta alla panoramica, perché «Glossa // Ricerca federata»
+  // salterebbe il passaggio che c'è davvero.
+  const dashboardSection = location.area === 'dashboard' ? location.view : undefined;
+  const contextLabel = globalArea
+    ? t(GLOBAL_AREA_LABEL_KEYS[globalArea])
+    : dashboardSection
+      ? t('dashboard.title')
+      : workspaceLabel;
+  const showContextBreadcrumb = Boolean(
+    currentProjectId || location.area !== 'dashboard' || dashboardSection,
+  );
   // Aprendo un'opera della Biblioteca, il titolo resta in vista nel
   // breadcrumb: cambiando tab nella colonna informazioni non si perde il
   // riferimento a quale libro si sta guardando.
@@ -105,7 +116,17 @@ export function Header() {
     location.area === 'library' && location.itemId && librarySourceDetail?.source.id === location.itemId
       ? librarySourceDetail.source.title
       : null;
-  const backToContextLabel = t(globalArea ? GLOBAL_AREA_BACK_KEYS[globalArea] : 'sidebar.backToWorkspace');
+  const dashboardTabLabel =
+    dashboardSection === 'search'
+      ? t('federation.title')
+      : dashboardSection === 'direct'
+        ? t('federation.single')
+        : null;
+  const backToContextLabel = globalArea
+    ? t(GLOBAL_AREA_BACK_KEYS[globalArea])
+    : dashboardSection
+      ? t('dashboard.navHint')
+      : t('sidebar.backToWorkspace');
 
   /**
    * Un segmento del breadcrumb porta **dove dice di portare**: cliccando il
@@ -117,6 +138,10 @@ export function Header() {
     if (currentProjectId) closeProject();
     if (globalArea) {
       navigate(GLOBAL_AREA_LOCATIONS[globalArea]());
+      return;
+    }
+    if (dashboardSection) {
+      navigate(dashboardLocation());
       return;
     }
     if (projectWorkspace) navigate(workspaceLocation(projectWorkspace.id));
@@ -143,14 +168,18 @@ export function Header() {
                       type="button"
                       onClick={handleContextClick}
                       disabled={isProcessing}
-                      className="flex min-w-0 items-center gap-2 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                      className="flex min-w-0 items-baseline gap-2 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
                     >
                       {!isGlobalAreaContext && projectWorkspace && (
-                        <WorkspaceIcon
-                          iconKey={projectWorkspace.iconKey}
-                          size={16}
-                          className="shrink-0 text-editorial-accent"
-                        />
+                        // Un'icona non ha linea di base: si appoggia a mano a
+                        // quella del testo, sennò la riga si legge disallineata.
+                        <span className="shrink-0 translate-y-[0.12em]">
+                          <WorkspaceIcon
+                            iconKey={projectWorkspace.iconKey}
+                            size={16}
+                            className="text-editorial-accent"
+                          />
+                        </span>
                       )}
                       <span className="truncate">{contextLabel}</span>
                     </button>
@@ -172,6 +201,22 @@ export function Header() {
                     </span>
                     <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
                       {currentProjectName}
+                    </span>
+                  </motion.span>
+                ) : dashboardTabLabel ? (
+                  <motion.span
+                    key="dashboard-section-segment"
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
+                    className="flex min-w-0 items-baseline gap-2.5"
+                  >
+                    <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                      //
+                    </span>
+                    <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {dashboardTabLabel}
                     </span>
                   </motion.span>
                 ) : librarySourceTitle ? (

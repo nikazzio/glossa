@@ -1,73 +1,54 @@
 ---
-title: Annotazioni
+title: Annotazioni e note
 ---
 
-# Annotazioni
+# Annotazioni e note
 
-Le annotazioni ti permettono di allegare note strutturate ai chunk tradotti, così
-il feedback editoriale resta vicino al testo a cui si riferisce e sopravvive al
-ricaricamento del progetto.
+Le annotazioni registrano osservazioni sul frammento e possono riferirsi a un
+passaggio preciso della traduzione. Sono salvate separatamente dal testo,
+così una nota può essere modificata o rimossa senza riscrivere la traduzione.
 
-## Tipi di annotazione
+## Tipi
 
-| Tipo | Quando usarlo |
-|---|---|
-| **Comment** | Osservazione generale, decisione editoriale da conservare |
-| **Doubt** | Dubbio interpretativo aperto, traduzione incerta ma non bloccante |
-| **Problem** | Errore reale che richiede correzione prima di bloccare il chunk |
-| **Approved** | Chunk rivisto e chiuso dopo lettura manuale e audit |
+| Tipo | Uso |
+| --- | --- |
+| Commento | Osservazione o decisione editoriale |
+| Dubbio | Interpretazione da verificare |
+| Problema | Errore che richiede un intervento |
+| Approvato | Nota che registra l’esito della revisione |
 
-## Come creare un'annotazione
+Il tipo Approvato non sostituisce il comando **Blocca traduzione**. Le
+annotazioni descrivono il lavoro di revisione; il blocco controlla la
+possibilità di rielaborare il frammento.
 
-- **Con selezione testo**: fai clic destro su qualsiasi testo nel pannello di
-  traduzione e scegli *Aggiungi annotazione*. La frase selezionata viene precompilata
-  come ancora.
-- **Da un'issue del giudice**: ogni problema nell'output di audit ha un pulsante
-  diretto per convertirlo in annotazione, con tipo, ancora e testo già compilati.
-- **Senza ancora**: apri il pannello note del chunk e aggiungi un'annotazione libera
-  non collegata a un passaggio specifico.
+## Creazione
 
-## Dove si visualizzano
+Seleziona un passaggio nella traduzione e usa **Aggiungi annotazione** dal
+menu contestuale. Il testo selezionato diventa il riferimento della nota.
+Puoi anche aggiungere una nota senza selezione dalla scheda **Note** del
+frammento, oppure convertire una segnalazione dell’audit in annotazione.
 
-Le annotazioni sono visibili nella scheda **Note** del pannello Insight, raggruppate
-per chunk. Nella vista renderizzata della traduzione, ogni annotazione con ancora
-inserisce un marcatore GFM (`[^a1]`, `[^a2]`, …) subito dopo la frase ancorata,
-con la definizione della nota in fondo al chunk. Il testo della traduzione salvato
-non viene mai modificato — i marcatori esistono solo nel rendering e scompaiono
-se l'annotazione viene eliminata.
+Le note del frammento si trovano nella barra laterale del progetto. Non sono
+le note bibliografiche dell’opera, che appartengono alla scheda della Biblioteca.
 
-## A cosa servono
+## Visualizzazione ed esportazione
 
-- Segnare formulazioni irrisolte senza perdere il contesto della revisione
-- Conservare decisioni editoriali prese durante l'audit
-- Tracciare issue del giudice che richiedono follow-up manuale
-- Ancorare un commento a una frase precisa invece che al chunk intero
+Nell’anteprima della traduzione, le annotazioni ancorate possono essere rese
+come note Markdown (`[^a1]`, `[^a2]` e così via). I marcatori vengono composti
+per la visualizzazione; non sono inseriti nel testo salvato della traduzione.
+Se il testo di riferimento cambia, verifica che la nota sia ancora associata
+al passaggio corretto.
 
-## Workflow tipico
+Le esportazioni basate sul Markdown possono includere queste annotazioni
+come note. Il formato bilingue usa una struttura propria con originale,
+traduzione e risultati dell’audit. Vedi [Importazione ed esportazione](../reference/import-export).
 
-1. Esegui un chunk di test e apri l'output del giudice.
-2. Converti in annotazione i problemi che richiedono revisione editoriale.
-3. Correggi la traduzione a mano dove necessario.
-4. Aggiungi note di tipo **Comment** per le decisioni che vuoi ricordare.
-5. Usa **Approved** solo dopo lettura manuale e audit pulito.
+## Note del documento sorgente
 
-## Note a piè di pagina nei documenti importati
+Le note a piè di pagina importate da Markdown o DOCX sono conservate con il
+progetto e visualizzate nell’originale. Marcatori e contenuto delle note sono
+esclusi dal testo inviato alla pipeline di traduzione.
 
-Se importi un DOCX o un Markdown con note a piè di pagina, Glossa le separa
-completamente dalla pipeline di traduzione: il modello riceve solo il corpo del
-testo, senza marcatori inline e senza il contenuto delle note. Le note originali
-vengono salvate con il progetto e restano visibili nell'editor sorgente. Dopo la
-traduzione dovrai gestire le note manualmente: adattarne il testo alla lingua di
-destinazione e posizionarle dove ha senso nel testo tradotto.
-
-> In una traduzione, una nota non può quasi mai occupare la stessa posizione
-> dell'originale e il suo testo va riscritto, non tradotto letteralmente.
-> Escluderle dalla pipeline lascia a te la decisione su posizione e formulazione.
-
-## Regole pratiche
-
-- Usa **Problem** per blocchi reali, **Doubt** per dubbi interpretativi aperti.
-- Usa **Approved** con parsimonia: indica che il chunk è davvero chiuso.
-- L'ancora conta: la nota deve puntare alla frase esatta che hai rivisto.
-- Preferisci note brevi e fattuali a discussioni lunghe dentro il chunk.
-- Le note sorgente estratte dal documento restano separate dalle annotazioni utente.
+Le note sorgente e le annotazioni del revisore sono dati distinti. Per includere
+una nota nella traduzione finale, rivedine il testo e inseriscila nella
+posizione appropriata: la pipeline non la traduce né la riposiziona automaticamente.

@@ -1,9 +1,9 @@
-import { Eye, FileText, Info, Languages, Network, Wand2 } from 'lucide-react';
+import { Eye, FileText, Languages, Network, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
 import { buildPromptPreviewStages, type PromptPreviewBlock, type PromptPreviewStage } from './promptPreview';
-import { IconButton } from '../ui';
+import { IconButton, Hint } from '../ui';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -29,13 +29,13 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
-            {title}
-          </span>
-          {hint && (
-            <IconButton size="xs" title={hint} tooltipSide="bottom">
-              <Info size={8} aria-hidden />
-            </IconButton>
+          {/* La spiegazione la porta il titolo del blocco. */}
+          {hint ? (
+            <Hint label={`${title} — ${hint}`} side="bottom">
+              <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{title}</span>
+            </Hint>
+          ) : (
+            <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{title}</span>
           )}
         </div>
         <span

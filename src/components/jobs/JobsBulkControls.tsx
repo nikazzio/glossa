@@ -21,7 +21,7 @@ export function JobsBulkControls() {
   const running = jobs.filter((job) => job.status === 'running');
   const resumable = jobs.filter((job) => job.status === 'paused' || isWaitingToRetry(job));
   const pausable = jobs.filter((job) => isRunning(job) || job.status === 'queued');
-  const finished = jobs.filter(isTerminal);
+  const finished = jobs.filter((job) => isTerminal(job) && job.jobType !== 'provider_search');
 
   return (
     <div className="flex items-center gap-1">

@@ -104,7 +104,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     // solo ciò che il backend può aver tolto, cioè i finiti.
     if (!done) return;
     set((state) => ({
-      jobs: state.jobs.filter((job) => !isTerminal(job) || (id !== undefined && job.id !== id)),
+      jobs: state.jobs.filter((job) => job.jobType === 'provider_search' || !isTerminal(job) || (id !== undefined && job.id !== id)),
     }));
   },
 }));

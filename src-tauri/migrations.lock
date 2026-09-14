@@ -1,0 +1,16 @@
+# Impronta delle migrazioni già distribuite.
+#
+# Una migrazione applicata non si modifica mai: chi la cambia rompe ogni
+# database che l'ha già eseguita, che al riavvio si rifiuta di aprirsi.
+# Per correggere una migrazione se ne aggiunge una nuova.
+#
+# La prova `migrations_are_frozen` confronta questo file con i file veri.
+# Aggiungendo una migrazione si aggiunge qui la sua riga; per tutto il
+# resto, se la prova fallisce il rimedio non è aggiornare questo file.
+
+# Consolidamento pre-1.0 (14 settembre 2026): 0002-0005 fuse nella baseline
+# prima di unirle a main, che non le aveva mai ricevute. Lecito solo finché
+# nessun database distribuito le ha applicate: chi le aveva in locale ricrea
+# il database e reimporta un backup. Dopo la 1.0 questa strada è chiusa.
+
+0001_baseline_2_0.sql 3c46dc75731f5c21

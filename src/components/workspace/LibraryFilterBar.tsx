@@ -120,7 +120,9 @@ export function LibraryFilterBar({
   );
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-5">
+    // Il contenuto non allarga la colonna: i nomi lunghi delle tendine
+    // facevano comparire una barra di scorrimento orizzontale nel pannello.
+    <div className="flex min-w-0 flex-col gap-6 overflow-x-hidden px-4 py-5">
       <div className="relative">
         <Search
           size={14}

@@ -1,88 +1,66 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { probeManifest } from '../services/iiifProviderService';
-import { errorMessage, logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
-/** Quante righe si controllano insieme. Poche: è un lavoro che nessuno sta
- *  aspettando, e deve restare dietro a tutto il resto. */
 const AT_ONCE = 2;
-
-/** Le verifiche già fatte in questa sessione, per indirizzo del manifesto: una
- *  riga che esce e rientra dallo schermo non si ricontrolla. */
 const known = new Map<string, boolean | null>();
-
+const pending = new Map<string, { users: number; promise: Promise<boolean | null> }>();
 let running = 0;
-const waiting: (() => void)[] = [];
+const waiting: Array<() => void> = [];
 
-/** Un posto in coda: chi arriva quando i posti sono pieni aspetta il suo turno
- *  invece di partire comunque. */
 async function takeTurn(): Promise<() => void> {
-  if (running >= AT_ONCE) {
-    await new Promise<void>((resolve) => waiting.push(resolve));
-  }
-  running += 1;
+  if (running < AT_ONCE) running += 1;
+  else await new Promise<void>((resolve) => waiting.push(resolve));
   return () => {
-    running -= 1;
-    waiting.shift()?.();
+    const next = waiting.shift();
+    if (next) next(); // Transfer the occupied slot; do not briefly expose a third one.
+    else running -= 1;
   };
 }
 
-/**
- * Se un risultato si apre davvero, chiesto solo quando la riga si guarda.
- *
- * Un catalogo elenca anche materiale che non ha una riproduzione: la scheda
- * c'è, il libro digitalizzato no. Controllarle tutte sarebbe una raffica di
- * richieste per informazioni che nessuno ha chiesto, e controllarle mai
- * significa scoprirlo aprendo una riga per volta.
- *
- * Qui si controlla **solo quando `visible` è vero**, due righe alla volta,
- * senza ritentare: quello che si sa resta per tutta la sessione.
- */
-export function useOpenableProbe(
-  providerKey: string,
-  manifestUrl: string,
-  declared: boolean | null | undefined,
-  visible: boolean,
+/** One request per provider/manifest per session, shared by mounted consumers.
+ *  Queued work with no interested rows is discarded before any network request. */
+export function useOpenableProbe(providerKey: string, manifestUrl: string,
+  declared: boolean | null | undefined, visible: boolean,
 ): { openable: boolean | null; checking: boolean } {
-  const [openable, setOpenable] = useState<boolean | null>(
-    declared ?? known.get(manifestUrl) ?? null,
-  );
-  const [checking, setChecking] = useState(false);
-  const asked = useRef(false);
-
+  const key = JSON.stringify([providerKey,manifestUrl]);
+  const [state,setState] = useState<{key:string;openable:boolean|null;checking:boolean}>({key,openable:null,checking:false});
   useEffect(() => {
-    // Il motore lo ha già letto aprendo il manifesto per completare la scheda:
-    // chiederlo di nuovo sarebbe una richiesta per una risposta che abbiamo.
-    if (declared !== undefined && declared !== null) {
-      setOpenable(declared);
+    if (declared != null || !visible || !manifestUrl || known.has(key)) {
+      setState({key,openable:declared ?? known.get(key) ?? null,checking:false});
       return;
     }
-    if (!visible || asked.current) return;
-    if (known.has(manifestUrl)) {
-      setOpenable(known.get(manifestUrl) ?? null);
-      return;
-    }
-    asked.current = true;
     let cancelled = false;
-    setChecking(true);
-    void (async () => {
-      const release = await takeTurn();
-      try {
-        const outcome = await probeManifest(providerKey, manifestUrl);
-        known.set(manifestUrl, outcome);
-        if (!cancelled) setOpenable(outcome);
-      } catch (error: unknown) {
-        // Un controllo che non riesce non dice niente sull'opera: la riga resta
-        // com'era, senza un avviso che sarebbe solo rumore.
-        logger.debug('discovery probe failed', { manifestUrl, message: errorMessage(error) });
-      } finally {
-        release();
-        if (!cancelled) setChecking(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [providerKey, manifestUrl, declared, visible]);
-
-  return { openable, checking };
+    let task = pending.get(key);
+    if (!task) {
+      const created = {users:0,promise:Promise.resolve<boolean|null>(null)};
+      created.promise = (async () => {
+        const release = await takeTurn();
+        try {
+          // Chi si è iscritto mentre aspettavamo il turno vuole comunque la
+          // risposta: si rinuncia solo se davvero non guarda più nessuno.
+          if (created.users === 0) { pending.delete(key); return null; }
+          const outcome = await probeManifest(providerKey,manifestUrl);
+          known.set(key,outcome);
+          return outcome;
+        } catch {
+          // Un guasto di rete riguarda adesso, non l'opera: se lo ricordassimo
+          // la riga non verrebbe più controllata per tutta la sessione.
+          logger.debug('discovery.probe.failed',{providerKey,code:'probe_failed'});
+          return null;
+        } finally {
+          release();
+          pending.delete(key);
+        }
+      })();
+      task = created;
+      pending.set(key,task);
+    }
+    task.users += 1;
+    setState({key,openable:null,checking:true});
+    void task.promise.then((openable) => { if (!cancelled) setState({key,openable,checking:false}); });
+    return () => { cancelled=true; task.users -= 1; };
+  }, [key,providerKey,manifestUrl,declared,visible]);
+  return state.key === key ? {openable:declared ?? state.openable,checking:declared == null && state.checking}
+    : {openable:declared ?? known.get(key) ?? null,checking:false};
 }

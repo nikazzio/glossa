@@ -1,79 +1,69 @@
 ---
-title: Provider supportati
+title: Servizi di traduzione
 ---
 
-# Provider supportati
+# Servizi di traduzione
 
-Glossa supporta provider cloud, inferenza locale, DeepL per la prima passata di traduzione
-ed endpoint OpenAI-compatibili personalizzati. L'insieme supportato nell'app include:
+Glossa integra servizi LLM remoti, Ollama ed endpoint compatibili con l’API
+OpenAI. DeepL è disponibile come prima fase della modalità DeepL Hybrid.
+La tabella descrive i ruoli implementati, senza classificare la qualità
+dei modelli per marca.
 
-- Gemini
-- OpenAI
-- Anthropic
-- DeepSeek
-- DeepL API
-- Ollama
-- Endpoint custom (qualsiasi API OpenAI-compatibile)
+| Provider | Configurazione | Ruolo |
+| --- | --- | --- |
+| Gemini | Chiave API e modello | Fasi LLM e valutazione |
+| OpenAI | Chiave API e modello | Fasi LLM e valutazione |
+| Anthropic | Chiave API e modello | Fasi LLM e valutazione |
+| DeepSeek | Chiave API e modello | Fasi LLM e valutazione |
+| DeepL | Chiave API e opzioni di traduzione | Prima traduzione in DeepL Hybrid |
+| Ollama | URL del server e modello installato | Fasi LLM e valutazione |
+| Custom | Profilo endpoint, modello e credenziali se richieste | Fasi compatibili con il servizio configurato |
 
-## Locale contro cloud contro custom
+## Configurazione delle credenziali
 
-| Tipo provider | Note |
-|---|---|
-| Cloud | Ideale quando vuoi API gestite, capacità remota e meno setup macchina |
-| DeepL | Stage dedicato alla modalità DeepL Hybrid; non viene usato come modello LLM per refine, judge o coherence |
-| Ollama | Opzione locale per workflow offline o privati sul tuo hardware |
-| Custom | Endpoint OpenAI-compatibili di terze parti o auto-ospitati (OpenRouter, Groq, LM Studio, vLLM, proxy aziendali) |
+Apri **Impostazioni → Provider**. Le chiavi sono conservate nel portachiavi
+del sistema quando disponibile; se non è accessibile, Glossa usa un archivio
+locale cifrato. Non sono incluse nei backup dell’applicazione.
 
-## Endpoint custom
+Le richieste inviano al provider selezionato i testi e il contesto necessari
+alla fase. Impostare Ollama per la traduzione non rende locali le altre
+operazioni: verifica anche valutatore, rifinitura dei prompt ed eventuali
+servizi della memoria. Un server Ollama configurato su un altro computer
+riceve le richieste a quell’indirizzo.
 
-Tramite **Impostazioni → Custom** puoi definire profili endpoint arbitrari. Ogni profilo ha:
+## Endpoint personalizzati
 
-- **Nome** — etichetta identificativa del profilo
-- **URL base** — radice dell'endpoint OpenAI-compatibile (es. `https://openrouter.ai/api/v1`)
-- **Richiede API key** — toggle; se attivo la chiave viene salvata nel portachiavi OS
-- **Test connessione** — verifica la raggiungibilità dell'endpoint con un modello di tua scelta
+Un profilo Custom contiene nome, URL base, necessità di autenticazione e
+relativa chiave. Nome e URL devono essere validi prima del salvataggio o del
+test. Gli endpoint remoti richiedono HTTPS; HTTP è ammesso solo per
+`localhost`, `127.0.0.1` e `::1`.
 
-Per salvare o testare un profilo, nome e URL base devono essere completi e validi.
-Glossa non conserva un profilo incompleto o con un indirizzo non riconoscibile.
+Nella fase seleziona Custom, scegli il profilo e inserisci l’identificativo
+del modello. La compatibilità OpenAI riguarda il protocollo: non garantisce
+che ogni endpoint supporti tutte le opzioni o gli stessi formati di risposta.
+Usa il test di connessione e una prova su un frammento per verificare la
+configurazione.
 
-Per proteggere le chiavi API, gli endpoint remoti devono usare `https://`.
-`http://` è accettato soltanto per servizi sulla macchina locale:
-`localhost`, `127.0.0.1` e `::1`. Un profilo remoto non sicuro viene rifiutato
-prima che Glossa invii credenziali o richieste.
+## Ollama
 
-Nello stage della pipeline, selezionando il provider *Custom* appare un secondo menu a tendina per scegliere il profilo e un campo di testo libero per il nome del modello.
+Installa Ollama e scarica un modello adatto al tuo hardware seguendo le
+istruzioni della sua distribuzione. In Glossa configura l’URL del server e
+aggiorna l’elenco dei modelli. Il server deve essere in esecuzione prima
+dell’elaborazione; se la tua installazione non lo avvia automaticamente,
+puoi avviarlo con `ollama serve`.
 
-## Guida alla scelta del provider
+Prestazioni e capacità dipendono dal modello, dalla memoria disponibile e
+dalla lunghezza delle richieste. Le opzioni di ragionamento vanno usate solo
+con modelli che le supportano. Non è necessaria una chiave API per il normale
+server locale.
 
-| Esigenza | Scelta pratica |
-|---|---|
-| Minimo attrito di setup | Provider cloud con API key |
-| Prima traduzione veloce e terminologia controllata | DeepL Hybrid con glossario DeepL, poi refine LLM se serve |
-| Workflow solo locale | Ollama |
-| Review intensa e reasoning | Modelli hosted più grandi o un buon modello locale se l'hardware lo regge |
-| Coerenza su corpus ampi | Scelta stabile provider/modello per tutto il progetto |
+## Scelta e diagnosi
 
-## Criteri di scelta del modello
+Valuta un modello su passaggi rappresentativi del documento, considerando
+fedeltà, registro, rispetto del glossario, latenza e consumo. Mantieni gli
+stessi criteri mentre confronti le configurazioni. Disponibilità dei modelli,
+quote e tariffe dipendono dal servizio; il catalogo dell’app non sostituisce
+le condizioni del tuo account.
 
-La scelta del modello dipende dal tipo di lavoro e dal volume:
-
-- **Volume alto, testo tecnico o ripetitivo** — usa i modelli *flash* o *mini* di ciascun provider (es. Gemini Flash, GPT-4o Mini). Sono veloci, economici e sufficientemente precisi per testi strutturati.
-- **Rifinitura letteraria o testi ad alta densità stilistica** — preferisci i modelli *flagship* o *reasoning* (es. Gemini Pro, GPT-4o, Claude Sonnet/Opus). Gestiscono meglio il tono, il registro e le sfumature.
-- **Stage Audit e giudizio qualità** — usa modelli con buone capacità di *judge* (valutazione critica), tipicamente i modelli flagship con contesto lungo. Un modello mini nell'audit tende a produrre giudizi poco calibrati.
-- **Coerenza di corpus** — non cambiare modello a metà progetto se vuoi output stilisticamente omogenei.
-- **DeepL Hybrid** — DeepL non usa un selettore modello LLM: configuri registro, modalità traduzione, glossario DeepL e poi scegli separatamente il modello LLM per refine e judge.
-
-## Differenze operative
-
-- I provider cloud dipendono da API key e stabilità di rete.
-- DeepL dipende da API key, quota caratteri e coppie linguistiche supportate.
-- Ollama dipende dalla disponibilità del server locale e dal budget hardware.
-- Provider diversi possono comportarsi in modo diverso su contesti lunghi, formattazione e rigidità della review.
-
-## Indicazioni pratiche
-
-- Usa la stessa combinazione provider/modello all'interno di un progetto se vuoi output stabili.
-- In DeepL Hybrid, tieni stabile anche il modello usato per refine e judge: DeepL copre la prima bozza, non la revisione critica.
-- Se un provider è indisponibile, verifica API key o server locale prima di cambiare il resto della pipeline.
-- Tieni documentata la scelta del provider nel progetto se quel progetto dovrà essere condiviso.
-- Se Ollama è lento o instabile, riduci il chunk size o passa a un modello locale più piccolo prima di cambiare i prompt.
+Per errori di connessione, quota o risposta, consulta
+[Risoluzione dei problemi](./troubleshooting).

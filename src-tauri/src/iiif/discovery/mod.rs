@@ -132,12 +132,13 @@ pub struct DiscoveryOutcome {
     pub has_more: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SearchPage {
     pub results: Vec<DiscoveryResult>,
     pub has_more: bool,
 }
 
-fn client() -> Result<Client, String> {
+pub(crate) fn client() -> Result<Client, String> {
     Client::builder()
         .timeout(Duration::from_secs(15))
         // Alcune biblioteche (la Vaticana fra queste) rifiutano le richieste
@@ -322,23 +323,46 @@ pub async fn probe_manifest(
     };
     let client = client()?;
     let _turn = wait_aside(Some(&gate), &manifest_url).await;
-    // Basta l'intestazione: il manifesto intero può pesare megabyte, e qui
-    // interessa solo se esiste.
+    probe_response(&client, &manifest_url).await
+}
+
+/// A bounded GET avoids providers' misleading HEAD responses. Large manifests
+/// remain unknown; checking a row must not download an unbounded catalogue.
+async fn probe_response(client: &Client, manifest_url: &str) -> Result<Option<bool>, String> {
+    const MAX_BYTES: usize = 512 * 1024;
     let outcome = client
-        .head(&manifest_url)
+        .get(manifest_url)
         .header(reqwest::header::ACCEPT, "application/json")
         .send()
         .await;
-    Ok(match outcome {
-        Ok(response) if response.status().is_success() => Some(true),
-        Ok(response) if matches!(response.status().as_u16(), 404 | 410) => {
-            log::info!("discovery probe missing url={manifest_url}");
-            Some(false)
+    let Ok(mut response) = outcome else {
+        return Ok(None);
+    };
+    if matches!(response.status().as_u16(), 404 | 410) {
+        return Ok(Some(false));
+    }
+    if !response.status().is_success()
+        || response
+            .content_length()
+            .is_some_and(|len| len > MAX_BYTES as u64)
+    {
+        return Ok(None);
+    }
+    let mut bytes = Vec::new();
+    while let Ok(Some(chunk)) = response.chunk().await {
+        if bytes.len() + chunk.len() > MAX_BYTES {
+            return Ok(None);
         }
-        // Qualunque altra risposta — un rifiuto, un'attesa scaduta, un metodo
-        // non accettato — non dice niente sull'opera.
-        Ok(_) | Err(_) => None,
-    })
+        bytes.extend_from_slice(&chunk);
+    }
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+        return Ok(None);
+    };
+    let valid = (value.get("type").and_then(|v| v.as_str()) == Some("Manifest")
+        && value.get("items").is_some_and(|v| v.is_array()))
+        || (value.get("@type").and_then(|v| v.as_str()) == Some("sc:Manifest")
+            && value.get("sequences").is_some_and(|v| v.is_array()));
+    Ok(valid.then_some(true))
 }
 
 /// Il nome con cui la chiave di Europeana sta nel portachiavi, lo stesso che

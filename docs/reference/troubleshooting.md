@@ -1,66 +1,99 @@
 ---
-title: Risoluzione problemi
+title: Risoluzione dei problemi
 ---
 
-# Risoluzione problemi
+# Risoluzione dei problemi
 
-Questa pagina copre i problemi più comuni che puoi incontrare durante setup o run di Glossa.
+Per diagnosticare un problema, identifica l’operazione, il messaggio ricevuto
+e il servizio coinvolto. Mantieni invariati gli altri parametri mentre
+verifichi una causa.
 
-## L'app non parte
+## Connessione o credenziali
 
-- Verifica che `npm install` sia terminato correttamente
-- Rilancia `npm run tauri:dev`
-- Su Linux installa i pacchetti di sistema Tauri elencati nel `README.md` principale
+Se una fase non parte, controlla in **Impostazioni → Provider** la chiave,
+il modello e, per Custom, il profilo selezionato. Un errore di autenticazione,
+un modello non disponibile e una quota esaurita richiedono interventi diversi.
+Per un endpoint remoto personalizzato è obbligatorio HTTPS; HTTP è ammesso
+solo sugli indirizzi locali supportati.
 
-## L'app si apre ma mostra un errore di connessione
+Per Ollama, verifica URL del server, stato della connessione e presenza del
+modello. `ollama list` elenca i modelli installati; `ollama serve` avvia il
+server quando non è già gestito dall’installazione. Per timeout durante
+l’inferenza, controlla dimensioni del contesto e risorse disponibili.
 
-- Il dev server usa la porta dedicata `48123`; se un altro processo la occupa già, Vite si ferma con un errore leggibile invece di aprire una finestra rotta
-- Se il messaggio riguarda una porta diversa da 48123, sovrascrivi la porta: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` (Linux/macOS) — su Windows PowerShell `$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev`, su cmd.exe `set GLOSSA_DEV_PORT=9999 && npm run tauri:dev`
-- Questo riguarda solo lo sviluppo da sorgente: l'app installata (`.deb`/`.AppImage`/`.msi`/`.dmg`) non usa un dev server e non è soggetta a questo problema
+In DeepL Hybrid, distingui gli errori della prima fase DeepL da quelli degli
+LLM successivi. Una quota caratteri esaurita o un glossario remoto incompatibile
+non si risolvono modificando il prompt del valutatore.
 
-## Un provider non parte
+## Ricerca vuota o incompleta
 
-- Controlla che l'API key esista in Settings
-- Verifica che il modello scelto sia valido per quel provider
-- Tieni fisso il provider durante il debug; non cambiare prompt e provider insieme
+Controlla che la fonte supporti la ricerca per parole e che l’identificativo
+segua l’esempio mostrato. Nella ricerca federata, verifica quante fonti hanno
+terminato e quali sono in errore. I filtri operano sui metadati ricevuti:
+dati assenti possono lasciare un risultato non verificabile.
 
-## L'audit è rumoroso o incoerente
+Una scheda senza riproduzione viene indicata come non consultabile. Un errore
+di rete non dimostra invece che l’opera sia assente. Se stai visualizzando
+risultati dalla cache, usa il comando di aggiornamento per una nuova richiesta.
 
-- Riesegui il test su un chunk rappresentativo
-- Semplifica il prompt di traduzione prima di riscrivere quello del giudice
-- Rimuovi i match deboli della phrase memory
-- Controlla se il glossario è troppo vago per essere applicato con costanza
+## Pagine mancanti e lavori in attesa
 
-## Ollama non è disponibile
+Controlla se il visore è limitato ai file locali e se la versione selezionata
+contiene la pagina. Verifica anche che il disco del deposito sia collegato.
+Per file mancanti o danneggiati, esegui la verifica del deposito e valuta
+l’eventuale recupero proposto.
 
-- Avvia il server locale con `ollama serve`
-- Verifica che il modello sia installato con `ollama list`
-- Usa un modello più piccolo o riduci il chunk size se l'inferenza locale va in timeout
+Un lavoro in attesa può rispettare un limite di rete; il dettaglio mostra
+se è previsto un nuovo tentativo. Un lavoro in pausa richiede invece una
+ripresa esplicita. Per eliminare file coinvolti in un lavoro sospeso, annulla
+prima il lavoro: la pausa conserva la possibilità di riprendere la scrittura.
 
-## DeepL Hybrid non parte
+## Importazione o risultato errato
 
-- Verifica che la API key DeepL sia configurata in Settings.
-- Controlla quota caratteri e piano DeepL: errori di quota bloccano lo stage prima del refine LLM.
-- Se un glossario DeepL non viene creato, controlla che la coppia linguistica sia supportata da DeepL per i glossari.
-- Se il refine LLM funziona ma lo stage DeepL no, debugga DeepL separatamente: non cambiare anche prompt, judge e provider LLM nello stesso tentativo.
+Un errore UTF-8 richiede di convertire il file di testo in quella codifica.
+Per DOCX e PDF controlla il testo estratto prima di tradurre. Un PDF di sole
+scansioni richiede un’operazione OCR esterna al percorso di importazione attuale.
 
-## La qualità dell'output è instabile
+Se la resa non è adeguata, prova un frammento rappresentativo e confronta
+gli output delle fasi. Controlla glossario, riferimenti selezionati e istruzioni.
+Una valutazione incoerente va verificata sul testo: non applicare correzioni
+solo perché proposte dal modello.
 
-- Torna al Test mode
-- Riduci la complessità del prompt
-- Restringi il glossario ai soli termini obbligatori
-- Rivedi i match phrase memory prima di riusarli
+## Salvataggio e backup
 
-## L'import documento sembra sbagliato
+Se la barra di stato segnala un salvataggio fallito, verifica accessibilità
+e spazio disponibile della cartella dati. Non considerare salvate le modifiche
+finché non compare lo stato di completamento.
 
-- Riapri l'anteprima di import e ispeziona il chunking
-- Preferisci l'import Markdown quando contano heading e struttura
-- Usa chunk più piccoli se passaggi lunghi vengono raggruppati troppo aggressivamente
+Un backup incompatibile o non valido viene rifiutato prima del ripristino.
+Un archivio cifrato richiede password o codice di recupero. Le immagini
+mancanti dopo un ripristino non indicano da sole un errore: i file del deposito
+sono [esclusi dal backup](./backup-and-restore).
 
-## Problemi di build o CI
+## Avvio da sorgente
 
-- `npm run lint:all` controlla i tipi TypeScript e le regole ESLint del frontend
-- `npm test` esegue la suite test frontend
-- `npm run docs:build` valida il sito VitePress
-- `cargo check --all-targets` e `cargo test` validano il backend Tauri
-- Il sito docs è statico; se si rompe, controlla prima `docs/.vitepress/config.ts`, i link markdown e gli asset pubblici
+Questa sezione riguarda lo sviluppo, non i pacchetti installati. Il server
+Vite usa la porta `48123`; un conflitto di porta impedisce l’avvio.
+Per scegliere un’altra porta:
+
+```bash
+# Linux e macOS
+GLOSSA_DEV_PORT=9999 npm run tauri:dev
+```
+
+```powershell
+# Windows PowerShell
+$env:GLOSSA_DEV_PORT=9999
+npm run tauri:dev
+```
+
+Verifica anche le dipendenze indicate nella [guida di installazione](../intro/getting-started).
+I pacchetti desktop distribuiti non usano il server di sviluppo.
+
+## Informazioni per una segnalazione
+
+Includi versione di Glossa, sistema operativo, azione eseguita, risultato
+atteso e messaggio effettivo. La console delle operazioni mostra le fasi e
+le richieste; la guida in-app espone la cartella dei log. I dettagli dei prompt
+possono contenere il testo del documento: controllali prima di condividerli.
+Per una diagnosi tecnica aggiuntiva è possibile avviare l’app con `RUST_LOG=debug`.

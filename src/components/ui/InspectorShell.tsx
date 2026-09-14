@@ -147,7 +147,7 @@ export function InspectorShell({
       )}
       {tabs.length > 0 && (
         <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
-          <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex flex-1 items-center gap-1">
+          <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex min-w-0 shrink-0 items-center gap-1">
             {tabs.map((tab) => (
               <TabButton
                 key={tab.id}
@@ -163,10 +163,12 @@ export function InspectorShell({
               />
             ))}
           </div>
-          {actions}
+          {/* Il testo accanto alle linguette non spinge fuori la colonna: si
+              tronca, e per esteso resta nel nome della linguetta. */}
+          <div className="min-w-0 flex-1 truncate text-right">{actions}</div>
         </div>
       )}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto custom-scrollbar">
         {ownsPanelSemantics && tabs.length > 0 ? (
           <div
             id={`inspector-tab-panel-${activeTab}`}

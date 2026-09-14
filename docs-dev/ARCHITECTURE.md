@@ -1,6 +1,112 @@
 # Glossa — riferimento architetturale
 
-Ultimo aggiornamento: 2026-09-10.
+Ultimo aggiornamento: 2026-09-13.
+
+## Migrazioni: una volta applicate non si toccano
+
+Il programma confronta l'impronta di ogni migrazione che ha eseguito: se il
+file cambia, il database non si apre più e l'unico rimedio è ricostruirlo. Una
+correzione a una migrazione già distribuita si scrive quindi in una migrazione
+nuova, idempotente sui database che l'hanno già superata.
+
+`src-tauri/migrations.lock` elenca nome e impronta di ogni migrazione; la prova
+`migrations_are_frozen` confronta il lucchetto con i file e fallisce sia quando
+una migrazione dichiarata è cambiata o sparita, sia quando ne compare una non
+dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
+
+## Ricerca federata e Dashboard
+
+Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, ricerca
+federata e ricerca singola/identificativo. Si scelgono dalla barra a sinistra,
+come voci sotto la Dashboard (`WorkspaceRailNext`), non da una fila di linguette
+dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
+continua a leggere. Contratto di navigazione: la variante `dashboard` di
+`AppLocation` porta `view` e `searchId`; la variante `library` porta solo
+`itemId` e `workspaceFilter` e non ha più concetto di linguetta. Navigare non
+annulla lavori.
+
+Nella ricerca federata le parole cercate stanno nella barra in cima, con avvio,
+criteri avanzati, estensione e aggiornamento; gli altri criteri e la scelta
+delle fonti sono la terza scheda della colonna di destra, insieme a esecuzione e
+storico; l'elenco delle ricerche non è duplicato da una tendina. Il pannello di
+esecuzione è una riga per fonte — segno di stato, nome, record ricevuti — che si
+apre sui dati completi, i comandi e i tentativi precedenti.
+La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
+sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
+Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
+Sezioni richiudibili con comandi condivisi; grafico a barre degli stati dei lavori,
+non una percentuale di completamento fra operazioni eterogenee.
+
+`federation/` riusa registry, adapter di ricerca, cache, cortesia e JobEngine.
+Tabelle nella baseline (`0001_baseline_2_0.sql`): `search_runs`,
+`search_executions`, `search_pages`. Una ricerca contiene criteri immutabili e provider; un job
+`provider_search` acquisisce una pagina. Creazione ricerca/esecuzioni/job atomica
+tramite `submit_transaction`; pagina e checkpoint si salvano nella stessa transazione.
+Gli eventi `jobs:updated` invalidano gli snapshot solo dopo il commit.
+Il client si sottoscrive prima di leggere; se arriva un evento durante la lettura,
+la ripete. Snapshot di ricerca e risultati coerente nella stessa transazione.
+
+Comandi: `create_search`, `list_searches`, `get_search_snapshot`,
+`list_search_results`, `relaunch_provider_search`, `export_search_history`.
+Pausa/ripresa/annullamento usano la coda esistente. Retry manuale, restart e
+continuazione creano nuove generazioni; confronto sulla generazione corrente
+impedisce doppi rilanci. I comandi generici non possono creare o ritentare questi
+job senza il dominio. Le ricerche accodate/interrotte si recuperano in pausa,
+anche se l’autoripresa degli scaricamenti è abilitata. Nessuna esecuzione ad app chiusa.
+
+Solo le parole chiave vengono inviate ai cataloghi. Gli altri criteri sono
+post-filtri espliciti sui metadati: assenza/approssimazione resta `unknown`, non
+una corrispondenza inventata. Materiale generico «text» non prova manoscritto
+o stampato. Un match deve appartenere a una singola occorrenza completa.
+Deduplicazione esclusivamente per manifesto identico; le occorrenze originali
+restano conservate. Risultati virtualizzati; ordinamento per titolo su snapshot
+integrato esplicitamente, distinto dal flusso in ordine di arrivo.
+
+Raccolte escluse dalla selezione iniziale. L’estensione crea una ricerca sorella
+con criteri identici e sole raccolte non già incluse. Nessuna importazione nel
+catalogo senza azione esplicita. Le prove di consultabilità esistenti restano
+limitate alle righe visibili.
+
+Log strutturati `domain=federation`: creazione, avvio, cache, pagina salvata,
+recupero, pausa, annullamento, errore e richiesta di rilancio, correlati da
+searchId/executionId/provider/page. Mai criteri, URL o chiavi nei nuovi log.
+Durata, conteggio e stato cache stanno nei dettagli del job; i fatti semantici
+del suo ciclo di vita sono registrati dal motore. Console generale ancora #413.
+
+Copertura di un'esecuzione (record ricevuti, pagine ulteriori) dalle colonne
+`received`/`has_more` di `search_pages`, scritte quando la pagina arriva: elencare le ricerche non riapre nessun
+payload. Gli eventi ravvicinati del motore si raggruppano in una sola lettura
+(250 ms); le pagine di storico già lette non si rileggono a ogni evento, solo
+la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed
+esito, senza criteri né indirizzi.
+
+La Biblioteca è tornata un'area unica con il solo catalogo
+(`LibraryCatalogArea`): nessuna linguetta. Le colonne
+ridimensionabili hanno larghezze minime in pixel: sotto la loro somma la
+colonna dei filtri si richiude da sola e si riapre quando lo spazio torna,
+mentre una chiusura decisa dall'utente resta. Ogni contenitore intermedio di
+un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
+barre di scorrimento orizzontali.
+
+Il quadro d'insieme della Dashboard è fatto di cinque riquadri con la stessa
+cornice (`DashboardSection`), distribuiti su due colonne: ripresa, ricerche
+recenti, attività, attenzione e lavori. Apertura e chiusura di ciascuno vivono
+in `uiStore.dashboardSections`, persistito. Il filtro workspace della Dashboard è
+stato locale del componente e restringe solo patrimonio, ripresa e attenzione;
+lavori e ricerche restano globali.
+
+Backup dati versione 5: oltre alle ricerche, include annotazioni, provider
+personalizzati, storico delle operazioni ed elenco degli artefatti. Le colonne
+che citano righe assenti (frammento di un registro, lavoro di un artefatto) si
+riscrivono a fine ripristino solo quando la riga esiste. Restano fuori i file
+del deposito e le chiavi, che vivono nel portachiavi del sistema.
+
+Backup dati versione 4: snapshot atomico delle quattro tabelle correlate,
+inclusi soltanto i job di ricerca. Il ripristino richiede ricerche ferme e mette
+in pausa quelle non terminali; azzera dipendenze e riferimenti locali dei job.
+Pulire lavori terminati non elimina i job referenziati dalle ricerche.
+Lo storico si carica 50 ricerche alla volta; risultati delle vecchie esecuzioni
+consultabili separatamente. Limiti residui elencati nella roadmap, non impliciti.
 
 Questo documento descrive struttura corrente e invarianti tecniche. Decisioni di
 prodotto in `PRODUCT_ARCHITECTURE_2_0.md`; regole visive in
