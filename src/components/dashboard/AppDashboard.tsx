@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { Activity, AlertTriangle, ArrowRight, BookOpenText, History, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -14,9 +15,18 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { dashboardLocation, libraryLocation, translationsLocation, workspaceLocation } from '../../navigation/appLocation';
 import { formatDateTime } from '../../utils';
+import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
+import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
+import { DashboardBoard, type BoardSection } from './DashboardBoard';
 import { DashboardSection } from './DashboardSection';
 import { JobsOverviewChart } from './JobsOverviewChart';
-import { EmptyState, FieldLabel, IconButton, Select, Spinner, StatBlock } from '../ui';
+import { JobsHistoryList } from '../jobs/JobsHistoryList';
+import { EmptyState, FieldLabel, IconButton, InspectorShell, Select, Spinner, StatBlock, Tooltip } from '../ui';
+
+const JOBS_COLLAPSED = 56;
+const JOBS_MIN = 320;
+const JOBS_MAX = 560;
+const OVERVIEW_MIN = 420;
 
 const recentProjects = (id: string | null) => listRecentProjectsAllWorkspaces(5, id);
 const attentionProjects = (id: string | null) => listProjectsNeedingAttention(8, id);
@@ -38,6 +48,35 @@ export function AppDashboard() {
   // Il riquadro ne mostra cinque: chiederne cinquanta a ogni evento dei lavori
   // sarebbe dieci volte il lavoro per lo stesso schermo.
   const searches = useFederatedSearch(undefined, RECENT_SEARCHES);
+  const jobsWidth = useUiStore((s) => s.dashboardJobsWidth);
+  const jobsCollapsed = useUiStore((s) => s.dashboardJobsCollapsed);
+  const setJobsWidth = useUiStore((s) => s.setDashboardJobsWidth);
+  const setJobsCollapsed = useUiStore((s) => s.setDashboardJobsCollapsed);
+  const [jobsPanel, setJobsPanel] = usePanelCallbackRef();
+  const [dragging, setDragging] = useResizeDragging();
+  const initialJobsWidth = useRef(Math.min(Math.max(jobsWidth || 380, JOBS_MIN), JOBS_MAX));
+  const persistJobsLayout = () => {
+    if (!jobsPanel) return;
+    const collapsed = jobsPanel.isCollapsed();
+    if (collapsed !== jobsCollapsed) setJobsCollapsed(collapsed);
+    if (!collapsed) {
+      const px = Math.round(jobsPanel.getSize().inPixels);
+      if (px !== jobsWidth) setJobsWidth(px);
+    }
+  };
+  const toggleJobsCollapsed = (next: boolean) => {
+    if (!jobsPanel) return;
+    if (next) jobsPanel.collapse();
+    else jobsPanel.expand();
+    setJobsCollapsed(next);
+  };
+  // Alla riapertura la colonna torna com'era: lo stato persistito è la
+  // sorgente, il riquadro fisico lo segue.
+  useEffect(() => {
+    if (!jobsPanel) return;
+    if (jobsCollapsed && !jobsPanel.isCollapsed()) jobsPanel.collapse();
+    if (!jobsCollapsed && jobsPanel.isCollapsed()) jobsPanel.expand();
+  }, [jobsCollapsed, jobsPanel]);
   const openJobs = () => { const ui = useUiStore.getState(); ui.setDrawerTab('jobs'); ui.setShowConsoleDrawer(true); };
   const openProject = async (id: string, workspaceId: string) => {
     try { await useProjectStore.getState().openProjectInWorkspace(id, workspaceId); }
@@ -55,7 +94,9 @@ export function AppDashboard() {
     { key: 'projects' as const, label: t('dashboard.stats.projects'), open: () => navigate(translationsLocation({ workspaceFilter: scope ?? undefined })) },
     { key: 'workspaces' as const, label: t('overview.workspaces'), open: scope ? () => navigate(workspaceLocation(scope)) : null },
   ];
-  return <main className="h-full min-h-0 flex-1 overflow-y-auto bg-editorial-bg px-5 py-5 custom-scrollbar md:px-6">
+  return <Group orientation="horizontal" className="flex h-full min-h-0 w-full min-w-0 flex-1" onLayoutChanged={persistJobsLayout}>
+    <Panel id="dashboard-overview" minSize={OVERVIEW_MIN} className="flex min-w-0 flex-col">
+    <main className="h-full min-h-0 overflow-y-auto bg-editorial-bg px-5 py-5 custom-scrollbar md:px-6">
     <header className="flex flex-wrap items-center justify-end gap-3">
       <div className="flex items-center gap-2">
         <Select value={scope ?? ''} onChange={(value) => setScope(value || null)} ariaLabel={t('overview.scope')}
@@ -73,9 +114,8 @@ export function AppDashboard() {
       {sectionState(counts) && <div className="col-span-full">{sectionState(counts)}</div>}
     </section>
 
-    <div className="grid items-start gap-4 xl:grid-cols-2">
-      <div className="flex min-w-0 flex-col gap-4">
-        <DashboardSection id="resume" icon={History} label={t('dashboard.resumeTitle')} hint={t('overview.resumeHint')}>
+    <DashboardBoard sections={[
+      { id: 'resume', node: <DashboardSection id="resume" icon={History} label={t('dashboard.resumeTitle')} hint={t('overview.resumeHint')}>
           {sectionState(sources) ?? (sources.data?.length ? <>
             <FieldLabel block>{t('dashboard.resumeSources')}</FieldLabel>
             {sources.data.map((source) => <DashboardRow key={source.id} title={source.title}
@@ -91,9 +131,8 @@ export function AppDashboard() {
           {(sources.data?.length ?? 0) === 0 && (projects.data?.length ?? 0) === 0 &&
             !sources.loading && !projects.loading && !sources.error && !projects.error &&
             <EmptyState icon={<BookOpenText size={18} />} message={t('dashboard.resumeEmpty')} className={EMPTY_CLASSNAME} />}
-        </DashboardSection>
-
-        <DashboardSection id="searches" icon={Search} label={t('federation.history')} hint={t('overview.searchGlobal')}>
+        </DashboardSection> },
+      { id: 'searches', node: <DashboardSection id="searches" icon={Search} label={t('federation.history')} hint={t('overview.searchGlobal')}>
           {searches.error
             ? <p role="alert" className="text-xs text-editorial-danger">{t('federation.readFailed')}</p>
             : searches.loading && !searches.runs.length
@@ -108,9 +147,8 @@ export function AppDashboard() {
                   </div>
                 </>
                 : <EmptyState icon={<Search size={18} />} message={t('federation.empty')} className={EMPTY_CLASSNAME} />}
-        </DashboardSection>
-
-        <DashboardSection id="activity" icon={Activity} label={t('dashboard.activityTitle')} hint={t('overview.activityHint')} initiallyOpen={false}>
+        </DashboardSection> },
+      { id: 'activity', node: <DashboardSection id="activity" icon={Activity} label={t('dashboard.activityTitle')} hint={t('overview.activityHint')} initiallyOpen={false}>
           {sectionState(facts)}
           {facts.data?.map((fact) => <div key={fact.id} className="border-b border-editorial-border/60 py-2 last:border-0">
             <p className="text-sm text-editorial-ink">{t('overview.events.' + fact.event_type, { defaultValue: fact.event_type })}</p>
@@ -118,28 +156,77 @@ export function AppDashboard() {
             <p className="text-xs text-editorial-muted">{formatDateTime(fact.occurred_at)}{fact.outcome ? ' · ' + t('overview.outcomes.' + fact.outcome, { defaultValue: fact.outcome }) : ''}</p>
           </div>)}
           {facts.data?.length === 0 && <EmptyState icon={<Activity size={18} />} message={t('dashboard.activityEmpty')} className={EMPTY_CLASSNAME} />}
-        </DashboardSection>
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-4">
-        <DashboardSection id="attention" icon={AlertTriangle} label={t('dashboard.attentionTitle')} hint={t('overview.attentionHint')}>
+        </DashboardSection> },
+      { id: 'attention', node: <DashboardSection id="attention" icon={AlertTriangle} label={t('dashboard.attentionTitle')} hint={t('overview.attentionHint')}>
           {sectionState(attention)}
           {attention.data?.map((project) => <DashboardRow key={project.project_id} title={project.project_name}
             detail={`${project.workspace_name} · ${t('dashboard.attentionCount', { count: project.issue_count })}`}
             label={t('overview.openProject')} onOpen={() => void openProject(project.project_id, project.workspace_id)} />)}
           {attention.data?.length === 0 && <EmptyState icon={<AlertTriangle size={18} />} message={t('dashboard.attentionEmpty')} className={EMPTY_CLASSNAME} />}
-        </DashboardSection>
-
-        <DashboardSection id="jobs" icon={Activity} label={t('dashboard.jobsTitle')} hint={t('overview.jobsHint')}>
+        </DashboardSection> },
+      { id: 'jobs', node: <DashboardSection id="jobs" icon={Activity} label={t('dashboard.jobsTitle')} hint={t('overview.jobsHint')}>
           <JobsOverviewChart jobs={jobs} />
           <div className="flex items-center justify-between gap-3 border-t border-editorial-border pt-2.5">
             <p className="text-xs text-editorial-muted">{t('overview.jobsSummary', { active: jobs.filter((job) => !isTerminal(job)).length, failed: jobs.filter((job) => job.status === 'error').length })}</p>
             <IconButton size="sm" title={t('overview.openJobs')} onClick={openJobs}><Activity size={16} /></IconButton>
           </div>
-        </DashboardSection>
-      </div>
-    </div>
-  </main>;
+        </DashboardSection> },
+    ] satisfies BoardSection[]} />
+    </main>
+    </Panel>
+
+    <Separator
+      onPointerDown={() => setDragging(true)}
+      className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
+        dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`relative h-7 w-px rounded-full transition-colors ${
+          dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
+        }`}
+      />
+    </Separator>
+
+    <Panel
+      id="dashboard-jobs"
+      collapsible
+      collapsedSize={JOBS_COLLAPSED}
+      minSize={JOBS_MIN}
+      maxSize={JOBS_MAX}
+      defaultSize={initialJobsWidth.current}
+      panelRef={setJobsPanel}
+      onResize={persistJobsLayout}
+      className={`flex min-w-0 flex-col border-l border-editorial-border bg-surface-panel ${
+        dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
+      }`}
+    >
+      <InspectorShell
+        ariaLabel={t('jobsHistory.title')}
+        tabs={[]}
+        activeTab=""
+        onTabChange={() => undefined}
+        panelIcon={<Activity size={15} />}
+        panelLabel={t('jobsHistory.title')}
+        collapsed={jobsCollapsed}
+        onCollapsedChange={toggleJobsCollapsed}
+        ownsPanelSemantics={false}
+        bodyScrolls={false}
+        collapsedContent={
+          /* Chiusa, la striscia dice comunque cosa nasconde: senza il segno
+             resterebbe un bordo muto accanto al comando di riapertura. */
+          <Tooltip label={t('jobsHistory.title')} side="left">
+            <span className="text-editorial-muted" role="img" aria-label={t('jobsHistory.title')}>
+              <Activity size={15} />
+            </span>
+          </Tooltip>
+        }
+      >
+        <JobsHistoryList />
+      </InspectorShell>
+    </Panel>
+  </Group>;
 }
 
 const EMPTY_CLASSNAME = 'flex flex-col items-center gap-2 px-3 py-6 text-center';

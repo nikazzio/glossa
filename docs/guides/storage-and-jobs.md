@@ -115,3 +115,50 @@ soggette al limite di spazio, senza la stessa scadenza temporale. In
 **Impostazioni → Dati** puoi modificare questi valori e svuotare la
 cache. La cache non aumenta il conteggio delle pagine scaricate e non entra
 nel [backup](../reference/backup-and-restore).
+
+
+## Messaggi e log di sistema
+
+Il pannello in basso raccoglie tre schede: i messaggi della traduzione in corso,
+il **log di sistema** e i lavori. Il log di sistema è disponibile in ogni area e
+mostra quanto il programma ha scritto mentre lavorava — ricerche nelle
+biblioteche, scaricamenti, deposito, salvataggi — leggendo direttamente il file
+di log dell'applicazione, compresi i file ruotati delle sessioni precedenti.
+
+I filtri restringono per area (Biblioteca, Traduzione, Lavori, Interfaccia) e
+per livello (errore, attenzione, info, debug); la ricerca lavora sul testo della
+riga. Le righe prodotte dalle librerie di terze parti — interrogazioni al
+database, portachiavi, connessioni di rete — restano nascoste finché non le si
+richiede esplicitamente: da sole costituiscono la maggior parte del file.
+
+«Svuota la vista» ripulisce la finestra e non tocca il file su disco: ricaricando,
+le righe tornano. «Carica le precedenti» prosegue la lettura all'indietro.
+Il percorso della cartella dei log resta indicato nella guida dentro
+l'applicazione, alla voce di risoluzione dei problemi.
+
+## Storico dei jobs e retention
+
+Il pannello in basso è la vista operativa: mostra i jobs non ancora conclusi e
+quelli terminati nelle ultime 24 ore, con pausa, ripresa e retry. Il comando con
+il cestino nella sua intestazione **toglie dalla vista** le righe concluse, così
+i jobs nuovi si leggono senza rumore: non cancella niente, e un job nascosto che
+riparte ricompare da solo. La pulizia vale per la sessione in corso.
+
+Lo **storico completo** sta nella colonna a destra della Panoramica: elenca tutto
+ciò che è passato dalla coda, si legge a pagine e si può stringere, allargare o
+chiudere come le altre colonne laterali. Ogni riga si apre come nel pannello in
+basso, con fase, tentativi, orari, esito ed errore.
+
+In cima alla colonna ci sono la ricerca a testo libero sul nome del job e due
+file di comandi: la prima filtra per esito (in corso, riuscito, fallito,
+interrotto), la seconda per tipo di lavoro. Più scelte possono essere attive
+insieme; lo stato di ogni riga è un simbolo con la spiegazione al passaggio del
+mouse, non una parola.
+
+Nessun job viene eliminato automaticamente e non esiste un tetto al numero di
+righe conservate. L'eliminazione è sempre esplicita: la singola riga, oppure —
+con il cestino in cima alla colonna — **tutti i conclusi che i filtri stanno
+mostrando**, quindi tutti se i filtri sono spenti e solo quelli selezionati
+altrimenti. Restano i jobs a cui è ancora appesa un'altra superficie — oggi le
+esecuzioni di una ricerca salvata, che verranno eliminate insieme alla ricerca
+stessa.

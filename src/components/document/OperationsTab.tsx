@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, Loader2, Search, TerminalSquare, Trash2, X } from 'lucide-react';
+import { Copy, ExternalLink, Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { confirm } from '../../stores/confirmStore';
 import { Tooltip } from '../ui';
+import { ConsoleChrome } from '../console/ConsoleChrome';
+import { ConsoleToolbar } from '../console/ConsoleToolbar';
 import {
   aggregateEntries,
   formatCacheHitRate,
@@ -157,31 +159,94 @@ export function OperationsTab({
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
       <ConsoleChrome
-        isProcessing={isProcessing}
-        isAuditOnly={isProcessing && runStatus !== 'running'}
-        isMemoryRunning={isMemoryRunning}
-        memoryProgress={memoryProgress}
-        processingChunkIndex={processingChunkIndex}
-        chunksCount={chunks.length}
+        title={t('document.operationsShellTitle')}
         // Il conteggio deve contare **quello che si vede**: con un frammento
         // selezionato la lista mostra solo i suoi messaggi, e annunciarne sei
         // sopra una lista vuota fa sembrare la console rotta.
         rowCount={filteredEntries.length}
         onClose={onClose}
+        status={
+          <>
+            {isProcessing && (
+              <StatusPill
+                tone="accent"
+                label={isProcessing && runStatus !== 'running' ? t('document.auditRunning') : t('document.operationsRunning')}
+                progress={processingChunkIndex >= 0 ? `${indexPad(processingChunkIndex + 1)}/${indexPad(chunks.length)}` : undefined}
+              />
+            )}
+            {isMemoryRunning && (
+              <StatusPill
+                tone="info"
+                label={t('document.memoryRunning')}
+                progress={memoryProgress ? `${indexPad(memoryProgress.processed + 1)}/${indexPad(memoryProgress.total)}` : undefined}
+              />
+            )}
+          </>
+        }
       />
 
       <ConsoleToolbar
-        scopeFilter={scopeFilter}
-        levelFilter={levelFilter}
         search={search}
-        grouped={grouped}
-        onToggleScope={toggleScope}
-        onToggleLevel={toggleLevel}
         onSearchChange={setSearch}
-        onToggleGrouped={() => setGrouped((g) => !g)}
-        showGoToChunk={isProcessing && processingChunk !== null}
-        onGoToChunk={() => processingChunk && onSelectChunk(processingChunk.id)}
-        onClear={handleClear}
+        groups={[
+          {
+            key: 'scopes',
+            onToggle: (value) => toggleScope(value as OperationLogScope),
+            options: ALL_SCOPES.map((scope) => ({
+              value: scope,
+              label: scopeLabels(t)[scope],
+              active: scopeFilter.has(scope),
+            })),
+          },
+          {
+            key: 'levels',
+            onToggle: (value) => toggleLevel(value as OperationLogLevel),
+            options: ALL_LEVELS.map((level) => ({
+              value: level,
+              label: levelLabels(t)[level],
+              active: levelFilter.has(level),
+              activeClassName: LEVEL_COLOR[level],
+            })),
+          },
+        ]}
+        inlineToggles={
+          <button
+            type="button"
+            onClick={() => setGrouped((g) => !g)}
+            aria-pressed={grouped}
+            className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
+              grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
+            }`}
+          >
+            {t('log.grouped')}
+          </button>
+        }
+        actions={
+          <>
+            {isProcessing && processingChunk !== null && (
+              <Tooltip label={t('document.operationsGoToChunk')}>
+                <button
+                  type="button"
+                  onClick={() => onSelectChunk(processingChunk.id)}
+                  aria-label={t('document.operationsGoToChunk')}
+                  className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+                >
+                  <ExternalLink size={14} />
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip label={t('document.operationsClearTooltip')} side="top">
+              <button
+                type="button"
+                onClick={handleClear}
+                aria-label={t('document.operationsClear')}
+                className="shrink-0 text-terminal-error/70 transition-colors hover:text-terminal-error focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-error"
+              >
+                <Trash2 size={14} />
+              </button>
+            </Tooltip>
+          </>
+        }
       />
 
       {filteredEntries.length === 0 ? (
@@ -212,17 +277,6 @@ export function OperationsTab({
 
 // ── Chrome: titolo + stato live + chiudi (unico header, #296 follow-up) ─────
 
-interface ConsoleChromeProps {
-  isProcessing: boolean;
-  isAuditOnly: boolean;
-  isMemoryRunning: boolean;
-  memoryProgress: { processed: number; total: number } | null;
-  processingChunkIndex: number;
-  chunksCount: number;
-  rowCount: number;
-  onClose?: () => void;
-}
-
 function StatusPill({ tone, label, progress }: { tone: 'accent' | 'info'; label: string; progress?: string }) {
   const color = tone === 'accent' ? 'text-terminal-accent bg-terminal-accent/12' : 'text-terminal-info bg-terminal-info/12';
   return (
@@ -231,185 +285,6 @@ function StatusPill({ tone, label, progress }: { tone: 'accent' | 'info'; label:
       {label}
       {progress && <span className="font-display text-xs italic normal-case tracking-normal opacity-80">{progress}</span>}
     </span>
-  );
-}
-
-function ConsoleChrome({
-  isProcessing,
-  isAuditOnly,
-  isMemoryRunning,
-  memoryProgress,
-  processingChunkIndex,
-  chunksCount,
-  rowCount,
-  onClose,
-}: ConsoleChromeProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-terminal-border bg-terminal-chrome px-4 py-2.5">
-      <div className="flex items-center gap-1.5 text-terminal-ink">
-        <TerminalSquare size={13} className="text-terminal-accent shrink-0" />
-        <span className="text-xs font-bold uppercase tracking-[0.1em]">{t('document.operationsShellTitle')}</span>
-        <span className="text-xs text-terminal-secondary">· {t('document.operationsRowCount', { count: rowCount })}</span>
-      </div>
-      {isProcessing && (
-        <StatusPill
-          tone="accent"
-          label={isAuditOnly ? t('document.auditRunning') : t('document.operationsRunning')}
-          progress={processingChunkIndex >= 0 ? `${indexPad(processingChunkIndex + 1)}/${indexPad(chunksCount)}` : undefined}
-        />
-      )}
-      {isMemoryRunning && (
-        <StatusPill
-          tone="info"
-          label={t('document.memoryRunning')}
-          progress={memoryProgress ? `${indexPad(memoryProgress.processed + 1)}/${indexPad(memoryProgress.total)}` : undefined}
-        />
-      )}
-      <div className="flex-1" />
-      {onClose && (
-        <Tooltip label={t('common.close')}>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('common.close')}
-            className="flex h-6.5 w-6.5 items-center justify-center rounded-full border border-terminal-border text-terminal-secondary transition-colors hover:border-terminal-accent/60 hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
-          >
-            <X size={12} />
-          </button>
-        </Tooltip>
-      )}
-    </div>
-  );
-}
-
-// ── Toolbar: ricerca + filtri + azioni (seconda riga della stessa testata) ──
-
-interface ConsoleToolbarProps {
-  scopeFilter: Set<OperationLogScope>;
-  levelFilter: Set<OperationLogLevel>;
-  search: string;
-  grouped: boolean;
-  onToggleScope: (scope: OperationLogScope) => void;
-  onToggleLevel: (level: OperationLogLevel) => void;
-  onSearchChange: (value: string) => void;
-  onToggleGrouped: () => void;
-  showGoToChunk: boolean;
-  onGoToChunk: () => void;
-  onClear: () => void;
-}
-
-function ConsoleToolbar({
-  scopeFilter,
-  levelFilter,
-  search,
-  grouped,
-  onToggleScope,
-  onToggleLevel,
-  onSearchChange,
-  onToggleGrouped,
-  showGoToChunk,
-  onGoToChunk,
-  onClear,
-}: ConsoleToolbarProps) {
-  const { t } = useTranslation();
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const scopeLabel = scopeLabels(t);
-  const levelLabel = levelLabels(t);
-
-  return (
-    <div className="shrink-0 border-b border-terminal-line bg-terminal-bg font-mono text-xs">
-      <div className="flex items-center gap-3 px-4 py-2">
-        <div className="flex flex-1 items-center gap-2 text-terminal-muted">
-          <Search size={11} className="shrink-0" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={t('log.search')}
-            className="w-full bg-transparent text-xs text-terminal-ink placeholder:text-terminal-dim outline-none"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={onToggleGrouped}
-          aria-pressed={grouped}
-          className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
-            grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
-          }`}
-        >
-          {t('log.grouped')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((o) => !o)}
-          aria-pressed={filtersOpen}
-          className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
-            filtersOpen ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
-          }`}
-        >
-          {filtersOpen ? '▾' : '▸'} {t('log.filters')}
-        </button>
-        <span className="h-3.5 w-px shrink-0 bg-terminal-line" aria-hidden="true" />
-        {showGoToChunk && (
-          <Tooltip label={t('document.operationsGoToChunk')}>
-            <button
-              type="button"
-              onClick={onGoToChunk}
-              aria-label={t('document.operationsGoToChunk')}
-              className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
-            >
-              <ExternalLink size={14} />
-            </button>
-          </Tooltip>
-        )}
-        <Tooltip label={t('document.operationsClearTooltip')} side="top">
-          <button
-            type="button"
-            onClick={onClear}
-            aria-label={t('document.operationsClear')}
-            className="shrink-0 text-terminal-error/70 transition-colors hover:text-terminal-error focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-error"
-          >
-            <Trash2 size={14} />
-          </button>
-        </Tooltip>
-      </div>
-
-      {filtersOpen && (
-        <div className="space-y-1 px-4 pb-2 pt-0.5">
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-            {ALL_SCOPES.map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                onClick={() => onToggleScope(scope)}
-                aria-pressed={scopeFilter.has(scope)}
-                className={`text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
-                  scopeFilter.has(scope) ? 'text-terminal-ink' : 'text-terminal-dim line-through'
-                }`}
-              >
-                {scopeLabel[scope]}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-            {ALL_LEVELS.map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => onToggleLevel(level)}
-                aria-pressed={levelFilter.has(level)}
-                className={`text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
-                  levelFilter.has(level) ? LEVEL_COLOR[level] : 'text-terminal-dim line-through'
-                }`}
-              >
-                {levelLabel[level]}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 

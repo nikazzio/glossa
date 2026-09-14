@@ -65,6 +65,43 @@ export async function listActiveJobs(): Promise<Job[]> {
   return Array.isArray(answer) ? answer : [];
 }
 
+export interface JobsPage {
+  jobs: Job[];
+  /** Quanti job soddisfano i filtri, non quanti ne sono arrivati in questa pagina. */
+  total: number;
+}
+
+/** I filtri della vista completa: valgono per l'elenco e per l'eliminazione in
+ *  blocco, così «elimina quello che vedo» elimina davvero quello che si vede. */
+export interface JobsFilter {
+  statuses?: JobStatus[];
+  jobTypes?: string[];
+  /** Parole cercate nel messaggio del lavoro. */
+  query?: string;
+}
+
+export interface JobsQuery extends JobsFilter {
+  limit: number;
+  offset: number;
+}
+
+export async function listJobs(query: JobsQuery): Promise<JobsPage> {
+  const answer = await invoke<JobsPage | null>('list_jobs', {
+    ...filterArguments(query),
+    limit: query.limit,
+    offset: query.offset,
+  });
+  return answer ?? { jobs: [], total: 0 };
+}
+
+function filterArguments(filter: JobsFilter) {
+  return {
+    statuses: filter.statuses?.length ? filter.statuses : null,
+    jobTypes: filter.jobTypes?.length ? filter.jobTypes : null,
+    query: filter.query?.trim() ? filter.query.trim() : null,
+  };
+}
+
 export async function getJob(id: string): Promise<Job | null> {
   return invoke<Job | null>('get_job', { id });
 }
@@ -100,6 +137,11 @@ export async function enqueueVaultVerification(full = false): Promise<Job> {
 
 export async function clearFinishedJobs(id?: string): Promise<number> {
   return invoke<number>('clear_finished_jobs', { id });
+}
+
+/** Elimina i lavori conclusi che soddisfano i filtri, e restituisce quanti. */
+export async function clearMatchingJobs(filter: JobsFilter): Promise<number> {
+  return invoke<number>('clear_matching_jobs', filterArguments(filter));
 }
 
 export async function retryJob(id: string, fromScratch = false): Promise<void> {

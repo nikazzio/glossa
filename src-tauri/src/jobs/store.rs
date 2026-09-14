@@ -374,18 +374,144 @@ pub fn park_as_paused(conn: &Connection, id: &str, reset_progress: bool) -> Resu
 /// Sono righe di storico che il pannello mostra per la giornata; quando
 /// diventano rumore si buttano. `id` limita la pulizia a un lavoro solo.
 pub fn forget_finished(conn: &Connection, id: Option<&str>) -> Result<usize, String> {
-    let removed = match id {
-        Some(id) => conn.execute(
-            "DELETE FROM jobs WHERE id = ?1 AND job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
-            params![id],
-        ),
-        None => conn.execute(
-            "DELETE FROM jobs WHERE job_type != 'provider_search' AND status IN ('completed', 'cancelled', 'error')",
-            [],
-        ),
+    let candidates: Vec<String> = {
+        let mut statement = conn
+            .prepare(
+                "SELECT id FROM jobs \
+                 WHERE status IN ('completed', 'cancelled', 'error') \
+                   AND (?1 IS NULL OR id = ?1)",
+            )
+            .map_err(|e| format!("Failed to prepare the jobs query: {e}"))?;
+        let rows = statement
+            .query_map(params![id], |row| row.get::<_, String>(0))
+            .map_err(|e| format!("Failed to read the jobs: {e}"))?;
+        rows.collect::<rusqlite::Result<Vec<String>>>()
+            .map_err(|e| format!("Failed to read the jobs: {e}"))?
+    };
+    delete_each(conn, &candidates)
+}
+
+/// Elimina i lavori conclusi che soddisfano i filtri della vista completa:
+/// «butta via tutto quello che sto guardando», senza andare riga per riga.
+pub fn forget_matching(conn: &Connection, filter: &JobFilter) -> Result<usize, String> {
+    let (clause, values) = filter.where_clause();
+    let sql = format!(
+        "SELECT id FROM jobs WHERE status IN ('completed', 'cancelled', 'error') AND {clause}"
+    );
+    let candidates: Vec<String> = {
+        let mut statement = conn
+            .prepare(&sql)
+            .map_err(|e| format!("Failed to prepare the jobs query: {e}"))?;
+        let rows = statement
+            .query_map(rusqlite::params_from_iter(values.iter()), |row| {
+                row.get::<_, String>(0)
+            })
+            .map_err(|e| format!("Failed to read the jobs: {e}"))?;
+        rows.collect::<rusqlite::Result<Vec<String>>>()
+            .map_err(|e| format!("Failed to read the jobs: {e}"))?
+    };
+    delete_each(conn, &candidates)
+}
+
+/// Cancella i lavori indicati uno per uno.
+///
+/// Si cancella ciò da cui non dipende nient'altro: un job di ricerca regge
+/// ancora la sua esecuzione nello storico, e la foreign key lo dice al posto
+/// nostro. Prima la regola era un elenco di tipi scritto a mano, che sarebbe
+/// rimasto indietro al primo tipo nuovo.
+fn delete_each(conn: &Connection, ids: &[String]) -> Result<usize, String> {
+    let mut removed = 0usize;
+    for id in ids {
+        match conn.execute("DELETE FROM jobs WHERE id = ?1", params![id]) {
+            Ok(count) => removed += count,
+            Err(rusqlite::Error::SqliteFailure(error, _))
+                if error.code == rusqlite::ErrorCode::ConstraintViolation => {}
+            Err(error) => return Err(format!("Failed to clear finished jobs: {error}")),
+        }
     }
-    .map_err(|error| format!("Failed to clear finished jobs: {error}"))?;
     Ok(removed)
+}
+
+/// I filtri della vista completa, tradotti in `IN (?, ?, …)` con i valori
+/// legati: un elenco vuoto significa «nessun filtro», non «nessun risultato».
+fn in_clause(column: &str, values: &[String]) -> String {
+    if values.is_empty() {
+        return "1".to_string();
+    }
+    let placeholders = vec!["?"; values.len()].join(",");
+    format!("{column} IN ({placeholders})")
+}
+
+/// I filtri della vista completa: stati, tipi di lavoro e parole cercate nel
+/// messaggio. Li condividono elenco, conteggio ed eliminazione in blocco, così
+/// «elimina quello che vedo» non può divergere da quello che si vede davvero.
+#[derive(Default)]
+pub struct JobFilter {
+    pub statuses: Vec<String>,
+    pub job_types: Vec<String>,
+    pub query: Option<String>,
+}
+
+impl JobFilter {
+    /// Condizione e valori legati, nello stesso ordine dei segnaposto.
+    fn where_clause(&self) -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
+        let mut values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        for status in &self.statuses {
+            values.push(Box::new(status.clone()));
+        }
+        for job_type in &self.job_types {
+            values.push(Box::new(job_type.clone()));
+        }
+        // Il messaggio può mancare: senza COALESCE quelle righe uscirebbero
+        // dall'elenco appena si scrive una lettera nella ricerca.
+        let text = match self.query.as_deref().map(str::trim) {
+            Some(text) if !text.is_empty() => {
+                values.push(Box::new(format!("%{text}%")));
+                "COALESCE(message, '') LIKE ?"
+            }
+            _ => "1",
+        };
+        (
+            format!(
+                "{} AND {} AND {text}",
+                in_clause("status", &self.statuses),
+                in_clause("job_type", &self.job_types),
+            ),
+            values,
+        )
+    }
+}
+
+/// Tutti i job, dal più recente, con i filtri della vista completa. `limit` e
+/// `offset` esistono perché la tabella non si svuota mai da sola: leggere
+/// l'intero storico per mostrarne venti righe è uno spreco che cresce con l'uso.
+pub fn list_all(
+    conn: &Connection,
+    filter: &JobFilter,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<JobRecord>, String> {
+    let (clause, mut values) = filter.where_clause();
+    let sql = format!(
+        "SELECT {COLUMNS} FROM jobs WHERE {clause} \
+         ORDER BY COALESCE(finished_at, created_at) DESC, created_at DESC \
+         LIMIT ? OFFSET ?"
+    );
+    values.push(Box::new(limit as i64));
+    values.push(Box::new(offset as i64));
+    query_many(conn, &sql, rusqlite::params_from_iter(values.iter()))
+}
+
+/// Quanti job esistono con quei filtri: l'elenco completo deve poter dire
+/// quanti ne restano indietro, non solo mostrare la pagina corrente.
+pub fn count_all(conn: &Connection, filter: &JobFilter) -> Result<usize, String> {
+    let (clause, values) = filter.where_clause();
+    let sql = format!("SELECT COUNT(*) FROM jobs WHERE {clause}");
+    conn.query_row(&sql, rusqlite::params_from_iter(values.iter()), |row| {
+        row.get::<_, i64>(0)
+    })
+    .map(|count| count as usize)
+    .map_err(|e| format!("Failed to count the jobs: {e}"))
 }
 
 pub fn read_setting(conn: &Connection, key: &str) -> Result<Option<String>, String> {
@@ -800,6 +926,164 @@ mod tests {
         // Anche un fallito vecchio esce: restando dentro terrebbe acceso
         // l'indicatore in barra per sempre.
         assert!(!listed.contains(&"fallito-vecchio".to_string()));
+    }
+
+    /// Un lavoro con tipo, stato e messaggio scelti: i filtri della vista
+    /// completa si provano su dati che li distinguono davvero.
+    fn described(conn: &Connection, id: &str, job_type: &str, message: &str) -> JobRecord {
+        create(
+            conn,
+            &NewJob {
+                id: id.to_string(),
+                job_type: job_type.to_string(),
+                priority: 0,
+                config: "{}".to_string(),
+                max_attempts: 3,
+                depends_on_job_id: None,
+                workspace_id: None,
+                message: Some(message.to_string()),
+            },
+        )
+        .expect("job creato")
+    }
+
+    fn ids(jobs: Vec<JobRecord>) -> Vec<String> {
+        jobs.into_iter().map(|job| job.id).collect()
+    }
+
+    #[test]
+    fn an_empty_filter_means_every_job_not_none() {
+        let conn = migrated_connection();
+        described(&conn, "a", "source_download", "Beatus");
+        described(&conn, "b", "provider_search", "Gallica · beatus");
+
+        let filter = JobFilter::default();
+        assert_eq!(list_all(&conn, &filter, 50, 0).unwrap().len(), 2);
+        assert_eq!(count_all(&conn, &filter).unwrap(), 2);
+    }
+
+    #[test]
+    fn status_type_and_words_filter_together() {
+        let conn = migrated_connection();
+        described(
+            &conn,
+            "scaricamento-finito",
+            "source_download",
+            "Beatus di Liébana",
+        );
+        described(
+            &conn,
+            "scaricamento-in-corso",
+            "source_download",
+            "Beatus di Girona",
+        );
+        described(
+            &conn,
+            "ricerca-finita",
+            "provider_search",
+            "Gallica · beatus",
+        );
+        set_status(&conn, "scaricamento-finito", JobStatus::Completed).unwrap();
+        set_status(&conn, "ricerca-finita", JobStatus::Completed).unwrap();
+
+        let filter = JobFilter {
+            statuses: vec!["completed".into()],
+            job_types: vec!["source_download".into()],
+            query: Some("liébana".into()),
+        };
+        assert_eq!(
+            ids(list_all(&conn, &filter, 50, 0).unwrap()),
+            vec!["scaricamento-finito"]
+        );
+        assert_eq!(count_all(&conn, &filter).unwrap(), 1);
+
+        // Lo stesso filtro senza il tipo prende anche la ricerca conclusa.
+        let wider = JobFilter {
+            statuses: vec!["completed".into()],
+            job_types: Vec::new(),
+            query: None,
+        };
+        assert_eq!(count_all(&conn, &wider).unwrap(), 2);
+    }
+
+    #[test]
+    fn a_job_without_a_message_survives_a_search_that_does_not_match_it() {
+        // Senza COALESCE le righe con messaggio nullo sparivano dall'elenco
+        // appena si scriveva una lettera nella ricerca: qui si controlla che
+        // spariscano perché non corrispondono, non perché non hanno testo.
+        let conn = migrated_connection();
+        queued(&conn, "senza-messaggio");
+        described(&conn, "con-messaggio", "source_download", "Beatus");
+
+        let filter = JobFilter {
+            query: Some("beatus".into()),
+            ..JobFilter::default()
+        };
+        assert_eq!(
+            ids(list_all(&conn, &filter, 50, 0).unwrap()),
+            vec!["con-messaggio"]
+        );
+        assert_eq!(count_all(&conn, &JobFilter::default()).unwrap(), 2);
+    }
+
+    #[test]
+    fn the_page_and_the_total_speak_of_the_same_set() {
+        let conn = migrated_connection();
+        for index in 0..5 {
+            described(&conn, &format!("j{index}"), "source_download", "Beatus");
+        }
+        let filter = JobFilter::default();
+
+        assert_eq!(list_all(&conn, &filter, 2, 0).unwrap().len(), 2);
+        assert_eq!(list_all(&conn, &filter, 2, 4).unwrap().len(), 1);
+        assert_eq!(count_all(&conn, &filter).unwrap(), 5);
+    }
+
+    #[test]
+    fn bulk_deletion_only_takes_the_finished_ones_the_filter_shows() {
+        let conn = migrated_connection();
+        described(&conn, "finito-che-cerco", "source_download", "Beatus");
+        described(&conn, "finito-altro", "vault_verification", "Verifica");
+        described(&conn, "in-corso", "source_download", "Beatus in corso");
+        set_status(&conn, "finito-che-cerco", JobStatus::Completed).unwrap();
+        set_status(&conn, "finito-altro", JobStatus::Completed).unwrap();
+
+        let filter = JobFilter {
+            job_types: vec!["source_download".into()],
+            ..JobFilter::default()
+        };
+        assert_eq!(forget_matching(&conn, &filter).unwrap(), 1);
+
+        let left = ids(list_all(&conn, &JobFilter::default(), 50, 0).unwrap());
+        assert!(!left.contains(&"finito-che-cerco".to_string()));
+        assert!(left.contains(&"finito-altro".to_string()));
+        assert!(left.contains(&"in-corso".to_string()));
+    }
+
+    #[test]
+    fn a_job_a_search_still_depends_on_is_not_deleted_and_is_not_counted() {
+        let conn = migrated_connection();
+        described(&conn, "ricerca", "provider_search", "Gallica · beatus");
+        described(&conn, "scaricamento", "source_download", "Beatus");
+        set_status(&conn, "ricerca", JobStatus::Completed).unwrap();
+        set_status(&conn, "scaricamento", JobStatus::Completed).unwrap();
+        conn.execute(
+            "INSERT INTO search_runs (id, criteria, providers, group_id) VALUES ('s1', '{}', '[]', 'g1')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO search_executions (id, search_id, provider_key, generation, result_set_id, page, mode) \
+             VALUES ('ricerca', 's1', 'gallica', 1, 'rs1', 1, 'first')",
+            [],
+        )
+        .unwrap();
+
+        // Due conclusi, ma solo uno se ne può andare: il conteggio dice la
+        // verità invece di annunciare una cancellazione che non è avvenuta.
+        assert_eq!(forget_matching(&conn, &JobFilter::default()).unwrap(), 1);
+        let left = ids(list_all(&conn, &JobFilter::default(), 50, 0).unwrap());
+        assert_eq!(left, vec!["ricerca".to_string()]);
     }
 
     #[test]

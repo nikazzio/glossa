@@ -6,7 +6,8 @@ import { ShellNext } from './components/layout/shell-next/ShellNext';
 import { WorkspaceShellNext } from './components/layout/shell-next/WorkspaceShellNext';
 import { AppStatusBar } from './components/layout/AppStatusBar';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
-import { motion } from 'motion/react';
+import { MotionConfig, motion } from 'motion/react';
+import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from './components/layout/motion';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -489,6 +490,9 @@ export default function App() {
       <DocTypographySync />
       <ThemeSync />
       <RunStatusAnnouncer />
+      {/* Chi ha chiesto meno animazioni al sistema le vede ferme ovunque, senza
+          che ogni componente debba ricordarsene. */}
+      <MotionConfig reducedMotion="user">
       <div className="flex h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] flex-col overflow-hidden bg-editorial-bg font-sans text-editorial-ink">
         <div className="flex-shrink-0">
           <Header />
@@ -497,30 +501,38 @@ export default function App() {
           <div className="flex flex-1 min-h-0">
             <WorkspaceShellNext>
               <div className="relative flex min-w-0 flex-1">
-                {location.area === 'translations' ? (
-                  <TranslationsArea />
-                ) : location.area === 'library' ? (
-                  <LibraryCatalogArea itemId={location.itemId} />
-                ) : location.area === 'transcriptions' ? (
-                  <TranscriptionsCatalogArea />
-                ) : location.area === 'analysis' ? (
-                  <AnalysisArea />
-                ) : location.area === 'workspace' ? (
-                  <WorkspaceOverview />
-                ) : (
-                  <DashboardArea location={location.area === 'dashboard' ? location : {area:'dashboard'}} />
-                )}
-                <PanelTransitionVeil
-                  panelKey={
+                {/* Cambiando area il contenuto entra con una dissolvenza e
+                    pochi pixel di scivolo: il salto secco fra due schermate
+                    piene non dice se si è arrivati o se qualcosa è saltato.
+                    Niente uscita animata — l'area vecchia se ne va subito,
+                    tenerne due montate insieme costa letture doppie. */}
+                <motion.div
+                  key={
                     location.area === 'workspace'
                       ? `workspace-${location.workspaceId}`
                       : location.area === 'dashboard'
                         ? 'app-dashboard'
                         : `area-${location.area}`
                   }
-                  tone="paper"
-                  variant="workspace"
-                />
+                  initial={{ opacity: 0, y: MOTION_SHIFT }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: MOTION_DURATION, ease: EASE_EDITORIAL }}
+                  className="flex min-w-0 flex-1"
+                >
+                  {location.area === 'translations' ? (
+                    <TranslationsArea />
+                  ) : location.area === 'library' ? (
+                    <LibraryCatalogArea itemId={location.itemId} />
+                  ) : location.area === 'transcriptions' ? (
+                    <TranscriptionsCatalogArea />
+                  ) : location.area === 'analysis' ? (
+                    <AnalysisArea />
+                  ) : location.area === 'workspace' ? (
+                    <WorkspaceOverview />
+                  ) : (
+                    <DashboardArea location={location.area === 'dashboard' ? location : {area:'dashboard'}} />
+                  )}
+                </motion.div>
               </div>
             </WorkspaceShellNext>
           </div>
@@ -540,6 +552,7 @@ export default function App() {
         {isShellView && <AppStatusBar />}
         <ConfirmDialog />
       </div>
+      </MotionConfig>
       <Toaster
         position="bottom-right"
         toastOptions={{

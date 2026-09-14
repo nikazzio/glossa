@@ -189,6 +189,11 @@ solo**.
 - `ownsPanelSemantics` (default vero): falso solo se `children` porta già un
   proprio wrapper `role="tabpanel"` per tab (più componenti di contenuto,
   ognuno con la sua identità — come i tab del documento).
+- `bodyScrolls` (default vero): falso quando il contenuto porta già il proprio
+  contenitore scorrevole — per esempio una barra di filtri fissa sopra un elenco
+  lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
+  scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
+  destinazioni e nessuna delle due si comporta come ci si aspetta.
 
 ### SettingRow e campi
 
@@ -300,6 +305,35 @@ se cercare per parole ha senso prima di scrivere.
 - Selezione tramite `tone="accent"`.
 - Ordine e posizione restano stabili tra viste equivalenti.
 
+### Movimento
+
+Tutti i movimenti nascono dai token in `components/layout/motion.ts`
+(`EASE_EDITORIAL`, `MOTION_DURATION`, `MOTION_SHIFT`, `LIST_STAGGER`): durate
+brevi (0,18 s), spostamenti di pochi pixel, nessun rimbalzo. Sono schermate di
+lavoro attraversate decine di volte al giorno: un movimento lungo diventa
+un'attesa, e la seconda volta è già di troppo.
+
+- Cambio area: il contenuto entra con dissolvenza e `MOTION_SHIFT` di scivolo,
+  senza uscita animata — tenere montate due aree insieme costerebbe letture
+  doppie.
+- Elenchi: `ListReveal` sfalsa le righe di `LIST_STAGGER`, e il ritardo smette
+  di crescere dopo `LIST_STAGGER_MAX`.
+- Riquadri richiudibili: altezza animata con `AnimatePresence`; chiuso, il
+  contenuto **non resta** nel DOM, altrimenti lo raggiungerebbe il tabulatore.
+- `MotionConfig reducedMotion="user"` sta alla radice dell'applicazione: nessun
+  componente deve ricordarsi di rispettare la preferenza di sistema, ma chi
+  anima l'altezza aggiunge comunque il proprio controllo, perché lì la
+  preferenza cambia il fotogramma iniziale e non solo la durata.
+
+### Riordino a trascinamento
+
+Dove l'ordine è una preferenza dell'utente (i riquadri della Panoramica), si
+trascina da una **maniglia** dedicata e non dall'intera intestazione: l'header
+porta già comandi, e un'intera superficie trascinabile trasforma ogni click
+mancato in uno spostamento. La maniglia arriva al riquadro tramite contesto
+(`sectionDragHandle`), così la sezione non sa niente del trascinamento. Ordine e
+colonna vivono in `uiStore` e sopravvivono alla chiusura.
+
 ### Shell e pannelli
 
 - Sidebar e rail usano larghezze persistite nello store UI.
@@ -367,6 +401,16 @@ Niente colori neon o valori locali.
 - Aree scroll console: `.terminal-scrollbar`.
 - Header: riga chrome con titolo, stato e chiusura; toolbar separata.
 - Drawer ridimensionabile tra 160 e 520 px, altezza persistita.
+- Testata e toolbar sono primitive condivise (`components/console/ConsoleChrome`
+  e `ConsoleToolbar`): titolo, conteggio righe visibili, stato, chiusura; sotto,
+  ricerca sempre visibile, gruppi di filtri richiudibili e comandi a destra.
+  Ogni console nuova le riusa — due console con filtri disposti diversamente
+  sono due console che si imparano due volte.
+- Filtro spento = testo barrato in `terminal-dim`, non colore assente: lo stato
+  si legge senza distinguere le tinte.
+- Il pannello in basso ha tre schede — messaggi della pipeline (solo dentro una
+  traduzione), log di sistema e lavori — e ricorda l'ultima usata. Fuori da una
+  traduzione ripiega sul log di sistema, mai su una scheda vuota.
 
 ## Controllo prima di aggiungere UI
 

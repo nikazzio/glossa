@@ -17,7 +17,9 @@ export function DashboardArea({ location }: { location: Extract<AppLocation, {ar
       {view !== 'overview' && <span className="font-display text-xl italic text-editorial-muted">{label}</span>}
     </div>
     <div className="flex min-h-0 min-w-0 flex-1">
-      {view === 'overview' ? <AppDashboard /> : view === 'search' ? <FederatedSearchArea searchId={location.searchId} /> : <div className="h-full min-w-0 flex-1 overflow-y-auto p-5 custom-scrollbar"><SourceDiscoveryPanel /></div>}
+      {view === 'overview' && <AppDashboard />}
+      {view === 'search' && <FederatedSearchArea searchId={location.searchId} />}
+      {view === 'direct' && <div className="h-full min-w-0 flex-1 overflow-y-auto p-5 custom-scrollbar"><SourceDiscoveryPanel /></div>}
     </div>
   </div>;
 }

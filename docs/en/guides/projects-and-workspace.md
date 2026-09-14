@@ -45,6 +45,11 @@ sections retain their state. The workspace filter applies to the relevant
 summaries; jobs and searches remain global. A section that cannot load its
 data displays an error rather than a zero count.
 
+The cards can be arranged as needed: the handle to the left of the title drags a
+card higher, lower or into the other column, and the chosen arrangement is
+remembered. The full job list sits to the right of the overview, in a column
+that can be resized and closed.
+
 ## Moving and archiving
 
 Moving a translation changes the workspace that supplies its resources without

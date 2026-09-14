@@ -1,3 +1,4 @@
+mod app_log;
 mod backup;
 mod db;
 mod deepl;
@@ -161,6 +162,7 @@ pub fn run() {
             federation::commands::get_search_snapshot,
             federation::commands::list_search_results,
             federation::commands::relaunch_provider_search,
+            app_log::read_app_log,
             db::backup_database_file,
             backup::write_backup,
             backup::read_backup,
@@ -199,12 +201,14 @@ pub fn run() {
             vault::commands::delete_vault_orphans,
             jobs::commands::create_job,
             jobs::commands::list_active_jobs,
+            jobs::commands::list_jobs,
             jobs::commands::get_job,
             jobs::commands::pause_job,
             jobs::commands::resume_job,
             jobs::commands::cancel_job,
             jobs::commands::retry_job,
             jobs::commands::clear_finished_jobs,
+            jobs::commands::clear_matching_jobs,
             download::enqueue_source_download,
             download::inventory::version_inventory,
             download::inventory::library_inventory,

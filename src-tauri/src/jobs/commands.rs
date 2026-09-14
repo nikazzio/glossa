@@ -59,12 +59,43 @@ pub async fn create_job(
     jobs.0.submit(&job).await
 }
 
-/// I lavori non ancora finiti. Lo storico completo non serve finché non c'è
-/// l'area Analisi (#379).
+/// I job non ancora finiti, più quelli conclusi nelle ultime 24 ore: è la
+/// vista operativa del panel. Lo storico completo sta in `list_jobs`.
 #[tauri::command]
 pub async fn list_active_jobs(jobs: State<'_, JobsState>) -> Result<Vec<JobRecord>, String> {
     let conn = jobs.0.connection()?;
     store::list_active(&conn)
+}
+
+/// Una pagina dello storico completo, con quanti job soddisfano i filtri.
+#[derive(serde::Serialize)]
+pub struct JobsPage {
+    pub jobs: Vec<JobRecord>,
+    pub total: usize,
+}
+
+/// Tutti i job, filtrati e paginati: la vista completa della Dashboard, dove si
+/// cerca un job di mesi fa e lo si elimina riga per riga. Il database non
+/// scarta mai un job da solo, quindi qui si legge a pagine.
+#[tauri::command]
+pub async fn list_jobs(
+    jobs: State<'_, JobsState>,
+    statuses: Option<Vec<String>>,
+    job_types: Option<Vec<String>>,
+    query: Option<String>,
+    limit: usize,
+    offset: usize,
+) -> Result<JobsPage, String> {
+    let filter = store::JobFilter {
+        statuses: statuses.unwrap_or_default(),
+        job_types: job_types.unwrap_or_default(),
+        query,
+    };
+    let conn = jobs.0.connection()?;
+    Ok(JobsPage {
+        jobs: store::list_all(&conn, &filter, limit, offset)?,
+        total: store::count_all(&conn, &filter)?,
+    })
 }
 
 #[tauri::command]
@@ -102,13 +133,34 @@ pub async fn retry_job(
     jobs.0.retry(&id, from_scratch.unwrap_or(false)).await
 }
 
-/// Toglie dall'elenco i lavori finiti. Senza `id` li toglie tutti.
+/// Elimina i job conclusi: senza `id` tutti quelli eliminabili, con `id` solo
+/// quello. Un job a cui è ancora appesa un'altra superficie — oggi le
+/// esecuzioni di una ricerca — resta, e a dirlo è la foreign key, non un elenco
+/// di tipi scritto a mano.
 #[tauri::command]
 pub async fn clear_finished_jobs(
     jobs: State<'_, JobsState>,
     id: Option<String>,
 ) -> Result<usize, String> {
     jobs.0.forget_finished(id.as_deref()).await
+}
+
+/// Elimina i job conclusi che soddisfano i filtri della vista completa: chi
+/// guarda solo i falliti di una ricerca può buttarli tutti senza scorrere le
+/// pagine una per una.
+#[tauri::command]
+pub async fn clear_matching_jobs(
+    jobs: State<'_, JobsState>,
+    statuses: Option<Vec<String>>,
+    job_types: Option<Vec<String>>,
+    query: Option<String>,
+) -> Result<usize, String> {
+    let filter = store::JobFilter {
+        statuses: statuses.unwrap_or_default(),
+        job_types: job_types.unwrap_or_default(),
+        query,
+    };
+    jobs.0.forget_matching(&filter).await
 }
 
 /// Mette in coda la verifica rapida del deposito, se l'impostazione è accesa.

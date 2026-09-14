@@ -46,6 +46,11 @@ Il filtro workspace si applica ai riepiloghi pertinenti; lavori e ricerche
 mantengono ambito globale. Se una sezione non può caricare i dati, mostra un
 errore anziché un conteggio pari a zero.
 
+I riquadri si dispongono come serve: la maniglia a sinistra del titolo permette
+di trascinare un riquadro più in alto, più in basso o nell’altra colonna, e la
+disposizione scelta viene ricordata. A destra della panoramica sta l’elenco
+completo dei jobs, in una colonna ridimensionabile e richiudibile.
+
 ## Spostamento e archiviazione
 
 Spostare una traduzione cambia il workspace da cui ricava le risorse, senza

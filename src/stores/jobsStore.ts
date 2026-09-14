@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { toast } from 'sonner';
 import i18next from 'i18next';
 import { logger } from '../utils/logger';
@@ -41,7 +42,16 @@ interface JobsState {
   resume: (id: string) => Promise<void>;
   cancel: (id: string) => Promise<void>;
   retry: (id: string, fromScratch?: boolean) => Promise<void>;
-  clearFinished: (id?: string) => Promise<void>;
+  /** Restituisce quante righe sono sparite davvero: zero significa che il
+   *  database le ha tenute, e chi ha chiesto la cancellazione deve dirlo. */
+  clearFinished: (id?: string) => Promise<number>;
+  /** Lavori nascosti dal pannello in basso: righe tolte dalla vista, non dal
+   *  deposito. Si eliminano davvero solo dall'elenco completo in Panoramica.
+   *  La scelta resta dopo il riavvio — una riga tolta che tornava da sola era
+   *  una pulizia che non serviva a niente — e si ripulisce da sé quando il
+   *  lavoro sparisce dal deposito o torna a girare. */
+  dismissed: string[];
+  dismiss: (ids: string[]) => void;
 }
 
 /**
@@ -66,18 +76,33 @@ function replace(jobs: Job[], changed: Job): Job[] {
   return known ? jobs.map((job) => (job.id === changed.id ? changed : job)) : [...jobs, changed];
 }
 
-export const useJobsStore = create<JobsState>((set, get) => ({
+export const useJobsStore = create<JobsState>()(persist((set, get) => ({
   jobs: [],
   isLoaded: false,
 
   load: async () => {
     const jobs = await listActiveJobs();
-    set({ jobs, isLoaded: true });
+    // La lista dei nascosti non cresce all'infinito: si tiene solo ciò che
+    // esiste ancora nel deposito, il resto sarebbe memoria di righe morte.
+    const alive = new Set(jobs.map((job) => job.id));
+    set((state) => ({
+      jobs,
+      isLoaded: true,
+      dismissed: state.dismissed.filter((id) => alive.has(id)),
+    }));
   },
 
   subscribe: async () => onJobChanged((job) => get().applyChange(job)),
 
-  applyChange: (job) => set((state) => ({ jobs: replace(state.jobs, job) })),
+  applyChange: (job) =>
+    set((state) => ({
+      jobs: replace(state.jobs, job),
+      // Un lavoro nascosto che riparte torna visibile: il pannello racconta
+      // quello che sta succedendo adesso, e quello sta succedendo adesso.
+      dismissed: isTerminal(job)
+        ? state.dismissed
+        : state.dismissed.filter((id) => id !== job.id),
+    })),
 
   // Un comando che fallisce deve dirlo. Prima l'errore spariva: il pulsante
   // sembrava non fare niente e non restava traccia da nessuna parte.
@@ -94,19 +119,27 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     await run('retry', id, () => retryJob(id, fromScratch));
   },
 
+  dismissed: [],
+  dismiss: (ids) => set((state) => ({ dismissed: [...new Set([...state.dismissed, ...ids])] })),
   clearFinished: async (id) => {
+    let removed = 0;
     const done = await run('clear', id ?? 'tutti', async () => {
-      await clearFinishedJobs(id);
+      removed = await clearFinishedJobs(id);
     });
-    // L'elenco locale si allinea senza aspettare un evento, perché la rimozione
-    // non ne produce — ma **solo se il comando è riuscito**: togliere righe che
-    // nel database ci sono ancora le farebbe ricomparire al riavvio. Si toglie
-    // solo ciò che il backend può aver tolto, cioè i finiti.
-    if (!done) return;
-    set((state) => ({
-      jobs: state.jobs.filter((job) => job.jobType === 'provider_search' || !isTerminal(job) || (id !== undefined && job.id !== id)),
-    }));
+    if (!done) return 0;
+    // L'elenco si rilegge dal database invece di indovinare cosa è sparito: una
+    // riga che il database ha tenuto — oggi il lavoro di una ricerca, che muore
+    // con la sua ricerca — spariva a schermo e tornava al primo aggiornamento.
+    await get().load();
+    return removed;
   },
+}), {
+  // Solo le righe tolte dalla vista: i lavori arrivano dal deposito a ogni
+  // avvio, salvarne una copia qui vorrebbe dire mostrarne di vecchi finché
+  // la prima lettura non arriva.
+  name: 'glossa-jobs-panel',
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({ dismissed: state.dismissed }),
 }));
 
 /** In corso davvero: sta girando, o si sta fermando. */

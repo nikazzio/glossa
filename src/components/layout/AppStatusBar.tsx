@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, ListChecks, MinusCircle, Loader2, NotebookText, PanelBottom, Search, ShieldAlert, Terminal, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ListChecks, MinusCircle, Loader2, NotebookText, PanelBottom, ScrollText, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
@@ -11,6 +11,7 @@ import { useDiscoverySearchStore } from '../../stores/discoverySearchStore';
 import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
+import { SystemLogTab } from '../console/SystemLogTab';
 import { JobsIndicator } from '../jobs/JobsIndicator';
 import { TerminalIconButton } from '../jobs/TerminalIconButton';
 import { JobsPanel } from '../jobs/JobsPanel';
@@ -133,9 +134,9 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
   const setHeight = useUiStore((s) => s.setConsoleDrawerHeight);
   const drawerTab = useUiStore((s) => s.drawerTab);
   const setDrawerTab = useUiStore((s) => s.setDrawerTab);
-  // Fuori da un progetto i messaggi della pipeline non esistono: resta la
-  // scheda dei lavori, che invece vale ovunque.
-  const activeTab = showConsoleTab ? drawerTab : 'jobs';
+  // Fuori da un progetto i messaggi della pipeline non esistono: le altre due
+  // schede valgono ovunque.
+  const activeTab = showConsoleTab || drawerTab !== 'console' ? drawerTab : 'system';
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
@@ -187,6 +188,15 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
           </DrawerTab>
         )}
         <DrawerTab
+          label={t('systemLog.tab')}
+          id="drawer-tab-system"
+          controls="system-drawer-panel"
+          selected={activeTab === 'system'}
+          onSelect={() => setDrawerTab('system')}
+        >
+          <ScrollText size={12} />
+        </DrawerTab>
+        <DrawerTab
           label={t('jobs.tab')}
           id="drawer-tab-jobs"
           controls="jobs-drawer-panel"
@@ -205,7 +215,7 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
         </TerminalIconButton>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === 'console' ? (
+        {activeTab === 'console' && (
           <OperationsTab
             panelId="console-drawer-panel"
             labelledBy="console-drawer-label"
@@ -213,9 +223,11 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
             chunks={chunks}
             onSelectChunk={setSelectedChunkId}
           />
-        ) : (
-          <JobsPanel panelId="jobs-drawer-panel" labelledBy="drawer-tab-jobs" />
         )}
+        {activeTab === 'system' && (
+          <SystemLogTab panelId="system-drawer-panel" labelledBy="drawer-tab-system" />
+        )}
+        {activeTab === 'jobs' && <JobsPanel panelId="jobs-drawer-panel" labelledBy="drawer-tab-jobs" />}
       </div>
     </div>
   );
@@ -425,16 +437,13 @@ export function AppStatusBar() {
   const data = useStatusBarData();
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
-  const drawerTab = useUiStore((state) => state.drawerTab);
   const setDrawerTab = useUiStore((state) => state.setDrawerTab);
 
   if (data.kind === 'idle') return null;
 
   return (
     <div className="relative shrink-0">
-      {showConsoleDrawer && (data.kind === 'project' || drawerTab === 'jobs') && (
-        <BottomDrawer showConsoleTab={data.kind === 'project'} />
-      )}
+      {showConsoleDrawer && <BottomDrawer showConsoleTab={data.kind === 'project'} />}
       {/* Zone stabili: contesto, stato, comandi globali. */}
       <div
         role="status"
@@ -462,7 +471,8 @@ export function AppStatusBar() {
             tone={showConsoleDrawer ? 'accent' : 'default'}
             onClick={() => {
               // Aprendolo da qui si va sui messaggi dove esistono — dentro una
-              // traduzione — e sui lavori altrove, che è l'unica cosa che c'è.
+              // traduzione — e sui lavori altrove, come prima della scheda
+              // Sistema, che resta raggiungibile con un click.
               if (!showConsoleDrawer) setDrawerTab(data.kind === 'project' ? 'console' : 'jobs');
               setShowConsoleDrawer(!showConsoleDrawer);
             }}

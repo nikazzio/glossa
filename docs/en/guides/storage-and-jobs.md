@@ -109,3 +109,47 @@ subject to the size limit without the same time-based expiry. Change these
 values or clear the cache under **Settings → Data**. Cached data does not
 increase downloaded-page counts and is excluded from
 [backups](../reference/backup-and-restore).
+
+
+## Messages and system log
+
+The bottom panel holds three tabs: messages from the running translation, the
+**system log**, and jobs. The system log is available in every area and shows
+what the program wrote while working — library searches, downloads, storage,
+saves — reading the application log file directly, including the rotated files
+from previous sessions.
+
+Filters narrow by area (Library, Translation, Jobs, Interface) and by level
+(error, warning, info, debug); the search box works on the text of each line.
+Lines produced by third-party libraries — database queries, keyring, network
+connections — stay hidden until explicitly requested: on their own they are most
+of the file.
+
+"Clear the view" empties the window without touching the file on disk: reloading
+brings the lines back. "Load earlier messages" continues reading backwards. The
+log folder path is shown in the in-app guide, under troubleshooting.
+
+## Job history and retention
+
+The bottom panel is the operational view: it shows jobs that have not finished
+yet plus those completed in the last 24 hours, with pause, resume and retry. The
+bin command in its header **takes the finished rows out of the view**, so new
+jobs read clearly: it deletes nothing, and a hidden job that starts again comes
+back on its own. The cleanup lasts for the current session.
+
+The **full history** lives in the right-hand column of the Overview: it lists
+everything that went through the queue, reads in pages and can be narrowed,
+widened or closed like the other side columns. Every row expands like in the
+bottom panel, with phase, attempts, times, outcome and error.
+
+At the top of the column there is a free-text search over the job name and two
+rows of commands: the first filters by outcome (running, succeeded, failed,
+interrupted), the second by kind of work. Several choices can be active at once;
+the state of each row is a symbol explained on hover, not a word.
+
+No job is ever deleted automatically and there is no cap on the number of rows
+kept. Deletion is always explicit: a single row, or — with the bin at the top of
+the column — **every finished job the filters are showing**, so all of them when
+the filters are off and only the selected ones otherwise. Jobs another surface
+still depends on stay — today the executions of a stored search, which will be
+removed together with the search itself.

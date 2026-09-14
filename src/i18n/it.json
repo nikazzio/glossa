@@ -1552,7 +1552,12 @@
     "resumeProjects": "Traduzioni",
     "section": {
       "collapse": "Chiudi {{section}}",
-      "expand": "Apri {{section}}"
+      "expand": "Apri {{section}}",
+      "move": "Sposta la sezione"
+    },
+    "board": {
+      "left": "Colonna di sinistra",
+      "right": "Colonna di destra"
     }
   },
   "files": {
@@ -2177,6 +2182,13 @@
             ]
           },
           {
+            "title": "Leggere i messaggi del programma",
+            "paragraphs": [
+              "Il pannello in basso ha tre schede: i messaggi della traduzione in corso, il log di sistema e i lavori. Il log di sistema si apre ovunque e mostra quello che il programma ha scritto mentre lavorava: ricerche, scaricamenti, deposito, salvataggi.",
+              "I filtri restringono per area e per livello, e la ricerca funziona sul testo della riga. Le righe delle librerie di terze parti restano nascoste finché non le chiedi: da sole sono la maggior parte del file. Svuota la vista ripulisce la finestra senza toccare il file su disco, e ricaricando le righe tornano."
+            ]
+          },
+          {
             "title": "Raccogliere informazioni",
             "paragraphs": [
               "Per segnalare un problema, annota versione, sistema operativo, azione eseguita e messaggio ricevuto. La console nella barra di stato permette di consultare le operazioni.",
@@ -2205,7 +2217,8 @@
             "paragraphs": [
               "La Dashboard mostra attività recenti, elementi da controllare e lavori in corso. Le altre due schede permettono di cercare fonti in più biblioteche oppure su una sola fonte, anche per identificativo.",
               "La Biblioteca contiene le opere che hai aggiunto al catalogo. Traduzioni mostra i progetti di tutti i workspace. Aprendo un workspace trovi i progetti e le risorse che gli appartengono.",
-              "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere."
+              "Passa il puntatore sui comandi a icona, oppure raggiungili con la tastiera, per leggerne la funzione. Le barre laterali si possono ridimensionare o richiudere.",
+              "I riquadri della Dashboard si spostano: prendi la maniglia a sinistra del titolo e trascina il riquadro più in alto, più in basso o nell'altra colonna. La disposizione resta come l'hai lasciata."
             ]
           },
           {
@@ -2348,6 +2361,15 @@
               "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
               "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
               "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori."
+            ]
+          },
+          {
+            "title": "Rivedere ed eliminare i jobs passati",
+            "paragraphs": [
+              "Il pannello in basso mostra i jobs in corso, quelli in attesa e quelli conclusi di recente: è la vista di adesso. Il comando con il cestino nella sua intestazione toglie dalla vista le righe concluse, così i nuovi jobs si leggono senza rumore; non cancella niente.",
+              "L'elenco completo sta nella colonna a destra della Panoramica, e si può stringere, allargare o chiudere con il comando in alto a sinistra della colonna. Ogni riga si apre come nel pannello in basso, con fase, tentativi, orari ed errore.",
+              "In cima alla colonna ci sono la ricerca a testo libero e due file di comandi: la prima sceglie come è andato il job (in corso, riuscito, fallito, interrotto), la seconda il tipo di lavoro. Si possono accendere più scelte insieme.",
+              "Il cestino in cima alla colonna elimina i jobs conclusi che i filtri stanno mostrando: con i filtri spenti sono tutti, con un filtro acceso solo quelli. Nessun job viene eliminato da solo. Fanno eccezione i jobs di una ricerca, che restano finché resta la ricerca a cui appartengono, altrimenti il suo storico perderebbe pezzi."
             ]
           },
           {
@@ -2771,7 +2793,7 @@
     "discoveryMore": "altri disponibili",
     "discoveryPages_one": "{{count}} pagina",
     "discoveryPages_other": "{{count}} pagine",
-    "panelToggle": "Messaggi e lavori",
+    "panelToggle": "Log e jobs",
     "workspaceFilter": "· filtro: {{name}}",
     "network": {
       "label": "Rete verso le biblioteche",
@@ -2797,8 +2819,8 @@
     "transcription": "Trascrizione"
   },
   "console": {
-    "toggle": "Console log",
-    "title": "Console"
+    "toggle": "Log traduzione",
+    "title": "Log traduzione"
   },
   "jobs": {
     "status": {
@@ -2811,8 +2833,8 @@
       "completed": "Completata",
       "error": "Con errori"
     },
-    "tab": "Lavori",
-    "drawerTabs": "Messaggi e lavori",
+    "tab": "Jobs",
+    "drawerTabs": "Log e jobs",
     "openPanel": "Lavori in background",
     "activeCount_one": "{{count}} lavoro",
     "activeCount_other": "{{count}} lavori",
@@ -2861,7 +2883,6 @@
     "waitingForLibrary": "in attesa · limiti della biblioteca",
     "commandFailed": "Comando non riuscito",
     "dismiss": "Togli dall'elenco",
-    "clearFinished": "Svuota i terminati ({{count}})",
     "short": {
       "provider_search": "Ricerca biblioteca",
       "source_download": "pagine",
@@ -2925,9 +2946,60 @@
     },
     "retryNow": "Riprova adesso",
     "retryingIn": "riprovo da solo fra {{eta}}",
-    "retrying": "riprovo da solo"
+    "retrying": "riprovo da solo",
+    "hideFinished": "Togli dal pannello i {{count}} conclusi"
   },
   "models": {
     "provider": "Servizio del modello"
+  },
+  "systemLog": {
+    "tab": "Sistema",
+    "title": "Log di sistema",
+    "reload": "Ricarica dal file",
+    "clearView": "Svuota la vista",
+    "loadMore": "Carica le precedenti",
+    "loading": "Lettura in corso",
+    "empty": "Nessun messaggio con questi filtri.",
+    "readFailed": "Non è stato possibile leggere il file dei messaggi.",
+    "area": {
+      "library": "Biblioteca",
+      "translation": "Traduzione",
+      "jobs": "Lavori",
+      "interface": "Interfaccia",
+      "dependencies": "Librerie"
+    },
+    "level": {
+      "ERROR": "errore",
+      "WARN": "attenzione",
+      "INFO": "info",
+      "DEBUG": "debug"
+    }
+  },
+  "jobsHistory": {
+    "title": "Storico jobs",
+    "searchPlaceholder": "Cerca fra i lavori",
+    "reload": "Rileggi l'elenco",
+    "outcome": {
+      "active": "In corso o in attesa",
+      "completed": "Riusciti",
+      "error": "Falliti",
+      "cancelled": "Interrotti"
+    },
+    "clearFilters": "Togli i filtri",
+    "count": "{{shown}} di {{total}}",
+    "delete": "Elimina",
+    "clearShown": "Elimina i conclusi fra questi",
+    "clearAll": "Elimina tutti i conclusi",
+    "deleteConfirmTitle": "Eliminare questo job?",
+    "deleteConfirmMessage": "La riga sparisce dallo storico. I dati prodotti dal job restano dove sono.",
+    "clearShownConfirmTitle": "Eliminare i job conclusi che stai vedendo?",
+    "clearShownConfirmMessage": "Spariscono solo i job conclusi che soddisfano i filtri attivi. Restano quelli ancora in corso e quelli a cui è appesa una ricerca nello storico.",
+    "loading": "Lettura dello storico",
+    "loadMore": "Carica altri",
+    "empty": "Nessun job con questi filtri.",
+    "failed": "Non è stato possibile leggere lo storico dei jobs.",
+    "deleteBlocked": "Non è stato eliminato niente: un job che appartiene a una ricerca resta finché resta la ricerca.",
+    "cleared_one": "Eliminato {{count}} job.",
+    "cleared_other": "Eliminati {{count}} jobs."
   }
 }
