@@ -234,8 +234,13 @@ export const SOURCE_FIELDS = [
 
 export type SourceField = (typeof SOURCE_FIELDS)[number];
 
+/** Con cosa si uniscono i valori di un campo che ne porta più d'uno: si legge
+ *  così e si corregge così, perché due forme diverse per lo stesso campo
+ *  costringerebbero a indovinare quale usare quando si scrive. */
+export const MULTI_VALUE_SEPARATOR = ' · ';
+
 /** I campi che, lato biblioteca, arrivano come più valori insieme (uniti da
- *  ` · ` in visualizzazione e nella correzione a mano). */
+ *  `MULTI_VALUE_SEPARATOR` in visualizzazione e nella correzione a mano). */
 export const MULTI_VALUE_SOURCE_FIELDS: ReadonlySet<SourceField> = new Set([
   'contributors', 'rights', 'subjects', 'provenance', 'genre_form', 'coverage', 'related_works',
 ]);

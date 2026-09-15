@@ -386,6 +386,129 @@ pub async fn free_version_size(
     })
 }
 
+/// Una misura di **una pagina** presente sul computer.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageCopy {
+    pub size_tag: String,
+    pub bytes: u64,
+    /// Vera per una copia ricavata in locale, falsa per una scaricata.
+    pub derived: bool,
+}
+
+/// Che cosa si ha di questa pagina, misura per misura.
+///
+/// Serve al visore: chi legge deve poter vedere cosa ha già prima di chiedere
+/// la pagina più grande, e poter buttare quello che non gli serve. Si guardano
+/// i file, non il database: il deposito è la verità, e una riga che dice il
+/// contrario sarebbe una riga vecchia.
+#[tauri::command]
+pub fn page_local_copies(
+    app: tauri::AppHandle,
+    provider_key: String,
+    version_id: String,
+    page_index: u32,
+) -> Result<Vec<PageCopy>, String> {
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let file = super::layout::page_file_name(page_index);
+    let mut copies = Vec::new();
+    for (folder, derived) in [
+        (
+            root.join(super::layout::pages_dir(&provider_key, &version_id)?),
+            false,
+        ),
+        (
+            root.join(super::layout::derived_version_dir(
+                &provider_key,
+                &version_id,
+            )?),
+            true,
+        ),
+    ] {
+        let Ok(entries) = std::fs::read_dir(&folder) else {
+            continue;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            if !entry.path().is_dir() {
+                continue;
+            }
+            let page = entry.path().join(&file);
+            let Ok(metadata) = std::fs::metadata(&page) else {
+                continue;
+            };
+            copies.push(PageCopy {
+                size_tag: entry.file_name().to_string_lossy().to_string(),
+                bytes: metadata.len(),
+                derived,
+            });
+        }
+    }
+    // Dalla più leggera alla più pesante: è l'ordine in cui si legge «cosa ho»,
+    // e mette in fondo quella che occupa di più, cioè quella che si butta.
+    copies.sort_by_key(|copy| copy.bytes);
+    Ok(copies)
+}
+
+/// Toglie dal computer una pagina: una misura sola, o tutte quelle che ha.
+///
+/// Non tocca il database: **escludere** una pagina — cioè impedirle di tornare
+/// al prossimo scaricamento — è un'altra cosa, e la decide chi chiama.
+#[tauri::command]
+pub async fn forget_page(
+    app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
+    provider_key: String,
+    version_id: String,
+    page_index: u32,
+    size_tag: Option<String>,
+) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let file = super::layout::page_file_name(page_index);
+    let wanted = size_tag.as_deref();
+    let mut freed = FreedSpace {
+        deleted_files: 0,
+        freed_bytes: 0,
+    };
+    for folder in [
+        root.join(super::layout::pages_dir(&provider_key, &version_id)?),
+        root.join(super::layout::derived_version_dir(
+            &provider_key,
+            &version_id,
+        )?),
+    ] {
+        let Ok(entries) = std::fs::read_dir(&folder) else {
+            continue;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            if !entry.path().is_dir() {
+                continue;
+            }
+            let size = entry.file_name().to_string_lossy().to_string();
+            if wanted.is_some_and(|tag| tag != size) {
+                continue;
+            }
+            let page = entry.path().join(&file);
+            let Ok(metadata) = std::fs::metadata(&page) else {
+                continue;
+            };
+            let bytes = metadata.len();
+            std::fs::remove_file(&page)
+                .map_err(|e| format!("Failed to remove {}: {e}", page.display()))?;
+            freed.deleted_files += 1;
+            freed.freed_bytes += bytes;
+        }
+    }
+    Ok(freed)
+}
+
 /// Cancella i file che nessuna riga reclama.
 ///
 /// **Riguarda il deposito adesso, non il conto dell'ultima verifica.** Fra la

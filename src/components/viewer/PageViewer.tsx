@@ -1,5 +1,12 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- La superficie deep-zoom è intenzionalmente un widget ARIA application: riceve focus e gestisce le frecce, mentre i controlli figli e la tela OSD conservano la propria tastiera. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,6 +37,7 @@ import {
   buildsImagesOnDemand,
   getLastViewedPage,
   infoJsonUrl,
+  MAX_SIZE,
   pageSourceUrl,
   setLastViewedPage,
   wholePageAttempts,
@@ -42,6 +50,8 @@ import {
   type ImageSource,
 } from '../../services/cacheService';
 import { keepViewerPage } from '../../services/cacheService';
+import { includePage } from '../../services/excludedPagesService';
+import { PageActionsMenu } from './PageActionsMenu';
 import { libraryPageUrl } from '../../services/libraryLinks';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { errorMessage, logger } from '../../utils/logger';
@@ -699,6 +709,37 @@ export function PageViewer({
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
             shownPageUrl={shownPageUrl}
+            pageActions={
+              page ? (
+                <PageActionsMenu
+                  providerKey={providerKey ?? 'generic'}
+                  versionId={versionId}
+                  pageIndex={page.index}
+                  bookSize={localSize}
+                  onTakeAtMax={async () => {
+                    // Chiedere di nuovo una pagina esclusa la riammette: il
+                    // comando deve fare quello che dice, non restare inerte.
+                    await includePage(versionId, page.index);
+                    await keepViewerPage({
+                      kind: 'page',
+                      versionId,
+                      index: page.index,
+                      size: MAX_SIZE,
+                      remoteUrl: pageSourceUrl(
+                        page.imageService,
+                        MAX_SIZE,
+                        manifest?.presentation2 ?? false,
+                      ),
+                      providerKey: providerKey ?? 'generic',
+                    });
+                  }}
+                  onChanged={() => {
+                    void refreshLocalSize();
+                    onPageKept?.();
+                  }}
+                />
+              ) : undefined
+            }
           />
         )}
         <div
@@ -808,6 +849,9 @@ interface ViewerToolbarProps {
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
   shownPageUrl?: string | null;
+  /** Il menu delle azioni sulla pagina aperta, montato da chi ha i dati del
+   *  deposito: la barra lo ospita, non lo costruisce. */
+  pageActions?: ReactNode;
 }
 
 /**
@@ -896,6 +940,7 @@ function ViewerToolbar({
   thumbnailsOpen,
   onToggleThumbnails,
   shownPageUrl,
+  pageActions,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
@@ -964,6 +1009,7 @@ function ViewerToolbar({
           edge={shownEdge}
           onDownload={onDownloadPage}
         />
+        {pageActions}
         {/* Due uscite diverse, accanto al comando che salva: questa pagina
             com'è servita dalla biblioteca, e l'opera intera sul loro sito. */}
         {shownPageUrl && (

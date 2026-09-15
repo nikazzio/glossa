@@ -1353,7 +1353,45 @@
       "manifestContentFailed": "Non è stato possibile leggere il manifest dalla biblioteca.",
       "manifestPages": "Pagine",
       "manifestSummary": "Descrizione",
-      "manifestRights": "Diritti"
+      "manifestRights": "Diritti",
+      "fieldLabels": {
+        "title": "Titolo",
+        "kind": "Tipo di opera",
+        "creator": "Autore",
+        "date": "Data",
+        "publisher": "Editore",
+        "primary_language": "Lingua",
+        "description": "Descrizione",
+        "subjects": "Soggetti",
+        "genre_form": "Genere/forma",
+        "coverage": "Copertura",
+        "contributors": "Altri responsabili",
+        "physical_description": "Descrizione fisica",
+        "volume": "Volume",
+        "series": "Serie/collana",
+        "standard_identifier": "Identificativo standard",
+        "origin_place": "Luogo di origine",
+        "provenance": "Provenienza",
+        "related_works": "Opere collegate",
+        "rights": "Diritti",
+        "notes": "Note"
+      },
+      "fieldGroups": {
+        "content": "Contenuto",
+        "copy": "Esemplare",
+        "provenance": "Provenienza",
+        "rights": "Diritti e note"
+      },
+      "pageActions": "Cosa fare con questa pagina",
+      "pageTakeAtMax": "Prendila alla massima risoluzione",
+      "pageBackToBookSize": "Riportala alla misura del libro",
+      "pageRemove": "Togli questa pagina dal computer",
+      "pageRemoveSize": "Cancella la misura {{size}}",
+      "pageCopiesLoading": "Lettura delle misure",
+      "pageNoCopies": "Di questa pagina non hai niente sul computer.",
+      "pageActionFailed": "Non è stato possibile cambiare questa pagina.",
+      "excludedPagesCount_one": "{{count}} pagina tolta di proposito: non torna con un nuovo scaricamento.",
+      "excludedPagesCount_other": "{{count}} pagine tolte di proposito: non tornano con un nuovo scaricamento."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2333,7 +2371,8 @@
             "title": "Trovare un’opera nel catalogo",
             "paragraphs": [
               "Alterna elenco e griglia e usa i filtri per restringere il catalogo. Puoi salvare una combinazione di filtri come vista. Includi le opere archiviate quando vuoi recuperare un elemento messo da parte.",
-              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file."
+              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
+              "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
             ]
           },
           {
@@ -2379,7 +2418,8 @@
               "Apri il pannello dei lavori in basso a destra. Ogni voce mostra avanzamento e stato; espandila per leggere dettagli, tentativi ed errori.",
               "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
               "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
-              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori."
+              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori.",
+              "Mentre leggi puoi agire sulla singola pagina: prenderla alla massima risoluzione, riportarla alla misura del libro o toglierla dal computer. Una pagina tolta resta esclusa e non torna con un nuovo scaricamento, finché non la richiedi."
             ]
           },
           {

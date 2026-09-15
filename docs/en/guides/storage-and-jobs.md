@@ -111,6 +111,25 @@ increase downloaded-page counts and is excluded from
 [backups](../reference/backup-and-restore).
 
 
+## Acting on the page you are reading
+
+In the viewer toolbar, next to the command that keeps the page, another one
+opens what can be done with **that** page:
+
+- **take it at the highest resolution**, when the book size is not enough to
+  really look at it;
+- **bring it back to the book size**, which deletes the larger copies and gives
+  the space back;
+- **remove it from the computer**: the page goes and stays excluded — it does
+  not come back with a new download of the book, nor on its own. Asking for it
+  again at the highest resolution readmits it.
+
+Below, the sizes of that page actually on disk, with their weight and a command
+to delete a single one.
+
+On the item page, under Digital copies, the copy states how many pages you
+removed on purpose: without that line an incomplete copy would look broken.
+
 ## Messages and system log
 
 The bottom panel holds three tabs: messages from the running translation, the

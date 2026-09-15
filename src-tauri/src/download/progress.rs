@@ -35,6 +35,9 @@ pub(crate) struct Progress {
     /// Pagine che la biblioteca non ha servito **in questo avvio**: il totale
     /// storico lo dà la differenza fra cartella e conteggio atteso.
     pub unavailable: u32,
+    /// Pagine che l'utente ha tolto di proposito: non si chiedono, e senza
+    /// contarle il lavoro non arriverebbe mai in fondo.
+    pub excluded: u32,
     /// Vero se almeno una pagina è stata saltata per un **guasto** e non per un
     /// rifiuto: cambia come si dichiara un lavoro che non ha portato niente.
     pub faulty: bool,
@@ -45,7 +48,7 @@ pub(crate) struct Progress {
 
 impl Progress {
     pub(crate) fn done(&self) -> u32 {
-        self.present + self.unavailable
+        self.present + self.unavailable + self.excluded
     }
 
     pub(crate) fn ratio(&self) -> f64 {
@@ -160,12 +163,16 @@ impl Progress {
                 PageOutcome::Present => {
                     map.insert("recovered".into(), true.into());
                 }
-                PageOutcome::NotServed | PageOutcome::Faulty | PageOutcome::Stopped => {}
+                PageOutcome::NotServed
+                | PageOutcome::Faulty
+                | PageOutcome::Stopped
+                | PageOutcome::Excluded => {}
             }
         }
         serde_json::json!({
             "units": { "done": self.present, "total": self.total, "label": "items" },
             "unavailable": self.unavailable,
+            "excluded": self.excluded,
             "bytes": { "downloaded": self.bytes, "estimated": estimated },
             "speed": self.speed_bytes_per_sec(),
             "cap": cap,
@@ -230,6 +237,7 @@ mod tests {
             total: 100,
             bytes: 2_000_000,
             unavailable: 0,
+            excluded: 0,
             faulty: false,
             recent,
         }

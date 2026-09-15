@@ -50,6 +50,23 @@ sono memorizzate separatamente dal dato originale e possono essere rimosse.
 **Risincronizza con la biblioteca** acquisisce nuovamente i metadati e cancella
 le correzioni manuali. Note e file scaricati restano invariati.
 
+## Dati dell'opera
+
+La scheda mostra **tutti** i campi previsti, anche quelli che la biblioteca non
+ha compilato: un campo vuoto dice che quell'informazione non è arrivata, e da lì
+la puoi scrivere tu. Ogni riga si corregge con la matita e conserva il valore
+originale della biblioteca, che resta consultabile e ripristinabile.
+
+I campi essenziali — titolo, tipo di opera, autore, data, editore, lingua —
+stanno sempre in vista. Il resto è raccolto in gruppi richiudibili: contenuto,
+esemplare, provenienza, diritti e note. I gruppi ricordano se sono aperti, e la
+scelta vale per tutta la Biblioteca.
+
+Il tipo di opera si sceglie fra i valori previsti, perché i filtri del catalogo
+si appoggiano a quelli. I campi che contengono più valori — soggetti, altri
+responsabili, diritti, provenienza — si scrivono su una riga sola separandoli
+con «·», come vengono mostrati.
+
 ## Lettura delle pagine
 
 Il visore offre miniature, navigazione per numero di pagina e zoom; ricorda

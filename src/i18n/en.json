@@ -1353,7 +1353,45 @@
       "manifestContentFailed": "The manifest could not be read from the library.",
       "manifestPages": "Pages",
       "manifestSummary": "Description",
-      "manifestRights": "Rights"
+      "manifestRights": "Rights",
+      "fieldLabels": {
+        "title": "Title",
+        "kind": "Work type",
+        "creator": "Author",
+        "date": "Date",
+        "publisher": "Publisher",
+        "primary_language": "Language",
+        "description": "Description",
+        "subjects": "Subjects",
+        "genre_form": "Genre/form",
+        "coverage": "Coverage",
+        "contributors": "Other contributors",
+        "physical_description": "Physical description",
+        "volume": "Volume",
+        "series": "Series",
+        "standard_identifier": "Standard identifier",
+        "origin_place": "Place of origin",
+        "provenance": "Provenance",
+        "related_works": "Related works",
+        "rights": "Rights",
+        "notes": "Notes"
+      },
+      "fieldGroups": {
+        "content": "Content",
+        "copy": "Copy",
+        "provenance": "Provenance",
+        "rights": "Rights and notes"
+      },
+      "pageActions": "What to do with this page",
+      "pageTakeAtMax": "Take it at the highest resolution",
+      "pageBackToBookSize": "Bring it back to the book size",
+      "pageRemove": "Remove this page from the computer",
+      "pageRemoveSize": "Delete the {{size}} size",
+      "pageCopiesLoading": "Reading the sizes",
+      "pageNoCopies": "You have nothing of this page on the computer.",
+      "pageActionFailed": "This page could not be changed.",
+      "excludedPagesCount_one": "{{count}} page removed on purpose: it does not come back with a new download.",
+      "excludedPagesCount_other": "{{count}} pages removed on purpose: they do not come back with a new download."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -2333,7 +2371,8 @@
             "title": "Finding a catalogue entry",
             "paragraphs": [
               "Switch between list and grid views and use filters to narrow the catalogue. You can save a filter combination as a view. Include archived works to find an item you have set aside.",
-              "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files."
+              "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files.",
+              "The item page shows every field it knows about, including those the library did not fill in: they stay empty and you write them with the pencil, as you already do for title and author. The library's original value is kept and can be restored. The essential fields are always in view, the rest sit in groups that open and stay as you leave them."
             ]
           },
           {
@@ -2379,7 +2418,8 @@
               "Open the jobs panel at the bottom right. Each entry shows progress and status; expand it for details, attempts and errors.",
               "Pause requests a stop at the next checkpoint; Resume continues from there. Cancel ends the job and keeps files already saved. After a failure, you can start another attempt.",
               "Waiting may indicate a library rate limit. A countdown refers to the next attempt, not the end of the download. Paused means the job needs to be resumed.",
-              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs."
+              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs.",
+              "While reading you can act on a single page: take it at the highest resolution, bring it back to the book size, or remove it from the computer. A removed page stays excluded and does not come back with a new download, until you ask for it again."
             ]
           },
           {

@@ -110,3 +110,21 @@ The library's manifest can be requested there too: it is not dumped as it comes
 — its address is right above for that — but read and shown as the library's
 statement about the work, with page count, description, catalogue entries and
 rights.
+
+## Work data
+
+The item page shows **every** field it knows about, including those the library
+did not fill in: an empty field states that the information never arrived, and
+from there you can write it yourself. Each row is corrected with the pencil and
+keeps the library's original value, which stays readable and restorable.
+
+The essential fields — title, kind of work, author, date, publisher, language —
+are always in view. The rest is gathered into collapsible groups: content, copy,
+provenance, rights and notes. The groups remember whether they are open, and
+that choice applies across the whole Library.
+
+The kind of work is chosen among the expected values, because the catalogue
+filters rely on them. Fields holding several values — subjects, other
+contributors, rights, provenance — are written on a single line separated by
+«·», exactly as they are shown.
+

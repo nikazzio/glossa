@@ -23,6 +23,7 @@ import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-pa
 import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import { libraryItemUrl } from '../../services/libraryLinks';
+import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
 import { type ShownPage } from './VersionTechnicalData';
 import {
   ClickPopover,
@@ -48,6 +49,7 @@ import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
 import { PageViewer } from '../viewer/PageViewer';
 import { useDebounce } from '../../hooks/useDebounce';
+import { MULTI_VALUE_SEPARATOR } from '../../types';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -353,12 +355,15 @@ export function LibrarySourcePage({
             <div className="flex flex-col gap-6 px-4 py-5">
               {activeTab === 'info' ? (
                 <>
-                  <DataSection
+                  {/* Prima da dove viene l'opera, poi cosa dice di sé: chi
+                      apre la scheda sa già il titolo, e la prima domanda è di
+                      chi è la copia che sta guardando. */}
+                  <SourceInfoSection
                     detail={detail}
-                    onCorrectField={onCorrectField}
+                    providerLabel={providerLabel}
                     onResyncSource={onResyncSource}
                   />
-                  <SourceInfoSection detail={detail} providerLabel={providerLabel} />
+                  <DataSection detail={detail} onCorrectField={onCorrectField} />
                 </>
               ) : activeTab === 'copies' ? (
                 <CopiesSection
@@ -418,17 +423,25 @@ function Section({
   actions,
   children,
 }: {
-  icon: LucideIcon;
-  label: string;
+  icon?: LucideIcon;
+  /** Senza etichetta la sezione non si intesta: resta la riga dei comandi,
+   *  quando ce ne sono. Una sezione che raccoglie i dati dell'opera dentro la
+   *  scheda dell'opera non ha bisogno di dichiarare che sono dati. */
+  label?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const heading = label !== undefined && icon !== undefined;
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2 border-b border-editorial-border/70 pb-1.5">
-        <SectionLabel icon={icon} label={label} />
-        {actions}
-      </div>
+      {(heading || actions) && (
+        <div className={`flex items-center gap-2 border-b border-editorial-border/70 pb-1.5 ${
+          heading ? 'justify-between' : 'justify-end'
+        }`}>
+          {heading && <SectionLabel icon={icon} label={label} />}
+          {actions}
+        </div>
+      )}
       {children}
     </section>
   );
@@ -491,19 +504,176 @@ function WorkspaceLinkPicker({
   );
 }
 
-/** Dati essenziali dell'opera; i metadati meno comuni compaiono soltanto se
- *  presenti e restano raccolti in una sezione chiusa. */
+/**
+ * I dati dell'opera: **sempre tutti**, con o senza valore.
+ *
+ * Un campo vuoto è un'informazione — dice che quella biblioteca non l'ha data —
+ * e nasconderlo toglieva anche il modo di scriverlo a mano. Ogni riga si
+ * corregge con la matita e conserva il valore originale della biblioteca, così
+ * la scheda è la stessa per ogni fonte e quello che manca lo puoi mettere tu.
+ *
+ * I gruppi oltre il primo sono richiudibili e ricordano se sono aperti: la
+ * scelta vale per tutta la Biblioteca, non per la singola opera — chi lavora su
+ * un tipo di materiale tiene aperti sempre gli stessi.
+ */
 function DataSection({
   detail,
   onCorrectField,
-  onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const openGroups = useUiStore((state) => state.librarySourceGroups);
+  const setGroupOpen = useUiStore((state) => state.setLibrarySourceGroupOpen);
+
+  const join = (values: string[]) => values.join(MULTI_VALUE_SEPARATOR);
+  const row = (field: SourceField, value: string): SourceFieldSpec => ({
+    field,
+    label: t(`areas.library.fieldLabels.${field}`),
+    value,
+    original: detail.original[field],
+  });
+
+  const groups: SourceFieldGroup[] = [
+    {
+      id: 'identity',
+      fields: [
+        row('title', detail.source.title),
+        {
+          ...row('kind', t(`areas.library.kindLabels.${detail.source.kind}`, {
+            defaultValue: t('areas.library.kindLabels.other'),
+          })),
+          // Si mostra tradotto, si salva com'è nei dati: senza questa
+          // distinzione finirebbe nel database l'etichetta italiana.
+          editableValue: detail.source.kind,
+          options: SOURCE_KINDS.map((kind) => ({
+            value: kind,
+            label: t(`areas.library.kindLabels.${kind}`),
+          })),
+        },
+        row('creator', detail.creator ?? ''),
+        row('date', detail.date ?? ''),
+        row('publisher', detail.publisher ?? ''),
+        row('primary_language', detail.source.primaryLanguage ?? ''),
+      ],
+    },
+    {
+      id: 'content',
+      fields: [
+        row('description', detail.description ?? ''),
+        row('subjects', join(detail.subjects)),
+        row('genre_form', join(detail.genreForm)),
+        row('coverage', join(detail.coverage)),
+        row('contributors', join(detail.contributors)),
+      ],
+    },
+    {
+      id: 'copy',
+      fields: [
+        row('physical_description', detail.physicalDescription ?? ''),
+        row('volume', detail.volume ?? ''),
+        row('series', detail.series ?? ''),
+        row('standard_identifier', detail.standardIdentifier ?? ''),
+      ],
+    },
+    {
+      id: 'provenance',
+      fields: [
+        row('origin_place', detail.originPlace ?? ''),
+        row('provenance', join(detail.provenance)),
+        row('related_works', join(detail.relatedWorks)),
+      ],
+    },
+    {
+      id: 'rights',
+      fields: [row('rights', join(detail.rights)), row('notes', detail.notes ?? '')],
+    },
+  ];
+
+  const [first, ...rest] = groups;
+
+  return (
+    <Section>
+      <dl className="space-y-2.5">
+        {first.fields.map((spec) => (
+          <SourceFieldRow
+            key={spec.field}
+            label={spec.label}
+            value={spec.value}
+            editableValue={spec.editableValue}
+            original={spec.original}
+            options={spec.options}
+            onSave={(value) => onCorrectField(spec.field, value)}
+          />
+        ))}
+      </dl>
+
+      {rest.map((group) => (
+        <details
+          key={group.id}
+          open={openGroups[group.id] ?? false}
+          onToggle={(event) => setGroupOpen(group.id, event.currentTarget.open)}
+          className="mt-2 border-t border-editorial-border/70 pt-2"
+        >
+          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
+            {t(`areas.library.fieldGroups.${group.id}`)}
+          </summary>
+          <dl className="mt-3 space-y-2.5">
+            {group.fields.map((spec) => (
+              <SourceFieldRow
+                key={spec.field}
+                label={spec.label}
+                value={spec.value}
+                editableValue={spec.editableValue}
+                original={spec.original}
+                options={spec.options}
+                onSave={(value) => onCorrectField(spec.field, value)}
+              />
+            ))}
+          </dl>
+        </details>
+      ))}
+    </Section>
+  );
+}
+
+/** Una riga della scheda: il campo dei dati, come si legge e come si corregge. */
+interface SourceFieldSpec {
+  field: SourceField;
+  label: string;
+  value: string;
+  editableValue?: string;
+  original?: string;
+  options?: { value: string; label: string }[];
+}
+
+interface SourceFieldGroup {
+  id: string;
+  fields: SourceFieldSpec[];
+}
+
+/** La provenienza dell'opera: riconoscibile a colpo d'occhio, con i
+ *  riferimenti specifici della biblioteca — testo semplice, mai una pastiglia
+ *  colorata (il design system la vieta per i metadati di provenienza).
+ *
+ *  Sempre presente, come le altre sezioni anagrafiche: un'opera aggiunta
+ *  riconoscendo una segnatura/indirizzo diretto (invece che da un risultato
+ *  di ricerca) non porta fondo/pagina web/scheda del catalogo — quei campi
+ *  restano «—», la sezione non sparisce. */
+function SourceInfoSection({
+  detail,
+  providerLabel,
+  onResyncSource,
+}: {
+  detail: LibrarySourceDetail;
+  providerLabel?: string;
   onResyncSource: () => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [resyncing, setResyncing] = useState(false);
+  // Riallineare riguarda quello che la biblioteca dice dell'opera: il comando
+  // sta dove si legge la biblioteca, non sotto i dati che andrebbe a cambiare.
   const resync = async () => {
     const confirmed = await confirm({
       title: t('areas.library.resyncTitle'),
@@ -519,109 +689,6 @@ function DataSection({
       setResyncing(false);
     }
   };
-  const allReadonlyFields: Array<[string, string]> = [
-    [t('areas.library.contributorsField'), detail.contributors.join(' · ')],
-    [t('areas.library.volumeField'), detail.volume ?? ''],
-    [t('areas.library.subjectsField'), detail.subjects.join(' · ')],
-    [t('areas.library.publisherField'), detail.publisher ?? ''],
-    [t('areas.library.rightsField'), detail.rights.join(' · ')],
-    [t('areas.library.physicalDescriptionField'), detail.physicalDescription ?? ''],
-    [t('areas.library.originPlaceField'), detail.originPlace ?? ''],
-    [t('areas.library.provenanceField'), detail.provenance.join(' · ')],
-    [t('areas.library.seriesField'), detail.series ?? ''],
-    [t('areas.library.genreFormField'), detail.genreForm.join(' · ')],
-    [t('areas.library.standardIdentifierField'), detail.standardIdentifier ?? ''],
-    [t('areas.library.coverageField'), detail.coverage.join(' · ')],
-    [t('areas.library.relatedWorksField'), detail.relatedWorks.join(' · ')],
-  ];
-  const readonlyFields = allReadonlyFields.filter(([, value]) => value.trim() !== '');
-
-  return (
-    <Section
-      icon={Info}
-      label={t('areas.library.detailsSection')}
-      actions={
-        <IconButton
-          size="sm"
-          onClick={() => void resync()}
-          disabled={resyncing}
-          title={t('areas.library.resyncAction')}
-        >
-          <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
-        </IconButton>
-      }
-    >
-      <dl className="space-y-2.5">
-        <SourceFieldRow
-          label={t('areas.library.titleField')}
-          value={detail.source.title}
-          original={detail.original.title}
-          onSave={(value) => onCorrectField('title', value)}
-        />
-        <StatBlock
-          label={t('areas.library.kind')}
-          // Libri aggiunti prima che "natura" perdesse i valori di formato
-          // (pdf/iiif/web) hanno ancora quei vecchi valori salvati: mostrano
-          // "Altro" come qualunque valore che oggi non si riconosce più,
-          // non la parola tecnica grezza.
-          value={t(`areas.library.kindLabels.${detail.source.kind}`, {
-            defaultValue: t('areas.library.kindLabels.other'),
-          })}
-        />
-        <SourceFieldRow
-          label={t('areas.library.creatorField')}
-          value={detail.creator ?? ''}
-          original={detail.original.creator}
-          onSave={(value) => onCorrectField('creator', value)}
-        />
-        <SourceFieldRow
-          label={t('areas.library.dateField')}
-          value={detail.date ?? ''}
-          original={detail.original.date}
-          onSave={(value) => onCorrectField('date', value)}
-        />
-        <SourceFieldRow
-          label={t('areas.library.languageField')}
-          value={detail.source.primaryLanguage ?? ''}
-          original={detail.original.primary_language}
-          onSave={(value) => onCorrectField('primary_language', value)}
-        />
-        {detail.description && (
-          <StatBlock label={t('areas.library.descriptionField')} value={detail.description} />
-        )}
-      </dl>
-      {readonlyFields.length > 0 && (
-        <details className="border-t border-editorial-border/70 pt-2">
-          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
-            {t('areas.library.otherMetadata')}
-          </summary>
-          <dl className="mt-3 space-y-2.5">
-            {readonlyFields.map(([label, value]) => (
-              <StatBlock key={label} label={label} value={value} />
-            ))}
-          </dl>
-        </details>
-      )}
-    </Section>
-  );
-}
-
-/** La provenienza dell'opera: riconoscibile a colpo d'occhio, con i
- *  riferimenti specifici della biblioteca — testo semplice, mai una pastiglia
- *  colorata (il design system la vieta per i metadati di provenienza).
- *
- *  Sempre presente, come le altre sezioni anagrafiche: un'opera aggiunta
- *  riconoscendo una segnatura/indirizzo diretto (invece che da un risultato
- *  di ricerca) non porta fondo/pagina web/scheda del catalogo — quei campi
- *  restano «—», la sezione non sparisce. */
-function SourceInfoSection({
-  detail,
-  providerLabel,
-}: {
-  detail: LibrarySourceDetail;
-  providerLabel?: string;
-}) {
-  const { t } = useTranslation();
   const externalRef = detail.source.externalRef;
   const identifier =
     externalRef && detail.providerKey && externalRef.startsWith(`${detail.providerKey}:`)
@@ -634,7 +701,20 @@ function SourceInfoSection({
   ].filter(([, value]) => value !== '');
 
   return (
-    <Section icon={Library} label={t('areas.library.sourceSection')}>
+    <Section
+      icon={Library}
+      label={t('areas.library.sourceSection')}
+      actions={
+        <IconButton
+          size="sm"
+          onClick={() => void resync()}
+          disabled={resyncing}
+          title={t('areas.library.resyncAction')}
+        >
+          <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
+        </IconButton>
+      }
+    >
       <dl className="space-y-2.5">
         {providerLabel && (
           <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />

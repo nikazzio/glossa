@@ -54,6 +54,36 @@ pub(crate) async fn size_policy_for(ctx: &JobContext, config: &DownloadConfig) -
     })
 }
 
+/// Le pagine che l'utente ha tolto di proposito da questa copia.
+///
+/// Si leggono a ogni avvio, non si tengono in mano: fra un tentativo e il
+/// successivo può averne escluse altre, e riscaricare una pagina che ha appena
+/// buttato è il modo più rapido per fargli perdere fiducia nel comando.
+pub(crate) async fn excluded_pages(
+    ctx: &JobContext,
+    version_id: &str,
+) -> std::collections::HashSet<u32> {
+    let version = version_id.to_string();
+    ctx.with_database(move |conn| {
+        let mut statement = conn
+            .prepare("SELECT page_index FROM excluded_pages WHERE version_id = ?1")
+            .map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map([&version], |row| row.get::<_, i64>(0))
+            .map_err(|error| error.to_string())?;
+        let mut excluded = std::collections::HashSet::new();
+        for row in rows {
+            excluded.insert(row.map_err(|error| error.to_string())? as u32);
+        }
+        Ok(excluded)
+    })
+    .await
+    .unwrap_or_else(|error| {
+        log::warn!("job excluded pages not read id={} error={error}", ctx.id);
+        std::collections::HashSet::new()
+    })
+}
+
 /// Il titolo va nel messaggio del lavoro: nel pannello si legge quello, e
 /// «207/362» da solo non dice quale libro sta scaricando.
 pub(crate) async fn source_title(ctx: &JobContext, version_id: &str) -> Option<String> {

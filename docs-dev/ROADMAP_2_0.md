@@ -100,14 +100,19 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   segnale resta dichiarato come segnaposto per quando anche lo scaricamento
   dovrà aprire una sessione.
 - #459 (azioni sulla pagina e selezione multipla, «Fase A»): **quasi tutta da
-  fare**. Esiste solo «tieni questa pagina» alla misura mostrata. Mancano scelta
+  fare**, e semplificata il 16 settembre — una sola copia a immagini per opera,
+  le pagine come eccezioni dentro di essa, due comandi simmetrici («prendila al
+  massimo», «riportala alla misura del libro»), selezione a intervallo. La
+  compressione che oggi crea una seconda copia completa sparisce come tale. Esiste solo «tieni questa pagina» alla misura mostrata. Mancano scelta
   della misura, sostituzione, riduzione, eliminazione di una versione locale
   della pagina, verifica, e **tutta** la selezione multipla: le miniature non
   hanno alcun concetto di selezione. Le quattro decisioni elencate nella issue
   vanno prese prima di iniziare.
-- #462 (PDF della biblioteca, «Fase C»): da iniziare, dopo le tre decisioni
-  scritte nella issue. Si appoggia al modo di dire «copia locale, spazio,
-  stato» che la #459 consolida: conviene dopo, non prima.
+- #462 (PDF della biblioteca, «Fase C»): decisa il 16 settembre. Il PDF è una
+  **copia a sé** accanto a quella a immagini, si legge **dentro il visore
+  attuale** con pdf.js — che serve anche a estrarre il testo per le trascrizioni
+  (#220) — e le pagine si contano dal file all'arrivo. Si appoggia al modo di
+  dire «copia locale, spazio, stato» che la #459 consolida: conviene dopo.
 - #471 (biblioteche scozzesi) e #472 (membri del consorzio IIIF): la prima
   consegnata con #473, la seconda è l'elenco ordinato di chi manca.
 - #474 (scheda a template fisso): tutti i campi sempre visibili e compilabili a
