@@ -117,7 +117,8 @@
       "execution": "Come sta rispondendo ogni fonte di questa ricerca: stato, pagina raggiunta, quanto è arrivato e i comandi per intervenire su una sola biblioteca.",
       "history": "Le ricerche già fatte, caricate cinquanta alla volta. Ognuna conserva criteri, fonti ed esecuzioni proprie; aprendone una si torna all'esecuzione.",
       "criteria": "I criteri che restringono la ricerca e le fonti da interrogare. Valgono per la prossima ricerca: non cambiano quelle già avviate."
-    }
+    },
+    "openProviderSite": "Cerca direttamente sul sito di {{provider}}"
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -1025,7 +1026,8 @@
       "monthsAgo_other": "{{count}} mesi fa",
       "yearsAgo_one": "{{count}} anno fa",
       "yearsAgo_other": "{{count}} anni fa"
-    }
+    },
+    "openLinkFailed": "Non è stato possibile aprire il collegamento nel browser."
   },
   "projects": {
     "title": "Progetti",
@@ -1336,7 +1338,22 @@
       "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
-      "viewOnline": "Online"
+      "viewOnline": "Online",
+      "openShownPage": "Apri questa pagina nel visore della biblioteca",
+      "technicalLinkOpen": "Apri nel browser",
+      "technicalLinks": {
+        "manifest": "Manifest IIIF",
+        "item": "Pagina dell'opera",
+        "catalog": "Scheda di catalogo",
+        "shownPage": "Pagina aperta",
+        "shownImage": "Immagine della pagina",
+        "librarySite": "Sito della biblioteca"
+      },
+      "manifestContent": "Leggi il manifest della biblioteca",
+      "manifestContentFailed": "Non è stato possibile leggere il manifest dalla biblioteca.",
+      "manifestPages": "Pagine",
+      "manifestSummary": "Descrizione",
+      "manifestRights": "Diritti"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2292,7 +2309,9 @@
             "title": "Usare un indirizzo o un identificativo",
             "paragraphs": [
               "Apri la ricerca singola, scegli la fonte e segui l’esempio nel campo. Puoi usare, secondo la fonte, parole chiave, segnatura, identificativo o indirizzo.",
-              "Alcune fonti permettono solo l’apertura diretta: il pannello lo indica. Per un manifesto di un’istituzione non elencata, scegli l’indirizzo IIIF diretto."
+              "Alcune fonti permettono solo l’apertura diretta: il pannello lo indica. Per un manifesto di un’istituzione non elencata, scegli l’indirizzo IIIF diretto.",
+              "Accanto alla biblioteca scelta c'è un comando che apre la sua pagina di ricerca nel browser, portandoci le parole già scritte dove la biblioteca le accetta. Quello che Glossa interroga è ciò che la biblioteca offre a un programma, che quasi mai è tutto il suo catalogo: nel dubbio si cerca sul loro sito, si copia l'indirizzo dell'opera e lo si incolla qui.",
+              "La Biblioteca nazionale scozzese si cerca per titolo fra le sue raccolte digitali, oppure si apre incollando il numero dell'opera. Le collezioni digitali dell'Università di Glasgow si aprono con l'indirizzo del manifesto, che la loro scheda offre con un comando apposito."
             ]
           },
           {

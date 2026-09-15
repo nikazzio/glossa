@@ -83,11 +83,27 @@ nel campo indicano la sintassi accettata.
 | Heidelberg University Library | No | `cpg848` |
 | e-rara | No | Numero della scheda |
 | e-manuscripta | No | Numero della scheda |
+| National Library of Scotland | Sì, sui titoli delle raccolte digitali | Numero dell’opera, per esempio `133475158` |
+| University of Glasgow | No | Indirizzo del manifesto IIIF, offerto dalla scheda dell’opera |
 | IIIF diretto | No | Indirizzo completo del manifesto |
 
 La tabella descrive le capacità implementate in Glossa, non la disponibilità
 in tempo reale dei servizi. Limitazioni di rete e controlli anti-automazione
 possono impedire una richiesta anche per una fonte supportata.
+
+## Cercare sul sito della biblioteca
+
+Accanto a ogni biblioteca compare un comando che apre la sua pagina di ricerca
+nel browser, con le parole già scritte dove la biblioteca le accetta
+nell’indirizzo. Serve quando la ricerca interna non basta: quello che Glossa
+interroga è ciò che la biblioteca espone a un programma, che quasi mai coincide
+con tutto il suo catalogo. Si cerca sul loro sito, si copia l’indirizzo
+dell’opera e lo si incolla qui per aprirla.
+
+Il comando compare nella ricerca su una sola fonte, accanto alla biblioteca
+scelta; nella ricerca su più fonti quando l’elenco dei risultati resta vuoto e
+quando si stanno guardando i risultati di una sola biblioteca; e nella scheda
+di un’opera che non porta con sé l’indirizzo della propria pagina.
 
 ## Disponibilità delle riproduzioni
 

@@ -326,6 +326,54 @@ pub async fn probe_manifest(
     probe_response(&client, &manifest_url).await
 }
 
+/// Il manifesto così com'è, per chi vuole leggerlo.
+///
+/// Serve ai dati tecnici della scheda: un manifesto è la dichiarazione della
+/// biblioteca su quell'opera, e poterla leggere senza uscire dall'applicazione
+/// evita di doverla ricostruire a mente da quello che il visore ne mostra. Si
+/// legge con la stessa cortesia di rete del resto, e con un tetto: un catalogo
+/// da cinquanta megabyte non si apre in una finestra.
+#[tauri::command]
+pub async fn read_iiif_manifest_text(
+    app: tauri::AppHandle,
+    provider_key: String,
+    manifest_url: String,
+) -> Result<String, String> {
+    const MAX_BYTES: usize = 4 * 1024 * 1024;
+    let profile = crate::db::open_connection(&crate::storage_config::db_path(&app)?)
+        .map(|conn| crate::iiif::settings::effective_profile(&conn, &provider_key, None))
+        .unwrap_or(super::network::CAUTIOUS);
+    let courtesy = app.state::<std::sync::Arc<Courtesy>>().inner().clone();
+    let gate = Gate {
+        courtesy: &courtesy,
+        profile: &profile,
+    };
+    let client = client()?;
+    let _turn = wait_aside(Some(&gate), &manifest_url).await;
+    let response = client
+        .get(&manifest_url)
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| {
+            log::warn!("manifest text request failed error={error}");
+            crate::iiif::search::MANIFEST_UNREACHABLE.to_string()
+        })?
+        .error_for_status()
+        .map_err(|error| {
+            log::warn!("manifest text response failed error={error}");
+            crate::iiif::search::MANIFEST_UNREADABLE.to_string()
+        })?;
+    let body = response.text().await.map_err(|error| {
+        log::warn!("manifest text body failed error={error}");
+        crate::iiif::search::MANIFEST_UNREADABLE.to_string()
+    })?;
+    if body.len() > MAX_BYTES {
+        return Err(crate::iiif::search::MANIFEST_INVALID.to_string());
+    }
+    Ok(body)
+}
+
 /// A bounded GET avoids providers' misleading HEAD responses. Large manifests
 /// remain unknown; checking a row must not download an unbounded catalogue.
 async fn probe_response(client: &Client, manifest_url: &str) -> Result<Option<bool>, String> {

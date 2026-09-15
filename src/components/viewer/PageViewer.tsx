@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  ExternalLink,
   HardDrive,
   HardDriveDownload,
   Images,
@@ -19,7 +20,7 @@ import {
   Focus,
   MoreHorizontal,
 } from 'lucide-react';
-import { ClickPopover, EmptyState, IconButton, MenuActionRow, Spinner, Tooltip } from '../ui';
+import { ClickPopover, EmptyState, IconButton, IconLink, MenuActionRow, Spinner, Tooltip } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import { ThumbnailRail } from './ThumbnailRail';
 import { createControlledIiifTileSource } from './iiifTileBridge';
@@ -41,6 +42,7 @@ import {
   type ImageSource,
 } from '../../services/cacheService';
 import { keepViewerPage } from '../../services/cacheService';
+import { libraryPageUrl } from '../../services/libraryLinks';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { errorMessage, logger } from '../../utils/logger';
 import { toast } from 'sonner';
@@ -50,6 +52,9 @@ export interface ViewerPagePosition {
   index: number;
   label: string | null;
   total: number;
+  /** L'immagine di questa pagina come la serve la biblioteca, alla misura con
+   *  cui è stata chiesta: fuori dal visore serve per darne l'indirizzo. */
+  imageUrl: string | null;
 }
 
 interface PageViewerProps {
@@ -311,6 +316,11 @@ export function PageViewer({
   }, []);
 
   const page = manifest?.pages[currentIndex] ?? null;
+  // Il visore della biblioteca aperto su **questa** pagina. Non l'immagine
+  // grezza: chi esce vuole vedere la pagina dove la biblioteca la mostra, con
+  // il suo sfoglio e i suoi dati. Esiste solo dove la forma dell'indirizzo è
+  // stata verificata, e dove manca non si mostra niente.
+  const shownPageUrl = libraryPageUrl(providerKey, manifestUrl, currentIndex);
   const total = manifest?.pages.length ?? 0;
   const goToIndex = useCallback(
     (index: number) => {
@@ -479,7 +489,20 @@ export function PageViewer({
       setPageError(null);
       if (!announced) {
         announced = true;
-        onPageChangeRef.current?.({ index: currentIndex, label: page.label, total });
+        onPageChangeRef.current?.({
+          index: currentIndex,
+          label: page.label,
+          total,
+          // La misura è quella con cui la pagina è stata davvero chiesta;
+          // finché non lo si sa, quella che il visore chiederebbe.
+          imageUrl: pageSourceUrl(
+            page.imageService,
+            shownRequest.current?.kind === 'page'
+              ? shownRequest.current.size
+              : wholePageAttempts(page, null, buildsImagesOnDemand(providerKey))[0],
+            manifest?.presentation2 ?? false,
+          ),
+        });
         void setLastViewedPage(sourceId, currentIndex).catch((error) => {
           logger.warn('library.viewer.lastPageSaveFailed', {
             message: errorMessage(error),
@@ -675,6 +698,7 @@ export function PageViewer({
             }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
+            shownPageUrl={shownPageUrl}
           />
         )}
         <div
@@ -783,6 +807,7 @@ interface ViewerToolbarProps {
   onToggleLocalOnly: () => void;
   thumbnailsOpen: boolean;
   onToggleThumbnails: () => void;
+  shownPageUrl?: string | null;
 }
 
 /**
@@ -870,6 +895,7 @@ function ViewerToolbar({
   onToggleLocalOnly,
   thumbnailsOpen,
   onToggleThumbnails,
+  shownPageUrl,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
@@ -938,6 +964,18 @@ function ViewerToolbar({
           edge={shownEdge}
           onDownload={onDownloadPage}
         />
+        {/* Due uscite diverse, accanto al comando che salva: questa pagina
+            com'è servita dalla biblioteca, e l'opera intera sul loro sito. */}
+        {shownPageUrl && (
+          <IconLink
+            size="sm"
+            href={shownPageUrl}
+            title={t('areas.library.openShownPage')}
+            tooltipSide="bottom"
+          >
+            <ExternalLink size={14} />
+          </IconLink>
+        )}
         <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
         <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
           <ZoomOut size={14} />

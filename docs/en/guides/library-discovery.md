@@ -54,6 +54,11 @@ the reading position. It uses local images when available. Online reading
 loads a page image first and may request higher-detail tiles as you zoom in.
 Enlarging a local image does not increase its resolution.
 
+A command in the viewer toolbar opens **the page you are looking at** in the
+library's own viewer, where the address shape has been verified — today Gallica
+and Internet Archive. The link to the whole work sits at the top of the item
+page, next to the other commands.
+
 The **Local file / Online file** indicator distinguishes repository files from
 remote reading. Its tooltip provides the source, cache status and image
 dimensions. Viewer caching is not a permanent download.
@@ -94,3 +99,14 @@ available. Importing text from a PDF into a translation project is a separate
 feature. Advanced page management and multiple-page selection are incomplete.
 Institutional download restrictions are not enforced automatically; consult
 the source’s conditions of use.
+
+On the item page, under **Digital copies**, the collapsible «Technical data»
+section gathers every address of that copy — IIIF manifest, work page,
+catalogue record, the open page in the library's viewer, the image of that page,
+the library site — each marked by its own symbol, copyable and openable in the
+browser. Long addresses read in full on hover.
+
+The library's manifest can be requested there too: it is not dumped as it comes
+— its address is right above for that — but read and shown as the library's
+statement about the work, with page count, description, catalogue entries and
+rights.

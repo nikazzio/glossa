@@ -39,6 +39,8 @@ pub enum ResolverKind {
     ERara,
     EManuscripta,
     Mdz,
+    Nls,
+    Glasgow,
     ArchiveOrg,
     Generic,
 }
@@ -57,6 +59,7 @@ pub enum SearchHandlerKind {
     Bodleian,
     Estense,
     Institut,
+    Nls,
     ArchiveOrg,
 }
 
@@ -131,6 +134,12 @@ pub struct IIIFProvider {
     pub kind: ProviderKind,
     /// Perché una fonte non cerca, quando non cerca.
     pub availability: SearchAvailability,
+    /// La pagina di ricerca della biblioteca sul suo sito, con `{query}` dove
+    /// vanno le parole già scritte. Serve a uscire da Glossa quando la ricerca
+    /// interna non basta o non convince: si cerca a casa loro, si copia
+    /// l'indirizzo dell'opera e la si apre qui. Vuota dove non esiste una
+    /// pagina di ricerca pubblica; senza `{query}` si apre e basta.
+    pub site_search: &'static str,
     pub filters: &'static [ProviderFilter],
 }
 
@@ -163,6 +172,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Aggregator,
         availability: SearchAvailability::Searchable,
+        site_search: "https://www.europeana.eu/en/search?query={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -179,6 +189,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://wellcomecollection.org/search/works?query={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -195,6 +206,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://digi.vatlib.it/mss/search?k_f=0&k_v={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -211,6 +223,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://gallica.bnf.fr/services/engine/search/sru?operation=searchRetrieve&version=1.2&query=gallica%20all%20%22{query}%22",
         filters: GALLICA_FILTERS,
     },
     IIIFProvider {
@@ -227,6 +240,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://bibnum.institutdefrance.fr/records?search={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -243,6 +257,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://digital.bodleian.ox.ac.uk/search/?q={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -259,6 +274,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: false,
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
+        site_search: "https://digi.ub.uni-heidelberg.de/diglit/",
         filters: &[],
     },
     IIIFProvider {
@@ -275,6 +291,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://cudl.lib.cam.ac.uk/search?keyword={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -294,6 +311,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://www.e-codices.unifr.ch/en/search/all?sQueryString={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -310,6 +328,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://edl.cultura.gov.it/search?q={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -326,6 +345,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: false,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Paused,
+        site_search: "https://id.lib.harvard.edu/search?q={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -342,6 +362,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://www.loc.gov/search/?q={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -358,6 +379,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Aggregator,
         availability: SearchAvailability::Searchable,
+        site_search: "https://archive.org/search?query={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -377,6 +399,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: false,
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
+        site_search: "https://www.e-rara.ch/search?operation=searchRetrieve&query={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -393,6 +416,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: false,
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
+        site_search: "https://www.e-manuscripta.ch/search?operation=searchRetrieve&query={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -409,6 +433,46 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: true,
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
+        site_search: "https://www.digitale-sammlungen.de/en/search?query={query}",
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "nls",
+        network: network::CAUTIOUS,
+        label: "National Library of Scotland",
+        aliases: &["nls", "scotland", "scozia"],
+        placeholder: "e.g. 133475158",
+        is_enabled: true,
+        resolver: ResolverKind::Nls,
+        // Cerca nei titoli delle raccolte digitali pubblicate, non nel
+        // catalogo della biblioteca: il catalogo ha un suo servizio, ma i suoi
+        // record non dicono se e dove l'opera è stata digitalizzata.
+        search_handler: Some(SearchHandlerKind::Nls),
+        search_mode: SearchMode::Fallback,
+        supports_direct_resolution: true,
+        supports_search: true,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::Searchable,
+        site_search: "https://digital.nls.uk/gallery/",
+        filters: &[],
+    },
+    IIIFProvider {
+        key: "glasgow",
+        network: network::CAUTIOUS,
+        label: "University of Glasgow",
+        aliases: &["glasgow", "uofg"],
+        placeholder: "e.g. 240023ec-d936-40c3-8f28-85416f86db21",
+        is_enabled: true,
+        resolver: ResolverKind::Glasgow,
+        // La piattaforma pubblica i manifesti ma non un modo di interrogarli:
+        // nessuna raccolta IIIF, nessuna risposta strutturata alla ricerca.
+        search_handler: None,
+        search_mode: SearchMode::Direct,
+        supports_direct_resolution: true,
+        supports_search: false,
+        kind: ProviderKind::Library,
+        availability: SearchAvailability::DirectOnly,
+        site_search: "https://digitalresearchcollections.glasgow.ac.uk/documents/search?search={query}",
         filters: &[],
     },
     IIIFProvider {
@@ -425,6 +489,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         supports_search: false,
         kind: ProviderKind::DirectUrl,
         availability: SearchAvailability::DirectOnly,
+        site_search: "",
         filters: &[],
     },
 ];
@@ -453,6 +518,25 @@ pub fn list_iiif_providers() -> Vec<&'static IIIFProvider> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_library_says_where_to_search_on_its_own_site() {
+        // Il collegamento al sito serve proprio quando la ricerca interna non
+        // basta: una biblioteca senza indirizzo lascia l'utente senza uscita.
+        for provider in PROVIDERS
+            .iter()
+            .filter(|p| p.kind != ProviderKind::DirectUrl)
+        {
+            assert!(
+                provider.site_search.starts_with("https://"),
+                "{} non dichiara la sua pagina di ricerca",
+                provider.key
+            );
+        }
+        // L'indirizzo diretto non è una biblioteca: non ha un sito dove cercare.
+        let generic = find_provider("generic").expect("generic provider must exist");
+        assert!(generic.site_search.is_empty());
+    }
 
     #[test]
     fn registry_is_stable_and_has_a_generic_direct_url_provider() {

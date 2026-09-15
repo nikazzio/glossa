@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Activity, ArrowDown, ArrowUpDown, CheckCircle2, EyeOff, FilePlus, Globe, HelpCircle, History, Layers, RefreshCw, Search, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ProviderSiteLink } from './ProviderSiteLink';
 import { toast } from 'sonner';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
 import { EMPTY_SEARCH, createSearch, currentExecutions, groupResults, occurrenceKey, searchResults, searchStatus, type SearchCriteria, type SearchResultGroup, type SearchResultPage } from '../../services/federatedSearchService';
@@ -198,6 +199,9 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
               onClick={() => { setHistorical(null); setByTitle(false); }}><Undo2 size={14} /></IconButton>}
             {providerFilter !== 'all' && <IconButton size="sm" tone="accent" title={t('federation.allSources')}
               onClick={() => setProviderFilter('all')}><Globe size={14} /></IconButton>}
+            {providerFilter !== 'all' && <ProviderSiteLink
+              provider={providers.find((provider) => provider.key === providerFilter)}
+              query={selected?.criteria.query} />}
             {VISIBILITY_FILTERS.map(({ value, icon: Icon }) => (
               <IconButton key={value} size="sm" ariaPressed={visibility === value}
                 tone={visibility === value ? 'accent' : 'default'}
@@ -209,7 +213,20 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
           </div>
         </div>
         <div ref={scroll} className="min-h-0 flex-1 overflow-auto custom-scrollbar">
-          {visible.length === 0 && <EmptyState icon={<Search size={20} />} message={t('federation.noVisible')} />}
+          {/* Nessun risultato è il momento in cui serve uscire: le biblioteche
+              interrogate si riaprono sul loro sito, con le stesse parole. */}
+          {visible.length === 0 && <div className="flex flex-col items-center gap-3 py-2">
+            <EmptyState icon={<Search size={20} />} message={t('federation.noVisible')} />
+            <div className="flex flex-wrap items-center justify-center gap-1">
+              {/* Con una fonte sola sott'occhio si esce verso quella: offrire
+                  anche le altre risponderebbe a una domanda non fatta. */}
+              {providers.filter((provider) => (providerFilter === 'all'
+                ? selected?.providers.includes(provider.key)
+                : provider.key === providerFilter))
+                .map((provider) => <ProviderSiteLink key={provider.key} provider={provider}
+                  query={selected?.criteria.query} />)}
+            </div>
+          </div>}
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((item) => {
               const original = visible[item.index];

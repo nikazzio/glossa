@@ -82,6 +82,8 @@ The field’s example shows the accepted syntax.
 | Heidelberg University Library | No | `cpg848` |
 | e-rara | No | Record number |
 | e-manuscripta | No | Record number |
+| National Library of Scotland | Yes, over the titles of the digital collections | The work number, for example `133475158` |
+| University of Glasgow | No | The IIIF manifest address, offered by the item page |
 | Direct IIIF | No | Full manifest URL |
 
 This table describes capabilities implemented in Glossa, not live service
@@ -106,3 +108,19 @@ Persistent searches retain criteria, executions and results between sessions
 and are included in backups. Jobs stop when the application closes. Network
 response caching is separate from search history; the refresh control in
 single-source search requests a fresh response from the service.
+
+## Searching on the library's own site
+
+Next to every library there is a command that opens its search page in the
+browser, carrying the words already typed where the library accepts them in the
+address. It is there for when the internal search is not enough: what Glossa
+queries is what the library exposes to a program, which rarely matches its whole
+catalogue. Search on their site, copy the address of the work, paste it here to
+open it.
+
+The command appears in the single-source search next to the chosen library; in
+the multi-source search when the result list stays empty and when the results of
+a single library are being read; and on the page of a work that does not carry
+the address of its own page.
+
+## Availability of reproductions

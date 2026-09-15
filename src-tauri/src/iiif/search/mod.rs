@@ -22,6 +22,7 @@ mod gallica;
 mod institut;
 mod loc;
 mod mdz;
+mod nls;
 mod vatican;
 mod wellcome;
 
@@ -38,6 +39,10 @@ pub struct SearchEndpoints {
     pub europeana_search: String,
     pub mdz_search: String,
     pub wellcome_search: String,
+    /// La radice dell'albero delle raccolte digitali della Biblioteca
+    /// nazionale scozzese: è l'unica superficie pubblica interrogabile, il
+    /// portale di consultazione rifiuta le richieste automatiche.
+    pub nls_collections: String,
     /// La chiave di Europeana, quando è stata salvata: senza, la sua ricerca
     /// non parte e lo dice invece di fallire come un guasto di rete.
     pub europeana_key: Option<String>,
@@ -66,6 +71,7 @@ impl Default for SearchEndpoints {
             europeana_search: "https://api.europeana.eu/record/v2/search.json".to_string(),
             mdz_search: "https://bsb.alma.exlibrisgroup.com/view/sru/49BVB_BSB".to_string(),
             wellcome_search: "https://api.wellcomecollection.org/catalogue/v2/works".to_string(),
+            nls_collections: "https://view.nls.uk/collections/top.json".to_string(),
             europeana_key: None,
             bodleian_search: "https://digital.bodleian.ox.ac.uk/search/".to_string(),
             estense_search:
@@ -134,6 +140,7 @@ pub async fn run(
         SearchHandlerKind::Bodleian => bodleian::bodleian(client, endpoints, query, gate).await,
         SearchHandlerKind::Estense => estense::estense(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Institut => institut::institut(client, endpoints, query, gate).await,
+        SearchHandlerKind::Nls => nls::nls(client, endpoints, query, page, gate).await,
         // Internet Archive aveva un percorso suo, da prima che questo modulo
         // esistesse: la funzione resta dov'è, ma la si chiama da qui come le
         // altre, così esiste un punto solo in cui si cerca.

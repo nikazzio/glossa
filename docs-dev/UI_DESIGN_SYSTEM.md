@@ -298,6 +298,19 @@ biblioteche, ricerca ferma (`⏸`), solo per identificativo (`#`). Sono quattro
 comportamenti diversi, non quattro categorie decorative: chi sceglie deve sapere
 se cercare per parole ha senso prima di scrivere.
 
+### Elenchi di indirizzi
+
+Dove un elenco raccoglie indirizzi dello stesso oggetto (i dati tecnici di una
+copia digitale), ogni voce si riconosce dal **segno**, non da un'etichetta: sei
+righe di parole accanto a sei indirizzi sono una colonna che nessuno rilegge.
+Il nome per esteso sta nel tooltip del segno. L'indirizzo si tronca e si legge
+intero al passaggio del mouse, con accanto copia e apertura nel browser.
+
+Nelle righe dati dei blocchi tecnici il nome del campo è in **grassetto normale**,
+non in maiuscoletto spaziato: il maiuscolo su elenchi lunghi si legge peggio e
+rallenta. Vale per i dati che arrivano da fuori (le voci di un manifesto), dove
+i nomi li sceglie la biblioteca e possono essere lunghi.
+
 ### Barre filtro
 
 - Label attiva in `font-display italic`.

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, Eraser, Eye, HardDrive, Loader2, Minimize2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ClickPopover, CopyButton, IconButton, SectionLabel, Select, StatBlock, StatRow } from '../ui';
+import { ClickPopover, IconButton, SectionLabel, Select, StatBlock, StatRow } from '../ui';
 import { useJobsStore } from '../../stores/jobsStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
@@ -23,7 +23,13 @@ import { freeVersionPages, freeVersionSize } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
-import type { LibraryCatalogEntry, LibrarySourceDetail, LibrarySourceVersion } from '../../types';
+import { VersionTechnicalData, type ShownPage } from './VersionTechnicalData';
+import type {
+  IIIFProvider,
+  LibraryCatalogEntry,
+  LibrarySourceDetail,
+  LibrarySourceVersion,
+} from '../../types';
 
 /** Quanto c'è sul computer, per una copia: le risoluzioni presenti, quale è
  *  la principale, quante pagine e quanto pesano. */
@@ -54,6 +60,8 @@ export function CopiesSection({
   viewedLocalSize = null,
   onViewLocalSize,
   reloadToken = 0,
+  provider,
+  shownPage = null,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
@@ -67,6 +75,10 @@ export function CopiesSection({
   /** La versione locale che il visore sta leggendo, quando è stata scelta. */
   viewedLocalSize?: string | null;
   onViewLocalSize?: (sizeTag: string | null) => void;
+  /** La biblioteca di questa copia: serve ai collegamenti dei dati tecnici. */
+  provider?: IIIFProvider;
+  /** La pagina aperta nel visore, per darne gli indirizzi fra i dati tecnici. */
+  shownPage?: ShownPage | null;
 }) {
   const { t } = useTranslation();
 
@@ -96,24 +108,12 @@ export function CopiesSection({
             onViewLocalSize={onViewLocalSize}
           />
 
-          {version.sourceUrl && (
-            <details className="border-t border-editorial-border/70 pt-2">
-              <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
-                {t('areas.library.technicalData')}
-              </summary>
-              <span className="mt-2 flex items-start gap-1">
-                <a
-                  href={version.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-w-0 flex-1 truncate text-xs text-editorial-accent underline underline-offset-2"
-                >
-                  {version.sourceUrl}
-                </a>
-                <CopyButton text={version.sourceUrl} size="xs" />
-              </span>
-            </details>
-          )}
+          <VersionTechnicalData
+            version={version}
+            detail={detail}
+            provider={provider}
+            shownPage={version.id === openVersionId ? shownPage : null}
+          />
         </li>
       ))}
     </ul>

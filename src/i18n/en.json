@@ -117,7 +117,8 @@
       "execution": "How each source of this search is answering: state, page reached, how much arrived, and the controls that act on a single library.",
       "history": "The searches already made, loaded fifty at a time. Each keeps its own criteria, sources and runs; opening one returns you to the execution tab.",
       "criteria": "The criteria that narrow the search and the sources to query. They apply to the next search: they do not change the ones already started."
-    }
+    },
+    "openProviderSite": "Search directly on the {{provider}} website"
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -1025,7 +1026,8 @@
       "monthsAgo_other": "{{count}} months ago",
       "yearsAgo_one": "{{count}} year ago",
       "yearsAgo_other": "{{count}} years ago"
-    }
+    },
+    "openLinkFailed": "The link could not be opened in the browser."
   },
   "projects": {
     "title": "Projects",
@@ -1336,7 +1338,22 @@
       "downloadOnlyImages": "For now Glossa only downloads image digitisations. For this one you can read the record and open it on the library site.",
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
-      "viewOnline": "Online"
+      "viewOnline": "Online",
+      "openShownPage": "Open this page in the library's own viewer",
+      "technicalLinkOpen": "Open in the browser",
+      "technicalLinks": {
+        "manifest": "IIIF manifest",
+        "item": "Work page",
+        "catalog": "Catalogue record",
+        "shownPage": "Open page",
+        "shownImage": "Page image",
+        "librarySite": "Library site"
+      },
+      "manifestContent": "Read the library manifest",
+      "manifestContentFailed": "The manifest could not be read from the library.",
+      "manifestPages": "Pages",
+      "manifestSummary": "Description",
+      "manifestRights": "Rights"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -2292,7 +2309,9 @@
             "title": "Using an address or identifier",
             "paragraphs": [
               "Open single-source search, choose the source and follow the example in the field. Depending on the source, you can use keywords, a shelfmark, an identifier or a URL.",
-              "Some sources support direct opening only; the panel indicates this. For a manifest from an institution not listed, choose Direct IIIF URL."
+              "Some sources support direct opening only; the panel indicates this. For a manifest from an institution not listed, choose Direct IIIF URL.",
+              "Next to the chosen library there is a command that opens its search page in the browser, carrying the words already typed where the library accepts them. What Glossa queries is what the library offers to a program, which is rarely its whole catalogue: when in doubt, search on their site, copy the address of the work and paste it here.",
+              "The National Library of Scotland is searched by title across its digital collections, or opened by pasting the work number. The University of Glasgow digital collections open with the manifest address, which their item page offers with a dedicated command."
             ]
           },
           {

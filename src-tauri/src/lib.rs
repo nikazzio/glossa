@@ -30,6 +30,7 @@ pub fn run() {
     let mut builder = tauri::Builder::default()
         .manage(llm::StreamRegistry::new())
         .manage(db::DbWriteCoordinator::default())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build());
@@ -231,6 +232,7 @@ pub fn run() {
             iiif::list_iiif_providers,
             iiif::discovery::discover_iiif,
             iiif::discovery::probe_manifest,
+            iiif::discovery::read_iiif_manifest_text,
             iiif::commands::list_network_settings,
             httpcache::commands::network_probe,
             iiif::commands::save_network_profile,

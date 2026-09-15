@@ -1,5 +1,9 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from 'react';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { errorMessage, logger } from '../../utils/logger';
 import { Tooltip, type TooltipSide } from './Tooltip';
 
 const iconButton = cva(
@@ -60,6 +64,14 @@ type IconLinkProps = VariantProps<typeof iconButton> & {
 
 /** Stesso aspetto di `IconButton` per un indirizzo esterno: resta un
  *  collegamento vero, così vale il tasto centrale e il menu del browser. */
+/**
+ * Un indirizzo esterno si apre nel **browser di sistema**, non dentro Glossa.
+ *
+ * Resta un collegamento vero — si legge come tale, si raggiunge col
+ * tabulatore, si copia col tasto destro — ma il click passa dal componente di
+ * Tauri: la finestra dell'applicazione non naviga fuori, e senza questo
+ * passaggio un `target="_blank"` non apriva proprio niente.
+ */
 export function IconLink({
   href,
   children,
@@ -70,11 +82,22 @@ export function IconLink({
   className,
   tooltipSide,
 }: IconLinkProps) {
+  const { t } = useTranslation();
+
+  const open = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    openUrl(href).catch((error: unknown) => {
+      logger.error('externalLink.openFailed', { reason: errorMessage(error) });
+      toast.error(t('common.openLinkFailed'));
+    });
+  };
+
   return (
     <Tooltip label={title} side={tooltipSide}>
       <span className="inline-flex">
         <a
           href={href}
+          onClick={open}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={ariaLabel ?? title}
