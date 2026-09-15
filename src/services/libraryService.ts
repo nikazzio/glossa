@@ -19,9 +19,12 @@ import {
   type SourceField,
   type SourceFieldValues,
   type SourceStatus,
+  MULTI_VALUE_SEPARATOR,
 } from '../types';
 
-const FIELD_SEPARATOR = ' · ';
+// Lo stesso separatore che la scheda mostra e accetta quando si scrive a mano:
+// due definizioni dello stesso segno finirebbero per divergere.
+const FIELD_SEPARATOR = MULTI_VALUE_SEPARATOR;
 
 function joinValues(values: string[]): string | null {
   return values.length ? values.join(FIELD_SEPARATOR) : null;

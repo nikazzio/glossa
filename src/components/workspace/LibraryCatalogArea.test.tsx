@@ -845,10 +845,10 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea itemId="s1" />);
     const creatorRow = screen
-      .getByText('areas.library.creatorField')
+      .getByText('areas.library.fieldLabels.creator')
       .closest('div') as HTMLElement;
     await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'areas.library.creatorField' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'areas.library.fieldLabels.creator' }), {
       target: { value: 'Jean Pucelle' },
     });
     await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
@@ -916,7 +916,7 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByText('Legatura settecentesca rifatta.')).toBeInTheDocument();
   });
 
-  it('mostra la natura dell\'origine come sola lettura, non più correggibile dalla scheda', async () => {
+  it('la natura dell\'opera si corregge scegliendo fra i valori previsti, non a testo libero', async () => {
     useSourceLibraryStore.setState({
       catalog: [entry()],
       detail: {
@@ -931,9 +931,21 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
-    const kindRow = screen.getByText('areas.library.kind').closest('div') as HTMLElement;
-    expect(within(kindRow).queryByRole('button', { name: 'areas.library.fieldEdit' })).toBeNull();
+    const kindRow = screen
+      .getByText('areas.library.fieldLabels.kind')
+      .closest('div') as HTMLElement;
+    await user.click(within(kindRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
+
+    // I filtri del catalogo si appoggiano a questi valori: scriverne uno
+    // qualsiasi li renderebbe inaffidabili.
+    const choice = within(kindRow).getByRole('combobox');
+    expect(Array.from(choice.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
+      'areas.library.kindLabels.manuscript',
+      'areas.library.kindLabels.print',
+      'areas.library.kindLabels.other',
+    ]);
   });
 
   it('se la correzione non si salva, il campo resta aperto e lo dice', async () => {
@@ -956,7 +968,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea itemId="s1" />);
     const creatorRow = screen
-      .getByText('areas.library.creatorField')
+      .getByText('areas.library.fieldLabels.creator')
       .closest('div') as HTMLElement;
     await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
     await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
@@ -966,7 +978,7 @@ describe('LibraryCatalogArea', () => {
     );
     // Il campo è ancora lì: chiuderlo direbbe che la correzione è passata.
     expect(
-      screen.getByRole('textbox', { name: 'areas.library.creatorField' }),
+      screen.getByRole('textbox', { name: 'areas.library.fieldLabels.creator' }),
     ).toBeInTheDocument();
   });
 

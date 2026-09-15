@@ -47,6 +47,15 @@ e dalla scheda di un'opera senza indirizzo proprio. Un solo componente
 (`ProviderSiteLink`) per tutti e quattro i punti; l'assenza della pagina è
 dichiarata dal record, non decisa dalla schermata.
 
+La scheda dell'opera è un **template fisso**: tutti i campi di `SOURCE_FIELDS`
+sono presenti sempre, vuoti compresi, e ognuno si corregge a mano con la stessa
+riga (`SourceFieldRow`), che conserva il valore originale della biblioteca in
+`source_field_overrides`. Il tipo di opera è una scelta fra valori fissi perché
+i filtri del catalogo vi si appoggiano; i campi a più valori si scrivono su una
+riga sola con `MULTI_VALUE_SEPARATOR`, la stessa costante con cui il servizio li
+divide e li unisce. I gruppi oltre il primo sono richiudibili e il loro stato
+sta in `uiStore.librarySourceGroups`, uno per tutta la Biblioteca.
+
 Dall'indirizzo del manifesto si torna alle pagine pubbliche della biblioteca
 (`services/libraryLinks.ts`): scheda dell'opera e visore aperto su una pagina
 precisa, oggi per Gallica — che numera le pagine da uno — e Internet Archive —

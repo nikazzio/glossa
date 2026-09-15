@@ -1353,7 +1353,35 @@
       "manifestContentFailed": "Non è stato possibile leggere il manifest dalla biblioteca.",
       "manifestPages": "Pagine",
       "manifestSummary": "Descrizione",
-      "manifestRights": "Diritti"
+      "manifestRights": "Diritti",
+      "fieldLabels": {
+        "title": "Titolo",
+        "kind": "Tipo di opera",
+        "creator": "Autore",
+        "date": "Data",
+        "publisher": "Editore",
+        "primary_language": "Lingua",
+        "description": "Descrizione",
+        "subjects": "Soggetti",
+        "genre_form": "Genere/forma",
+        "coverage": "Copertura",
+        "contributors": "Altri responsabili",
+        "physical_description": "Descrizione fisica",
+        "volume": "Volume",
+        "series": "Serie/collana",
+        "standard_identifier": "Identificativo standard",
+        "origin_place": "Luogo di origine",
+        "provenance": "Provenienza",
+        "related_works": "Opere collegate",
+        "rights": "Diritti",
+        "notes": "Note"
+      },
+      "fieldGroups": {
+        "content": "Contenuto",
+        "copy": "Esemplare",
+        "provenance": "Provenienza",
+        "rights": "Diritti e note"
+      }
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2333,7 +2361,8 @@
             "title": "Trovare un’opera nel catalogo",
             "paragraphs": [
               "Alterna elenco e griglia e usa i filtri per restringere il catalogo. Puoi salvare una combinazione di filtri come vista. Includi le opere archiviate quando vuoi recuperare un elemento messo da parte.",
-              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file."
+              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
+              "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
             ]
           },
           {
