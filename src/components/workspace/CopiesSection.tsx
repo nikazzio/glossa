@@ -6,6 +6,7 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
 import { versionInventory, type SizeFolder } from '../../services/inventoryService';
+import { excludedPages } from '../../services/excludedPagesService';
 import {
   enqueueOptimization,
   getOptimizeQuality,
@@ -148,6 +149,7 @@ function CopyDetails({
   const [fetched, setFetched] = useState<CopyInventory | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [excluded, setExcluded] = useState(0);
   const providerKeyRef = useRef<string | null>(null);
 
   // Si rilegge anche quando il catalogo l'aveva già dato: dopo una
@@ -193,6 +195,22 @@ function CopyDetails({
   };
 
   const inventory: CopyInventory = fetched ?? emptyInventory();
+  // Le pagine tolte di proposito non sono un buco: vanno dette, altrimenti la
+  // copia sembra incompleta per un guasto.
+  useEffect(() => {
+    let cancelled = false;
+    void excludedPages(version.id)
+      .then((pages) => {
+        if (!cancelled) setExcluded(pages.size);
+      })
+      .catch(() => {
+        if (!cancelled) setExcluded(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [version.id, reloadToken, reloadTick]);
+
   const reading = fetched === null;
   const expectedPages = entry?.expectedPages ?? version.expectedPages ?? 0;
   const { sizes, principal, localPages, localBytes } = inventory;
@@ -366,6 +384,13 @@ function CopyDetails({
           </p>
         )}
 
+        {excluded > 0 && (
+          // Dichiarate qui e non dentro una misura: l'esclusione vale per la
+          // copia, e una copia «incompleta» senza spiegazione sembra guasta.
+          <p className="text-xs text-editorial-muted">
+            {t('areas.library.excludedPagesCount', { count: excluded })}
+          </p>
+        )}
         {sizes.length > 0 && (
           <div className="space-y-4 pt-1">
             {sizes.map((size) => (

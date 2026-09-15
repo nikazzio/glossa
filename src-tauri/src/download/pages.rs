@@ -48,6 +48,9 @@ pub(crate) enum PageOutcome {
     },
     /// File già presente: nessuna richiesta.
     Present,
+    /// Tolta dall'utente di proposito: non si richiede e non si riscrive.
+    /// Diversa da `NotServed`, che è la biblioteca a non averla.
+    Excluded,
     /// La biblioteca non l'ha servita (404/410), o l'aveva già dichiarata tale
     /// entro `RETRY_MISSING_AFTER_SECS`.
     NotServed,

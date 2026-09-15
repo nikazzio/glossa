@@ -355,12 +355,15 @@ export function LibrarySourcePage({
             <div className="flex flex-col gap-6 px-4 py-5">
               {activeTab === 'info' ? (
                 <>
-                  <DataSection
+                  {/* Prima da dove viene l'opera, poi cosa dice di sé: chi
+                      apre la scheda sa già il titolo, e la prima domanda è di
+                      chi è la copia che sta guardando. */}
+                  <SourceInfoSection
                     detail={detail}
-                    onCorrectField={onCorrectField}
+                    providerLabel={providerLabel}
                     onResyncSource={onResyncSource}
                   />
-                  <SourceInfoSection detail={detail} providerLabel={providerLabel} />
+                  <DataSection detail={detail} onCorrectField={onCorrectField} />
                 </>
               ) : activeTab === 'copies' ? (
                 <CopiesSection
@@ -420,17 +423,25 @@ function Section({
   actions,
   children,
 }: {
-  icon: LucideIcon;
-  label: string;
+  icon?: LucideIcon;
+  /** Senza etichetta la sezione non si intesta: resta la riga dei comandi,
+   *  quando ce ne sono. Una sezione che raccoglie i dati dell'opera dentro la
+   *  scheda dell'opera non ha bisogno di dichiarare che sono dati. */
+  label?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const heading = label !== undefined && icon !== undefined;
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2 border-b border-editorial-border/70 pb-1.5">
-        <SectionLabel icon={icon} label={label} />
-        {actions}
-      </div>
+      {(heading || actions) && (
+        <div className={`flex items-center gap-2 border-b border-editorial-border/70 pb-1.5 ${
+          heading ? 'justify-between' : 'justify-end'
+        }`}>
+          {heading && <SectionLabel icon={icon} label={label} />}
+          {actions}
+        </div>
+      )}
       {children}
     </section>
   );
@@ -508,31 +519,13 @@ function WorkspaceLinkPicker({
 function DataSection({
   detail,
   onCorrectField,
-  onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
-  onResyncSource: () => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const [resyncing, setResyncing] = useState(false);
   const openGroups = useUiStore((state) => state.librarySourceGroups);
   const setGroupOpen = useUiStore((state) => state.setLibrarySourceGroupOpen);
-  const resync = async () => {
-    const confirmed = await confirm({
-      title: t('areas.library.resyncTitle'),
-      message: t('areas.library.resyncMessage'),
-      confirmLabel: t('areas.library.resyncConfirm'),
-      danger: true,
-    });
-    if (!confirmed) return;
-    setResyncing(true);
-    try {
-      await onResyncSource();
-    } finally {
-      setResyncing(false);
-    }
-  };
 
   const join = (values: string[]) => values.join(MULTI_VALUE_SEPARATOR);
   const row = (field: SourceField, value: string): SourceFieldSpec => ({
@@ -601,20 +594,7 @@ function DataSection({
   const [first, ...rest] = groups;
 
   return (
-    <Section
-      icon={Info}
-      label={t('areas.library.detailsSection')}
-      actions={
-        <IconButton
-          size="sm"
-          onClick={() => void resync()}
-          disabled={resyncing}
-          title={t('areas.library.resyncAction')}
-        >
-          <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
-        </IconButton>
-      }
-    >
+    <Section>
       <dl className="space-y-2.5">
         {first.fields.map((spec) => (
           <SourceFieldRow
@@ -684,11 +664,31 @@ interface SourceFieldGroup {
 function SourceInfoSection({
   detail,
   providerLabel,
+  onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   providerLabel?: string;
+  onResyncSource: () => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [resyncing, setResyncing] = useState(false);
+  // Riallineare riguarda quello che la biblioteca dice dell'opera: il comando
+  // sta dove si legge la biblioteca, non sotto i dati che andrebbe a cambiare.
+  const resync = async () => {
+    const confirmed = await confirm({
+      title: t('areas.library.resyncTitle'),
+      message: t('areas.library.resyncMessage'),
+      confirmLabel: t('areas.library.resyncConfirm'),
+      danger: true,
+    });
+    if (!confirmed) return;
+    setResyncing(true);
+    try {
+      await onResyncSource();
+    } finally {
+      setResyncing(false);
+    }
+  };
   const externalRef = detail.source.externalRef;
   const identifier =
     externalRef && detail.providerKey && externalRef.startsWith(`${detail.providerKey}:`)
@@ -701,7 +701,20 @@ function SourceInfoSection({
   ].filter(([, value]) => value !== '');
 
   return (
-    <Section icon={Library} label={t('areas.library.sourceSection')}>
+    <Section
+      icon={Library}
+      label={t('areas.library.sourceSection')}
+      actions={
+        <IconButton
+          size="sm"
+          onClick={() => void resync()}
+          disabled={resyncing}
+          title={t('areas.library.resyncAction')}
+        >
+          <RefreshCw size={13} className={resyncing ? 'animate-spin' : undefined} />
+        </IconButton>
+      }
+    >
       <dl className="space-y-2.5">
         {providerLabel && (
           <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />

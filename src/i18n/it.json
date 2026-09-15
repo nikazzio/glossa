@@ -1381,7 +1381,17 @@
         "copy": "Esemplare",
         "provenance": "Provenienza",
         "rights": "Diritti e note"
-      }
+      },
+      "pageActions": "Cosa fare con questa pagina",
+      "pageTakeAtMax": "Prendila alla massima risoluzione",
+      "pageBackToBookSize": "Riportala alla misura del libro",
+      "pageRemove": "Togli questa pagina dal computer",
+      "pageRemoveSize": "Cancella la misura {{size}}",
+      "pageCopiesLoading": "Lettura delle misure",
+      "pageNoCopies": "Di questa pagina non hai niente sul computer.",
+      "pageActionFailed": "Non è stato possibile cambiare questa pagina.",
+      "excludedPagesCount_one": "{{count}} pagina tolta di proposito: non torna con un nuovo scaricamento.",
+      "excludedPagesCount_other": "{{count}} pagine tolte di proposito: non tornano con un nuovo scaricamento."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2408,7 +2418,8 @@
               "Apri il pannello dei lavori in basso a destra. Ogni voce mostra avanzamento e stato; espandila per leggere dettagli, tentativi ed errori.",
               "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
               "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
-              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori."
+              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori.",
+              "Mentre leggi puoi agire sulla singola pagina: prenderla alla massima risoluzione, riportarla alla misura del libro o toglierla dal computer. Una pagina tolta resta esclusa e non torna con un nuovo scaricamento, finché non la richiedi."
             ]
           },
           {

@@ -117,6 +117,26 @@ cache. La cache non aumenta il conteggio delle pagine scaricate e non entra
 nel [backup](../reference/backup-and-restore).
 
 
+## Agire sulla pagina che stai leggendo
+
+Nella barra del visore, accanto al comando che conserva la pagina, ce n'è uno
+che apre cosa si può fare con **quella** pagina:
+
+- **prenderla alla massima risoluzione**, quando la misura del libro non basta
+  per guardarla davvero;
+- **riportarla alla misura del libro**, che cancella le copie più grandi e
+  restituisce lo spazio;
+- **toglierla dal computer**: la pagina sparisce e resta esclusa, cioè non torna
+  né con un nuovo scaricamento del libro né da sola. Chiederla di nuovo alla
+  massima risoluzione la riammette.
+
+Sotto compaiono le misure di quella pagina che hai davvero sul disco, con il
+loro peso e un comando per cancellarne una sola.
+
+Nella scheda dell'opera, sotto Copie digitali, la copia dichiara quante pagine
+hai tolto di proposito: senza quella riga una copia incompleta sembrerebbe
+guasta.
+
 ## Messaggi e log di sistema
 
 Il pannello in basso raccoglie tre schede: i messaggi della traduzione in corso,

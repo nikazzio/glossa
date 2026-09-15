@@ -1381,7 +1381,17 @@
         "copy": "Copy",
         "provenance": "Provenance",
         "rights": "Rights and notes"
-      }
+      },
+      "pageActions": "What to do with this page",
+      "pageTakeAtMax": "Take it at the highest resolution",
+      "pageBackToBookSize": "Bring it back to the book size",
+      "pageRemove": "Remove this page from the computer",
+      "pageRemoveSize": "Delete the {{size}} size",
+      "pageCopiesLoading": "Reading the sizes",
+      "pageNoCopies": "You have nothing of this page on the computer.",
+      "pageActionFailed": "This page could not be changed.",
+      "excludedPagesCount_one": "{{count}} page removed on purpose: it does not come back with a new download.",
+      "excludedPagesCount_other": "{{count}} pages removed on purpose: they do not come back with a new download."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -2408,7 +2418,8 @@
               "Open the jobs panel at the bottom right. Each entry shows progress and status; expand it for details, attempts and errors.",
               "Pause requests a stop at the next checkpoint; Resume continues from there. Cancel ends the job and keeps files already saved. After a failure, you can start another attempt.",
               "Waiting may indicate a library rate limit. A countdown refers to the next attempt, not the end of the download. Paused means the job needs to be resumed.",
-              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs."
+              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs.",
+              "While reading you can act on a single page: take it at the highest resolution, bring it back to the book size, or remove it from the computer. A removed page stays excluded and does not come back with a new download, until you ask for it again."
             ]
           },
           {

@@ -47,6 +47,15 @@ e dalla scheda di un'opera senza indirizzo proprio. Un solo componente
 (`ProviderSiteLink`) per tutti e quattro i punti; l'assenza della pagina è
 dichiarata dal record, non decisa dalla schermata.
 
+Le pagine si manipolano una per una dentro l'unica copia a immagini: prenderla
+alla massima risoluzione, riportarla alla misura del libro, toglierla. I comandi
+del deposito sono `page_local_copies` e `forget_page`, che guardano i file e non
+il database. Togliere una pagina la **esclude**: la riga sta in `excluded_pages`
+(migrazione 0002), lo scaricamento del libro la salta con l'esito `Excluded` —
+contato nell'avanzamento, altrimenti il lavoro non arriverebbe mai in fondo — e
+chiederla di nuovo la riammette. L'esclusione vale per la copia, non per una
+singola misura.
+
 La scheda dell'opera è un **template fisso**: tutti i campi di `SOURCE_FIELDS`
 sono presenti sempre, vuoti compresi, e ognuno si corregge a mano con la stessa
 riga (`SourceFieldRow`), che conserva il valore originale della biblioteca in

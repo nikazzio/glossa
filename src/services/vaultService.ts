@@ -215,3 +215,34 @@ export function summarizeAvailability(
     expectedPages,
   };
 }
+
+/** Una misura di una singola pagina presente sul computer. */
+export interface PageCopy {
+  sizeTag: string;
+  bytes: number;
+  derived: boolean;
+}
+
+/** Che cosa si ha di questa pagina, misura per misura, letto dal deposito. */
+export async function pageLocalCopies(
+  providerKey: string,
+  versionId: string,
+  pageIndex: number,
+): Promise<PageCopy[]> {
+  return invoke<PageCopy[]>('page_local_copies', { providerKey, versionId, pageIndex });
+}
+
+/**
+ * Toglie dal computer una pagina: una misura sola, oppure tutte.
+ *
+ * Non impedisce alla pagina di tornare con il prossimo scaricamento: quello lo
+ * fa l'esclusione, che è una decisione diversa e si scrive nel database.
+ */
+export async function forgetPage(
+  providerKey: string,
+  versionId: string,
+  pageIndex: number,
+  sizeTag?: string,
+): Promise<FreedSpace> {
+  return invoke<FreedSpace>('forget_page', { providerKey, versionId, pageIndex, sizeTag });
+}
