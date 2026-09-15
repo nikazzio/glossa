@@ -89,8 +89,80 @@ fn homepage_url(value: &Value) -> Option<String> {
         .or_else(|| text(Some(first)))
 }
 
+/// La copertina di un'opera: quella dichiarata dal manifesto, e in mancanza
+/// quella della sua prima pagina.
+///
+/// Molte biblioteche non mettono una miniatura in cima al manifesto e la
+/// scrivono solo sulle pagine — la Nazionale scozzese è una di queste — e i
+/// risultati arrivavano senza copertina pur avendone una a un livello di
+/// distanza. Ultimo ripiego: il servizio immagini della prima pagina, a cui si
+/// chiede una misura da miniatura.
 pub(super) fn thumbnail_url(value: &Value) -> Option<String> {
-    thumbnail_of(value.get("thumbnail")?)
+    value
+        .get("thumbnail")
+        .and_then(thumbnail_of)
+        .or_else(|| {
+            first_canvas(value).and_then(|canvas| canvas.get("thumbnail").and_then(thumbnail_of))
+        })
+        .or_else(|| first_canvas(value).and_then(canvas_image_thumbnail))
+}
+
+/// La prima pagina, nelle due versioni del formato: `sequences`/`canvases`
+/// nella 2, `items` nella 3.
+fn first_canvas(value: &Value) -> Option<&Value> {
+    let from_v3 = value
+        .get("items")
+        .and_then(Value::as_array)
+        .and_then(|items| items.first());
+    from_v3.or_else(|| {
+        value
+            .get("sequences")
+            .and_then(Value::as_array)
+            .and_then(|sequences| sequences.first())
+            .and_then(|sequence| sequence.get("canvases"))
+            .and_then(Value::as_array)
+            .and_then(|canvases| canvases.first())
+    })
+}
+
+/// Dal servizio immagini della prima pagina a una miniatura: la richiesta è
+/// quella dell'Image API, la stessa che il visore usa per le pagine.
+fn canvas_image_thumbnail(canvas: &Value) -> Option<String> {
+    let service = image_service(canvas)?;
+    Some(format!(
+        "{}/full/!200,200/0/default.jpg",
+        service.trim_end_matches('/')
+    ))
+}
+
+fn image_service(canvas: &Value) -> Option<String> {
+    // IIIF 2: `images[0].resource.service`; IIIF 3: `items[0].items[0].body.service`.
+    let v2 = canvas
+        .get("images")
+        .and_then(Value::as_array)
+        .and_then(|images| images.first())
+        .and_then(|image| image.get("resource"))
+        .and_then(|resource| resource.get("service"));
+    let v3 = canvas
+        .get("items")
+        .and_then(Value::as_array)
+        .and_then(|items| items.first())
+        .and_then(|page| page.get("items"))
+        .and_then(Value::as_array)
+        .and_then(|annotations| annotations.first())
+        .and_then(|annotation| annotation.get("body"))
+        .and_then(|body| body.get("service"));
+    let service = v2.or(v3)?;
+    let service = match service {
+        Value::Array(items) => items.first()?,
+        other => other,
+    };
+    service
+        .get("@id")
+        .or_else(|| service.get("id"))
+        .and_then(Value::as_str)
+        .filter(|url| url.starts_with("http"))
+        .map(str::to_string)
 }
 
 /// L'indirizzo di una miniatura, comunque la biblioteca l'abbia scritta: una
@@ -352,6 +424,52 @@ mod tests {
         matchers::{method, path, query_param},
         Mock, MockServer, ResponseTemplate,
     };
+
+    #[test]
+    fn the_cover_falls_back_to_the_first_page_when_the_manifest_has_none() {
+        // La Nazionale scozzese scrive la miniatura solo sulle pagine: senza
+        // ripiego i suoi risultati arrivavano tutti senza copertina.
+        let manifest = serde_json::json!({
+            "@type": "sc:Manifest",
+            "sequences": [{ "canvases": [{
+                "thumbnail": { "@id": "https://deriv.nls.uk/dcn4/1341/6737/134167371.4.jpg" }
+            }]}]
+        });
+        assert_eq!(
+            super::thumbnail_url(&manifest).as_deref(),
+            Some("https://deriv.nls.uk/dcn4/1341/6737/134167371.4.jpg")
+        );
+    }
+
+    #[test]
+    fn without_any_thumbnail_the_cover_is_asked_to_the_image_service() {
+        let manifest = serde_json::json!({
+            "@type": "sc:Manifest",
+            "sequences": [{ "canvases": [{
+                "images": [{ "resource": { "service": {
+                    "@id": "https://dg-view.nls.uk/iiif/2/1341%2F6737%2F134167371.5"
+                }}}]
+            }]}]
+        });
+        assert_eq!(
+            super::thumbnail_url(&manifest).as_deref(),
+            Some("https://dg-view.nls.uk/iiif/2/1341%2F6737%2F134167371.5/full/!200,200/0/default.jpg")
+        );
+    }
+
+    #[test]
+    fn the_manifest_cover_still_comes_first() {
+        let manifest = serde_json::json!({
+            "thumbnail": "https://example.org/copertina.jpg",
+            "sequences": [{ "canvases": [{
+                "thumbnail": { "@id": "https://example.org/pagina.jpg" }
+            }]}]
+        });
+        assert_eq!(
+            super::thumbnail_url(&manifest).as_deref(),
+            Some("https://example.org/copertina.jpg")
+        );
+    }
 
     #[tokio::test]
     async fn direct_manifest_returns_normalized_preview() {
