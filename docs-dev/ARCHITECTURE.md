@@ -47,6 +47,12 @@ e dalla scheda di un'opera senza indirizzo proprio. Un solo componente
 (`ProviderSiteLink`) per tutti e quattro i punti; l'assenza della pagina è
 dichiarata dal record, non decisa dalla schermata.
 
+I comandi sulla pagina vivono nella scheda (`OpenPageSection`), non nella barra
+del visore: sono manovre sul deposito come lo scaricamento, e la barra resta per
+la lettura. Il visore pubblica verso l'alto la posizione corrente con servizio
+immagini e versione del formato, così la scheda costruisce da sé la richiesta a
+qualunque misura.
+
 Le pagine si manipolano una per una dentro l'unica copia a immagini: prenderla
 alla massima risoluzione, riportarla alla misura del libro, toglierla. I comandi
 del deposito sono `page_local_copies` e `forget_page`, che guardano i file e non

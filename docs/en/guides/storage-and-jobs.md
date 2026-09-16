@@ -113,9 +113,14 @@ increase downloaded-page counts and is excluded from
 
 ## Acting on the page you are reading
 
-In the viewer toolbar, next to the command that keeps the page, another one
-opens what can be done with **that** page:
+The commands for a single page live in the right-hand panel, under **Digital
+copies**, in the section at the top about the page open in the viewer. They are
+icon commands: the name appears on hover. They stay visible, disabled, when the
+viewer is showing another copy.
 
+With a page open you can:
+
+- **keep it at the book size**, as the toolbar used to do;
 - **take it at the highest resolution**, when the book size is not enough to
   really look at it;
 - **bring it back to the book size**, which deletes the larger copies and gives
@@ -125,7 +130,9 @@ opens what can be done with **that** page:
   again at the highest resolution readmits it.
 
 Below, the sizes of that page actually on disk, with their weight and a command
-to delete a single one.
+to delete a single one. The viewer toolbar keeps only the reading commands:
+local-only reading, zoom, thumbnails and the link to the page on the library
+site.
 
 On the item page, under Digital copies, the copy states how many pages you
 removed on purpose: without that line an incomplete copy would look broken.

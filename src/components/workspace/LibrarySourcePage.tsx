@@ -24,7 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import { libraryItemUrl } from '../../services/libraryLinks';
 import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
-import { type ShownPage } from './VersionTechnicalData';
+import { type ShownPage } from './OpenPageSection';
 import {
   ClickPopover,
   IconButton,
@@ -154,7 +154,6 @@ export function LibrarySourcePage({
   const countRefreshedFor = useRef<string | null>(null);
   /** Cresce ogni volta che il visore conserva una pagina: la scheda delle
    *  digitalizzazioni rilegge il deposito senza aspettare un lavoro in coda. */
-  const [keptPages, setKeptPages] = useState(0);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
@@ -269,9 +268,13 @@ export function LibrarySourcePage({
             providerKey={manifestVersion.providerKey}
             preferredLocalSize={chosenLocalSize}
             onLocalSizeChange={setReadingLocalSize}
-            onPageKept={() => setKeptPages((count) => count + 1)}
             onPageChange={(position) => {
-              setShownPage({ index: position.index, imageUrl: position.imageUrl });
+              setShownPage({
+                index: position.index,
+                imageUrl: position.imageUrl,
+                imageService: position.imageService,
+                presentation2: position.presentation2,
+              });
               // Il manifesto letto dal visore dice quante pagine ha il libro, e
               // il motore lo registra. La scheda però tiene in mano il numero
               // di prima — a volte «1», dichiarato dalla ricerca — e diceva
@@ -373,7 +376,6 @@ export function LibrarySourcePage({
                   openVersionId={manifestVersion?.id ?? null}
                   viewedLocalSize={readingLocalSize}
                   onViewLocalSize={setChosenLocalSize}
-                  reloadToken={keptPages}
                   provider={provider}
                   shownPage={shownPage}
                 />

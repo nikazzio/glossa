@@ -119,9 +119,14 @@ nel [backup](../reference/backup-and-restore).
 
 ## Agire sulla pagina che stai leggendo
 
-Nella barra del visore, accanto al comando che conserva la pagina, ce n'è uno
-che apre cosa si può fare con **quella** pagina:
+I comandi sulla singola pagina stanno nella scheda a destra, sotto **Copie
+digitali**, nella sezione in cima che riguarda la pagina aperta nel visore. Sono
+comandi a icona: il nome compare passandoci sopra. Restano visibili anche quando
+il visore mostra un'altra copia, spenti.
 
+Con la pagina aperta puoi:
+
+- **conservarla alla misura del libro**, come si faceva prima dalla barra;
 - **prenderla alla massima risoluzione**, quando la misura del libro non basta
   per guardarla davvero;
 - **riportarla alla misura del libro**, che cancella le copie più grandi e
@@ -131,7 +136,9 @@ che apre cosa si può fare con **quella** pagina:
   massima risoluzione la riammette.
 
 Sotto compaiono le misure di quella pagina che hai davvero sul disco, con il
-loro peso e un comando per cancellarne una sola.
+loro peso e un comando per cancellarne una sola. Nella barra del visore restano
+soltanto i comandi di lettura: lettura solo dal computer, ingrandimento,
+miniature e il collegamento alla pagina sul sito della biblioteca.
 
 Nella scheda dell'opera, sotto Copie digitali, la copia dichiara quante pagine
 hai tolto di proposito: senza quella riga una copia incompleta sembrerebbe

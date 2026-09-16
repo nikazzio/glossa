@@ -24,7 +24,8 @@ import { freeVersionPages, freeVersionSize } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
-import { VersionTechnicalData, type ShownPage } from './VersionTechnicalData';
+import { VersionTechnicalData } from './VersionTechnicalData';
+import { OpenPageSection, type ShownPage } from './OpenPageSection';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -101,6 +102,7 @@ export function CopiesSection({
 
           <CopyDetails
             version={version}
+            shownPage={version.id === openVersionId ? shownPage : null}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
             reloadToken={reloadToken}
@@ -135,8 +137,11 @@ function CopyDetails({
   isOpenInViewer,
   viewedLocalSize,
   onViewLocalSize,
+  shownPage,
 }: {
   version: LibrarySourceVersion;
+  /** La pagina aperta nel visore, quando è di questa copia. */
+  shownPage?: ShownPage | null;
   entry?: LibraryCatalogEntry;
   onRefresh: () => void;
   reloadToken: number;
@@ -328,6 +333,17 @@ function CopyDetails({
 
   return (
     <div className="space-y-8 border-t border-editorial-border/60 pt-4">
+      {/* La pagina aperta viene prima: è il contesto in cui si sta mentre si
+          legge, e i suoi comandi sono quelli che si cercano subito. */}
+      {version.versionKind === 'iiif_manifest' && (
+        <OpenPageSection
+          version={version}
+          providerKey={version.providerKey ?? 'generic'}
+          shownPage={isOpenInViewer ? (shownPage ?? null) : null}
+          bookSize={principal}
+          onChanged={reloadAll}
+        />
+      )}
       {/* Prima si prende, poi si guarda cosa si ha: lo scaricamento sta in
           cima perché è il gesto con cui questa scheda comincia. */}
       <section className="space-y-3">

@@ -1382,16 +1382,16 @@
         "provenance": "Provenance",
         "rights": "Rights and notes"
       },
-      "pageActions": "What to do with this page",
       "pageTakeAtMax": "Take it at the highest resolution",
       "pageBackToBookSize": "Bring it back to the book size",
       "pageRemove": "Remove this page from the computer",
       "pageRemoveSize": "Delete the {{size}} size",
-      "pageCopiesLoading": "Reading the sizes",
-      "pageNoCopies": "You have nothing of this page on the computer.",
       "pageActionFailed": "This page could not be changed.",
       "excludedPagesCount_one": "{{count}} page removed on purpose: it does not come back with a new download.",
-      "excludedPagesCount_other": "{{count}} pages removed on purpose: they do not come back with a new download."
+      "excludedPagesCount_other": "{{count}} pages removed on purpose: they do not come back with a new download.",
+      "openPageSection": "Page {{page}}",
+      "openPageSectionIdle": "Open page",
+      "pageKeep": "Keep this page at the book size"
     },
     "transcriptions": {
       "title": "Transcriptions",

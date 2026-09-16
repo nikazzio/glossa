@@ -1382,16 +1382,16 @@
         "provenance": "Provenienza",
         "rights": "Diritti e note"
       },
-      "pageActions": "Cosa fare con questa pagina",
       "pageTakeAtMax": "Prendila alla massima risoluzione",
       "pageBackToBookSize": "Riportala alla misura del libro",
       "pageRemove": "Togli questa pagina dal computer",
       "pageRemoveSize": "Cancella la misura {{size}}",
-      "pageCopiesLoading": "Lettura delle misure",
-      "pageNoCopies": "Di questa pagina non hai niente sul computer.",
       "pageActionFailed": "Non è stato possibile cambiare questa pagina.",
       "excludedPagesCount_one": "{{count}} pagina tolta di proposito: non torna con un nuovo scaricamento.",
-      "excludedPagesCount_other": "{{count}} pagine tolte di proposito: non tornano con un nuovo scaricamento."
+      "excludedPagesCount_other": "{{count}} pagine tolte di proposito: non tornano con un nuovo scaricamento.",
+      "openPageSection": "Pagina {{page}}",
+      "openPageSectionIdle": "Pagina aperta",
+      "pageKeep": "Conserva questa pagina alla misura del libro"
     },
     "transcriptions": {
       "title": "Trascrizioni",
