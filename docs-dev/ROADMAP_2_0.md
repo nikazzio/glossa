@@ -99,13 +99,14 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   gestore di ricerca (visita della pagina del catalogo e `Referer`), e il
   segnale resta dichiarato come segnaposto per quando anche lo scaricamento
   dovrà aprire una sessione.
-- #459 (azioni sulla pagina e selezione multipla, «Fase A»): **prima metà
-  consegnata** nella forma semplificata del 16 settembre — una copia a immagini
+- #459 (azioni sulla pagina, «Fase A»): **consegnata**. Una copia a immagini
   sola per opera con un file per pagina, comandi sulla pagina che sostituiscono
   invece di affiancare, esclusione persistente rispettata dallo scaricamento,
   ricompressione sul posto al posto della copia derivata, riallineamento che non
-  butta le correzioni sui campi che la biblioteca non dà. **Resta** la selezione
-  a intervallo dalle miniature.
+  butta le correzioni sui campi che la biblioteca non dichiara. La **selezione
+  multipla** è uscita dalla issue: con una copia sola i suoi motivi si riducono
+  a «togliere molte pagine in fila», e vive meglio nello Studio di trascrizione
+  (#388), dove serve a scegliere cosa trascrivere.
 - #462 (PDF della biblioteca, «Fase C»): decisa il 16 settembre. Il PDF è una
   **copia a sé** accanto a quella a immagini, si legge **dentro il visore
   attuale** con pdf.js — che serve anche a estrarre il testo per le trascrizioni
