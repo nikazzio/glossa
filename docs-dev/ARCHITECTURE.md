@@ -598,6 +598,8 @@ Layout:
   .glossa-vault
   providers/<biblioteca>/<versione>/
     manifest.json
+    document.pdf
+    document.json
     pages/<misura>/0001.jpg
     pages/<misura>/pages.jsonl
     thumbnails/0001.jpg
@@ -625,6 +627,48 @@ l'originale è stato liberato e resta solo la copia, quella diventa principale.
 `vault::commands::free_version_size` libera **una sola** cartella di misura
 (scaricata o derivata); `delete_version_files` (rimozione dell'opera) e lo
 spazzino delle cartelle orfane coprono ora anche `derived/`.
+
+### Il documento unico (#462, 16 settembre 2026)
+
+Una digitalizzazione di tipo `pdf` è **una copia a sé**, non una misura della
+copia a immagini: `document.pdf` sta nella cartella della versione, accanto a
+`manifest.json` e a `pages/`, e se ne va solo con il proprio comando.
+`document.json` tiene quello che il file di sistema non dice — indirizzo di
+origine, byte, pagine contate, impronta, momento dell'arrivo — e vive accanto al
+file invece che nel database, così cancellare la cartella non lascia righe che
+parlano di un file che non c'è più.
+
+Catena: `download::pdf::enqueue_pdf_download` (comando) mette in coda
+`source_pdf_download`, gestito da `download::pdf::PdfDownloadJob` con la stessa
+cortesia per host dello scaricamento a immagini. Il ciclo tiene il posto in
+corsia per tutto il trasferimento — è una richiesta sola e lunga — scrive in
+`staging/<versione>/`, valida con `integrity::FileKind::Pdf` (firma `%PDF-`,
+`%%EOF` nella coda), sposta atomicamente e solo allora scrive la scheda.
+`Recovery::Restart`: mezzo documento non serve a niente, e riprendere significa
+rifare. La guardia `has_active_version_work` conosce anche questo tipo, così
+eliminare file mentre arrivano resta impossibile.
+
+Le pagine si contano dal file con `lopdf` (`count_pages`), a documento appena
+promosso e fuori dal filo del runtime. Un documento protetto, malformato o oltre
+i 512 MB resta senza conteggio: `pages: None`, dichiarato come tale
+nell'interfaccia. **Quello che la biblioteca dichiara non vince mai** sul
+conteggio del file, e la differenza non produce avvisi a schermo (decisione del
+16 settembre 2026).
+
+`VersionInventory` porta ora `document: Option<DocumentCopy>` letto dal disco;
+`inventoryBytes` lo somma allo spazio della copia. `free_version_document`
+cancella file e scheda e nient'altro. La verifica del deposito
+(`vault::verification`) include il documento fra i file registrati, con
+l'impronta della scheda.
+
+Lettura: `document_bytes` serve i byte grezzi (`tauri::ipc::Response`) con un
+tetto di 256 MB, `open_document_externally` apre il file con il lettore del
+sistema. Nella finestra, `DocumentViewer` disegna la pagina con pdf.js e la
+mostra con OpenSeadragon, riusando `ViewerToolbar` — estratta da `PageViewer`
+in questo giro, con le parti solo-immagini (miniature, solo-locale, uscita verso
+la pagina della biblioteca) rese facoltative. Il percorso del deposito non
+arriva mai alla finestra: si compone nel motore da chiave e identificativo,
+entrambi convalidati come componenti di percorso.
 
 ### Riconoscimento e ricerca per biblioteca
 

@@ -100,6 +100,30 @@ Una risoluzione diversa produce una versione locale distinta. Ogni versione
 ha comandi propri per aprirla, ridurla o eliminarla. Le regole di dimensionamento
 sono descritte in [Archiviazione e lavori](./storage-and-jobs).
 
+## Documenti serviti come file unico
+
+Alcune biblioteche non servono l'opera come sequenza di immagini ma come un
+documento unico. In quel caso la scheda mostra una copia a sé, con il proprio
+comando di scaricamento: non ci sono risoluzioni da scegliere, perché il file è
+uno solo e arriva com'è.
+
+Arrivato il documento, la scheda ne dichiara le pagine — contate dal file, non
+da quanto la biblioteca dichiara — lo spazio occupato e lo stato. Eliminarlo
+libera lo spazio e non tocca le immagini della stessa opera, che restano dove
+sono. Un comando apre il documento con il lettore del sistema.
+
+La lettura avviene nel visore, con lo stesso zoom e lo stesso sfoglio delle
+immagini, ma resta **separata**: le pagine del documento e quelle della sequenza
+di immagini non garantiscono la stessa identità, quindi non si fondono in un
+unico sfoglio e la barra dichiara sempre quale delle due copie è a schermo.
+Il selettore in alto elenca entrambe, con il tipo accanto al nome.
+
+Limiti dichiarati: un documento oltre i 256 MB non si apre dentro Glossa e va
+letto con il lettore del sistema; di un documento protetto da parola d'ordine o
+malformato non si contano le pagine, e la scheda lo dice invece di inventarne un
+numero. La pagina del documento viene disegnata a una risoluzione fissa: una
+scansione ingrandita al massimo si vede meno nitida delle tessere IIIF.
+
 ## Archiviazione ed eliminazione
 
 | Azione | Effetto |
@@ -115,10 +139,10 @@ la sola pausa non è sufficiente.
 
 ## Limiti
 
-Le digitalizzazioni PDF possono essere registrate, ma il loro download e la
-lettura nella Biblioteca non sono disponibili. L’importazione del testo di
-un PDF in un progetto di traduzione è una funzione distinta. La gestione
-avanzata delle singole pagine e la selezione multipla sono ancora incomplete.
+L’importazione del testo di un PDF in un progetto di traduzione resta una
+funzione distinta: dal documento conservato nella Biblioteca non si avvia
+ancora una trascrizione. La gestione avanzata delle singole pagine e la
+selezione multipla sono ancora incomplete.
 Le restrizioni di scaricamento dichiarate dalle istituzioni non sono applicate
 automaticamente: consulta le condizioni della fonte.
 

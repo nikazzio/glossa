@@ -216,7 +216,7 @@ async fn attempt_once(
 /// L'attesa la decide il **profilo della biblioteca**, non una costante
 /// del motore: dopo un 403 Gallica vuole dieci minuti, le altre due. Il tempo
 /// dichiarato dal servizio, quando c'è, vince su tutto.
-fn classify(
+pub(crate) fn classify(
     status: StatusCode,
     retry_after: Option<u64>,
     url: &str,
@@ -269,7 +269,7 @@ fn classify(
     }
 }
 
-fn retry_after_secs(response: &reqwest::Response) -> Option<u64> {
+pub(crate) fn retry_after_secs(response: &reqwest::Response) -> Option<u64> {
     response
         .headers()
         .get(reqwest::header::RETRY_AFTER)?

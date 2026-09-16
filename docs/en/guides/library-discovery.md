@@ -79,6 +79,30 @@ different resolution creates a separate local version. Each version has its
 own controls for opening, resizing and deletion. Resolution policies are
 described under [Storage and jobs](./storage-and-jobs).
 
+## Documents served as a single file
+
+Some libraries do not serve the work as a sequence of images but as a single
+document. The record then shows a copy of its own, with its own download
+command: there are no resolutions to choose, because the file is one and
+arrives as it is.
+
+Once the document has arrived, the record states its pages — counted from the
+file, not from what the library declares — the space it takes and its status.
+Deleting it frees the space and does not touch the images of the same work,
+which stay where they are. A command opens the document with the system reader.
+
+Reading happens in the viewer, with the same zoom and page turning as the
+images, but it stays **separate**: the pages of the document and those of the
+image sequence do not guarantee the same identity, so they are not merged into a
+single browsing sequence and the bar always states which of the two copies is on
+screen. The selector at the top lists both, with the kind next to the name.
+
+Stated limits: a document over 256 MB does not open inside Glossa and must be
+read with the system reader; for a password-protected or malformed document the
+pages are not counted, and the record says so rather than inventing a number.
+The document page is drawn at a fixed resolution: a scan magnified to the
+maximum looks less sharp than IIIF tiles.
+
 ## Archiving and deletion
 
 | Action | Effect |
@@ -94,9 +118,9 @@ sufficient.
 
 ## Limitations
 
-PDF digitisations can be registered, but Library download and viewing are not
-available. Importing text from a PDF into a translation project is a separate
-feature. Advanced page management and multiple-page selection are incomplete.
+Importing text from a PDF into a translation project remains a separate
+feature: a transcription cannot yet be started from a document kept in the
+Library. Advanced page management and multiple-page selection are incomplete.
 Institutional download restrictions are not enforced automatically; consult
 the source’s conditions of use.
 

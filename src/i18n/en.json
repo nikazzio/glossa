@@ -1329,7 +1329,7 @@
         "other": "File"
       },
       "sourceUrlField": "Address",
-      "downloadOnlyImages": "For now Glossa only downloads image digitisations. For this one you can read the record and open it on the library site.",
+      "downloadOnlyImages": "For now Glossa downloads image digitisations and documents. For this one you can read the record and open it on the library site.",
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
       "viewOnline": "Online",
@@ -1396,7 +1396,31 @@
       "pagePixels": "{{width}} × {{height}}",
       "compressTitle": "Recompress the pages?",
       "compressMessage": "Every page is rewritten at a lower quality, same pixel dimensions. Not reversible: to get the current quality back the book must be downloaded again.",
-      "freeSpace": "Delete every page of this work from disk"
+      "freeSpace": "Delete every page of this work from disk",
+      "documentSection": "Document",
+      "documentPresent": "The document is on this computer.",
+      "documentAbsent": "The document is not on this computer yet.",
+      "documentDownloading": "The document is on its way.",
+      "documentDownload": "Download the document",
+      "documentAlreadyHere": "The document is already on this computer",
+      "documentQueued": "Document download queued.",
+      "documentDownloadFailed": "The document could not be requested.",
+      "documentFreeTitle": "Delete the document ({{size}})?",
+      "documentFreeMessage": "The file leaves this computer. The image pages of the same work stay where they are, and the document can be downloaded again from the library.",
+      "documentFreeAction": "Delete the document",
+      "documentFreeFailed": "The document could not be deleted.",
+      "documentOpenOutside": "Open with the system reader",
+      "documentOpenFailed": "The document could not be opened.",
+      "documentPagesUnknown": "not counted",
+      "documentComplete": "complete",
+      "documentViewerSection": "Document reading",
+      "documentReading": "document",
+      "documentTooLarge": "Document too large to open here",
+      "documentTooLargeHint": "Open it with the system reader: it reads the file from disk without loading all of it.",
+      "documentLoadError": "The document does not open",
+      "documentLoadErrorHint": "The file may be password protected or may have arrived damaged. Try again, or download it again from the record.",
+      "documentNotHere": "The document is not on this computer yet",
+      "documentNotHereHint": "Download it from the digital copies record: until it is here there is nothing to read."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -2399,8 +2423,15 @@
             "title": "Downloading and saving",
             "paragraphs": [
               "In Digitisations, choose a resolution and start downloading the work. A different resolution creates another local version. You can choose which version to open.",
-              "Save page keeps only the displayed image at the dimensions shown in the tooltip. It does not request a new image at the configured resolution.",
-              "PDF copies may appear in the record, but Library viewing and downloading are not yet available for them."
+              "Save page keeps only the displayed image at the dimensions shown in the tooltip. It does not request a new image at the configured resolution."
+            ]
+          },
+          {
+            "title": "Library documents",
+            "paragraphs": [
+              "When the library serves the work as a single document instead of a sequence of images, the record shows it as a copy of its own, with its own download command.",
+              "Once it has arrived, the record says how many pages it has — counted from the file — how much space it takes and whether it is complete. Deleting it frees the space and does not touch the images of the same work. You can also open it with your computer's reader.",
+              "The document is read in the viewer like the images, with zoom and page turning, but it stays a separate reading: the pages of the document and those of the image sequence are not the same thing, and the top bar always says which of the two you are looking at. A very large document does not open inside Glossa: open it with your computer's reader."
             ]
           },
           {
@@ -2929,7 +2960,8 @@
       "debug_restart_only": "Development test (restart only)",
       "source_download": "Page download",
       "vault_verification": "Vault check",
-      "image_optimization": "Image optimisation"
+      "image_optimization": "Image optimisation",
+      "source_pdf_download": "Document download"
     },
     "phase": {
       "starting": "starting",
@@ -2937,7 +2969,8 @@
       "downloading": "downloading",
       "checking_files": "checking files",
       "looking_for_orphans": "looking for orphans",
-      "optimizing": "shrinking the images"
+      "optimizing": "shrinking the images",
+      "reading_document": "reading the document"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",
@@ -2954,7 +2987,8 @@
       "vault_verification": "check",
       "debug_counter": "test",
       "debug_restart_only": "test",
-      "image_optimization": "optimisation"
+      "image_optimization": "optimisation",
+      "source_pdf_download": "document"
     },
     "error": {
       "optimizationIncomplete_one": "One page could not be optimised.",

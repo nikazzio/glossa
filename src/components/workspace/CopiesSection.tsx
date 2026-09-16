@@ -5,7 +5,11 @@ import { ClickPopover, IconButton, SectionLabel, Select, StatBlock, StatRow } fr
 import { useJobsStore } from '../../stores/jobsStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
-import { versionInventory, type SizeFolder } from '../../services/inventoryService';
+import {
+  versionInventory,
+  type DocumentCopy,
+  type SizeFolder,
+} from '../../services/inventoryService';
 import { excludedPages } from '../../services/excludedPagesService';
 import { CopyProvenance } from './CopyProvenance';
 import { errorMessage, logger } from '../../utils/logger';
@@ -27,6 +31,7 @@ import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
 import { VersionTechnicalData } from './VersionTechnicalData';
 import { OpenPageSection, type ShownPage } from './OpenPageSection';
+import { DocumentSection } from './DocumentSection';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -41,10 +46,12 @@ interface CopyInventory {
   principal: string | null;
   localPages: number;
   localBytes: number;
+  /** Il documento unico, per le copie che la biblioteca serve come file. */
+  document: DocumentCopy | null;
 }
 
 function emptyInventory(): CopyInventory {
-  return { sizes: [], principal: null, localPages: 0, localBytes: 0 };
+  return { sizes: [], principal: null, localPages: 0, localBytes: 0, document: null };
 }
 
 /** Le copie digitali dell'opera: per ognuna, cosa è (manifesto IIIF, PDF,
@@ -181,6 +188,7 @@ function CopyDetails({
                 principal: result.principal,
                 localPages: result.sizes.find((size) => size.sizeTag === result.principal)?.pages ?? 0,
                 localBytes: result.sizes.reduce((total, size) => total + size.bytes, 0),
+                document: result.document,
               }
             : emptyInventory(),
         );
@@ -350,6 +358,20 @@ function CopyDetails({
     }
   };
 
+  // Una copia servita come file unico non ha misure né pagine sul disco: ha un
+  // documento, e i suoi comandi sono altri.
+  if (version.versionKind === 'pdf') {
+    return (
+      <DocumentSection
+        version={version}
+        document={inventory.document}
+        isOpenInViewer={isOpenInViewer}
+        viewing={isOpenInViewer}
+        onChanged={reloadAll}
+      />
+    );
+  }
+
   return (
     <div className="space-y-8 border-t border-editorial-border/60 pt-4">
       {/* La pagina aperta viene prima: è il contesto in cui si sta mentre si
@@ -372,9 +394,10 @@ function CopyDetails({
             le descrive. */}
         <SectionLabel icon={HardDrive} label={t('areas.library.bookSection')} />
 
-        {/* Solo le digitalizzazioni a immagini si scaricano: per un PDF o un
-            file di altro tipo lo scaricamento chiederebbe alla biblioteca un
-            manifesto che non esiste, e il lavoro finirebbe in errore. */}
+        {/* Le digitalizzazioni a immagini si scaricano dal manifesto; il
+            documento unico ha la sua sezione. Per un file di altro tipo non
+            c'è niente da chiedere alla biblioteca, e offrirlo prometterebbe un
+            lavoro che finisce in errore. */}
         {version.versionKind === 'iiif_manifest' ? (
           <DownloadRow
             version={version}

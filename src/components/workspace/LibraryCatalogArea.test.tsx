@@ -635,6 +635,7 @@ describe('LibraryCatalogArea', () => {
       sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0, derived: false }],
       principal: '2000',
       hasManifest: true,
+      document: null,
     });
 
     const user = userEvent.setup();
@@ -711,6 +712,7 @@ describe('LibraryCatalogArea', () => {
       ],
       principal: '1500',
       hasManifest: true,
+      document: null,
     });
     useSourceLibraryStore.setState({
       catalog: [

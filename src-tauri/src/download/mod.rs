@@ -13,6 +13,7 @@ mod handler_it;
 pub mod inventory;
 pub mod manifest;
 pub mod pages;
+pub mod pdf;
 pub mod progress;
 pub mod sidecar;
 pub mod sizing;

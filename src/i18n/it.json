@@ -1329,7 +1329,7 @@
         "other": "File"
       },
       "sourceUrlField": "Indirizzo",
-      "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
+      "downloadOnlyImages": "Per ora Glossa scarica le digitalizzazioni a immagini e i documenti. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
       "viewOnline": "Online",
@@ -1396,7 +1396,31 @@
       "pagePixels": "{{width}} × {{height}}",
       "compressTitle": "Ricomprimere le pagine?",
       "compressMessage": "Ogni pagina viene riscritta a qualità inferiore, stesse dimensioni in pixel. Operazione non reversibile: per tornare alla qualità attuale occorre riscaricare il libro.",
-      "freeSpace": "Elimina dal disco tutte le pagine di quest'opera"
+      "freeSpace": "Elimina dal disco tutte le pagine di quest'opera",
+      "documentSection": "Documento",
+      "documentPresent": "Il documento è sul computer.",
+      "documentAbsent": "Il documento non è ancora sul computer.",
+      "documentDownloading": "Il documento sta arrivando.",
+      "documentDownload": "Scarica il documento",
+      "documentAlreadyHere": "Il documento è già sul computer",
+      "documentQueued": "Scaricamento del documento messo in coda.",
+      "documentDownloadFailed": "Non è stato possibile chiedere il documento.",
+      "documentFreeTitle": "Eliminare il documento ({{size}})?",
+      "documentFreeMessage": "Il file se ne va dal computer. Le pagine a immagini della stessa opera restano dove sono, e il documento si può riscaricare dalla biblioteca.",
+      "documentFreeAction": "Elimina il documento",
+      "documentFreeFailed": "Non è stato possibile eliminare il documento.",
+      "documentOpenOutside": "Apri con il lettore del computer",
+      "documentOpenFailed": "Non è stato possibile aprire il documento.",
+      "documentPagesUnknown": "non contate",
+      "documentComplete": "completo",
+      "documentViewerSection": "Lettura del documento",
+      "documentReading": "documento",
+      "documentTooLarge": "Documento troppo grande per essere aperto qui",
+      "documentTooLargeHint": "Aprilo con il lettore del computer: legge il file dal disco senza doverlo caricare tutto.",
+      "documentLoadError": "Il documento non si apre",
+      "documentLoadErrorHint": "Il file potrebbe essere protetto da una parola d'ordine o essere arrivato rovinato. Riprova, oppure riscaricalo dalla scheda.",
+      "documentNotHere": "Il documento non è ancora sul computer",
+      "documentNotHereHint": "Scaricalo dalla scheda delle copie digitali: finché non è qui non c'è niente da leggere."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2399,8 +2423,15 @@
             "title": "Scaricare e conservare",
             "paragraphs": [
               "In Digitalizzazioni scegli la risoluzione e avvia il download dell’opera. Una risoluzione diversa crea un’altra versione locale. Puoi scegliere quale versione aprire.",
-              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata.",
-              "Le copie PDF possono comparire nella scheda, ma non sono ancora leggibili o scaricabili dalla Biblioteca."
+              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata."
+            ]
+          },
+          {
+            "title": "I documenti della biblioteca",
+            "paragraphs": [
+              "Quando la biblioteca serve l’opera come un documento unico invece che come una sequenza di immagini, la scheda lo mostra come una copia a sé, con il suo comando per scaricarlo.",
+              "Una volta arrivato, la scheda dice quante pagine ha — contate dal file — quanto occupa e se è completo. Eliminarlo libera lo spazio e non tocca le immagini della stessa opera. Puoi anche aprirlo con il lettore del tuo computer.",
+              "Il documento si legge nel visore come le immagini, con zoom e sfoglio, ma resta una lettura separata: le pagine del documento e quelle della sequenza di immagini non sono la stessa cosa, e in alto è sempre scritto quale delle due stai guardando. Un documento molto grande non si apre dentro Glossa: si apre con il lettore del computer."
             ]
           },
           {
@@ -2929,7 +2960,8 @@
       "debug_restart_only": "Prova di sviluppo (da rifare)",
       "source_download": "Scaricamento pagine",
       "vault_verification": "Verifica del deposito",
-      "image_optimization": "Ottimizzazione delle immagini"
+      "image_optimization": "Ottimizzazione delle immagini",
+      "source_pdf_download": "Scaricamento documento"
     },
     "phase": {
       "starting": "avvio",
@@ -2937,7 +2969,8 @@
       "downloading": "scaricamento",
       "checking_files": "controllo dei file",
       "looking_for_orphans": "ricerca dei file orfani",
-      "optimizing": "riduzione delle immagini"
+      "optimizing": "riduzione delle immagini",
+      "reading_document": "lettura del documento"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
@@ -2954,7 +2987,8 @@
       "vault_verification": "verifica",
       "debug_counter": "prova",
       "debug_restart_only": "prova",
-      "image_optimization": "ottimizzazione"
+      "image_optimization": "ottimizzazione",
+      "source_pdf_download": "documento"
     },
     "error": {
       "optimizationIncomplete_one": "Non è stato possibile ottimizzare una pagina.",

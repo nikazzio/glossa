@@ -116,6 +116,17 @@ export async function freeVersionSize(
 }
 
 /**
+ * Butta il documento unico di una digitalizzazione e solo quello: le pagine a
+ * immagini della stessa opera restano dove sono.
+ */
+export async function freeVersionDocument(
+  providerKey: string,
+  versionId: string,
+): Promise<FreedSpace> {
+  return invoke<FreedSpace>('free_version_document', { providerKey, versionId });
+}
+
+/**
  * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
  * miniature, pagine — quando l'opera esce dalla Biblioteca.
  */

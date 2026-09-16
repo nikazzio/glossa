@@ -49,6 +49,7 @@ import { CopiesSection } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
 import { PageViewer } from '../viewer/PageViewer';
+import { DocumentViewer } from '../viewer/DocumentViewer';
 import { useDebounce } from '../../hooks/useDebounce';
 import { MULTI_VALUE_SEPARATOR } from '../../types';
 import type {
@@ -114,13 +115,20 @@ export function LibrarySourcePage({
   onResyncSource,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
-  const iiifVersions = detail.versions.filter(
-    (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
+  // Si legge quello che ha un indirizzo e una forma che Glossa sa aprire: la
+  // sequenza di immagini della biblioteca e il documento unico. Sono due
+  // letture distinte della stessa opera, e restano due voci separate.
+  const readableVersions = detail.versions.filter(
+    (version) =>
+      (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf')
+      && version.sourceUrl,
   );
-  const initialManifestVersion = iiifVersions.find((version) => version.isPrimary) ?? iiifVersions[0];
+  const initialManifestVersion =
+    readableVersions.find((version) => version.isPrimary) ?? readableVersions[0];
   const [selectedVersionId, setSelectedVersionId] = useState(initialManifestVersion?.id ?? '');
   const manifestVersion =
-    iiifVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
+    readableVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
+  const readingDocument = manifestVersion?.versionKind === 'pdf';
   // L'opera sul sito della biblioteca: quello che ha dichiarato lei, e in
   // mancanza quello che si ricava dall'indirizzo del manifesto per le fonti di
   // cui la forma è verificata. Trovato il libro, la ricerca generica della
@@ -212,14 +220,17 @@ export function LibrarySourcePage({
         {/* Biblioteca e uscite stanno con i comandi, a destra: al centro
             rubavano larghezza al titolo, che è la cosa che si legge. */}
         <div className="flex shrink-0 items-center justify-end gap-1">
-          {manifestVersion && (iiifVersions.length > 1 ? (
+          {manifestVersion && (readableVersions.length > 1 ? (
             <Select
               value={manifestVersion.id}
               onChange={setSelectedVersionId}
               ariaLabel={t('areas.library.digitalizationLabel')}
-              options={iiifVersions.map((version) => ({
+              // Il tipo si scrive accanto al nome: con due copie della stessa
+              // opera — le immagini e il documento — il solo nome non dice
+              // quale delle due si sta per aprire.
+              options={readableVersions.map((version) => ({
                 value: version.id,
-                label: version.label,
+                label: `${t(`areas.library.versionKindLabels.${version.versionKind}`)} · ${version.label}`,
               }))}
               className="min-w-0 max-w-[12rem]"
             />
@@ -258,7 +269,13 @@ export function LibrarySourcePage({
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
             dallo Studio di trascrizione: questo componente resta la stessa
             dimensione minima predisposta prima che esistesse. */}
-        {manifestVersion?.sourceUrl ? (
+        {readingDocument && manifestVersion ? (
+          <DocumentViewer
+            key={manifestVersion.id}
+            versionId={manifestVersion.id}
+            providerKey={manifestVersion.providerKey ?? 'generic'}
+          />
+        ) : manifestVersion?.sourceUrl ? (
           <PageViewer
             key={manifestVersion.id}
             sourceId={detail.source.id}

@@ -1,0 +1,61 @@
+import * as pdfjs from 'pdfjs-dist';
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+/**
+ * pdf.js dietro tre funzioni: apri, disegna una pagina, chiudi.
+ *
+ * Il disegno avviene in un filo separato — è il modo in cui pdf.js lavora —
+ * e il file del filo è quello impacchettato con l'applicazione, non uno preso
+ * dalla rete.
+ */
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+/**
+ * A che scala si disegna la pagina.
+ *
+ * Due volte la misura dichiarata dal documento: una scansione ingrandita resta
+ * leggibile, e il costo in memoria di una pagina sola resta accettabile. È il
+ * limite dichiarato di questa lettura rispetto alle tessere della biblioteca,
+ * che si ridisegnano a ogni livello di zoom.
+ */
+const RENDER_SCALE = 2;
+
+export interface LoadedDocument {
+  pages: number;
+  /** Il documento aperto da pdf.js. */
+  handle: pdfjs.PDFDocumentProxy;
+  /** Chiude il documento e ferma il filo che lo teneva: senza, i byte di un
+   *  documento che non si sta più leggendo resterebbero in memoria. */
+  destroy: () => Promise<void>;
+}
+
+/** Apre il documento dai byte già in mano. */
+export async function openDocument(bytes: Uint8Array): Promise<LoadedDocument> {
+  const task = pdfjs.getDocument({ data: bytes });
+  const handle = await task.promise;
+  return {
+    pages: handle.numPages,
+    handle,
+    destroy: () => task.destroy(),
+  };
+}
+
+/** Disegna una pagina e ne restituisce l'immagine. */
+export async function renderDocumentPage(
+  document: LoadedDocument,
+  index: number,
+): Promise<Blob> {
+  // pdf.js conta le pagine da uno; qui, come nel resto del visore, da zero.
+  const page = await document.handle.getPage(index + 1);
+  const viewport = page.getViewport({ scale: RENDER_SCALE });
+  const canvas = window.document.createElement('canvas');
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('canvas_unavailable');
+  await page.render({ canvas, canvasContext: context, viewport }).promise;
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  page.cleanup();
+  if (!blob) throw new Error('page_not_drawn');
+  return blob;
+}

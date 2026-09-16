@@ -317,6 +317,52 @@ pub async fn delete_version_files(
     })
 }
 
+/// Butta il documento unico di una digitalizzazione, e solo quello: le pagine
+/// a immagini della stessa opera restano dove sono.
+///
+/// Se ne va anche la scheda scritta accanto: descrive un file che non c'è più,
+/// e tenerla farebbe dire alla scheda dell'opera che il documento c'è ancora.
+#[tauri::command]
+pub async fn free_version_document(
+    app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
+    provider_key: String,
+    version_id: String,
+) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let mut deleted_files = 0;
+    let mut freed_bytes = 0;
+    // Come per la rimozione dell'opera: la cartella porta il nome della chiave
+    // che valeva quando il file è stato scritto, che può non essere quella
+    // dichiarata adesso dal catalogo.
+    for key in provider_keys_holding(&root, &provider_key, &version_id) {
+        for path in [
+            root.join(super::layout::document_path(&key, &version_id)?),
+            root.join(super::layout::document_meta_path(&key, &version_id)?),
+        ] {
+            let Ok(metadata) = std::fs::metadata(&path) else {
+                continue;
+            };
+            if !metadata.is_file() {
+                continue;
+            }
+            std::fs::remove_file(&path)
+                .map_err(|e| format!("Failed to delete {}: {e}", path.display()))?;
+            deleted_files += 1;
+            freed_bytes += metadata.len();
+        }
+    }
+    Ok(FreedSpace {
+        deleted_files,
+        freed_bytes,
+    })
+}
+
 /// Le chiavi di biblioteca sotto cui esiste davvero una cartella per questa
 /// digitalizzazione, più quella dichiarata dal catalogo.
 ///
