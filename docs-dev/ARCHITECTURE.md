@@ -679,6 +679,14 @@ Solo il `rendering` **di manifesto** conta: uno dichiarato su un canvas riguarda
 quella pagina, e confonderli farebbe passare per «il libro in PDF» il PDF di una
 carta sola.
 
+Attenzione alla **posizione** del `rendering`: in Presentation 2.1 quasi nessuna
+biblioteca lo dichiara sulla radice — sta sulla sequenza, che in quella versione
+è l'oggetto «libro intero» (Wellcome, e-codices). Leggere solo la radice le
+perdeva tutte, ed è il motivo per cui la prima versione non trovava mai un PDF.
+Gallica non dichiara nessun `rendering`: lì lo stato è «non disponibile», e
+resta tale finché non lo dichiara, perché indovinare l'indirizzo del PDF è
+esattamente quello che questo modulo non fa.
+
 `iiif::discovery::inspect_manifest` (che ha sostituito `probe_manifest`) fa un
 GET con tetto di 2 MB e restituisce `ManifestFacts`: `openable`, `pages`,
 `sample_pixels` (i pixel del primo canvas) e `document`. Una lettura sola
@@ -686,21 +694,54 @@ risponde alle tre domande che prima erano due richieste e una assenza. Oltre il
 tetto resta `openable: Some(true)` con il resto ignoto. `facts_of` è la parte
 senza rete, ed è dove stanno le prove.
 
+**Nessuna attesa senza scadenza (16 settembre 2026).** Era il difetto peggiore
+di questa catena, e si vedeva: una verifica partiva e non finiva più, e dietro
+di lei si accodava tutto quello che riguardava quella biblioteca — aggiunta di
+opere compresa. Due cause, entrambe corrette:
+
+- `Gate::wait_in` aspettava il turno con `stop = || false`, cioè per sempre. Il
+  raffreddamento di una biblioteca dura minuti (Gallica ne chiede dieci dopo un
+  rifiuto). Adesso l'attesa ha una scadenza — `WATCHED_DEADLINE` 20 s per quello
+  che l'utente sta guardando, `BACKGROUND_DEADLINE` 8 s per i controlli di
+  sfondo — e chi non ottiene il turno **rinuncia**: `inspect_manifest` risponde
+  «non verificato» invece di bussare senza turno.
+- `Courtesy::take_seat` faceva `acquire_owned().await` senza mai riguardare i
+  segnali: un posto tenuto da una richiesta lunga metteva in fila tutti, e
+  nemmeno una pausa o un annullamento li liberava. Adesso il posto si aspetta a
+  fette di `POLL_SLICE`, controllando fra una e l'altra se chi aspetta ha
+  smesso. Vale anche per i lavori di scaricamento, che prima non rispondevano a
+  «pausa» finché non ottenevano il posto.
+
 Nella finestra la lettura passa da `useManifestFacts`, che ne fa **una per
 biblioteca e manifesto per sessione**, condivisa fra le righe e con al massimo
 due richieste insieme; `readManifestFacts` è la stessa cosa fuori da un
-componente, con `fresh` per «chiedi di nuovo davvero». Le righe di ricerca la
-usano solo quando entrano nello schermo, e mai per un risultato che il catalogo
-dichiara già senza riproduzione.
+componente, con `fresh` per «rileggi davvero». Le righe di ricerca la usano solo
+quando entrano nello schermo, e mai per un risultato che il catalogo dichiara
+già senza riproduzione. Tre invarianti, e sono tutta la robustezza di quel file:
+ogni richiesta finisce (scadenza di 35 s come rete di sicurezza sopra quelle del
+motore), il posto in coda si rilascia una volta sola, e **solo una risposta
+verificata si ricorda** — un guasto non marchia un'opera per tutta la sessione.
+
+L'aggiunta di un'opera **non aspetta** la verifica: la lettura del manifesto
+parte per conto suo e il catalogo si rilegge quando arriva. Aspettarla
+significava tenere fermo un comando riuscito dietro a una fila di rete.
 
 La copia si registra con `registerDeclaredDocument`: una riga `source_versions`
 con `version_kind = 'pdf'`, l'indirizzo del documento e la chiave della
 biblioteca nei metadati. La chiama l'aggiunta dalla ricerca, il riallineamento
 (`resyncSource`) e il comando «chiedi alla biblioteca» nella scheda. È
 idempotente sull'indirizzo, quindi ripeterla non crea doppioni. Finché la
-biblioteca non dichiara niente, la scheda mostra comunque la sezione del
-documento con lo stato («non dichiarato», «non si sa»): una copia assente va
-detta, non taciuta.
+biblioteca non dichiara niente, la riga del PDF resta con il suo stato («non
+disponibile», «disponibilità non verificata»): un'assenza va detta, non taciuta.
+Lo stesso vale nei risultati di ricerca, dove lo stato è sempre una delle tre
+parole, mai il silenzio.
+
+**Dove sta il PDF nell'interfaccia.** Non è una voce dell'elenco delle copie: è
+una riga dentro la sezione del libro della copia a immagini (`DocumentBlock`
+dentro `CopiesSection`), sotto le misure locali, perché è lì che si sceglie se
+visualizzare le immagini o il PDF. La scelta arriva al visore con
+`onShowVersion`, che cambia la copia selezionata in `LibrarySourcePage`; i
+comandi di visualizzazione delle misure fanno la stessa cosa al contrario.
 
 Rimozione dell'opera: `delete_source_files` cancella le cartelle di **tutte** le
 copie del lavoro (le legge da `source_versions`), perché `delete_version_files`

@@ -188,11 +188,19 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
 /// quella pagina, non l'opera, e confonderli farebbe passare per «il libro in
 /// PDF» il PDF di una carta sola.
 fn renderings_of(root: &Value) -> Vec<Rendering> {
-    let declared = match root.get("rendering") {
-        Some(Value::Array(entries)) => entries.clone(),
-        Some(single) => vec![single.clone()],
-        None => return Vec::new(),
-    };
+    // In Presentation 2.1 quasi nessuna biblioteca dichiara le rappresentazioni
+    // sulla radice: stanno sulla sequenza, che è l'oggetto che rappresenta «il
+    // libro intero» in quella versione dello standard (Wellcome, e-codices e
+    // altre fanno così). Guardare solo la radice le perdeva tutte.
+    let mut declared = entries_of(root.get("rendering"));
+    for sequence in root
+        .get("sequences")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    {
+        declared.extend(entries_of(sequence.get("rendering")));
+    }
     declared
         .iter()
         .filter_map(|entry| {
@@ -206,6 +214,15 @@ fn renderings_of(root: &Value) -> Vec<Rendering> {
             })
         })
         .collect()
+}
+
+/// Un valore che lo standard ammette singolo o in elenco, sempre come elenco.
+fn entries_of(value: Option<&Value>) -> Vec<Value> {
+    match value {
+        Some(Value::Array(entries)) => entries.clone(),
+        Some(single) => vec![single.clone()],
+        None => Vec::new(),
+    }
 }
 
 /// La radice del servizio immagini.
@@ -390,6 +407,37 @@ mod tests {
             label: None,
         };
         assert!(by_format.is_pdf());
+    }
+
+    /// Quasi tutte le biblioteche in Presentation 2.1 dichiarano il documento
+    /// sulla **sequenza**, non sulla radice: è la forma di Wellcome, ed era il
+    /// motivo per cui un PDF che esiste risultava inesistente.
+    #[test]
+    fn presentation_2_declares_the_document_on_the_sequence() {
+        let body = r#"{
+          "@id": "https://example.org/manifest",
+          "sequences": [{
+            "rendering": [
+              { "@id": "https://example.org/opera.pdf", "label": "View as PDF",
+                "format": "application/pdf" },
+              { "@id": "https://example.org/opera.txt", "label": "View raw text",
+                "format": "text/plain" }
+            ],
+            "canvases": [
+              { "label": "1r", "width": 1275, "height": 1650,
+                "images": [{ "resource": { "service": { "@id": "https://img/a" } } }] }
+            ]
+          }]
+        }"#;
+
+        let manifest = parse(body.as_bytes()).unwrap();
+        assert_eq!(manifest.renderings.len(), 2);
+        let document = manifest
+            .renderings
+            .iter()
+            .find(|rendering| rendering.is_pdf())
+            .expect("il PDF dichiarato dalla sequenza");
+        assert_eq!(document.url, "https://example.org/opera.pdf");
     }
 
     /// In 2.1 `rendering` è lo stesso, con `@id` e l'etichetta come stringa.

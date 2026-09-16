@@ -164,31 +164,57 @@ pub struct Gate<'a> {
     pub profile: &'a NetworkProfile,
 }
 
+/// Quanto si aspetta al massimo il proprio turno verso una biblioteca prima di
+/// rinunciare.
+///
+/// **Aspettare senza scadenza era il difetto peggiore di questo modulo**: il
+/// raffreddamento di una biblioteca dura minuti (Gallica ne chiede dieci dopo un
+/// rifiuto), e una richiesta nata dalla finestra restava appesa per tutto quel
+/// tempo. Chi guardava non vedeva niente finire, e le richieste seguenti verso
+/// quella biblioteca si accodavano dietro a una che non finiva mai.
+///
+/// Due scadenze, perché due sono le attese: quella che l'utente sta guardando
+/// (una ricerca, l'apertura di un manifesto) può permettersi di più di un
+/// controllo di sfondo, che nessuno aspetta e che deve togliersi di mezzo.
+const WATCHED_DEADLINE: Duration = Duration::from_secs(20);
+const BACKGROUND_DEADLINE: Duration = Duration::from_secs(8);
+
 impl Gate<'_> {
     /// Il turno va **tenuto** per tutta la durata della richiesta: è ciò che
     /// limita quante ne partono insieme verso lo stesso host.
     async fn wait(&self, url: &str) -> Option<Turn> {
-        self.wait_in(url, Lane::Page).await
+        self.wait_in(url, Lane::Page, WATCHED_DEADLINE).await
     }
 
-    /// Lo stesso turno, ma in una corsia scelta: un controllo che nessuno sta
-    /// aspettando non deve togliere il posto alla pagina che si sta guardando.
-    async fn wait_in(&self, url: &str, lane: Lane) -> Option<Turn> {
+    /// Lo stesso turno, ma in una corsia scelta e con una scadenza: un
+    /// controllo che nessuno sta aspettando non deve togliere il posto alla
+    /// pagina che si sta guardando, né restare in fila all'infinito.
+    ///
+    /// `None` significa «non è arrivato il turno in tempo»: chi chiama lo
+    /// dichiara come non verificato, invece di bussare lo stesso — bussare
+    /// senza turno è esattamente il modo di farsi bandire dalla biblioteca.
+    async fn wait_in(&self, url: &str, lane: Lane, deadline: Duration) -> Option<Turn> {
         let host = crate::download::fetch::host_of(url).ok()?;
-        let never_stops = || false;
+        let until = std::time::Instant::now() + deadline;
+        let give_up = move || std::time::Instant::now() >= until;
         let waiting = AtomicBool::new(false);
         let signals = Signals {
-            stop: &never_stops,
+            stop: &give_up,
             courtesy_wait: &waiting,
         };
-        // Una ricerca è quello che l'utente sta aspettando a schermo, non
-        // un'acquisizione in blocco: passa dalla corsia della pagina.
         self.courtesy
             .wait_turn(&host, self.profile, lane, &signals)
             .await
     }
 }
 
+/// Il turno per una richiesta che l'utente sta aspettando a schermo.
+///
+/// Scaduta l'attesa si procede lo stesso: una ricerca che non parte perché la
+/// biblioteca è occupata è una schermata vuota senza spiegazione, e il tempo
+/// della richiesta è comunque limitato dal client. Chi invece può permettersi
+/// di rinunciare — i controlli di sfondo — usa `wait_aside` e dichiara «non
+/// verificato».
 pub(super) async fn wait_if_gated(gate: Option<&Gate<'_>>, url: &str) -> Option<Turn> {
     match gate {
         Some(gate) => gate.wait(url).await,
@@ -200,7 +226,10 @@ pub(super) async fn wait_if_gated(gate: Option<&Gate<'_>>, url: &str) -> Option<
 /// miniature, quella che non toglie mai il posto alla pagina aperta.
 pub(super) async fn wait_aside(gate: Option<&Gate<'_>>, url: &str) -> Option<Turn> {
     match gate {
-        Some(gate) => gate.wait_in(url, Lane::Thumbnail).await,
+        Some(gate) => {
+            gate.wait_in(url, Lane::Thumbnail, BACKGROUND_DEADLINE)
+                .await
+        }
         None => None,
     }
 }
@@ -364,7 +393,13 @@ pub async fn inspect_manifest(
         profile: &profile,
     };
     let client = client()?;
-    let _turn = wait_aside(Some(&gate), &manifest_url).await;
+    // Senza turno non si bussa: la biblioteca è occupata o in raffreddamento, e
+    // un controllo di sfondo non ha niente di così urgente da scavalcarla. Si
+    // dichiara «non verificato», che è la verità.
+    let Some(_turn) = wait_aside(Some(&gate), &manifest_url).await else {
+        log::debug!("manifest inspection skipped, no turn url={manifest_url}");
+        return Ok(ManifestFacts::default());
+    };
     Ok(manifest_facts(&client, &manifest_url).await)
 }
 
@@ -462,7 +497,9 @@ pub async fn read_iiif_manifest_text(
         profile: &profile,
     };
     let client = client()?;
-    let _turn = wait_aside(Some(&gate), &manifest_url).await;
+    let Some(_turn) = wait_aside(Some(&gate), &manifest_url).await else {
+        return Err(crate::iiif::search::MANIFEST_UNREACHABLE.to_string());
+    };
     let response = client
         .get(&manifest_url)
         .header(reqwest::header::ACCEPT, "application/json")

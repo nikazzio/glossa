@@ -225,10 +225,20 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // fondo e segnatura in una stringa sola: in riga chiusa vale il primo.
   const shortOrigin = expanded ? origin : origin.split(',')[0].trim();
   const mediaType = !isManifest(card) ? card.mediaType : null;
-  // La presenza del documento si dice nella riga chiusa: è la differenza fra
-  // «lo leggo online» e «me lo porto via in un file», e deciderlo dopo aver
-  // aperto l'opera significa averla già aggiunta.
-  const documentPart = facts.document ? t('dashboard.discovery.documentAvailable') : null;
+  // Lo stato del PDF si dice **sempre**, nei tre casi in cui può stare: c'è,
+  // non c'è, non si è potuto verificare. Dirlo solo quando c'è lascerebbe
+  // credere che l'assenza della scritta significhi qualcosa, e non significa
+  // niente. Sull'opera che la biblioteca dichiara senza riproduzione non si
+  // dice niente: lì non c'è nessun manifesto da leggere, e la riga lo scrive
+  // già con parole sue.
+  const documentPart =
+    openable === false || checking
+      ? null
+      : facts.document
+        ? t('dashboard.discovery.documentAvailable')
+        : facts.openable !== null
+          ? t('dashboard.discovery.documentUnavailable')
+          : t('dashboard.discovery.documentUnverified');
   const metaParts = [
     card.creator,
     card.date,
@@ -250,13 +260,15 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
               t('dashboard.discovery.samplePixels'),
               `${facts.samplePixels[0]} × ${facts.samplePixels[1]} px`,
             ],
-            // Detto sempre, anche quando non c'è: «non dichiarato» è una
+            // Detta sempre, anche quando il PDF non c'è: l'assenza è una
             // risposta, il silenzio no.
-            facts.openable !== null && [
+            [
               t('dashboard.discovery.documentLabel'),
               facts.document
-                ? (facts.document.label ?? t('dashboard.discovery.documentDeclared'))
-                : t('dashboard.discovery.documentNotDeclared'),
+                ? (facts.document.label ?? t('dashboard.discovery.documentAvailable'))
+                : facts.openable !== null
+                  ? t('dashboard.discovery.documentUnavailable')
+                  : t('dashboard.discovery.documentUnverified'),
             ],
           ].filter((entry): entry is [string, string] => Boolean(entry)))
         : [],

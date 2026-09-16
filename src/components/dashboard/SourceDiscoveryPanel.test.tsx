@@ -400,9 +400,9 @@ describe('risultati doppi dai cataloghi', () => {
     // riproduzione, e va detto sulla riga invece di farla sparire.
     expect(await screen.findByText('Solo in catalogo')).toBeInTheDocument();
     expect(screen.getByText('dashboard.discovery.notOpenable')).toBeInTheDocument();
-    // Il motore lo aveva già scoperto leggendo il manifesto: nessun controllo
-    // in più.
-    expect(mockInspect).not.toHaveBeenCalled();
+    // Il catalogo lo aveva già dichiarato: quel manifesto non si legge, perché
+    // non c'è niente da leggere.
+    expect(mockInspect).not.toHaveBeenCalledWith('archive_org', 'https://example.test/assente');
   });
 
   it('checks a result the library did not tell us about', async () => {

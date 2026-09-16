@@ -171,12 +171,14 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),
         libraryManifestSourceIds: new Map(state.libraryManifestSourceIds).set(manifestUrl, sourceId),
       }));
-      // Se la biblioteca dichiara anche il documento, l'opera nasce con due
-      // copie: le immagini e il file. Chiederlo dopo, aprendo la scheda,
-      // significherebbe che il documento esiste ma nessuno lo sa.
-      // Non riuscirci non fa fallire l'aggiunta: dalla scheda si può sempre
-      // chiedere di nuovo alla biblioteca.
-      await registerDocumentIfDeclared(sourceId, manifestUrl, providerKey ?? null);
+      // Se la biblioteca dichiara anche il PDF, l'opera nasce con due copie: le
+      // immagini e il file. **Non si aspetta**: la lettura del manifesto passa
+      // dalla fila verso quella biblioteca e può richiedere secondi, mentre
+      // l'aggiunta è già riuscita. Quando la risposta arriva, il catalogo si
+      // rilegge da sé.
+      void registerDocumentIfDeclared(sourceId, manifestUrl, providerKey ?? null).then(() =>
+        get().loadCatalog(),
+      );
       // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
       // Biblioteca senza riaprire la schermata.
       await get().loadCatalog();

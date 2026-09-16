@@ -100,42 +100,44 @@ Una risoluzione diversa produce una versione locale distinta. Ogni versione
 ha comandi propri per aprirla, ridurla o eliminarla. Le regole di dimensionamento
 sono descritte in [Archiviazione e lavori](./storage-and-jobs).
 
-## Documenti serviti come file unico
+## Il PDF dell'opera
 
-Alcune biblioteche, accanto alle immagini, offrono la stessa opera come
-documento unico. Lo dichiarano nel loro manifesto, ed è da lì che Glossa lo
-scopre: nessun indirizzo indovinato.
+Alcune biblioteche, accanto alle immagini, offrono la stessa opera come PDF. Lo
+dichiarano nel loro manifesto — sulla radice o sulla sequenza, secondo la
+versione dello standard — ed è da lì che Glossa lo scopre: nessun indirizzo
+costruito per analogia.
 
-Nei **risultati della ricerca** la riga lo dice con «PDF disponibile», e la riga
-aperta aggiunge quello che solo il manifesto sa — pagine dichiarate e misura in
-pixel della prima pagina, che è l'unico indizio sulla qualità della scansione
-disponibile prima di scaricare. La lettura del manifesto avviene una volta sola
-per opera, e **solo per le righe che stanno sotto gli occhi**.
+Nei **risultati della ricerca** ogni riga dichiara lo stato, sempre: «PDF
+disponibile», «PDF non disponibile», oppure «PDF non verificato» quando il
+manifesto non si è potuto leggere. La riga aperta aggiunge le pagine dichiarate
+e la misura in pixel della prima pagina, unico indizio sulla qualità della
+scansione disponibile prima di scaricare. Il manifesto si legge una volta sola
+per opera, solo per le righe che stanno sotto gli occhi, due letture alla volta
+al massimo, e mai per un risultato che il catalogo dichiara già senza
+riproduzione.
 
-Nella **scheda dell'opera** la sezione del documento c'è sempre, anche quando il
-documento non c'è: dice se la biblioteca lo offre, se non lo offre, o se non è
-arrivata risposta. Un comando richiede alla biblioteca, per il caso in cui il
-documento sia stato pubblicato dopo; lo stesso controllo lo fa il riallineamento.
-Appena la biblioteca lo dichiara, il documento diventa una copia a sé accanto a
-quella a immagini, con il proprio comando di scaricamento: non ci sono
-risoluzioni da scegliere, perché il file è uno solo e arriva com'è.
+Nella **scheda dell'opera** il PDF è una riga della sezione del libro, sotto le
+copie a immagini. Dichiara disponibilità e stato locale; un comando verifica di
+nuovo presso la biblioteca — serve quando il PDF è stato pubblicato dopo — e lo
+stesso controllo lo fa il riallineamento. Quando il PDF è disponibile, dalla
+stessa riga si scarica; quando è sul disco, la riga ne dichiara pagine e spazio
+e offre i comandi per visualizzarlo, aprirlo con l'applicazione di sistema o
+eliminarlo. Eliminarlo non tocca le immagini della stessa opera.
 
-Arrivato il documento, la scheda ne dichiara le pagine — contate dal file, non
-da quanto la biblioteca dichiara — lo spazio occupato e lo stato. Eliminarlo
-libera lo spazio e non tocca le immagini della stessa opera, che restano dove
-sono. Un comando apre il documento con il lettore del sistema.
+Dalla stessa riga si sceglie **cosa visualizzare**: il PDF o le immagini. Il
+visore dichiara sempre quale delle due copie è a schermo, perché le pagine del
+PDF e quelle della sequenza di immagini non corrispondono e non vengono fuse in
+un unico sfoglio.
 
-La lettura avviene nel visore, con lo stesso zoom e lo stesso sfoglio delle
-immagini, ma resta **separata**: le pagine del documento e quelle della sequenza
-di immagini non garantiscono la stessa identità, quindi non si fondono in un
-unico sfoglio e la barra dichiara sempre quale delle due copie è a schermo.
-Il selettore in alto elenca entrambe, con il tipo accanto al nome.
+Limiti dichiarati: un PDF oltre i 256 MB non si apre nel visore integrato e va
+letto con l'applicazione di sistema; di un PDF protetto da password o malformato
+non si contano le pagine, e la scheda lo dichiara invece di inventare un numero.
+La pagina viene disegnata a risoluzione fissa: ingrandita al massimo si vede
+meno nitida delle tessere IIIF.
 
-Limiti dichiarati: un documento oltre i 256 MB non si apre dentro Glossa e va
-letto con il lettore del sistema; di un documento protetto da parola d'ordine o
-malformato non si contano le pagine, e la scheda lo dice invece di inventarne un
-numero. La pagina del documento viene disegnata a una risoluzione fissa: una
-scansione ingrandita al massimo si vede meno nitida delle tessere IIIF.
+Ogni verifica ha una **scadenza**: se la biblioteca è occupata o non risponde,
+lo stato resta «non verificato» e si può riprovare. Nessuna attesa resta appesa,
+e una richiesta lenta non blocca le altre.
 
 ## Archiviazione ed eliminazione
 

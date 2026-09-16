@@ -31,7 +31,7 @@ import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
 import { VersionTechnicalData } from './VersionTechnicalData';
 import { OpenPageSection, type ShownPage } from './OpenPageSection';
-import { DocumentAvailability, DocumentSection } from './DocumentSection';
+import { DocumentBlock } from './DocumentBlock';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -72,6 +72,8 @@ export function CopiesSection({
   reloadToken = 0,
   provider,
   shownPage = null,
+  shownVersionId = null,
+  onShowVersion,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
@@ -89,15 +91,23 @@ export function CopiesSection({
   provider?: IIIFProvider;
   /** La pagina aperta nel visore, per darne gli indirizzi fra i dati tecnici. */
   shownPage?: ShownPage | null;
+  /** La copia che il visore sta mostrando, e come cambiarla. */
+  shownVersionId?: string | null;
+  onShowVersion?: (versionId: string) => void;
 }) {
   const { t } = useTranslation();
+  // Il PDF non è una voce dell'elenco: è una riga dentro la sezione del libro
+  // della copia a immagini, perché è la stessa opera in un'altra forma e la
+  // scelta di cosa visualizzare si fa lì.
+  const imageVersions = detail.versions.filter((version) => version.versionKind !== 'pdf');
+  const documentVersion = detail.versions.find((version) => version.versionKind === 'pdf') ?? null;
 
   return (
     // Niente intestazione di sezione qui: la tab la dà già ("Copie digitali").
     // Niente riquadro a sfondo: la tab stessa è già il contenitore, un'altra
     // cornice attorno sarebbe una scatola dentro la scatola.
     <ul className="divide-y divide-editorial-border/70">
-      {detail.versions.map((version) => (
+      {imageVersions.map((version) => (
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
           <div>
             <CopyProvenance
@@ -115,6 +125,10 @@ export function CopiesSection({
 
           <CopyDetails
             version={version}
+            sourceId={detail.source.id}
+            documentVersion={documentVersion}
+            shownVersionId={shownVersionId}
+            onShowVersion={onShowVersion}
             shownPage={version.id === openVersionId ? shownPage : null}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
@@ -132,23 +146,6 @@ export function CopiesSection({
           />
         </li>
       ))}
-      {/* Il documento, quando la biblioteca non l'ha (ancora) dichiarato: la
-          riga c'è lo stesso e dice come stanno le cose, invece di lasciare
-          credere che quel libro esista solo a immagini. Appena la biblioteca lo
-          dichiara diventa una copia come le altre e questa riga sparisce. */}
-      {!detail.versions.some((version) => version.versionKind === 'pdf') && (
-        <li className="space-y-3 py-4 first:pt-0">
-          <DocumentAvailability
-            sourceId={detail.source.id}
-            version={
-              detail.versions.find(
-                (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
-              ) ?? null
-            }
-            onChanged={onRefresh}
-          />
-        </li>
-      )}
     </ul>
   );
 }
@@ -161,6 +158,10 @@ export function CopiesSection({
  *  comparire la versione appena creata. */
 function CopyDetails({
   version,
+  sourceId,
+  documentVersion,
+  shownVersionId,
+  onShowVersion,
   entry,
   onRefresh,
   reloadToken,
@@ -170,6 +171,11 @@ function CopyDetails({
   shownPage,
 }: {
   version: LibrarySourceVersion;
+  sourceId: string;
+  /** La copia PDF della stessa opera, quando la biblioteca l'ha dichiarata. */
+  documentVersion: LibrarySourceVersion | null;
+  shownVersionId?: string | null;
+  onShowVersion?: (versionId: string) => void;
   /** La pagina aperta nel visore, quando è di questa copia. */
   shownPage?: ShownPage | null;
   entry?: LibraryCatalogEntry;
@@ -375,20 +381,6 @@ function CopyDetails({
     }
   };
 
-  // Una copia servita come file unico non ha misure né pagine sul disco: ha un
-  // documento, e i suoi comandi sono altri.
-  if (version.versionKind === 'pdf') {
-    return (
-      <DocumentSection
-        version={version}
-        document={inventory.document}
-        isOpenInViewer={isOpenInViewer}
-        viewing={isOpenInViewer}
-        onChanged={reloadAll}
-      />
-    );
-  }
-
   return (
     <div className="space-y-8 border-t border-editorial-border/60 pt-4">
       {/* La pagina aperta viene prima: è il contesto in cui si sta mentre si
@@ -453,8 +445,17 @@ function CopyDetails({
                 size={size}
                 onCompressed={reloadAll}
                 expectedPages={expectedPages}
-                viewing={isOpenInViewer && viewedLocalSize === size.sizeTag}
-                onView={isOpenInViewer && onViewLocalSize ? onViewLocalSize : undefined}
+                viewing={isOpenInViewer && shownVersionId === version.id && viewedLocalSize === size.sizeTag}
+                onView={
+                  onViewLocalSize
+                    ? (sizeTag) => {
+                        // Scegliere una misura è anche scegliere le immagini:
+                        // se a schermo c'è il PDF, si torna indietro.
+                        onShowVersion?.(version.id);
+                        onViewLocalSize(sizeTag);
+                      }
+                    : undefined
+                }
                 onFree={freeSizeRow(size)}
                 onVerify={verify}
                 excluded={excluded}
@@ -462,6 +463,18 @@ function CopyDetails({
             ))}
           </div>
         )}
+
+        {/* Il PDF è la stessa opera in un'altra forma: sta qui, sotto le copie
+            a immagini, perché è qui che si sceglie cosa visualizzare. */}
+        <DocumentBlock
+          sourceId={sourceId}
+          imagesVersion={version}
+          documentVersion={documentVersion}
+          shownVersionId={shownVersionId}
+          onShowVersion={onShowVersion}
+          onChanged={reloadAll}
+          reloadToken={reloadToken}
+        />
       </section>
     </div>
   );

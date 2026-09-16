@@ -163,16 +163,16 @@ impl Courtesy {
         let gate = self.gate_for(host, profile).await;
 
         let bulk_seat = match lane {
-            Lane::Bulk => Some(Self::take_seat(&gate.bulk_seats, host).await?),
+            Lane::Bulk => Some(Self::take_seat(&gate.bulk_seats, host, signals).await?),
             Lane::Page | Lane::Thumbnail => None,
         };
         let behind = match lane {
             Lane::Bulk | Lane::Thumbnail => {
-                Some(Self::take_seat(&gate.behind_the_page, host).await?)
+                Some(Self::take_seat(&gate.behind_the_page, host, signals).await?)
             }
             Lane::Page => None,
         };
-        let seat = Self::take_seat(&gate.seats, host).await?;
+        let seat = Self::take_seat(&gate.seats, host, signals).await?;
 
         Self::respect_limits(host, &gate, profile, signals).await?;
         Some(Turn {
@@ -199,15 +199,32 @@ impl Courtesy {
         });
     }
 
-    /// Un posto, o `None` se il semaforo fosse chiuso — non succede, ma dare per
-    /// buono un turno che non è stato concesso significherebbe superare il tetto
-    /// della biblioteca.
-    async fn take_seat(seats: &Arc<Semaphore>, host: &str) -> Option<OwnedSemaphorePermit> {
-        match Arc::clone(seats).acquire_owned().await {
-            Ok(seat) => Some(seat),
-            Err(_) => {
-                log::error!("cortesia: corsia chiusa verso {host}");
-                None
+    /// Un posto in corsia, aspettato **a fette**, guardando fra una e l'altra se
+    /// è stato chiesto di fermarsi.
+    ///
+    /// `None` significa «rinuncio»: chi aspettava ha smesso di aspettare (pausa,
+    /// annullamento, scadenza) oppure la corsia è chiusa. Aspettare senza mai
+    /// riguardare quel segnale era il modo in cui una richiesta restava appesa
+    /// per sempre dietro a un'altra che non finiva, e con lei tutte quelle che
+    /// arrivavano dopo verso la stessa biblioteca.
+    async fn take_seat(
+        seats: &Arc<Semaphore>,
+        host: &str,
+        signals: &Signals<'_>,
+    ) -> Option<OwnedSemaphorePermit> {
+        loop {
+            if signals.stop() {
+                return None;
+            }
+            match tokio::time::timeout(POLL_SLICE, Arc::clone(seats).acquire_owned()).await {
+                Ok(Ok(seat)) => return Some(seat),
+                Ok(Err(_)) => {
+                    log::error!("cortesia: corsia chiusa verso {host}");
+                    return None;
+                }
+                // Nessun posto in questa fetta: si riguarda il segnale e si
+                // riprova.
+                Err(_) => continue,
             }
         }
     }
@@ -595,5 +612,51 @@ mod tests {
 
         assert!(next_delay(&mut timeline, &rhythm).is_none());
         assert!(timeline.cooldown_until.is_none(), "va dimenticato");
+    }
+
+    /// Il difetto che bloccava la Biblioteca: un posto tenuto da una richiesta
+    /// lunga metteva in fila tutte le altre verso la stessa biblioteca, e
+    /// quelle attese non guardavano più nessun segnale. Adesso chi ha smesso di
+    /// aspettare se ne va.
+    #[tokio::test]
+    async fn whoever_stops_waiting_does_not_queue_for_a_seat_forever() {
+        let courtesy = Courtesy::new();
+        let rhythm = NetworkProfile {
+            host_concurrency: 1,
+            ..profile(100, 60)
+        };
+
+        // Il solo posto disponibile resta occupato per tutta la prova.
+        let (_held, _) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Page).await;
+
+        let gave_up = || true;
+        let waiting = AtomicBool::new(false);
+        let second = courtesy
+            .wait_turn(
+                "gallica.bnf.fr",
+                &rhythm,
+                Lane::Page,
+                &signals(&gave_up, &waiting),
+            )
+            .await;
+
+        assert!(second.is_none(), "chi rinuncia non resta in coda");
+    }
+
+    /// Chi invece aspetta davvero ottiene il posto appena si libera: la
+    /// rinuncia non deve essere diventata l'unico esito possibile.
+    #[tokio::test]
+    async fn a_seat_freed_is_a_seat_given() {
+        let courtesy = Courtesy::new();
+        let rhythm = NetworkProfile {
+            host_concurrency: 1,
+            ..profile(100, 60)
+        };
+
+        let (held, _) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Page).await;
+        drop(held);
+
+        let (_second, waited) = turn(&courtesy, "gallica.bnf.fr", &rhythm, Lane::Page).await;
+        assert!(waited < Duration::from_secs(1));
     }
 }

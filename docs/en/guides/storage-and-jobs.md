@@ -121,6 +121,18 @@ network failure does not leave you with nothing.
 The repository can still hold several sizes at once, but no command creates more
 than one.
 
+## Waiting on libraries
+
+Every request to a library waits for its turn: that is what stops Glossa from
+knocking too fast and getting refused. **Every wait has a deadline**: twenty
+seconds for what you are looking at, eight for background checks. Once it
+expires the request gives up and says so — “not verified” — instead of hanging.
+
+This addresses a concrete case: after a refusal, some libraries ask you to wait
+for minutes. Without a deadline a single request started at that moment stayed
+in the queue for all that time, and everything else concerning that library —
+including adding works — queued up behind it.
+
 ## The document next to the images
 
 When the library serves the work as a single document, that file lives in the

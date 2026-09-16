@@ -394,6 +394,8 @@ export function LibrarySourcePage({
                   onViewLocalSize={setChosenLocalSize}
                   provider={provider}
                   shownPage={shownPage}
+                  shownVersionId={manifestVersion?.id ?? null}
+                  onShowVersion={setSelectedVersionId}
                 />
               ) : (
                 <>

@@ -128,6 +128,19 @@ lascia senza niente.
 Il deposito resta capace di tenere più misure insieme, ma nessun comando ne
 crea più di una.
 
+## Attese verso le biblioteche
+
+Ogni richiesta verso una biblioteca aspetta il proprio turno: è ciò che impedisce
+a Glossa di bussare troppo in fretta e di farsi rifiutare. **Ogni attesa ha una
+scadenza**: venti secondi per quello che stai guardando, otto per i controlli di
+sfondo. Scaduta, la richiesta rinuncia e lo dichiara — «non verificato» — invece
+di restare sospesa.
+
+Serve a un caso concreto: dopo un rifiuto, certe biblioteche chiedono di
+aspettare minuti. Senza scadenza una sola richiesta partita in quel momento
+restava in attesa per tutto quel tempo, e dietro di lei si accodava tutto il
+resto che riguardava quella biblioteca, aggiunta di opere compresa.
+
 ## Il documento accanto alle immagini
 
 Quando la biblioteca serve l'opera come documento unico, quel file vive nel

@@ -79,41 +79,42 @@ different resolution creates a separate local version. Each version has its
 own controls for opening, resizing and deletion. Resolution policies are
 described under [Storage and jobs](./storage-and-jobs).
 
-## Documents served as a single file
+## The PDF of the work
 
-Some libraries, next to the images, offer the same work as a single document.
-They declare it in their manifest, and that is where Glossa finds it: no guessed
-addresses.
+Some libraries, next to the images, offer the same work as a PDF. They declare
+it in their manifest — on the root or on the sequence, depending on the version
+of the standard — and that is where Glossa finds it: no addresses built by
+analogy.
 
-In **search results** the row says “PDF available”, and the expanded row adds
-what only the manifest knows — declared pages and the pixel size of the first
-page, the only hint about scan quality available before downloading. The
-manifest is read once per work, and **only for rows that are on screen**.
+In **search results** every row states the status, always: “PDF available”,
+“PDF not available”, or “PDF not verified” when the manifest could not be read.
+The expanded row adds the declared pages and the pixel size of the first page,
+the only hint about scan quality available before downloading. The manifest is
+read once per work, only for rows on screen, at most two reads at a time, and
+never for a result the catalogue already declares without a reproduction.
 
-In the **work record** the document section is always present, even when the
-document is not: it says whether the library offers one, whether it does not, or
-whether no answer arrived. A command asks the library again, for the case where
-the document was published later; the same check runs on resynchronisation.
-As soon as the library declares it, the document becomes a copy of its own next
-to the image copy, with its own download command: there are no resolutions to
-choose, because the file is one and arrives as it is.
+In the **work record** the PDF is a row of the book section, below the image
+copies. It states availability and local status; a command checks with the
+library again — useful when the PDF was published later — and the same check
+runs on resynchronisation. When the PDF is available it is downloaded from the
+same row; when it is on disk, the row states its pages and size and offers the
+commands to display it, open it with the system application or delete it.
+Deleting it does not touch the images of the same work.
 
-Once the document has arrived, the record states its pages — counted from the
-file, not from what the library declares — the space it takes and its status.
-Deleting it frees the space and does not touch the images of the same work,
-which stay where they are. A command opens the document with the system reader.
+From the same row you choose **what to display**: the PDF or the images. The
+viewer always states which of the two copies is on screen, because the pages of
+the PDF and those of the image sequence do not correspond and are not merged
+into a single browsing sequence.
 
-Reading happens in the viewer, with the same zoom and page turning as the
-images, but it stays **separate**: the pages of the document and those of the
-image sequence do not guarantee the same identity, so they are not merged into a
-single browsing sequence and the bar always states which of the two copies is on
-screen. The selector at the top lists both, with the kind next to the name.
+Stated limits: a PDF over 256 MB does not open in the built-in viewer and must
+be read with the system application; for a password-protected or malformed PDF
+the pages are not counted, and the record says so rather than inventing a
+number. The page is drawn at a fixed resolution: magnified to the maximum it
+looks less sharp than IIIF tiles.
 
-Stated limits: a document over 256 MB does not open inside Glossa and must be
-read with the system reader; for a password-protected or malformed document the
-pages are not counted, and the record says so rather than inventing a number.
-The document page is drawn at a fixed resolution: a scan magnified to the
-maximum looks less sharp than IIIF tiles.
+Every check has a **deadline**: if the library is busy or does not answer, the
+status stays “not verified” and you can try again. No wait is left hanging, and
+a slow request does not block the others.
 
 ## Archiving and deletion
 
