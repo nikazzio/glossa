@@ -645,6 +645,11 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
 
   const primary = versionRows.find((row) => row.is_primary === 1) ?? versionRows[0];
   const metadata = parseMetadata(primary?.metadata ?? null);
+  if (!metadata.providerKey) {
+    // Aggiunta prima che la provenienza venisse registrata: senza biblioteca
+    // non si risolve né il nome né il collegamento all'opera sul suo sito.
+    logger.warn('library.source.provenanceMissing', { sourceId });
+  }
   const overrides = (await overridesOfMany([sourceId])).get(sourceId) ?? {};
   const { effective, original } = effectiveFieldValues(source, metadata, overrides);
 

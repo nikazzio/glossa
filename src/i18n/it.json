@@ -1394,7 +1394,8 @@
       "downloadWholeBook": "Scarica tutto il libro a questa misura",
       "downloadReplaceTitle": "Scaricare a {{size}}?",
       "downloadReplaceMessage": "Di un'opera si tiene una misura sola. Quando lo scaricamento è riuscito, le misure che hai adesso ({{sizes}}) vengono cancellate; se fallisce, resta tutto com'è.",
-      "downloadReplaceConfirm": "Scarica e sostituisci"
+      "downloadReplaceConfirm": "Scarica e sostituisci",
+      "provenanceMissing": "Provenienza mancante: quest'opera è stata aggiunta senza la biblioteca di origine. Rimuovila e riaggiungila per avere nome e collegamento."
     },
     "transcriptions": {
       "title": "Trascrizioni",

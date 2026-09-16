@@ -23,7 +23,7 @@ import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-pa
 import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import { libraryItemUrl } from '../../services/libraryLinks';
-import { copyTitle } from '../../utils/copyTitle';
+import { CopyProvenance } from './CopyProvenance';
 import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
 import { type ShownPage } from './OpenPageSection';
 import {
@@ -224,12 +224,10 @@ export function LibrarySourcePage({
               className="min-w-0 max-w-[12rem]"
             />
           ) : (
-            <span
+            <CopyProvenance
+              providerLabel={providerLabel}
               className="mr-1 max-w-[12rem] truncate text-xs text-editorial-ink"
-              aria-label={t('areas.library.digitalizationLabel')}
-            >
-              {copyTitle(manifestVersion, providerLabel, t)}
-            </span>
+            />
           ))}
           {libraryPageUrl && (
             <IconLink

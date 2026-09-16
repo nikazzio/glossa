@@ -1394,7 +1394,8 @@
       "downloadWholeBook": "Download the whole book at this size",
       "downloadReplaceTitle": "Download at {{size}}?",
       "downloadReplaceMessage": "A work keeps one size only. Once the download succeeds, the sizes you have now ({{sizes}}) are deleted; if it fails, everything stays as it is.",
-      "downloadReplaceConfirm": "Download and replace"
+      "downloadReplaceConfirm": "Download and replace",
+      "provenanceMissing": "Provenance missing: this work was added without its source library. Remove it and add it again to get the name and the link."
     },
     "transcriptions": {
       "title": "Transcriptions",

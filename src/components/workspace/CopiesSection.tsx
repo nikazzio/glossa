@@ -7,7 +7,7 @@ import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
 import { versionInventory, type SizeFolder } from '../../services/inventoryService';
 import { excludedPages } from '../../services/excludedPagesService';
-import { copyTitle } from '../../utils/copyTitle';
+import { CopyProvenance } from './CopyProvenance';
 import { errorMessage, logger } from '../../utils/logger';
 import {
   enqueueOptimization,
@@ -94,12 +94,17 @@ export function CopiesSection({
       {detail.versions.map((version) => (
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
           <div>
-            <span className="block truncate font-display text-sm italic text-editorial-ink">
-              {copyTitle(version, provider?.label, t)}
-            </span>
-            <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-              {t(`areas.library.versionKindLabels.${version.versionKind}`)}
-            </span>
+            <CopyProvenance
+              providerLabel={provider?.label}
+              className="block truncate font-display text-sm italic text-editorial-ink"
+            />
+            {/* Il tipo sta sotto il nome della biblioteca; senza nome sarebbe
+                l'unica riga e ripeterebbe quello che il segno già dice. */}
+            {provider?.label && (
+              <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                {t(`areas.library.versionKindLabels.${version.versionKind}`)}
+              </span>
+            )}
           </div>
 
           <CopyDetails
