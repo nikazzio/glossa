@@ -130,19 +130,26 @@ viewer is showing another copy.
 
 With a page open you can:
 
-- **keep it at the book size**, if you were reading online;
-- **take it at the highest resolution**: the page is requested again and
-  **replaces** the one you have, staying the only file for that page;
-- **bring it back to the book size**, which downloads it again at the normal
-  size and recovers the space;
-- **remove it from the computer**: the page goes and stays excluded — it does
-  not come back with a new download of the book, nor on its own. Asking for it
-  again readmits it.
+- **download it**, even when the book is not on disk: the page goes into the
+  folder of the resolution chosen for that work;
+- **download it at maximum resolution**: it is requested again and **replaces**
+  the one present, staying the only file for that page;
+- **download it again at the book resolution**, which recovers the space when
+  the detail is no longer needed;
+- **delete it from disk**: the page is excluded and does not come back with a
+  new download of the book, nor on its own. Asking for it again readmits it.
+
+When the book is already at maximum resolution both resolution commands are
+disabled: they would request the same image.
 
 Below, the real size of that page — the pixels it actually has, which after a
 retake are no longer the book's — and its weight. The viewer toolbar keeps only
 the reading commands: local-only reading, zoom, thumbnails and the link to the
 page on the library site.
+
+The commands about the pages on disk — check, recompress, delete — sit on the
+resolution row, not in the section header: that is where you can see what they
+act on.
 
 On the item page the copy states how many pages you removed on purpose: without
 that line an incomplete copy would look broken.

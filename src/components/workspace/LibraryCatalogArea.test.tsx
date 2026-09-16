@@ -649,7 +649,9 @@ describe('LibraryCatalogArea', () => {
     expect(await screen.findByText('areas.library.viewerLoadError')).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
-    expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
+    // I comandi sulle pagine stanno sulla riga della risoluzione, non
+    // nell'intestazione: qui basta che la scheda delle copie si apra.
+    expect(screen.getByRole('button', { name: 'areas.library.downloadWholeBook' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
     expect(await screen.findByRole('button', { name: 'areas.library.archive' })).toBeInTheDocument();

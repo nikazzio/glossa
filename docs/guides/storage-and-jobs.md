@@ -137,20 +137,27 @@ il visore mostra un'altra copia, spenti.
 
 Con la pagina aperta puoi:
 
-- **conservarla alla misura del libro**, se stavi leggendo online;
-- **prenderla alla massima risoluzione**: la pagina viene richiesta di nuovo e
-  **sostituisce** quella che hai, restando l'unico file di quella pagina;
-- **riportarla alla misura del libro**, che la riscarica alla misura normale e
-  recupera lo spazio;
-- **toglierla dal computer**: la pagina sparisce e resta esclusa, cioè non torna
-  né con un nuovo scaricamento del libro né da sola. Chiederla di nuovo la
-  riammette.
+- **scaricarla**, anche se il libro non è sul disco: la pagina va nella cartella
+  della risoluzione scelta per quell'opera;
+- **scaricarla a risoluzione massima**: viene richiesta di nuovo e **sostituisce**
+  quella presente, restando l'unico file di quella pagina;
+- **riscaricarla alla risoluzione del libro**, che recupera lo spazio quando non
+  serve più il dettaglio;
+- **eliminarla dal disco**: la pagina viene esclusa e non torna né con un nuovo
+  scaricamento del libro né da sola. Richiederla la riammette.
+
+Quando il libro è già alla risoluzione massima i due comandi sulla risoluzione
+sono spenti: chiederebbero la stessa immagine.
 
 Sotto compaiono la misura vera di quella pagina — i pixel che ha davvero, che
 dopo una ripresa non sono più quelli del libro — e quanto pesa. Nella barra del
 visore restano soltanto i comandi di lettura: lettura solo dal computer,
 ingrandimento, miniature e il collegamento alla pagina sul sito della
 biblioteca.
+
+I comandi che riguardano le pagine sul disco — verifica, ricompressione,
+eliminazione — stanno sulla riga della risoluzione, non nell'intestazione della
+sezione: è lì che si legge su cosa agiscono.
 
 Nella scheda dell'opera la copia dichiara quante pagine hai tolto di proposito:
 senza quella riga una copia incompleta sembrerebbe guasta.

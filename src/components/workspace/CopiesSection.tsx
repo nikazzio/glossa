@@ -21,7 +21,7 @@ import {
   SIZE_CAPS,
 } from '../../services/downloadSettingsService';
 import { confirm } from '../../stores/confirmStore';
-import { freeVersionPages, freeVersionSize } from '../../services/vaultService';
+import { freeVersionSize } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
@@ -161,6 +161,7 @@ function CopyDetails({
   const [busy, setBusy] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [excluded, setExcluded] = useState(0);
+  const [sizeCap, setSizeCap] = useState(DEFAULT_SIZE_CAP);
   const providerKeyRef = useRef<string | null>(null);
 
   // Si rilegge anche quando il catalogo l'aveva già dato: dopo una
@@ -206,6 +207,20 @@ function CopyDetails({
   };
 
   const inventory: CopyInventory = fetched ?? emptyInventory();
+  // La risoluzione scelta per questa copia vale anche prima di scaricare il
+  // libro: è lì che finisce una pagina presa da sola leggendo online.
+  useEffect(() => {
+    let cancelled = false;
+    void getVersionSizeCap(version.id)
+      .then((stored) => {
+        if (!cancelled) setSizeCap(stored ?? DEFAULT_SIZE_CAP);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [version.id, reloadTick]);
+
   // Le pagine tolte di proposito non sono un buco: vanno dette, altrimenti la
   // copia sembra incompleta per un guasto.
   useEffect(() => {
@@ -312,31 +327,6 @@ function CopyDetails({
     }
   };
 
-  const freeSpace = async () => {
-    const confirmed = await confirm({
-      title: t('areas.library.freeSpaceTitle', { size: humanSize(localBytes) }),
-      message: t('areas.library.freeSpaceMessage'),
-      confirmLabel: t('areas.library.freeSpaceConfirm'),
-      danger: true,
-    });
-    if (!confirmed) return;
-    setBusy(true);
-    try {
-      const freed = await freeVersionPages(await providerKey(), version.id);
-      toast.success(t('areas.library.freeSpaceDone', { size: humanSize(freed.freedBytes) }));
-      reload();
-      onRefresh();
-    } catch (error: unknown) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason.includes('version_work_in_progress')) {
-        toast.info(t('areas.library.filesBusy'));
-        return;
-      }
-      toast.error(t('areas.library.freeSpaceFailed'), { description: reason });
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const freeSizeRow = (size: SizeFolder) => async () => {
     const confirmed = await confirm({
@@ -370,33 +360,17 @@ function CopyDetails({
           providerKey={version.providerKey ?? 'generic'}
           shownPage={isOpenInViewer ? (shownPage ?? null) : null}
           bookSize={principal}
+          sizeCap={sizeCap}
           onChanged={reloadAll}
         />
       )}
       {/* Il libro: prima come si prende, poi cosa se n'è già preso. Sopra
           resta la pagina che si sta leggendo, che è un'altra scala. */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <SectionLabel icon={HardDrive} label={t('areas.library.bookSection')} />
-          <div className="flex items-center gap-1">
-            <IconButton
-              size="sm"
-              onClick={() => void verify()}
-              disabled={busy || !hasLocalPages}
-              title={t('areas.library.verify')}
-            >
-              <ShieldCheck size={13} />
-            </IconButton>
-            <IconButton
-              size="sm"
-              onClick={() => void freeSpace()}
-              disabled={busy || !hasLocalPages}
-              title={t('areas.library.freeSpace')}
-            >
-              <Eraser size={13} />
-            </IconButton>
-          </div>
-        </div>
+        {/* Nell'intestazione non restano comandi: verifica, ricompressione ed
+            eliminazione riguardano le pagine sul disco, e stanno sulla riga che
+            le descrive. */}
+        <SectionLabel icon={HardDrive} label={t('areas.library.bookSection')} />
 
         {/* Solo le digitalizzazioni a immagini si scaricano: per un PDF o un
             file di altro tipo lo scaricamento chiederebbe alla biblioteca un
@@ -442,6 +416,7 @@ function CopyDetails({
                 viewing={isOpenInViewer && viewedLocalSize === size.sizeTag}
                 onView={isOpenInViewer && onViewLocalSize ? onViewLocalSize : undefined}
                 onFree={freeSizeRow(size)}
+                onVerify={verify}
                 excluded={excluded}
               />
             ))}
@@ -462,6 +437,7 @@ function ResolutionRow({
   viewing,
   onView,
   onFree,
+  onVerify,
   onCompressed,
   excluded,
 }: {
@@ -476,6 +452,7 @@ function ResolutionRow({
   /** Presente solo per la digitalizzazione aperta nel visore. */
   onView?: (sizeTag: string) => void;
   onFree: () => Promise<void>;
+  onVerify: () => Promise<void>;
   onCompressed: () => void;
 }) {
   const { t } = useTranslation();
@@ -509,6 +486,19 @@ function ResolutionRow({
               <Eye size={13} />
             </IconButton>
           )}
+          {/* I tre comandi che riguardano queste pagine, nell'ordine in cui si
+              usano: controlla, alleggerisci, elimina. */}
+          <IconButton
+            size="sm"
+            onClick={() => {
+              setBusy(true);
+              void onVerify().finally(() => setBusy(false));
+            }}
+            disabled={busy || size.pages === 0}
+            title={t('areas.library.verify')}
+          >
+            <ShieldCheck size={13} />
+          </IconButton>
           {/* Una copia già ridotta non si ricomprime: il motore la rifiuta, e
               offrire il comando prometterebbe qualcosa che non succede. */}
           {!size.derived && size.pages > 0 && (
@@ -520,12 +510,13 @@ function ResolutionRow({
           )}
           <IconButton
             size="sm"
+            tone="danger"
             onClick={() => {
               setBusy(true);
               void onFree().finally(() => setBusy(false));
             }}
             disabled={busy}
-            title={t('areas.library.freeSizeAction', { size: resolutionLabel(size.sizeTag, t) })}
+            title={t('areas.library.freeSizeAction')}
           >
             <Eraser size={13} />
           </IconButton>

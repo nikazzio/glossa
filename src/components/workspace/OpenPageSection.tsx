@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FileText, HardDriveDownload, Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { FileText, HardDriveDownload, Loader2, Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { IconButton, SectionLabel, Spinner, StatRow } from '../ui';
@@ -11,6 +11,9 @@ import { resolutionLabel } from '../../utils/resolutionLabel';
 import { humanSize } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import type { LibrarySourceVersion } from '../../types';
+
+/** Quale comando sta girando: uno per volta, e si vede quale. */
+type PageCommand = 'keep' | 'max' | 'book' | 'remove';
 
 /** La pagina che il visore sta mostrando di questa copia. */
 export interface ShownPage {
@@ -35,20 +38,24 @@ export function OpenPageSection({
   providerKey,
   shownPage,
   bookSize,
+  sizeCap,
   onChanged,
 }: {
   version: LibrarySourceVersion;
   providerKey: string;
   /** Nulla quando il visore mostra un'altra copia, o nessuna. */
   shownPage: ShownPage | null;
-  /** La misura con cui è stato scaricato il libro: è lì che si torna. */
+  /** La risoluzione delle pagine già sul disco, quando ce ne sono. */
   bookSize: string | null;
+  /** La risoluzione scelta per questa copia: vale anche prima di scaricare il
+   *  libro, ed è la cartella in cui finisce una pagina presa da sola. */
+  sizeCap: string;
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
   const [copies, setCopies] = useState<PageCopy[]>([]);
   const [reading, setReading] = useState(false);
-  const [working, setWorking] = useState(false);
+  const [running, setRunning] = useState<PageCommand | null>(null);
   const pageIndex = shownPage?.index ?? null;
 
   const load = useCallback(async () => {
@@ -71,8 +78,11 @@ export function OpenPageSection({
     void load();
   }, [load]);
 
-  const act = async (work: () => Promise<void>) => {
-    setWorking(true);
+  /** Ogni comando gira con il suo segno di attività: sono richieste singole
+   *  alla biblioteca, non lavori in coda, ma senza un ritorno visibile si
+   *  preme due volte. */
+  const act = async (command: PageCommand, work: () => Promise<void>) => {
+    setRunning(command);
     try {
       await work();
       await load();
@@ -81,7 +91,7 @@ export function OpenPageSection({
       logger.error('library.page.actionFailed', { reason: errorMessage(error) });
       toast.error(t('areas.library.pageActionFailed'));
     } finally {
-      setWorking(false);
+      setRunning(null);
     }
   };
 
@@ -94,7 +104,7 @@ export function OpenPageSection({
    * misura davvero quella pagina.
    */
   const keepAt = async (requested: string) => {
-    if (!shownPage || !bookSize) return;
+    if (!shownPage) return;
     // Chiedere una pagina esclusa la riammette: un comando che non fa quello
     // che dice è peggio di un comando assente.
     await includePage(version.id, shownPage.index);
@@ -102,17 +112,24 @@ export function OpenPageSection({
       kind: 'page',
       versionId: version.id,
       index: shownPage.index,
-      size: bookSize,
+      size: targetSize,
       remoteUrl: pageSourceUrl(shownPage.imageService, requested, shownPage.presentation2),
       providerKey,
     });
   };
 
   const page = copies[0] ?? null;
-  const atMax = page?.pixels !== undefined && page?.pixels !== null && bookPixels(bookSize) !== null
-    ? Math.max(...page.pixels) > bookPixels(bookSize)!
-    : false;
-  const idle = shownPage === null || working;
+  // Dove finisce la pagina: nella cartella delle pagine già scaricate, o — se
+  // il libro non è ancora sul disco — in quella della risoluzione scelta.
+  // Scaricare una pagina sola mentre si legge online deve funzionare.
+  const targetSize = bookSize ?? sizeCap;
+  // Il libro è già alla risoluzione massima: chiedere «massima» e «quella del
+  // libro» sarebbero la stessa richiesta, e uno dei due comandi mentirebbe.
+  const bookAtMax = bookSize === MAX_SIZE;
+  const above = bookPixels(bookSize);
+  const pageAboveBook =
+    page?.pixels != null && above !== null ? Math.max(...page.pixels) > above : false;
+  const idle = shownPage === null || running !== null;
 
   return (
     <section className="space-y-3">
@@ -128,41 +145,57 @@ export function OpenPageSection({
         <span className="flex shrink-0 items-center gap-1">
           <IconButton
             size="sm"
-            disabled={idle || bookSize === null}
+            disabled={idle || page !== null}
             title={t('areas.library.pageKeep')}
-            onClick={() => void act(() => keepAt(bookSize ?? MAX_SIZE))}
+            onClick={() => void act('keep', () => keepAt(targetSize))}
           >
-            <HardDriveDownload size={13} />
+            {running === 'keep' ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <HardDriveDownload size={13} />
+            )}
           </IconButton>
           <IconButton
             size="sm"
-            disabled={idle || atMax}
+            disabled={idle || bookAtMax || pageAboveBook}
             title={t('areas.library.pageTakeAtMax')}
-            onClick={() => void act(() => keepAt(MAX_SIZE))}
+            onClick={() => void act('max', () => keepAt(MAX_SIZE))}
           >
-            <Maximize2 size={13} />
+            {running === 'max' ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Maximize2 size={13} />
+            )}
           </IconButton>
           <IconButton
             size="sm"
-            disabled={idle || !atMax || bookSize === null}
+            disabled={idle || bookAtMax || !pageAboveBook}
             title={t('areas.library.pageBackToBookSize')}
-            onClick={() => void act(() => keepAt(bookSize ?? MAX_SIZE))}
+            onClick={() => void act('book', () => keepAt(targetSize))}
           >
-            <Minimize2 size={13} />
+            {running === 'book' ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Minimize2 size={13} />
+            )}
           </IconButton>
           <IconButton
             size="sm"
             tone="danger"
-            disabled={idle || copies.length === 0}
+            disabled={idle || page === null}
             title={t('areas.library.pageRemove')}
             onClick={() =>
-              void act(async () => {
+              void act('remove', async () => {
                 await forgetPage(providerKey, version.id, shownPage!.index);
                 await excludePage(version.id, shownPage!.index);
               })
             }
           >
-            <Trash2 size={13} />
+            {running === 'remove' ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
           </IconButton>
         </span>
       </div>
