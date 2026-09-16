@@ -62,6 +62,18 @@ pub fn resize_jpeg(bytes: &[u8], long_edge: u32, quality: u8) -> Result<Vec<u8>,
     encode_jpeg_at(&fit_inside(decoded, long_edge)?, quality)
 }
 
+/// Ricomprime l'immagine **senza toccarne i pixel**: cambia solo quanto pesa.
+///
+/// È l'operazione che serve quando la misura va bene e il problema è lo spazio:
+/// molte biblioteche servono JPEG a qualità altissima, e riscriverli a una
+/// qualità sensata libera metà dei byte senza differenza visibile. La perdita
+/// è reale e non si torna indietro senza riscaricare.
+pub fn recompress_jpeg(bytes: &[u8], quality: u8) -> Result<Vec<u8>, ImageError> {
+    let decoded =
+        image::load_from_memory(bytes).map_err(|error| ImageError::Decode(error.to_string()))?;
+    encode_jpeg_at(&decoded, quality)
+}
+
 /// Riporta l'immagine dentro un quadrato di lato `edge` conservando le
 /// proporzioni: il lato lungo diventa `edge`, l'altro scende di conseguenza.
 fn fit_inside(image: DynamicImage, edge: u32) -> Result<DynamicImage, ImageError> {

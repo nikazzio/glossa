@@ -12,7 +12,6 @@ import { errorMessage, logger } from '../../utils/logger';
 import {
   enqueueOptimization,
   getOptimizeQuality,
-  OPTIMIZE_LONG_EDGES,
   OPTIMIZE_QUALITIES,
 } from '../../services/optimizeService';
 import {
@@ -438,7 +437,6 @@ function CopyDetails({
                 key={`${size.sizeTag}-${size.derived ? 'derived' : 'native'}`}
                 version={version}
                 size={size}
-                allSizes={sizes}
                 onCompressed={reloadAll}
                 expectedPages={expectedPages}
                 viewing={isOpenInViewer && viewedLocalSize === size.sizeTag}
@@ -460,7 +458,6 @@ function CopyDetails({
 function ResolutionRow({
   version,
   size,
-  allSizes,
   expectedPages,
   viewing,
   onView,
@@ -473,9 +470,6 @@ function ResolutionRow({
   /** Pagine tolte di proposito: non sono un buco, e senza contarle la copia
    *  resterebbe «incompleta» per sempre. */
   excluded: number;
-  /** Tutte le versioni locali di questa copia: servono a non proporre una
-   *  misura d'arrivo che esiste già. */
-  allSizes: SizeFolder[];
   expectedPages: number;
   /** Vero quando il visore sta leggendo proprio questa versione. */
   viewing: boolean;
@@ -521,7 +515,6 @@ function ResolutionRow({
             <CompressPopover
               version={version}
               sourceTag={size.sizeTag}
-              sizes={allSizes}
               onRefresh={onCompressed}
             />
           )}
@@ -675,29 +668,27 @@ function DownloadRow({
   );
 }
 
-/** Ricava una copia ridotta **dalla versione locale su cui si apre**: la fonte
- *  è quella riga, non una scelta dentro il pannello — nell'intestazione della
- *  sezione non si capiva quale versione si stesse comprimendo. Si scelgono solo
- *  la misura d'arrivo (fra quelle più piccole della fonte e non ancora
- *  presenti) e la qualità. L'originale non si tocca mai: la copia nasce a
- *  parte. */
+/**
+ * Ricomprime le pagine della copia **sul posto**: stessi pixel, meno byte.
+ *
+ * Non crea una seconda copia del libro — di copie se ne tiene una — e non è
+ * reversibile: l'originale non resta da nessuna parte e per riavere la qualità
+ * di prima si riscarica dalla biblioteca. Si sceglie solo la qualità.
+ */
 function CompressPopover({
   version,
   sourceTag,
-  sizes,
   onRefresh,
 }: {
   version: LibrarySourceVersion;
-  /** La versione locale da cui partire: la riga che ospita il comando. */
+  /** La misura della copia: la riga che ospita il comando. */
   sourceTag: string;
-  sizes: SizeFolder[];
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
   const applyChange = useJobsStore((state) => state.applyChange);
   const jobs = useJobsStore((state) => state.jobs);
   const [open, setOpen] = useState(false);
-  const [targetEdge, setTargetEdge] = useState<number | null>(null);
   const [quality, setQuality] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -708,24 +699,18 @@ function CompressPopover({
     void getOptimizeQuality().then(setQuality);
   }, [open, quality]);
 
-  const sourceNumeric = /^\d+$/.test(sourceTag) ? Number(sourceTag) : null;
-  const existingTags = new Set(sizes.map((size) => size.sizeTag));
-  const targetOptions: number[] = OPTIMIZE_LONG_EDGES.filter((edge) => {
-    if (existingTags.has(String(edge))) return false;
-    return sourceNumeric === null || edge < sourceNumeric;
-  });
-
-  useEffect(() => {
-    if (targetEdge !== null && targetOptions.includes(targetEdge)) return;
-    setTargetEdge(targetOptions[targetOptions.length - 1] ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetOptions.join(',')]);
-
   const confirmCompress = async () => {
-    if (targetEdge === null || quality === null) return;
+    if (quality === null) return;
+    const confirmed = await confirm({
+      title: t('areas.library.compressTitle'),
+      message: t('areas.library.compressMessage'),
+      confirmLabel: t('areas.library.compressConfirm'),
+      danger: true,
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
-      const job = await enqueueOptimization(version.id, sourceTag, targetEdge, quality);
+      const job = await enqueueOptimization(version.id, sourceTag, quality);
       applyChange(job);
       toast.success(t('areas.library.optimizeQueued'));
       setOpen(false);
@@ -750,27 +735,15 @@ function CompressPopover({
         <IconButton
           size="sm"
           disabled={running}
-          title={t('areas.library.compressAction', { size: resolutionLabel(sourceTag, t) })}
+          title={t('areas.library.compressAction')}
           ariaPressed={open}
         >
           <Minimize2 size={13} className={running ? 'animate-spin' : undefined} />
         </IconButton>
       }
     >
-      <div className="flex min-w-56 flex-col gap-2 p-3">
-        <span className="text-[11px] text-editorial-muted">
-          {t('areas.library.compressFrom', { size: resolutionLabel(sourceTag, t) })}
-        </span>
-        <label className="flex flex-col gap-1 text-[11px] text-editorial-muted">
-          {t('areas.library.compressTargetLabel')}
-          <Select
-            value={targetEdge !== null ? String(targetEdge) : ''}
-            onChange={(value) => setTargetEdge(Number(value))}
-            ariaLabel={t('areas.library.compressTargetLabel')}
-            options={targetOptions.map((value) => ({ value: String(value), label: t('settings.download.pixels', { value }) }))}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-[11px] text-editorial-muted">
+      <div className="flex min-w-48 flex-col gap-2 p-3">
+        <label className="flex flex-col gap-1 text-xs text-editorial-muted">
           {t('settings.download.optimizeQuality')}
           <Select
             value={quality !== null ? String(quality) : ''}
@@ -779,18 +752,14 @@ function CompressPopover({
             options={OPTIMIZE_QUALITIES.map((value) => ({ value: String(value), label: String(value) }))}
           />
         </label>
-        {targetOptions.length === 0 ? (
-          <span className="text-[11px] text-editorial-muted">{t('areas.library.compressNoTarget')}</span>
-        ) : (
-          <IconButton
-            size="sm"
-            onClick={() => void confirmCompress()}
-            disabled={busy || targetEdge === null || quality === null}
-            title={t('areas.library.compressConfirm')}
-          >
-            <Minimize2 size={13} />
-          </IconButton>
-        )}
+        <IconButton
+          size="sm"
+          onClick={() => void confirmCompress()}
+          disabled={busy || quality === null}
+          title={t('areas.library.compressConfirm')}
+        >
+          <Minimize2 size={13} />
+        </IconButton>
       </div>
     </ClickPopover>
   );

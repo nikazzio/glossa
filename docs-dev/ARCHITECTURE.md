@@ -53,14 +53,28 @@ la lettura. Il visore pubblica verso l'alto la posizione corrente con servizio
 immagini e versione del formato, così la scheda costruisce da sé la richiesta a
 qualunque misura.
 
-Le pagine si manipolano una per una dentro l'unica copia a immagini: prenderla
-alla massima risoluzione, riportarla alla misura del libro, toglierla. I comandi
-del deposito sono `page_local_copies` e `forget_page`, che guardano i file e non
-il database. Togliere una pagina la **esclude**: la riga sta in `excluded_pages`
-(migrazione 0002), lo scaricamento del libro la salta con l'esito `Excluded` —
-contato nell'avanzamento, altrimenti il lavoro non arriverebbe mai in fondo — e
-chiederla di nuovo la riammette. L'esclusione vale per la copia, non per una
-singola misura.
+**Di un'opera si tiene una copia a immagini sola, con un file per pagina.** Il
+deposito resta strutturalmente capace di più cartelle di misura (`pages/<tag>/`),
+ma nessun percorso ne crea più di una:
+
+- riprendere una pagina a un'altra misura la **sovrascrive** nella cartella del
+  libro — `keep_viewer_page` non rifiuta più un file già presente — e i pixel
+  veri finiscono nella riga di lato, che è l'unica fonte onesta della misura di
+  quella pagina;
+- riscaricare il libro a un'altra misura sostituisce tutto: la conferma lo
+  dichiara prima, e le cartelle vecchie si cancellano **a scaricamento
+  riuscito** (`consolidate` in `CopiesSection`), non prima;
+- la ricompressione (`optimize`) riscrive le pagine **sul posto** a qualità più
+  bassa senza toccare i pixel, e non produce più una copia in `derived/`. La
+  ripresa non ricomprime due volte: la riga di lato porta
+  `Note::Recompressed { quality }`;
+- togliere una pagina la **esclude** (`excluded_pages`, migrazione 0002): lo
+  scaricamento la salta con l'esito `Excluded`, contato nell'avanzamento, e
+  chiederla di nuovo la riammette.
+
+Il riallineamento con la biblioteca cancella le correzioni a mano **solo dei
+campi che la biblioteca dichiara** in quella lettura: quelli che non dà — e le
+note — restano.
 
 La scheda dell'opera è un **template fisso**: tutti i campi di `SOURCE_FIELDS`
 sono presenti sempre, vuoti compresi, e ognuno si corregge a mano con la stessa

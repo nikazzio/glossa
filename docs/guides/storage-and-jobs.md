@@ -117,6 +117,17 @@ cache. La cache non aumenta il conteggio delle pagine scaricate e non entra
 nel [backup](../reference/backup-and-restore).
 
 
+## Una copia sola per opera
+
+Di un'opera si tiene **una copia a immagini**, alla misura scelta al momento
+dello scaricamento, con **un file per pagina**. Chiedere il libro a un'altra
+misura lo dichiara prima e sostituisce quella che hai: le misure vecchie
+vengono cancellate solo a scaricamento riuscito, così un guasto di rete non ti
+lascia senza niente.
+
+Il deposito resta capace di tenere più misure insieme, ma nessun comando ne
+crea più di una.
+
 ## Agire sulla pagina che stai leggendo
 
 I comandi sulla singola pagina stanno nella scheda a destra, sotto **Copie
@@ -126,23 +137,34 @@ il visore mostra un'altra copia, spenti.
 
 Con la pagina aperta puoi:
 
-- **conservarla alla misura del libro**, come si faceva prima dalla barra;
-- **prenderla alla massima risoluzione**, quando la misura del libro non basta
-  per guardarla davvero;
-- **riportarla alla misura del libro**, che cancella le copie più grandi e
-  restituisce lo spazio;
+- **conservarla alla misura del libro**, se stavi leggendo online;
+- **prenderla alla massima risoluzione**: la pagina viene richiesta di nuovo e
+  **sostituisce** quella che hai, restando l'unico file di quella pagina;
+- **riportarla alla misura del libro**, che la riscarica alla misura normale e
+  recupera lo spazio;
 - **toglierla dal computer**: la pagina sparisce e resta esclusa, cioè non torna
-  né con un nuovo scaricamento del libro né da sola. Chiederla di nuovo alla
-  massima risoluzione la riammette.
+  né con un nuovo scaricamento del libro né da sola. Chiederla di nuovo la
+  riammette.
 
-Sotto compaiono le misure di quella pagina che hai davvero sul disco, con il
-loro peso e un comando per cancellarne una sola. Nella barra del visore restano
-soltanto i comandi di lettura: lettura solo dal computer, ingrandimento,
-miniature e il collegamento alla pagina sul sito della biblioteca.
+Sotto compaiono la misura vera di quella pagina — i pixel che ha davvero, che
+dopo una ripresa non sono più quelli del libro — e quanto pesa. Nella barra del
+visore restano soltanto i comandi di lettura: lettura solo dal computer,
+ingrandimento, miniature e il collegamento alla pagina sul sito della
+biblioteca.
 
-Nella scheda dell'opera, sotto Copie digitali, la copia dichiara quante pagine
-hai tolto di proposito: senza quella riga una copia incompleta sembrerebbe
-guasta.
+Nella scheda dell'opera la copia dichiara quante pagine hai tolto di proposito:
+senza quella riga una copia incompleta sembrerebbe guasta.
+
+## Alleggerire le pagine
+
+Il comando di ricompressione riscrive **tutte** le pagine della copia a una
+qualità più bassa, **senza cambiarne le dimensioni**: serve quando la misura va
+bene e il problema è lo spazio. Non crea una seconda copia del libro e non è
+reversibile — per riavere la qualità di prima si riscarica dalla biblioteca.
+
+Se dopo la ricompressione una pagina ti serve migliore, la riprendi alla massima
+risoluzione: sostituisce quella ricompressa.
+
 
 ## Messaggi e log di sistema
 

@@ -1159,13 +1159,10 @@
       "localVersionNeverDownloaded": "Mai scaricata",
       "localVersionLastDownloadFailed": "Ultimo scaricamento fallito",
       "localVersionNotServed": "{{count}} non servite dalla biblioteca",
-      "compressAction": "Ricava una versione più piccola da quella da {{size}}, senza toccarla",
+      "compressAction": "Ricomprimi le pagine per liberare spazio",
       "compressSourceLabel": "Da quale risoluzione",
-      "compressFrom": "Parte dalla versione da {{size}}",
       "downloadInProgress": "C'è già uno scaricamento in corso per questa digitalizzazione, alla misura da {{size}}: aspetta che finisca o fermalo dal pannello dei lavori.",
-      "compressTargetLabel": "A quale risoluzione",
-      "compressConfirm": "Crea la copia",
-      "compressNoTarget": "Nessuna risoluzione più piccola disponibile.",
+      "compressConfirm": "Ricomprimi",
       "freeSizeAction": "Cancella solo la versione da {{size}}",
       "freeSizeTitle": "Liberare {{size}}?",
       "freeSizeMessage": "Questa risoluzione viene cancellata subito. Le altre risoluzioni di quest'opera restano.",
@@ -1223,7 +1220,7 @@
       "detailsSection": "Dati",
       "resyncAction": "Risincronizza con la biblioteca",
       "resyncTitle": "Risincronizzare questa opera?",
-      "resyncMessage": "Rilegge i dati dalla biblioteca e li riscrive: ogni correzione a mano fatta finora sparisce (le Note restano). Le pagine già scaricate non vengono toccate.",
+      "resyncMessage": "Rileggo i dati dalla biblioteca. Le correzioni che hai fatto a mano sui campi che la biblioteca dichiara verranno sostituite; quelle sui campi che lei non dà — e le note — restano.",
       "resyncConfirm": "Risincronizza",
       "resyncSuccess": "Opera risincronizzata con la biblioteca",
       "resyncFailed": "Impossibile risincronizzare",
@@ -1395,7 +1392,11 @@
       "downloadReplaceTitle": "Scaricare a {{size}}?",
       "downloadReplaceMessage": "Di un'opera si tiene una misura sola. Quando lo scaricamento è riuscito, le misure che hai adesso ({{sizes}}) vengono cancellate; se fallisce, resta tutto com'è.",
       "downloadReplaceConfirm": "Scarica e sostituisci",
-      "provenanceMissing": "Provenienza mancante: quest'opera è stata aggiunta senza la biblioteca di origine. Rimuovila e riaggiungila per avere nome e collegamento."
+      "provenanceMissing": "Provenienza mancante: quest'opera è stata aggiunta senza la biblioteca di origine. Rimuovila e riaggiungila per avere nome e collegamento.",
+      "pageSizeField": "Misura",
+      "pagePixels": "{{width}} × {{height}}",
+      "compressTitle": "Ricomprimere le pagine?",
+      "compressMessage": "Ogni pagina viene riscritta più leggera, alle stesse dimensioni. Non si torna indietro: per riavere la qualità di adesso bisogna riscaricare il libro dalla biblioteca."
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2423,7 +2424,8 @@
               "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
               "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
               "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori.",
-              "Mentre leggi puoi agire sulla singola pagina: prenderla alla massima risoluzione, riportarla alla misura del libro o toglierla dal computer. Una pagina tolta resta esclusa e non torna con un nuovo scaricamento, finché non la richiedi."
+              "Mentre leggi puoi agire sulla singola pagina: conservarla, prenderla alla massima risoluzione — sostituisce quella che hai — riportarla alla misura del libro o toglierla dal computer. Una pagina tolta resta esclusa e non torna con un nuovo scaricamento, finché non la richiedi.",
+              "Di un'opera si tiene una copia sola, con un file per pagina: chiedere il libro a un'altra misura sostituisce quella che hai, e la ricompressione riscrive le pagine più leggere senza cambiarne le dimensioni — non si torna indietro senza riscaricare."
             ]
           },
           {

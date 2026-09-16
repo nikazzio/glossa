@@ -394,6 +394,10 @@ pub struct PageCopy {
     pub bytes: u64,
     /// Vera per una copia ricavata in locale, falsa per una scaricata.
     pub derived: bool,
+    /// I pixel davvero presenti, letti dalla riga di lato: il nome della
+    /// cartella dice con che misura è stato scaricato il libro, non quanto
+    /// misura **questa** pagina dopo che è stata ripresa.
+    pub pixels: Option<(u32, u32)>,
 }
 
 /// Che cosa si ha di questa pagina, misura per misura.
@@ -443,6 +447,9 @@ pub fn page_local_copies(
                 size_tag: entry.file_name().to_string_lossy().to_string(),
                 bytes: metadata.len(),
                 derived,
+                pixels: crate::download::sidecar::read(&entry.path())
+                    .get(&page_index)
+                    .and_then(|record| record.got),
             });
         }
     }

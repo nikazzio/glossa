@@ -50,7 +50,11 @@ interface SourceDetailRow {
  * provenienza, serie...) non hanno un originale: `null` finché Niki non li
  * scrive lui.
  */
-function baseFieldValue(field: SourceField, row: SourceDetailRow, metadata: SourceMetadata): string | null {
+function baseFieldValue(
+  row: Pick<SourceDetailRow, 'title' | 'kind' | 'primary_language' | 'description'>,
+  metadata: SourceMetadata,
+  field: SourceField,
+): string | null {
   switch (field) {
     case 'title': return row.title;
     case 'kind': return row.kind;
@@ -81,7 +85,7 @@ function effectiveFieldValues(
   const original: SourceFieldValues = {};
   const effective = {} as Record<SourceField, string | null>;
   for (const field of SOURCE_FIELDS) {
-    const base = baseFieldValue(field, row, metadata);
+    const base = baseFieldValue(row, metadata, field);
     const override = overrides[field];
     if (override !== undefined) {
       original[field] = base ?? '';
@@ -617,9 +621,31 @@ export async function resyncSourceFromManifest(
       'UPDATE source_versions SET metadata = $2 WHERE source_id = $1 AND is_primary = 1',
       [sourceId, metadata],
     );
-    await run(`DELETE FROM source_field_overrides WHERE source_id = $1 AND field <> 'notes'`, [
-      sourceId,
-    ]);
+    // Si cancellano le correzioni **solo dei campi che la biblioteca dichiara**
+    // in questa lettura: se hai scritto a mano un dato che la biblioteca non dà
+    // — il luogo di origine, una nota di provenienza — riallineare non ha
+    // motivo di buttarlo. Le note non arrivano mai dalla biblioteca e restano
+    // sempre.
+    const provided = SOURCE_FIELDS.filter((field) => {
+      const value = baseFieldValue(
+        {
+          title: input.title,
+          kind: input.kind,
+          primary_language: input.language,
+          description: input.description,
+        },
+        parseMetadata(metadata),
+        field,
+      );
+      return value !== null && value.trim() !== '';
+    });
+    if (provided.length > 0) {
+      const placeholders = provided.map((_, index) => `$${index + 2}`).join(', ');
+      await run(
+        `DELETE FROM source_field_overrides WHERE source_id = $1 AND field IN (${placeholders})`,
+        [sourceId, ...provided],
+      );
+    }
   });
 
   logger.info('library.source.resynced', { sourceId });
@@ -741,7 +767,7 @@ async function originalFieldValue(sourceId: string, field: SourceField): Promise
     [sourceId],
   );
   const metadata = parseMetadata(version?.metadata ?? null);
-  return baseFieldValue(field, row, metadata);
+  return baseFieldValue(row, metadata, field);
 }
 
 export async function setWorkspaceSourceLink(

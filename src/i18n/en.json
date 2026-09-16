@@ -1159,13 +1159,10 @@
       "localVersionNeverDownloaded": "Never downloaded",
       "localVersionLastDownloadFailed": "Last download failed",
       "localVersionNotServed": "{{count}} not served by the library",
-      "compressAction": "Derive a smaller version from the {{size}} one, leaving it untouched",
+      "compressAction": "Recompress the pages to free space",
       "compressSourceLabel": "From which resolution",
-      "compressFrom": "Starts from the {{size}} version",
       "downloadInProgress": "A download is already running for this digitisation, at the {{size}} size: wait for it to finish or stop it from the jobs panel.",
-      "compressTargetLabel": "To which resolution",
-      "compressConfirm": "Make the copy",
-      "compressNoTarget": "No smaller resolution available.",
+      "compressConfirm": "Recompress",
       "freeSizeAction": "Delete only the {{size}} version",
       "freeSizeTitle": "Free {{size}}?",
       "freeSizeMessage": "This resolution is deleted right away. The work's other resolutions stay.",
@@ -1223,7 +1220,7 @@
       "detailsSection": "Details",
       "resyncAction": "Resync with the library",
       "resyncTitle": "Resync this work?",
-      "resyncMessage": "Reads the data from the library again and overwrites it: every hand correction made so far is gone (Notes stay). Already downloaded pages are not touched.",
+      "resyncMessage": "The data is read again from the library. Your manual corrections on the fields the library declares will be replaced; those on fields it does not provide — and the notes — stay.",
       "resyncConfirm": "Resync",
       "resyncSuccess": "Work resynced with the library",
       "resyncFailed": "Could not resync",
@@ -1395,7 +1392,11 @@
       "downloadReplaceTitle": "Download at {{size}}?",
       "downloadReplaceMessage": "A work keeps one size only. Once the download succeeds, the sizes you have now ({{sizes}}) are deleted; if it fails, everything stays as it is.",
       "downloadReplaceConfirm": "Download and replace",
-      "provenanceMissing": "Provenance missing: this work was added without its source library. Remove it and add it again to get the name and the link."
+      "provenanceMissing": "Provenance missing: this work was added without its source library. Remove it and add it again to get the name and the link.",
+      "pageSizeField": "Size",
+      "pagePixels": "{{width}} × {{height}}",
+      "compressTitle": "Recompress the pages?",
+      "compressMessage": "Every page is rewritten lighter, at the same dimensions. There is no way back: to get today's quality again you have to download the book from the library."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -2423,7 +2424,8 @@
               "Pause requests a stop at the next checkpoint; Resume continues from there. Cancel ends the job and keeps files already saved. After a failure, you can start another attempt.",
               "Waiting may indicate a library rate limit. A countdown refers to the next attempt, not the end of the download. Paused means the job needs to be resumed.",
               "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs.",
-              "While reading you can act on a single page: take it at the highest resolution, bring it back to the book size, or remove it from the computer. A removed page stays excluded and does not come back with a new download, until you ask for it again."
+              "While reading you can act on a single page: keep it, take it at the highest resolution — it replaces the one you have — bring it back to the book size, or remove it from the computer. A removed page stays excluded and does not come back with a new download, until you ask for it again.",
+              "A work keeps one copy only, with one file per page: asking for the book at another size replaces the one you have, and recompression rewrites the pages lighter without changing their dimensions — there is no way back without downloading again."
             ]
           },
           {

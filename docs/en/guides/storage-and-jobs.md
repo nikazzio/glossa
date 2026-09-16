@@ -111,6 +111,16 @@ increase downloaded-page counts and is excluded from
 [backups](../reference/backup-and-restore).
 
 
+## One copy per work
+
+A work keeps **one image copy**, at the size chosen when downloading, with **one
+file per page**. Asking for the book at another size says so first and replaces
+what you have: the old sizes are deleted only once the download succeeds, so a
+network failure does not leave you with nothing.
+
+The repository can still hold several sizes at once, but no command creates more
+than one.
+
 ## Acting on the page you are reading
 
 The commands for a single page live in the right-hand panel, under **Digital
@@ -120,22 +130,34 @@ viewer is showing another copy.
 
 With a page open you can:
 
-- **keep it at the book size**, as the toolbar used to do;
-- **take it at the highest resolution**, when the book size is not enough to
-  really look at it;
-- **bring it back to the book size**, which deletes the larger copies and gives
-  the space back;
+- **keep it at the book size**, if you were reading online;
+- **take it at the highest resolution**: the page is requested again and
+  **replaces** the one you have, staying the only file for that page;
+- **bring it back to the book size**, which downloads it again at the normal
+  size and recovers the space;
 - **remove it from the computer**: the page goes and stays excluded — it does
   not come back with a new download of the book, nor on its own. Asking for it
-  again at the highest resolution readmits it.
+  again readmits it.
 
-Below, the sizes of that page actually on disk, with their weight and a command
-to delete a single one. The viewer toolbar keeps only the reading commands:
-local-only reading, zoom, thumbnails and the link to the page on the library
-site.
+Below, the real size of that page — the pixels it actually has, which after a
+retake are no longer the book's — and its weight. The viewer toolbar keeps only
+the reading commands: local-only reading, zoom, thumbnails and the link to the
+page on the library site.
 
-On the item page, under Digital copies, the copy states how many pages you
-removed on purpose: without that line an incomplete copy would look broken.
+On the item page the copy states how many pages you removed on purpose: without
+that line an incomplete copy would look broken.
+
+## Making the pages lighter
+
+The recompression command rewrites **every** page of the copy at a lower
+quality, **without changing its dimensions**: it is for when the size is right
+and space is the problem. It does not create a second copy of the book and it is
+not reversible — to get the previous quality back you download from the library
+again.
+
+If a page turns out to need better quality after that, take it at the highest
+resolution: it replaces the recompressed one.
+
 
 ## Messages and system log
 

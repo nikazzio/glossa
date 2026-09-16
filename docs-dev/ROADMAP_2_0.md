@@ -99,15 +99,13 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   gestore di ricerca (visita della pagina del catalogo e `Referer`), e il
   segnale resta dichiarato come segnaposto per quando anche lo scaricamento
   dovrà aprire una sessione.
-- #459 (azioni sulla pagina e selezione multipla, «Fase A»): **quasi tutta da
-  fare**, e semplificata il 16 settembre — una sola copia a immagini per opera,
-  le pagine come eccezioni dentro di essa, due comandi simmetrici («prendila al
-  massimo», «riportala alla misura del libro»), selezione a intervallo. La
-  compressione che oggi crea una seconda copia completa sparisce come tale. Esiste solo «tieni questa pagina» alla misura mostrata. Mancano scelta
-  della misura, sostituzione, riduzione, eliminazione di una versione locale
-  della pagina, verifica, e **tutta** la selezione multipla: le miniature non
-  hanno alcun concetto di selezione. Le quattro decisioni elencate nella issue
-  vanno prese prima di iniziare.
+- #459 (azioni sulla pagina e selezione multipla, «Fase A»): **prima metà
+  consegnata** nella forma semplificata del 16 settembre — una copia a immagini
+  sola per opera con un file per pagina, comandi sulla pagina che sostituiscono
+  invece di affiancare, esclusione persistente rispettata dallo scaricamento,
+  ricompressione sul posto al posto della copia derivata, riallineamento che non
+  butta le correzioni sui campi che la biblioteca non dà. **Resta** la selezione
+  a intervallo dalle miniature.
 - #462 (PDF della biblioteca, «Fase C»): decisa il 16 settembre. Il PDF è una
   **copia a sé** accanto a quella a immagini, si legge **dentro il visore
   attuale** con pdf.js — che serve anche a estrarre il testo per le trascrizioni

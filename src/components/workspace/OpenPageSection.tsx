@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FileText, HardDriveDownload, Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { IconButton, SectionLabel, Spinner } from '../ui';
+import { IconButton, SectionLabel, Spinner, StatRow } from '../ui';
 import { keepViewerPage } from '../../services/cacheService';
 import { excludePage, includePage } from '../../services/excludedPagesService';
 import { MAX_SIZE, pageSourceUrl } from '../../services/iiifViewerService';
@@ -85,8 +85,16 @@ export function OpenPageSection({
     }
   };
 
-  const keepAt = async (size: string) => {
-    if (!shownPage) return;
+  /**
+   * Riprende la pagina alla misura chiesta e la **sostituisce** nella copia.
+   *
+   * La cartella resta quella del libro: di una pagina si tiene un file solo, e
+   * la misura chiesta cambia solo cosa si domanda alla biblioteca. I pixel veri
+   * restano scritti nella riga di lato, che è l'unica cosa che poi dice quanto
+   * misura davvero quella pagina.
+   */
+  const keepAt = async (requested: string) => {
+    if (!shownPage || !bookSize) return;
     // Chiedere una pagina esclusa la riammette: un comando che non fa quello
     // che dice è peggio di un comando assente.
     await includePage(version.id, shownPage.index);
@@ -94,13 +102,16 @@ export function OpenPageSection({
       kind: 'page',
       versionId: version.id,
       index: shownPage.index,
-      size,
-      remoteUrl: pageSourceUrl(shownPage.imageService, size, shownPage.presentation2),
+      size: bookSize,
+      remoteUrl: pageSourceUrl(shownPage.imageService, requested, shownPage.presentation2),
       providerKey,
     });
   };
 
-  const beyondBook = copies.filter((copy) => copy.sizeTag !== bookSize);
+  const page = copies[0] ?? null;
+  const atMax = page?.pixels !== undefined && page?.pixels !== null && bookPixels(bookSize) !== null
+    ? Math.max(...page.pixels) > bookPixels(bookSize)!
+    : false;
   const idle = shownPage === null || working;
 
   return (
@@ -125,7 +136,7 @@ export function OpenPageSection({
           </IconButton>
           <IconButton
             size="sm"
-            disabled={idle || copies.some((copy) => copy.sizeTag === MAX_SIZE)}
+            disabled={idle || atMax}
             title={t('areas.library.pageTakeAtMax')}
             onClick={() => void act(() => keepAt(MAX_SIZE))}
           >
@@ -133,15 +144,9 @@ export function OpenPageSection({
           </IconButton>
           <IconButton
             size="sm"
-            disabled={idle || beyondBook.length === 0 || bookSize === null}
+            disabled={idle || !atMax || bookSize === null}
             title={t('areas.library.pageBackToBookSize')}
-            onClick={() =>
-              void act(async () => {
-                for (const copy of beyondBook) {
-                  await forgetPage(providerKey, version.id, shownPage!.index, copy.sizeTag);
-                }
-              })
-            }
+            onClick={() => void act(() => keepAt(bookSize ?? MAX_SIZE))}
           >
             <Minimize2 size={13} />
           </IconButton>
@@ -165,38 +170,34 @@ export function OpenPageSection({
       {reading ? (
         <Spinner size={12} className="flex items-center gap-2 text-xs text-editorial-muted" />
       ) : (
-        copies.length > 0 && (
+        page && (
+          // Una pagina, un file: quello che conta è quanto misura davvero e
+          // quanto pesa — il nome della cartella dice la misura del libro, che
+          // dopo una ripresa non è più la sua.
           <dl className="space-y-1 pl-0.5">
-            {copies.map((copy) => (
-              <div
-                key={`${copy.sizeTag}-${copy.derived ? 'derived' : 'native'}`}
-                className="flex items-center gap-2"
-              >
-                <dt className="min-w-0 flex-1 truncate text-xs text-editorial-muted">
-                  {resolutionLabel(copy.sizeTag, t)}
-                </dt>
-                <dd className="shrink-0 font-display text-sm italic text-editorial-ink">
-                  {humanSize(copy.bytes)}
-                </dd>
-                <IconButton
-                  size="xs"
-                  disabled={working}
-                  title={t('areas.library.pageRemoveSize', {
-                    size: resolutionLabel(copy.sizeTag, t),
-                  })}
-                  onClick={() =>
-                    void act(async () => {
-                      await forgetPage(providerKey, version.id, shownPage!.index, copy.sizeTag);
+            <StatRow
+              label={t('areas.library.pageSizeField')}
+              value={
+                page.pixels
+                  ? t('areas.library.pagePixels', {
+                      width: page.pixels[0],
+                      height: page.pixels[1],
                     })
-                  }
-                >
-                  <Trash2 size={11} />
-                </IconButton>
-              </div>
-            ))}
+                  : resolutionLabel(page.sizeTag, t)
+              }
+            />
+            <StatRow label={t('areas.library.localVersionSpace')} value={humanSize(page.bytes)} />
           </dl>
         )
       )}
     </section>
   );
+}
+
+/** Il lato lungo che il libro dichiara, quando è un numero: «max» non lo è, e
+ *  allora non c'è niente da confrontare. */
+function bookPixels(bookSize: string | null): number | null {
+  if (!bookSize || bookSize === MAX_SIZE) return null;
+  const value = Number(bookSize);
+  return Number.isFinite(value) ? value : null;
 }

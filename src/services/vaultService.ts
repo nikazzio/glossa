@@ -221,6 +221,10 @@ export interface PageCopy {
   sizeTag: string;
   bytes: number;
   derived: boolean;
+  /** I pixel davvero presenti, letti dal registro del deposito: il nome della
+   *  cartella dice con che misura è stato scaricato il libro, non quanto
+   *  misura questa pagina dopo che è stata ripresa. */
+  pixels: [number, number] | null;
 }
 
 /** Che cosa si ha di questa pagina, misura per misura, letto dal deposito. */
