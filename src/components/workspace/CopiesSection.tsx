@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, Eraser, Eye, HardDrive, Loader2, Minimize2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ClickPopover, IconButton, SectionLabel, Select, StatBlock, StatRow } from '../ui';
@@ -7,6 +7,8 @@ import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
 import { versionInventory, type SizeFolder } from '../../services/inventoryService';
 import { excludedPages } from '../../services/excludedPagesService';
+import { copyTitle } from '../../utils/copyTitle';
+import { errorMessage, logger } from '../../utils/logger';
 import {
   enqueueOptimization,
   getOptimizeQuality,
@@ -93,7 +95,7 @@ export function CopiesSection({
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
           <div>
             <span className="block truncate font-display text-sm italic text-editorial-ink">
-              {version.label}
+              {copyTitle(version, provider?.label, t)}
             </span>
             <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t(`areas.library.versionKindLabels.${version.versionKind}`)}
@@ -233,10 +235,33 @@ function CopyDetails({
       isTerminal(job),
   ).length;
 
+  // Finito uno scaricamento, l'opera torna ad avere una misura sola: le altre
+  // se ne vanno adesso, non prima, così un guasto di rete non lascia il libro
+  // senza niente. Vale anche per le copie di prima, scaricate quando più
+  // misure insieme erano ammesse.
+  const consolidate = useCallback(async () => {
+    const kept = (await getVersionSizeCap(version.id)) ?? DEFAULT_SIZE_CAP;
+    const inventory = await versionInventory(version.id);
+    if (!inventory) return;
+    const extra = inventory.sizes.filter((size) => size.sizeTag !== kept && !size.derived);
+    if (extra.length === 0) return;
+    for (const size of extra) {
+      await freeVersionSize(inventory.providerKey ?? 'generic', version.id, size.sizeTag, false);
+    }
+    logger.info('library.version.consolidated', {
+      versionId: version.id,
+      kept,
+      removed: extra.length,
+    });
+  }, [version.id]);
+
   useEffect(() => {
     if (finishedJobs === 0) return;
+    void consolidate().catch((error: unknown) => {
+      logger.warn('library.version.consolidateFailed', { reason: errorMessage(error) });
+    });
     setReloadTick((tick) => tick + 1);
-  }, [finishedJobs]);
+  }, [finishedJobs, consolidate]);
 
   const startDownload = async () => {
     if (!version.sourceUrl) return;
@@ -344,32 +369,11 @@ function CopyDetails({
           onChanged={reloadAll}
         />
       )}
-      {/* Prima si prende, poi si guarda cosa si ha: lo scaricamento sta in
-          cima perché è il gesto con cui questa scheda comincia. */}
-      <section className="space-y-3">
-        <SectionLabel icon={Download} label={t('areas.library.downloadSection')} />
-        {/* Solo le digitalizzazioni a immagini si scaricano: per un PDF o un
-            file di altro tipo lo scaricamento chiederebbe alla biblioteca un
-            manifesto che non esiste, e il lavoro finirebbe in errore. */}
-        {version.versionKind === 'iiif_manifest' ? (
-          <DownloadRow
-            version={version}
-            existingSizes={sizes}
-            expectedPages={expectedPages}
-            disabled={busy || runningDownload || !version.sourceUrl}
-          />
-        ) : (
-          <p className="text-xs text-editorial-muted">{t('areas.library.downloadOnlyImages')}</p>
-        )}
-      </section>
-
-      {/* I comandi restano sempre in vista, spenti quando non c'è niente sul
-          computer: dentro l'elenco delle versioni sparivano del tutto quando
-          l'inventario del deposito non risponde, e allora non si poteva più né
-          verificare né liberare spazio. */}
+      {/* Il libro: prima come si prende, poi cosa se n'è già preso. Sopra
+          resta la pagina che si sta leggendo, che è un'altra scala. */}
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <SectionLabel icon={HardDrive} label={t('areas.library.localVersionsSection')} />
+          <SectionLabel icon={HardDrive} label={t('areas.library.bookSection')} />
           <div className="flex items-center gap-1">
             <IconButton
               size="sm"
@@ -389,6 +393,21 @@ function CopyDetails({
             </IconButton>
           </div>
         </div>
+
+        {/* Solo le digitalizzazioni a immagini si scaricano: per un PDF o un
+            file di altro tipo lo scaricamento chiederebbe alla biblioteca un
+            manifesto che non esiste, e il lavoro finirebbe in errore. */}
+        {version.versionKind === 'iiif_manifest' ? (
+          <DownloadRow
+            version={version}
+            existingSizes={sizes}
+            expectedPages={expectedPages}
+            disabled={busy || runningDownload || !version.sourceUrl}
+            onDownloaded={reloadAll}
+          />
+        ) : (
+          <p className="text-xs text-editorial-muted">{t('areas.library.downloadOnlyImages')}</p>
+        )}
 
         <StatBlock label={t('areas.library.occupiedField')} value={humanSize(localBytes)} />
 
@@ -420,6 +439,7 @@ function CopyDetails({
                 viewing={isOpenInViewer && viewedLocalSize === size.sizeTag}
                 onView={isOpenInViewer && onViewLocalSize ? onViewLocalSize : undefined}
                 onFree={freeSizeRow(size)}
+                excluded={excluded}
               />
             ))}
           </div>
@@ -441,9 +461,13 @@ function ResolutionRow({
   onView,
   onFree,
   onCompressed,
+  excluded,
 }: {
   version: LibrarySourceVersion;
   size: SizeFolder;
+  /** Pagine tolte di proposito: non sono un buco, e senza contarle la copia
+   *  resterebbe «incompleta» per sempre. */
+  excluded: number;
   /** Tutte le versioni locali di questa copia: servono a non proporre una
    *  misura d'arrivo che esiste già. */
   allSizes: SizeFolder[];
@@ -465,7 +489,7 @@ function ResolutionRow({
   // Le pagine che la biblioteca dichiara di non servire non sono un buco: una
   // versione con tutte quelle servite è completa, ed è lo stesso conto che fa
   // la disponibilità nel catalogo.
-  const complete = expectedPages > 0 && size.pages + size.missing >= expectedPages;
+  const complete = expectedPages > 0 && size.pages + size.missing + excluded >= expectedPages;
 
   return (
     <div className="space-y-2 border-t border-editorial-border/60 pt-3 first:border-t-0 first:pt-0">
@@ -546,11 +570,14 @@ function DownloadRow({
   existingSizes,
   expectedPages,
   disabled,
+  onDownloaded,
 }: {
   version: LibrarySourceVersion;
   existingSizes: SizeFolder[];
   expectedPages: number;
   disabled: boolean;
+  /** Lo scaricamento è partito: chi mostra le versioni locali deve rileggere. */
+  onDownloaded: () => void;
 }) {
   const { t } = useTranslation();
   const applyChange = useJobsStore((state) => state.applyChange);
@@ -578,6 +605,21 @@ function DownloadRow({
 
   const download = async () => {
     if (!cap || !version.sourceUrl) return;
+    // Di un'opera si tiene una misura sola: chiederne un'altra sostituisce
+    // quella che c'è, e va detto prima — non dopo, quando lo spazio è già
+    // sparito. Le altre misure si cancellano a scaricamento riuscito, così un
+    // guasto di rete non lascia l'opera senza niente.
+    const replaced = existingSizes.filter((size) => size.sizeTag !== cap && size.pages > 0);
+    if (replaced.length > 0) {
+      const confirmed = await confirm({
+        title: t('areas.library.downloadReplaceTitle', { size: resolutionLabel(cap, t) }),
+        message: t('areas.library.downloadReplaceMessage', {
+          sizes: replaced.map((size) => resolutionLabel(size.sizeTag, t)).join(' · '),
+        }),
+        confirmLabel: t('areas.library.downloadReplaceConfirm'),
+      });
+      if (!confirmed) return;
+    }
     setDownloading(true);
     try {
       const providerKey = version.providerKey ?? (await versionProviderKey(version.id)) ?? 'generic';
@@ -588,6 +630,7 @@ function DownloadRow({
         sizeTag: cap,
       });
       applyChange(job);
+      onDownloaded();
       toast.success(t('areas.library.downloadQueued'));
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -619,7 +662,7 @@ function DownloadRow({
         size="sm"
         onClick={() => void download()}
         disabled={disabled || !cap || downloading || isComplete}
-        title={isComplete ? t('areas.library.resolutionComplete') : t('areas.library.download')}
+        title={isComplete ? t('areas.library.resolutionComplete') : t('areas.library.downloadWholeBook')}
       >
         {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
       </IconButton>

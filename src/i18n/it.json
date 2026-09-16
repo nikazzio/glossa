@@ -1145,7 +1145,6 @@
       "optimizeWhileDownloading": "Prima finisce lo scaricamento di quest'opera: i due lavori scriverebbero sulle stesse pagine.",
       "resolutionPages": "{{done}}/{{total}} pagine",
       "resolutionsSection": "Risoluzioni scaricate",
-      "localVersionsSection": "Versioni locali",
       "localVersionOrigin": "Origine",
       "localVersionSpace": "Spazio",
       "localVersionNotServedLabel": "Non servite",
@@ -1334,7 +1333,6 @@
         "other": "File"
       },
       "sourceUrlField": "Indirizzo",
-      "downloadSection": "Scarica",
       "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
@@ -1391,7 +1389,12 @@
       "excludedPagesCount_other": "{{count}} pagine tolte di proposito: non tornano con un nuovo scaricamento.",
       "openPageSection": "Pagina {{page}}",
       "openPageSectionIdle": "Pagina aperta",
-      "pageKeep": "Conserva questa pagina alla misura del libro"
+      "pageKeep": "Conserva questa pagina alla misura del libro",
+      "bookSection": "Il libro",
+      "downloadWholeBook": "Scarica tutto il libro a questa misura",
+      "downloadReplaceTitle": "Scaricare a {{size}}?",
+      "downloadReplaceMessage": "Di un'opera si tiene una misura sola. Quando lo scaricamento è riuscito, le misure che hai adesso ({{sizes}}) vengono cancellate; se fallisce, resta tutto com'è.",
+      "downloadReplaceConfirm": "Scarica e sostituisci"
     },
     "transcriptions": {
       "title": "Trascrizioni",

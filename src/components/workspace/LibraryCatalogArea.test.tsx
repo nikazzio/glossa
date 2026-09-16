@@ -749,7 +749,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea itemId="s1" />);
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
 
-    const resolutionsList = screen.getByText('areas.library.localVersionsSection')
+    const resolutionsList = screen.getByText('areas.library.bookSection')
       .closest('section') as HTMLElement;
     // "1500" è numerica: l'etichetta aggiunge l'unità di misura tramite una
     // chiave tradotta (il mock i18n dei test non interpola i placeholder,
