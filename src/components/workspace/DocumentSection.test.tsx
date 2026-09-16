@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DocumentSection } from './DocumentSection';
+import { DocumentAvailability, DocumentSection } from './DocumentSection';
 import { enqueuePdfDownload } from '../../services/jobsService';
 import { freeVersionDocument } from '../../services/vaultService';
+import { registerDeclaredDocument } from '../../services/libraryService';
 import type { LibrarySourceVersion } from '../../types';
 import '../../test/i18n-mock';
 
@@ -13,7 +14,22 @@ vi.mock('sonner', () => ({
 
 vi.mock('../../services/libraryService', () => ({
   versionProviderKey: vi.fn().mockResolvedValue('gallica'),
+  registerDeclaredDocument: vi.fn().mockResolvedValue(true),
 }));
+
+vi.mock('../../hooks/useManifestFacts', () => ({
+  readManifestFacts: (...args: unknown[]) => mockFacts(...args),
+}));
+
+const mockFacts = vi.fn();
+
+const NO_DOCUMENT = {
+  openable: true,
+  pages: 120,
+  samplePixels: null,
+  document: null,
+  renderings: [],
+};
 
 vi.mock('../../services/jobsService', () => ({
   enqueuePdfDownload: vi.fn().mockResolvedValue({ id: 'pdf:v1', status: 'queued' }),
@@ -117,5 +133,56 @@ describe('DocumentSection', () => {
 
     await waitFor(() => expect(freeVersionDocument).toHaveBeenCalledWith('gallica', 'v1'));
     expect(onChanged).toHaveBeenCalled();
+  });
+});
+
+const imagesVersion: LibrarySourceVersion = {
+  ...version,
+  id: 'v-img',
+  versionKind: 'iiif_manifest',
+  sourceUrl: 'https://gallica.bnf.fr/iiif/ark:/12148/bpt6k1234/manifest.json',
+} as LibrarySourceVersion;
+
+describe('DocumentAvailability', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('dice che la biblioteca non offre un documento invece di tacere', async () => {
+    mockFacts.mockResolvedValue(NO_DOCUMENT);
+
+    render(
+      <DocumentAvailability sourceId="s1" version={imagesVersion} onChanged={vi.fn()} />,
+    );
+
+    expect(
+      await screen.findByText('areas.library.documentNotDeclared'),
+    ).toBeInTheDocument();
+  });
+
+  it('quando la biblioteca lo dichiara, la copia entra in Biblioteca', async () => {
+    mockFacts.mockResolvedValue({
+      ...NO_DOCUMENT,
+      document: { url: 'https://example.test/opera.pdf', format: 'application/pdf', label: 'PDF' },
+    });
+    const onChanged = vi.fn();
+
+    render(<DocumentAvailability sourceId="s1" version={imagesVersion} onChanged={onChanged} />);
+
+    await waitFor(() =>
+      expect(registerDeclaredDocument).toHaveBeenCalledWith('s1', {
+        url: 'https://example.test/opera.pdf',
+        label: 'PDF',
+        providerKey: 'gallica',
+      }),
+    );
+    expect(onChanged).toHaveBeenCalled();
+  });
+
+  it('senza indirizzo della digitalizzazione non chiede niente a nessuno', async () => {
+    render(<DocumentAvailability sourceId="s1" version={null} onChanged={vi.fn()} />);
+
+    expect(await screen.findByText('areas.library.documentNoManifest')).toBeInTheDocument();
+    expect(mockFacts).not.toHaveBeenCalled();
   });
 });

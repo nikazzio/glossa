@@ -134,6 +134,16 @@ export async function deleteVersionFiles(providerKey: string, versionId: string)
   return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
 }
 
+/**
+ * Come sopra, ma per **tutte** le copie di un'opera: le immagini e il
+ * documento. È quello che serve quando l'opera esce dalla Biblioteca, perché
+ * cancellare la sola copia con cui era stata trovata lasciava il documento sul
+ * disco.
+ */
+export async function deleteSourceFiles(providerKey: string, sourceId: string): Promise<FreedSpace> {
+  return invoke<FreedSpace>('delete_source_files', { providerKey, sourceId });
+}
+
 /** L'esito di un controllo del deposito, come lo mostrano le impostazioni. */
 export interface VaultCheckOutcome {
   /** Quando è finito. */

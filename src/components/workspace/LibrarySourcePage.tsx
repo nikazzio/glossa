@@ -712,11 +712,18 @@ function SourceInfoSection({
     externalRef && detail.providerKey && externalRef.startsWith(`${detail.providerKey}:`)
       ? externalRef.slice(detail.providerKey.length + 1)
       : externalRef;
-  const technicalFields = [
+  // Un campo per riga, **sempre gli stessi e sempre tutti**: è la stessa regola
+  // della scheda dell'opera. Prima tre di questi stavano in un blocco
+  // richiudibile che compariva solo quando almeno uno era pieno, quindi la
+  // sezione cambiava forma da una biblioteca all'altra e non si poteva vedere
+  // cosa quella biblioteca non dà.
+  const libraryFields: [string, string][] = [
+    [t('areas.library.sourceProviderField'), providerLabel ?? ''],
+    [t('areas.library.sourceIdentifierField'), identifier ?? ''],
     [t('areas.library.sourceHoldingField'), detail.holdingInstitution ?? ''],
     [t('areas.library.sourcePageUrlField'), detail.pageUrl ?? ''],
     [t('areas.library.sourceCatalogUrlField'), detail.catalogUrl ?? ''],
-  ].filter(([, value]) => value !== '');
+  ];
 
   return (
     <Section
@@ -734,30 +741,15 @@ function SourceInfoSection({
       }
     >
       <dl className="space-y-2.5">
-        {providerLabel && (
-          <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />
-        )}
-        {identifier && (
-          <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier} />
-        )}
+        {libraryFields.map(([label, value]) => (
+          <StatBlock
+            key={label}
+            label={label}
+            value={value}
+            href={value.startsWith('http') ? value : undefined}
+          />
+        ))}
       </dl>
-      {technicalFields.length > 0 && (
-        <details className="border-t border-editorial-border/70 pt-2">
-          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
-            {t('areas.library.technicalData')}
-          </summary>
-          <dl className="mt-3 space-y-2.5">
-            {technicalFields.map(([label, value]) => (
-              <StatBlock
-                key={label}
-                label={label}
-                value={value}
-                href={value.startsWith('http') ? value : undefined}
-              />
-            ))}
-          </dl>
-        </details>
-      )}
     </Section>
   );
 }

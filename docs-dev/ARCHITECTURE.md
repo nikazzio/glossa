@@ -85,6 +85,15 @@ riga sola con `MULTI_VALUE_SEPARATOR`, la stessa costante con cui il servizio li
 divide e li unisce. I gruppi oltre il primo sono richiudibili e il loro stato
 sta in `uiStore.librarySourceGroups`, uno per tutta la Biblioteca.
 
+La stessa regola vale per il riquadro «Biblioteca e catalogo»
+(`SourceInfoSection`): biblioteca, identificativo, istituto che conserva,
+pagina del libro e scheda di catalogo sono **cinque righe sempre presenti**, con
+«—» dove la biblioteca non dà niente. Fino al 16 settembre 2026 le ultime tre
+stavano in un blocco richiudibile chiamato «Dati tecnici» che compariva solo se
+almeno una era piena: la sezione cambiava forma da una biblioteca all'altra —
+esattamente ciò che il template fisso esiste per evitare — e il nome prometteva
+più di quello che conteneva.
+
 Dall'indirizzo del manifesto si torna alle pagine pubbliche della biblioteca
 (`services/libraryLinks.ts`): scheda dell'opera e visore aperto su una pagina
 precisa, oggi per Gallica — che numera le pagine da uno — e Internet Archive —
@@ -660,6 +669,43 @@ conteggio del file, e la differenza non produce avvisi a schermo (decisione del
 cancella file e scheda e nient'altro. La verifica del deposito
 (`vault::verification`) include il documento fra i file registrati, con
 l'impronta della scheda.
+
+**Da dove nasce la copia PDF.** Il manifesto della biblioteca dichiara le
+rappresentazioni alternative dell'opera in `rendering` (stesso nome in
+Presentation 2.1 e 3, cambia solo `@id`/`id` e la forma dell'etichetta).
+`download::manifest` le legge in `Manifest::renderings`; `Rendering::is_pdf`
+decide sul tipo dichiarato e, quando manca, sull'estensione dell'indirizzo.
+Solo il `rendering` **di manifesto** conta: uno dichiarato su un canvas riguarda
+quella pagina, e confonderli farebbe passare per «il libro in PDF» il PDF di una
+carta sola.
+
+`iiif::discovery::inspect_manifest` (che ha sostituito `probe_manifest`) fa un
+GET con tetto di 2 MB e restituisce `ManifestFacts`: `openable`, `pages`,
+`sample_pixels` (i pixel del primo canvas) e `document`. Una lettura sola
+risponde alle tre domande che prima erano due richieste e una assenza. Oltre il
+tetto resta `openable: Some(true)` con il resto ignoto. `facts_of` è la parte
+senza rete, ed è dove stanno le prove.
+
+Nella finestra la lettura passa da `useManifestFacts`, che ne fa **una per
+biblioteca e manifesto per sessione**, condivisa fra le righe e con al massimo
+due richieste insieme; `readManifestFacts` è la stessa cosa fuori da un
+componente, con `fresh` per «chiedi di nuovo davvero». Le righe di ricerca la
+usano solo quando entrano nello schermo, e mai per un risultato che il catalogo
+dichiara già senza riproduzione.
+
+La copia si registra con `registerDeclaredDocument`: una riga `source_versions`
+con `version_kind = 'pdf'`, l'indirizzo del documento e la chiave della
+biblioteca nei metadati. La chiama l'aggiunta dalla ricerca, il riallineamento
+(`resyncSource`) e il comando «chiedi alla biblioteca» nella scheda. È
+idempotente sull'indirizzo, quindi ripeterla non crea doppioni. Finché la
+biblioteca non dichiara niente, la scheda mostra comunque la sezione del
+documento con lo stato («non dichiarato», «non si sa»): una copia assente va
+detta, non taciuta.
+
+Rimozione dell'opera: `delete_source_files` cancella le cartelle di **tutte** le
+copie del lavoro (le legge da `source_versions`), perché `delete_version_files`
+sulla sola copia di catalogo lasciava il documento sul disco fino al passaggio
+dello spazzino delle cartelle orfane.
 
 Lettura: `document_bytes` serve i byte grezzi (`tauri::ipc::Response`) con un
 tetto di 256 MB, `open_document_externally` apre il file con il lettore del

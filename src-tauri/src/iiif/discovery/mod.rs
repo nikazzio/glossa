@@ -295,24 +295,66 @@ async fn discover_with(
     Ok(nothing())
 }
 
-/// Se un risultato si apre davvero, chiesto per una riga sola.
+/// Cosa la biblioteca offre davvero di quest'opera, letto dal suo manifesto.
 ///
 /// Un catalogo elenca anche materiale che non ha una riproduzione: la scheda
 /// c'è, il libro digitalizzato no. Scoprirlo aprendo una riga per volta è il
 /// modo più lento; chiederlo per tutte le righe sarebbe una raffica di
-/// richieste per informazioni che nessuno ha chiesto.
+/// richieste per informazioni che nessuno ha chiesto. La lettura sta nel mezzo:
+/// la chiede la schermata **solo per le righe che stanno sotto gli occhi**, e
+/// passa dalla corsia che non toglie il posto alla pagina aperta.
 ///
-/// Questo comando sta nel mezzo: lo chiama la schermata **solo per le righe che
-/// stanno sotto gli occhi**, passa dalla corsia che non toglie il posto alla
-/// pagina aperta, e non ritenta. Risponde `Some(false)` soltanto quando la
-/// biblioteca dichiara che quel libro non c'è: un servizio fermo o una rete
-/// lenta riguardano oggi, e restano `None`.
+/// Un solo passaggio di rete risponde a tre domande che prima erano separate o
+/// senza risposta: il libro si apre, quante pagine dichiara, e se accanto alle
+/// immagini esiste un documento unico da scaricare. Chiederle in tre richieste
+/// distinte significherebbe bussare tre volte allo stesso server per una riga
+/// di elenco.
+#[derive(Debug, Clone, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManifestFacts {
+    /// Se quel libro si apre. `None` = non si è potuto sapere: servizio fermo,
+    /// rete lenta, o manifesto troppo grande per essere letto qui.
+    pub openable: Option<bool>,
+    /// Quante pagine dichiara il manifesto.
+    pub pages: Option<u32>,
+    /// I pixel dichiarati dalla prima pagina: è l'unico indizio sulla qualità
+    /// della scansione che il manifesto dà senza scaricare un'immagine.
+    pub sample_pixels: Option<(u32, u32)>,
+    /// Il documento unico dichiarato dal manifesto, quando c'è.
+    pub document: Option<DeclaredRendering>,
+    /// Le altre rappresentazioni alternative dichiarate.
+    pub renderings: Vec<DeclaredRendering>,
+}
+
+/// Una rappresentazione alternativa, come la vede la finestra.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeclaredRendering {
+    pub url: String,
+    pub format: Option<String>,
+    pub label: Option<String>,
+}
+
+impl From<&crate::download::manifest::Rendering> for DeclaredRendering {
+    fn from(rendering: &crate::download::manifest::Rendering) -> Self {
+        Self {
+            url: rendering.url.clone(),
+            format: rendering.format.clone(),
+            label: rendering.label.clone(),
+        }
+    }
+}
+
+/// Lo chiama la schermata per le righe che stanno sotto gli occhi e la scheda
+/// dell'opera quando chiede alla biblioteca cosa offre. Non ritenta: un
+/// servizio fermo riguarda adesso, e si resta senza risposta invece di
+/// dichiarare assente quello che non si è potuto leggere.
 #[tauri::command]
-pub async fn probe_manifest(
+pub async fn inspect_manifest(
     app: tauri::AppHandle,
     provider_key: String,
     manifest_url: String,
-) -> Result<Option<bool>, String> {
+) -> Result<ManifestFacts, String> {
     let profile = crate::db::open_connection(&crate::storage_config::db_path(&app)?)
         .map(|conn| crate::iiif::settings::effective_profile(&conn, &provider_key, None))
         .unwrap_or(super::network::CAUTIOUS);
@@ -323,7 +365,78 @@ pub async fn probe_manifest(
     };
     let client = client()?;
     let _turn = wait_aside(Some(&gate), &manifest_url).await;
-    probe_response(&client, &manifest_url).await
+    Ok(manifest_facts(&client, &manifest_url).await)
+}
+
+/// Un GET con un tetto: controllare una riga non deve scaricare un catalogo.
+///
+/// Oltre il tetto si sa solo che il libro c'è: il manifesto non si è potuto
+/// leggere, quindi pagine e rappresentazioni restano ignote invece di essere
+/// dichiarate assenti.
+async fn manifest_facts(client: &Client, manifest_url: &str) -> ManifestFacts {
+    const MAX_BYTES: usize = 2 * 1024 * 1024;
+    let Ok(mut response) = client
+        .get(manifest_url)
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()
+        .await
+    else {
+        return ManifestFacts::default();
+    };
+    if matches!(response.status().as_u16(), 404 | 410) {
+        return ManifestFacts {
+            openable: Some(false),
+            ..ManifestFacts::default()
+        };
+    }
+    if !response.status().is_success() {
+        return ManifestFacts::default();
+    }
+    let too_big = ManifestFacts {
+        openable: Some(true),
+        ..ManifestFacts::default()
+    };
+    if response
+        .content_length()
+        .is_some_and(|len| len > MAX_BYTES as u64)
+    {
+        return too_big;
+    }
+    let mut bytes = Vec::new();
+    while let Ok(Some(chunk)) = response.chunk().await {
+        if bytes.len() + chunk.len() > MAX_BYTES {
+            return too_big;
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    facts_of(&bytes)
+}
+
+/// I fatti ricavati dai byte del manifesto. Separata dalla rete perché è tutta
+/// la parte che si può provare senza un server.
+pub(crate) fn facts_of(bytes: &[u8]) -> ManifestFacts {
+    let Ok(manifest) = crate::download::manifest::parse(bytes) else {
+        // Non è un manifesto leggibile: non vuol dire che l'opera non esista,
+        // vuol dire che di qui non si sa niente.
+        return ManifestFacts::default();
+    };
+    let document = manifest
+        .renderings
+        .iter()
+        .find(|rendering| rendering.is_pdf())
+        .map(DeclaredRendering::from);
+    ManifestFacts {
+        openable: Some(true),
+        pages: u32::try_from(manifest.pages.len()).ok(),
+        sample_pixels: manifest.pages.first().and_then(|page| page.size),
+        renderings: manifest
+            .renderings
+            .iter()
+            .filter(|rendering| !rendering.is_pdf())
+            .map(DeclaredRendering::from)
+            .collect(),
+        document,
+    }
 }
 
 /// Il manifesto così com'è, per chi vuole leggerlo.
@@ -372,45 +485,6 @@ pub async fn read_iiif_manifest_text(
         return Err(crate::iiif::search::MANIFEST_INVALID.to_string());
     }
     Ok(body)
-}
-
-/// A bounded GET avoids providers' misleading HEAD responses. Large manifests
-/// remain unknown; checking a row must not download an unbounded catalogue.
-async fn probe_response(client: &Client, manifest_url: &str) -> Result<Option<bool>, String> {
-    const MAX_BYTES: usize = 512 * 1024;
-    let outcome = client
-        .get(manifest_url)
-        .header(reqwest::header::ACCEPT, "application/json")
-        .send()
-        .await;
-    let Ok(mut response) = outcome else {
-        return Ok(None);
-    };
-    if matches!(response.status().as_u16(), 404 | 410) {
-        return Ok(Some(false));
-    }
-    if !response.status().is_success()
-        || response
-            .content_length()
-            .is_some_and(|len| len > MAX_BYTES as u64)
-    {
-        return Ok(None);
-    }
-    let mut bytes = Vec::new();
-    while let Ok(Some(chunk)) = response.chunk().await {
-        if bytes.len() + chunk.len() > MAX_BYTES {
-            return Ok(None);
-        }
-        bytes.extend_from_slice(&chunk);
-    }
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return Ok(None);
-    };
-    let valid = (value.get("type").and_then(|v| v.as_str()) == Some("Manifest")
-        && value.get("items").is_some_and(|v| v.is_array()))
-        || (value.get("@type").and_then(|v| v.as_str()) == Some("sc:Manifest")
-            && value.get("sequences").is_some_and(|v| v.is_array()));
-    Ok(valid.then_some(true))
 }
 
 /// Il nome con cui la chiave di Europeana sta nel portachiavi, lo stesso che
@@ -989,5 +1063,61 @@ mod tests {
         .expect("ricerca");
 
         assert_eq!(outcome.status, DiscoveryStatus::NotFound);
+    }
+
+    /// Cosa si riesce a dire di un'opera leggendo il suo manifesto: le tre
+    /// risposte che la riga di elenco e la scheda mostrano.
+    #[test]
+    fn the_facts_say_pages_sample_size_and_document() {
+        let body = br#"{
+          "id": "https://example.org/manifest",
+          "rendering": [{ "id": "https://example.org/opera.pdf",
+                          "format": "application/pdf", "label": { "it": ["Volume in PDF"] } }],
+          "items": [
+            { "width": 2000, "height": 3000,
+              "items": [{ "items": [{ "body": { "service": [{ "id": "https://img/1" }] } }] }] },
+            { "items": [{ "items": [{ "body": { "service": [{ "id": "https://img/2" }] } }] }] }
+          ]
+        }"#;
+
+        let facts = facts_of(body);
+
+        assert_eq!(facts.openable, Some(true));
+        assert_eq!(facts.pages, Some(2));
+        assert_eq!(facts.sample_pixels, Some((2000, 3000)));
+        assert_eq!(
+            facts
+                .document
+                .as_ref()
+                .map(|document| document.url.as_str()),
+            Some("https://example.org/opera.pdf")
+        );
+    }
+
+    #[test]
+    fn a_manifest_without_a_document_does_not_invent_one() {
+        let body = br#"{
+          "id": "https://example.org/manifest",
+          "items": [
+            { "items": [{ "items": [{ "body": { "service": [{ "id": "https://img/1" }] } }] }] }
+          ]
+        }"#;
+
+        let facts = facts_of(body);
+
+        assert_eq!(facts.openable, Some(true));
+        assert!(facts.document.is_none());
+        assert!(facts.renderings.is_empty());
+    }
+
+    /// Byte che non sono un manifesto non dicono che l'opera non esista: dicono
+    /// che di qui non si sa niente.
+    #[test]
+    fn unreadable_bytes_leave_everything_unknown() {
+        let facts = facts_of(b"<!doctype html><html></html>");
+
+        assert_eq!(facts.openable, None);
+        assert_eq!(facts.pages, None);
+        assert!(facts.document.is_none());
     }
 }

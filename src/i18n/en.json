@@ -1420,7 +1420,13 @@
       "documentLoadError": "The document does not open",
       "documentLoadErrorHint": "The file may be password protected or may have arrived damaged. Try again, or download it again from the record.",
       "documentNotHere": "The document is not on this computer yet",
-      "documentNotHereHint": "Download it from the digital copies record: until it is here there is nothing to read."
+      "documentNotHereHint": "Download it from the digital copies record: until it is here there is nothing to read.",
+      "documentChecking": "Asking the library…",
+      "documentNotDeclared": "The library does not declare a PDF of this work.",
+      "documentDeclared": "The library declares a PDF of this work.",
+      "documentUnknown": "Whether the library offers a PDF is unknown: no answer arrived.",
+      "documentAskLibrary": "Ask the library again",
+      "documentNoManifest": "Without the digitisation address there is nothing to ask for."
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -1607,7 +1613,13 @@
         "aggregator": "◈ A collection: it indexes material from many institutions. Each result states who holds the original, which is another library.",
         "paused": "⏸ This library's search exists but refuses automated requests. You can still open a work by typing its identifier or pasting its address.",
         "directOnly": "# This source has no search to query: it opens by typing the identifier or pasting the address, as in the field's example."
-      }
+      },
+      "documentAvailable": "PDF available",
+      "documentLabel": "Document",
+      "documentDeclared": "PDF offered by the library",
+      "documentNotDeclared": "not declared",
+      "manifestPages": "Pages in the manifest",
+      "samplePixels": "First page size"
     },
     "stats": {
       "projects": "Projects",
@@ -2429,8 +2441,9 @@
           {
             "title": "Library documents",
             "paragraphs": [
-              "When the library serves the work as a single document instead of a sequence of images, the record shows it as a copy of its own, with its own download command.",
-              "Once it has arrived, the record says how many pages it has — counted from the file — how much space it takes and whether it is complete. Deleting it frees the space and does not touch the images of the same work. You can also open it with your computer's reader.",
+              "Some libraries, besides page-by-page images, offer the same work as a single document. In search results the row says so — “PDF available” — and opening it also shows how many pages the manifest declares and the size of the first page, the only hint about scan quality available before downloading.",
+              "In the work record the document section is always there: it says whether the library offers one, whether it does not, or whether no answer arrived. A command asks the library again, for when the document was published later. The same check runs when you resynchronise with the library.",
+              "When the document is there, one command downloads it. The record then says how many pages it has — counted from the file — how much space it takes and whether it is complete. Deleting it frees the space and does not touch the images of the same work; you can also open it with your computer's reader.",
               "The document is read in the viewer like the images, with zoom and page turning, but it stays a separate reading: the pages of the document and those of the image sequence are not the same thing, and the top bar always says which of the two you are looking at. A very large document does not open inside Glossa: open it with your computer's reader."
             ]
           },

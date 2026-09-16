@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryCatalogArea } from './LibraryCatalogArea';
-import { deleteVersionFiles } from '../../services/vaultService';
+import { deleteSourceFiles } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -51,7 +51,7 @@ vi.mock('../../services/vaultService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/vaultService')>();
   return {
     ...actual,
-    deleteVersionFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
+    deleteSourceFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
     freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0 }),
   };
 });
@@ -169,7 +169,7 @@ describe('LibraryCatalogArea', () => {
     // un'asserzione anche se in questo caso non è successo niente.
     vi.clearAllMocks();
     vi.mocked(confirm).mockResolvedValue(true);
-    vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
+    vi.mocked(deleteSourceFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     vi.mocked(enqueueOptimization).mockReset();
     // Le versioni locali si leggono sempre dal motore: ogni caso dichiara cosa
     // c'è nel deposito, e chi non lo dichiara parte da «niente sul disco».
@@ -345,9 +345,10 @@ describe('LibraryCatalogArea', () => {
     expect(screen.queryByText(/areas\.library\.pageCount/)).not.toBeInTheDocument();
   });
 
-  it('togliendo un opera si eliminano anche le sue immagini', async () => {
-    // Lasciarle dietro produceva cartelle che nessuna schermata sa mostrare, e
-    // che riaggiungendo la stessa opera non tornerebbero comunque utili.
+  it('togliendo un opera si eliminano i file di tutte le sue copie', async () => {
+    // Lasciarli dietro produceva cartelle che nessuna schermata sa mostrare, e
+    // che riaggiungendo la stessa opera non tornerebbero comunque utili. Vale
+    // per tutte le copie: anche il documento, che è una copia a sé.
     const user = userEvent.setup();
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
@@ -356,13 +357,13 @@ describe('LibraryCatalogArea', () => {
     await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() =>
-      expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
+      expect(vi.mocked(deleteSourceFiles)).toHaveBeenCalledWith('gallica', 's1'),
     );
   });
 
   it('non rimuove i file mentre un lavoro li sta modificando', async () => {
     const user = userEvent.setup();
-    vi.mocked(deleteVersionFiles).mockRejectedValue(new Error('version_work_in_progress'));
+    vi.mocked(deleteSourceFiles).mockRejectedValue(new Error('version_work_in_progress'));
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
     render(<LibraryCatalogArea />);
 

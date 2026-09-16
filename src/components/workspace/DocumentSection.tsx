@@ -1,13 +1,24 @@
-import { useEffect, useState } from 'react';
-import { Download, Eraser, Eye, ExternalLink, HardDrive, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Download,
+  Eraser,
+  Eye,
+  ExternalLink,
+  FileText,
+  HardDrive,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { IconButton, SectionLabel, StatRow } from '../ui';
 import { useJobsStore } from '../../stores/jobsStore';
 import { enqueuePdfDownload, isTerminal } from '../../services/jobsService';
-import { versionProviderKey } from '../../services/libraryService';
+import { registerDeclaredDocument, versionProviderKey } from '../../services/libraryService';
 import { openDocumentExternally } from '../../services/documentService';
 import { freeVersionDocument } from '../../services/vaultService';
+import { readManifestFacts } from '../../hooks/useManifestFacts';
+import { errorMessage, logger } from '../../utils/logger';
 import { confirm } from '../../stores/confirmStore';
 import { humanSize } from '../../utils';
 import type { DocumentCopy } from '../../services/inventoryService';
@@ -211,6 +222,100 @@ export function DocumentSection({
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Se di quest'opera la biblioteca offre anche un documento unico.
+ *
+ * Compare **sempre**, anche quando il documento non c'è: «non dichiarato» è una
+ * risposta e il silenzio no. Chi legge deve poter sapere, senza uscire da
+ * Glossa, se di quel libro esiste un file da portarsi via.
+ *
+ * La risposta viene dal manifesto della biblioteca. Quella già letta in questa
+ * sessione vale ancora; il comando la richiede daccapo, per quando la
+ * biblioteca ha aggiunto il documento dopo.
+ */
+export function DocumentAvailability({
+  sourceId,
+  version,
+  onChanged,
+}: {
+  sourceId: string;
+  /** La copia a immagini da cui si legge il manifesto: senza il suo indirizzo
+   *  non c'è niente da chiedere. */
+  version: LibrarySourceVersion | null;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const [state, setState] = useState<'unknown' | 'checking' | 'declared' | 'absent'>('unknown');
+
+  const ask = useCallback(
+    async (fresh: boolean) => {
+      if (!version?.sourceUrl) return;
+      setState('checking');
+      try {
+        const facts = await readManifestFacts(
+          version.providerKey ?? 'generic',
+          version.sourceUrl,
+          { fresh },
+        );
+        if (!facts.document) {
+          setState('absent');
+          return;
+        }
+        setState('declared');
+        const added = await registerDeclaredDocument(sourceId, {
+          url: facts.document.url,
+          label: facts.document.label,
+          providerKey: version.providerKey ?? null,
+        });
+        if (added) onChanged();
+      } catch (error: unknown) {
+        logger.debug('library.document.checkFailed', { reason: errorMessage(error) });
+        setState('unknown');
+      }
+    },
+    [sourceId, version?.providerKey, version?.sourceUrl, onChanged],
+  );
+
+  // Alla prima apertura si usa quello che si sa già: se l'opera è stata
+  // aggiunta in questa sessione la risposta c'è, e non si bussa di nuovo.
+  useEffect(() => {
+    void ask(false);
+  }, [ask]);
+
+  const status =
+    state === 'checking'
+      ? t('areas.library.documentChecking')
+      : state === 'absent'
+        ? t('areas.library.documentNotDeclared')
+        : state === 'declared'
+          ? t('areas.library.documentDeclared')
+          : t('areas.library.documentUnknown');
+
+  return (
+    <div className="space-y-3 border-t border-editorial-border/60 pt-4">
+      <SectionLabel icon={FileText} label={t('areas.library.documentSection')} />
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 flex-1 text-xs text-editorial-muted">{status}</span>
+        <IconButton
+          size="sm"
+          onClick={() => void ask(true)}
+          disabled={state === 'checking' || !version?.sourceUrl}
+          title={t('areas.library.documentAskLibrary')}
+        >
+          {state === 'checking' ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <RefreshCw size={14} />
+          )}
+        </IconButton>
+      </div>
+      {!version?.sourceUrl && (
+        <p className="text-xs text-editorial-muted">{t('areas.library.documentNoManifest')}</p>
+      )}
     </div>
   );
 }

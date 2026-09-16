@@ -16,7 +16,7 @@ import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
-import { useOpenableProbe } from '../../hooks/useOpenableProbe';
+import { useManifestFacts } from '../../hooks/useManifestFacts';
 import { useSeenOnce } from '../../hooks/useSeenOnce';
 
 /**
@@ -192,7 +192,11 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // Una scheda ricavata aprendo direttamente un indirizzo si è già aperta: non
   // c'è niente da controllare.
   const declaredOpenable = isManifest(card) ? true : card.openable;
-  const { openable, checking } = useOpenableProbe(providerKey, card.manifestUrl, declaredOpenable, seen);
+  // Una lettura sola del manifesto risponde a tutto quello che la riga deve
+  // dire e il catalogo non dice: se si apre, quante pagine ha davvero, quanto
+  // misura la prima, e se accanto alle immagini c'è un documento da scaricare.
+  const { facts, checking } = useManifestFacts(providerKey, card.manifestUrl, declaredOpenable, seen);
+  const openable = facts.openable;
   const title = card.title || t('dashboard.discovery.untitled');
   // Il collegamento alla pagina web e quello al catalogo cartaceo sono
   // indirizzi veri: si aprono, non si leggono come le altre etichette.
@@ -221,13 +225,43 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // fondo e segnatura in una stringa sola: in riga chiusa vale il primo.
   const shortOrigin = expanded ? origin : origin.split(',')[0].trim();
   const mediaType = !isManifest(card) ? card.mediaType : null;
+  // La presenza del documento si dice nella riga chiusa: è la differenza fra
+  // «lo leggo online» e «me lo porto via in un file», e deciderlo dopo aver
+  // aperto l'opera significa averla già aggiunta.
+  const documentPart = facts.document ? t('dashboard.discovery.documentAvailable') : null;
   const metaParts = [
     card.creator,
     card.date,
     mediaType,
     ...(expanded ? [] : [pageCount]),
+    documentPart,
     note,
   ].filter(Boolean) as string[];
+  /** Quello che si sa solo leggendo il manifesto, e che il catalogo non dice. */
+  const manifestStats = useMemo(
+    () =>
+      expanded
+        ? ([
+            facts.pages !== null && [
+              t('dashboard.discovery.manifestPages'),
+              String(facts.pages),
+            ],
+            facts.samplePixels && [
+              t('dashboard.discovery.samplePixels'),
+              `${facts.samplePixels[0]} × ${facts.samplePixels[1]} px`,
+            ],
+            // Detto sempre, anche quando non c'è: «non dichiarato» è una
+            // risposta, il silenzio no.
+            facts.openable !== null && [
+              t('dashboard.discovery.documentLabel'),
+              facts.document
+                ? (facts.document.label ?? t('dashboard.discovery.documentDeclared'))
+                : t('dashboard.discovery.documentNotDeclared'),
+            ],
+          ].filter((entry): entry is [string, string] => Boolean(entry)))
+        : [],
+    [expanded, facts, t],
+  );
 
   return (
     <motion.article
@@ -287,6 +321,13 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
                 {stats.length > 0 && (
                   <div className="grid grid-cols-1 gap-y-2">
                     {stats.map(([label, value]) => <StatBlock key={label} label={label} value={value} />)}
+                  </div>
+                )}
+                {manifestStats.length > 0 && (
+                  <div className="grid grid-cols-1 gap-y-2">
+                    {manifestStats.map(([label, value]) => (
+                      <StatBlock key={label} label={label} value={value} />
+                    ))}
                   </div>
                 )}
                 {pageUrl && <StatBlock label={t('dashboard.discovery.pageUrl')} value={pageUrl} href={pageUrl} />}

@@ -102,10 +102,23 @@ sono descritte in [Archiviazione e lavori](./storage-and-jobs).
 
 ## Documenti serviti come file unico
 
-Alcune biblioteche non servono l'opera come sequenza di immagini ma come un
-documento unico. In quel caso la scheda mostra una copia a sé, con il proprio
-comando di scaricamento: non ci sono risoluzioni da scegliere, perché il file è
-uno solo e arriva com'è.
+Alcune biblioteche, accanto alle immagini, offrono la stessa opera come
+documento unico. Lo dichiarano nel loro manifesto, ed è da lì che Glossa lo
+scopre: nessun indirizzo indovinato.
+
+Nei **risultati della ricerca** la riga lo dice con «PDF disponibile», e la riga
+aperta aggiunge quello che solo il manifesto sa — pagine dichiarate e misura in
+pixel della prima pagina, che è l'unico indizio sulla qualità della scansione
+disponibile prima di scaricare. La lettura del manifesto avviene una volta sola
+per opera, e **solo per le righe che stanno sotto gli occhi**.
+
+Nella **scheda dell'opera** la sezione del documento c'è sempre, anche quando il
+documento non c'è: dice se la biblioteca lo offre, se non lo offre, o se non è
+arrivata risposta. Un comando richiede alla biblioteca, per il caso in cui il
+documento sia stato pubblicato dopo; lo stesso controllo lo fa il riallineamento.
+Appena la biblioteca lo dichiara, il documento diventa una copia a sé accanto a
+quella a immagini, con il proprio comando di scaricamento: non ci sono
+risoluzioni da scegliere, perché il file è uno solo e arriva com'è.
 
 Arrivato il documento, la scheda ne dichiara le pagine — contate dal file, non
 da quanto la biblioteca dichiara — lo spazio occupato e lo stato. Eliminarlo
@@ -131,7 +144,7 @@ scansione ingrandita al massimo si vede meno nitida delle tessere IIIF.
 | Archivia | Nasconde l’opera dal catalogo attivo e conserva i file; l’eventuale liberazione dello spazio richiede una scelta separata |
 | Libera spazio | Elimina le immagini scaricate, conservando scheda, manifesto e miniature |
 | Elimina una versione locale | Rimuove solo i file della versione selezionata |
-| Elimina l’opera | Rimuove scheda, collegamenti, deposito dell’opera e relativa cache |
+| Elimina l’opera | Rimuove scheda, collegamenti, i file di **tutte** le copie — immagini e documento — e la relativa cache |
 
 L’eliminazione non prevede un cestino. Le operazioni distruttive sui file
 richiedono che i lavori che possono modificarli siano conclusi o annullati;

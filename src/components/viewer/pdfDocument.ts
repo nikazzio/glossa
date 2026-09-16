@@ -31,6 +31,9 @@ export interface LoadedDocument {
 
 /** Apre il documento dai byte già in mano. */
 export async function openDocument(bytes: Uint8Array): Promise<LoadedDocument> {
+  // Nessuna opzione per disattivare `eval`: questa versione di pdf.js non
+  // costruisce più codice al volo, quindi regge la regola di sicurezza della
+  // build di rilascio, che lo vieta.
   const task = pdfjs.getDocument({ data: bytes });
   const handle = await task.promise;
   return {

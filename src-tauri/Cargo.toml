@@ -50,7 +50,10 @@ quick-xml = "0.41"
 pdf-extract = "0.12"
 # Stessa versione che `pdf-extract` usa già: serve a contare le pagine del
 # documento scaricato dalla biblioteca, che l'estrazione del testo non dice.
-lopdf = "0.42"
+# Senza le funzioni predefinite: contare le pagine non ha bisogno né di date né
+# del parallelismo di `rayon`, che tirava dentro una catena di dipendenze in più
+# (una con un avviso di sicurezza aperto) per niente.
+lopdf = { version = "0.42", default-features = false }
 aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"

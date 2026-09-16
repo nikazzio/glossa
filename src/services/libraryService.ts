@@ -484,6 +484,37 @@ export async function listLibrarySourceUrls(): Promise<{ sourceUrl: string; sour
   return rows.map((row) => ({ sourceUrl: row.source_url, sourceId: row.source_id }));
 }
 
+/**
+ * Registra il documento unico che la biblioteca dichiara, come copia a sé
+ * dell'opera.
+ *
+ * È una copia distinta, non una misura di quella a immagini: le due non
+ * promettono la stessa identità di pagina. Chiamarla due volte non crea
+ * doppioni — se quell'indirizzo è già registrato non si fa niente — così
+ * riaggiungere l'opera o richiedere alla biblioteca resta sicuro.
+ */
+export async function registerDeclaredDocument(
+  sourceId: string,
+  document: { url: string; label: string | null; providerKey?: string | null },
+): Promise<boolean> {
+  if (!isValidUrl(document.url)) return false;
+  const [existing] = await select<{ id: string }>(
+    'SELECT id FROM source_versions WHERE source_id = $1 AND source_url = $2',
+    [sourceId, document.url],
+  );
+  if (existing) return false;
+  // La biblioteca si scrive anche qui: è la copia a decidere sotto quale
+  // cartella finisce il file, e leggerla dalla copia a immagini
+  // presupporrebbe che le due restino sempre accoppiate.
+  const metadata = JSON.stringify({ providerKey: document.providerKey ?? null });
+  await execute(
+    'INSERT INTO source_versions (id, source_id, label, version_kind, source_url, metadata, is_primary) VALUES ($1, $2, $3, $4, $5, $6, 0)',
+    [generateId('sver'), sourceId, document.label ?? 'PDF', 'pdf', document.url, metadata],
+  );
+  logger.info('library.document.registered', { sourceId });
+  return true;
+}
+
 export async function addSourceToLibrary(
   input: AddSourceToLibraryInput,
 ): Promise<{ sourceId: string; wasCreated: boolean }> {

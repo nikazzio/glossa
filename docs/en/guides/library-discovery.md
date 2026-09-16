@@ -81,10 +81,22 @@ described under [Storage and jobs](./storage-and-jobs).
 
 ## Documents served as a single file
 
-Some libraries do not serve the work as a sequence of images but as a single
-document. The record then shows a copy of its own, with its own download
-command: there are no resolutions to choose, because the file is one and
-arrives as it is.
+Some libraries, next to the images, offer the same work as a single document.
+They declare it in their manifest, and that is where Glossa finds it: no guessed
+addresses.
+
+In **search results** the row says “PDF available”, and the expanded row adds
+what only the manifest knows — declared pages and the pixel size of the first
+page, the only hint about scan quality available before downloading. The
+manifest is read once per work, and **only for rows that are on screen**.
+
+In the **work record** the document section is always present, even when the
+document is not: it says whether the library offers one, whether it does not, or
+whether no answer arrived. A command asks the library again, for the case where
+the document was published later; the same check runs on resynchronisation.
+As soon as the library declares it, the document becomes a copy of its own next
+to the image copy, with its own download command: there are no resolutions to
+choose, because the file is one and arrives as it is.
 
 Once the document has arrived, the record states its pages — counted from the
 file, not from what the library declares — the space it takes and its status.
@@ -110,7 +122,7 @@ maximum looks less sharp than IIIF tiles.
 | Archive | Hides the work from the active catalogue and retains files; freeing space is a separate choice |
 | Free space | Deletes downloaded images while retaining the record, manifest and thumbnails |
 | Delete a local version | Removes only the selected version’s files |
-| Delete the work | Removes the record, links, repository files and associated cache |
+| Delete the work | Removes the record, links, the files of **all** copies — images and document — and the associated cache |
 
 Deletion does not use a recycle bin. Destructive file operations require jobs
 that could modify those files to finish or be cancelled; pausing them is not

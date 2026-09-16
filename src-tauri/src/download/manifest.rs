@@ -38,6 +38,37 @@ pub struct Page {
     pub ready_sizes: Vec<(u32, u32)>,
 }
 
+/// Una rappresentazione alternativa dell'opera dichiarata dal manifesto: lo
+/// stesso libro servito in un'altra forma — quasi sempre un documento unico.
+///
+/// Sta nello standard sia in Presentation 3 sia in 2.1, con lo stesso nome
+/// (`rendering`) e due sole differenze di forma: l'identificativo (`id` contro
+/// `@id`) e l'etichetta (mappa per lingua contro stringa).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Rendering {
+    pub url: String,
+    /// Il tipo dichiarato dalla biblioteca, quando lo dichiara.
+    pub format: Option<String>,
+    pub label: Option<String>,
+}
+
+impl Rendering {
+    /// Vero quando questa rappresentazione è un PDF.
+    ///
+    /// Il tipo dichiarato vale più dell'indirizzo; quando manca — e capita —
+    /// si guarda come finisce l'indirizzo, che è l'unico altro indizio che la
+    /// biblioteca ha dato.
+    pub fn is_pdf(&self) -> bool {
+        match self.format.as_deref() {
+            Some(format) => format.trim().eq_ignore_ascii_case("application/pdf"),
+            None => {
+                let path = self.url.split(['?', '#']).next().unwrap_or(&self.url);
+                path.to_ascii_lowercase().ends_with(".pdf")
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     pub pages: Vec<Page>,
@@ -47,6 +78,9 @@ pub struct Manifest {
     /// problema, non un dettaglio.
     pub rights: Option<String>,
     pub attribution: Option<String>,
+    /// Le rappresentazioni alternative dichiarate dal manifesto: il documento
+    /// unico, quando c'è, sta qui.
+    pub renderings: Vec<Rendering>,
     /// Manifesto nella vecchia Presentation 2.1. Cambia il nome della
     /// dimensione piena: `max` esiste solo dalla Image API 3.0, prima si
     /// chiamava `full` e chiederlo alla vecchia maniera fa rispondere 400.
@@ -80,6 +114,7 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, JobError> {
             .and_then(Value::as_str)
             .map(str::to_string),
         attribution: attribution_of(&root),
+        renderings: renderings_of(&root),
         presentation2,
     })
 }
@@ -145,6 +180,32 @@ fn parse_presentation_2(root: &Value) -> Vec<Page> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// Le rappresentazioni alternative dichiarate a livello di manifesto.
+///
+/// Solo quelle del manifesto: un `rendering` dichiarato su un canvas riguarda
+/// quella pagina, non l'opera, e confonderli farebbe passare per «il libro in
+/// PDF» il PDF di una carta sola.
+fn renderings_of(root: &Value) -> Vec<Rendering> {
+    let declared = match root.get("rendering") {
+        Some(Value::Array(entries)) => entries.clone(),
+        Some(single) => vec![single.clone()],
+        None => return Vec::new(),
+    };
+    declared
+        .iter()
+        .filter_map(|entry| {
+            Some(Rendering {
+                url: id_of(entry)?,
+                format: entry
+                    .get("format")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+                label: label_of(entry.get("label")),
+            })
+        })
+        .collect()
 }
 
 /// La radice del servizio immagini.
@@ -265,6 +326,90 @@ mod tests {
                                                   "profile": "http://iiif.io/api/image/2/level1.json" } } }] }
       ]}]
     }"#;
+
+    /// Presentation 3 che dichiara il libro anche come documento unico, come
+    /// fanno le biblioteche che lo offrono: `rendering` a livello di manifesto.
+    const PRESENTATION_3_WITH_PDF: &str = r#"{
+      "id": "https://example.org/manifest",
+      "rendering": [
+        { "id": "https://example.org/opera.pdf", "type": "Text",
+          "label": { "it": ["Volume completo in PDF"] }, "format": "application/pdf" },
+        { "id": "https://example.org/opera.txt", "type": "Text", "format": "text/plain" }
+      ],
+      "items": [
+        { "label": { "it": ["1r"] }, "width": 2816, "height": 4240,
+          "items": [{ "items": [{ "body": { "service": [{ "id": "https://img/1" }] } }] }] }
+      ]
+    }"#;
+
+    #[test]
+    fn the_document_declared_by_the_manifest_is_read() {
+        let manifest = parse(PRESENTATION_3_WITH_PDF.as_bytes()).unwrap();
+
+        assert_eq!(manifest.renderings.len(), 2);
+        let document = manifest
+            .renderings
+            .iter()
+            .find(|rendering| rendering.is_pdf())
+            .expect("il manifesto dichiara un PDF");
+        assert_eq!(document.url, "https://example.org/opera.pdf");
+        assert_eq!(document.label.as_deref(), Some("Volume completo in PDF"));
+    }
+
+    #[test]
+    fn a_manifest_without_alternatives_declares_none() {
+        assert!(parse(PRESENTATION_3.as_bytes())
+            .unwrap()
+            .renderings
+            .is_empty());
+        assert!(parse(PRESENTATION_2.as_bytes())
+            .unwrap()
+            .renderings
+            .is_empty());
+    }
+
+    #[test]
+    fn a_rendering_without_a_declared_type_is_judged_by_its_address() {
+        let by_address = Rendering {
+            url: "https://example.org/opera.pdf?dl=1".to_string(),
+            format: None,
+            label: None,
+        };
+        assert!(by_address.is_pdf());
+        let other = Rendering {
+            url: "https://example.org/opera.zip".to_string(),
+            format: None,
+            label: None,
+        };
+        assert!(!other.is_pdf());
+        // Il tipo dichiarato vale più dell'indirizzo: un servizio che serve il
+        // PDF da un indirizzo senza estensione resta un PDF.
+        let by_format = Rendering {
+            url: "https://example.org/download/12345".to_string(),
+            format: Some("application/pdf".to_string()),
+            label: None,
+        };
+        assert!(by_format.is_pdf());
+    }
+
+    /// In 2.1 `rendering` è lo stesso, con `@id` e l'etichetta come stringa.
+    #[test]
+    fn presentation_2_declares_the_document_the_same_way() {
+        let body = r#"{
+          "@id": "https://example.org/manifest",
+          "rendering": { "@id": "https://example.org/opera.pdf",
+                         "label": "PDF", "format": "application/pdf" },
+          "sequences": [{ "canvases": [
+            { "label": "1r", "width": 1275, "height": 1650,
+              "images": [{ "resource": { "service": { "@id": "https://img/a" } } }] }
+          ]}]
+        }"#;
+
+        let manifest = parse(body.as_bytes()).unwrap();
+        assert_eq!(manifest.renderings.len(), 1);
+        assert!(manifest.renderings[0].is_pdf());
+        assert_eq!(manifest.renderings[0].label.as_deref(), Some("PDF"));
+    }
 
     #[test]
     fn reads_a_presentation_3_manifest_in_declared_order() {

@@ -31,7 +31,7 @@ import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
 import { VersionTechnicalData } from './VersionTechnicalData';
 import { OpenPageSection, type ShownPage } from './OpenPageSection';
-import { DocumentSection } from './DocumentSection';
+import { DocumentAvailability, DocumentSection } from './DocumentSection';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -132,6 +132,23 @@ export function CopiesSection({
           />
         </li>
       ))}
+      {/* Il documento, quando la biblioteca non l'ha (ancora) dichiarato: la
+          riga c'è lo stesso e dice come stanno le cose, invece di lasciare
+          credere che quel libro esista solo a immagini. Appena la biblioteca lo
+          dichiara diventa una copia come le altre e questa riga sparisce. */}
+      {!detail.versions.some((version) => version.versionKind === 'pdf') && (
+        <li className="space-y-3 py-4 first:pt-0">
+          <DocumentAvailability
+            sourceId={detail.source.id}
+            version={
+              detail.versions.find(
+                (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
+              ) ?? null
+            }
+            onChanged={onRefresh}
+          />
+        </li>
+      )}
     </ul>
   );
 }

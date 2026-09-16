@@ -8,8 +8,13 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { addSourceToLibrary, getLibrarySourceDetail, setSourceArchived, setWorkspaceSourceLink } =
-  await import('./libraryService');
+const {
+  addSourceToLibrary,
+  getLibrarySourceDetail,
+  registerDeclaredDocument,
+  setSourceArchived,
+  setWorkspaceSourceLink,
+} = await import('./libraryService');
 
 const baseInput = {
   manifestUrl: 'https://iiif.example.test/manifest.json',
@@ -258,5 +263,50 @@ describe('libraryService', () => {
         ['ws-1', 's1'],
       );
     });
+  });
+});
+
+describe('il documento dichiarato dalla biblioteca', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMocks.select.mockResolvedValue([]);
+    dbMocks.execute.mockResolvedValue(undefined);
+  });
+
+  it('nasce come copia a sé, non come misura di quella a immagini', async () => {
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'https://example.test/opera.pdf',
+      label: 'Volume in PDF',
+      providerKey: 'gallica',
+    });
+
+    expect(registered).toBe(true);
+    const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(query).toContain('INSERT INTO source_versions');
+    expect(params).toContain('pdf');
+    expect(params).toContain('https://example.test/opera.pdf');
+    expect(params).toContain('Volume in PDF');
+  });
+
+  it('chiesto due volte non crea doppioni', async () => {
+    dbMocks.select.mockResolvedValue([{ id: 'sver-1' }]);
+
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'https://example.test/opera.pdf',
+      label: null,
+    });
+
+    expect(registered).toBe(false);
+    expect(dbMocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('un indirizzo che non è un indirizzo non entra in Biblioteca', async () => {
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'non-un-indirizzo',
+      label: null,
+    });
+
+    expect(registered).toBe(false);
+    expect(dbMocks.execute).not.toHaveBeenCalled();
   });
 });

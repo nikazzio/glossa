@@ -108,7 +108,10 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   a «togliere molte pagine in fila», e vive meglio nello Studio di trascrizione
   (#388), dove serve a scegliere cosa trascrivere.
 - #462 (PDF della biblioteca, «Fase C»): **realizzata** il 16 settembre, sopra
-  la #459. Il PDF è una **copia a sé** accanto a quella a immagini: si scarica
+  la #459, in due giri — il secondo perché il primo aveva costruito lo
+  scaricamento di una copia che nessun percorso creava mai. Adesso il documento
+  si **scopre** dal manifesto della biblioteca, compare nei risultati di ricerca
+  e nella scheda (anche quando non c'è), e solo dopo si scarica. Il PDF è una **copia a sé** accanto a quella a immagini: si scarica
   con la stessa cortesia di rete e la stessa scrittura atomica delle pagine, si
   dichiara fra le copie locali con pagine, spazio e stato, si elimina da solo e
   si legge nel visore con pdf.js. Le pagine si contano **dal file**; se la
