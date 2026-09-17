@@ -63,14 +63,43 @@ ma nessun percorso ne crea più di una:
   quella pagina;
 - riscaricare il libro a un'altra misura sostituisce tutto: la conferma lo
   dichiara prima, e le cartelle vecchie si cancellano **a scaricamento
-  riuscito** (`consolidate` in `CopiesSection`), non prima;
+  riuscito** (`consolidate` in `CopiesSection`), non prima. `consolidate` scatta
+  **solo** su un lavoro `download:<versionId>` arrivato a `completed` — non su
+  `error`/`cancelled`, che prima cancellavano una copia buona già presente — e
+  tiene la misura letta dalla **configurazione di quel lavoro specifico**
+  (`sizeTagOfConfig`), non la preferenza corrente: cambiarla mentre il download
+  era ancora in corso cancellava altrimenti la copia appena arrivata (17
+  settembre);
 - la ricompressione (`optimize`) riscrive le pagine **sul posto** a qualità più
   bassa senza toccare i pixel, e non produce più una copia in `derived/`. La
   ripresa non ricomprime due volte: la riga di lato porta
-  `Note::Recompressed { quality }`;
+  `Note::Recompressed { quality }`. La promozione usa `std::fs::rename` anche
+  quando il file di arrivo esiste già: su Windows lo standard di Rust passa
+  `MOVEFILE_REPLACE_EXISTING`, quindi è già sicuro — nessun percorso alternativo
+  necessario;
 - togliere una pagina la **esclude** (`excluded_pages`, migrazione 0002): lo
-  scaricamento la salta con l'esito `Excluded`, contato nell'avanzamento, e
-  chiederla di nuovo la riammette.
+  scaricamento la salta con l'esito `Excluded`, contato nell'avanzamento
+  (`units.done` include le escluse: un libro con **tutte** le pagine escluse
+  arriva al 100% e non fallisce, `finished()` distingue `present == 0` da
+  «niente da chiedere perché è tutto escluso»), e chiederla di nuovo la
+  riammette **solo a scaricamento riuscito** — prima veniva riammessa subito,
+  lasciando la pagina segnata come tornata anche se la richiesta falliva. Un
+  errore nel leggere le esclusioni dal database **ferma il lavoro**
+  (`excluded_pages` propaga `JobError`): trattarlo come «nessuna esclusione»
+  avrebbe riscaricato pagine tolte di proposito. `verify()` e il comando di
+  scaricamento contano le escluse fra le pagine complete, con la stessa formula
+  della riga di misura (`pages + missing + excluded >= expected`);
+- una pagina può avere **più di una misura locale** sul disco — libri di prima
+  del modello a copia unica — e `page_local_copies` le restituisce tutte:
+  `OpenPageSection` le elenca ognuna con il proprio comando di eliminazione
+  (`forget_page` con `sizeTag` esplicito), perché ometterlo cancella **tutte**
+  le misure di quella pagina in un colpo solo (semantica del comando, non un
+  bug: va passato sempre quando si intende una sola misura);
+- la chiave di biblioteca passata ai comandi sulla pagina va **risolta**, non
+  letta a caldo da `version.providerKey`: un'opera aggiunta prima che la chiave
+  finisse nei metadati non ne ha una lì, e leggerla senza il ripiego su
+  `versionProviderKey` (lettura dal deposito) fa leggere/scrivere sotto
+  `generic` invece della cartella vera.
 
 Il riallineamento con la biblioteca cancella le correzioni a mano **solo dei
 campi che la biblioteca dichiara** in quella lettura: quelli che non dà — e le
@@ -232,6 +261,14 @@ un'autorizzazione a cancellazioni automatiche non annunciate, e non garantisce
 che un backup prodotto da una baseline precedente sia importabile: prima di
 consolidare si verifica di avere una copia dei dati e la strada per rimetterli
 dentro.
+
+**Da consolidare prima del prossimo merge su `main` (17 settembre 2026):**
+`0002_excluded_pages.sql` e `0003_single_pdf_copy.sql`, aperte durante la PR
+#475/#462 mai ancora unita — nessun database distribuito le ha applicate.
+Vanno fuse in `0001_baseline_2_0.sql` **subito prima** dell'unione, non prima:
+farlo prima avrebbe fatto passare `main` per una forma del database che poi
+sparisce con la fusione, e un database creato in quella finestra non si
+aprirebbe più dopo.
 
 **Condizione di uscita:** alla prima distribuzione destinata a utenti esterni la
 baseline si fissa e vale di nuovo la regola sopra — ogni cambiamento riceve un

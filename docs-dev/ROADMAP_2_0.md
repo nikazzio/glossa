@@ -128,10 +128,6 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
 
 - Verificare i percorsi già presenti e correggere le regressioni prima di
   aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
-- Completare azioni sulla singola pagina e selezione multipla (#459):
-  sostituzione, eliminazione volontaria, esclusione, verifica e risultati parziali.
-  Prima di implementare, confrontare le decisioni del piano con quelle già
-  risolte dal lettore; non riaprire scelte di precedenza chiuse.
 - Rendere visibili log generali, salvataggio e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca
