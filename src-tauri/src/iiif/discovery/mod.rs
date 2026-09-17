@@ -397,7 +397,12 @@ pub async fn inspect_manifest(
     // un controllo di sfondo non ha niente di così urgente da scavalcarla. Si
     // dichiara «non verificato», che è la verità.
     let Some(_turn) = wait_aside(Some(&gate), &manifest_url).await else {
-        log::debug!("manifest inspection skipped, no turn url={manifest_url}");
+        // Solo l'host: un indirizzo di manifesto può portare parametri firmati,
+        // e questa riga finisce in un file che resta sul disco.
+        log::debug!(
+            "manifest inspection skipped, no turn host={}",
+            crate::download::fetch::host_of(&manifest_url).unwrap_or_default()
+        );
         return Ok(ManifestFacts::default());
     };
     Ok(manifest_facts(&client, &manifest_url).await)

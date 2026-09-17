@@ -15,3 +15,4 @@
 
 0001_baseline_2_0.sql 3c46dc75731f5c21
 0002_excluded_pages.sql 6978c766baf8f930
+0003_single_pdf_copy.sql 68861798ca985ed4

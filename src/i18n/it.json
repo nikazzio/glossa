@@ -1618,7 +1618,8 @@
       "manifestPages": "Pagine nel manifesto",
       "samplePixels": "Misura della prima pagina",
       "documentUnavailable": "PDF non disponibile",
-      "documentUnverified": "PDF non verificato"
+      "documentUnverified": "PDF non verificato",
+      "documentChecking": "PDF: verifica in corso"
     },
     "stats": {
       "projects": "Progetti",

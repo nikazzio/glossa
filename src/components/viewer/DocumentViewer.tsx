@@ -43,6 +43,11 @@ export function DocumentViewer({
   /** Il documento non è ancora sul computer: si legge solo quello che c'è. */
   const [missing, setMissing] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  /** Cresce a ogni documento **aperto davvero**. È la dipendenza su cui si
+   *  appende il disegno della pagina: il conteggio delle pagine non basta,
+   *  perché riaprendo lo stesso documento resta identico e il disegno non
+   *  ripartirebbe — dopo un «riprova» la finestra restava vuota. */
+  const [opening, setOpening] = useState(0);
 
   // Il visore nasce una volta sola: ricrearlo a ogni pagina butterebbe zoom e
   // posizione senza motivo.
@@ -82,6 +87,7 @@ export function DocumentViewer({
         documentRef.current = opened;
         setTotal(opened.pages);
         setCurrentIndex(0);
+        setOpening((count) => count + 1);
       } catch (error: unknown) {
         if (cancelled) return;
         if (isTooLarge(error)) {
@@ -99,6 +105,7 @@ export function DocumentViewer({
       cancelled = true;
       void documentRef.current?.destroy();
       documentRef.current = null;
+      setTotal(0);
     };
   }, [providerKey, versionId, attempt]);
 
@@ -132,7 +139,7 @@ export function DocumentViewer({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [currentIndex, total, attempt]);
+  }, [currentIndex, total, opening]);
 
   const goToIndex = useCallback(
     (index: number) => {

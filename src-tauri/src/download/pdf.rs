@@ -262,10 +262,9 @@ impl PdfDownloadJob {
             .send()
             .await
             .map_err(|error| {
-                log::warn!(
-                    "document request failed url={} error={error}",
-                    config.source_url
-                );
+                // Host e non indirizzo completo: l'indirizzo di un documento può
+                // portare parametri firmati, e il registro è un file che resta.
+                log::warn!("document request failed host={host} error={error}");
                 JobError::new(ErrorKind::Transport, "la biblioteca non risponde")
             })?;
 

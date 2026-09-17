@@ -120,6 +120,14 @@ export function DocumentBlock({
 
   const job = documentVersionId ? jobs.find((entry) => entry.id === `pdf:${documentVersionId}`) : null;
   const downloading = Boolean(job && !isTerminal(job));
+  // Uno scaricamento finito ha cambiato il disco: senza rileggerlo la riga
+  // resterebbe su «non scaricato», con il comando di scaricamento ancora
+  // acceso, finché non si riapre l'opera.
+  const finished = job && isTerminal(job) ? job.id + job.status : null;
+  useEffect(() => {
+    if (!finished) return;
+    setReloadTick((tick) => tick + 1);
+  }, [finished]);
 
   const download = async () => {
     if (!documentVersion?.sourceUrl) return;
@@ -133,7 +141,10 @@ export function DocumentBlock({
       applyChange(queued);
       toast.success(t('areas.library.documentQueued'));
     } catch (error: unknown) {
-      toast.error(t('areas.library.documentDownloadFailed'), { description: errorMessage(error) });
+      // Il motivo tecnico va nel registro, non a schermo: può contenere
+      // percorsi del disco o dettagli di rete, e a chi legge non dice niente.
+      logger.warn('library.document.downloadFailed', { reason: errorMessage(error) });
+      toast.error(t('areas.library.documentDownloadFailed'));
     } finally {
       setBusy(false);
     }
@@ -160,7 +171,8 @@ export function DocumentBlock({
         toast.info(t('areas.library.filesBusy'));
         return;
       }
-      toast.error(t('areas.library.documentFreeFailed'), { description: reason });
+      logger.warn('library.document.freeFailed', { reason });
+      toast.error(t('areas.library.documentFreeFailed'));
     } finally {
       setBusy(false);
     }
@@ -171,7 +183,8 @@ export function DocumentBlock({
     try {
       await openDocumentExternally(providerKey, documentVersion.id);
     } catch (error: unknown) {
-      toast.error(t('areas.library.documentOpenFailed'), { description: errorMessage(error) });
+      logger.warn('library.document.openFailed', { reason: errorMessage(error) });
+      toast.error(t('areas.library.documentOpenFailed'));
     }
   };
 

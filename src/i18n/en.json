@@ -1618,7 +1618,8 @@
       "manifestPages": "Pages in the manifest",
       "samplePixels": "First page size",
       "documentUnavailable": "PDF not available",
-      "documentUnverified": "PDF not verified"
+      "documentUnverified": "PDF not verified",
+      "documentChecking": "PDF: checking"
     },
     "stats": {
       "projects": "Projects",

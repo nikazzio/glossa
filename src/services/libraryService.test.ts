@@ -266,7 +266,7 @@ describe('libraryService', () => {
   });
 });
 
-describe('il documento dichiarato dalla biblioteca', () => {
+describe('il PDF dichiarato dalla biblioteca', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.select.mockResolvedValue([]);
@@ -276,8 +276,8 @@ describe('il documento dichiarato dalla biblioteca', () => {
   it('nasce come copia a sé, non come misura di quella a immagini', async () => {
     const registered = await registerDeclaredDocument('s1', {
       url: 'https://example.test/opera.pdf',
-      label: 'Volume in PDF',
-      providerKey: 'gallica',
+      label: 'View as PDF',
+      providerKey: 'wellcome',
     });
 
     expect(registered).toBe(true);
@@ -285,11 +285,16 @@ describe('il documento dichiarato dalla biblioteca', () => {
     expect(query).toContain('INSERT INTO source_versions');
     expect(params).toContain('pdf');
     expect(params).toContain('https://example.test/opera.pdf');
-    expect(params).toContain('Volume in PDF');
+    // L'etichetta della copia è fissa: la tabella ne impone di distinte dentro
+    // la stessa opera, e quella della biblioteca resta nei metadati.
+    expect(params).toContain('PDF');
+    expect(params.some((value) => String(value).includes('View as PDF'))).toBe(true);
   });
 
-  it('chiesto due volte non crea doppioni', async () => {
-    dbMocks.select.mockResolvedValue([{ id: 'sver-1' }]);
+  it('chiesto due volte con lo stesso indirizzo non tocca niente', async () => {
+    dbMocks.select.mockResolvedValue([
+      { id: 'sver-1', source_url: 'https://example.test/opera.pdf' },
+    ]);
 
     const registered = await registerDeclaredDocument('s1', {
       url: 'https://example.test/opera.pdf',
@@ -298,6 +303,23 @@ describe('il documento dichiarato dalla biblioteca', () => {
 
     expect(registered).toBe(false);
     expect(dbMocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('se la biblioteca cambia indirizzo aggiorna la copia invece di affiancarne una seconda', async () => {
+    dbMocks.select.mockResolvedValue([
+      { id: 'sver-1', source_url: 'https://example.test/vecchio.pdf' },
+    ]);
+
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'https://example.test/nuovo.pdf',
+      label: 'PDF',
+    });
+
+    expect(registered).toBe(true);
+    const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(query).toContain('UPDATE source_versions');
+    expect(params).toContain('https://example.test/nuovo.pdf');
+    expect(params).toContain('sver-1');
   });
 
   it('un indirizzo che non è un indirizzo non entra in Biblioteca', async () => {

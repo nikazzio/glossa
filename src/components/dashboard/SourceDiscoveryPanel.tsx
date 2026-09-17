@@ -232,13 +232,15 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // dice niente: lì non c'è nessun manifesto da leggere, e la riga lo scrive
   // già con parole sue.
   const documentPart =
-    openable === false || checking
+    openable === false
       ? null
-      : facts.document
-        ? t('dashboard.discovery.documentAvailable')
-        : facts.openable !== null
-          ? t('dashboard.discovery.documentUnavailable')
-          : t('dashboard.discovery.documentUnverified');
+      : checking
+        ? t('dashboard.discovery.documentChecking')
+        : facts.document
+          ? t('dashboard.discovery.documentAvailable')
+          : facts.openable !== null
+            ? t('dashboard.discovery.documentUnavailable')
+            : t('dashboard.discovery.documentUnverified');
   const metaParts = [
     card.creator,
     card.date,
@@ -264,15 +266,17 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
             // risposta, il silenzio no.
             [
               t('dashboard.discovery.documentLabel'),
-              facts.document
-                ? (facts.document.label ?? t('dashboard.discovery.documentAvailable'))
-                : facts.openable !== null
-                  ? t('dashboard.discovery.documentUnavailable')
-                  : t('dashboard.discovery.documentUnverified'),
+              checking
+                ? t('dashboard.discovery.documentChecking')
+                : facts.document
+                  ? (facts.document.label ?? t('dashboard.discovery.documentAvailable'))
+                  : facts.openable !== null
+                    ? t('dashboard.discovery.documentUnavailable')
+                    : t('dashboard.discovery.documentUnverified'),
             ],
           ].filter((entry): entry is [string, string] => Boolean(entry)))
         : [],
-    [expanded, facts, t],
+    [expanded, facts, checking, t],
   );
 
   return (

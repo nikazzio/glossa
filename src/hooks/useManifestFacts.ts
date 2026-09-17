@@ -97,11 +97,15 @@ export async function readManifestFacts(
   if (!fresh) {
     const remembered = known.get(key);
     if (remembered) return remembered;
-    const inFlight = pending.get(key);
-    if (inFlight) {
-      inFlight.users += 1;
-      return inFlight.promise;
-    }
+  }
+  // Una lettura già in volo vale anche per chi ha chiesto «rileggi»: è appena
+  // partita, ed è la risposta di adesso. Farne partire una seconda
+  // significherebbe bussare due volte alla stessa biblioteca e lasciare che la
+  // più lenta delle due scriva per ultima.
+  const inFlight = pending.get(key);
+  if (inFlight) {
+    inFlight.users += 1;
+    return inFlight.promise;
   }
 
   const task = { users: 1, promise: Promise.resolve(UNVERIFIED) };
@@ -153,8 +157,12 @@ export function useManifestFacts(
     }
     let cancelled = false;
     setState({ key, facts: UNVERIFIED, checking: true });
+    const reading = readManifestFacts(providerKey, manifestUrl);
+    // Il conto di chi aspetta si prende **dopo** aver avviato la lettura: preso
+    // prima, la prima riga non risultava fra chi aspetta — e andandosene
+    // lasciava partire una richiesta che non interessava più a nessuno.
     const task = pending.get(key);
-    void readManifestFacts(providerKey, manifestUrl).then((facts) => {
+    void reading.then((facts) => {
       if (!cancelled) setState({ key, facts, checking: false });
     });
     return () => {
