@@ -8,8 +8,13 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { addSourceToLibrary, getLibrarySourceDetail, setSourceArchived, setWorkspaceSourceLink } =
-  await import('./libraryService');
+const {
+  addSourceToLibrary,
+  getLibrarySourceDetail,
+  registerDeclaredDocument,
+  setSourceArchived,
+  setWorkspaceSourceLink,
+} = await import('./libraryService');
 
 const baseInput = {
   manifestUrl: 'https://iiif.example.test/manifest.json',
@@ -258,5 +263,72 @@ describe('libraryService', () => {
         ['ws-1', 's1'],
       );
     });
+  });
+});
+
+describe('il PDF dichiarato dalla biblioteca', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMocks.select.mockResolvedValue([]);
+    dbMocks.execute.mockResolvedValue(undefined);
+  });
+
+  it('nasce come copia a sé, non come misura di quella a immagini', async () => {
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'https://example.test/opera.pdf',
+      label: 'View as PDF',
+      providerKey: 'wellcome',
+    });
+
+    expect(registered).toBe(true);
+    const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(query).toContain('INSERT INTO source_versions');
+    expect(params).toContain('pdf');
+    expect(params).toContain('https://example.test/opera.pdf');
+    // L'etichetta della copia è fissa: la tabella ne impone di distinte dentro
+    // la stessa opera, e quella della biblioteca resta nei metadati.
+    expect(params).toContain('PDF');
+    expect(params.some((value) => String(value).includes('View as PDF'))).toBe(true);
+  });
+
+  it('chiesto due volte con lo stesso indirizzo non tocca niente', async () => {
+    dbMocks.select.mockResolvedValue([
+      { id: 'sver-1', source_url: 'https://example.test/opera.pdf' },
+    ]);
+
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'https://example.test/opera.pdf',
+      label: null,
+    });
+
+    expect(registered).toBe(false);
+    expect(dbMocks.execute).not.toHaveBeenCalled();
+  });
+
+  it('se la biblioteca cambia indirizzo aggiorna la copia invece di affiancarne una seconda', async () => {
+    dbMocks.select.mockResolvedValue([
+      { id: 'sver-1', source_url: 'https://example.test/vecchio.pdf' },
+    ]);
+
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'https://example.test/nuovo.pdf',
+      label: 'PDF',
+    });
+
+    expect(registered).toBe(true);
+    const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(query).toContain('UPDATE source_versions');
+    expect(params).toContain('https://example.test/nuovo.pdf');
+    expect(params).toContain('sver-1');
+  });
+
+  it('un indirizzo che non è un indirizzo non entra in Biblioteca', async () => {
+    const registered = await registerDeclaredDocument('s1', {
+      url: 'non-un-indirizzo',
+      label: null,
+    });
+
+    expect(registered).toBe(false);
+    expect(dbMocks.execute).not.toHaveBeenCalled();
   });
 });

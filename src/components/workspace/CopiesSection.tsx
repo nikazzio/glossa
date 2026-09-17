@@ -5,7 +5,11 @@ import { ClickPopover, IconButton, SectionLabel, Select, StatBlock, StatRow } fr
 import { useJobsStore } from '../../stores/jobsStore';
 import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
 import { versionProviderKey } from '../../services/libraryService';
-import { versionInventory, type SizeFolder } from '../../services/inventoryService';
+import {
+  versionInventory,
+  type DocumentCopy,
+  type SizeFolder,
+} from '../../services/inventoryService';
 import { excludedPages } from '../../services/excludedPagesService';
 import { CopyProvenance } from './CopyProvenance';
 import { errorMessage, logger } from '../../utils/logger';
@@ -27,6 +31,7 @@ import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
 import { VersionTechnicalData } from './VersionTechnicalData';
 import { OpenPageSection, type ShownPage } from './OpenPageSection';
+import { DocumentBlock } from './DocumentBlock';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -41,10 +46,12 @@ interface CopyInventory {
   principal: string | null;
   localPages: number;
   localBytes: number;
+  /** Il documento unico, per le copie che la biblioteca serve come file. */
+  document: DocumentCopy | null;
 }
 
 function emptyInventory(): CopyInventory {
-  return { sizes: [], principal: null, localPages: 0, localBytes: 0 };
+  return { sizes: [], principal: null, localPages: 0, localBytes: 0, document: null };
 }
 
 /** Le copie digitali dell'opera: per ognuna, cosa è (manifesto IIIF, PDF,
@@ -65,6 +72,8 @@ export function CopiesSection({
   reloadToken = 0,
   provider,
   shownPage = null,
+  shownVersionId = null,
+  onShowVersion,
 }: {
   detail: LibrarySourceDetail;
   entry?: LibraryCatalogEntry;
@@ -82,15 +91,23 @@ export function CopiesSection({
   provider?: IIIFProvider;
   /** La pagina aperta nel visore, per darne gli indirizzi fra i dati tecnici. */
   shownPage?: ShownPage | null;
+  /** La copia che il visore sta mostrando, e come cambiarla. */
+  shownVersionId?: string | null;
+  onShowVersion?: (versionId: string) => void;
 }) {
   const { t } = useTranslation();
+  // Il PDF non è una voce dell'elenco: è una riga dentro la sezione del libro
+  // della copia a immagini, perché è la stessa opera in un'altra forma e la
+  // scelta di cosa visualizzare si fa lì.
+  const imageVersions = detail.versions.filter((version) => version.versionKind !== 'pdf');
+  const documentVersion = detail.versions.find((version) => version.versionKind === 'pdf') ?? null;
 
   return (
     // Niente intestazione di sezione qui: la tab la dà già ("Copie digitali").
     // Niente riquadro a sfondo: la tab stessa è già il contenitore, un'altra
     // cornice attorno sarebbe una scatola dentro la scatola.
     <ul className="divide-y divide-editorial-border/70">
-      {detail.versions.map((version) => (
+      {imageVersions.map((version) => (
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
           <div>
             <CopyProvenance
@@ -108,6 +125,10 @@ export function CopiesSection({
 
           <CopyDetails
             version={version}
+            sourceId={detail.source.id}
+            documentVersion={documentVersion}
+            shownVersionId={shownVersionId}
+            onShowVersion={onShowVersion}
             shownPage={version.id === openVersionId ? shownPage : null}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
@@ -137,6 +158,10 @@ export function CopiesSection({
  *  comparire la versione appena creata. */
 function CopyDetails({
   version,
+  sourceId,
+  documentVersion,
+  shownVersionId,
+  onShowVersion,
   entry,
   onRefresh,
   reloadToken,
@@ -146,6 +171,11 @@ function CopyDetails({
   shownPage,
 }: {
   version: LibrarySourceVersion;
+  sourceId: string;
+  /** La copia PDF della stessa opera, quando la biblioteca l'ha dichiarata. */
+  documentVersion: LibrarySourceVersion | null;
+  shownVersionId?: string | null;
+  onShowVersion?: (versionId: string) => void;
   /** La pagina aperta nel visore, quando è di questa copia. */
   shownPage?: ShownPage | null;
   entry?: LibraryCatalogEntry;
@@ -181,6 +211,7 @@ function CopyDetails({
                 principal: result.principal,
                 localPages: result.sizes.find((size) => size.sizeTag === result.principal)?.pages ?? 0,
                 localBytes: result.sizes.reduce((total, size) => total + size.bytes, 0),
+                document: result.document,
               }
             : emptyInventory(),
         );
@@ -372,9 +403,10 @@ function CopyDetails({
             le descrive. */}
         <SectionLabel icon={HardDrive} label={t('areas.library.bookSection')} />
 
-        {/* Solo le digitalizzazioni a immagini si scaricano: per un PDF o un
-            file di altro tipo lo scaricamento chiederebbe alla biblioteca un
-            manifesto che non esiste, e il lavoro finirebbe in errore. */}
+        {/* Le digitalizzazioni a immagini si scaricano dal manifesto; il
+            documento unico ha la sua sezione. Per un file di altro tipo non
+            c'è niente da chiedere alla biblioteca, e offrirlo prometterebbe un
+            lavoro che finisce in errore. */}
         {version.versionKind === 'iiif_manifest' ? (
           <DownloadRow
             version={version}
@@ -413,8 +445,17 @@ function CopyDetails({
                 size={size}
                 onCompressed={reloadAll}
                 expectedPages={expectedPages}
-                viewing={isOpenInViewer && viewedLocalSize === size.sizeTag}
-                onView={isOpenInViewer && onViewLocalSize ? onViewLocalSize : undefined}
+                viewing={isOpenInViewer && shownVersionId === version.id && viewedLocalSize === size.sizeTag}
+                onView={
+                  onViewLocalSize
+                    ? (sizeTag) => {
+                        // Scegliere una misura è anche scegliere le immagini:
+                        // se a schermo c'è il PDF, si torna indietro.
+                        onShowVersion?.(version.id);
+                        onViewLocalSize(sizeTag);
+                      }
+                    : undefined
+                }
                 onFree={freeSizeRow(size)}
                 onVerify={verify}
                 excluded={excluded}
@@ -422,6 +463,18 @@ function CopyDetails({
             ))}
           </div>
         )}
+
+        {/* Il PDF è la stessa opera in un'altra forma: sta qui, sotto le copie
+            a immagini, perché è qui che si sceglie cosa visualizzare. */}
+        <DocumentBlock
+          sourceId={sourceId}
+          imagesVersion={version}
+          documentVersion={documentVersion}
+          shownVersionId={shownVersionId}
+          onShowVersion={onShowVersion}
+          onChanged={reloadAll}
+          reloadToken={reloadToken}
+        />
       </section>
     </div>
   );

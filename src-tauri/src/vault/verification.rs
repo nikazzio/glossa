@@ -217,10 +217,10 @@ fn stopped(ctx: &JobContext) -> Outcome {
 
 /// Il manifesto si riconosce dall'estensione: è l'unico file JSON del deposito.
 fn kind_of(path: &Path) -> integrity::FileKind {
-    if path.extension().is_some_and(|ext| ext == "json") {
-        integrity::FileKind::Manifest
-    } else {
-        integrity::FileKind::Image
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some("json") => integrity::FileKind::Manifest,
+        Some("pdf") => integrity::FileKind::Pdf,
+        _ => integrity::FileKind::Image,
     }
 }
 
@@ -246,6 +246,17 @@ fn registered_files(root: &Path) -> Vec<Registered> {
             found.push(Registered {
                 path: version_dir.join(super::layout::MANIFEST_FILE),
                 checksum: None,
+            });
+        }
+        // Il documento unico si controlla come una pagina: l'impronta è quella
+        // scritta nella sua scheda quando è arrivato.
+        if inventory.document.is_some() {
+            found.push(Registered {
+                path: version_dir.join(super::layout::DOCUMENT_FILE),
+                checksum: crate::download::pdf::record_at(
+                    &version_dir.join(super::layout::DOCUMENT_META_FILE),
+                )
+                .map(|record| record.checksum),
             });
         }
         for size in &inventory.sizes {

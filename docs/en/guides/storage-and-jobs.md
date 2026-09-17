@@ -121,6 +121,36 @@ network failure does not leave you with nothing.
 The repository can still hold several sizes at once, but no command creates more
 than one.
 
+## Waiting on libraries
+
+Every request to a library waits for its turn: that is what stops Glossa from
+knocking too fast and getting refused. **Every wait has a deadline**: twenty
+seconds for what you are looking at, eight for background checks. Once it
+expires the request gives up and says so — “not verified” — instead of hanging.
+
+This addresses a concrete case: after a refusal, some libraries ask you to wait
+for minutes. Without a deadline a single request started at that moment stayed
+in the queue for all that time, and everything else concerning that library —
+including adding works — queued up behind it.
+
+## The document next to the images
+
+When the library serves the work as a single document, that file lives in the
+repository next to the image pages of the same work, not among the resolutions:
+it is another copy, not another resolution. It takes space of its own, is
+deleted on its own, and does not disappear when you free the images.
+
+The download is a job like the others and respects the same library network
+limits: the file is written to a staging area, checked — signature and proper
+ending — and only then enters the repository, so a dropped connection never
+leaves half a document among your files. Pages are counted from the document as
+soon as it arrives. If the library declared a different number, the count from
+the file wins, and the difference stays in the operations log without on-screen
+warnings.
+
+Repository verification checks the document the way it checks pages, comparing
+the checksum recorded when it arrived.
+
 ## Acting on the page you are reading
 
 The commands for a single page live in the right-hand panel, under **Digital

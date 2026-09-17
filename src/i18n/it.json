@@ -1329,7 +1329,7 @@
         "other": "File"
       },
       "sourceUrlField": "Indirizzo",
-      "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
+      "downloadOnlyImages": "Per ora Glossa scarica le digitalizzazioni a immagini e i documenti. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
       "viewOnline": "Online",
@@ -1396,7 +1396,36 @@
       "pagePixels": "{{width}} × {{height}}",
       "compressTitle": "Ricomprimere le pagine?",
       "compressMessage": "Ogni pagina viene riscritta a qualità inferiore, stesse dimensioni in pixel. Operazione non reversibile: per tornare alla qualità attuale occorre riscaricare il libro.",
-      "freeSpace": "Elimina dal disco tutte le pagine di quest'opera"
+      "freeSpace": "Elimina dal disco tutte le pagine di quest'opera",
+      "documentDownloading": "scaricamento in corso",
+      "documentDownload": "Scarica il PDF",
+      "documentQueued": "Scaricamento del PDF accodato.",
+      "documentDownloadFailed": "Scaricamento del PDF non avviato.",
+      "documentFreeTitle": "Eliminare il PDF ({{size}})?",
+      "documentFreeMessage": "Il file viene rimosso dal disco. Le immagini della stessa opera restano invariate e il PDF si può scaricare di nuovo.",
+      "documentFreeAction": "Elimina il PDF dal disco",
+      "documentFreeFailed": "Eliminazione del PDF non riuscita.",
+      "documentOpenOutside": "Apri con l'applicazione di sistema",
+      "documentOpenFailed": "Apertura del PDF non riuscita.",
+      "documentPagesUnknown": "non determinate",
+      "documentViewerSection": "Visualizzazione PDF",
+      "documentReading": "PDF",
+      "documentTooLarge": "PDF troppo grande per la visualizzazione integrata",
+      "documentTooLargeHint": "Aprilo con l'applicazione di sistema: legge il file dal disco senza caricarlo tutto in memoria.",
+      "documentLoadError": "Apertura del PDF non riuscita",
+      "documentLoadErrorHint": "Il file può essere protetto da password o danneggiato. Riprova, oppure scaricalo di nuovo dalla scheda.",
+      "documentNotHere": "PDF non presente sul disco",
+      "documentNotHereHint": "Scaricalo dalla sezione PDF della scheda dell'opera.",
+      "documentChecking": "verifica in corso",
+      "documentNoManifest": "verifica non possibile senza indirizzo IIIF",
+      "documentField": "PDF",
+      "documentDownloaded": "scaricato",
+      "documentNotDownloaded": "non scaricato",
+      "documentUnavailable": "non disponibile per quest'opera",
+      "documentUnverified": "disponibilità non verificata",
+      "documentVerify": "Verifica disponibilità del PDF",
+      "documentShow": "Visualizza il PDF nel lettore",
+      "documentShown": "PDF in visualizzazione"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1583,7 +1612,14 @@
         "aggregator": "◈ Raccolta: indicizza il materiale di molte istituzioni. Di ogni risultato leggi chi conserva l'originale, che è un'altra biblioteca.",
         "paused": "⏸ La ricerca di questa biblioteca esiste ma respinge le richieste automatiche. Puoi aprire un'opera scrivendo il suo identificativo o incollando il suo indirizzo.",
         "directOnly": "# Questa fonte non ha una ricerca da interrogare: si apre scrivendo l'identificativo o incollando l'indirizzo, come nell'esempio del campo."
-      }
+      },
+      "documentAvailable": "PDF disponibile",
+      "documentLabel": "PDF",
+      "manifestPages": "Pagine nel manifesto",
+      "samplePixels": "Misura della prima pagina",
+      "documentUnavailable": "PDF non disponibile",
+      "documentUnverified": "PDF non verificato",
+      "documentChecking": "PDF: verifica in corso"
     },
     "stats": {
       "projects": "Progetti",
@@ -2399,8 +2435,16 @@
             "title": "Scaricare e conservare",
             "paragraphs": [
               "In Digitalizzazioni scegli la risoluzione e avvia il download dell’opera. Una risoluzione diversa crea un’altra versione locale. Puoi scegliere quale versione aprire.",
-              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata.",
-              "Le copie PDF possono comparire nella scheda, ma non sono ancora leggibili o scaricabili dalla Biblioteca."
+              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata."
+            ]
+          },
+          {
+            "title": "Il PDF dell’opera",
+            "paragraphs": [
+              "Alcune biblioteche, oltre alle immagini pagina per pagina, offrono la stessa opera come PDF. Nei risultati della ricerca ogni riga dichiara lo stato: «PDF disponibile», «PDF non disponibile» oppure «PDF non verificato» quando la biblioteca non ha risposto. Aprendo la riga trovi anche le pagine dichiarate e la misura in pixel della prima pagina, che è l’unico indizio sulla qualità della scansione prima di scaricare.",
+              "Nella scheda dell’opera il PDF è una riga della sezione del libro, sotto le copie a immagini: lì dice se è disponibile, se è già scaricato, quanto occupa e quante pagine ha. Il comando di verifica interroga di nuovo la biblioteca, per quando il PDF è stato pubblicato dopo; lo stesso controllo lo fa il riallineamento.",
+              "Dalla stessa riga scegli cosa visualizzare: il PDF oppure le immagini. In alto il visore dichiara sempre quale delle due stai guardando, perché le pagine del PDF e quelle della sequenza di immagini non corrispondono. Un PDF molto grande non si apre nel visore integrato: si apre con l’applicazione di sistema.",
+              "La verifica ha sempre una scadenza: se la biblioteca è occupata o non risponde, lo stato resta «non verificato» e puoi riprovare. Nessuna attesa resta appesa e nessuna richiesta blocca le altre."
             ]
           },
           {
@@ -2929,7 +2973,8 @@
       "debug_restart_only": "Prova di sviluppo (da rifare)",
       "source_download": "Scaricamento pagine",
       "vault_verification": "Verifica del deposito",
-      "image_optimization": "Ottimizzazione delle immagini"
+      "image_optimization": "Ottimizzazione delle immagini",
+      "source_pdf_download": "Scaricamento documento"
     },
     "phase": {
       "starting": "avvio",
@@ -2937,7 +2982,8 @@
       "downloading": "scaricamento",
       "checking_files": "controllo dei file",
       "looking_for_orphans": "ricerca dei file orfani",
-      "optimizing": "riduzione delle immagini"
+      "optimizing": "riduzione delle immagini",
+      "reading_document": "lettura del documento"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
@@ -2954,7 +3000,8 @@
       "vault_verification": "verifica",
       "debug_counter": "prova",
       "debug_restart_only": "prova",
-      "image_optimization": "ottimizzazione"
+      "image_optimization": "ottimizzazione",
+      "source_pdf_download": "documento"
     },
     "error": {
       "optimizationIncomplete_one": "Non è stato possibile ottimizzare una pagina.",

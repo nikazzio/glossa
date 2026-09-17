@@ -85,6 +85,15 @@ riga sola con `MULTI_VALUE_SEPARATOR`, la stessa costante con cui il servizio li
 divide e li unisce. I gruppi oltre il primo sono richiudibili e il loro stato
 sta in `uiStore.librarySourceGroups`, uno per tutta la Biblioteca.
 
+La stessa regola vale per il riquadro «Biblioteca e catalogo»
+(`SourceInfoSection`): biblioteca, identificativo, istituto che conserva,
+pagina del libro e scheda di catalogo sono **cinque righe sempre presenti**, con
+«—» dove la biblioteca non dà niente. Fino al 16 settembre 2026 le ultime tre
+stavano in un blocco richiudibile chiamato «Dati tecnici» che compariva solo se
+almeno una era piena: la sezione cambiava forma da una biblioteca all'altra —
+esattamente ciò che il template fisso esiste per evitare — e il nome prometteva
+più di quello che conteneva.
+
 Dall'indirizzo del manifesto si torna alle pagine pubbliche della biblioteca
 (`services/libraryLinks.ts`): scheda dell'opera e visore aperto su una pagina
 precisa, oggi per Gallica — che numera le pagine da uno — e Internet Archive —
@@ -598,6 +607,8 @@ Layout:
   .glossa-vault
   providers/<biblioteca>/<versione>/
     manifest.json
+    document.pdf
+    document.json
     pages/<misura>/0001.jpg
     pages/<misura>/pages.jsonl
     thumbnails/0001.jpg
@@ -625,6 +636,126 @@ l'originale è stato liberato e resta solo la copia, quella diventa principale.
 `vault::commands::free_version_size` libera **una sola** cartella di misura
 (scaricata o derivata); `delete_version_files` (rimozione dell'opera) e lo
 spazzino delle cartelle orfane coprono ora anche `derived/`.
+
+### Il documento unico (#462, 16 settembre 2026)
+
+Una digitalizzazione di tipo `pdf` è **una copia a sé**, non una misura della
+copia a immagini: `document.pdf` sta nella cartella della versione, accanto a
+`manifest.json` e a `pages/`, e se ne va solo con il proprio comando.
+`document.json` tiene quello che il file di sistema non dice — indirizzo di
+origine, byte, pagine contate, impronta, momento dell'arrivo — e vive accanto al
+file invece che nel database, così cancellare la cartella non lascia righe che
+parlano di un file che non c'è più.
+
+Catena: `download::pdf::enqueue_pdf_download` (comando) mette in coda
+`source_pdf_download`, gestito da `download::pdf::PdfDownloadJob` con la stessa
+cortesia per host dello scaricamento a immagini. Il ciclo tiene il posto in
+corsia per tutto il trasferimento — è una richiesta sola e lunga — scrive in
+`staging/<versione>/`, valida con `integrity::FileKind::Pdf` (firma `%PDF-`,
+`%%EOF` nella coda), sposta atomicamente e solo allora scrive la scheda.
+`Recovery::Restart`: mezzo documento non serve a niente, e riprendere significa
+rifare. La guardia `has_active_version_work` conosce anche questo tipo, così
+eliminare file mentre arrivano resta impossibile.
+
+Le pagine si contano dal file con `lopdf` (`count_pages`), a documento appena
+promosso e fuori dal filo del runtime. Un documento protetto, malformato o oltre
+i 512 MB resta senza conteggio: `pages: None`, dichiarato come tale
+nell'interfaccia. **Quello che la biblioteca dichiara non vince mai** sul
+conteggio del file, e la differenza non produce avvisi a schermo (decisione del
+16 settembre 2026).
+
+`VersionInventory` porta ora `document: Option<DocumentCopy>` letto dal disco;
+`inventoryBytes` lo somma allo spazio della copia. `free_version_document`
+cancella file e scheda e nient'altro. La verifica del deposito
+(`vault::verification`) include il documento fra i file registrati, con
+l'impronta della scheda.
+
+**Da dove nasce la copia PDF.** Il manifesto della biblioteca dichiara le
+rappresentazioni alternative dell'opera in `rendering` (stesso nome in
+Presentation 2.1 e 3, cambia solo `@id`/`id` e la forma dell'etichetta).
+`download::manifest` le legge in `Manifest::renderings`; `Rendering::is_pdf`
+decide sul tipo dichiarato e, quando manca, sull'estensione dell'indirizzo.
+Solo il `rendering` **di manifesto** conta: uno dichiarato su un canvas riguarda
+quella pagina, e confonderli farebbe passare per «il libro in PDF» il PDF di una
+carta sola.
+
+Attenzione alla **posizione** del `rendering`: in Presentation 2.1 quasi nessuna
+biblioteca lo dichiara sulla radice — sta sulla sequenza, che in quella versione
+è l'oggetto «libro intero» (Wellcome, e-codices). Leggere solo la radice le
+perdeva tutte, ed è il motivo per cui la prima versione non trovava mai un PDF.
+Gallica non dichiara nessun `rendering`: lì lo stato è «non disponibile», e
+resta tale finché non lo dichiara, perché indovinare l'indirizzo del PDF è
+esattamente quello che questo modulo non fa.
+
+`iiif::discovery::inspect_manifest` (che ha sostituito `probe_manifest`) fa un
+GET con tetto di 2 MB e restituisce `ManifestFacts`: `openable`, `pages`,
+`sample_pixels` (i pixel del primo canvas) e `document`. Una lettura sola
+risponde alle tre domande che prima erano due richieste e una assenza. Oltre il
+tetto resta `openable: Some(true)` con il resto ignoto. `facts_of` è la parte
+senza rete, ed è dove stanno le prove.
+
+**Nessuna attesa senza scadenza (16 settembre 2026).** Era il difetto peggiore
+di questa catena, e si vedeva: una verifica partiva e non finiva più, e dietro
+di lei si accodava tutto quello che riguardava quella biblioteca — aggiunta di
+opere compresa. Due cause, entrambe corrette:
+
+- `Gate::wait_in` aspettava il turno con `stop = || false`, cioè per sempre. Il
+  raffreddamento di una biblioteca dura minuti (Gallica ne chiede dieci dopo un
+  rifiuto). Adesso l'attesa ha una scadenza — `WATCHED_DEADLINE` 20 s per quello
+  che l'utente sta guardando, `BACKGROUND_DEADLINE` 8 s per i controlli di
+  sfondo — e chi non ottiene il turno **rinuncia**: `inspect_manifest` risponde
+  «non verificato» invece di bussare senza turno.
+- `Courtesy::take_seat` faceva `acquire_owned().await` senza mai riguardare i
+  segnali: un posto tenuto da una richiesta lunga metteva in fila tutti, e
+  nemmeno una pausa o un annullamento li liberava. Adesso il posto si aspetta a
+  fette di `POLL_SLICE`, controllando fra una e l'altra se chi aspetta ha
+  smesso. Vale anche per i lavori di scaricamento, che prima non rispondevano a
+  «pausa» finché non ottenevano il posto.
+
+Nella finestra la lettura passa da `useManifestFacts`, che ne fa **una per
+biblioteca e manifesto per sessione**, condivisa fra le righe e con al massimo
+due richieste insieme; `readManifestFacts` è la stessa cosa fuori da un
+componente, con `fresh` per «rileggi davvero». Le righe di ricerca la usano solo
+quando entrano nello schermo, e mai per un risultato che il catalogo dichiara
+già senza riproduzione. Tre invarianti, e sono tutta la robustezza di quel file:
+ogni richiesta finisce (scadenza di 35 s come rete di sicurezza sopra quelle del
+motore), il posto in coda si rilascia una volta sola, e **solo una risposta
+verificata si ricorda** — un guasto non marchia un'opera per tutta la sessione.
+
+L'aggiunta di un'opera **non aspetta** la verifica: la lettura del manifesto
+parte per conto suo e il catalogo si rilegge quando arriva. Aspettarla
+significava tenere fermo un comando riuscito dietro a una fila di rete.
+
+La copia si registra con `registerDeclaredDocument`: una riga `source_versions`
+con `version_kind = 'pdf'`, l'indirizzo del documento e la chiave della
+biblioteca nei metadati. La chiama l'aggiunta dalla ricerca, il riallineamento
+(`resyncSource`) e il comando «chiedi alla biblioteca» nella scheda. È
+idempotente sull'indirizzo, quindi ripeterla non crea doppioni. Finché la
+biblioteca non dichiara niente, la riga del PDF resta con il suo stato («non
+disponibile», «disponibilità non verificata»): un'assenza va detta, non taciuta.
+Lo stesso vale nei risultati di ricerca, dove lo stato è sempre una delle tre
+parole, mai il silenzio.
+
+**Dove sta il PDF nell'interfaccia.** Non è una voce dell'elenco delle copie: è
+una riga dentro la sezione del libro della copia a immagini (`DocumentBlock`
+dentro `CopiesSection`), sotto le misure locali, perché è lì che si sceglie se
+visualizzare le immagini o il PDF. La scelta arriva al visore con
+`onShowVersion`, che cambia la copia selezionata in `LibrarySourcePage`; i
+comandi di visualizzazione delle misure fanno la stessa cosa al contrario.
+
+Rimozione dell'opera: `delete_source_files` cancella le cartelle di **tutte** le
+copie del lavoro (le legge da `source_versions`), perché `delete_version_files`
+sulla sola copia di catalogo lasciava il documento sul disco fino al passaggio
+dello spazzino delle cartelle orfane.
+
+Lettura: `document_bytes` serve i byte grezzi (`tauri::ipc::Response`) con un
+tetto di 256 MB, `open_document_externally` apre il file con il lettore del
+sistema. Nella finestra, `DocumentViewer` disegna la pagina con pdf.js e la
+mostra con OpenSeadragon, riusando `ViewerToolbar` — estratta da `PageViewer`
+in questo giro, con le parti solo-immagini (miniature, solo-locale, uscita verso
+la pagina della biblioteca) rese facoltative. Il percorso del deposito non
+arriva mai alla finestra: si compone nel motore da chiave e identificativo,
+entrambi convalidati come componenti di percorso.
 
 ### Riconoscimento e ricerca per biblioteca
 

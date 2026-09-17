@@ -107,11 +107,18 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   multipla** è uscita dalla issue: con una copia sola i suoi motivi si riducono
   a «togliere molte pagine in fila», e vive meglio nello Studio di trascrizione
   (#388), dove serve a scegliere cosa trascrivere.
-- #462 (PDF della biblioteca, «Fase C»): decisa il 16 settembre. Il PDF è una
-  **copia a sé** accanto a quella a immagini, si legge **dentro il visore
-  attuale** con pdf.js — che serve anche a estrarre il testo per le trascrizioni
-  (#220) — e le pagine si contano dal file all'arrivo. Si appoggia al modo di
-  dire «copia locale, spazio, stato» che la #459 consolida: conviene dopo.
+- #462 (PDF della biblioteca, «Fase C»): **realizzata** il 16 settembre, sopra
+  la #459, in due giri — il secondo perché il primo aveva costruito lo
+  scaricamento di una copia che nessun percorso creava mai. Adesso il documento
+  si **scopre** dal manifesto della biblioteca, compare nei risultati di ricerca
+  e nella scheda (anche quando non c'è), e solo dopo si scarica. Il PDF è una **copia a sé** accanto a quella a immagini: si scarica
+  con la stessa cortesia di rete e la stessa scrittura atomica delle pagine, si
+  dichiara fra le copie locali con pagine, spazio e stato, si elimina da solo e
+  si legge nel visore con pdf.js. Le pagine si contano **dal file**; se la
+  biblioteca ne dichiara un altro numero vince il file e la differenza resta nel
+  registro, senza avvisi a schermo. La trascrizione a partire dal documento
+  **resta fuori**: non esiste ancora un punto dove si sceglie da cosa
+  trascrivere, e la decisione va presa con lo Studio (#388/#220).
 - #471 (biblioteche scozzesi) e #472 (membri del consorzio IIIF): la prima
   consegnata con #473, la seconda è l'elenco ordinato di chi manca.
 - #474 (scheda a template fisso): tutti i campi sempre visibili e compilabili a
@@ -125,8 +132,6 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   sostituzione, eliminazione volontaria, esclusione, verifica e risultati parziali.
   Prima di implementare, confrontare le decisioni del piano con quelle già
   risolte dal lettore; non riaprire scelte di precedenza chiuse.
-- Scaricare, elencare e leggere i PDF delle biblioteche (#462), distinti dalla
-  sequenza IIIF: non presumere la stessa identità di pagina.
 - Rendere visibili log generali, salvataggio e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca

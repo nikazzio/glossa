@@ -484,6 +484,63 @@ export async function listLibrarySourceUrls(): Promise<{ sourceUrl: string; sour
   return rows.map((row) => ({ sourceUrl: row.source_url, sourceId: row.source_id }));
 }
 
+/**
+ * Registra il PDF che la biblioteca dichiara, come copia a sé dell'opera.
+ *
+ * È una copia distinta da quella a immagini: le due non promettono la stessa
+ * identità di pagina. Di PDF però **ce n'è uno solo per opera** — quello del
+ * manifesto — e il database lo impone con un indice unico parziale: qui si
+ * aggiorna la copia esistente invece di affiancarne una seconda.
+ *
+ * L'identità della copia è il **tipo**, non l'etichetta né l'indirizzo: una
+ * biblioteca che cambia l'indirizzo del suo PDF non deve produrre due copie di
+ * cui una morta, e l'etichetta remota non è un identificativo (la tabella ha
+ * un vincolo di unicità proprio sull'etichetta).
+ *
+ * Restituisce `true` quando qualcosa è cambiato: copia nuova o indirizzo
+ * aggiornato.
+ */
+export async function registerDeclaredDocument(
+  sourceId: string,
+  document: { url: string; label: string | null; providerKey?: string | null },
+): Promise<boolean> {
+  if (!isValidUrl(document.url)) return false;
+  // La biblioteca si scrive nei metadati della copia: è lei a decidere sotto
+  // quale cartella finisce il file, e leggerla dalla copia a immagini
+  // presupporrebbe che le due restino sempre accoppiate. L'etichetta dichiarata
+  // dalla biblioteca si conserva qui perché è informativa, non identificativa.
+  const metadata = JSON.stringify({
+    providerKey: document.providerKey ?? null,
+    declaredLabel: document.label,
+  });
+  const [existing] = await select<{ id: string; source_url: string | null }>(
+    "SELECT id, source_url FROM source_versions WHERE source_id = $1 AND version_kind = 'pdf'",
+    [sourceId],
+  );
+
+  if (existing) {
+    if (existing.source_url === document.url) return false;
+    await execute(
+      'UPDATE source_versions SET source_url = $1, metadata = $2 WHERE id = $3',
+      [document.url, metadata, existing.id],
+    );
+    logger.info('library.document.updated', { sourceId });
+    return true;
+  }
+
+  await execute(
+    'INSERT INTO source_versions (id, source_id, label, version_kind, source_url, metadata, is_primary) VALUES ($1, $2, $3, $4, $5, $6, 0)',
+    [generateId('sver'), sourceId, DOCUMENT_VERSION_LABEL, 'pdf', document.url, metadata],
+  );
+  logger.info('library.document.registered', { sourceId });
+  return true;
+}
+
+/** L'etichetta della copia PDF. Fissa: la tabella impone etichette distinte
+ *  dentro la stessa opera, e quella dichiarata dalla biblioteca può coincidere
+ *  con una già usata. Quella dichiarata resta nei metadati. */
+const DOCUMENT_VERSION_LABEL = 'PDF';
+
 export async function addSourceToLibrary(
   input: AddSourceToLibraryInput,
 ): Promise<{ sourceId: string; wasCreated: boolean }> {

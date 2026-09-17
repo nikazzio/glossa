@@ -10,6 +10,7 @@ import {
 } from '../types';
 import {
   addSourceToLibrary as addSourceToLibraryService,
+  registerDeclaredDocument,
   getLibrarySourceDetail,
   listLibraryCatalog,
   listLibrarySourceUrls,
@@ -21,6 +22,7 @@ import {
   versionProviderKey,
 } from '../services/libraryService';
 import { discoverIIIF } from '../services/iiifProviderService';
+import { readManifestFacts } from '../hooks/useManifestFacts';
 import {
   collectionsOfMany,
   createCollection as createCollectionService,
@@ -29,6 +31,33 @@ import {
   setSourceCollection,
 } from '../services/libraryCollectionsService';
 import { errorMessage as getErrorMessage, logger } from '../utils/logger';
+
+/**
+ * Chiede alla biblioteca se di quest'opera esiste anche un documento unico, e
+ * se esiste lo registra come copia a sé.
+ *
+ * Silenziosa di proposito: è un di più rispetto all'aggiunta, e una biblioteca
+ * che non risponde non deve far sembrare fallita un'aggiunta riuscita. Dalla
+ * scheda dell'opera si può sempre chiedere di nuovo.
+ */
+async function registerDocumentIfDeclared(
+  sourceId: string,
+  manifestUrl: string,
+  providerKey: string | null,
+  { fresh = false }: { fresh?: boolean } = {},
+): Promise<void> {
+  try {
+    const facts = await readManifestFacts(providerKey ?? 'generic', manifestUrl, { fresh });
+    if (!facts.document) return;
+    await registerDeclaredDocument(sourceId, {
+      url: facts.document.url,
+      label: facts.document.label,
+      providerKey,
+    });
+  } catch (error: unknown) {
+    logger.debug('library.document.notChecked', { reason: getErrorMessage(error) });
+  }
+}
 
 interface SourceLibraryState {
   detail: LibrarySourceDetail | null;
@@ -142,6 +171,14 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
         addedManifestUrls: new Set(state.addedManifestUrls).add(manifestUrl),
         libraryManifestSourceIds: new Map(state.libraryManifestSourceIds).set(manifestUrl, sourceId),
       }));
+      // Se la biblioteca dichiara anche il PDF, l'opera nasce con due copie: le
+      // immagini e il file. **Non si aspetta**: la lettura del manifesto passa
+      // dalla fila verso quella biblioteca e può richiedere secondi, mentre
+      // l'aggiunta è già riuscita. Quando la risposta arriva, il catalogo si
+      // rilegge da sé.
+      void registerDocumentIfDeclared(sourceId, manifestUrl, providerKey ?? null).then(() =>
+        get().loadCatalog(),
+      );
       // Il catalogo si rilegge: la fonte appena aggiunta deve comparire in
       // Biblioteca senza riaprire la schermata.
       await get().loadCatalog();
@@ -312,6 +349,10 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       // sovrascriverlo con niente perderebbe quello che avevamo.
       raw: {},
     });
+
+    // Riallineare vuol dire «chiedi di nuovo alla biblioteca cosa offre»: se
+    // nel frattempo ha pubblicato il documento, adesso compare fra le copie.
+    await registerDocumentIfDeclared(sourceId, primary.sourceUrl, providerKey, { fresh: true });
 
     await get().loadDetail(sourceId);
     await get().loadCatalog();

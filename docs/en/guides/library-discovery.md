@@ -79,6 +79,43 @@ different resolution creates a separate local version. Each version has its
 own controls for opening, resizing and deletion. Resolution policies are
 described under [Storage and jobs](./storage-and-jobs).
 
+## The PDF of the work
+
+Some libraries, next to the images, offer the same work as a PDF. They declare
+it in their manifest — on the root or on the sequence, depending on the version
+of the standard — and that is where Glossa finds it: no addresses built by
+analogy.
+
+In **search results** every row states the status, always: “PDF available”,
+“PDF not available”, or “PDF not verified” when the manifest could not be read.
+The expanded row adds the declared pages and the pixel size of the first page,
+the only hint about scan quality available before downloading. The manifest is
+read once per work, only for rows on screen, at most two reads at a time, and
+never for a result the catalogue already declares without a reproduction.
+
+In the **work record** the PDF is a row of the book section, below the image
+copies. It states availability and local status; a command checks with the
+library again — useful when the PDF was published later — and the same check
+runs on resynchronisation. When the PDF is available it is downloaded from the
+same row; when it is on disk, the row states its pages and size and offers the
+commands to display it, open it with the system application or delete it.
+Deleting it does not touch the images of the same work.
+
+From the same row you choose **what to display**: the PDF or the images. The
+viewer always states which of the two copies is on screen, because the pages of
+the PDF and those of the image sequence do not correspond and are not merged
+into a single browsing sequence.
+
+Stated limits: a PDF over 256 MB does not open in the built-in viewer and must
+be read with the system application; for a password-protected or malformed PDF
+the pages are not counted, and the record says so rather than inventing a
+number. The page is drawn at a fixed resolution: magnified to the maximum it
+looks less sharp than IIIF tiles.
+
+Every check has a **deadline**: if the library is busy or does not answer, the
+status stays “not verified” and you can try again. No wait is left hanging, and
+a slow request does not block the others.
+
 ## Archiving and deletion
 
 | Action | Effect |
@@ -86,7 +123,7 @@ described under [Storage and jobs](./storage-and-jobs).
 | Archive | Hides the work from the active catalogue and retains files; freeing space is a separate choice |
 | Free space | Deletes downloaded images while retaining the record, manifest and thumbnails |
 | Delete a local version | Removes only the selected version’s files |
-| Delete the work | Removes the record, links, repository files and associated cache |
+| Delete the work | Removes the record, links, the files of **all** copies — images and document — and the associated cache |
 
 Deletion does not use a recycle bin. Destructive file operations require jobs
 that could modify those files to finish or be cancelled; pausing them is not
@@ -94,9 +131,9 @@ sufficient.
 
 ## Limitations
 
-PDF digitisations can be registered, but Library download and viewing are not
-available. Importing text from a PDF into a translation project is a separate
-feature. Advanced page management and multiple-page selection are incomplete.
+Importing text from a PDF into a translation project remains a separate
+feature: a transcription cannot yet be started from a document kept in the
+Library. Advanced page management and multiple-page selection are incomplete.
 Institutional download restrictions are not enforced automatically; consult
 the source’s conditions of use.
 

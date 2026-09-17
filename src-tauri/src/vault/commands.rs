@@ -272,6 +272,51 @@ pub async fn choose_vault_folder(
     }))
 }
 
+/// Cancella i file di **tutte** le copie di un'opera: le immagini, il
+/// documento, e le copie ricavate in locale da ognuna.
+///
+/// Serve alla rimozione dell'opera. Cancellare la sola copia con cui l'opera è
+/// stata trovata lasciava sul disco il documento scaricato, che restava lì
+/// finché qualcuno non passava lo spazzino delle cartelle orfane.
+#[tauri::command]
+pub async fn delete_source_files(
+    app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
+    provider_key: String,
+    source_id: String,
+) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    let versions = versions_of_source(&app, &source_id)?;
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let mut total = FreedSpace {
+        deleted_files: 0,
+        freed_bytes: 0,
+    };
+    for version_id in versions {
+        refuse_while_version_working(&app, &version_id)?;
+        let freed = wipe_version(&root, &provider_key, &version_id)?;
+        total.deleted_files += freed.deleted_files;
+        total.freed_bytes += freed.freed_bytes;
+    }
+    Ok(total)
+}
+
+/// Gli identificativi di tutte le copie di un'opera.
+fn versions_of_source(app: &tauri::AppHandle, source_id: &str) -> Result<Vec<String>, String> {
+    let conn = crate::db::open_connection(&crate::storage_config::db_path(app)?)?;
+    let mut statement = conn
+        .prepare("SELECT id FROM source_versions WHERE source_id = ?1")
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map([source_id], |row| row.get::<_, String>(0))
+        .map_err(|error| error.to_string())?;
+    rows.collect::<Result<Vec<String>, _>>()
+        .map_err(|error| error.to_string())
+}
+
 /// Cancella manifesto, miniature, pagine **e copie ricavate in locale** di una
 /// digitalizzazione: l'opera sparisce del tutto, non solo dalle biblioteche.
 #[tauri::command]
@@ -287,6 +332,16 @@ pub async fn delete_version_files(
     if !root.is_dir() {
         return Err("vault_unreachable".to_string());
     }
+    wipe_version(&root, &provider_key, &version_id)
+}
+
+/// Le cartelle di una copia, scaricate e ricavate, sotto ogni chiave di
+/// biblioteca che le ospita.
+fn wipe_version(
+    root: &std::path::Path,
+    provider_key: &str,
+    version_id: &str,
+) -> Result<FreedSpace, String> {
     // La chiave dichiarata dal catalogo si prova per prima, ma non è l'unica
     // possibile: le cartelle sono nominate con la chiave che valeva quando i
     // file sono stati scritti, e su un'opera aggiunta per indirizzo quella
@@ -307,9 +362,55 @@ pub async fn delete_version_files(
             .map_err(|e| format!("Failed to delete {}: {e}", folder.display()))
     };
 
+    for key in provider_keys_holding(root, provider_key, version_id) {
+        wipe(root.join(super::layout::version_dir(&key, version_id)?))?;
+        wipe(root.join(super::layout::derived_version_dir(&key, version_id)?))?;
+    }
+    Ok(FreedSpace {
+        deleted_files,
+        freed_bytes,
+    })
+}
+
+/// Butta il documento unico di una digitalizzazione, e solo quello: le pagine
+/// a immagini della stessa opera restano dove sono.
+///
+/// Se ne va anche la scheda scritta accanto: descrive un file che non c'è più,
+/// e tenerla farebbe dire alla scheda dell'opera che il documento c'è ancora.
+#[tauri::command]
+pub async fn free_version_document(
+    app: tauri::AppHandle,
+    writes: State<'_, crate::db::DbWriteCoordinator>,
+    provider_key: String,
+    version_id: String,
+) -> Result<FreedSpace, String> {
+    let _write_guard = writes.lock().await;
+    refuse_while_version_working(&app, &version_id)?;
+    let root = root_of(&app)?;
+    if !root.is_dir() {
+        return Err("vault_unreachable".to_string());
+    }
+    let mut deleted_files = 0;
+    let mut freed_bytes = 0;
+    // Come per la rimozione dell'opera: la cartella porta il nome della chiave
+    // che valeva quando il file è stato scritto, che può non essere quella
+    // dichiarata adesso dal catalogo.
     for key in provider_keys_holding(&root, &provider_key, &version_id) {
-        wipe(root.join(super::layout::version_dir(&key, &version_id)?))?;
-        wipe(root.join(super::layout::derived_version_dir(&key, &version_id)?))?;
+        for path in [
+            root.join(super::layout::document_path(&key, &version_id)?),
+            root.join(super::layout::document_meta_path(&key, &version_id)?),
+        ] {
+            let Ok(metadata) = std::fs::metadata(&path) else {
+                continue;
+            };
+            if !metadata.is_file() {
+                continue;
+            }
+            std::fs::remove_file(&path)
+                .map_err(|e| format!("Failed to delete {}: {e}", path.display()))?;
+            deleted_files += 1;
+            freed_bytes += metadata.len();
+        }
     }
     Ok(FreedSpace {
         deleted_files,

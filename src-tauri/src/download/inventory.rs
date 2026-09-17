@@ -42,6 +42,23 @@ pub struct SizeFolder {
     pub derived: bool,
 }
 
+/// Il documento unico presente sul computer: un file, non una cartella di
+/// pagine. Sta accanto alle misure e non fra di esse, perché non è una misura
+/// della stessa copia ma un'altra copia dell'opera.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentCopy {
+    /// Quanto occupa il file.
+    pub bytes: u64,
+    /// Quante pagine ha davvero, contate dal file all'arrivo. Assente quando il
+    /// documento non si è potuto aprire per contarle.
+    pub pages: Option<u32>,
+    /// Da quale indirizzo è arrivato.
+    pub source_url: Option<String>,
+    /// Quando è arrivato, in secondi.
+    pub downloaded_at: Option<i64>,
+}
+
 /// Cosa si ha di una digitalizzazione, e a che misure.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,6 +73,9 @@ pub struct VersionInventory {
     pub principal: Option<String>,
     /// Vero se il manifesto conservato è al suo posto.
     pub has_manifest: bool,
+    /// Il documento unico, quando la biblioteca ne serve uno ed è stato
+    /// scaricato.
+    pub document: Option<DocumentCopy>,
 }
 
 impl VersionInventory {
@@ -186,7 +206,26 @@ fn read_folder(
         sizes,
         principal,
         has_manifest: folder.join(crate::vault::layout::MANIFEST_FILE).is_file(),
+        document: read_document(folder),
     }
+}
+
+/// Il documento presente nella cartella della digitalizzazione, quando c'è.
+///
+/// Lo spazio lo dice il file di sistema, come per ogni altra cosa del deposito;
+/// il conteggio delle pagine no — contarle significa riaprire il documento
+/// intero — e si legge dalla scheda scritta all'arrivo.
+fn read_document(folder: &Path) -> Option<DocumentCopy> {
+    let path = folder.join(crate::vault::layout::DOCUMENT_FILE);
+    let bytes = std::fs::metadata(&path).ok().filter(|m| m.is_file())?.len();
+    let record =
+        crate::download::pdf::record_at(&folder.join(crate::vault::layout::DOCUMENT_META_FILE));
+    Some(DocumentCopy {
+        bytes,
+        pages: record.as_ref().and_then(|record| record.pages),
+        source_url: record.as_ref().map(|record| record.source_url.clone()),
+        downloaded_at: record.as_ref().map(|record| record.downloaded_at),
+    })
 }
 
 /// Quante pagine ci sono in una cartella di misura, quanto occupano e quante la

@@ -19,8 +19,14 @@ use crate::provenance::fnv1a_hex;
 /// lavoro e non alla messa in coda: un lavoro ripreso dopo giorni deve
 /// rispettare i limiti di adesso.
 pub(crate) async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> NetworkProfile {
-    let key = config.provider_key.clone();
-    let host = host_of(&config.manifest_url).ok();
+    profile_of(ctx, &config.provider_key, &config.manifest_url).await
+}
+
+/// Come `profile_for`, per chi non scarica un manifesto: il documento unico ha
+/// un indirizzo solo e nessuna configurazione di pagine.
+pub(crate) async fn profile_of(ctx: &JobContext, provider_key: &str, url: &str) -> NetworkProfile {
+    let key = provider_key.to_string();
+    let host = host_of(url).ok();
     ctx.with_database(move |conn| {
         Ok(crate::iiif::settings::effective_profile(
             conn,

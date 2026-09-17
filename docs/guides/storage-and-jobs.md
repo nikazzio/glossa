@@ -128,6 +128,37 @@ lascia senza niente.
 Il deposito resta capace di tenere più misure insieme, ma nessun comando ne
 crea più di una.
 
+## Attese verso le biblioteche
+
+Ogni richiesta verso una biblioteca aspetta il proprio turno: è ciò che impedisce
+a Glossa di bussare troppo in fretta e di farsi rifiutare. **Ogni attesa ha una
+scadenza**: venti secondi per quello che stai guardando, otto per i controlli di
+sfondo. Scaduta, la richiesta rinuncia e lo dichiara — «non verificato» — invece
+di restare sospesa.
+
+Serve a un caso concreto: dopo un rifiuto, certe biblioteche chiedono di
+aspettare minuti. Senza scadenza una sola richiesta partita in quel momento
+restava in attesa per tutto quel tempo, e dietro di lei si accodava tutto il
+resto che riguardava quella biblioteca, aggiunta di opere compresa.
+
+## Il documento accanto alle immagini
+
+Quando la biblioteca serve l'opera come documento unico, quel file vive nel
+deposito accanto alle pagine a immagini della stessa opera, non fra le misure:
+è un'altra copia, non un'altra risoluzione. Occupa spazio per conto suo, si
+elimina per conto suo e non sparisce quando liberi le immagini.
+
+Lo scaricamento è un lavoro come gli altri e rispetta gli stessi limiti di rete
+della biblioteca: il file viene scritto in un'area di transito, controllato —
+firma e chiusura al posto giusto — e solo allora entra nel deposito, così una
+connessione caduta non lascia mai mezzo documento fra i tuoi file. Le pagine si
+contano dal documento appena arrivato. Se la biblioteca ne dichiarava un numero
+diverso, vale quello contato dal file, e la differenza resta nel registro delle
+operazioni senza avvisi a schermo.
+
+La verifica del deposito controlla il documento come controlla le pagine,
+confrontando l'impronta registrata al suo arrivo.
+
 ## Agire sulla pagina che stai leggendo
 
 I comandi sulla singola pagina stanno nella scheda a destra, sotto **Copie
