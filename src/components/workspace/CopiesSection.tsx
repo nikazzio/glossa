@@ -54,6 +54,18 @@ function emptyInventory(): CopyInventory {
   return { sizes: [], principal: null, localPages: 0, localBytes: 0, document: null };
 }
 
+/** La misura scritta nella configurazione di un lavoro di scaricamento, per
+ *  sapere davvero cosa **quel** lavoro ha portato a casa — e non quello che
+ *  la preferenza dice adesso, che può essere cambiata nel frattempo. */
+function sizeTagOfConfig(config: string): string | null {
+  try {
+    const parsed = JSON.parse(config) as { sizeTag?: unknown };
+    return typeof parsed.sizeTag === 'string' ? parsed.sizeTag : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Le copie digitali dell'opera: per ognuna, cosa è (manifesto IIIF, PDF,
  *  altro), quanto ne hai sul computer — a ogni risoluzione davvero presente,
  *  non solo quella con cui è stata scaricata — e i comandi per cambiarlo:
@@ -276,21 +288,37 @@ function CopyDetails({
   const hasLocalPages = localPages > 0 || sizes.some((size) => size.pages > 0);
   const runningDownload = jobs.some((job) => job.id === `download:${version.id}` && !isTerminal(job));
   const lastDownload = jobs.find((job) => job.id === `download:${version.id}`);
-  // Uno scaricamento o una compressione finiti hanno cambiato le cartelle: la
-  // lista delle versioni locali va riletta, altrimenti la copia appena
-  // ricavata non compare finché non si riapre l'opera.
-  const finishedJobs = jobs.filter(
-    (job) =>
-      (job.id === `download:${version.id}` || job.id.startsWith(`optimize:${version.id}:`)) &&
-      isTerminal(job),
+  // Una compressione finita ha cambiato le cartelle: la lista delle versioni
+  // locali va riletta, altrimenti la copia appena ricavata non compare finché
+  // non si riapre l'opera. Un download fallito o annullato rilegge anche lui —
+  // le pagine già arrivate potrebbero essere cambiate — ma **non consolida**:
+  // quello lo fa solo il ramo qui sotto, e solo a scaricamento riuscito.
+  const finishedOptimizeJobs = jobs.filter(
+    (job) => job.id.startsWith(`optimize:${version.id}:`) && isTerminal(job),
   ).length;
 
-  // Finito uno scaricamento, l'opera torna ad avere una misura sola: le altre
-  // se ne vanno adesso, non prima, così un guasto di rete non lascia il libro
-  // senza niente. Vale anche per le copie di prima, scaricate quando più
-  // misure insieme erano ammesse.
-  const consolidate = useCallback(async () => {
-    const kept = (await getVersionSizeCap(version.id)) ?? DEFAULT_SIZE_CAP;
+  useEffect(() => {
+    if (finishedOptimizeJobs === 0) return;
+    setReloadTick((tick) => tick + 1);
+  }, [finishedOptimizeJobs]);
+
+  // Un download **riuscito** porta l'opera a una misura sola: le altre se ne
+  // vanno adesso, non prima, così un guasto di rete non lascia il libro senza
+  // niente. La misura da tenere è quella che **quel lavoro** ha scaricato
+  // davvero — letta dalla sua configurazione — e non la preferenza corrente:
+  // cambiarla mentre lo scaricamento era ancora in corso cancellava altrimenti
+  // la copia appena arrivata invece di una vecchia.
+  const completedDownload = jobs.find(
+    (job) => job.id === `download:${version.id}` && job.status === 'completed',
+  );
+  // Chiave primitiva e non l'oggetto lavoro: lo stesso completamento non deve
+  // far ripartire il consolidamento a ogni nuovo render, ma un rilancio con
+  // un'altra misura — stesso identificativo, configurazione diversa — sì.
+  const completedDownloadKey = completedDownload
+    ? `${completedDownload.id}:${completedDownload.config}`
+    : null;
+
+  const consolidate = useCallback(async (kept: string) => {
     const inventory = await versionInventory(version.id);
     if (!inventory) return;
     const extra = inventory.sizes.filter((size) => size.sizeTag !== kept && !size.derived);
@@ -306,12 +334,14 @@ function CopyDetails({
   }, [version.id]);
 
   useEffect(() => {
-    if (finishedJobs === 0) return;
-    void consolidate().catch((error: unknown) => {
+    if (!completedDownload) return;
+    const kept = sizeTagOfConfig(completedDownload.config) ?? DEFAULT_SIZE_CAP;
+    void consolidate(kept).catch((error: unknown) => {
       logger.warn('library.version.consolidateFailed', { reason: errorMessage(error) });
     });
     setReloadTick((tick) => tick + 1);
-  }, [finishedJobs, consolidate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `completedDownloadKey` è la chiave primitiva voluta: `completedDownload` cambierebbe riferimento a ogni render senza motivo.
+  }, [completedDownloadKey, consolidate]);
 
   const startDownload = async () => {
     if (!version.sourceUrl) return;

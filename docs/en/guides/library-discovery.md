@@ -44,8 +44,9 @@ The detail view places the viewer alongside a panel with four sections:
 
 Title, author, date and language can be edited manually. Overrides are stored
 separately from the original values and can be removed. **Resynchronise with
-the library** retrieves fresh metadata and clears manual overrides. Notes and
-downloaded files are retained.
+the library** retrieves fresh metadata and clears manual overrides **only for
+the fields the library declares** in that reading: a correction on a field the
+library does not provide is kept, along with notes and downloaded files.
 
 ## Reading pages
 

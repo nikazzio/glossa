@@ -48,7 +48,9 @@ La scheda affianca il visore a un pannello con quattro sezioni:
 Titolo, autore, data e lingua possono essere corretti manualmente. Le correzioni
 sono memorizzate separatamente dal dato originale e possono essere rimosse.
 **Risincronizza con la biblioteca** acquisisce nuovamente i metadati e cancella
-le correzioni manuali. Note e file scaricati restano invariati.
+le correzioni manuali **solo dei campi che la biblioteca dichiara** in quella
+lettura: una correzione su un campo che la biblioteca non fornisce resta,
+insieme alle note e ai file scaricati.
 
 ## Dati dell'opera
 

@@ -66,9 +66,10 @@ at full size. A predefined size can be larger or smaller than the target.
 If the service rejects the requested dimensions, a download may use full size
 and preserve it without local resizing. Thumbnails are generated from downloaded pages.
 
-Requesting another resolution creates a separate version. Saving a page from
-the viewer instead uses the image already loaded. Changing the configured
-resolution does not alter existing files.
+Requesting a different resolution **replaces** the downloaded one: for a work
+Glossa keeps a single image copy at a time (see “One copy per work” further
+down). Saving a page from the viewer instead uses the image already loaded,
+without requesting a new one.
 
 ## Network profiles
 
@@ -98,10 +99,11 @@ command that rechecks the repository before proceeding.
 
 ## Image reduction and caching
 
-Image reduction creates a new version at the selected dimensions and quality,
-preserving the original. Reclaiming space requires deleting a version after
-checking the result. If some pages cannot be processed, the job reports an
-error and retains the pages produced successfully.
+Recompression rewrites the copy's pages **in place**, at a lower quality and
+the same dimensions: same pixels, fewer bytes, no second copy of the book. It
+is not reversible — getting the original quality back means downloading again
+from the library (details further down). If some pages cannot be processed,
+the job reports an error and retains the pages produced successfully.
 
 The network cache reuses responses and images. Its default size limit is
 512 MB, and search responses are valid for 24 hours by default. Images are

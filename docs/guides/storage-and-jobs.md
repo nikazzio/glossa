@@ -70,9 +70,10 @@ più piccolo dell’obiettivo. Se il servizio rifiuta la dimensione richiesta,
 il download può usare la dimensione piena e conservarla senza riduzione locale.
 Le miniature vengono generate dalle pagine scaricate.
 
-Chiedere una risoluzione diversa crea una versione separata. Il comando per
-salvare la pagina dal visore usa invece l’immagine già caricata. La risoluzione
-scelta non modifica retroattivamente i file presenti.
+Chiedere una risoluzione diversa **sostituisce** quella scaricata: di un'opera
+Glossa tiene una sola copia a immagini alla volta (vedi «Una copia sola per
+opera» più avanti). Il comando per salvare la pagina dal visore usa invece
+l'immagine già caricata, senza richiederne una nuova.
 
 ## Profili di rete
 
@@ -104,10 +105,12 @@ il deposito prima di procedere.
 
 ## Riduzione e cache
 
-La riduzione genera una nuova versione con dimensioni e qualità scelte,
-conservando l’originale. Per recuperare spazio occorre eliminare una versione
-dopo aver verificato il risultato. Se alcune pagine non sono elaborabili,
-il lavoro segnala l’errore e conserva quelle prodotte correttamente.
+La ricompressione riscrive le pagine della copia **sul posto**, a una qualità
+più bassa e alle stesse dimensioni: stessi pixel, meno byte, nessuna seconda
+copia del libro. Non è reversibile — per riavere la qualità di prima occorre
+riscaricare dalla biblioteca (dettagli più avanti). Se alcune pagine non sono
+elaborabili, il lavoro segnala l'errore e conserva quelle prodotte
+correttamente.
 
 La cache di rete riutilizza risposte e immagini; il limite predefinito è
 512 MB e la validità predefinita delle ricerche è 24 ore. Le immagini sono
