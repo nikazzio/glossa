@@ -170,7 +170,11 @@ impl Progress {
             }
         }
         serde_json::json!({
-            "units": { "done": self.present, "total": self.total, "label": "items" },
+            // Le pagine escluse di proposito contano come fatte, non come
+            // buco: un libro con tutte le pagine escluse arriva al 100% e deve
+            // dirlo — "0 su 10 fatte" per un lavoro riuscito confonderebbe un
+            // risultato voluto con uno a metà.
+            "units": { "done": self.present + self.excluded, "total": self.total, "label": "items" },
             "unavailable": self.unavailable,
             "excluded": self.excluded,
             "bytes": { "downloaded": self.bytes, "estimated": estimated },

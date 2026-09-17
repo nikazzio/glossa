@@ -12,6 +12,7 @@ const {
   addSourceToLibrary,
   getLibrarySourceDetail,
   registerDeclaredDocument,
+  resyncSourceFromManifest,
   setSourceArchived,
   setWorkspaceSourceLink,
 } = await import('./libraryService');
@@ -263,6 +264,39 @@ describe('libraryService', () => {
         ['ws-1', 's1'],
       );
     });
+  });
+});
+
+describe('riallineamento selettivo delle correzioni', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMocks.select.mockResolvedValue([]);
+    dbMocks.execute.mockResolvedValue(undefined);
+  });
+
+  it("cancella la correzione solo dei campi che il manifesto dichiara adesso, non tutti", async () => {
+    // Il manifesto dichiara un autore (`creator`) ma non una data: la
+    // correzione manuale sull'autore va sostituita dal dato fresco, quella
+    // sulla data — che la biblioteca qui non dà — deve restare, insieme a un
+    // campo che dalla biblioteca non arriva mai (`notes`).
+    await resyncSourceFromManifest('s1', {
+      ...baseInput,
+      title: 'Book of Hours',
+      creator: 'Anonimo',
+      date: null,
+    });
+
+    const deleteCall = dbMocks.execute.mock.calls.find((call: unknown[]) =>
+      (call[0] as string).includes('DELETE FROM source_field_overrides'),
+    );
+    expect(deleteCall).toBeDefined();
+    const [, params] = deleteCall as [string, unknown[]];
+    // sourceId + campi: qui deve esserci 'creator' e 'title', non 'date' né
+    // 'notes'.
+    expect(params).toContain('creator');
+    expect(params).toContain('title');
+    expect(params).not.toContain('date');
+    expect(params).not.toContain('notes');
   });
 });
 

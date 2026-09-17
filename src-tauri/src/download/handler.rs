@@ -124,7 +124,11 @@ fn finished(
         progress.unavailable,
         progress.bytes
     );
-    if progress.present == 0 {
+    // Un libro con tutte le pagine escluse di proposito non ha niente da
+    // scaricare: `present` resta a zero, ma non è un guasto, è il risultato
+    // voluto. Senza questo confronto il lavoro falliva e ripartiva su un
+    // libro che l'utente aveva deciso di non volere.
+    if progress.present == 0 && progress.excluded < progress.total {
         // Cartella vuota per un guasto o cartella vuota per un rifiuto sono due
         // esiti diversi: il primo si ritenta, il secondo no. Dichiararli allo
         // stesso modo faceva finire in errore definitivo una rete caduta.
@@ -414,7 +418,7 @@ impl SourceDownloadJob {
 
         // Stato di partenza letto dal disco, non da un punto salvato.
         let known = sidecar::read(size_dir);
-        let excluded = excluded_pages(ctx, &config.version_id).await;
+        let excluded = excluded_pages(ctx, &config.version_id).await?;
         let start = inventory::read_size_folder(cap.folder(), size_dir, false);
         let rule = SharedRule::new(rule.clone());
 

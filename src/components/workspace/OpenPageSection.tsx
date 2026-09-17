@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText, HardDriveDownload, Loader2, Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import { errorMessage, logger } from '../../utils/logger';
 import type { LibrarySourceVersion } from '../../types';
 
 /** Quale comando sta girando: uno per volta, e si vede quale. */
-type PageCommand = 'keep' | 'max' | 'book' | 'remove';
+type PageCommand = 'keep' | 'max' | 'book';
 
 /** La pagina che il visore sta mostrando di questa copia. */
 export interface ShownPage {
@@ -56,21 +56,32 @@ export function OpenPageSection({
   const [copies, setCopies] = useState<PageCopy[]>([]);
   const [reading, setReading] = useState(false);
   const [running, setRunning] = useState<PageCommand | null>(null);
+  /** Quale misura sta eliminando: comando per riga, non per l'intera pagina. */
+  const [removingSizeTag, setRemovingSizeTag] = useState<string | null>(null);
   const pageIndex = shownPage?.index ?? null;
 
+  // Una richiesta lenta per la pagina di prima non deve scrivere sopra quella
+  // vera della pagina corrente: si cambia pagina rapidamente prima che la
+  // prima richiesta torni, e le due possono rispondere fuori ordine.
+  const requestId = useRef(0);
+
   const load = useCallback(async () => {
+    const id = ++requestId.current;
     if (pageIndex === null) {
       setCopies([]);
       return;
     }
     setReading(true);
     try {
-      setCopies(await pageLocalCopies(providerKey, version.id, pageIndex));
+      const result = await pageLocalCopies(providerKey, version.id, pageIndex);
+      if (id !== requestId.current) return;
+      setCopies(result);
     } catch (error) {
+      if (id !== requestId.current) return;
       logger.warn('library.page.copiesFailed', { reason: errorMessage(error) });
       setCopies([]);
     } finally {
-      setReading(false);
+      if (id === requestId.current) setReading(false);
     }
   }, [providerKey, version.id, pageIndex]);
 
@@ -95,6 +106,28 @@ export function OpenPageSection({
     }
   };
 
+  /** Elimina **una sola misura** della pagina, non tutte insieme: `forgetPage`
+   *  senza misura le cancella tutte, ed è esattamente quello che una riga
+   *  singola non deve fare. */
+  const removeCopy = async (sizeTag: string) => {
+    if (!shownPage) return;
+    setRemovingSizeTag(sizeTag);
+    try {
+      await forgetPage(providerKey, version.id, shownPage.index, sizeTag);
+      // Esclusa solo quando non ne resta più nessuna: un libro con due misure
+      // sulla stessa pagina non deve smettere di riscaricarla finché non se ne
+      // va anche l'ultima.
+      if (copies.length <= 1) await excludePage(version.id, shownPage.index);
+      await load();
+      onChanged();
+    } catch (error) {
+      logger.error('library.page.actionFailed', { reason: errorMessage(error) });
+      toast.error(t('areas.library.pageActionFailed'));
+    } finally {
+      setRemovingSizeTag(null);
+    }
+  };
+
   /**
    * Riprende la pagina alla misura chiesta e la **sostituisce** nella copia.
    *
@@ -105,9 +138,6 @@ export function OpenPageSection({
    */
   const keepAt = async (requested: string) => {
     if (!shownPage) return;
-    // Chiedere una pagina esclusa la riammette: un comando che non fa quello
-    // che dice è peggio di un comando assente.
-    await includePage(version.id, shownPage.index);
     await keepViewerPage({
       kind: 'page',
       versionId: version.id,
@@ -116,8 +146,15 @@ export function OpenPageSection({
       remoteUrl: pageSourceUrl(shownPage.imageService, requested, shownPage.presentation2),
       providerKey,
     });
+    // Riammessa solo a scaricamento riuscito: se la biblioteca non risponde, la
+    // pagina non torna davvero e non deve nemmeno sembrare rientrata — uno
+    // scaricamento del libro intero, nel frattempo, la salterebbe ancora.
+    await includePage(version.id, shownPage.index);
   };
 
+  // "C'è una copia" per abilitare i comandi in alto: quale misura, quando ce
+  // n'è più d'una — libri di prima del modello a copia unica — lo dice
+  // l'elenco sotto, dove ognuna ha il suo comando di eliminazione.
   const page = copies[0] ?? null;
   // Dove finisce la pagina: nella cartella delle pagine già scaricate, o — se
   // il libro non è ancora sul disco — in quella della risoluzione scelta.
@@ -179,48 +216,51 @@ export function OpenPageSection({
               <Minimize2 size={13} />
             )}
           </IconButton>
-          <IconButton
-            size="sm"
-            tone="danger"
-            disabled={idle || page === null}
-            title={t('areas.library.pageRemove')}
-            onClick={() =>
-              void act('remove', async () => {
-                await forgetPage(providerKey, version.id, shownPage!.index);
-                await excludePage(version.id, shownPage!.index);
-              })
-            }
-          >
-            {running === 'remove' ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <Trash2 size={13} />
-            )}
-          </IconButton>
         </span>
       </div>
 
       {reading ? (
         <Spinner size={12} className="flex items-center gap-2 text-xs text-editorial-muted" />
       ) : (
-        page && (
-          // Una pagina, un file: quello che conta è quanto misura davvero e
-          // quanto pesa — il nome della cartella dice la misura del libro, che
-          // dopo una ripresa non è più la sua.
-          <dl className="space-y-1 pl-0.5">
-            <StatRow
-              label={t('areas.library.pageSizeField')}
-              value={
-                page.pixels
-                  ? t('areas.library.pagePixels', {
-                      width: page.pixels[0],
-                      height: page.pixels[1],
-                    })
-                  : resolutionLabel(page.sizeTag, t)
-              }
-            />
-            <StatRow label={t('areas.library.localVersionSpace')} value={humanSize(page.bytes)} />
-          </dl>
+        copies.length > 0 && (
+          // Una copia normale ha una misura sola; un libro di prima del
+          // modello a copia unica può averne ancora più d'una sul disco. Ogni
+          // riga ha il suo comando di eliminazione, mirato a quella misura: un
+          // solo comando che le cancellasse tutte insieme confonderebbe le due
+          // situazioni.
+          <div className="space-y-2">
+            {copies.map((copy) => (
+              <div key={`${copy.sizeTag}-${copy.derived ? 'derived' : 'native'}`} className="flex items-center justify-between gap-2">
+                <dl className="min-w-0 flex-1 space-y-1 pl-0.5">
+                  <StatRow
+                    label={t('areas.library.pageSizeField')}
+                    value={
+                      copy.pixels
+                        ? t('areas.library.pagePixels', {
+                            width: copy.pixels[0],
+                            height: copy.pixels[1],
+                          })
+                        : resolutionLabel(copy.sizeTag, t)
+                    }
+                  />
+                  <StatRow label={t('areas.library.localVersionSpace')} value={humanSize(copy.bytes)} />
+                </dl>
+                <IconButton
+                  size="sm"
+                  tone="danger"
+                  disabled={running !== null || removingSizeTag !== null}
+                  title={t('areas.library.pageRemove')}
+                  onClick={() => void removeCopy(copy.sizeTag)}
+                >
+                  {removingSizeTag === copy.sizeTag ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                </IconButton>
+              </div>
+            ))}
+          </div>
         )
       )}
     </section>

@@ -68,7 +68,7 @@ pub(crate) async fn size_policy_for(ctx: &JobContext, config: &DownloadConfig) -
 pub(crate) async fn excluded_pages(
     ctx: &JobContext,
     version_id: &str,
-) -> std::collections::HashSet<u32> {
+) -> Result<std::collections::HashSet<u32>, JobError> {
     let version = version_id.to_string();
     ctx.with_database(move |conn| {
         let mut statement = conn
@@ -84,9 +84,12 @@ pub(crate) async fn excluded_pages(
         Ok(excluded)
     })
     .await
-    .unwrap_or_else(|error| {
+    .map_err(|error| {
+        // Un database illeggibile qui non vale «nessuna esclusione»: quel
+        // ripiego riscaricherebbe pagine che l'utente ha tolto di proposito.
+        // Meglio fermare il lavoro, che riparte da capo con la lettura giusta.
         log::warn!("job excluded pages not read id={} error={error}", ctx.id);
-        std::collections::HashSet::new()
+        JobError::new(ErrorKind::Internal, error)
     })
 }
 

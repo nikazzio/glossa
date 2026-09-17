@@ -249,6 +249,25 @@ function CopyDetails({
     return key;
   };
 
+  // Come sopra, ma sincrona: serve a un componente figlio che chiede la chiave
+  // come prop e non può aspettare una promessa. Le versioni vecchie, senza
+  // chiave salvata nei metadati, hanno comunque bisogno della lettura dal
+  // deposito — senza, i comandi sulla pagina leggevano e scrivevano sotto
+  // «generic» invece della cartella vera.
+  const [resolvedProviderKey, setResolvedProviderKey] = useState<string | null>(
+    entry?.providerKey ?? version.providerKey ?? null,
+  );
+  useEffect(() => {
+    if (resolvedProviderKey) return;
+    let cancelled = false;
+    void versionProviderKey(version.id).then((key) => {
+      if (!cancelled) setResolvedProviderKey(key ?? 'generic');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [version.id, resolvedProviderKey]);
+
   const inventory: CopyInventory = fetched ?? emptyInventory();
   // La risoluzione scelta per questa copia vale anche prima di scaricare il
   // libro: è lì che finisce una pagina presa da sola leggendo online.
@@ -366,7 +385,11 @@ function CopyDetails({
         toast.info(t('areas.library.verifyNoExpected', { count: principalSize.pages }));
         return;
       }
-      const missing = Math.max(0, expectedPages - principalSize.pages - principalSize.missing);
+      // Stessa formula di "completo" usata sulla riga della misura: le pagine
+      // escluse di proposito non sono un buco, e senza contarle qui il
+      // comando proponeva di riscaricare quello che avevi già deciso di non
+      // avere.
+      const missing = Math.max(0, expectedPages - principalSize.pages - principalSize.missing - excluded);
       if (missing === 0) {
         toast.success(t('areas.library.verifyIntact', { count: principalSize.pages }));
         return;
@@ -418,7 +441,7 @@ function CopyDetails({
       {version.versionKind === 'iiif_manifest' && (
         <OpenPageSection
           version={version}
-          providerKey={version.providerKey ?? 'generic'}
+          providerKey={resolvedProviderKey ?? 'generic'}
           shownPage={isOpenInViewer ? (shownPage ?? null) : null}
           bookSize={principal}
           sizeCap={sizeCap}
@@ -442,6 +465,7 @@ function CopyDetails({
             version={version}
             existingSizes={sizes}
             expectedPages={expectedPages}
+            excluded={excluded}
             disabled={busy || runningDownload || !version.sourceUrl}
             onDownloaded={reloadAll}
           />
@@ -641,12 +665,16 @@ function DownloadRow({
   version,
   existingSizes,
   expectedPages,
+  excluded,
   disabled,
   onDownloaded,
 }: {
   version: LibrarySourceVersion;
   existingSizes: SizeFolder[];
   expectedPages: number;
+  /** Pagine tolte di proposito: come per la riga della misura, non sono un
+   *  buco da colmare. */
+  excluded: number;
   disabled: boolean;
   /** Lo scaricamento è partito: chi mostra le versioni locali deve rileggere. */
   onDownloaded: () => void;
@@ -673,7 +701,9 @@ function DownloadRow({
 
   const targetSize = existingSizes.find((size) => size.sizeTag === cap);
   const isComplete =
-    Boolean(targetSize) && expectedPages > 0 && targetSize!.missing === 0 && targetSize!.pages >= expectedPages;
+    Boolean(targetSize) &&
+    expectedPages > 0 &&
+    targetSize!.pages + targetSize!.missing + excluded >= expectedPages;
 
   const download = async () => {
     if (!cap || !version.sourceUrl) return;

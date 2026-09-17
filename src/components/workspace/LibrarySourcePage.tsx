@@ -174,6 +174,15 @@ export function LibrarySourcePage({
     countRefreshedFor.current = null;
   }, [detail.source.id, initialManifestVersion?.id]);
 
+  // Cambiata la copia mostrata (un'altra digitalizzazione, oppure PDF↔immagini):
+  // la posizione della copia precedente non deve restare in mano ai comandi
+  // sulla pagina finché il nuovo manifesto non ha pubblicato la sua. Senza
+  // questo, un comando premuto in quella finestra breve agirebbe sulla pagina
+  // sbagliata della copia appena scelta.
+  useEffect(() => {
+    setShownPage(null);
+  }, [selectedVersionId]);
+
   const persistLayout = () => {
     if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
     const px = Math.round(inspectorPanel.getSize().inPixels);
