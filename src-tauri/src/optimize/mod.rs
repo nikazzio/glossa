@@ -44,12 +44,8 @@ pub const DEFAULT_QUALITY: u8 = 82;
 pub struct OptimizeConfig {
     pub provider_key: String,
     pub version_id: String,
-    /// La cartella di misura da cui si legge. Non viene mai scritta.
+    /// La cartella di misura della copia: si legge e si riscrive lì dentro.
     pub source_size_tag: String,
-    /// La cartella di misura d'arrivo, dentro `derived/`: coincide col lato
-    /// lungo chiesto, sempre diversa dalla fonte.
-    pub target_size_tag: String,
-    pub long_edge: u32,
     pub quality: u8,
 }
 
@@ -67,8 +63,8 @@ const PACE_WINDOW: usize = 10;
 enum PageResult {
     /// Ricompressa: byte prima e dopo.
     Shrunk { before: u64, after: u64 },
-    /// Copiata così com'è nella cartella d'arrivo: già dentro il lato lungo
-    /// scelto, o la ricompressione non avrebbe liberato niente.
+    /// Lasciata com'era: la ricompressione non avrebbe liberato niente, e una
+    /// perdita senza guadagno non si fa.
     Untouched,
 }
 
@@ -91,7 +87,6 @@ impl JobHandler for ImageOptimizationJob {
         let config: OptimizeConfig = serde_json::from_str(&ctx.config).map_err(|error| {
             JobError::new(ErrorKind::Internal, format!("configurazione: {error}"))
         })?;
-        let long_edge = config.long_edge.clamp(MIN_LONG_EDGE, MAX_LONG_EDGE);
         let quality = config.quality.clamp(MIN_QUALITY, MAX_QUALITY);
 
         let root = ctx
@@ -112,16 +107,11 @@ impl JobHandler for ImageOptimizationJob {
                         .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
                 ),
         );
-        let target_dir = root.join(
-            layout::derived_size_dir(
-                &config.provider_key,
-                &config.version_id,
-                &config.target_size_tag,
-            )
-            .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
-        );
-        // Scaricamento e ottimizzazione non devono condividere file temporanei.
-        let area = format!("{}-optimize-{}", config.version_id, config.target_size_tag);
+        // Di una copia si tiene un file per pagina: la ricompressione riscrive
+        // quelle stesse pagine, senza creare una seconda copia del libro.
+        let target_dir = source_dir.clone();
+        // Scaricamento e ricompressione non devono condividere file temporanei.
+        let area = format!("{}-optimize-{}", config.version_id, config.source_size_tag);
         let staging = root.join(layout::STAGING_DIR).join(
             layout::safe_component(&area)
                 .map_err(|error| JobError::new(ErrorKind::Internal, error))?,
@@ -141,19 +131,18 @@ impl JobHandler for ImageOptimizationJob {
         let mut recent: VecDeque<Instant> = VecDeque::new();
         ctx.report_phase(phase::OPTIMIZING).await;
         log::info!(
-            "job optimize starting id={} pages={total} long_edge={long_edge} quality={quality}",
+            "job optimize starting id={} pages={total} quality={quality}",
             ctx.id
         );
 
-        // L'etichetta di ogni pagina viene dalla fonte: la cartella d'arrivo
-        // parte vuota e non ne sa ancora niente.
+        // Le righe già scritte per questa copia: portano l'etichetta della
+        // pagina e dicono a che qualità è stata riscritta l'ultima volta.
         let source_known = Arc::new(sidecar::read(&source_dir));
         let work = Arc::new(Workspace {
             target_dir: target_dir.clone(),
             staging: staging.clone(),
-            long_edge,
             quality,
-            source_known,
+            source_known: Arc::clone(&source_known),
         });
 
         // Quante pagine insieme: come i lavori CPU in coda, tutti i nuclei
@@ -175,9 +164,13 @@ impl JobHandler for ImageOptimizationJob {
                 stopped = true;
                 break;
             }
-            // Già promossa in un giro precedente: il file lo dice da solo,
-            // non serve rileggere la riga di lato per saperlo.
-            if target_dir.join(layout::page_file_name(index)).is_file() {
+            // Già riscritta a questa qualità in un giro precedente. Il file da
+            // solo non lo direbbe — si legge e si riscrive nella stessa
+            // cartella — quindi lo dice la riga di lato, che porta la qualità.
+            if matches!(
+                source_known.get(&index).and_then(|row| row.note.as_ref()),
+                Some(Note::Recompressed { quality: done_at }) if *done_at == quality
+            ) {
                 done += 1;
                 continue;
             }
@@ -269,7 +262,6 @@ fn pages_in(size_dir: &Path) -> Vec<(u32, PathBuf)> {
 struct Workspace {
     target_dir: PathBuf,
     staging: PathBuf,
-    long_edge: u32,
     quality: u8,
     /// Le righe di `pages.jsonl` della cartella di **partenza**: servono solo
     /// a portare l'etichetta della pagina nella cartella d'arrivo.
@@ -284,24 +276,16 @@ fn optimise_one(work: &Workspace, index: u32, path: &Path) -> Result<PageResult,
     let (width, height) =
         dimensions(&bytes).ok_or_else(|| "formato immagine non riconoscibile".to_string())?;
 
-    // Già dentro il lato lungo scelto: si copia il file com'è, senza
-    // perdere niente per un ridimensionamento che non farebbe nulla.
-    let (final_bytes, note): (Vec<u8>, Option<Note>) = if width.max(height) <= work.long_edge {
-        (bytes, None)
-    } else {
-        match images::resize_jpeg(&bytes, work.long_edge, work.quality) {
-            Ok(reduced) if (reduced.len() as u64) < before => (
-                reduced,
-                Some(Note::Downscaled {
-                    from: (width, height),
-                }),
-            ),
-            // Una ricompressione che non libera spazio non vale la perdita:
-            // si tiene l'originale, copiato così com'è.
-            Ok(_) => (bytes, None),
-            Err(error) => return Err(error.to_string()),
-        }
+    // I pixel non si toccano: cambia solo quanto pesa il file. Una
+    // ricompressione che non libera spazio non vale la perdita, e allora la
+    // pagina resta quella che era.
+    let final_bytes: Vec<u8> = match images::recompress_jpeg(&bytes, work.quality) {
+        Ok(lighter) if (lighter.len() as u64) < before => lighter,
+        Ok(_) => bytes,
+        Err(error) => return Err(error.to_string()),
     };
+    let lighter = (final_bytes.len() as u64) < before;
+    let _ = (width, height);
 
     let checksum = stage_and_promote(
         &work.staging.join(layout::page_file_name(index)),
@@ -321,7 +305,11 @@ fn optimise_one(work: &Workspace, index: u32, path: &Path) -> Result<PageResult,
         bytes: Some(final_bytes.len() as u64),
         checksum: Some(checksum),
         at: now_secs(),
-        note: note.clone(),
+        // La qualità con cui è stata riscritta: è ciò che permette alla ripresa
+        // di non ricomprimere due volte la stessa pagina.
+        note: Some(Note::Recompressed {
+            quality: work.quality,
+        }),
     };
     if let Err(error) = sidecar::append(&work.target_dir, &record) {
         // Dopo la promozione del file, una riga senza impronta è più sicura
@@ -336,12 +324,13 @@ fn optimise_one(work: &Workspace, index: u32, path: &Path) -> Result<PageResult,
         }
     }
 
-    match note {
-        Some(_) => Ok(PageResult::Shrunk {
+    if lighter {
+        Ok(PageResult::Shrunk {
             before,
             after: final_bytes.len() as u64,
-        }),
-        None => Ok(PageResult::Untouched),
+        })
+    } else {
+        Ok(PageResult::Untouched)
     }
 }
 
@@ -429,51 +418,49 @@ mod tests {
         .unwrap()
     }
 
-    fn workspace(target_dir: &Path, staging: &Path, long_edge: u32, quality: u8) -> Workspace {
+    fn workspace(target_dir: &Path, staging: &Path, quality: u8) -> Workspace {
         Workspace {
             target_dir: target_dir.to_path_buf(),
             staging: staging.to_path_buf(),
-            long_edge,
             quality,
             source_known: Arc::new(BTreeMap::new()),
         }
     }
 
     #[test]
-    fn a_page_larger_than_the_chosen_size_lands_shrunk_in_the_derived_folder() {
-        let root = temp_dir("shrink");
-        let source_dir = root.join("providers/gallica/v1/pages/max");
-        let target_dir = root.join("derived/gallica/v1/800");
+    fn a_page_is_rewritten_lighter_in_place_keeping_its_pixels() {
+        let root = temp_dir("recompress");
+        let pages_dir = root.join("providers/gallica/v1/pages/max");
         let staging = root.join("staging/v1");
-        std::fs::create_dir_all(&source_dir).unwrap();
-        std::fs::create_dir_all(&target_dir).unwrap();
+        std::fs::create_dir_all(&pages_dir).unwrap();
         std::fs::create_dir_all(&staging).unwrap();
-        let source_page = source_dir.join("0001.jpg");
-        std::fs::write(&source_page, jpeg(2000, 3000)).unwrap();
-        let before = std::fs::metadata(&source_page).unwrap().len();
+        let page = pages_dir.join("0001.jpg");
+        std::fs::write(&page, jpeg(2000, 3000)).unwrap();
+        let before = std::fs::metadata(&page).unwrap().len();
 
-        let work = workspace(&target_dir, &staging, 800, 82);
-        let result = optimise_one(&work, 1, &source_page).unwrap();
+        // Fonte e arrivo sono la stessa cartella: di una copia si tiene un file
+        // per pagina, e ricomprimere non crea un secondo libro.
+        let work = workspace(&pages_dir, &staging, 60);
+        let result = optimise_one(&work, 1, &page).unwrap();
 
         assert!(matches!(result, PageResult::Shrunk { .. }));
-        // La fonte non si tocca: è la ragione stessa della copia a parte.
-        assert_eq!(std::fs::metadata(&source_page).unwrap().len(), before);
-        let derived_page = target_dir.join("0001.jpg");
-        assert!(derived_page.is_file());
-        assert!(std::fs::metadata(&derived_page).unwrap().len() < before);
-
-        let records = sidecar::read(&target_dir);
-        assert!(records[&1].checksum.is_some());
+        let after = std::fs::read(&page).unwrap();
+        assert!((after.len() as u64) < before, "il file deve pesare meno");
         assert_eq!(
-            records[&1].note,
-            Some(Note::Downscaled { from: (2000, 3000) })
+            dimensions(&after),
+            Some((2000, 3000)),
+            "i pixel non si toccano: cambia solo quanto pesa"
         );
+
+        let records = sidecar::read(&pages_dir);
+        assert!(records[&1].checksum.is_some());
+        assert_eq!(records[&1].got, Some((2000, 3000)));
 
         let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
-    fn a_page_already_small_enough_is_copied_verbatim() {
+    fn a_page_that_would_not_get_lighter_keeps_its_bytes() {
         let root = temp_dir("untouched");
         let source_dir = root.join("providers/gallica/v1/pages/max");
         let target_dir = root.join("derived/gallica/v1/800");
@@ -482,19 +469,29 @@ mod tests {
         std::fs::create_dir_all(&target_dir).unwrap();
         std::fs::create_dir_all(&staging).unwrap();
         let source_page = source_dir.join("0001.jpg");
-        std::fs::write(&source_page, jpeg(400, 600)).unwrap();
+        // Già a qualità bassa: riscriverla non libererebbe niente.
+        std::fs::write(
+            &source_page,
+            images::recompress_jpeg(&jpeg(400, 600), 40).unwrap(),
+        )
+        .unwrap();
         let original = std::fs::read(&source_page).unwrap();
 
-        let work = workspace(&target_dir, &staging, 800, 82);
+        let work = workspace(&target_dir, &staging, 95);
         let result = optimise_one(&work, 1, &source_page).unwrap();
 
         assert!(matches!(result, PageResult::Untouched));
         assert_eq!(
             std::fs::read(target_dir.join("0001.jpg")).unwrap(),
             original,
-            "byte identici alla fonte, nessuna perdita per niente"
+            "byte identici: una perdita senza guadagno non si fa"
         );
-        assert_eq!(sidecar::read(&target_dir)[&1].note, None);
+        // La riga dice comunque a che qualità è stata guardata: senza, la
+        // ripresa la riproverebbe a ogni giro.
+        assert_eq!(
+            sidecar::read(&target_dir)[&1].note,
+            Some(Note::Recompressed { quality: 95 })
+        );
 
         let _ = std::fs::remove_dir_all(&root);
     }
@@ -524,7 +521,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut work = workspace(&target_dir, &staging, 800, 82);
+        let mut work = workspace(&target_dir, &staging, 60);
         work.source_known = Arc::new(sidecar::read(&source_dir));
         optimise_one(&work, 1, &source_page).unwrap();
 

@@ -15,13 +15,9 @@ import {
   THUMBNAIL_EDGES,
 } from '../../services/downloadSettingsService';
 import {
-  DEFAULT_OPTIMIZE_LONG_EDGE,
   DEFAULT_OPTIMIZE_QUALITY,
-  getOptimizeLongEdge,
   getOptimizeQuality,
-  OPTIMIZE_LONG_EDGES,
   OPTIMIZE_QUALITIES,
-  setOptimizeLongEdge,
   setOptimizeQuality,
 } from '../../services/optimizeService';
 
@@ -37,7 +33,6 @@ export function LibraryImagesSection() {
   const { t } = useTranslation();
   const [sizeCap, setSizeCap] = useState(DEFAULT_SIZE_CAP);
   const [thumbnailEdge, setEdge] = useState(DEFAULT_THUMBNAIL_EDGE);
-  const [optimizeEdge, setOptimizeEdge] = useState(DEFAULT_OPTIMIZE_LONG_EDGE);
   const [optimizeQuality, setOptimizeQualityState] = useState(DEFAULT_OPTIMIZE_QUALITY);
 
   useEffect(() => {
@@ -45,7 +40,6 @@ export function LibraryImagesSection() {
       try {
         setSizeCap(await getGlobalSizeCap());
         setEdge(await getThumbnailEdge());
-        setOptimizeEdge(await getOptimizeLongEdge());
         setOptimizeQualityState(await getOptimizeQuality());
       } catch (error: unknown) {
         toast.error(t('settings.download.loadFailed'), {
@@ -120,24 +114,6 @@ export function LibraryImagesSection() {
       <section className="space-y-4">
         <SectionLabel icon={Minimize2} label={t('settings.download.optimize')} />
         <div className={ROWS}>
-          <SettingRow
-            label={t('settings.download.optimizeLongEdge')}
-            hint={t('settings.download.optimizeLongEdgeHint')}
-          >
-            <Select
-              value={String(optimizeEdge)}
-              onChange={(value) =>
-                void persist(Number(value), optimizeEdge, setOptimizeEdge, setOptimizeLongEdge)
-              }
-              size="md"
-              ariaLabel={t('settings.download.optimizeLongEdge')}
-              options={OPTIMIZE_LONG_EDGES.map((value) => ({
-                value: String(value),
-                label: t('settings.download.pixels', { value }),
-              }))}
-            />
-          </SettingRow>
-
           <SettingRow
             label={t('settings.download.optimizeQuality')}
             hint={t('settings.download.optimizeQualityHint')}

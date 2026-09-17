@@ -116,11 +116,32 @@ export async function freeVersionSize(
 }
 
 /**
+ * Butta il documento unico di una digitalizzazione e solo quello: le pagine a
+ * immagini della stessa opera restano dove sono.
+ */
+export async function freeVersionDocument(
+  providerKey: string,
+  versionId: string,
+): Promise<FreedSpace> {
+  return invoke<FreedSpace>('free_version_document', { providerKey, versionId });
+}
+
+/**
  * Cancella tutto quello che una digitalizzazione ha nel deposito — manifesto,
  * miniature, pagine — quando l'opera esce dalla Biblioteca.
  */
 export async function deleteVersionFiles(providerKey: string, versionId: string): Promise<FreedSpace> {
   return invoke<FreedSpace>('delete_version_files', { providerKey, versionId });
+}
+
+/**
+ * Come sopra, ma per **tutte** le copie di un'opera: le immagini e il
+ * documento. È quello che serve quando l'opera esce dalla Biblioteca, perché
+ * cancellare la sola copia con cui era stata trovata lasciava il documento sul
+ * disco.
+ */
+export async function deleteSourceFiles(providerKey: string, sourceId: string): Promise<FreedSpace> {
+  return invoke<FreedSpace>('delete_source_files', { providerKey, sourceId });
 }
 
 /** L'esito di un controllo del deposito, come lo mostrano le impostazioni. */
@@ -214,4 +235,39 @@ export function summarizeAvailability(
     presentPages,
     expectedPages,
   };
+}
+
+/** Una misura di una singola pagina presente sul computer. */
+export interface PageCopy {
+  sizeTag: string;
+  bytes: number;
+  derived: boolean;
+  /** I pixel davvero presenti, letti dal registro del deposito: il nome della
+   *  cartella dice con che misura è stato scaricato il libro, non quanto
+   *  misura questa pagina dopo che è stata ripresa. */
+  pixels: [number, number] | null;
+}
+
+/** Che cosa si ha di questa pagina, misura per misura, letto dal deposito. */
+export async function pageLocalCopies(
+  providerKey: string,
+  versionId: string,
+  pageIndex: number,
+): Promise<PageCopy[]> {
+  return invoke<PageCopy[]>('page_local_copies', { providerKey, versionId, pageIndex });
+}
+
+/**
+ * Toglie dal computer una pagina: una misura sola, oppure tutte.
+ *
+ * Non impedisce alla pagina di tornare con il prossimo scaricamento: quello lo
+ * fa l'esclusione, che è una decisione diversa e si scrive nel database.
+ */
+export async function forgetPage(
+  providerKey: string,
+  versionId: string,
+  pageIndex: number,
+  sizeTag?: string,
+): Promise<FreedSpace> {
+  return invoke<FreedSpace>('forget_page', { providerKey, versionId, pageIndex, sizeTag });
 }

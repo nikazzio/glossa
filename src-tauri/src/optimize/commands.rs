@@ -58,44 +58,31 @@ fn refuse_while_downloading(app: &tauri::AppHandle, version_id: &str) -> Result<
 ///
 /// Un lavoro per cartella: l'identificativo lo dice, quindi chiederla due volte
 /// non ne apre due.
-/// Mette in coda la creazione di **una nuova copia**, ricavata da una misura
-/// già scaricata, mai al suo posto: `size_tag` è la fonte, il lato lungo
-/// chiesto diventa il nome della cartella d'arrivo. Se quella cartella esiste
-/// già — scaricata o ricavata in un giro precedente — il comando si rifiuta:
-/// tocca a chi chiede scegliere un'altra misura o liberare prima quella.
+/// Mette in coda la **ricompressione sul posto** delle pagine di una copia.
+///
+/// I pixel non si toccano: si riscrive ogni pagina a una qualità più bassa per
+/// liberare spazio. L'operazione non è reversibile — l'originale non resta da
+/// nessuna parte — e per riavere la qualità di prima si riscarica dalla
+/// biblioteca. Di una copia si tiene un file per pagina, e questo comando
+/// rispetta quella regola invece di creare un secondo libro.
 #[tauri::command]
 pub async fn enqueue_optimization(
     app: tauri::AppHandle,
     version_id: String,
     size_tag: String,
-    long_edge: Option<u32>,
     quality: Option<u8>,
 ) -> Result<JobRecord, String> {
     let root = crate::vault::commands::root_of(&app)?;
     let inventory = inventory::of_version(&root, &version_id)
         .ok_or_else(|| "Questa opera non ha pagine nel deposito.".to_string())?;
     refuse_while_downloading(&app, &version_id)?;
-    let source = inventory
+    inventory
         .sizes
         .iter()
         .find(|size| size.size_tag == size_tag)
         .ok_or_else(|| "Questa misura non è nel deposito.".to_string())?;
-    if source.derived {
-        return Err("Una copia già ricavata in locale non si ricomprime di nuovo.".to_string());
-    }
     let conn = crate::db::open_connection(&crate::storage_config::db_path(&app)?)?;
-    let (default_edge, default_quality) = configured(&conn);
-    let long_edge = long_edge
-        .unwrap_or(default_edge)
-        .clamp(MIN_LONG_EDGE, MAX_LONG_EDGE);
-    let target_tag = long_edge.to_string();
-    if inventory
-        .sizes
-        .iter()
-        .any(|size| size.size_tag == target_tag)
-    {
-        return Err("Questa misura esiste già per quest'opera.".to_string());
-    }
+    let (_, default_quality) = configured(&conn);
     let title = conn
         .query_row(
             "SELECT s.title FROM sources s \
@@ -110,20 +97,16 @@ pub async fn enqueue_optimization(
         "providerKey": inventory.provider_key,
         "versionId": version_id,
         "sourceSizeTag": size_tag,
-        "targetSizeTag": target_tag,
-        "longEdge": long_edge,
         "quality": quality.unwrap_or(default_quality).clamp(MIN_QUALITY, MAX_QUALITY),
     })
     .to_string();
 
     let jobs = app.state::<JobsState>();
-    let id = format!("optimize:{version_id}:{target_tag}");
+    let id = format!("optimize:{version_id}:{size_tag}");
 
-    // Un tentativo precedente per la stessa misura ha lasciato la sua riga in
-    // elenco, anche se è fallito. Riproporlo come lavoro nuovo urtava contro
-    // l'identificativo già in uso e l'errore arrivava a schermo così com'era:
-    // un lavoro già in corso si ritrova, uno finito si rilancia da capo con la
-    // qualità e il lato lungo appena chiesti.
+    // Un tentativo precedente sulla stessa copia ha lasciato la sua riga in
+    // elenco, anche se è fallito: un lavoro in corso si ritrova, uno finito si
+    // rilancia da capo con la qualità appena chiesta.
     {
         let conn = jobs.0.connection()?;
         let existing = crate::jobs::store::get(&conn, &id)?;

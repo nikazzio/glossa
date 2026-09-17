@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryCatalogArea } from './LibraryCatalogArea';
-import { deleteVersionFiles } from '../../services/vaultService';
+import { deleteSourceFiles } from '../../services/vaultService';
 import { toast } from 'sonner';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -51,7 +51,7 @@ vi.mock('../../services/vaultService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/vaultService')>();
   return {
     ...actual,
-    deleteVersionFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
+    deleteSourceFiles: vi.fn().mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 }),
     freeVersionPages: vi.fn().mockResolvedValue({ deletedFiles: 0, freedBytes: 0 }),
   };
 });
@@ -169,7 +169,7 @@ describe('LibraryCatalogArea', () => {
     // un'asserzione anche se in questo caso non è successo niente.
     vi.clearAllMocks();
     vi.mocked(confirm).mockResolvedValue(true);
-    vi.mocked(deleteVersionFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
+    vi.mocked(deleteSourceFiles).mockResolvedValue({ deletedFiles: 3, freedBytes: 8_200_000 });
     vi.mocked(enqueueOptimization).mockReset();
     // Le versioni locali si leggono sempre dal motore: ogni caso dichiara cosa
     // c'è nel deposito, e chi non lo dichiara parte da «niente sul disco».
@@ -345,9 +345,10 @@ describe('LibraryCatalogArea', () => {
     expect(screen.queryByText(/areas\.library\.pageCount/)).not.toBeInTheDocument();
   });
 
-  it('togliendo un opera si eliminano anche le sue immagini', async () => {
-    // Lasciarle dietro produceva cartelle che nessuna schermata sa mostrare, e
-    // che riaggiungendo la stessa opera non tornerebbero comunque utili.
+  it('togliendo un opera si eliminano i file di tutte le sue copie', async () => {
+    // Lasciarli dietro produceva cartelle che nessuna schermata sa mostrare, e
+    // che riaggiungendo la stessa opera non tornerebbero comunque utili. Vale
+    // per tutte le copie: anche il documento, che è una copia a sé.
     const user = userEvent.setup();
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
@@ -356,13 +357,13 @@ describe('LibraryCatalogArea', () => {
     await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() =>
-      expect(vi.mocked(deleteVersionFiles)).toHaveBeenCalledWith('gallica', 'v1'),
+      expect(vi.mocked(deleteSourceFiles)).toHaveBeenCalledWith('gallica', 's1'),
     );
   });
 
   it('non rimuove i file mentre un lavoro li sta modificando', async () => {
     const user = userEvent.setup();
-    vi.mocked(deleteVersionFiles).mockRejectedValue(new Error('version_work_in_progress'));
+    vi.mocked(deleteSourceFiles).mockRejectedValue(new Error('version_work_in_progress'));
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
     render(<LibraryCatalogArea />);
 
@@ -635,6 +636,7 @@ describe('LibraryCatalogArea', () => {
       sizes: [{ sizeTag: '2000', pages: 34, bytes: 48_234_496, missing: 0, derived: false }],
       principal: '2000',
       hasManifest: true,
+      document: null,
     });
 
     const user = userEvent.setup();
@@ -649,7 +651,9 @@ describe('LibraryCatalogArea', () => {
     expect(await screen.findByText('areas.library.viewerLoadError')).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
-    expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
+    // I comandi sulle pagine stanno sulla riga della risoluzione, non
+    // nell'intestazione: qui basta che la scheda delle copie si apra.
+    expect(screen.getByRole('button', { name: 'areas.library.downloadWholeBook' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
     expect(await screen.findByRole('button', { name: 'areas.library.archive' })).toBeInTheDocument();
@@ -709,6 +713,7 @@ describe('LibraryCatalogArea', () => {
       ],
       principal: '1500',
       hasManifest: true,
+      document: null,
     });
     useSourceLibraryStore.setState({
       catalog: [
@@ -749,7 +754,7 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea itemId="s1" />);
     await user.click(screen.getByRole('tab', { name: 'areas.library.copiesTab' }));
 
-    const resolutionsList = screen.getByText('areas.library.localVersionsSection')
+    const resolutionsList = screen.getByText('areas.library.bookSection')
       .closest('section') as HTMLElement;
     // "1500" è numerica: l'etichetta aggiunge l'unità di misura tramite una
     // chiave tradotta (il mock i18n dei test non interpola i placeholder,
@@ -845,10 +850,10 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea itemId="s1" />);
     const creatorRow = screen
-      .getByText('areas.library.creatorField')
+      .getByText('areas.library.fieldLabels.creator')
       .closest('div') as HTMLElement;
     await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'areas.library.creatorField' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'areas.library.fieldLabels.creator' }), {
       target: { value: 'Jean Pucelle' },
     });
     await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
@@ -916,7 +921,7 @@ describe('LibraryCatalogArea', () => {
     expect(screen.getByText('Legatura settecentesca rifatta.')).toBeInTheDocument();
   });
 
-  it('mostra la natura dell\'origine come sola lettura, non più correggibile dalla scheda', async () => {
+  it('la natura dell\'opera si corregge scegliendo fra i valori previsti, non a testo libero', async () => {
     useSourceLibraryStore.setState({
       catalog: [entry()],
       detail: {
@@ -931,9 +936,21 @@ describe('LibraryCatalogArea', () => {
       },
     });
 
+    const user = userEvent.setup();
     render(<LibraryCatalogArea itemId="s1" />);
-    const kindRow = screen.getByText('areas.library.kind').closest('div') as HTMLElement;
-    expect(within(kindRow).queryByRole('button', { name: 'areas.library.fieldEdit' })).toBeNull();
+    const kindRow = screen
+      .getByText('areas.library.fieldLabels.kind')
+      .closest('div') as HTMLElement;
+    await user.click(within(kindRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
+
+    // I filtri del catalogo si appoggiano a questi valori: scriverne uno
+    // qualsiasi li renderebbe inaffidabili.
+    const choice = within(kindRow).getByRole('combobox');
+    expect(Array.from(choice.querySelectorAll('option')).map((option) => option.textContent)).toEqual([
+      'areas.library.kindLabels.manuscript',
+      'areas.library.kindLabels.print',
+      'areas.library.kindLabels.other',
+    ]);
   });
 
   it('se la correzione non si salva, il campo resta aperto e lo dice', async () => {
@@ -956,7 +973,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea itemId="s1" />);
     const creatorRow = screen
-      .getByText('areas.library.creatorField')
+      .getByText('areas.library.fieldLabels.creator')
       .closest('div') as HTMLElement;
     await user.click(within(creatorRow).getByRole('button', { name: 'areas.library.fieldEdit' }));
     await user.click(screen.getByRole('button', { name: 'areas.library.fieldSave' }));
@@ -966,7 +983,7 @@ describe('LibraryCatalogArea', () => {
     );
     // Il campo è ancora lì: chiuderlo direbbe che la correzione è passata.
     expect(
-      screen.getByRole('textbox', { name: 'areas.library.creatorField' }),
+      screen.getByRole('textbox', { name: 'areas.library.fieldLabels.creator' }),
     ).toBeInTheDocument();
   });
 

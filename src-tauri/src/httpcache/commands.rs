@@ -218,9 +218,9 @@ pub async fn keep_viewer_page(
     let folder = root.join(crate::vault::layout::version_dir(provider_key, version_id)?);
     let size_dir = folder.join(crate::vault::layout::PAGES_DIR).join(size);
     let target = size_dir.join(crate::vault::layout::page_file_name(index));
-    if target.is_file() {
-        return Ok(false);
-    }
+    // Di una pagina si tiene un file solo: riprenderla a una misura diversa
+    // **sostituisce** quello che c'è. La riga di lato che si scrive dopo vince
+    // sulle precedenti, quindi pixel e impronta restano quelli veri.
     let staging = root
         .join(crate::vault::layout::STAGING_DIR)
         .join(format!("viewer-{version_id}"));

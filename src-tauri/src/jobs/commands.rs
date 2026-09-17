@@ -208,7 +208,16 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         .clone();
     engine.register(
         crate::download::handler::JOB_TYPE,
-        Arc::new(crate::download::handler::SourceDownloadJob::new(courtesy)),
+        Arc::new(crate::download::handler::SourceDownloadJob::new(
+            Arc::clone(&courtesy),
+        )),
+    );
+
+    // Il documento unico offerto dalla biblioteca: stessa cortesia, un file
+    // solo invece di una sequenza di pagine.
+    engine.register(
+        crate::download::pdf::JOB_TYPE,
+        Arc::new(crate::download::pdf::PdfDownloadJob::new(courtesy)),
     );
 
     // L'ottimizzazione locale: rilegge pagine già scaricate e le ricomprime

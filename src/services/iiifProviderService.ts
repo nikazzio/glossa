@@ -18,18 +18,39 @@ export async function discoverIIIF(
   return invoke<IIIFDiscoveryOutcome>('discover_iiif', { providerKey, input, page, fresh });
 }
 
+/** Una rappresentazione alternativa dell'opera dichiarata dalla biblioteca:
+ *  lo stesso libro servito in un'altra forma, quasi sempre un documento unico. */
+export interface DeclaredRendering {
+  url: string;
+  format: string | null;
+  label: string | null;
+}
+
 /**
- * Se un risultato si apre davvero.
+ * Cosa la biblioteca offre di un'opera, letto dal suo manifesto in un solo
+ * passaggio di rete.
  *
- * `null` vuol dire «non si sa»: il servizio non ha risposto, o ha risposto in
- * un modo che non dice niente sull'opera. Solo `false` significa che la
- * biblioteca dichiara di non avere quel libro.
+ * `openable: null` vuol dire «non si sa»: il servizio non ha risposto, o ha
+ * risposto in un modo che non dice niente sull'opera. Solo `false` significa
+ * che la biblioteca dichiara di non avere quel libro. Allo stesso modo
+ * `document: null` non promette che il documento non esista: promette che il
+ * manifesto non lo dichiara.
  */
-export async function probeManifest(
+export interface ManifestFacts {
+  openable: boolean | null;
+  pages: number | null;
+  /** I pixel dichiarati dalla prima pagina: l'unico indizio sulla qualità
+   *  della scansione che il manifesto dà senza scaricare un'immagine. */
+  samplePixels: [number, number] | null;
+  document: DeclaredRendering | null;
+  renderings: DeclaredRendering[];
+}
+
+export async function inspectManifest(
   providerKey: string,
   manifestUrl: string,
-): Promise<boolean | null> {
-  return invoke<boolean | null>('probe_manifest', { providerKey, manifestUrl });
+): Promise<ManifestFacts> {
+  return invoke<ManifestFacts>('inspect_manifest', { providerKey, manifestUrl });
 }
 
 /**

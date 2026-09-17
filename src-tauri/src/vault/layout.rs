@@ -19,6 +19,18 @@ pub(crate) const PAGES_DIR: &str = "pages";
 pub(crate) const THUMBNAILS_DIR: &str = "thumbnails";
 pub(crate) const MANIFEST_FILE: &str = "manifest.json";
 
+/// Il documento offerto dalla biblioteca come file unico. Sta accanto al
+/// manifesto e alle pagine perché è **un'altra digitalizzazione della stessa
+/// opera**, non una misura di quella a immagini: le due non promettono la
+/// stessa identità di pagina e non si fondono in un unico sfoglio.
+pub(crate) const DOCUMENT_FILE: &str = "document.pdf";
+
+/// Quello che del documento non si legge dal file di sistema: quante pagine ha,
+/// da quale indirizzo è arrivato, l'impronta con cui è stato validato. Contarle
+/// significa riaprire il documento intero, e l'inventario si legge a ogni
+/// apertura della scheda.
+pub(crate) const DOCUMENT_META_FILE: &str = "document.json";
+
 /// Radice delle copie ricavate in locale (l'ottimizzazione, oggi; un domani
 /// anche i ritagli) — mai dentro `providers/`: sono un fatto di Niki, non
 /// della biblioteca, e "libera spazio" sulle pagine scaricate non deve
@@ -73,6 +85,17 @@ pub fn version_dir(provider_key: &str, version_id: &str) -> Result<PathBuf, Stri
 /// vive in memoria e nel database, l'originale resta la verità.
 pub fn manifest_path(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
     Ok(version_dir(provider_key, version_id)?.join(MANIFEST_FILE))
+}
+
+/// Il documento scaricato dalla biblioteca, dentro la cartella della
+/// digitalizzazione.
+pub fn document_path(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
+    Ok(version_dir(provider_key, version_id)?.join(DOCUMENT_FILE))
+}
+
+/// La scheda del documento, accanto al documento stesso.
+pub fn document_meta_path(provider_key: &str, version_id: &str) -> Result<PathBuf, String> {
+    Ok(version_dir(provider_key, version_id)?.join(DOCUMENT_META_FILE))
 }
 
 /// Percorso della miniatura derivata dalla pagina scaricata.
@@ -172,6 +195,18 @@ mod tests {
     fn page_numbers_are_padded_to_four_digits() {
         assert!(page_path("gallica", "v1", "2000", 7).ends_with("/0007.jpg"));
         assert!(page_path("gallica", "v1", "2000", 1234).ends_with("/1234.jpg"));
+    }
+
+    #[test]
+    fn the_document_sits_next_to_the_pages() {
+        assert_eq!(
+            as_string(document_path("gallica", "v1").unwrap()),
+            "providers/gallica/v1/document.pdf"
+        );
+        assert_eq!(
+            as_string(document_meta_path("gallica", "v1").unwrap()),
+            "providers/gallica/v1/document.json"
+        );
     }
 
     #[test]

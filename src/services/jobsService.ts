@@ -131,6 +131,19 @@ export async function enqueueSourceDownload(request: {
   });
 }
 
+/** Scarica il documento unico offerto dalla biblioteca: un file, non una
+ *  sequenza di pagine, quindi nessuna misura da scegliere. */
+export async function enqueuePdfDownload(request: {
+  providerKey: string;
+  sourceUrl: string;
+  versionId: string;
+}): Promise<Job> {
+  return invoke<Job>('enqueue_pdf_download', {
+    ...request,
+    workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? null,
+  });
+}
+
 export async function enqueueVaultVerification(full = false): Promise<Job> {
   return invoke<Job>('enqueue_vault_verification', { full });
 }

@@ -23,7 +23,9 @@ import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-pa
 import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from '../library/ProviderSiteLink';
 import { libraryItemUrl } from '../../services/libraryLinks';
-import { type ShownPage } from './VersionTechnicalData';
+import { CopyProvenance } from './CopyProvenance';
+import { SOURCE_KINDS } from '../../utils/libraryCatalogFilters';
+import { type ShownPage } from './OpenPageSection';
 import {
   ClickPopover,
   IconButton,
@@ -47,7 +49,9 @@ import { CopiesSection } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
 import { PageViewer } from '../viewer/PageViewer';
+import { DocumentViewer } from '../viewer/DocumentViewer';
 import { useDebounce } from '../../hooks/useDebounce';
+import { MULTI_VALUE_SEPARATOR } from '../../types';
 import type {
   IIIFProvider,
   LibraryCatalogEntry,
@@ -111,13 +115,20 @@ export function LibrarySourcePage({
   onResyncSource,
 }: LibrarySourcePageProps) {
   const { t } = useTranslation();
-  const iiifVersions = detail.versions.filter(
-    (version) => version.versionKind === 'iiif_manifest' && version.sourceUrl,
+  // Si legge quello che ha un indirizzo e una forma che Glossa sa aprire: la
+  // sequenza di immagini della biblioteca e il documento unico. Sono due
+  // letture distinte della stessa opera, e restano due voci separate.
+  const readableVersions = detail.versions.filter(
+    (version) =>
+      (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf')
+      && version.sourceUrl,
   );
-  const initialManifestVersion = iiifVersions.find((version) => version.isPrimary) ?? iiifVersions[0];
+  const initialManifestVersion =
+    readableVersions.find((version) => version.isPrimary) ?? readableVersions[0];
   const [selectedVersionId, setSelectedVersionId] = useState(initialManifestVersion?.id ?? '');
   const manifestVersion =
-    iiifVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
+    readableVersions.find((version) => version.id === selectedVersionId) ?? initialManifestVersion;
+  const readingDocument = manifestVersion?.versionKind === 'pdf';
   // L'opera sul sito della biblioteca: quello che ha dichiarato lei, e in
   // mancanza quello che si ricava dall'indirizzo del manifesto per le fonti di
   // cui la forma è verificata. Trovato il libro, la ricerca generica della
@@ -152,7 +163,6 @@ export function LibrarySourcePage({
   const countRefreshedFor = useRef<string | null>(null);
   /** Cresce ogni volta che il visore conserva una pagina: la scheda delle
    *  digitalizzazioni rilegge il deposito senza aspettare un lavoro in coda. */
-  const [keptPages, setKeptPages] = useState(0);
   const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 400, INSPECTOR_MIN, INSPECTOR_MAX));
 
   // Un'altra opera: la posizione di quella precedente non va lasciata a
@@ -163,6 +173,15 @@ export function LibrarySourcePage({
     setReadingLocalSize(null);
     countRefreshedFor.current = null;
   }, [detail.source.id, initialManifestVersion?.id]);
+
+  // Cambiata la copia mostrata (un'altra digitalizzazione, oppure PDF↔immagini):
+  // la posizione della copia precedente non deve restare in mano ai comandi
+  // sulla pagina finché il nuovo manifesto non ha pubblicato la sua. Senza
+  // questo, un comando premuto in quella finestra breve agirebbe sulla pagina
+  // sbagliata della copia appena scelta.
+  useEffect(() => {
+    setShownPage(null);
+  }, [selectedVersionId]);
 
   const persistLayout = () => {
     if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
@@ -210,24 +229,25 @@ export function LibrarySourcePage({
         {/* Biblioteca e uscite stanno con i comandi, a destra: al centro
             rubavano larghezza al titolo, che è la cosa che si legge. */}
         <div className="flex shrink-0 items-center justify-end gap-1">
-          {manifestVersion && (iiifVersions.length > 1 ? (
+          {manifestVersion && (readableVersions.length > 1 ? (
             <Select
               value={manifestVersion.id}
               onChange={setSelectedVersionId}
               ariaLabel={t('areas.library.digitalizationLabel')}
-              options={iiifVersions.map((version) => ({
+              // Il tipo si scrive accanto al nome: con due copie della stessa
+              // opera — le immagini e il documento — il solo nome non dice
+              // quale delle due si sta per aprire.
+              options={readableVersions.map((version) => ({
                 value: version.id,
-                label: version.label,
+                label: `${t(`areas.library.versionKindLabels.${version.versionKind}`)} · ${version.label}`,
               }))}
               className="min-w-0 max-w-[12rem]"
             />
           ) : (
-            <span
+            <CopyProvenance
+              providerLabel={providerLabel}
               className="mr-1 max-w-[12rem] truncate text-xs text-editorial-ink"
-              aria-label={t('areas.library.digitalizationLabel')}
-            >
-              {providerLabel ?? manifestVersion.label}
-            </span>
+            />
           ))}
           {libraryPageUrl && (
             <IconLink
@@ -258,7 +278,13 @@ export function LibrarySourcePage({
         {/* Il visore delle pagine nasce come lavoro a sé e verrà riusato anche
             dallo Studio di trascrizione: questo componente resta la stessa
             dimensione minima predisposta prima che esistesse. */}
-        {manifestVersion?.sourceUrl ? (
+        {readingDocument && manifestVersion ? (
+          <DocumentViewer
+            key={manifestVersion.id}
+            versionId={manifestVersion.id}
+            providerKey={manifestVersion.providerKey ?? 'generic'}
+          />
+        ) : manifestVersion?.sourceUrl ? (
           <PageViewer
             key={manifestVersion.id}
             sourceId={detail.source.id}
@@ -267,9 +293,13 @@ export function LibrarySourcePage({
             providerKey={manifestVersion.providerKey}
             preferredLocalSize={chosenLocalSize}
             onLocalSizeChange={setReadingLocalSize}
-            onPageKept={() => setKeptPages((count) => count + 1)}
             onPageChange={(position) => {
-              setShownPage({ index: position.index, imageUrl: position.imageUrl });
+              setShownPage({
+                index: position.index,
+                imageUrl: position.imageUrl,
+                imageService: position.imageService,
+                presentation2: position.presentation2,
+              });
               // Il manifesto letto dal visore dice quante pagine ha il libro, e
               // il motore lo registra. La scheda però tiene in mano il numero
               // di prima — a volte «1», dichiarato dalla ricerca — e diceva
@@ -353,12 +383,15 @@ export function LibrarySourcePage({
             <div className="flex flex-col gap-6 px-4 py-5">
               {activeTab === 'info' ? (
                 <>
-                  <DataSection
+                  {/* Prima da dove viene l'opera, poi cosa dice di sé: chi
+                      apre la scheda sa già il titolo, e la prima domanda è di
+                      chi è la copia che sta guardando. */}
+                  <SourceInfoSection
                     detail={detail}
-                    onCorrectField={onCorrectField}
+                    providerLabel={providerLabel}
                     onResyncSource={onResyncSource}
                   />
-                  <SourceInfoSection detail={detail} providerLabel={providerLabel} />
+                  <DataSection detail={detail} onCorrectField={onCorrectField} />
                 </>
               ) : activeTab === 'copies' ? (
                 <CopiesSection
@@ -368,9 +401,10 @@ export function LibrarySourcePage({
                   openVersionId={manifestVersion?.id ?? null}
                   viewedLocalSize={readingLocalSize}
                   onViewLocalSize={setChosenLocalSize}
-                  reloadToken={keptPages}
                   provider={provider}
                   shownPage={shownPage}
+                  shownVersionId={manifestVersion?.id ?? null}
+                  onShowVersion={setSelectedVersionId}
                 />
               ) : (
                 <>
@@ -418,17 +452,25 @@ function Section({
   actions,
   children,
 }: {
-  icon: LucideIcon;
-  label: string;
+  icon?: LucideIcon;
+  /** Senza etichetta la sezione non si intesta: resta la riga dei comandi,
+   *  quando ce ne sono. Una sezione che raccoglie i dati dell'opera dentro la
+   *  scheda dell'opera non ha bisogno di dichiarare che sono dati. */
+  label?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const heading = label !== undefined && icon !== undefined;
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2 border-b border-editorial-border/70 pb-1.5">
-        <SectionLabel icon={icon} label={label} />
-        {actions}
-      </div>
+      {(heading || actions) && (
+        <div className={`flex items-center gap-2 border-b border-editorial-border/70 pb-1.5 ${
+          heading ? 'justify-between' : 'justify-end'
+        }`}>
+          {heading && <SectionLabel icon={icon} label={label} />}
+          {actions}
+        </div>
+      )}
       {children}
     </section>
   );
@@ -491,19 +533,176 @@ function WorkspaceLinkPicker({
   );
 }
 
-/** Dati essenziali dell'opera; i metadati meno comuni compaiono soltanto se
- *  presenti e restano raccolti in una sezione chiusa. */
+/**
+ * I dati dell'opera: **sempre tutti**, con o senza valore.
+ *
+ * Un campo vuoto è un'informazione — dice che quella biblioteca non l'ha data —
+ * e nasconderlo toglieva anche il modo di scriverlo a mano. Ogni riga si
+ * corregge con la matita e conserva il valore originale della biblioteca, così
+ * la scheda è la stessa per ogni fonte e quello che manca lo puoi mettere tu.
+ *
+ * I gruppi oltre il primo sono richiudibili e ricordano se sono aperti: la
+ * scelta vale per tutta la Biblioteca, non per la singola opera — chi lavora su
+ * un tipo di materiale tiene aperti sempre gli stessi.
+ */
 function DataSection({
   detail,
   onCorrectField,
-  onResyncSource,
 }: {
   detail: LibrarySourceDetail;
   onCorrectField: (field: SourceField, value: string | null) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const openGroups = useUiStore((state) => state.librarySourceGroups);
+  const setGroupOpen = useUiStore((state) => state.setLibrarySourceGroupOpen);
+
+  const join = (values: string[]) => values.join(MULTI_VALUE_SEPARATOR);
+  const row = (field: SourceField, value: string): SourceFieldSpec => ({
+    field,
+    label: t(`areas.library.fieldLabels.${field}`),
+    value,
+    original: detail.original[field],
+  });
+
+  const groups: SourceFieldGroup[] = [
+    {
+      id: 'identity',
+      fields: [
+        row('title', detail.source.title),
+        {
+          ...row('kind', t(`areas.library.kindLabels.${detail.source.kind}`, {
+            defaultValue: t('areas.library.kindLabels.other'),
+          })),
+          // Si mostra tradotto, si salva com'è nei dati: senza questa
+          // distinzione finirebbe nel database l'etichetta italiana.
+          editableValue: detail.source.kind,
+          options: SOURCE_KINDS.map((kind) => ({
+            value: kind,
+            label: t(`areas.library.kindLabels.${kind}`),
+          })),
+        },
+        row('creator', detail.creator ?? ''),
+        row('date', detail.date ?? ''),
+        row('publisher', detail.publisher ?? ''),
+        row('primary_language', detail.source.primaryLanguage ?? ''),
+      ],
+    },
+    {
+      id: 'content',
+      fields: [
+        row('description', detail.description ?? ''),
+        row('subjects', join(detail.subjects)),
+        row('genre_form', join(detail.genreForm)),
+        row('coverage', join(detail.coverage)),
+        row('contributors', join(detail.contributors)),
+      ],
+    },
+    {
+      id: 'copy',
+      fields: [
+        row('physical_description', detail.physicalDescription ?? ''),
+        row('volume', detail.volume ?? ''),
+        row('series', detail.series ?? ''),
+        row('standard_identifier', detail.standardIdentifier ?? ''),
+      ],
+    },
+    {
+      id: 'provenance',
+      fields: [
+        row('origin_place', detail.originPlace ?? ''),
+        row('provenance', join(detail.provenance)),
+        row('related_works', join(detail.relatedWorks)),
+      ],
+    },
+    {
+      id: 'rights',
+      fields: [row('rights', join(detail.rights)), row('notes', detail.notes ?? '')],
+    },
+  ];
+
+  const [first, ...rest] = groups;
+
+  return (
+    <Section>
+      <dl className="space-y-2.5">
+        {first.fields.map((spec) => (
+          <SourceFieldRow
+            key={spec.field}
+            label={spec.label}
+            value={spec.value}
+            editableValue={spec.editableValue}
+            original={spec.original}
+            options={spec.options}
+            onSave={(value) => onCorrectField(spec.field, value)}
+          />
+        ))}
+      </dl>
+
+      {rest.map((group) => (
+        <details
+          key={group.id}
+          open={openGroups[group.id] ?? false}
+          onToggle={(event) => setGroupOpen(group.id, event.currentTarget.open)}
+          className="mt-2 border-t border-editorial-border/70 pt-2"
+        >
+          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
+            {t(`areas.library.fieldGroups.${group.id}`)}
+          </summary>
+          <dl className="mt-3 space-y-2.5">
+            {group.fields.map((spec) => (
+              <SourceFieldRow
+                key={spec.field}
+                label={spec.label}
+                value={spec.value}
+                editableValue={spec.editableValue}
+                original={spec.original}
+                options={spec.options}
+                onSave={(value) => onCorrectField(spec.field, value)}
+              />
+            ))}
+          </dl>
+        </details>
+      ))}
+    </Section>
+  );
+}
+
+/** Una riga della scheda: il campo dei dati, come si legge e come si corregge. */
+interface SourceFieldSpec {
+  field: SourceField;
+  label: string;
+  value: string;
+  editableValue?: string;
+  original?: string;
+  options?: { value: string; label: string }[];
+}
+
+interface SourceFieldGroup {
+  id: string;
+  fields: SourceFieldSpec[];
+}
+
+/** La provenienza dell'opera: riconoscibile a colpo d'occhio, con i
+ *  riferimenti specifici della biblioteca — testo semplice, mai una pastiglia
+ *  colorata (il design system la vieta per i metadati di provenienza).
+ *
+ *  Sempre presente, come le altre sezioni anagrafiche: un'opera aggiunta
+ *  riconoscendo una segnatura/indirizzo diretto (invece che da un risultato
+ *  di ricerca) non porta fondo/pagina web/scheda del catalogo — quei campi
+ *  restano «—», la sezione non sparisce. */
+function SourceInfoSection({
+  detail,
+  providerLabel,
+  onResyncSource,
+}: {
+  detail: LibrarySourceDetail;
+  providerLabel?: string;
   onResyncSource: () => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [resyncing, setResyncing] = useState(false);
+  // Riallineare riguarda quello che la biblioteca dice dell'opera: il comando
+  // sta dove si legge la biblioteca, non sotto i dati che andrebbe a cambiare.
   const resync = async () => {
     const confirmed = await confirm({
       title: t('areas.library.resyncTitle'),
@@ -519,27 +718,28 @@ function DataSection({
       setResyncing(false);
     }
   };
-  const allReadonlyFields: Array<[string, string]> = [
-    [t('areas.library.contributorsField'), detail.contributors.join(' · ')],
-    [t('areas.library.volumeField'), detail.volume ?? ''],
-    [t('areas.library.subjectsField'), detail.subjects.join(' · ')],
-    [t('areas.library.publisherField'), detail.publisher ?? ''],
-    [t('areas.library.rightsField'), detail.rights.join(' · ')],
-    [t('areas.library.physicalDescriptionField'), detail.physicalDescription ?? ''],
-    [t('areas.library.originPlaceField'), detail.originPlace ?? ''],
-    [t('areas.library.provenanceField'), detail.provenance.join(' · ')],
-    [t('areas.library.seriesField'), detail.series ?? ''],
-    [t('areas.library.genreFormField'), detail.genreForm.join(' · ')],
-    [t('areas.library.standardIdentifierField'), detail.standardIdentifier ?? ''],
-    [t('areas.library.coverageField'), detail.coverage.join(' · ')],
-    [t('areas.library.relatedWorksField'), detail.relatedWorks.join(' · ')],
+  const externalRef = detail.source.externalRef;
+  const identifier =
+    externalRef && detail.providerKey && externalRef.startsWith(`${detail.providerKey}:`)
+      ? externalRef.slice(detail.providerKey.length + 1)
+      : externalRef;
+  // Un campo per riga, **sempre gli stessi e sempre tutti**: è la stessa regola
+  // della scheda dell'opera. Prima tre di questi stavano in un blocco
+  // richiudibile che compariva solo quando almeno uno era pieno, quindi la
+  // sezione cambiava forma da una biblioteca all'altra e non si poteva vedere
+  // cosa quella biblioteca non dà.
+  const libraryFields: [string, string][] = [
+    [t('areas.library.sourceProviderField'), providerLabel ?? ''],
+    [t('areas.library.sourceIdentifierField'), identifier ?? ''],
+    [t('areas.library.sourceHoldingField'), detail.holdingInstitution ?? ''],
+    [t('areas.library.sourcePageUrlField'), detail.pageUrl ?? ''],
+    [t('areas.library.sourceCatalogUrlField'), detail.catalogUrl ?? ''],
   ];
-  const readonlyFields = allReadonlyFields.filter(([, value]) => value.trim() !== '');
 
   return (
     <Section
-      icon={Info}
-      label={t('areas.library.detailsSection')}
+      icon={Library}
+      label={t('areas.library.sourceSection')}
       actions={
         <IconButton
           size="sm"
@@ -552,114 +752,15 @@ function DataSection({
       }
     >
       <dl className="space-y-2.5">
-        <SourceFieldRow
-          label={t('areas.library.titleField')}
-          value={detail.source.title}
-          original={detail.original.title}
-          onSave={(value) => onCorrectField('title', value)}
-        />
-        <StatBlock
-          label={t('areas.library.kind')}
-          // Libri aggiunti prima che "natura" perdesse i valori di formato
-          // (pdf/iiif/web) hanno ancora quei vecchi valori salvati: mostrano
-          // "Altro" come qualunque valore che oggi non si riconosce più,
-          // non la parola tecnica grezza.
-          value={t(`areas.library.kindLabels.${detail.source.kind}`, {
-            defaultValue: t('areas.library.kindLabels.other'),
-          })}
-        />
-        <SourceFieldRow
-          label={t('areas.library.creatorField')}
-          value={detail.creator ?? ''}
-          original={detail.original.creator}
-          onSave={(value) => onCorrectField('creator', value)}
-        />
-        <SourceFieldRow
-          label={t('areas.library.dateField')}
-          value={detail.date ?? ''}
-          original={detail.original.date}
-          onSave={(value) => onCorrectField('date', value)}
-        />
-        <SourceFieldRow
-          label={t('areas.library.languageField')}
-          value={detail.source.primaryLanguage ?? ''}
-          original={detail.original.primary_language}
-          onSave={(value) => onCorrectField('primary_language', value)}
-        />
-        {detail.description && (
-          <StatBlock label={t('areas.library.descriptionField')} value={detail.description} />
-        )}
+        {libraryFields.map(([label, value]) => (
+          <StatBlock
+            key={label}
+            label={label}
+            value={value}
+            href={value.startsWith('http') ? value : undefined}
+          />
+        ))}
       </dl>
-      {readonlyFields.length > 0 && (
-        <details className="border-t border-editorial-border/70 pt-2">
-          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
-            {t('areas.library.otherMetadata')}
-          </summary>
-          <dl className="mt-3 space-y-2.5">
-            {readonlyFields.map(([label, value]) => (
-              <StatBlock key={label} label={label} value={value} />
-            ))}
-          </dl>
-        </details>
-      )}
-    </Section>
-  );
-}
-
-/** La provenienza dell'opera: riconoscibile a colpo d'occhio, con i
- *  riferimenti specifici della biblioteca — testo semplice, mai una pastiglia
- *  colorata (il design system la vieta per i metadati di provenienza).
- *
- *  Sempre presente, come le altre sezioni anagrafiche: un'opera aggiunta
- *  riconoscendo una segnatura/indirizzo diretto (invece che da un risultato
- *  di ricerca) non porta fondo/pagina web/scheda del catalogo — quei campi
- *  restano «—», la sezione non sparisce. */
-function SourceInfoSection({
-  detail,
-  providerLabel,
-}: {
-  detail: LibrarySourceDetail;
-  providerLabel?: string;
-}) {
-  const { t } = useTranslation();
-  const externalRef = detail.source.externalRef;
-  const identifier =
-    externalRef && detail.providerKey && externalRef.startsWith(`${detail.providerKey}:`)
-      ? externalRef.slice(detail.providerKey.length + 1)
-      : externalRef;
-  const technicalFields = [
-    [t('areas.library.sourceHoldingField'), detail.holdingInstitution ?? ''],
-    [t('areas.library.sourcePageUrlField'), detail.pageUrl ?? ''],
-    [t('areas.library.sourceCatalogUrlField'), detail.catalogUrl ?? ''],
-  ].filter(([, value]) => value !== '');
-
-  return (
-    <Section icon={Library} label={t('areas.library.sourceSection')}>
-      <dl className="space-y-2.5">
-        {providerLabel && (
-          <StatBlock label={t('areas.library.sourceProviderField')} value={providerLabel} />
-        )}
-        {identifier && (
-          <StatBlock label={t('areas.library.sourceIdentifierField')} value={identifier} />
-        )}
-      </dl>
-      {technicalFields.length > 0 && (
-        <details className="border-t border-editorial-border/70 pt-2">
-          <summary className="cursor-pointer text-xs font-semibold text-editorial-muted">
-            {t('areas.library.technicalData')}
-          </summary>
-          <dl className="mt-3 space-y-2.5">
-            {technicalFields.map(([label, value]) => (
-              <StatBlock
-                key={label}
-                label={label}
-                value={value}
-                href={value.startsWith('http') ? value : undefined}
-              />
-            ))}
-          </dl>
-        </details>
-      )}
     </Section>
   );
 }

@@ -1115,7 +1115,7 @@
       "availabilityRemoteShort": "online",
       "availabilityComplete": "Immagini locali",
       "availabilityPartial": "{{done}}/{{total}} Immagini locali",
-      "verify": "Verifica i file di questa fonte",
+      "verify": "Verifica integrità dei file",
       "verifyIntact": "Tutte le {{count}} pagine sono al loro posto",
       "verifyNoExpected_one": "C'è 1 pagina sul computer. Quante dovrebbero essere non lo sappiamo: la biblioteca non lo dichiara.",
       "verifyNoExpected_other": "Ci sono {{count}} pagine sul computer. Quante dovrebbero essere non lo sappiamo: la biblioteca non lo dichiara.",
@@ -1124,7 +1124,6 @@
       "verifyDownloadMissing": "Scarica le mancanti",
       "verifyFailed": "Verifica non riuscita",
       "vaultUnreachable": "Deposito non raggiungibile: disco staccato o cartella non montata",
-      "freeSpace": "Libera tutto lo spazio di questa digitalizzazione: cancella le pagine di ogni versione locale",
       "freeSpaceTitle": "Liberare {{size}}?",
       "freeSpaceMessage": "Le pagine scaricate vengono cancellate subito. Restano scheda, manifesto e miniature, e le pagine si riscaricano dalla biblioteca quando servono.",
       "freeSpaceConfirm": "Libera spazio",
@@ -1145,7 +1144,6 @@
       "optimizeWhileDownloading": "Prima finisce lo scaricamento di quest'opera: i due lavori scriverebbero sulle stesse pagine.",
       "resolutionPages": "{{done}}/{{total}} pagine",
       "resolutionsSection": "Risoluzioni scaricate",
-      "localVersionsSection": "Versioni locali",
       "localVersionOrigin": "Origine",
       "localVersionSpace": "Spazio",
       "localVersionNotServedLabel": "Non servite",
@@ -1160,14 +1158,11 @@
       "localVersionNeverDownloaded": "Mai scaricata",
       "localVersionLastDownloadFailed": "Ultimo scaricamento fallito",
       "localVersionNotServed": "{{count}} non servite dalla biblioteca",
-      "compressAction": "Ricava una versione più piccola da quella da {{size}}, senza toccarla",
+      "compressAction": "Ricomprimi le pagine",
       "compressSourceLabel": "Da quale risoluzione",
-      "compressFrom": "Parte dalla versione da {{size}}",
       "downloadInProgress": "C'è già uno scaricamento in corso per questa digitalizzazione, alla misura da {{size}}: aspetta che finisca o fermalo dal pannello dei lavori.",
-      "compressTargetLabel": "A quale risoluzione",
-      "compressConfirm": "Crea la copia",
-      "compressNoTarget": "Nessuna risoluzione più piccola disponibile.",
-      "freeSizeAction": "Cancella solo la versione da {{size}}",
+      "compressConfirm": "Ricomprimi",
+      "freeSizeAction": "Elimina le pagine dal disco",
       "freeSizeTitle": "Liberare {{size}}?",
       "freeSizeMessage": "Questa risoluzione viene cancellata subito. Le altre risoluzioni di quest'opera restano.",
       "pageActionsLabel": "Pagina singola",
@@ -1224,7 +1219,7 @@
       "detailsSection": "Dati",
       "resyncAction": "Risincronizza con la biblioteca",
       "resyncTitle": "Risincronizzare questa opera?",
-      "resyncMessage": "Rilegge i dati dalla biblioteca e li riscrive: ogni correzione a mano fatta finora sparisce (le Note restano). Le pagine già scaricate non vengono toccate.",
+      "resyncMessage": "Rileggo i dati dalla biblioteca. Le correzioni che hai fatto a mano sui campi che la biblioteca dichiara verranno sostituite; quelle sui campi che lei non dà — e le note — restano.",
       "resyncConfirm": "Risincronizza",
       "resyncSuccess": "Opera risincronizzata con la biblioteca",
       "resyncFailed": "Impossibile risincronizzare",
@@ -1334,8 +1329,7 @@
         "other": "File"
       },
       "sourceUrlField": "Indirizzo",
-      "downloadSection": "Scarica",
-      "downloadOnlyImages": "Per ora Glossa scarica solo le digitalizzazioni a immagini. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
+      "downloadOnlyImages": "Per ora Glossa scarica le digitalizzazioni a immagini e i documenti. Di questa puoi leggere la scheda e aprirla sul sito della biblioteca.",
       "resolutionComplete": "Già completa",
       "viewPreference": "Visualizza (per il futuro visore)",
       "viewOnline": "Online",
@@ -1353,7 +1347,85 @@
       "manifestContentFailed": "Non è stato possibile leggere il manifest dalla biblioteca.",
       "manifestPages": "Pagine",
       "manifestSummary": "Descrizione",
-      "manifestRights": "Diritti"
+      "manifestRights": "Diritti",
+      "fieldLabels": {
+        "title": "Titolo",
+        "kind": "Tipo di opera",
+        "creator": "Autore",
+        "date": "Data",
+        "publisher": "Editore",
+        "primary_language": "Lingua",
+        "description": "Descrizione",
+        "subjects": "Soggetti",
+        "genre_form": "Genere/forma",
+        "coverage": "Copertura",
+        "contributors": "Altri responsabili",
+        "physical_description": "Descrizione fisica",
+        "volume": "Volume",
+        "series": "Serie/collana",
+        "standard_identifier": "Identificativo standard",
+        "origin_place": "Luogo di origine",
+        "provenance": "Provenienza",
+        "related_works": "Opere collegate",
+        "rights": "Diritti",
+        "notes": "Note"
+      },
+      "fieldGroups": {
+        "content": "Contenuto",
+        "copy": "Esemplare",
+        "provenance": "Provenienza",
+        "rights": "Diritti e note"
+      },
+      "pageTakeAtMax": "Scarica questa pagina a risoluzione massima",
+      "pageBackToBookSize": "Riscarica alla risoluzione del libro",
+      "pageRemove": "Elimina questa pagina dal disco",
+      "pageRemoveSize": "Cancella la misura {{size}}",
+      "pageActionFailed": "Operazione sulla pagina non riuscita.",
+      "excludedPagesCount_one": "{{count}} pagina esclusa: non verrà riscaricata.",
+      "excludedPagesCount_other": "{{count}} pagine escluse: non verranno riscaricate.",
+      "openPageSection": "Pagina {{page}}",
+      "openPageSectionIdle": "Pagina",
+      "pageKeep": "Scarica questa pagina",
+      "bookSection": "Il libro",
+      "downloadWholeBook": "Scarica il libro a questa risoluzione",
+      "downloadReplaceTitle": "Scaricare a {{size}}?",
+      "downloadReplaceMessage": "Di un'opera si conserva una risoluzione sola. A scaricamento riuscito le pagine attuali ({{sizes}}) vengono eliminate; se fallisce resta tutto invariato.",
+      "downloadReplaceConfirm": "Scarica e sostituisci",
+      "provenanceMissing": "Provenienza assente: quest'opera è stata aggiunta senza biblioteca di origine. Rimuovila e riaggiungila per avere nome e collegamento.",
+      "pageSizeField": "Risoluzione",
+      "pagePixels": "{{width}} × {{height}}",
+      "compressTitle": "Ricomprimere le pagine?",
+      "compressMessage": "Ogni pagina viene riscritta a qualità inferiore, stesse dimensioni in pixel. Operazione non reversibile: per tornare alla qualità attuale occorre riscaricare il libro.",
+      "freeSpace": "Elimina dal disco tutte le pagine di quest'opera",
+      "documentDownloading": "scaricamento in corso",
+      "documentDownload": "Scarica il PDF",
+      "documentQueued": "Scaricamento del PDF accodato.",
+      "documentDownloadFailed": "Scaricamento del PDF non avviato.",
+      "documentFreeTitle": "Eliminare il PDF ({{size}})?",
+      "documentFreeMessage": "Il file viene rimosso dal disco. Le immagini della stessa opera restano invariate e il PDF si può scaricare di nuovo.",
+      "documentFreeAction": "Elimina il PDF dal disco",
+      "documentFreeFailed": "Eliminazione del PDF non riuscita.",
+      "documentOpenOutside": "Apri con l'applicazione di sistema",
+      "documentOpenFailed": "Apertura del PDF non riuscita.",
+      "documentPagesUnknown": "non determinate",
+      "documentViewerSection": "Visualizzazione PDF",
+      "documentReading": "PDF",
+      "documentTooLarge": "PDF troppo grande per la visualizzazione integrata",
+      "documentTooLargeHint": "Aprilo con l'applicazione di sistema: legge il file dal disco senza caricarlo tutto in memoria.",
+      "documentLoadError": "Apertura del PDF non riuscita",
+      "documentLoadErrorHint": "Il file può essere protetto da password o danneggiato. Riprova, oppure scaricalo di nuovo dalla scheda.",
+      "documentNotHere": "PDF non presente sul disco",
+      "documentNotHereHint": "Scaricalo dalla sezione PDF della scheda dell'opera.",
+      "documentChecking": "verifica in corso",
+      "documentNoManifest": "verifica non possibile senza indirizzo IIIF",
+      "documentField": "PDF",
+      "documentDownloaded": "scaricato",
+      "documentNotDownloaded": "non scaricato",
+      "documentUnavailable": "non disponibile per quest'opera",
+      "documentUnverified": "disponibilità non verificata",
+      "documentVerify": "Verifica disponibilità del PDF",
+      "documentShow": "Visualizza il PDF nel lettore",
+      "documentShown": "PDF in visualizzazione"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1540,7 +1612,14 @@
         "aggregator": "◈ Raccolta: indicizza il materiale di molte istituzioni. Di ogni risultato leggi chi conserva l'originale, che è un'altra biblioteca.",
         "paused": "⏸ La ricerca di questa biblioteca esiste ma respinge le richieste automatiche. Puoi aprire un'opera scrivendo il suo identificativo o incollando il suo indirizzo.",
         "directOnly": "# Questa fonte non ha una ricerca da interrogare: si apre scrivendo l'identificativo o incollando l'indirizzo, come nell'esempio del campo."
-      }
+      },
+      "documentAvailable": "PDF disponibile",
+      "documentLabel": "PDF",
+      "manifestPages": "Pagine nel manifesto",
+      "samplePixels": "Misura della prima pagina",
+      "documentUnavailable": "PDF non disponibile",
+      "documentUnverified": "PDF non verificato",
+      "documentChecking": "PDF: verifica in corso"
     },
     "stats": {
       "projects": "Progetti",
@@ -2333,7 +2412,8 @@
             "title": "Trovare un’opera nel catalogo",
             "paragraphs": [
               "Alterna elenco e griglia e usa i filtri per restringere il catalogo. Puoi salvare una combinazione di filtri come vista. Includi le opere archiviate quando vuoi recuperare un elemento messo da parte.",
-              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file."
+              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
+              "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
             ]
           },
           {
@@ -2355,8 +2435,16 @@
             "title": "Scaricare e conservare",
             "paragraphs": [
               "In Digitalizzazioni scegli la risoluzione e avvia il download dell’opera. Una risoluzione diversa crea un’altra versione locale. Puoi scegliere quale versione aprire.",
-              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata.",
-              "Le copie PDF possono comparire nella scheda, ma non sono ancora leggibili o scaricabili dalla Biblioteca."
+              "Salva pagina conserva solo l’immagine aperta, alle dimensioni indicate nel suggerimento. Non richiede una nuova immagine alla risoluzione impostata."
+            ]
+          },
+          {
+            "title": "Il PDF dell’opera",
+            "paragraphs": [
+              "Alcune biblioteche, oltre alle immagini pagina per pagina, offrono la stessa opera come PDF. Nei risultati della ricerca ogni riga dichiara lo stato: «PDF disponibile», «PDF non disponibile» oppure «PDF non verificato» quando la biblioteca non ha risposto. Aprendo la riga trovi anche le pagine dichiarate e la misura in pixel della prima pagina, che è l’unico indizio sulla qualità della scansione prima di scaricare.",
+              "Nella scheda dell’opera il PDF è una riga della sezione del libro, sotto le copie a immagini: lì dice se è disponibile, se è già scaricato, quanto occupa e quante pagine ha. Il comando di verifica interroga di nuovo la biblioteca, per quando il PDF è stato pubblicato dopo; lo stesso controllo lo fa il riallineamento.",
+              "Dalla stessa riga scegli cosa visualizzare: il PDF oppure le immagini. In alto il visore dichiara sempre quale delle due stai guardando, perché le pagine del PDF e quelle della sequenza di immagini non corrispondono. Un PDF molto grande non si apre nel visore integrato: si apre con l’applicazione di sistema.",
+              "La verifica ha sempre una scadenza: se la biblioteca è occupata o non risponde, lo stato resta «non verificato» e puoi riprovare. Nessuna attesa resta appesa e nessuna richiesta blocca le altre."
             ]
           },
           {
@@ -2379,7 +2467,9 @@
               "Apri il pannello dei lavori in basso a destra. Ogni voce mostra avanzamento e stato; espandila per leggere dettagli, tentativi ed errori.",
               "Pausa richiede l’arresto al prossimo punto utile; Riprendi continua da lì. Annulla termina il lavoro e conserva i file già salvati. Dopo un errore puoi avviare un nuovo tentativo.",
               "In attesa può indicare un limite imposto dalla biblioteca. Un conto alla rovescia riguarda il prossimo tentativo, non la fine del download. In pausa indica invece una sospensione da riprendere.",
-              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori."
+              "Alla chiusura i lavori si fermano. Alla riapertura restano sospesi, salvo la ripresa automatica dei download se abilitata in Impostazioni → Lavori.",
+              "Mentre leggi puoi agire sulla singola pagina: conservarla, prenderla alla massima risoluzione — sostituisce quella che hai — riportarla alla misura del libro o toglierla dal computer. Una pagina tolta resta esclusa e non torna con un nuovo scaricamento, finché non la richiedi.",
+              "Di un'opera si tiene una copia sola, con un file per pagina: chiedere il libro a un'altra misura sostituisce quella che hai, e la ricompressione riscrive le pagine più leggere senza cambiarne le dimensioni — non si torna indietro senza riscaricare."
             ]
           },
           {
@@ -2883,7 +2973,8 @@
       "debug_restart_only": "Prova di sviluppo (da rifare)",
       "source_download": "Scaricamento pagine",
       "vault_verification": "Verifica del deposito",
-      "image_optimization": "Ottimizzazione delle immagini"
+      "image_optimization": "Ottimizzazione delle immagini",
+      "source_pdf_download": "Scaricamento documento"
     },
     "phase": {
       "starting": "avvio",
@@ -2891,7 +2982,8 @@
       "downloading": "scaricamento",
       "checking_files": "controllo dei file",
       "looking_for_orphans": "ricerca dei file orfani",
-      "optimizing": "riduzione delle immagini"
+      "optimizing": "riduzione delle immagini",
+      "reading_document": "lettura del documento"
     },
     "closeTitle_one": "C'è {{count}} lavoro in corso",
     "closeTitle_other": "Ci sono {{count}} lavori in corso",
@@ -2908,7 +3000,8 @@
       "vault_verification": "verifica",
       "debug_counter": "prova",
       "debug_restart_only": "prova",
-      "image_optimization": "ottimizzazione"
+      "image_optimization": "ottimizzazione",
+      "source_pdf_download": "documento"
     },
     "error": {
       "optimizationIncomplete_one": "Non è stato possibile ottimizzare una pagina.",

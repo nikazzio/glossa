@@ -13,6 +13,9 @@ mod handler_it;
 pub mod inventory;
 pub mod manifest;
 pub mod pages;
+pub mod pdf;
+#[cfg(test)]
+mod pdf_it;
 pub mod progress;
 pub mod sidecar;
 pub mod sizing;

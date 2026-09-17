@@ -24,7 +24,6 @@ const VERSION_ID: &str = "sver-prova";
 const JOB_ID: &str = "optimize:sver-prova:800";
 const PROVIDER: &str = "archive_org";
 const SOURCE_SIZE_TAG: &str = "2000";
-const TARGET_SIZE_TAG: &str = "800";
 
 /// Un JPEG vero delle dimensioni chieste: il lavoro decodifica e ricomprime, e
 /// un JPEG finto lo farebbe fallire per il motivo sbagliato.
@@ -73,17 +72,15 @@ fn source_dir(root: &Path) -> PathBuf {
         .join(SOURCE_SIZE_TAG)
 }
 
-/// Dove il lavoro scrive: mai la cartella di partenza.
-fn derived_dir(root: &Path) -> PathBuf {
-    root.join("derived")
-        .join(PROVIDER)
-        .join(VERSION_ID)
-        .join(TARGET_SIZE_TAG)
+/// Dove il lavoro scrive: **la stessa cartella** da cui legge. Di una copia si
+/// tiene un file per pagina, e ricomprimere non crea un secondo libro.
+fn target_dir(root: &Path) -> PathBuf {
+    source_dir(root)
 }
 
 fn staging_dir(root: &Path) -> PathBuf {
     root.join("staging")
-        .join(format!("{VERSION_ID}-optimize-{TARGET_SIZE_TAG}"))
+        .join(format!("{VERSION_ID}-optimize-{SOURCE_SIZE_TAG}"))
 }
 
 fn temp_db(name: &str) -> PathBuf {
@@ -130,9 +127,7 @@ fn optimize_job() -> NewJob {
             "providerKey": PROVIDER,
             "versionId": VERSION_ID,
             "sourceSizeTag": SOURCE_SIZE_TAG,
-            "targetSizeTag": TARGET_SIZE_TAG,
-            "longEdge": 800,
-            "quality": 82,
+            "quality": 55,
         })
         .to_string(),
         max_attempts: 1,
@@ -172,7 +167,7 @@ fn page_bytes(dir: &Path, index: u32) -> u64 {
 }
 
 #[tokio::test]
-async fn the_job_writes_every_page_shrunk_into_the_derived_folder() {
+async fn the_job_rewrites_every_page_lighter_in_place() {
     let root = vault_with("intero", 3);
     let source_before: Vec<u64> = (1..=3)
         .map(|index| page_bytes(&source_dir(&root), index))
@@ -189,22 +184,21 @@ async fn the_job_writes_every_page_shrunk_into_the_derived_folder() {
     // di righe identiche.
     assert_eq!(record.message.as_deref(), Some("Opera di prova"));
     assert!(record.eta_seconds.is_some(), "e una stima del tempo");
-    // La cartella di partenza non cambia mai: è la ragione stessa della copia
-    // a parte, non solo un dettaglio d'implementazione.
+    // Si riscrive dove si legge: ogni pagina pesa meno di prima, nello stesso
+    // posto, e di copie del libro ne resta una sola.
     for index in 1..=3 {
-        assert_eq!(
-            page_bytes(&source_dir(&root), index),
-            source_before[index as usize - 1],
-            "pagina {index} della fonte intatta"
-        );
         assert!(
-            page_bytes(&derived_dir(&root), index) < source_before[index as usize - 1],
-            "pagina {index} ridotta nella copia"
+            page_bytes(&source_dir(&root), index) < source_before[index as usize - 1],
+            "pagina {index} più leggera"
         );
     }
+    assert!(
+        !root.join("derived").exists(),
+        "nessuna seconda copia del libro"
+    );
     // Ogni pagina lascia la sua riga con l'impronta dei byte nuovi: senza, la
     // verifica completa confronterebbe l'impronta di byte che non esistono più.
-    let rows = crate::download::sidecar::read(&derived_dir(&root));
+    let rows = crate::download::sidecar::read(&target_dir(&root));
     assert_eq!(rows.len(), 3);
     assert!(rows.values().all(|row| row.checksum.is_some()));
 
@@ -218,8 +212,8 @@ async fn running_it_twice_does_nothing_the_second_time() {
     engine.submit(&optimize_job()).await.expect("in coda");
     run_until_terminal(&engine).await;
     let after_first = (
-        page_bytes(&derived_dir(&root), 1),
-        page_bytes(&derived_dir(&root), 2),
+        page_bytes(&target_dir(&root), 1),
+        page_bytes(&target_dir(&root), 2),
     );
 
     // Lo stesso lavoro, di nuovo: le pagine sono già nella cartella d'arrivo,
@@ -234,14 +228,14 @@ async fn running_it_twice_does_nothing_the_second_time() {
     assert_eq!(record.status, JobStatus::Completed, "{:?}", record.error);
     assert_eq!(
         (
-            page_bytes(&derived_dir(&root), 1),
-            page_bytes(&derived_dir(&root), 2)
+            page_bytes(&target_dir(&root), 1),
+            page_bytes(&target_dir(&root), 2)
         ),
         after_first,
         "nessun byte toccato al secondo giro"
     );
     // E nessuna riga in più: una pagina già presente non ne scrive un'altra.
-    let rows = crate::download::sidecar::read(&derived_dir(&root));
+    let rows = crate::download::sidecar::read(&target_dir(&root));
     assert_eq!(rows.len(), 2);
 
     let _ = std::fs::remove_dir_all(&root);
@@ -298,7 +292,7 @@ async fn a_paused_job_leaves_no_page_half_written_and_resumes() {
                 .is_none(),
         "area di transito vuota dopo la pausa"
     );
-    if let Ok(entries) = std::fs::read_dir(derived_dir(&root)) {
+    if let Ok(entries) = std::fs::read_dir(target_dir(&root)) {
         for entry in entries.flatten().filter(|entry| entry.path().is_file()) {
             if entry.file_name() == "pages.jsonl" {
                 continue;
@@ -312,7 +306,7 @@ async fn a_paused_job_leaves_no_page_half_written_and_resumes() {
     let record = run_until_terminal(&engine).await;
 
     assert_eq!(record.status, JobStatus::Completed, "{:?}", record.error);
-    let rows = crate::download::sidecar::read(&derived_dir(&root));
+    let rows = crate::download::sidecar::read(&target_dir(&root));
     assert_eq!(rows.len(), 4, "le quattro pagine hanno la loro riga");
 
     let _ = std::fs::remove_dir_all(&root);

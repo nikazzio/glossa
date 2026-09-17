@@ -99,15 +99,26 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
   gestore di ricerca (visita della pagina del catalogo e `Referer`), e il
   segnale resta dichiarato come segnaposto per quando anche lo scaricamento
   dovrà aprire una sessione.
-- #459 (azioni sulla pagina e selezione multipla, «Fase A»): **quasi tutta da
-  fare**. Esiste solo «tieni questa pagina» alla misura mostrata. Mancano scelta
-  della misura, sostituzione, riduzione, eliminazione di una versione locale
-  della pagina, verifica, e **tutta** la selezione multipla: le miniature non
-  hanno alcun concetto di selezione. Le quattro decisioni elencate nella issue
-  vanno prese prima di iniziare.
-- #462 (PDF della biblioteca, «Fase C»): da iniziare, dopo le tre decisioni
-  scritte nella issue. Si appoggia al modo di dire «copia locale, spazio,
-  stato» che la #459 consolida: conviene dopo, non prima.
+- #459 (azioni sulla pagina, «Fase A»): **consegnata**. Una copia a immagini
+  sola per opera con un file per pagina, comandi sulla pagina che sostituiscono
+  invece di affiancare, esclusione persistente rispettata dallo scaricamento,
+  ricompressione sul posto al posto della copia derivata, riallineamento che non
+  butta le correzioni sui campi che la biblioteca non dichiara. La **selezione
+  multipla** è uscita dalla issue: con una copia sola i suoi motivi si riducono
+  a «togliere molte pagine in fila», e vive meglio nello Studio di trascrizione
+  (#388), dove serve a scegliere cosa trascrivere.
+- #462 (PDF della biblioteca, «Fase C»): **realizzata** il 16 settembre, sopra
+  la #459, in due giri — il secondo perché il primo aveva costruito lo
+  scaricamento di una copia che nessun percorso creava mai. Adesso il documento
+  si **scopre** dal manifesto della biblioteca, compare nei risultati di ricerca
+  e nella scheda (anche quando non c'è), e solo dopo si scarica. Il PDF è una **copia a sé** accanto a quella a immagini: si scarica
+  con la stessa cortesia di rete e la stessa scrittura atomica delle pagine, si
+  dichiara fra le copie locali con pagine, spazio e stato, si elimina da solo e
+  si legge nel visore con pdf.js. Le pagine si contano **dal file**; se la
+  biblioteca ne dichiara un altro numero vince il file e la differenza resta nel
+  registro, senza avvisi a schermo. La trascrizione a partire dal documento
+  **resta fuori**: non esiste ancora un punto dove si sceglie da cosa
+  trascrivere, e la decisione va presa con lo Studio (#388/#220).
 - #471 (biblioteche scozzesi) e #472 (membri del consorzio IIIF): la prima
   consegnata con #473, la seconda è l'elenco ordinato di chi manca.
 - #474 (scheda a template fisso): tutti i campi sempre visibili e compilabili a
@@ -117,12 +128,6 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
 
 - Verificare i percorsi già presenti e correggere le regressioni prima di
   aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
-- Completare azioni sulla singola pagina e selezione multipla (#459):
-  sostituzione, eliminazione volontaria, esclusione, verifica e risultati parziali.
-  Prima di implementare, confrontare le decisioni del piano con quelle già
-  risolte dal lettore; non riaprire scelte di precedenza chiuse.
-- Scaricare, elencare e leggere i PDF delle biblioteche (#462), distinti dalla
-  sequenza IIIF: non presumere la stessa identità di pagina.
 - Rendere visibili log generali, salvataggio e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca

@@ -52,6 +52,7 @@
     "motion": "^12.23.24",
     "openseadragon": "6.1.0",
     "papaparse": "^5.5.3",
+    "pdfjs-dist": "^6.3.289",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.4.0",

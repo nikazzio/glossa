@@ -40,6 +40,8 @@ pub enum Validation {
 pub enum FileKind {
     Image,
     Manifest,
+    /// Il documento unico offerto dalla biblioteca.
+    Pdf,
 }
 
 /// Esito di una lettura sola: validazione e impronta insieme.
@@ -125,6 +127,7 @@ fn scan_reader(mut reader: impl Read, kind: FileKind) -> FileScan {
 
     let validation = match kind {
         FileKind::Image => validate_image_shape(&head, &tail, total),
+        FileKind::Pdf => validate_pdf_shape(&head, &tail, total),
         FileKind::Manifest => match serde_json::from_slice::<serde_json::Value>(&manifest_body) {
             Ok(_) => Validation::Valid,
             Err(error) => Validation::Corrupt(format!("JSON non valido: {error}")),
@@ -172,10 +175,69 @@ fn validate_image_shape(head: &[u8], tail: &[u8], total: u64) -> Validation {
     Validation::Corrupt("formato immagine non riconosciuto".to_string())
 }
 
+/// Firma iniziale e terminatore di un PDF.
+///
+/// Il terminatore `%%EOF` può essere seguito da un fine riga, e certe
+/// biblioteche ne aggiungono uno: si cerca dentro la coda invece di pretenderlo
+/// esattamente in fondo.
+fn validate_pdf_shape(head: &[u8], tail: &[u8], total: u64) -> Validation {
+    if total < 32 {
+        return Validation::Corrupt("file troppo corto per essere un PDF".to_string());
+    }
+    if !head.starts_with(b"%PDF-") {
+        return Validation::Corrupt("non è un PDF: manca la firma iniziale".to_string());
+    }
+    if tail
+        .windows(PDF_TAIL_MARKER.len())
+        .any(|w| w == PDF_TAIL_MARKER)
+    {
+        Validation::Valid
+    } else {
+        Validation::Corrupt("PDF troncato: manca il marcatore di fine".to_string())
+    }
+}
+
+const PDF_TAIL_MARKER: &[u8] = b"%%EOF";
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;
+
+    /// PDF integro quanto basta a questa validazione: firma, corpo, fine.
+    fn pdf_around(payload: &[u8]) -> Vec<u8> {
+        let mut bytes = b"%PDF-1.7\n".to_vec();
+        bytes.extend_from_slice(payload);
+        bytes.extend_from_slice(b"\n%%EOF\n");
+        bytes
+    }
+
+    #[test]
+    fn a_whole_pdf_is_valid() {
+        let scan = scan_bytes(&pdf_around(&[b'x'; 64]), FileKind::Pdf);
+        assert_eq!(scan.validation, Validation::Valid);
+        assert!(scan.checksum.is_some());
+    }
+
+    #[test]
+    fn a_pdf_cut_before_the_end_is_corrupt() {
+        let whole = pdf_around(&[b'x'; 64]);
+        let cut = &whole[..whole.len() - 8];
+        assert!(matches!(
+            scan_bytes(cut, FileKind::Pdf).validation,
+            Validation::Corrupt(_)
+        ));
+    }
+
+    #[test]
+    fn a_page_of_html_answered_instead_of_a_pdf_is_corrupt() {
+        // Il caso vero: la biblioteca risponde 200 con una pagina di errore.
+        let page = b"<!doctype html><html><body>not here</body></html>".repeat(4);
+        assert!(matches!(
+            scan_bytes(&page, FileKind::Pdf).validation,
+            Validation::Corrupt(_)
+        ));
+    }
 
     fn temp_file(name: &str, bytes: &[u8]) -> std::path::PathBuf {
         let path = std::env::temp_dir().join(format!("glossa_vault_{name}"));

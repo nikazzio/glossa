@@ -2,27 +2,10 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  ExternalLink,
-  HardDrive,
-  HardDriveDownload,
-  Images,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Loader2,
-  RefreshCw,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  Focus,
-  MoreHorizontal,
-} from 'lucide-react';
-import { ClickPopover, EmptyState, IconButton, IconLink, MenuActionRow, Spinner, Tooltip } from '../ui';
-import { FIELD_CLASSNAME } from '../ui/fieldStyles';
+import { Images, RefreshCw } from 'lucide-react';
+import { EmptyState, IconButton, Spinner } from '../ui';
 import { ThumbnailRail } from './ThumbnailRail';
+import { ViewerToolbar } from './ViewerToolbar';
 import { createControlledIiifTileSource } from './iiifTileBridge';
 import {
   fetchIiifBytes,
@@ -41,11 +24,9 @@ import {
   type CacheRequest,
   type ImageSource,
 } from '../../services/cacheService';
-import { keepViewerPage } from '../../services/cacheService';
 import { libraryPageUrl } from '../../services/libraryLinks';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { errorMessage, logger } from '../../utils/logger';
-import { toast } from 'sonner';
 
 /** Dove si è arrivati nel libro, per chi sta fuori dal visore. */
 export interface ViewerPagePosition {
@@ -55,6 +36,11 @@ export interface ViewerPagePosition {
   /** L'immagine di questa pagina come la serve la biblioteca, alla misura con
    *  cui è stata chiesta: fuori dal visore serve per darne l'indirizzo. */
   imageUrl: string | null;
+  /** Il servizio immagini di questa pagina e la versione del formato: con
+   *  questi due la scheda costruisce da sé la richiesta a qualunque misura,
+   *  senza dover chiedere al visore di scaricare per conto suo. */
+  imageService: string;
+  presentation2: boolean;
 }
 
 interface PageViewerProps {
@@ -77,9 +63,6 @@ interface PageViewerProps {
   /** Avvisa chi ospita il visore della pagina mostrata, così altri riquadri
    *  della stessa schermata possono dirla senza chiederla al visore. */
   onPageChange?: (page: ViewerPagePosition) => void;
-  /** Una pagina è appena entrata nel deposito: chi mostra le versioni locali
-   *  deve rileggerle, perché spazio e conteggio sono cambiati. */
-  onPageKept?: () => void;
 }
 
 /**
@@ -137,7 +120,6 @@ export function PageViewer({
   preferredLocalSize = null,
   onLocalSizeChange,
   onPageChange,
-  onPageKept,
 }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -170,7 +152,6 @@ export function PageViewer({
   } | null>(null);
   const [pageRequest, setPageRequest] = useState<CacheRequest | null>(null);
   /** Vero mentre la pagina aperta sta entrando nel deposito. */
-  const [savingPage, setSavingPage] = useState(false);
   /**
    * Leggere solo quello che è sul computer.
    *
@@ -502,6 +483,8 @@ export function PageViewer({
               : wholePageAttempts(page, null, buildsImagesOnDemand(providerKey))[0],
             manifest?.presentation2 ?? false,
           ),
+          imageService: page.imageService,
+          presentation2: manifest?.presentation2 ?? false,
         });
         void setLastViewedPage(sourceId, currentIndex).catch((error) => {
           logger.warn('library.viewer.lastPageSaveFailed', {
@@ -646,55 +629,10 @@ export function PageViewer({
               viewport.zoomTo(viewport.imageToViewportZoom(1));
               viewport.applyConstraints();
             }}
-            keepState={
-              pageRequest?.kind !== 'page'
-                ? 'unavailable'
-                : pageOrigin?.source === 'vault'
-                  ? 'saved'
-                  : 'available'
-            }
-            savingPage={savingPage}
             localOnly={localOnly}
             onToggleLocalOnly={() => {
               logger.info('library.viewer.localOnlyChanged', { sourceId, localOnly: !localOnly });
               setLocalOnly(!localOnly);
-            }}
-            onDownloadPage={() => {
-              const saved = pageRequest;
-              if (!saved || saved.kind !== 'page') return;
-              setSavingPage(true);
-              void keepViewerPage(saved)
-                .then(() => {
-                  // Se nel frattempo si è voltata pagina, la provenienza a
-                  // schermo riguarda un'altra immagine e non si tocca: quello
-                  // che è finito nel deposito lo dice l'inventario.
-                  if (sameRequest(shownRequest.current, saved)) {
-                    setPageOrigin({ source: 'vault', size: saved.size });
-                  }
-                  void refreshLocalSize();
-                  onPageKept?.();
-                  logger.info('library.viewer.pageKept', {
-                    sourceId,
-                    versionId,
-                    index: saved.index,
-                    size: saved.size,
-                    from: pageOrigin?.source ?? 'unknown',
-                  });
-                  toast.success(t('areas.library.viewerPageDownloaded'));
-                })
-                .catch((error: unknown) => {
-                  logger.error('library.viewer.pageKeepFailed', {
-                    sourceId,
-                    versionId,
-                    index: saved.index,
-                    size: saved.size,
-                    message: errorMessage(error),
-                  });
-                  toast.error(t('areas.library.viewerPageDownloadFailed'), {
-                    description: errorMessage(error),
-                  });
-                })
-                .finally(() => setSavingPage(false));
             }}
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
@@ -770,332 +708,5 @@ export function PageViewer({
         </div>
       </div>
     </div>
-  );
-}
-
-interface ViewerToolbarProps {
-  /** Vero quando la pagina viene letta dal computer e non dalla biblioteca. */
-  fromDisk: boolean;
-  /** Da dove arriva la pagina a schermo, quando il motore l'ha detto. */
-  origin: { source: ImageSource | null; size: string } | null;
-  /** Il lato lungo in pixel dell'immagine a schermo, quando è noto. */
-  shownEdge: number | null;
-  index: number;
-  total: number;
-  label: string | null;
-  goToPage: string;
-  onGoToPageChange: (value: string) => void;
-  onGoToPageSubmit: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onZoomToFit: () => void;
-  onZoomToActualSize: () => void;
-  /**
-   * Cosa si può fare con la pagina a schermo: prenderla, niente perché non è
-   * ancora aperta, oppure niente perché è già in casa. Un booleano solo
-   * confondeva «non si può» con «è già fatto», e durante ogni apertura il
-   * comando dichiarava sul computer una pagina appena chiesta alla biblioteca.
-   */
-  keepState: 'unavailable' | 'available' | 'saved';
-  /** Vero mentre la pagina aperta sta entrando nel deposito. */
-  savingPage: boolean;
-  onDownloadPage: () => void;
-  /** Vero quando la lettura è limitata ai file già sul computer. */
-  localOnly: boolean;
-  onToggleLocalOnly: () => void;
-  thumbnailsOpen: boolean;
-  onToggleThumbnails: () => void;
-  shownPageUrl?: string | null;
-}
-
-/**
- * Da dove arriva **la pagina che si sta guardando**, e a che misura.
- *
- * Due parole, tre pallini. La scritta risponde alla sola domanda che cambia
- * qualcosa per chi legge — questo file è mio o no — e una pagina presa dalla
- * cache non è sua, perché chiudendo il libro non resta. Il colore dice il
- * dettaglio senza allungare la barra: neutro per il file sul computer, giallo
- * per la cache, verde quando la pagina è appena arrivata dalla biblioteca.
- *
- * Finché la provenienza non è nota si dice quello che si sa: se il libro è sul
- * disco, il disco.
- */
-function ConnectionBadge({
-  fromDisk,
-  origin,
-  shownEdge,
-}: {
-  fromDisk: boolean;
-  origin: { source: ImageSource | null; size: string } | null;
-  shownEdge: number | null;
-}) {
-  const { t } = useTranslation();
-  const source = origin?.source ?? (fromDisk ? 'vault' : null);
-  const fromLibrary = source === 'network';
-  const fromCache = source === 'cache';
-  const onDisk = source === 'vault';
-
-  const dotClass = fromLibrary
-    ? 'bg-editorial-success'
-    : fromCache
-      // Oro, non l'ocra profonda degli avvisi: su un pallino da sei pixel
-      // `warning` legge come un rosso scuro, e questo non è un avviso.
-      ? 'bg-editorial-running'
-      : 'bg-editorial-border';
-  const label = onDisk ? t('areas.library.viewerFromDisk') : t('areas.library.viewerOnline');
-  // La misura è quella dei pixel arrivati davvero: da quando una copia locale
-  // più grande viene servita com'è, la misura chiesta non è più quella che si
-  // sta guardando.
-  const size = shownEdge !== null ? String(shownEdge) : (origin?.size ?? null);
-  const detail = fromLibrary
-    ? t('areas.library.viewerOriginLibrary')
-    : fromCache
-      ? t('areas.library.viewerOriginCache')
-      : onDisk
-        ? t('areas.library.viewerOriginVault')
-        : label;
-
-  return (
-    <Tooltip
-      label={size ? `${detail} · ${t('areas.library.viewerOriginSize', { size })}` : detail}
-      side="bottom"
-    >
-      <span
-        className={`flex items-center gap-1.5 whitespace-nowrap text-xs ${fromLibrary ? 'text-editorial-success' : 'text-editorial-muted'}`}
-      >
-        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
-        {label}
-      </span>
-    </Tooltip>
-  );
-}
-
-function ViewerToolbar({
-  fromDisk,
-  origin,
-  shownEdge,
-  index,
-  total,
-  label,
-  goToPage,
-  onGoToPageChange,
-  onGoToPageSubmit,
-  onPrev,
-  onNext,
-  onZoomIn,
-  onZoomOut,
-  onZoomToFit,
-  onZoomToActualSize,
-  keepState,
-  savingPage,
-  onDownloadPage,
-  localOnly,
-  onToggleLocalOnly,
-  thumbnailsOpen,
-  onToggleThumbnails,
-  shownPageUrl,
-}: ViewerToolbarProps) {
-  const { t } = useTranslation();
-  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
-  return (
-    <div className="flex h-12 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
-      <IconButton
-        size="sm"
-        onClick={onToggleThumbnails}
-        ariaPressed={thumbnailsOpen}
-        title={t(thumbnailsOpen ? 'areas.library.viewerHideThumbnails' : 'areas.library.viewerShowThumbnails')}
-      >
-        {thumbnailsOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
-      </IconButton>
-      <span className="h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
-
-      <div className="flex shrink-0 items-center gap-1">
-        <IconButton size="sm" onClick={onPrev} disabled={index <= 0} title={t('areas.library.viewerPrevPage')}>
-          <ChevronLeft size={14} />
-        </IconButton>
-        <IconButton size="sm" onClick={onNext} disabled={index >= total - 1} title={t('areas.library.viewerNextPage')}>
-          <ChevronRight size={14} />
-        </IconButton>
-      </div>
-
-      <div className="flex min-w-0 items-center gap-2">
-        <form
-          className="shrink-0"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onGoToPageSubmit();
-          }}
-        >
-          <input
-            value={goToPage}
-            onChange={(event) => onGoToPageChange(event.target.value.replace(/\D/g, ''))}
-            placeholder={String(index + 1)}
-            aria-label={t('areas.library.viewerGoToPage')}
-            className={`${FIELD_CLASSNAME} w-12 py-1 text-center text-xs`}
-          />
-        </form>
-        <span className="truncate text-xs text-editorial-muted">
-          {t('areas.library.viewerPageOf', { index: index + 1, total })}
-          {label ? ` · ${label}` : ''}
-        </span>
-      </div>
-
-      {/* La provenienza è uno stato, non un comando: sta in mezzo, fra il
-          contesto a sinistra e i comandi a destra. */}
-      <div className="mx-auto shrink-0">
-        <ConnectionBadge fromDisk={fromDisk} origin={origin} shownEdge={shownEdge} />
-      </div>
-
-      <div className="ml-auto flex shrink-0 items-center gap-1">
-        <IconButton
-          size="sm"
-          tone={localOnly ? 'accent' : 'default'}
-          ariaPressed={localOnly}
-          onClick={onToggleLocalOnly}
-          title={t(localOnly ? 'areas.library.viewerLocalOnlyOff' : 'areas.library.viewerLocalOnly')}
-        >
-          <HardDrive size={14} />
-        </IconButton>
-        <PageKeepButton
-          saving={savingPage}
-          state={keepState}
-          edge={shownEdge}
-          onDownload={onDownloadPage}
-        />
-        {/* Due uscite diverse, accanto al comando che salva: questa pagina
-            com'è servita dalla biblioteca, e l'opera intera sul loro sito. */}
-        {shownPageUrl && (
-          <IconLink
-            size="sm"
-            href={shownPageUrl}
-            title={t('areas.library.openShownPage')}
-            tooltipSide="bottom"
-          >
-            <ExternalLink size={14} />
-          </IconLink>
-        )}
-        <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />
-        <IconButton size="sm" onClick={onZoomOut} title={t('areas.library.viewerZoomOut')}>
-          <ZoomOut size={14} />
-        </IconButton>
-        <IconButton size="sm" onClick={onZoomIn} title={t('areas.library.viewerZoomIn')}>
-          <ZoomIn size={14} />
-        </IconButton>
-        <ClickPopover
-          open={zoomMenuOpen}
-          onOpenChange={setZoomMenuOpen}
-          trigger={
-            <IconButton
-              size="sm"
-              ariaPressed={zoomMenuOpen}
-              title={t('areas.library.viewerZoomMore')}
-            >
-              <MoreHorizontal size={14} />
-            </IconButton>
-          }
-        >
-          <div className="min-w-44 py-1">
-            <MenuActionRow
-              icon={<Maximize size={14} />}
-              label={t('areas.library.viewerZoomToFit')}
-              onClick={() => {
-                setZoomMenuOpen(false);
-                onZoomToFit();
-              }}
-            />
-            <MenuActionRow
-              icon={<Focus size={14} />}
-              label={t('areas.library.viewerZoomActualSize')}
-              onClick={() => {
-                setZoomMenuOpen(false);
-                onZoomToActualSize();
-              }}
-            />
-          </div>
-        </ClickPopover>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Il comando che conserva sul computer la pagina aperta, e che dice in che
- * punto di quel gesto si è: da prendere, in corso, già in casa.
- *
- * Quando la pagina è già nel deposito non è più un comando spento — un pulsante
- * disabilitato non distingue «non si può» da «è già fatto» — ma uno stato, con
- * il suo colore e la sua frase. Riscaricare una pagina che c'è già è un'altra
- * funzione, e arriva con i comandi della singola pagina.
- */
-function PageKeepButton({
-  saving,
-  state,
-  edge,
-  onDownload,
-}: {
-  saving: boolean;
-  state: 'unavailable' | 'available' | 'saved';
-  /** Il lato lungo in pixel dell'immagine a schermo: è quella che verrebbe
-   *  salvata, quindi è l'unico numero che ha senso mostrare qui. Il nome
-   *  della misura chiesta («la più grande disponibile») non dice niente a chi
-   *  guarda una pagina già aperta. */
-  edge: number | null;
-  onDownload: () => void;
-}) {
-  const { t } = useTranslation();
-  const sizeLabel = edge !== null ? String(edge) : null;
-
-  if (saving) {
-    return (
-      <IconButton size="sm" disabled title={t('areas.library.viewerPageSaving')}>
-        <Loader2 size={14} className="animate-spin" />
-      </IconButton>
-    );
-  }
-
-  if (state === 'saved') {
-    // La misura serve anche qui: sapere *quale* versione locale contiene questa
-    // pagina è la differenza fra «ce l'ho» e «ce l'ho a quella giusta».
-    const label = sizeLabel
-      ? t('areas.library.viewerPageOnComputerAt', { size: sizeLabel })
-      : t('areas.library.viewerPageOnComputer');
-    return (
-      <Tooltip label={label} side="bottom">
-        <span
-          role="status"
-          aria-label={label}
-          className="flex h-7 w-7 items-center justify-center text-editorial-success"
-        >
-          <HardDriveDownload size={14} />
-        </span>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <IconButton
-      size="sm"
-      onClick={onDownload}
-      disabled={state === 'unavailable'}
-      title={
-        sizeLabel
-          ? t('areas.library.viewerDownloadPageAt', { size: sizeLabel })
-          : t('areas.library.viewerDownloadPage')
-      }
-    >
-      <Download size={14} />
-    </IconButton>
-  );
-}
-
-/** Due richieste che parlano della stessa immagine alla stessa misura. */
-function sameRequest(current: CacheRequest | null, other: CacheRequest): boolean {
-  if (!current || current.kind !== 'page' || other.kind !== 'page') return false;
-  return (
-    current.versionId === other.versionId &&
-    current.index === other.index &&
-    current.size === other.size
   );
 }
