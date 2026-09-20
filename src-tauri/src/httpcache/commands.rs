@@ -37,6 +37,29 @@ use crate::download::fetch;
 const MIN_MAX_BYTES: u64 = 32 * 1024 * 1024;
 const MAX_MAX_BYTES: u64 = 32 * 1024 * 1024 * 1024;
 
+/// Porta la categoria dell'errore fino al visore, dentro lo stesso
+/// `Result<_, String>` che il comando Tauri già restituisce.
+///
+/// Il motore di scaricamento distingue già le cause (biblioteca che chiede di
+/// rallentare, pagina assente, guasto di rete, ...) tramite `ErrorKind`, ma
+/// quella distinzione andava persa qui: si prendeva solo `error.message` e il
+/// visore mostrava sempre lo stesso avviso generico. Serializzando `kind` e
+/// `message` insieme, il visore può scegliere un testo per categoria; se la
+/// stringa non è questo formato (errori locali non di rete) resta comunque un
+/// messaggio leggibile, letto come testo semplice.
+fn tag_network_error(error: crate::jobs::JobError) -> String {
+    #[derive(serde::Serialize)]
+    struct Tagged {
+        kind: &'static str,
+        message: String,
+    }
+    serde_json::to_string(&Tagged {
+        kind: error.kind.as_str(),
+        message: error.message,
+    })
+    .unwrap_or_else(|_| "Errore di rete non classificabile.".to_string())
+}
+
 /// La stessa qualità dell'ottimizzazione locale: è materiale derivato e
 /// mostrato, non conservato.
 const DOWNSCALE_QUALITY: u8 = 82;
@@ -350,7 +373,7 @@ async fn resolve(
             let profile = read_profile();
             (
                 profile,
-                fetch::build_client(&profile).map_err(|error| error.message)?,
+                fetch::build_client(&profile).map_err(tag_network_error)?,
             )
         }
     };
@@ -371,7 +394,7 @@ async fn resolve(
         &signals,
     )
     .await
-    .map_err(|error| error.message)?
+    .map_err(tag_network_error)?
     .ok_or_else(|| "Richiesta interrotta.".to_string())?;
 
     // Prima si prova a tenerla per sempre: se quell'opera ha già una cartella

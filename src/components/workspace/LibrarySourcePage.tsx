@@ -48,7 +48,7 @@ import { useSourceActions } from './useSourceActions';
 import { CopiesSection } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
 import { MarkdownEditor } from '../common';
-import { PageViewer } from '../viewer/PageViewer';
+import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
 import { useDebounce } from '../../hooks/useDebounce';
 import { MULTI_VALUE_SEPARATOR } from '../../types';
@@ -140,6 +140,11 @@ export function LibrarySourcePage({
   const creatorDate = [detail.creator, detail.date].filter(Boolean).join(' · ');
   /** La pagina aperta nel visore: i dati tecnici ne mostrano gli indirizzi. */
   const [shownPage, setShownPage] = useState<ShownPage | null>(null);
+  /** La pagina che il visore sta aprendo o ha appena fallito, quando è
+   *  diversa da `shownPage`: senza, i pannelli a destra continuerebbero a
+   *  mostrare i dati della pagina precedente come se fossero già quelli
+   *  della pagina appena scelta. */
+  const [pageStatus, setPageStatus] = useState<PageStatus | null>(null);
   const [activeTab, setActiveTab] = useState<InspectorTabId>('info');
   const inspectorWidth = useUiStore((state) => state.librarySourceInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setLibrarySourceInspectorWidth);
@@ -181,6 +186,7 @@ export function LibrarySourcePage({
   // sbagliata della copia appena scelta.
   useEffect(() => {
     setShownPage(null);
+    setPageStatus(null);
   }, [selectedVersionId]);
 
   const persistLayout = () => {
@@ -293,6 +299,7 @@ export function LibrarySourcePage({
             providerKey={manifestVersion.providerKey}
             preferredLocalSize={chosenLocalSize}
             onLocalSizeChange={setReadingLocalSize}
+            onPageStatusChange={setPageStatus}
             onPageChange={(position) => {
               setShownPage({
                 index: position.index,
@@ -403,6 +410,7 @@ export function LibrarySourcePage({
                   onViewLocalSize={setChosenLocalSize}
                   provider={provider}
                   shownPage={shownPage}
+                  pageStatus={pageStatus}
                   shownVersionId={manifestVersion?.id ?? null}
                   onShowVersion={setSelectedVersionId}
                 />

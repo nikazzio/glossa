@@ -31,6 +31,7 @@ import { humanSize } from '../../utils';
 import { resolutionLabel } from '../../utils/resolutionLabel';
 import { VersionTechnicalData } from './VersionTechnicalData';
 import { OpenPageSection, type ShownPage } from './OpenPageSection';
+import type { PageStatus } from '../viewer/PageViewer';
 import { DocumentBlock } from './DocumentBlock';
 import type {
   IIIFProvider,
@@ -84,6 +85,7 @@ export function CopiesSection({
   reloadToken = 0,
   provider,
   shownPage = null,
+  pageStatus = null,
   shownVersionId = null,
   onShowVersion,
 }: {
@@ -103,6 +105,9 @@ export function CopiesSection({
   provider?: IIIFProvider;
   /** La pagina aperta nel visore, per darne gli indirizzi fra i dati tecnici. */
   shownPage?: ShownPage | null;
+  /** La pagina che il visore sta aprendo o ha appena fallito, quando è
+   *  diversa da `shownPage`. */
+  pageStatus?: PageStatus | null;
   /** La copia che il visore sta mostrando, e come cambiarla. */
   shownVersionId?: string | null;
   onShowVersion?: (versionId: string) => void;
@@ -142,6 +147,7 @@ export function CopiesSection({
             shownVersionId={shownVersionId}
             onShowVersion={onShowVersion}
             shownPage={version.id === openVersionId ? shownPage : null}
+            pageStatus={version.id === openVersionId ? pageStatus : null}
             entry={entry && version.id === entry.versionId ? entry : undefined}
             onRefresh={onRefresh}
             reloadToken={reloadToken}
@@ -181,6 +187,7 @@ function CopyDetails({
   viewedLocalSize,
   onViewLocalSize,
   shownPage,
+  pageStatus,
 }: {
   version: LibrarySourceVersion;
   sourceId: string;
@@ -190,6 +197,9 @@ function CopyDetails({
   onShowVersion?: (versionId: string) => void;
   /** La pagina aperta nel visore, quando è di questa copia. */
   shownPage?: ShownPage | null;
+  /** La pagina che il visore sta aprendo o ha appena fallito, quando è
+   *  diversa da `shownPage`. */
+  pageStatus?: PageStatus | null;
   entry?: LibraryCatalogEntry;
   onRefresh: () => void;
   reloadToken: number;
@@ -443,6 +453,7 @@ function CopyDetails({
           version={version}
           providerKey={resolvedProviderKey ?? 'generic'}
           shownPage={isOpenInViewer ? (shownPage ?? null) : null}
+          pageStatus={isOpenInViewer ? (pageStatus ?? null) : null}
           bookSize={principal}
           sizeCap={sizeCap}
           onChanged={reloadAll}

@@ -27,6 +27,7 @@ import {
 import { libraryPageUrl } from '../../services/libraryLinks';
 import { versionInventory, type VersionInventory } from '../../services/inventoryService';
 import { errorMessage, logger } from '../../utils/logger';
+import { networkErrorHintKey } from '../../services/viewerErrorHint';
 
 /** Dove si è arrivati nel libro, per chi sta fuori dal visore. */
 export interface ViewerPagePosition {
@@ -63,7 +64,19 @@ interface PageViewerProps {
   /** Avvisa chi ospita il visore della pagina mostrata, così altri riquadri
    *  della stessa schermata possono dirla senza chiederla al visore. */
   onPageChange?: (page: ViewerPagePosition) => void;
+  /** Avvisa chi ospita il visore che una pagina diversa da quella mostrata è
+   *  in caricamento o ha appena fallito: senza, un riquadro che tiene i dati
+   *  dell'ultima pagina riuscita non saprebbe che non sono più quelli giusti.
+   *  `null` quando la pagina mostrata e quella richiesta tornano a coincidere. */
+  onPageStatusChange?: (status: PageStatus | null) => void;
 }
+
+/** Cosa sta succedendo a una pagina diversa da quella confermata a schermo:
+ *  la si sta apre, o si è appena arresa. `message` è quanto arrivato dal
+ *  motore, nello stesso formato che `networkErrorHintKey` sa leggere. */
+export type PageStatus =
+  | { index: number; state: 'loading' }
+  | { index: number; state: 'error'; message: string };
 
 /**
  * Quale cartella di misura leggere sul computer: quella chiesta, se ha pagine,
@@ -120,6 +133,7 @@ export function PageViewer({
   preferredLocalSize = null,
   onLocalSizeChange,
   onPageChange,
+  onPageStatusChange,
 }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -188,6 +202,8 @@ export function PageViewer({
    */
   const onPageChangeRef = useRef(onPageChange);
   onPageChangeRef.current = onPageChange;
+  const onPageStatusChangeRef = useRef(onPageStatusChange);
+  onPageStatusChangeRef.current = onPageStatusChange;
 
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -201,6 +217,7 @@ export function PageViewer({
     setPageError(null);
     setPageLoading(false);
     setLocalOnly(false);
+    onPageStatusChangeRef.current?.(null);
     // I contatori dei tentativi **non** si azzerano qui: l'effetto che carica
     // il manifesto li ha fra le dipendenze, e riportarli a zero gli faceva
     // chiedere due volte lo stesso manifesto — megabyte, sulla corsia della
@@ -461,6 +478,7 @@ export function PageViewer({
       });
       setPageLoading(false);
       setPageError(message);
+      onPageStatusChangeRef.current?.({ index: currentIndex, state: 'error', message });
     };
 
     const handleTileLoaded = () => {
@@ -468,6 +486,7 @@ export function PageViewer({
       shown += 1;
       setPageLoading(false);
       setPageError(null);
+      onPageStatusChangeRef.current?.(null);
       if (!announced) {
         announced = true;
         onPageChangeRef.current?.({
@@ -532,6 +551,7 @@ export function PageViewer({
     viewer.addHandler('zoom', handleZoom);
     setPageError(null);
     setPageLoading(true);
+    onPageStatusChangeRef.current?.({ index: currentIndex, state: 'loading' });
     // La provenienza è di questa pagina: tenere quella di prima mentre la nuova
     // arriva la farebbe leggere come se valesse per l'immagine a schermo.
     setPageOrigin(null);
@@ -677,11 +697,12 @@ export function PageViewer({
           {pageLoading && (
             <div className="absolute inset-x-0 top-0 flex flex-col items-center gap-1 p-2">
               <Spinner
+                size={16}
                 label={t('areas.library.viewerOpeningPage', { index: currentIndex + 1 })}
-                className="rounded bg-surface-panel/90 px-2 py-1 text-xs text-editorial-muted shadow"
+                className="flex items-center gap-2 rounded bg-surface-panel/90 px-3 py-1.5 text-sm text-editorial-muted shadow"
               />
               {openingIsSlow && (
-                <p className="max-w-xs rounded bg-surface-panel/90 px-2 py-1 text-center text-xs text-editorial-muted shadow">
+                <p className="max-w-xs rounded bg-surface-panel/90 px-3 py-1.5 text-center text-sm text-editorial-muted shadow">
                   {t('areas.library.viewerPreparing')}
                 </p>
               )}
@@ -697,7 +718,7 @@ export function PageViewer({
                     ? t('areas.library.viewerNotLocal')
                     : pageError === TILE_LOAD_FAILED
                       ? t('areas.library.viewerTileLoadErrorHint')
-                      : t('areas.library.viewerLoadErrorHint')
+                      : t(networkErrorHintKey(pageError ?? '') ?? 'areas.library.viewerLoadErrorHint')
                 }
               />
               <IconButton size="sm" onClick={() => setPageAttempt((n) => n + 1)} title={t('areas.library.viewerRetry')}>
