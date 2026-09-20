@@ -39,7 +39,7 @@
     "@radix-ui/react-popover": "^1.1.17",
     "@radix-ui/react-tooltip": "^1.2.10",
     "@tanstack/react-virtual": "^3.13.24",
-    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/api": "2.10.1",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
     "@tauri-apps/plugin-log": "^2.8.0",
@@ -94,5 +94,8 @@
     "vite": "^8.0.16",
     "vitepress": "^1.6.3",
     "vitest": "^4.1.4"
+  },
+  "overrides": {
+    "@tauri-apps/api": "2.10.1"
   }
 }
