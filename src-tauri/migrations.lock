@@ -12,7 +12,10 @@
 # prima di unirle a main, che non le aveva mai ricevute. Lecito solo finché
 # nessun database distribuito le ha applicate: chi le aveva in locale ricrea
 # il database e reimporta un backup. Dopo la 1.0 questa strada è chiusa.
+#
+# Consolidamento pre-1.0 (21 settembre 2026): 0002_excluded_pages e
+# 0003_single_pdf_copy fuse nella baseline prima di unire la PR #475 a main,
+# che non le aveva mai ricevute. Stessa condizione: nessun database
+# distribuito le ha applicate.
 
-0001_baseline_2_0.sql 3c46dc75731f5c21
-0002_excluded_pages.sql 6978c766baf8f930
-0003_single_pdf_copy.sql 68861798ca985ed4
+0001_baseline_2_0.sql d608384f3f940d96

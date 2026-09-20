@@ -262,14 +262,6 @@ che un backup prodotto da una baseline precedente sia importabile: prima di
 consolidare si verifica di avere una copia dei dati e la strada per rimetterli
 dentro.
 
-**Da consolidare prima del prossimo merge su `main` (17 settembre 2026):**
-`0002_excluded_pages.sql` e `0003_single_pdf_copy.sql`, aperte durante la PR
-#475/#462 mai ancora unita — nessun database distribuito le ha applicate.
-Vanno fuse in `0001_baseline_2_0.sql` **subito prima** dell'unione, non prima:
-farlo prima avrebbe fatto passare `main` per una forma del database che poi
-sparisce con la fusione, e un database creato in quella finestra non si
-aprirebbe più dopo.
-
 **Condizione di uscita:** alla prima distribuzione destinata a utenti esterni la
 baseline si fissa e vale di nuovo la regola sopra — ogni cambiamento riceve un
 file di migrazione nuovo, la baseline non si tocca più.
