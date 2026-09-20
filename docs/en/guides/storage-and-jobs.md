@@ -66,9 +66,10 @@ at full size. A predefined size can be larger or smaller than the target.
 If the service rejects the requested dimensions, a download may use full size
 and preserve it without local resizing. Thumbnails are generated from downloaded pages.
 
-Requesting another resolution creates a separate version. Saving a page from
-the viewer instead uses the image already loaded. Changing the configured
-resolution does not alter existing files.
+Requesting a different resolution **replaces** the downloaded one: for a work
+Glossa keeps a single image copy at a time (see “One copy per work” further
+down). Saving a page from the viewer instead uses the image already loaded,
+without requesting a new one.
 
 ## Network profiles
 
@@ -98,10 +99,11 @@ command that rechecks the repository before proceeding.
 
 ## Image reduction and caching
 
-Image reduction creates a new version at the selected dimensions and quality,
-preserving the original. Reclaiming space requires deleting a version after
-checking the result. If some pages cannot be processed, the job reports an
-error and retains the pages produced successfully.
+Recompression rewrites the copy's pages **in place**, at a lower quality and
+the same dimensions: same pixels, fewer bytes, no second copy of the book. It
+is not reversible — getting the original quality back means downloading again
+from the library (details further down). If some pages cannot be processed,
+the job reports an error and retains the pages produced successfully.
 
 The network cache reuses responses and images. Its default size limit is
 512 MB, and search responses are valid for 24 hours by default. Images are
@@ -109,6 +111,91 @@ subject to the size limit without the same time-based expiry. Change these
 values or clear the cache under **Settings → Data**. Cached data does not
 increase downloaded-page counts and is excluded from
 [backups](../reference/backup-and-restore).
+
+
+## One copy per work
+
+A work keeps **one image copy**, at the size chosen when downloading, with **one
+file per page**. Asking for the book at another size says so first and replaces
+what you have: the old sizes are deleted only once the download succeeds, so a
+network failure does not leave you with nothing.
+
+The repository can still hold several sizes at once, but no command creates more
+than one.
+
+## Waiting on libraries
+
+Every request to a library waits for its turn: that is what stops Glossa from
+knocking too fast and getting refused. **Every wait has a deadline**: twenty
+seconds for what you are looking at, eight for background checks. Once it
+expires the request gives up and says so — “not verified” — instead of hanging.
+
+This addresses a concrete case: after a refusal, some libraries ask you to wait
+for minutes. Without a deadline a single request started at that moment stayed
+in the queue for all that time, and everything else concerning that library —
+including adding works — queued up behind it.
+
+## The document next to the images
+
+When the library serves the work as a single document, that file lives in the
+repository next to the image pages of the same work, not among the resolutions:
+it is another copy, not another resolution. It takes space of its own, is
+deleted on its own, and does not disappear when you free the images.
+
+The download is a job like the others and respects the same library network
+limits: the file is written to a staging area, checked — signature and proper
+ending — and only then enters the repository, so a dropped connection never
+leaves half a document among your files. Pages are counted from the document as
+soon as it arrives. If the library declared a different number, the count from
+the file wins, and the difference stays in the operations log without on-screen
+warnings.
+
+Repository verification checks the document the way it checks pages, comparing
+the checksum recorded when it arrived.
+
+## Acting on the page you are reading
+
+The commands for a single page live in the right-hand panel, under **Digital
+copies**, in the section at the top about the page open in the viewer. They are
+icon commands: the name appears on hover. They stay visible, disabled, when the
+viewer is showing another copy.
+
+With a page open you can:
+
+- **download it**, even when the book is not on disk: the page goes into the
+  folder of the resolution chosen for that work;
+- **download it at maximum resolution**: it is requested again and **replaces**
+  the one present, staying the only file for that page;
+- **download it again at the book resolution**, which recovers the space when
+  the detail is no longer needed;
+- **delete it from disk**: the page is excluded and does not come back with a
+  new download of the book, nor on its own. Asking for it again readmits it.
+
+When the book is already at maximum resolution both resolution commands are
+disabled: they would request the same image.
+
+Below, the real size of that page — the pixels it actually has, which after a
+retake are no longer the book's — and its weight. The viewer toolbar keeps only
+the reading commands: local-only reading, zoom, thumbnails and the link to the
+page on the library site.
+
+The commands about the pages on disk — check, recompress, delete — sit on the
+resolution row, not in the section header: that is where you can see what they
+act on.
+
+On the item page the copy states how many pages you removed on purpose: without
+that line an incomplete copy would look broken.
+
+## Making the pages lighter
+
+The recompression command rewrites **every** page of the copy at a lower
+quality, **without changing its dimensions**: it is for when the size is right
+and space is the problem. It does not create a second copy of the book and it is
+not reversible — to get the previous quality back you download from the library
+again.
+
+If a page turns out to need better quality after that, take it at the highest
+resolution: it replaces the recompressed one.
 
 
 ## Messages and system log

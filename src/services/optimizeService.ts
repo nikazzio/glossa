@@ -3,39 +3,31 @@ import { execute, select } from './dbService';
 import type { Job } from './jobsService';
 
 /**
- * L'ottimizzazione locale delle immagini: rilegge le pagine di una
- * cartella di misura già scaricata, le rimpicciolisce al lato lungo scelto e le
- * ricomprime in una nuova versione locale, senza sostituire l'originale.
+ * La ricompressione locale delle immagini: rilegge le pagine della copia e le
+ * riscrive a una qualità più bassa **senza toccarne i pixel**, per liberare
+ * spazio quando la misura va bene e il peso no.
  *
- * La nuova versione perde dettaglio rispetto alla fonte, ma l'operazione è
- * reversibile perché la fonte resta intatta. Lavora su una cartella di misura
- * per volta e non parte mai da sé.
+ * Non è reversibile: l'originale non resta da nessuna parte, e per riavere la
+ * qualità di prima si riscarica dalla biblioteca. Non parte mai da sé.
  */
 
-export const DEFAULT_OPTIMIZE_LONG_EDGE = 2000;
 export const DEFAULT_OPTIMIZE_QUALITY = 82;
 
-/** Le scelte offerte per il lato lungo di arrivo. */
-export const OPTIMIZE_LONG_EDGES = [1000, 1500, 2000, 3000, 4000] as const;
 /** Le scelte offerte per la qualità JPEG. */
 export const OPTIMIZE_QUALITIES = [60, 70, 82, 90] as const;
 
-const LONG_EDGE_KEY = 'optimize_long_edge';
 const QUALITY_KEY = 'optimize_jpeg_quality';
 
 /** Gli stessi estremi che applica il motore. */
-const MIN_LONG_EDGE = 512;
-const MAX_LONG_EDGE = 12_000;
 const MIN_QUALITY = 40;
 const MAX_QUALITY = 100;
 
 export async function enqueueOptimization(
   versionId: string,
   sizeTag: string,
-  longEdge?: number,
   quality?: number,
 ): Promise<Job> {
-  return invoke<Job>('enqueue_optimization', { versionId, sizeTag, longEdge, quality });
+  return invoke<Job>('enqueue_optimization', { versionId, sizeTag, quality });
 }
 
 async function readNumber(key: string, fallback: number, min: number, max: number): Promise<number> {
@@ -51,13 +43,7 @@ async function writeNumber(key: string, value: number): Promise<void> {
   );
 }
 
-export async function getOptimizeLongEdge(): Promise<number> {
-  return readNumber(LONG_EDGE_KEY, DEFAULT_OPTIMIZE_LONG_EDGE, MIN_LONG_EDGE, MAX_LONG_EDGE);
-}
 
-export async function setOptimizeLongEdge(value: number): Promise<void> {
-  await writeNumber(LONG_EDGE_KEY, value);
-}
 
 export async function getOptimizeQuality(): Promise<number> {
   return readNumber(QUALITY_KEY, DEFAULT_OPTIMIZE_QUALITY, MIN_QUALITY, MAX_QUALITY);

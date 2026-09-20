@@ -18,12 +18,7 @@ import { summarizeManifest, type ManifestSummary } from '../../services/manifest
 import { providerSiteUrl } from '../library/ProviderSiteLink';
 import { errorMessage, logger } from '../../utils/logger';
 import type { IIIFProvider, LibrarySourceDetail, LibrarySourceVersion } from '../../types';
-
-/** La pagina che il visore sta mostrando, quando è di questa copia. */
-export interface ShownPage {
-  index: number;
-  imageUrl: string | null;
-}
+import type { ShownPage } from './OpenPageSection';
 
 /** Ogni indirizzo ha il suo segno: il nome per esteso sta nel tooltip, perché
  *  sei righe di etichette accanto a sei indirizzi sono una colonna di parole

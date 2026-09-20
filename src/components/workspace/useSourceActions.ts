@@ -9,7 +9,7 @@ import { versionInventory } from '../../services/inventoryService';
 import { enqueueOptimization } from '../../services/optimizeService';
 import { forgetVersionCache } from '../../services/cacheService';
 import {
-  deleteVersionFiles,
+  deleteSourceFiles,
   freeVersionPages,
   summarizeAvailability,
 } from '../../services/vaultService';
@@ -229,8 +229,10 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
 
     setBusy(true);
     try {
+      // Tutte le copie dell'opera, non solo quella con cui è stata trovata:
+      // il documento scaricato è una copia a sé, e restava sul disco.
+      await deleteSourceFiles(await providerKey(), entry.source.id);
       if (entry.versionId) {
-        await deleteVersionFiles(await providerKey(), entry.versionId);
         // Anche la memoria di lavoro: senza questo passo lo spazio non si
         // libera davvero, e riaggiungendo la stessa opera le pagine
         // tornerebbero da lì senza ricontattare la biblioteca.

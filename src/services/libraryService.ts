@@ -19,9 +19,12 @@ import {
   type SourceField,
   type SourceFieldValues,
   type SourceStatus,
+  MULTI_VALUE_SEPARATOR,
 } from '../types';
 
-const FIELD_SEPARATOR = ' · ';
+// Lo stesso separatore che la scheda mostra e accetta quando si scrive a mano:
+// due definizioni dello stesso segno finirebbero per divergere.
+const FIELD_SEPARATOR = MULTI_VALUE_SEPARATOR;
 
 function joinValues(values: string[]): string | null {
   return values.length ? values.join(FIELD_SEPARATOR) : null;
@@ -47,7 +50,11 @@ interface SourceDetailRow {
  * provenienza, serie...) non hanno un originale: `null` finché Niki non li
  * scrive lui.
  */
-function baseFieldValue(field: SourceField, row: SourceDetailRow, metadata: SourceMetadata): string | null {
+function baseFieldValue(
+  row: Pick<SourceDetailRow, 'title' | 'kind' | 'primary_language' | 'description'>,
+  metadata: SourceMetadata,
+  field: SourceField,
+): string | null {
   switch (field) {
     case 'title': return row.title;
     case 'kind': return row.kind;
@@ -78,7 +85,7 @@ function effectiveFieldValues(
   const original: SourceFieldValues = {};
   const effective = {} as Record<SourceField, string | null>;
   for (const field of SOURCE_FIELDS) {
-    const base = baseFieldValue(field, row, metadata);
+    const base = baseFieldValue(row, metadata, field);
     const override = overrides[field];
     if (override !== undefined) {
       original[field] = base ?? '';
@@ -477,6 +484,63 @@ export async function listLibrarySourceUrls(): Promise<{ sourceUrl: string; sour
   return rows.map((row) => ({ sourceUrl: row.source_url, sourceId: row.source_id }));
 }
 
+/**
+ * Registra il PDF che la biblioteca dichiara, come copia a sé dell'opera.
+ *
+ * È una copia distinta da quella a immagini: le due non promettono la stessa
+ * identità di pagina. Di PDF però **ce n'è uno solo per opera** — quello del
+ * manifesto — e il database lo impone con un indice unico parziale: qui si
+ * aggiorna la copia esistente invece di affiancarne una seconda.
+ *
+ * L'identità della copia è il **tipo**, non l'etichetta né l'indirizzo: una
+ * biblioteca che cambia l'indirizzo del suo PDF non deve produrre due copie di
+ * cui una morta, e l'etichetta remota non è un identificativo (la tabella ha
+ * un vincolo di unicità proprio sull'etichetta).
+ *
+ * Restituisce `true` quando qualcosa è cambiato: copia nuova o indirizzo
+ * aggiornato.
+ */
+export async function registerDeclaredDocument(
+  sourceId: string,
+  document: { url: string; label: string | null; providerKey?: string | null },
+): Promise<boolean> {
+  if (!isValidUrl(document.url)) return false;
+  // La biblioteca si scrive nei metadati della copia: è lei a decidere sotto
+  // quale cartella finisce il file, e leggerla dalla copia a immagini
+  // presupporrebbe che le due restino sempre accoppiate. L'etichetta dichiarata
+  // dalla biblioteca si conserva qui perché è informativa, non identificativa.
+  const metadata = JSON.stringify({
+    providerKey: document.providerKey ?? null,
+    declaredLabel: document.label,
+  });
+  const [existing] = await select<{ id: string; source_url: string | null }>(
+    "SELECT id, source_url FROM source_versions WHERE source_id = $1 AND version_kind = 'pdf'",
+    [sourceId],
+  );
+
+  if (existing) {
+    if (existing.source_url === document.url) return false;
+    await execute(
+      'UPDATE source_versions SET source_url = $1, metadata = $2 WHERE id = $3',
+      [document.url, metadata, existing.id],
+    );
+    logger.info('library.document.updated', { sourceId });
+    return true;
+  }
+
+  await execute(
+    'INSERT INTO source_versions (id, source_id, label, version_kind, source_url, metadata, is_primary) VALUES ($1, $2, $3, $4, $5, $6, 0)',
+    [generateId('sver'), sourceId, DOCUMENT_VERSION_LABEL, 'pdf', document.url, metadata],
+  );
+  logger.info('library.document.registered', { sourceId });
+  return true;
+}
+
+/** L'etichetta della copia PDF. Fissa: la tabella impone etichette distinte
+ *  dentro la stessa opera, e quella dichiarata dalla biblioteca può coincidere
+ *  con una già usata. Quella dichiarata resta nei metadati. */
+const DOCUMENT_VERSION_LABEL = 'PDF';
+
 export async function addSourceToLibrary(
   input: AddSourceToLibraryInput,
 ): Promise<{ sourceId: string; wasCreated: boolean }> {
@@ -614,9 +678,31 @@ export async function resyncSourceFromManifest(
       'UPDATE source_versions SET metadata = $2 WHERE source_id = $1 AND is_primary = 1',
       [sourceId, metadata],
     );
-    await run(`DELETE FROM source_field_overrides WHERE source_id = $1 AND field <> 'notes'`, [
-      sourceId,
-    ]);
+    // Si cancellano le correzioni **solo dei campi che la biblioteca dichiara**
+    // in questa lettura: se hai scritto a mano un dato che la biblioteca non dà
+    // — il luogo di origine, una nota di provenienza — riallineare non ha
+    // motivo di buttarlo. Le note non arrivano mai dalla biblioteca e restano
+    // sempre.
+    const provided = SOURCE_FIELDS.filter((field) => {
+      const value = baseFieldValue(
+        {
+          title: input.title,
+          kind: input.kind,
+          primary_language: input.language,
+          description: input.description,
+        },
+        parseMetadata(metadata),
+        field,
+      );
+      return value !== null && value.trim() !== '';
+    });
+    if (provided.length > 0) {
+      const placeholders = provided.map((_, index) => `$${index + 2}`).join(', ');
+      await run(
+        `DELETE FROM source_field_overrides WHERE source_id = $1 AND field IN (${placeholders})`,
+        [sourceId, ...provided],
+      );
+    }
   });
 
   logger.info('library.source.resynced', { sourceId });
@@ -642,6 +728,11 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
 
   const primary = versionRows.find((row) => row.is_primary === 1) ?? versionRows[0];
   const metadata = parseMetadata(primary?.metadata ?? null);
+  if (!metadata.providerKey) {
+    // Aggiunta prima che la provenienza venisse registrata: senza biblioteca
+    // non si risolve né il nome né il collegamento all'opera sul suo sito.
+    logger.warn('library.source.provenanceMissing', { sourceId });
+  }
   const overrides = (await overridesOfMany([sourceId])).get(sourceId) ?? {};
   const { effective, original } = effectiveFieldValues(source, metadata, overrides);
 
@@ -733,7 +824,7 @@ async function originalFieldValue(sourceId: string, field: SourceField): Promise
     [sourceId],
   );
   const metadata = parseMetadata(version?.metadata ?? null);
-  return baseFieldValue(field, row, metadata);
+  return baseFieldValue(row, metadata, field);
 }
 
 export async function setWorkspaceSourceLink(

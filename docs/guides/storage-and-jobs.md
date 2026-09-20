@@ -70,9 +70,10 @@ più piccolo dell’obiettivo. Se il servizio rifiuta la dimensione richiesta,
 il download può usare la dimensione piena e conservarla senza riduzione locale.
 Le miniature vengono generate dalle pagine scaricate.
 
-Chiedere una risoluzione diversa crea una versione separata. Il comando per
-salvare la pagina dal visore usa invece l’immagine già caricata. La risoluzione
-scelta non modifica retroattivamente i file presenti.
+Chiedere una risoluzione diversa **sostituisce** quella scaricata: di un'opera
+Glossa tiene una sola copia a immagini alla volta (vedi «Una copia sola per
+opera» più avanti). Il comando per salvare la pagina dal visore usa invece
+l'immagine già caricata, senza richiederne una nuova.
 
 ## Profili di rete
 
@@ -104,10 +105,12 @@ il deposito prima di procedere.
 
 ## Riduzione e cache
 
-La riduzione genera una nuova versione con dimensioni e qualità scelte,
-conservando l’originale. Per recuperare spazio occorre eliminare una versione
-dopo aver verificato il risultato. Se alcune pagine non sono elaborabili,
-il lavoro segnala l’errore e conserva quelle prodotte correttamente.
+La ricompressione riscrive le pagine della copia **sul posto**, a una qualità
+più bassa e alle stesse dimensioni: stessi pixel, meno byte, nessuna seconda
+copia del libro. Non è reversibile — per riavere la qualità di prima occorre
+riscaricare dalla biblioteca (dettagli più avanti). Se alcune pagine non sono
+elaborabili, il lavoro segnala l'errore e conserva quelle prodotte
+correttamente.
 
 La cache di rete riutilizza risposte e immagini; il limite predefinito è
 512 MB e la validità predefinita delle ricerche è 24 ore. Le immagini sono
@@ -115,6 +118,93 @@ soggette al limite di spazio, senza la stessa scadenza temporale. In
 **Impostazioni → Dati** puoi modificare questi valori e svuotare la
 cache. La cache non aumenta il conteggio delle pagine scaricate e non entra
 nel [backup](../reference/backup-and-restore).
+
+
+## Una copia sola per opera
+
+Di un'opera si tiene **una copia a immagini**, alla misura scelta al momento
+dello scaricamento, con **un file per pagina**. Chiedere il libro a un'altra
+misura lo dichiara prima e sostituisce quella che hai: le misure vecchie
+vengono cancellate solo a scaricamento riuscito, così un guasto di rete non ti
+lascia senza niente.
+
+Il deposito resta capace di tenere più misure insieme, ma nessun comando ne
+crea più di una.
+
+## Attese verso le biblioteche
+
+Ogni richiesta verso una biblioteca aspetta il proprio turno: è ciò che impedisce
+a Glossa di bussare troppo in fretta e di farsi rifiutare. **Ogni attesa ha una
+scadenza**: venti secondi per quello che stai guardando, otto per i controlli di
+sfondo. Scaduta, la richiesta rinuncia e lo dichiara — «non verificato» — invece
+di restare sospesa.
+
+Serve a un caso concreto: dopo un rifiuto, certe biblioteche chiedono di
+aspettare minuti. Senza scadenza una sola richiesta partita in quel momento
+restava in attesa per tutto quel tempo, e dietro di lei si accodava tutto il
+resto che riguardava quella biblioteca, aggiunta di opere compresa.
+
+## Il documento accanto alle immagini
+
+Quando la biblioteca serve l'opera come documento unico, quel file vive nel
+deposito accanto alle pagine a immagini della stessa opera, non fra le misure:
+è un'altra copia, non un'altra risoluzione. Occupa spazio per conto suo, si
+elimina per conto suo e non sparisce quando liberi le immagini.
+
+Lo scaricamento è un lavoro come gli altri e rispetta gli stessi limiti di rete
+della biblioteca: il file viene scritto in un'area di transito, controllato —
+firma e chiusura al posto giusto — e solo allora entra nel deposito, così una
+connessione caduta non lascia mai mezzo documento fra i tuoi file. Le pagine si
+contano dal documento appena arrivato. Se la biblioteca ne dichiarava un numero
+diverso, vale quello contato dal file, e la differenza resta nel registro delle
+operazioni senza avvisi a schermo.
+
+La verifica del deposito controlla il documento come controlla le pagine,
+confrontando l'impronta registrata al suo arrivo.
+
+## Agire sulla pagina che stai leggendo
+
+I comandi sulla singola pagina stanno nella scheda a destra, sotto **Copie
+digitali**, nella sezione in cima che riguarda la pagina aperta nel visore. Sono
+comandi a icona: il nome compare passandoci sopra. Restano visibili anche quando
+il visore mostra un'altra copia, spenti.
+
+Con la pagina aperta puoi:
+
+- **scaricarla**, anche se il libro non è sul disco: la pagina va nella cartella
+  della risoluzione scelta per quell'opera;
+- **scaricarla a risoluzione massima**: viene richiesta di nuovo e **sostituisce**
+  quella presente, restando l'unico file di quella pagina;
+- **riscaricarla alla risoluzione del libro**, che recupera lo spazio quando non
+  serve più il dettaglio;
+- **eliminarla dal disco**: la pagina viene esclusa e non torna né con un nuovo
+  scaricamento del libro né da sola. Richiederla la riammette.
+
+Quando il libro è già alla risoluzione massima i due comandi sulla risoluzione
+sono spenti: chiederebbero la stessa immagine.
+
+Sotto compaiono la misura vera di quella pagina — i pixel che ha davvero, che
+dopo una ripresa non sono più quelli del libro — e quanto pesa. Nella barra del
+visore restano soltanto i comandi di lettura: lettura solo dal computer,
+ingrandimento, miniature e il collegamento alla pagina sul sito della
+biblioteca.
+
+I comandi che riguardano le pagine sul disco — verifica, ricompressione,
+eliminazione — stanno sulla riga della risoluzione, non nell'intestazione della
+sezione: è lì che si legge su cosa agiscono.
+
+Nella scheda dell'opera la copia dichiara quante pagine hai tolto di proposito:
+senza quella riga una copia incompleta sembrerebbe guasta.
+
+## Alleggerire le pagine
+
+Il comando di ricompressione riscrive **tutte** le pagine della copia a una
+qualità più bassa, **senza cambiarne le dimensioni**: serve quando la misura va
+bene e il problema è lo spazio. Non crea una seconda copia del libro e non è
+reversibile — per riavere la qualità di prima si riscarica dalla biblioteca.
+
+Se dopo la ricompressione una pagina ti serve migliore, la riprendi alla massima
+risoluzione: sostituisce quella ricompressa.
 
 
 ## Messaggi e log di sistema

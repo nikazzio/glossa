@@ -21,6 +21,18 @@ export interface SizeFolder {
   derived: boolean;
 }
 
+/** Il documento unico presente sul computer: un file, non una cartella di
+ *  pagine. Sta accanto alle misure perché è un'altra copia dell'opera, non una
+ *  misura della stessa. */
+export interface DocumentCopy {
+  bytes: number;
+  /** Le pagine contate dal file all'arrivo; assenti se non si è potuto aprire. */
+  pages: number | null;
+  sourceUrl: string | null;
+  /** Quando è arrivato, in secondi. */
+  downloadedAt: number | null;
+}
+
 export interface VersionInventory {
   versionId: string;
   providerKey: string;
@@ -28,6 +40,8 @@ export interface VersionInventory {
   /** La misura con cui il libro è stato scaricato: quella con più pagine. */
   principal: string | null;
   hasManifest: boolean;
+  /** Il documento unico scaricato dalla biblioteca, quando c'è. */
+  document: DocumentCopy | null;
 }
 
 export async function versionInventory(versionId: string): Promise<VersionInventory | null> {
@@ -44,7 +58,8 @@ export function principalPages(inventory: VersionInventory): number {
   return principal?.pages ?? 0;
 }
 
-/** Quanto occupa in tutto, tutte le misure comprese. */
+/** Quanto occupa in tutto: tutte le misure, più il documento se c'è. */
 export function inventoryBytes(inventory: VersionInventory): number {
-  return inventory.sizes.reduce((total, size) => total + size.bytes, 0);
+  const sizes = inventory.sizes.reduce((total, size) => total + size.bytes, 0);
+  return sizes + (inventory.document?.bytes ?? 0);
 }

@@ -688,6 +688,36 @@ CREATE TABLE IF NOT EXISTS search_pages (
   PRIMARY KEY(result_set_id, page)
 );
 
+-- Le pagine che l'utente ha tolto dal computer **di proposito**.
+--
+-- Senza questa memoria un'eliminazione non dura: il primo scaricamento del
+-- libro, o il primo ripiego automatico, rimetterebbe la pagina al suo posto e
+-- lo spazio tornerebbe occupato. Chi butta le carte bianche vuole che restino
+-- buttate finché non è lui a richiederle.
+--
+-- L'esclusione vale per la copia digitale, non per una singola misura: una
+-- pagina che non interessa non interessa a nessuna risoluzione.
+CREATE TABLE IF NOT EXISTS excluded_pages (
+  version_id TEXT NOT NULL REFERENCES source_versions(id) ON DELETE CASCADE,
+  page_index INTEGER NOT NULL,
+  excluded_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (version_id, page_index)
+);
+
+-- Una sola copia PDF per opera.
+--
+-- Il PDF di un'opera è uno: quello che la biblioteca dichiara nel suo
+-- manifesto. Senza questo vincolo due strade che lo registrano insieme —
+-- l'aggiunta dalla ricerca e la verifica aperta nella scheda — potevano
+-- crearne due, perché ognuna guardava e poi scriveva senza che il database
+-- impedisse la seconda scrittura.
+--
+-- L'unicità è **parziale**, sulle sole copie PDF: di copie a immagini una
+-- stessa opera ne può avere più d'una, ed è un caso legittimo.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_source_versions_single_pdf
+  ON source_versions(source_id)
+  WHERE version_kind = 'pdf';
+
 -- ── Bootstrap defaults (first-run only, mirrors former dbService.ts seed) ──
 
 INSERT INTO app_settings (key, value)

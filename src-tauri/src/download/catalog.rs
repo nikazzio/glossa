@@ -19,8 +19,14 @@ use crate::provenance::fnv1a_hex;
 /// lavoro e non alla messa in coda: un lavoro ripreso dopo giorni deve
 /// rispettare i limiti di adesso.
 pub(crate) async fn profile_for(ctx: &JobContext, config: &DownloadConfig) -> NetworkProfile {
-    let key = config.provider_key.clone();
-    let host = host_of(&config.manifest_url).ok();
+    profile_of(ctx, &config.provider_key, &config.manifest_url).await
+}
+
+/// Come `profile_for`, per chi non scarica un manifesto: il documento unico ha
+/// un indirizzo solo e nessuna configurazione di pagine.
+pub(crate) async fn profile_of(ctx: &JobContext, provider_key: &str, url: &str) -> NetworkProfile {
+    let key = provider_key.to_string();
+    let host = host_of(url).ok();
     ctx.with_database(move |conn| {
         Ok(crate::iiif::settings::effective_profile(
             conn,
@@ -51,6 +57,39 @@ pub(crate) async fn size_policy_for(ctx: &JobContext, config: &DownloadConfig) -
     .unwrap_or_else(|error| {
         log::warn!("job size policy not read id={} error={error}", ctx.id);
         SizePolicy::default()
+    })
+}
+
+/// Le pagine che l'utente ha tolto di proposito da questa copia.
+///
+/// Si leggono a ogni avvio, non si tengono in mano: fra un tentativo e il
+/// successivo può averne escluse altre, e riscaricare una pagina che ha appena
+/// buttato è il modo più rapido per fargli perdere fiducia nel comando.
+pub(crate) async fn excluded_pages(
+    ctx: &JobContext,
+    version_id: &str,
+) -> Result<std::collections::HashSet<u32>, JobError> {
+    let version = version_id.to_string();
+    ctx.with_database(move |conn| {
+        let mut statement = conn
+            .prepare("SELECT page_index FROM excluded_pages WHERE version_id = ?1")
+            .map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map([&version], |row| row.get::<_, i64>(0))
+            .map_err(|error| error.to_string())?;
+        let mut excluded = std::collections::HashSet::new();
+        for row in rows {
+            excluded.insert(row.map_err(|error| error.to_string())? as u32);
+        }
+        Ok(excluded)
+    })
+    .await
+    .map_err(|error| {
+        // Un database illeggibile qui non vale «nessuna esclusione»: quel
+        // ripiego riscaricherebbe pagine che l'utente ha tolto di proposito.
+        // Meglio fermare il lavoro, che riparte da capo con la lettura giusta.
+        log::warn!("job excluded pages not read id={} error={error}", ctx.id);
+        JobError::new(ErrorKind::Internal, error)
     })
 }
 

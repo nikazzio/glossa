@@ -159,6 +159,10 @@ interface UiState {
    *  colonna, e spostarla dentro la sua o nell'altra dev'essere la stessa
    *  operazione con lo stesso risultato visibile. */
   dashboardSectionColumns: { left: string[]; right: string[] };
+  /** I gruppi di campi aperti nella scheda dell'opera. La scelta vale per
+   *  tutta la Biblioteca e non per la singola opera: chi lavora su un tipo di
+   *  materiale tiene aperti sempre gli stessi. */
+  librarySourceGroups: Record<string, boolean>;
   /** Colonna dei lavori nella Panoramica. */
   dashboardJobsWidth: number;
   dashboardJobsCollapsed: boolean;
@@ -214,6 +218,7 @@ interface UiState {
   setLibrarySourceInspectorWidth: (width: number) => void;
   setLibraryCatalogFiltersWidth: (width: number) => void;
   setLibraryCatalogFiltersCollapsed: (collapsed: boolean) => void;
+  setLibrarySourceGroupOpen: (group: string, open: boolean) => void;
   setDashboardSectionColumns: (columns: { left: string[]; right: string[] }) => void;
   setDashboardJobsWidth: (width: number) => void;
   setDashboardJobsCollapsed: (collapsed: boolean) => void;
@@ -373,6 +378,7 @@ export const useUiStore = create<UiState>()(
       librarySourceInspectorWidth: 400,
       libraryCatalogFiltersWidth: 320,
       libraryCatalogFiltersCollapsed: false,
+      librarySourceGroups: {},
       dashboardSectionColumns: {
         left: ['resume', 'searches', 'activity'],
         right: ['attention', 'jobs'],
@@ -564,6 +570,8 @@ export const useUiStore = create<UiState>()(
       setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
       setLibraryCatalogFiltersWidth: (width) => set({ libraryCatalogFiltersWidth: width }),
       setLibraryCatalogFiltersCollapsed: (collapsed) => set({ libraryCatalogFiltersCollapsed: collapsed }),
+      setLibrarySourceGroupOpen: (group, open) =>
+        set((state) => ({ librarySourceGroups: { ...state.librarySourceGroups, [group]: open } })),
       setDashboardSectionColumns: (columns) => set({ dashboardSectionColumns: columns }),
       setDashboardJobsWidth: (width) => set({ dashboardJobsWidth: width }),
       setDashboardJobsCollapsed: (collapsed) => set({ dashboardJobsCollapsed: collapsed }),
@@ -637,6 +645,7 @@ export const useUiStore = create<UiState>()(
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,
         libraryCatalogFiltersWidth: state.libraryCatalogFiltersWidth,
         libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
+        librarySourceGroups: state.librarySourceGroups,
         dashboardSectionColumns: state.dashboardSectionColumns,
         dashboardJobsWidth: state.dashboardJobsWidth,
         dashboardJobsCollapsed: state.dashboardJobsCollapsed,

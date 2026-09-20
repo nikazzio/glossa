@@ -35,7 +35,9 @@ use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
 use crate::vault::{integrity, layout};
 
-use super::catalog::{profile_for, record_manifest, record_pages, size_policy_for, source_title};
+use super::catalog::{
+    excluded_pages, profile_for, record_manifest, record_pages, size_policy_for, source_title,
+};
 use super::courtesy::{Courtesy, Lane, Signals};
 use super::fetch::{build_client, fetch, host_of};
 use super::inventory;
@@ -122,7 +124,11 @@ fn finished(
         progress.unavailable,
         progress.bytes
     );
-    if progress.present == 0 {
+    // Un libro con tutte le pagine escluse di proposito non ha niente da
+    // scaricare: `present` resta a zero, ma non è un guasto, è il risultato
+    // voluto. Senza questo confronto il lavoro falliva e ripartiva su un
+    // libro che l'utente aveva deciso di non volere.
+    if progress.present == 0 && progress.excluded < progress.total {
         // Cartella vuota per un guasto o cartella vuota per un rifiuto sono due
         // esiti diversi: il primo si ritenta, il secondo no. Dichiararli allo
         // stesso modo faceva finire in errore definitivo una rete caduta.
@@ -165,6 +171,7 @@ fn account_for(outcome: &PageOutcome, progress: &mut Progress) {
             progress.faulty = true;
         }
         PageOutcome::NotServed => progress.unavailable += 1,
+        PageOutcome::Excluded => progress.excluded += 1,
         // Il ciclo esce prima: qui non arriva.
         PageOutcome::Stopped => {}
     }
@@ -184,6 +191,8 @@ struct PageWork<'a> {
     fetcher: &'a PageFetcher<'a>,
     rule: &'a SharedRule,
     known: &'a std::collections::BTreeMap<u32, sidecar::PageRecord>,
+    /// Le pagine tolte di proposito: non si chiedono alla biblioteca.
+    excluded: &'a std::collections::HashSet<u32>,
     reporter: &'a Reporter<'a>,
     progress: &'a std::sync::Mutex<Progress>,
     profile: &'a NetworkProfile,
@@ -201,6 +210,11 @@ async fn attempt_page(
     signals: &Signals<'_>,
 ) -> (usize, Result<PageOutcome, JobError>) {
     let page = &work.pages[at_index];
+    // Una pagina tolta dall'utente non si richiede: l'eliminazione deve durare,
+    // altrimenti il primo scaricamento del libro la rimetterebbe al suo posto.
+    if work.excluded.contains(&page.index) {
+        return (at_index, Ok(PageOutcome::Excluded));
+    }
     // Una bandiera per pagina: con più pagine in volo, una che passava
     // azzerava quella di una collega ferma in raffreddamento, e il pannello
     // smetteva di dire «in attesa della biblioteca» proprio quando era vero.
@@ -404,6 +418,7 @@ impl SourceDownloadJob {
 
         // Stato di partenza letto dal disco, non da un punto salvato.
         let known = sidecar::read(size_dir);
+        let excluded = excluded_pages(ctx, &config.version_id).await?;
         let start = inventory::read_size_folder(cap.folder(), size_dir, false);
         let rule = SharedRule::new(rule.clone());
 
@@ -428,6 +443,7 @@ impl SourceDownloadJob {
             total: manifest.pages.len() as u32,
             bytes: start.bytes,
             unavailable: 0,
+            excluded: 0,
             faulty: false,
             recent: std::collections::VecDeque::new(),
         });
@@ -442,6 +458,7 @@ impl SourceDownloadJob {
             fetcher: &fetcher,
             rule: &rule,
             known: &known,
+            excluded: &excluded,
             reporter: &reporter,
             progress: &progress,
             profile,
@@ -605,6 +622,7 @@ mod tests {
             total,
             bytes: 0,
             unavailable: 0,
+            excluded: 0,
             faulty: false,
             recent: std::collections::VecDeque::new(),
         }

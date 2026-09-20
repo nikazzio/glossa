@@ -48,7 +48,26 @@ La scheda affianca il visore a un pannello con quattro sezioni:
 Titolo, autore, data e lingua possono essere corretti manualmente. Le correzioni
 sono memorizzate separatamente dal dato originale e possono essere rimosse.
 **Risincronizza con la biblioteca** acquisisce nuovamente i metadati e cancella
-le correzioni manuali. Note e file scaricati restano invariati.
+le correzioni manuali **solo dei campi che la biblioteca dichiara** in quella
+lettura: una correzione su un campo che la biblioteca non fornisce resta,
+insieme alle note e ai file scaricati.
+
+## Dati dell'opera
+
+La scheda mostra **tutti** i campi previsti, anche quelli che la biblioteca non
+ha compilato: un campo vuoto dice che quell'informazione non è arrivata, e da lì
+la puoi scrivere tu. Ogni riga si corregge con la matita e conserva il valore
+originale della biblioteca, che resta consultabile e ripristinabile.
+
+I campi essenziali — titolo, tipo di opera, autore, data, editore, lingua —
+stanno sempre in vista. Il resto è raccolto in gruppi richiudibili: contenuto,
+esemplare, provenienza, diritti e note. I gruppi ricordano se sono aperti, e la
+scelta vale per tutta la Biblioteca.
+
+Il tipo di opera si sceglie fra i valori previsti, perché i filtri del catalogo
+si appoggiano a quelli. I campi che contengono più valori — soggetti, altri
+responsabili, diritti, provenienza — si scrivono su una riga sola separandoli
+con «·», come vengono mostrati.
 
 ## Lettura delle pagine
 
@@ -83,6 +102,45 @@ Una risoluzione diversa produce una versione locale distinta. Ogni versione
 ha comandi propri per aprirla, ridurla o eliminarla. Le regole di dimensionamento
 sono descritte in [Archiviazione e lavori](./storage-and-jobs).
 
+## Il PDF dell'opera
+
+Alcune biblioteche, accanto alle immagini, offrono la stessa opera come PDF. Lo
+dichiarano nel loro manifesto — sulla radice o sulla sequenza, secondo la
+versione dello standard — ed è da lì che Glossa lo scopre: nessun indirizzo
+costruito per analogia.
+
+Nei **risultati della ricerca** ogni riga dichiara lo stato, sempre: «PDF
+disponibile», «PDF non disponibile», oppure «PDF non verificato» quando il
+manifesto non si è potuto leggere. La riga aperta aggiunge le pagine dichiarate
+e la misura in pixel della prima pagina, unico indizio sulla qualità della
+scansione disponibile prima di scaricare. Il manifesto si legge una volta sola
+per opera, solo per le righe che stanno sotto gli occhi, due letture alla volta
+al massimo, e mai per un risultato che il catalogo dichiara già senza
+riproduzione.
+
+Nella **scheda dell'opera** il PDF è una riga della sezione del libro, sotto le
+copie a immagini. Dichiara disponibilità e stato locale; un comando verifica di
+nuovo presso la biblioteca — serve quando il PDF è stato pubblicato dopo — e lo
+stesso controllo lo fa il riallineamento. Quando il PDF è disponibile, dalla
+stessa riga si scarica; quando è sul disco, la riga ne dichiara pagine e spazio
+e offre i comandi per visualizzarlo, aprirlo con l'applicazione di sistema o
+eliminarlo. Eliminarlo non tocca le immagini della stessa opera.
+
+Dalla stessa riga si sceglie **cosa visualizzare**: il PDF o le immagini. Il
+visore dichiara sempre quale delle due copie è a schermo, perché le pagine del
+PDF e quelle della sequenza di immagini non corrispondono e non vengono fuse in
+un unico sfoglio.
+
+Limiti dichiarati: un PDF oltre i 256 MB non si apre nel visore integrato e va
+letto con l'applicazione di sistema; di un PDF protetto da password o malformato
+non si contano le pagine, e la scheda lo dichiara invece di inventare un numero.
+La pagina viene disegnata a risoluzione fissa: ingrandita al massimo si vede
+meno nitida delle tessere IIIF.
+
+Ogni verifica ha una **scadenza**: se la biblioteca è occupata o non risponde,
+lo stato resta «non verificato» e si può riprovare. Nessuna attesa resta appesa,
+e una richiesta lenta non blocca le altre.
+
 ## Archiviazione ed eliminazione
 
 | Azione | Effetto |
@@ -90,7 +148,7 @@ sono descritte in [Archiviazione e lavori](./storage-and-jobs).
 | Archivia | Nasconde l’opera dal catalogo attivo e conserva i file; l’eventuale liberazione dello spazio richiede una scelta separata |
 | Libera spazio | Elimina le immagini scaricate, conservando scheda, manifesto e miniature |
 | Elimina una versione locale | Rimuove solo i file della versione selezionata |
-| Elimina l’opera | Rimuove scheda, collegamenti, deposito dell’opera e relativa cache |
+| Elimina l’opera | Rimuove scheda, collegamenti, i file di **tutte** le copie — immagini e documento — e la relativa cache |
 
 L’eliminazione non prevede un cestino. Le operazioni distruttive sui file
 richiedono che i lavori che possono modificarli siano conclusi o annullati;
@@ -98,10 +156,10 @@ la sola pausa non è sufficiente.
 
 ## Limiti
 
-Le digitalizzazioni PDF possono essere registrate, ma il loro download e la
-lettura nella Biblioteca non sono disponibili. L’importazione del testo di
-un PDF in un progetto di traduzione è una funzione distinta. La gestione
-avanzata delle singole pagine e la selezione multipla sono ancora incomplete.
+L’importazione del testo di un PDF in un progetto di traduzione resta una
+funzione distinta: dal documento conservato nella Biblioteca non si avvia
+ancora una trascrizione. La gestione avanzata delle singole pagine e la
+selezione multipla sono ancora incomplete.
 Le restrizioni di scaricamento dichiarate dalle istituzioni non sono applicate
 automaticamente: consulta le condizioni della fonte.
 

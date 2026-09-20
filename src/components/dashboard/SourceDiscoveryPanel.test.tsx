@@ -16,7 +16,16 @@ async function expandControl(title: string | RegExp) {
 
 const mockListProviders = vi.fn();
 const mockDiscover = vi.fn();
-const mockProbe = vi.fn();
+const mockInspect = vi.fn();
+
+/** Quello che il motore risponde quando del manifesto non ha saputo niente. */
+const UNKNOWN_FACTS = {
+  openable: null,
+  pages: null,
+  samplePixels: null,
+  document: null,
+  renderings: [],
+};
 
 const RESULT_EXTRAS = {
   itemCount: null,
@@ -32,7 +41,7 @@ const RESULT_EXTRAS = {
 vi.mock('../../services/iiifProviderService', () => ({
   listIIIFProviders: () => mockListProviders(),
   discoverIIIF: (...args: unknown[]) => mockDiscover(...args),
-  probeManifest: (...args: unknown[]) => mockProbe(...args),
+  inspectManifest: (...args: unknown[]) => mockInspect(...args),
 }));
 
 vi.mock('../../services/libraryService', () => ({
@@ -57,7 +66,7 @@ describe('SourceDiscoveryPanel', () => {
     useSourceLibraryStore.setState({ catalog: [], detail: null, addingUrls: new Set(), addedManifestUrls: new Set(), error: null });
     useWorkspaceStore.setState({ activeWorkspace: null, workspaces: [] });
     mockListProviders.mockResolvedValue(PROVIDERS);
-    mockProbe.mockResolvedValue(null);
+    mockInspect.mockResolvedValue(UNKNOWN_FACTS);
   });
 
   it('shows a distinct error when discovery fails', async () => {
@@ -391,13 +400,13 @@ describe('risultati doppi dai cataloghi', () => {
     // riproduzione, e va detto sulla riga invece di farla sparire.
     expect(await screen.findByText('Solo in catalogo')).toBeInTheDocument();
     expect(screen.getByText('dashboard.discovery.notOpenable')).toBeInTheDocument();
-    // Il motore lo aveva già scoperto leggendo il manifesto: nessun controllo
-    // in più.
-    expect(mockProbe).not.toHaveBeenCalled();
+    // Il catalogo lo aveva già dichiarato: quel manifesto non si legge, perché
+    // non c'è niente da leggere.
+    expect(mockInspect).not.toHaveBeenCalledWith('archive_org', 'https://example.test/assente');
   });
 
   it('checks a result the library did not tell us about', async () => {
-    mockProbe.mockResolvedValue(false);
+    mockInspect.mockResolvedValue({ ...UNKNOWN_FACTS, openable: false });
     mockDiscover.mockResolvedValueOnce({
       status: 'results', providerKey: 'archive_org', manifest: null, hasMore: false,
       results: [
@@ -411,6 +420,6 @@ describe('risultati doppi dai cataloghi', () => {
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
 
     expect(await screen.findByText('dashboard.discovery.notOpenable')).toBeInTheDocument();
-    expect(mockProbe).toHaveBeenCalledWith('archive_org', 'https://example.test/ignoto');
+    expect(mockInspect).toHaveBeenCalledWith('archive_org', 'https://example.test/ignoto');
   });
 });

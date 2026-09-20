@@ -1115,7 +1115,7 @@
       "availabilityRemoteShort": "online",
       "availabilityComplete": "Local images",
       "availabilityPartial": "{{done}}/{{total}} Local images",
-      "verify": "Check this source's files",
+      "verify": "Check file integrity",
       "verifyIntact": "All {{count}} pages are in place",
       "verifyNoExpected_one": "There is 1 page on your computer. How many there should be is unknown: the library does not declare it.",
       "verifyNoExpected_other": "There are {{count}} pages on your computer. How many there should be is unknown: the library does not declare it.",
@@ -1124,7 +1124,6 @@
       "verifyDownloadMissing": "Download the missing ones",
       "verifyFailed": "Check failed",
       "vaultUnreachable": "Vault unreachable: disconnected disk or unmounted folder",
-      "freeSpace": "Free all the space of this digitisation: delete the pages of every local version",
       "freeSpaceTitle": "Free {{size}}?",
       "freeSpaceMessage": "The downloaded pages are deleted right away. The record, the manifest and the thumbnails stay, and pages are downloaded again from the library when you need them.",
       "freeSpaceConfirm": "Free space",
@@ -1145,7 +1144,6 @@
       "optimizeWhileDownloading": "This work has to finish downloading first: the two jobs would write over the same pages.",
       "resolutionPages": "{{done}}/{{total}} pages",
       "resolutionsSection": "Downloaded resolutions",
-      "localVersionsSection": "Local versions",
       "localVersionOrigin": "Origin",
       "localVersionSpace": "Space",
       "localVersionNotServedLabel": "Not served",
@@ -1160,14 +1158,11 @@
       "localVersionNeverDownloaded": "Never downloaded",
       "localVersionLastDownloadFailed": "Last download failed",
       "localVersionNotServed": "{{count}} not served by the library",
-      "compressAction": "Derive a smaller version from the {{size}} one, leaving it untouched",
+      "compressAction": "Recompress the pages",
       "compressSourceLabel": "From which resolution",
-      "compressFrom": "Starts from the {{size}} version",
       "downloadInProgress": "A download is already running for this digitisation, at the {{size}} size: wait for it to finish or stop it from the jobs panel.",
-      "compressTargetLabel": "To which resolution",
-      "compressConfirm": "Make the copy",
-      "compressNoTarget": "No smaller resolution available.",
-      "freeSizeAction": "Delete only the {{size}} version",
+      "compressConfirm": "Recompress",
+      "freeSizeAction": "Delete the pages from disk",
       "freeSizeTitle": "Free {{size}}?",
       "freeSizeMessage": "This resolution is deleted right away. The work's other resolutions stay.",
       "pageActionsLabel": "Single page",
@@ -1224,7 +1219,7 @@
       "detailsSection": "Details",
       "resyncAction": "Resync with the library",
       "resyncTitle": "Resync this work?",
-      "resyncMessage": "Reads the data from the library again and overwrites it: every hand correction made so far is gone (Notes stay). Already downloaded pages are not touched.",
+      "resyncMessage": "The data is read again from the library. Your manual corrections on the fields the library declares will be replaced; those on fields it does not provide — and the notes — stay.",
       "resyncConfirm": "Resync",
       "resyncSuccess": "Work resynced with the library",
       "resyncFailed": "Could not resync",
@@ -1236,6 +1231,13 @@
       "viewerLoadError": "This page could not be opened.",
       "viewerLoadErrorHint": "Check your connection and try again.",
       "viewerTileLoadErrorHint": "The library did not return all the required tiles.",
+      "viewerErrorHintTransport": "The library did not respond correctly. Try again shortly.",
+      "viewerErrorHintRateLimited": "The library asked to slow down requests. Try again shortly.",
+      "viewerErrorHintThrottled": "Too many requests right now. Try again shortly.",
+      "viewerErrorHintNotFound": "The library does not have this page at the expected address.",
+      "viewerErrorHintSizeRejected": "The library does not offer this page at the requested size.",
+      "viewerErrorHintStorage": "Not enough space or permission denied to save the page.",
+      "viewerErrorHintFormat": "The library returned an image in an unrecognized format.",
       "viewerRetry": "Retry",
       "viewerDownloadPage": "Save this page on your computer",
       "viewerDownloadPageAt": "Save this page on your computer, {{size}} px",
@@ -1334,8 +1336,7 @@
         "other": "File"
       },
       "sourceUrlField": "Address",
-      "downloadSection": "Download",
-      "downloadOnlyImages": "For now Glossa only downloads image digitisations. For this one you can read the record and open it on the library site.",
+      "downloadOnlyImages": "For now Glossa downloads image digitisations and documents. For this one you can read the record and open it on the library site.",
       "resolutionComplete": "Already complete",
       "viewPreference": "View (for the future viewer)",
       "viewOnline": "Online",
@@ -1353,7 +1354,85 @@
       "manifestContentFailed": "The manifest could not be read from the library.",
       "manifestPages": "Pages",
       "manifestSummary": "Description",
-      "manifestRights": "Rights"
+      "manifestRights": "Rights",
+      "fieldLabels": {
+        "title": "Title",
+        "kind": "Work type",
+        "creator": "Author",
+        "date": "Date",
+        "publisher": "Publisher",
+        "primary_language": "Language",
+        "description": "Description",
+        "subjects": "Subjects",
+        "genre_form": "Genre/form",
+        "coverage": "Coverage",
+        "contributors": "Other contributors",
+        "physical_description": "Physical description",
+        "volume": "Volume",
+        "series": "Series",
+        "standard_identifier": "Standard identifier",
+        "origin_place": "Place of origin",
+        "provenance": "Provenance",
+        "related_works": "Related works",
+        "rights": "Rights",
+        "notes": "Notes"
+      },
+      "fieldGroups": {
+        "content": "Content",
+        "copy": "Copy",
+        "provenance": "Provenance",
+        "rights": "Rights and notes"
+      },
+      "pageTakeAtMax": "Download this page at maximum resolution",
+      "pageBackToBookSize": "Download again at the book resolution",
+      "pageRemove": "Delete this page from disk",
+      "pageRemoveSize": "Delete the {{size}} size",
+      "pageActionFailed": "The page operation failed.",
+      "excludedPagesCount_one": "{{count}} page excluded: it will not be downloaded again.",
+      "excludedPagesCount_other": "{{count}} pages excluded: they will not be downloaded again.",
+      "openPageSection": "Page {{page}}",
+      "openPageSectionIdle": "Page",
+      "pageKeep": "Download this page",
+      "bookSection": "The book",
+      "downloadWholeBook": "Download the book at this resolution",
+      "downloadReplaceTitle": "Download at {{size}}?",
+      "downloadReplaceMessage": "A work keeps a single resolution. Once the download succeeds the current pages ({{sizes}}) are deleted; if it fails nothing changes.",
+      "downloadReplaceConfirm": "Download and replace",
+      "provenanceMissing": "Provenance missing: this work was added without a source library. Remove it and add it again to get the name and the link.",
+      "pageSizeField": "Resolution",
+      "pagePixels": "{{width}} × {{height}}",
+      "compressTitle": "Recompress the pages?",
+      "compressMessage": "Every page is rewritten at a lower quality, same pixel dimensions. Not reversible: to get the current quality back the book must be downloaded again.",
+      "freeSpace": "Delete every page of this work from disk",
+      "documentDownloading": "downloading",
+      "documentDownload": "Download the PDF",
+      "documentQueued": "PDF download queued.",
+      "documentDownloadFailed": "PDF download could not be started.",
+      "documentFreeTitle": "Delete the PDF ({{size}})?",
+      "documentFreeMessage": "The file is removed from disk. The images of the same work are left untouched and the PDF can be downloaded again.",
+      "documentFreeAction": "Delete the PDF from disk",
+      "documentFreeFailed": "The PDF could not be deleted.",
+      "documentOpenOutside": "Open with the system application",
+      "documentOpenFailed": "The PDF could not be opened.",
+      "documentPagesUnknown": "not determined",
+      "documentViewerSection": "PDF view",
+      "documentReading": "PDF",
+      "documentTooLarge": "PDF too large for the built-in viewer",
+      "documentTooLargeHint": "Open it with the system application: it reads the file from disk without loading all of it into memory.",
+      "documentLoadError": "The PDF could not be opened",
+      "documentLoadErrorHint": "The file may be password protected or damaged. Try again, or download it again from the record.",
+      "documentNotHere": "PDF not on disk",
+      "documentNotHereHint": "Download it from the PDF section of the work record.",
+      "documentChecking": "checking",
+      "documentNoManifest": "cannot be checked without a IIIF address",
+      "documentField": "PDF",
+      "documentDownloaded": "downloaded",
+      "documentNotDownloaded": "not downloaded",
+      "documentUnavailable": "not available for this work",
+      "documentUnverified": "availability not checked",
+      "documentVerify": "Check PDF availability",
+      "documentShow": "Show the PDF in the viewer",
+      "documentShown": "PDF shown in the viewer"
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -1540,7 +1619,14 @@
         "aggregator": "◈ A collection: it indexes material from many institutions. Each result states who holds the original, which is another library.",
         "paused": "⏸ This library's search exists but refuses automated requests. You can still open a work by typing its identifier or pasting its address.",
         "directOnly": "# This source has no search to query: it opens by typing the identifier or pasting the address, as in the field's example."
-      }
+      },
+      "documentAvailable": "PDF available",
+      "documentLabel": "PDF",
+      "manifestPages": "Pages in the manifest",
+      "samplePixels": "First page size",
+      "documentUnavailable": "PDF not available",
+      "documentUnverified": "PDF not verified",
+      "documentChecking": "PDF: checking"
     },
     "stats": {
       "projects": "Projects",
@@ -2333,7 +2419,8 @@
             "title": "Finding a catalogue entry",
             "paragraphs": [
               "Switch between list and grid views and use filters to narrow the catalogue. You can save a filter combination as a view. Include archived works to find an item you have set aside.",
-              "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files."
+              "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files.",
+              "The item page shows every field it knows about, including those the library did not fill in: they stay empty and you write them with the pencil, as you already do for title and author. The library's original value is kept and can be restored. The essential fields are always in view, the rest sit in groups that open and stay as you leave them."
             ]
           },
           {
@@ -2355,8 +2442,16 @@
             "title": "Downloading and saving",
             "paragraphs": [
               "In Digitisations, choose a resolution and start downloading the work. A different resolution creates another local version. You can choose which version to open.",
-              "Save page keeps only the displayed image at the dimensions shown in the tooltip. It does not request a new image at the configured resolution.",
-              "PDF copies may appear in the record, but Library viewing and downloading are not yet available for them."
+              "Save page keeps only the displayed image at the dimensions shown in the tooltip. It does not request a new image at the configured resolution."
+            ]
+          },
+          {
+            "title": "The PDF of the work",
+            "paragraphs": [
+              "Some libraries, besides page-by-page images, offer the same work as a PDF. In search results every row states the status: “PDF available”, “PDF not available”, or “PDF not verified” when the library did not answer. Opening the row also shows the declared pages and the pixel size of the first page, the only hint about scan quality before downloading.",
+              "In the work record the PDF is a row of the book section, below the image copies: there it states whether it is available, whether it has been downloaded, how much space it takes and how many pages it has. The check command queries the library again, for when the PDF was published later; the same check runs on resynchronisation.",
+              "From the same row you choose what to display: the PDF or the images. The viewer always states which of the two is on screen, because the pages of the PDF and those of the image sequence do not correspond. A very large PDF does not open in the built-in viewer: open it with the system application.",
+              "Every check has a deadline: if the library is busy or does not answer, the status stays “not verified” and you can try again. No wait is left hanging and no request blocks the others."
             ]
           },
           {
@@ -2379,7 +2474,9 @@
               "Open the jobs panel at the bottom right. Each entry shows progress and status; expand it for details, attempts and errors.",
               "Pause requests a stop at the next checkpoint; Resume continues from there. Cancel ends the job and keeps files already saved. After a failure, you can start another attempt.",
               "Waiting may indicate a library rate limit. A countdown refers to the next attempt, not the end of the download. Paused means the job needs to be resumed.",
-              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs."
+              "Jobs stop when the app closes. On reopening they remain paused, unless automatic download recovery is enabled under Settings → Jobs.",
+              "While reading you can act on a single page: keep it, take it at the highest resolution — it replaces the one you have — bring it back to the book size, or remove it from the computer. A removed page stays excluded and does not come back with a new download, until you ask for it again.",
+              "A work keeps one copy only, with one file per page: asking for the book at another size replaces the one you have, and recompression rewrites the pages lighter without changing their dimensions — there is no way back without downloading again."
             ]
           },
           {
@@ -2883,7 +2980,8 @@
       "debug_restart_only": "Development test (restart only)",
       "source_download": "Page download",
       "vault_verification": "Vault check",
-      "image_optimization": "Image optimisation"
+      "image_optimization": "Image optimisation",
+      "source_pdf_download": "Document download"
     },
     "phase": {
       "starting": "starting",
@@ -2891,7 +2989,8 @@
       "downloading": "downloading",
       "checking_files": "checking files",
       "looking_for_orphans": "looking for orphans",
-      "optimizing": "shrinking the images"
+      "optimizing": "shrinking the images",
+      "reading_document": "reading the document"
     },
     "closeTitle_one": "{{count}} job is still running",
     "closeTitle_other": "{{count}} jobs are still running",
@@ -2908,7 +3007,8 @@
       "vault_verification": "check",
       "debug_counter": "test",
       "debug_restart_only": "test",
-      "image_optimization": "optimisation"
+      "image_optimization": "optimisation",
+      "source_pdf_download": "document"
     },
     "error": {
       "optimizationIncomplete_one": "One page could not be optimised.",
