@@ -23,6 +23,12 @@ block of text and its own history. A document created from scratch in
 Transcriptions has no digitization to show: a notice appears in place of the
 viewer, not an error, and it stays a single block of text.
 
+At the top, a document tied to a work shows the work's title and author —
+the same row as the Library page, with the link out to the library's site.
+The three-dot command offers only "Remove transcription": downloading,
+verifying, or archiving the work stay commands of the Library page, not of
+the Studio.
+
 ## Writing and saving
 
 The text saves itself shortly after you stop typing: the indicator at the

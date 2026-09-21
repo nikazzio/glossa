@@ -1079,6 +1079,7 @@
     "saveFailed": "Failed to create the document",
     "loadFailed": "Failed to load transcriptions",
     "delete": "Delete",
+    "removeDocument": "Remove transcription",
     "confirmDeleteTitle": "Delete this document?",
     "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
     "deleted": "Document deleted",
@@ -2040,7 +2041,8 @@
           {
             "title": "The viewer on the left, one text per page",
             "paragraphs": [
-              "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text."
+              "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text.",
+              "At the top, a document tied to a work shows the work's title and author, as on its Library page, with the link out to the library's site. The three-dot command offers only \"Remove transcription\": downloading, verifying, or archiving the work stay commands of the Library page."
             ]
           },
           {

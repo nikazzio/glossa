@@ -1079,6 +1079,7 @@
     "saveFailed": "Creazione del documento fallita",
     "loadFailed": "Caricamento delle trascrizioni fallito",
     "delete": "Elimina",
+    "removeDocument": "Rimuovi trascrizione",
     "confirmDeleteTitle": "Eliminare il documento?",
     "confirmDeleteMessage": "\"{{name}}\" verrà rimosso. L'operazione non è reversibile.",
     "deleted": "Documento eliminato",
@@ -2040,7 +2041,8 @@
           {
             "title": "Il visore a sinistra, un testo per pagina",
             "paragraphs": [
-              "Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra la pagina della digitalizzazione collegata, con zoom e trascinamento — cambiando pagina, il testo a destra cambia con lei: ogni pagina ha il proprio blocco di testo e il proprio storico. Un documento creato da zero non ha una digitalizzazione da mostrare: al posto del visore compare un avviso, e resta un solo blocco di testo."
+              "Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra la pagina della digitalizzazione collegata, con zoom e trascinamento — cambiando pagina, il testo a destra cambia con lei: ogni pagina ha il proprio blocco di testo e il proprio storico. Un documento creato da zero non ha una digitalizzazione da mostrare: al posto del visore compare un avviso, e resta un solo blocco di testo.",
+              "In alto, un documento legato a un'opera mostra titolo e autore dell'opera, come nella sua scheda in Biblioteca, con l'uscita verso il sito della biblioteca. Il comando con i tre puntini offre solo \"Rimuovi trascrizione\": scaricare, verificare o archiviare l'opera restano comandi della scheda in Biblioteca."
             ]
           },
           {

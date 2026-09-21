@@ -389,6 +389,18 @@ Studio di traduzione — `AppLocation` porta `{ area: 'transcriptions',
 documentId }`, e l'area stessa decide se mostrare il catalogo o la vista
 concentrata, invece di un flag globale come `projectStore.currentProjectId`.
 
+**Intestazione**, quando il documento è legato a un'opera: stessa riga della
+scheda opera in Biblioteca (icona, titolo e autore dell'opera, uscita verso
+la biblioteca) — non il titolo scelto per la trascrizione, che identifica il
+documento nel catalogo e nel breadcrumb ma non qui, per non mostrare due
+titoli nella stessa schermata. Letta una volta per opera
+(`getLibrarySourceDetail` + `listIIIFProviders`, tenuti in `bookInfo`), non a
+ogni cambio pagina. Il menu a tre puntini è **volutamente più povero** di
+quello della scheda opera: solo "Rimuovi trascrizione", perché scaricare,
+verificare, archiviare sono azioni sull'opera, non sul suo studio di
+trascrizione — vivono già nella scheda opera. Un documento senza opera
+collegata mostra il proprio titolo, come prima.
+
 **Visore a sinistra** (#221, solo la parte zoom/pan — filtri visuali, preset
 e cambio fonte restano aperti): riusa `PageViewer`/`DocumentViewer`, già
 scritti per la scheda opera in Biblioteca, invece di un componente nuovo.

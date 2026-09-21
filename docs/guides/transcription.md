@@ -24,6 +24,12 @@ ha il proprio blocco di testo e il proprio storico. Un documento creato da
 zero in Trascrizioni non ha una digitalizzazione da mostrare: al posto del
 visore compare un avviso, non un errore, e resta un solo blocco di testo.
 
+In alto, un documento legato a un'opera mostra titolo e autore dell'opera —
+la stessa riga della scheda in Biblioteca, con l'uscita verso il sito della
+biblioteca. Il comando con i tre puntini offre solo "Rimuovi trascrizione":
+scaricare, verificare o archiviare l'opera restano comandi della scheda in
+Biblioteca, non dello Studio.
+
 ## Scrivere e salvare
 
 Il testo si salva da solo poco dopo che smetti di scrivere: l'indicatore in

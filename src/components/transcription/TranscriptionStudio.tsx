@@ -3,33 +3,40 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
+  BookOpenText,
   Check,
+  ExternalLink,
   FileInput,
   History,
   Images,
   Info,
   Loader2,
   Lock,
+  MoreVertical,
   RefreshCw,
   RotateCcw,
   ScanText,
   SlidersHorizontal,
   Sparkles,
+  Trash2,
   User,
 } from 'lucide-react';
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { MarkdownEditor } from '../common';
-import { IconButton, InspectorShell, Spinner, StatRow } from '../ui';
+import { ClickPopover, IconButton, IconLink, InspectorShell, MenuActionRow, Spinner, StatRow } from '../ui';
 import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
+import { CopyProvenance } from '../workspace/CopyProvenance';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
-import { getVersionForViewer, type ViewerVersionRef } from '../../services/libraryService';
+import { confirm } from '../../stores/confirmStore';
+import { getLibrarySourceDetail, getVersionForViewer, type ViewerVersionRef } from '../../services/libraryService';
+import { listIIIFProviders } from '../../services/iiifProviderService';
 import { logger } from '../../utils/logger';
 import {
   ensureSegment,
@@ -37,6 +44,7 @@ import {
   listRevisions,
   restoreRevision,
   saveSegmentText,
+  setDocumentStatus,
   unverifySegment,
   verifySegment,
   type TranscriptionRevision,
@@ -65,6 +73,16 @@ interface TranscriptionStudioProps {
   documentId: string;
   workspaceId: string | null;
   onBack: () => void;
+}
+
+/** Quanto serve per la riga dell'opera in alto — stessa forma della scheda
+ *  opera in Biblioteca, letta una volta sola per `sourceId`, non a ogni
+ *  cambio pagina. */
+interface BookHeaderInfo {
+  title: string;
+  creatorDate: string;
+  pageUrl: string | null;
+  providerLabel: string | undefined;
 }
 
 /**
@@ -96,6 +114,9 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [textMenuOpen, setTextMenuOpen] = useState(false);
   const [viewerRef, setViewerRef] = useState<ViewerVersionRef | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
+  const [bookInfo, setBookInfo] = useState<BookHeaderInfo | null>(null);
+  const [removingDocument, setRemovingDocument] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
   // La pagina mostrata a sinistra: un documento senza visore resta sempre a
   // 0, l'unico blocco di testo che ha senso per lui.
@@ -154,6 +175,54 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
       .finally(() => { if (!cancelled) setViewerLoading(false); });
     return () => { cancelled = true; };
   }, [detail?.source_version_id]);
+
+  // Titolo e autore dell'opera, come nella scheda opera in Biblioteca: letti
+  // una volta per opera (non per pagina), il visore può cambiare pagina
+  // migliaia di volte senza rileggere niente qui.
+  useEffect(() => {
+    if (!viewerRef) {
+      setBookInfo(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([getLibrarySourceDetail(viewerRef.sourceId), listIIIFProviders()])
+      .then(([sourceDetail, providers]) => {
+        if (cancelled) return;
+        setBookInfo({
+          title: sourceDetail.source.title,
+          creatorDate: [sourceDetail.creator, sourceDetail.date].filter(Boolean).join(' · '),
+          pageUrl: sourceDetail.pageUrl ?? sourceDetail.catalogUrl,
+          providerLabel: providers.find((p) => p.key === viewerRef.providerKey)?.label,
+        });
+      })
+      .catch((error: unknown) => {
+        logger.error('transcription.bookInfo.loadFailed', { sourceId: viewerRef.sourceId, error });
+        if (!cancelled) setBookInfo(null);
+      });
+    return () => { cancelled = true; };
+  }, [viewerRef]);
+
+  const handleRemoveDocument = async () => {
+    const ok = await confirm({
+      title: t('transcription.confirmDeleteTitle'),
+      message: t('transcription.confirmDeleteMessage', { name: detail?.title ?? '' }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    setRemovingDocument(true);
+    try {
+      await setDocumentStatus(documentId, 'trashed');
+      toast.success(t('transcription.deleted'));
+      onBack();
+    } catch (err: unknown) {
+      toast.error(t('transcription.deleteFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setRemovingDocument(false);
+    }
+  };
 
   const loadSegmentForPage = useCallback(async () => {
     setLoadingSegment(true);
@@ -325,16 +394,55 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
+      {/* Stessa riga della scheda opera in Biblioteca (icona, titolo/autore,
+          uscita verso la biblioteca): quando il documento è legato a
+          un'opera è quella a identificarlo qui, non il titolo scelto per la
+          trascrizione — visibile comunque nel breadcrumb in alto. */}
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3">
         <div className="flex min-w-0 items-center gap-3">
           <IconButton size="sm" onClick={onBack} title={t('transcription.backToCatalogue')}>
             <ArrowLeft size={15} />
           </IconButton>
+          {bookInfo && <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />}
           <div className="min-w-0">
             <h1 className="truncate font-display text-base italic text-editorial-ink">
-              {detail?.title ?? t('areas.transcriptions.title')}
+              {bookInfo?.title ?? detail?.title ?? t('areas.transcriptions.title')}
             </h1>
+            {bookInfo?.creatorDate && (
+              <p className="truncate text-xs text-editorial-muted">{bookInfo.creatorDate}</p>
+            )}
           </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {bookInfo?.providerLabel && (
+            <CopyProvenance providerLabel={bookInfo.providerLabel} className="mr-1 text-xs text-editorial-ink" />
+          )}
+          {bookInfo?.pageUrl && (
+            <IconLink size="sm" href={bookInfo.pageUrl} title={t('areas.library.openOnLibrarySite')}>
+              <ExternalLink size={13} />
+            </IconLink>
+          )}
+          <ClickPopover
+            open={headerMenuOpen}
+            onOpenChange={setHeaderMenuOpen}
+            trigger={
+              <IconButton size="sm" title={t('areas.library.moreActions')} disabled={removingDocument} ariaPressed={headerMenuOpen}>
+                <MoreVertical size={13} />
+              </IconButton>
+            }
+          >
+            <div className="min-w-44 py-1">
+              <MenuActionRow
+                icon={<Trash2 size={14} />}
+                label={t('transcription.removeDocument')}
+                tone="danger"
+                onClick={() => {
+                  setHeaderMenuOpen(false);
+                  void handleRemoveDocument();
+                }}
+              />
+            </div>
+          </ClickPopover>
         </div>
       </header>
 
