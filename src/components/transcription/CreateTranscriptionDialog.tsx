@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { createDocument } from '../../services/transcriptionService';
 import { getLibrarySourceDetail, listLibraryCatalog } from '../../services/libraryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, SegmentedControl, Select } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, FIELD_CLASSNAME, IconButton, PopoverItem, SegmentedControl, Select } from '../ui';
 import type { LibraryCatalogEntry } from '../../types';
 
 interface ReadableVersionOption {
@@ -88,17 +88,25 @@ export function CreateTranscriptionDialog({
     getLibrarySourceDetail(effectiveSourceId)
       .then((detail) => {
         if (cancelled) return;
-        const versions = detail.versions
-          .filter(
-            (version): version is typeof version & { versionKind: 'iiif_manifest' | 'pdf' } =>
-              (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf') &&
-              Boolean(version.sourceUrl),
-          )
-          .map((version) => ({ id: version.id, versionKind: version.versionKind }));
-        setReadableVersions(versions);
+        const readable = detail.versions.filter(
+          (version): version is typeof version & { versionKind: 'iiif_manifest' | 'pdf' } =>
+            (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf') &&
+            Boolean(version.sourceUrl),
+        );
         // Con la scelta fatta dalla scheda dell'opera si parte da quella;
         // scegliendo un'opera qui invece si parte dalla sua copia primaria.
         const fallback = sourceId ? sourceVersionId : pickedSource?.versionId ?? sourceVersionId;
+        const startingVersion = readable.find((version) => version.id === fallback) ?? readable[0] ?? null;
+        // Al massimo due scelte: la copia di partenza più una dell'altro tipo.
+        // Un'opera con due manifesti IIIF avrebbe altrimenti due voci
+        // "Immagini" indistinguibili in interfaccia.
+        const opposite = startingVersion
+          ? readable.find((version) => version.versionKind !== startingVersion.versionKind)
+          : undefined;
+        const versions = [startingVersion, opposite]
+          .filter((version): version is NonNullable<typeof version> => Boolean(version))
+          .map((version) => ({ id: version.id, versionKind: version.versionKind }));
+        setReadableVersions(versions);
         setChosenVersionId((current) =>
           current && versions.some((version) => version.id === current) ? current : fallback,
         );
@@ -205,24 +213,25 @@ export function CreateTranscriptionDialog({
                   value={sourceQuery}
                   onChange={(e) => setSourceQuery(e.target.value)}
                   placeholder={t('transcription.linkToSourcePlaceholder')}
-                  className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('transcription.linkToSource')}
+                  className={FIELD_CLASSNAME}
                 />
                 {sourceResults.length > 0 && (
                   <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-editorial-border bg-editorial-page shadow-lg custom-scrollbar">
                     {sourceResults.map((entry) => (
                       <li key={entry.source.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
+                        <PopoverItem
+                          label={entry.source.title}
+                          onSelect={() => {
                             setPickedSource(entry);
+                            // Subito, non solo quando arriva la lista delle copie
+                            // leggibili: creando prima che arrivi, il documento
+                            // restava senza collegamento nonostante la scelta visibile.
+                            setChosenVersionId(entry.versionId);
                             setSourceQuery('');
                             if (!title.trim()) setTitle(entry.source.title);
                           }}
-                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-editorial-ink hover:bg-editorial-accent/10 focus:outline-none focus-visible:bg-editorial-accent/10"
-                        >
-                          <BookOpenText size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
-                          <span className="truncate">{entry.source.title}</span>
-                        </button>
+                        />
                       </li>
                     ))}
                   </ul>

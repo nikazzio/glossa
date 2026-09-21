@@ -181,17 +181,21 @@ export function DocumentViewer({
     [total],
   );
 
-  // Salto comandato dall'esterno, stessa forma di PageViewer.
+  // Salto comandato dall'esterno, stessa forma di PageViewer. Il documento
+  // può ancora essere in apertura quando la richiesta arriva (`total` a 0):
+  // resta in attesa invece di scartarla, altrimenti il salto si perde e il
+  // documento riappena montato non raggiunge mai la pagina del testo.
   const goToIndexRef = useRef(goToIndex);
   goToIndexRef.current = goToIndex;
   useEffect(() => {
     if (requestedIndex === null) return;
+    if (total === 0) return;
     goToIndexRef.current(requestedIndex);
     onRequestedIndexHandledRef.current?.();
-    // Scatta solo su una richiesta nuova (requestToken), non a ogni cambio
-    // di `requestedIndex` da solo.
+    // Scatta su richiesta nuova (requestToken) o non appena il conteggio
+    // pagine arriva (total), non a ogni cambio di `requestedIndex` da solo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestToken]);
+  }, [requestToken, total]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowRight') {
@@ -210,7 +214,7 @@ export function DocumentViewer({
       className="flex h-full min-h-0 flex-1"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        {total > 0 && (
+        {(total > 0 || extraControls) && (
           <ViewerToolbar
             fromDisk
             origin={{ source: 'vault', size: '' }}

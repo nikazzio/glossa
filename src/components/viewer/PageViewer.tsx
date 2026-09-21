@@ -352,13 +352,18 @@ export function PageViewer({
   onRequestedIndexHandledRef.current = onRequestedIndexHandled;
   useEffect(() => {
     if (requestedIndex === null) return;
+    // Il manifesto può ancora essere in arrivo (`total` a 0): la richiesta
+    // resta in attesa invece di scartarla, altrimenti un visore appena
+    // montato non raggiunge mai la pagina del testo.
+    if (total === 0) return;
     goToIndexRef.current(requestedIndex);
     onRequestedIndexHandledRef.current?.();
-    // Scatta solo su una richiesta nuova (requestToken), non a ogni cambio
-    // di `requestedIndex` da solo: chi lo aggiorna deve anche cambiare
-    // il token, altrimenti non è una richiesta nuova.
+    // Scatta su richiesta nuova (requestToken) o non appena il manifesto
+    // arriva (total), non a ogni cambio di `requestedIndex` da solo: chi lo
+    // aggiorna deve anche cambiare il token, altrimenti non è una richiesta
+    // nuova.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestToken]);
+  }, [requestToken, total]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -653,7 +658,7 @@ export function PageViewer({
         </div>
       )}
       <div className="flex min-h-0 flex-1 flex-col">
-        {manifest && total > 0 && (
+        {((manifest && total > 0) || extraControls) && (
           <ViewerToolbar
             fromDisk={localSize !== null}
             origin={pageOrigin}

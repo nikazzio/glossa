@@ -30,7 +30,7 @@ import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-pa
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { MarkdownEditor, PanelTransitionVeil } from '../common';
-import { ClickPopover, IconButton, IconLink, InspectorShell, MenuActionRow, Spinner, StatRow } from '../ui';
+import { ClickPopover, EmptyState, IconButton, IconLink, InspectorShell, MenuActionRow, Spinner, StatRow } from '../ui';
 import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
 import { CopyProvenance } from '../workspace/CopyProvenance';
@@ -208,6 +208,11 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     let cancelled = false;
     setActiveSource('main');
     setManualUnlinked(false);
+    // Azzerati subito, non solo in caso di errore: senza, la secondaria
+    // dell'opera lasciata resta montata mentre quella dell'opera nuova è
+    // ancora in arrivo.
+    setSiblingVersion(null);
+    setSiblingPageCount(null);
     Promise.all([getLibrarySourceDetail(viewerRef.sourceId), listIIIFProviders()])
       .then(([sourceDetail, providers]) => {
         if (cancelled) return;
@@ -218,12 +223,12 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           providerLabel: providers.find((p) => p.key === viewerRef.providerKey)?.label,
         });
 
-        // La copia dell'altro tipo, se c'è: stessa opera, non la principale,
-        // leggibile (manifest o PDF con indirizzo). Al massimo una per tipo
-        // interessa qui — cambiarla di nuovo resta un caso raro.
+        // La copia dell'altro tipo, se c'è: stessa opera, tipo diverso dalla
+        // principale (mai un'altra sequenza di immagini se la principale è
+        // già immagini), leggibile (manifest o PDF con indirizzo).
         const sibling = sourceDetail.versions.find(
           (version) =>
-            version.id !== viewerRef.versionId &&
+            version.versionKind !== viewerRef.versionKind &&
             (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf') &&
             version.sourceUrl,
         );
@@ -381,6 +386,16 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     wasSyncedRef.current = synced;
   }, [synced, pageIndex]);
 
+  /** Le frecce indipendenti del testo, fuori sincronia: stessa cautela di
+   *  `handleViewerPageChange` per non perdere testo non salvato. La pagina
+   *  raggiunta così non ha un'etichetta nota (non viene da un visore), va
+   *  azzerata perché non resti quella della pagina lasciata. */
+  const handleTextPageChange = (nextIndex: number) => {
+    if (draft !== savedRef.current) void save(draft);
+    setPageIndex(nextIndex);
+    setPageLabel(null);
+  };
+
   const handleVerify = async () => {
     if (!segment) return;
     setVerifying(true);
@@ -460,7 +475,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   // sincronia il visore sfoglia per conto suo: il suo stato di caricamento
   // non riguarda più la pagina di testo mostrata qui.
   const displayIndex = synced ? pendingStatus?.index ?? pageIndex : pageIndex;
-  const isPagePending = synced && pendingStatus?.state === 'loading';
+  const isPagePending = loadingSegment || (synced && pendingStatus?.state === 'loading');
   const pagePendingError = synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
   const pageTitle =
     viewerRef && pageTotal
@@ -480,6 +495,21 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   };
 
   const revisionAuthorIcon = { user: User, ocr: ScanText, import: FileInput } as const;
+
+  /** Cambio fonte: se le due copie restano sincrone (allineate, o si torna
+   *  alla principale) il visore che si monta è un altro componente — chiave
+   *  diversa, stato interno nuovo — e senza una richiesta esplicita apre la
+   *  sua prima pagina invece di quella che il testo sta mostrando. */
+  const handleSourceChange = (source: 'main' | 'sibling') => {
+    setActiveSource(source);
+    const nextSynced = computeSyncState({
+      activeSource: source,
+      manualUnlinked,
+      mainPageTotal: pageTotal,
+      siblingPageCount,
+    }).synced;
+    if (nextSynced) setJumpRequest({ index: pageIndex, token: Date.now() });
+  };
 
   const displayedVersion = activeSource === 'main' ? viewerRef : siblingVersion;
   const sourceIcon = (kind: ViewerVersionRef['versionKind']) => (kind === 'pdf' ? FileText : Images);
@@ -504,7 +534,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                 size="sm"
                 tone={activeSource === source ? 'accent' : 'default'}
                 ariaPressed={activeSource === source}
-                onClick={() => setActiveSource(source)}
+                onClick={() => handleSourceChange(source)}
                 title={t(sourceLabelKey(version.versionKind, aligned))}
               >
                 <Icon size={14} />
@@ -630,12 +660,10 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                   {sourceSwitchControls}
                 </div>
               )}
-              <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-editorial-muted">
-                <span className="flex flex-col items-center gap-2">
-                  <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-                  {t(displayedVersion ? 'transcription.viewerOpenFailed' : 'transcription.viewerUnavailable')}
-                </span>
-              </div>
+              <EmptyState
+                icon={<Images size={28} aria-hidden="true" />}
+                message={t(displayedVersion ? 'transcription.viewerOpenFailed' : 'transcription.viewerUnavailable')}
+              />
             </div>
           )}
           {/* Cambiare fonte smonta e rimonta il visore (chiavi diverse, dati
@@ -659,9 +687,11 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
         </Separator>
 
         <Panel id="transcription-text" minSize={TEXT_MIN} className="flex min-w-0 flex-1 flex-col bg-surface-panel">
-          {loadingSegment ? (
-            <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
-          ) : (
+          {/* Niente più "spinner al posto di tutto": scambiare l'intera
+              sezione a ogni cambio pagina smontava e rimontava intestazione
+              e editor per una lettura locale che dura pochi millisecondi —
+              uno scatto visibile per niente. La struttura resta, un velo la
+              copre se e quando il caricamento si fa sentire davvero. */}
             <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
               {/* Stessa altezza della barra comandi del visore a sinistra
                   (`ViewerToolbar`, h-12): le due colonne partono allineate. */}
@@ -675,7 +705,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                     <IconButton
                       size="sm"
                       disabled={synced || pageIndex <= 0}
-                      onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+                      onClick={() => handleTextPageChange(Math.max(0, pageIndex - 1))}
                       title={t('transcription.textPrevPage')}
                     >
                       <ChevronLeft size={14} />
@@ -683,7 +713,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                     <IconButton
                       size="sm"
                       disabled={synced || (pageTotal !== null && pageIndex >= pageTotal - 1)}
-                      onClick={() => setPageIndex((current) => (pageTotal !== null ? Math.min(pageTotal - 1, current + 1) : current + 1))}
+                      onClick={() => handleTextPageChange(pageTotal !== null ? Math.min(pageTotal - 1, pageIndex + 1) : pageIndex + 1)}
                       title={t('transcription.textNextPage')}
                     >
                       <ChevronRight size={14} />
@@ -758,7 +788,6 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                 </div>
               </div>
             </section>
-          )}
         </Panel>
         </Group>
         </Panel>
