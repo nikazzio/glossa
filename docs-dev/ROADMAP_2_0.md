@@ -149,32 +149,41 @@ Uscita: ricerca → aggiunta → lettura → scaricamento → riapertura offline
 con disponibilità e fallimenti comprensibili e senza duplicare materiale.
 Verificare anche interruzione, ripresa e cancellazione durante lavori attivi.
 
-## 2. Studio di trascrizione utilizzabile
+## 2. Studio di trascrizione utilizzabile, con assistenza OCR/HTR
 
-Issue: #182, #388, #219, #208, #221, #222, #209, #223.
+Issue: #182, #388, #219, #220, #185.
 
 - Studio pagina + testo + strumenti, coerente con Biblioteca e Traduzioni.
-- Trascrizione manuale con salvataggio, revisioni, approvazione per pagina.
-- Filtri visuali, ritaglio, coordinate e note; corpus di frammenti riusabile.
+- Trascrizione manuale con salvataggio, revisioni, approvazione per pagina —
+  utile anche senza OCR: l'editor resta testo semplice, non a riquadri.
+- Visore minimo (zoom/pan), senza filtri visuali avanzati né ritaglio: quelli
+  arrivano al punto 3.
+- OCR/HTR tramite lavori persistenti (stesso motore già in uso per lo
+  scaricamento delle pagine, non un tracciamento in memoria che si perde a un
+  riavvio), con provider espliciti ed errori recuperabili. Primo provider: gli
+  stessi già configurati per la traduzione (stessa chiave, stesso motore di
+  chiamata); predisposto per aggiungere in seguito un motore locale (Kraken) o
+  altro, senza riscrivere l'astrazione.
 - Conservare identità di pagina e collegamenti anche dopo un nuovo download.
-- Consultare Scriptoria per viewer, workflow, ritagli e stati di revisione.
+- Consultare Scriptoria per viewer e workflow di revisione — non per l'editor
+  di correzione, che in Scriptoria stesso è testo semplice a pagina intera,
+  non un editor a riquadri sull'immagine.
 
-Uscita: aprire una fonte reale, trascrivere più pagine, correggere, riaprire
-e ritrovare testo, revisioni e riferimenti alla fonte. La trascrizione manuale
-deve essere utile anche senza OCR.
+Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
+da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti
+alla fonte.
 
-## 3. Assistenza OCR/HTR e passaggio alla traduzione
+## 3. Image workbench, corpus di frammenti e passaggio alla traduzione
 
-Issue: #185, #220, #189, #224; risorse contestuali #227.
+Issue: #208, #221, #222, #209, #223, #189, #224; risorse contestuali #227.
 
-- OCR/HTR tramite lavori persistenti, con provider espliciti ed errori recuperabili.
-- Correzione e approvazione umana prima di alimentare la traduzione.
+- Filtri visuali, ritaglio, coordinate e note; corpus di frammenti riusabile.
 - Creare il progetto di traduzione dal testo approvato senza perdere provenienza.
 - Collegare fonte, trascrizioni e traduzioni dalla scheda dell'opera.
 - Integrare corpus e suggerimenti contestuali con ambito workspace chiaro.
 
-Uscita: fonte → trascrizione assistita → correzione → approvazione →
-traduzione → revisione, con ripresa dopo riavvio e storico ricostruibile.
+Uscita: image workbench e corpus di frammenti pronti; passaggio trascrizione
+→ traduzione con provenienza conservata, storico ricostruibile.
 
 ## 4. Consegna e portabilità
 
