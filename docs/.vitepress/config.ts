@@ -36,6 +36,15 @@ const sidebarIt = [
     ]
   },
   {
+    "text": "Trascrizione",
+    "items": [
+      {
+        "text": "Trascrizione di un documento",
+        "link": "/guides/transcription"
+      }
+    ]
+  },
+  {
     "text": "Traduzione e revisione",
     "items": [
       {
@@ -140,6 +149,15 @@ const sidebarEn = [
       {
         "text": "Backup and restore",
         "link": "/en/reference/backup-and-restore"
+      }
+    ]
+  },
+  {
+    "text": "Transcription",
+    "items": [
+      {
+        "text": "Transcribing a document",
+        "link": "/en/guides/transcription"
       }
     ]
   },

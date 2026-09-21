@@ -1072,6 +1072,49 @@
     "rename": "Rinomina il progetto",
     "untitled": "Progetto senza nome"
   },
+  "transcription": {
+    "create": "Crea documento",
+    "titleLabel": "Titolo",
+    "titlePlaceholder": "Titolo del documento...",
+    "saveFailed": "Creazione del documento fallita",
+    "loadFailed": "Caricamento delle trascrizioni fallito",
+    "delete": "Elimina",
+    "confirmDeleteTitle": "Eliminare il documento?",
+    "confirmDeleteMessage": "\"{{name}}\" verrà rimosso. L'operazione non è reversibile.",
+    "deleted": "Documento eliminato",
+    "deleteFailed": "Eliminazione del documento fallita",
+    "newDocumentCard": "Nuovo documento",
+    "createFromSource": "Crea una trascrizione di quest'opera",
+    "backToCatalogue": "Torna a Trascrizioni",
+    "verifiedBadge": "Verificato",
+    "verify": "Segna come verificato",
+    "unverify": "Riporta in bozza",
+    "verified": "Segmento verificato",
+    "verifyFailed": "Operazione non riuscita",
+    "restore": "Ripristina questa versione",
+    "restored": "Versione ripristinata",
+    "restoreFailed": "Ripristino non riuscito",
+    "viewerComingSoon": "Il visore della pagina arriverà qui.",
+    "paneEyebrow": "Testo trascritto",
+    "paneLabel": "Testo",
+    "saveSaved": "Salvato",
+    "saveSaving": "Salvataggio",
+    "saveError": "Salvataggio fallito",
+    "saveRetry": "Riprova",
+    "textPlaceholder": "Scrivi qui il testo trascritto...",
+    "inspectorLabel": "Strumenti di trascrizione",
+    "inspectorPanelTitle": "Strumenti",
+    "noRevisions": "Nessun salvataggio ancora.",
+    "tabs": {
+      "history": "Storico",
+      "assist": "Assistenza"
+    },
+    "authorLabels": {
+      "user": "Correzione manuale",
+      "ocr": "Riconoscimento automatico",
+      "import": "Importato"
+    }
+  },
   "areas": {
     "translations": {
       "title": "Traduzioni",
@@ -1438,7 +1481,7 @@
       "title": "Trascrizioni",
       "sidebarHint": "OCR e preparazione",
       "emptyMessage": "Il catalogo Trascrizioni non ha ancora contenuto.",
-      "emptyHint": "Arriverà con lo Studio di trascrizione."
+      "emptyHint": "Crea un documento per iniziare a trascrivere, o parti da un'opera della Biblioteca."
     },
     "analysis": {
       "title": "Analisi",
@@ -1968,10 +2011,37 @@
     "groups": {
       "start": "Per iniziare",
       "sources": "Fonti e dati",
+      "transcription": "Trascrizione",
       "translation": "Traduzione e revisione",
       "support": "Configurazione e assistenza"
     },
     "articles": {
+      "transcription": {
+        "title": "Trascrivere un documento",
+        "intro": "Lo Studio di trascrizione è la modalità concentrata per scrivere e correggere il testo di un documento: visore a sinistra, testo al centro, strumenti a destra.",
+        "blocks": [
+          {
+            "title": "Creare un documento",
+            "paragraphs": [
+              "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo. In alternativa, dalla scheda di un'opera in Biblioteca puoi creare direttamente una trascrizione di quella digitalizzazione."
+            ]
+          },
+          {
+            "title": "Scrivere e salvare",
+            "paragraphs": [
+              "Il testo si salva da solo poco dopo che smetti di scrivere: l'indicatore in alto a destra dice se il salvataggio è in corso, riuscito o fallito.",
+              "Quando il testo è pronto, segnalo come verificato con il comando in alto: torna in bozza in qualsiasi momento con lo stesso comando."
+            ]
+          },
+          {
+            "title": "Storico e ripristino",
+            "paragraphs": [
+              "Ogni salvataggio resta nello storico, a destra: mostra chi ha scritto quella versione — correzione manuale, riconoscimento automatico o importazione — e quando.",
+              "Il comando su ogni voce dello storico riporta il testo di quella versione, come nuovo salvataggio: le versioni precedenti non si perdono mai."
+            ]
+          }
+        ]
+      },
       "pipeline": {
         "title": "Tradurre un documento",
         "intro": "La pipeline è la sequenza di fasi che produce e valuta una traduzione. Ogni frammento del documento viene elaborato separatamente.",

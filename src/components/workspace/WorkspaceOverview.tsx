@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpenText,
+  FilePen,
   FolderInput,
   LibraryBig,
   Link2,
@@ -14,8 +15,10 @@ import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useUiStore } from '../../stores/uiStore';
 import { IconButton, SectionLabel, Select } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
+import { CreateTranscriptionDialog } from '../transcription/CreateTranscriptionDialog';
 import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
 import { WorkspaceDisposalDialog } from './WorkspaceDisposalDialog';
 import { WorkspaceIcon } from './WorkspaceIdentity';
@@ -24,6 +27,8 @@ import {
   moveDocumentToWorkspace,
   type WorkspaceDisposal,
 } from '../../services/workspaceService';
+import { listDocuments, type TranscriptionDocument } from '../../services/transcriptionService';
+import { transcriptionsLocation } from '../../navigation/appLocation';
 import {
   linkedGlossaries,
   linkedSources,
@@ -45,12 +50,16 @@ export function WorkspaceOverview() {
   const { activeWorkspace, workspaces, removeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const { projects, loadProjects, openProject } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
+  const navigate = useUiStore((s) => s.navigate);
 
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [showCreateTranscription, setShowCreateTranscription] = useState(false);
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
   const [showDisposal, setShowDisposal] = useState(false);
   /** Il progetto per cui si sta scegliendo il workspace di destinazione. */
   const [movingProjectId, setMovingProjectId] = useState<string | null>(null);
+  const [movingDocumentId, setMovingDocumentId] = useState<string | null>(null);
+  const [transcriptionDocs, setTranscriptionDocs] = useState<TranscriptionDocument[]>([]);
 
   /** Quello che è **collegato** qui: sta anche altrove, e si toglie da qui. */
   const [books, setBooks] = useState<LinkedItem[]>([]);
@@ -102,6 +111,42 @@ export function WorkspaceOverview() {
   );
 
   useEffect(() => { void loadProjects(); }, [activeWorkspace?.id, loadProjects]);
+
+  const loadTranscriptions = useCallback(async () => {
+    if (!activeWorkspace) {
+      setTranscriptionDocs([]);
+      return;
+    }
+    try {
+      setTranscriptionDocs(await listDocuments(activeWorkspace.id));
+    } catch (error: unknown) {
+      setTranscriptionDocs([]);
+      toast.error(tRef.current('transcription.loadFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [activeWorkspace]);
+
+  useEffect(() => { void loadTranscriptions(); }, [loadTranscriptions]);
+
+  const sortedTranscriptions = useMemo(
+    () => [...transcriptionDocs].sort((a, b) => a.title.localeCompare(b.title)),
+    [transcriptionDocs],
+  );
+
+  const handleMoveTranscription = async (documentId: string, targetWorkspaceId: string) => {
+    try {
+      await moveDocumentToWorkspace('transcription_document', documentId, targetWorkspaceId);
+      await loadTranscriptions();
+      toast.success(t('workspace.moveDocument.done'));
+    } catch (err: unknown) {
+      toast.error(t('workspace.moveDocument.failed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setMovingDocumentId(null);
+    }
+  };
 
   const sortedProjects = useMemo(
     () => [...projects].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
@@ -319,6 +364,84 @@ export function WorkspaceOverview() {
           )}
         </section>
 
+        {/* Documenti di trascrizione del workspace */}
+        <section className="mt-6">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <SectionLabel icon={FilePen} label={t('areas.transcriptions.title')} />
+            <IconButton
+              size="sm"
+              tone="muted"
+              onClick={() => setShowCreateTranscription(true)}
+              title={t('transcription.newDocumentCard')}
+              disabled={!activeWorkspace}
+            >
+              <Plus size={12} />
+            </IconButton>
+          </div>
+          {sortedTranscriptions.length > 0 ? (
+            <div className="space-y-1.5">
+              {sortedTranscriptions.map((document) => (
+                <div
+                  key={document.id}
+                  className="flex w-full items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper"
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(transcriptionsLocation({ documentId: document.id }))}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <FilePen size={15} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+                    <span className="truncate font-display text-base italic text-editorial-ink">
+                      {document.title}
+                    </span>
+                  </button>
+
+                  {movingDocumentId === document.id ? (
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Select
+                        value=""
+                        onChange={(workspaceId) => {
+                          if (workspaceId) void handleMoveTranscription(document.id, workspaceId);
+                        }}
+                        className="min-w-40"
+                        ariaLabel={t('workspace.moveDocument.command')}
+                        options={[
+                          { value: '', label: t('workspace.moveDocument.pick') },
+                          ...otherWorkspaces.map((candidate) => ({
+                            value: candidate.id,
+                            label: candidate.name,
+                          })),
+                        ]}
+                      />
+                      <IconButton
+                        size="sm"
+                        tone="muted"
+                        onClick={() => setMovingDocumentId(null)}
+                        title={t('common.cancel')}
+                      >
+                        <X size={12} />
+                      </IconButton>
+                    </span>
+                  ) : (
+                    otherWorkspaces.length > 0 && (
+                      <IconButton
+                        size="sm"
+                        tone="muted"
+                        onClick={() => setMovingDocumentId(document.id)}
+                        title={t('workspace.moveDocument.command')}
+                      >
+                        <FolderInput size={12} />
+                      </IconButton>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="px-1 text-sm text-editorial-muted">{t('areas.transcriptions.emptyMessage')}</p>
+          )}
+        </section>
+
         {/* Quello che è collegato qui: sta anche altrove, e da qui si toglie
             soltanto il collegamento (#213). */}
         {[
@@ -355,6 +478,17 @@ export function WorkspaceOverview() {
 
       {activeWorkspace && (
         <CreateProjectDialog open={showCreateProject} onClose={() => setShowCreateProject(false)} workspaceId={activeWorkspace.id} />
+      )}
+      {activeWorkspace && (
+        <CreateTranscriptionDialog
+          open={showCreateTranscription}
+          onClose={() => setShowCreateTranscription(false)}
+          workspaceId={activeWorkspace.id}
+          onCreated={(documentId) => {
+            void loadTranscriptions();
+            navigate(transcriptionsLocation({ documentId }));
+          }}
+        />
       )}
       <WorkspaceSettingsModal open={showWorkspaceSettings} onClose={() => setShowWorkspaceSettings(false)} />
       {activeWorkspace && (

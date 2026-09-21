@@ -1072,6 +1072,49 @@
     "rename": "Rename the project",
     "untitled": "Untitled project"
   },
+  "transcription": {
+    "create": "Create document",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Document title...",
+    "saveFailed": "Failed to create the document",
+    "loadFailed": "Failed to load transcriptions",
+    "delete": "Delete",
+    "confirmDeleteTitle": "Delete this document?",
+    "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
+    "deleted": "Document deleted",
+    "deleteFailed": "Failed to delete the document",
+    "newDocumentCard": "New document",
+    "createFromSource": "Create a transcription of this work",
+    "backToCatalogue": "Back to Transcriptions",
+    "verifiedBadge": "Verified",
+    "verify": "Mark as verified",
+    "unverify": "Return to draft",
+    "verified": "Segment verified",
+    "verifyFailed": "The action failed",
+    "restore": "Restore this version",
+    "restored": "Version restored",
+    "restoreFailed": "Restore failed",
+    "viewerComingSoon": "The page viewer will appear here.",
+    "paneEyebrow": "Transcribed text",
+    "paneLabel": "Text",
+    "saveSaved": "Saved",
+    "saveSaving": "Saving",
+    "saveError": "Save failed",
+    "saveRetry": "Retry",
+    "textPlaceholder": "Write the transcribed text here...",
+    "inspectorLabel": "Transcription tools",
+    "inspectorPanelTitle": "Tools",
+    "noRevisions": "No saves yet.",
+    "tabs": {
+      "history": "History",
+      "assist": "Assist"
+    },
+    "authorLabels": {
+      "user": "Manual correction",
+      "ocr": "Automatic recognition",
+      "import": "Imported"
+    }
+  },
   "areas": {
     "translations": {
       "title": "Translations",
@@ -1438,7 +1481,7 @@
       "title": "Transcriptions",
       "sidebarHint": "OCR and source prep",
       "emptyMessage": "The Transcriptions catalogue has no content yet.",
-      "emptyHint": "Coming with the Transcription Studio."
+      "emptyHint": "Create a document to start transcribing, or start from a work in the Library."
     },
     "analysis": {
       "title": "Analysis",
@@ -1968,10 +2011,37 @@
     "groups": {
       "start": "Getting started",
       "sources": "Sources and data",
+      "transcription": "Transcription",
       "translation": "Translation and review",
       "support": "Setup and support"
     },
     "articles": {
+      "transcription": {
+        "title": "Transcribing a document",
+        "intro": "The Transcription Studio is the focused mode for writing and correcting a document's text: viewer on the left, text in the middle, tools on the right.",
+        "blocks": [
+          {
+            "title": "Creating a document",
+            "paragraphs": [
+              "From Transcriptions, choose \"New document\" and give it a title. You can also create a transcription directly from a work's page in the Library, tied to that digitization."
+            ]
+          },
+          {
+            "title": "Writing and saving",
+            "paragraphs": [
+              "The text saves itself shortly after you stop typing: the indicator in the top right says whether the save is in progress, done, or failed.",
+              "When the text is ready, mark it as verified with the command at the top; return it to draft at any time with the same command."
+            ]
+          },
+          {
+            "title": "History and restore",
+            "paragraphs": [
+              "Every save stays in the history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
+              "The command on each history entry brings that version's text back as a new save: earlier versions are never lost."
+            ]
+          }
+        ]
+      },
       "pipeline": {
         "title": "Translating a document",
         "intro": "A pipeline is the sequence of stages that produces and assesses a translation. Each document segment is processed separately.",

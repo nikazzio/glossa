@@ -340,6 +340,7 @@ attivo, così tornare indietro non perde la vista da cui si veniva.
 | `jobsStore` | snapshot della coda ricevuto dagli eventi backend |
 | `sourceLibraryStore` | catalogo e dettaglio delle fonti |
 | `libraryStore` | dizionari e ambito di lettura |
+| `transcriptionStore` | documento di trascrizione aperto (solo per il breadcrumb dell'header, stesso schema di `sourceLibraryStore.detail`) |
 
 Gli store non duplicano il database. Oggetti e collezioni vengono aggiornati in
 modo immutabile. Stato confinato a un componente resta locale.
@@ -355,6 +356,31 @@ rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
 le Trascrizioni. La bozza di un profilo di rete vive nella finestra e non nella
 scheda, perché la scheda si smonta cambiando linguetta, e il profilo in modifica
 si ritrova dalla bozza al rientro.
+
+## Trascrizioni
+
+Schema in `transcription_documents` → `transcription_segments` →
+`transcription_revisions` (baseline #211, non un modulo Rust: nessun comando
+backend dedicato, come `translation_revisions`). `transcriptionService.ts`
+scrive e legge direttamente via `dbService` (`execute`/`select`), stesso
+pattern di `translationRevisionsService.ts`: revisioni append-only,
+deduplicate per impronta del contenuto (`content_hash`), un segmento senza
+`approved_revision_id` è in bozza, valorizzato è verificato — nessuna colonna
+di stato propria.
+
+**Un segmento per documento, per ora.** Lo schema supporta più segmenti
+ancorati a una pagina logica (`source_page_id`), ma senza il visore (#221) e
+l'OCR (#220) non c'è ancora un modo di crearne più di uno: lo Studio crea il
+segmento in posizione 0 al primo accesso e lavora solo su quello.
+
+**Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
+#388): stessa convenzione della scheda opera in Biblioteca, non quella dello
+Studio di traduzione — `AppLocation` porta `{ area: 'transcriptions',
+documentId }`, e l'area stessa decide se mostrare il catalogo o la vista
+concentrata, invece di un flag globale come `projectStore.currentProjectId`. Il
+visore a sinistra è un segnaposto (arriva con #221); a destra `InspectorShell`
+condiviso con lo Studio di traduzione e la scheda opera, con una scheda
+Assistenza già presente ma disattivata in attesa dell'OCR.
 
 ## Pipeline di traduzione
 

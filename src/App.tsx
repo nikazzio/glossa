@@ -524,7 +524,7 @@ export default function App() {
                   ) : location.area === 'library' ? (
                     <LibraryCatalogArea itemId={location.itemId} />
                   ) : location.area === 'transcriptions' ? (
-                    <TranscriptionsCatalogArea />
+                    <TranscriptionsCatalogArea documentId={location.documentId} />
                   ) : location.area === 'analysis' ? (
                     <AnalysisArea />
                   ) : location.area === 'workspace' ? (

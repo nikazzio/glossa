@@ -169,6 +169,17 @@ Issue: #182, #388, #219, #220, #185.
   di correzione, che in Scriptoria stesso è testo semplice a pagina intera,
   non un editor a riquadri sull'immagine.
 
+**Stato al 21 settembre 2026.** #219 e la prima metà di #388 **consegnate**:
+comandi dati (servizio TS sulle tabelle già in schema, un segmento per
+documento, storico revisioni append-only, verifica/ritiro come per le
+traduzioni) e schermata Studio (visore segnaposto a sinistra, testo con
+salvataggio automatico al centro, storico e ripristino a destra — la scheda
+Assistenza è predisposta ma disattivata, arriva con l'OCR). Un documento si
+crea dall'area Trascrizioni o direttamente dalla scheda di un'opera in
+Biblioteca. **Restano**: visore minimo con zoom/pan (#221, punto 3), OCR/HTR
+(#220), più pagine/segmenti per documento (oggi un segmento solo, lo schema
+già lo permette).
+
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti
 alla fonte.
