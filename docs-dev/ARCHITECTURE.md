@@ -922,15 +922,24 @@ la pagina della biblioteca) rese facoltative. Il percorso del deposito non
 arriva mai alla finestra: si compone nel motore da chiave e identificativo,
 entrambi convalidati come componenti di percorso.
 
-**Pagine disegnate vuote in sviluppo, con i byte corretti** (si aprivano bene
-col lettore del sistema): `pdfDocument.ts` chiamava `page.cleanup()` dopo
-ogni disegno, anche riuscito. React in modalità sviluppo (`StrictMode`)
-chiama l'effetto che disegna la pagina due volte di seguito per la stessa
-pagina; la prima chiamata liberava la cache interna di pdf.js mentre la
-seconda stava ancora disegnando sulla stessa `page`, e il risultato restava
-vuoto senza che nessuna delle due segnalasse un errore. Tolto: pdf.js tiene
-la sua cache da sé, e `document.destroy()` (già chiamato smontando il
-visore) libera comunque tutto quando il documento cambia.
+**Pagine disegnate vuote, con i byte corretti** (si aprivano bene col lettore
+del sistema): pdf.js decodifica JPEG2000/JBIG2 — compressioni frequenti nelle
+scansioni — solo con moduli WASM dedicati (OpenJPEG, JBIG2); senza l'opzione
+`wasmUrl` non li cerca nemmeno, cade su un ripiego JS che qui non risolve, e
+la pagina non ha niente da disegnare. Console del browser: errore di
+inizializzazione del decoder OpenJPEG. Fix: `wasmUrl: '/pdfjs/'` in
+`pdfjs.getDocument()`, con i tre file `.wasm` copiati in `public/pdfjs/`
+invece che importati con `?url` — quel percorso li comprimerebbe ognuno con
+un nome diverso, mentre pdf.js li cerca con nomi esatti in una sola cartella.
+La build di rilascio ha bisogno in più di `'wasm-unsafe-eval'` nel
+`script-src` della CSP (`tauri.release.conf.json`), perché l'istanziazione
+WASM lo richiede e quella build non ha la `'unsafe-eval'` più ampia della
+build di sviluppo.
+
+(Prima ipotesi, scartata dal test dal vivo: `page.cleanup()` dopo ogni
+disegno, in conflitto con la doppia chiamata di `StrictMode` in sviluppo. La
+rimozione non risolveva niente — la pagina restava bianca anche fuori
+sviluppo — perché non era la causa.)
 
 ### Riconoscimento e ricerca per biblioteca
 

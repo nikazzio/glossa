@@ -11,6 +11,17 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 /**
+ * Le pagine scannerizzate spesso comprimono le immagini in JPEG2000 o JBIG2,
+ * che pdf.js decodifica solo con questi moduli WASM — senza, non prova
+ * nemmeno a cercarli sulla rete: cade su un ripiego JS che qui non risolve
+ * (`wasmUrl` non è impostato), e la pagina non ha niente da disegnare. Copiati
+ * in `public/pdfjs/` invece che importati con `?url`: quel percorso li
+ * comprimerebbe ognuno con un nome diverso, e pdf.js li cerca con questi nomi
+ * esatti in una sola cartella.
+ */
+const WASM_BASE_URL = '/pdfjs/';
+
+/**
  * A che scala si disegna la pagina.
  *
  * Due volte la misura dichiarata dal documento: una scansione ingrandita resta
@@ -34,7 +45,7 @@ export async function openDocument(bytes: Uint8Array): Promise<LoadedDocument> {
   // Nessuna opzione per disattivare `eval`: questa versione di pdf.js non
   // costruisce più codice al volo, quindi regge la regola di sicurezza della
   // build di rilascio, che lo vieta.
-  const task = pdfjs.getDocument({ data: bytes });
+  const task = pdfjs.getDocument({ data: bytes, wasmUrl: WASM_BASE_URL });
   const handle = await task.promise;
   return {
     pages: handle.numPages,
