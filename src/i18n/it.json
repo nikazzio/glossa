@@ -1081,6 +1081,7 @@
     "titlePlaceholder": "Titolo del documento...",
     "saveFailed": "Creazione del documento fallita",
     "loadFailed": "Caricamento delle trascrizioni fallito",
+    "notFound": "Documento di trascrizione non trovato",
     "delete": "Elimina",
     "removeDocument": "Rimuovi trascrizione",
     "sourceImages": "Immagini",

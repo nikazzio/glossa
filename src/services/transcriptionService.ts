@@ -224,7 +224,15 @@ async function insertRevision(
       revision.content_hash,
     ],
   );
-  return revision;
+  // `ON CONFLICT DO NOTHING` scarta in silenzio un ID già scritto da un
+  // autosave concorrente che aveva letto la stessa revisione precedente:
+  // rileggere invece di fidarsi dell'oggetto locale evita di dichiarare
+  // "salvato" un testo che in realtà ha perso il confronto.
+  const persisted = await select<TranscriptionRevision>(
+    'SELECT * FROM transcription_revisions WHERE id = $1',
+    [revision.id],
+  );
+  return persisted[0] ?? revision;
 }
 
 /**

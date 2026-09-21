@@ -181,11 +181,12 @@ pagina nel visore cambia il testo, ognuna con il proprio storico — un
 documento senza visore (nato da zero) resta su un solo blocco di testo. Un
 documento si crea dall'area Trascrizioni o direttamente dalla scheda di
 un'opera in Biblioteca; solo nel secondo caso c'è una pagina da mostrare, il
-primo resta un documento senza digitalizzazione collegata. **Restano**:
-filtri visuali, preset e cambio fonte del visore (resto di #221, spostati al
-punto 3 come da decisione del 20 settembre), OCR/HTR (#220), l'ancoraggio a
-`source_page_id` (oggi la posizione si tiene da sé, senza dipendere da uno
-scaricamento).
+primo resta un documento senza digitalizzazione collegata. Il cambio fonte
+immagini/PDF nel visore, con riallineamento delle pagine quando le due copie
+non promettono la stessa numerazione, è consegnato. **Restano**: filtri
+visuali e preset (resto di #221, spostati al punto 3 come da decisione del 20
+settembre), OCR/HTR (#220), l'ancoraggio a `source_page_id` (oggi la posizione
+si tiene da sé, senza dipendere da uno scaricamento).
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

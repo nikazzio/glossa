@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { createDocument } from '../../services/transcriptionService';
 import { getLibrarySourceDetail, listLibraryCatalog } from '../../services/libraryService';
+import { versionInventory } from '../../services/inventoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, DialogCancelButton, DialogConfirmButton, FIELD_CLASSNAME, IconButton, PopoverItem, SegmentedControl, Select } from '../ui';
 import type { LibraryCatalogEntry } from '../../types';
@@ -86,12 +87,25 @@ export function CreateTranscriptionDialog({
     }
     let cancelled = false;
     getLibrarySourceDetail(effectiveSourceId)
-      .then((detail) => {
+      .then(async (detail) => {
         if (cancelled) return;
-        const readable = detail.versions.filter(
+        const candidates = detail.versions.filter(
           (version): version is typeof version & { versionKind: 'iiif_manifest' | 'pdf' } =>
             (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf') &&
             Boolean(version.sourceUrl),
+        );
+        // Il manifesto IIIF si apre in streaming, non serve averlo scaricato.
+        // Il PDF invece lo apre solo il visore locale: senza un documento già
+        // scaricato la scelta porterebbe subito a una pagina che non si apre.
+        const pdfAvailability = await Promise.all(
+          candidates
+            .filter((version) => version.versionKind === 'pdf')
+            .map((version) => versionInventory(version.id).then((inventory) => [version.id, Boolean(inventory?.document)] as const)),
+        );
+        if (cancelled) return;
+        const downloadedPdfIds = new Set(pdfAvailability.filter(([, hasDocument]) => hasDocument).map(([id]) => id));
+        const readable = candidates.filter(
+          (version) => version.versionKind === 'iiif_manifest' || downloadedPdfIds.has(version.id),
         );
         // Con la scelta fatta dalla scheda dell'opera si parte da quella;
         // scegliendo un'opera qui invece si parte dalla sua copia primaria.

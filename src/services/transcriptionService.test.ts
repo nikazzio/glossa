@@ -128,6 +128,22 @@ describe('storico delle trascrizioni', () => {
     expect(insert?.params).toContain('seg1:r2');
   });
 
+  it('un ID già scritto da un salvataggio concorrente: vince chi ha scritto per primo, non chi legge il risultato', async () => {
+    const winner = {
+      ...ocrRevision,
+      created_by: 'user' as const,
+      text: 'Testo del salvataggio che ha vinto',
+      content_hash: contentHash('Testo del salvataggio che ha vinto'),
+    };
+    selectMock
+      .mockResolvedValueOnce([]) // latestRevision: nessuna revisione precedente, stesso punto di partenza dei due salvataggi
+      .mockResolvedValueOnce([winner]); // rilettura dopo l'INSERT ON CONFLICT DO NOTHING
+
+    const result = await saveSegmentText('seg1', 'Testo nostro, scartato dal vincolo di unicità', 'user');
+
+    expect(result?.text).toBe('Testo del salvataggio che ha vinto');
+  });
+
   it('restore della revisione già corrente non aggiunge nulla', async () => {
     selectMock.mockResolvedValueOnce([ocrRevision]).mockResolvedValueOnce([ocrRevision]);
 

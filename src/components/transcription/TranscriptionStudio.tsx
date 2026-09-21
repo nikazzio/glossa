@@ -154,6 +154,12 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   // risultato sullo stato della pagina nuova, arrivato nel frattempo.
   const pageIndexRef = useRef(pageIndex);
   useEffect(() => { pageIndexRef.current = pageIndex; }, [pageIndex]);
+  // Il cambio pagina (salvataggio immediato) e il debounce possono chiedere
+  // di salvare quasi nello stesso istante: senza serializzare, entrambi
+  // leggono la stessa revisione precedente e calcolano lo stesso numero
+  // successivo, e uno dei due testi sparisce in silenzio (scartato dal
+  // vincolo di unicità). Incodare sulla stessa catena li rende sequenziali.
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
 
   const inspectorWidth = useUiStore((state) => state.transcriptionInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setTranscriptionInspectorWidth);
@@ -317,27 +323,42 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   useEffect(() => { void loadSegmentForPage(); }, [loadSegmentForPage]);
 
   const save = useCallback(
-    async (text: string) => {
-      const savingPage = pageIndex;
-      attemptRef.current = text;
-      setSaveState('saving');
-      try {
-        // Sfogliare pagine mai trascritte non crea righe vuote: il segmento
-        // nasce solo al primo salvataggio davvero.
-        const target = segment ?? await ensureSegment(documentId, savingPage, pageLabel);
-        // Nel frattempo si è già cambiata pagina (salvataggio lanciato
-        // all'uscita, prima del debounce): il suo risultato non riguarda più
-        // quello che si vede adesso.
-        if (pageIndexRef.current !== savingPage) return;
-        if (!segment) setSegment(target);
-        const revision = await saveSegmentText(target.id, text, 'user');
-        if (pageIndexRef.current !== savingPage) return;
-        savedRef.current = text;
-        if (attemptRef.current === text) setSaveState('saved');
-        if (revision) setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
-      } catch {
-        if (pageIndexRef.current === savingPage && attemptRef.current === text) setSaveState('error');
-      }
+    (text: string) => {
+      // Incodato: parte solo a salvataggio precedente concluso, così legge
+      // sempre l'ultima revisione davvero scritta e non ne collide il numero.
+      const run = saveChainRef.current.then(async () => {
+        const savingPage = pageIndex;
+        attemptRef.current = text;
+        setSaveState('saving');
+        try {
+          // Sfogliare pagine mai trascritte non crea righe vuote: il segmento
+          // nasce solo al primo salvataggio davvero.
+          const target = segment ?? await ensureSegment(documentId, savingPage, pageLabel);
+          // Nel frattempo si è già cambiata pagina (salvataggio lanciato
+          // all'uscita, prima del debounce): il suo risultato non riguarda più
+          // quello che si vede adesso.
+          if (pageIndexRef.current !== savingPage) return;
+          if (!segment) setSegment(target);
+          const revision = await saveSegmentText(target.id, text, 'user');
+          if (pageIndexRef.current !== savingPage) return;
+          if (revision) {
+            // Il testo davvero persistito, non quello tentato: su collisione
+            // la revisione restituita è quella dell'altro salvataggio, non la nostra.
+            savedRef.current = revision.text;
+            if (attemptRef.current === text) {
+              setSaveState(revision.text === text ? 'saved' : 'error');
+            }
+            setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
+          } else if (attemptRef.current === text) {
+            savedRef.current = text;
+            setSaveState('saved');
+          }
+        } catch {
+          if (pageIndexRef.current === savingPage && attemptRef.current === text) setSaveState('error');
+        }
+      });
+      saveChainRef.current = run;
+      return run;
     },
     [segment, documentId, pageIndex, pageLabel],
   );
@@ -400,7 +421,11 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     if (!segment) return;
     setVerifying(true);
     try {
-      const revision = await verifySegment(segment.id, workspaceId);
+      // Il documento stesso porta il suo workspace: quando è già caricato è
+      // la fonte giusta, non l'elenco del catalogo (può ancora star caricando
+      // su un ingresso diretto allo Studio, e verificare prima di allora
+      // scriverebbe l'attribuzione mancante nel registro di provenienza).
+      const revision = await verifySegment(segment.id, detail?.workspace_id ?? workspaceId);
       setSegment({ ...segment, approved_revision_id: revision.id });
       toast.success(t('transcription.verified'));
     } catch (err: unknown) {
@@ -416,7 +441,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     if (!segment) return;
     setVerifying(true);
     try {
-      await unverifySegment(segment.id, workspaceId);
+      await unverifySegment(segment.id, detail?.workspace_id ?? workspaceId);
       setSegment({ ...segment, approved_revision_id: null });
     } catch (err: unknown) {
       toast.error(t('transcription.verifyFailed'), {

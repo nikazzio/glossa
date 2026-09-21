@@ -1081,6 +1081,7 @@
     "titlePlaceholder": "Document title...",
     "saveFailed": "Failed to create the document",
     "loadFailed": "Failed to load transcriptions",
+    "notFound": "Transcription document not found",
     "delete": "Delete",
     "removeDocument": "Remove transcription",
     "sourceImages": "Images",
