@@ -9,6 +9,7 @@ Leggere solo i documenti pertinenti al lavoro corrente.
 | componenti o regole visive | `UI_DESIGN_SYSTEM.md` |
 | priorità e lavoro futuro | `ROADMAP_2_0.md` |
 | attività aperte della sessione | `../STATO_SESSIONE_2.0.md` |
+| piano OCR/HTR non ancora iniziato (#220) | `PLAN_OCR_HTR.md` |
 | **comportamento visibile all'utente** | **guida in-app (`help.*` in `src/i18n/it.json` e `en.json`) e documentazione pubblica `docs/` + `docs/en/`** |
 
 La riga in grassetto non è un promemoria: è la regola di documentazione
