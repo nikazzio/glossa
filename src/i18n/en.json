@@ -1075,11 +1075,20 @@
   "transcription": {
     "create": "Create document",
     "titleLabel": "Title",
+    "chooseStartingCopy": "Which copy to start from",
     "titlePlaceholder": "Document title...",
     "saveFailed": "Failed to create the document",
     "loadFailed": "Failed to load transcriptions",
     "delete": "Delete",
     "removeDocument": "Remove transcription",
+    "sourceImages": "Images",
+    "sourcePdf": "PDF",
+    "sourceImagesUnaligned": "Images (page numbers differ from the PDF)",
+    "sourcePdfUnaligned": "PDF (page numbers differ from the images)",
+    "unlink": "Detach text from viewer",
+    "relink": "Reattach text to viewer",
+    "textPrevPage": "Previous text page",
+    "textNextPage": "Next text page",
     "confirmDeleteTitle": "Delete this document?",
     "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
     "deleted": "Document deleted",
@@ -2035,7 +2044,7 @@
           {
             "title": "Creating a document",
             "paragraphs": [
-              "From Transcriptions, choose \"New document\" and give it a title. You can also create a transcription directly from a work's page in the Library, tied to that digitization."
+              "From Transcriptions, choose \"New document\" and give it a title. You can also create a transcription directly from a work's page in the Library, tied to that digitization. If the work has both images and a PDF on your computer, choose which to start from."
             ]
           },
           {
@@ -2056,6 +2065,13 @@
             "title": "Page loading",
             "paragraphs": [
               "While the viewer is still opening the chosen page, a veil covers the text and history with a spinner in the middle: writing or restoring stay disabled until the page is actually shown. If opening fails, a warning appears in place of the spinner, with the same block."
+            ]
+          },
+          {
+            "title": "Switching source, images or PDF",
+            "paragraphs": [
+              "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows next to the \"Page N\" title. Switching back to the main copy restores the link on its own.",
+              "A third command detaches the link regardless of page counts, even while staying on the main copy: handy for glancing at a different page without moving where you're writing."
             ]
           },
           {

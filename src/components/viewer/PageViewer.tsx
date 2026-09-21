@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- La superficie deep-zoom è intenzionalmente un widget ARIA application: riceve focus e gestisce le frecce, mentre i controlli figli e la tela OSD conservano la propria tastiera. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import { Images, RefreshCw } from 'lucide-react';
@@ -69,6 +69,16 @@ interface PageViewerProps {
    *  dell'ultima pagina riuscita non saprebbe che non sono più quelli giusti.
    *  `null` quando la pagina mostrata e quella richiesta tornano a coincidere. */
   onPageStatusChange?: (status: PageStatus | null) => void;
+  /** Comanda una pagina dall'esterno (es. si torna alla fonte principale
+   *  dopo averla sfogliata da sola): cambia `requestToken` anche per
+   *  richiedere di nuovo la stessa pagina, altrimenti l'effetto non
+   *  scatterebbe una seconda volta. */
+  requestedIndex?: number | null;
+  requestToken?: number;
+  onRequestedIndexHandled?: () => void;
+  /** Comandi propri di chi ospita il visore (es. cambio fonte), nella stessa
+   *  barra del visore invece che in una riga a parte. */
+  extraControls?: ReactNode;
 }
 
 /** Cosa sta succedendo a una pagina diversa da quella confermata a schermo:
@@ -134,6 +144,10 @@ export function PageViewer({
   onLocalSizeChange,
   onPageChange,
   onPageStatusChange,
+  requestedIndex = null,
+  requestToken = 0,
+  onRequestedIndexHandled,
+  extraControls,
 }: PageViewerProps) {
   const { t } = useTranslation();
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
@@ -327,6 +341,24 @@ export function PageViewer({
     },
     [total],
   );
+
+  // Salto comandato da chi ospita il visore (es. si torna sulla fonte
+  // principale dopo averla sfogliata da sola): `requestToken` cambia anche a
+  // parità di pagina, per far scattare l'effetto pure quando si richiede la
+  // stessa pagina già mostrata.
+  const goToIndexRef = useRef(goToIndex);
+  goToIndexRef.current = goToIndex;
+  const onRequestedIndexHandledRef = useRef(onRequestedIndexHandled);
+  onRequestedIndexHandledRef.current = onRequestedIndexHandled;
+  useEffect(() => {
+    if (requestedIndex === null) return;
+    goToIndexRef.current(requestedIndex);
+    onRequestedIndexHandledRef.current?.();
+    // Scatta solo su una richiesta nuova (requestToken), non a ogni cambio
+    // di `requestedIndex` da solo: chi lo aggiorna deve anche cambiare
+    // il token, altrimenti non è una richiesta nuova.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestToken]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -657,6 +689,7 @@ export function PageViewer({
             thumbnailsOpen={thumbnailsOpen}
             onToggleThumbnails={() => setThumbnailsOpen((open) => !open)}
             shownPageUrl={shownPageUrl}
+            extraControls={extraControls}
           />
         )}
         <div

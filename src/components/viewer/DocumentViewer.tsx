@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- Come il visore delle immagini: la superficie deep-zoom è un widget ARIA application che riceve il fuoco e gestisce le frecce. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import { FileText, RefreshCw } from 'lucide-react';
@@ -28,6 +28,10 @@ export function DocumentViewer({
   providerKey,
   onPageChange,
   onPageStatusChange,
+  requestedIndex = null,
+  requestToken = 0,
+  onRequestedIndexHandled,
+  extraControls,
 }: {
   versionId: string;
   providerKey: string;
@@ -38,6 +42,13 @@ export function DocumentViewer({
   /** Stessa forma di `PageViewer`: la pagina richiesta è in corso o è appena
    *  fallita, `null` quando torna a coincidere con quella mostrata. */
   onPageStatusChange?: (status: PageStatus | null) => void;
+  /** Comanda una pagina dall'esterno; `requestToken` cambia anche a parità
+   *  di pagina, per far scattare l'effetto pure a richiesta ripetuta. */
+  requestedIndex?: number | null;
+  requestToken?: number;
+  onRequestedIndexHandled?: () => void;
+  /** Comandi di chi ospita il visore (cambio fonte), nella stessa barra. */
+  extraControls?: ReactNode;
 }) {
   const { t } = useTranslation();
   const viewerElementRef = useRef<HTMLDivElement>(null);
@@ -47,6 +58,8 @@ export function DocumentViewer({
   onPageChangeRef.current = onPageChange;
   const onPageStatusChangeRef = useRef(onPageStatusChange);
   onPageStatusChangeRef.current = onPageStatusChange;
+  const onRequestedIndexHandledRef = useRef(onRequestedIndexHandled);
+  onRequestedIndexHandledRef.current = onRequestedIndexHandled;
 
   const [total, setTotal] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -168,6 +181,18 @@ export function DocumentViewer({
     [total],
   );
 
+  // Salto comandato dall'esterno, stessa forma di PageViewer.
+  const goToIndexRef = useRef(goToIndex);
+  goToIndexRef.current = goToIndex;
+  useEffect(() => {
+    if (requestedIndex === null) return;
+    goToIndexRef.current(requestedIndex);
+    onRequestedIndexHandledRef.current?.();
+    // Scatta solo su una richiesta nuova (requestToken), non a ogni cambio
+    // di `requestedIndex` da solo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestToken]);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowRight') {
       event.preventDefault();
@@ -211,6 +236,7 @@ export function DocumentViewer({
               viewport.zoomTo(viewport.imageToViewportZoom(1));
               viewport.applyConstraints();
             }}
+            extraControls={extraControls}
           />
         )}
         <div

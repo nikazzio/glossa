@@ -5,11 +5,15 @@ import {
   ArrowLeft,
   BookOpenText,
   Check,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   FileInput,
+  FileText,
   History,
   Images,
   Info,
+  Link2,
   Loader2,
   Lock,
   MoreVertical,
@@ -19,6 +23,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Trash2,
+  Unlink2,
   User,
 } from 'lucide-react';
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
@@ -37,7 +42,9 @@ import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { confirm } from '../../stores/confirmStore';
 import { getLibrarySourceDetail, getVersionForViewer, type ViewerVersionRef } from '../../services/libraryService';
 import { listIIIFProviders } from '../../services/iiifProviderService';
+import { versionInventory } from '../../services/inventoryService';
 import { logger } from '../../utils/logger';
+import { computeSyncState } from './transcriptionSync';
 import {
   ensureSegment,
   getSegmentByPosition,
@@ -118,6 +125,18 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [removingDocument, setRemovingDocument] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
+  // Cambio fonte immagini/PDF: la copia con cui il documento è nato resta
+  // "principale" per sempre; l'altra, quando c'è, è "secondaria" e potrebbe
+  // non promettere la stessa numerazione di pagina — vedi transcriptionSync.ts.
+  const [siblingVersion, setSiblingVersion] = useState<ViewerVersionRef | null>(null);
+  const [siblingPageCount, setSiblingPageCount] = useState<number | null>(null);
+  const [activeSource, setActiveSource] = useState<'main' | 'sibling'>('main');
+  /** Interruttore manuale: stacca l'aggancio testo↔visore a prescindere dal
+   *  calcolo automatico, anche sulla principale — chiesto esplicitamente per
+   *  poter curiosare una pagina senza spostare il punto in cui si scrive. */
+  const [manualUnlinked, setManualUnlinked] = useState(false);
+  const [jumpRequest, setJumpRequest] = useState<{ index: number; token: number } | null>(null);
+
   // La pagina mostrata a sinistra: un documento senza visore resta sempre a
   // 0, l'unico blocco di testo che ha senso per lui.
   const [pageIndex, setPageIndex] = useState(0);
@@ -182,9 +201,13 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   useEffect(() => {
     if (!viewerRef) {
       setBookInfo(null);
+      setSiblingVersion(null);
+      setSiblingPageCount(null);
       return;
     }
     let cancelled = false;
+    setActiveSource('main');
+    setManualUnlinked(false);
     Promise.all([getLibrarySourceDetail(viewerRef.sourceId), listIIIFProviders()])
       .then(([sourceDetail, providers]) => {
         if (cancelled) return;
@@ -194,10 +217,47 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           pageUrl: sourceDetail.pageUrl ?? sourceDetail.catalogUrl,
           providerLabel: providers.find((p) => p.key === viewerRef.providerKey)?.label,
         });
+
+        // La copia dell'altro tipo, se c'è: stessa opera, non la principale,
+        // leggibile (manifest o PDF con indirizzo). Al massimo una per tipo
+        // interessa qui — cambiarla di nuovo resta un caso raro.
+        const sibling = sourceDetail.versions.find(
+          (version) =>
+            version.id !== viewerRef.versionId &&
+            (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf') &&
+            version.sourceUrl,
+        );
+        if (!sibling) {
+          setSiblingVersion(null);
+          setSiblingPageCount(null);
+          return;
+        }
+        setSiblingVersion({
+          sourceId: viewerRef.sourceId,
+          versionId: sibling.id,
+          versionKind: sibling.versionKind as 'iiif_manifest' | 'pdf',
+          sourceUrl: sibling.sourceUrl,
+          providerKey: sibling.providerKey,
+        });
+        if (sibling.versionKind === 'iiif_manifest') {
+          // Pagine dichiarate dal manifesto: stesso campo che la scheda
+          // opera mostra, niente lettura in più.
+          setSiblingPageCount(sibling.expectedPages);
+        } else {
+          // Per il PDF conta il file arrivato, non una dichiarazione: letto
+          // una volta allo scaricamento, qui si rilegge solo quel dato.
+          versionInventory(sibling.id)
+            .then((inventory) => { if (!cancelled) setSiblingPageCount(inventory?.document?.pages ?? null); })
+            .catch(() => { if (!cancelled) setSiblingPageCount(null); });
+        }
       })
       .catch((error: unknown) => {
         logger.error('transcription.bookInfo.loadFailed', { sourceId: viewerRef.sourceId, error });
-        if (!cancelled) setBookInfo(null);
+        if (!cancelled) {
+          setBookInfo(null);
+          setSiblingVersion(null);
+          setSiblingPageCount(null);
+        }
       });
     return () => { cancelled = true; };
   }, [viewerRef]);
@@ -280,19 +340,42 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     void save(debouncedDraft);
   }, [debouncedDraft, save, loadingSegment]);
 
+  const { aligned, synced } = computeSyncState({
+    activeSource,
+    manualUnlinked,
+    mainPageTotal: pageTotal,
+    siblingPageCount,
+  });
+
   /** Il visore ha disegnato un'altra pagina davvero (non solo richiesta): se
    *  quella che si lascia ha testo non ancora salvato, lo si salva subito —
-   *  aspettare il debounce lo perderebbe cambiando pagina in fretta. */
+   *  aspettare il debounce lo perderebbe cambiando pagina in fretta.
+   *
+   *  Fuori sincronia il visore sfoglia per conto suo: i suoi eventi non
+   *  toccano più la pagina di testo, che si sposta solo con le frecce
+   *  indipendenti. */
   const handleViewerPageChange = useCallback(
     (index: number, label: string | null, total: number | null) => {
+      if (!synced) return;
       if (draft !== savedRef.current) void save(draft);
       setPageIndex(index);
       setPageLabel(label);
       setPageTotal(total);
       setPendingStatus(null);
     },
-    [draft, save],
+    [draft, save, synced],
   );
+
+  // Tornando in sincronia (si rientra sulla principale, o si riallinea la
+  // secondaria) il visore attivo salta dove sta il testo: senza, resterebbe
+  // dov'era rimasto sfogliando da solo.
+  const wasSyncedRef = useRef(synced);
+  useEffect(() => {
+    if (synced && !wasSyncedRef.current) {
+      setJumpRequest({ index: pageIndex, token: Date.now() });
+    }
+    wasSyncedRef.current = synced;
+  }, [synced, pageIndex]);
 
   const handleVerify = async () => {
     if (!segment) return;
@@ -369,10 +452,12 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
 
   const isVerified = Boolean(segment?.approved_revision_id);
   // Il numero mostrato segue subito la pagina scelta, non quella ancora
-  // confermata: la stessa convenzione della scheda opera in Biblioteca.
-  const displayIndex = pendingStatus?.index ?? pageIndex;
-  const isPagePending = pendingStatus?.state === 'loading';
-  const pagePendingError = pendingStatus?.state === 'error' ? pendingStatus.message : null;
+  // confermata: la stessa convenzione della scheda opera in Biblioteca. Fuori
+  // sincronia il visore sfoglia per conto suo: il suo stato di caricamento
+  // non riguarda più la pagina di testo mostrata qui.
+  const displayIndex = synced ? pendingStatus?.index ?? pageIndex : pageIndex;
+  const isPagePending = synced && pendingStatus?.state === 'loading';
+  const pagePendingError = synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
   const pageTitle =
     viewerRef && pageTotal
       ? t('areas.library.viewerPageOf', { index: displayIndex + 1, total: pageTotal })
@@ -391,6 +476,50 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   };
 
   const revisionAuthorIcon = { user: User, ocr: ScanText, import: FileInput } as const;
+
+  const displayedVersion = activeSource === 'main' ? viewerRef : siblingVersion;
+  const sourceIcon = (kind: ViewerVersionRef['versionKind']) => (kind === 'pdf' ? FileText : Images);
+  const sourceLabelKey = (kind: ViewerVersionRef['versionKind'], forAligned: boolean) =>
+    kind === 'pdf'
+      ? forAligned ? 'transcription.sourcePdf' : 'transcription.sourcePdfUnaligned'
+      : forAligned ? 'transcription.sourceImages' : 'transcription.sourceImagesUnaligned';
+  // Comandi del cambio fonte: stessa barra del visore (accanto a "leggi solo
+  // file locali"), non una riga a parte. Il cambio fonte compare solo con
+  // una secondaria; lo sgancio manuale sempre, anche con una copia sola —
+  // può tornare comodo curiosare senza spostare il punto di scrittura.
+  const sourceSwitchControls = viewerRef && (
+    <div className="flex items-center gap-1">
+      {siblingVersion && (
+        <>
+          {(['main', 'sibling'] as const).map((source) => {
+            const version = source === 'main' ? viewerRef : siblingVersion;
+            const Icon = sourceIcon(version.versionKind);
+            return (
+              <IconButton
+                key={source}
+                size="sm"
+                tone={activeSource === source ? 'accent' : 'default'}
+                ariaPressed={activeSource === source}
+                onClick={() => setActiveSource(source)}
+                title={t(sourceLabelKey(version.versionKind, aligned))}
+              >
+                <Icon size={14} />
+              </IconButton>
+            );
+          })}
+        </>
+      )}
+      <IconButton
+        size="sm"
+        tone={manualUnlinked ? 'accent' : 'default'}
+        ariaPressed={manualUnlinked}
+        onClick={() => setManualUnlinked((current) => !current)}
+        title={t(manualUnlinked ? 'transcription.relink' : 'transcription.unlink')}
+      >
+        {manualUnlinked ? <Unlink2 size={14} /> : <Link2 size={14} />}
+      </IconButton>
+    </div>
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
@@ -459,23 +588,31 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
         >
           {viewerLoading ? (
             <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
-          ) : viewerRef?.versionKind === 'pdf' && viewerRef.providerKey ? (
+          ) : displayedVersion?.versionKind === 'pdf' && displayedVersion.providerKey ? (
             <DocumentViewer
-              key={viewerRef.versionId}
-              versionId={viewerRef.versionId}
-              providerKey={viewerRef.providerKey}
+              key={displayedVersion.versionId}
+              versionId={displayedVersion.versionId}
+              providerKey={displayedVersion.providerKey}
               onPageChange={(index, total) => handleViewerPageChange(index, null, total)}
               onPageStatusChange={setPendingStatus}
+              requestedIndex={jumpRequest?.index ?? null}
+              requestToken={jumpRequest?.token ?? 0}
+              onRequestedIndexHandled={() => setJumpRequest(null)}
+              extraControls={sourceSwitchControls}
             />
-          ) : viewerRef?.versionKind === 'iiif_manifest' && viewerRef.sourceUrl ? (
+          ) : displayedVersion?.versionKind === 'iiif_manifest' && displayedVersion.sourceUrl ? (
             <PageViewer
-              key={viewerRef.versionId}
-              sourceId={viewerRef.sourceId}
-              versionId={viewerRef.versionId}
-              manifestUrl={viewerRef.sourceUrl}
-              providerKey={viewerRef.providerKey}
+              key={displayedVersion.versionId}
+              sourceId={displayedVersion.sourceId}
+              versionId={displayedVersion.versionId}
+              manifestUrl={displayedVersion.sourceUrl}
+              providerKey={displayedVersion.providerKey}
               onPageChange={(page) => handleViewerPageChange(page.index, page.label, page.total)}
               onPageStatusChange={setPendingStatus}
+              requestedIndex={jumpRequest?.index ?? null}
+              requestToken={jumpRequest?.token ?? 0}
+              onRequestedIndexHandled={() => setJumpRequest(null)}
+              extraControls={sourceSwitchControls}
             />
           ) : (
             // Filtri visuali, preset e cambio fonte restano il resto di #221:
@@ -512,6 +649,28 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                   (`ViewerToolbar`, h-12): le due colonne partono allineate. */}
               <div className={`flex ${TEXT_HEADER_HEIGHT} shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3`}>
                 <div className="flex min-w-0 items-center gap-3">
+                  {/* Navigazione autonoma del testo: sempre presente, attiva
+                      solo fuori sincronia (visore staccato sulla secondaria,
+                      o sgancio manuale). Stesse pagine di sempre — cambia
+                      solo chi le comanda. */}
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <IconButton
+                      size="sm"
+                      disabled={synced || pageIndex <= 0}
+                      onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+                      title={t('transcription.textPrevPage')}
+                    >
+                      <ChevronLeft size={14} />
+                    </IconButton>
+                    <IconButton
+                      size="sm"
+                      disabled={synced || (pageTotal !== null && pageIndex >= pageTotal - 1)}
+                      onClick={() => setPageIndex((current) => (pageTotal !== null ? Math.min(pageTotal - 1, current + 1) : current + 1))}
+                      title={t('transcription.textNextPage')}
+                    >
+                      <ChevronRight size={14} />
+                    </IconButton>
+                  </span>
                   <h3 className="min-w-0 truncate font-display text-lg italic text-editorial-ink">
                     {pageTitle}
                   </h3>

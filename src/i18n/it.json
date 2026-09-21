@@ -1075,11 +1075,20 @@
   "transcription": {
     "create": "Crea documento",
     "titleLabel": "Titolo",
+    "chooseStartingCopy": "Da quale copia iniziare",
     "titlePlaceholder": "Titolo del documento...",
     "saveFailed": "Creazione del documento fallita",
     "loadFailed": "Caricamento delle trascrizioni fallito",
     "delete": "Elimina",
     "removeDocument": "Rimuovi trascrizione",
+    "sourceImages": "Immagini",
+    "sourcePdf": "PDF",
+    "sourceImagesUnaligned": "Immagini (numerazione diversa dal PDF)",
+    "sourcePdfUnaligned": "PDF (numerazione diversa dalle immagini)",
+    "unlink": "Stacca testo e visore",
+    "relink": "Riaggancia testo e visore",
+    "textPrevPage": "Pagina precedente del testo",
+    "textNextPage": "Pagina successiva del testo",
     "confirmDeleteTitle": "Eliminare il documento?",
     "confirmDeleteMessage": "\"{{name}}\" verrà rimosso. L'operazione non è reversibile.",
     "deleted": "Documento eliminato",
@@ -2035,7 +2044,7 @@
           {
             "title": "Creare un documento",
             "paragraphs": [
-              "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo. In alternativa, dalla scheda di un'opera in Biblioteca puoi creare direttamente una trascrizione di quella digitalizzazione."
+              "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo. In alternativa, dalla scheda di un'opera in Biblioteca puoi creare direttamente una trascrizione di quella digitalizzazione. Se l'opera ha sia le immagini sia il PDF sul computer, scegli da quale iniziare."
             ]
           },
           {
@@ -2056,6 +2065,13 @@
             "title": "Pagina in caricamento",
             "paragraphs": [
               "Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo e lo storico con una rotellina al centro: scrivere o ripristinare restano disattivati finché la pagina non è mostrata davvero. Se l'apertura fallisce, compare un avviso al posto della rotellina, con lo stesso blocco."
+            ]
+          },
+          {
+            "title": "Cambiare fonte, immagini o PDF",
+            "paragraphs": [
+              "Se l'opera ha entrambe le copie, nella barra del visore compaiono due comandi per passare dall'una all'altra. Se dichiarano lo stesso numero di pagine il cambio è fluido, stessa numerazione. Se il numero non combacia, sulla copia secondaria il visore si stacca dal testo: si sfoglia liberamente, mentre il testo si sfoglia con le proprie frecce accanto al titolo \"Pagina N\". Tornando sulla copia principale l'aggancio si ripristina da solo.",
+              "Un terzo comando stacca il collegamento a prescindere dal numero di pagine, anche restando sulla copia principale: comodo per guardare una pagina diversa senza spostare il punto in cui si sta scrivendo."
             ]
           },
           {

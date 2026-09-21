@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
@@ -52,6 +52,9 @@ export interface ViewerToolbarProps {
   thumbnailsOpen?: boolean;
   onToggleThumbnails?: () => void;
   shownPageUrl?: string | null;
+  /** Comandi di chi ospita il visore (es. cambio fonte immagini/PDF nello
+   *  Studio di trascrizione): stessa barra, non una riga a parte. */
+  extraControls?: ReactNode;
 }
 
 /**
@@ -137,6 +140,7 @@ export function ViewerToolbar({
   thumbnailsOpen,
   onToggleThumbnails,
   shownPageUrl,
+  extraControls,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
@@ -199,6 +203,8 @@ export function ViewerToolbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        {extraControls}
+        {extraControls && <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />}
         {onToggleLocalOnly && (
           <IconButton
             size="sm"

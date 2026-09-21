@@ -427,6 +427,39 @@ Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
 (posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
 finché non si decide una presentazione definitiva.
 
+**Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
+copia con cui il documento nasce (`source_version_id`) resta "principale"
+per sempre, l'altra — se c'è — è "secondaria". Le due non promettono la
+stessa numerazione di pagina, quindi il calcolo in
+`transcriptionSync.computeSyncState` (funzione pura, con le sue prove in
+`transcriptionSync.test.ts`) decide se restano agganciate:
+
+- sulla principale, sempre agganciate;
+- sulla secondaria, solo se dichiarano lo stesso numero di pagine — per le
+  immagini è `expectedPages` (già in `LibrarySourceVersion`, nessuna lettura
+  in più), per il PDF è `versionInventory(...).document.pages`, il conteggio
+  vero letto al momento dello scaricamento;
+- un interruttore manuale stacca l'aggancio a prescindere, anche sulla
+  principale — utile per curiosare una pagina senza spostare il punto in cui
+  si scrive.
+
+Staccati, il visore sfoglia per conto suo (i suoi eventi di cambio pagina
+non toccano più `pageIndex`) e il testo si sfoglia con due frecce proprie,
+sempre presenti nell'intestazione ma attive solo fuori sincronia — stessa
+numerazione di sempre (0..N-1 del documento), comandata da altro. Tornando
+in sincronia, il visore riceve un comando di salto
+(`requestedIndex`/`requestToken`/`onRequestedIndexHandled`, stessa forma di
+`focusQuery`/`focusRequestId` di `MarkdownEditor`) per riallinearsi alla
+pagina che il testo sta mostrando. Il comando del cambio fonte vive nella
+barra del visore stessa (`ViewerToolbar.extraControls`, proprietà opzionale
+e retrocompatibile — nessun effetto sugli usi in Biblioteca).
+
+**Scelta della copia alla creazione**: il documento creato dalla scheda di
+un'opera prendeva sempre la copia primaria del catalogo (quasi sempre le
+immagini, il PDF non è mai primario). `CreateTranscriptionDialog`, con un
+`sourceId` in più, legge ora tutte le copie leggibili dell'opera e — solo se
+ce n'è più di una — lascia scegliere da quale iniziare.
+
 **Pagina in caricamento o fallita**: `onPageStatusChange` (già di
 `PageViewer`, aggiunto ora anche a `DocumentViewer`) segnala una pagina
 richiesta ma non ancora mostrata, o appena fallita — stesso segnale che il
