@@ -560,6 +560,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       open={transcriptionTarget !== null}
       onClose={() => setTranscriptionTarget(null)}
       sourceVersionId={transcriptionTarget?.versionId ?? null}
+      sourceId={transcriptionTarget?.source.id}
       defaultTitle={transcriptionTarget?.source.title ?? ''}
       onCreated={(documentId) => navigate(transcriptionsLocation({ documentId }))}
     />

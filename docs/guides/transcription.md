@@ -10,10 +10,14 @@ destra. È la stessa idea della Traduzione, applicata alla trascrizione.
 
 ## Creare un documento
 
-Dall'area **Trascrizioni** scegli "Nuovo documento" e dai un titolo. In
-alternativa, dalla scheda di un'opera in **Biblioteca** puoi creare
-direttamente una trascrizione di quella digitalizzazione, con il titolo già
-compilato.
+Dall'area **Trascrizioni** scegli "Nuovo documento" e dai un titolo. Puoi
+anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo
+nello stesso dialogo — facoltativo: senza, il documento resta senza visore,
+un solo blocco di testo. Dalla scheda di un'opera in **Biblioteca** puoi
+invece creare direttamente una trascrizione di quella digitalizzazione, con
+il titolo già compilato. Se l'opera ha sia le immagini sia il PDF sul
+computer, scegli da quale iniziare; con una sola copia disponibile non c'è
+scelta da fare.
 
 ## Il visore a sinistra, un testo per pagina
 
@@ -48,6 +52,20 @@ e lo storico con una rotellina al centro: scrivere o ripristinare restano
 disattivati finché la pagina non è davvero mostrata. Se l'apertura fallisce,
 al posto della rotellina compare un avviso, con lo stesso blocco.
 
+## Cambiare fonte, immagini o PDF
+
+Se l'opera ha entrambe le copie, nella barra del visore compaiono due
+comandi per passare dall'una all'altra. Se le due dichiarano lo stesso
+numero di pagine, il cambio è fluido: stessa numerazione, il testo segue.
+Se il numero non combacia, passando sulla copia secondaria il visore si
+stacca dal testo — si sfoglia liberamente cercando quel che serve, mentre il
+testo si sfoglia con le proprie frecce, accanto al titolo "Pagina N".
+Tornando sulla copia principale l'aggancio si ripristina da solo.
+
+Un terzo comando stacca il collegamento **a prescindere** dal numero di
+pagine, anche restando sulla copia principale: comodo per guardare una
+pagina diversa senza spostare il punto in cui si sta scrivendo.
+
 ## Storico, ripristino e metadati
 
 Ogni salvataggio resta nello storico della pagina, nel pannello a destra:
@@ -65,4 +83,4 @@ Serve a vedere cosa viene registrato oggi; la sua presentazione cambierà.
 
 L'assistenza al riconoscimento del testo (OCR) arriva con i prossimi passi
 della beta. Il visore non ha ancora filtri visivi (luminosità, contrasto,
-inversione) né il cambio fra fonti diverse della stessa opera.
+inversione).

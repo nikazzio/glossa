@@ -5,7 +5,7 @@ import { Header } from './components/layout';
 import { ShellNext } from './components/layout/shell-next/ShellNext';
 import { WorkspaceShellNext } from './components/layout/shell-next/WorkspaceShellNext';
 import { AppStatusBar } from './components/layout/AppStatusBar';
-import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
+import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner, PanelTransitionVeil } from './components/common';
 import { MotionConfig, motion } from 'motion/react';
 import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from './components/layout/motion';
 import { usePipeline } from './hooks/usePipeline';
@@ -565,33 +565,5 @@ export default function App() {
         closeButton
       />
     </ErrorBoundary>
-  );
-}
-
-function PanelTransitionVeil({
-  panelKey,
-  tone,
-  variant = 'workspace',
-}: {
-  panelKey: string;
-  tone: 'paper' | 'bg';
-  variant?: 'workspace' | 'project';
-}) {
-  const transition =
-    variant === 'project'
-      ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const }
-      : { duration: 0.44, ease: [0.19, 1, 0.22, 1] as const };
-  const initialOpacity = variant === 'project' ? 0.78 : 0.92;
-
-  return (
-    <motion.div
-      key={panelKey}
-      initial={{ opacity: initialOpacity }}
-      animate={{ opacity: 0 }}
-      transition={transition}
-      className={`pointer-events-none absolute inset-0 z-20 ${
-        tone === 'paper' ? 'bg-editorial-paper' : 'bg-editorial-bg'
-      }`}
-    />
   );
 }

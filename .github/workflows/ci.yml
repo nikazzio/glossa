@@ -133,7 +133,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify release CSP has no unsafe-eval or unsafe-inline scripts
         run: |
-          if grep -q "unsafe-eval" src-tauri/tauri.release.conf.json; then
+          # 'wasm-unsafe-eval' è un permesso CSP diverso e più stretto (solo
+          # compilazione WASM, non eval JS generico) — non va confuso con
+          # 'unsafe-eval' solo perché ne contiene la sottostringa.
+          if grep -oE "'unsafe-eval'" src-tauri/tauri.release.conf.json | grep -q .; then
             echo "ERROR: 'unsafe-eval' found in tauri.release.conf.json — remove it before merging"
             exit 1
           fi

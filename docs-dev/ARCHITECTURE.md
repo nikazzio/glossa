@@ -427,6 +427,56 @@ Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
 (posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
 finché non si decide una presentazione definitiva.
 
+**Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
+copia con cui il documento nasce (`source_version_id`) resta "principale"
+per sempre, l'altra — se c'è — è "secondaria". Le due non promettono la
+stessa numerazione di pagina, quindi il calcolo in
+`transcriptionSync.computeSyncState` (funzione pura, con le sue prove in
+`transcriptionSync.test.ts`) decide se restano agganciate:
+
+- sulla principale, sempre agganciate;
+- sulla secondaria, solo se dichiarano lo stesso numero di pagine — per le
+  immagini è `expectedPages` (già in `LibrarySourceVersion`, nessuna lettura
+  in più), per il PDF è `versionInventory(...).document.pages`, il conteggio
+  vero letto al momento dello scaricamento;
+- un interruttore manuale stacca l'aggancio a prescindere, anche sulla
+  principale — utile per curiosare una pagina senza spostare il punto in cui
+  si scrive.
+
+Staccati, il visore sfoglia per conto suo (i suoi eventi di cambio pagina
+non toccano più `pageIndex`) e il testo si sfoglia con due frecce proprie,
+sempre presenti nell'intestazione ma attive solo fuori sincronia — stessa
+numerazione di sempre (0..N-1 del documento), comandata da altro. Tornando
+in sincronia, il visore riceve un comando di salto
+(`requestedIndex`/`requestToken`/`onRequestedIndexHandled`, stessa forma di
+`focusQuery`/`focusRequestId` di `MarkdownEditor`) per riallinearsi alla
+pagina che il testo sta mostrando. Il comando del cambio fonte vive nella
+barra del visore stessa (`ViewerToolbar.extraControls`, proprietà opzionale
+e retrocompatibile — nessun effetto sugli usi in Biblioteca).
+
+**Scelta della copia alla creazione**: il documento creato dalla scheda di
+un'opera prendeva sempre la copia primaria del catalogo (quasi sempre le
+immagini, il PDF non è mai primario). `CreateTranscriptionDialog`, con un
+`sourceId` in più, legge ora tutte le copie leggibili dell'opera e — solo se
+ce n'è più di una — lascia scegliere da quale iniziare.
+
+**Collegare un'opera creando da zero**: senza `sourceId` (comando "Nuovo
+documento" in Trascrizioni) il dialogo mostrava solo il titolo, senza alcun
+modo di legare il documento a un'opera dopo — un documento nato così restava
+per sempre senza visore. Aggiunta una ricerca per titolo inline
+(`listLibraryCatalog()`, filtrata lato finestra: lo stesso catalogo che la
+Biblioteca tiene già tutto in memoria), facoltativa; scegliendo un'opera si
+comporta come se `sourceId` fosse stato passato dal chiamante.
+
+**Il cambio fonte non deve mai lasciare senza uscita**: se la copia scelta
+non si apre (chiave della biblioteca mancante nei metadati della copia,
+indirizzo non valido), i comandi del cambio fonte restano visibili anche
+sulla schermata di errore — prima sparivano insieme al visore, perché
+vivevano solo dentro la sua barra (`extraControls`), e non c'era modo di
+tornare indietro. La risoluzione della copia secondaria usa ora
+`getVersionForViewer`, la stessa della principale (letta dal deposito, non
+dai soli metadati della copia — più affidabile).
+
 **Pagina in caricamento o fallita**: `onPageStatusChange` (già di
 `PageViewer`, aggiunto ora anche a `DocumentViewer`) segnala una pagina
 richiesta ma non ancora mostrata, o appena fallita — stesso segnale che il
@@ -871,6 +921,25 @@ in questo giro, con le parti solo-immagini (miniature, solo-locale, uscita verso
 la pagina della biblioteca) rese facoltative. Il percorso del deposito non
 arriva mai alla finestra: si compone nel motore da chiave e identificativo,
 entrambi convalidati come componenti di percorso.
+
+**Pagine disegnate vuote, con i byte corretti** (si aprivano bene col lettore
+del sistema): pdf.js decodifica JPEG2000/JBIG2 — compressioni frequenti nelle
+scansioni — solo con moduli WASM dedicati (OpenJPEG, JBIG2); senza l'opzione
+`wasmUrl` non li cerca nemmeno, cade su un ripiego JS che qui non risolve, e
+la pagina non ha niente da disegnare. Console del browser: errore di
+inizializzazione del decoder OpenJPEG. Fix: `wasmUrl: '/pdfjs/'` in
+`pdfjs.getDocument()`, con i tre file `.wasm` copiati in `public/pdfjs/`
+invece che importati con `?url` — quel percorso li comprimerebbe ognuno con
+un nome diverso, mentre pdf.js li cerca con nomi esatti in una sola cartella.
+La build di rilascio ha bisogno in più di `'wasm-unsafe-eval'` nel
+`script-src` della CSP (`tauri.release.conf.json`), perché l'istanziazione
+WASM lo richiede e quella build non ha la `'unsafe-eval'` più ampia della
+build di sviluppo.
+
+(Prima ipotesi, scartata dal test dal vivo: `page.cleanup()` dopo ogni
+disegno, in conflitto con la doppia chiamata di `StrictMode` in sviluppo. La
+rimozione non risolveva niente — la pagina restava bianca anche fuori
+sviluppo — perché non era la causa.)
 
 ### Riconoscimento e ricerca per biblioteca
 
