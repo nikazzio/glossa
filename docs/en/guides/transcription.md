@@ -35,13 +35,22 @@ When the text is ready, mark it as **verified** with the lock next to the
 doesn't get overwritten by accident. You can return it to draft at any time
 with the same command.
 
-## History and restore
+While the viewer is still opening the chosen page, a veil covers the text
+and history with a spinner in the middle: writing or restoring stay
+disabled until the page is actually shown. If opening fails, a warning
+appears in place of the spinner, with the same block.
+
+## History, restore and metadata
 
 Every save stays in that page's history, in the panel on the right: it
 shows who wrote that version — manual correction, automatic recognition, or
 import — and when. The command on each history entry brings that version's
 text back as a new save: earlier versions are never lost, even after a
 restore. Changing page changes the history shown, too.
+
+The **Metadata** tab, next to History, shows the raw data saved for the
+current page: position, label, status, and revision count. It's there to
+show what's recorded today; how it's presented will change.
 
 ## Current limits
 

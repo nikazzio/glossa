@@ -2051,10 +2051,17 @@
             ]
           },
           {
-            "title": "Storico e ripristino",
+            "title": "Pagina in caricamento",
+            "paragraphs": [
+              "Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo e lo storico con una rotellina al centro: scrivere o ripristinare restano disattivati finché la pagina non è mostrata davvero. Se l'apertura fallisce, compare un avviso al posto della rotellina, con lo stesso blocco."
+            ]
+          },
+          {
+            "title": "Storico, ripristino e metadati",
             "paragraphs": [
               "Ogni salvataggio resta nello storico della pagina, a destra: mostra chi ha scritto quella versione — correzione manuale, riconoscimento automatico o importazione — e quando.",
-              "Il comando su ogni voce dello storico riporta il testo di quella versione, come nuovo salvataggio: le versioni precedenti non si perdono mai. Cambiando pagina, lo storico mostrato cambia con lei."
+              "Il comando su ogni voce dello storico riporta il testo di quella versione, come nuovo salvataggio: le versioni precedenti non si perdono mai. Cambiando pagina, lo storico mostrato cambia con lei.",
+              "La scheda Metadati, di fianco a Storico, mostra i dati grezzi salvati per la pagina corrente — posizione, etichetta, stato, numero di revisioni — utile per vedere cosa viene registrato oggi."
             ]
           }
         ]

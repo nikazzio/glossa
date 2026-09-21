@@ -37,7 +37,12 @@ accanto al titolo "Pagina N": il testo diventa bloccato, per non
 sovrascrivere per sbaglio una trascrizione già controllata. Puoi tornare in
 bozza in qualsiasi momento con lo stesso comando.
 
-## Storico e ripristino
+Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo
+e lo storico con una rotellina al centro: scrivere o ripristinare restano
+disattivati finché la pagina non è davvero mostrata. Se l'apertura fallisce,
+al posto della rotellina compare un avviso, con lo stesso blocco.
+
+## Storico, ripristino e metadati
 
 Ogni salvataggio resta nello storico della pagina, nel pannello a destra:
 mostra chi ha scritto quella versione — correzione manuale, riconoscimento
@@ -45,6 +50,10 @@ automatico o importazione — e quando. Il comando su ogni voce dello storico
 riporta il testo di quella versione come nuovo salvataggio: le versioni
 precedenti non si perdono mai, anche dopo un ripristino. Cambiando pagina lo
 storico mostrato cambia con lei.
+
+La scheda **Metadati**, accanto allo Storico, mostra i dati grezzi salvati
+per la pagina corrente: posizione, etichetta, stato e numero di revisioni.
+Serve a vedere cosa viene registrato oggi; la sua presentazione cambierà.
 
 ## Limiti attuali
 
