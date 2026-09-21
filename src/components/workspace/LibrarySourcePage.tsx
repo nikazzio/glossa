@@ -365,6 +365,8 @@ export function LibrarySourcePage({
             a mano. */}
         <InspectorShell
           ariaLabel={t('areas.library.inspectorLabel')}
+          headerHeightClassName="h-12"
+          tabRowHeightClassName="h-12"
           tabs={INSPECTOR_TABS.map((tab) => ({ ...tab, label: t(tab.labelKey) }))}
           activeTab={activeTab}
           onTabChange={(id) => setActiveTab(id as InspectorTabId)}

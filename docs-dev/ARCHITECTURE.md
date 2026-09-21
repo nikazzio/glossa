@@ -427,8 +427,8 @@ sull'errore) e disattivati, finché il visore non conferma la nuova pagina.
 (`headerHeightClassName`, `tabRowHeightClassName`, default gli stessi valori
 di sempre): qui impostate a `h-12` per allineare intestazione e barra tab
 alla stessa altezza della barra comandi del visore e dell'intestazione del
-testo. Non ancora applicato allo Studio di traduzione né alla scheda opera —
-prima si valuta l'esito qui.
+testo. Applicate anche alla scheda opera in Biblioteca (`LibrarySourcePage`),
+approvato l'esito qui — non ancora allo Studio di traduzione.
 
 ## Pipeline di traduzione
 
