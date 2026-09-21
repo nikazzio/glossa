@@ -29,7 +29,7 @@ import {
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { MarkdownEditor } from '../common';
+import { MarkdownEditor, PanelTransitionVeil } from '../common';
 import { ClickPopover, IconButton, IconLink, InspectorShell, MenuActionRow, Spinner, StatRow } from '../ui';
 import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
@@ -588,7 +588,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           minSize={VIEWER_MIN}
           maxSize={VIEWER_MAX}
           panelRef={setViewerPanel}
-          className="flex min-w-0 flex-col border-r border-editorial-border bg-surface-panel"
+          className="relative flex min-w-0 flex-col border-r border-editorial-border bg-surface-panel"
         >
           {viewerLoading ? (
             <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
@@ -638,6 +638,10 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
               </div>
             </div>
           )}
+          {/* Cambiare fonte smonta e rimonta il visore (chiavi diverse, dati
+              diversi): senza questo velo si vede il vuoto per un istante fra
+              i due, uno scatto invece di una transizione. */}
+          <PanelTransitionVeil panelKey={displayedVersion?.versionId ?? 'none'} tone="panel" variant="project" />
         </Panel>
 
         <Separator
