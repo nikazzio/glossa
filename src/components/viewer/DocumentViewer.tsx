@@ -7,6 +7,7 @@ import { EmptyState, IconButton, Spinner } from '../ui';
 import { ViewerToolbar } from './ViewerToolbar';
 import { documentBytes, isTooLarge, openDocumentExternally } from '../../services/documentService';
 import { renderDocumentPage, openDocument, type LoadedDocument } from './pdfDocument';
+import type { PageStatus } from './PageViewer';
 import { errorMessage, logger } from '../../utils/logger';
 
 /** Quanto si può ingrandire oltre i pixel disegnati, come per le immagini. */
@@ -26,6 +27,7 @@ export function DocumentViewer({
   versionId,
   providerKey,
   onPageChange,
+  onPageStatusChange,
 }: {
   versionId: string;
   providerKey: string;
@@ -33,6 +35,9 @@ export function DocumentViewer({
    *  render, non alla sola richiesta): chi tiene un testo per pagina sa a
    *  quale pagina agganciarlo. */
   onPageChange?: (index: number, total: number) => void;
+  /** Stessa forma di `PageViewer`: la pagina richiesta è in corso o è appena
+   *  fallita, `null` quando torna a coincidere con quella mostrata. */
+  onPageStatusChange?: (status: PageStatus | null) => void;
 }) {
   const { t } = useTranslation();
   const viewerElementRef = useRef<HTMLDivElement>(null);
@@ -40,6 +45,8 @@ export function DocumentViewer({
   const documentRef = useRef<LoadedDocument | null>(null);
   const onPageChangeRef = useRef(onPageChange);
   onPageChangeRef.current = onPageChange;
+  const onPageStatusChangeRef = useRef(onPageStatusChange);
+  onPageStatusChangeRef.current = onPageStatusChange;
 
   const [total, setTotal] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -124,6 +131,7 @@ export function DocumentViewer({
     let cancelled = false;
     let objectUrl: string | null = null;
     setLoading(true);
+    onPageStatusChangeRef.current?.({ index: currentIndex, state: 'loading' });
     void (async () => {
       try {
         const blob = await renderDocumentPage(opened, currentIndex);
@@ -134,11 +142,14 @@ export function DocumentViewer({
           url: objectUrl,
         } as unknown as OpenSeadragon.TileSourceSpecifier);
         setLoadError(null);
+        onPageStatusChangeRef.current?.(null);
         onPageChangeRef.current?.(currentIndex, total);
       } catch (error: unknown) {
         if (cancelled) return;
-        logger.error('library.document.pageFailed', { message: errorMessage(error) });
-        setLoadError(errorMessage(error));
+        const message = errorMessage(error);
+        logger.error('library.document.pageFailed', { message });
+        setLoadError(message);
+        onPageStatusChangeRef.current?.({ index: currentIndex, state: 'error', message });
       } finally {
         if (!cancelled) setLoading(false);
       }

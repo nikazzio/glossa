@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   Check,
   FileInput,
   History,
   Images,
+  Info,
   Loader2,
   Lock,
   RefreshCw,
@@ -19,8 +21,8 @@ import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-pa
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { MarkdownEditor } from '../common';
-import { IconButton, InspectorShell, Spinner } from '../ui';
-import { PageViewer } from '../viewer/PageViewer';
+import { IconButton, InspectorShell, Spinner, StatRow } from '../ui';
+import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
@@ -90,7 +92,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [draft, setDraft] = useState('');
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const [verifying, setVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'history' | 'assist'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'assist' | 'metadata'>('history');
   const [textMenuOpen, setTextMenuOpen] = useState(false);
   const [viewerRef, setViewerRef] = useState<ViewerVersionRef | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
@@ -100,6 +102,10 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [pageIndex, setPageIndex] = useState(0);
   const [pageLabel, setPageLabel] = useState<string | null>(null);
   const [pageTotal, setPageTotal] = useState<number | null>(null);
+  /** La pagina richiesta è in corso o è appena fallita: stesso segnale che
+   *  la scheda opera in Biblioteca usa già, qui applicato al testo e allo
+   *  storico invece che ai dati tecnici della copia. */
+  const [pendingStatus, setPendingStatus] = useState<PageStatus | null>(null);
 
   const debouncedDraft = useDebounce(draft, SAVE_DELAY_MS);
   const savedRef = useRef('');
@@ -214,6 +220,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
       setPageIndex(index);
       setPageLabel(label);
       setPageTotal(total);
+      setPendingStatus(null);
     },
     [draft, save],
   );
@@ -292,11 +299,16 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   };
 
   const isVerified = Boolean(segment?.approved_revision_id);
+  // Il numero mostrato segue subito la pagina scelta, non quella ancora
+  // confermata: la stessa convenzione della scheda opera in Biblioteca.
+  const displayIndex = pendingStatus?.index ?? pageIndex;
+  const isPagePending = pendingStatus?.state === 'loading';
+  const pagePendingError = pendingStatus?.state === 'error' ? pendingStatus.message : null;
   const pageTitle =
     viewerRef && pageTotal
-      ? t('areas.library.viewerPageOf', { index: pageIndex + 1, total: pageTotal })
+      ? t('areas.library.viewerPageOf', { index: displayIndex + 1, total: pageTotal })
       : viewerRef
-        ? t('transcription.pageTitle', { n: pageIndex + 1 })
+        ? t('transcription.pageTitle', { n: displayIndex + 1 })
         : t('transcription.paneLabel');
   const formatDate = (value: string) => {
     // `value` è già ISO (revisione appena scritta, in attesa della rilettura
@@ -345,6 +357,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
               versionId={viewerRef.versionId}
               providerKey={viewerRef.providerKey}
               onPageChange={(index, total) => handleViewerPageChange(index, null, total)}
+              onPageStatusChange={setPendingStatus}
             />
           ) : viewerRef?.versionKind === 'iiif_manifest' && viewerRef.sourceUrl ? (
             <PageViewer
@@ -354,6 +367,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
               manifestUrl={viewerRef.sourceUrl}
               providerKey={viewerRef.providerKey}
               onPageChange={(page) => handleViewerPageChange(page.index, page.label, page.total)}
+              onPageStatusChange={setPendingStatus}
             />
           ) : (
             // Filtri visuali, preset e cambio fonte restano il resto di #221:
@@ -381,7 +395,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           />
         </Separator>
 
-        <Panel id="transcription-text" minSize={TEXT_MIN} className="flex min-w-0 flex-1 flex-col bg-editorial-paper">
+        <Panel id="transcription-text" minSize={TEXT_MIN} className="flex min-w-0 flex-1 flex-col bg-surface-panel">
           {loadingSegment ? (
             <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
           ) : (
@@ -389,20 +403,22 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
               {/* Stessa altezza della barra comandi del visore a sinistra
                   (`ViewerToolbar`, h-12): le due colonne partono allineate. */}
               <div className={`flex ${TEXT_HEADER_HEIGHT} shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3`}>
-                <div className="flex min-w-0 items-center gap-2">
-                  <h3 className="truncate font-display text-lg italic text-editorial-ink">
+                <div className="flex min-w-0 items-center gap-3">
+                  <h3 className="min-w-0 truncate font-display text-lg italic text-editorial-ink">
                     {pageTitle}
                   </h3>
-                  <IconButton
-                    size="sm"
-                    tone={isVerified ? 'success' : 'muted'}
-                    onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
-                    disabled={verifying || !segment || (!isVerified && !draft.trim())}
-                    title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
-                    ariaPressed={isVerified}
-                  >
-                    {verifying ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
-                  </IconButton>
+                  <span className="shrink-0">
+                    <IconButton
+                      size="sm"
+                      tone={isVerified ? 'success' : 'muted'}
+                      onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
+                      disabled={verifying || !segment || isPagePending || (!isVerified && !draft.trim())}
+                      title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
+                      ariaPressed={isVerified}
+                    >
+                      {verifying ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
+                    </IconButton>
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span
@@ -438,7 +454,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                 </div>
               </div>
               <div className="flex min-h-0 flex-1 flex-col bg-editorial-bg px-12 py-8">
-                <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)]">
+                <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)]">
                   <MarkdownEditor
                     identityKey={segment?.id ?? `${documentId}:${pageIndex}`}
                     flatToolbar
@@ -447,12 +463,13 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                     value={draft}
                     onChange={setDraft}
                     markdownEnabled
-                    readOnly={isVerified}
+                    readOnly={isVerified || isPagePending || Boolean(pagePendingError)}
                     fillHeight
                     textClassName="doc-content text-editorial-ink"
                     previewClassName="min-h-[280px] doc-content text-editorial-ink"
                     placeholder={t('transcription.textPlaceholder')}
                   />
+                  <PagePendingOverlay pending={isPagePending} errorMessage={pagePendingError} />
                 </div>
               </div>
             </section>
@@ -490,6 +507,8 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
         >
           <InspectorShell
             ariaLabel={t('transcription.inspectorLabel')}
+            headerHeightClassName="h-12"
+            tabRowHeightClassName="h-12"
             tabs={[
               {
                 id: 'assist',
@@ -498,16 +517,17 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                 disabled: true,
               },
               { id: 'history', label: t('transcription.tabs.history'), icon: <History size={13} /> },
+              { id: 'metadata', label: t('transcription.tabs.metadata'), icon: <Info size={13} /> },
             ]}
             activeTab={activeTab}
-            onTabChange={(id) => setActiveTab(id as 'history' | 'assist')}
+            onTabChange={(id) => setActiveTab(id as 'history' | 'assist' | 'metadata')}
             panelIcon={<History size={15} />}
             panelLabel={t('transcription.inspectorPanelTitle')}
             collapsed={inspectorCollapsed}
             onCollapsedChange={toggleInspectorCollapsed}
           >
             {activeTab === 'history' ? (
-              <div className="flex flex-col gap-2 p-3">
+              <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
                 {revisions.length === 0 ? (
                   <p className="px-1 py-4 text-center text-xs text-editorial-muted">
                     {t('transcription.noRevisions')}
@@ -541,6 +561,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                             size="xs"
                             onClick={() => void handleRestore(revision.id)}
                             title={t('transcription.restore')}
+                            disabled={isPagePending}
                           >
                             <RotateCcw size={12} />
                           </IconButton>
@@ -549,11 +570,59 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                     );
                   })
                 )}
+                <PagePendingOverlay pending={isPagePending} errorMessage={pagePendingError} roundedClassName="rounded-none" />
               </div>
+            ) : activeTab === 'metadata' ? (
+              <dl className="flex flex-col gap-3 p-4">
+                <StatRow label={t('transcription.meta.page')} value={displayIndex + 1} />
+                <StatRow label={t('transcription.meta.pageLabel')} value={pageLabel ?? '—'} />
+                <StatRow
+                  label={t('transcription.meta.status')}
+                  value={t(isVerified ? 'transcription.verifiedBadge' : 'transcription.draftBadge')}
+                />
+                <StatRow label={t('transcription.meta.revisionCount')} value={revisions.length} />
+                <StatRow label={t('transcription.meta.segmentId')} value={segment?.id ?? '—'} />
+                <StatRow
+                  label={t('transcription.meta.sourcePageId')}
+                  value={segment?.source_page_id ?? t('transcription.meta.sourcePageIdUnset')}
+                />
+              </dl>
             ) : null}
           </InspectorShell>
         </Panel>
       </Group>
+    </div>
+  );
+}
+
+/**
+ * Il visore sta ancora aprendo una pagina diversa, o ci ha appena rinunciato:
+ * stessa idea del pannello Digitalizzazioni della Biblioteca, applicata al
+ * testo e allo storico invece che ai dati tecnici della copia. Blocca il
+ * contenuto sotto (non solo lo attenua) — un clic durante il cambio pagina
+ * non deve colpire la pagina sbagliata.
+ */
+function PagePendingOverlay({
+  pending,
+  errorMessage,
+  roundedClassName = 'rounded-2xl',
+}: {
+  pending: boolean;
+  errorMessage: string | null;
+  roundedClassName?: string;
+}) {
+  const { t } = useTranslation();
+  if (!pending && !errorMessage) return null;
+  return (
+    <div className={`absolute inset-0 z-10 flex items-center justify-center bg-editorial-bg/70 ${roundedClassName}`}>
+      {pending ? (
+        <Loader2 size={20} className="animate-spin text-editorial-muted" aria-label={t('common.loading')} />
+      ) : (
+        <span className="flex flex-col items-center gap-1.5 text-center text-xs text-editorial-danger">
+          <AlertTriangle size={20} aria-hidden="true" />
+          {errorMessage}
+        </span>
+      )}
     </div>
   );
 }

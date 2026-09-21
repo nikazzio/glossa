@@ -410,8 +410,25 @@ con un riferimento alla pagina che si sta salvando, non con lo stato letto a
 scrittura ultimata.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
-opera, con una scheda Assistenza già presente ma disattivata in attesa
-dell'OCR.
+opera, con schede Assistenza (disattivata, in attesa dell'OCR), Storico e
+Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
+(posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
+finché non si decide una presentazione definitiva.
+
+**Pagina in caricamento o fallita**: `onPageStatusChange` (già di
+`PageViewer`, aggiunto ora anche a `DocumentViewer`) segnala una pagina
+richiesta ma non ancora mostrata, o appena fallita — stesso segnale che il
+pannello Digitalizzazioni della Biblioteca usa già. Il numero di pagina in
+alto segue subito quella richiesta; testo e storico restano quelli della
+pagina precedente ma coperti da un velo con rotellina (o triangolo
+sull'errore) e disattivati, finché il visore non conferma la nuova pagina.
+
+`InspectorShell` ha due proprietà nuove, opzionali e retrocompatibili
+(`headerHeightClassName`, `tabRowHeightClassName`, default gli stessi valori
+di sempre): qui impostate a `h-12` per allineare intestazione e barra tab
+alla stessa altezza della barra comandi del visore e dell'intestazione del
+testo. Non ancora applicato allo Studio di traduzione né alla scheda opera —
+prima si valuta l'esito qui.
 
 ## Pipeline di traduzione
 

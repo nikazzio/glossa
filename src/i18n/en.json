@@ -1087,6 +1087,7 @@
     "createFromSource": "Create a transcription of this work",
     "backToCatalogue": "Back to Transcriptions",
     "verifiedBadge": "Verified",
+    "draftBadge": "Draft",
     "verify": "Mark as verified",
     "unverify": "Return to draft",
     "verified": "Segment verified",
@@ -1107,7 +1108,17 @@
     "noRevisions": "No saves yet.",
     "tabs": {
       "history": "History",
-      "assist": "Assist"
+      "assist": "Assist",
+      "metadata": "Metadata"
+    },
+    "meta": {
+      "page": "Page",
+      "pageLabel": "Page label",
+      "status": "Status",
+      "revisionCount": "Saved revisions",
+      "segmentId": "Segment id",
+      "sourcePageId": "Linked page",
+      "sourcePageIdUnset": "not linked"
     },
     "authorLabels": {
       "user": "Manual correction",

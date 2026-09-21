@@ -1087,6 +1087,7 @@
     "createFromSource": "Crea una trascrizione di quest'opera",
     "backToCatalogue": "Torna a Trascrizioni",
     "verifiedBadge": "Verificato",
+    "draftBadge": "Bozza",
     "verify": "Segna come verificato",
     "unverify": "Riporta in bozza",
     "verified": "Segmento verificato",
@@ -1107,7 +1108,17 @@
     "noRevisions": "Nessun salvataggio ancora.",
     "tabs": {
       "history": "Storico",
-      "assist": "Assistenza"
+      "assist": "Assistenza",
+      "metadata": "Metadati"
+    },
+    "meta": {
+      "page": "Pagina",
+      "pageLabel": "Etichetta pagina",
+      "status": "Stato",
+      "revisionCount": "Revisioni salvate",
+      "segmentId": "Id segmento",
+      "sourcePageId": "Pagina collegata",
+      "sourcePageIdUnset": "non collegata"
     },
     "authorLabels": {
       "user": "Correzione manuale",
