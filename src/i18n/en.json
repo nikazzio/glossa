@@ -1094,7 +1094,7 @@
     "restore": "Restore this version",
     "restored": "Version restored",
     "restoreFailed": "Restore failed",
-    "viewerComingSoon": "The page viewer will appear here.",
+    "viewerUnavailable": "This document isn't linked to a digitization with pages to show.",
     "paneEyebrow": "Transcribed text",
     "paneLabel": "Text",
     "saveSaved": "Saved",
@@ -2038,6 +2038,12 @@
             "paragraphs": [
               "Every save stays in the history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
               "The command on each history entry brings that version's text back as a new save: earlier versions are never lost."
+            ]
+          },
+          {
+            "title": "The viewer on the left",
+            "paragraphs": [
+              "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning. A document created from scratch has no digitization to show: a notice appears in place of the viewer."
             ]
           }
         ]

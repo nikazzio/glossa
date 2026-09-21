@@ -31,8 +31,16 @@ wrote that version — manual correction, automatic recognition, or import —
 and when. The command on each history entry brings that version's text back
 as a new save: earlier versions are never lost, even after a restore.
 
+## The viewer on the left
+
+A document created from a work's page in the Library shows the linked
+digitization's page on the left, with zoom and panning. A document created
+from scratch in Transcriptions has no digitization to show: a notice appears
+in place of the viewer, not an error.
+
 ## Current limits
 
 Today a document has a single block of text: anchoring to multiple pages and
 assisted text recognition (OCR) arrive with the next steps of the beta. The
-page viewer, on the left, is a reserved space for now.
+viewer doesn't yet have visual filters (brightness, contrast, inversion) or
+switching between different sources of the same work.

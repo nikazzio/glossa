@@ -1094,7 +1094,7 @@
     "restore": "Ripristina questa versione",
     "restored": "Versione ripristinata",
     "restoreFailed": "Ripristino non riuscito",
-    "viewerComingSoon": "Il visore della pagina arriverà qui.",
+    "viewerUnavailable": "Questo documento non è collegato a una digitalizzazione con pagine da mostrare.",
     "paneEyebrow": "Testo trascritto",
     "paneLabel": "Testo",
     "saveSaved": "Salvato",
@@ -2038,6 +2038,12 @@
             "paragraphs": [
               "Ogni salvataggio resta nello storico, a destra: mostra chi ha scritto quella versione — correzione manuale, riconoscimento automatico o importazione — e quando.",
               "Il comando su ogni voce dello storico riporta il testo di quella versione, come nuovo salvataggio: le versioni precedenti non si perdono mai."
+            ]
+          },
+          {
+            "title": "Il visore a sinistra",
+            "paragraphs": [
+              "Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra la pagina della digitalizzazione collegata, con zoom e trascinamento. Un documento creato da zero non ha una digitalizzazione da mostrare: al posto del visore compare un avviso."
             ]
           }
         ]

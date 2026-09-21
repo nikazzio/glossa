@@ -369,18 +369,29 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 di stato propria.
 
 **Un segmento per documento, per ora.** Lo schema supporta più segmenti
-ancorati a una pagina logica (`source_page_id`), ma senza il visore (#221) e
-l'OCR (#220) non c'è ancora un modo di crearne più di uno: lo Studio crea il
-segmento in posizione 0 al primo accesso e lavora solo su quello.
+ancorati a una pagina logica (`source_page_id`), ma senza l'OCR (#220) non c'è
+ancora un modo di crearne più di uno: lo Studio crea il segmento in posizione
+0 al primo accesso e lavora solo su quello.
 
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello
 Studio di traduzione — `AppLocation` porta `{ area: 'transcriptions',
 documentId }`, e l'area stessa decide se mostrare il catalogo o la vista
-concentrata, invece di un flag globale come `projectStore.currentProjectId`. Il
-visore a sinistra è un segnaposto (arriva con #221); a destra `InspectorShell`
-condiviso con lo Studio di traduzione e la scheda opera, con una scheda
-Assistenza già presente ma disattivata in attesa dell'OCR.
+concentrata, invece di un flag globale come `projectStore.currentProjectId`.
+
+**Visore a sinistra** (#221, solo la parte zoom/pan — filtri visuali, preset
+e cambio fonte restano aperti): riusa `PageViewer`/`DocumentViewer`, già
+scritti per la scheda opera in Biblioteca, invece di un componente nuovo.
+`libraryService.getVersionForViewer(sourceVersionId)` legge `source_versions`
+per sapere che tipo di copia mostrare (manifest IIIF o documento unico) senza
+rileggere l'intera scheda dell'opera. Un documento senza
+`source_version_id` — creato da zero, non da una digitalizzazione — mostra un
+avviso al posto del visore: non è un caso di errore, è un documento che non
+ha mai avuto una pagina da mostrare.
+
+A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
+opera, con una scheda Assistenza già presente ma disattivata in attesa
+dell'OCR.
 
 ## Pipeline di traduzione
 

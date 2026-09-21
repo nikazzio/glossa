@@ -20,11 +20,15 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { MarkdownEditor } from '../common';
 import { IconButton, InspectorShell, Spinner } from '../ui';
+import { PageViewer } from '../viewer/PageViewer';
+import { DocumentViewer } from '../viewer/DocumentViewer';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
+import { getVersionForViewer, type ViewerVersionRef } from '../../services/libraryService';
+import { logger } from '../../utils/logger';
 import {
   addSegment,
   listRevisions,
@@ -59,10 +63,13 @@ interface TranscriptionStudioProps {
 }
 
 /**
- * Studio di trascrizione (#388): visore a sinistra (segnaposto finché non
- * arriva #221), testo al centro, strumenti a destra. Un solo segmento per
+ * Studio di trascrizione (#388): visore a sinistra — zoom/pan della pagina
+ * collegata, riuso di `PageViewer`/`DocumentViewer` già scritti per la scheda
+ * opera in Biblioteca; un documento nato senza digitalizzazione mostra un
+ * avviso al posto suo — testo al centro, strumenti a destra. Filtri visuali,
+ * preset e cambio fonte restano il resto di #221. Un solo segmento per
  * documento per ora — più pagine/segmenti arrivano con l'ancoraggio alle
- * pagine (#221/#220), lo schema li supporta già.
+ * pagine e l'OCR (#220), lo schema li supporta già.
  */
 export function TranscriptionStudio({ documentId, workspaceId, onBack }: TranscriptionStudioProps) {
   const { t, i18n } = useTranslation();
@@ -77,6 +84,8 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [verifying, setVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState<'history' | 'assist'>('history');
   const [textMenuOpen, setTextMenuOpen] = useState(false);
+  const [viewerRef, setViewerRef] = useState<ViewerVersionRef | null>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
 
   const debouncedDraft = useDebounce(draft, SAVE_DELAY_MS);
   const savedRef = useRef('');
@@ -100,6 +109,27 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   useEffect(() => {
     void loadDetail(documentId);
   }, [documentId, loadDetail]);
+
+  // Il documento può nascere legato a una digitalizzazione della Biblioteca
+  // (creato dalla scheda dell'opera) oppure no (creato da zero in
+  // Trascrizioni): solo nel primo caso c'è una pagina da mostrare a sinistra.
+  useEffect(() => {
+    const sourceVersionId = detail?.source_version_id ?? null;
+    if (!sourceVersionId) {
+      setViewerRef(null);
+      return;
+    }
+    let cancelled = false;
+    setViewerLoading(true);
+    getVersionForViewer(sourceVersionId)
+      .then((ref) => { if (!cancelled) setViewerRef(ref); })
+      .catch((error: unknown) => {
+        logger.error('transcription.viewer.loadFailed', { sourceVersionId, error });
+        if (!cancelled) setViewerRef(null);
+      })
+      .finally(() => { if (!cancelled) setViewerLoading(false); });
+    return () => { cancelled = true; };
+  }, [detail?.source_version_id]);
 
   const loadSegment = useCallback(async () => {
     setLoadingSegment(true);
@@ -262,14 +292,28 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           panelRef={setViewerPanel}
           className="flex min-w-0 flex-col border-r border-editorial-border bg-surface-panel"
         >
-          {/* Il visore delle pagine arriva con #221: stessa colonna, stesso
-              spazio già predisposto, oggi vuota. */}
-          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
-            <span className="flex flex-col items-center gap-2">
-              <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-              {t('transcription.viewerComingSoon')}
-            </span>
-          </div>
+          {viewerLoading ? (
+            <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
+          ) : viewerRef?.versionKind === 'pdf' && viewerRef.providerKey ? (
+            <DocumentViewer key={viewerRef.versionId} versionId={viewerRef.versionId} providerKey={viewerRef.providerKey} />
+          ) : viewerRef?.versionKind === 'iiif_manifest' && viewerRef.sourceUrl ? (
+            <PageViewer
+              key={viewerRef.versionId}
+              sourceId={viewerRef.sourceId}
+              versionId={viewerRef.versionId}
+              manifestUrl={viewerRef.sourceUrl}
+              providerKey={viewerRef.providerKey}
+            />
+          ) : (
+            // Filtri visuali, preset e cambio fonte restano il resto di #221:
+            // questa colonna oggi offre solo zoom/pan della pagina.
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
+              <span className="flex flex-col items-center gap-2">
+                <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
+                {t('transcription.viewerUnavailable')}
+              </span>
+            </div>
+          )}
         </Panel>
 
         <Separator

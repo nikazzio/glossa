@@ -33,9 +33,16 @@ importazione — e quando. Il comando su ogni voce dello storico riporta il
 testo di quella versione come nuovo salvataggio: le versioni precedenti non
 si perdono mai, anche dopo un ripristino.
 
+## Il visore a sinistra
+
+Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra
+la pagina della digitalizzazione collegata, con zoom e trascinamento. Un
+documento creato da zero in Trascrizioni non ha una digitalizzazione da
+mostrare: al posto del visore compare un avviso, non un errore.
+
 ## Limiti attuali
 
 Oggi un documento ha un solo blocco di testo: l'ancoraggio a più pagine e
 l'assistenza al riconoscimento del testo (OCR) arrivano con i prossimi passi
-della beta. Il visore della pagina, a sinistra, è per ora uno spazio
-riservato.
+della beta. Il visore non ha ancora filtri visivi (luminosità, contrasto,
+inversione) né il cambio fra fonti diverse della stessa opera.
