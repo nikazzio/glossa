@@ -30,9 +30,9 @@ import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { getVersionForViewer, type ViewerVersionRef } from '../../services/libraryService';
 import { logger } from '../../utils/logger';
 import {
-  addSegment,
+  ensureSegment,
+  getSegmentByPosition,
   listRevisions,
-  listSegments,
   restoreRevision,
   saveSegmentText,
   unverifySegment,
@@ -51,6 +51,9 @@ const TEXT_MIN = 280;
 /** Proporzione al primo apertura, prima che l'utente sposti il divisore: 3/5
  *  visore, 2/5 testo. */
 const VIEWER_DEFAULT_RATIO = '60%';
+/** Altezza della barra di intestazione del testo: la stessa di
+ *  `ViewerToolbar` a sinistra, così le due colonne partono allineate. */
+const TEXT_HEADER_HEIGHT = 'h-12';
 
 function clampWidth(width: number, min: number, max: number) {
   return Math.min(Math.max(width, min), max);
@@ -67,9 +70,14 @@ interface TranscriptionStudioProps {
  * collegata, riuso di `PageViewer`/`DocumentViewer` già scritti per la scheda
  * opera in Biblioteca; un documento nato senza digitalizzazione mostra un
  * avviso al posto suo — testo al centro, strumenti a destra. Filtri visuali,
- * preset e cambio fonte restano il resto di #221. Un solo segmento per
- * documento per ora — più pagine/segmenti arrivano con l'ancoraggio alle
- * pagine e l'OCR (#220), lo schema li supporta già.
+ * preset e cambio fonte restano il resto di #221.
+ *
+ * **Un segmento per pagina**, non uno per documento: cambiare pagina nel
+ * visore cambia il testo mostrato, ancorato a quella posizione
+ * (`transcription_segments.position`, non ancora `source_page_id` — quella
+ * riga esiste solo dopo uno scaricamento, il visore la mostra anche prima).
+ * Un documento senza visore (nato da zero) resta su un solo blocco di testo,
+ * in posizione 0.
  */
 export function TranscriptionStudio({ documentId, workspaceId, onBack }: TranscriptionStudioProps) {
   const { t, i18n } = useTranslation();
@@ -87,9 +95,19 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [viewerRef, setViewerRef] = useState<ViewerVersionRef | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
 
+  // La pagina mostrata a sinistra: un documento senza visore resta sempre a
+  // 0, l'unico blocco di testo che ha senso per lui.
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageLabel, setPageLabel] = useState<string | null>(null);
+  const [pageTotal, setPageTotal] = useState<number | null>(null);
+
   const debouncedDraft = useDebounce(draft, SAVE_DELAY_MS);
   const savedRef = useRef('');
   const attemptRef = useRef<string | null>(null);
+  // Un salvataggio in corso quando si cambia pagina non deve scrivere il suo
+  // risultato sullo stato della pagina nuova, arrivato nel frattempo.
+  const pageIndexRef = useRef(pageIndex);
+  useEffect(() => { pageIndexRef.current = pageIndex; }, [pageIndex]);
 
   const inspectorWidth = useUiStore((state) => state.transcriptionInspectorWidth);
   const setInspectorWidth = useUiStore((state) => state.setTranscriptionInspectorWidth);
@@ -131,13 +149,12 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     return () => { cancelled = true; };
   }, [detail?.source_version_id]);
 
-  const loadSegment = useCallback(async () => {
+  const loadSegmentForPage = useCallback(async () => {
     setLoadingSegment(true);
     try {
-      const segments = await listSegments(documentId);
-      const first = segments[0] ?? (await addSegment(documentId, 0));
-      const history = await listRevisions(first.id);
-      setSegment(first);
+      const existing = await getSegmentByPosition(documentId, pageIndex);
+      const history = existing ? await listRevisions(existing.id) : [];
+      setSegment(existing);
       setRevisions(history);
       const currentText = history[0]?.text ?? '';
       setDraft(currentText);
@@ -151,25 +168,34 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     } finally {
       setLoadingSegment(false);
     }
-  }, [documentId, t]);
+  }, [documentId, pageIndex, t]);
 
-  useEffect(() => { void loadSegment(); }, [loadSegment]);
+  useEffect(() => { void loadSegmentForPage(); }, [loadSegmentForPage]);
 
   const save = useCallback(
     async (text: string) => {
-      if (!segment) return;
+      const savingPage = pageIndex;
       attemptRef.current = text;
       setSaveState('saving');
       try {
-        const revision = await saveSegmentText(segment.id, text, 'user');
+        // Sfogliare pagine mai trascritte non crea righe vuote: il segmento
+        // nasce solo al primo salvataggio davvero.
+        const target = segment ?? await ensureSegment(documentId, savingPage, pageLabel);
+        // Nel frattempo si è già cambiata pagina (salvataggio lanciato
+        // all'uscita, prima del debounce): il suo risultato non riguarda più
+        // quello che si vede adesso.
+        if (pageIndexRef.current !== savingPage) return;
+        if (!segment) setSegment(target);
+        const revision = await saveSegmentText(target.id, text, 'user');
+        if (pageIndexRef.current !== savingPage) return;
         savedRef.current = text;
         if (attemptRef.current === text) setSaveState('saved');
         if (revision) setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
       } catch {
-        if (attemptRef.current === text) setSaveState('error');
+        if (pageIndexRef.current === savingPage && attemptRef.current === text) setSaveState('error');
       }
     },
-    [segment],
+    [segment, documentId, pageIndex, pageLabel],
   );
 
   useEffect(() => {
@@ -178,6 +204,19 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
     if (attemptRef.current === debouncedDraft) return;
     void save(debouncedDraft);
   }, [debouncedDraft, save, loadingSegment]);
+
+  /** Il visore ha disegnato un'altra pagina davvero (non solo richiesta): se
+   *  quella che si lascia ha testo non ancora salvato, lo si salva subito —
+   *  aspettare il debounce lo perderebbe cambiando pagina in fretta. */
+  const handleViewerPageChange = useCallback(
+    (index: number, label: string | null, total: number | null) => {
+      if (draft !== savedRef.current) void save(draft);
+      setPageIndex(index);
+      setPageLabel(label);
+      setPageTotal(total);
+    },
+    [draft, save],
+  );
 
   const handleVerify = async () => {
     if (!segment) return;
@@ -253,6 +292,12 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   };
 
   const isVerified = Boolean(segment?.approved_revision_id);
+  const pageTitle =
+    viewerRef && pageTotal
+      ? t('areas.library.viewerPageOf', { index: pageIndex + 1, total: pageTotal })
+      : viewerRef
+        ? t('transcription.pageTitle', { n: pageIndex + 1 })
+        : t('transcription.paneLabel');
   const formatDate = (value: string) => {
     // `value` è già ISO (revisione appena scritta, in attesa della rilettura
     // dal database) oppure "AAAA-MM-GG HH:MM:SS" di SQLite, sempre UTC. Solo
@@ -295,7 +340,12 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           {viewerLoading ? (
             <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
           ) : viewerRef?.versionKind === 'pdf' && viewerRef.providerKey ? (
-            <DocumentViewer key={viewerRef.versionId} versionId={viewerRef.versionId} providerKey={viewerRef.providerKey} />
+            <DocumentViewer
+              key={viewerRef.versionId}
+              versionId={viewerRef.versionId}
+              providerKey={viewerRef.providerKey}
+              onPageChange={(index, total) => handleViewerPageChange(index, null, total)}
+            />
           ) : viewerRef?.versionKind === 'iiif_manifest' && viewerRef.sourceUrl ? (
             <PageViewer
               key={viewerRef.versionId}
@@ -303,6 +353,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
               versionId={viewerRef.versionId}
               manifestUrl={viewerRef.sourceUrl}
               providerKey={viewerRef.providerKey}
+              onPageChange={(page) => handleViewerPageChange(page.index, page.label, page.total)}
             />
           ) : (
             // Filtri visuali, preset e cambio fonte restano il resto di #221:
@@ -334,81 +385,75 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           {loadingSegment ? (
             <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
           ) : (
-            // Stessa struttura della pagina sorgente/traduzione dello Studio di
-            // traduzione (intestazione con eyebrow/titolo/lucchetto a sinistra,
-            // stato e comandi a destra, poi il riquadro di testo): non un
-            // componente condiviso — è privato in quel file — ma la stessa
-            // forma, per restare la stessa esperienza in entrambi gli Studio.
-            <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-editorial-bg px-12 py-8">
-              <div className="mb-6 shrink-0 border-b border-editorial-divider-soft pb-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
-                  {t('transcription.paneEyebrow')}
+            <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+              {/* Stessa altezza della barra comandi del visore a sinistra
+                  (`ViewerToolbar`, h-12): le due colonne partono allineate. */}
+              <div className={`flex ${TEXT_HEADER_HEIGHT} shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3`}>
+                <div className="flex min-w-0 items-center gap-2">
+                  <h3 className="truncate font-display text-lg italic text-editorial-ink">
+                    {pageTitle}
+                  </h3>
+                  <IconButton
+                    size="sm"
+                    tone={isVerified ? 'success' : 'muted'}
+                    onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
+                    disabled={verifying || !segment || (!isVerified && !draft.trim())}
+                    title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
+                    ariaPressed={isVerified}
+                  >
+                    {verifying ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
+                  </IconButton>
                 </div>
-                <div className="mt-1.5 flex items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <h3 className="truncate font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
-                      {segment?.label ?? t('transcription.paneLabel')}
-                    </h3>
-                    <IconButton
-                      size="sm"
-                      tone={isVerified ? 'success' : 'muted'}
-                      onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
-                      disabled={verifying || !segment || (!isVerified && !draft.trim())}
-                      title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
-                      ariaPressed={isVerified}
-                    >
-                      {verifying ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
-                    </IconButton>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className={`flex items-center gap-1 text-xs ${
-                        saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'
-                      }`}
-                      role="status"
-                    >
-                      {saveState === 'saving' ? (
-                        <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-                      ) : saveState === 'error' ? (
-                        <AlertCircle size={12} aria-hidden="true" />
-                      ) : (
-                        <Check size={12} aria-hidden="true" />
-                      )}
-                      {t(`transcription.save${saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving' : 'Error'}`)}
-                      {saveState === 'error' && (
-                        <IconButton size="xs" tone="danger" onClick={() => void save(draft)} title={t('transcription.saveRetry')}>
-                          <RefreshCw size={12} />
-                        </IconButton>
-                      )}
-                    </span>
-                    <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-                    <IconButton
-                      size="lg"
-                      tone={textMenuOpen ? 'accent' : 'default'}
-                      onClick={() => setTextMenuOpen((open) => !open)}
-                      title={t('editor.textMenu')}
-                      ariaPressed={textMenuOpen}
-                    >
-                      <SlidersHorizontal size={14} />
-                    </IconButton>
-                  </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`flex items-center gap-1 text-xs ${
+                      saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'
+                    }`}
+                    role="status"
+                  >
+                    {saveState === 'saving' ? (
+                      <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                    ) : saveState === 'error' ? (
+                      <AlertCircle size={12} aria-hidden="true" />
+                    ) : (
+                      <Check size={12} aria-hidden="true" />
+                    )}
+                    {t(`transcription.save${saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving' : 'Error'}`)}
+                    {saveState === 'error' && (
+                      <IconButton size="xs" tone="danger" onClick={() => void save(draft)} title={t('transcription.saveRetry')}>
+                        <RefreshCw size={12} />
+                      </IconButton>
+                    )}
+                  </span>
+                  <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+                  <IconButton
+                    size="lg"
+                    tone={textMenuOpen ? 'accent' : 'default'}
+                    onClick={() => setTextMenuOpen((open) => !open)}
+                    title={t('editor.textMenu')}
+                    ariaPressed={textMenuOpen}
+                  >
+                    <SlidersHorizontal size={14} />
+                  </IconButton>
                 </div>
               </div>
-              <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)]">
-                <MarkdownEditor
-                  identityKey={segment?.id ?? documentId}
-                  flatToolbar
-                  menuOpen={textMenuOpen}
-                  onMenuOpenChange={setTextMenuOpen}
-                  value={draft}
-                  onChange={setDraft}
-                  markdownEnabled
-                  readOnly={isVerified}
-                  fillHeight
-                  textClassName="doc-content text-editorial-ink"
-                  previewClassName="min-h-[280px] doc-content text-editorial-ink"
-                  placeholder={t('transcription.textPlaceholder')}
-                />
+              <div className="flex min-h-0 flex-1 flex-col bg-editorial-bg px-12 py-8">
+                <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)]">
+                  <MarkdownEditor
+                    identityKey={segment?.id ?? `${documentId}:${pageIndex}`}
+                    flatToolbar
+                    menuOpen={textMenuOpen}
+                    onMenuOpenChange={setTextMenuOpen}
+                    value={draft}
+                    onChange={setDraft}
+                    markdownEnabled
+                    readOnly={isVerified}
+                    fillHeight
+                    textClassName="doc-content text-editorial-ink"
+                    previewClassName="min-h-[280px] doc-content text-editorial-ink"
+                    placeholder={t('transcription.textPlaceholder')}
+                  />
+                </div>
               </div>
             </section>
           )}

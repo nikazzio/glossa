@@ -368,10 +368,20 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 `approved_revision_id` è in bozza, valorizzato è verificato — nessuna colonna
 di stato propria.
 
-**Un segmento per documento, per ora.** Lo schema supporta più segmenti
-ancorati a una pagina logica (`source_page_id`), ma senza l'OCR (#220) non c'è
-ancora un modo di crearne più di uno: lo Studio crea il segmento in posizione
-0 al primo accesso e lavora solo su quello.
+**Un segmento per pagina, non per documento.** `transcription_segments.position`
+è l'indice di pagina del visore (0-based, lo stesso `currentIndex` che
+`PageViewer`/`DocumentViewer` tengono già), non un contatore interno: cambiare
+pagina nel visore cambia il segmento mostrato. Il segmento nasce solo al primo
+salvataggio davvero (`transcriptionService.ensureSegment`) — sfogliare pagine
+mai trascritte non lascia righe vuote nella tabella;
+`getSegmentByPosition` è la sola lettura, senza crearne uno. La colonna
+`source_page_id` resta **non collegata** per ora: quella riga esiste solo dopo
+uno scaricamento (`record_pages` in Rust, dentro il lavoro di scaricamento),
+mentre il visore mostra pagine anche senza aver mai scaricato nulla — legarsi
+a `source_page_id` avrebbe reso la trascrizione dipendente da uno
+scaricamento che l'utente potrebbe non voler mai fare. Un documento senza
+visore (nato da zero, non da una digitalizzazione) resta su un solo blocco di
+testo, in posizione 0 — lo stesso codice, solo che la pagina non cambia mai.
 
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello
@@ -387,7 +397,17 @@ per sapere che tipo di copia mostrare (manifest IIIF o documento unico) senza
 rileggere l'intera scheda dell'opera. Un documento senza
 `source_version_id` — creato da zero, non da una digitalizzazione — mostra un
 avviso al posto del visore: non è un caso di errore, è un documento che non
-ha mai avuto una pagina da mostrare.
+ha mai avuto una pagina da mostrare. `DocumentViewer` ha un `onPageChange`
+in più (non serviva finché lo usava solo la scheda opera, che non tiene
+niente per pagina): entrambi i visori lo chiamano solo a pagina disegnata
+davvero, non alla sola richiesta.
+
+Cambiare pagina con del testo non ancora salvato lo salva subito, prima del
+debounce: aspettare l'timer normale lo perderebbe cambiando pagina in fretta.
+Un salvataggio ancora in corso quando la pagina cambia di nuovo non scrive il
+suo risultato sullo stato della pagina arrivata nel frattempo — confrontato
+con un riferimento alla pagina che si sta salvando, non con lo stato letto a
+scrittura ultimata.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
 opera, con una scheda Assistenza già presente ma disattivata in attesa

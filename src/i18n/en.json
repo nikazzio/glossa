@@ -1095,8 +1095,8 @@
     "restored": "Version restored",
     "restoreFailed": "Restore failed",
     "viewerUnavailable": "This document isn't linked to a digitization with pages to show.",
-    "paneEyebrow": "Transcribed text",
     "paneLabel": "Text",
+    "pageTitle": "Page {{n}}",
     "saveSaved": "Saved",
     "saveSaving": "Saving",
     "saveError": "Save failed",
@@ -2027,23 +2027,23 @@
             ]
           },
           {
+            "title": "The viewer on the left, one text per page",
+            "paragraphs": [
+              "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text."
+            ]
+          },
+          {
             "title": "Writing and saving",
             "paragraphs": [
-              "The text saves itself shortly after you stop typing: the indicator in the top right says whether the save is in progress, done, or failed.",
-              "When the text is ready, mark it as verified with the command at the top; return it to draft at any time with the same command."
+              "The text saves itself shortly after you stop typing: the indicator in the top right says whether the save is in progress, done, or failed. Changing page before the save has started still saves the text right away.",
+              "When the text is ready, mark it as verified with the lock next to the \"Page N\" title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command."
             ]
           },
           {
             "title": "History and restore",
             "paragraphs": [
-              "Every save stays in the history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
-              "The command on each history entry brings that version's text back as a new save: earlier versions are never lost."
-            ]
-          },
-          {
-            "title": "The viewer on the left",
-            "paragraphs": [
-              "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning. A document created from scratch has no digitization to show: a notice appears in place of the viewer."
+              "Every save stays in that page's history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
+              "The command on each history entry brings that version's text back as a new save: earlier versions are never lost. Changing page changes the history shown, too."
             ]
           }
         ]

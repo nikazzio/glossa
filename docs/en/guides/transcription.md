@@ -14,33 +14,37 @@ From the **Transcriptions** area, choose "New document" and give it a title.
 You can also create a transcription directly from a work's page in the
 **Library**, tied to that digitization, with the title already filled in.
 
+## The viewer on the left, one text per page
+
+A document created from a work's page in the Library shows the linked
+digitization's page on the left, with zoom and panning — change page in the
+viewer, and the text on the right changes with it: each page has its own
+block of text and its own history. A document created from scratch in
+Transcriptions has no digitization to show: a notice appears in place of the
+viewer, not an error, and it stays a single block of text.
+
 ## Writing and saving
 
 The text saves itself shortly after you stop typing: the indicator at the
 top right of the editor shows whether the save is in progress, done, or
-failed, with a retry command if it fails.
+failed, with a retry command if it fails. Changing page before the save has
+started still saves what was written, right away.
 
-When the text is ready, mark it as **verified** with the command at the top
-center of the screen. You can return it to draft at any time with the same
-command: the text stays as it was.
+When the text is ready, mark it as **verified** with the lock next to the
+"Page N" title: the text becomes locked, so an already-checked transcription
+doesn't get overwritten by accident. You can return it to draft at any time
+with the same command.
 
 ## History and restore
 
-Every save stays in the history, in the panel on the right: it shows who
-wrote that version — manual correction, automatic recognition, or import —
-and when. The command on each history entry brings that version's text back
-as a new save: earlier versions are never lost, even after a restore.
-
-## The viewer on the left
-
-A document created from a work's page in the Library shows the linked
-digitization's page on the left, with zoom and panning. A document created
-from scratch in Transcriptions has no digitization to show: a notice appears
-in place of the viewer, not an error.
+Every save stays in that page's history, in the panel on the right: it
+shows who wrote that version — manual correction, automatic recognition, or
+import — and when. The command on each history entry brings that version's
+text back as a new save: earlier versions are never lost, even after a
+restore. Changing page changes the history shown, too.
 
 ## Current limits
 
-Today a document has a single block of text: anchoring to multiple pages and
-assisted text recognition (OCR) arrive with the next steps of the beta. The
+Assisted text recognition (OCR) arrives with the next steps of the beta. The
 viewer doesn't yet have visual filters (brightness, contrast, inversion) or
 switching between different sources of the same work.

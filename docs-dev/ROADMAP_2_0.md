@@ -171,18 +171,21 @@ Issue: #182, #388, #219, #220, #185.
 
 **Stato al 21 settembre 2026.** #219, la prima metà di #388 e il pezzo
 zoom/pan di #221 **consegnati**: comandi dati (servizio TS sulle tabelle già
-in schema, un segmento per documento, storico revisioni append-only,
-verifica/ritiro come per le traduzioni), schermata Studio (testo con
-salvataggio automatico al centro, storico e ripristino a destra — la scheda
-Assistenza è predisposta ma disattivata, arriva con l'OCR) e visore a
-sinistra — riuso di `PageViewer`/`DocumentViewer` già scritti per la
-Biblioteca, non un componente nuovo. Un documento si crea dall'area
-Trascrizioni o direttamente dalla scheda di un'opera in Biblioteca; solo nel
-secondo caso c'è una pagina da mostrare, il primo resta un documento senza
-digitalizzazione collegata. **Restano**: filtri visuali, preset e cambio
-fonte del visore (resto di #221, spostati al punto 3 come da decisione del 20
-settembre), OCR/HTR (#220), più pagine/segmenti per documento (oggi un
-segmento solo, lo schema già lo permette).
+in schema, storico revisioni append-only, verifica/ritiro come per le
+traduzioni), schermata Studio (testo con salvataggio automatico al centro,
+storico e ripristino a destra — la scheda Assistenza è predisposta ma
+disattivata, arriva con l'OCR) e visore a sinistra — riuso di
+`PageViewer`/`DocumentViewer` già scritti per la Biblioteca, non un
+componente nuovo. **Un segmento per pagina**, non per documento: cambiare
+pagina nel visore cambia il testo, ognuna con il proprio storico — un
+documento senza visore (nato da zero) resta su un solo blocco di testo. Un
+documento si crea dall'area Trascrizioni o direttamente dalla scheda di
+un'opera in Biblioteca; solo nel secondo caso c'è una pagina da mostrare, il
+primo resta un documento senza digitalizzazione collegata. **Restano**:
+filtri visuali, preset e cambio fonte del visore (resto di #221, spostati al
+punto 3 come da decisione del 20 settembre), OCR/HTR (#220), l'ancoraggio a
+`source_page_id` (oggi la posizione si tiene da sé, senza dipendere da uno
+scaricamento).
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

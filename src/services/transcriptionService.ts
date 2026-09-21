@@ -137,6 +137,36 @@ export async function listSegments(documentId: string): Promise<TranscriptionSeg
   );
 }
 
+/** Il segmento di quella pagina, se qualcuno l'ha già toccata. Non ne crea
+ *  uno: sfogliare pagine mai trascritte non deve lasciare righe vuote. */
+export async function getSegmentByPosition(
+  documentId: string,
+  position: number,
+): Promise<TranscriptionSegment | null> {
+  const rows = await select<TranscriptionSegment>(
+    'SELECT * FROM transcription_segments WHERE document_id = $1 AND position = $2',
+    [documentId, position],
+  );
+  return rows[0] ?? null;
+}
+
+/** Il segmento di quella pagina, creandolo al primo tocco davvero — non alla
+ *  sola apertura. L'etichetta segue quella che il visore dichiara adesso, se
+ *  cambiata (una rilettura del manifesto può rinumerare le pagine). */
+export async function ensureSegment(
+  documentId: string,
+  position: number,
+  label: string | null = null,
+): Promise<TranscriptionSegment> {
+  const existing = await getSegmentByPosition(documentId, position);
+  if (!existing) return addSegment(documentId, position, label);
+  if (label && label !== existing.label) {
+    await execute('UPDATE transcription_segments SET label = $2 WHERE id = $1', [existing.id, label]);
+    return { ...existing, label };
+  }
+  return existing;
+}
+
 async function latestRevision(segmentId: string): Promise<TranscriptionRevision | null> {
   const rows = await select<TranscriptionRevision>(
     `SELECT * FROM transcription_revisions WHERE segment_id = $1

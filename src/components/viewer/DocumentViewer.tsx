@@ -25,14 +25,21 @@ const MAX_MAGNIFICATION = 2;
 export function DocumentViewer({
   versionId,
   providerKey,
+  onPageChange,
 }: {
   versionId: string;
   providerKey: string;
+  /** Avvisa chi ospita il visore della pagina disegnata davvero (dopo il
+   *  render, non alla sola richiesta): chi tiene un testo per pagina sa a
+   *  quale pagina agganciarlo. */
+  onPageChange?: (index: number, total: number) => void;
 }) {
   const { t } = useTranslation();
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
   const documentRef = useRef<LoadedDocument | null>(null);
+  const onPageChangeRef = useRef(onPageChange);
+  onPageChangeRef.current = onPageChange;
 
   const [total, setTotal] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -127,6 +134,7 @@ export function DocumentViewer({
           url: objectUrl,
         } as unknown as OpenSeadragon.TileSourceSpecifier);
         setLoadError(null);
+        onPageChangeRef.current?.(currentIndex, total);
       } catch (error: unknown) {
         if (cancelled) return;
         logger.error('library.document.pageFailed', { message: errorMessage(error) });

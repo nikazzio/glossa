@@ -15,34 +15,39 @@ alternativa, dalla scheda di un'opera in **Biblioteca** puoi creare
 direttamente una trascrizione di quella digitalizzazione, con il titolo già
 compilato.
 
+## Il visore a sinistra, un testo per pagina
+
+Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra
+la pagina della digitalizzazione collegata, con zoom e trascinamento —
+cambiando pagina nel visore, il testo a destra cambia con lei: ogni pagina
+ha il proprio blocco di testo e il proprio storico. Un documento creato da
+zero in Trascrizioni non ha una digitalizzazione da mostrare: al posto del
+visore compare un avviso, non un errore, e resta un solo blocco di testo.
+
 ## Scrivere e salvare
 
 Il testo si salva da solo poco dopo che smetti di scrivere: l'indicatore in
 alto a destra dell'editor dice se il salvataggio è in corso, riuscito o
-fallito, con un comando per riprovare in caso di errore.
+fallito, con un comando per riprovare in caso di errore. Cambiando pagina
+prima che il salvataggio sia partito, il testo scritto fin lì si salva
+comunque, subito.
 
-Quando il testo è pronto, segnalo come **verificato** con il comando in alto
-al centro dello schermo. Puoi tornare in bozza in qualsiasi momento con lo
-stesso comando: il testo resta quello che era.
+Quando il testo è pronto, segnalo come **verificato** con il lucchetto
+accanto al titolo "Pagina N": il testo diventa bloccato, per non
+sovrascrivere per sbaglio una trascrizione già controllata. Puoi tornare in
+bozza in qualsiasi momento con lo stesso comando.
 
 ## Storico e ripristino
 
-Ogni salvataggio resta nello storico, nel pannello a destra: mostra chi ha
-scritto quella versione — correzione manuale, riconoscimento automatico o
-importazione — e quando. Il comando su ogni voce dello storico riporta il
-testo di quella versione come nuovo salvataggio: le versioni precedenti non
-si perdono mai, anche dopo un ripristino.
-
-## Il visore a sinistra
-
-Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra
-la pagina della digitalizzazione collegata, con zoom e trascinamento. Un
-documento creato da zero in Trascrizioni non ha una digitalizzazione da
-mostrare: al posto del visore compare un avviso, non un errore.
+Ogni salvataggio resta nello storico della pagina, nel pannello a destra:
+mostra chi ha scritto quella versione — correzione manuale, riconoscimento
+automatico o importazione — e quando. Il comando su ogni voce dello storico
+riporta il testo di quella versione come nuovo salvataggio: le versioni
+precedenti non si perdono mai, anche dopo un ripristino. Cambiando pagina lo
+storico mostrato cambia con lei.
 
 ## Limiti attuali
 
-Oggi un documento ha un solo blocco di testo: l'ancoraggio a più pagine e
-l'assistenza al riconoscimento del testo (OCR) arrivano con i prossimi passi
+L'assistenza al riconoscimento del testo (OCR) arriva con i prossimi passi
 della beta. Il visore non ha ancora filtri visivi (luminosità, contrasto,
 inversione) né il cambio fra fonti diverse della stessa opera.
