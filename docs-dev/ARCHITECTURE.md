@@ -460,6 +460,23 @@ immagini, il PDF non è mai primario). `CreateTranscriptionDialog`, con un
 `sourceId` in più, legge ora tutte le copie leggibili dell'opera e — solo se
 ce n'è più di una — lascia scegliere da quale iniziare.
 
+**Collegare un'opera creando da zero**: senza `sourceId` (comando "Nuovo
+documento" in Trascrizioni) il dialogo mostrava solo il titolo, senza alcun
+modo di legare il documento a un'opera dopo — un documento nato così restava
+per sempre senza visore. Aggiunta una ricerca per titolo inline
+(`listLibraryCatalog()`, filtrata lato finestra: lo stesso catalogo che la
+Biblioteca tiene già tutto in memoria), facoltativa; scegliendo un'opera si
+comporta come se `sourceId` fosse stato passato dal chiamante.
+
+**Il cambio fonte non deve mai lasciare senza uscita**: se la copia scelta
+non si apre (chiave della biblioteca mancante nei metadati della copia,
+indirizzo non valido), i comandi del cambio fonte restano visibili anche
+sulla schermata di errore — prima sparivano insieme al visore, perché
+vivevano solo dentro la sua barra (`extraControls`), e non c'era modo di
+tornare indietro. La risoluzione della copia secondaria usa ora
+`getVersionForViewer`, la stessa della principale (letta dal deposito, non
+dai soli metadati della copia — più affidabile).
+
 **Pagina in caricamento o fallita**: `onPageStatusChange` (già di
 `PageViewer`, aggiunto ora anche a `DocumentViewer`) segnala una pagina
 richiesta ma non ancora mostrata, o appena fallita — stesso segnale che il
@@ -904,6 +921,16 @@ in questo giro, con le parti solo-immagini (miniature, solo-locale, uscita verso
 la pagina della biblioteca) rese facoltative. Il percorso del deposito non
 arriva mai alla finestra: si compone nel motore da chiave e identificativo,
 entrambi convalidati come componenti di percorso.
+
+**Pagine disegnate vuote in sviluppo, con i byte corretti** (si aprivano bene
+col lettore del sistema): `pdfDocument.ts` chiamava `page.cleanup()` dopo
+ogni disegno, anche riuscito. React in modalità sviluppo (`StrictMode`)
+chiama l'effetto che disegna la pagina due volte di seguito per la stessa
+pagina; la prima chiamata liberava la cache interna di pdf.js mentre la
+seconda stava ancora disegnando sulla stessa `page`, e il risultato restava
+vuoto senza che nessuna delle due segnalasse un errore. Tolto: pdf.js tiene
+la sua cache da sé, e `document.destroy()` (già chiamato smontando il
+visore) libera comunque tutto quando il documento cambia.
 
 ### Riconoscimento e ricerca per biblioteca
 

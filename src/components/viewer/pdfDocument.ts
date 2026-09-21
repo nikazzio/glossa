@@ -56,22 +56,14 @@ export async function renderDocumentPage(
   canvas.height = Math.ceil(viewport.height);
   const context = canvas.getContext('2d');
   if (!context) throw new Error('canvas_unavailable');
-  // Su alcuni motori grafici (WebKitGTK su Linux, verificato) un canvas mai
-  // entrato nel documento disegna pagine vuote: pdf.js segnala successo, i
-  // pixel non arrivano. Restare fuori dalla vista (fuori schermo, invisibile)
-  // basta a farlo comporre davvero, e sparisce subito dopo.
-  canvas.style.position = 'fixed';
-  canvas.style.left = '-99999px';
-  canvas.style.top = '0';
-  canvas.style.visibility = 'hidden';
-  window.document.body.appendChild(canvas);
-  try {
-    await page.render({ canvas, canvasContext: context, viewport }).promise;
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-    if (!blob) throw new Error('page_not_drawn');
-    return blob;
-  } finally {
-    canvas.remove();
-    page.cleanup();
-  }
+  await page.render({ canvas, canvasContext: context, viewport }).promise;
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('page_not_drawn');
+  // Niente `page.cleanup()` qui: in sviluppo React (StrictMode) chiama questa
+  // funzione due volte di seguito per la stessa pagina — la prima chiamata
+  // liberava la cache interna di pdf.js mentre la seconda stava ancora
+  // disegnando sulla stessa `page`, e il risultato mostrato restava vuoto
+  // pur senza errori. `document.destroy()`, già chiamato smontando il
+  // visore, libera comunque tutte le pagine quando il documento cambia.
+  return blob;
 }

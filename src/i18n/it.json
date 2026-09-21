@@ -1076,6 +1076,8 @@
     "create": "Crea documento",
     "titleLabel": "Titolo",
     "chooseStartingCopy": "Da quale copia iniziare",
+    "linkToSource": "Collega a un'opera della Biblioteca (opzionale)",
+    "linkToSourcePlaceholder": "Cerca per titolo...",
     "titlePlaceholder": "Titolo del documento...",
     "saveFailed": "Creazione del documento fallita",
     "loadFailed": "Caricamento delle trascrizioni fallito",
@@ -1106,6 +1108,7 @@
     "restored": "Versione ripristinata",
     "restoreFailed": "Ripristino non riuscito",
     "viewerUnavailable": "Questo documento non è collegato a una digitalizzazione con pagine da mostrare.",
+    "viewerOpenFailed": "Questa copia non si apre. Torna all'altra con i comandi qui sopra.",
     "paneLabel": "Testo",
     "pageTitle": "Pagina {{n}}",
     "saveSaved": "Salvato",
@@ -2044,7 +2047,7 @@
           {
             "title": "Creare un documento",
             "paragraphs": [
-              "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo. In alternativa, dalla scheda di un'opera in Biblioteca puoi creare direttamente una trascrizione di quella digitalizzazione. Se l'opera ha sia le immagini sia il PDF sul computer, scegli da quale iniziare."
+              "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo. Puoi anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo nello stesso dialogo — facoltativo, senza resta un solo blocco di testo senza visore. Dalla scheda di un'opera in Biblioteca puoi invece creare direttamente una trascrizione di quella digitalizzazione. Se l'opera ha sia le immagini sia il PDF sul computer, scegli da quale iniziare."
             ]
           },
           {

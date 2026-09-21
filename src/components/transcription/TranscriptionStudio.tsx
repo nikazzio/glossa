@@ -232,13 +232,17 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
           setSiblingPageCount(null);
           return;
         }
-        setSiblingVersion({
-          sourceId: viewerRef.sourceId,
-          versionId: sibling.id,
-          versionKind: sibling.versionKind as 'iiif_manifest' | 'pdf',
-          sourceUrl: sibling.sourceUrl,
-          providerKey: sibling.providerKey,
-        });
+        // Stessa risoluzione robusta della principale (`getVersionForViewer`):
+        // la chiave della biblioteca scritta nei metadati della copia può
+        // mancare (es. PDF registrato prima che questo campo esistesse), ma
+        // il deposito la sa sempre. Con la chiave sbagliata il visore non
+        // apre niente e lo sgancio manuale resta l'unica via d'uscita.
+        getVersionForViewer(sibling.id)
+          .then((resolved) => { if (!cancelled) setSiblingVersion(resolved); })
+          .catch((error: unknown) => {
+            logger.error('transcription.siblingVersion.loadFailed', { versionId: sibling.id, error });
+            if (!cancelled) setSiblingVersion(null);
+          });
         if (sibling.versionKind === 'iiif_manifest') {
           // Pagine dichiarate dal manifesto: stesso campo che la scheda
           // opera mostra, niente lettura in più.
@@ -616,12 +620,22 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
             />
           ) : (
             // Filtri visuali, preset e cambio fonte restano il resto di #221:
-            // questa colonna oggi offre solo zoom/pan della pagina.
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-editorial-muted">
-              <span className="flex flex-col items-center gap-2">
-                <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
-                {t('transcription.viewerUnavailable')}
-              </span>
+            // questa colonna oggi offre solo zoom/pan della pagina. I comandi
+            // del cambio fonte restano visibili anche qui — se la copia
+            // scelta non si apre, si deve poter tornare indietro senza
+            // restare bloccati su una schermata senza uscita.
+            <div className="flex h-full min-h-0 flex-col">
+              {sourceSwitchControls && (
+                <div className="flex h-12 shrink-0 items-center justify-end border-b border-editorial-border px-3">
+                  {sourceSwitchControls}
+                </div>
+              )}
+              <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-editorial-muted">
+                <span className="flex flex-col items-center gap-2">
+                  <Images size={28} className="text-editorial-muted/60" aria-hidden="true" />
+                  {t(displayedVersion ? 'transcription.viewerOpenFailed' : 'transcription.viewerUnavailable')}
+                </span>
+              </div>
             </div>
           )}
         </Panel>
@@ -671,7 +685,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                       <ChevronRight size={14} />
                     </IconButton>
                   </span>
-                  <h3 className="min-w-0 truncate font-display text-lg italic text-editorial-ink">
+                  <h3 className="min-w-0 flex-1 truncate font-display text-lg italic text-editorial-ink">
                     {pageTitle}
                   </h3>
                   <span className="shrink-0">

@@ -11,10 +11,13 @@ It follows the same idea as Translation, applied to transcription.
 ## Creating a document
 
 From the **Transcriptions** area, choose "New document" and give it a title.
-You can also create a transcription directly from a work's page in the
-**Library**, tied to that digitization, with the title already filled in. If
-the work has both images and a PDF on your computer, choose which to start
-from; with only one copy available there's no choice to make.
+You can also link it right away to a work already in the Library, searching
+by title in the same dialog — optional: without it, the document has no
+viewer, a single block of text. From a work's page in the **Library** you
+can instead create a transcription directly from that digitization, with
+the title already filled in. If the work has both images and a PDF on your
+computer, choose which to start from; with only one copy available there's
+no choice to make.
 
 ## The viewer on the left, one text per page
 

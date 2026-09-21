@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { FilePen, FileText, Images } from 'lucide-react';
+import { BookOpenText, FilePen, FileText, Images, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { createDocument } from '../../services/transcriptionService';
-import { getLibrarySourceDetail } from '../../services/libraryService';
+import { getLibrarySourceDetail, listLibraryCatalog } from '../../services/libraryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, DialogCancelButton, DialogConfirmButton, SegmentedControl, Select } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, SegmentedControl, Select } from '../ui';
+import type { LibraryCatalogEntry } from '../../types';
 
 interface ReadableVersionOption {
   id: string;
@@ -49,6 +50,14 @@ export function CreateTranscriptionDialog({
    *  quale usare. Con una sola (o nessuna, `sourceId` assente) niente scelta. */
   const [readableVersions, setReadableVersions] = useState<ReadableVersionOption[]>([]);
   const [chosenVersionId, setChosenVersionId] = useState<string | null>(sourceVersionId);
+  // Il chiamante può già sapere a quale opera legare il documento (dalla
+  // scheda dell'opera): solo se non lo sa si mostra la ricerca — creare un
+  // documento senza passare dalla Biblioteca non offriva nessun modo di
+  // collegarlo a un'opera dopo.
+  const [catalog, setCatalog] = useState<LibraryCatalogEntry[]>([]);
+  const [sourceQuery, setSourceQuery] = useState('');
+  const [pickedSource, setPickedSource] = useState<LibraryCatalogEntry | null>(null);
+  const effectiveSourceId = sourceId ?? pickedSource?.source.id;
 
   useEffect(() => {
     if (!open) return;
@@ -61,13 +70,22 @@ export function CreateTranscriptionDialog({
   }, [open, workspaceId, workspaces, defaultTitle]);
 
   useEffect(() => {
-    if (!open || !sourceId) {
+    if (!open || sourceId) return;
+    setPickedSource(null);
+    setSourceQuery('');
+    void listLibraryCatalog()
+      .then(setCatalog)
+      .catch(() => setCatalog([]));
+  }, [open, sourceId]);
+
+  useEffect(() => {
+    if (!open || !effectiveSourceId) {
       setReadableVersions([]);
       setChosenVersionId(sourceVersionId);
       return;
     }
     let cancelled = false;
-    getLibrarySourceDetail(sourceId)
+    getLibrarySourceDetail(effectiveSourceId)
       .then((detail) => {
         if (cancelled) return;
         const versions = detail.versions
@@ -78,8 +96,11 @@ export function CreateTranscriptionDialog({
           )
           .map((version) => ({ id: version.id, versionKind: version.versionKind }));
         setReadableVersions(versions);
+        // Con la scelta fatta dalla scheda dell'opera si parte da quella;
+        // scegliendo un'opera qui invece si parte dalla sua copia primaria.
+        const fallback = sourceId ? sourceVersionId : pickedSource?.versionId ?? sourceVersionId;
         setChosenVersionId((current) =>
-          current && versions.some((version) => version.id === current) ? current : sourceVersionId,
+          current && versions.some((version) => version.id === current) ? current : fallback,
         );
       })
       .catch(() => {
@@ -89,7 +110,10 @@ export function CreateTranscriptionDialog({
         }
       });
     return () => { cancelled = true; };
-  }, [open, sourceId, sourceVersionId]);
+    // `pickedSource` non è nelle dipendenze: cambia insieme a `effectiveSourceId`
+    // (deriva da lui), rileggerlo qui rifarebbe la stessa richiesta due volte.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, effectiveSourceId, sourceId, sourceVersionId]);
 
   const close = () => {
     setTitle('');
@@ -111,6 +135,13 @@ export function CreateTranscriptionDialog({
       setCreating(false);
     }
   };
+
+  const sourceResults =
+    !sourceId && !pickedSource && sourceQuery.trim()
+      ? catalog
+          .filter((entry) => entry.source.title.toLowerCase().includes(sourceQuery.trim().toLowerCase()))
+          .slice(0, 8)
+      : [];
 
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
 
@@ -152,6 +183,53 @@ export function CreateTranscriptionDialog({
               className="w-full"
             />
           </label>
+        )}
+        {!sourceId && (
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
+              {t('transcription.linkToSource')}
+            </span>
+            {pickedSource ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-2.5">
+                <span className="flex min-w-0 items-center gap-2 text-sm text-editorial-ink">
+                  <BookOpenText size={14} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+                  <span className="truncate">{pickedSource.source.title}</span>
+                </span>
+                <IconButton size="xs" onClick={() => setPickedSource(null)} title={t('common.cancel')}>
+                  <X size={12} />
+                </IconButton>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  value={sourceQuery}
+                  onChange={(e) => setSourceQuery(e.target.value)}
+                  placeholder={t('transcription.linkToSourcePlaceholder')}
+                  className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                />
+                {sourceResults.length > 0 && (
+                  <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-editorial-border bg-editorial-page shadow-lg custom-scrollbar">
+                    {sourceResults.map((entry) => (
+                      <li key={entry.source.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPickedSource(entry);
+                            setSourceQuery('');
+                            if (!title.trim()) setTitle(entry.source.title);
+                          }}
+                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-editorial-ink hover:bg-editorial-accent/10 focus:outline-none focus-visible:bg-editorial-accent/10"
+                        >
+                          <BookOpenText size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+                          <span className="truncate">{entry.source.title}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         )}
         {readableVersions.length > 1 && (
           <div className="space-y-1.5">

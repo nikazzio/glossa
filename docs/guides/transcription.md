@@ -10,11 +10,14 @@ destra. È la stessa idea della Traduzione, applicata alla trascrizione.
 
 ## Creare un documento
 
-Dall'area **Trascrizioni** scegli "Nuovo documento" e dai un titolo. In
-alternativa, dalla scheda di un'opera in **Biblioteca** puoi creare
-direttamente una trascrizione di quella digitalizzazione, con il titolo già
-compilato. Se l'opera ha sia le immagini sia il PDF sul computer, scegli da
-quale iniziare; con una sola copia disponibile non c'è scelta da fare.
+Dall'area **Trascrizioni** scegli "Nuovo documento" e dai un titolo. Puoi
+anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo
+nello stesso dialogo — facoltativo: senza, il documento resta senza visore,
+un solo blocco di testo. Dalla scheda di un'opera in **Biblioteca** puoi
+invece creare direttamente una trascrizione di quella digitalizzazione, con
+il titolo già compilato. Se l'opera ha sia le immagini sia il PDF sul
+computer, scegli da quale iniziare; con una sola copia disponibile non c'è
+scelta da fare.
 
 ## Il visore a sinistra, un testo per pagina
 
