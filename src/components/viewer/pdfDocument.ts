@@ -12,12 +12,17 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 /**
  * Le pagine scannerizzate spesso comprimono le immagini in JPEG2000 o JBIG2,
- * che pdf.js decodifica solo con questi moduli WASM — senza, non prova
- * nemmeno a cercarli sulla rete: cade su un ripiego JS che qui non risolve
- * (`wasmUrl` non è impostato), e la pagina non ha niente da disegnare. Copiati
+ * che pdf.js decodifica solo con questi moduli WASM — senza `wasmUrl` non
+ * prova nemmeno a cercarli, e la pagina non ha niente da disegnare. Copiati
  * in `public/pdfjs/` invece che importati con `?url`: quel percorso li
  * comprimerebbe ognuno con un nome diverso, e pdf.js li cerca con questi nomi
  * esatti in una sola cartella.
+ *
+ * Ci sono anche i due `*_nowasm_fallback.js`, stessa cartella: se
+ * l'istanziazione WASM fallisce (ambiente che non la supporta appieno),
+ * pdf.js prova questo ripiego in puro JavaScript, cercandolo con lo stesso
+ * `wasmUrl` come base — senza il file lì, quel tentativo di recupero fallisce
+ * a sua volta con un 404 invece di disegnare comunque la pagina, più lenta.
  */
 const WASM_BASE_URL = '/pdfjs/';
 
