@@ -71,7 +71,7 @@ without moving where you're writing.
 
 ## Automatic page reading (OCR)
 
-In the **Assist** tab, on the right, you can have the text of the open page
+In the **OCR** tab, on the right, you can have the text of the open page
 read by a connected AI model — the same mechanism already used for
 Translation, with providers and keys already configured. The command
 appears disabled until the conditions are met: the page must belong to a

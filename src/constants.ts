@@ -35,9 +35,11 @@ Rules:
 - Do not invent, normalize, paraphrase, translate, or repair text.
 - Use confidence from 0 to 1. Return {"pairs":[]} if no reliable pairs exist.`;
 
-// OCR/HTR (#220). No default provider/model: unlike the memory extractor,
-// there is no universally-sensible vision model to fall back to — the picker
-// stays empty until a workspace, document, or the user chooses one.
+// OCR/HTR (#220). Same default as the memory extractor: a workspace is
+// never left with an empty picker, so the locked select in the Studio has a
+// real value to show and inherit from day one.
+export const DEFAULT_OCR_PROVIDER: ModelProvider = 'openai';
+export const DEFAULT_OCR_MODEL = 'gpt-5.4-nano';
 export const DEFAULT_OCR_PROMPT = `Transcribe the text visible in the image. Preserve the original spelling, punctuation and line breaks. Do not correct errors, do not modernise spelling, do not add text that is not in the image. Mark an illegible word with [?] instead of guessing. Return the text only, with no comments and no description of the image.`;
 
 // Longest side, in pixels, an OCR image is resized to before sending — keeps

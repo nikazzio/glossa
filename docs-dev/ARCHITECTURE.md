@@ -438,7 +438,7 @@ con un riferimento alla pagina che si sta salvando, non con lo stato letto a
 scrittura ultimata.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
-opera, con schede Assistenza (OCR, #220 — vedi sezione dedicata), Storico e
+opera, con schede OCR (#220 — vedi sezione dedicata), Storico e
 Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
 (posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
 finché non si decide una presentazione definitiva. Il log dei costi OCR vive
@@ -555,11 +555,15 @@ risolve solo copie `versionKind === 'iiif_manifest'` — un documento unico
 **Cascata di risoluzione** (`transcriptionService.resolveOcrSettings`, sola
 fonte, in TypeScript): pagina → documento → workspace → costante
 (`DEFAULT_OCR_PROMPT`/`DEFAULT_OCR_IMAGE_EDGE` in `constants.ts`) per il
-prompt; documento → workspace per provider/modello, senza costante finale —
-non esiste un modello di ripiego universale, la select resta vuota finché
-qualcuno non ne sceglie uno. Il risultato si congela nella configurazione del
-lavoro al momento della messa in coda (`ocrService.buildPageInput`):
-modificare il prompt dopo non altera un lavoro già accodato.
+prompt; documento → workspace per provider/modello. `DEFAULT_OCR_PROVIDER`/
+`DEFAULT_OCR_MODEL` (`openai`/`gpt-5.4-nano`, stesso ripiego dell'estrattore
+di memoria) coprono anche questo livello: un workspace nato prima di questo
+default, o creato con la colonna ancora vuota, eredita comunque un valore
+vero in lettura (`workspaceService.listWorkspaces`) — la select bloccata
+della scheda OCR non mostra mai il vuoto. Il risultato si congela nella
+configurazione del lavoro al momento della messa in coda
+(`ocrService.buildPageInput`): modificare il prompt dopo non altera un lavoro
+già accodato.
 
 **Gestore lavoro** (`src-tauri/src/ocr/`, `JOB_TYPE = "ocr_page"`, registrato
 in `jobs/commands.rs` accanto agli altri): `ResourceClass::LanguageService`,

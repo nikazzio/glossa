@@ -1122,7 +1122,7 @@
     "noRevisions": "No saves yet.",
     "tabs": {
       "history": "History",
-      "assist": "Assist",
+      "assist": "OCR",
       "metadata": "Metadata",
       "log": "Transcription log"
     },
@@ -1150,9 +1150,7 @@
       "readThisPage": "Read this page",
       "inheritWorkspace": "Inherit from workspace",
       "documentPrompt": "Document prompt",
-      "documentPromptHint": "Applies to every page of this document, unless a page has its own prompt.",
       "pagePrompt": "Page prompt",
-      "pagePromptHint": "Applies only to this page, above the document prompt.",
       "saveFailed": "Could not save OCR settings",
       "jobStarted": "Reading started: follow progress in the jobs panel",
       "jobStartFailed": "Could not start the reading job",
@@ -2115,7 +2113,7 @@
           {
             "title": "Automatic page reading (OCR)",
             "paragraphs": [
-              "In the \"Assist\" tab, on the right, you can have the text of the open page read by a connected AI model — the same mechanism already used for translation, with providers and keys already configured.",
+              "In the \"OCR\" tab, on the right, you can have the text of the open page read by a connected AI model — the same mechanism already used for translation, with providers and keys already configured.",
               "The command appears disabled until the conditions are met: the page must belong to a digitization linked to the document, and a provider and model that can read images must be chosen, either for the document or inherited from the workspace settings. The reason a command is disabled is always in its own tooltip.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
               "The prompt that guides the reading can be customised at three levels — workspace, document, single page — each meant to take over only when it is written on purpose; otherwise the level above still applies.",

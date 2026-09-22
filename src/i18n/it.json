@@ -1122,7 +1122,7 @@
     "noRevisions": "Nessun salvataggio ancora.",
     "tabs": {
       "history": "Storico",
-      "assist": "Assistenza",
+      "assist": "OCR",
       "metadata": "Metadati",
       "log": "Log trascrizione"
     },
@@ -1150,9 +1150,7 @@
       "readThisPage": "Leggi questa pagina",
       "inheritWorkspace": "Eredita dal workspace",
       "documentPrompt": "Prompt del documento",
-      "documentPromptHint": "Vale per tutte le pagine di questo documento, salvo diverso prompt di pagina.",
       "pagePrompt": "Prompt della pagina",
-      "pagePromptHint": "Vale solo per questa pagina, sopra al prompt del documento.",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
       "jobStarted": "Lettura avviata: segui l'avanzamento nel pannello lavori",
       "jobStartFailed": "Avvio della lettura non riuscito",
@@ -2115,7 +2113,7 @@
           {
             "title": "Riconoscimento automatico della pagina (OCR)",
             "paragraphs": [
-              "Nella scheda \"Assistenza\", a destra, puoi far leggere il testo della pagina aperta a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati.",
+              "Nella scheda \"OCR\", a destra, puoi far leggere il testo della pagina aperta a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati.",
               "Il comando compare disattivato finché mancano le condizioni: la pagina deve appartenere a una digitalizzazione collegata al documento, e serve un fornitore e un modello che sappiano leggere le immagini, scelti per il documento o ereditati dalle impostazioni del workspace. Il motivo di un comando disattivato è nel suo stesso suggerimento.",
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
               "Il prompt che guida la lettura si può personalizzare su tre livelli — workspace, documento, singola pagina — ognuno pensato per prevalere sul precedente solo quando viene scritto apposta; altrimenti resta quello del livello sopra.",

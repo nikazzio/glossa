@@ -188,7 +188,7 @@ visuali e preset (resto di #221, spostati al punto 3 come da decisione del 20
 settembre).
 
 **Stato al 22 settembre 2026.** OCR/HTR (#220) consegnato in prima versione:
-scheda Assistenza attiva, con select provider/modello (filtrata sui modelli
+scheda OCR attiva, con select provider/modello (filtrata sui modelli
 che leggono immagini) e prompt personalizzabile su tre livelli — workspace,
 documento, pagina. Il comando legge la pagina aperta tramite un lavoro
 persistente, stesso motore dello scaricamento; il risultato entra nello

@@ -72,7 +72,7 @@ pagina diversa senza spostare il punto in cui si sta scrivendo.
 
 ## Riconoscimento automatico della pagina (OCR)
 
-Nella scheda **Assistenza**, a destra, puoi far leggere il testo della
+Nella scheda **OCR**, a destra, puoi far leggere il testo della
 pagina aperta a un modello di intelligenza artificiale collegato — lo stesso
 meccanismo già usato per la Traduzione, con provider e chiavi già
 configurati. Il comando compare disattivato finché mancano le condizioni: la

@@ -222,7 +222,7 @@ export function TranscriptionAssistTab({
 
       <AuditPromptEditor
         label={t('transcription.assist.documentPrompt')}
-        hint={t('transcription.assist.documentPromptHint')}
+        hint=""
         value={document.ocr_prompt ?? ''}
         placeholder={workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT}
         templates={ocrTemplates}
@@ -245,7 +245,7 @@ export function TranscriptionAssistTab({
       {segment && (
         <AuditPromptEditor
           label={t('transcription.assist.pagePrompt')}
-          hint={t('transcription.assist.pagePromptHint')}
+          hint=""
           value={segment.ocr_prompt ?? ''}
           placeholder={document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT}
           templates={ocrTemplates}

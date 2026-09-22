@@ -3,6 +3,8 @@ import {
   DEFAULT_MEMORY_EXTRACTOR_MODEL,
   DEFAULT_MEMORY_EXTRACTOR_PROMPT,
   DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
+  DEFAULT_OCR_MODEL,
+  DEFAULT_OCR_PROVIDER,
 } from '../constants';
 import { logger } from '../utils/logger';
 import { recordFact } from './provenanceService';
@@ -27,10 +29,12 @@ export async function createWorkspace(params: {
     memoryExtractorProvider: DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
     memoryExtractorModel: DEFAULT_MEMORY_EXTRACTOR_MODEL,
     memoryExtractorPrompt: DEFAULT_MEMORY_EXTRACTOR_PROMPT,
-    // '' a questo livello: la select del provider/modello OCR resta vuota
-    // finché workspace, documento o utente non ne scelgono uno (#220).
-    ocrDefaultProvider: '',
-    ocrDefaultModel: '',
+    // Provider/modello reali fin da subito, come l'estrattore di memoria: una
+    // select bloccata che eredita dal workspace non serve a niente se il
+    // workspace stesso parte vuoto (#220). Il prompt resta '': vuoto vuol dire
+    // «usa la costante di codice», che si aggiorna da sola se cambia.
+    ocrDefaultProvider: DEFAULT_OCR_PROVIDER,
+    ocrDefaultModel: DEFAULT_OCR_MODEL,
     ocrDefaultPrompt: '',
     createdAt: new Date().toISOString(),
   };
@@ -38,11 +42,13 @@ export async function createWorkspace(params: {
     `INSERT INTO workspaces (
        id, name, icon_key, description, embedding_model,
        memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
+       ocr_default_provider, ocr_default_model,
        created_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [workspace.id, workspace.name, workspace.iconKey, workspace.description ?? null,
      workspace.embeddingModel, workspace.memoryExtractorProvider,
      workspace.memoryExtractorModel, workspace.memoryExtractorPrompt,
+     workspace.ocrDefaultProvider, workspace.ocrDefaultModel,
      workspace.createdAt],
   );
   return workspace;
@@ -81,8 +87,11 @@ export async function listWorkspaces(includeArchived = false): Promise<Workspace
     memoryExtractorProvider: (r.memory_extractor_provider || DEFAULT_MEMORY_EXTRACTOR_PROVIDER) as ModelProvider,
     memoryExtractorModel: r.memory_extractor_model || DEFAULT_MEMORY_EXTRACTOR_MODEL,
     memoryExtractorPrompt: r.memory_extractor_prompt || DEFAULT_MEMORY_EXTRACTOR_PROMPT,
-    ocrDefaultProvider: (r.ocr_default_provider || '') as ModelProvider | '',
-    ocrDefaultModel: r.ocr_default_model || '',
+    // Stesso ripiego dell'estrattore di memoria: un workspace creato prima di
+    // questo default (colonna ancora vuota) eredita comunque un valore vero,
+    // non resta con una select bloccata su niente.
+    ocrDefaultProvider: (r.ocr_default_provider || DEFAULT_OCR_PROVIDER) as ModelProvider,
+    ocrDefaultModel: r.ocr_default_model || DEFAULT_OCR_MODEL,
     ocrDefaultPrompt: r.ocr_default_prompt || '',
     createdAt: r.created_at,
     archivedAt: r.archived_at ?? undefined,
