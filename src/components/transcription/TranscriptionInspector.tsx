@@ -1,13 +1,18 @@
-import { FileInput, History, Info, RotateCcw, ScanText, Sparkles, User } from 'lucide-react';
+import { FileInput, History, Info, RotateCcw, ScanText, ScrollText, Sparkles, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, InspectorShell, StatRow } from '../ui';
 import type {
+  TranscriptionDocument,
   TranscriptionRevision,
   TranscriptionSegment,
 } from '../../services/transcriptionService';
+import type { ViewerVersionRef } from '../../services/libraryService';
+import type { ModelProvider, Workspace } from '../../types';
 import { PagePendingOverlay } from './PagePendingOverlay';
+import { TranscriptionAssistTab } from './TranscriptionAssistTab';
+import { TranscriptionLogTab } from './TranscriptionLogTab';
 
-export type TranscriptionInspectorTab = 'history' | 'assist' | 'metadata';
+export type TranscriptionInspectorTab = 'history' | 'assist' | 'metadata' | 'log';
 
 interface TranscriptionInspectorProps {
   activeTab: TranscriptionInspectorTab;
@@ -24,6 +29,15 @@ interface TranscriptionInspectorProps {
   displayIndex: number;
   pageLabel: string | null;
   verified: boolean;
+  document: TranscriptionDocument | null;
+  workspace: Pick<Workspace, 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'> | null;
+  viewerRef: ViewerVersionRef | null;
+  ocrStarting: boolean;
+  onStartOcr: () => void;
+  onDocumentOcrProviderChange: (provider: ModelProvider | '', model: string) => void;
+  onDocumentOcrModelChange: (model: string) => void;
+  onDocumentOcrPromptChange: (prompt: string) => void;
+  onSegmentOcrPromptChange: (prompt: string) => void;
 }
 
 const AUTHOR_ICONS = { user: User, ocr: ScanText, import: FileInput } as const;
@@ -43,6 +57,15 @@ export function TranscriptionInspector({
   displayIndex,
   pageLabel,
   verified,
+  document,
+  workspace,
+  viewerRef,
+  ocrStarting,
+  onStartOcr,
+  onDocumentOcrProviderChange,
+  onDocumentOcrModelChange,
+  onDocumentOcrPromptChange,
+  onSegmentOcrPromptChange,
 }: TranscriptionInspectorProps) {
   const { t } = useTranslation();
   return (
@@ -55,9 +78,9 @@ export function TranscriptionInspector({
           id: 'assist',
           label: t('transcription.tabs.assist'),
           icon: <Sparkles size={13} />,
-          disabled: true,
         },
         { id: 'history', label: t('transcription.tabs.history'), icon: <History size={13} /> },
+        { id: 'log', label: t('transcription.tabs.log'), icon: <ScrollText size={13} /> },
         { id: 'metadata', label: t('transcription.tabs.metadata'), icon: <Info size={13} /> },
       ]}
       activeTab={activeTab}
@@ -67,7 +90,28 @@ export function TranscriptionInspector({
       collapsed={collapsed}
       onCollapsedChange={onCollapsedChange}
     >
-      {activeTab === 'history' ? (
+      {activeTab === 'assist' ? (
+        <TranscriptionAssistTab
+          document={document}
+          segment={segment}
+          workspace={workspace}
+          viewerRef={viewerRef}
+          starting={ocrStarting}
+          onStartOcr={onStartOcr}
+          onDocumentProviderChange={onDocumentOcrProviderChange}
+          onDocumentModelChange={onDocumentOcrModelChange}
+          onDocumentPromptChange={onDocumentOcrPromptChange}
+          onSegmentPromptChange={onSegmentOcrPromptChange}
+        />
+      ) : activeTab === 'log' ? (
+        document ? (
+          <TranscriptionLogTab
+            documentId={document.id}
+            panelId="transcription-log-panel"
+            labelledBy="transcription-log-tab"
+          />
+        ) : null
+      ) : activeTab === 'history' ? (
         <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
           {revisions.length === 0 ? (
             <p className="px-1 py-4 text-center text-xs text-editorial-muted">

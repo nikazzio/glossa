@@ -11,6 +11,9 @@ interface TranscriptionState {
   error: string | null;
   loadDetail: (documentId: string) => Promise<void>;
   clearDetail: () => void;
+  /** Aggiornamento locale dopo una scrittura già fatta sul database (#220):
+   *  evita di rileggere l'intero documento per un campo cambiato. */
+  patchDetail: (patch: Partial<TranscriptionDocument>) => void;
 }
 
 // Ultimo documentId richiesto: una risposta asincrona di una richiesta
@@ -38,5 +41,8 @@ export const useTranscriptionStore = create<TranscriptionState>((set) => ({
   clearDetail: () => {
     latestRequestId = null;
     set({ detail: null, loading: false, error: null });
+  },
+  patchDetail: (patch) => {
+    set((state) => ({ detail: state.detail ? { ...state.detail, ...patch } : state.detail }));
   },
 }));

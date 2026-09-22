@@ -571,6 +571,7 @@ function scopeLabels(t: (k: string) => string): Record<OperationLogScope, string
     coherence: t('log.scopeCoherence'),
     memory: t('log.scopeMemory'),
     chunk: t('log.scopeChunk'),
+    ocr: t('log.scopeOcr'),
   };
 }
 

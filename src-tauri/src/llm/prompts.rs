@@ -1,6 +1,6 @@
 use crate::llm::types::{
-    CoherenceChunkInput, FewShotExample, PipelineConfig, PromptBlock, ProviderRuntimeConfig,
-    StageConfig, StructuredPrompt,
+    CoherenceChunkInput, FewShotExample, ImageAttachment, PipelineConfig, PromptBlock,
+    ProviderRuntimeConfig, StageConfig, StructuredPrompt,
 };
 
 pub(crate) const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
@@ -75,6 +75,62 @@ fn effective_target(config: &PipelineConfig) -> &str {
         .as_deref()
         .filter(|s| !s.trim().is_empty())
         .unwrap_or(&config.target_language)
+}
+
+/// Persona, transcription rules and output contract for OCR/HTR (#220).
+/// Static across every page of every document — the whole reason it is its
+/// own cacheable block, separate from the resolved prompt (which varies by
+/// workspace/document/segment and lands in the non-cacheable block instead).
+pub(crate) const OCR_SYSTEM_PERSONA: &str = "\
+You are a careful transcription assistant reading a single page image from a \
+historical or printed source.\n\
+Transcribe exactly what is visible on the page: do not translate, summarize, or \
+interpret the content. Preserve the original spelling, punctuation, and line \
+breaks as closely as the image allows.\n\
+Output only the transcribed text of the current page — no commentary, no \
+headers, no description of the image, no reference to these instructions.";
+
+/// Prompt for one OCR/HTR call (#220): persona (cacheable), reference block of
+/// already-transcribed nearby pages (cacheable, identical for every page in the
+/// same blob group), resolved prompt (not cacheable, varies per level), image
+/// and page id in the user message only — never in a system block, or Gemini's
+/// whole-prompt cache invalidates on every page and Anthropic/OpenAI lose the
+/// cached prefix.
+pub(crate) fn build_ocr_prompt(
+    resolved_prompt: &str,
+    reference_text: Option<&str>,
+    image: ImageAttachment,
+    page_id: &str,
+) -> StructuredPrompt {
+    let mut system = vec![PromptBlock {
+        text: OCR_SYSTEM_PERSONA.to_string(),
+        cacheable: true,
+    }];
+
+    if let Some(reference) = reference_text.filter(|s| !s.trim().is_empty()) {
+        system.push(PromptBlock {
+            text: format!(
+                "[Reference document block - context only]\n\
+                 Already-transcribed text from nearby pages of the same document, for \
+                 continuity of spelling, names, and layout conventions. Do not transcribe \
+                 this block: it is not the current page.\n\
+                 {reference}\n\
+                 [End reference document block]"
+            ),
+            cacheable: true,
+        });
+    }
+
+    system.push(PromptBlock {
+        text: format!("Core Instructions:\n{resolved_prompt}"),
+        cacheable: false,
+    });
+
+    StructuredPrompt {
+        system,
+        user: format!("Current page id: {page_id}"),
+        images: vec![image],
+    }
 }
 
 pub(crate) fn build_stage_prompts(
@@ -209,7 +265,7 @@ pub(crate) fn build_stage_prompts(
         )
     };
 
-    StructuredPrompt { system, user }
+    StructuredPrompt::new(system, user)
 }
 
 fn build_format_stage_prompts(text: &str, stage: &StageConfig) -> StructuredPrompt {
@@ -236,7 +292,7 @@ Do not return explanations, comments, JSON, diffs, or 'no changes'."
          Apply only the formatting instructions. Output only the complete formatted text."
     );
 
-    StructuredPrompt { system, user }
+    StructuredPrompt::new(system, user)
 }
 
 pub(crate) fn build_judge_prompts(
@@ -312,6 +368,7 @@ pub(crate) fn build_judge_prompts(
             cacheable: true,
         }],
         user,
+        images: Vec::new(),
     }
 }
 
@@ -406,7 +463,7 @@ pub(crate) fn build_coherence_prompts(
         });
     }
 
-    StructuredPrompt { system, user }
+    StructuredPrompt::new(system, user)
 }
 
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.

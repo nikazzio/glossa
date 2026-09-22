@@ -1123,7 +1123,8 @@
     "tabs": {
       "history": "History",
       "assist": "Assist",
-      "metadata": "Metadata"
+      "metadata": "Metadata",
+      "log": "Transcription log"
     },
     "meta": {
       "page": "Page",
@@ -1138,6 +1139,30 @@
       "user": "Manual correction",
       "ocr": "Automatic recognition",
       "import": "Imported"
+    },
+    "assist": {
+      "noProvider": "None",
+      "noProviderHint": "Choose a provider to read pages with a model.",
+      "noDigitization": "Needs a linked IIIF digitization on the document.",
+      "noSourcePage": "This page is not yet linked to a downloaded page.",
+      "noModelConfigured": "Choose a provider and a model that can read images.",
+      "loading": "Loading…",
+      "documentModel": "Document model",
+      "readThisPage": "Read this page",
+      "inheritWorkspace": "Inherit from workspace",
+      "inheritedFromWorkspace": "Will use {{provider}} · {{model}} from the workspace",
+      "documentPrompt": "Document prompt",
+      "documentPromptHint": "Applies to every page of this document, unless a page has its own prompt.",
+      "pagePrompt": "Page prompt",
+      "pagePromptHint": "Applies only to this page, above the document prompt.",
+      "saveFailed": "Could not save OCR settings",
+      "jobStarted": "Reading started: follow progress in the jobs panel",
+      "jobStartFailed": "Could not start the reading job"
+    },
+    "log": {
+      "title": "Transcription log",
+      "empty": "No reading yet.",
+      "cachedTokens": "{{count}} tokens from cache"
     }
   },
   "areas": {
@@ -1614,7 +1639,8 @@
     "settings": {
       "eyebrow": "Workspace Settings",
       "generalTab": "General",
-      "memoryTab": "Phrase Memory"
+      "memoryTab": "Phrase Memory",
+      "ocrTab": "OCR"
     },
     "translationsArea": {
       "sort": {
@@ -1624,7 +1650,11 @@
     },
     "hub": {
       "lockedArea": "Coming in version 2.0"
-    }
+    },
+    "ocrDefaultModel": "Default OCR model",
+    "ocrDefaultPrompt": "Default OCR prompt",
+    "resetOcrPrompt": "Reset OCR prompt",
+    "ocrDefaultPromptUnsetHint": "Empty: the built-in default text is used."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2080,6 +2110,17 @@
             "paragraphs": [
               "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows next to the \"Page N\" title. Switching back to the main copy restores the link on its own.",
               "A third command detaches the link regardless of page counts, even while staying on the main copy: handy for glancing at a different page without moving where you're writing."
+            ]
+          },
+          {
+            "title": "Automatic page reading (OCR)",
+            "paragraphs": [
+              "In the \"Assist\" tab, on the right, you can have the text of the open page read by a connected AI model — the same mechanism already used for translation, with providers and keys already configured.",
+              "The command appears disabled until the conditions are met: the page must belong to a digitization linked to the document, and a provider and model that can read images must be chosen, either for the document or inherited from the workspace settings. The reason a command is disabled is always in its own tooltip.",
+              "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
+              "The prompt that guides the reading can be customised at three levels — workspace, document, single page — each meant to take over only when it is written on purpose; otherwise the level above still applies.",
+              "The reading starts in the queue, like a download: you will find it in the jobs panel while it runs, and you can pause or cancel it the same way.",
+              "The \"Transcription log\" tab, next to Assist, lists every reading with its cost and the tokens it used — the same information the Translation log shows for chunks."
             ]
           },
           {
@@ -2866,7 +2907,8 @@
     "copyFailed": "Copy failed",
     "newRun": "new run",
     "grouped": "Group",
-    "filters": "Filters"
+    "filters": "Filters",
+    "scopeOcr": "OCR"
   },
   "resume": {
     "title": "Translation interrupted",

@@ -18,4 +18,9 @@
 # che non le aveva mai ricevute. Stessa condizione: nessun database
 # distribuito le ha applicate.
 
-0001_baseline_2_0.sql d608384f3f940d96
+# Consolidamento pre-1.0 (22 settembre 2026): colonne OCR/HTR (#220) su
+# workspaces, transcription_documents, transcription_segments e
+# operation_logs fuse nella baseline prima di unire il lavoro a main.
+# Stessa condizione: nessun database distribuito le ha applicate.
+
+0001_baseline_2_0.sql c2155719a86817c6

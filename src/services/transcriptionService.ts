@@ -1,6 +1,8 @@
 import { execute, select } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
+import { DEFAULT_OCR_IMAGE_EDGE, DEFAULT_OCR_PROMPT } from '../constants';
+import type { ModelProvider, Workspace } from '../types';
 
 /**
  * Il documento di trascrizione: contenuto per pagina/segmento, stato
@@ -28,6 +30,11 @@ export interface TranscriptionDocument {
   workspace_id: string;
   title: string;
   status: TranscriptionDocumentStatus;
+  /** Cascata OCR (#220): NULL eredita dal workspace. */
+  ocr_prompt: string | null;
+  ocr_provider: string | null;
+  ocr_model: string | null;
+  ocr_image_edge: number | null;
 }
 
 export interface TranscriptionSegment {
@@ -36,6 +43,8 @@ export interface TranscriptionSegment {
   position: number;
   label: string | null;
   source_page_id: string | null;
+  /** Cascata OCR (#220): NULL eredita dal documento. */
+  ocr_prompt: string | null;
   approved_revision_id: string | null;
 }
 
@@ -65,6 +74,10 @@ export async function createDocument(
     workspace_id: workspaceId,
     title,
     status: 'active',
+    ocr_prompt: null,
+    ocr_provider: null,
+    ocr_model: null,
+    ocr_image_edge: null,
   };
   await execute(
     `INSERT INTO transcription_documents (id, source_version_id, workspace_id, title, status)
@@ -95,6 +108,49 @@ export async function getDocument(documentId: string): Promise<TranscriptionDocu
   return rows[0] ?? null;
 }
 
+/** Livello documento della cascata OCR (#220): `null`/`''` per un campo
+ *  significa «torna a ereditare dal workspace». */
+export async function updateDocumentOcrSettings(
+  documentId: string,
+  updates: Partial<{
+    ocrPrompt: string | null;
+    ocrProvider: string | null;
+    ocrModel: string | null;
+    ocrImageEdge: number | null;
+  }>,
+): Promise<void> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let index = 1;
+  if (updates.ocrPrompt !== undefined) {
+    sets.push(`ocr_prompt = $${index++}`);
+    params.push(updates.ocrPrompt || null);
+  }
+  if (updates.ocrProvider !== undefined) {
+    sets.push(`ocr_provider = $${index++}`);
+    params.push(updates.ocrProvider || null);
+  }
+  if (updates.ocrModel !== undefined) {
+    sets.push(`ocr_model = $${index++}`);
+    params.push(updates.ocrModel || null);
+  }
+  if (updates.ocrImageEdge !== undefined) {
+    sets.push(`ocr_image_edge = $${index++}`);
+    params.push(updates.ocrImageEdge);
+  }
+  if (sets.length === 0) return;
+  params.push(documentId);
+  await execute(`UPDATE transcription_documents SET ${sets.join(', ')} WHERE id = $${index}`, params);
+}
+
+/** Livello pagina della cascata OCR (#220): `null` torna a ereditare dal documento. */
+export async function updateSegmentOcrPrompt(segmentId: string, prompt: string | null): Promise<void> {
+  await execute('UPDATE transcription_segments SET ocr_prompt = $2 WHERE id = $1', [
+    segmentId,
+    prompt || null,
+  ]);
+}
+
 export async function setDocumentStatus(
   documentId: string,
   status: TranscriptionDocumentStatus,
@@ -120,6 +176,7 @@ export async function addSegment(
     position,
     label,
     source_page_id: sourcePageId,
+    ocr_prompt: null,
     approved_revision_id: null,
   };
   await execute(
@@ -150,21 +207,48 @@ export async function getSegmentByPosition(
   return rows[0] ?? null;
 }
 
+/** L'id della pagina logica corrispondente, se il documento ha una copia
+ *  collegata e quella pagina è già passata da un lavoro di scaricamento
+ *  (`source_pages` si popola lì, non alla sola apertura del manifesto). */
+async function resolveSourcePageId(documentId: string, position: number): Promise<string | null> {
+  const document = await getDocument(documentId);
+  if (!document?.source_version_id) return null;
+  const rows = await select<{ id: string }>(
+    'SELECT id FROM source_pages WHERE source_version_id = $1 AND position = $2',
+    [document.source_version_id, position],
+  );
+  return rows[0]?.id ?? null;
+}
+
 /** Il segmento di quella pagina, creandolo al primo tocco davvero — non alla
  *  sola apertura. L'etichetta segue quella che il visore dichiara adesso, se
- *  cambiata (una rilettura del manifesto può rinumerare le pagine). */
+ *  cambiata (una rilettura del manifesto può rinumerare le pagine). Un
+ *  segmento nato prima che la copia fosse scaricata riceve `source_page_id`
+ *  al primo tocco successivo allo scaricamento — non è un backfill una
+ *  tantum, è la stessa risoluzione applicata a ogni chiamata. */
 export async function ensureSegment(
   documentId: string,
   position: number,
   label: string | null = null,
 ): Promise<TranscriptionSegment> {
   const existing = await getSegmentByPosition(documentId, position);
-  if (!existing) return addSegment(documentId, position, label);
-  if (label && label !== existing.label) {
-    await execute('UPDATE transcription_segments SET label = $2 WHERE id = $1', [existing.id, label]);
-    return { ...existing, label };
+  if (!existing) {
+    const sourcePageId = await resolveSourcePageId(documentId, position);
+    return addSegment(documentId, position, label, sourcePageId);
   }
-  return existing;
+  const labelChanged = Boolean(label) && label !== existing.label;
+  const needsSourcePageId = existing.source_page_id === null;
+  const resolvedSourcePageId = needsSourcePageId
+    ? await resolveSourcePageId(documentId, position)
+    : existing.source_page_id;
+  const sourcePageIdChanged = needsSourcePageId && resolvedSourcePageId !== null;
+  if (!labelChanged && !sourcePageIdChanged) return existing;
+  const nextLabel = labelChanged ? label : existing.label;
+  await execute(
+    'UPDATE transcription_segments SET label = $2, source_page_id = $3 WHERE id = $1',
+    [existing.id, nextLabel, resolvedSourcePageId],
+  );
+  return { ...existing, label: nextLabel, source_page_id: resolvedSourcePageId };
 }
 
 async function latestRevision(segmentId: string): Promise<TranscriptionRevision | null> {
@@ -335,4 +419,30 @@ export async function unverifySegment(segmentId: string, workspaceId: string): P
     workspaceId,
     inputRef: approvedRevisionId,
   });
+}
+
+/** Impostazioni OCR risolte per una chiamata: da congelare nella
+ *  configurazione del lavoro alla messa in coda (#220) — modificare il
+ *  prompt dopo non deve alterare un lavoro già accodato. */
+export interface ResolvedOcrSettings {
+  prompt: string;
+  provider: ModelProvider | '';
+  model: string;
+  imageEdge: number;
+}
+
+/** Cascata pagina → documento → workspace → costante, in TypeScript: è
+ *  l'unica fonte, il gestore Rust riceve solo il risultato già risolto
+ *  dentro la configurazione del lavoro, mai la costante duplicata lato Rust. */
+export function resolveOcrSettings(
+  segment: Pick<TranscriptionSegment, 'ocr_prompt'> | null,
+  document: Pick<TranscriptionDocument, 'ocr_prompt' | 'ocr_provider' | 'ocr_model' | 'ocr_image_edge'>,
+  workspace: Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel'>,
+): ResolvedOcrSettings {
+  const prompt =
+    segment?.ocr_prompt || document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
+  const provider = (document.ocr_provider || workspace.ocrDefaultProvider || '') as ModelProvider | '';
+  const model = document.ocr_model || workspace.ocrDefaultModel || '';
+  const imageEdge = document.ocr_image_edge ?? DEFAULT_OCR_IMAGE_EDGE;
+  return { prompt, provider, model, imageEdge };
 }

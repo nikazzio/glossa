@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AlignLeft, Brain, Cpu, Loader2, RefreshCcw, Settings2, Type } from 'lucide-react';
+import { AlignLeft, Brain, Cpu, Loader2, RefreshCcw, ScanText, Settings2, Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
+import { OcrSettingsSection } from './OcrSettingsSection';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../../workspaceIdentity';
 import { WorkspaceIcon, WorkspaceIconPicker } from './WorkspaceIdentity';
 
-type WorkspaceSettingsTab = 'general' | 'memory';
+type WorkspaceSettingsTab = 'general' | 'memory' | 'ocr';
 
 interface Props {
   open: boolean;
@@ -30,6 +31,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
   const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5.4-nano');
   const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
+  const [ocrDefaultProvider, setOcrDefaultProvider] = useState<ModelProvider | ''>('');
+  const [ocrDefaultModel, setOcrDefaultModel] = useState('');
+  const [ocrDefaultPrompt, setOcrDefaultPrompt] = useState('');
   const [saving, setSaving] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
@@ -42,6 +46,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     setMemoryExtractorProvider(activeWorkspace.memoryExtractorProvider);
     setMemoryExtractorModel(activeWorkspace.memoryExtractorModel);
     setMemoryExtractorPrompt(activeWorkspace.memoryExtractorPrompt);
+    setOcrDefaultProvider(activeWorkspace.ocrDefaultProvider);
+    setOcrDefaultModel(activeWorkspace.ocrDefaultModel);
+    setOcrDefaultPrompt(activeWorkspace.ocrDefaultPrompt);
     setActiveTab('general');
   }, [open, activeWorkspace]);
 
@@ -59,6 +66,13 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
         memoryExtractorProvider,
         memoryExtractorModel: memoryExtractorModel.trim(),
         memoryExtractorPrompt: memoryExtractorPrompt.trim(),
+      } : activeTab === 'ocr' ? {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        iconKey,
+        ocrDefaultProvider,
+        ocrDefaultModel: ocrDefaultModel.trim(),
+        ocrDefaultPrompt: ocrDefaultPrompt.trim(),
       } : {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -95,6 +109,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const tabConfig: Array<{ id: WorkspaceSettingsTab; icon: ReactNode; label: string }> = [
     { id: 'general', icon: <Settings2 size={14} />, label: t('workspace.settings.generalTab') },
     { id: 'memory', icon: <Brain size={14} />, label: t('workspace.settings.memoryTab') },
+    { id: 'ocr', icon: <ScanText size={14} />, label: t('workspace.settings.ocrTab') },
   ];
 
   const tabBar = (
@@ -237,6 +252,27 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     }}
                     onModelChange={setMemoryExtractorModel}
                     onPromptChange={setMemoryExtractorPrompt}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'ocr' && (
+                <div
+                  id="workspace-settings-panel-ocr"
+                  role="tabpanel"
+                  aria-labelledby="workspace-settings-tab-ocr"
+                  className="space-y-4"
+                >
+                  <OcrSettingsSection
+                    provider={ocrDefaultProvider}
+                    model={ocrDefaultModel}
+                    prompt={ocrDefaultPrompt}
+                    onProviderChange={(provider, model) => {
+                      setOcrDefaultProvider(provider);
+                      setOcrDefaultModel(model);
+                    }}
+                    onModelChange={setOcrDefaultModel}
+                    onPromptChange={setOcrDefaultPrompt}
                   />
                 </div>
               )}

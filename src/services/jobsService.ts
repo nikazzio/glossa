@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useWorkspaceStore } from '../stores/workspaceStore';
+import type { CacheRequest } from './cacheService';
 
 const JOB_EVENT = 'jobs:updated';
 
@@ -146,6 +147,30 @@ export async function enqueuePdfDownload(request: {
 
 export async function enqueueVaultVerification(full = false): Promise<Job> {
   return invoke<Job>('enqueue_vault_verification', { full });
+}
+
+export const OCR_JOB_TYPE = 'ocr_page';
+
+/** Una pagina da leggere, già risolta (#220): stessa forma di
+ *  `OcrPageConfig` lato Rust (`src-tauri/src/ocr/handler.rs`). */
+export interface OcrPageJobInput {
+  segmentId: string;
+  documentId: string;
+  cacheRequest: CacheRequest;
+  prompt: string;
+  referenceText?: string | null;
+  provider: string;
+  model: string;
+  imageEdge: number;
+  pageLabel: string;
+}
+
+export async function enqueueOcrPages(pages: OcrPageJobInput[]): Promise<Job> {
+  return createJob({
+    jobType: OCR_JOB_TYPE,
+    config: JSON.stringify({ pages }),
+    workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? undefined,
+  });
 }
 
 export async function clearFinishedJobs(id?: string): Promise<number> {

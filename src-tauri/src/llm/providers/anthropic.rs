@@ -72,12 +72,34 @@ fn build_anthropic_system(req: &LlmRequest<'_>, force_json: bool) -> Value {
     Value::Array(blocks)
 }
 
+/// Content of the user message. Plain string when there is no image — byte
+/// for byte what every existing pipeline sent before OCR (#220) — an array of
+/// blocks (images first, text last) only when the prompt attaches one or more.
+fn build_anthropic_user_content(req: &LlmRequest<'_>) -> Value {
+    if req.structured.images.is_empty() {
+        return Value::String(req.structured.user.clone());
+    }
+    let mut blocks: Vec<Value> = req
+        .structured
+        .images_base64()
+        .into_iter()
+        .map(|(media_type, data)| {
+            json!({
+                "type": "image",
+                "source": { "type": "base64", "media_type": media_type, "data": data }
+            })
+        })
+        .collect();
+    blocks.push(json!({ "type": "text", "text": req.structured.user }));
+    Value::Array(blocks)
+}
+
 fn build_anthropic_body(req: &LlmRequest<'_>, stream: bool) -> Value {
     let mut body = json!({
         "model": req.model,
         "max_tokens": max_output_tokens(req),
         "system": build_anthropic_system(req, req.json_mode && !req.json_schema_strict),
-        "messages": [{"role": "user", "content": req.structured.user}]
+        "messages": [{"role": "user", "content": build_anthropic_user_content(req)}]
     });
 
     if stream {
@@ -329,7 +351,7 @@ mod tests {
         user: String,
         anthropic: Option<AnthropicConfig>,
     ) -> LlmRequest<'static> {
-        let structured = Box::leak(Box::new(StructuredPrompt { system, user }));
+        let structured = Box::leak(Box::new(StructuredPrompt::new(system, user)));
         let provider_options = anthropic.map(|anthropic| {
             &*Box::leak(Box::new(ProviderRuntimeConfig {
                 ollama: None,

@@ -7,7 +7,10 @@ vi.mock('../services/transcriptionService', () => ({ getDocument: vi.fn() }));
 const getDocumentMock = vi.mocked(getDocument);
 
 function documentOf(id: string) {
-  return { id, source_version_id: null, workspace_id: 'w1', title: id, status: 'active' as const };
+  return {
+    id, source_version_id: null, workspace_id: 'w1', title: id, status: 'active' as const,
+    ocr_prompt: null, ocr_provider: null, ocr_model: null, ocr_image_edge: null,
+  };
 }
 
 describe('transcriptionStore — richieste in corsa', () => {

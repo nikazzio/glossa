@@ -115,8 +115,9 @@ const VALID_DETAIL_KINDS = new Set(['prompt', 'json', 'error', 'note']);
 
 interface DbOperationLogRow {
   id: string;
-  project_id: string;
-  pipeline_id: string;
+  // Nullable: una riga di trascrizione (#220) non ha né progetto né pipeline.
+  project_id: string | null;
+  pipeline_id: string | null;
   at: string;
   level: string;
   scope: string;
@@ -138,6 +139,8 @@ interface DbOperationLogRow {
   is_free: number | null;
   attempt_number: number | null;
   max_attempts: number | null;
+  transcription_document_id: string | null;
+  transcription_segment_id: string | null;
 }
 
 export interface PersistedLogEntry {
@@ -239,12 +242,8 @@ export async function saveOperationLogEntry(
   });
 }
 
-export async function loadOperationLogs(projectId: string, pipelineId: string): Promise<PersistedLogEntry[]> {
-  const rows = await select<DbOperationLogRow>(
-    `SELECT * FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2 ORDER BY at ASC`,
-    [projectId, pipelineId],
-  );
-  return rows.map((row) => ({
+function operationLogRowToEntry(row: DbOperationLogRow): PersistedLogEntry {
+  return {
     id: row.id,
     at: row.at,
     level: row.level,
@@ -267,9 +266,28 @@ export async function loadOperationLogs(projectId: string, pipelineId: string): 
     ...(row.is_free != null ? { isFree: row.is_free === 1 } : {}),
     ...(row.attempt_number != null ? { attemptNumber: row.attempt_number } : {}),
     ...(row.max_attempts != null ? { maxAttempts: row.max_attempts } : {}),
-  }));
+  };
+}
+
+export async function loadOperationLogs(projectId: string, pipelineId: string): Promise<PersistedLogEntry[]> {
+  const rows = await select<DbOperationLogRow>(
+    `SELECT * FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2 ORDER BY at ASC`,
+    [projectId, pipelineId],
+  );
+  return rows.map(operationLogRowToEntry);
 }
 
 export async function clearOperationLogs(projectId: string, pipelineId: string): Promise<void> {
   await execute('DELETE FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2', [projectId, pipelineId]);
+}
+
+/** Log OCR/HTR (#220): niente progetto/pipeline, filtrato sul documento di
+ *  trascrizione aperto — percorso di lettura proprio, lo store della
+ *  traduzione resta invariato. */
+export async function loadTranscriptionOperationLogs(documentId: string): Promise<PersistedLogEntry[]> {
+  const rows = await select<DbOperationLogRow>(
+    `SELECT * FROM operation_logs WHERE transcription_document_id = $1 ORDER BY at ASC`,
+    [documentId],
+  );
+  return rows.map(operationLogRowToEntry);
 }

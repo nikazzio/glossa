@@ -2,7 +2,7 @@ import { BookmarkPlus, BookOpen, Check, Loader2, Pencil, RotateCcw, Trash2, Wand
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { PromptTemplate } from '../../types';
+import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
 import { IconButton, FieldLabel } from '../ui';
@@ -26,6 +26,10 @@ export interface AuditPromptEditorProps {
   icon?: ReactNode;
   defaultValue?: string;
   onReset?: () => void;
+  /** Contesto/flusso con cui il template si salva: giudizio traduzione per
+   *  default (unico caso storico), OCR/HTR per la scheda Assistenza (#220). */
+  templateContext?: PromptTemplateContext;
+  templateWorkflow?: PromptTemplateWorkflow;
 }
 
 export function AuditPromptEditor({
@@ -47,6 +51,8 @@ export function AuditPromptEditor({
   icon,
   defaultValue,
   onReset,
+  templateContext = 'audit',
+  templateWorkflow = 'translation',
 }: AuditPromptEditorProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
@@ -72,7 +78,7 @@ export function AuditPromptEditor({
     const name = templateName.trim();
     if (!name) return;
     try {
-      await saveTemplate(name, value, 'audit', 'translation', defaultModel, defaultProvider);
+      await saveTemplate(name, value, templateContext, templateWorkflow, defaultModel, defaultProvider);
       toast.success(t('pipeline.templates.saved'));
       setTemplateName('');
       setShowSaveName(false);

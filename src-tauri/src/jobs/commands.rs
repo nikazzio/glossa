@@ -249,6 +249,13 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
         crate::federation::JOB_TYPE,
         Arc::new(crate::federation::SearchJob(app.clone())),
     );
+
+    // Lettura assistita di una pagina di trascrizione (#220): stesso bisogno
+    // di un `AppHandle` per chiavi API e catena di lettura dell'immagine.
+    engine.register(
+        crate::ocr::handler::JOB_TYPE,
+        Arc::new(crate::ocr::handler::OcrJobHandler(app.clone())),
+    );
     engine.load_limits()?;
     let engine = Arc::new(engine);
     app.manage(JobsState(Arc::clone(&engine)));

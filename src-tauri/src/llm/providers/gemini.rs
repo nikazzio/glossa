@@ -38,6 +38,22 @@ fn min_explicit_cache_tokens(model: &str) -> usize {
     }
 }
 
+/// `parts` of the user turn. Just the text when there is no image — byte for
+/// byte what every existing pipeline sent before OCR (#220) — image parts
+/// (`inline_data`) before the text part otherwise.
+fn gemini_user_parts(req: &LlmRequest<'_>) -> Value {
+    let mut parts: Vec<Value> = req
+        .structured
+        .images_base64()
+        .into_iter()
+        .map(|(media_type, data)| {
+            json!({ "inline_data": { "mime_type": media_type, "data": data } })
+        })
+        .collect();
+    parts.push(json!({ "text": req.structured.user }));
+    Value::Array(parts)
+}
+
 #[async_trait]
 impl LlmProvider for GeminiProvider {
     fn id(&self) -> &'static str {
@@ -112,7 +128,7 @@ impl LlmProvider for GeminiProvider {
         apply_temperature_config(req, &mut gen_config);
 
         let mut body = serde_json::json!({
-            "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
+            "contents": [{ "role": "user", "parts": gemini_user_parts(req) }],
             "generationConfig": gen_config
         });
 
@@ -197,7 +213,7 @@ impl LlmProvider for GeminiProvider {
         apply_temperature_config(req, &mut gen_config);
 
         let mut body = serde_json::json!({
-            "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
+            "contents": [{ "role": "user", "parts": gemini_user_parts(req) }],
             "generationConfig": gen_config
         });
 
@@ -388,6 +404,7 @@ mod temperature_tests {
                 cacheable: false,
             }],
             user: "hello".to_string(),
+            images: Vec::new(),
         }));
         let provider_options = gemini.map(|gemini| {
             &*Box::leak(Box::new(ProviderRuntimeConfig {

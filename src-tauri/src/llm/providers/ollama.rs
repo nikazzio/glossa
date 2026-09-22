@@ -217,10 +217,17 @@ impl LlmProvider for OllamaProvider {
             .unwrap_or_else(default_ollama_config);
 
         let system = req.structured.flatten_system();
+        let images_base64: Vec<String> = req
+            .structured
+            .images_base64()
+            .into_iter()
+            .map(|(_media_type, data)| data)
+            .collect();
         let body = build_ollama_chat_body(
             req.model,
             &system,
             &req.structured.user,
+            &images_base64,
             &ollama,
             false,
             req.json_mode,
@@ -278,10 +285,17 @@ impl LlmProvider for OllamaProvider {
             .unwrap_or_else(default_ollama_config);
 
         let system = req.structured.flatten_system();
+        let images_base64: Vec<String> = req
+            .structured
+            .images_base64()
+            .into_iter()
+            .map(|(_media_type, data)| data)
+            .collect();
         let body = build_ollama_chat_body(
             req.model,
             &system,
             &req.structured.user,
+            &images_base64,
             &ollama,
             true,
             req.json_mode,
@@ -397,10 +411,14 @@ pub(crate) fn build_ollama_options(config: &OllamaConfig) -> Map<String, Value> 
     options
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn build_ollama_chat_body(
     model: &str,
     system_prompt: &str,
     user_prompt: &str,
+    // Base64 image data, no data-URL prefix — Ollama's own `images` field on
+    // the user message. Empty for every call before OCR (#220).
+    images_base64: &[String],
     ollama: &OllamaConfig,
     stream: bool,
     json_mode: bool,
@@ -415,11 +433,16 @@ pub(crate) fn build_ollama_chat_body(
         options.insert("temperature".to_string(), serde_json::json!(0.0));
     }
 
+    let mut user_message = serde_json::json!({"role": "user", "content": user_prompt});
+    if !images_base64.is_empty() {
+        user_message["images"] = serde_json::json!(images_base64);
+    }
+
     let mut body = serde_json::json!({
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            user_message
         ],
         "stream": stream,
         "options": options,
@@ -450,6 +473,7 @@ mod structured_output_tests {
             "model",
             "system",
             "user",
+            &[],
             &default_ollama_config(),
             false,
             true,
@@ -466,7 +490,8 @@ mod structured_output_tests {
         let mut config = default_ollama_config();
         config.temperature = Some(0.9);
 
-        let body = build_ollama_chat_body("model", "system", "user", &config, false, true, true);
+        let body =
+            build_ollama_chat_body("model", "system", "user", &[], &config, false, true, true);
 
         assert_eq!(
             body["options"]["temperature"], 0.0,
@@ -479,7 +504,8 @@ mod structured_output_tests {
         let mut config = default_ollama_config();
         config.temperature = Some(0.9);
 
-        let body = build_ollama_chat_body("model", "system", "user", &config, false, true, false);
+        let body =
+            build_ollama_chat_body("model", "system", "user", &[], &config, false, true, false);
 
         // La temperatura viaggia come f32: confrontata come f64 diretta darebbe
         // 0.8999999761581421.
@@ -497,6 +523,7 @@ mod structured_output_tests {
             "model",
             "system",
             "user",
+            &[],
             &default_ollama_config(),
             false,
             true,

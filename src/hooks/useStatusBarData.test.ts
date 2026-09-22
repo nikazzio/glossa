@@ -18,6 +18,7 @@ const workspace: Workspace = {
   memoryExtractorProvider: 'openai',
   memoryExtractorModel: 'model',
   memoryExtractorPrompt: 'prompt',
+  ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '',
   createdAt: '2026-08-22',
 };
 

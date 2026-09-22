@@ -31,6 +31,7 @@ const workspace = {
   memoryExtractorProvider: 'openai' as const,
   memoryExtractorModel: 'gpt-5-nano',
   memoryExtractorPrompt: 'Extract',
+  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '',
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 

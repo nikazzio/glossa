@@ -11,6 +11,7 @@ mod images;
 mod jobs;
 mod keystore;
 mod llm;
+mod ocr;
 mod optimize;
 mod provenance;
 mod storage_config;

@@ -6,7 +6,7 @@ import type {
 
 export type { ModelReasoningClass, ModelStatus } from '../types';
 import type { ModelReasoningClass, ModelStatus } from '../types';
-export type ModelUseCase = StageRole | 'judge' | 'coherence';
+export type ModelUseCase = StageRole | 'judge' | 'coherence' | 'ocr';
 export type ModelUseCaseFit = 'preferred' | 'discouraged' | 'neutral';
 
 // Providers shown in settings (API-key management). DeepL needs its own key,
@@ -37,6 +37,12 @@ export interface ModelEntry {
   preferredFor: ModelUseCase[];
   discouragedFor?: ModelUseCase[];
   description: string;
+  /** Capability, not fit: whether the model accepts an image in the request at
+   *  all. `'ocr'` in `preferredFor`/`discouragedFor` expresses suitability
+   *  among vision-capable models — a model can support vision and still be
+   *  discouraged for OCR, but a model without this flag never shows up in the
+   *  OCR picker regardless of `preferredFor` (#220). Absent/false = no vision. */
+  supportsVision?: boolean;
 }
 
 // Last reviewed: 2026-07-13
@@ -44,23 +50,23 @@ export interface ModelEntry {
 // This catalog is the single frontend source of truth for product-known models.
 export const MODEL_CATALOG: ModelEntry[] = [
   // Gemini
-  { id: 'gemini-2.5-flash-lite', provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.10, output: 0.40 }, preferredFor: ['translation', 'format'], description: 'Fast and cost-efficient for high-volume translation tasks' },
-  { id: 'gemini-2.5-flash',      provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.30, output: 2.50 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Balanced speed and quality for translation and review' },
-  { id: 'gemini-2.5-pro',        provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 1.25, output: 10.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Deep optional-reasoning for complex review and coherence' },
+  { id: 'gemini-2.5-flash-lite', provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.10, output: 0.40 }, preferredFor: ['translation', 'format'], supportsVision: true, description: 'Fast and cost-efficient for high-volume translation tasks' },
+  { id: 'gemini-2.5-flash',      provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.30, output: 2.50 }, preferredFor: ['translation', 'refine', 'judge'], supportsVision: true, description: 'Balanced speed and quality for translation and review' },
+  { id: 'gemini-2.5-pro',        provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 1.25, output: 10.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], supportsVision: true, description: 'Deep optional-reasoning for complex review and coherence' },
   // Gemini 3.x line
-  { id: 'gemini-3-flash-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.50, output: 3.00 }, preferredFor: ['translation', 'refine'], description: 'Preview next-gen flash model with optional thinking' },
-  { id: 'gemini-3.1-flash-lite',    provider: 'gemini', status: 'stable',  reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.25, output: 1.50 }, preferredFor: ['translation', 'format'], description: 'Cost-efficient stable 3.1 flash model' },
-  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 2_097_152, pricing: { input: 2.00, output: 12.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Preview pro model with 2M context for deep analysis' },
+  { id: 'gemini-3-flash-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.50, output: 3.00 }, preferredFor: ['translation', 'refine'], supportsVision: true, description: 'Preview next-gen flash model with optional thinking' },
+  { id: 'gemini-3.1-flash-lite',    provider: 'gemini', status: 'stable',  reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.25, output: 1.50 }, preferredFor: ['translation', 'format'], supportsVision: true, description: 'Cost-efficient stable 3.1 flash model' },
+  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 2_097_152, pricing: { input: 2.00, output: 12.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], supportsVision: true, description: 'Preview pro model with 2M context for deep analysis' },
   // OpenAI — GPT-5.4 line (optional reasoning, 2026-03). Only the nano tier survives as the
   // budget option: it undercuts GPT-5.6 Luna 5x on price, still worthwhile for bulk/simple work.
   // gpt-4.1(-mini), o4-mini, gpt-5(-mini/-nano), gpt-5.4(-mini) dropped: superseded on price
   // and/or quality by the optional-reasoning GPT-5.6 tiers below. GPT-5.5 was superseded by
   // GPT-5.6 within weeks of release — not worth adding.
-  { id: 'gpt-5.4-nano', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 0.20, output: 1.25 }, preferredFor: ['translation', 'format'], description: 'Cheapest OpenAI option for bulk, low-complexity translation and formatting' },
+  { id: 'gpt-5.4-nano', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 0.20, output: 1.25 }, preferredFor: ['translation', 'format'], supportsVision: true, description: 'Cheapest OpenAI option for bulk, low-complexity translation and formatting' },
   // OpenAI — GPT-5.6 line (optional reasoning, 2026-07; replaces mini/nano naming with Luna/Terra/Sol tiers)
-  { id: 'gpt-5.6-luna',  provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 1.00, output: 6.00  }, preferredFor: ['translation', 'format'], description: 'Cost-sensitive, high-volume tier of the GPT-5.6 family' },
-  { id: 'gpt-5.6-terra', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 2.50, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Balanced intermediate tier of the GPT-5.6 family' },
-  { id: 'gpt-5.6-sol',   provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 30.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Flagship GPT-5.6 tier for complex reasoning and review' },
+  { id: 'gpt-5.6-luna',  provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 1.00, output: 6.00  }, preferredFor: ['translation', 'format'], supportsVision: true, description: 'Cost-sensitive, high-volume tier of the GPT-5.6 family' },
+  { id: 'gpt-5.6-terra', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 2.50, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge'], supportsVision: true, description: 'Balanced intermediate tier of the GPT-5.6 family' },
+  { id: 'gpt-5.6-sol',   provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 30.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], supportsVision: true, description: 'Flagship GPT-5.6 tier for complex reasoning and review' },
   // OpenAI — deprecated (superseded by GPT-5.6). Kept so pricing/context-window lookups stay
   // correct for existing projects still configured with one of these; hidden from new-model
   // pickers by default — see getSelectableModelIds's includeDeprecated option.
@@ -73,12 +79,12 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'gpt-5.4-mini', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 0.75, output: 4.50 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Mid-tier snapshot with optional reasoning and large context' },
   { id: 'gpt-5.4', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 2.50, output: 15.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'High-capacity snapshot for complex review tasks' },
   // Anthropic (Claude 4 line — all support optional extended/adaptive thinking)
-  { id: 'claude-haiku-4-5-20251001', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 200_000, pricing: { input: 1.00, output: 5.00 }, preferredFor: ['translation', 'format'], description: 'Fast and cost-efficient for high-volume translation' },
-  { id: 'claude-sonnet-4-6',         provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine'], description: 'Balanced quality and speed for translation and review' },
-  { id: 'claude-opus-4-7',           provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['refine'], discouragedFor: ['format'], description: 'Previous-generation Opus for deep analysis' },
+  { id: 'claude-haiku-4-5-20251001', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 200_000, pricing: { input: 1.00, output: 5.00 }, preferredFor: ['translation', 'format'], supportsVision: true, description: 'Fast and cost-efficient for high-volume translation' },
+  { id: 'claude-sonnet-4-6',         provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine'], supportsVision: true, description: 'Balanced quality and speed for translation and review' },
+  { id: 'claude-opus-4-7',           provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['refine'], discouragedFor: ['format'], supportsVision: true, description: 'Previous-generation Opus for deep analysis' },
   // Anthropic — Claude 5 line (2026-07; Sonnet 5 reaches near-Opus quality at Sonnet cost)
-  { id: 'claude-sonnet-5', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'], description: 'Near-Opus quality coding/agentic performance at Sonnet cost' },
-  { id: 'claude-opus-4-8', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Most capable Anthropic model for deep analysis and long-horizon review' },
+  { id: 'claude-sonnet-5', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'], supportsVision: true, description: 'Near-Opus quality coding/agentic performance at Sonnet cost' },
+  { id: 'claude-opus-4-8', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], supportsVision: true, description: 'Most capable Anthropic model for deep analysis and long-horizon review' },
   // DeepSeek (v4 line — 1M context, optional reasoning effort)
   // deepseek-chat / deepseek-reasoner retired 2026-07-24
   { id: 'deepseek-v4-flash', provider: 'deepseek', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 0.14, output: 0.28 }, preferredFor: ['translation', 'format'], description: 'Extremely cost-effective with optional reasoning effort' },
@@ -135,6 +141,21 @@ export function getSelectableModelIds(
   options?: { includeDeprecated?: boolean },
 ): string[] {
   return provider === 'ollama' ? (ollamaModels ?? []) : getKnownModelIds(provider, options);
+}
+
+/** Same as `getSelectableModelIds`, filtered to models that accept an image
+ *  in the request (#220). Ollama models pass through unfiltered: the list is
+ *  fetched live from the local install, capability isn't declarable there —
+ *  the choice is the user's. */
+export function getVisionCapableModelIds(
+  provider: ModelProvider,
+  ollamaModels?: string[],
+  options?: { includeDeprecated?: boolean },
+): string[] {
+  if (provider === 'ollama') return ollamaModels ?? [];
+  return getProviderCatalogEntries(provider, options)
+    .filter((entry) => entry.supportsVision)
+    .map((entry) => entry.id);
 }
 
 /** Ensures a stage's currently-selected model stays in its option list even if filtered out (e.g. deprecated). */

@@ -34,6 +34,9 @@ reqwest = { version = "0.12", features = ["json", "cookies", "stream"] }
 # Windows, macOS e Linux restano come sono. Solo i formati che servono davvero:
 # le biblioteche IIIF servono JPEG, e la PNG è l'unica altra che capiti.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+# Codifica delle immagini OCR (#220) nel messaggio utente: ogni fornitore
+# vuole i byte in base64, nessuno accetta il file grezzo nel corpo JSON.
+base64 = "0.22"
 # Ridimensionamento con le istruzioni vettoriali del processore: stesso
 # risultato del filtro Lanczos già in uso, diverse volte più veloce. Puro
 # Rust anche questa: nessuna libreria di sistema in più da compilare.

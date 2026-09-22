@@ -184,6 +184,7 @@ pub async fn test_custom_provider_connection(
             cacheable: false,
         }],
         user: "Reply with exactly: OK".to_string(),
+        images: Vec::new(),
     };
     let req = crate::llm::provider::LlmRequest {
         model: &model,

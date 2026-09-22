@@ -27,6 +27,11 @@ export async function createWorkspace(params: {
     memoryExtractorProvider: DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
     memoryExtractorModel: DEFAULT_MEMORY_EXTRACTOR_MODEL,
     memoryExtractorPrompt: DEFAULT_MEMORY_EXTRACTOR_PROMPT,
+    // '' a questo livello: la select del provider/modello OCR resta vuota
+    // finché workspace, documento o utente non ne scelgono uno (#220).
+    ocrDefaultProvider: '',
+    ocrDefaultModel: '',
+    ocrDefaultPrompt: '',
     createdAt: new Date().toISOString(),
   };
   await execute(
@@ -55,10 +60,14 @@ export async function listWorkspaces(includeArchived = false): Promise<Workspace
     memory_extractor_provider: string | null;
     memory_extractor_model: string | null;
     memory_extractor_prompt: string | null;
+    ocr_default_provider: string | null;
+    ocr_default_model: string | null;
+    ocr_default_prompt: string | null;
     created_at: string;
     archived_at: string | null;
   }>(`SELECT id, name, icon_key, description, embedding_model,
              memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
+             ocr_default_provider, ocr_default_model, ocr_default_prompt,
              created_at, archived_at
       FROM workspaces
       WHERE archived_at IS NULL OR $1 = 1
@@ -72,6 +81,9 @@ export async function listWorkspaces(includeArchived = false): Promise<Workspace
     memoryExtractorProvider: (r.memory_extractor_provider || DEFAULT_MEMORY_EXTRACTOR_PROVIDER) as ModelProvider,
     memoryExtractorModel: r.memory_extractor_model || DEFAULT_MEMORY_EXTRACTOR_MODEL,
     memoryExtractorPrompt: r.memory_extractor_prompt || DEFAULT_MEMORY_EXTRACTOR_PROMPT,
+    ocrDefaultProvider: (r.ocr_default_provider || '') as ModelProvider | '',
+    ocrDefaultModel: r.ocr_default_model || '',
+    ocrDefaultPrompt: r.ocr_default_prompt || '',
     createdAt: r.created_at,
     archivedAt: r.archived_at ?? undefined,
   }));
@@ -82,7 +94,8 @@ export async function updateWorkspace(
   updates: Partial<Pick<Workspace,
     'name' | 'description' | 'embeddingModel' |
     'iconKey' |
-    'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
+    'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt' |
+    'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'
   >>,
 ): Promise<void> {
   const sets: string[] = [];
@@ -116,6 +129,18 @@ export async function updateWorkspace(
   if (updates.memoryExtractorPrompt !== undefined) {
     sets.push(`memory_extractor_prompt = $${index++}`);
     params.push(updates.memoryExtractorPrompt);
+  }
+  if (updates.ocrDefaultProvider !== undefined) {
+    sets.push(`ocr_default_provider = $${index++}`);
+    params.push(updates.ocrDefaultProvider);
+  }
+  if (updates.ocrDefaultModel !== undefined) {
+    sets.push(`ocr_default_model = $${index++}`);
+    params.push(updates.ocrDefaultModel);
+  }
+  if (updates.ocrDefaultPrompt !== undefined) {
+    sets.push(`ocr_default_prompt = $${index++}`);
+    params.push(updates.ocrDefaultPrompt);
   }
   if (sets.length === 0) return;
 

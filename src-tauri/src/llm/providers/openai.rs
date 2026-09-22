@@ -56,6 +56,50 @@ pub fn custom_endpoint(base_url: String) -> OpenAiCompatibleProvider {
     }
 }
 
+/// `input` field for the Responses API. Plain string when there is no image —
+/// byte for byte what every existing pipeline sent before OCR (#220) — a
+/// one-message array with image blocks before the text block otherwise.
+fn responses_api_input(req: &LlmRequest<'_>) -> Value {
+    if req.structured.images.is_empty() {
+        return Value::String(req.structured.user.clone());
+    }
+    let mut content: Vec<Value> = req
+        .structured
+        .images_base64()
+        .into_iter()
+        .map(|(media_type, data)| {
+            serde_json::json!({
+                "type": "input_image",
+                "image_url": format!("data:{media_type};base64,{data}")
+            })
+        })
+        .collect();
+    content.push(serde_json::json!({ "type": "input_text", "text": req.structured.user }));
+    serde_json::json!([{ "role": "user", "content": content }])
+}
+
+/// `content` of the user message for the Chat Completions API (OpenAI,
+/// DeepSeek, custom endpoints). Same string-vs-array rule as
+/// `responses_api_input`.
+fn chat_completions_user_content(req: &LlmRequest<'_>) -> Value {
+    if req.structured.images.is_empty() {
+        return Value::String(req.structured.user.clone());
+    }
+    let mut content: Vec<Value> = req
+        .structured
+        .images_base64()
+        .into_iter()
+        .map(|(media_type, data)| {
+            serde_json::json!({
+                "type": "image_url",
+                "image_url": { "url": format!("data:{media_type};base64,{data}") }
+            })
+        })
+        .collect();
+    content.push(serde_json::json!({ "type": "text", "text": req.structured.user }));
+    Value::Array(content)
+}
+
 fn judge_json_schema() -> serde_json::Value {
     serde_json::json!({
         "name": "translation_audit",
@@ -258,7 +302,7 @@ impl OpenAiCompatibleProvider {
         let mut body = serde_json::json!({
             "model": req.model,
             "instructions": req.structured.flatten_system(),
-            "input": req.structured.user,
+            "input": responses_api_input(req),
         });
 
         if req.json_mode {
@@ -335,7 +379,7 @@ impl OpenAiCompatibleProvider {
         let mut body = serde_json::json!({
             "model": req.model,
             "instructions": req.structured.flatten_system(),
-            "input": req.structured.user,
+            "input": responses_api_input(req),
             "stream": true,
         });
         if req.json_mode {
@@ -494,7 +538,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
             "model": req.model,
             "messages": [
                 {"role": "system", "content": req.structured.flatten_system()},
-                {"role": "user", "content": req.structured.user}
+                {"role": "user", "content": chat_completions_user_content(req)}
             ]
         });
 
@@ -566,7 +610,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
             "model": req.model,
             "messages": [
                 {"role": "system", "content": req.structured.flatten_system()},
-                {"role": "user", "content": req.structured.user}
+                {"role": "user", "content": chat_completions_user_content(req)}
             ],
             "stream": true,
             "stream_options": {"include_usage": true}
@@ -611,6 +655,7 @@ mod temperature_tests {
                 cacheable: false,
             }],
             user: "hello".to_string(),
+            images: Vec::new(),
         }));
         LlmRequest {
             model: "gpt-5.1",

@@ -31,6 +31,7 @@ import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { confirm } from '../../stores/confirmStore';
 import type { ViewerVersionRef } from '../../services/libraryService';
 import { computeSyncState } from './transcriptionSync';
@@ -48,10 +49,15 @@ import {
   saveSegmentText,
   setDocumentStatus,
   unverifySegment,
+  updateDocumentOcrSettings,
+  updateSegmentOcrPrompt,
   verifySegment,
   type TranscriptionRevision,
   type TranscriptionSegment,
 } from '../../services/transcriptionService';
+import { startOcrForPage } from '../../services/ocrService';
+import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
+import type { ModelProvider } from '../../types';
 
 const SAVE_DELAY_MS = 800;
 const INSPECTOR_COLLAPSED = 56;
@@ -85,8 +91,10 @@ interface TranscriptionStudioProps {
  *
  * **Un segmento per pagina**, non uno per documento: cambiare pagina nel
  * visore cambia il testo mostrato, ancorato a quella posizione
- * (`transcription_segments.position`, non ancora `source_page_id` — quella
- * riga esiste solo dopo uno scaricamento, il visore la mostra anche prima).
+ * (`transcription_segments.position`; `source_page_id` si aggiunge da sé al
+ * primo tocco del segmento dopo che un lavoro di scaricamento ha popolato
+ * `source_pages` — il visore mostra la pagina anche prima, ma l'OCR (#220)
+ * resta disattivo finché quel collegamento non esiste).
  * Un documento senza visore (nato da zero) resta su un solo blocco di testo,
  * in posizione 0.
  */
@@ -94,6 +102,8 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   const { t, i18n } = useTranslation();
   const detail = useTranscriptionStore((s) => s.detail);
   const loadDetail = useTranscriptionStore((s) => s.loadDetail);
+  const patchDetail = useTranscriptionStore((s) => s.patchDetail);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
 
   const [segment, setSegment] = useState<TranscriptionSegment | null>(null);
   const [revisions, setRevisions] = useState<TranscriptionRevision[]>([]);
@@ -206,6 +216,88 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   }, [documentId, pageIndex, t]);
 
   useEffect(() => { void loadSegmentForPage(); }, [loadSegmentForPage]);
+
+  // Assistenza OCR/HTR (#220).
+  const [ocrStarting, setOcrStarting] = useState(false);
+
+  // Il lavoro gira in background: quando un lavoro OCR finisce si rilegge la
+  // pagina corrente, così la revisione appena scritta compare da sola nello
+  // storico, senza che l'utente debba cambiare pagina e tornare indietro.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    onJobChanged((job) => {
+      if (job.jobType === OCR_JOB_TYPE && job.status === 'completed') {
+        void loadSegmentForPage();
+      }
+    }).then((fn) => { if (!cancelled) unlisten = fn; else fn(); });
+    return () => { cancelled = true; unlisten?.(); };
+  }, [loadSegmentForPage]);
+
+  const handleDocumentOcrProviderChange = (provider: ModelProvider | '', model: string) => {
+    if (!detail) return;
+    patchDetail({ ocr_provider: provider || null, ocr_model: model || null });
+    void updateDocumentOcrSettings(detail.id, {
+      ocrProvider: provider || null,
+      ocrModel: model || null,
+    }).catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  const handleDocumentOcrModelChange = (model: string) => {
+    if (!detail) return;
+    patchDetail({ ocr_model: model || null });
+    void updateDocumentOcrSettings(detail.id, { ocrModel: model || null }).catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  const handleDocumentOcrPromptChange = (prompt: string) => {
+    if (!detail) return;
+    patchDetail({ ocr_prompt: prompt || null });
+    void updateDocumentOcrSettings(detail.id, { ocrPrompt: prompt || null }).catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  const handleSegmentOcrPromptChange = (prompt: string) => {
+    if (!segment) return;
+    const segmentId = segment.id;
+    setSegment((current) => (current ? { ...current, ocr_prompt: prompt || null } : current));
+    void updateSegmentOcrPrompt(segmentId, prompt || null).catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  const handleStartOcr = async () => {
+    if (!detail || !segment || !activeWorkspace || !viewerRef) return;
+    setOcrStarting(true);
+    try {
+      await startOcrForPage({
+        document: detail,
+        segment,
+        workspace: activeWorkspace,
+        viewerRef,
+        pageLabel: pageLabel ?? String(pageIndex + 1),
+      });
+      toast.success(t('transcription.assist.jobStarted'));
+    } catch (err: unknown) {
+      toast.error(t('transcription.assist.jobStartFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setOcrStarting(false);
+    }
+  };
 
   const save = useCallback(
     (text: string) => {
@@ -738,6 +830,15 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
             displayIndex={displayIndex}
             pageLabel={pageLabel}
             verified={isVerified}
+            document={detail}
+            workspace={activeWorkspace}
+            viewerRef={viewerRef}
+            ocrStarting={ocrStarting}
+            onStartOcr={() => void handleStartOcr()}
+            onDocumentOcrProviderChange={handleDocumentOcrProviderChange}
+            onDocumentOcrModelChange={handleDocumentOcrModelChange}
+            onDocumentOcrPromptChange={handleDocumentOcrPromptChange}
+            onSegmentOcrPromptChange={handleSegmentOcrPromptChange}
           />
         </Panel>
       </Group>

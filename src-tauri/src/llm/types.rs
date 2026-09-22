@@ -12,15 +12,51 @@ pub struct PromptBlock {
     pub cacheable: bool,
 }
 
+/// An image attached to the user message (OCR, #220). Never placed in a
+/// system block: on Gemini it would break the whole-prompt cache for every
+/// page, on Anthropic/OpenAI it would break the cacheable-prefix chain.
+#[derive(Debug, Clone)]
+pub struct ImageAttachment {
+    pub bytes: Vec<u8>,
+    /// MIME type as guessed from the bytes (`image/jpeg`, `image/png`, …).
+    pub media_type: String,
+}
+
 /// Structured prompt ready for dispatch. System blocks are ordered; the last
 /// cacheable block marks the furthest stable cache boundary for the call.
+/// Images always attach to the user message, never to a system block.
 #[derive(Debug, Clone)]
 pub struct StructuredPrompt {
     pub system: Vec<PromptBlock>,
     pub user: String,
+    pub images: Vec<ImageAttachment>,
 }
 
 impl StructuredPrompt {
+    /// Prompt without images — the common case (translation, judge, coherence).
+    pub fn new(system: Vec<PromptBlock>, user: String) -> Self {
+        Self {
+            system,
+            user,
+            images: Vec::new(),
+        }
+    }
+
+    /// Images encoded as base64, paired with their MIME type, in attachment
+    /// order. Every provider wants this shape; only the surrounding JSON differs.
+    pub fn images_base64(&self) -> Vec<(String, String)> {
+        use base64::Engine;
+        self.images
+            .iter()
+            .map(|image| {
+                (
+                    image.media_type.clone(),
+                    base64::engine::general_purpose::STANDARD.encode(&image.bytes),
+                )
+            })
+            .collect()
+    }
+
     /// Flatten all system blocks into a single string for providers that don't
     /// support structured caching.
     pub fn flatten_system(&self) -> String {
