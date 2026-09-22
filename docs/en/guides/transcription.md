@@ -91,9 +91,10 @@ written on purpose; otherwise the level above still applies.
 
 The reading starts in the queue, like a download: you'll find it in the
 jobs panel while it runs, with the option to pause or cancel it the same
-way. The **Transcription log** tab, next to Assist, lists every reading
-with its cost and the tokens it used — the same information the Translation
-log shows for chunks.
+way. Open the bottom panel and choose **Transcription log** — it only shows
+up here, inside a transcription document, mirroring the Translation log you
+see inside a project — for the list of every reading with its cost and the
+tokens it used.
 
 ## History, restore and metadata
 

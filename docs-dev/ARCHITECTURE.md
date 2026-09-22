@@ -435,10 +435,11 @@ con un riferimento alla pagina che si sta salvando, non con lo stato letto a
 scrittura ultimata.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
-opera, con schede Assistenza (OCR, #220 — vedi sezione dedicata), Storico,
-Log trascrizione e Metadati — quest'ultima mostra i campi grezzi che il
-segmento porta oggi (posizione, etichetta, stato, numero di revisioni,
-`source_page_id`), utile finché non si decide una presentazione definitiva.
+opera, con schede Assistenza (OCR, #220 — vedi sezione dedicata), Storico e
+Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
+(posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
+finché non si decide una presentazione definitiva. Il log dei costi OCR vive
+altrove, nel cassetto in basso — vedi sezione OCR/HTR.
 
 **Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
 copia con cui il documento nasce (`source_version_id`) resta "principale"
@@ -509,8 +510,7 @@ approvato l'esito qui — non ancora allo Studio di traduzione.
 
 Un provider LLM già configurato per la traduzione legge l'immagine di una
 pagina e propone un testo, che entra come revisione modificabile — mai come
-verità finale. Piano completo, con la verifica riga per riga contro il
-codice: `docs-dev/PLAN_OCR_HTR.md`.
+verità finale.
 
 **Schema** (consolidato in `0001_baseline_2_0.sql`, nessuna migrazione
 incrementale — beta privata): `workspaces.ocr_default_{prompt,provider,model}`
@@ -579,6 +579,21 @@ punto in cui Rust scrive quella tabella (prima solo `dbService.ts`).
 `dbService.loadTranscriptionOperationLogs(documentId)` è il percorso di
 lettura dedicato — lo store della traduzione (`operationLogStore.ts`, scope
 `'ocr'` aggiunto all'unione) non cambia.
+
+**Log trascrizione, nel cassetto in basso — non nel pannello laterale.**
+Speculare al Log traduzione, non fuso col pannello lavori: `AppStatusBar`
+tiene un unico cassetto ridimensionabile la cui **prima scheda** cambia con
+l'area aperta, mai le due insieme. `useStatusBarData` distingue un terzo
+`kind: 'transcription'` (oltre a `'workspace'`/`'project'`), letto da
+`location.area === 'transcriptions' && location.documentId` — prima del
+controllo su `currentProjectId`, altrimenti un progetto di traduzione
+rimasto "corrente" in memoria vincerebbe sull'area davvero aperta.
+`BottomDrawer` riceve un `primaryTab: 'console' | 'transcriptionLog' | null`
+invece del vecchio `showConsoleTab: boolean`: `'console'` dentro un
+progetto, `'transcriptionLog'` dentro un documento di trascrizione, `null`
+altrove — le schede Sistema e Lavori restano sempre disponibili, la prima
+scheda no. `TranscriptionLogTab` (già scritto per il pannello laterale nel
+primo giro, qui solo rimontato) resta lo stesso componente.
 
 **Catalogo modelli**: `ModelEntry.supportsVision` (capacità, filtra la
 select OCR) separato da `'ocr'` in `ModelUseCase` (idoneità,

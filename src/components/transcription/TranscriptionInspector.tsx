@@ -1,4 +1,4 @@
-import { FileInput, History, Info, RotateCcw, ScanText, ScrollText, Sparkles, User } from 'lucide-react';
+import { FileInput, History, Info, RotateCcw, ScanText, Sparkles, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, InspectorShell, StatRow } from '../ui';
 import type {
@@ -10,9 +10,8 @@ import type { ViewerVersionRef } from '../../services/libraryService';
 import type { ModelProvider, Workspace } from '../../types';
 import { PagePendingOverlay } from './PagePendingOverlay';
 import { TranscriptionAssistTab } from './TranscriptionAssistTab';
-import { TranscriptionLogTab } from './TranscriptionLogTab';
 
-export type TranscriptionInspectorTab = 'history' | 'assist' | 'metadata' | 'log';
+export type TranscriptionInspectorTab = 'history' | 'assist' | 'metadata';
 
 interface TranscriptionInspectorProps {
   activeTab: TranscriptionInspectorTab;
@@ -80,7 +79,6 @@ export function TranscriptionInspector({
           icon: <Sparkles size={13} />,
         },
         { id: 'history', label: t('transcription.tabs.history'), icon: <History size={13} /> },
-        { id: 'log', label: t('transcription.tabs.log'), icon: <ScrollText size={13} /> },
         { id: 'metadata', label: t('transcription.tabs.metadata'), icon: <Info size={13} /> },
       ]}
       activeTab={activeTab}
@@ -103,14 +101,6 @@ export function TranscriptionInspector({
           onDocumentPromptChange={onDocumentOcrPromptChange}
           onSegmentPromptChange={onSegmentOcrPromptChange}
         />
-      ) : activeTab === 'log' ? (
-        document ? (
-          <TranscriptionLogTab
-            documentId={document.id}
-            panelId="transcription-log-panel"
-            labelledBy="transcription-log-tab"
-          />
-        ) : null
       ) : activeTab === 'history' ? (
         <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
           {revisions.length === 0 ? (

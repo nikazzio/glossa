@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, ListChecks, MinusCircle, Loader2, NotebookText, PanelBottom, ScrollText, Search, ShieldAlert, Terminal, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ListChecks, MinusCircle, Loader2, NotebookText, PanelBottom, ScanText, ScrollText, Search, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
@@ -12,6 +12,7 @@ import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
 import { SystemLogTab } from '../console/SystemLogTab';
+import { TranscriptionLogTab } from '../transcription/TranscriptionLogTab';
 import { JobsIndicator } from '../jobs/JobsIndicator';
 import { TerminalIconButton } from '../jobs/TerminalIconButton';
 import { JobsPanel } from '../jobs/JobsPanel';
@@ -124,7 +125,21 @@ function DrawerTab({
  * pannello di VS Code. Una destinazione sola: al passaggio del mouse un
  * riepilogo, al clic il pannello.
  */
-function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
+/**
+ * La prima scheda del cassetto cambia con l'area aperta: "Console" dentro un
+ * progetto di traduzione, "Log trascrizione" dentro un documento di
+ * trascrizione — mai insieme, mai una dentro l'altra. Nessuna delle due fuori
+ * da un'area che ne ha bisogno.
+ */
+type DrawerPrimaryTab = 'console' | 'transcriptionLog' | null;
+
+function BottomDrawer({
+  primaryTab,
+  transcriptionDocumentId,
+}: {
+  primaryTab: DrawerPrimaryTab;
+  transcriptionDocumentId?: string;
+}) {
   const { t } = useTranslation();
   const chunks = useChunksStore((s) => s.chunks);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
@@ -134,9 +149,10 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
   const setHeight = useUiStore((s) => s.setConsoleDrawerHeight);
   const drawerTab = useUiStore((s) => s.drawerTab);
   const setDrawerTab = useUiStore((s) => s.setDrawerTab);
-  // Fuori da un progetto i messaggi della pipeline non esistono: le altre due
-  // schede valgono ovunque.
-  const activeTab = showConsoleTab || drawerTab !== 'console' ? drawerTab : 'system';
+  // Fuori dall'area a cui appartiene, la prima scheda non esiste: si cade sui
+  // messaggi di sistema, che valgono ovunque.
+  const isPrimarySelected = drawerTab === 'console' || drawerTab === 'transcriptionLog';
+  const activeTab = isPrimarySelected && drawerTab !== primaryTab ? 'system' : drawerTab;
 
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
@@ -176,7 +192,7 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
         aria-label={t('jobs.drawerTabs')}
         className="flex shrink-0 items-center gap-1 border-b border-terminal-border bg-terminal-chrome px-2 py-1"
       >
-        {showConsoleTab && (
+        {primaryTab === 'console' && (
           <DrawerTab
             label={t('console.toggle')}
             id="drawer-tab-console"
@@ -185,6 +201,17 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
             onSelect={() => setDrawerTab('console')}
           >
             <Terminal size={12} />
+          </DrawerTab>
+        )}
+        {primaryTab === 'transcriptionLog' && (
+          <DrawerTab
+            label={t('transcription.log.title')}
+            id="drawer-tab-transcriptionLog"
+            controls="transcription-log-drawer-panel"
+            selected={activeTab === 'transcriptionLog'}
+            onSelect={() => setDrawerTab('transcriptionLog')}
+          >
+            <ScanText size={12} />
           </DrawerTab>
         )}
         <DrawerTab
@@ -222,6 +249,13 @@ function BottomDrawer({ showConsoleTab }: { showConsoleTab: boolean }) {
             currentChunkId={selectedChunkId}
             chunks={chunks}
             onSelectChunk={setSelectedChunkId}
+          />
+        )}
+        {activeTab === 'transcriptionLog' && transcriptionDocumentId && (
+          <TranscriptionLogTab
+            documentId={transcriptionDocumentId}
+            panelId="transcription-log-drawer-panel"
+            labelledBy="drawer-tab-transcriptionLog"
           />
         )}
         {activeTab === 'system' && (
@@ -443,7 +477,14 @@ export function AppStatusBar() {
 
   return (
     <div className="relative shrink-0">
-      {showConsoleDrawer && <BottomDrawer showConsoleTab={data.kind === 'project'} />}
+      {showConsoleDrawer && (
+        <BottomDrawer
+          primaryTab={
+            data.kind === 'project' ? 'console' : data.kind === 'transcription' ? 'transcriptionLog' : null
+          }
+          transcriptionDocumentId={data.kind === 'transcription' ? data.documentId : undefined}
+        />
+      )}
       {/* Zone stabili: contesto, stato, comandi globali. */}
       <div
         role="status"

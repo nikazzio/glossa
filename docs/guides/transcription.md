@@ -92,9 +92,10 @@ solo quando viene scritto apposta; altrimenti resta quello ereditato.
 
 La lettura parte in coda, come uno scaricamento: la trovi nel pannello
 lavori mentre procede, con la possibilità di metterla in pausa o annullarla
-allo stesso modo. La scheda **Log trascrizione**, accanto ad Assistenza,
-elenca ogni lettura fatta con il relativo costo e i token usati — la stessa
-informazione che il Log traduzione mostra per i frammenti.
+allo stesso modo. Apri il pannello in basso e scegli **Log trascrizione** —
+compare solo qui, dentro un documento di trascrizione, speculare al Log
+traduzione che vedi dentro un progetto — per l'elenco di ogni lettura fatta
+con il relativo costo e i token usati.
 
 ## Storico, ripristino e metadati
 

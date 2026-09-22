@@ -2120,7 +2120,7 @@
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
               "Il prompt che guida la lettura si può personalizzare su tre livelli — workspace, documento, singola pagina — ognuno pensato per prevalere sul precedente solo quando viene scritto apposta; altrimenti resta quello del livello sopra.",
               "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo.",
-              "La scheda \"Log trascrizione\", accanto ad Assistenza, elenca ogni lettura fatta con il relativo costo e i token usati — la stessa informazione che il Log traduzione mostra per i frammenti."
+              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione che vedi dentro un progetto — per l'elenco di ogni lettura fatta con il relativo costo e i token usati."
             ]
           },
           {

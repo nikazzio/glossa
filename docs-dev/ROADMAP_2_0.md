@@ -193,8 +193,10 @@ che leggono immagini) e prompt personalizzabile su tre livelli — workspace,
 documento, pagina. Il comando legge la pagina aperta tramite un lavoro
 persistente, stesso motore dello scaricamento; il risultato entra nello
 storico come revisione marcata "riconoscimento automatico", mai come
-sovrascrittura. Nuova scheda "Log trascrizione" accanto ad Assistenza,
-costo e token per lettura. L'ancoraggio a `source_page_id` è risolto: si
+sovrascrittura. Nuova scheda "Log trascrizione" nel cassetto in basso,
+speculare al Log traduzione — appare solo dentro un documento di
+trascrizione, mai insieme a quello — con costo e token per lettura.
+L'ancoraggio a `source_page_id` è risolto: si
 completa da sé al primo tocco di un segmento, prerequisito di tutto il resto.
 **Restano fuori da questo primo giro**: comando per leggere un intervallo di
 pagine o l'intero documento in interfaccia (la forma dati lo prevede già),

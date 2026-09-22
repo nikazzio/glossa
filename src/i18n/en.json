@@ -2120,7 +2120,7 @@
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
               "The prompt that guides the reading can be customised at three levels — workspace, document, single page — each meant to take over only when it is written on purpose; otherwise the level above still applies.",
               "The reading starts in the queue, like a download: you will find it in the jobs panel while it runs, and you can pause or cancel it the same way.",
-              "The \"Transcription log\" tab, next to Assist, lists every reading with its cost and the tokens it used — the same information the Translation log shows for chunks."
+              "Open the bottom panel and choose \"Transcription log\" — it only shows up here, inside a transcription document, mirroring the Translation log you see inside a project — for the list of every reading with its cost and the tokens it used."
             ]
           },
           {
