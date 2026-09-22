@@ -86,12 +86,33 @@ Il testo letto entra nello storico come una revisione normale, marcata
 modificabile come qualunque altra versione, e una correzione manuale
 successiva crea semplicemente la revisione dopo.
 
-Il prompt che guida la lettura appartiene **alla pagina**: la casella nella
-scheda OCR riguarda solo la carta aperta in quel momento, e quello che scrivi
-lì non tocca le altre pagine. Una pagina mai letta parte dal testo predefinito
-che trovi nelle impostazioni del workspace, alla voce OCR: cambiarlo lì cambia
-il punto di partenza delle pagine ancora intatte, mai quelle che hai già
-personalizzato.
+Il prompt che guida la lettura appartiene **al documento**: lo modifichi da
+una pagina qualsiasi e vale per tutte le pagine di quel documento, ma per
+nessun altro. Un documento nuovo parte dal prompt scelto nelle impostazioni del
+workspace, alla voce OCR, dove puoi anche caricarne uno dalla libreria dei
+prompt. Per riusare un prompt in un altro documento salvalo nella libreria dal
+comando di modifica, poi caricalo di là. Il comando di ripristino riporta il
+documento al prompt del workspace.
+
+Al modello partono l'immagine della pagina e il prompt, senza il numero di
+pagina: la numerazione stampata dalla biblioteca raramente coincide con la
+posizione nella scansione e confonderebbe solo la lettura.
+
+Sotto il modello due cerchietti scelgono quale immagine inviare:
+
+- **ottimizzata**: ridotta al lato lungo scelto nelle Impostazioni, scheda
+  Trascrizioni (1500, 2000, 2500 o 3000 pixel), e ricompressa. Un'immagine più
+  piccola non viene ingrandita;
+- **copia sul computer**: la stessa immagine del visore, senza modifiche — la
+  pagina del libro scaricato, oppure quella salvata in cache mentre sfogli
+  online. Online può essere più piccola dell'ottimizzata, perché il visore
+  chiede alla biblioteca una misura già pronta. Se la copia manca (cache
+  svuotata per il limite di spazio, libro scaricato solo in parte) si invia
+  l'ottimizzata.
+
+La scelta di partenza sta nelle Impostazioni; nello Studio la cambi per la
+sessione, senza che resti salvata nel documento. Con il pannello a destra
+chiuso il comando di lettura resta sotto il comando di riapertura.
 
 Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura,
 per non scrivere su un testo che sta per essere sostituito; nella riga in alto
@@ -102,13 +123,14 @@ La lettura parte in coda, come uno scaricamento: la trovi nel pannello
 lavori mentre procede, con la possibilità di metterla in pausa o annullarla
 allo stesso modo. Un intoppo passeggero — il servizio che chiede di rallentare,
 una connessione caduta per un istante — viene ritentato da solo; una chiave
-sbagliata o un modello inesistente no, perché riprovare darebbe la stessa
-risposta.
+sbagliata, un modello inesistente o una risposta vuota no, perché riprovare
+darebbe la stessa risposta. Una risposta vuota di solito vuol dire che sulla
+pagina il modello non ha trovato testo.
 
 Apri il pannello in basso e scegli **Log trascrizione** — compare solo qui,
 dentro un documento di trascrizione, speculare al Log traduzione che vedi
 dentro un progetto. Ogni lettura lascia quattro righe: l'avvio con fornitore e
-modello, l'immagine inviata con misura e peso, il prompt inviato per intero
+modello, l'immagine inviata con misura reale, peso e provenienza (libro scaricato, cache o biblioteca), il prompt inviato per intero
 (apribile riga per riga), e l'esito con durata, token, costo stimato e numero
 della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per
 livello, e il raggruppamento per pagina.

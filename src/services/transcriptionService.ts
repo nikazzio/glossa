@@ -30,10 +30,11 @@ export interface TranscriptionDocument {
   workspace_id: string;
   title: string;
   status: TranscriptionDocumentStatus;
-  /** Fornitore e modello OCR del documento (#220): NULL eredita dal
-   *  workspace. Il prompt non sta qui: si scrive per pagina. */
+  /** Fornitore, modello e prompt OCR del documento (#220): NULL eredita dal
+   *  workspace. Il prompt vale per tutte le pagine del documento. */
   ocr_provider: string | null;
   ocr_model: string | null;
+  ocr_prompt: string | null;
 }
 
 export interface TranscriptionSegment {
@@ -42,9 +43,6 @@ export interface TranscriptionSegment {
   position: number;
   label: string | null;
   source_page_id: string | null;
-  /** L'unico prompt OCR modificabile (#220): vale solo per questa pagina.
-   *  NULL = mai toccato, si parte dal testo predefinito del workspace. */
-  ocr_prompt: string | null;
   approved_revision_id: string | null;
 }
 
@@ -76,6 +74,7 @@ export async function createDocument(
     status: 'active',
     ocr_provider: null,
     ocr_model: null,
+    ocr_prompt: null,
   };
   await execute(
     `INSERT INTO transcription_documents (id, source_version_id, workspace_id, title, status)
@@ -106,11 +105,11 @@ export async function getDocument(documentId: string): Promise<TranscriptionDocu
   return rows[0] ?? null;
 }
 
-/** Fornitore e modello OCR del documento (#220): `null`/`''` per un campo
- *  significa «torna a ereditare dal workspace». */
+/** Fornitore, modello e prompt OCR del documento (#220): `null`/`''` per un
+ *  campo significa «torna a ereditare dal workspace». */
 export async function updateDocumentOcrSettings(
   documentId: string,
-  updates: Partial<{ ocrProvider: string | null; ocrModel: string | null }>,
+  updates: Partial<{ ocrProvider: string | null; ocrModel: string | null; ocrPrompt: string | null }>,
 ): Promise<void> {
   const sets: string[] = [];
   const params: unknown[] = [];
@@ -123,18 +122,13 @@ export async function updateDocumentOcrSettings(
     sets.push(`ocr_model = $${index++}`);
     params.push(updates.ocrModel || null);
   }
+  if (updates.ocrPrompt !== undefined) {
+    sets.push(`ocr_prompt = $${index++}`);
+    params.push(updates.ocrPrompt || null);
+  }
   if (sets.length === 0) return;
   params.push(documentId);
   await execute(`UPDATE transcription_documents SET ${sets.join(', ')} WHERE id = $${index}`, params);
-}
-
-/** Il prompt OCR di una pagina (#220): `null` torna al testo predefinito
- *  del workspace. */
-export async function updateSegmentOcrPrompt(segmentId: string, prompt: string | null): Promise<void> {
-  await execute('UPDATE transcription_segments SET ocr_prompt = $2 WHERE id = $1', [
-    segmentId,
-    prompt || null,
-  ]);
 }
 
 export async function setDocumentStatus(
@@ -162,7 +156,6 @@ export async function addSegment(
     position,
     label,
     source_page_id: sourcePageId,
-    ocr_prompt: null,
     approved_revision_id: null,
   };
   await execute(
@@ -193,6 +186,15 @@ export async function getSegmentByPosition(
   return rows[0] ?? null;
 }
 
+/** Da posizione di una pagina nello Studio (da 0: la copertina è 0) a
+ *  indice della stessa pagina nel manifesto (da 1), la numerazione usata dal
+ *  deposito, dalla cache e da `source_pages`. **Unico punto** della
+ *  conversione: chi confronta le due numerazioni senza passare da qui prende
+ *  la pagina precedente. */
+export function manifestIndexOf(position: number): number {
+  return position + 1;
+}
+
 /** L'id della pagina logica corrispondente, se il documento ha una copia
  *  collegata e quella pagina è già passata da un lavoro di scaricamento
  *  (`source_pages` si popola lì, non alla sola apertura del manifesto). */
@@ -201,7 +203,7 @@ async function resolveSourcePageId(documentId: string, position: number): Promis
   if (!document?.source_version_id) return null;
   const rows = await select<{ id: string }>(
     'SELECT id FROM source_pages WHERE source_version_id = $1 AND position = $2',
-    [document.source_version_id, position],
+    [document.source_version_id, manifestIndexOf(position)],
   );
   return rows[0]?.id ?? null;
 }
@@ -223,11 +225,13 @@ export async function ensureSegment(
     return addSegment(documentId, position, label, sourcePageId);
   }
   const labelChanged = Boolean(label) && label !== existing.label;
-  const needsSourcePageId = existing.source_page_id === null;
-  const resolvedSourcePageId = needsSourcePageId
-    ? await resolveSourcePageId(documentId, position)
-    : existing.source_page_id;
-  const sourcePageIdChanged = needsSourcePageId && resolvedSourcePageId !== null;
+  // Ricalcolato a ogni tocco, non solo quando manca: un collegamento
+  // sbagliato (per esempio scritto prima di una correzione) si rimette a
+  // posto da solo invece di restare lì per sempre. Una pagina logica non
+  // ancora nota (copia mai scaricata) non cancella quello che c'è.
+  const found = await resolveSourcePageId(documentId, position);
+  const resolvedSourcePageId = found ?? existing.source_page_id;
+  const sourcePageIdChanged = resolvedSourcePageId !== existing.source_page_id;
   if (!labelChanged && !sourcePageIdChanged) return existing;
   const nextLabel = labelChanged ? label : existing.label;
   await execute(
@@ -416,19 +420,15 @@ export interface ResolvedOcrSettings {
   model: string;
 }
 
-/** Il prompt è quello della pagina, e solo quello: una pagina mai toccata
- *  parte dal testo predefinito del workspace, ma da quel momento in poi
- *  quello che scrivi su una pagina non tocca mai le altre (scelta di Niki,
- *  22 settembre 2026 — l'ereditarietà fra pagine confonde e costringe a
- *  tornare indietro di decine di carte per cambiare una riga).
- *  Fornitore e modello restano invece per documento, con il workspace come
- *  valore di partenza: sono una scelta di attrezzatura, non di contenuto. */
+/** Tutto per documento, con il workspace come punto di partenza: il prompt
+ *  modificato da una pagina qualsiasi vale per tutte le pagine di quel
+ *  documento e per nessun altro. Per riusarlo altrove si salva nella libreria
+ *  dei prompt (scelta di Niki, 22 settembre 2026). */
 export function resolveOcrSettings(
-  segment: Pick<TranscriptionSegment, 'ocr_prompt'> | null,
-  document: Pick<TranscriptionDocument, 'ocr_provider' | 'ocr_model'>,
+  document: Pick<TranscriptionDocument, 'ocr_provider' | 'ocr_model' | 'ocr_prompt'>,
   workspace: Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel'>,
 ): ResolvedOcrSettings {
-  const prompt = segment?.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
+  const prompt = document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
   const provider = (document.ocr_provider || workspace.ocrDefaultProvider || '') as ModelProvider | '';
   const model = document.ocr_model || workspace.ocrDefaultModel || '';
   return { prompt, provider, model };

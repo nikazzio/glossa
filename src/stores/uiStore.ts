@@ -45,6 +45,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab =
   | 'translations'
+  | 'transcriptions'
   | 'provider'
   | 'typography'
   | 'storage'

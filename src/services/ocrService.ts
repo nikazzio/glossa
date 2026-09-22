@@ -1,7 +1,15 @@
-import { fetchViewerManifestWithRetry, pageSourceUrl } from './iiifViewerService';
-import { OCR_IMAGE_EDGE } from '../constants';
+import {
+  buildsImagesOnDemand,
+  fetchViewerManifestWithRetry,
+  pageSourceUrl,
+  wholePageAttempts,
+  type ViewerPage,
+} from './iiifViewerService';
+import { readableLocalSize, versionInventory } from './inventoryService';
+import type { OcrImagePreferences } from './ocrImageSettingsService';
 import { enqueueOcrPages, type Job, type OcrPageJobInput } from './jobsService';
 import {
+  manifestIndexOf,
   resolveOcrSettings,
   type TranscriptionDocument,
   type TranscriptionSegment,
@@ -49,27 +57,48 @@ export function ocrUnavailableReason(
   return null;
 }
 
-async function buildCacheRequest(
-  viewerRef: ViewerVersionRef,
-  pageIndex: number,
-): Promise<CacheRequest> {
+interface ManifestPage {
+  page: ViewerPage;
+  presentation2: boolean;
+}
+
+async function manifestPageOf(viewerRef: ViewerVersionRef, pageIndex: number): Promise<ManifestPage> {
   if (!viewerRef.sourceUrl) throw new Error('noDigitization');
   const manifest = await fetchViewerManifestWithRetry(
     viewerRef.sourceUrl,
     viewerRef.providerKey,
     viewerRef.versionId,
   );
-  const page = manifest.pages.find((candidate) => candidate.index === pageIndex);
+  const page = manifest.pages.find((candidate) => candidate.index === manifestIndexOf(pageIndex));
   if (!page) throw new Error('noDigitization');
-  const size = String(OCR_IMAGE_EDGE);
+  return { page, presentation2: manifest.presentation2 };
+}
+
+function pageRequest(
+  viewerRef: ViewerVersionRef,
+  page: ViewerPage,
+  size: string,
+  remoteUrl: string | null,
+): CacheRequest {
   return {
     kind: 'page',
     versionId: viewerRef.versionId,
     index: page.index,
     size,
-    remoteUrl: pageSourceUrl(page.imageService, size, manifest.presentation2),
+    remoteUrl,
     providerKey: viewerRef.providerKey,
   };
+}
+
+/** Le copie della pagina che il visore può avere già salvato, in ordine: la
+ *  misura del libro scaricato, poi quelle che il visore chiede navigando
+ *  online. Senza indirizzo remoto: una copia che manca non si scarica. */
+async function localRequestsFor(viewerRef: ViewerVersionRef, page: ViewerPage): Promise<CacheRequest[]> {
+  const inventory = await versionInventory(viewerRef.versionId);
+  const downloaded = inventory ? readableLocalSize(inventory, null) : null;
+  const online = wholePageAttempts(page, null, buildsImagesOnDemand(viewerRef.providerKey));
+  const sizes = [...new Set([...(downloaded ? [downloaded] : []), ...online])];
+  return sizes.map((size) => pageRequest(viewerRef, page, size, null));
 }
 
 interface BuildPageInputParams {
@@ -80,13 +109,17 @@ interface BuildPageInputParams {
   workspace: OcrWorkspace;
   viewerRef: ViewerVersionRef;
   pageLabel: string;
+  image: OcrImagePreferences;
 }
 
 async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobInput> {
-  const { document, segment, workspace, viewerRef, pageLabel } = params;
-  const settings = resolveOcrSettings(segment, document, workspace);
+  const { document, segment, workspace, viewerRef, pageLabel, image } = params;
+  const settings = resolveOcrSettings(document, workspace);
   if (!settings.provider || !settings.model) throw new Error('noModelConfigured');
-  const cacheRequest = await buildCacheRequest(viewerRef, segment.position);
+  const { page, presentation2 } = await manifestPageOf(viewerRef, segment.position);
+  const size = String(image.edge);
+  const cacheRequest = pageRequest(viewerRef, page, size, pageSourceUrl(page.imageService, size, presentation2));
+  const localRequests = image.mode === 'local' ? await localRequestsFor(viewerRef, page) : [];
   return {
     segmentId: segment.id,
     documentId: document.id,
@@ -94,7 +127,8 @@ async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobI
     prompt: settings.prompt,
     provider: settings.provider,
     model: settings.model,
-    imageEdge: OCR_IMAGE_EDGE,
+    imageEdge: image.edge,
+    localRequests,
     pageLabel,
   };
 }

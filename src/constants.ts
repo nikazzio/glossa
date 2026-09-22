@@ -44,11 +44,11 @@ export const DEFAULT_OCR_PROVIDER: ModelProvider = 'openai';
 export const DEFAULT_OCR_MODEL = 'gpt-5.6-terra';
 export const DEFAULT_OCR_PROMPT = `Transcribe the text visible in the image. Preserve the original spelling, punctuation and line breaks. Do not correct errors, do not modernise spelling, do not add text that is not in the image. Mark an illegible word with [?] instead of guessing. Return the text only, with no comments and no description of the image.`;
 
-// Longest side, in pixels, an OCR image is resized to before sending — keeps
-// the request small without losing legibility for most printed/handwritten
-// sources. One value for every read: no screen sets it, so it is a constant
-// and not a column.
-export const OCR_IMAGE_EDGE = 2000;
+// Longest side, in pixels, of the optimised OCR image. Chosen in Settings →
+// Transcriptions among these values; 2000 keeps the request small without
+// losing legibility for most printed/handwritten sources.
+export const OCR_IMAGE_EDGES = [1500, 2000, 2500, 3000] as const;
+export const DEFAULT_OCR_IMAGE_EDGE = 2000;
 
 // Derived from MODEL_CATALOG — edit catalog.ts to update prices
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = Object.fromEntries(

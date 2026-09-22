@@ -1,33 +1,26 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Cpu, Loader2, Lock, LockOpen, ScanText, TriangleAlert } from 'lucide-react';
+import { Cpu, Lock, LockOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AuditPromptEditor } from '../pipeline/AuditPromptEditor';
-import { FieldLabel, IconButton, Select, Tooltip } from '../ui';
+import { IconButton, SectionLabel, Select } from '../ui';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { getVisionCapableModelIds, LLM_PROVIDER_ORDER, providerSupportsVision } from '../../models/catalog';
+import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import { DEFAULT_OCR_PROMPT } from '../../constants';
-import {
-  resolveOcrSettings,
-  type TranscriptionDocument,
-  type TranscriptionSegment,
-} from '../../services/transcriptionService';
-import { ocrUnavailableReason, type OcrUnavailableReason } from '../../services/ocrService';
+import { resolveOcrSettings, type TranscriptionDocument } from '../../services/transcriptionService';
 import type { ViewerVersionRef } from '../../services/libraryService';
+import type { OcrImageMode, OcrImagePreferences } from '../../services/ocrImageSettingsService';
 import type { ModelProvider, PromptTemplate, Workspace } from '../../types';
-
-const UNAVAILABLE_REASON_KEYS: Record<OcrUnavailableReason, string> = {
-  noDigitization: 'transcription.assist.noDigitization',
-  noModelConfigured: 'transcription.assist.noModelConfigured',
-};
+import { OcrImageModePicker } from './OcrImageModePicker';
+import { OcrStartButton } from './OcrStartButton';
 
 interface TranscriptionAssistTabProps {
   document: TranscriptionDocument | null;
-  segment: TranscriptionSegment | null;
   workspace: Pick<Workspace, 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'> | null;
   viewerRef: ViewerVersionRef | null;
   pageLabel: string;
@@ -36,15 +29,17 @@ interface TranscriptionAssistTabProps {
   onStartOcr: () => void;
   onDocumentProviderChange: (provider: ModelProvider | '', model: string) => void;
   onDocumentModelChange: (model: string) => void;
-  onPagePromptChange: (prompt: string) => void;
+  /** `null` torna al prompt di partenza del workspace. */
+  onDocumentPromptChange: (prompt: string | null) => void;
+  image: OcrImagePreferences;
+  onImageModeChange: (mode: OcrImageMode) => void;
 }
 
-/** Scheda OCR dello Studio di trascrizione (#220): fornitore e modello per il
- *  documento, il prompt **della pagina aperta** — uno solo, non una cascata di
- *  editor uguali — e il comando di lettura. */
+/** Scheda OCR dello Studio di trascrizione (#220): fornitore, modello e
+ *  prompt del documento, e il comando di lettura della pagina aperta. Stessa
+ *  resa della scheda traduzione: due sezioni, pochissime scritte. */
 export function TranscriptionAssistTab({
   document,
-  segment,
   workspace,
   viewerRef,
   pageLabel,
@@ -53,7 +48,9 @@ export function TranscriptionAssistTab({
   onStartOcr,
   onDocumentProviderChange,
   onDocumentModelChange,
-  onPagePromptChange,
+  onDocumentPromptChange,
+  image,
+  onImageModeChange,
 }: TranscriptionAssistTabProps) {
   const { t } = useTranslation();
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
@@ -84,7 +81,7 @@ export function TranscriptionAssistTab({
     setIsRefining(true);
     try {
       const refined = await llmService.refinePrompt(prompt, resolvedProvider, resolvedModel, 'ocr');
-      onPagePromptChange(refined);
+      onDocumentPromptChange(refined);
       toast.success(t('pipeline.refined'));
     } catch (err: unknown) {
       toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
@@ -102,16 +99,20 @@ export function TranscriptionAssistTab({
   }
 
   const documentModel = document.ocr_model ?? '';
-  const resolved = resolveOcrSettings(segment, document, workspace);
+  const resolved = resolveOcrSettings(document, workspace);
   const ocrTemplates = templates.filter((tmpl) => tmpl.context === 'ocr');
   const canRefine = resolved.provider ? canRefineWithProvider(resolved.provider, keyStatuses) : false;
   const refineLabel = resolved.provider ? formatProviderModelLabel(resolved.provider, resolved.model) : '';
-  const reason = ocrUnavailableReason(viewerRef, resolved.provider, resolved.model);
 
   const effectiveProvider = overridden ? documentProvider : resolved.provider;
   const effectiveModel = overridden ? documentModel : resolved.model;
   const unlockedModelOptions = effectiveProvider ? getVisionCapableModelIds(effectiveProvider, ollamaModels) : [];
   const defaultPrompt = workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
+  // Testo uguale al prompt di partenza = nessuna scelta del documento: il
+  // documento torna a seguire il workspace invece di congelarne una copia.
+  const handlePromptChange = (prompt: string) => {
+    onDocumentPromptChange(prompt.trim() === defaultPrompt.trim() ? null : prompt);
+  };
 
   const handleProviderChange = (nextProvider: ModelProvider | '') => {
     if (!nextProvider) {
@@ -150,42 +151,25 @@ export function TranscriptionAssistTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
-      <div className="space-y-3 border-y border-editorial-border/70 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <div className="flex items-center justify-between gap-2">
-          <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
-            {t('transcription.assist.documentModel')}
-          </FieldLabel>
-          <div className="flex items-center gap-1.5">
-            <Tooltip label={reason ? t(UNAVAILABLE_REASON_KEYS[reason]) : t('transcription.assist.ready')}>
-              {reason ? (
-                <TriangleAlert size={14} className="shrink-0 text-editorial-warning" aria-hidden="true" />
-              ) : (
-                <CheckCircle2 size={14} className="shrink-0 text-editorial-success" aria-hidden="true" />
-              )}
-            </Tooltip>
-            <IconButton
-              size="sm"
-              tone="accent"
-              onClick={onStartOcr}
-              disabled={starting || reading || reason !== null}
-              title={
-                reading
-                  ? t('transcription.assist.readingThisPage', { page: pageLabel })
-                  : reason
-                    ? t(UNAVAILABLE_REASON_KEYS[reason])
-                    : t('transcription.assist.readThisPage')
-              }
-            >
-              {starting || reading ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
-            </IconButton>
-          </div>
+          <SectionLabel icon={Cpu} label={t('transcription.assist.documentModel')} />
+          <OcrStartButton
+            document={document}
+            workspace={workspace}
+            viewerRef={viewerRef}
+            pageLabel={pageLabel}
+            starting={starting}
+            reading={reading}
+            onStart={onStartOcr}
+          />
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Select
             value={effectiveProvider}
             onChange={(value) => handleProviderChange(value as ModelProvider | '')}
             disabled={!overridden}
-            className="w-28 shrink-0 font-bold uppercase"
+            className="font-bold uppercase"
             ariaLabel={t('models.provider')}
             options={providerOptions}
           />
@@ -195,12 +179,15 @@ export function TranscriptionAssistTab({
                 value={effectiveModel}
                 onChange={onDocumentModelChange}
                 disabled={!overridden}
-                className="flex-1 font-mono"
+                className="flex-1"
                 ariaLabel={t('transcription.assist.documentModel')}
                 options={unlockedModelOptions.map((entry) => ({ value: entry, label: entry }))}
               />
               {effectiveProvider && (
-                <ModelCapabilityHint provider={effectiveProvider} model={effectiveModel} iconOnly />
+                <>
+                  <ModelCapabilityHint provider={effectiveProvider} model={effectiveModel} iconOnly />
+                  <DeprecatedModelBadge provider={effectiveProvider} model={effectiveModel} />
+                </>
               )}
             </div>
           ) : (
@@ -211,7 +198,7 @@ export function TranscriptionAssistTab({
               onChange={(e) => onDocumentModelChange(e.target.value)}
               disabled={!overridden}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={t('transcription.assist.documentModel')}
             />
           )}
@@ -226,28 +213,30 @@ export function TranscriptionAssistTab({
             {overridden ? <LockOpen size={13} /> : <Lock size={13} />}
           </IconButton>
         </div>
+        <OcrImageModePicker value={image.mode} edge={image.edge} onChange={onImageModeChange} />
       </div>
 
-      {/* Un prompt solo, quello della pagina aperta. Quello che scrivi qui
-          vale per questa pagina e non tocca le altre. */}
+      {/* Il prompt del documento: modificato da una pagina qualsiasi vale per
+          tutte le sue pagine, e per nessun altro documento. */}
       <AuditPromptEditor
-        label={t('transcription.assist.pagePrompt', { page: pageLabel })}
-        hint={t('transcription.assist.pagePromptHint')}
-        value={segment?.ocr_prompt ?? ''}
+        variant="stage"
+        label={t('transcription.assist.documentPrompt')}
+        hint=""
+        value={resolved.prompt}
         placeholder={defaultPrompt}
         templates={ocrTemplates}
         isRefining={isRefining}
         canRefine={canRefine}
         refineLabel={refineLabel}
-        onRefine={() => void handleRefine(resolved.provider, resolved.model, segment?.ocr_prompt || defaultPrompt)}
-        onChange={onPagePromptChange}
-        onApplyTemplate={(template: PromptTemplate) => onPagePromptChange(template.prompt)}
+        onRefine={() => void handleRefine(resolved.provider, resolved.model, resolved.prompt)}
+        onChange={handlePromptChange}
+        onApplyTemplate={(template: PromptTemplate) => handlePromptChange(template.prompt)}
         saveTemplate={saveTemplate}
         onDeleteTemplate={deleteTemplate}
         defaultModel={resolved.model}
         defaultProvider={resolved.provider}
         defaultValue={defaultPrompt}
-        onReset={() => onPagePromptChange('')}
+        onReset={() => onDocumentPromptChange(null)}
         templateContext="ocr"
         templateWorkflow="transcription"
       />

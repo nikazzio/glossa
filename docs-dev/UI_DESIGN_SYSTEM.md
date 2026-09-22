@@ -379,6 +379,22 @@ I dati della riga stanno su righe separate (`StatRow` dentro un `dl`), non
 concatenati con punti su una riga sola: in una colonna stretta quattro dati
 separati da «·» non si leggono.
 
+### Pannelli modello + prompt
+
+Ogni pannello che configura una chiamata a un modello (fase di traduzione,
+scheda OCR della trascrizione) ha la stessa forma: una sezione **Modello**
+(bordo sinistro neutro, fornitore + modello + lucchetto su una riga, comandi
+di taratura sotto) e una sezione **Prompt** (bordo sinistro verde, pillola
+«Personalizzato», solo ripristino e modifica fuori dalla modifica). Nessun
+testo di spiegazione fisso: il perché sta nei suggerimenti dei comandi.
+L'editor prompt è uno solo, `AuditPromptEditor`, con `variant="stage"` per
+questa resa; la variante predefinita resta quella del giudizio traduzione.
+Le scelte di taratura sotto il modello (livello di ragionamento, immagine
+inviata dall'OCR) sono cerchietti da 24 px con icona e suggerimento, preceduti
+da un'icona di categoria. Il comando principale di un pannello che si chiude
+(leggi la pagina) resta anche nel pannello chiuso, sotto il comando di
+riapertura.
+
 ### Barra di stato
 
 Tre zone stabili: contesto a sinistra, stato centrale, comandi globali a

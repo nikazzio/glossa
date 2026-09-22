@@ -25,7 +25,7 @@ import {
   type ImageSource,
 } from '../../services/cacheService';
 import { libraryPageUrl } from '../../services/libraryLinks';
-import { versionInventory, type VersionInventory } from '../../services/inventoryService';
+import { readableLocalSize, versionInventory } from '../../services/inventoryService';
 import { errorMessage, logger } from '../../utils/logger';
 import { networkErrorHintKey } from '../../services/viewerErrorHint';
 
@@ -87,20 +87,6 @@ interface PageViewerProps {
 export type PageStatus =
   | { index: number; state: 'loading' }
   | { index: number; state: 'error'; message: string };
-
-/**
- * Quale cartella di misura leggere sul computer: quella chiesta, se ha pagine,
- * altrimenti la più fornita. Nessuna scelta implicita fra due misure: una
- * versione ridotta si legge solo se qualcuno l'ha chiesta.
- */
-function readableSize(inventory: VersionInventory, preferred: string | null): string | null {
-  const wanted = preferred
-    ? inventory.sizes.find((size) => size.sizeTag === preferred && size.pages > 0)
-    : undefined;
-  if (wanted) return wanted.sizeTag;
-  const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);
-  return principal && principal.pages > 0 ? principal.sizeTag : null;
-}
 
 const TILE_LOAD_FAILED = 'tile_load_failed';
 
@@ -259,14 +245,14 @@ export function PageViewer({
    */
   const refreshLocalSize = useCallback(async () => {
     const inventory = await versionInventory(versionId);
-    setLocalSize(inventory ? readableSize(inventory, preferredLocalSize) : null);
+    setLocalSize(inventory ? readableLocalSize(inventory, preferredLocalSize) : null);
   }, [versionId, preferredLocalSize]);
 
   useEffect(() => {
     let cancelled = false;
     void versionInventory(versionId).then((inventory) => {
       if (cancelled) return;
-      setLocalSize(inventory ? readableSize(inventory, preferredLocalSize) : null);
+      setLocalSize(inventory ? readableLocalSize(inventory, preferredLocalSize) : null);
     });
     return () => {
       cancelled = true;

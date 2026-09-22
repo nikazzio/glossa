@@ -297,12 +297,23 @@ pub fn image_source(app: tauri::AppHandle, request: CacheRequest) -> Option<&'st
 /// megabyte, e riportarlo alla finestra per rimandarlo indietro da leggere
 /// significava trasformarlo due volte in un elenco di numeri.
 pub async fn bytes_of(app: &tauri::AppHandle, request: &CacheRequest) -> Result<Vec<u8>, String> {
+    bytes_and_source_of(app, request)
+        .await
+        .map(|(_, bytes)| bytes)
+}
+
+/// Come `bytes_of`, dicendo anche da dove sono arrivati: il log OCR lo mostra,
+/// perché «dal deposito» e «riscaricata dalla biblioteca» non costano uguale.
+pub async fn bytes_and_source_of(
+    app: &tauri::AppHandle,
+    request: &CacheRequest,
+) -> Result<(Source, Vec<u8>), String> {
     let (source, bytes) = resolve_and_release(app, request).await?;
     if let Some(cache) = cache(app) {
         cache.served(source, bytes.len());
         cache.note_source(request.key().as_str(), source);
     }
-    Ok(bytes)
+    Ok((source, bytes))
 }
 
 /// Deposito, cache, deposito a misura più grande, biblioteca: in quest'ordine.

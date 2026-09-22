@@ -85,11 +85,31 @@ The text that comes back enters the history as a normal revision, marked
 editable like any other version, and a later manual correction simply
 creates the next revision.
 
-The prompt that guides the reading belongs **to the page**: the box in the OCR
-tab is about the open folio only, and what you write there never touches the
-other pages. A page that has never been read starts from the default text in
-the workspace settings, under OCR: changing it there changes the starting
-point of untouched pages only, never the ones you already customised.
+The prompt that guides the reading belongs **to the document**: you edit it
+from any page and it applies to every page of that document, but to no other.
+A new document starts from the prompt chosen in the workspace settings, under
+OCR, where you can also load one from the prompt library. To reuse a prompt in
+another document, save it to the library from the edit command, then load it
+there. The reset command brings the document back to the workspace prompt.
+
+The model receives the page image and the prompt, without the page number: the
+library's printed numbering rarely matches the position in the scan and would
+only confuse the reading.
+
+Under the model, two small circles choose which image is sent:
+
+- **optimised**: reduced to the long side chosen in Settings, Transcriptions
+  tab (1500, 2000, 2500 or 3000 pixels), and recompressed. A smaller image is
+  not enlarged;
+- **copy on this computer**: the same image as the viewer, unchanged — the
+  downloaded book's page, or the one saved in the cache while browsing online.
+  Online it can be smaller than the optimised one, because the viewer asks the
+  library for a ready-made size. If the copy is missing (cache emptied by its
+  space limit, book only partly downloaded) the optimised one is sent.
+
+The starting choice is in Settings; in the Studio you change it for the
+session, without it being saved in the document. With the right panel closed,
+the reading command stays under the reopen command.
 
 While a page is being read its sheet is veiled and stays read-only, so you
 don't type into text that is about to be replaced; a pill in the top row of
@@ -99,13 +119,14 @@ ahead in the meantime.
 The reading starts in the queue, like a download: you'll find it in the
 jobs panel while it runs, with the option to pause or cancel it the same
 way. A passing problem — the service asking you to slow down, a connection
-dropping for a moment — is retried on its own; a wrong key or a missing model
-is not, because retrying would give the same answer.
+dropping for a moment — is retried on its own; a wrong key, a missing model or
+an empty answer is not, because retrying would give the same answer. An empty
+answer usually means the model found no text on the page.
 
 Open the bottom panel and choose **Transcription log** — it only shows up
 here, inside a transcription document, mirroring the Translation log you see
 inside a project. Every reading leaves four rows: the start with provider and
-model, the image that was sent with its size and weight, the full prompt that
+model, the image that was sent with its real size, weight and origin (downloaded book, cache or library), the full prompt that
 was sent (expandable row by row), and the outcome with duration, tokens,
 estimated cost and the number of the revision created. On top there are
 search, filters by row type and by level, and grouping by page.

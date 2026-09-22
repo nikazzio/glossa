@@ -518,8 +518,11 @@ verità finale.
 **Schema** (consolidato in `0001_baseline_2_0.sql`, nessuna migrazione
 incrementale — beta privata): `workspaces.ocr_default_{prompt,provider,model}`
 (`TEXT NOT NULL DEFAULT ''`, vuoto = nessun default a quel livello),
-`transcription_documents.ocr_{provider,model}` (`NULL` eredita dal
-workspace), `transcription_segments.ocr_prompt`. `operation_logs.transcription_document_id` /
+`transcription_documents.ocr_{provider,model,prompt}` (`NULL` eredita dal
+workspace). `transcription_segments.ocr_prompt` e
+`transcription_documents.ocr_image_edge` esistono nello schema ma **nessuno li
+legge né li scrive**: da ripulire insieme alle altre colonne inutilizzate
+(vedi STATO_SESSIONE). `operation_logs.transcription_document_id` /
 `transcription_segment_id` (`ON DELETE SET NULL`, mai `CASCADE`, stessa
 regola di `chunk_id`: la cronologia dei costi non sparisce se il documento si
 elimina).
@@ -533,17 +536,28 @@ Responses sia Chat Completions), Gemini `inline_data`, Ollama campo
 `images` (base64 nudo, senza prefisso data-URL). Nessuna immagine ⇒ stesso
 corpo di richiesta di prima, byte per byte — invariante coperto da test in
 ogni provider. `llm/prompts.rs::build_ocr_prompt` compone persona OCR
-(cacheable), prompt della pagina (non cacheable) e messaggio utente con
-immagine + id pagina.
+(cacheable), prompt del documento (non cacheable) e messaggio utente con
+immagine + testo fisso (`OCR_USER_MESSAGE`). **Nessun numero di pagina al
+modello**: l'etichetta del manifesto è la numerazione stampata della
+biblioteca («3» per la nona carta), non aiuta a trascrivere e confonde.
 
 **Catena pagina → byte, mai costruita in Rust.** `transcription_segments.position`
-— lo stesso indice che il visore mostra, non `source_page_id`, che non è un
-prerequisito — è l'indice di manifesto. Il frontend, che ha già in mano il
+è la posizione nel visore **da 0** (`PageViewer.currentIndex`), non
+`ViewerPage.index`, che è l'indice di manifesto **da 1** — lo stesso di
+`CacheRequest::Page.index`, dei file del deposito (`0001.jpg`) e di
+`source_pages.position`. La conversione passa **solo** da
+`transcriptionService.manifestIndexOf(position)`, sia per la pagina inviata
+all'OCR sia per `source_pages`: confrontare `index === position` mandava al
+modello la pagina precedente. `ensureSegment` ricalcola `source_page_id` a ogni
+tocco (una copia mai scaricata non cancella quello che c'è), così un
+collegamento sbagliato si corregge da solo. Coperto da test in
+`ocrService.test.ts` e `transcriptionService.test.ts`. Il frontend, che ha già in mano il
 manifesto aperto nel visore (`iiifViewerService.fetchViewerManifestWithRetry`
 + `pageSourceUrl`), congela una `CacheRequest::Page` completa (con
 `remoteUrl`) dentro la configurazione del lavoro. Il gestore Rust
 (`ocr::handler::OcrJobHandler`) la passa **inalterata** a
-`httpcache::commands::bytes_of`, la stessa catena che il visore usa per
+`httpcache::commands::bytes_and_source_of` (come `bytes_of`, più la
+provenienza per il log), la stessa catena che il visore usa per
 mostrare le pagine: deposito alla misura esatta → cache di rete → deposito a
 misura più grande (ridotta al volo) → biblioteca remota. Una copia solo in
 cache (mai scaricata formalmente, solo vista) è servita da lì, allo stesso
@@ -551,21 +565,35 @@ modo — l'OCR non chiede altro. Limite v1: `src/services/ocrService.ts`
 risolve solo copie `versionKind === 'iiif_manifest'` — un documento unico
 (PDF) resta fuori da questo primo giro.
 
-**Un prompt solo, quello della pagina** (decisione di Niki, 22 settembre
-2026). `transcriptionService.resolveOcrSettings` è la sola fonte: il prompt è
-`segment.ocr_prompt`, e una pagina mai toccata parte dal testo predefinito del
-workspace (`DEFAULT_OCR_PROMPT` come ultimo ripiego). **Nessuna ereditarietà
-fra pagine**: quello che si scrive su una pagina non tocca le altre, né in
-avanti né indietro — una cascata a tre livelli era invisibile all'uso (tre
-editor identici in fila nel pannello) e costringeva a tornare indietro di
-decine di carte per cambiare una riga. Provider e modello restano invece per
-documento con il workspace come partenza: sono scelta di attrezzatura, non di
-contenuto. `DEFAULT_OCR_PROVIDER`/`DEFAULT_OCR_MODEL` (`openai`/`gpt-5.6-terra`)
+**Un prompt per documento** (decisione di Niki, 22 settembre 2026).
+`transcriptionService.resolveOcrSettings(document, workspace)` è la sola
+fonte: `document.ocr_prompt`, altrimenti il prompt del workspace, altrimenti
+`DEFAULT_OCR_PROMPT`. Si modifica da una pagina qualsiasi e vale per tutte le
+pagine di quel documento, per nessun altro; riusarlo altrove passa dalla
+libreria dei prompt (`prompt_templates`, contesto `ocr`), da cui il workspace
+carica anche il proprio punto di partenza (copia del testo, non riferimento).
+Un testo identico al prompt di partenza si salva come `NULL`: il documento
+torna a seguire il workspace invece di congelarne una copia. Provider e
+modello seguono la stessa regola, per documento con il workspace come
+partenza. `DEFAULT_OCR_PROVIDER`/`DEFAULT_OCR_MODEL` (`openai`/`gpt-5.6-terra`)
 coprono il caso di un workspace con le colonne vuote: fascia media di
 proposito, il fondo del listino sbaglia abbastanza da sembrare rotto su una
-pagina manoscritta. `OCR_IMAGE_EDGE` è una costante e non una colonna: nessuna
-schermata la imposta, e una colonna che nessuno scrive è solo una colonna da
-mantenere. Il risultato si congela nella configurazione del lavoro alla messa
+pagina manoscritta.
+
+**Immagine inviata** (`ocrImageSettingsService`, chiavi `app_settings`
+`ocr_image_edge` e `ocr_image_mode`, nessuna colonna): globale, scheda
+Impostazioni → Trascrizioni; nello Studio si cambia per la sessione (stato
+locale, mai salvato nel documento). `optimized`: `CacheRequest::Page` alla
+misura scelta (`OCR_IMAGE_EDGES`, default 2000), ridotta se più grande, **non**
+ingrandita, ricodificata in JPEG a `optimize::DEFAULT_QUALITY`; se il deposito
+ha solo una misura più piccola la catena la salta e riscarica. `local`: il
+frontend aggiunge `localRequests` — la misura del libro scaricato
+(`inventoryService.readableLocalSize`, la stessa scelta del visore) e quelle
+che il visore chiede online (`wholePageAttempts`) — **senza** `remoteUrl`, quindi
+mai rete; il gestore invia la prima trovata così com'è (`images::media_type_of`,
+JPEG o PNG), altrimenti ripiega sull'ottimizzata e lo scrive nel log. Il
+comando di lettura è un componente solo (`OcrStartButton`), nella scheda OCR e
+nel `collapsedContent` del pannello chiuso. Il risultato si congela nella configurazione del lavoro alla messa
 in coda (`ocrService.buildPageInput`): modificare il prompt dopo non altera un
 lavoro già accodato.
 
@@ -592,7 +620,9 @@ codice di stato (connessione mai arrivata a destinazione) è `Transport`.
 Conta perché il motore lavori **ritenta solo** `Transport`/`RateLimited`/
 `Throttled`: marcare tutto come `Format`, come nella prima stesura, significa
 non ritentare mai, nemmeno dopo un limite di richieste al minuto o una
-connessione caduta per due secondi. Il `Retry-After` dichiarato dal servizio
+connessione caduta per due secondi. Una risposta vuota a una chiamata riuscita
+è `Format`, non ritentata: il modello ha risposto, e di solito vuol dire che
+sulla pagina non c'è testo. Il `Retry-After` dichiarato dal servizio
 viaggia nel messaggio come marcatore `retry-after-ms=N` e viene riletto in
 `JobError.retry_after`, dove vince sul calcolo esponenziale.
 
@@ -605,11 +635,13 @@ identico.
 **Una lettura scrive più righe di log, non una.** `ocr::log::write_ocr_log`
 scrive in `operation_logs` con `project_id`/`pipeline_id` `NULL` (primo punto
 in cui Rust scrive quella tabella) una riga per fase, distinte da `phase`:
-`start` (fornitore, modello, pagina), `image` (lato lungo e kB davvero
-inviati), `prompt` (testo completo in `detail`, `detail_kind = 'prompt'`),
+`start` (fornitore, modello, pagina), `image` (ottimizzata o copia locale,
+larghezza×altezza reali, kB davvero inviati, provenienza: deposito, cache o
+biblioteca), `prompt` (testo completo in `detail`, `detail_kind = 'prompt'`),
 `end` (revisione scritta con il suo numero, oppure testo identico a livello
 `warn`, oppure errore con motivo e se verrà ritentato). `meta` porta
-l'etichetta della pagina, che serve alla console per raggruppare senza una
+il numero della pagina (posizione nel libro da 1, come nel titolo della
+pagina nello Studio, non l'etichetta della biblioteca), che serve alla console per raggruppare senza una
 colonna in più. `dbService.VALID_PHASES` accetta `image` e `prompt` oltre ai
 valori della traduzione.
 

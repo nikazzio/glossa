@@ -10,6 +10,8 @@ import type { ViewerVersionRef } from '../../services/libraryService';
 import type { ModelProvider, Workspace } from '../../types';
 import { PagePendingOverlay } from './PagePendingOverlay';
 import { TranscriptionAssistTab } from './TranscriptionAssistTab';
+import { OcrStartButton } from './OcrStartButton';
+import type { OcrImageMode, OcrImagePreferences } from '../../services/ocrImageSettingsService';
 
 export type TranscriptionInspectorTab = 'history' | 'assist' | 'metadata';
 
@@ -39,7 +41,9 @@ interface TranscriptionInspectorProps {
   onStartOcr: () => void;
   onDocumentOcrProviderChange: (provider: ModelProvider | '', model: string) => void;
   onDocumentOcrModelChange: (model: string) => void;
-  onPageOcrPromptChange: (prompt: string) => void;
+  onDocumentOcrPromptChange: (prompt: string | null) => void;
+  ocrImage: OcrImagePreferences;
+  onOcrImageModeChange: (mode: OcrImageMode) => void;
 }
 
 const AUTHOR_ICONS = { user: User, ocr: ScanText, import: FileInput } as const;
@@ -68,7 +72,9 @@ export function TranscriptionInspector({
   onStartOcr,
   onDocumentOcrProviderChange,
   onDocumentOcrModelChange,
-  onPageOcrPromptChange,
+  onDocumentOcrPromptChange,
+  ocrImage,
+  onOcrImageModeChange,
 }: TranscriptionInspectorProps) {
   const { t } = useTranslation();
   return (
@@ -91,11 +97,25 @@ export function TranscriptionInspector({
       panelLabel={t('transcription.inspectorPanelTitle')}
       collapsed={collapsed}
       onCollapsedChange={onCollapsedChange}
+      collapsedContent={
+        // Leggere la pagina non richiede il pannello aperto.
+        document && workspace ? (
+          <OcrStartButton
+            document={document}
+            workspace={workspace}
+            viewerRef={viewerRef}
+            pageLabel={pageTitleShort}
+            starting={ocrStarting}
+            reading={ocrReading}
+            onStart={onStartOcr}
+            tooltipSide="left"
+          />
+        ) : null
+      }
     >
       {activeTab === 'assist' ? (
         <TranscriptionAssistTab
           document={document}
-          segment={segment}
           workspace={workspace}
           viewerRef={viewerRef}
           pageLabel={pageTitleShort}
@@ -104,7 +124,9 @@ export function TranscriptionInspector({
           onStartOcr={onStartOcr}
           onDocumentProviderChange={onDocumentOcrProviderChange}
           onDocumentModelChange={onDocumentOcrModelChange}
-          onPagePromptChange={onPageOcrPromptChange}
+          onDocumentPromptChange={onDocumentOcrPromptChange}
+          image={ocrImage}
+          onImageModeChange={onOcrImageModeChange}
         />
       ) : activeTab === 'history' ? (
         <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">

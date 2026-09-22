@@ -161,6 +161,10 @@ export interface OcrPageJobInput {
   provider: string;
   model: string;
   imageEdge: number;
+  /** Copie della pagina già sul computer da inviare così come sono, in ordine
+   *  di preferenza; vuoto = immagine ottimizzata. Nessuna ha un indirizzo
+   *  remoto: se mancano tutte, il lavoro ripiega sull'ottimizzata. */
+  localRequests: CacheRequest[];
   pageLabel: string;
 }
 

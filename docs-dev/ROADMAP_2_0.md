@@ -190,9 +190,8 @@ settembre).
 **Stato al 22 settembre 2026.** OCR/HTR (#220) consegnato in prima versione:
 scheda OCR attiva, con select provider/modello per documento (filtrata sui
 modelli che leggono immagini, fornitori senza vista spenti in elenco) e
-**un solo prompt, quello della pagina aperta** — nessuna ereditarietà fra
-pagine, il testo predefinito del workspace è solo il punto di partenza di una
-pagina mai letta. Il comando legge la pagina aperta tramite un lavoro
+**un prompt per documento**, modificabile da qualunque pagina, con il prompt
+del workspace (caricabile dalla libreria) come punto di partenza. Il comando legge la pagina aperta tramite un lavoro
 persistente, stesso motore dello scaricamento; il risultato entra nello
 storico come revisione marcata "riconoscimento automatico", mai come
 sovrascrittura. Mentre una pagina è in lettura il suo foglio è velato e in
@@ -206,8 +205,10 @@ L'ancoraggio a `source_page_id` è risolto: si completa da sé al primo tocco di
 un segmento, e non è comunque un prerequisito della lettura.
 **Restano fuori da questo primo giro**: comando per leggere un intervallo di
 pagine o l'intero documento in interfaccia (la forma dati lo prevede già),
-lettura su un documento unico (PDF) — solo le copie IIIF sono coperte —, e il
-testo delle pagine vicine come contesto di continuità nel prompt.
+lettura su un documento unico (PDF) — solo le copie IIIF sono coperte —, il
+e il testo delle pagine vicine come contesto di continuità nel prompt.
+L'immagine inviata (ottimizzata a misura scelta o copia locale così com'è) si
+sceglie in Impostazioni → Trascrizioni e per sessione nella scheda OCR.
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

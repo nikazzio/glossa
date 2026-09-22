@@ -690,7 +690,6 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "eyebrow": "Impostazioni generali",
-    "tabPlanned": "{{label}} — in arrivo con Glossa 2.0",
     "providerTab": "Provider",
     "storageTab": "Dati",
     "storage": {
@@ -926,6 +925,17 @@
       "defaultSource": "Fonte predefinita",
       "defaultSourceHint": "Da dove parte una ricerca nuova quando apri Glossa. Durante la sessione vale la fonte che scegli nel pannello. Compaiono solo le fonti che cercano per parole.",
       "defaultSourceLastUsed": "L'ultima che ho usato"
+    },
+    "transcriptions": {
+      "ocrImage": "Immagine per l’OCR",
+      "imageMode": "Immagine inviata",
+      "imageModeHint": "Ottimizzata: ridotta alla misura qui sotto e ricompressa. Copia sul computer: la stessa del visore, senza modifiche; se manca si invia l’ottimizzata. Nello Studio si cambia per la sessione.",
+      "optimized": "Ottimizzata",
+      "local": "Copia sul computer",
+      "imageEdge": "Misura ottimizzata",
+      "imageEdgeHint": "Lato lungo dell’immagine ottimizzata. Un’immagine più piccola non viene ingrandita.",
+      "loadFailed": "Impossibile leggere le impostazioni delle trascrizioni",
+      "saveFailed": "Impossibile salvare l’impostazione"
     }
   },
   "ollama": {
@@ -1146,19 +1156,21 @@
       "noDigitization": "Serve una digitalizzazione IIIF collegata al documento.",
       "noModelConfigured": "Scegli un fornitore e un modello che leggano le immagini.",
       "loading": "Caricamento…",
-      "documentModel": "Modello del documento",
-      "readThisPage": "Leggi questa pagina",
+      "documentModel": "Modello",
+      "documentPrompt": "Prompt",
+      "readThisPage": "Leggi la pagina {{page}}",
       "inheritWorkspace": "Eredita dal workspace",
-      "pagePrompt": "Prompt della pagina {{page}}",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
       "jobStarted": "Lettura avviata: segui l'avanzamento nel pannello lavori",
       "jobStartFailed": "Avvio della lettura non riuscito",
-      "ready": "Pronta",
       "customizeForDocument": "Personalizza per questo documento",
-      "pagePromptHint": "Vale solo per questa pagina: le altre restano com’erano.",
       "readingThisPage": "Lettura della pagina {{page}} in corso",
       "readingPage": "lettura {{page}}",
-      "readingInProgress": "Lettura in corso…"
+      "readingInProgress": "Lettura in corso…",
+      "imageMode": "Immagine inviata",
+      "imageOptimized": "Ottimizzata: {{edge}} px, ricompressa",
+      "imageLocal": "Copia sul computer così com’è; se manca, ottimizzata",
+      "imageSettingsFailed": "Impossibile leggere le impostazioni dell’immagine"
     },
     "log": {
       "title": "Log trascrizione",
@@ -1652,7 +1664,7 @@
       "generalTab": "Generale",
       "memoryTab": "Phrase Memory",
       "ocrTab": "OCR",
-      "ocrDefaultPromptHint": "Da qui parte ogni pagina mai letta: nello Studio si cambia pagina per pagina.",
+      "ocrDefaultPromptHint": "Ogni documento parte da qui. Nello Studio il prompt si cambia da una pagina qualsiasi e vale per tutto il documento.",
       "ocrDefaultModel": "Modello OCR predefinito",
       "ocrDefaultPrompt": "Prompt OCR predefinito"
     },
@@ -2128,10 +2140,11 @@
               "Nella scheda \"OCR\", a destra, puoi far leggere il testo della pagina aperta a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati.",
               "Il comando compare disattivato finché mancano le condizioni: la pagina deve appartenere a una digitalizzazione collegata al documento, e serve un fornitore e un modello che sappiano leggere le immagini, scelti per il documento o ereditati dalle impostazioni del workspace. Il motivo di un comando disattivato è nel suo stesso suggerimento.",
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
-              "Il prompt che guida la lettura appartiene alla pagina: la casella nella scheda OCR riguarda solo la carta aperta, e quello che scrivi lì non tocca le altre. Una pagina mai letta parte dal testo predefinito che trovi nelle impostazioni del workspace, alla voce OCR.",
+              "Il prompt che guida la lettura appartiene al documento: lo modifichi da una pagina qualsiasi e vale per tutte le sue pagine, non per gli altri documenti. Un documento nuovo parte dal prompt del workspace, scelto nelle impostazioni alla voce OCR, anche dalla libreria. Per riusarlo altrove salvalo nella libreria dal comando di modifica; il ripristino riporta il documento al prompt del workspace.",
+              "Sotto il modello due cerchietti scelgono l'immagine inviata: ottimizzata (ridotta alla misura delle Impostazioni, scheda Trascrizioni, e ricompressa) o copia sul computer così com'è, la stessa del visore; se la copia manca parte l'ottimizzata. La scelta di partenza sta nelle Impostazioni, qui vale per la sessione. Con il pannello chiuso il comando di lettura resta visibile.",
               "Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura; nella riga in alto della colonna del testo una pastiglia dice quale pagina è in lettura, e resta visibile anche se nel frattempo sfogli avanti.",
-              "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo. Un intoppo passeggero viene ritentato da solo; una chiave sbagliata no, perché riprovare darebbe la stessa risposta.",
-              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura e peso, prompt inviato per intero, esito con durata, token, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
+              "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo. Un intoppo passeggero viene ritentato da solo; una chiave sbagliata o una risposta vuota no, perché riprovare darebbe la stessa risposta. Una risposta vuota di solito vuol dire che il modello non ha trovato testo sulla pagina.",
+              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura reale, peso e provenienza, prompt inviato per intero, esito con durata, token, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
             ]
           },
           {

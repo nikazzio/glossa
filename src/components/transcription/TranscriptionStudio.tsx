@@ -50,12 +50,16 @@ import {
   setDocumentStatus,
   unverifySegment,
   updateDocumentOcrSettings,
-  updateSegmentOcrPrompt,
   verifySegment,
   type TranscriptionRevision,
   type TranscriptionSegment,
 } from '../../services/transcriptionService';
 import { startOcrForPage } from '../../services/ocrService';
+import {
+  DEFAULT_OCR_IMAGE_PREFERENCES,
+  getOcrImagePreferences,
+  type OcrImageMode,
+} from '../../services/ocrImageSettingsService';
 import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
 import { useOcrPageActivity } from '../../hooks/useOcrPageActivity';
 import type { ModelProvider } from '../../types';
@@ -223,6 +227,17 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   // Quali pagine di questo documento sono in lettura adesso: viene dai lavori
   // in coda, quindi resta vero anche riaprendo il documento o dopo un riavvio.
   const ocrActivity = useOcrPageActivity(detail?.id ?? null);
+  // Immagine inviata: la scelta delle impostazioni generali, cambiabile qui
+  // per la sessione — non si salva nel documento.
+  const [ocrImage, setOcrImage] = useState(DEFAULT_OCR_IMAGE_PREFERENCES);
+  useEffect(() => {
+    getOcrImagePreferences().then(setOcrImage).catch((err: unknown) => {
+      toast.error(t('transcription.assist.imageSettingsFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }, [t]);
+  const handleOcrImageModeChange = (mode: OcrImageMode) => setOcrImage((current) => ({ ...current, mode }));
 
   // Il lavoro gira in background: quando un lavoro OCR finisce si rilegge la
   // pagina corrente, così la revisione appena scritta compare da sola nello
@@ -261,18 +276,12 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
     });
   };
 
-  // Il prompt appartiene alla pagina: se quella pagina non ha ancora un
-  // segmento (mai toccata), nasce qui — come già fa il primo salvataggio a
-  // mano — altrimenti non ci sarebbe niente su cui scriverlo.
-  const handlePagePromptChange = (prompt: string) => {
+  // Il prompt appartiene al documento: modificato da una pagina qualsiasi,
+  // vale per tutte. `null` torna al prompt di partenza del workspace.
+  const handleDocumentOcrPromptChange = (prompt: string | null) => {
     if (!detail) return;
-    const existing = segment;
-    setSegment((current) => (current ? { ...current, ocr_prompt: prompt || null } : current));
-    void (async () => {
-      const target = existing ?? (await ensureSegment(detail.id, pageIndex, pageLabel));
-      if (!existing) setSegment({ ...target, ocr_prompt: prompt || null });
-      await updateSegmentOcrPrompt(target.id, prompt || null);
-    })().catch((err: unknown) => {
+    patchDetail({ ocr_prompt: prompt });
+    void updateDocumentOcrSettings(detail.id, { ocrPrompt: prompt }).catch((err: unknown) => {
       toast.error(t('transcription.assist.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
@@ -293,7 +302,11 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
         segment: target,
         workspace: activeWorkspace,
         viewerRef,
-        pageLabel: pageLabel ?? String(pageIndex + 1),
+        // La posizione nel libro contando dalla copertina, come nel titolo
+        // della pagina: la numerazione stampata della biblioteca («3») non
+        // corrisponde quasi mai.
+        pageLabel: String(pageIndex + 1),
+        image: ocrImage,
       });
       toast.success(t('transcription.assist.jobStarted'));
     } catch (err: unknown) {
@@ -861,11 +874,13 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
             viewerRef={viewerRef}
             ocrStarting={ocrStarting}
             ocrReading={isPageReading}
-            pageTitleShort={pageLabel ?? String(displayIndex + 1)}
+            pageTitleShort={String(displayIndex + 1)}
             onStartOcr={() => void handleStartOcr()}
             onDocumentOcrProviderChange={handleDocumentOcrProviderChange}
             onDocumentOcrModelChange={handleDocumentOcrModelChange}
-            onPageOcrPromptChange={handlePagePromptChange}
+            onDocumentOcrPromptChange={handleDocumentOcrPromptChange}
+            ocrImage={ocrImage}
+            onOcrImageModeChange={handleOcrImageModeChange}
           />
         </Panel>
       </Group>

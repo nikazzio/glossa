@@ -23,10 +23,10 @@ interface OcrSettingsSectionProps {
   onPromptChange: (prompt: string) => void;
 }
 
-/** Impostazioni OCR/HTR a livello workspace (#220): il fornitore e il modello
- *  da cui parte ogni documento nuovo, e il testo da cui parte ogni pagina mai
- *  toccata. Da qui in poi la pagina fa storia a sé: quello che si scrive nello
- *  Studio vale per quella pagina e non torna mai indietro fin qui.
+/** Impostazioni OCR/HTR a livello workspace (#220): fornitore, modello e
+ *  prompt da cui parte ogni documento. Il prompt si può caricare dalla
+ *  libreria; quello che si cambia poi nello Studio vale per quel documento e
+ *  non torna mai indietro fin qui.
  *
  *  L'editor del prompt è lo stesso componente usato nello Studio e nel
  *  giudizio della traduzione — modelli salvati, riscrittura assistita e
@@ -63,10 +63,11 @@ export function OcrSettingsSection({
   };
 
   const handleRefine = async () => {
-    if (!provider || !prompt.trim() || !model.trim()) return;
+    const current = prompt || DEFAULT_OCR_PROMPT;
+    if (!provider || !model.trim()) return;
     setIsRefining(true);
     try {
-      const refined = await llmService.refinePrompt(prompt, provider, model, 'ocr');
+      const refined = await llmService.refinePrompt(current, provider, model, 'ocr');
       onPromptChange(refined);
       toast.success(t('pipeline.refined'));
     } catch (err: unknown) {
@@ -78,8 +79,13 @@ export function OcrSettingsSection({
     }
   };
 
+  // Testo uguale al predefinito dell'applicazione = nessuna scelta salvata.
+  const handlePromptChange = (next: string) => {
+    onPromptChange(next.trim() === DEFAULT_OCR_PROMPT.trim() ? '' : next);
+  };
+
   const handleApplyTemplate = (template: PromptTemplate) => {
-    onPromptChange(template.prompt);
+    handlePromptChange(template.prompt);
     if (template.defaultProvider) {
       const nextProvider = template.defaultProvider as ModelProvider;
       onProviderChange(
@@ -146,14 +152,14 @@ export function OcrSettingsSection({
       <AuditPromptEditor
         label={t('workspace.settings.ocrDefaultPrompt')}
         hint={t('workspace.settings.ocrDefaultPromptHint')}
-        value={prompt}
+        value={prompt || DEFAULT_OCR_PROMPT}
         placeholder={DEFAULT_OCR_PROMPT}
         templates={ocrTemplates}
         isRefining={isRefining}
         canRefine={canRefine}
         refineLabel={refineLabel}
         onRefine={() => void handleRefine()}
-        onChange={onPromptChange}
+        onChange={handlePromptChange}
         onApplyTemplate={handleApplyTemplate}
         saveTemplate={saveTemplate}
         onDeleteTemplate={deleteTemplate}

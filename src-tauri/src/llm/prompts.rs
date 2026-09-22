@@ -80,7 +80,7 @@ fn effective_target(config: &PipelineConfig) -> &str {
 /// Persona, transcription rules and output contract for OCR/HTR (#220).
 /// Static across every page of every document — the whole reason it is its
 /// own cacheable block, separate from the resolved prompt (which varies by
-/// page and lands in the non-cacheable block instead).
+/// document and lands in the non-cacheable block instead).
 pub(crate) const OCR_SYSTEM_PERSONA: &str = "\
 You are a careful transcription assistant reading a single page image from a \
 historical or printed source.\n\
@@ -90,15 +90,16 @@ breaks as closely as the image allows.\n\
 Output only the transcribed text of the current page — no commentary, no \
 headers, no description of the image, no reference to these instructions.";
 
-/// Prompt for one OCR/HTR call (#220): persona (cacheable), the page's own
-/// prompt (not cacheable, edited page by page), image and page id in the user
-/// message only — never in a system block, or Gemini's whole-prompt cache
-/// invalidates on every page and Anthropic/OpenAI lose the cached prefix.
-pub(crate) fn build_ocr_prompt(
-    resolved_prompt: &str,
-    image: ImageAttachment,
-    page_id: &str,
-) -> StructuredPrompt {
+/// Fixed user text sent with the page image. No page number: the library's
+/// printed numbering ("3") rarely matches the position in the scan and only
+/// confuses the model. Some providers reject an empty text block.
+const OCR_USER_MESSAGE: &str = "Transcribe the page in the attached image.";
+
+/// Prompt for one OCR/HTR call (#220): persona (cacheable), the document's
+/// prompt (not cacheable), image in the user message only — never in a
+/// system block, or Gemini's whole-prompt cache invalidates on every page and
+/// Anthropic/OpenAI lose the cached prefix.
+pub(crate) fn build_ocr_prompt(resolved_prompt: &str, image: ImageAttachment) -> StructuredPrompt {
     StructuredPrompt {
         system: vec![
             PromptBlock {
@@ -110,7 +111,7 @@ pub(crate) fn build_ocr_prompt(
                 cacheable: false,
             },
         ],
-        user: format!("Current page id: {page_id}"),
+        user: OCR_USER_MESSAGE.to_string(),
         images: vec![image],
     }
 }

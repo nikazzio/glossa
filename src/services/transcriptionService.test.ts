@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { execute, select } from './dbService';
 import {
+  ensureSegment,
+  manifestIndexOf,
   saveSegmentText,
   restoreRevision,
   verifySegment,
@@ -165,5 +167,67 @@ describe('storico delle trascrizioni', () => {
     await restoreRevision('seg1', 'seg1:r1');
 
     expect(writeMatching('INSERT INTO transcription_revisions')).toBeUndefined();
+  });
+});
+
+describe('collegamento fra pagina dello Studio e pagina del libro', () => {
+  beforeEach(() => {
+    selectMock.mockReset().mockResolvedValue([]);
+    executeMock.mockReset().mockResolvedValue(undefined);
+  });
+
+  const document = { id: 'td1', source_version_id: 'v1' };
+
+  function sourcePageLookup() {
+    return selectMock.mock.calls.find(([query]) => String(query).includes('FROM source_pages'));
+  }
+
+  it('la copertina è la pagina 1 del libro: lo Studio conta da 0, il libro da 1', () => {
+    expect(manifestIndexOf(0)).toBe(1);
+    expect(manifestIndexOf(8)).toBe(9);
+  });
+
+  it('la nona pagina dello Studio si collega alla nona pagina del libro, non all ottava', async () => {
+    selectMock
+      .mockResolvedValueOnce([]) // nessun segmento a quella posizione
+      .mockResolvedValueOnce([document])
+      .mockResolvedValueOnce([{ id: 'spg-9' }]);
+
+    const segment = await ensureSegment('td1', 8, '3');
+
+    expect(sourcePageLookup()?.[1]).toEqual(['v1', 9]);
+    expect(segment.source_page_id).toBe('spg-9');
+  });
+
+  it('un collegamento sbagliato già salvato si corregge al tocco successivo', async () => {
+    const wrong = {
+      id: 'ts1', document_id: 'td1', position: 8, label: '3',
+      source_page_id: 'spg-8', approved_revision_id: null,
+    };
+    selectMock
+      .mockResolvedValueOnce([wrong])
+      .mockResolvedValueOnce([document])
+      .mockResolvedValueOnce([{ id: 'spg-9' }]);
+
+    const segment = await ensureSegment('td1', 8, '3');
+
+    expect(segment.source_page_id).toBe('spg-9');
+    expect(writeMatching('UPDATE transcription_segments')?.params).toEqual(['ts1', '3', 'spg-9']);
+  });
+
+  it('una copia mai scaricata non cancella un collegamento già presente', async () => {
+    const linked = {
+      id: 'ts1', document_id: 'td1', position: 8, label: '3',
+      source_page_id: 'spg-9', approved_revision_id: null,
+    };
+    selectMock
+      .mockResolvedValueOnce([linked])
+      .mockResolvedValueOnce([document])
+      .mockResolvedValueOnce([]);
+
+    const segment = await ensureSegment('td1', 8, '3');
+
+    expect(segment.source_page_id).toBe('spg-9');
+    expect(writeMatching('UPDATE transcription_segments')).toBeUndefined();
   });
 });

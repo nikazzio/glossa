@@ -1,11 +1,11 @@
-import { BookmarkPlus, BookOpen, Check, Loader2, Pencil, RotateCcw, Trash2, Wand2, X } from 'lucide-react';
+import { BookmarkPlus, BookOpen, Check, FileText, Loader2, Pencil, RotateCcw, Trash2, Wand2, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
-import { IconButton, FieldLabel } from '../ui';
+import { IconButton, FieldLabel, SectionLabel } from '../ui';
 
 export interface AuditPromptEditorProps {
   label: string;
@@ -30,7 +30,23 @@ export interface AuditPromptEditorProps {
    *  default (unico caso storico), OCR/HTR per la scheda Assistenza (#220). */
   templateContext?: PromptTemplateContext;
   templateWorkflow?: PromptTemplateWorkflow;
+  /** `stage`: stessa resa della sezione prompt della scheda traduzione
+   *  (bordo verde, etichetta di sezione, «Personalizzato» a pillola). */
+  variant?: 'audit' | 'stage';
 }
+
+const VARIANT_STYLES = {
+  audit: {
+    card: 'border-l-editorial-warning/45',
+    badge: 'border-l-2 border-l-editorial-accent bg-editorial-accent/10',
+    editing: 'border-editorial-warning/25',
+  },
+  stage: {
+    card: 'border-l-editorial-accent/40',
+    badge: 'rounded-full bg-editorial-accent/15',
+    editing: 'border-editorial-accent/25',
+  },
+} as const;
 
 export function AuditPromptEditor({
   label,
@@ -53,7 +69,9 @@ export function AuditPromptEditor({
   onReset,
   templateContext = 'audit',
   templateWorkflow = 'translation',
+  variant = 'audit',
 }: AuditPromptEditorProps) {
+  const styles = VARIANT_STYLES[variant];
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
@@ -108,15 +126,19 @@ export function AuditPromptEditor({
   };
 
   return (
-    <div className="border-l-4 border-l-editorial-warning/45 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
+    <div className={`border-l-4 ${styles.card} border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3`}>
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            <FieldLabel icon={icon && <span className="text-editorial-accent shrink-0">{icon}</span>}>
-              {label}
-            </FieldLabel>
-            {isCustomPrompt && (
-              <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
+            {variant === 'stage' ? (
+              <SectionLabel icon={FileText} label={label} />
+            ) : (
+              <FieldLabel icon={icon && <span className="text-editorial-accent shrink-0">{icon}</span>}>
+                {label}
+              </FieldLabel>
+            )}
+            {isCustomPrompt && !(variant === 'stage' && isEditing) && (
+              <span className={`${styles.badge} px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent`}>
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -273,7 +295,7 @@ export function AuditPromptEditor({
         rows={isEditing ? 12 : 4}
         className={`w-full rounded-md border-2 p-4 text-[13px] font-mono outline-none leading-6 resize-y min-h-[12rem] ${
           isEditing
-            ? 'bg-editorial-paper border-editorial-warning/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            ? `bg-editorial-paper ${styles.editing} focus-visible:ring-2 focus-visible:ring-editorial-accent`
             : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
         }`}
       />

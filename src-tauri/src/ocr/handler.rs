@@ -7,7 +7,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::httpcache::{commands as httpcache_commands, request::CacheRequest};
+use crate::httpcache::{commands as httpcache_commands, request::CacheRequest, Source};
 use crate::images;
 use crate::jobs::engine::{JobContext, JobHandler};
 use crate::jobs::{ErrorKind, JobError, Outcome, Recovery, ResourceClass};
@@ -40,7 +40,20 @@ pub struct OcrPageConfig {
     pub provider: String,
     pub model: String,
     pub image_edge: u32,
+    /// Copie già sul computer da inviare così come sono, in ordine di
+    /// preferenza (vuoto = immagine ottimizzata). Senza indirizzo remoto:
+    /// quella che manca non si scarica, si passa alla successiva.
+    #[serde(default)]
+    pub local_requests: Vec<CacheRequest>,
     pub page_label: String,
+}
+
+/// L'immagine pronta da inviare, con quanto serve a descriverla nel log.
+struct PreparedImage {
+    bytes: Vec<u8>,
+    media_type: &'static str,
+    source: Source,
+    kind: &'static str,
 }
 
 #[derive(Debug, Deserialize)]
@@ -198,23 +211,15 @@ impl OcrJobHandler {
             }
         };
 
-        let raw_bytes = match httpcache_commands::bytes_of(&self.0, &page.cache_request).await {
-            Ok(bytes) => bytes,
-            Err(error) => {
-                let message = format!("immagine non raggiungibile: {error}");
-                return Err(self
-                    .fail(ctx, page, started, ErrorKind::Transport, &message)
-                    .await);
+        let image = match self.prepare_image(page).await {
+            Ok(image) => image,
+            Err((kind, message)) => {
+                return Err(self.fail(ctx, page, started, kind, &message).await)
             }
         };
-        let resized = match images::resize_jpeg(&raw_bytes, page.image_edge, SEND_QUALITY) {
-            Ok(bytes) => bytes,
-            Err(error) => {
-                return Err(self
-                    .fail(ctx, page, started, ErrorKind::Format, &error.to_string())
-                    .await)
-            }
-        };
+        // Misura reale di quello che parte, non quella chiesta: una copia più
+        // piccola non viene ingrandita, e una copia locale parte com'è.
+        let (width, height) = images::dimensions_of(&image.bytes).unwrap_or((0, 0));
 
         self.log(
             ctx,
@@ -223,9 +228,10 @@ impl OcrJobHandler {
                 level: "info",
                 phase: OcrPhase::Image,
                 message: format!(
-                    "immagine pronta — lato lungo {} px, {} kB inviati",
-                    page.image_edge,
-                    resized.len() / 1024
+                    "immagine pronta — {}, {width}×{height} px, {} kB inviati, {}",
+                    image.kind,
+                    image.bytes.len() / 1024,
+                    source_label(image.source)
                 ),
                 ..LogRow::default()
             },
@@ -236,10 +242,9 @@ impl OcrJobHandler {
         let structured = build_ocr_prompt(
             &page.prompt,
             ImageAttachment {
-                bytes: resized,
-                media_type: "image/jpeg".to_string(),
+                bytes: image.bytes,
+                media_type: image.media_type.to_string(),
             },
-            &page.page_label,
         );
 
         let sent_prompt = readable_prompt(&structured);
@@ -291,9 +296,9 @@ impl OcrJobHandler {
                     ctx,
                     page,
                     started,
-                    // Risposta vuota da un modello: capita e spesso non si
-                    // ripete, quindi vale un secondo tentativo.
-                    ErrorKind::Transport,
+                    // La chiamata è andata a buon fine: il modello non ha
+                    // trovato testo. Ritentare ripaga la stessa risposta.
+                    ErrorKind::Format,
                     "il modello ha restituito una risposta vuota",
                 )
                 .await);
@@ -350,6 +355,53 @@ impl OcrJobHandler {
         .await;
 
         Ok(())
+    }
+
+    /// La copia sul computer così com'è, se richiesta e presente; altrimenti
+    /// l'immagine ottimizzata alla misura scelta. Una copia locale che manca
+    /// non è un errore: si ripiega, e il log lo dice.
+    async fn prepare_image(
+        &self,
+        page: &OcrPageConfig,
+    ) -> Result<PreparedImage, (ErrorKind, String)> {
+        for request in &page.local_requests {
+            let Ok((source, bytes)) =
+                httpcache_commands::bytes_and_source_of(&self.0, request).await
+            else {
+                continue;
+            };
+            if let Some(media_type) = images::media_type_of(&bytes) {
+                return Ok(PreparedImage {
+                    bytes,
+                    media_type,
+                    source,
+                    kind: "copia sul computer, senza modifiche",
+                });
+            }
+        }
+
+        let (source, raw_bytes) =
+            httpcache_commands::bytes_and_source_of(&self.0, &page.cache_request)
+                .await
+                .map_err(|error| {
+                    (
+                        ErrorKind::Transport,
+                        format!("immagine non raggiungibile: {error}"),
+                    )
+                })?;
+        let bytes = images::resize_jpeg(&raw_bytes, page.image_edge, SEND_QUALITY)
+            .map_err(|error| (ErrorKind::Format, error.to_string()))?;
+        let kind = if page.local_requests.is_empty() {
+            "ottimizzata"
+        } else {
+            "ottimizzata (copia sul computer non trovata)"
+        };
+        Ok(PreparedImage {
+            bytes,
+            media_type: "image/jpeg",
+            source,
+            kind,
+        })
     }
 
     /// Scrive la riga di log di errore e restituisce il `JobError` da propagare:
@@ -414,6 +466,15 @@ impl OcrJobHandler {
             max_attempts: Some(ctx.max_attempts),
         };
         let _ = ctx.with_database(|conn| write_ocr_log(conn, &entry)).await;
+    }
+}
+
+/// Da dove arriva l'immagine, detto come nel resto del log.
+fn source_label(source: Source) -> &'static str {
+    match source {
+        Source::Vault => "dal libro scaricato",
+        Source::Cache => "dalla cache",
+        Source::Network => "scaricata dalla biblioteca",
     }
 }
 
