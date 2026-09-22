@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Cpu, Loader2, ScanText } from 'lucide-react';
+import { CheckCircle2, Cpu, Loader2, Lock, LockOpen, ScanText, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AuditPromptEditor } from '../pipeline/AuditPromptEditor';
-import { FieldLabel, IconButton, Select } from '../ui';
+import { FieldLabel, IconButton, Select, Tooltip } from '../ui';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { getVisionCapableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
@@ -22,7 +22,6 @@ import type { ModelProvider, PromptTemplate, Workspace } from '../../types';
 
 const UNAVAILABLE_REASON_KEYS: Record<OcrUnavailableReason, string> = {
   noDigitization: 'transcription.assist.noDigitization',
-  noSourcePage: 'transcription.assist.noSourcePage',
   noModelConfigured: 'transcription.assist.noModelConfigured',
 };
 
@@ -81,9 +80,7 @@ export function TranscriptionAssistTab({
   const ocrTemplates = templates.filter((tmpl) => tmpl.context === 'ocr');
   const canRefine = resolved.provider ? canRefineWithProvider(resolved.provider, keyStatuses) : false;
   const refineLabel = resolved.provider ? formatProviderModelLabel(resolved.provider, resolved.model) : '';
-  const reason = ocrUnavailableReason(viewerRef, segment, resolved.provider, resolved.model);
-
-  const modelOptions = documentProvider ? getVisionCapableModelIds(documentProvider, ollamaModels) : [];
+  const reason = ocrUnavailableReason(viewerRef, resolved.provider, resolved.model);
 
   const handleProviderChange = (nextProvider: ModelProvider | '') => {
     if (!nextProvider) {
@@ -122,8 +119,28 @@ export function TranscriptionAssistTab({
     }
   };
 
+  // Bloccato per default: la select mostra il valore ereditato dal workspace
+  // (sola lettura). Sbloccare crea un override a livello documento; ribloccare
+  // lo cancella — tornare a ereditare è la stessa azione al contrario.
+  const [overridden, setOverridden] = useState(Boolean(documentProvider));
+  const effectiveProvider = overridden ? documentProvider : resolved.provider;
+  const effectiveModel = overridden ? documentModel : resolved.model;
+  const unlockedModelOptions = effectiveProvider ? getVisionCapableModelIds(effectiveProvider, ollamaModels) : [];
+
+  const toggleOverride = () => {
+    if (overridden) {
+      setOverridden(false);
+      onDocumentProviderChange('', '');
+    } else {
+      setOverridden(true);
+    }
+  };
+
   const providerOptions = [
-    { value: '', label: t('transcription.assist.inheritWorkspace') },
+    // Segnaposto disabilitato, mai scelto a mano: senza, un valore vuoto
+    // farebbe apparire selezionata la prima voce vera, mentendo su cosa è
+    // davvero impostato quando nessun livello ha ancora un provider.
+    ...(effectiveProvider === '' ? [{ value: '', label: t('transcription.assist.noProvider'), disabled: true }] : []),
     ...LLM_PROVIDER_ORDER.map((entry) => ({
       value: entry,
       label: entry,
@@ -138,57 +155,69 @@ export function TranscriptionAssistTab({
           <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
             {t('transcription.assist.documentModel')}
           </FieldLabel>
-          <IconButton
-            size="sm"
-            tone="accent"
-            onClick={onStartOcr}
-            disabled={starting || reason !== null}
-            title={reason ? t(UNAVAILABLE_REASON_KEYS[reason]) : t('transcription.assist.readThisPage')}
-          >
-            {starting ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
-          </IconButton>
+          <div className="flex items-center gap-1.5">
+            <Tooltip label={reason ? t(UNAVAILABLE_REASON_KEYS[reason]) : t('transcription.assist.ready')}>
+              {reason ? (
+                <TriangleAlert size={14} className="shrink-0 text-editorial-warning" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 size={14} className="shrink-0 text-editorial-success" aria-hidden="true" />
+              )}
+            </Tooltip>
+            <IconButton
+              size="sm"
+              tone="accent"
+              onClick={onStartOcr}
+              disabled={starting || reason !== null}
+              title={reason ? t(UNAVAILABLE_REASON_KEYS[reason]) : t('transcription.assist.readThisPage')}
+            >
+              {starting ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
+            </IconButton>
+          </div>
         </div>
         <div className="flex gap-2">
           <Select
-            value={documentProvider}
+            value={effectiveProvider}
             onChange={(value) => handleProviderChange(value as ModelProvider | '')}
-            className="font-bold uppercase"
+            disabled={!overridden}
+            className="w-28 shrink-0 font-bold uppercase"
             ariaLabel={t('models.provider')}
             options={providerOptions}
           />
-          {documentProvider && modelOptions.length > 0 ? (
+          {unlockedModelOptions.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
               <Select
-                value={documentModel}
+                value={effectiveModel}
                 onChange={onDocumentModelChange}
+                disabled={!overridden}
                 className="flex-1 font-mono"
                 ariaLabel={t('transcription.assist.documentModel')}
-                options={modelOptions.map((entry) => ({ value: entry, label: entry }))}
+                options={unlockedModelOptions.map((entry) => ({ value: entry, label: entry }))}
               />
-              <ModelCapabilityHint provider={documentProvider} model={documentModel} iconOnly />
+              {effectiveProvider && (
+                <ModelCapabilityHint provider={effectiveProvider} model={effectiveModel} iconOnly />
+              )}
             </div>
-          ) : documentProvider ? (
+          ) : (
             <input
-              value={documentModel}
+              value={effectiveModel}
               onChange={(e) => onDocumentModelChange(e.target.value)}
+              disabled={!overridden}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
               aria-label={t('transcription.assist.documentModel')}
             />
-          ) : (
-            <p className="flex flex-1 items-center px-2 text-xs text-editorial-muted">
-              {resolved.provider
-                ? t('transcription.assist.inheritedFromWorkspace', { provider: resolved.provider, model: resolved.model })
-                : t('transcription.assist.noProviderHint')}
-            </p>
           )}
+          <IconButton
+            size="sm"
+            tone={overridden ? 'accent' : 'default'}
+            onClick={toggleOverride}
+            title={overridden ? t('transcription.assist.inheritWorkspace') : t('transcription.assist.customizeForDocument')}
+            ariaPressed={overridden}
+            className="shrink-0"
+          >
+            {overridden ? <LockOpen size={13} /> : <Lock size={13} />}
+          </IconButton>
         </div>
-        {reason && (
-          <p className="flex items-start gap-1.5 text-xs text-editorial-muted">
-            <AlertCircle size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-            {t(UNAVAILABLE_REASON_KEYS[reason])}
-          </p>
-        )}
       </div>
 
       <AuditPromptEditor

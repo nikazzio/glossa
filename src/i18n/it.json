@@ -1144,20 +1144,20 @@
       "noProvider": "Nessuno",
       "noProviderHint": "Scegli un fornitore per leggere le pagine con un modello.",
       "noDigitization": "Serve una digitalizzazione IIIF collegata al documento.",
-      "noSourcePage": "Questa pagina non è ancora collegata a una pagina scaricata.",
       "noModelConfigured": "Scegli un fornitore e un modello che leggano le immagini.",
       "loading": "Caricamento…",
       "documentModel": "Modello del documento",
       "readThisPage": "Leggi questa pagina",
       "inheritWorkspace": "Eredita dal workspace",
-      "inheritedFromWorkspace": "Userà {{provider}} · {{model}} dal workspace",
       "documentPrompt": "Prompt del documento",
       "documentPromptHint": "Vale per tutte le pagine di questo documento, salvo diverso prompt di pagina.",
       "pagePrompt": "Prompt della pagina",
       "pagePromptHint": "Vale solo per questa pagina, sopra al prompt del documento.",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
       "jobStarted": "Lettura avviata: segui l'avanzamento nel pannello lavori",
-      "jobStartFailed": "Avvio della lettura non riuscito"
+      "jobStartFailed": "Avvio della lettura non riuscito",
+      "ready": "Pronta",
+      "customizeForDocument": "Personalizza per questo documento"
     },
     "log": {
       "title": "Log trascrizione",

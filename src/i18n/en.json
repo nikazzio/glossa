@@ -1144,20 +1144,20 @@
       "noProvider": "None",
       "noProviderHint": "Choose a provider to read pages with a model.",
       "noDigitization": "Needs a linked IIIF digitization on the document.",
-      "noSourcePage": "This page is not yet linked to a downloaded page.",
       "noModelConfigured": "Choose a provider and a model that can read images.",
       "loading": "Loading…",
       "documentModel": "Document model",
       "readThisPage": "Read this page",
       "inheritWorkspace": "Inherit from workspace",
-      "inheritedFromWorkspace": "Will use {{provider}} · {{model}} from the workspace",
       "documentPrompt": "Document prompt",
       "documentPromptHint": "Applies to every page of this document, unless a page has its own prompt.",
       "pagePrompt": "Page prompt",
       "pagePromptHint": "Applies only to this page, above the document prompt.",
       "saveFailed": "Could not save OCR settings",
       "jobStarted": "Reading started: follow progress in the jobs panel",
-      "jobStartFailed": "Could not start the reading job"
+      "jobStartFailed": "Could not start the reading job",
+      "ready": "Ready",
+      "customizeForDocument": "Customise for this document"
     },
     "log": {
       "title": "Transcription log",

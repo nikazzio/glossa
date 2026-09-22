@@ -279,12 +279,17 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   };
 
   const handleStartOcr = async () => {
-    if (!detail || !segment || !activeWorkspace || !viewerRef) return;
+    if (!detail || !activeWorkspace || !viewerRef) return;
     setOcrStarting(true);
     try {
+      // Una pagina mai toccata non ha ancora un segmento: nasce qui, come già
+      // fa il primo salvataggio manuale — l'OCR non deve aspettare che
+      // qualcuno scriva prima a mano.
+      const target = segment ?? (await ensureSegment(detail.id, pageIndex, pageLabel));
+      if (!segment) setSegment(target);
       await startOcrForPage({
         document: detail,
-        segment,
+        segment: target,
         workspace: activeWorkspace,
         viewerRef,
         pageLabel: pageLabel ?? String(pageIndex + 1),

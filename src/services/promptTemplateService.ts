@@ -15,7 +15,7 @@ interface TemplateRow {
 
 function rowToTemplate(row: TemplateRow): PromptTemplate {
   const ctx: PromptTemplateContext =
-    row.context === 'audit' || row.context === 'persona' || row.context === 'memory'
+    row.context === 'audit' || row.context === 'persona' || row.context === 'memory' || row.context === 'ocr'
       ? row.context
       : 'stage';
   const workflow: PromptTemplateWorkflow =

@@ -383,13 +383,16 @@ segmenti con `source_page_id NULL`, anche se il visore mostra già la pagina.
 `ensureSegment` colma il collegamento al primo tocco del segmento successivo
 allo scaricamento — non un backfill una tantum, la stessa risoluzione si
 applica a ogni chiamata, sia alla creazione sia su un segmento già esistente
-con la colonna ancora vuota. Senza questo collegamento l'OCR resta
-disattivato per quella pagina (vedi sezione OCR più sotto): è il modo con cui
-Rust risale dalla pagina ai byte dell'immagine senza dipendere da un
-`position` che nel deposito significa un'altra cosa per ogni provider. Un
-documento senza visore (nato da zero, non da una digitalizzazione) resta su
-un solo blocco di testo, in posizione 0, `source_page_id` sempre `NULL` — lo
-stesso codice, solo che la pagina non cambia mai.
+con la colonna ancora vuota. **Non è un prerequisito dell'OCR** (vedi sezione
+OCR più sotto): quel percorso usa direttamente `transcription_segments.position`,
+lo stesso indice che il visore mostra, senza aspettare che un lavoro di
+scaricamento sia mai passato di lì — una pagina vista solo in streaming, mai
+scaricata, resta comunque leggibile. `source_page_id` serve altrove:
+conservare l'identità della pagina logica anche dopo un nuovo download (resto
+della roadmap). Un documento senza visore (nato da zero, non da una
+digitalizzazione) resta su un solo blocco di testo, in posizione 0,
+`source_page_id` sempre `NULL` — lo stesso codice, solo che la pagina non
+cambia mai.
 
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello
@@ -534,18 +537,20 @@ ogni provider. `llm/prompts.rs::build_ocr_prompt` compone persona OCR
 (cacheable), blocco di riferimento opzionale (cacheable), prompt risolto
 (non cacheable) e messaggio utente con immagine + id pagina.
 
-**Catena pagina → byte, mai costruita in Rust.** `transcription_segments.source_page_id`
-→ `source_pages.position` → il frontend, che ha già in mano il manifesto
-aperto nel visore (`iiifViewerService.fetchViewerManifestWithRetry` +
-`pageSourceUrl`), congela una `CacheRequest::Page` completa (con
+**Catena pagina → byte, mai costruita in Rust.** `transcription_segments.position`
+— lo stesso indice che il visore mostra, non `source_page_id`, che non è un
+prerequisito — è l'indice di manifesto. Il frontend, che ha già in mano il
+manifesto aperto nel visore (`iiifViewerService.fetchViewerManifestWithRetry`
++ `pageSourceUrl`), congela una `CacheRequest::Page` completa (con
 `remoteUrl`) dentro la configurazione del lavoro. Il gestore Rust
 (`ocr::handler::OcrJobHandler`) la passa **inalterata** a
 `httpcache::commands::bytes_of`, la stessa catena che il visore usa per
 mostrare le pagine: deposito alla misura esatta → cache di rete → deposito a
-misura più grande (ridotta al volo) → biblioteca remota. Limite v1:
-`src/services/ocrService.ts` risolve solo copie `versionKind ===
-'iiif_manifest'` — un documento unico (PDF) resta fuori da questo primo
-giro.
+misura più grande (ridotta al volo) → biblioteca remota. Una copia solo in
+cache (mai scaricata formalmente, solo vista) è servita da lì, allo stesso
+modo — l'OCR non chiede altro. Limite v1: `src/services/ocrService.ts`
+risolve solo copie `versionKind === 'iiif_manifest'` — un documento unico
+(PDF) resta fuori da questo primo giro.
 
 **Cascata di risoluzione** (`transcriptionService.resolveOcrSettings`, sola
 fonte, in TypeScript): pagina → documento → workspace → costante

@@ -1,4 +1,3 @@
-import { select } from './dbService';
 import { fetchViewerManifestWithRetry, pageSourceUrl } from './iiifViewerService';
 import { enqueueOcrPages, type Job, type OcrPageJobInput } from './jobsService';
 import {
@@ -15,6 +14,12 @@ import type { Workspace } from '../types';
  * `CacheRequest::Page` per mostrare l'immagine — qui se ne costruisce una
  * equivalente per il lavoro OCR, così Rust non deve mai costruire un
  * indirizzo di biblioteca da solo (lo conosce solo chi ha aperto il visore).
+ * Stessa catena del visore, sempre: deposito → cache di rete → deposito a
+ * misura più grande → biblioteca remota. Una copia in cache (mai scaricata
+ * formalmente, solo vista) vale quanto una nel deposito — bytes_of non fa
+ * differenza, e nemmeno questo servizio: **non** si richiede più un
+ * collegamento a `source_pages` (quello esiste solo dopo un lavoro di
+ * scaricamento vero e proprio, che non è un prerequisito dell'OCR).
  *
  * **Limite v1**: solo le copie IIIF (`versionKind === 'iiif_manifest'`) sono
  * risolvibili qui — un documento unico (PDF) non ha pagine logiche separate
@@ -23,32 +28,19 @@ import type { Workspace } from '../types';
 
 type OcrWorkspace = Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel'>;
 
-async function sourcePagePosition(sourcePageId: string): Promise<number | null> {
-  const rows = await select<{ position: number }>(
-    'SELECT position FROM source_pages WHERE id = $1',
-    [sourcePageId],
-  );
-  return rows[0]?.position ?? null;
-}
+export type OcrUnavailableReason = 'noDigitization' | 'noModelConfigured';
 
-export type OcrUnavailableReason =
-  | 'noDigitization'
-  | 'noSourcePage'
-  | 'noModelConfigured';
-
-/** Perché il comando OCR è disattivato per questa pagina, se lo è — il
- *  motivo va nel tooltip del comando, non in un testo a parte. */
+/** Perché il comando OCR è disattivato, se lo è — il motivo va nel
+ *  suggerimento del comando, non in un testo a parte. Non dipende dal
+ *  segmento: una pagina mai toccata è comunque leggibile, il segmento nasce
+ *  al bisogno (`ensureSegment`), come già fa il salvataggio manuale. */
 export function ocrUnavailableReason(
   viewerRef: ViewerVersionRef | null,
-  segment: TranscriptionSegment | null,
   provider: string,
   model: string,
 ): OcrUnavailableReason | null {
   if (!viewerRef || viewerRef.versionKind !== 'iiif_manifest' || !viewerRef.sourceUrl) {
     return 'noDigitization';
-  }
-  if (!segment?.source_page_id) {
-    return 'noSourcePage';
   }
   if (!provider || !model) {
     return 'noModelConfigured';
@@ -58,7 +50,7 @@ export function ocrUnavailableReason(
 
 async function buildCacheRequest(
   viewerRef: ViewerVersionRef,
-  position: number,
+  pageIndex: number,
   imageEdge: number,
 ): Promise<CacheRequest> {
   if (!viewerRef.sourceUrl) throw new Error('noDigitization');
@@ -67,8 +59,8 @@ async function buildCacheRequest(
     viewerRef.providerKey,
     viewerRef.versionId,
   );
-  const page = manifest.pages.find((candidate) => candidate.index === position);
-  if (!page) throw new Error('noSourcePage');
+  const page = manifest.pages.find((candidate) => candidate.index === pageIndex);
+  if (!page) throw new Error('noDigitization');
   const size = String(imageEdge);
   return {
     kind: 'page',
@@ -82,6 +74,8 @@ async function buildCacheRequest(
 
 interface BuildPageInputParams {
   document: TranscriptionDocument;
+  /** Il segmento della pagina, già garantito da `ensureSegment` se serviva
+   *  crearlo: l'OCR può partire su una pagina mai toccata prima. */
   segment: TranscriptionSegment;
   workspace: OcrWorkspace;
   viewerRef: ViewerVersionRef;
@@ -92,10 +86,7 @@ async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobI
   const { document, segment, workspace, viewerRef, pageLabel } = params;
   const settings = resolveOcrSettings(segment, document, workspace);
   if (!settings.provider || !settings.model) throw new Error('noModelConfigured');
-  if (!segment.source_page_id) throw new Error('noSourcePage');
-  const position = await sourcePagePosition(segment.source_page_id);
-  if (position == null) throw new Error('noSourcePage');
-  const cacheRequest = await buildCacheRequest(viewerRef, position, settings.imageEdge);
+  const cacheRequest = await buildCacheRequest(viewerRef, segment.position, settings.imageEdge);
   return {
     segmentId: segment.id,
     documentId: document.id,
