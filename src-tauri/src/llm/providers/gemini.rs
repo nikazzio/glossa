@@ -394,8 +394,36 @@ mod temperature_tests {
     use super::*;
     use crate::llm::provider::LlmRequest;
     use crate::llm::types::{
-        GeminiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
+        GeminiCacheConfig, ImageAttachment, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
     };
+
+    #[test]
+    fn image_part_precedes_user_text() {
+        let prompt = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "stable".into(),
+                cacheable: true,
+            }],
+            user: "read page".into(),
+            images: vec![ImageAttachment {
+                bytes: vec![1, 2, 3],
+                media_type: "image/png".into(),
+            }],
+        };
+        let req = LlmRequest {
+            model: "test",
+            structured: &prompt,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: None,
+        };
+        let parts = gemini_user_parts(&req);
+        assert_eq!(parts[0]["inline_data"]["data"], "AQID");
+        assert_eq!(parts[0]["inline_data"]["mime_type"], "image/png");
+        assert_eq!(parts[1]["text"], "read page");
+        assert_eq!(prompt.system[0].text, "stable");
+    }
 
     fn request_with(gemini: Option<GeminiCacheConfig>) -> LlmRequest<'static> {
         let structured = Box::leak(Box::new(StructuredPrompt {

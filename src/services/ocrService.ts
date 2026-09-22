@@ -17,6 +17,7 @@ import {
 import type { ViewerVersionRef } from './libraryService';
 import type { CacheRequest } from './cacheService';
 import type { Workspace } from '../types';
+import { useConfigStore } from '../stores/configStore';
 
 /**
  * Lettura assistita di una pagina (#220): il visore risolve già una
@@ -127,6 +128,7 @@ async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobI
     prompt: settings.prompt,
     provider: settings.provider,
     model: settings.model,
+    ollamaBaseUrl: settings.provider === 'ollama' ? useConfigStore.getState().ollamaBaseUrl : null,
     imageEdge: image.edge,
     localRequests,
     pageLabel,

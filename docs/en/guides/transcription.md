@@ -111,9 +111,10 @@ The starting choice is in Settings; in the Studio you change it for the
 session, without it being saved in the document. With the right panel closed,
 the reading command stays under the reopen command.
 
-While a page is being read its sheet is veiled and stays read-only, so you
-don't type into text that is about to be replaced; a pill in the top row of
-the text column names the page being read, and stays visible even if you page
+While a page is being read its sheet is veiled and stays read-only, even
+after a cancellation request, until the job actually stops.
+Text you are still editing on another page is not replaced when reading finishes.
+A pill in the top row of the text column names the page being read, and stays visible even if you page
 ahead in the meantime.
 
 The reading starts in the queue, like a download: you'll find it in the

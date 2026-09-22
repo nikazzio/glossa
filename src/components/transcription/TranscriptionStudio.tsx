@@ -146,6 +146,13 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
 
   const debouncedDraft = useDebounce(draft, SAVE_DELAY_MS);
   const savedRef = useRef('');
+  const ocrPromptSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const draftRef = useRef(draft);
+  const saveStateRef = useRef(saveState);
+  useEffect(() => {
+    draftRef.current = draft;
+    saveStateRef.current = saveState;
+  }, [draft, saveState]);
   const attemptRef = useRef<string | null>(null);
   // Un salvataggio in corso quando si cambia pagina non deve scrivere il suo
   // risultato sullo stato della pagina nuova, arrivato nel frattempo.
@@ -199,14 +206,16 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
     }
   };
 
-  const loadSegmentForPage = useCallback(async () => {
+  const loadSegmentForPage = useCallback(async (preserveDirty = false) => {
     setLoadingSegment(true);
     try {
       const existing = await getSegmentByPosition(documentId, pageIndex);
       const history = existing ? await listRevisions(existing.id) : [];
+      if (preserveDirty && (draftRef.current !== savedRef.current || saveStateRef.current !== 'saved')) return;
       setSegment(existing);
       setRevisions(history);
       const currentText = history[0]?.text ?? '';
+      draftRef.current = currentText;
       setDraft(currentText);
       savedRef.current = currentText;
       attemptRef.current = null;
@@ -246,12 +255,20 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
     let unlisten: (() => void) | undefined;
     let cancelled = false;
     onJobChanged((job) => {
-      if (job.jobType === OCR_JOB_TYPE && job.status === 'completed') {
-        void loadSegmentForPage();
-      }
+      if (job.jobType !== OCR_JOB_TYPE || job.status !== 'completed' || !segment) return;
+      try {
+        const config = JSON.parse(job.config) as { pages?: unknown };
+        if (!Array.isArray(config.pages)) return;
+        const affectsPage = config.pages.some((page: unknown) =>
+          typeof page === 'object' && page !== null &&
+          'documentId' in page && page.documentId === documentId &&
+          'segmentId' in page && page.segmentId === segment.id,
+        );
+        if (affectsPage) void loadSegmentForPage(true);
+      } catch { /* Un lavoro con configurazione illeggibile non riguarda la pagina aperta. */ }
     }).then((fn) => { if (!cancelled) unlisten = fn; else fn(); });
     return () => { cancelled = true; unlisten?.(); };
-  }, [loadSegmentForPage]);
+  }, [documentId, segment, loadSegmentForPage]);
 
   const handleDocumentOcrProviderChange = (provider: ModelProvider | '', model: string) => {
     if (!detail) return;
@@ -281,7 +298,12 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   const handleDocumentOcrPromptChange = (prompt: string | null) => {
     if (!detail) return;
     patchDetail({ ocr_prompt: prompt });
-    void updateDocumentOcrSettings(detail.id, { ocrPrompt: prompt }).catch((err: unknown) => {
+    const targetDocumentId = detail.id;
+    // Le digitazioni rapide devono arrivare al database nello stesso ordine.
+    ocrPromptSaveChainRef.current = ocrPromptSaveChainRef.current
+      .catch(() => undefined)
+      .then(() => updateDocumentOcrSettings(targetDocumentId, { ocrPrompt: prompt }));
+    void ocrPromptSaveChainRef.current.catch((err: unknown) => {
       toast.error(t('transcription.assist.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
@@ -807,7 +829,7 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                     menuOpen={textMenuOpen}
                     onMenuOpenChange={setTextMenuOpen}
                     value={draft}
-                    onChange={setDraft}
+                    onChange={(text) => { draftRef.current = text; setDraft(text); }}
                     markdownEnabled
                     readOnly={isVerified || isPageReading || isPagePending || Boolean(pagePendingError)}
                     fillHeight

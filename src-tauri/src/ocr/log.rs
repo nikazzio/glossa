@@ -27,10 +27,8 @@ fn new_log_id() -> String {
     format!("oplog_{hex}")
 }
 
-/// Il prompt completo finisce in `detail`: tagliato alla stessa misura del
-/// lato TypeScript, perché una console non deve mai diventare il posto dove
-/// un prompt da mezzo megabyte blocca il rendering.
-const MAX_DETAIL_LENGTH: usize = 20_000;
+/// Stesso limite usato dal lato TypeScript per i dettagli del log.
+const MAX_DETAIL_LENGTH: usize = 500_000;
 
 /// Tipo di riga, e quindi filtro nella console. Stessi valori usati come
 /// `phase` dalle righe di traduzione.
@@ -285,5 +283,19 @@ mod tests {
         assert!(detail.len() <= MAX_DETAIL_LENGTH);
         assert!(detail.starts_with('à'));
         assert_eq!(meta.as_deref(), Some(r#"{"pageLabel":"12r"}"#));
+    }
+
+    #[test]
+    fn keeps_a_prompt_longer_than_twenty_thousand_bytes_in_full() {
+        let conn = setup();
+        let prompt = "à".repeat(15_000);
+        let mut row = entry("info", OcrPhase::Prompt, "prompt inviato");
+        row.detail = Some(&prompt);
+        write_ocr_log(&conn, &row).unwrap();
+
+        let stored: String = conn
+            .query_row("SELECT detail FROM operation_logs", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(stored, prompt);
     }
 }

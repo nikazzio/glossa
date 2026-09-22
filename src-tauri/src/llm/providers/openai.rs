@@ -100,6 +100,46 @@ fn chat_completions_user_content(req: &LlmRequest<'_>) -> Value {
     Value::Array(content)
 }
 
+#[cfg(test)]
+mod image_payload_tests {
+    use super::{chat_completions_user_content, responses_api_input};
+    use crate::llm::provider::LlmRequest;
+    use crate::llm::types::{ImageAttachment, PromptBlock, StructuredPrompt};
+
+    #[test]
+    fn image_precedes_text_in_both_openai_request_formats() {
+        let prompt = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "stable".into(),
+                cacheable: true,
+            }],
+            user: "read page".into(),
+            images: vec![ImageAttachment {
+                bytes: vec![1, 2, 3],
+                media_type: "image/png".into(),
+            }],
+        };
+        let req = LlmRequest {
+            model: "test",
+            structured: &prompt,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: None,
+        };
+        let responses = responses_api_input(&req);
+        assert_eq!(
+            responses[0]["content"][0]["image_url"],
+            "data:image/png;base64,AQID"
+        );
+        assert_eq!(responses[0]["content"][1]["text"], "read page");
+        let chat = chat_completions_user_content(&req);
+        assert_eq!(chat[0]["image_url"]["url"], "data:image/png;base64,AQID");
+        assert_eq!(chat[1]["text"], "read page");
+        assert_eq!(prompt.system[0].text, "stable");
+    }
+}
+
 fn judge_json_schema() -> serde_json::Value {
     serde_json::json!({
         "name": "translation_audit",

@@ -4,6 +4,7 @@ import { fetchViewerManifestWithRetry } from './iiifViewerService';
 import { enqueueOcrPages } from './jobsService';
 import type { ViewerPage } from './iiifViewerService';
 import type { TranscriptionDocument, TranscriptionSegment } from './transcriptionService';
+import { useConfigStore } from '../stores/configStore';
 
 vi.mock('./iiifViewerService', () => ({
   fetchViewerManifestWithRetry: vi.fn(),
@@ -89,5 +90,25 @@ describe('pagina inviata al modello', () => {
   it('una pagina oltre la fine del libro non parte', async () => {
     await expect(sentFor(10)).rejects.toThrow('noDigitization');
     expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('congela nel lavoro l indirizzo Ollama configurato', async () => {
+    const previousUrl = useConfigStore.getState().ollamaBaseUrl;
+    useConfigStore.setState({ ollamaBaseUrl: 'http://127.0.0.1:11435' });
+    try {
+      await startOcrForPage({
+        document: { ...document, ocr_provider: 'ollama', ocr_model: 'llava' },
+        segment: segmentAt(0),
+        workspace: { ocrDefaultPrompt: '', ocrDefaultProvider: '', ocrDefaultModel: '' },
+        viewerRef: {
+          sourceId: 's1', versionId: 'v1', versionKind: 'iiif_manifest',
+          sourceUrl: 'https://biblioteca.example/manifest.json', providerKey: 'gallica',
+        },
+        pageLabel: '1', image: { edge: 2000, mode: 'optimized' },
+      });
+      expect(enqueueMock.mock.calls[0][0][0].ollamaBaseUrl).toBe('http://127.0.0.1:11435');
+    } finally {
+      useConfigStore.setState({ ollamaBaseUrl: previousUrl });
+    }
   });
 });

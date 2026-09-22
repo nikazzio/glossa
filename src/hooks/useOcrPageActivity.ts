@@ -16,7 +16,7 @@ export interface OcrPageActivity {
   isReading: (segmentId: string | null | undefined) => boolean;
 }
 
-const ACTIVE_STATUSES = new Set(['queued', 'running', 'pausing']);
+const ACTIVE_STATUSES = new Set(['queued', 'running', 'pausing', 'cancelling']);
 
 export function useOcrPageActivity(documentId: string | null): OcrPageActivity {
   const jobs = useJobsStore((state) => state.jobs);

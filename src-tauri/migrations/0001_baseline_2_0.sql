@@ -412,7 +412,6 @@ CREATE TABLE IF NOT EXISTS transcription_documents (
   ocr_prompt TEXT,
   ocr_provider TEXT,
   ocr_model TEXT,
-  ocr_image_edge INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -427,7 +426,6 @@ CREATE TABLE IF NOT EXISTS transcription_segments (
   position INTEGER NOT NULL,
   label TEXT,
   source_page_id TEXT REFERENCES source_pages(id) ON DELETE SET NULL,
-  ocr_prompt TEXT,
   approved_revision_id TEXT REFERENCES transcription_revisions(id) ON DELETE SET NULL,
   UNIQUE (document_id, position)
 );

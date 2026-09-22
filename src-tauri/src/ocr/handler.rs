@@ -39,6 +39,8 @@ pub struct OcrPageConfig {
     pub prompt: String,
     pub provider: String,
     pub model: String,
+    #[serde(default)]
+    pub ollama_base_url: Option<String>,
     pub image_edge: u32,
     /// Copie già sul computer da inviare così come sono, in ordine di
     /// preferenza (vuoto = immagine ottimizzata). Senza indirizzo remoto:
@@ -198,18 +200,19 @@ impl OcrJobHandler {
             },
             started,
         )
-        .await;
+        .await?;
 
-        let (provider, api_key) = match resolve_provider(&self.0, &page.provider, None, None) {
-            Ok(resolved) => resolved,
-            Err(error) => {
-                // Provider non configurato o chiave mancante: nessun tentativo
-                // successivo può cambiare la risposta.
-                return Err(self
-                    .fail(ctx, page, started, ErrorKind::Format, &error)
-                    .await);
-            }
-        };
+        let (provider, api_key) =
+            match resolve_provider(&self.0, &page.provider, None, page.ollama_base_url.clone()) {
+                Ok(resolved) => resolved,
+                Err(error) => {
+                    // Provider non configurato o chiave mancante: nessun tentativo
+                    // successivo può cambiare la risposta.
+                    return Err(self
+                        .fail(ctx, page, started, ErrorKind::Format, &error)
+                        .await);
+                }
+            };
 
         let image = match self.prepare_image(page).await {
             Ok(image) => image,
@@ -237,7 +240,7 @@ impl OcrJobHandler {
             },
             started,
         )
-        .await;
+        .await?;
 
         let structured = build_ocr_prompt(
             &page.prompt,
@@ -261,7 +264,7 @@ impl OcrJobHandler {
             },
             started,
         )
-        .await;
+        .await?;
 
         let request = LlmRequest {
             model: &page.model,
@@ -352,7 +355,7 @@ impl OcrJobHandler {
             },
             started,
         )
-        .await;
+        .await?;
 
         Ok(())
     }
@@ -423,21 +426,25 @@ impl OcrJobHandler {
         } else {
             String::new()
         };
-        self.log(
-            ctx,
-            page,
-            LogRow {
-                level: "error",
-                phase: OcrPhase::End,
-                message: format!("{message}{suffix}"),
-                detail: Some(message.to_string()),
-                detail_kind: Some("error"),
-                ..LogRow::default()
-            },
-            started,
-        )
-        .await;
-        JobError::new(kind, message.to_string())
+        let logged = self
+            .log(
+                ctx,
+                page,
+                LogRow {
+                    level: "error",
+                    phase: OcrPhase::End,
+                    message: format!("{message}{suffix}"),
+                    detail: Some(message.to_string()),
+                    detail_kind: Some("error"),
+                    ..LogRow::default()
+                },
+                started,
+            )
+            .await;
+        match logged {
+            Ok(()) => JobError::new(kind, message.to_string()),
+            Err(error) => error,
+        }
     }
 
     async fn log(
@@ -446,7 +453,7 @@ impl OcrJobHandler {
         page: &OcrPageConfig,
         row: LogRow,
         started: std::time::Instant,
-    ) {
+    ) -> Result<(), JobError> {
         let duration_ms = started.elapsed().as_millis() as i64;
         let meta = serde_json::json!({ "pageLabel": page.page_label }).to_string();
         let entry = OcrLogEntry {
@@ -465,7 +472,9 @@ impl OcrJobHandler {
             attempt_number: Some(ctx.attempt),
             max_attempts: Some(ctx.max_attempts),
         };
-        let _ = ctx.with_database(|conn| write_ocr_log(conn, &entry)).await;
+        ctx.with_database(|conn| write_ocr_log(conn, &entry))
+            .await
+            .map_err(|error| JobError::new(ErrorKind::Storage, format!("log OCR: {error}")))
     }
 }
 

@@ -160,6 +160,7 @@ export interface OcrPageJobInput {
   prompt: string;
   provider: string;
   model: string;
+  ollamaBaseUrl: string | null;
   imageEdge: number;
   /** Copie della pagina già sul computer da inviare così come sono, in ordine
    *  di preferenza; vuoto = immagine ottimizzata. Nessuna ha un indirizzo

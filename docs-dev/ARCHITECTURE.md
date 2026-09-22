@@ -519,10 +519,9 @@ verità finale.
 incrementale — beta privata): `workspaces.ocr_default_{prompt,provider,model}`
 (`TEXT NOT NULL DEFAULT ''`, vuoto = nessun default a quel livello),
 `transcription_documents.ocr_{provider,model,prompt}` (`NULL` eredita dal
-workspace). `transcription_segments.ocr_prompt` e
-`transcription_documents.ocr_image_edge` esistono nello schema ma **nessuno li
-legge né li scrive**: da ripulire insieme alle altre colonne inutilizzate
-(vedi STATO_SESSIONE). `operation_logs.transcription_document_id` /
+workspace). La misura dell'immagine OCR vive nelle impostazioni e nella
+configurazione del lavoro, non in una colonna del documento.
+`operation_logs.transcription_document_id` /
 `transcription_segment_id` (`ON DELETE SET NULL`, mai `CASCADE`, stessa
 regola di `chunk_id`: la cronologia dei costi non sparisce se il documento si
 elimina).
@@ -597,6 +596,9 @@ nel `collapsedContent` del pannello chiuso. Il risultato si congela nella config
 in coda (`ocrService.buildPageInput`): modificare il prompt dopo non altera un
 lavoro già accodato.
 
+Per Ollama, anche l'indirizzo configurato viene congelato nel lavoro: una
+porta diversa da quella predefinita deve restare valida dopo una ripresa.
+
 **Gestore lavoro** (`src-tauri/src/ocr/`, `JOB_TYPE = "ocr_page"`, registrato
 in `jobs/commands.rs` accanto agli altri): `ResourceClass::LanguageService`,
 `Recovery::Restart` (una chiamata interrotta a metà non lascia stato parziale
@@ -611,6 +613,11 @@ di un intervallo è la stessa forma con più elementi, non un gestore nuovo.
 **cresce** a ogni pagina: sovrascriverlo con la sola pagina appena finita
 farebbe rileggere — e ripagare — tutte le precedenti alla ripresa dopo una
 pausa o un riavvio.
+
+Lo Studio aggiorna lo storico alla conclusione soltanto se il lavoro riguarda
+il documento e il segmento aperti; una bozza non salvata non viene ricaricata
+dal database. Una pagina resta in sola lettura anche nello stato `cancelling`,
+finché il gestore non raggiunge il confine cooperativo e si ferma.
 
 **Classificazione degli errori** (`classify_provider_error`): i provider
 normalizzano i loro guasti nella forma `«<provider> API error (<status>):
@@ -650,6 +657,9 @@ non conosce il listino prezzi (vive nel catalogo modelli, in TypeScript):
 `cost_usd` resta `NULL` e la console applica `costForEntry` in lettura, la
 stessa funzione dei riepiloghi di traduzione. Duplicare i prezzi in Rust
 significherebbe due listini da tenere allineati a mano.
+Una scrittura del log fallita restituisce `Storage` al gestore: il lavoro non
+può risultare completato senza lasciare la riga di costo e di audit. Il
+dettaglio conserva fino a 500.000 byte, come il log TypeScript.
 
 **Log trascrizione, nel cassetto in basso — non nel pannello laterale.**
 Speculare al Log traduzione, non fuso col pannello lavori: `AppStatusBar`

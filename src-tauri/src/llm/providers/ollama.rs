@@ -468,6 +468,23 @@ mod structured_output_tests {
     use super::{build_ollama_chat_body, default_ollama_config};
 
     #[test]
+    fn image_data_is_on_user_message_without_data_url_prefix() {
+        let body = build_ollama_chat_body(
+            "model",
+            "stable",
+            "read page",
+            &["AQID".into()],
+            &default_ollama_config(),
+            false,
+            false,
+            false,
+        );
+        assert_eq!(body["messages"][0]["content"], "stable");
+        assert_eq!(body["messages"][1]["content"], "read page");
+        assert_eq!(body["messages"][1]["images"][0], "AQID");
+    }
+
+    #[test]
     fn strict_json_passes_the_schema_to_ollama() {
         let body = build_ollama_chat_body(
             "model",

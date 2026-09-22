@@ -23,4 +23,7 @@
 # operation_logs fuse nella baseline prima di unire il lavoro a main.
 # Stessa condizione: nessun database distribuito le ha applicate.
 
-0001_baseline_2_0.sql c2155719a86817c6
+# Consolidamento pre-1.0 (23 settembre 2026): eliminate due colonne OCR mai
+# usate prima del merge. Database locale ricreato dopo export dei dati.
+
+0001_baseline_2_0.sql 740cbb58eadb6d58

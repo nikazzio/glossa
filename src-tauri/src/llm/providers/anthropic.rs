@@ -324,8 +324,39 @@ mod tests {
     };
     use crate::llm::provider::LlmRequest;
     use crate::llm::types::{
-        AnthropicConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
+        AnthropicConfig, ImageAttachment, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
     };
+
+    #[test]
+    fn image_stays_in_user_message_before_text() {
+        let prompt = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "stable".into(),
+                cacheable: true,
+            }],
+            user: "read page".into(),
+            images: vec![ImageAttachment {
+                bytes: vec![1, 2, 3],
+                media_type: "image/png".into(),
+            }],
+        };
+        let req = LlmRequest {
+            model: "test",
+            structured: &prompt,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: None,
+        };
+        let body = build_anthropic_body(&req, false);
+        assert_eq!(body["messages"][0]["content"][0]["source"]["data"], "AQID");
+        assert_eq!(
+            body["messages"][0]["content"][0]["source"]["media_type"],
+            "image/png"
+        );
+        assert_eq!(body["messages"][0]["content"][1]["text"], "read page");
+        assert_eq!(body["system"][0]["text"], "stable");
+    }
 
     fn request(user: String) -> LlmRequest<'static> {
         request_with_temperature(user, None)

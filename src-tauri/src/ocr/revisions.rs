@@ -78,8 +78,10 @@ pub fn write_ocr_revision(
     // di unicità. Chi perde riparte dalla revisione che ha vinto, così nessun
     // testo si perde e la catena resta lineare.
     loop {
-        if parent.as_ref().map(|p| p.content_hash.as_str()) == Some(hash.as_str()) {
-            return Ok(parent.expect("appena confrontato Some sopra"));
+        if let Some(previous) = &parent {
+            if previous.content_hash == hash {
+                return Ok(previous.clone());
+            }
         }
         let revision_number = parent.as_ref().map(|p| p.revision_number).unwrap_or(0) + 1;
         let revision = TranscriptionRevision {
@@ -130,7 +132,8 @@ mod tests {
     fn setup() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE transcription_documents (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL);
+            "PRAGMA foreign_keys = ON;
+             CREATE TABLE transcription_documents (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL);
              CREATE TABLE transcription_segments (
                id TEXT PRIMARY KEY,
                document_id TEXT NOT NULL REFERENCES transcription_documents(id),

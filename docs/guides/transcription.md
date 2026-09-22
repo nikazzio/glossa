@@ -115,7 +115,9 @@ sessione, senza che resti salvata nel documento. Con il pannello a destra
 chiuso il comando di lettura resta sotto il comando di riapertura.
 
 Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura,
-per non scrivere su un testo che sta per essere sostituito; nella riga in alto
+anche dopo la richiesta di annullamento, finché il lavoro si ferma davvero.
+Se stai modificando un'altra pagina, il testo non viene rimpiazzato quando
+la lettura finisce. Nella riga in alto
 della colonna del testo una pastiglia dice quale pagina è in lettura, e resta
 visibile anche se nel frattempo sfogli avanti.
 
