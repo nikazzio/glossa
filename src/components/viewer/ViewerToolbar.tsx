@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
@@ -14,7 +14,6 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { ClickPopover, IconButton, IconLink, MenuActionRow, Tooltip } from '../ui';
-import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 import type { ImageSource } from '../../services/cacheService';
 
 /**
@@ -53,6 +52,9 @@ export interface ViewerToolbarProps {
   thumbnailsOpen?: boolean;
   onToggleThumbnails?: () => void;
   shownPageUrl?: string | null;
+  /** Comandi di chi ospita il visore (es. cambio fonte immagini/PDF nello
+   *  Studio di trascrizione): stessa barra, non una riga a parte. */
+  extraControls?: ReactNode;
 }
 
 /**
@@ -138,6 +140,7 @@ export function ViewerToolbar({
   thumbnailsOpen,
   onToggleThumbnails,
   shownPageUrl,
+  extraControls,
 }: ViewerToolbarProps) {
   const { t } = useTranslation();
   const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
@@ -179,7 +182,12 @@ export function ViewerToolbar({
             onChange={(event) => onGoToPageChange(event.target.value.replace(/\D/g, ''))}
             placeholder={String(index + 1)}
             aria-label={t('areas.library.viewerGoToPage')}
-            className={`${FIELD_CLASSNAME} w-12 py-1 text-center text-xs`}
+            // Non FIELD_CLASSNAME: porta `w-full`, che nella cascata compilata
+            // di Tailwind può vincere su `w-12` scritto dopo — un campo per
+            // "quale pagina" largo quanto tutta la barra. Stessa spunta
+            // visiva, larghezza propria: un libro di diecimila pagine ci
+            // sta comunque.
+            className="w-14 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1 text-center text-xs text-editorial-ink outline-none transition-colors focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
           />
         </form>
         <span className="truncate text-xs text-editorial-muted">
@@ -195,6 +203,8 @@ export function ViewerToolbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        {extraControls}
+        {extraControls && <span className="mx-1 h-5 w-px shrink-0 bg-editorial-border" aria-hidden="true" />}
         {onToggleLocalOnly && (
           <IconButton
             size="sm"

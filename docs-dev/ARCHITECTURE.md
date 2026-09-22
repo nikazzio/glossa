@@ -340,6 +340,7 @@ attivo, così tornare indietro non perde la vista da cui si veniva.
 | `jobsStore` | snapshot della coda ricevuto dagli eventi backend |
 | `sourceLibraryStore` | catalogo e dettaglio delle fonti |
 | `libraryStore` | dizionari e ambito di lettura |
+| `transcriptionStore` | documento di trascrizione aperto (solo per il breadcrumb dell'header, stesso schema di `sourceLibraryStore.detail`) |
 
 Gli store non duplicano il database. Oggetti e collezioni vengono aggiornati in
 modo immutabile. Stato confinato a un componente resta locale.
@@ -355,6 +356,146 @@ rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
 le Trascrizioni. La bozza di un profilo di rete vive nella finestra e non nella
 scheda, perché la scheda si smonta cambiando linguetta, e il profilo in modifica
 si ritrova dalla bozza al rientro.
+
+## Trascrizioni
+
+Schema in `transcription_documents` → `transcription_segments` →
+`transcription_revisions` (baseline #211, non un modulo Rust: nessun comando
+backend dedicato, come `translation_revisions`). `transcriptionService.ts`
+scrive e legge direttamente via `dbService` (`execute`/`select`), stesso
+pattern di `translationRevisionsService.ts`: revisioni append-only,
+deduplicate per impronta del contenuto (`content_hash`), un segmento senza
+`approved_revision_id` è in bozza, valorizzato è verificato — nessuna colonna
+di stato propria.
+
+**Un segmento per pagina, non per documento.** `transcription_segments.position`
+è l'indice di pagina del visore (0-based, lo stesso `currentIndex` che
+`PageViewer`/`DocumentViewer` tengono già), non un contatore interno: cambiare
+pagina nel visore cambia il segmento mostrato. Il segmento nasce solo al primo
+salvataggio davvero (`transcriptionService.ensureSegment`) — sfogliare pagine
+mai trascritte non lascia righe vuote nella tabella;
+`getSegmentByPosition` è la sola lettura, senza crearne uno. La colonna
+`source_page_id` resta **non collegata** per ora: quella riga esiste solo dopo
+uno scaricamento (`record_pages` in Rust, dentro il lavoro di scaricamento),
+mentre il visore mostra pagine anche senza aver mai scaricato nulla — legarsi
+a `source_page_id` avrebbe reso la trascrizione dipendente da uno
+scaricamento che l'utente potrebbe non voler mai fare. Un documento senza
+visore (nato da zero, non da una digitalizzazione) resta su un solo blocco di
+testo, in posizione 0 — lo stesso codice, solo che la pagina non cambia mai.
+
+**Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
+#388): stessa convenzione della scheda opera in Biblioteca, non quella dello
+Studio di traduzione — `AppLocation` porta `{ area: 'transcriptions',
+documentId }`, e l'area stessa decide se mostrare il catalogo o la vista
+concentrata, invece di un flag globale come `projectStore.currentProjectId`.
+La Panoramica del workspace offre lo stesso ingresso, filtrato sul workspace
+attivo, e crea il documento già dentro quel workspace. Il caricamento della
+copia principale e dell'eventuale copia alternativa vive in
+`useTranscriptionSources`; storico e metadati vivono in
+`TranscriptionInspector`, separati dallo stato di salvataggio del testo.
+
+**Intestazione**, quando il documento è legato a un'opera: stessa riga della
+scheda opera in Biblioteca (icona, titolo e autore dell'opera, uscita verso
+la biblioteca) — non il titolo scelto per la trascrizione, che identifica il
+documento nel catalogo e nel breadcrumb ma non qui, per non mostrare due
+titoli nella stessa schermata. Letta una volta per opera
+(`getLibrarySourceDetail` + `listIIIFProviders`, tenuti in `bookInfo`), non a
+ogni cambio pagina. Il menu a tre puntini è **volutamente più povero** di
+quello della scheda opera: solo "Rimuovi trascrizione", perché scaricare,
+verificare, archiviare sono azioni sull'opera, non sul suo studio di
+trascrizione — vivono già nella scheda opera. Un documento senza opera
+collegata mostra il proprio titolo, come prima.
+
+**Visore a sinistra** (#221, parte zoom/pan e cambio fonte — filtri visuali e
+preset restano aperti): riusa `PageViewer`/`DocumentViewer`, già
+scritti per la scheda opera in Biblioteca, invece di un componente nuovo.
+`libraryService.getVersionForViewer(sourceVersionId)` legge `source_versions`
+per sapere che tipo di copia mostrare (manifest IIIF o documento unico) senza
+rileggere l'intera scheda dell'opera. Un documento senza
+`source_version_id` — creato da zero, non da una digitalizzazione — mostra un
+avviso al posto del visore: non è un caso di errore, è un documento che non
+ha mai avuto una pagina da mostrare. `DocumentViewer` ha un `onPageChange`
+in più (non serviva finché lo usava solo la scheda opera, che non tiene
+niente per pagina): entrambi i visori lo chiamano solo a pagina disegnata
+davvero, non alla sola richiesta.
+
+Cambiare pagina con del testo non ancora salvato lo salva subito, prima del
+debounce: aspettare l'timer normale lo perderebbe cambiando pagina in fretta.
+Un salvataggio ancora in corso quando la pagina cambia di nuovo non scrive il
+suo risultato sullo stato della pagina arrivata nel frattempo — confrontato
+con un riferimento alla pagina che si sta salvando, non con lo stato letto a
+scrittura ultimata.
+
+A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
+opera, con schede Assistenza (disattivata, in attesa dell'OCR), Storico e
+Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
+(posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
+finché non si decide una presentazione definitiva.
+
+**Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
+copia con cui il documento nasce (`source_version_id`) resta "principale"
+per sempre, l'altra — se c'è — è "secondaria". Le due non promettono la
+stessa numerazione di pagina, quindi il calcolo in
+`transcriptionSync.computeSyncState` (funzione pura, con le sue prove in
+`transcriptionSync.test.ts`) decide se restano agganciate:
+
+- sulla principale, sempre agganciate;
+- sulla secondaria, solo se dichiarano lo stesso numero di pagine — per le
+  immagini è `expectedPages` (già in `LibrarySourceVersion`, nessuna lettura
+  in più), per il PDF è `versionInventory(...).document.pages`, il conteggio
+  vero letto al momento dello scaricamento;
+- un interruttore manuale stacca l'aggancio a prescindere, anche sulla
+  principale — utile per curiosare una pagina senza spostare il punto in cui
+  si scrive.
+
+Staccati, il visore sfoglia per conto suo (i suoi eventi di cambio pagina
+non toccano più `pageIndex`) e il testo si sfoglia con due frecce proprie,
+sempre presenti nell'intestazione ma attive solo fuori sincronia — stessa
+numerazione di sempre (0..N-1 del documento), comandata da altro. Tornando
+in sincronia, il visore riceve un comando di salto
+(`requestedIndex`/`requestToken`/`onRequestedIndexHandled`, stessa forma di
+`focusQuery`/`focusRequestId` di `MarkdownEditor`) per riallinearsi alla
+pagina che il testo sta mostrando. Il comando del cambio fonte vive nella
+barra del visore stessa (`ViewerToolbar.extraControls`, proprietà opzionale
+e retrocompatibile — nessun effetto sugli usi in Biblioteca).
+
+**Scelta della copia alla creazione**: il documento creato dalla scheda di
+un'opera prendeva sempre la copia primaria del catalogo (quasi sempre le
+immagini, il PDF non è mai primario). `CreateTranscriptionDialog`, con un
+`sourceId` in più, legge ora tutte le copie leggibili dell'opera e — solo se
+ce n'è più di una — lascia scegliere da quale iniziare.
+
+**Collegare un'opera creando da zero**: senza `sourceId` (comando "Nuovo
+documento" in Trascrizioni) il dialogo mostrava solo il titolo, senza alcun
+modo di legare il documento a un'opera dopo — un documento nato così restava
+per sempre senza visore. Aggiunta una ricerca per titolo inline
+(`listLibraryCatalog()`, filtrata lato finestra: lo stesso catalogo che la
+Biblioteca tiene già tutto in memoria), facoltativa; scegliendo un'opera si
+comporta come se `sourceId` fosse stato passato dal chiamante.
+
+**Il cambio fonte non deve mai lasciare senza uscita**: se la copia scelta
+non si apre (chiave della biblioteca mancante nei metadati della copia,
+indirizzo non valido), i comandi del cambio fonte restano visibili anche
+sulla schermata di errore — prima sparivano insieme al visore, perché
+vivevano solo dentro la sua barra (`extraControls`), e non c'era modo di
+tornare indietro. La risoluzione della copia secondaria usa ora
+`getVersionForViewer`, la stessa della principale (letta dal deposito, non
+dai soli metadati della copia — più affidabile).
+
+**Pagina in caricamento o fallita**: `onPageStatusChange` (già di
+`PageViewer`, aggiunto ora anche a `DocumentViewer`) segnala una pagina
+richiesta ma non ancora mostrata, o appena fallita — stesso segnale che il
+pannello Digitalizzazioni della Biblioteca usa già. Il numero di pagina in
+alto segue subito quella richiesta; testo e storico restano quelli della
+pagina precedente ma coperti da un velo con rotellina (o triangolo
+sull'errore) e disattivati, finché il visore non conferma la nuova pagina.
+
+`InspectorShell` ha due proprietà nuove, opzionali e retrocompatibili
+(`headerHeightClassName`, `tabRowHeightClassName`, default gli stessi valori
+di sempre): qui impostate a `h-12` per allineare intestazione e barra tab
+alla stessa altezza della barra comandi del visore e dell'intestazione del
+testo. Applicate anche alla scheda opera in Biblioteca (`LibrarySourcePage`),
+approvato l'esito qui — non ancora allo Studio di traduzione.
 
 ## Pipeline di traduzione
 
@@ -785,6 +926,28 @@ in questo giro, con le parti solo-immagini (miniature, solo-locale, uscita verso
 la pagina della biblioteca) rese facoltative. Il percorso del deposito non
 arriva mai alla finestra: si compone nel motore da chiave e identificativo,
 entrambi convalidati come componenti di percorso.
+
+**Pagine disegnate vuote, con i byte corretti** (si aprivano bene col lettore
+del sistema): pdf.js decodifica JPEG2000/JBIG2 — compressioni frequenti nelle
+scansioni — solo con moduli WASM dedicati (OpenJPEG, JBIG2); senza l'opzione
+`wasmUrl` non li cerca nemmeno, cade su un ripiego JS che qui non risolve, e
+la pagina non ha niente da disegnare. Console del browser: errore di
+inizializzazione del decoder OpenJPEG. Fix: `wasmUrl: '/pdfjs/'` in
+`pdfjs.getDocument()`, con i tre file `.wasm` copiati in `public/pdfjs/`
+invece che importati con `?url` — quel percorso li comprimerebbe ognuno con
+un nome diverso, mentre pdf.js li cerca con nomi esatti in una sola cartella.
+La build di rilascio ha bisogno in più di `'wasm-unsafe-eval'` nel
+`script-src` della CSP (`tauri.release.conf.json`), perché l'istanziazione
+WASM lo richiede e quella build non ha la `'unsafe-eval'` più ampia della
+build di sviluppo.
+
+`PDFPageProxy.cleanup()` viene chiamato dopo aver prodotto il blob, così una
+sessione lunga non trattiene le risorse decodificate di ogni pagina. pdf.js
+restituisce lo stesso proxy per richieste contemporanee della stessa pagina:
+`pdfDocument` serializza quindi i disegni per indice prima del `cleanup`,
+evitando che la doppia chiamata di `StrictMode` liberi risorse usate dal
+disegno ancora attivo. La rimozione precedente del `cleanup` non aveva
+risolto le pagine bianche: la causa era il decoder WASM descritto sopra.
 
 ### Riconoscimento e ricerca per biblioteca
 

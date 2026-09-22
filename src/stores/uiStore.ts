@@ -19,6 +19,7 @@ export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export const HELP_GROUPS = [
   { id: 'start', sections: ['overview', 'projects'] },
   { id: 'sources', sections: ['search', 'sources', 'storage', 'backup'] },
+  { id: 'transcription', sections: ['transcription'] },
   { id: 'translation', sections: ['pipeline', 'features', 'glossary', 'memory', 'audit', 'annotations', 'context'] },
   { id: 'support', sections: ['providers', 'ollama', 'shortcuts', 'troubleshooting'] },
 ] as const;
@@ -151,6 +152,11 @@ interface UiState {
   projectFlyoutWidth: number;
   /** Colonna informazioni della scheda opera in Biblioteca. */
   librarySourceInspectorWidth: number;
+  /** Colonna strumenti dello Studio di trascrizione. */
+  transcriptionInspectorWidth: number;
+  /** Colonna visore dello Studio di trascrizione. 0 = mai ridimensionata,
+   *  vale la proporzione predefinita (3/5 visore, 2/5 testo). */
+  transcriptionViewerWidth: number;
   /** Colonna filtri del catalogo Biblioteca. */
   libraryCatalogFiltersWidth: number;
   libraryCatalogFiltersCollapsed: boolean;
@@ -216,6 +222,8 @@ interface UiState {
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
   setLibrarySourceInspectorWidth: (width: number) => void;
+  setTranscriptionInspectorWidth: (width: number) => void;
+  setTranscriptionViewerWidth: (width: number) => void;
   setLibraryCatalogFiltersWidth: (width: number) => void;
   setLibraryCatalogFiltersCollapsed: (collapsed: boolean) => void;
   setLibrarySourceGroupOpen: (group: string, open: boolean) => void;
@@ -376,6 +384,8 @@ export const useUiStore = create<UiState>()(
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       librarySourceInspectorWidth: 400,
+      transcriptionInspectorWidth: 380,
+      transcriptionViewerWidth: 0,
       libraryCatalogFiltersWidth: 320,
       libraryCatalogFiltersCollapsed: false,
       librarySourceGroups: {},
@@ -568,6 +578,8 @@ export const useUiStore = create<UiState>()(
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
       setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
+      setTranscriptionInspectorWidth: (width) => set({ transcriptionInspectorWidth: width }),
+      setTranscriptionViewerWidth: (width) => set({ transcriptionViewerWidth: width }),
       setLibraryCatalogFiltersWidth: (width) => set({ libraryCatalogFiltersWidth: width }),
       setLibraryCatalogFiltersCollapsed: (collapsed) => set({ libraryCatalogFiltersCollapsed: collapsed }),
       setLibrarySourceGroupOpen: (group, open) =>
@@ -643,6 +655,8 @@ export const useUiStore = create<UiState>()(
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,
+        transcriptionInspectorWidth: state.transcriptionInspectorWidth,
+        transcriptionViewerWidth: state.transcriptionViewerWidth,
         libraryCatalogFiltersWidth: state.libraryCatalogFiltersWidth,
         libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
         librarySourceGroups: state.librarySourceGroups,

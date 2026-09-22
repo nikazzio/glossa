@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- Come il visore delle immagini: la superficie deep-zoom è un widget ARIA application che riceve il fuoco e gestisce le frecce. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import { FileText, RefreshCw } from 'lucide-react';
@@ -7,6 +7,7 @@ import { EmptyState, IconButton, Spinner } from '../ui';
 import { ViewerToolbar } from './ViewerToolbar';
 import { documentBytes, isTooLarge, openDocumentExternally } from '../../services/documentService';
 import { renderDocumentPage, openDocument, type LoadedDocument } from './pdfDocument';
+import type { PageStatus } from './PageViewer';
 import { errorMessage, logger } from '../../utils/logger';
 
 /** Quanto si può ingrandire oltre i pixel disegnati, come per le immagini. */
@@ -25,14 +26,40 @@ const MAX_MAGNIFICATION = 2;
 export function DocumentViewer({
   versionId,
   providerKey,
+  onPageChange,
+  onPageStatusChange,
+  requestedIndex = null,
+  requestToken = 0,
+  onRequestedIndexHandled,
+  extraControls,
 }: {
   versionId: string;
   providerKey: string;
+  /** Avvisa chi ospita il visore della pagina disegnata davvero (dopo il
+   *  render, non alla sola richiesta): chi tiene un testo per pagina sa a
+   *  quale pagina agganciarlo. */
+  onPageChange?: (index: number, total: number) => void;
+  /** Stessa forma di `PageViewer`: la pagina richiesta è in corso o è appena
+   *  fallita, `null` quando torna a coincidere con quella mostrata. */
+  onPageStatusChange?: (status: PageStatus | null) => void;
+  /** Comanda una pagina dall'esterno; `requestToken` cambia anche a parità
+   *  di pagina, per far scattare l'effetto pure a richiesta ripetuta. */
+  requestedIndex?: number | null;
+  requestToken?: number;
+  onRequestedIndexHandled?: () => void;
+  /** Comandi di chi ospita il visore (cambio fonte), nella stessa barra. */
+  extraControls?: ReactNode;
 }) {
   const { t } = useTranslation();
   const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
   const documentRef = useRef<LoadedDocument | null>(null);
+  const onPageChangeRef = useRef(onPageChange);
+  onPageChangeRef.current = onPageChange;
+  const onPageStatusChangeRef = useRef(onPageStatusChange);
+  onPageStatusChangeRef.current = onPageStatusChange;
+  const onRequestedIndexHandledRef = useRef(onRequestedIndexHandled);
+  onRequestedIndexHandledRef.current = onRequestedIndexHandled;
 
   const [total, setTotal] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -117,6 +144,7 @@ export function DocumentViewer({
     let cancelled = false;
     let objectUrl: string | null = null;
     setLoading(true);
+    onPageStatusChangeRef.current?.({ index: currentIndex, state: 'loading' });
     void (async () => {
       try {
         const blob = await renderDocumentPage(opened, currentIndex);
@@ -127,10 +155,14 @@ export function DocumentViewer({
           url: objectUrl,
         } as unknown as OpenSeadragon.TileSourceSpecifier);
         setLoadError(null);
+        onPageStatusChangeRef.current?.(null);
+        onPageChangeRef.current?.(currentIndex, total);
       } catch (error: unknown) {
         if (cancelled) return;
-        logger.error('library.document.pageFailed', { message: errorMessage(error) });
-        setLoadError(errorMessage(error));
+        const message = errorMessage(error);
+        logger.error('library.document.pageFailed', { message });
+        setLoadError(message);
+        onPageStatusChangeRef.current?.({ index: currentIndex, state: 'error', message });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -149,6 +181,22 @@ export function DocumentViewer({
     [total],
   );
 
+  // Salto comandato dall'esterno, stessa forma di PageViewer. Il documento
+  // può ancora essere in apertura quando la richiesta arriva (`total` a 0):
+  // resta in attesa invece di scartarla, altrimenti il salto si perde e il
+  // documento riappena montato non raggiunge mai la pagina del testo.
+  const goToIndexRef = useRef(goToIndex);
+  goToIndexRef.current = goToIndex;
+  useEffect(() => {
+    if (requestedIndex === null) return;
+    if (total === 0) return;
+    goToIndexRef.current(requestedIndex);
+    onRequestedIndexHandledRef.current?.();
+    // Scatta su richiesta nuova (requestToken) o non appena il conteggio
+    // pagine arriva (total), non a ogni cambio di `requestedIndex` da solo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestToken, total]);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowRight') {
       event.preventDefault();
@@ -166,7 +214,7 @@ export function DocumentViewer({
       className="flex h-full min-h-0 flex-1"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        {total > 0 && (
+        {(total > 0 || extraControls) && (
           <ViewerToolbar
             fromDisk
             origin={{ source: 'vault', size: '' }}
@@ -192,6 +240,7 @@ export function DocumentViewer({
               viewport.zoomTo(viewport.imageToViewportZoom(1));
               viewport.applyConstraints();
             }}
+            extraControls={extraControls}
           />
         )}
         <div

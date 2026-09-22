@@ -7,6 +7,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
+import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import {
   analysisLocation,
   dashboardLocation,
@@ -77,6 +78,7 @@ export function Header() {
   const location = useUiStore((state) => state.location);
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const librarySourceDetail = useSourceLibraryStore((state) => state.detail);
+  const transcriptionDetail = useTranscriptionStore((state) => state.detail);
   const { t } = useTranslation();
 
   const helpLoaded = useRef(false);
@@ -115,6 +117,13 @@ export function Header() {
   const librarySourceTitle =
     location.area === 'library' && location.itemId && librarySourceDetail?.source.id === location.itemId
       ? librarySourceDetail.source.title
+      : null;
+  // Stesso principio per lo Studio di trascrizione: aperto un documento, il
+  // suo titolo resta in vista finché non se ne apre un altro o si torna al
+  // catalogo.
+  const transcriptionDocumentTitle =
+    location.area === 'transcriptions' && location.documentId && transcriptionDetail?.id === location.documentId
+      ? transcriptionDetail.title
       : null;
   const dashboardTabLabel =
     dashboardSection === 'search'
@@ -233,6 +242,22 @@ export function Header() {
                     </span>
                     <span className="min-w-0 max-w-[24rem] truncate font-display text-lg italic text-editorial-muted md:text-xl">
                       {librarySourceTitle}
+                    </span>
+                  </motion.span>
+                ) : transcriptionDocumentTitle ? (
+                  <motion.span
+                    key="transcription-document-segment"
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
+                    className="flex min-w-0 items-baseline gap-2.5"
+                  >
+                    <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                      //
+                    </span>
+                    <span className="min-w-0 max-w-[24rem] truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {transcriptionDocumentTitle}
                     </span>
                   </motion.span>
                 ) : null}

@@ -1072,6 +1072,74 @@
     "rename": "Rinomina il progetto",
     "untitled": "Progetto senza nome"
   },
+  "transcription": {
+    "create": "Crea documento",
+    "titleLabel": "Titolo",
+    "chooseStartingCopy": "Da quale copia iniziare",
+    "linkToSource": "Collega a un'opera della Biblioteca (opzionale)",
+    "linkToSourcePlaceholder": "Cerca per titolo...",
+    "titlePlaceholder": "Titolo del documento...",
+    "saveFailed": "Creazione del documento fallita",
+    "loadFailed": "Caricamento delle trascrizioni fallito",
+    "notFound": "Documento di trascrizione non trovato",
+    "delete": "Elimina",
+    "removeDocument": "Rimuovi trascrizione",
+    "sourceImages": "Immagini",
+    "sourcePdf": "PDF",
+    "sourceImagesUnaligned": "Immagini (numerazione diversa dal PDF)",
+    "sourcePdfUnaligned": "PDF (numerazione diversa dalle immagini)",
+    "unlink": "Stacca testo e visore",
+    "relink": "Riaggancia testo e visore",
+    "textPrevPage": "Pagina precedente del testo",
+    "textNextPage": "Pagina successiva del testo",
+    "confirmDeleteTitle": "Eliminare il documento?",
+    "confirmDeleteMessage": "\"{{name}}\" verrà rimosso. L'operazione non è reversibile.",
+    "deleted": "Documento eliminato",
+    "deleteFailed": "Eliminazione del documento fallita",
+    "newDocumentCard": "Nuovo documento",
+    "createFromSource": "Crea una trascrizione di quest'opera",
+    "backToCatalogue": "Torna a Trascrizioni",
+    "verifiedBadge": "Verificato",
+    "draftBadge": "Bozza",
+    "verify": "Segna come verificato",
+    "unverify": "Riporta in bozza",
+    "verified": "Segmento verificato",
+    "verifyFailed": "Operazione non riuscita",
+    "restore": "Ripristina questa versione",
+    "restored": "Versione ripristinata",
+    "restoreFailed": "Ripristino non riuscito",
+    "viewerUnavailable": "Questo documento non è collegato a una digitalizzazione con pagine da mostrare.",
+    "viewerOpenFailed": "Questa copia non si apre. Torna all'altra con i comandi qui sopra.",
+    "paneLabel": "Testo",
+    "pageTitle": "Pagina {{n}}",
+    "saveSaved": "Salvato",
+    "saveSaving": "Salvataggio",
+    "saveError": "Salvataggio fallito",
+    "saveRetry": "Riprova",
+    "textPlaceholder": "Scrivi qui il testo trascritto...",
+    "inspectorLabel": "Strumenti di trascrizione",
+    "inspectorPanelTitle": "Strumenti",
+    "noRevisions": "Nessun salvataggio ancora.",
+    "tabs": {
+      "history": "Storico",
+      "assist": "Assistenza",
+      "metadata": "Metadati"
+    },
+    "meta": {
+      "page": "Pagina",
+      "pageLabel": "Etichetta pagina",
+      "status": "Stato",
+      "revisionCount": "Revisioni salvate",
+      "segmentId": "Id segmento",
+      "sourcePageId": "Pagina collegata",
+      "sourcePageIdUnset": "non collegata"
+    },
+    "authorLabels": {
+      "user": "Correzione manuale",
+      "ocr": "Riconoscimento automatico",
+      "import": "Importato"
+    }
+  },
   "areas": {
     "translations": {
       "title": "Traduzioni",
@@ -1438,7 +1506,7 @@
       "title": "Trascrizioni",
       "sidebarHint": "OCR e preparazione",
       "emptyMessage": "Il catalogo Trascrizioni non ha ancora contenuto.",
-      "emptyHint": "Arriverà con lo Studio di trascrizione."
+      "emptyHint": "Crea un documento per iniziare a trascrivere, o parti da un'opera della Biblioteca."
     },
     "analysis": {
       "title": "Analisi",
@@ -1968,10 +2036,62 @@
     "groups": {
       "start": "Per iniziare",
       "sources": "Fonti e dati",
+      "transcription": "Trascrizione",
       "translation": "Traduzione e revisione",
       "support": "Configurazione e assistenza"
     },
     "articles": {
+      "transcription": {
+        "title": "Trascrivere un documento",
+        "intro": "Lo Studio di trascrizione è la modalità concentrata per scrivere e correggere il testo di un documento: visore a sinistra, testo al centro, strumenti a destra.",
+        "blocks": [
+          {
+            "title": "Creare un documento",
+            "paragraphs": [
+              "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo.",
+              "Dalla Panoramica di un workspace, la sezione Trascrizioni mostra solo i documenti di quel workspace: aprine uno dall'elenco oppure usa il comando + per crearne uno già assegnato lì.",
+              "Puoi anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo nello stesso dialogo — facoltativo, senza resta un solo blocco di testo senza visore.",
+              "Dalla scheda di un'opera in Biblioteca puoi invece creare direttamente una trascrizione di quella digitalizzazione.",
+              "Se l'opera ha sia le immagini sia il PDF sul computer, scegli da quale iniziare."
+            ]
+          },
+          {
+            "title": "Il visore a sinistra, un testo per pagina",
+            "paragraphs": [
+              "Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra la pagina della digitalizzazione collegata, con zoom e trascinamento — cambiando pagina, il testo a destra cambia con lei: ogni pagina ha il proprio blocco di testo e il proprio storico. Un documento creato da zero non ha una digitalizzazione da mostrare: al posto del visore compare un avviso, e resta un solo blocco di testo.",
+              "In alto, un documento legato a un'opera mostra titolo e autore dell'opera, come nella sua scheda in Biblioteca, con l'uscita verso il sito della biblioteca. Il comando con i tre puntini offre solo \"Rimuovi trascrizione\": scaricare, verificare o archiviare l'opera restano comandi della scheda in Biblioteca."
+            ]
+          },
+          {
+            "title": "Scrivere e salvare",
+            "paragraphs": [
+              "Il testo si salva da solo poco dopo che smetti di scrivere: l'indicatore in alto a destra dice se il salvataggio è in corso, riuscito o fallito. Cambiando pagina prima che il salvataggio sia partito, il testo si salva comunque, subito.",
+              "Quando il testo è pronto, segnalo come verificato con il lucchetto accanto al titolo \"Pagina N\": il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando."
+            ]
+          },
+          {
+            "title": "Pagina in caricamento",
+            "paragraphs": [
+              "Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo e lo storico con una rotellina al centro: scrivere o ripristinare restano disattivati finché la pagina non è mostrata davvero. Se l'apertura fallisce, compare un avviso al posto della rotellina, con lo stesso blocco."
+            ]
+          },
+          {
+            "title": "Cambiare fonte, immagini o PDF",
+            "paragraphs": [
+              "Se l'opera ha entrambe le copie, nella barra del visore compaiono due comandi per passare dall'una all'altra. Se dichiarano lo stesso numero di pagine il cambio è fluido, stessa numerazione. Se il numero non combacia, sulla copia secondaria il visore si stacca dal testo: si sfoglia liberamente, mentre il testo si sfoglia con le proprie frecce accanto al titolo \"Pagina N\". Tornando sulla copia principale l'aggancio si ripristina da solo.",
+              "Un terzo comando stacca il collegamento a prescindere dal numero di pagine, anche restando sulla copia principale: comodo per guardare una pagina diversa senza spostare il punto in cui si sta scrivendo."
+            ]
+          },
+          {
+            "title": "Storico, ripristino e metadati",
+            "paragraphs": [
+              "Ogni salvataggio resta nello storico della pagina, a destra: mostra chi ha scritto quella versione — correzione manuale, riconoscimento automatico o importazione — e quando.",
+              "Il comando su ogni voce dello storico riporta il testo di quella versione, come nuovo salvataggio: le versioni precedenti non si perdono mai. Cambiando pagina, lo storico mostrato cambia con lei.",
+              "La scheda Metadati, di fianco a Storico, mostra i dati grezzi salvati per la pagina corrente — posizione, etichetta, stato, numero di revisioni — utile per vedere cosa viene registrato oggi."
+            ]
+          }
+        ]
+      },
       "pipeline": {
         "title": "Tradurre un documento",
         "intro": "La pipeline è la sequenza di fasi che produce e valuta una traduzione. Ogni frammento del documento viene elaborato separatamente.",

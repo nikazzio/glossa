@@ -39,6 +39,11 @@ interface InspectorShellProps {
   /** Altri comandi nell'intestazione, accanto a collassa/espandi (es. chiudi
    *  la scheda) — solo quando c'è un'intestazione (`panelLabel` presente). */
   headerActions?: ReactNode;
+  /** Altezza di intestazione e barra tab, per allinearle a un'altra colonna
+   *  (es. la barra comandi di un visore). Default `h-20` per intestazione,
+   *  tabs sempre auto salvo qui specificato — usi diversi restano invariati. */
+  headerHeightClassName?: string;
+  tabRowHeightClassName?: string;
   /** Informazione compatta che resta sotto il comando di riapertura. */
   collapsedContent?: ReactNode;
   /**
@@ -72,6 +77,8 @@ export function InspectorShell({
   headerActions,
   collapsedContent,
   bodyScrolls = true,
+  headerHeightClassName = 'h-20',
+  tabRowHeightClassName,
   children,
 }: InspectorShellProps) {
   const { t } = useTranslation();
@@ -81,7 +88,7 @@ export function InspectorShell({
   if (hasHeader && collapsed) {
     return (
       <div className="flex h-full flex-col items-center">
-        <div className="flex h-20 w-full shrink-0 items-center justify-center">
+        <div className={`flex ${headerHeightClassName} w-full shrink-0 items-center justify-center`}>
           <IconButton
             size="md"
             tone="muted"
@@ -136,7 +143,7 @@ export function InspectorShell({
   return (
     <div className="flex h-full flex-col" role="region" aria-label={ariaLabel}>
       {hasHeader && (
-        <div className="flex h-20 shrink-0 items-center gap-3 border-b border-editorial-border px-3">
+        <div className={`flex ${headerHeightClassName} shrink-0 items-center gap-3 border-b border-editorial-border px-3`}>
           <IconButton
             size="md"
             tone="muted"
@@ -154,7 +161,7 @@ export function InspectorShell({
         </div>
       )}
       {tabs.length > 0 && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
+        <div className={`flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 ${tabRowHeightClassName ?? 'py-2'}`}>
           <div role="tablist" aria-orientation="horizontal" aria-label={ariaLabel} className="flex min-w-0 shrink-0 items-center gap-1">
             {tabs.map((tab) => (
               <TabButton

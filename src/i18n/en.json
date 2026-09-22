@@ -1072,6 +1072,74 @@
     "rename": "Rename the project",
     "untitled": "Untitled project"
   },
+  "transcription": {
+    "create": "Create document",
+    "titleLabel": "Title",
+    "chooseStartingCopy": "Which copy to start from",
+    "linkToSource": "Link to a work in the Library (optional)",
+    "linkToSourcePlaceholder": "Search by title...",
+    "titlePlaceholder": "Document title...",
+    "saveFailed": "Failed to create the document",
+    "loadFailed": "Failed to load transcriptions",
+    "notFound": "Transcription document not found",
+    "delete": "Delete",
+    "removeDocument": "Remove transcription",
+    "sourceImages": "Images",
+    "sourcePdf": "PDF",
+    "sourceImagesUnaligned": "Images (page numbers differ from the PDF)",
+    "sourcePdfUnaligned": "PDF (page numbers differ from the images)",
+    "unlink": "Detach text from viewer",
+    "relink": "Reattach text to viewer",
+    "textPrevPage": "Previous text page",
+    "textNextPage": "Next text page",
+    "confirmDeleteTitle": "Delete this document?",
+    "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
+    "deleted": "Document deleted",
+    "deleteFailed": "Failed to delete the document",
+    "newDocumentCard": "New document",
+    "createFromSource": "Create a transcription of this work",
+    "backToCatalogue": "Back to Transcriptions",
+    "verifiedBadge": "Verified",
+    "draftBadge": "Draft",
+    "verify": "Mark as verified",
+    "unverify": "Return to draft",
+    "verified": "Segment verified",
+    "verifyFailed": "The action failed",
+    "restore": "Restore this version",
+    "restored": "Version restored",
+    "restoreFailed": "Restore failed",
+    "viewerUnavailable": "This document isn't linked to a digitization with pages to show.",
+    "viewerOpenFailed": "This copy won't open. Switch back with the controls above.",
+    "paneLabel": "Text",
+    "pageTitle": "Page {{n}}",
+    "saveSaved": "Saved",
+    "saveSaving": "Saving",
+    "saveError": "Save failed",
+    "saveRetry": "Retry",
+    "textPlaceholder": "Write the transcribed text here...",
+    "inspectorLabel": "Transcription tools",
+    "inspectorPanelTitle": "Tools",
+    "noRevisions": "No saves yet.",
+    "tabs": {
+      "history": "History",
+      "assist": "Assist",
+      "metadata": "Metadata"
+    },
+    "meta": {
+      "page": "Page",
+      "pageLabel": "Page label",
+      "status": "Status",
+      "revisionCount": "Saved revisions",
+      "segmentId": "Segment id",
+      "sourcePageId": "Linked page",
+      "sourcePageIdUnset": "not linked"
+    },
+    "authorLabels": {
+      "user": "Manual correction",
+      "ocr": "Automatic recognition",
+      "import": "Imported"
+    }
+  },
   "areas": {
     "translations": {
       "title": "Translations",
@@ -1438,7 +1506,7 @@
       "title": "Transcriptions",
       "sidebarHint": "OCR and source prep",
       "emptyMessage": "The Transcriptions catalogue has no content yet.",
-      "emptyHint": "Coming with the Transcription Studio."
+      "emptyHint": "Create a document to start transcribing, or start from a work in the Library."
     },
     "analysis": {
       "title": "Analysis",
@@ -1968,10 +2036,62 @@
     "groups": {
       "start": "Getting started",
       "sources": "Sources and data",
+      "transcription": "Transcription",
       "translation": "Translation and review",
       "support": "Setup and support"
     },
     "articles": {
+      "transcription": {
+        "title": "Transcribing a document",
+        "intro": "The Transcription Studio is the focused mode for writing and correcting a document's text: viewer on the left, text in the middle, tools on the right.",
+        "blocks": [
+          {
+            "title": "Creating a document",
+            "paragraphs": [
+              "From Transcriptions, choose \"New document\" and give it a title.",
+              "From a workspace Overview, the Transcriptions section shows only that workspace's documents: open one from the list or use the + command to create one already assigned there.",
+              "You can also link it right away to a work already in the Library, searching by title in the same dialog — optional, without it the document stays a single block of text with no viewer.",
+              "From a work's page in the Library you can instead create a transcription directly from that digitization.",
+              "If the work has both images and a PDF on your computer, choose which to start from."
+            ]
+          },
+          {
+            "title": "The viewer on the left, one text per page",
+            "paragraphs": [
+              "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text.",
+              "At the top, a document tied to a work shows the work's title and author, as on its Library page, with the link out to the library's site. The three-dot command offers only \"Remove transcription\": downloading, verifying, or archiving the work stay commands of the Library page."
+            ]
+          },
+          {
+            "title": "Writing and saving",
+            "paragraphs": [
+              "The text saves itself shortly after you stop typing: the indicator in the top right says whether the save is in progress, done, or failed. Changing page before the save has started still saves the text right away.",
+              "When the text is ready, mark it as verified with the lock next to the \"Page N\" title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command."
+            ]
+          },
+          {
+            "title": "Page loading",
+            "paragraphs": [
+              "While the viewer is still opening the chosen page, a veil covers the text and history with a spinner in the middle: writing or restoring stay disabled until the page is actually shown. If opening fails, a warning appears in place of the spinner, with the same block."
+            ]
+          },
+          {
+            "title": "Switching source, images or PDF",
+            "paragraphs": [
+              "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows next to the \"Page N\" title. Switching back to the main copy restores the link on its own.",
+              "A third command detaches the link regardless of page counts, even while staying on the main copy: handy for glancing at a different page without moving where you're writing."
+            ]
+          },
+          {
+            "title": "History, restore and metadata",
+            "paragraphs": [
+              "Every save stays in that page's history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
+              "The command on each history entry brings that version's text back as a new save: earlier versions are never lost. Changing page changes the history shown, too.",
+              "The Metadata tab, next to History, shows the raw data saved for the current page — position, label, status, revision count — useful to see what's recorded today."
+            ]
+          }
+        ]
+      },
       "pipeline": {
         "title": "Translating a document",
         "intro": "A pipeline is the sequence of stages that produces and assesses a translation. Each document segment is processed separately.",

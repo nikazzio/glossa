@@ -443,6 +443,32 @@ export async function versionProviderKey(versionId: string): Promise<string | nu
   return (await versionInventory(versionId))?.providerKey ?? null;
 }
 
+/** Quanto serve per montare il visore altrove nell'app (Studio di
+ *  trascrizione), senza rileggere l'intera scheda dell'opera. */
+export interface ViewerVersionRef {
+  sourceId: string;
+  versionId: string;
+  versionKind: 'iiif_manifest' | 'pdf' | 'edition' | 'copy' | 'other';
+  sourceUrl: string | null;
+  providerKey: string | null;
+}
+
+export async function getVersionForViewer(versionId: string): Promise<ViewerVersionRef | null> {
+  const rows = await select<{ id: string; source_id: string; version_kind: ViewerVersionRef['versionKind']; source_url: string | null }>(
+    'SELECT id, source_id, version_kind, source_url FROM source_versions WHERE id = $1',
+    [versionId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    sourceId: row.source_id,
+    versionId: row.id,
+    versionKind: row.version_kind,
+    sourceUrl: row.source_url,
+    providerKey: await versionProviderKey(row.id),
+  };
+}
+
 /**
  * Mette da parte un'opera senza perderla, o la rimette in circolo.
  *

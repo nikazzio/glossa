@@ -5,6 +5,7 @@ import {
   AlertCircle,
   BookOpenText,
   Eraser,
+  FilePen,
   LayoutGrid,
   Link2,
   List,
@@ -40,6 +41,7 @@ import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
+import { CreateTranscriptionDialog } from '../transcription/CreateTranscriptionDialog';
 import {
   EMPTY_LIBRARY_FILTERS,
   filterLibraryCatalog,
@@ -49,7 +51,7 @@ import {
   orderLibraryCatalog,
   type LibraryFilters,
 } from '../../utils/libraryCatalogFilters';
-import { libraryLocation, withWorkspaceFilter } from '../../navigation/appLocation';
+import { libraryLocation, transcriptionsLocation, withWorkspaceFilter } from '../../navigation/appLocation';
 import type { IIIFProvider, LibraryCatalogEntry, SourceCollection, SourceField, Workspace } from '../../types';
 
 interface LibraryCatalogAreaProps {
@@ -123,6 +125,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   );
   const [filters, setFilters] = useState(EMPTY_LIBRARY_FILTERS);
   const [providers, setProviders] = useState<IIIFProvider[]>([]);
+  const [transcriptionTarget, setTranscriptionTarget] = useState<LibraryCatalogEntry | null>(null);
   const [filtersPanel, setFiltersPanel] = usePanelCallbackRef();
   const [dragging, setDragging] = useResizeDragging();
   const initialFiltersWidth = useRef(clampWidth(filtersWidth || 320, FILTERS_MIN, FILTERS_MAX));
@@ -302,6 +305,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const yOffset = reducedMotion ? 0 : 8;
 
   return (
+    <>
     <AnimatePresence mode="wait" initial={false}>
       {itemId && !isSourcePage ? (
         <motion.div
@@ -466,6 +470,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                         onSetCollection={(collectionId, member) =>
                           void changeCollection(entry.source.id, collectionId, member)
                         }
+                        onCreateTranscription={() => setTranscriptionTarget(entry)}
                       />
                       </ListReveal>
                     ))}
@@ -551,6 +556,15 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
         </motion.div>
       )}
     </AnimatePresence>
+    <CreateTranscriptionDialog
+      open={transcriptionTarget !== null}
+      onClose={() => setTranscriptionTarget(null)}
+      sourceVersionId={transcriptionTarget?.versionId ?? null}
+      sourceId={transcriptionTarget?.source.id}
+      defaultTitle={transcriptionTarget?.source.title ?? ''}
+      onCreated={(documentId) => navigate(transcriptionsLocation({ documentId }))}
+    />
+    </>
   );
 }
 
@@ -566,6 +580,7 @@ function CatalogEntryRow({
   onToggleLink,
   collections,
   onSetCollection,
+  onCreateTranscription,
 }: {
   entry: LibraryCatalogEntry;
   view: 'list' | 'grid';
@@ -578,6 +593,7 @@ function CatalogEntryRow({
   onToggleLink: (workspaceId: string, linked: boolean) => void;
   collections: SourceCollection[];
   onSetCollection: (collectionId: string, member: boolean) => void;
+  onCreateTranscription: () => void;
 }) {
   const { t } = useTranslation();
   const actions = useSourceActions(entry, { onRemove, onSetArchived, onRefresh });
@@ -762,6 +778,14 @@ function CatalogEntryRow({
                 </ul>
               </ClickPopover>
             )}
+            <span className="mx-0.5 h-4 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
+            <IconButton
+              size="xs"
+              title={t('transcription.createFromSource')}
+              onClick={onCreateTranscription}
+            >
+              <FilePen size={12} />
+            </IconButton>
         </div>
       </div>
 
