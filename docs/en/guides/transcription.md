@@ -69,6 +69,32 @@ A third command detaches the link **regardless** of page counts, even
 while staying on the main copy: handy for glancing at a different page
 without moving where you're writing.
 
+## Automatic page reading (OCR)
+
+In the **Assist** tab, on the right, you can have the text of the open page
+read by a connected AI model — the same mechanism already used for
+Translation, with providers and keys already configured. The command
+appears disabled until the conditions are met: the page must belong to a
+digitization linked to the document, and a provider and model that can read
+images must be chosen, either for the document or inherited from the
+workspace settings. The reason a command is disabled is always in its
+tooltip.
+
+The text that comes back enters the history as a normal revision, marked
+"Automatic recognition": it never overwrites what's there, it stays
+editable like any other version, and a later manual correction simply
+creates the next revision.
+
+The prompt that guides the reading is customisable at three levels —
+workspace, document, single page — each meant to take over only when
+written on purpose; otherwise the level above still applies.
+
+The reading starts in the queue, like a download: you'll find it in the
+jobs panel while it runs, with the option to pause or cancel it the same
+way. The **Transcription log** tab, next to Assist, lists every reading
+with its cost and the tokens it used — the same information the Translation
+log shows for chunks.
+
 ## History, restore and metadata
 
 Every save stays in that page's history, in the panel on the right: it
@@ -83,5 +109,10 @@ show what's recorded today; how it's presented will change.
 
 ## Current limits
 
-Assisted text recognition (OCR) arrives with the next steps of the beta. The
-viewer doesn't yet have visual filters (brightness, contrast, inversion).
+Automatic recognition reads one page at a time, picked by hand in the
+Studio: there's no command yet to read a range of pages in one pass, or to
+read the whole document. It only works on digitizations linked through an
+IIIF manifest — a single-file work (PDF) isn't supported yet. The model
+doesn't yet receive the text of nearby pages as continuity context — only
+the current page's image and the configured prompt. The viewer doesn't yet
+have visual filters (brightness, contrast, inversion).

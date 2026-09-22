@@ -48,9 +48,10 @@ visore IIIF, lettura locale, versioni a più misure, deposito, cache, coda
 persistente, ottimizzazione e verifica. La traduzione editoriale, glossari,
 memoria di frasi, annotazioni, storico e backup applicativo sono operativi.
 
-Restano incompleti lo Studio di trascrizione, OCR/HTR, collegamento alla
-traduzione, PDF nella Biblioteca, Export Studio e Analisi. La proposta di
-rilascio automatica non sostituisce questi criteri di completamento.
+Restano incompleti collegamento alla traduzione, PDF nella Biblioteca, Export
+Studio e Analisi. OCR/HTR (#220) è consegnato in prima versione — vedi lo
+stato del punto 2. La proposta di rilascio automatica non sostituisce questi
+criteri di completamento.
 
 **Proposta di rilascio aperta: #386.** Si aggiorna da sola a ogni arrivo su
 main e resta aperta finché non la si unisce. Unirla pubblica il tag, le note,
@@ -173,8 +174,7 @@ Issue: #182, #388, #219, #220, #185.
 zoom/pan di #221 **consegnati**: comandi dati (servizio TS sulle tabelle già
 in schema, storico revisioni append-only, verifica/ritiro come per le
 traduzioni), schermata Studio (testo con salvataggio automatico al centro,
-storico e ripristino a destra — la scheda Assistenza è predisposta ma
-disattivata, arriva con l'OCR) e visore a sinistra — riuso di
+storico e ripristino a destra) e visore a sinistra — riuso di
 `PageViewer`/`DocumentViewer` già scritti per la Biblioteca, non un
 componente nuovo. **Un segmento per pagina**, non per documento: cambiare
 pagina nel visore cambia il testo, ognuna con il proprio storico — un
@@ -185,8 +185,21 @@ primo resta un documento senza digitalizzazione collegata. Il cambio fonte
 immagini/PDF nel visore, con riallineamento delle pagine quando le due copie
 non promettono la stessa numerazione, è consegnato. **Restano**: filtri
 visuali e preset (resto di #221, spostati al punto 3 come da decisione del 20
-settembre), OCR/HTR (#220), l'ancoraggio a `source_page_id` (oggi la posizione
-si tiene da sé, senza dipendere da uno scaricamento).
+settembre).
+
+**Stato al 22 settembre 2026.** OCR/HTR (#220) consegnato in prima versione:
+scheda Assistenza attiva, con select provider/modello (filtrata sui modelli
+che leggono immagini) e prompt personalizzabile su tre livelli — workspace,
+documento, pagina. Il comando legge la pagina aperta tramite un lavoro
+persistente, stesso motore dello scaricamento; il risultato entra nello
+storico come revisione marcata "riconoscimento automatico", mai come
+sovrascrittura. Nuova scheda "Log trascrizione" accanto ad Assistenza,
+costo e token per lettura. L'ancoraggio a `source_page_id` è risolto: si
+completa da sé al primo tocco di un segmento, prerequisito di tutto il resto.
+**Restano fuori da questo primo giro**: comando per leggere un intervallo di
+pagine o l'intero documento in interfaccia (la forma dati lo prevede già),
+lettura su un documento unico (PDF) — solo le copie IIIF sono coperte —, e il
+testo delle pagine vicine come contesto di continuità nel prompt.
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

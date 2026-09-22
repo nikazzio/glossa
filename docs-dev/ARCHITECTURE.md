@@ -374,14 +374,22 @@ di stato propria.
 pagina nel visore cambia il segmento mostrato. Il segmento nasce solo al primo
 salvataggio davvero (`transcriptionService.ensureSegment`) — sfogliare pagine
 mai trascritte non lascia righe vuote nella tabella;
-`getSegmentByPosition` è la sola lettura, senza crearne uno. La colonna
-`source_page_id` resta **non collegata** per ora: quella riga esiste solo dopo
-uno scaricamento (`record_pages` in Rust, dentro il lavoro di scaricamento),
-mentre il visore mostra pagine anche senza aver mai scaricato nulla — legarsi
-a `source_page_id` avrebbe reso la trascrizione dipendente da uno
-scaricamento che l'utente potrebbe non voler mai fare. Un documento senza
-visore (nato da zero, non da una digitalizzazione) resta su un solo blocco di
-testo, in posizione 0 — lo stesso codice, solo che la pagina non cambia mai.
+`getSegmentByPosition` è la sola lettura, senza crearne uno.
+
+**`source_page_id` si risolve da sé (#220).** La riga in `source_pages`
+esiste solo dopo che un lavoro di scaricamento ha letto il manifesto
+(`record_pages` in Rust): un documento aperto prima di quel momento ha
+segmenti con `source_page_id NULL`, anche se il visore mostra già la pagina.
+`ensureSegment` colma il collegamento al primo tocco del segmento successivo
+allo scaricamento — non un backfill una tantum, la stessa risoluzione si
+applica a ogni chiamata, sia alla creazione sia su un segmento già esistente
+con la colonna ancora vuota. Senza questo collegamento l'OCR resta
+disattivato per quella pagina (vedi sezione OCR più sotto): è il modo con cui
+Rust risale dalla pagina ai byte dell'immagine senza dipendere da un
+`position` che nel deposito significa un'altra cosa per ogni provider. Un
+documento senza visore (nato da zero, non da una digitalizzazione) resta su
+un solo blocco di testo, in posizione 0, `source_page_id` sempre `NULL` — lo
+stesso codice, solo che la pagina non cambia mai.
 
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello
@@ -427,10 +435,10 @@ con un riferimento alla pagina che si sta salvando, non con lo stato letto a
 scrittura ultimata.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
-opera, con schede Assistenza (disattivata, in attesa dell'OCR), Storico e
-Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
-(posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
-finché non si decide una presentazione definitiva.
+opera, con schede Assistenza (OCR, #220 — vedi sezione dedicata), Storico,
+Log trascrizione e Metadati — quest'ultima mostra i campi grezzi che il
+segmento porta oggi (posizione, etichetta, stato, numero di revisioni,
+`source_page_id`), utile finché non si decide una presentazione definitiva.
 
 **Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
 copia con cui il documento nasce (`source_version_id`) resta "principale"
@@ -496,6 +504,95 @@ di sempre): qui impostate a `h-12` per allineare intestazione e barra tab
 alla stessa altezza della barra comandi del visore e dell'intestazione del
 testo. Applicate anche alla scheda opera in Biblioteca (`LibrarySourcePage`),
 approvato l'esito qui — non ancora allo Studio di traduzione.
+
+## OCR/HTR (#220)
+
+Un provider LLM già configurato per la traduzione legge l'immagine di una
+pagina e propone un testo, che entra come revisione modificabile — mai come
+verità finale. Piano completo, con la verifica riga per riga contro il
+codice: `docs-dev/PLAN_OCR_HTR.md`.
+
+**Schema** (consolidato in `0001_baseline_2_0.sql`, nessuna migrazione
+incrementale — beta privata): `workspaces.ocr_default_{prompt,provider,model}`
+(`TEXT NOT NULL DEFAULT ''`, vuoto = nessun default a quel livello),
+`transcription_documents.ocr_{prompt,provider,model,image_edge}` (`NULL`
+eredita dal workspace), `transcription_segments.ocr_prompt` (`NULL` eredita
+dal documento). `operation_logs.transcription_document_id` /
+`transcription_segment_id` (`ON DELETE SET NULL`, mai `CASCADE`, stessa
+regola di `chunk_id`: la cronologia dei costi non sparisce se il documento si
+elimina).
+
+**Livello LLM** (`llm/types.rs`): `StructuredPrompt.images: Vec<ImageAttachment>`,
+sempre nel messaggio utente, mai in un blocco di sistema — romperebbe la
+cache dell'intero prompt su Gemini e la coda cacheable su Anthropic/OpenAI a
+ogni pagina. Ogni provider serializza a modo suo (`llm/providers/*.rs`):
+Anthropic blocco `type: "base64"`, OpenAI `image_url` con data-URL (sia
+Responses sia Chat Completions), Gemini `inline_data`, Ollama campo
+`images` (base64 nudo, senza prefisso data-URL). Nessuna immagine ⇒ stesso
+corpo di richiesta di prima, byte per byte — invariante coperto da test in
+ogni provider. `llm/prompts.rs::build_ocr_prompt` compone persona OCR
+(cacheable), blocco di riferimento opzionale (cacheable), prompt risolto
+(non cacheable) e messaggio utente con immagine + id pagina.
+
+**Catena pagina → byte, mai costruita in Rust.** `transcription_segments.source_page_id`
+→ `source_pages.position` → il frontend, che ha già in mano il manifesto
+aperto nel visore (`iiifViewerService.fetchViewerManifestWithRetry` +
+`pageSourceUrl`), congela una `CacheRequest::Page` completa (con
+`remoteUrl`) dentro la configurazione del lavoro. Il gestore Rust
+(`ocr::handler::OcrJobHandler`) la passa **inalterata** a
+`httpcache::commands::bytes_of`, la stessa catena che il visore usa per
+mostrare le pagine: deposito alla misura esatta → cache di rete → deposito a
+misura più grande (ridotta al volo) → biblioteca remota. Limite v1:
+`src/services/ocrService.ts` risolve solo copie `versionKind ===
+'iiif_manifest'` — un documento unico (PDF) resta fuori da questo primo
+giro.
+
+**Cascata di risoluzione** (`transcriptionService.resolveOcrSettings`, sola
+fonte, in TypeScript): pagina → documento → workspace → costante
+(`DEFAULT_OCR_PROMPT`/`DEFAULT_OCR_IMAGE_EDGE` in `constants.ts`) per il
+prompt; documento → workspace per provider/modello, senza costante finale —
+non esiste un modello di ripiego universale, la select resta vuota finché
+qualcuno non ne sceglie uno. Il risultato si congela nella configurazione del
+lavoro al momento della messa in coda (`ocrService.buildPageInput`):
+modificare il prompt dopo non altera un lavoro già accodato.
+
+**Gestore lavoro** (`src-tauri/src/ocr/`, `JOB_TYPE = "ocr_page"`, registrato
+in `jobs/commands.rs` accanto agli altri): `ResourceClass::LanguageService`,
+`Recovery::Restart` (una chiamata interrotta a metà non lascia stato
+parziale utile — le pagine già scritte non si ripetono comunque, grazie al
+checkpoint elencato sotto). `resolve_provider`/`get_api_key` chiedono un
+`AppHandle` che `JobContext` non dà: il gestore lo tiene come campo, come
+`federation::SearchJob`. Il campo `pages: Vec<OcrPageConfig>` accetta fin da
+subito più pagine (`config.checkpoint` come JSON array di `segment_id` già
+scritti, per saltarli alla ripresa dopo una pausa), anche se l'interfaccia
+v1 offre solo la pagina corrente (`TranscriptionAssistTab`) —
+`ocrService.startOcrForRange` esiste lato TypeScript ma non ha ancora un
+comando visibile.
+
+**Scrittura**: `ocr::revisions::write_ocr_revision` (TDD, prima del
+gestore) replica in `rusqlite` le stesse regole di
+`transcriptionService.insertRevision` — numero progressivo, impronta
+FNV-1a identica (due implementazioni indipendenti, non un valore
+condiviso), append-only, deduplica sul testo identico. `ocr::log::write_ocr_log`
+scrive in `operation_logs` con `project_id`/`pipeline_id` `NULL`: primo
+punto in cui Rust scrive quella tabella (prima solo `dbService.ts`).
+`dbService.loadTranscriptionOperationLogs(documentId)` è il percorso di
+lettura dedicato — lo store della traduzione (`operationLogStore.ts`, scope
+`'ocr'` aggiunto all'unione) non cambia.
+
+**Catalogo modelli**: `ModelEntry.supportsVision` (capacità, filtra la
+select OCR) separato da `'ocr'` in `ModelUseCase` (idoneità,
+`preferredFor`/`discouragedFor`) — un modello può vedere immagini ed essere
+comunque sconsigliato per l'OCR, ma un modello senza `supportsVision` non
+compare mai nella select OCR a prescindere da `preferredFor`.
+`getVisionCapableModelIds` filtra i modelli noti; gli Ollama passano
+sempre (lista dinamica, capacità non dichiarabile).
+
+**Non ancora fatto** (v1 non li copre): comando "leggi intervallo di pagine"
+in interfaccia, testo delle pagine vicine come blocco di riferimento
+cacheable (`ocrService.buildPageInput` passa sempre `referenceText: null` —
+il costruttore di prompt lo accetta già, manca solo chi lo calcola), lettura
+su documento unico (PDF), filtri visuali dell'immagine prima dell'invio.
 
 ## Pipeline di traduzione
 

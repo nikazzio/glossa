@@ -47,6 +47,17 @@ Questi comportamenti descrivono l’integrazione di Glossa. L’effettiva
 disponibilità, durata e tariffazione della cache dipendono dal servizio e dal
 modello; non sono deducibili dal solo nome della famiglia di modelli.
 
+## Riconoscimento automatico della pagina (OCR)
+
+Lo stesso principio vale per la lettura automatica delle pagine di
+trascrizione: l'immagine della pagina e il suo identificativo stanno
+**sempre** nel messaggio utente, mai in un blocco di sistema. Persona e
+regole di trascrizione restano un blocco statico cacheable, identico per
+ogni pagina letta — lo stesso beneficio di cache descritto sopra per la
+traduzione si applica quindi a una sequenza di letture consecutive dello
+stesso documento, senza che l'immagine ne comprometta il prefisso
+riutilizzabile.
+
 ## Configurazione e verifica
 
 La cache Anthropic è disattivata per impostazione predefinita. Attivala quando

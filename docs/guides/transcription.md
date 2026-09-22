@@ -70,6 +70,32 @@ Un terzo comando stacca il collegamento **a prescindere** dal numero di
 pagine, anche restando sulla copia principale: comodo per guardare una
 pagina diversa senza spostare il punto in cui si sta scrivendo.
 
+## Riconoscimento automatico della pagina (OCR)
+
+Nella scheda **Assistenza**, a destra, puoi far leggere il testo della
+pagina aperta a un modello di intelligenza artificiale collegato — lo stesso
+meccanismo già usato per la Traduzione, con provider e chiavi già
+configurati. Il comando compare disattivato finché mancano le condizioni: la
+pagina deve appartenere a una digitalizzazione collegata al documento, e
+serve un provider e un modello che sappiano leggere le immagini, scelti per
+il documento oppure ereditati dalle impostazioni del workspace. Il motivo di
+un comando disattivato sta sempre nel suo suggerimento.
+
+Il testo letto entra nello storico come una revisione normale, marcata
+"Riconoscimento automatico": non sovrascrive mai quello che c'è, resta
+modificabile come qualunque altra versione, e una correzione manuale
+successiva crea semplicemente la revisione dopo.
+
+Il prompt che guida la lettura si personalizza su tre livelli — workspace,
+documento, singola pagina — ognuno pensato per prevalere sul livello sopra
+solo quando viene scritto apposta; altrimenti resta quello ereditato.
+
+La lettura parte in coda, come uno scaricamento: la trovi nel pannello
+lavori mentre procede, con la possibilità di metterla in pausa o annullarla
+allo stesso modo. La scheda **Log trascrizione**, accanto ad Assistenza,
+elenca ogni lettura fatta con il relativo costo e i token usati — la stessa
+informazione che il Log traduzione mostra per i frammenti.
+
 ## Storico, ripristino e metadati
 
 Ogni salvataggio resta nello storico della pagina, nel pannello a destra:
@@ -85,6 +111,11 @@ Serve a vedere cosa viene registrato oggi; la sua presentazione cambierà.
 
 ## Limiti attuali
 
-L'assistenza al riconoscimento del testo (OCR) arriva con i prossimi passi
-della beta. Il visore non ha ancora filtri visivi (luminosità, contrasto,
-inversione).
+Il riconoscimento automatico legge una pagina alla volta, scelta a mano
+nello Studio: non c'è ancora un comando per leggere un intervallo di pagine
+in un solo passaggio, né un comando per leggere l'intero documento. Funziona
+solo su digitalizzazioni collegate tramite manifesto IIIF: un documento
+unico (PDF) non è ancora supportato. Il modello non riceve per ora il testo
+delle pagine vicine come riferimento di continuità — solo l'immagine della
+pagina corrente e il prompt configurato. Il visore non ha ancora filtri
+visivi (luminosità, contrasto, inversione).

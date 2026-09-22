@@ -46,6 +46,15 @@ These behaviours describe Glossa’s integration. Actual cache availability,
 duration and pricing depend on the service and model; they cannot be inferred
 from a model family name alone.
 
+## Automatic page reading (OCR)
+
+The same principle applies to automatic reading of transcription pages: the
+page image and its identifier always live in the user message, never in a
+system block. Persona and transcription rules stay a static, cacheable
+block, identical for every page read — the same caching benefit described
+above for translation applies to a sequence of consecutive readings of the
+same document, without the image ever breaking the reusable prefix.
+
 ## Configuration and inspection
 
 Anthropic caching is disabled by default. Enable it when you expect to reuse
