@@ -1,7 +1,7 @@
 import { execute, select } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
-import { DEFAULT_OCR_IMAGE_EDGE, DEFAULT_OCR_PROMPT } from '../constants';
+import { DEFAULT_OCR_PROMPT } from '../constants';
 import type { ModelProvider, Workspace } from '../types';
 
 /**
@@ -30,11 +30,10 @@ export interface TranscriptionDocument {
   workspace_id: string;
   title: string;
   status: TranscriptionDocumentStatus;
-  /** Cascata OCR (#220): NULL eredita dal workspace. */
-  ocr_prompt: string | null;
+  /** Fornitore e modello OCR del documento (#220): NULL eredita dal
+   *  workspace. Il prompt non sta qui: si scrive per pagina. */
   ocr_provider: string | null;
   ocr_model: string | null;
-  ocr_image_edge: number | null;
 }
 
 export interface TranscriptionSegment {
@@ -43,7 +42,8 @@ export interface TranscriptionSegment {
   position: number;
   label: string | null;
   source_page_id: string | null;
-  /** Cascata OCR (#220): NULL eredita dal documento. */
+  /** L'unico prompt OCR modificabile (#220): vale solo per questa pagina.
+   *  NULL = mai toccato, si parte dal testo predefinito del workspace. */
   ocr_prompt: string | null;
   approved_revision_id: string | null;
 }
@@ -74,10 +74,8 @@ export async function createDocument(
     workspace_id: workspaceId,
     title,
     status: 'active',
-    ocr_prompt: null,
     ocr_provider: null,
     ocr_model: null,
-    ocr_image_edge: null,
   };
   await execute(
     `INSERT INTO transcription_documents (id, source_version_id, workspace_id, title, status)
@@ -108,24 +106,15 @@ export async function getDocument(documentId: string): Promise<TranscriptionDocu
   return rows[0] ?? null;
 }
 
-/** Livello documento della cascata OCR (#220): `null`/`''` per un campo
+/** Fornitore e modello OCR del documento (#220): `null`/`''` per un campo
  *  significa «torna a ereditare dal workspace». */
 export async function updateDocumentOcrSettings(
   documentId: string,
-  updates: Partial<{
-    ocrPrompt: string | null;
-    ocrProvider: string | null;
-    ocrModel: string | null;
-    ocrImageEdge: number | null;
-  }>,
+  updates: Partial<{ ocrProvider: string | null; ocrModel: string | null }>,
 ): Promise<void> {
   const sets: string[] = [];
   const params: unknown[] = [];
   let index = 1;
-  if (updates.ocrPrompt !== undefined) {
-    sets.push(`ocr_prompt = $${index++}`);
-    params.push(updates.ocrPrompt || null);
-  }
   if (updates.ocrProvider !== undefined) {
     sets.push(`ocr_provider = $${index++}`);
     params.push(updates.ocrProvider || null);
@@ -134,16 +123,13 @@ export async function updateDocumentOcrSettings(
     sets.push(`ocr_model = $${index++}`);
     params.push(updates.ocrModel || null);
   }
-  if (updates.ocrImageEdge !== undefined) {
-    sets.push(`ocr_image_edge = $${index++}`);
-    params.push(updates.ocrImageEdge);
-  }
   if (sets.length === 0) return;
   params.push(documentId);
   await execute(`UPDATE transcription_documents SET ${sets.join(', ')} WHERE id = $${index}`, params);
 }
 
-/** Livello pagina della cascata OCR (#220): `null` torna a ereditare dal documento. */
+/** Il prompt OCR di una pagina (#220): `null` torna al testo predefinito
+ *  del workspace. */
 export async function updateSegmentOcrPrompt(segmentId: string, prompt: string | null): Promise<void> {
   await execute('UPDATE transcription_segments SET ocr_prompt = $2 WHERE id = $1', [
     segmentId,
@@ -428,21 +414,22 @@ export interface ResolvedOcrSettings {
   prompt: string;
   provider: ModelProvider | '';
   model: string;
-  imageEdge: number;
 }
 
-/** Cascata pagina → documento → workspace → costante, in TypeScript: è
- *  l'unica fonte, il gestore Rust riceve solo il risultato già risolto
- *  dentro la configurazione del lavoro, mai la costante duplicata lato Rust. */
+/** Il prompt è quello della pagina, e solo quello: una pagina mai toccata
+ *  parte dal testo predefinito del workspace, ma da quel momento in poi
+ *  quello che scrivi su una pagina non tocca mai le altre (scelta di Niki,
+ *  22 settembre 2026 — l'ereditarietà fra pagine confonde e costringe a
+ *  tornare indietro di decine di carte per cambiare una riga).
+ *  Fornitore e modello restano invece per documento, con il workspace come
+ *  valore di partenza: sono una scelta di attrezzatura, non di contenuto. */
 export function resolveOcrSettings(
   segment: Pick<TranscriptionSegment, 'ocr_prompt'> | null,
-  document: Pick<TranscriptionDocument, 'ocr_prompt' | 'ocr_provider' | 'ocr_model' | 'ocr_image_edge'>,
+  document: Pick<TranscriptionDocument, 'ocr_provider' | 'ocr_model'>,
   workspace: Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel'>,
 ): ResolvedOcrSettings {
-  const prompt =
-    segment?.ocr_prompt || document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
+  const prompt = segment?.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
   const provider = (document.ocr_provider || workspace.ocrDefaultProvider || '') as ModelProvider | '';
   const model = document.ocr_model || workspace.ocrDefaultModel || '';
-  const imageEdge = document.ocr_image_edge ?? DEFAULT_OCR_IMAGE_EDGE;
-  return { prompt, provider, model, imageEdge };
+  return { prompt, provider, model };
 }

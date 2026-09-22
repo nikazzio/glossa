@@ -1149,18 +1149,31 @@
       "documentModel": "Modello del documento",
       "readThisPage": "Leggi questa pagina",
       "inheritWorkspace": "Eredita dal workspace",
-      "documentPrompt": "Prompt del documento",
-      "pagePrompt": "Prompt della pagina",
+      "pagePrompt": "Prompt della pagina {{page}}",
       "saveFailed": "Salvataggio impostazioni OCR non riuscito",
       "jobStarted": "Lettura avviata: segui l'avanzamento nel pannello lavori",
       "jobStartFailed": "Avvio della lettura non riuscito",
       "ready": "Pronta",
-      "customizeForDocument": "Personalizza per questo documento"
+      "customizeForDocument": "Personalizza per questo documento",
+      "pagePromptHint": "Vale solo per questa pagina: le altre restano com’erano.",
+      "readingThisPage": "Lettura della pagina {{page}} in corso",
+      "readingPage": "lettura {{page}}",
+      "readingInProgress": "Lettura in corso…"
     },
     "log": {
       "title": "Log trascrizione",
       "empty": "Nessuna lettura ancora.",
-      "cachedTokens": "{{count}} token dalla cache"
+      "cachedTokens": "{{count}} token dalla cache",
+      "emptyFiltered": "Nessuna riga con questi filtri.",
+      "unknownPage": "Pagina non indicata",
+      "pageGroup": "Pagina {{page}}",
+      "showPrompt": "Mostra il prompt inviato",
+      "phase": {
+        "start": "Avvio",
+        "image": "Immagine",
+        "prompt": "Prompt",
+        "end": "Esito"
+      }
     }
   },
   "areas": {
@@ -1638,7 +1651,10 @@
       "eyebrow": "Impostazioni Workspace",
       "generalTab": "Generale",
       "memoryTab": "Phrase Memory",
-      "ocrTab": "OCR"
+      "ocrTab": "OCR",
+      "ocrDefaultPromptHint": "Da qui parte ogni pagina mai letta: nello Studio si cambia pagina per pagina.",
+      "ocrDefaultModel": "Modello OCR predefinito",
+      "ocrDefaultPrompt": "Prompt OCR predefinito"
     },
     "translationsArea": {
       "sort": {
@@ -1648,11 +1664,7 @@
     },
     "hub": {
       "lockedArea": "In arrivo nella versione 2.0"
-    },
-    "ocrDefaultModel": "Modello OCR predefinito",
-    "ocrDefaultPrompt": "Prompt OCR predefinito",
-    "resetOcrPrompt": "Ripristina prompt OCR",
-    "ocrDefaultPromptUnsetHint": "Vuoto: si usa il testo predefinito."
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2116,9 +2128,10 @@
               "Nella scheda \"OCR\", a destra, puoi far leggere il testo della pagina aperta a un modello di intelligenza artificiale collegato — lo stesso meccanismo già usato per la traduzione, con chiavi e fornitori già configurati.",
               "Il comando compare disattivato finché mancano le condizioni: la pagina deve appartenere a una digitalizzazione collegata al documento, e serve un fornitore e un modello che sappiano leggere le immagini, scelti per il documento o ereditati dalle impostazioni del workspace. Il motivo di un comando disattivato è nel suo stesso suggerimento.",
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
-              "Il prompt che guida la lettura si può personalizzare su tre livelli — workspace, documento, singola pagina — ognuno pensato per prevalere sul precedente solo quando viene scritto apposta; altrimenti resta quello del livello sopra.",
-              "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo.",
-              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione che vedi dentro un progetto — per l'elenco di ogni lettura fatta con il relativo costo e i token usati."
+              "Il prompt che guida la lettura appartiene alla pagina: la casella nella scheda OCR riguarda solo la carta aperta, e quello che scrivi lì non tocca le altre. Una pagina mai letta parte dal testo predefinito che trovi nelle impostazioni del workspace, alla voce OCR.",
+              "Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura; nella riga in alto della colonna del testo una pastiglia dice quale pagina è in lettura, e resta visibile anche se nel frattempo sfogli avanti.",
+              "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo. Un intoppo passeggero viene ritentato da solo; una chiave sbagliata no, perché riprovare darebbe la stessa risposta.",
+              "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura e peso, prompt inviato per intero, esito con durata, token, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
             ]
           },
           {

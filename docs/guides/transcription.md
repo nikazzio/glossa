@@ -86,16 +86,32 @@ Il testo letto entra nello storico come una revisione normale, marcata
 modificabile come qualunque altra versione, e una correzione manuale
 successiva crea semplicemente la revisione dopo.
 
-Il prompt che guida la lettura si personalizza su tre livelli — workspace,
-documento, singola pagina — ognuno pensato per prevalere sul livello sopra
-solo quando viene scritto apposta; altrimenti resta quello ereditato.
+Il prompt che guida la lettura appartiene **alla pagina**: la casella nella
+scheda OCR riguarda solo la carta aperta in quel momento, e quello che scrivi
+lì non tocca le altre pagine. Una pagina mai letta parte dal testo predefinito
+che trovi nelle impostazioni del workspace, alla voce OCR: cambiarlo lì cambia
+il punto di partenza delle pagine ancora intatte, mai quelle che hai già
+personalizzato.
+
+Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura,
+per non scrivere su un testo che sta per essere sostituito; nella riga in alto
+della colonna del testo una pastiglia dice quale pagina è in lettura, e resta
+visibile anche se nel frattempo sfogli avanti.
 
 La lettura parte in coda, come uno scaricamento: la trovi nel pannello
 lavori mentre procede, con la possibilità di metterla in pausa o annullarla
-allo stesso modo. Apri il pannello in basso e scegli **Log trascrizione** —
-compare solo qui, dentro un documento di trascrizione, speculare al Log
-traduzione che vedi dentro un progetto — per l'elenco di ogni lettura fatta
-con il relativo costo e i token usati.
+allo stesso modo. Un intoppo passeggero — il servizio che chiede di rallentare,
+una connessione caduta per un istante — viene ritentato da solo; una chiave
+sbagliata o un modello inesistente no, perché riprovare darebbe la stessa
+risposta.
+
+Apri il pannello in basso e scegli **Log trascrizione** — compare solo qui,
+dentro un documento di trascrizione, speculare al Log traduzione che vedi
+dentro un progetto. Ogni lettura lascia quattro righe: l'avvio con fornitore e
+modello, l'immagine inviata con misura e peso, il prompt inviato per intero
+(apribile riga per riga), e l'esito con durata, token, costo stimato e numero
+della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per
+livello, e il raggruppamento per pagina.
 
 ## Storico, ripristino e metadati
 

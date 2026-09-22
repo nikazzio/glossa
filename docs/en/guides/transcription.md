@@ -85,16 +85,30 @@ The text that comes back enters the history as a normal revision, marked
 editable like any other version, and a later manual correction simply
 creates the next revision.
 
-The prompt that guides the reading is customisable at three levels —
-workspace, document, single page — each meant to take over only when
-written on purpose; otherwise the level above still applies.
+The prompt that guides the reading belongs **to the page**: the box in the OCR
+tab is about the open folio only, and what you write there never touches the
+other pages. A page that has never been read starts from the default text in
+the workspace settings, under OCR: changing it there changes the starting
+point of untouched pages only, never the ones you already customised.
+
+While a page is being read its sheet is veiled and stays read-only, so you
+don't type into text that is about to be replaced; a pill in the top row of
+the text column names the page being read, and stays visible even if you page
+ahead in the meantime.
 
 The reading starts in the queue, like a download: you'll find it in the
 jobs panel while it runs, with the option to pause or cancel it the same
-way. Open the bottom panel and choose **Transcription log** — it only shows
-up here, inside a transcription document, mirroring the Translation log you
-see inside a project — for the list of every reading with its cost and the
-tokens it used.
+way. A passing problem — the service asking you to slow down, a connection
+dropping for a moment — is retried on its own; a wrong key or a missing model
+is not, because retrying would give the same answer.
+
+Open the bottom panel and choose **Transcription log** — it only shows up
+here, inside a transcription document, mirroring the Translation log you see
+inside a project. Every reading leaves four rows: the start with provider and
+model, the image that was sent with its size and weight, the full prompt that
+was sent (expandable row by row), and the outcome with duration, tokens,
+estimated cost and the number of the revision created. On top there are
+search, filters by row type and by level, and grouping by page.
 
 ## History, restore and metadata
 

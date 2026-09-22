@@ -1,4 +1,5 @@
 import { fetchViewerManifestWithRetry, pageSourceUrl } from './iiifViewerService';
+import { OCR_IMAGE_EDGE } from '../constants';
 import { enqueueOcrPages, type Job, type OcrPageJobInput } from './jobsService';
 import {
   resolveOcrSettings,
@@ -51,7 +52,6 @@ export function ocrUnavailableReason(
 async function buildCacheRequest(
   viewerRef: ViewerVersionRef,
   pageIndex: number,
-  imageEdge: number,
 ): Promise<CacheRequest> {
   if (!viewerRef.sourceUrl) throw new Error('noDigitization');
   const manifest = await fetchViewerManifestWithRetry(
@@ -61,7 +61,7 @@ async function buildCacheRequest(
   );
   const page = manifest.pages.find((candidate) => candidate.index === pageIndex);
   if (!page) throw new Error('noDigitization');
-  const size = String(imageEdge);
+  const size = String(OCR_IMAGE_EDGE);
   return {
     kind: 'page',
     versionId: viewerRef.versionId,
@@ -86,31 +86,24 @@ async function buildPageInput(params: BuildPageInputParams): Promise<OcrPageJobI
   const { document, segment, workspace, viewerRef, pageLabel } = params;
   const settings = resolveOcrSettings(segment, document, workspace);
   if (!settings.provider || !settings.model) throw new Error('noModelConfigured');
-  const cacheRequest = await buildCacheRequest(viewerRef, segment.position, settings.imageEdge);
+  const cacheRequest = await buildCacheRequest(viewerRef, segment.position);
   return {
     segmentId: segment.id,
     documentId: document.id,
     cacheRequest,
     prompt: settings.prompt,
-    referenceText: null,
     provider: settings.provider,
     model: settings.model,
-    imageEdge: settings.imageEdge,
+    imageEdge: OCR_IMAGE_EDGE,
     pageLabel,
   };
 }
 
-/** Avvia la lettura della pagina aperta nello Studio. */
+/** Avvia la lettura della pagina aperta nello Studio. La configurazione del
+ *  lavoro resta un elenco di pagine anche con una sola dentro: il giorno che
+ *  arriva la lettura di un intervallo è la stessa forma con più elementi, non
+ *  un gestore nuovo. */
 export async function startOcrForPage(params: BuildPageInputParams): Promise<Job> {
   const page = await buildPageInput(params);
   return enqueueOcrPages([page]);
-}
-
-/** Avvia la lettura di un intervallo di pagine: un solo lavoro, una pagina
- *  per volta — la stessa forma dati del comando singolo, con più elementi. */
-export async function startOcrForRange(
-  pages: BuildPageInputParams[],
-): Promise<Job> {
-  const built = await Promise.all(pages.map(buildPageInput));
-  return enqueueOcrPages(built);
 }

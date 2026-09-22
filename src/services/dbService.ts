@@ -110,7 +110,9 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 const MAX_DETAIL_LENGTH = 500_000;
 
-const VALID_PHASES = new Set(['start', 'end', 'retry', 'cache']);
+// 'image' e 'prompt' arrivano solo dalle righe OCR (#220): dicono che cosa
+// è stato inviato al modello, non solo quando la chiamata è iniziata e finita.
+const VALID_PHASES = new Set(['start', 'image', 'prompt', 'end', 'retry', 'cache']);
 const VALID_DETAIL_KINDS = new Set(['prompt', 'json', 'error', 'note']);
 
 interface DbOperationLogRow {

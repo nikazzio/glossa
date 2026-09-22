@@ -32,11 +32,14 @@ interface TranscriptionInspectorProps {
   workspace: Pick<Workspace, 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'> | null;
   viewerRef: ViewerVersionRef | null;
   ocrStarting: boolean;
+  /** La pagina aperta è dentro un lavoro di lettura in corso. */
+  ocrReading: boolean;
+  /** Etichetta breve della pagina aperta, per i testi della scheda OCR. */
+  pageTitleShort: string;
   onStartOcr: () => void;
   onDocumentOcrProviderChange: (provider: ModelProvider | '', model: string) => void;
   onDocumentOcrModelChange: (model: string) => void;
-  onDocumentOcrPromptChange: (prompt: string) => void;
-  onSegmentOcrPromptChange: (prompt: string) => void;
+  onPageOcrPromptChange: (prompt: string) => void;
 }
 
 const AUTHOR_ICONS = { user: User, ocr: ScanText, import: FileInput } as const;
@@ -60,11 +63,12 @@ export function TranscriptionInspector({
   workspace,
   viewerRef,
   ocrStarting,
+  ocrReading,
+  pageTitleShort,
   onStartOcr,
   onDocumentOcrProviderChange,
   onDocumentOcrModelChange,
-  onDocumentOcrPromptChange,
-  onSegmentOcrPromptChange,
+  onPageOcrPromptChange,
 }: TranscriptionInspectorProps) {
   const { t } = useTranslation();
   return (
@@ -94,12 +98,13 @@ export function TranscriptionInspector({
           segment={segment}
           workspace={workspace}
           viewerRef={viewerRef}
+          pageLabel={pageTitleShort}
           starting={ocrStarting}
+          reading={ocrReading}
           onStartOcr={onStartOcr}
           onDocumentProviderChange={onDocumentOcrProviderChange}
           onDocumentModelChange={onDocumentOcrModelChange}
-          onDocumentPromptChange={onDocumentOcrPromptChange}
-          onSegmentPromptChange={onSegmentOcrPromptChange}
+          onPagePromptChange={onPageOcrPromptChange}
         />
       ) : activeTab === 'history' ? (
         <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">

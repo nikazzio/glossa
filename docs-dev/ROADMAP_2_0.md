@@ -188,16 +188,22 @@ visuali e preset (resto di #221, spostati al punto 3 come da decisione del 20
 settembre).
 
 **Stato al 22 settembre 2026.** OCR/HTR (#220) consegnato in prima versione:
-scheda OCR attiva, con select provider/modello (filtrata sui modelli
-che leggono immagini) e prompt personalizzabile su tre livelli — workspace,
-documento, pagina. Il comando legge la pagina aperta tramite un lavoro
+scheda OCR attiva, con select provider/modello per documento (filtrata sui
+modelli che leggono immagini, fornitori senza vista spenti in elenco) e
+**un solo prompt, quello della pagina aperta** — nessuna ereditarietà fra
+pagine, il testo predefinito del workspace è solo il punto di partenza di una
+pagina mai letta. Il comando legge la pagina aperta tramite un lavoro
 persistente, stesso motore dello scaricamento; il risultato entra nello
 storico come revisione marcata "riconoscimento automatico", mai come
-sovrascrittura. Nuova scheda "Log trascrizione" nel cassetto in basso,
-speculare al Log traduzione — appare solo dentro un documento di
-trascrizione, mai insieme a quello — con costo e token per lettura.
-L'ancoraggio a `source_page_id` è risolto: si
-completa da sé al primo tocco di un segmento, prerequisito di tutto il resto.
+sovrascrittura. Mentre una pagina è in lettura il suo foglio è velato e in
+sola lettura, e una pastiglia nell'intestazione del testo dice quale pagina sta
+lavorando anche se si sfoglia altrove. Scheda "Log trascrizione" nel cassetto
+in basso, speculare al Log traduzione — appare solo dentro un documento di
+trascrizione, mai insieme a quello — con quattro righe per lettura (avvio,
+immagine inviata, prompt inviato per intero, esito), ricerca, filtri per tipo
+di riga e livello, raggruppamento per pagina, token e costo stimato.
+L'ancoraggio a `source_page_id` è risolto: si completa da sé al primo tocco di
+un segmento, e non è comunque un prerequisito della lettura.
 **Restano fuori da questo primo giro**: comando per leggere un intervallo di
 pagine o l'intero documento in interfaccia (la forma dati lo prevede già),
 lettura su un documento unico (PDF) — solo le copie IIIF sono coperte —, e il

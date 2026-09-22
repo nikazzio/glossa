@@ -54,6 +54,13 @@ fn latest_revision(
     .map_err(|error| format!("ultima revisione del segmento {segment_id}: {error}"))
 }
 
+/// Il numero dell'ultima revisione del segmento, se ne ha una. Serve a dire
+/// nel log se la lettura ha davvero prodotto una revisione nuova o se il
+/// modello ha ridato lo stesso testo di prima.
+pub fn latest_revision_number(conn: &Connection, segment_id: &str) -> Result<Option<i64>, String> {
+    Ok(latest_revision(conn, segment_id)?.map(|revision| revision.revision_number))
+}
+
 /// Scrive il testo OCR come nuova revisione, autore `'ocr'`. Nessuna riga
 /// nuova se il testo è identico all'ultima revisione — restituisce quella
 /// esistente, come fa `saveSegmentText` lato TypeScript. Fallisce se il

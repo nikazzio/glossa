@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { AuditPromptEditor } from '../pipeline/AuditPromptEditor';
 import { FieldLabel, IconButton, Select, Tooltip } from '../ui';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { getVisionCapableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
+import { getVisionCapableModelIds, LLM_PROVIDER_ORDER, providerSupportsVision } from '../../models/catalog';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
@@ -30,28 +30,30 @@ interface TranscriptionAssistTabProps {
   segment: TranscriptionSegment | null;
   workspace: Pick<Workspace, 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'> | null;
   viewerRef: ViewerVersionRef | null;
+  pageLabel: string;
   starting: boolean;
+  reading: boolean;
   onStartOcr: () => void;
   onDocumentProviderChange: (provider: ModelProvider | '', model: string) => void;
   onDocumentModelChange: (model: string) => void;
-  onDocumentPromptChange: (prompt: string) => void;
-  onSegmentPromptChange: (prompt: string) => void;
+  onPagePromptChange: (prompt: string) => void;
 }
 
-/** Scheda Assistenza dello Studio di trascrizione (#220): select provider e
- *  modello a livello documento, editor del prompt a livello documento e
- *  pagina, comando di lettura per la pagina aperta. */
+/** Scheda OCR dello Studio di trascrizione (#220): fornitore e modello per il
+ *  documento, il prompt **della pagina aperta** — uno solo, non una cascata di
+ *  editor uguali — e il comando di lettura. */
 export function TranscriptionAssistTab({
   document,
   segment,
   workspace,
   viewerRef,
+  pageLabel,
   starting,
+  reading,
   onStartOcr,
   onDocumentProviderChange,
   onDocumentModelChange,
-  onDocumentPromptChange,
-  onSegmentPromptChange,
+  onPagePromptChange,
 }: TranscriptionAssistTabProps) {
   const { t } = useTranslation();
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
@@ -59,12 +61,37 @@ export function TranscriptionAssistTab({
   const saveTemplate = usePromptTemplateStore((s) => s.saveTemplate);
   const deleteTemplate = usePromptTemplateStore((s) => s.deleteTemplate);
   const { statuses: keyStatuses } = useProviderKeyStatus();
-  const [isRefiningDocument, setIsRefiningDocument] = useState(false);
-  const [isRefiningSegment, setIsRefiningSegment] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
+  // Bloccato per default: la select mostra il valore ereditato dal workspace
+  // (sola lettura). Sbloccare crea una scelta a livello documento; ribloccare
+  // la cancella — tornare a ereditare è la stessa azione al contrario.
+  const [overridden, setOverridden] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) void loadTemplates();
   }, [isLoaded, loadTemplates]);
+
+  // La scelta del documento arriva dopo il primo disegno (lettura dal
+  // database): il lucchetto la segue, senza che uno stato iniziale
+  // fotografato una volta sola resti indietro al cambio di documento.
+  const documentProvider = (document?.ocr_provider ?? '') as ModelProvider | '';
+  useEffect(() => {
+    setOverridden(Boolean(documentProvider));
+  }, [documentProvider, document?.id]);
+
+  const handleRefine = async (resolvedProvider: ModelProvider | '', resolvedModel: string, prompt: string) => {
+    if (!resolvedProvider || !prompt.trim()) return;
+    setIsRefining(true);
+    try {
+      const refined = await llmService.refinePrompt(prompt, resolvedProvider, resolvedModel, 'ocr');
+      onPagePromptChange(refined);
+      toast.success(t('pipeline.refined'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsRefining(false);
+    }
+  };
 
   if (!document || !workspace) {
     return (
@@ -74,13 +101,17 @@ export function TranscriptionAssistTab({
     );
   }
 
-  const documentProvider = (document.ocr_provider ?? '') as ModelProvider | '';
   const documentModel = document.ocr_model ?? '';
   const resolved = resolveOcrSettings(segment, document, workspace);
   const ocrTemplates = templates.filter((tmpl) => tmpl.context === 'ocr');
   const canRefine = resolved.provider ? canRefineWithProvider(resolved.provider, keyStatuses) : false;
   const refineLabel = resolved.provider ? formatProviderModelLabel(resolved.provider, resolved.model) : '';
   const reason = ocrUnavailableReason(viewerRef, resolved.provider, resolved.model);
+
+  const effectiveProvider = overridden ? documentProvider : resolved.provider;
+  const effectiveModel = overridden ? documentModel : resolved.model;
+  const unlockedModelOptions = effectiveProvider ? getVisionCapableModelIds(effectiveProvider, ollamaModels) : [];
+  const defaultPrompt = workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
 
   const handleProviderChange = (nextProvider: ModelProvider | '') => {
     if (!nextProvider) {
@@ -90,42 +121,6 @@ export function TranscriptionAssistTab({
     const nextModels = getVisionCapableModelIds(nextProvider, ollamaModels);
     onDocumentProviderChange(nextProvider, nextModels[0] ?? '');
   };
-
-  const handleRefineDocument = async () => {
-    if (!resolved.provider || !document.ocr_prompt?.trim()) return;
-    setIsRefiningDocument(true);
-    try {
-      const refined = await llmService.refinePrompt(document.ocr_prompt, resolved.provider, resolved.model, 'ocr');
-      onDocumentPromptChange(refined);
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsRefiningDocument(false);
-    }
-  };
-
-  const handleRefineSegment = async () => {
-    if (!resolved.provider || !segment?.ocr_prompt?.trim()) return;
-    setIsRefiningSegment(true);
-    try {
-      const refined = await llmService.refinePrompt(segment.ocr_prompt, resolved.provider, resolved.model, 'ocr');
-      onSegmentPromptChange(refined);
-      toast.success(t('pipeline.refined'));
-    } catch (err: unknown) {
-      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsRefiningSegment(false);
-    }
-  };
-
-  // Bloccato per default: la select mostra il valore ereditato dal workspace
-  // (sola lettura). Sbloccare crea un override a livello documento; ribloccare
-  // lo cancella — tornare a ereditare è la stessa azione al contrario.
-  const [overridden, setOverridden] = useState(Boolean(documentProvider));
-  const effectiveProvider = overridden ? documentProvider : resolved.provider;
-  const effectiveModel = overridden ? documentModel : resolved.model;
-  const unlockedModelOptions = effectiveProvider ? getVisionCapableModelIds(effectiveProvider, ollamaModels) : [];
 
   const toggleOverride = () => {
     if (overridden) {
@@ -144,7 +139,12 @@ export function TranscriptionAssistTab({
     ...LLM_PROVIDER_ORDER.map((entry) => ({
       value: entry,
       label: entry,
-      disabled: entry !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[entry] === false,
+      // Senza chiave, o senza nemmeno un modello che legga immagini, quel
+      // fornitore non può servire una lettura: si mostra spento invece di
+      // portare a una chiamata che fallisce.
+      disabled:
+        (entry !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[entry] === false) ||
+        !providerSupportsVision(entry, ollamaModels),
     })),
   ];
 
@@ -167,10 +167,16 @@ export function TranscriptionAssistTab({
               size="sm"
               tone="accent"
               onClick={onStartOcr}
-              disabled={starting || reason !== null}
-              title={reason ? t(UNAVAILABLE_REASON_KEYS[reason]) : t('transcription.assist.readThisPage')}
+              disabled={starting || reading || reason !== null}
+              title={
+                reading
+                  ? t('transcription.assist.readingThisPage', { page: pageLabel })
+                  : reason
+                    ? t(UNAVAILABLE_REASON_KEYS[reason])
+                    : t('transcription.assist.readThisPage')
+              }
             >
-              {starting ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
+              {starting || reading ? <Loader2 size={16} className="animate-spin" /> : <ScanText size={16} />}
             </IconButton>
           </div>
         </div>
@@ -198,6 +204,8 @@ export function TranscriptionAssistTab({
               )}
             </div>
           ) : (
+            // Solo Ollama arriva qui: la lista dei modelli locali è dinamica e
+            // nessun elenco statico può dire quali leggono immagini.
             <input
               value={effectiveModel}
               onChange={(e) => onDocumentModelChange(e.target.value)}
@@ -220,51 +228,29 @@ export function TranscriptionAssistTab({
         </div>
       </div>
 
+      {/* Un prompt solo, quello della pagina aperta. Quello che scrivi qui
+          vale per questa pagina e non tocca le altre. */}
       <AuditPromptEditor
-        label={t('transcription.assist.documentPrompt')}
-        hint=""
-        value={document.ocr_prompt ?? ''}
-        placeholder={workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT}
+        label={t('transcription.assist.pagePrompt', { page: pageLabel })}
+        hint={t('transcription.assist.pagePromptHint')}
+        value={segment?.ocr_prompt ?? ''}
+        placeholder={defaultPrompt}
         templates={ocrTemplates}
-        isRefining={isRefiningDocument}
+        isRefining={isRefining}
         canRefine={canRefine}
         refineLabel={refineLabel}
-        onRefine={() => void handleRefineDocument()}
-        onChange={onDocumentPromptChange}
-        onApplyTemplate={(template: PromptTemplate) => onDocumentPromptChange(template.prompt)}
+        onRefine={() => void handleRefine(resolved.provider, resolved.model, segment?.ocr_prompt || defaultPrompt)}
+        onChange={onPagePromptChange}
+        onApplyTemplate={(template: PromptTemplate) => onPagePromptChange(template.prompt)}
         saveTemplate={saveTemplate}
         onDeleteTemplate={deleteTemplate}
         defaultModel={resolved.model}
         defaultProvider={resolved.provider}
-        defaultValue={workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT}
-        onReset={() => onDocumentPromptChange('')}
+        defaultValue={defaultPrompt}
+        onReset={() => onPagePromptChange('')}
         templateContext="ocr"
         templateWorkflow="transcription"
       />
-
-      {segment && (
-        <AuditPromptEditor
-          label={t('transcription.assist.pagePrompt')}
-          hint=""
-          value={segment.ocr_prompt ?? ''}
-          placeholder={document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT}
-          templates={ocrTemplates}
-          isRefining={isRefiningSegment}
-          canRefine={canRefine}
-          refineLabel={refineLabel}
-          onRefine={() => void handleRefineSegment()}
-          onChange={onSegmentPromptChange}
-          onApplyTemplate={(template: PromptTemplate) => onSegmentPromptChange(template.prompt)}
-          saveTemplate={saveTemplate}
-          onDeleteTemplate={deleteTemplate}
-          defaultModel={resolved.model}
-          defaultProvider={resolved.provider}
-          defaultValue={document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT}
-          onReset={() => onSegmentPromptChange('')}
-          templateContext="ocr"
-          templateWorkflow="transcription"
-        />
-      )}
     </div>
   );
 }

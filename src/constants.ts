@@ -37,15 +37,18 @@ Rules:
 
 // OCR/HTR (#220). Same default as the memory extractor: a workspace is
 // never left with an empty picker, so the locked select in the Studio has a
-// real value to show and inherit from day one.
+// real value to show and inherit from day one. Mid-tier on purpose: reading a
+// hand-written page is the hardest thing we ask a model to do, and the bottom
+// of the price list gets it wrong often enough to look broken.
 export const DEFAULT_OCR_PROVIDER: ModelProvider = 'openai';
-export const DEFAULT_OCR_MODEL = 'gpt-5.4-nano';
+export const DEFAULT_OCR_MODEL = 'gpt-5.6-terra';
 export const DEFAULT_OCR_PROMPT = `Transcribe the text visible in the image. Preserve the original spelling, punctuation and line breaks. Do not correct errors, do not modernise spelling, do not add text that is not in the image. Mark an illegible word with [?] instead of guessing. Return the text only, with no comments and no description of the image.`;
 
 // Longest side, in pixels, an OCR image is resized to before sending — keeps
 // the request small without losing legibility for most printed/handwritten
-// sources. Used when no level of the cascade overrides it.
-export const DEFAULT_OCR_IMAGE_EDGE = 2000;
+// sources. One value for every read: no screen sets it, so it is a constant
+// and not a column.
+export const OCR_IMAGE_EDGE = 2000;
 
 // Derived from MODEL_CATALOG — edit catalog.ts to update prices
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = Object.fromEntries(

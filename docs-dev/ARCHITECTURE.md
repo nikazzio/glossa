@@ -518,9 +518,8 @@ verità finale.
 **Schema** (consolidato in `0001_baseline_2_0.sql`, nessuna migrazione
 incrementale — beta privata): `workspaces.ocr_default_{prompt,provider,model}`
 (`TEXT NOT NULL DEFAULT ''`, vuoto = nessun default a quel livello),
-`transcription_documents.ocr_{prompt,provider,model,image_edge}` (`NULL`
-eredita dal workspace), `transcription_segments.ocr_prompt` (`NULL` eredita
-dal documento). `operation_logs.transcription_document_id` /
+`transcription_documents.ocr_{provider,model}` (`NULL` eredita dal
+workspace), `transcription_segments.ocr_prompt`. `operation_logs.transcription_document_id` /
 `transcription_segment_id` (`ON DELETE SET NULL`, mai `CASCADE`, stessa
 regola di `chunk_id`: la cronologia dei costi non sparisce se il documento si
 elimina).
@@ -534,8 +533,8 @@ Responses sia Chat Completions), Gemini `inline_data`, Ollama campo
 `images` (base64 nudo, senza prefisso data-URL). Nessuna immagine ⇒ stesso
 corpo di richiesta di prima, byte per byte — invariante coperto da test in
 ogni provider. `llm/prompts.rs::build_ocr_prompt` compone persona OCR
-(cacheable), blocco di riferimento opzionale (cacheable), prompt risolto
-(non cacheable) e messaggio utente con immagine + id pagina.
+(cacheable), prompt della pagina (non cacheable) e messaggio utente con
+immagine + id pagina.
 
 **Catena pagina → byte, mai costruita in Rust.** `transcription_segments.position`
 — lo stesso indice che il visore mostra, non `source_page_id`, che non è un
@@ -552,42 +551,73 @@ modo — l'OCR non chiede altro. Limite v1: `src/services/ocrService.ts`
 risolve solo copie `versionKind === 'iiif_manifest'` — un documento unico
 (PDF) resta fuori da questo primo giro.
 
-**Cascata di risoluzione** (`transcriptionService.resolveOcrSettings`, sola
-fonte, in TypeScript): pagina → documento → workspace → costante
-(`DEFAULT_OCR_PROMPT`/`DEFAULT_OCR_IMAGE_EDGE` in `constants.ts`) per il
-prompt; documento → workspace per provider/modello. `DEFAULT_OCR_PROVIDER`/
-`DEFAULT_OCR_MODEL` (`openai`/`gpt-5.4-nano`, stesso ripiego dell'estrattore
-di memoria) coprono anche questo livello: un workspace nato prima di questo
-default, o creato con la colonna ancora vuota, eredita comunque un valore
-vero in lettura (`workspaceService.listWorkspaces`) — la select bloccata
-della scheda OCR non mostra mai il vuoto. Il risultato si congela nella
-configurazione del lavoro al momento della messa in coda
-(`ocrService.buildPageInput`): modificare il prompt dopo non altera un lavoro
-già accodato.
+**Un prompt solo, quello della pagina** (decisione di Niki, 22 settembre
+2026). `transcriptionService.resolveOcrSettings` è la sola fonte: il prompt è
+`segment.ocr_prompt`, e una pagina mai toccata parte dal testo predefinito del
+workspace (`DEFAULT_OCR_PROMPT` come ultimo ripiego). **Nessuna ereditarietà
+fra pagine**: quello che si scrive su una pagina non tocca le altre, né in
+avanti né indietro — una cascata a tre livelli era invisibile all'uso (tre
+editor identici in fila nel pannello) e costringeva a tornare indietro di
+decine di carte per cambiare una riga. Provider e modello restano invece per
+documento con il workspace come partenza: sono scelta di attrezzatura, non di
+contenuto. `DEFAULT_OCR_PROVIDER`/`DEFAULT_OCR_MODEL` (`openai`/`gpt-5.6-terra`)
+coprono il caso di un workspace con le colonne vuote: fascia media di
+proposito, il fondo del listino sbaglia abbastanza da sembrare rotto su una
+pagina manoscritta. `OCR_IMAGE_EDGE` è una costante e non una colonna: nessuna
+schermata la imposta, e una colonna che nessuno scrive è solo una colonna da
+mantenere. Il risultato si congela nella configurazione del lavoro alla messa
+in coda (`ocrService.buildPageInput`): modificare il prompt dopo non altera un
+lavoro già accodato.
 
 **Gestore lavoro** (`src-tauri/src/ocr/`, `JOB_TYPE = "ocr_page"`, registrato
 in `jobs/commands.rs` accanto agli altri): `ResourceClass::LanguageService`,
-`Recovery::Restart` (una chiamata interrotta a metà non lascia stato
-parziale utile — le pagine già scritte non si ripetono comunque, grazie al
-checkpoint elencato sotto). `resolve_provider`/`get_api_key` chiedono un
-`AppHandle` che `JobContext` non dà: il gestore lo tiene come campo, come
-`federation::SearchJob`. Il campo `pages: Vec<OcrPageConfig>` accetta fin da
-subito più pagine (`config.checkpoint` come JSON array di `segment_id` già
-scritti, per saltarli alla ripresa dopo una pausa), anche se l'interfaccia
-v1 offre solo la pagina corrente (`TranscriptionAssistTab`) —
-`ocrService.startOcrForRange` esiste lato TypeScript ma non ha ancora un
-comando visibile.
+`Recovery::Restart` (una chiamata interrotta a metà non lascia stato parziale
+utile — le pagine già scritte non si ripetono comunque, grazie al checkpoint).
+`resolve_provider`/`get_api_key` chiedono un `AppHandle` che `JobContext` non
+dà: il gestore lo tiene come campo, come `federation::SearchJob`. Il campo
+`pages: Vec<OcrPageConfig>` accetta fin da subito più pagine anche se
+l'interfaccia v1 accoda solo la pagina aperta: il giorno che arriva la lettura
+di un intervallo è la stessa forma con più elementi, non un gestore nuovo.
 
-**Scrittura**: `ocr::revisions::write_ocr_revision` (TDD, prima del
-gestore) replica in `rusqlite` le stesse regole di
-`transcriptionService.insertRevision` — numero progressivo, impronta
-FNV-1a identica (due implementazioni indipendenti, non un valore
-condiviso), append-only, deduplica sul testo identico. `ocr::log::write_ocr_log`
-scrive in `operation_logs` con `project_id`/`pipeline_id` `NULL`: primo
-punto in cui Rust scrive quella tabella (prima solo `dbService.ts`).
-`dbService.loadTranscriptionOperationLogs(documentId)` è il percorso di
-lettura dedicato — lo store della traduzione (`operationLogStore.ts`, scope
-`'ocr'` aggiunto all'unione) non cambia.
+**Il checkpoint accumula.** È un JSON array dei `segment_id` già scritti e
+**cresce** a ogni pagina: sovrascriverlo con la sola pagina appena finita
+farebbe rileggere — e ripagare — tutte le precedenti alla ripresa dopo una
+pausa o un riavvio.
+
+**Classificazione degli errori** (`classify_provider_error`): i provider
+normalizzano i loro guasti nella forma `«<provider> API error (<status>):
+<motivo>»`, da cui si ricava l'`ErrorKind` giusto — 429 `RateLimited`, 403
+`Throttled`, 404 `NotFound`, 408 e 5xx `Transport`, 400/401 `Format`; nessun
+codice di stato (connessione mai arrivata a destinazione) è `Transport`.
+Conta perché il motore lavori **ritenta solo** `Transport`/`RateLimited`/
+`Throttled`: marcare tutto come `Format`, come nella prima stesura, significa
+non ritentare mai, nemmeno dopo un limite di richieste al minuto o una
+connessione caduta per due secondi. Il `Retry-After` dichiarato dal servizio
+viaggia nel messaggio come marcatore `retry-after-ms=N` e viene riletto in
+`JobError.retry_after`, dove vince sul calcolo esponenziale.
+
+**Scrittura**: `ocr::revisions::write_ocr_revision` (TDD, prima del gestore)
+replica in `rusqlite` le stesse regole di `transcriptionService.insertRevision`
+— numero progressivo, impronta FNV-1a identica (due implementazioni
+indipendenti, non un valore condiviso), append-only, deduplica sul testo
+identico.
+
+**Una lettura scrive più righe di log, non una.** `ocr::log::write_ocr_log`
+scrive in `operation_logs` con `project_id`/`pipeline_id` `NULL` (primo punto
+in cui Rust scrive quella tabella) una riga per fase, distinte da `phase`:
+`start` (fornitore, modello, pagina), `image` (lato lungo e kB davvero
+inviati), `prompt` (testo completo in `detail`, `detail_kind = 'prompt'`),
+`end` (revisione scritta con il suo numero, oppure testo identico a livello
+`warn`, oppure errore con motivo e se verrà ritentato). `meta` porta
+l'etichetta della pagina, che serve alla console per raggruppare senza una
+colonna in più. `dbService.VALID_PHASES` accetta `image` e `prompt` oltre ai
+valori della traduzione.
+
+**Il costo non si congela alla scrittura.** Le righe OCR le scrive Rust, che
+non conosce il listino prezzi (vive nel catalogo modelli, in TypeScript):
+`cost_usd` resta `NULL` e la console applica `costForEntry` in lettura, la
+stessa funzione dei riepiloghi di traduzione. Duplicare i prezzi in Rust
+significherebbe due listini da tenere allineati a mano.
 
 **Log trascrizione, nel cassetto in basso — non nel pannello laterale.**
 Speculare al Log traduzione, non fuso col pannello lavori: `AppStatusBar`
@@ -601,22 +631,30 @@ rimasto "corrente" in memoria vincerebbe sull'area davvero aperta.
 invece del vecchio `showConsoleTab: boolean`: `'console'` dentro un
 progetto, `'transcriptionLog'` dentro un documento di trascrizione, `null`
 altrove — le schede Sistema e Lavori restano sempre disponibili, la prima
-scheda no. `TranscriptionLogTab` (già scritto per il pannello laterale nel
-primo giro, qui solo rimontato) resta lo stesso componente.
+scheda no. `TranscriptionLogTab` riusa `ConsoleChrome` e `ConsoleToolbar`: ricerca,
+filtri per tipo di riga (avvio/immagine/prompt/esito) e per livello,
+raggruppamento per pagina, prompt inviato apribile riga per riga.
 
-**Catalogo modelli**: `ModelEntry.supportsVision` (capacità, filtra la
-select OCR) separato da `'ocr'` in `ModelUseCase` (idoneità,
-`preferredFor`/`discouragedFor`) — un modello può vedere immagini ed essere
-comunque sconsigliato per l'OCR, ma un modello senza `supportsVision` non
-compare mai nella select OCR a prescindere da `preferredFor`.
-`getVisionCapableModelIds` filtra i modelli noti; gli Ollama passano
-sempre (lista dinamica, capacità non dichiarabile).
+**Catalogo modelli**: `ModelEntry.supportsVision` dice se il modello accetta
+un'immagine; `getVisionCapableModelIds` filtra la select OCR e
+`providerSupportsVision` spegne in elenco i fornitori che non hanno nemmeno un
+modello capace (oggi DeepSeek) — prima restavano scegliibili e portavano a una
+chiamata destinata a fallire. Gli Ollama passano sempre: lista dinamica,
+capacità non dichiarabile, la scelta è dell'utente.
+
+**Segnale di lavorazione per pagina** (`useOcrPageActivity`): le pagine in
+lettura si ricavano dai lavori in coda (`ocrPendingPagesOf` legge
+configurazione e checkpoint), non da uno stato locale — così il segnale
+sopravvive a un cambio di schermata e a un riavvio. La pagina aperta prende il
+velo di `PagePendingOverlay` e resta in sola lettura; l'intestazione della
+colonna di testo mostra una pastiglia con la pagina in lettura anche quando si
+sfoglia altrove.
 
 **Non ancora fatto** (v1 non li copre): comando "leggi intervallo di pagine"
 in interfaccia, testo delle pagine vicine come blocco di riferimento
-cacheable (`ocrService.buildPageInput` passa sempre `referenceText: null` —
-il costruttore di prompt lo accetta già, manca solo chi lo calcola), lettura
-su documento unico (PDF), filtri visuali dell'immagine prima dell'invio.
+cacheable, lettura su documento unico (PDF), filtri visuali dell'immagine
+prima dell'invio. Nessuno dei tre ha oggi codice a metà strada in attesa: il
+lavoro sul testo di riferimento è stato rimosso perché nessuno lo calcolava.
 
 ## Pipeline di traduzione
 

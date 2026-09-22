@@ -57,6 +57,7 @@ import {
 } from '../../services/transcriptionService';
 import { startOcrForPage } from '../../services/ocrService';
 import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
+import { useOcrPageActivity } from '../../hooks/useOcrPageActivity';
 import type { ModelProvider } from '../../types';
 
 const SAVE_DELAY_MS = 800;
@@ -93,8 +94,8 @@ interface TranscriptionStudioProps {
  * visore cambia il testo mostrato, ancorato a quella posizione
  * (`transcription_segments.position`; `source_page_id` si aggiunge da sé al
  * primo tocco del segmento dopo che un lavoro di scaricamento ha popolato
- * `source_pages` — il visore mostra la pagina anche prima, ma l'OCR (#220)
- * resta disattivo finché quel collegamento non esiste).
+ * `source_pages`). L'OCR (#220) non aspetta quel collegamento: gli basta la
+ * copia che il visore sta già mostrando.
  * Un documento senza visore (nato da zero) resta su un solo blocco di testo,
  * in posizione 0.
  */
@@ -219,6 +220,9 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
 
   // Assistenza OCR/HTR (#220).
   const [ocrStarting, setOcrStarting] = useState(false);
+  // Quali pagine di questo documento sono in lettura adesso: viene dai lavori
+  // in coda, quindi resta vero anche riaprendo il documento o dopo un riavvio.
+  const ocrActivity = useOcrPageActivity(detail?.id ?? null);
 
   // Il lavoro gira in background: quando un lavoro OCR finisce si rilegge la
   // pagina corrente, così la revisione appena scritta compare da sola nello
@@ -257,21 +261,18 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
     });
   };
 
-  const handleDocumentOcrPromptChange = (prompt: string) => {
+  // Il prompt appartiene alla pagina: se quella pagina non ha ancora un
+  // segmento (mai toccata), nasce qui — come già fa il primo salvataggio a
+  // mano — altrimenti non ci sarebbe niente su cui scriverlo.
+  const handlePagePromptChange = (prompt: string) => {
     if (!detail) return;
-    patchDetail({ ocr_prompt: prompt || null });
-    void updateDocumentOcrSettings(detail.id, { ocrPrompt: prompt || null }).catch((err: unknown) => {
-      toast.error(t('transcription.assist.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    });
-  };
-
-  const handleSegmentOcrPromptChange = (prompt: string) => {
-    if (!segment) return;
-    const segmentId = segment.id;
+    const existing = segment;
     setSegment((current) => (current ? { ...current, ocr_prompt: prompt || null } : current));
-    void updateSegmentOcrPrompt(segmentId, prompt || null).catch((err: unknown) => {
+    void (async () => {
+      const target = existing ?? (await ensureSegment(detail.id, pageIndex, pageLabel));
+      if (!existing) setSegment({ ...target, ocr_prompt: prompt || null });
+      await updateSegmentOcrPrompt(target.id, prompt || null);
+    })().catch((err: unknown) => {
       toast.error(t('transcription.assist.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
@@ -479,6 +480,13 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   // non riguarda più la pagina di testo mostrata qui.
   const displayIndex = synced ? pendingStatus?.index ?? pageIndex : pageIndex;
   const isPagePending = loadingSegment || (synced && pendingStatus?.state === 'loading');
+  // Questa pagina è dentro un lavoro di lettura in corso: il foglio si vela e
+  // resta in sola lettura, perché scrivere su un testo che sta per essere
+  // sostituito è lavoro buttato.
+  const isPageReading = ocrActivity.isReading(segment?.id);
+  // La prima pagina in lettura del documento, anche se non è quella aperta:
+  // sfogliare avanti non deve far sparire il segnale.
+  const readingPage = ocrActivity.pages[0] ?? null;
   const pagePendingError = synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
   const pageTitle =
     viewerRef && pageTotal
@@ -737,6 +745,15 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {readingPage && (
+                    <span
+                      className="flex items-center gap-1.5 rounded-full bg-editorial-accent/10 px-2.5 py-1 text-xs text-editorial-accent"
+                      role="status"
+                    >
+                      <Loader2 size={12} className="shrink-0 animate-spin" aria-hidden="true" />
+                      {t('transcription.assist.readingPage', { page: readingPage.pageLabel })}
+                    </span>
+                  )}
                   <span
                     className={`flex items-center gap-1 text-xs ${
                       saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'
@@ -779,13 +796,17 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                     value={draft}
                     onChange={setDraft}
                     markdownEnabled
-                    readOnly={isVerified || isPagePending || Boolean(pagePendingError)}
+                    readOnly={isVerified || isPageReading || isPagePending || Boolean(pagePendingError)}
                     fillHeight
                     textClassName="doc-content text-editorial-ink"
                     previewClassName="min-h-[280px] doc-content text-editorial-ink"
                     placeholder={t('transcription.textPlaceholder')}
                   />
-                  <PagePendingOverlay pending={isPagePending} errorMessage={pagePendingError} />
+                  <PagePendingOverlay
+                    pending={isPagePending || isPageReading}
+                    label={isPageReading && !isPagePending ? t('transcription.assist.readingInProgress') : undefined}
+                    errorMessage={pagePendingError}
+                  />
                 </div>
               </div>
             </section>
@@ -839,11 +860,12 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
             workspace={activeWorkspace}
             viewerRef={viewerRef}
             ocrStarting={ocrStarting}
+            ocrReading={isPageReading}
+            pageTitleShort={pageLabel ?? String(displayIndex + 1)}
             onStartOcr={() => void handleStartOcr()}
             onDocumentOcrProviderChange={handleDocumentOcrProviderChange}
             onDocumentOcrModelChange={handleDocumentOcrModelChange}
-            onDocumentOcrPromptChange={handleDocumentOcrPromptChange}
-            onSegmentOcrPromptChange={handleSegmentOcrPromptChange}
+            onPageOcrPromptChange={handlePagePromptChange}
           />
         </Panel>
       </Group>

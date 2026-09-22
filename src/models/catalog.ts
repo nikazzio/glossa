@@ -6,7 +6,7 @@ import type {
 
 export type { ModelReasoningClass, ModelStatus } from '../types';
 import type { ModelReasoningClass, ModelStatus } from '../types';
-export type ModelUseCase = StageRole | 'judge' | 'coherence' | 'ocr';
+export type ModelUseCase = StageRole | 'judge' | 'coherence';
 export type ModelUseCaseFit = 'preferred' | 'discouraged' | 'neutral';
 
 // Providers shown in settings (API-key management). DeepL needs its own key,
@@ -37,11 +37,9 @@ export interface ModelEntry {
   preferredFor: ModelUseCase[];
   discouragedFor?: ModelUseCase[];
   description: string;
-  /** Capability, not fit: whether the model accepts an image in the request at
-   *  all. `'ocr'` in `preferredFor`/`discouragedFor` expresses suitability
-   *  among vision-capable models — a model can support vision and still be
-   *  discouraged for OCR, but a model without this flag never shows up in the
-   *  OCR picker regardless of `preferredFor` (#220). Absent/false = no vision. */
+  /** Whether the model accepts an image in the request at all (#220). A model
+   *  without this flag never shows up in the OCR picker. Absent/false = no
+   *  vision. */
   supportsVision?: boolean;
 }
 
@@ -156,6 +154,15 @@ export function getVisionCapableModelIds(
   return getProviderCatalogEntries(provider, options)
     .filter((entry) => entry.supportsVision)
     .map((entry) => entry.id);
+}
+
+/** Whether a provider can serve OCR at all (#220): Ollama always can (the
+ *  user installs what they want), the others only if the catalog lists at
+ *  least one vision-capable model. A provider that cannot is shown disabled
+ *  in the OCR picker instead of leading to a call that fails. */
+export function providerSupportsVision(provider: ModelProvider, ollamaModels?: string[]): boolean {
+  if (provider === 'ollama') return true;
+  return getVisionCapableModelIds(provider, ollamaModels).length > 0;
 }
 
 /** Ensures a stage's currently-selected model stays in its option list even if filtered out (e.g. deprecated). */

@@ -80,7 +80,7 @@ fn effective_target(config: &PipelineConfig) -> &str {
 /// Persona, transcription rules and output contract for OCR/HTR (#220).
 /// Static across every page of every document — the whole reason it is its
 /// own cacheable block, separate from the resolved prompt (which varies by
-/// workspace/document/segment and lands in the non-cacheable block instead).
+/// page and lands in the non-cacheable block instead).
 pub(crate) const OCR_SYSTEM_PERSONA: &str = "\
 You are a careful transcription assistant reading a single page image from a \
 historical or printed source.\n\
@@ -90,44 +90,26 @@ breaks as closely as the image allows.\n\
 Output only the transcribed text of the current page — no commentary, no \
 headers, no description of the image, no reference to these instructions.";
 
-/// Prompt for one OCR/HTR call (#220): persona (cacheable), reference block of
-/// already-transcribed nearby pages (cacheable, identical for every page in the
-/// same blob group), resolved prompt (not cacheable, varies per level), image
-/// and page id in the user message only — never in a system block, or Gemini's
-/// whole-prompt cache invalidates on every page and Anthropic/OpenAI lose the
-/// cached prefix.
+/// Prompt for one OCR/HTR call (#220): persona (cacheable), the page's own
+/// prompt (not cacheable, edited page by page), image and page id in the user
+/// message only — never in a system block, or Gemini's whole-prompt cache
+/// invalidates on every page and Anthropic/OpenAI lose the cached prefix.
 pub(crate) fn build_ocr_prompt(
     resolved_prompt: &str,
-    reference_text: Option<&str>,
     image: ImageAttachment,
     page_id: &str,
 ) -> StructuredPrompt {
-    let mut system = vec![PromptBlock {
-        text: OCR_SYSTEM_PERSONA.to_string(),
-        cacheable: true,
-    }];
-
-    if let Some(reference) = reference_text.filter(|s| !s.trim().is_empty()) {
-        system.push(PromptBlock {
-            text: format!(
-                "[Reference document block - context only]\n\
-                 Already-transcribed text from nearby pages of the same document, for \
-                 continuity of spelling, names, and layout conventions. Do not transcribe \
-                 this block: it is not the current page.\n\
-                 {reference}\n\
-                 [End reference document block]"
-            ),
-            cacheable: true,
-        });
-    }
-
-    system.push(PromptBlock {
-        text: format!("Core Instructions:\n{resolved_prompt}"),
-        cacheable: false,
-    });
-
     StructuredPrompt {
-        system,
+        system: vec![
+            PromptBlock {
+                text: OCR_SYSTEM_PERSONA.to_string(),
+                cacheable: true,
+            },
+            PromptBlock {
+                text: format!("Core Instructions:\n{resolved_prompt}"),
+                cacheable: false,
+            },
+        ],
         user: format!("Current page id: {page_id}"),
         images: vec![image],
     }
