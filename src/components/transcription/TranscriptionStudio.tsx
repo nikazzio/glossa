@@ -1,36 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
-  AlertTriangle,
   ArrowLeft,
   BookOpenText,
   Check,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  FileInput,
   FileText,
-  History,
   Images,
-  Info,
   Link2,
   Loader2,
   Lock,
   MoreVertical,
   RefreshCw,
-  RotateCcw,
-  ScanText,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
   Unlink2,
-  User,
 } from 'lucide-react';
 import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { MarkdownEditor, PanelTransitionVeil } from '../common';
-import { ClickPopover, EmptyState, IconButton, IconLink, InspectorShell, MenuActionRow, Spinner, StatRow } from '../ui';
+import { ClickPopover, EmptyState, IconButton, IconLink, MenuActionRow, Spinner } from '../ui';
 import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
 import { CopyProvenance } from '../workspace/CopyProvenance';
@@ -40,11 +32,14 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { confirm } from '../../stores/confirmStore';
-import { getLibrarySourceDetail, getVersionForViewer, type ViewerVersionRef } from '../../services/libraryService';
-import { listIIIFProviders } from '../../services/iiifProviderService';
-import { versionInventory } from '../../services/inventoryService';
-import { logger } from '../../utils/logger';
+import type { ViewerVersionRef } from '../../services/libraryService';
 import { computeSyncState } from './transcriptionSync';
+import { useTranscriptionSources } from './useTranscriptionSources';
+import { PagePendingOverlay } from './PagePendingOverlay';
+import {
+  TranscriptionInspector,
+  type TranscriptionInspectorTab,
+} from './TranscriptionInspector';
 import {
   ensureSegment,
   getSegmentByPosition,
@@ -78,18 +73,7 @@ function clampWidth(width: number, min: number, max: number) {
 
 interface TranscriptionStudioProps {
   documentId: string;
-  workspaceId: string | null;
   onBack: () => void;
-}
-
-/** Quanto serve per la riga dell'opera in alto — stessa forma della scheda
- *  opera in Biblioteca, letta una volta sola per `sourceId`, non a ogni
- *  cambio pagina. */
-interface BookHeaderInfo {
-  title: string;
-  creatorDate: string;
-  pageUrl: string | null;
-  providerLabel: string | undefined;
 }
 
 /**
@@ -106,7 +90,7 @@ interface BookHeaderInfo {
  * Un documento senza visore (nato da zero) resta su un solo blocco di testo,
  * in posizione 0.
  */
-export function TranscriptionStudio({ documentId, workspaceId, onBack }: TranscriptionStudioProps) {
+export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioProps) {
   const { t, i18n } = useTranslation();
   const detail = useTranscriptionStore((s) => s.detail);
   const loadDetail = useTranscriptionStore((s) => s.loadDetail);
@@ -117,24 +101,22 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   const [draft, setDraft] = useState('');
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const [verifying, setVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'history' | 'assist' | 'metadata'>('history');
+  const [activeTab, setActiveTab] = useState<TranscriptionInspectorTab>('history');
   const [textMenuOpen, setTextMenuOpen] = useState(false);
-  const [viewerRef, setViewerRef] = useState<ViewerVersionRef | null>(null);
-  const [viewerLoading, setViewerLoading] = useState(false);
-  const [bookInfo, setBookInfo] = useState<BookHeaderInfo | null>(null);
   const [removingDocument, setRemovingDocument] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
-  // Cambio fonte immagini/PDF: la copia con cui il documento è nato resta
-  // "principale" per sempre; l'altra, quando c'è, è "secondaria" e potrebbe
-  // non promettere la stessa numerazione di pagina — vedi transcriptionSync.ts.
-  const [siblingVersion, setSiblingVersion] = useState<ViewerVersionRef | null>(null);
-  const [siblingPageCount, setSiblingPageCount] = useState<number | null>(null);
-  const [activeSource, setActiveSource] = useState<'main' | 'sibling'>('main');
-  /** Interruttore manuale: stacca l'aggancio testo↔visore a prescindere dal
-   *  calcolo automatico, anche sulla principale — chiesto esplicitamente per
-   *  poter curiosare una pagina senza spostare il punto in cui si scrive. */
-  const [manualUnlinked, setManualUnlinked] = useState(false);
+  const {
+    viewerRef,
+    viewerLoading,
+    bookInfo,
+    siblingVersion,
+    siblingPageCount,
+    activeSource,
+    setActiveSource,
+    manualUnlinked,
+    setManualUnlinked,
+  } = useTranscriptionSources(detail?.source_version_id ?? null);
   const [jumpRequest, setJumpRequest] = useState<{ index: number; token: number } | null>(null);
 
   // La pagina mostrata a sinistra: un documento senza visore resta sempre a
@@ -179,103 +161,6 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   useEffect(() => {
     void loadDetail(documentId);
   }, [documentId, loadDetail]);
-
-  // Il documento può nascere legato a una digitalizzazione della Biblioteca
-  // (creato dalla scheda dell'opera) oppure no (creato da zero in
-  // Trascrizioni): solo nel primo caso c'è una pagina da mostrare a sinistra.
-  useEffect(() => {
-    const sourceVersionId = detail?.source_version_id ?? null;
-    if (!sourceVersionId) {
-      setViewerRef(null);
-      return;
-    }
-    let cancelled = false;
-    setViewerLoading(true);
-    getVersionForViewer(sourceVersionId)
-      .then((ref) => { if (!cancelled) setViewerRef(ref); })
-      .catch((error: unknown) => {
-        logger.error('transcription.viewer.loadFailed', { sourceVersionId, error });
-        if (!cancelled) setViewerRef(null);
-      })
-      .finally(() => { if (!cancelled) setViewerLoading(false); });
-    return () => { cancelled = true; };
-  }, [detail?.source_version_id]);
-
-  // Titolo e autore dell'opera, come nella scheda opera in Biblioteca: letti
-  // una volta per opera (non per pagina), il visore può cambiare pagina
-  // migliaia di volte senza rileggere niente qui.
-  useEffect(() => {
-    if (!viewerRef) {
-      setBookInfo(null);
-      setSiblingVersion(null);
-      setSiblingPageCount(null);
-      return;
-    }
-    let cancelled = false;
-    setActiveSource('main');
-    setManualUnlinked(false);
-    // Azzerati subito, non solo in caso di errore: senza, la secondaria
-    // dell'opera lasciata resta montata mentre quella dell'opera nuova è
-    // ancora in arrivo.
-    setSiblingVersion(null);
-    setSiblingPageCount(null);
-    Promise.all([getLibrarySourceDetail(viewerRef.sourceId), listIIIFProviders()])
-      .then(([sourceDetail, providers]) => {
-        if (cancelled) return;
-        setBookInfo({
-          title: sourceDetail.source.title,
-          creatorDate: [sourceDetail.creator, sourceDetail.date].filter(Boolean).join(' · '),
-          pageUrl: sourceDetail.pageUrl ?? sourceDetail.catalogUrl,
-          providerLabel: providers.find((p) => p.key === viewerRef.providerKey)?.label,
-        });
-
-        // La copia dell'altro tipo, se c'è: stessa opera, tipo diverso dalla
-        // principale (mai un'altra sequenza di immagini se la principale è
-        // già immagini), leggibile (manifest o PDF con indirizzo).
-        const sibling = sourceDetail.versions.find(
-          (version) =>
-            version.versionKind !== viewerRef.versionKind &&
-            (version.versionKind === 'iiif_manifest' || version.versionKind === 'pdf') &&
-            version.sourceUrl,
-        );
-        if (!sibling) {
-          setSiblingVersion(null);
-          setSiblingPageCount(null);
-          return;
-        }
-        // Stessa risoluzione robusta della principale (`getVersionForViewer`):
-        // la chiave della biblioteca scritta nei metadati della copia può
-        // mancare (es. PDF registrato prima che questo campo esistesse), ma
-        // il deposito la sa sempre. Con la chiave sbagliata il visore non
-        // apre niente e lo sgancio manuale resta l'unica via d'uscita.
-        getVersionForViewer(sibling.id)
-          .then((resolved) => { if (!cancelled) setSiblingVersion(resolved); })
-          .catch((error: unknown) => {
-            logger.error('transcription.siblingVersion.loadFailed', { versionId: sibling.id, error });
-            if (!cancelled) setSiblingVersion(null);
-          });
-        if (sibling.versionKind === 'iiif_manifest') {
-          // Pagine dichiarate dal manifesto: stesso campo che la scheda
-          // opera mostra, niente lettura in più.
-          setSiblingPageCount(sibling.expectedPages);
-        } else {
-          // Per il PDF conta il file arrivato, non una dichiarazione: letto
-          // una volta allo scaricamento, qui si rilegge solo quel dato.
-          versionInventory(sibling.id)
-            .then((inventory) => { if (!cancelled) setSiblingPageCount(inventory?.document?.pages ?? null); })
-            .catch(() => { if (!cancelled) setSiblingPageCount(null); });
-        }
-      })
-      .catch((error: unknown) => {
-        logger.error('transcription.bookInfo.loadFailed', { sourceId: viewerRef.sourceId, error });
-        if (!cancelled) {
-          setBookInfo(null);
-          setSiblingVersion(null);
-          setSiblingPageCount(null);
-        }
-      });
-    return () => { cancelled = true; };
-  }, [viewerRef]);
 
   const handleRemoveDocument = async () => {
     const ok = await confirm({
@@ -418,14 +303,10 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   };
 
   const handleVerify = async () => {
-    if (!segment) return;
+    if (!segment || !detail) return;
     setVerifying(true);
     try {
-      // Il documento stesso porta il suo workspace: quando è già caricato è
-      // la fonte giusta, non l'elenco del catalogo (può ancora star caricando
-      // su un ingresso diretto allo Studio, e verificare prima di allora
-      // scriverebbe l'attribuzione mancante nel registro di provenienza).
-      const revision = await verifySegment(segment.id, detail?.workspace_id ?? workspaceId);
+      const revision = await verifySegment(segment.id, detail.workspace_id);
       setSegment({ ...segment, approved_revision_id: revision.id });
       toast.success(t('transcription.verified'));
     } catch (err: unknown) {
@@ -438,10 +319,10 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
   };
 
   const handleUnverify = async () => {
-    if (!segment) return;
+    if (!segment || !detail) return;
     setVerifying(true);
     try {
-      await unverifySegment(segment.id, detail?.workspace_id ?? workspaceId);
+      await unverifySegment(segment.id, detail.workspace_id);
       setSegment({ ...segment, approved_revision_id: null });
     } catch (err: unknown) {
       toast.error(t('transcription.verifyFailed'), {
@@ -518,8 +399,6 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
       day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
     }).format(new Date(iso));
   };
-
-  const revisionAuthorIcon = { user: User, ocr: ScanText, import: FileInput } as const;
 
   /** Cambio fonte: se le due copie restano sincrone (allineate, o si torna
    *  alla principale) il visore che si monta è un altro componente — chiave
@@ -752,7 +631,7 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
                       size="sm"
                       tone={isVerified ? 'success' : 'muted'}
                       onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
-                      disabled={verifying || !segment || isPagePending || (!isVerified && !draft.trim())}
+                      disabled={verifying || !segment || !detail || isPagePending || (!isVerified && !draft.trim())}
                       title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
                       ariaPressed={isVerified}
                     >
@@ -844,124 +723,24 @@ export function TranscriptionStudio({ documentId, workspaceId, onBack }: Transcr
             dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
           }`}
         >
-          <InspectorShell
-            ariaLabel={t('transcription.inspectorLabel')}
-            headerHeightClassName="h-12"
-            tabRowHeightClassName="h-12"
-            tabs={[
-              {
-                id: 'assist',
-                label: t('transcription.tabs.assist'),
-                icon: <Sparkles size={13} />,
-                disabled: true,
-              },
-              { id: 'history', label: t('transcription.tabs.history'), icon: <History size={13} /> },
-              { id: 'metadata', label: t('transcription.tabs.metadata'), icon: <Info size={13} /> },
-            ]}
+          <TranscriptionInspector
             activeTab={activeTab}
-            onTabChange={(id) => setActiveTab(id as 'history' | 'assist' | 'metadata')}
-            panelIcon={<History size={15} />}
-            panelLabel={t('transcription.inspectorPanelTitle')}
+            onTabChange={setActiveTab}
             collapsed={inspectorCollapsed}
             onCollapsedChange={toggleInspectorCollapsed}
-          >
-            {activeTab === 'history' ? (
-              <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
-                {revisions.length === 0 ? (
-                  <p className="px-1 py-4 text-center text-xs text-editorial-muted">
-                    {t('transcription.noRevisions')}
-                  </p>
-                ) : (
-                  revisions.map((revision) => {
-                    const Icon = revisionAuthorIcon[revision.created_by];
-                    const isApproved = revision.id === segment?.approved_revision_id;
-                    const isCurrent = revision.text === draft;
-                    return (
-                      <div
-                        key={revision.id}
-                        className={`flex items-start gap-2 rounded-md border px-3 py-2 text-xs ${
-                          isApproved ? 'border-editorial-success/40 bg-editorial-success/5' : 'border-editorial-border'
-                        }`}
-                      >
-                        <Icon size={13} className="mt-0.5 shrink-0 text-editorial-muted" aria-hidden="true" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 text-editorial-muted">
-                            <span>{t(`transcription.authorLabels.${revision.created_by}`)}</span>
-                            <span>·</span>
-                            <span>{formatDate(revision.created_at)}</span>
-                            {isApproved && (
-                              <span className="text-editorial-success">· {t('transcription.verifiedBadge')}</span>
-                            )}
-                          </div>
-                          <p className="mt-1 line-clamp-3 text-editorial-ink">{revision.text}</p>
-                        </div>
-                        {!isCurrent && (
-                          <IconButton
-                            size="xs"
-                            onClick={() => void handleRestore(revision.id)}
-                            title={t('transcription.restore')}
-                            disabled={isPagePending}
-                          >
-                            <RotateCcw size={12} />
-                          </IconButton>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-                <PagePendingOverlay pending={isPagePending} errorMessage={pagePendingError} roundedClassName="rounded-none" />
-              </div>
-            ) : activeTab === 'metadata' ? (
-              <dl className="flex flex-col gap-3 p-4">
-                <StatRow label={t('transcription.meta.page')} value={displayIndex + 1} />
-                <StatRow label={t('transcription.meta.pageLabel')} value={pageLabel ?? '—'} />
-                <StatRow
-                  label={t('transcription.meta.status')}
-                  value={t(isVerified ? 'transcription.verifiedBadge' : 'transcription.draftBadge')}
-                />
-                <StatRow label={t('transcription.meta.revisionCount')} value={revisions.length} />
-                <StatRow label={t('transcription.meta.segmentId')} value={segment?.id ?? '—'} />
-                <StatRow
-                  label={t('transcription.meta.sourcePageId')}
-                  value={segment?.source_page_id ?? t('transcription.meta.sourcePageIdUnset')}
-                />
-              </dl>
-            ) : null}
-          </InspectorShell>
+            revisions={revisions}
+            segment={segment}
+            draft={draft}
+            formatDate={formatDate}
+            onRestore={(revisionId) => void handleRestore(revisionId)}
+            pagePending={isPagePending}
+            pagePendingError={pagePendingError}
+            displayIndex={displayIndex}
+            pageLabel={pageLabel}
+            verified={isVerified}
+          />
         </Panel>
       </Group>
-    </div>
-  );
-}
-
-/**
- * Il visore sta ancora aprendo una pagina diversa, o ci ha appena rinunciato:
- * stessa idea del pannello Digitalizzazioni della Biblioteca, applicata al
- * testo e allo storico invece che ai dati tecnici della copia. Blocca il
- * contenuto sotto (non solo lo attenua) — un clic durante il cambio pagina
- * non deve colpire la pagina sbagliata.
- */
-function PagePendingOverlay({
-  pending,
-  errorMessage,
-  roundedClassName = 'rounded-2xl',
-}: {
-  pending: boolean;
-  errorMessage: string | null;
-  roundedClassName?: string;
-}) {
-  const { t } = useTranslation();
-  if (!pending && !errorMessage) return null;
-  return (
-    <div className={`absolute inset-0 z-10 flex items-center justify-center bg-editorial-bg/70 ${roundedClassName}`}>
-      {pending ? (
-        <Loader2 size={20} className="animate-spin text-editorial-muted" aria-label={t('common.loading')} />
-      ) : (
-        <span className="flex flex-col items-center gap-1.5 text-center text-xs text-editorial-danger">
-          <AlertTriangle size={20} aria-hidden="true" />
-          {errorMessage}
-        </span>
-      )}
     </div>
   );
 }

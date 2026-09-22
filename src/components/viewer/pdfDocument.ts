@@ -40,6 +40,10 @@ export interface LoadedDocument {
   pages: number;
   /** Il documento aperto da pdf.js. */
   handle: pdfjs.PDFDocumentProxy;
+  /** Disegni della stessa pagina in coda: pdf.js restituisce lo stesso
+   *  `PDFPageProxy`, quindi le sue risorse si possono liberare solo quando
+   *  non c'è un altro disegno di quella pagina ancora attivo. */
+  renderQueues: Map<number, Promise<void>>;
   /** Chiude il documento e ferma il filo che lo teneva: senza, i byte di un
    *  documento che non si sta più leggendo resterebbero in memoria. */
   destroy: () => Promise<void>;
@@ -55,31 +59,39 @@ export async function openDocument(bytes: Uint8Array): Promise<LoadedDocument> {
   return {
     pages: handle.numPages,
     handle,
+    renderQueues: new Map(),
     destroy: () => task.destroy(),
   };
 }
 
 /** Disegna una pagina e ne restituisce l'immagine. */
-export async function renderDocumentPage(
+export function renderDocumentPage(
   document: LoadedDocument,
   index: number,
 ): Promise<Blob> {
-  // pdf.js conta le pagine da uno; qui, come nel resto del visore, da zero.
-  const page = await document.handle.getPage(index + 1);
-  const viewport = page.getViewport({ scale: RENDER_SCALE });
-  const canvas = window.document.createElement('canvas');
-  canvas.width = Math.ceil(viewport.width);
-  canvas.height = Math.ceil(viewport.height);
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('canvas_unavailable');
-  await page.render({ canvas, canvasContext: context, viewport }).promise;
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) throw new Error('page_not_drawn');
-  // Niente `page.cleanup()` qui: in sviluppo React (StrictMode) chiama questa
-  // funzione due volte di seguito per la stessa pagina — la prima chiamata
-  // liberava la cache interna di pdf.js mentre la seconda stava ancora
-  // disegnando sulla stessa `page`, e il risultato mostrato restava vuoto
-  // pur senza errori. `document.destroy()`, già chiamato smontando il
-  // visore, libera comunque tutte le pagine quando il documento cambia.
-  return blob;
+  const previous = document.renderQueues.get(index) ?? Promise.resolve();
+  const render = previous.catch(() => undefined).then(async () => {
+    // pdf.js conta le pagine da uno; qui, come nel resto del visore, da zero.
+    const page = await document.handle.getPage(index + 1);
+    try {
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      const canvas = window.document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('canvas_unavailable');
+      await page.render({ canvas, canvasContext: context, viewport }).promise;
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('page_not_drawn');
+      return blob;
+    } finally {
+      page.cleanup();
+    }
+  });
+  const settled = render.then(() => undefined, () => undefined);
+  document.renderQueues.set(index, settled);
+  void settled.finally(() => {
+    if (document.renderQueues.get(index) === settled) document.renderQueues.delete(index);
+  });
+  return render;
 }

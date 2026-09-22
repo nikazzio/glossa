@@ -128,20 +128,35 @@ describe('storico delle trascrizioni', () => {
     expect(insert?.params).toContain('seg1:r2');
   });
 
-  it('un ID già scritto da un salvataggio concorrente: vince chi ha scritto per primo, non chi legge il risultato', async () => {
+  it('un salvataggio concorrente non scarta il testo che arriva secondo', async () => {
     const winner = {
       ...ocrRevision,
       created_by: 'user' as const,
       text: 'Testo del salvataggio che ha vinto',
       content_hash: contentHash('Testo del salvataggio che ha vinto'),
     };
+    const retried = {
+      ...winner,
+      id: 'seg1:r2',
+      revision_number: 2,
+      text: 'Testo nostro, conservato nella revisione successiva',
+      content_hash: contentHash('Testo nostro, conservato nella revisione successiva'),
+      derived_from_revision_id: winner.id,
+    };
+    executeMock
+      .mockRejectedValueOnce(new Error('UNIQUE constraint failed'))
+      .mockResolvedValueOnce(undefined);
     selectMock
       .mockResolvedValueOnce([]) // latestRevision: nessuna revisione precedente, stesso punto di partenza dei due salvataggi
-      .mockResolvedValueOnce([winner]); // rilettura dopo l'INSERT ON CONFLICT DO NOTHING
+      .mockResolvedValueOnce([winner]); // nuova ultima revisione da cui ripartire
 
-    const result = await saveSegmentText('seg1', 'Testo nostro, scartato dal vincolo di unicità', 'user');
+    const result = await saveSegmentText('seg1', retried.text, 'user');
 
-    expect(result?.text).toBe('Testo del salvataggio che ha vinto');
+    expect(result).toMatchObject(retried);
+    const inserts = writes().filter((write) => write.query.includes('INSERT INTO transcription_revisions'));
+    expect(inserts).toHaveLength(2);
+    expect(inserts[1].params).toContain(2);
+    expect(inserts[1].params).toContain(winner.id);
   });
 
   it('restore della revisione già corrente non aggiunge nulla', async () => {

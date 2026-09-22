@@ -76,12 +76,10 @@ export function TranscriptionsCatalogArea({ documentId }: TranscriptionsCatalogA
   };
 
   if (documentId) {
-    const document = documents.find((d) => d.id === documentId);
     return (
       <TranscriptionStudio
         key={documentId}
         documentId={documentId}
-        workspaceId={document?.workspace_id ?? null}
         onBack={() => navigate(transcriptionsLocation())}
       />
     );
@@ -172,19 +170,18 @@ export function TranscriptionsCatalogArea({ documentId }: TranscriptionsCatalogA
 function NewDocumentCard({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation();
   return (
-    <motion.button
-      type="button"
+    <motion.div
       layout
-      onClick={onClick}
-      className="group flex min-h-[100px] w-full items-center justify-center gap-3 rounded-[26px] border border-dashed border-editorial-border bg-transparent transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      aria-label={t('transcription.newDocumentCard')}
+      className="flex min-h-[100px] w-full items-center justify-center rounded-[26px] border border-dashed border-editorial-border bg-transparent"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-editorial-border text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
+      <IconButton
+        size="lg"
+        tone="muted"
+        onClick={onClick}
+        title={t('transcription.newDocumentCard')}
+      >
         <Plus size={16} />
-      </span>
-      <span className="font-display text-lg italic text-editorial-muted transition-colors group-hover:text-editorial-ink">
-        {t('transcription.newDocumentCard')}
-      </span>
-    </motion.button>
+      </IconButton>
+    </motion.div>
   );
 }

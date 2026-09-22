@@ -19,6 +19,10 @@ il titolo già compilato. Se l'opera ha sia le immagini sia il PDF sul
 computer, scegli da quale iniziare; con una sola copia disponibile non c'è
 scelta da fare.
 
+Dalla **Panoramica** di un workspace, la sezione Trascrizioni mostra soltanto
+i documenti assegnati a quel workspace. Aprine uno dall'elenco oppure usa il
+comando **+** per crearne uno già assegnato lì.
+
 ## Il visore a sinistra, un testo per pagina
 
 Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra

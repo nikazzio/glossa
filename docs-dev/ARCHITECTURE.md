@@ -388,6 +388,11 @@ testo, in posizione 0 — lo stesso codice, solo che la pagina non cambia mai.
 Studio di traduzione — `AppLocation` porta `{ area: 'transcriptions',
 documentId }`, e l'area stessa decide se mostrare il catalogo o la vista
 concentrata, invece di un flag globale come `projectStore.currentProjectId`.
+La Panoramica del workspace offre lo stesso ingresso, filtrato sul workspace
+attivo, e crea il documento già dentro quel workspace. Il caricamento della
+copia principale e dell'eventuale copia alternativa vive in
+`useTranscriptionSources`; storico e metadati vivono in
+`TranscriptionInspector`, separati dallo stato di salvataggio del testo.
 
 **Intestazione**, quando il documento è legato a un'opera: stessa riga della
 scheda opera in Biblioteca (icona, titolo e autore dell'opera, uscita verso
@@ -401,8 +406,8 @@ verificare, archiviare sono azioni sull'opera, non sul suo studio di
 trascrizione — vivono già nella scheda opera. Un documento senza opera
 collegata mostra il proprio titolo, come prima.
 
-**Visore a sinistra** (#221, solo la parte zoom/pan — filtri visuali, preset
-e cambio fonte restano aperti): riusa `PageViewer`/`DocumentViewer`, già
+**Visore a sinistra** (#221, parte zoom/pan e cambio fonte — filtri visuali e
+preset restano aperti): riusa `PageViewer`/`DocumentViewer`, già
 scritti per la scheda opera in Biblioteca, invece di un componente nuovo.
 `libraryService.getVersionForViewer(sourceVersionId)` legge `source_versions`
 per sapere che tipo di copia mostrare (manifest IIIF o documento unico) senza
@@ -936,10 +941,13 @@ La build di rilascio ha bisogno in più di `'wasm-unsafe-eval'` nel
 WASM lo richiede e quella build non ha la `'unsafe-eval'` più ampia della
 build di sviluppo.
 
-(Prima ipotesi, scartata dal test dal vivo: `page.cleanup()` dopo ogni
-disegno, in conflitto con la doppia chiamata di `StrictMode` in sviluppo. La
-rimozione non risolveva niente — la pagina restava bianca anche fuori
-sviluppo — perché non era la causa.)
+`PDFPageProxy.cleanup()` viene chiamato dopo aver prodotto il blob, così una
+sessione lunga non trattiene le risorse decodificate di ogni pagina. pdf.js
+restituisce lo stesso proxy per richieste contemporanee della stessa pagina:
+`pdfDocument` serializza quindi i disegni per indice prima del `cleanup`,
+evitando che la doppia chiamata di `StrictMode` liberi risorse usate dal
+disegno ancora attivo. La rimozione precedente del `cleanup` non aveva
+risolto le pagine bianche: la causa era il decoder WASM descritto sopra.
 
 ### Riconoscimento e ricerca per biblioteca
 

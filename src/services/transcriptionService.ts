@@ -189,50 +189,58 @@ async function insertRevision(
   createdBy: TranscriptionRevisionAuthor,
   previous: TranscriptionRevision | null,
 ): Promise<TranscriptionRevision> {
-  const revisionNumber = (previous?.revision_number ?? 0) + 1;
-  const revision: TranscriptionRevision = {
-    id: `${segmentId}:r${revisionNumber}`,
-    segment_id: segmentId,
-    revision_number: revisionNumber,
-    text,
-    created_by: createdBy,
-    derived_from_revision_id: previous?.id ?? null,
-    content_hash: contentHash(text),
-    // Valore locale, sostituito dal vero timestamp del database alla
-    // successiva lettura: qui serve solo per il valore restituito subito.
-    created_at: new Date().toISOString(),
-  };
-  logger.info('transcription.revision.write', {
-    segmentId,
-    revisionNumber,
-    createdBy,
-    derivedFrom: revision.derived_from_revision_id,
-    length: text.length,
-  });
-  await execute(
-    `INSERT INTO transcription_revisions
-       (id, segment_id, revision_number, text, created_by, derived_from_revision_id, content_hash)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     ON CONFLICT(id) DO NOTHING`,
-    [
-      revision.id,
-      revision.segment_id,
-      revision.revision_number,
-      revision.text,
-      revision.created_by,
-      revision.derived_from_revision_id,
-      revision.content_hash,
-    ],
-  );
-  // `ON CONFLICT DO NOTHING` scarta in silenzio un ID già scritto da un
-  // autosave concorrente che aveva letto la stessa revisione precedente:
-  // rileggere invece di fidarsi dell'oggetto locale evita di dichiarare
-  // "salvato" un testo che in realtà ha perso il confronto.
-  const persisted = await select<TranscriptionRevision>(
-    'SELECT * FROM transcription_revisions WHERE id = $1',
-    [revision.id],
-  );
-  return persisted[0] ?? revision;
+  const hash = contentHash(text);
+  let parent = previous;
+
+  // Due scritture possono aver letto la stessa ultima revisione. Chi perde
+  // il vincolo di unicità riparte dalla revisione che ha vinto: nessun testo
+  // viene scartato e la catena append-only resta lineare.
+  for (;;) {
+    if (parent?.content_hash === hash) return parent;
+    const revisionNumber = (parent?.revision_number ?? 0) + 1;
+    const revision: TranscriptionRevision = {
+      id: `${segmentId}:r${revisionNumber}`,
+      segment_id: segmentId,
+      revision_number: revisionNumber,
+      text,
+      created_by: createdBy,
+      derived_from_revision_id: parent?.id ?? null,
+      content_hash: hash,
+      // Valore locale, sostituito dal vero timestamp del database alla
+      // successiva lettura: qui serve solo per il valore restituito subito.
+      created_at: new Date().toISOString(),
+    };
+    logger.info('transcription.revision.write', {
+      segmentId,
+      revisionNumber,
+      createdBy,
+      derivedFrom: revision.derived_from_revision_id,
+      length: text.length,
+    });
+    try {
+      await execute(
+        `INSERT INTO transcription_revisions
+           (id, segment_id, revision_number, text, created_by, derived_from_revision_id, content_hash)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          revision.id,
+          revision.segment_id,
+          revision.revision_number,
+          revision.text,
+          revision.created_by,
+          revision.derived_from_revision_id,
+          revision.content_hash,
+        ],
+      );
+      return revision;
+    } catch (error: unknown) {
+      const latest = await latestRevision(segmentId);
+      // Una revisione nuova dimostra la collisione attesa. Senza avanzamento
+      // è un vero errore di scrittura e va propagato, non ritentato per sempre.
+      if (!latest || latest.id === parent?.id) throw error;
+      parent = latest;
+    }
+  }
 }
 
 /**
@@ -278,7 +286,7 @@ export async function restoreRevision(
 /** Marca l'ultima revisione come verificata dall'utente. */
 export async function verifySegment(
   segmentId: string,
-  workspaceId: string | null,
+  workspaceId: string,
 ): Promise<TranscriptionRevision> {
   const latest = await latestRevision(segmentId);
   if (!latest) {
@@ -308,7 +316,7 @@ export async function verifySegment(
 }
 
 /** Riporta il segmento in bozza: la revisione verificata resta nella storia. */
-export async function unverifySegment(segmentId: string, workspaceId: string | null): Promise<void> {
+export async function unverifySegment(segmentId: string, workspaceId: string): Promise<void> {
   const rows = await select<{ approved_revision_id: string | null }>(
     'SELECT approved_revision_id FROM transcription_segments WHERE id = $1',
     [segmentId],

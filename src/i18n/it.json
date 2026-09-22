@@ -2049,6 +2049,7 @@
             "title": "Creare un documento",
             "paragraphs": [
               "Da Trascrizioni scegli \"Nuovo documento\" e dai un titolo.",
+              "Dalla Panoramica di un workspace, la sezione Trascrizioni mostra solo i documenti di quel workspace: aprine uno dall'elenco oppure usa il comando + per crearne uno già assegnato lì.",
               "Puoi anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo nello stesso dialogo — facoltativo, senza resta un solo blocco di testo senza visore.",
               "Dalla scheda di un'opera in Biblioteca puoi invece creare direttamente una trascrizione di quella digitalizzazione.",
               "Se l'opera ha sia le immagini sia il PDF sul computer, scegli da quale iniziare."

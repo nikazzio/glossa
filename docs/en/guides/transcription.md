@@ -19,6 +19,10 @@ the title already filled in. If the work has both images and a PDF on your
 computer, choose which to start from; with only one copy available there's
 no choice to make.
 
+From a workspace **Overview**, the Transcriptions section shows only the
+documents assigned to that workspace. Open one from the list or use the **+**
+command to create one already assigned there.
+
 ## The viewer on the left, one text per page
 
 A document created from a work's page in the Library shows the linked
