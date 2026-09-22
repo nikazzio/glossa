@@ -409,11 +409,10 @@ CREATE TABLE IF NOT EXISTS transcription_documents (
   title TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived', 'trashed')),
   trashed_at DATETIME DEFAULT NULL,
-  -- Fornitore e modello scelti per questo documento (#220): NULL eredita
-  -- dalle impostazioni del workspace. Il prompt non sta qui: si scrive
-  -- pagina per pagina, sul segmento.
+  ocr_prompt TEXT,
   ocr_provider TEXT,
   ocr_model TEXT,
+  ocr_image_edge INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -428,8 +427,6 @@ CREATE TABLE IF NOT EXISTS transcription_segments (
   position INTEGER NOT NULL,
   label TEXT,
   source_page_id TEXT REFERENCES source_pages(id) ON DELETE SET NULL,
-  -- L'unico prompt OCR modificabile (#220): vale per questa pagina e basta.
-  -- NULL significa «mai toccato»: parte dal testo predefinito del workspace.
   ocr_prompt TEXT,
   approved_revision_id TEXT REFERENCES transcription_revisions(id) ON DELETE SET NULL,
   UNIQUE (document_id, position)

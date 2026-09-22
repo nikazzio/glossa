@@ -20,9 +20,7 @@
 
 # Consolidamento pre-1.0 (22 settembre 2026): colonne OCR/HTR (#220) su
 # workspaces, transcription_documents, transcription_segments e
-# operation_logs fuse nella baseline prima di unire il lavoro a main. Il
-# prompt OCR resta solo sul segmento: documento e misura immagine non hanno
-# mai avuto un'interfaccia che li scrivesse.
+# operation_logs fuse nella baseline prima di unire il lavoro a main.
 # Stessa condizione: nessun database distribuito le ha applicate.
 
-0001_baseline_2_0.sql 6c40cc35d49d0404
+0001_baseline_2_0.sql c2155719a86817c6
