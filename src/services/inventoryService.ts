@@ -44,6 +44,21 @@ export interface VersionInventory {
   document: DocumentCopy | null;
 }
 
+/**
+ * Quale cartella di misura leggere sul computer: quella chiesta, se ha pagine,
+ * altrimenti la più fornita. Nessuna scelta implicita fra due misure: una
+ * versione ridotta si legge solo se qualcuno l'ha chiesta. La stessa scelta
+ * del visore, usata anche dalla lettura OCR.
+ */
+export function readableLocalSize(inventory: VersionInventory, preferred: string | null): string | null {
+  const wanted = preferred
+    ? inventory.sizes.find((size) => size.sizeTag === preferred && size.pages > 0)
+    : undefined;
+  if (wanted) return wanted.sizeTag;
+  const principal = inventory.sizes.find((size) => size.sizeTag === inventory.principal);
+  return principal && principal.pages > 0 ? principal.sizeTag : null;
+}
+
 export async function versionInventory(versionId: string): Promise<VersionInventory | null> {
   return invoke<VersionInventory | null>('version_inventory', { versionId });
 }

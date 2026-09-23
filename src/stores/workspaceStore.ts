@@ -24,7 +24,8 @@ type WorkspaceStore = {
   updateActiveWorkspace: (updates: Partial<Pick<Workspace,
     'name' | 'description' | 'embeddingModel' |
     'iconKey' |
-    'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
+    'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt' |
+    'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'
   >>) => Promise<void>;
   /** Eliminare un workspace richiede di dire cosa farne del contenuto (#213). */
   removeWorkspace: (workspaceId: string, disposal: WorkspaceDisposal) => Promise<void>;

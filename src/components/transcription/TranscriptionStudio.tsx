@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BookOpenText,
   Check,
+  Circle,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -31,6 +32,7 @@ import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { confirm } from '../../stores/confirmStore';
 import type { ViewerVersionRef } from '../../services/libraryService';
 import { computeSyncState } from './transcriptionSync';
@@ -42,18 +44,31 @@ import {
 } from './TranscriptionInspector';
 import {
   ensureSegment,
+  deleteTranscriptionRevision,
+  nameTranscriptionRevision,
+  clearTranscriptionHistory,
   getSegmentByPosition,
   listRevisions,
   restoreRevision,
   saveSegmentText,
   setDocumentStatus,
   unverifySegment,
+  updateDocumentOcrSettings,
   verifySegment,
   type TranscriptionRevision,
   type TranscriptionSegment,
 } from '../../services/transcriptionService';
+import { startOcrForPage } from '../../services/ocrService';
+import {
+  DEFAULT_OCR_IMAGE_PREFERENCES,
+  getOcrImagePreferences,
+  type OcrImageMode,
+} from '../../services/ocrImageSettingsService';
+import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
+import { useOcrPageActivity } from '../../hooks/useOcrPageActivity';
+import type { ModelProvider } from '../../types';
 
-const SAVE_DELAY_MS = 800;
+const SAVE_DELAY_MS = 30_000;
 const INSPECTOR_COLLAPSED = 56;
 const INSPECTOR_MIN = 300;
 const INSPECTOR_MAX = 520;
@@ -85,8 +100,10 @@ interface TranscriptionStudioProps {
  *
  * **Un segmento per pagina**, non uno per documento: cambiare pagina nel
  * visore cambia il testo mostrato, ancorato a quella posizione
- * (`transcription_segments.position`, non ancora `source_page_id` — quella
- * riga esiste solo dopo uno scaricamento, il visore la mostra anche prima).
+ * (`transcription_segments.position`; `source_page_id` si aggiunge da sé al
+ * primo tocco del segmento dopo che un lavoro di scaricamento ha popolato
+ * `source_pages`). L'OCR (#220) non aspetta quel collegamento: gli basta la
+ * copia che il visore sta già mostrando.
  * Un documento senza visore (nato da zero) resta su un solo blocco di testo,
  * in posizione 0.
  */
@@ -94,12 +111,14 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   const { t, i18n } = useTranslation();
   const detail = useTranscriptionStore((s) => s.detail);
   const loadDetail = useTranscriptionStore((s) => s.loadDetail);
+  const patchDetail = useTranscriptionStore((s) => s.patchDetail);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
 
   const [segment, setSegment] = useState<TranscriptionSegment | null>(null);
   const [revisions, setRevisions] = useState<TranscriptionRevision[]>([]);
   const [loadingSegment, setLoadingSegment] = useState(true);
   const [draft, setDraft] = useState('');
-  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [saveState, setSaveState] = useState<'saved' | 'pending' | 'saving' | 'error'>('saved');
   const [verifying, setVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState<TranscriptionInspectorTab>('history');
   const [textMenuOpen, setTextMenuOpen] = useState(false);
@@ -131,11 +150,20 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
 
   const debouncedDraft = useDebounce(draft, SAVE_DELAY_MS);
   const savedRef = useRef('');
+  const ocrPromptSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const draftRef = useRef(draft);
+  const saveStateRef = useRef(saveState);
+  useEffect(() => {
+    draftRef.current = draft;
+    saveStateRef.current = saveState;
+  }, [draft, saveState]);
   const attemptRef = useRef<string | null>(null);
   // Un salvataggio in corso quando si cambia pagina non deve scrivere il suo
   // risultato sullo stato della pagina nuova, arrivato nel frattempo.
   const pageIndexRef = useRef(pageIndex);
   useEffect(() => { pageIndexRef.current = pageIndex; }, [pageIndex]);
+  const loadedPageRef = useRef<number | null>(null);
+  const loadRequestRef = useRef(0);
   // Il cambio pagina (salvataggio immediato) e il debounce possono chiedere
   // di salvare quasi nello stesso istante: senza serializzare, entrambi
   // leggono la stessa revisione precedente e calcolano lo stesso numero
@@ -184,76 +212,208 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
     }
   };
 
-  const loadSegmentForPage = useCallback(async () => {
+  const loadSegmentForPage = useCallback(async (preserveDirty = false) => {
+    const requestedPage = pageIndex;
+    const request = ++loadRequestRef.current;
     setLoadingSegment(true);
     try {
-      const existing = await getSegmentByPosition(documentId, pageIndex);
+      // Tornando subito a una pagina lasciata con testo da salvare, leggi
+      // solo dopo che la sua scrittura in coda è terminata.
+      await saveChainRef.current;
+      if (request !== loadRequestRef.current || pageIndexRef.current !== requestedPage) return;
+      const existing = await getSegmentByPosition(documentId, requestedPage);
       const history = existing ? await listRevisions(existing.id) : [];
+      if (request !== loadRequestRef.current || pageIndexRef.current !== requestedPage) return;
+      if (preserveDirty && (draftRef.current !== savedRef.current || saveStateRef.current !== 'saved')) return;
       setSegment(existing);
       setRevisions(history);
       const currentText = history[0]?.text ?? '';
+      draftRef.current = currentText;
       setDraft(currentText);
       savedRef.current = currentText;
+      loadedPageRef.current = requestedPage;
       attemptRef.current = null;
       setSaveState('saved');
     } catch (err: unknown) {
-      toast.error(t('transcription.loadFailed'), {
+      if (request === loadRequestRef.current) toast.error(t('transcription.loadFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      setLoadingSegment(false);
+      if (request === loadRequestRef.current) setLoadingSegment(false);
     }
   }, [documentId, pageIndex, t]);
 
   useEffect(() => { void loadSegmentForPage(); }, [loadSegmentForPage]);
 
+  // Assistenza OCR/HTR (#220).
+  const [ocrStarting, setOcrStarting] = useState(false);
+  // Quali pagine di questo documento sono in lettura adesso: viene dai lavori
+  // in coda, quindi resta vero anche riaprendo il documento o dopo un riavvio.
+  const ocrActivity = useOcrPageActivity(detail?.id ?? null);
+  // Immagine inviata: la scelta delle impostazioni generali, cambiabile qui
+  // per la sessione — non si salva nel documento.
+  const [ocrImage, setOcrImage] = useState(DEFAULT_OCR_IMAGE_PREFERENCES);
+  useEffect(() => {
+    getOcrImagePreferences().then(setOcrImage).catch((err: unknown) => {
+      toast.error(t('transcription.assist.imageSettingsFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }, [t]);
+  const handleOcrImageModeChange = (mode: OcrImageMode) => setOcrImage((current) => ({ ...current, mode }));
+
+  // Il lavoro gira in background: quando un lavoro OCR finisce si rilegge la
+  // pagina corrente, così la revisione appena scritta compare da sola nello
+  // storico, senza che l'utente debba cambiare pagina e tornare indietro.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    onJobChanged((job) => {
+      if (job.jobType !== OCR_JOB_TYPE || job.status !== 'completed' || !segment) return;
+      try {
+        const config = JSON.parse(job.config) as { pages?: unknown };
+        if (!Array.isArray(config.pages)) return;
+        const affectsPage = config.pages.some((page: unknown) =>
+          typeof page === 'object' && page !== null &&
+          'documentId' in page && page.documentId === documentId &&
+          'segmentId' in page && page.segmentId === segment.id,
+        );
+        if (affectsPage) void loadSegmentForPage(true);
+      } catch { /* Un lavoro con configurazione illeggibile non riguarda la pagina aperta. */ }
+    }).then((fn) => { if (!cancelled) unlisten = fn; else fn(); });
+    return () => { cancelled = true; unlisten?.(); };
+  }, [documentId, segment, loadSegmentForPage]);
+
+  const handleDocumentOcrProviderChange = (provider: ModelProvider | '', model: string) => {
+    if (!detail) return;
+    patchDetail({ ocr_provider: provider || null, ocr_model: model || null });
+    void updateDocumentOcrSettings(detail.id, {
+      ocrProvider: provider || null,
+      ocrModel: model || null,
+    }).catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  const handleDocumentOcrModelChange = (model: string) => {
+    if (!detail) return;
+    patchDetail({ ocr_model: model || null });
+    void updateDocumentOcrSettings(detail.id, { ocrModel: model || null }).catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  // Il prompt appartiene al documento: modificato da una pagina qualsiasi,
+  // vale per tutte. `null` torna al prompt di partenza del workspace.
+  const handleDocumentOcrPromptChange = (prompt: string | null) => {
+    if (!detail) return;
+    patchDetail({ ocr_prompt: prompt });
+    const targetDocumentId = detail.id;
+    // Le digitazioni rapide devono arrivare al database nello stesso ordine.
+    ocrPromptSaveChainRef.current = ocrPromptSaveChainRef.current
+      .catch(() => undefined)
+      .then(() => updateDocumentOcrSettings(targetDocumentId, { ocrPrompt: prompt }));
+    void ocrPromptSaveChainRef.current.catch((err: unknown) => {
+      toast.error(t('transcription.assist.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
+  const handleStartOcr = async () => {
+    if (!detail || !activeWorkspace || !viewerRef) return;
+    setOcrStarting(true);
+    try {
+      // Una pagina mai toccata non ha ancora un segmento: nasce qui, come già
+      // fa il primo salvataggio manuale — l'OCR non deve aspettare che
+      // qualcuno scriva prima a mano.
+      const target = segment ?? (await ensureSegment(detail.id, pageIndex, pageLabel));
+      if (!segment) setSegment(target);
+      await startOcrForPage({
+        document: detail,
+        segment: target,
+        workspace: activeWorkspace,
+        viewerRef,
+        // La posizione nel libro contando dalla copertina, come nel titolo
+        // della pagina: la numerazione stampata della biblioteca («3») non
+        // corrisponde quasi mai.
+        pageLabel: String(pageIndex + 1),
+        image: ocrImage,
+      });
+      toast.success(t('transcription.assist.jobStarted'));
+    } catch (err: unknown) {
+      toast.error(t('transcription.assist.jobStartFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setOcrStarting(false);
+    }
+  };
+
   const save = useCallback(
     (text: string) => {
+      const savingPage = pageIndex;
+      const savingSegment = loadedPageRef.current === savingPage ? segment : null;
+      const savingLabel = pageLabel;
       // Incodato: parte solo a salvataggio precedente concluso, così legge
       // sempre l'ultima revisione davvero scritta e non ne collide il numero.
       const run = saveChainRef.current.then(async () => {
-        const savingPage = pageIndex;
-        attemptRef.current = text;
-        setSaveState('saving');
+        if (pageIndexRef.current === savingPage) {
+          attemptRef.current = text;
+          setSaveState('saving');
+        }
         try {
           // Sfogliare pagine mai trascritte non crea righe vuote: il segmento
           // nasce solo al primo salvataggio davvero.
-          const target = segment ?? await ensureSegment(documentId, savingPage, pageLabel);
-          // Nel frattempo si è già cambiata pagina (salvataggio lanciato
-          // all'uscita, prima del debounce): il suo risultato non riguarda più
-          // quello che si vede adesso.
-          if (pageIndexRef.current !== savingPage) return;
-          if (!segment) setSegment(target);
+          const target = savingSegment ?? await ensureSegment(documentId, savingPage, savingLabel);
+          if (pageIndexRef.current === savingPage && loadedPageRef.current === savingPage && !savingSegment) setSegment(target);
           const revision = await saveSegmentText(target.id, text, 'user');
-          if (pageIndexRef.current !== savingPage) return;
+          if (pageIndexRef.current !== savingPage || loadedPageRef.current !== savingPage) return;
           if (revision) {
             // Il testo davvero persistito, non quello tentato: su collisione
             // la revisione restituita è quella dell'altro salvataggio, non la nostra.
             savedRef.current = revision.text;
             if (attemptRef.current === text) {
-              setSaveState(revision.text === text ? 'saved' : 'error');
+              setSaveState(revision.text !== text ? 'error' : draftRef.current === text ? 'saved' : 'pending');
             }
             setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
           } else if (attemptRef.current === text) {
             savedRef.current = text;
-            setSaveState('saved');
+            setSaveState(draftRef.current === text ? 'saved' : 'pending');
           }
-        } catch {
-          if (pageIndexRef.current === savingPage && attemptRef.current === text) setSaveState('error');
+        } catch (error: unknown) {
+          if (pageIndexRef.current === savingPage && attemptRef.current === text) {
+            setSaveState('error');
+          } else {
+            toast.error(t('transcription.saveError'), {
+              description: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
       });
       saveChainRef.current = run;
       return run;
     },
-    [segment, documentId, pageIndex, pageLabel],
+    [segment, documentId, pageIndex, pageLabel, t],
   );
+  const saveOnExitRef = useRef(save);
+  saveOnExitRef.current = save;
+  useEffect(() => () => {
+    if (loadedPageRef.current === pageIndexRef.current && draftRef.current !== savedRef.current) {
+      void saveOnExitRef.current(draftRef.current);
+    }
+  }, []);
 
   useEffect(() => {
-    if (loadingSegment) return;
+    if (loadingSegment || loadedPageRef.current !== pageIndex || debouncedDraft !== draftRef.current) return;
     if (debouncedDraft === savedRef.current) return;
     if (attemptRef.current === debouncedDraft) return;
     void save(debouncedDraft);
-  }, [debouncedDraft, save, loadingSegment]);
+  }, [debouncedDraft, save, loadingSegment, pageIndex]);
 
   const { aligned, synced } = computeSyncState({
     activeSource,
@@ -272,13 +432,18 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   const handleViewerPageChange = useCallback(
     (index: number, label: string | null, total: number | null) => {
       if (!synced) return;
-      if (draft !== savedRef.current) void save(draft);
+      if (index === pageIndex) { setPageLabel(label); setPageTotal(total); setPendingStatus(null); return; }
+      if (loadedPageRef.current === pageIndex && draftRef.current !== savedRef.current) void save(draftRef.current);
+      pageIndexRef.current = index;
+      loadedPageRef.current = null;
+      ++loadRequestRef.current;
+      setLoadingSegment(true);
       setPageIndex(index);
       setPageLabel(label);
       setPageTotal(total);
       setPendingStatus(null);
     },
-    [draft, save, synced],
+    [save, synced, pageIndex],
   );
 
   // Tornando in sincronia (si rientra sulla principale, o si riallinea la
@@ -297,17 +462,29 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
    *  raggiunta così non ha un'etichetta nota (non viene da un visore), va
    *  azzerata perché non resti quella della pagina lasciata. */
   const handleTextPageChange = (nextIndex: number) => {
-    if (draft !== savedRef.current) void save(draft);
+    if (nextIndex === pageIndex) return;
+    if (loadedPageRef.current === pageIndex && draftRef.current !== savedRef.current) void save(draftRef.current);
+    pageIndexRef.current = nextIndex;
+    loadedPageRef.current = null;
+    ++loadRequestRef.current;
+    setLoadingSegment(true);
     setPageIndex(nextIndex);
     setPageLabel(null);
   };
 
   const handleVerify = async () => {
-    if (!segment || !detail) return;
+    if (!detail || !draftRef.current.trim()) return;
+    const verifyingPage = pageIndex;
     setVerifying(true);
     try {
-      const revision = await verifySegment(segment.id, detail.workspace_id);
-      setSegment({ ...segment, approved_revision_id: revision.id });
+      const text = draftRef.current;
+      if (text !== savedRef.current) await save(text);
+      if (pageIndexRef.current !== verifyingPage) return;
+      if (savedRef.current !== text) throw new Error(t('transcription.saveError'));
+      const target = await getSegmentByPosition(documentId, verifyingPage);
+      if (!target) throw new Error(t('transcription.noRevisions'));
+      const revision = await verifySegment(target.id, detail.workspace_id);
+      if (pageIndexRef.current === verifyingPage) setSegment({ ...target, approved_revision_id: revision.id });
       toast.success(t('transcription.verified'));
     } catch (err: unknown) {
       toast.error(t('transcription.verifyFailed'), {
@@ -320,10 +497,11 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
 
   const handleUnverify = async () => {
     if (!segment || !detail) return;
+    const verifyingPage = pageIndex;
     setVerifying(true);
     try {
       await unverifySegment(segment.id, detail.workspace_id);
-      setSegment({ ...segment, approved_revision_id: null });
+      if (pageIndexRef.current === verifyingPage) setSegment({ ...segment, approved_revision_id: null });
     } catch (err: unknown) {
       toast.error(t('transcription.verifyFailed'), {
         description: err instanceof Error ? err.message : String(err),
@@ -335,8 +513,15 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
 
   const handleRestore = async (revisionId: string) => {
     if (!segment) return;
+    const restoringPage = pageIndex;
     try {
+      const unsavedText = draftRef.current;
+      if (unsavedText !== savedRef.current) await save(unsavedText);
+      if (pageIndexRef.current !== restoringPage) return;
+      if (savedRef.current !== unsavedText) throw new Error(t('transcription.saveError'));
       const revision = await restoreRevision(segment.id, revisionId);
+      if (pageIndexRef.current !== restoringPage) return;
+      draftRef.current = revision.text;
       setDraft(revision.text);
       savedRef.current = revision.text;
       setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
@@ -344,6 +529,71 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
     } catch (err: unknown) {
       toast.error(t('transcription.restoreFailed'), {
         description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleDeleteRevision = async (revisionId: string) => {
+    if (!segment) return;
+    const deletingPage = pageIndex;
+    const segmentId = segment.id;
+    const ok = await confirm({
+      title: t('transcription.deleteRevisionTitle'),
+      message: t('transcription.deleteRevisionMessage'),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteTranscriptionRevision(segmentId, revisionId);
+      if (pageIndexRef.current === deletingPage) {
+        setRevisions((current) => current.filter((revision) => revision.id !== revisionId));
+      }
+    } catch (error: unknown) {
+      toast.error(t('transcription.deleteRevisionFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const handleNameRevision = async (revisionId: string, name: string | null) => {
+    if (!segment) return;
+    const namingPage = pageIndex;
+    try {
+      await nameTranscriptionRevision(segment.id, revisionId, name);
+      if (pageIndexRef.current === namingPage) {
+        setRevisions((current) => current.map((revision) =>
+          revision.id === revisionId ? { ...revision, consolidated_name: name } : revision));
+      }
+    } catch (error: unknown) {
+      toast.error(t('transcription.nameRevisionFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!segment) return;
+    const clearingPage = pageIndex;
+    const segmentId = segment.id;
+    const ok = await confirm({
+      title: t('transcription.clearHistoryTitle'),
+      message: t('transcription.clearHistoryMessage'),
+      confirmLabel: t('transcription.clearHistory'),
+      danger: true,
+    });
+    if (!ok || pageIndexRef.current !== clearingPage) return;
+    try {
+      const text = draftRef.current;
+      if (text !== savedRef.current) await save(text);
+      if (pageIndexRef.current !== clearingPage) return;
+      if (savedRef.current !== text) throw new Error(t('transcription.saveError'));
+      await clearTranscriptionHistory(segmentId);
+      const remaining = await listRevisions(segmentId);
+      if (pageIndexRef.current === clearingPage) setRevisions(remaining);
+    } catch (error: unknown) {
+      toast.error(t('transcription.clearHistoryFailed'), {
+        description: error instanceof Error ? error.message : String(error),
       });
     }
   };
@@ -382,6 +632,13 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   // non riguarda più la pagina di testo mostrata qui.
   const displayIndex = synced ? pendingStatus?.index ?? pageIndex : pageIndex;
   const isPagePending = loadingSegment || (synced && pendingStatus?.state === 'loading');
+  // Questa pagina è dentro un lavoro di lettura in corso: il foglio si vela e
+  // resta in sola lettura, perché scrivere su un testo che sta per essere
+  // sostituito è lavoro buttato.
+  const isPageReading = ocrActivity.isReading(segment?.id);
+  // La prima pagina in lettura del documento, anche se non è quella aperta:
+  // sfogliare avanti non deve far sparire il segnale.
+  const readingPage = ocrActivity.pages[0] ?? null;
   const pagePendingError = synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
   const pageTitle =
     viewerRef && pageTotal
@@ -631,7 +888,7 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                       size="sm"
                       tone={isVerified ? 'success' : 'muted'}
                       onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
-                      disabled={verifying || !segment || !detail || isPagePending || (!isVerified && !draft.trim())}
+                      disabled={verifying || !detail || isPagePending || (!isVerified && !draft.trim())}
                       title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
                       ariaPressed={isVerified}
                     >
@@ -640,6 +897,15 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {readingPage && (
+                    <span
+                      className="flex items-center gap-1.5 rounded-full bg-editorial-accent/10 px-2.5 py-1 text-xs text-editorial-accent"
+                      role="status"
+                    >
+                      <Loader2 size={12} className="shrink-0 animate-spin" aria-hidden="true" />
+                      {t('transcription.assist.readingPage', { page: readingPage.pageLabel })}
+                    </span>
+                  )}
                   <span
                     className={`flex items-center gap-1 text-xs ${
                       saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'
@@ -648,12 +914,14 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                   >
                     {saveState === 'saving' ? (
                       <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+                    ) : saveState === 'pending' ? (
+                      <Circle size={12} aria-hidden="true" />
                     ) : saveState === 'error' ? (
                       <AlertCircle size={12} aria-hidden="true" />
                     ) : (
                       <Check size={12} aria-hidden="true" />
                     )}
-                    {t(`transcription.save${saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving' : 'Error'}`)}
+                    {t(`transcription.save${saveState === 'saved' ? 'Saved' : saveState === 'pending' ? 'Pending' : saveState === 'saving' ? 'Saving' : 'Error'}`)}
                     {saveState === 'error' && (
                       <IconButton size="xs" tone="danger" onClick={() => void save(draft)} title={t('transcription.saveRetry')}>
                         <RefreshCw size={12} />
@@ -680,15 +948,19 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                     menuOpen={textMenuOpen}
                     onMenuOpenChange={setTextMenuOpen}
                     value={draft}
-                    onChange={setDraft}
+                    onChange={(text) => { draftRef.current = text; setDraft(text); setSaveState('pending'); }}
                     markdownEnabled
-                    readOnly={isVerified || isPagePending || Boolean(pagePendingError)}
+                    readOnly={isVerified || isPageReading || isPagePending || Boolean(pagePendingError)}
                     fillHeight
                     textClassName="doc-content text-editorial-ink"
                     previewClassName="min-h-[280px] doc-content text-editorial-ink"
                     placeholder={t('transcription.textPlaceholder')}
                   />
-                  <PagePendingOverlay pending={isPagePending} errorMessage={pagePendingError} />
+                  <PagePendingOverlay
+                    pending={isPagePending || isPageReading}
+                    label={isPageReading && !isPagePending ? t('transcription.assist.readingInProgress') : undefined}
+                    errorMessage={pagePendingError}
+                  />
                 </div>
               </div>
             </section>
@@ -733,11 +1005,27 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
             draft={draft}
             formatDate={formatDate}
             onRestore={(revisionId) => void handleRestore(revisionId)}
+            onDeleteRevision={(revisionId) => void handleDeleteRevision(revisionId)}
+            onNameRevision={(revisionId, name) => void handleNameRevision(revisionId, name)}
+            onClearHistory={() => void handleClearHistory()}
             pagePending={isPagePending}
             pagePendingError={pagePendingError}
             displayIndex={displayIndex}
             pageLabel={pageLabel}
+            pageTotal={pageTotal}
             verified={isVerified}
+            document={detail}
+            workspace={activeWorkspace}
+            viewerRef={viewerRef}
+            ocrStarting={ocrStarting}
+            ocrReading={isPageReading}
+            pageTitleShort={String(displayIndex + 1)}
+            onStartOcr={() => void handleStartOcr()}
+            onDocumentOcrProviderChange={handleDocumentOcrProviderChange}
+            onDocumentOcrModelChange={handleDocumentOcrModelChange}
+            onDocumentOcrPromptChange={handleDocumentOcrPromptChange}
+            ocrImage={ocrImage}
+            onOcrImageModeChange={handleOcrImageModeChange}
           />
         </Panel>
       </Group>

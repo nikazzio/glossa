@@ -587,7 +587,7 @@ export interface ResponseInfo {
   rawJson: string;
 }
 
-export type PromptTemplateContext = 'stage' | 'audit' | 'persona' | 'memory';
+export type PromptTemplateContext = 'stage' | 'audit' | 'persona' | 'memory' | 'ocr';
 export type PromptTemplateWorkflow = 'translation' | 'transcription';
 
 export interface PromptTemplate {
@@ -694,6 +694,10 @@ export type Workspace = {
   memoryExtractorProvider: ModelProvider;
   memoryExtractorModel: string;
   memoryExtractorPrompt: string;
+  /** Cascata OCR (#220): '' significa «nessun default a questo livello». */
+  ocrDefaultProvider: ModelProvider | '';
+  ocrDefaultModel: string;
+  ocrDefaultPrompt: string;
   createdAt: string;
   /** Messo da parte: resta com'è, ma non compare fra quelli in cui si lavora. */
   archivedAt?: string;

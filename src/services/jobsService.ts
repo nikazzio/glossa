@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useWorkspaceStore } from '../stores/workspaceStore';
+import type { CacheRequest } from './cacheService';
 
 const JOB_EVENT = 'jobs:updated';
 
@@ -146,6 +147,77 @@ export async function enqueuePdfDownload(request: {
 
 export async function enqueueVaultVerification(full = false): Promise<Job> {
   return invoke<Job>('enqueue_vault_verification', { full });
+}
+
+export const OCR_JOB_TYPE = 'ocr_page';
+
+/** Una pagina da leggere, già risolta (#220): stessa forma di
+ *  `OcrPageConfig` lato Rust (`src-tauri/src/ocr/handler.rs`). */
+export interface OcrPageJobInput {
+  segmentId: string;
+  documentId: string;
+  cacheRequest: CacheRequest;
+  prompt: string;
+  provider: string;
+  model: string;
+  ollamaBaseUrl: string | null;
+  imageEdge: number;
+  /** Copie della pagina già sul computer da inviare così come sono, in ordine
+   *  di preferenza; vuoto = immagine ottimizzata. Nessuna ha un indirizzo
+   *  remoto: se mancano tutte, il lavoro ripiega sull'ottimizzata. */
+  localRequests: CacheRequest[];
+  pageLabel: string;
+}
+
+export async function enqueueOcrPages(pages: OcrPageJobInput[]): Promise<Job> {
+  return createJob({
+    jobType: OCR_JOB_TYPE,
+    config: JSON.stringify({ pages }),
+    workspaceId: useWorkspaceStore.getState().activeWorkspace?.id ?? undefined,
+  });
+}
+
+/** Una pagina dentro un lavoro OCR, come la dichiara la configurazione. */
+export interface OcrJobPage {
+  segmentId: string;
+  documentId: string;
+  pageLabel: string;
+}
+
+/** Le pagine **ancora da leggere** di un lavoro OCR (#220), lette dalla sua
+ *  stessa configurazione e dal suo segnalibro di ripresa. Nessuna mappa tenuta
+ *  in memoria: così il segnale «questa pagina si sta leggendo» sopravvive a un
+ *  riavvio del programma, esattamente come il lavoro. */
+export function ocrPendingPagesOf(job: Job): OcrJobPage[] {
+  if (job.jobType !== OCR_JOB_TYPE) return [];
+  try {
+    const parsed = JSON.parse(job.config) as { pages?: unknown };
+    if (!Array.isArray(parsed.pages)) return [];
+    const done = new Set(parseCheckpointSegmentIds(job.checkpoint));
+    return parsed.pages
+      .map((page) => page as Partial<OcrJobPage>)
+      .filter(
+        (page): page is OcrJobPage =>
+          typeof page.segmentId === 'string' &&
+          typeof page.documentId === 'string' &&
+          typeof page.pageLabel === 'string',
+      )
+      .filter((page) => !done.has(page.segmentId));
+  } catch {
+    // Configurazione illeggibile: il lavoro resta visibile nel pannello
+    // lavori, semplicemente non accende nessuna pagina.
+    return [];
+  }
+}
+
+function parseCheckpointSegmentIds(checkpoint: string | null): string[] {
+  if (!checkpoint) return [];
+  try {
+    const parsed = JSON.parse(checkpoint) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function clearFinishedJobs(id?: string): Promise<number> {

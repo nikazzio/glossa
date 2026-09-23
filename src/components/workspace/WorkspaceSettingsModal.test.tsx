@@ -22,6 +22,7 @@ describe('WorkspaceSettingsModal', () => {
         memoryExtractorProvider: 'openai',
         memoryExtractorModel: 'gpt-5.4-nano',
         memoryExtractorPrompt: 'Estrai le frasi.',
+        ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '',
         createdAt: '2026-07-28T00:00:00.000Z',
       },
       workspaces: [],

@@ -38,7 +38,7 @@ describe('barra delle linguette delle impostazioni', () => {
     first.focus();
 
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'settings.typographyTab' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'areas.transcriptions.title' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -55,14 +55,5 @@ describe('barra delle linguette delle impostazioni', () => {
       'true',
     );
   });
-
-  it('le schede che arriveranno con la 2.0 lo dicono in una frase tradotta', () => {
-    render(<SettingsModal />);
-
-    // Resta soltanto Trascrizioni: la Biblioteca ha la sua scheda vera. Il
-    // tooltip viene da una chiave tradotta, non da una frase nel codice.
-    const planned = screen.getAllByRole('button', { name: 'settings.tabPlanned' });
-    expect(planned).toHaveLength(1);
-    planned.forEach((tab) => expect(tab).toBeDisabled());
-  });
 });
+

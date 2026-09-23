@@ -205,11 +205,12 @@ async function downloadedSources(): Promise<DownloadedSource[]> {
 export async function writeBackup(options: BackupOptions = { privacy: 'glossaOnly' }): Promise<boolean> {
   const now = new Date().toISOString();
 
-  const tables: Record<string, Record<string, unknown>[]> = {};
-  for (const table of INSERT_ORDER) {
-    if (['jobs','search_runs','search_executions','search_pages'].includes(table)) continue;
-    tables[table] = await select<Record<string, unknown>>(`SELECT * FROM ${table}`);
-  }
+  const snapshotTables = INSERT_ORDER.filter(
+    (table) => !['jobs', 'search_runs', 'search_executions', 'search_pages'].includes(table),
+  );
+  const tables = await invoke<Record<string, Record<string, unknown>[]>>('export_backup_snapshot', {
+    tables: snapshotTables,
+  });
   Object.assign(tables, await invoke('export_search_history'));
 
   const downloaded = await downloadedSources();
@@ -303,8 +304,11 @@ export async function restoreBackup(
         const emptied = (column: string) =>
           dangling.includes(column) || deferred.some((ref) => ref.column === column);
         const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+        // Testi e revisioni devono entrare tutti: ignorare una collisione
+        // lascerebbe una pagina apparentemente presente ma con storia tronca.
+        const insert = table.startsWith('transcription_') ? 'INSERT' : 'INSERT OR IGNORE';
         await run(
-          `INSERT OR IGNORE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`,
+          `${insert} INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`,
           cols.map((c) => {
             if (emptied(c)) return null;
             if (table === 'jobs' && c === 'status' && !['completed','error','cancelled'].includes(String(row.status))) return 'paused';
@@ -350,5 +354,43 @@ function validateBackup(json: unknown): BackupPayload {
   if (!parsed.success) {
     throw new Error('invalid_backup');
   }
-  return parsed.data;
+  const payload = parsed.data;
+  const documents = new Set(payload.tables.transcription_documents.map((row) => row.id));
+  const segments = new Map(payload.tables.transcription_segments.map((row) => [row.id, row]));
+  const revisions = new Map(payload.tables.transcription_revisions.map((row) => [row.id, row]));
+  if (documents.size !== payload.tables.transcription_documents.length ||
+      segments.size !== payload.tables.transcription_segments.length ||
+      revisions.size !== payload.tables.transcription_revisions.length) {
+    throw new Error('invalid_backup');
+  }
+  const positions = new Set<string>();
+  for (const segment of segments.values()) {
+    if (typeof segment.id !== 'string' || typeof segment.document_id !== 'string' ||
+        !documents.has(segment.document_id) || !Number.isInteger(segment.position)) {
+      throw new Error('invalid_backup');
+    }
+    const key = `${segment.document_id}:${segment.position}`;
+    if (positions.has(key)) throw new Error('invalid_backup');
+    positions.add(key);
+    if (segment.approved_revision_id != null &&
+        revisions.get(segment.approved_revision_id)?.segment_id !== segment.id) {
+      throw new Error('invalid_backup');
+    }
+  }
+  const numbers = new Set<string>();
+  for (const revision of revisions.values()) {
+    if (typeof revision.id !== 'string' || typeof revision.segment_id !== 'string' ||
+        !segments.has(revision.segment_id) || !Number.isInteger(revision.revision_number) ||
+        typeof revision.text !== 'string') {
+      throw new Error('invalid_backup');
+    }
+    const key = `${revision.segment_id}:${revision.revision_number}`;
+    if (numbers.has(key)) throw new Error('invalid_backup');
+    numbers.add(key);
+    if (revision.derived_from_revision_id != null &&
+        revisions.get(revision.derived_from_revision_id)?.segment_id !== revision.segment_id) {
+      throw new Error('invalid_backup');
+    }
+  }
+  return payload;
 }

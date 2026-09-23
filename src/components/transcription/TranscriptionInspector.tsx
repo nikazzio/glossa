@@ -1,13 +1,20 @@
-import { FileInput, History, Info, RotateCcw, ScanText, Sparkles, User } from 'lucide-react';
+import { BarChart2, History, Info, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, InspectorShell, StatRow } from '../ui';
+import { InspectorShell, StatRow } from '../ui';
 import type {
+  TranscriptionDocument,
   TranscriptionRevision,
   TranscriptionSegment,
 } from '../../services/transcriptionService';
-import { PagePendingOverlay } from './PagePendingOverlay';
+import type { ViewerVersionRef } from '../../services/libraryService';
+import type { ModelProvider, Workspace } from '../../types';
+import { TranscriptionAssistTab } from './TranscriptionAssistTab';
+import { OcrStartButton } from './OcrStartButton';
+import type { OcrImageMode, OcrImagePreferences } from '../../services/ocrImageSettingsService';
+import { TranscriptionSummaryTab } from './TranscriptionSummaryTab';
+import { TranscriptionHistoryTab } from './TranscriptionHistoryTab';
 
-export type TranscriptionInspectorTab = 'history' | 'assist' | 'metadata';
+export type TranscriptionInspectorTab = 'history' | 'assist' | 'summary' | 'metadata';
 
 interface TranscriptionInspectorProps {
   activeTab: TranscriptionInspectorTab;
@@ -19,14 +26,30 @@ interface TranscriptionInspectorProps {
   draft: string;
   formatDate: (value: string) => string;
   onRestore: (revisionId: string) => void;
+  onDeleteRevision: (revisionId: string) => void;
+  onNameRevision: (revisionId: string, name: string | null) => void;
+  onClearHistory: () => void;
   pagePending: boolean;
   pagePendingError: string | null;
   displayIndex: number;
   pageLabel: string | null;
+  pageTotal: number | null;
   verified: boolean;
+  document: TranscriptionDocument | null;
+  workspace: Pick<Workspace, 'ocrDefaultProvider' | 'ocrDefaultModel' | 'ocrDefaultPrompt'> | null;
+  viewerRef: ViewerVersionRef | null;
+  ocrStarting: boolean;
+  /** La pagina aperta è dentro un lavoro di lettura in corso. */
+  ocrReading: boolean;
+  /** Etichetta breve della pagina aperta, per i testi della scheda OCR. */
+  pageTitleShort: string;
+  onStartOcr: () => void;
+  onDocumentOcrProviderChange: (provider: ModelProvider | '', model: string) => void;
+  onDocumentOcrModelChange: (model: string) => void;
+  onDocumentOcrPromptChange: (prompt: string | null) => void;
+  ocrImage: OcrImagePreferences;
+  onOcrImageModeChange: (mode: OcrImageMode) => void;
 }
-
-const AUTHOR_ICONS = { user: User, ocr: ScanText, import: FileInput } as const;
 
 export function TranscriptionInspector({
   activeTab,
@@ -38,11 +61,27 @@ export function TranscriptionInspector({
   draft,
   formatDate,
   onRestore,
+  onDeleteRevision,
+  onNameRevision,
+  onClearHistory,
   pagePending,
   pagePendingError,
   displayIndex,
   pageLabel,
+  pageTotal,
   verified,
+  document,
+  workspace,
+  viewerRef,
+  ocrStarting,
+  ocrReading,
+  pageTitleShort,
+  onStartOcr,
+  onDocumentOcrProviderChange,
+  onDocumentOcrModelChange,
+  onDocumentOcrPromptChange,
+  ocrImage,
+  onOcrImageModeChange,
 }: TranscriptionInspectorProps) {
   const { t } = useTranslation();
   return (
@@ -55,68 +94,56 @@ export function TranscriptionInspector({
           id: 'assist',
           label: t('transcription.tabs.assist'),
           icon: <Sparkles size={13} />,
-          disabled: true,
         },
         { id: 'history', label: t('transcription.tabs.history'), icon: <History size={13} /> },
+        { id: 'summary', label: t('transcription.tabs.summary'), icon: <BarChart2 size={13} /> },
         { id: 'metadata', label: t('transcription.tabs.metadata'), icon: <Info size={13} /> },
       ]}
       activeTab={activeTab}
       onTabChange={(id) => onTabChange(id as TranscriptionInspectorTab)}
+      actions={<span className="font-display text-sm italic text-editorial-ink">{t(`transcription.tabs.${activeTab}`)}</span>}
       panelIcon={<History size={15} />}
       panelLabel={t('transcription.inspectorPanelTitle')}
       collapsed={collapsed}
       onCollapsedChange={onCollapsedChange}
-    >
-      {activeTab === 'history' ? (
-        <div className="relative flex min-h-0 flex-1 flex-col gap-2 p-3">
-          {revisions.length === 0 ? (
-            <p className="px-1 py-4 text-center text-xs text-editorial-muted">
-              {t('transcription.noRevisions')}
-            </p>
-          ) : (
-            revisions.map((revision) => {
-              const Icon = AUTHOR_ICONS[revision.created_by];
-              const isApproved = revision.id === segment?.approved_revision_id;
-              const isCurrent = revision.text === draft;
-              return (
-                <div
-                  key={revision.id}
-                  className={`flex items-start gap-2 rounded-md border px-3 py-2 text-xs ${
-                    isApproved ? 'border-editorial-success/40 bg-editorial-success/5' : 'border-editorial-border'
-                  }`}
-                >
-                  <Icon size={13} className="mt-0.5 shrink-0 text-editorial-muted" aria-hidden="true" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-editorial-muted">
-                      <span>{t(`transcription.authorLabels.${revision.created_by}`)}</span>
-                      <span>·</span>
-                      <span>{formatDate(revision.created_at)}</span>
-                      {isApproved && (
-                        <span className="text-editorial-success">· {t('transcription.verifiedBadge')}</span>
-                      )}
-                    </div>
-                    <p className="mt-1 line-clamp-3 text-editorial-ink">{revision.text}</p>
-                  </div>
-                  {!isCurrent && (
-                    <IconButton
-                      size="xs"
-                      onClick={() => onRestore(revision.id)}
-                      title={t('transcription.restore')}
-                      disabled={pagePending}
-                    >
-                      <RotateCcw size={12} />
-                    </IconButton>
-                  )}
-                </div>
-              );
-            })
-          )}
-          <PagePendingOverlay
-            pending={pagePending}
-            errorMessage={pagePendingError}
-            roundedClassName="rounded-none"
+      collapsedContent={
+        // Leggere la pagina non richiede il pannello aperto.
+        document && workspace ? (
+          <OcrStartButton
+            document={document}
+            workspace={workspace}
+            viewerRef={viewerRef}
+            pageLabel={pageTitleShort}
+            starting={ocrStarting}
+            reading={ocrReading}
+            onStart={onStartOcr}
+            tooltipSide="left"
           />
-        </div>
+        ) : null
+      }
+    >
+      {activeTab === 'assist' ? (
+        <TranscriptionAssistTab
+          document={document}
+          workspace={workspace}
+          viewerRef={viewerRef}
+          pageLabel={pageTitleShort}
+          starting={ocrStarting}
+          reading={ocrReading}
+          onStartOcr={onStartOcr}
+          onDocumentProviderChange={onDocumentOcrProviderChange}
+          onDocumentModelChange={onDocumentOcrModelChange}
+          onDocumentPromptChange={onDocumentOcrPromptChange}
+          image={ocrImage}
+          onImageModeChange={onOcrImageModeChange}
+        />
+      ) : activeTab === 'history' ? (
+        <TranscriptionHistoryTab revisions={revisions} segment={segment} draft={draft}
+          formatDate={formatDate} onRestore={onRestore} onDelete={onDeleteRevision}
+          onName={onNameRevision} onClear={onClearHistory}
+          pending={pagePending} pendingError={pagePendingError} />
+      ) : activeTab === 'summary' ? (
+        <TranscriptionSummaryTab documentId={document?.id ?? null} pageTotal={pageTotal} revisionCount={revisions.length} />
       ) : activeTab === 'metadata' ? (
         <dl className="flex flex-col gap-3 p-4">
           <StatRow label={t('transcription.meta.page')} value={displayIndex + 1} />

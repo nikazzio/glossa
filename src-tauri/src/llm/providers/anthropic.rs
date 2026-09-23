@@ -72,12 +72,34 @@ fn build_anthropic_system(req: &LlmRequest<'_>, force_json: bool) -> Value {
     Value::Array(blocks)
 }
 
+/// Content of the user message. Plain string when there is no image — byte
+/// for byte what every existing pipeline sent before OCR (#220) — an array of
+/// blocks (images first, text last) only when the prompt attaches one or more.
+fn build_anthropic_user_content(req: &LlmRequest<'_>) -> Value {
+    if req.structured.images.is_empty() {
+        return Value::String(req.structured.user.clone());
+    }
+    let mut blocks: Vec<Value> = req
+        .structured
+        .images_base64()
+        .into_iter()
+        .map(|(media_type, data)| {
+            json!({
+                "type": "image",
+                "source": { "type": "base64", "media_type": media_type, "data": data }
+            })
+        })
+        .collect();
+    blocks.push(json!({ "type": "text", "text": req.structured.user }));
+    Value::Array(blocks)
+}
+
 fn build_anthropic_body(req: &LlmRequest<'_>, stream: bool) -> Value {
     let mut body = json!({
         "model": req.model,
         "max_tokens": max_output_tokens(req),
         "system": build_anthropic_system(req, req.json_mode && !req.json_schema_strict),
-        "messages": [{"role": "user", "content": req.structured.user}]
+        "messages": [{"role": "user", "content": build_anthropic_user_content(req)}]
     });
 
     if stream {
@@ -302,8 +324,39 @@ mod tests {
     };
     use crate::llm::provider::LlmRequest;
     use crate::llm::types::{
-        AnthropicConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
+        AnthropicConfig, ImageAttachment, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
     };
+
+    #[test]
+    fn image_stays_in_user_message_before_text() {
+        let prompt = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "stable".into(),
+                cacheable: true,
+            }],
+            user: "read page".into(),
+            images: vec![ImageAttachment {
+                bytes: vec![1, 2, 3],
+                media_type: "image/png".into(),
+            }],
+        };
+        let req = LlmRequest {
+            model: "test",
+            structured: &prompt,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: None,
+        };
+        let body = build_anthropic_body(&req, false);
+        assert_eq!(body["messages"][0]["content"][0]["source"]["data"], "AQID");
+        assert_eq!(
+            body["messages"][0]["content"][0]["source"]["media_type"],
+            "image/png"
+        );
+        assert_eq!(body["messages"][0]["content"][1]["text"], "read page");
+        assert_eq!(body["system"][0]["text"], "stable");
+    }
 
     fn request(user: String) -> LlmRequest<'static> {
         request_with_temperature(user, None)
@@ -329,7 +382,7 @@ mod tests {
         user: String,
         anthropic: Option<AnthropicConfig>,
     ) -> LlmRequest<'static> {
-        let structured = Box::leak(Box::new(StructuredPrompt { system, user }));
+        let structured = Box::leak(Box::new(StructuredPrompt::new(system, user)));
         let provider_options = anthropic.map(|anthropic| {
             &*Box::leak(Box::new(ProviderRuntimeConfig {
                 ollama: None,

@@ -1,14 +1,17 @@
 # Glossa — Istruzioni per lo sviluppo
 
 ## Stato del progetto
+
 Beta privata in sviluppo, senza una base di utenti esterni. La numerazione 2.x deriva da prove di rilascio automatico e non indica completezza. Obiettivo: completare Biblioteca → Trascrizioni → Traduzioni → Export, preservando la modalità documento/editoriale. Ordine in docs-dev/ROADMAP_2_0.md. Scriptoria resta riferimento tecnico per fonti, deposito, lavori, trascrizione ed export. UI sandbox tocca solo regressioni bloccanti.
 
 ## Stack
+
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite
 - **Backend**: Rust (Tauri v2), SQLite via SQLx, reqwest
 - **Test**: Vitest + Testing Library (Frontend), tokio-test + wiremock (Backend)
 
 ## Principi Fondamentali
+
 - **Semplicità**: Codice minimo. No feature speculative future.
 - **UI (vincolo utente)**: Comandi visivi solo `IconButton` neutri, icona + tooltip hover. No pill o pulsanti testuali/colorati. Verde solo per tab, selettori e stati attivi, salvo richiesta esplicita utente.
 - **Leggibilità**: Nomi descrittivi. Commenti solo per logiche non ovvie, vincoli nascosti, workaround.
@@ -19,9 +22,11 @@ Beta privata in sviluppo, senza una base di utenti esterni. La numerazione 2.x d
 - **Architettura**: Handler backend snelli (logica in moduli dominio). Frontend con hook custom; Zustand solo per stato globale reale.
 
 ## Invarianti della Pipeline
+
 - **Prefix Caching (CRITICO)**: Ordine blocchi system prompt (`static → blob → stage-instructions`) **mai cambia**. Inversione spezza cache provider, moltiplica costi.
 
 ## Documentazione e Stato
+
 - **Lettura selettiva**: Parti da `docs-dev/README.md` e apri solo i documenti
   pertinenti al task; non leggere tutta `docs-dev` per default.
 - **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche flussi, comandi Tauri, schemi DB, store Zustand.
@@ -38,32 +43,40 @@ Ogni funzionalità nuova, rimossa o cambiata nel comportamento visibile va docum
 
 Nessuna delle tre è opzionale né rimandabile a un task successivo: una funzione non documentata è una funzione che nessuno sa usare e che verrà riprogettata da capo fra un mese. Vale anche per le correzioni che cambiano cosa l'utente vede, non solo per le funzioni nuove.
 
-Le tre superfici hanno destinatari diversi e non si copiano fra loro: la guida in-app spiega cosa fare mentre l'utente è nell'applicazione; la documentazione pubblica spiega il percorso completo e i limiti attuali; `docs-dev` registra invarianti e decisioni tecniche. Descrivi sempre il comportamento presente e i limiti veri, mai la cronologia dello sviluppo.
+Le tre superfici hanno destinatari diversi e non si copiano fra loro: la guida in-app spiega cosa fare mentre l'utente è nell'applicazione; la documentazione pubblica spiega il percorso completo e i limiti attuali; `docs-dev` registra invarianti e decisioni tecniche.
+Descrivi sempre il comportamento presente e i limiti veri, mai la cronologia dello sviluppo.
 
 ## Comunicazione con l'utente (CRITICO)
+
 Niki non scrive codice, non riconosce nomi tecnici. Spiegazioni utente:
+
 - **Mai** citare nomi file, funzioni, variabili, hook, componenti
 - **Sempre** descrivere comportamenti visibili: cosa utente vede, clicca, ottiene
 - **Giusto**: "la finestra della Libreria ora mostra il nome del workspace nel titolo"
 - **Sbagliato**: "LibraryPanel usa panelTitle derivato da activeWorkspace?.name"
 
 ## Git e Test
+
 - **Git**: Aggiorna sempre `main` prima creare branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).
-- **Test**: Approccio TDD. Copertura minima 80%. Nomi test descrittivi su comportamento atteso. Mai sopprimere errori in silenzio.
+- **Test**: Approccio TDD. Copertura minima 80%. Nomi test descrittivi su comportamento atteso. Mai sopprimere errori in silenzio. Su task lunghi fare i test solo alla fine.
 
 ---
 
 ## Strumenti e Ottimizzazione Token
 
 ### Repomix (Esplorazione Iniziale)
+
 Prima di analizzare porzioni codebase estese o poco conosciute, usa **repomix** (`skill repomix-commands:pack-local`).
+
 - **Scopo**: Vista compatta e indicizzata intero progetto in un'unica operazione, azzera catene esplorative costose filesystem, risparmia token.
 - **Misura**: usa include mirati al dominio da modificare; non generare pack completi quando bastano pochi file noti.
 
 ### RTK (Rust Token Killer) - Filtro Output CLI
+
 Per prevenire esaurimento finestra contesto, **ogni comando terminale deve iniziare con `rtk`**.
 
 `rtk` intercetta output, filtra verbosità, restituisce formati iper-compatti, risparmia 60-90% token.
+
 - **Uso corretto**: `rtk cargo test`, `rtk grep pattern`, `rtk read file.ts`
 - **Catene**: Anche con `&&`, applica ogni step: `rtk git add . && rtk git commit -m "msg" && rtk git push`
 
@@ -75,6 +88,7 @@ Per prevenire esaurimento finestra contesto, **ogni comando terminale deve inizi
 - **Esplorazione**: preferisci `rtk rg`, letture mirate e repomix compresso; evita scansioni o output completi non necessari al task.
 
 ### MCP Tools: code-review-graph
+
 ⚠️ **REGOLA DI INGAGGIO (OTTIMIZZAZIONE TOKEN):**
 Strumenti grafo consumano molti token per esecuzione, aumentano latenza. Uso NON default.
 

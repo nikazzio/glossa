@@ -18,6 +18,7 @@ function workspace(id: string, name: string): Workspace {
     memoryExtractorProvider: 'openai',
     memoryExtractorModel: 'gpt-5.4-nano',
     memoryExtractorPrompt: 'estrai',
+    ocrDefaultProvider: '', ocrDefaultModel: '', ocrDefaultPrompt: '',
     createdAt: '2026-08-01',
   };
 }

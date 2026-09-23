@@ -1139,6 +1139,7 @@ async fn call_openai_compatible_returns_content_on_success() {
             cacheable: false,
         }],
         user: "Hello world".into(),
+        images: Vec::new(),
     };
     let req = LlmRequest {
         model: "test-model",
@@ -1178,6 +1179,7 @@ async fn call_openai_compatible_maps_unauthorized_to_friendly_error() {
             cacheable: false,
         }],
         user: "user".into(),
+        images: Vec::new(),
     };
     let req = LlmRequest {
         model: "test-model",
@@ -1218,6 +1220,7 @@ async fn call_openai_compatible_maps_rate_limit_to_friendly_error() {
             cacheable: false,
         }],
         user: "user".into(),
+        images: Vec::new(),
     };
     let req = LlmRequest {
         model: "test-model",

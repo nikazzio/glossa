@@ -13,6 +13,7 @@ export type OperationLogScope =
   | 'pipeline'
   | 'preflight'
   | 'invoke'
+  | 'ocr'
   | 'stage'
   | 'audit'
   | 'coherence'

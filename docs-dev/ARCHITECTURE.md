@@ -208,6 +208,11 @@ personalizzati, storico delle operazioni ed elenco degli artefatti. Le colonne
 che citano righe assenti (frammento di un registro, lavoro di un artefatto) si
 riscrivono a fine ripristino solo quando la riga esiste. Restano fuori i file
 del deposito e le chiavi, che vivono nel portachiavi del sistema.
+Prima di sostituire i dati, il ripristino verifica che ogni segmento di
+trascrizione appartenga a un documento e ogni revisione al proprio segmento,
+senza posizioni o numeri di revisione duplicati. Le tre tabelle di
+trascrizione usano `INSERT` normale: un conflitto annulla la transazione
+invece di far sparire una versione dalla cronologia.
 
 Backup dati versione 4: snapshot atomico delle quattro tabelle correlate,
 inclusi soltanto i job di ricerca. Il ripristino richiede ricerche ferme e mette
@@ -368,20 +373,40 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 `approved_revision_id` è in bozza, valorizzato è verificato — nessuna colonna
 di stato propria.
 
+Il testo si salva dopo 30 secondi senza modifiche, e subito lasciando la pagina.
+Ogni caricamento è legato all'indice di pagina che lo ha richiesto: una risposta
+tardiva non può sostituire testo e storico della pagina ora aperta. Le versioni
+consolidate sono le stesse revisioni con `consolidated_name` valorizzato: nessuna
+copia del testo. Il nome si può cambiare o togliere. La pulizia esplicita dello
+storico elimina solo le revisioni ordinarie precedenti, conservando quelle
+consolidate, la corrente e la verificata. La cancellazione singola protegge
+sempre le ultime due. Il riepilogo aggrega testo corrente, verifiche e uso OCR.
+
 **Un segmento per pagina, non per documento.** `transcription_segments.position`
 è l'indice di pagina del visore (0-based, lo stesso `currentIndex` che
 `PageViewer`/`DocumentViewer` tengono già), non un contatore interno: cambiare
 pagina nel visore cambia il segmento mostrato. Il segmento nasce solo al primo
 salvataggio davvero (`transcriptionService.ensureSegment`) — sfogliare pagine
 mai trascritte non lascia righe vuote nella tabella;
-`getSegmentByPosition` è la sola lettura, senza crearne uno. La colonna
-`source_page_id` resta **non collegata** per ora: quella riga esiste solo dopo
-uno scaricamento (`record_pages` in Rust, dentro il lavoro di scaricamento),
-mentre il visore mostra pagine anche senza aver mai scaricato nulla — legarsi
-a `source_page_id` avrebbe reso la trascrizione dipendente da uno
-scaricamento che l'utente potrebbe non voler mai fare. Un documento senza
-visore (nato da zero, non da una digitalizzazione) resta su un solo blocco di
-testo, in posizione 0 — lo stesso codice, solo che la pagina non cambia mai.
+`getSegmentByPosition` è la sola lettura, senza crearne uno.
+
+**`source_page_id` si risolve da sé (#220).** La riga in `source_pages`
+esiste solo dopo che un lavoro di scaricamento ha letto il manifesto
+(`record_pages` in Rust): un documento aperto prima di quel momento ha
+segmenti con `source_page_id NULL`, anche se il visore mostra già la pagina.
+`ensureSegment` colma il collegamento al primo tocco del segmento successivo
+allo scaricamento — non un backfill una tantum, la stessa risoluzione si
+applica a ogni chiamata, sia alla creazione sia su un segmento già esistente
+con la colonna ancora vuota. **Non è un prerequisito dell'OCR** (vedi sezione
+OCR più sotto): quel percorso usa direttamente `transcription_segments.position`,
+lo stesso indice che il visore mostra, senza aspettare che un lavoro di
+scaricamento sia mai passato di lì — una pagina vista solo in streaming, mai
+scaricata, resta comunque leggibile. `source_page_id` serve altrove:
+conservare l'identità della pagina logica anche dopo un nuovo download (resto
+della roadmap). Un documento senza visore (nato da zero, non da una
+digitalizzazione) resta su un solo blocco di testo, in posizione 0,
+`source_page_id` sempre `NULL` — lo stesso codice, solo che la pagina non
+cambia mai.
 
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello
@@ -419,18 +444,25 @@ in più (non serviva finché lo usava solo la scheda opera, che non tiene
 niente per pagina): entrambi i visori lo chiamano solo a pagina disegnata
 davvero, non alla sola richiesta.
 
-Cambiare pagina con del testo non ancora salvato lo salva subito, prima del
-debounce: aspettare l'timer normale lo perderebbe cambiando pagina in fretta.
-Un salvataggio ancora in corso quando la pagina cambia di nuovo non scrive il
-suo risultato sullo stato della pagina arrivata nel frattempo — confrontato
-con un riferimento alla pagina che si sta salvando, non con lo stato letto a
-scrittura ultimata.
+Il testo si salva dopo 30 secondi senza modifiche; cambiare pagina o uscire
+normalmente dallo Studio forza il salvataggio. Ogni operazione cattura pagina,
+segmento e testo prima di entrare nella coda: una navigazione successiva non
+può scartare la scrittura né applicarla alla pagina nuova. Le letture di pagina
+usano un identificatore progressivo per ignorare risposte arrivate fuori
+ordine. Il debounce controlla anche che il testo ritardato appartenga ancora
+alla bozza corrente. Una chiusura forzata può perdere il testo in attesa.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
-opera, con schede Assistenza (disattivata, in attesa dell'OCR), Storico e
-Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
+opera, con schede OCR (#220 — vedi sezione dedicata), Storico, Riepilogo e
+Metadati. Il Riepilogo usa le ultime revisioni di tutte le pagine e le righe
+di esito OCR del documento; segue il layout del riepilogo traduzioni.
+La scheda Metadati mostra i campi grezzi che il segmento porta oggi
 (posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
-finché non si decide una presentazione definitiva.
+finché non si decide una presentazione definitiva. Il log dei costi OCR vive
+altrove, nel cassetto in basso — vedi sezione OCR/HTR.
+Lo Storico consente di eliminare su conferma una versione manuale vecchia,
+mai quella corrente, verificata o OCR. Prima della rimozione i figli puntano
+alla revisione precedente della versione eliminata, nella stessa transazione.
 
 **Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
 copia con cui il documento nasce (`source_version_id`) resta "principale"
@@ -496,6 +528,195 @@ di sempre): qui impostate a `h-12` per allineare intestazione e barra tab
 alla stessa altezza della barra comandi del visore e dell'intestazione del
 testo. Applicate anche alla scheda opera in Biblioteca (`LibrarySourcePage`),
 approvato l'esito qui — non ancora allo Studio di traduzione.
+
+## OCR/HTR (#220)
+
+Un provider LLM già configurato per la traduzione legge l'immagine di una
+pagina e propone un testo, che entra come revisione modificabile — mai come
+verità finale.
+
+**Schema** (consolidato in `0001_baseline_2_0.sql`, nessuna migrazione
+incrementale — beta privata): `workspaces.ocr_default_{prompt,provider,model}`
+(`TEXT NOT NULL DEFAULT ''`, vuoto = nessun default a quel livello),
+`transcription_documents.ocr_{provider,model,prompt}` (`NULL` eredita dal
+workspace). La misura dell'immagine OCR vive nelle impostazioni e nella
+configurazione del lavoro, non in una colonna del documento.
+`operation_logs.transcription_document_id` /
+`transcription_segment_id` (`ON DELETE SET NULL`, mai `CASCADE`, stessa
+regola di `chunk_id`: la cronologia dei costi non sparisce se il documento si
+elimina).
+
+**Livello LLM** (`llm/types.rs`): `StructuredPrompt.images: Vec<ImageAttachment>`,
+sempre nel messaggio utente, mai in un blocco di sistema — romperebbe la
+cache dell'intero prompt su Gemini e la coda cacheable su Anthropic/OpenAI a
+ogni pagina. Ogni provider serializza a modo suo (`llm/providers/*.rs`):
+Anthropic blocco `type: "base64"`, OpenAI `image_url` con data-URL (sia
+Responses sia Chat Completions), Gemini `inline_data`, Ollama campo
+`images` (base64 nudo, senza prefisso data-URL). Nessuna immagine ⇒ stesso
+corpo di richiesta di prima, byte per byte — invariante coperto da test in
+ogni provider. `llm/prompts.rs::build_ocr_prompt` compone persona OCR
+(cacheable), prompt del documento (non cacheable) e messaggio utente con
+immagine + testo fisso (`OCR_USER_MESSAGE`). **Nessun numero di pagina al
+modello**: l'etichetta del manifesto è la numerazione stampata della
+biblioteca («3» per la nona carta), non aiuta a trascrivere e confonde.
+
+**Catena pagina → byte, mai costruita in Rust.** `transcription_segments.position`
+è la posizione nel visore **da 0** (`PageViewer.currentIndex`), non
+`ViewerPage.index`, che è l'indice di manifesto **da 1** — lo stesso di
+`CacheRequest::Page.index`, dei file del deposito (`0001.jpg`) e di
+`source_pages.position`. La conversione passa **solo** da
+`transcriptionService.manifestIndexOf(position)`, sia per la pagina inviata
+all'OCR sia per `source_pages`: confrontare `index === position` mandava al
+modello la pagina precedente. `ensureSegment` ricalcola `source_page_id` a ogni
+tocco (una copia mai scaricata non cancella quello che c'è), così un
+collegamento sbagliato si corregge da solo. Coperto da test in
+`ocrService.test.ts` e `transcriptionService.test.ts`. Il frontend, che ha già in mano il
+manifesto aperto nel visore (`iiifViewerService.fetchViewerManifestWithRetry`
++ `pageSourceUrl`), congela una `CacheRequest::Page` completa (con
+`remoteUrl`) dentro la configurazione del lavoro. Il gestore Rust
+(`ocr::handler::OcrJobHandler`) la passa **inalterata** a
+`httpcache::commands::bytes_and_source_of` (come `bytes_of`, più la
+provenienza per il log), la stessa catena che il visore usa per
+mostrare le pagine: deposito alla misura esatta → cache di rete → deposito a
+misura più grande (ridotta al volo) → biblioteca remota. Una copia solo in
+cache (mai scaricata formalmente, solo vista) è servita da lì, allo stesso
+modo — l'OCR non chiede altro. Limite v1: `src/services/ocrService.ts`
+risolve solo copie `versionKind === 'iiif_manifest'` — un documento unico
+(PDF) resta fuori da questo primo giro.
+
+**Un prompt per documento** (decisione di Niki, 22 settembre 2026).
+`transcriptionService.resolveOcrSettings(document, workspace)` è la sola
+fonte: `document.ocr_prompt`, altrimenti il prompt del workspace, altrimenti
+`DEFAULT_OCR_PROMPT`. Si modifica da una pagina qualsiasi e vale per tutte le
+pagine di quel documento, per nessun altro; riusarlo altrove passa dalla
+libreria dei prompt (`prompt_templates`, contesto `ocr`), da cui il workspace
+carica anche il proprio punto di partenza (copia del testo, non riferimento).
+Un testo identico al prompt di partenza si salva come `NULL`: il documento
+torna a seguire il workspace invece di congelarne una copia. Provider e
+modello seguono la stessa regola, per documento con il workspace come
+partenza. `DEFAULT_OCR_PROVIDER`/`DEFAULT_OCR_MODEL` (`openai`/`gpt-5.6-terra`)
+coprono il caso di un workspace con le colonne vuote: fascia media di
+proposito, il fondo del listino sbaglia abbastanza da sembrare rotto su una
+pagina manoscritta.
+
+**Immagine inviata** (`ocrImageSettingsService`, chiavi `app_settings`
+`ocr_image_edge` e `ocr_image_mode`, nessuna colonna): globale, scheda
+Impostazioni → Trascrizioni; nello Studio si cambia per la sessione (stato
+locale, mai salvato nel documento). `optimized`: `CacheRequest::Page` alla
+misura scelta (`OCR_IMAGE_EDGES`, default 2000), ridotta se più grande, **non**
+ingrandita, ricodificata in JPEG a `optimize::DEFAULT_QUALITY`; se il deposito
+ha solo una misura più piccola la catena la salta e riscarica. `local`: il
+frontend aggiunge `localRequests` — la misura del libro scaricato
+(`inventoryService.readableLocalSize`, la stessa scelta del visore) e quelle
+che il visore chiede online (`wholePageAttempts`) — **senza** `remoteUrl`, quindi
+mai rete; il gestore invia la prima trovata così com'è (`images::media_type_of`,
+JPEG o PNG), altrimenti ripiega sull'ottimizzata e lo scrive nel log. Il
+comando di lettura è un componente solo (`OcrStartButton`), nella scheda OCR e
+nel `collapsedContent` del pannello chiuso. Il risultato si congela nella configurazione del lavoro alla messa
+in coda (`ocrService.buildPageInput`): modificare il prompt dopo non altera un
+lavoro già accodato.
+
+Per Ollama, anche l'indirizzo configurato viene congelato nel lavoro: una
+porta diversa da quella predefinita deve restare valida dopo una ripresa.
+
+**Gestore lavoro** (`src-tauri/src/ocr/`, `JOB_TYPE = "ocr_page"`, registrato
+in `jobs/commands.rs` accanto agli altri): `ResourceClass::LanguageService`,
+`Recovery::Restart` (una chiamata interrotta a metà non lascia stato parziale
+utile — le pagine già scritte non si ripetono comunque, grazie al checkpoint).
+`resolve_provider`/`get_api_key` chiedono un `AppHandle` che `JobContext` non
+dà: il gestore lo tiene come campo, come `federation::SearchJob`. Il campo
+`pages: Vec<OcrPageConfig>` accetta fin da subito più pagine anche se
+l'interfaccia v1 accoda solo la pagina aperta: il giorno che arriva la lettura
+di un intervallo è la stessa forma con più elementi, non un gestore nuovo.
+
+**Il checkpoint accumula.** È un JSON array dei `segment_id` già scritti e
+**cresce** a ogni pagina: sovrascriverlo con la sola pagina appena finita
+farebbe rileggere — e ripagare — tutte le precedenti alla ripresa dopo una
+pausa o un riavvio.
+
+Lo Studio aggiorna lo storico alla conclusione soltanto se il lavoro riguarda
+il documento e il segmento aperti; una bozza non salvata non viene ricaricata
+dal database. Una pagina resta in sola lettura anche nello stato `cancelling`,
+finché il gestore non raggiunge il confine cooperativo e si ferma.
+
+**Classificazione degli errori** (`classify_provider_error`): i provider
+normalizzano i loro guasti nella forma `«<provider> API error (<status>):
+<motivo>»`, da cui si ricava l'`ErrorKind` giusto — 429 `RateLimited`, 403
+`Throttled`, 404 `NotFound`, 408 e 5xx `Transport`, 400/401 `Format`; nessun
+codice di stato (connessione mai arrivata a destinazione) è `Transport`.
+Conta perché il motore lavori **ritenta solo** `Transport`/`RateLimited`/
+`Throttled`: marcare tutto come `Format`, come nella prima stesura, significa
+non ritentare mai, nemmeno dopo un limite di richieste al minuto o una
+connessione caduta per due secondi. Una risposta vuota a una chiamata riuscita
+è `Format`, non ritentata: il modello ha risposto, e di solito vuol dire che
+sulla pagina non c'è testo. Il `Retry-After` dichiarato dal servizio
+viaggia nel messaggio come marcatore `retry-after-ms=N` e viene riletto in
+`JobError.retry_after`, dove vince sul calcolo esponenziale.
+
+**Scrittura**: `ocr::revisions::write_ocr_revision` (TDD, prima del gestore)
+replica in `rusqlite` le stesse regole di `transcriptionService.insertRevision`
+— numero progressivo, impronta FNV-1a identica (due implementazioni
+indipendenti, non un valore condiviso), append-only, deduplica sul testo
+identico.
+
+**Una lettura scrive più righe di log, non una.** `ocr::log::write_ocr_log`
+scrive in `operation_logs` con `project_id`/`pipeline_id` `NULL` (primo punto
+in cui Rust scrive quella tabella) una riga per fase, distinte da `phase`:
+`start` (fornitore, modello, pagina), `image` (ottimizzata o copia locale,
+larghezza×altezza reali, kB davvero inviati, provenienza: deposito, cache o
+biblioteca), `prompt` (testo completo in `detail`, `detail_kind = 'prompt'`),
+`end` (revisione scritta con il suo numero, oppure testo identico a livello
+`warn`, oppure errore con motivo e se verrà ritentato). `meta` porta
+il numero della pagina (posizione nel libro da 1, come nel titolo della
+pagina nello Studio, non l'etichetta della biblioteca), che serve alla console per raggruppare senza una
+colonna in più. `dbService.VALID_PHASES` accetta `image` e `prompt` oltre ai
+valori della traduzione.
+
+**Il costo non si congela alla scrittura.** Le righe OCR le scrive Rust, che
+non conosce il listino prezzi (vive nel catalogo modelli, in TypeScript):
+`cost_usd` resta `NULL` e la console applica `costForEntry` in lettura, la
+stessa funzione dei riepiloghi di traduzione. Duplicare i prezzi in Rust
+significherebbe due listini da tenere allineati a mano.
+Una scrittura del log fallita restituisce `Storage` al gestore: il lavoro non
+può risultare completato senza lasciare la riga di costo e di audit. Il
+dettaglio conserva fino a 500.000 byte, come il log TypeScript.
+
+**Log trascrizione, nel cassetto in basso — non nel pannello laterale.**
+Speculare al Log traduzione, non fuso col pannello lavori: `AppStatusBar`
+tiene un unico cassetto ridimensionabile la cui **prima scheda** cambia con
+l'area aperta, mai le due insieme. `useStatusBarData` distingue un terzo
+`kind: 'transcription'` (oltre a `'workspace'`/`'project'`), letto da
+`location.area === 'transcriptions' && location.documentId` — prima del
+controllo su `currentProjectId`, altrimenti un progetto di traduzione
+rimasto "corrente" in memoria vincerebbe sull'area davvero aperta.
+`BottomDrawer` riceve un `primaryTab: 'console' | 'transcriptionLog' | null`
+invece del vecchio `showConsoleTab: boolean`: `'console'` dentro un
+progetto, `'transcriptionLog'` dentro un documento di trascrizione, `null`
+altrove — le schede Sistema e Lavori restano sempre disponibili, la prima
+scheda no. `TranscriptionLogTab` riusa `ConsoleChrome` e `ConsoleToolbar`: ricerca,
+filtri per tipo di riga (avvio/immagine/prompt/esito) e per livello,
+raggruppamento per pagina, prompt inviato apribile riga per riga.
+
+**Catalogo modelli**: `ModelEntry.supportsVision` dice se il modello accetta
+un'immagine; `getVisionCapableModelIds` filtra la select OCR e
+`providerSupportsVision` spegne in elenco i fornitori che non hanno nemmeno un
+modello capace (oggi DeepSeek) — prima restavano scegliibili e portavano a una
+chiamata destinata a fallire. Gli Ollama passano sempre: lista dinamica,
+capacità non dichiarabile, la scelta è dell'utente.
+
+**Segnale di lavorazione per pagina** (`useOcrPageActivity`): le pagine in
+lettura si ricavano dai lavori in coda (`ocrPendingPagesOf` legge
+configurazione e checkpoint), non da uno stato locale — così il segnale
+sopravvive a un cambio di schermata e a un riavvio. La pagina aperta prende il
+velo di `PagePendingOverlay` e resta in sola lettura; l'intestazione della
+colonna di testo mostra una pastiglia con la pagina in lettura anche quando si
+sfoglia altrove.
+
+**Non ancora fatto** (v1 non li copre): comando "leggi intervallo di pagine"
+in interfaccia, testo delle pagine vicine come blocco di riferimento
+cacheable, lettura su documento unico (PDF), filtri visuali dell'immagine
+prima dell'invio. Nessuno dei tre ha oggi codice a metà strada in attesa: il
+lavoro sul testo di riferimento è stato rimosso perché nessuno lo calcolava.
 
 ## Pipeline di traduzione
 
@@ -1325,7 +1546,8 @@ ai modelli, approvazioni, spostamenti e rigenerazioni. Gli eventi registrano
 workspace, modello, token, costo, durata, lingue, impronte ed esito quando
 pertinenti.
 
-Le revisioni di traduzione e trascrizione sono immutabili. Approvare o ritirare
+Il testo delle revisioni di traduzione e trascrizione è immutabile; il nome di
+una versione consolidata è modificabile. Approvare o ritirare
 produce un evento; il puntatore sulla traduzione o sul segmento indica la
 revisione corrente. Le metriche calcolate vivono in `derived_metrics` con
 versione dell'algoritmo e impronte degli input.
@@ -1336,6 +1558,9 @@ Il backup riguarda l'intera applicazione e contiene il database, non le immagini
 del deposito. L'archivio compresso include versione, dimensione e impronta del
 contenuto. Il ripristino conserva le pagine presenti, avvia una verifica del
 deposito e propone solo gli scaricamenti mancanti.
+L'esportazione legge le tabelle applicative da un'unica snapshot SQLite; lo
+storico della ricerca federata arriva dal suo comando dedicato. Il ripristino
+verifica i riferimenti fra documenti, pagine e revisioni prima di scrivere.
 
 Le chiavi dei provider restano nel portachiavi di sistema. Il backup offre un
 formato solo Glossa, dichiarato come offuscamento, e un formato cifrato con

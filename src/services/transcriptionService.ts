@@ -1,6 +1,9 @@
-import { execute, select } from './dbService';
+import { execute, select, runInTransaction } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
+import { DEFAULT_OCR_PROMPT } from '../constants';
+import type { ModelProvider, Workspace } from '../types';
+import { costForEntry, type Pricing } from '../utils/operationLogStats';
 
 /**
  * Il documento di trascrizione: contenuto per pagina/segmento, stato
@@ -28,6 +31,11 @@ export interface TranscriptionDocument {
   workspace_id: string;
   title: string;
   status: TranscriptionDocumentStatus;
+  /** Fornitore, modello e prompt OCR del documento (#220): NULL eredita dal
+   *  workspace. Il prompt vale per tutte le pagine del documento. */
+  ocr_provider: string | null;
+  ocr_model: string | null;
+  ocr_prompt: string | null;
 }
 
 export interface TranscriptionSegment {
@@ -47,6 +55,7 @@ export interface TranscriptionRevision {
   created_by: TranscriptionRevisionAuthor;
   derived_from_revision_id: string | null;
   content_hash: string;
+  consolidated_name: string | null;
   created_at: string;
 }
 
@@ -65,6 +74,9 @@ export async function createDocument(
     workspace_id: workspaceId,
     title,
     status: 'active',
+    ocr_provider: null,
+    ocr_model: null,
+    ocr_prompt: null,
   };
   await execute(
     `INSERT INTO transcription_documents (id, source_version_id, workspace_id, title, status)
@@ -93,6 +105,32 @@ export async function getDocument(documentId: string): Promise<TranscriptionDocu
     [documentId],
   );
   return rows[0] ?? null;
+}
+
+/** Fornitore, modello e prompt OCR del documento (#220): `null`/`''` per un
+ *  campo significa «torna a ereditare dal workspace». */
+export async function updateDocumentOcrSettings(
+  documentId: string,
+  updates: Partial<{ ocrProvider: string | null; ocrModel: string | null; ocrPrompt: string | null }>,
+): Promise<void> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let index = 1;
+  if (updates.ocrProvider !== undefined) {
+    sets.push(`ocr_provider = $${index++}`);
+    params.push(updates.ocrProvider || null);
+  }
+  if (updates.ocrModel !== undefined) {
+    sets.push(`ocr_model = $${index++}`);
+    params.push(updates.ocrModel || null);
+  }
+  if (updates.ocrPrompt !== undefined) {
+    sets.push(`ocr_prompt = $${index++}`);
+    params.push(updates.ocrPrompt || null);
+  }
+  if (sets.length === 0) return;
+  params.push(documentId);
+  await execute(`UPDATE transcription_documents SET ${sets.join(', ')} WHERE id = $${index}`, params);
 }
 
 export async function setDocumentStatus(
@@ -150,21 +188,59 @@ export async function getSegmentByPosition(
   return rows[0] ?? null;
 }
 
+/** Da posizione di una pagina nello Studio (da 0: la copertina è 0) a
+ *  indice della stessa pagina nel manifesto (da 1), la numerazione usata dal
+ *  deposito, dalla cache e da `source_pages`. **Unico punto** della
+ *  conversione: chi confronta le due numerazioni senza passare da qui prende
+ *  la pagina precedente. */
+export function manifestIndexOf(position: number): number {
+  return position + 1;
+}
+
+/** L'id della pagina logica corrispondente, se il documento ha una copia
+ *  collegata e quella pagina è già passata da un lavoro di scaricamento
+ *  (`source_pages` si popola lì, non alla sola apertura del manifesto). */
+async function resolveSourcePageId(documentId: string, position: number): Promise<string | null> {
+  const document = await getDocument(documentId);
+  if (!document?.source_version_id) return null;
+  const rows = await select<{ id: string }>(
+    'SELECT id FROM source_pages WHERE source_version_id = $1 AND position = $2',
+    [document.source_version_id, manifestIndexOf(position)],
+  );
+  return rows[0]?.id ?? null;
+}
+
 /** Il segmento di quella pagina, creandolo al primo tocco davvero — non alla
  *  sola apertura. L'etichetta segue quella che il visore dichiara adesso, se
- *  cambiata (una rilettura del manifesto può rinumerare le pagine). */
+ *  cambiata (una rilettura del manifesto può rinumerare le pagine). Un
+ *  segmento nato prima che la copia fosse scaricata riceve `source_page_id`
+ *  al primo tocco successivo allo scaricamento — non è un backfill una
+ *  tantum, è la stessa risoluzione applicata a ogni chiamata. */
 export async function ensureSegment(
   documentId: string,
   position: number,
   label: string | null = null,
 ): Promise<TranscriptionSegment> {
   const existing = await getSegmentByPosition(documentId, position);
-  if (!existing) return addSegment(documentId, position, label);
-  if (label && label !== existing.label) {
-    await execute('UPDATE transcription_segments SET label = $2 WHERE id = $1', [existing.id, label]);
-    return { ...existing, label };
+  if (!existing) {
+    const sourcePageId = await resolveSourcePageId(documentId, position);
+    return addSegment(documentId, position, label, sourcePageId);
   }
-  return existing;
+  const labelChanged = Boolean(label) && label !== existing.label;
+  // Ricalcolato a ogni tocco, non solo quando manca: un collegamento
+  // sbagliato (per esempio scritto prima di una correzione) si rimette a
+  // posto da solo invece di restare lì per sempre. Una pagina logica non
+  // ancora nota (copia mai scaricata) non cancella quello che c'è.
+  const found = await resolveSourcePageId(documentId, position);
+  const resolvedSourcePageId = found ?? existing.source_page_id;
+  const sourcePageIdChanged = resolvedSourcePageId !== existing.source_page_id;
+  if (!labelChanged && !sourcePageIdChanged) return existing;
+  const nextLabel = labelChanged ? label : existing.label;
+  await execute(
+    'UPDATE transcription_segments SET label = $2, source_page_id = $3 WHERE id = $1',
+    [existing.id, nextLabel, resolvedSourcePageId],
+  );
+  return { ...existing, label: nextLabel, source_page_id: resolvedSourcePageId };
 }
 
 async function latestRevision(segmentId: string): Promise<TranscriptionRevision | null> {
@@ -181,6 +257,55 @@ export async function listRevisions(segmentId: string): Promise<TranscriptionRev
     `SELECT * FROM transcription_revisions WHERE segment_id = $1 ORDER BY revision_number DESC`,
     [segmentId],
   );
+}
+
+export interface TranscriptionSummary {
+  pagesWithText: number;
+  verifiedPages: number;
+  words: number;
+  ocrRuns: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number | null;
+}
+
+/** Stato del documento, calcolato dalle ultime revisioni di ciascuna pagina. */
+export async function getTranscriptionSummary(documentId: string, pricing: Pricing): Promise<TranscriptionSummary> {
+  const pages = await select<{ text: string | null; approved_revision_id: string | null }>(
+    `SELECT r.text, s.approved_revision_id
+       FROM transcription_segments s
+       LEFT JOIN transcription_revisions r ON r.id = (
+         SELECT id FROM transcription_revisions
+          WHERE segment_id = s.id ORDER BY revision_number DESC LIMIT 1
+       )
+      WHERE s.document_id = $1`,
+    [documentId],
+  );
+  const usage = await select<{
+    provider: string | null; model: string | null;
+    input_tokens: number | null; output_tokens: number | null; cost_usd: number | null;
+  }>(
+    `SELECT provider, model, input_tokens, output_tokens, cost_usd
+       FROM operation_logs
+      WHERE transcription_document_id = $1 AND phase = 'end' AND level IN ('success', 'warn')`,
+    [documentId],
+  );
+  const textPages = pages.filter((page) => Boolean(page.text?.trim()));
+  const costs = usage.map((row) => row.cost_usd ?? costForEntry({
+    provider: row.provider ?? undefined,
+    model: row.model ?? undefined,
+    inputTokens: row.input_tokens ?? undefined,
+    outputTokens: row.output_tokens ?? undefined,
+  }, pricing));
+  return {
+    pagesWithText: textPages.length,
+    verifiedPages: textPages.filter((page) => page.approved_revision_id !== null).length,
+    words: textPages.reduce((total, page) => total + (page.text?.trim().match(/\S+/gu)?.length ?? 0), 0),
+    ocrRuns: usage.length,
+    inputTokens: usage.reduce((total, row) => total + (row.input_tokens ?? 0), 0),
+    outputTokens: usage.reduce((total, row) => total + (row.output_tokens ?? 0), 0),
+    costUsd: costs.some((cost) => cost === null) ? null : costs.reduce<number>((total, cost) => total + (cost ?? 0), 0),
+  };
 }
 
 async function insertRevision(
@@ -206,6 +331,7 @@ async function insertRevision(
       created_by: createdBy,
       derived_from_revision_id: parent?.id ?? null,
       content_hash: hash,
+      consolidated_name: null,
       // Valore locale, sostituito dal vero timestamp del database alla
       // successiva lettura: qui serve solo per il valore restituito subito.
       created_at: new Date().toISOString(),
@@ -283,6 +409,50 @@ export async function restoreRevision(
   return insertRevision(segmentId, target.text, 'user', previous);
 }
 
+/** Elimina una vecchia versione, mai quella corrente o verificata. */
+export async function deleteTranscriptionRevision(segmentId: string, revisionId: string): Promise<void> {
+  const target = (await select<TranscriptionRevision>(
+    'SELECT * FROM transcription_revisions WHERE id = $1 AND segment_id = $2',
+    [revisionId, segmentId],
+  ))[0];
+  const current = await latestRevision(segmentId);
+  const segment = (await select<TranscriptionSegment>(
+    'SELECT * FROM transcription_segments WHERE id = $1', [segmentId],
+  ))[0];
+  if (!target || target.id === current?.id ||
+      target.id === segment?.approved_revision_id) {
+    throw new Error('transcription.revisionDeleteUnavailable');
+  }
+  await runInTransaction(async (run) => {
+    await run(
+      'UPDATE transcription_revisions SET derived_from_revision_id = $1 WHERE derived_from_revision_id = $2 AND segment_id = $3',
+      [target.derived_from_revision_id, revisionId, segmentId],
+    );
+    await run('DELETE FROM transcription_revisions WHERE id = $1 AND segment_id = $2', [revisionId, segmentId]);
+  });
+}
+
+export async function nameTranscriptionRevision(segmentId: string, revisionId: string, name: string | null): Promise<void> {
+  const trimmed = name?.trim() ?? null;
+  if (trimmed !== null && (!trimmed || trimmed.length > 120)) throw new Error('transcription.invalidVersionName');
+  await execute(
+    'UPDATE transcription_revisions SET consolidated_name = $1 WHERE id = $2 AND segment_id = $3',
+    [trimmed, revisionId, segmentId],
+  );
+}
+
+/** Svuota solo lo storico ordinario della pagina: conserva i punti nominati,
+ * la versione corrente e l'eventuale versione verificata. */
+export async function clearTranscriptionHistory(segmentId: string): Promise<void> {
+  await execute(
+    `DELETE FROM transcription_revisions
+      WHERE segment_id = $1 AND consolidated_name IS NULL
+        AND id <> (SELECT id FROM transcription_revisions WHERE segment_id = $1 ORDER BY revision_number DESC LIMIT 1)
+        AND id <> COALESCE((SELECT approved_revision_id FROM transcription_segments WHERE id = $1), '')`,
+    [segmentId],
+  );
+}
+
 /** Marca l'ultima revisione come verificata dall'utente. */
 export async function verifySegment(
   segmentId: string,
@@ -335,4 +505,27 @@ export async function unverifySegment(segmentId: string, workspaceId: string): P
     workspaceId,
     inputRef: approvedRevisionId,
   });
+}
+
+/** Impostazioni OCR risolte per una chiamata: da congelare nella
+ *  configurazione del lavoro alla messa in coda (#220) — modificare il
+ *  prompt dopo non deve alterare un lavoro già accodato. */
+export interface ResolvedOcrSettings {
+  prompt: string;
+  provider: ModelProvider | '';
+  model: string;
+}
+
+/** Tutto per documento, con il workspace come punto di partenza: il prompt
+ *  modificato da una pagina qualsiasi vale per tutte le pagine di quel
+ *  documento e per nessun altro. Per riusarlo altrove si salva nella libreria
+ *  dei prompt (scelta di Niki, 22 settembre 2026). */
+export function resolveOcrSettings(
+  document: Pick<TranscriptionDocument, 'ocr_provider' | 'ocr_model' | 'ocr_prompt'>,
+  workspace: Pick<Workspace, 'ocrDefaultPrompt' | 'ocrDefaultProvider' | 'ocrDefaultModel'>,
+): ResolvedOcrSettings {
+  const prompt = document.ocr_prompt || workspace.ocrDefaultPrompt || DEFAULT_OCR_PROMPT;
+  const provider = (document.ocr_provider || workspace.ocrDefaultProvider || '') as ModelProvider | '';
+  const model = document.ocr_model || workspace.ocrDefaultModel || '';
+  return { prompt, provider, model };
 }

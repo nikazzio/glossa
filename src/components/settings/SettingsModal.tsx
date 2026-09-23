@@ -29,6 +29,7 @@ import { ProviderSettingsTab } from './ProviderSettingsTab';
 import { StorageSettingsTab } from './StorageSettingsTab';
 import { BackupSection } from './BackupSection';
 import { JobsSettingsTab } from './JobsSettingsTab';
+import { TranscriptionsSettingsTab } from './TranscriptionsSettingsTab';
 import { LibrarySettingsTab } from './LibrarySettingsTab';
 import type { NetworkProfileDraft } from '../../hooks/useLibraryNetworkSettings';
 
@@ -117,16 +118,13 @@ export function SettingsModal() {
 
   const activeTabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
     { id: 'translations', icon: <FileText size={14} />,          label: t('areas.translations.title') },
+    { id: 'transcriptions', icon: <BookOpen size={14} />,        label: t('areas.transcriptions.title') },
     { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
     { id: 'storage',      icon: <HardDrive size={14} />,         label: t('settings.storageTab') },
     { id: 'backup',       icon: <DatabaseBackup size={14} />,    label: t('settings.backup') },
     { id: 'jobs',         icon: <ListChecks size={14} />,        label: t('settings.jobsTab') },
     { id: 'library',      icon: <LibraryBig size={14} />,        label: t('areas.library.title') },
-  ];
-
-  const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
-    { icon: <BookOpen size={14} />,    label: t('areas.transcriptions.title') },
   ];
 
   // Le linguette inattive stanno fuori dal percorso di tabulazione, come vuole
@@ -181,17 +179,6 @@ export function SettingsModal() {
         );
       })}
       <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-      {disabledTabConfig.map((tab) => (
-        <IconButton
-          key={tab.label}
-          size="md"
-          tone="default"
-          title={t('settings.tabPlanned', { label: tab.label })}
-          disabled
-        >
-          {tab.icon}
-        </IconButton>
-      ))}
       <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
         {activeTabConfig.find((tb) => tb.id === activeTab)?.label}
@@ -289,6 +276,8 @@ export function SettingsModal() {
       )}
 
       {activeTab === 'jobs' && <JobsSettingsTab />}
+
+      {activeTab === 'transcriptions' && <TranscriptionsSettingsTab />}
 
       {activeTab === 'library' && (
         <LibrarySettingsTab draft={networkDraft} setDraft={setNetworkDraft} />

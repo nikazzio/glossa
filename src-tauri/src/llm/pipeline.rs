@@ -19,7 +19,7 @@ use crate::llm::types::{
 
 /// Resolves provider + api_key for a given provider id. Handles both built-in providers
 /// and custom endpoint profiles (provider == "custom", custom_provider_id set).
-fn resolve_provider(
+pub(crate) fn resolve_provider(
     app: &AppHandle,
     provider_id: &str,
     custom_profile_id: Option<&str>,
@@ -512,6 +512,7 @@ pub async fn refine_prompt(
             cacheable: true,
         }],
         user: format!("Rewrite this prompt professionally:\n\n{prompt}"),
+        images: Vec::new(),
     };
     let req = LlmRequest {
         model: &model,
@@ -560,6 +561,7 @@ pub async fn extract_phrase_memory_pairs(
             cacheable: false,
         }],
         user: format!("{context}\n\nReturn JSON only with key \"pairs\"."),
+        images: Vec::new(),
     };
 
     let mut last_error = String::new();
@@ -764,6 +766,7 @@ pub async fn test_provider_connection(
             cacheable: false,
         }],
         user: "Reply with exactly: OK".to_string(),
+        images: Vec::new(),
     };
     let req = LlmRequest {
         model: prov.default_test_model(),

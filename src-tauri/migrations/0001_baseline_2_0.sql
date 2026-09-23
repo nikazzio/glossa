@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS workspaces (
   memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5.4-nano',
   memory_extractor_prompt TEXT NOT NULL DEFAULT '',
   icon_key TEXT NOT NULL DEFAULT 'book',
+  ocr_default_prompt TEXT NOT NULL DEFAULT '',
+  ocr_default_provider TEXT NOT NULL DEFAULT '',
+  ocr_default_model TEXT NOT NULL DEFAULT '',
   archived_at DATETIME,
   created_at TEXT NOT NULL
 );
@@ -200,12 +203,18 @@ CREATE TABLE IF NOT EXISTS operation_logs (
   cost_usd REAL DEFAULT NULL,
   is_free INTEGER DEFAULT NULL,
   attempt_number INTEGER DEFAULT NULL,
-  max_attempts INTEGER DEFAULT NULL
+  max_attempts INTEGER DEFAULT NULL,
+  -- Stessa regola di `chunk_id`: SET NULL, mai CASCADE. La cronologia dei
+  -- costi OCR non deve sparire se il documento di trascrizione viene rimosso.
+  transcription_document_id TEXT REFERENCES transcription_documents(id) ON DELETE SET NULL,
+  transcription_segment_id TEXT REFERENCES transcription_segments(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_operation_logs_project_id ON operation_logs(project_id, at);
 CREATE INDEX IF NOT EXISTS idx_operation_logs_pipeline_id ON operation_logs(project_id, pipeline_id, at);
 CREATE INDEX IF NOT EXISTS idx_operation_logs_model_at ON operation_logs(model, at);
+CREATE INDEX IF NOT EXISTS idx_operation_logs_transcription
+  ON operation_logs(transcription_document_id, at);
 
 CREATE TABLE IF NOT EXISTS phrase_memory (
   id TEXT PRIMARY KEY,
@@ -400,6 +409,9 @@ CREATE TABLE IF NOT EXISTS transcription_documents (
   title TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived', 'trashed')),
   trashed_at DATETIME DEFAULT NULL,
+  ocr_prompt TEXT,
+  ocr_provider TEXT,
+  ocr_model TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -429,6 +441,7 @@ CREATE TABLE IF NOT EXISTS transcription_revisions (
   created_by TEXT NOT NULL DEFAULT 'user' CHECK (created_by IN ('user', 'ocr', 'import')),
   derived_from_revision_id TEXT REFERENCES transcription_revisions(id) ON DELETE SET NULL,
   content_hash TEXT NOT NULL DEFAULT '',
+  consolidated_name TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (segment_id, revision_number)
 );

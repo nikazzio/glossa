@@ -26,6 +26,10 @@ export type StatusBarContext =
       saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
       lastSavedAt: number | null;
       totalChunks: number;
+    }
+  | {
+      kind: 'transcription';
+      documentId: string;
     };
 
 export function useStatusBarData(): StatusBarContext {
@@ -39,6 +43,10 @@ export function useStatusBarData(): StatusBarContext {
 
   return useMemo<StatusBarContext>(() => {
     if (!activeWorkspace) return { kind: 'idle' };
+
+    if (location.area === 'transcriptions' && location.documentId) {
+      return { kind: 'transcription', documentId: location.documentId };
+    }
 
     if (!currentProjectId) {
       return {

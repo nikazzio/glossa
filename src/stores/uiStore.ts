@@ -45,6 +45,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab =
   | 'translations'
+  | 'transcriptions'
   | 'provider'
   | 'typography'
   | 'storage'
@@ -119,7 +120,7 @@ interface UiState {
    * lavori in background. Log e lavori sono le due facce della stessa domanda,
    * "cosa sta facendo il programma", quindi stanno nello stesso posto.
    */
-  drawerTab: 'console' | 'jobs' | 'system';
+  drawerTab: 'console' | 'transcriptionLog' | 'jobs' | 'system';
   /** Aree e livelli scelti nella scheda Sistema, ricordati fra le sessioni:
    *  chi guarda il log torna sempre sullo stesso sottoinsieme. */
   systemLogAreas: LogFilterKey[];
@@ -200,7 +201,7 @@ interface UiState {
   setShowInsightPanel: (show: boolean) => void;
   setChunkRailTab: (tab: ChunkRailTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
-  setDrawerTab: (tab: 'console' | 'jobs' | 'system') => void;
+  setDrawerTab: (tab: 'console' | 'transcriptionLog' | 'jobs' | 'system') => void;
   setSystemLogAreas: (areas: LogFilterKey[]) => void;
   setSystemLogLevels: (levels: LogLevel[]) => void;
   setLibraryView: (view: 'list' | 'grid') => void;

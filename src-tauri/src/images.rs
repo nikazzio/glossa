@@ -62,6 +62,27 @@ pub fn resize_jpeg(bytes: &[u8], long_edge: u32, quality: u8) -> Result<Vec<u8>,
     encode_jpeg_at(&fit_inside(decoded, long_edge)?, quality)
 }
 
+/// Larghezza e altezza di un'immagine, leggendo solo l'intestazione: serve a
+/// dire nel log quanto è grande davvero quello che si manda, non quanto si
+/// era chiesto.
+pub fn dimensions_of(bytes: &[u8]) -> Result<(u32, u32), ImageError> {
+    image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|error| ImageError::Decode(error.to_string()))?
+        .into_dimensions()
+        .map_err(|error| ImageError::Decode(error.to_string()))
+}
+
+/// Il tipo MIME di un'immagine riconosciuta dai primi byte, per i soli formati
+/// che l'app tratta (JPEG e PNG); `None` per tutto il resto.
+pub fn media_type_of(bytes: &[u8]) -> Option<&'static str> {
+    match image::guess_format(bytes).ok()? {
+        image::ImageFormat::Jpeg => Some("image/jpeg"),
+        image::ImageFormat::Png => Some("image/png"),
+        _ => None,
+    }
+}
+
 /// Ricomprime l'immagine **senza toccarne i pixel**: cambia solo quanto pesa.
 ///
 /// È l'operazione che serve quando la misura va bene e il problema è lo spazio:
