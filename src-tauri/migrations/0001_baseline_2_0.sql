@@ -441,6 +441,7 @@ CREATE TABLE IF NOT EXISTS transcription_revisions (
   created_by TEXT NOT NULL DEFAULT 'user' CHECK (created_by IN ('user', 'ocr', 'import')),
   derived_from_revision_id TEXT REFERENCES transcription_revisions(id) ON DELETE SET NULL,
   content_hash TEXT NOT NULL DEFAULT '',
+  consolidated_name TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (segment_id, revision_number)
 );

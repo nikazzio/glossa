@@ -8,7 +8,9 @@ use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use argon2::{Algorithm, Argon2, Params, Version};
 use rand::RngCore;
+use rusqlite::types::ValueRef;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use tauri_plugin_dialog::DialogExt;
 
@@ -22,6 +24,61 @@ const ARGON_MEMORY_KIB: u32 = 19_456;
 const ARGON_ITERATIONS: u32 = 2;
 const ARGON_PARALLELISM: u32 = 1;
 const GLOSSA_ONLY_KEY: &[u8] = b"Glossa backup format 2 is obfuscation, not encryption.";
+
+/// Read the requested application tables from one SQLite snapshot. Separate
+/// webview reads could export a revision without its newly created segment.
+#[tauri::command]
+pub async fn export_backup_snapshot(
+    app: tauri::AppHandle,
+    tables: Vec<String>,
+) -> Result<BTreeMap<String, Vec<serde_json::Map<String, serde_json::Value>>>, String> {
+    let path = crate::storage_config::db_path(&app)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut conn = crate::db::open_connection(&path)?;
+        let tx = conn.transaction().map_err(|error| error.to_string())?;
+        let mut snapshot = BTreeMap::new();
+        for table in tables {
+            if table.is_empty()
+                || !table
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            {
+                return Err("invalid_backup_table".to_string());
+            }
+            let mut statement = tx
+                .prepare(&format!("SELECT * FROM {table}"))
+                .map_err(|error| format!("backup {table}: {error}"))?;
+            let columns: Vec<String> = statement
+                .column_names()
+                .iter()
+                .map(|name| name.to_string())
+                .collect();
+            let mut rows = statement.query([]).map_err(|error| error.to_string())?;
+            let mut entries = Vec::new();
+            while let Some(row) = rows.next().map_err(|error| error.to_string())? {
+                let mut entry = serde_json::Map::new();
+                for (index, name) in columns.iter().enumerate() {
+                    let value = match row.get_ref(index).map_err(|error| error.to_string())? {
+                        ValueRef::Null => serde_json::Value::Null,
+                        ValueRef::Integer(value) => serde_json::Value::from(value),
+                        ValueRef::Real(value) => serde_json::json!(value),
+                        ValueRef::Text(value) => serde_json::Value::from(
+                            std::str::from_utf8(value).map_err(|error| error.to_string())?,
+                        ),
+                        ValueRef::Blob(value) => serde_json::json!(value),
+                    };
+                    entry.insert(name.clone(), value);
+                }
+                entries.push(entry);
+            }
+            snapshot.insert(table, entries);
+        }
+        tx.commit().map_err(|error| error.to_string())?;
+        Ok(snapshot)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]

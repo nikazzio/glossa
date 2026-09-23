@@ -1116,13 +1116,29 @@
     "verified": "Segmento verificato",
     "verifyFailed": "Operazione non riuscita",
     "restore": "Ripristina questa versione",
+    "alreadyCurrent": "Questo testo è già nella pagina",
     "restored": "Versione ripristinata",
     "restoreFailed": "Ripristino non riuscito",
+    "deleteRevision": "Elimina questa versione",
+    "deleteRevisionTitle": "Eliminare questa versione?",
+    "deleteRevisionMessage": "Questa versione sparirà dallo storico. Non potrai più ripristinarla.",
+    "deleteRevisionFailed": "Eliminazione della versione non riuscita",
+    "consolidatedVersions": "Versioni consolidate",
+    "versionName": "Nome della versione",
+    "consolidateVersion": "Consolida questa versione",
+    "renameVersion": "Rinomina questa versione",
+    "removeConsolidation": "Rimuovi dalle versioni consolidate",
+    "nameRevisionFailed": "Modifica della versione non riuscita",
+    "clearHistory": "Svuota storico",
+    "clearHistoryTitle": "Svuotare lo storico della pagina?",
+    "clearHistoryMessage": "I salvataggi ordinari precedenti saranno eliminati. Le versioni consolidate, quella corrente e quella verificata resteranno disponibili.",
+    "clearHistoryFailed": "Pulizia dello storico non riuscita",
     "viewerUnavailable": "Questo documento non è collegato a una digitalizzazione con pagine da mostrare.",
     "viewerOpenFailed": "Questa copia non si apre. Torna all'altra con i comandi qui sopra.",
     "paneLabel": "Testo",
     "pageTitle": "Pagina {{n}}",
     "saveSaved": "Salvato",
+    "savePending": "Da salvare",
     "saveSaving": "Salvataggio",
     "saveError": "Salvataggio fallito",
     "saveRetry": "Riprova",
@@ -1132,6 +1148,7 @@
     "noRevisions": "Nessun salvataggio ancora.",
     "tabs": {
       "history": "Storico",
+      "summary": "Riepilogo",
       "assist": "OCR",
       "metadata": "Metadati",
       "log": "Log trascrizione"
@@ -1144,6 +1161,16 @@
       "segmentId": "Id segmento",
       "sourcePageId": "Pagina collegata",
       "sourcePageIdUnset": "non collegata"
+    },
+    "summary": {
+      "title": "Riepilogo progetto",
+      "pagesWithText": "Pagine trascritte",
+      "words": "Parole trascritte",
+      "verifiedPages": "Pagine verificate",
+      "progress": "Avanzamento",
+      "ocr": "Riconoscimento automatico",
+      "runs": "Letture completate",
+      "loadFailed": "Impossibile caricare il riepilogo"
     },
     "authorLabels": {
       "user": "Correzione manuale",
@@ -2117,7 +2144,7 @@
           {
             "title": "Scrivere e salvare",
             "paragraphs": [
-              "Il testo si salva da solo poco dopo che smetti di scrivere: l'indicatore in alto a destra dice se il salvataggio è in corso, riuscito o fallito. Cambiando pagina prima che il salvataggio sia partito, il testo si salva comunque, subito.",
+              "Il testo si salva dopo 30 secondi senza modifiche. L'indicatore distingue il testo ancora da salvare dal salvataggio in corso, riuscito o fallito. Cambiando pagina o uscendo normalmente dallo Studio, il testo si salva subito; una chiusura forzata prima del salvataggio può perdere le ultime modifiche.",
               "Quando il testo è pronto, segnalo come verificato con il lucchetto accanto al titolo \"Pagina N\": il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando."
             ]
           },
@@ -2148,10 +2175,13 @@
             ]
           },
           {
-            "title": "Storico, ripristino e metadati",
+            "title": "Storico, riepilogo e metadati",
             "paragraphs": [
               "Ogni salvataggio resta nello storico della pagina, a destra: mostra chi ha scritto quella versione — correzione manuale, riconoscimento automatico o importazione — e quando.",
-              "Il comando su ogni voce dello storico riporta il testo di quella versione, come nuovo salvataggio: le versioni precedenti non si perdono mai. Cambiando pagina, lo storico mostrato cambia con lei.",
+              "Il comando su ogni voce dello storico riporta il testo di quella versione come nuovo salvataggio, senza sovrascrivere le versioni precedenti. Cambiando pagina, lo storico mostrato cambia con lei.",
+              "Puoi consolidare una versione e darle un nome modificabile: compare nella sezione in alto senza duplicare il testo. Togliendo il nome torna nello storico ordinario.",
+              "Puoi eliminare una vecchia versione singolarmente dopo conferma, oppure svuotare lo storico ordinario della pagina. La pulizia conserva le versioni consolidate, quella corrente e quella verificata. Queste ultime due non si possono eliminare; eliminando una versione perdi la possibilità di ripristinarne il testo.",
+              "La scheda Riepilogo mostra pagine con testo, parole, pagine verificate e avanzamento, poi letture OCR completate, token e costo stimato, come nel riepilogo della traduzione.",
               "La scheda Metadati, di fianco a Storico, mostra i dati grezzi salvati per la pagina corrente — posizione, etichetta, stato, numero di revisioni — utile per vedere cosa viene registrato oggi."
             ]
           }

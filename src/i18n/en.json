@@ -1116,13 +1116,29 @@
     "verified": "Segment verified",
     "verifyFailed": "The action failed",
     "restore": "Restore this version",
+    "alreadyCurrent": "This text is already on the page",
     "restored": "Version restored",
     "restoreFailed": "Restore failed",
+    "deleteRevision": "Delete this version",
+    "deleteRevisionTitle": "Delete this version?",
+    "deleteRevisionMessage": "This version will disappear from history. You will no longer be able to restore it.",
+    "deleteRevisionFailed": "Could not delete the version",
+    "consolidatedVersions": "Consolidated versions",
+    "versionName": "Version name",
+    "consolidateVersion": "Consolidate this version",
+    "renameVersion": "Rename this version",
+    "removeConsolidation": "Remove from consolidated versions",
+    "nameRevisionFailed": "Could not update the version",
+    "clearHistory": "Clear history",
+    "clearHistoryTitle": "Clear this page's history?",
+    "clearHistoryMessage": "Older ordinary saves will be deleted. Consolidated, current, and verified versions will remain available.",
+    "clearHistoryFailed": "Could not clear history",
     "viewerUnavailable": "This document isn't linked to a digitization with pages to show.",
     "viewerOpenFailed": "This copy won't open. Switch back with the controls above.",
     "paneLabel": "Text",
     "pageTitle": "Page {{n}}",
     "saveSaved": "Saved",
+    "savePending": "Unsaved",
     "saveSaving": "Saving",
     "saveError": "Save failed",
     "saveRetry": "Retry",
@@ -1132,6 +1148,7 @@
     "noRevisions": "No saves yet.",
     "tabs": {
       "history": "History",
+      "summary": "Summary",
       "assist": "OCR",
       "metadata": "Metadata",
       "log": "Transcription log"
@@ -1144,6 +1161,16 @@
       "segmentId": "Segment id",
       "sourcePageId": "Linked page",
       "sourcePageIdUnset": "not linked"
+    },
+    "summary": {
+      "title": "Project summary",
+      "pagesWithText": "Transcribed pages",
+      "words": "Transcribed words",
+      "verifiedPages": "Verified pages",
+      "progress": "Progress",
+      "ocr": "Automatic recognition",
+      "runs": "Completed readings",
+      "loadFailed": "Could not load the summary"
     },
     "authorLabels": {
       "user": "Manual correction",
@@ -2117,7 +2144,7 @@
           {
             "title": "Writing and saving",
             "paragraphs": [
-              "The text saves itself shortly after you stop typing: the indicator in the top right says whether the save is in progress, done, or failed. Changing page before the save has started still saves the text right away.",
+              "Text saves after 30 seconds without changes. The indicator distinguishes unsaved text from a save in progress, completed, or failed. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
               "When the text is ready, mark it as verified with the lock next to the \"Page N\" title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command."
             ]
           },
@@ -2148,10 +2175,13 @@
             ]
           },
           {
-            "title": "History, restore and metadata",
+            "title": "History, summary and metadata",
             "paragraphs": [
               "Every save stays in that page's history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
-              "The command on each history entry brings that version's text back as a new save: earlier versions are never lost. Changing page changes the history shown, too.",
+              "The command on each history entry brings that version's text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
+              "You can consolidate a version and give it an editable name: it appears in the upper section without duplicating the text. Remove the name to return it to ordinary history.",
+              "You can delete an older version individually after confirmation, or clear the page's ordinary history. Cleanup keeps consolidated, current, and verified versions. The last two cannot be deleted; deleting a version removes the ability to restore its text.",
+              "The Summary tab shows pages with text, word count, verified pages, and progress, then completed OCR readings, tokens, and estimated cost, like the Translation summary.",
               "The Metadata tab, next to History, shows the raw data saved for the current page — position, label, status, revision count — useful to see what's recorded today."
             ]
           }

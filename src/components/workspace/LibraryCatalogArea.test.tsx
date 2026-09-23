@@ -38,7 +38,8 @@ vi.mock('../../services/libraryService', () => ({
 
 // L'inventario del deposito passa dal motore: nelle prove non c'è, e la scheda
 // deve reggere la risposta «niente sul disco».
-vi.mock('../../services/inventoryService', () => ({
+vi.mock('../../services/inventoryService', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../services/inventoryService')>(),
   versionInventory: vi.fn().mockResolvedValue(null),
   libraryInventory: vi.fn().mockResolvedValue([]),
 }));
@@ -83,7 +84,8 @@ vi.mock('../../services/librarySavedViewsService', () => ({
   deleteSavedView: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../services/iiifProviderService', () => ({
+vi.mock('../../services/iiifProviderService', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../services/iiifProviderService')>(),
   listIIIFProviders: vi.fn().mockResolvedValue([]),
 }));
 

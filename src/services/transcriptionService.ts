@@ -1,8 +1,9 @@
-import { execute, select } from './dbService';
+import { execute, select, runInTransaction } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
 import { DEFAULT_OCR_PROMPT } from '../constants';
 import type { ModelProvider, Workspace } from '../types';
+import { costForEntry, type Pricing } from '../utils/operationLogStats';
 
 /**
  * Il documento di trascrizione: contenuto per pagina/segmento, stato
@@ -54,6 +55,7 @@ export interface TranscriptionRevision {
   created_by: TranscriptionRevisionAuthor;
   derived_from_revision_id: string | null;
   content_hash: string;
+  consolidated_name: string | null;
   created_at: string;
 }
 
@@ -257,6 +259,55 @@ export async function listRevisions(segmentId: string): Promise<TranscriptionRev
   );
 }
 
+export interface TranscriptionSummary {
+  pagesWithText: number;
+  verifiedPages: number;
+  words: number;
+  ocrRuns: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number | null;
+}
+
+/** Stato del documento, calcolato dalle ultime revisioni di ciascuna pagina. */
+export async function getTranscriptionSummary(documentId: string, pricing: Pricing): Promise<TranscriptionSummary> {
+  const pages = await select<{ text: string | null; approved_revision_id: string | null }>(
+    `SELECT r.text, s.approved_revision_id
+       FROM transcription_segments s
+       LEFT JOIN transcription_revisions r ON r.id = (
+         SELECT id FROM transcription_revisions
+          WHERE segment_id = s.id ORDER BY revision_number DESC LIMIT 1
+       )
+      WHERE s.document_id = $1`,
+    [documentId],
+  );
+  const usage = await select<{
+    provider: string | null; model: string | null;
+    input_tokens: number | null; output_tokens: number | null; cost_usd: number | null;
+  }>(
+    `SELECT provider, model, input_tokens, output_tokens, cost_usd
+       FROM operation_logs
+      WHERE transcription_document_id = $1 AND phase = 'end' AND level IN ('success', 'warn')`,
+    [documentId],
+  );
+  const textPages = pages.filter((page) => Boolean(page.text?.trim()));
+  const costs = usage.map((row) => row.cost_usd ?? costForEntry({
+    provider: row.provider ?? undefined,
+    model: row.model ?? undefined,
+    inputTokens: row.input_tokens ?? undefined,
+    outputTokens: row.output_tokens ?? undefined,
+  }, pricing));
+  return {
+    pagesWithText: textPages.length,
+    verifiedPages: textPages.filter((page) => page.approved_revision_id !== null).length,
+    words: textPages.reduce((total, page) => total + (page.text?.trim().match(/\S+/gu)?.length ?? 0), 0),
+    ocrRuns: usage.length,
+    inputTokens: usage.reduce((total, row) => total + (row.input_tokens ?? 0), 0),
+    outputTokens: usage.reduce((total, row) => total + (row.output_tokens ?? 0), 0),
+    costUsd: costs.some((cost) => cost === null) ? null : costs.reduce<number>((total, cost) => total + (cost ?? 0), 0),
+  };
+}
+
 async function insertRevision(
   segmentId: string,
   text: string,
@@ -280,6 +331,7 @@ async function insertRevision(
       created_by: createdBy,
       derived_from_revision_id: parent?.id ?? null,
       content_hash: hash,
+      consolidated_name: null,
       // Valore locale, sostituito dal vero timestamp del database alla
       // successiva lettura: qui serve solo per il valore restituito subito.
       created_at: new Date().toISOString(),
@@ -355,6 +407,50 @@ export async function restoreRevision(
     return previous;
   }
   return insertRevision(segmentId, target.text, 'user', previous);
+}
+
+/** Elimina una vecchia versione, mai quella corrente o verificata. */
+export async function deleteTranscriptionRevision(segmentId: string, revisionId: string): Promise<void> {
+  const target = (await select<TranscriptionRevision>(
+    'SELECT * FROM transcription_revisions WHERE id = $1 AND segment_id = $2',
+    [revisionId, segmentId],
+  ))[0];
+  const current = await latestRevision(segmentId);
+  const segment = (await select<TranscriptionSegment>(
+    'SELECT * FROM transcription_segments WHERE id = $1', [segmentId],
+  ))[0];
+  if (!target || target.id === current?.id ||
+      target.id === segment?.approved_revision_id) {
+    throw new Error('transcription.revisionDeleteUnavailable');
+  }
+  await runInTransaction(async (run) => {
+    await run(
+      'UPDATE transcription_revisions SET derived_from_revision_id = $1 WHERE derived_from_revision_id = $2 AND segment_id = $3',
+      [target.derived_from_revision_id, revisionId, segmentId],
+    );
+    await run('DELETE FROM transcription_revisions WHERE id = $1 AND segment_id = $2', [revisionId, segmentId]);
+  });
+}
+
+export async function nameTranscriptionRevision(segmentId: string, revisionId: string, name: string | null): Promise<void> {
+  const trimmed = name?.trim() ?? null;
+  if (trimmed !== null && (!trimmed || trimmed.length > 120)) throw new Error('transcription.invalidVersionName');
+  await execute(
+    'UPDATE transcription_revisions SET consolidated_name = $1 WHERE id = $2 AND segment_id = $3',
+    [trimmed, revisionId, segmentId],
+  );
+}
+
+/** Svuota solo lo storico ordinario della pagina: conserva i punti nominati,
+ * la versione corrente e l'eventuale versione verificata. */
+export async function clearTranscriptionHistory(segmentId: string): Promise<void> {
+  await execute(
+    `DELETE FROM transcription_revisions
+      WHERE segment_id = $1 AND consolidated_name IS NULL
+        AND id <> (SELECT id FROM transcription_revisions WHERE segment_id = $1 ORDER BY revision_number DESC LIMIT 1)
+        AND id <> COALESCE((SELECT approved_revision_id FROM transcription_segments WHERE id = $1), '')`,
+    [segmentId],
+  );
 }
 
 /** Marca l'ultima revisione come verificata dall'utente. */

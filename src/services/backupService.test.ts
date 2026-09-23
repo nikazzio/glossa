@@ -23,6 +23,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(async (command: string) => {
     if (command === 'read_backup') return fsState.raw;
     if (command === 'library_inventory') return inventory;
+    if (command === 'export_backup_snapshot' || command === 'export_search_history') return {};
     return null;
   }),
 }));
@@ -105,6 +106,13 @@ describe('cosa porta con sé un backup', () => {
     expect(BACKUP_TABLES).toContain('custom_providers');
     expect(BACKUP_TABLES).toContain('operation_logs');
     expect(BACKUP_TABLES).toContain('artifacts');
+  });
+
+  it('esporta le tabelle di trascrizione in una sola fotografia del database', async () => {
+    await writeBackup();
+    const call = vi.mocked(invoke).mock.calls.find(([command]) => command === 'export_backup_snapshot');
+    expect((call?.[1] as { tables: string[] }).tables).toContain('transcription_revisions');
+    expect((call?.[1] as { tables: string[] }).tables).toContain('transcription_segments');
   });
 });
 
@@ -299,6 +307,30 @@ describe('il ripristino', () => {
     await expect(restoreBackup(t)).rejects.toThrow('invalid_backup');
     expect(confirm).not.toHaveBeenCalled();
     expect(runMock).not.toHaveBeenCalled();
+  });
+
+  it('rifiuta una revisione assegnata a una pagina inesistente prima di sostituire i dati', async () => {
+    const payload = JSON.parse(backupWith([]));
+    payload.tables.transcription_revisions = [{
+      id: 'seg9:r1', segment_id: 'seg9', revision_number: 1, text: 'Testo',
+    }];
+    fsState.raw = JSON.stringify(payload);
+
+    await expect(restoreBackup(t)).rejects.toThrow('invalid_backup');
+    expect(confirm).not.toHaveBeenCalled();
+    expect(runMock).not.toHaveBeenCalled();
+  });
+
+  it('ripristina tutte le revisioni e interrompe l operazione se una non entra', async () => {
+    const payload = JSON.parse(backupWith([]));
+    payload.tables.transcription_documents = [{ id: 'td1', workspace_id: 'ws1', title: 'Libro', status: 'active' }];
+    payload.tables.transcription_segments = [{ id: 'seg1', document_id: 'td1', position: 8 }];
+    payload.tables.transcription_revisions = [{ id: 'seg1:r1', segment_id: 'seg1', revision_number: 1, text: 'Testo' }];
+    fsState.raw = JSON.stringify(payload);
+
+    await restoreBackup(t);
+    expect(runMock.mock.calls.some(([query]) => String(query).includes('INSERT INTO transcription_revisions'))).toBe(true);
+    expect(runMock.mock.calls.some(([query]) => String(query).includes('INSERT OR IGNORE INTO transcription_revisions'))).toBe(false);
   });
 
   it('rejects a backup created by a newer schema before changing data', async () => {

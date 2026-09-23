@@ -208,6 +208,11 @@ personalizzati, storico delle operazioni ed elenco degli artefatti. Le colonne
 che citano righe assenti (frammento di un registro, lavoro di un artefatto) si
 riscrivono a fine ripristino solo quando la riga esiste. Restano fuori i file
 del deposito e le chiavi, che vivono nel portachiavi del sistema.
+Prima di sostituire i dati, il ripristino verifica che ogni segmento di
+trascrizione appartenga a un documento e ogni revisione al proprio segmento,
+senza posizioni o numeri di revisione duplicati. Le tre tabelle di
+trascrizione usano `INSERT` normale: un conflitto annulla la transazione
+invece di far sparire una versione dalla cronologia.
 
 Backup dati versione 4: snapshot atomico delle quattro tabelle correlate,
 inclusi soltanto i job di ricerca. Il ripristino richiede ricerche ferme e mette
@@ -368,6 +373,15 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 `approved_revision_id` è in bozza, valorizzato è verificato — nessuna colonna
 di stato propria.
 
+Il testo si salva dopo 30 secondi senza modifiche, e subito lasciando la pagina.
+Ogni caricamento è legato all'indice di pagina che lo ha richiesto: una risposta
+tardiva non può sostituire testo e storico della pagina ora aperta. Le versioni
+consolidate sono le stesse revisioni con `consolidated_name` valorizzato: nessuna
+copia del testo. Il nome si può cambiare o togliere. La pulizia esplicita dello
+storico elimina solo le revisioni ordinarie precedenti, conservando quelle
+consolidate, la corrente e la verificata. La cancellazione singola protegge
+sempre le ultime due. Il riepilogo aggrega testo corrente, verifiche e uso OCR.
+
 **Un segmento per pagina, non per documento.** `transcription_segments.position`
 è l'indice di pagina del visore (0-based, lo stesso `currentIndex` che
 `PageViewer`/`DocumentViewer` tengono già), non un contatore interno: cambiare
@@ -430,19 +444,25 @@ in più (non serviva finché lo usava solo la scheda opera, che non tiene
 niente per pagina): entrambi i visori lo chiamano solo a pagina disegnata
 davvero, non alla sola richiesta.
 
-Cambiare pagina con del testo non ancora salvato lo salva subito, prima del
-debounce: aspettare l'timer normale lo perderebbe cambiando pagina in fretta.
-Un salvataggio ancora in corso quando la pagina cambia di nuovo non scrive il
-suo risultato sullo stato della pagina arrivata nel frattempo — confrontato
-con un riferimento alla pagina che si sta salvando, non con lo stato letto a
-scrittura ultimata.
+Il testo si salva dopo 30 secondi senza modifiche; cambiare pagina o uscire
+normalmente dallo Studio forza il salvataggio. Ogni operazione cattura pagina,
+segmento e testo prima di entrare nella coda: una navigazione successiva non
+può scartare la scrittura né applicarla alla pagina nuova. Le letture di pagina
+usano un identificatore progressivo per ignorare risposte arrivate fuori
+ordine. Il debounce controlla anche che il testo ritardato appartenga ancora
+alla bozza corrente. Una chiusura forzata può perdere il testo in attesa.
 
 A destra `InspectorShell` condiviso con lo Studio di traduzione e la scheda
-opera, con schede OCR (#220 — vedi sezione dedicata), Storico e
-Metadati — quest'ultima mostra i campi grezzi che il segmento porta oggi
+opera, con schede OCR (#220 — vedi sezione dedicata), Storico, Riepilogo e
+Metadati. Il Riepilogo usa le ultime revisioni di tutte le pagine e le righe
+di esito OCR del documento; segue il layout del riepilogo traduzioni.
+La scheda Metadati mostra i campi grezzi che il segmento porta oggi
 (posizione, etichetta, stato, numero di revisioni, `source_page_id`), utile
 finché non si decide una presentazione definitiva. Il log dei costi OCR vive
 altrove, nel cassetto in basso — vedi sezione OCR/HTR.
+Lo Storico consente di eliminare su conferma una versione manuale vecchia,
+mai quella corrente, verificata o OCR. Prima della rimozione i figli puntano
+alla revisione precedente della versione eliminata, nella stessa transazione.
 
 **Cambio fonte immagini/PDF.** Un'opera può avere entrambe le letture; la
 copia con cui il documento nasce (`source_version_id`) resta "principale"
@@ -1526,7 +1546,8 @@ ai modelli, approvazioni, spostamenti e rigenerazioni. Gli eventi registrano
 workspace, modello, token, costo, durata, lingue, impronte ed esito quando
 pertinenti.
 
-Le revisioni di traduzione e trascrizione sono immutabili. Approvare o ritirare
+Il testo delle revisioni di traduzione e trascrizione è immutabile; il nome di
+una versione consolidata è modificabile. Approvare o ritirare
 produce un evento; il puntatore sulla traduzione o sul segmento indica la
 revisione corrente. Le metriche calcolate vivono in `derived_metrics` con
 versione dell'algoritmo e impronte degli input.
@@ -1537,6 +1558,9 @@ Il backup riguarda l'intera applicazione e contiene il database, non le immagini
 del deposito. L'archivio compresso include versione, dimensione e impronta del
 contenuto. Il ripristino conserva le pagine presenti, avvia una verifica del
 deposito e propone solo gli scaricamenti mancanti.
+L'esportazione legge le tabelle applicative da un'unica snapshot SQLite; lo
+storico della ricerca federata arriva dal suo comando dedicato. Il ripristino
+verifica i riferimenti fra documenti, pagine e revisioni prima di scrivere.
 
 Le chiavi dei provider restano nel portachiavi di sistema. Il backup offre un
 formato solo Glossa, dichiarato come offuscamento, e un formato cifrato con

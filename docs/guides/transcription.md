@@ -40,11 +40,12 @@ Biblioteca, non dello Studio.
 
 ## Scrivere e salvare
 
-Il testo si salva da solo poco dopo che smetti di scrivere: l'indicatore in
-alto a destra dell'editor dice se il salvataggio è in corso, riuscito o
-fallito, con un comando per riprovare in caso di errore. Cambiando pagina
-prima che il salvataggio sia partito, il testo scritto fin lì si salva
-comunque, subito.
+Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in alto a
+destra distingue il testo ancora da salvare dal salvataggio in corso, riuscito
+o fallito, con un comando per riprovare in caso di errore. Cambiando pagina o
+uscendo normalmente dallo Studio, il testo ancora da salvare viene scritto
+subito. Una chiusura forzata prima del salvataggio può perdere le ultime
+modifiche.
 
 Quando il testo è pronto, segnalo come **verificato** con il lucchetto
 accanto al titolo "Pagina N": il testo diventa bloccato, per non
@@ -137,14 +138,26 @@ modello, l'immagine inviata con misura reale, peso e provenienza (libro scaricat
 della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per
 livello, e il raggruppamento per pagina.
 
-## Storico, ripristino e metadati
+## Storico, riepilogo e metadati
 
 Ogni salvataggio resta nello storico della pagina, nel pannello a destra:
 mostra chi ha scritto quella versione — correzione manuale, riconoscimento
 automatico o importazione — e quando. Il comando su ogni voce dello storico
-riporta il testo di quella versione come nuovo salvataggio: le versioni
-precedenti non si perdono mai, anche dopo un ripristino. Cambiando pagina lo
+riporta il testo di quella versione come nuovo salvataggio, senza sovrascrivere
+le versioni precedenti. Cambiando pagina lo
 storico mostrato cambia con lei.
+Puoi consolidare qualsiasi versione e darle un nome, modificabile in seguito.
+Le versioni consolidate compaiono in alto, separate dagli altri salvataggi,
+senza occupare spazio aggiuntivo. Puoi togliere il nome per riportarle nello
+storico ordinario. Puoi eliminare una vecchia versione singolarmente, oppure
+usare **Svuota storico** per cancellare i salvataggi ordinari precedenti.
+Le versioni consolidate, quella corrente e quella verificata restano dopo
+la pulizia. La versione corrente e quella verificata non si possono eliminare.
+L'eliminazione di una versione toglie la possibilità di ripristinarne il testo.
+
+La scheda **Riepilogo** segue il layout del riepilogo della traduzione:
+mostra pagine con testo, parole, pagine verificate e avanzamento; sotto
+riporta letture OCR completate, token e costo stimato.
 
 La scheda **Metadati**, accanto allo Storico, mostra i dati grezzi salvati
 per la pagina corrente: posizione, etichetta, stato e numero di revisioni.

@@ -168,6 +168,7 @@ pub fn run() {
             db::backup_database_file,
             backup::write_backup,
             backup::read_backup,
+            backup::export_backup_snapshot,
             db::execute_transaction,
             storage_config::get_data_dir,
             storage_config::choose_data_dir_folder,

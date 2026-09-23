@@ -1,7 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { execute, select } from './dbService';
+import { execute, select, runInTransaction } from './dbService';
 import {
   ensureSegment,
+  getTranscriptionSummary,
+  deleteTranscriptionRevision,
+  nameTranscriptionRevision,
+  clearTranscriptionHistory,
   manifestIndexOf,
   saveSegmentText,
   restoreRevision,
@@ -42,6 +46,7 @@ describe('storico delle trascrizioni', () => {
   beforeEach(() => {
     selectMock.mockReset().mockResolvedValue([]);
     executeMock.mockReset().mockResolvedValue(undefined);
+    vi.mocked(runInTransaction).mockReset();
   });
 
   it('il primo salvataggio manuale diventa la prima revisione', async () => {
@@ -167,6 +172,78 @@ describe('storico delle trascrizioni', () => {
     await restoreRevision('seg1', 'seg1:r1');
 
     expect(writeMatching('INSERT INTO transcription_revisions')).toBeUndefined();
+  });
+
+  it('elimina una vecchia versione manuale e collega le successive alla precedente', async () => {
+    const target = { ...ocrRevision, id: 'seg1:r2', revision_number: 2,
+      created_by: 'user', derived_from_revision_id: 'seg1:r1' };
+    const latest = { ...target, id: 'seg1:r3', revision_number: 3 };
+    selectMock.mockResolvedValueOnce([target]).mockResolvedValueOnce([latest])
+      .mockResolvedValueOnce([{ id: 'seg1', approved_revision_id: null }]);
+    const statements: string[] = [];
+    vi.mocked(runInTransaction).mockImplementationOnce(async (fn) => fn(async (query) => {
+      statements.push(query);
+    }));
+
+    await deleteTranscriptionRevision('seg1', target.id);
+
+    expect(statements[0]).toContain('SET derived_from_revision_id = $1');
+    expect(statements[1]).toContain('DELETE FROM transcription_revisions');
+  });
+
+  it('non elimina la versione corrente o verificata', async () => {
+    const target = { ...ocrRevision, created_by: 'user' };
+    selectMock.mockResolvedValueOnce([target]).mockResolvedValueOnce([target])
+      .mockResolvedValueOnce([{ id: 'seg1', approved_revision_id: null }]);
+
+    await expect(deleteTranscriptionRevision('seg1', target.id)).rejects.toThrow('transcription.revisionDeleteUnavailable');
+    expect(runInTransaction).not.toHaveBeenCalled();
+  });
+
+  it('consolida, rinomina e rimuove il nome senza duplicare la revisione', async () => {
+    await nameTranscriptionRevision('seg1', 'seg1:r1', ' Prima versione ');
+    await nameTranscriptionRevision('seg1', 'seg1:r1', null);
+    expect(writes()).toEqual([
+      expect.objectContaining({ params: ['Prima versione', 'seg1:r1', 'seg1'] }),
+      expect.objectContaining({ params: [null, 'seg1:r1', 'seg1'] }),
+    ]);
+    expect(writeMatching('INSERT INTO transcription_revisions')).toBeUndefined();
+  });
+
+  it('svuota solo i salvataggi ordinari vecchi', async () => {
+    await clearTranscriptionHistory('seg1');
+    const query = writeMatching('DELETE FROM transcription_revisions')?.query ?? '';
+    expect(query).toContain('consolidated_name IS NULL');
+    expect(query).toContain('ORDER BY revision_number DESC LIMIT 1');
+    expect(query).toContain('approved_revision_id');
+    expect(writeMatching('DELETE FROM transcription_revisions')?.params).toEqual(['seg1']);
+  });
+});
+
+describe('riepilogo della trascrizione', () => {
+  it('conta solo il testo corrente di ogni pagina e le letture OCR riuscite', async () => {
+    selectMock.mockReset()
+      .mockResolvedValueOnce([
+        { text: 'Una pagina scritta', approved_revision_id: 'r1' },
+        { text: 'Altre due parole qui', approved_revision_id: null },
+        { text: null, approved_revision_id: null },
+      ])
+      .mockResolvedValueOnce([
+        { provider: 'openai', model: 'model', input_tokens: 100, output_tokens: 20, cost_usd: 0.01 },
+        { provider: 'openai', model: 'model', input_tokens: 20, output_tokens: 10, cost_usd: 0.01 },
+      ]);
+
+    await expect(getTranscriptionSummary('td1', {})).resolves.toEqual({
+      pagesWithText: 2,
+      verifiedPages: 1,
+      words: 7,
+      ocrRuns: 2,
+      inputTokens: 120,
+      outputTokens: 30,
+      costUsd: 0.02,
+    });
+    expect(selectMock.mock.calls[0][0]).toContain('ORDER BY revision_number DESC LIMIT 1');
+    expect(selectMock.mock.calls[1][1]).toEqual(['td1']);
   });
 });
 

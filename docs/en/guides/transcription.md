@@ -40,10 +40,11 @@ the Studio.
 
 ## Writing and saving
 
-The text saves itself shortly after you stop typing: the indicator at the
-top right of the editor shows whether the save is in progress, done, or
-failed, with a retry command if it fails. Changing page before the save has
-started still saves what was written, right away.
+Text saves after 30 seconds without changes. The indicator in the top right
+distinguishes unsaved text from a save in progress, completed, or failed, with
+a command to retry on failure. Changing page or leaving the Studio normally
+saves pending text immediately. A forced shutdown before a save can lose the
+latest edits.
 
 When the text is ready, mark it as **verified** with the lock next to the
 "Page N" title: the text becomes locked, so an already-checked transcription
@@ -132,13 +133,24 @@ was sent (expandable row by row), and the outcome with duration, tokens,
 estimated cost and the number of the revision created. On top there are
 search, filters by row type and by level, and grouping by page.
 
-## History, restore and metadata
+## History, summary and metadata
 
 Every save stays in that page's history, in the panel on the right: it
 shows who wrote that version — manual correction, automatic recognition, or
 import — and when. The command on each history entry brings that version's
-text back as a new save: earlier versions are never lost, even after a
+text back as a new save, without overwriting earlier versions, even after a
 restore. Changing page changes the history shown, too.
+You can consolidate any version and give it a name, which you can edit later.
+Consolidated versions appear above ordinary saves without duplicating their
+text. Remove a name to move a version back to ordinary history. You can
+delete older versions one by one, or use **Clear history** to delete older
+ordinary saves. Consolidated, current, and verified versions survive the
+cleanup. The current and verified versions cannot be deleted. Deleting a
+version removes the ability to restore its text.
+
+The **Summary** tab follows the Translation summary layout: it shows pages
+with text, word count, verified pages, and progress. It also shows completed
+OCR readings, tokens, and estimated cost.
 
 The **Metadata** tab, next to History, shows the raw data saved for the
 current page: position, label, status, and revision count. It's there to
