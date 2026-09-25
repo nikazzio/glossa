@@ -12,6 +12,7 @@ import {
   type LibrarySort,
 } from '../../utils/libraryCatalogFilters';
 import { romanNumeral } from '../../utils/workYear';
+import { LIBRARY_GROUPINGS, type LibraryGrouping } from '../../utils/libraryGrouping';
 
 const AVAILABILITY_LABEL_KEY: Record<string, string> = {
   catalogued: 'areas.library.filters.availabilityRemote',
@@ -24,12 +25,14 @@ const AVAILABILITY_LABEL_KEY: Record<string, string> = {
  * aspetto con quante opere ha ogni valore, l'ordine. I filtri restringono lo
  * scaffale o la raccolta scelti a sinistra.
  */
-export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, workspaceName }: {
+export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, workspaceName, grouping, onGrouping }: {
   filters: LibraryFilters;
   onChange: (filters: LibraryFilters) => void;
   counts: Record<LibraryFacet, Map<string, number>>;
   providerLabel: (key: string) => string;
   workspaceName: (id: string) => string;
+  grouping: LibraryGrouping;
+  onGrouping: (grouping: LibraryGrouping) => void;
 }) {
   const { t } = useTranslation();
 
@@ -84,6 +87,13 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
         onChange={(sort) => onChange({ ...filters, sort: sort as LibrarySort })}
         options={LIBRARY_SORTS.map((sort) => ({ value: sort, label: t(`areas.library.filters.sort.${sort}`) }))}
         ariaLabel={t('areas.library.filters.sortLabel')}
+        className="max-w-[11rem]"
+      />
+      <Select
+        value={grouping}
+        onChange={(value) => onGrouping(value as LibraryGrouping)}
+        options={LIBRARY_GROUPINGS.map((value) => ({ value, label: t(`areas.library.grouping.${value}`) }))}
+        ariaLabel={t('areas.library.grouping.label')}
         className="max-w-[11rem]"
       />
       {hasActiveLibraryFilters(filters) && (

@@ -1110,6 +1110,39 @@ describe('LibraryCatalogArea', () => {
     expect(useUiStore.getState().location).toMatchObject({ area: 'library', itemId: 's1' });
   });
 
+  it('la vista a tabella ordina cliccando l intestazione', () => {
+    useUiStore.setState({ libraryView: 'table' });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Vita nuova' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1576' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Convivio' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1490' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.table.year' }));
+
+    const titles = screen.getAllByRole('row').slice(1).map((row) => within(row).getByRole('button', { name: /Convivio|Vita nuova/ }).textContent);
+    expect(titles).toEqual(['Convivio', 'Vita nuova']);
+    useUiStore.setState({ libraryView: 'list' });
+  });
+
+  it('raggruppa per secolo, con le opere senza data in fondo', () => {
+    useUiStore.setState({ libraryGrouping: 'century' });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Pantagruel' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1542' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Senza data' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+    expect(headings).toEqual(['areas.library.filters.centuryValue1', 'areas.library.grouping.missing.century1']);
+    useUiStore.setState({ libraryGrouping: 'none' });
+  });
+
   it('mostra solo le opere collegate al workspace scelto', async () => {
     useWorkspaceStore.setState({
       workspaces: [{ id: 'ws-1', name: 'Scherma' } as never],

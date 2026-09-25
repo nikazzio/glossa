@@ -48,6 +48,14 @@ sorts by title, author, year, recently added or recently opened. When a filter
 is active, a field appears at the bottom of the saved views to save it with a
 name; the view stays a filter and updates by itself as new works come in.
 
+The list shows as rows, covers or a **table**. The table has a column for
+author, title, year, place and printer, library, pages and state (work and
+download); author, title and year sort by clicking the header. With **Group**
+the list splits by century, author, library or collection, with the number of
+works next to each group; works without the value go into a group at the end,
+and a work in several collections appears under each. View and grouping stay
+as you leave them.
+
 List and grid views show provenance, declared page count, local resolutions,
 disk usage and links. An unavailable count is not equivalent to zero.
 Collections group works without moving or duplicating them.

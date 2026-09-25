@@ -350,6 +350,16 @@ visibile su tutte le righe finché la scelta non è vuota. I comandi sulla scelt
 stanno in una barra `role="toolbar"` sopra l'elenco, con fondo verde tenue e il
 conteggio: sono comandi per l'insieme, quindi non sulla riga.
 
+### Tabella di catalogo
+
+Accanto a righe e copertine, un catalogo può offrire la tabella: `table`
+semantica, intestazioni in maiuscoletto `text-[11px]`, quelle ordinabili come
+pulsanti con `aria-sort` e la scelta in verde. Il titolo resta in
+`font-display` corsivo su due righe al massimo, l'autore in grassetto, i dati
+secondari in `text-xs` muted. Selezione, trascinamento e comandi al passaggio
+sono gli stessi della riga. Il raggruppamento divide l'elenco in sezioni con
+intestazione `sticky` in `font-display` e il conteggio accanto.
+
 ### Barre filtro
 
 - Label attiva in `font-display italic`.

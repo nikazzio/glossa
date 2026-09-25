@@ -50,6 +50,14 @@ Quando un filtro è attivo, in fondo alle viste salvate compare il campo per
 salvarlo con un nome; la vista resta un filtro, e si aggiorna da sola quando
 entrano opere nuove.
 
+L'elenco si vede a righe, a copertine o in **tabella**. La tabella ha una
+colonna per autore, titolo, anno, luogo e tipografo, biblioteca, pagine e stato
+(lavoro e scaricamento); autore, titolo e anno si ordinano cliccando
+l'intestazione. Con **Raggruppa** l'elenco si divide per secolo, autore,
+biblioteca o raccolta, con il numero di opere accanto a ogni gruppo; le opere
+senza il dato vanno in un gruppo in fondo, e un'opera in più raccolte compare
+sotto ognuna. Vista e raggruppamento restano come li lasci.
+
 Le viste a elenco e a griglia mostrano provenienza, pagine dichiarate,
 risoluzioni locali, spazio occupato e collegamenti. Un conteggio non disponibile
 non equivale a zero. Le raccolte raggruppano opere senza spostarle o

@@ -4,6 +4,10 @@ import type { DocumentLayoutPreference } from '../types';
 import { dashboardLocation, locationsEqual, type AppLocation } from '../navigation/appLocation';
 import type { LogFilterKey } from '../components/console/logAreas';
 import type { LogLevel } from '../services/appLogService';
+import type { LibraryGrouping } from '../utils/libraryGrouping';
+
+/** Come si vede l'elenco della Biblioteca. */
+export type LibraryView = 'list' | 'grid' | 'table';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -123,7 +127,9 @@ interface UiState {
   systemLogAreas: LogFilterKey[];
   systemLogLevels: LogLevel[];
   /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
-  libraryView: 'list' | 'grid';
+  libraryView: LibraryView;
+  /** Come si raggruppa l'elenco della Biblioteca. */
+  libraryGrouping: LibraryGrouping;
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
@@ -200,7 +206,8 @@ interface UiState {
   setDrawerTab: (tab: 'console' | 'transcriptionLog' | 'jobs' | 'system') => void;
   setSystemLogAreas: (areas: LogFilterKey[]) => void;
   setSystemLogLevels: (levels: LogLevel[]) => void;
-  setLibraryView: (view: 'list' | 'grid') => void;
+  setLibraryView: (view: LibraryView) => void;
+  setLibraryGrouping: (grouping: LibraryGrouping) => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
@@ -358,6 +365,7 @@ export const useUiStore = create<UiState>()(
       systemLogAreas: ['library', 'translation', 'jobs', 'interface'],
       systemLogLevels: ['ERROR', 'WARN', 'INFO'],
       libraryView: 'list',
+      libraryGrouping: 'none',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
@@ -490,6 +498,7 @@ export const useUiStore = create<UiState>()(
       setSystemLogAreas: (areas) => set({ systemLogAreas: areas }),
       setSystemLogLevels: (levels) => set({ systemLogLevels: levels }),
       setLibraryView: (view) => set({ libraryView: view }),
+      setLibraryGrouping: (grouping) => set({ libraryGrouping: grouping }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
@@ -659,6 +668,7 @@ export const useUiStore = create<UiState>()(
         systemLogAreas: state.systemLogAreas,
         systemLogLevels: state.systemLogLevels,
         libraryView: state.libraryView,
+        libraryGrouping: state.libraryGrouping,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
         editorialAccentColor: state.editorialAccentColor,

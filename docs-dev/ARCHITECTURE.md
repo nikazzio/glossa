@@ -333,6 +333,12 @@ cestino legate alle copie dell'opera, verificate quando hanno pagine e tutte
 approvate; traduzioni attive la cui origine è una copia dell'opera o una sua
 trascrizione.
 
+Vista (`libraryView`: elenco, copertine, tabella) e raggruppamento
+(`libraryGrouping`, `utils/libraryGrouping.ts`: secolo, autore, biblioteca,
+raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
+sull'elenco già filtrato e ordinato; un'opera in più raccolte compare in ogni
+gruppo, e la scelta per intervallo segue l'ordine visibile, gruppi compresi.
+
 La scelta multipla del catalogo (`useCatalogSelection`) è stato della sola
 finestra: si svuota cambiando scaffale o raccolta. I comandi sulla scelta
 girano un'opera alla volta con le stesse azioni della singola riga

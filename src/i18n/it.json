@@ -1586,7 +1586,32 @@
         "transcribing": "In trascrizione",
         "transcribed": "Trascritta",
         "translated": "Tradotta"
-      }
+      },
+      "grouping": {
+        "label": "Raggruppa",
+        "none": "Nessun gruppo",
+        "century": "Per secolo",
+        "creator": "Per autore",
+        "provider": "Per biblioteca",
+        "collection": "Per raccolta",
+        "missing": {
+          "century": "Senza data",
+          "creator": "Senza autore",
+          "provider": "Biblioteca sconosciuta",
+          "collection": "In nessuna raccolta",
+          "none": ""
+        }
+      },
+      "table": {
+        "creator": "Autore",
+        "title": "Titolo",
+        "year": "Anno",
+        "imprint": "Luogo e tipografo",
+        "provider": "Biblioteca",
+        "pages": "Pagine",
+        "state": "Stato"
+      },
+      "viewTable": "Tabella"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2633,6 +2658,7 @@
               "Ogni opera si presenta allo stesso modo in ricerca, in Biblioteca e nello Studio: autore, anno, luogo e tipografo in evidenza, poi il titolo, che si ferma a due righe. Passa il puntatore sul titolo per leggerlo intero.",
               "A sinistra ci sono gli scaffali: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da scaricare, In trascrizione, Non collegate a un workspace, Archiviate. Sotto trovi le tue raccolte, con il campo per crearne una nuova, e le viste salvate.",
               "Sopra l'elenco cerchi in tutti i dati dell'opera — titolo, autore, tipografo, luogo, note, identificativo — e restringi con i filtri rapidi: tipo, secolo, lingua, biblioteca, scaricamento, workspace. Accanto a ogni valore vedi quante opere ha. Ordina per titolo, autore, anno, aggiunte o aperte di recente.",
+              "Accanto al titolo Biblioteca scegli come vedere l'elenco: righe, copertine o tabella. La tabella ha una colonna per autore, titolo, anno, luogo e tipografo, biblioteca, pagine e stato; clic sull'intestazione di autore, titolo o anno per ordinare. Con «Raggruppa» dividi l'elenco per secolo, autore, biblioteca o raccolta.",
               "Quando un filtro restringe l'elenco, in fondo alle viste salvate compare il campo per salvarlo con un nome: la vista si aggiorna da sola quando aggiungi opere.",
               "Collega le opere ai workspace e alle raccolte per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
               "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."

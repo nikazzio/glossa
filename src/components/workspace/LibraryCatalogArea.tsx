@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { AlertCircle, BookOpenText, LayoutGrid, List, RefreshCw } from 'lucide-react';
+import { AlertCircle, BookOpenText, LayoutGrid, List, RefreshCw, Table2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { EASE_EDITORIAL } from '../layout/motion';
@@ -15,7 +15,10 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { LibraryShelves } from './LibraryShelves';
 import { LibraryQuickFilters } from './LibraryQuickFilters';
 import { LibrarySourcePage } from './LibrarySourcePage';
-import { LibraryCatalogRow, DRAGGED_SOURCES } from './LibraryCatalogRow';
+import { LibraryCatalogRow, DRAGGED_SOURCES, type RowPick } from './LibraryCatalogRow';
+import { LibraryCatalogTable } from './LibraryCatalogTable';
+import { groupCatalog } from '../../utils/libraryGrouping';
+import { romanNumeral } from '../../utils/workYear';
 import { LibrarySelectionBar } from './LibrarySelectionBar';
 import { useCatalogSelection } from './useCatalogSelection';
 import { enqueueEntryDownload } from '../../services/sourceDownload';
@@ -79,6 +82,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
   const openedAt = useUiStore((state) => state.libraryOpenedAt);
+  const grouping = useUiStore((state) => state.libraryGrouping);
+  const setGrouping = useUiStore((state) => state.setLibraryGrouping);
   const markOpened = useUiStore((state) => state.markLibraryOpened);
   const finishedDownloads = useJobsStore(
     (state) =>
@@ -129,7 +134,21 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const counts = Object.fromEntries(LIBRARY_FACETS.map((facet) => [facet, facetCounts(catalog, filters, clock, facet)])) as
     Record<(typeof LIBRARY_FACETS)[number], Map<string, number>>;
 
-  const selection = useCatalogSelection(filteredCatalog.map((entry) => entry.source.id));
+  const groupLabel = (key: string): string => {
+    if (key === '') return t(`areas.library.grouping.missing.${grouping}`);
+    switch (grouping) {
+      case 'century': return t('areas.library.filters.centuryValue', { century: romanNumeral(Number(key)) });
+      case 'provider': return providerLabel(key);
+      case 'collection': return collections.find((collection) => collection.id === key)?.name ?? key;
+      default: return key;
+    }
+  };
+  const compareGroupKeys = (a: string, b: string) => grouping === 'century'
+    ? Number(a) - Number(b)
+    : groupLabel(a).localeCompare(groupLabel(b));
+  const groups = groupCatalog(filteredCatalog, grouping, compareGroupKeys);
+  // La scelta per intervallo segue l'ordine in cui le righe si vedono, gruppi compresi.
+  const selection = useCatalogSelection([...new Set(groups.flatMap((group) => group.entries.map((entry) => entry.source.id)))]);
   const selectedEntries = catalog.filter((entry) => selection.selected.has(entry.source.id));
   const applyJobChange = useJobsStore((state) => state.applyChange);
   // Cambiando scaffale o raccolta la scelta si svuota: opere che non si vedono
@@ -253,6 +272,20 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     selection.clear();
   };
 
+  /** Quello che una riga fa, uguale nell'elenco, nella griglia e nella tabella. */
+  const rowHandlers = (entry: LibraryCatalogEntry) => ({
+    onPick: (pick: RowPick) => selection.pick(entry.source.id, pick),
+    onDragStart: (event: DragEvent<HTMLElement>) => {
+      const ids = selection.selected.has(entry.source.id) ? [...selection.selected] : [entry.source.id];
+      event.dataTransfer.setData(DRAGGED_SOURCES, JSON.stringify(ids));
+      event.dataTransfer.effectAllowed = 'copy';
+    },
+    onOpen: () => openSource(entry.source.id),
+    onRemove: () => removeSource(entry.source.id),
+    onSetArchived: (archived: boolean) => archive(entry.source.id, archived),
+    onRefresh: () => void loadCatalog(),
+  });
+
   const isSourcePage = Boolean(itemId && detail && detail.source.id === itemId);
   const transition = { duration: 0.28, ease: EASE_EDITORIAL };
   const yOffset = reducedMotion ? 0 : 8;
@@ -361,12 +394,17 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                     title={t('areas.library.viewGrid')} ariaPressed={view === 'grid'}>
                     <LayoutGrid size={13} />
                   </IconButton>
+                  <IconButton size="sm" tone={view === 'table' ? 'accent' : 'default'} onClick={() => setView('table')}
+                    title={t('areas.library.viewTable')} ariaPressed={view === 'table'}>
+                    <Table2 size={13} />
+                  </IconButton>
                 </div>
               )}
             </div>
             {catalog.length > 0 && (
               <LibraryQuickFilters filters={filters} onChange={changeFilters} counts={counts}
-                providerLabel={providerLabel} workspaceName={workspaceName} />
+                providerLabel={providerLabel} workspaceName={workspaceName}
+                grouping={grouping} onGrouping={setGrouping} />
             )}
             {selectedEntries.length > 0 && (
               <LibrarySelectionBar
@@ -406,39 +444,50 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               ) : filteredCatalog.length === 0 ? (
                 <EmptyState icon={<BookOpenText size={20} />} message={t('areas.library.filters.noMatches')} />
               ) : (
-                <div
-                  className={
-                    view === 'grid'
-                      ? 'grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 px-5 py-4 md:px-6'
-                      : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
-                  }
-                >
-                  {filteredCatalog.map((entry, index) => (
-                    <ListReveal key={entry.source.id} index={index}>
-                    <LibraryCatalogRow
-                      entry={entry}
-                      view={view}
-                      selected={selection.selected.has(entry.source.id)}
-                      selecting={selection.selected.size > 0}
-                      onPick={(pick) => selection.pick(entry.source.id, pick)}
-                      onDragStart={(event) => {
-                        const ids = selection.selected.has(entry.source.id) ? [...selection.selected] : [entry.source.id];
-                        event.dataTransfer.setData(DRAGGED_SOURCES, JSON.stringify(ids));
-                        event.dataTransfer.effectAllowed = 'copy';
-                      }}
-                      providerLabel={entry.providerKey ? providerLabel(entry.providerKey) : undefined}
-                      onOpen={() => openSource(entry.source.id)}
-                      onRemove={() => removeSource(entry.source.id)}
-                      onSetArchived={(archived) => archive(entry.source.id, archived)}
-                      onRefresh={() => void loadCatalog()}
-                      workspaces={workspaces}
-                      onToggleLink={(workspaceId, linked) => void toggleLink(entry.source.id, workspaceId, linked)}
-                      collections={collections}
-                      onSetCollection={(collectionId, member) =>
-                        void collectionAction(() => setCollection(entry.source.id, collectionId, member))}
-                      onCreateTranscription={() => setTranscriptionTarget(entry)}
-                    />
-                    </ListReveal>
+                <div className="px-5 pb-4 md:px-6">
+                  {groups.map((group) => (
+                    <section key={group.key} aria-label={groupLabel(group.key)}>
+                      {grouping !== 'none' && (
+                        <h2 className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-editorial-border bg-surface-panel py-2 font-display text-lg italic text-editorial-ink">
+                          {groupLabel(group.key)}
+                          <span className="font-sans text-xs not-italic tabular-nums text-editorial-muted">{group.entries.length}</span>
+                        </h2>
+                      )}
+                      {view === 'table' ? (
+                        <LibraryCatalogTable
+                          entries={group.entries}
+                          sort={filters.sort}
+                          onSort={(sort) => changeFilters({ ...filters, sort })}
+                          providerLabel={(entry) => (entry.providerKey ? providerLabel(entry.providerKey) : undefined)}
+                          isSelected={(entry) => selection.selected.has(entry.source.id)}
+                          selecting={selection.selected.size > 0}
+                          handlersFor={rowHandlers}
+                        />
+                      ) : (
+                        <div className={view === 'grid'
+                          ? 'grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 py-4'
+                          : 'flex flex-col divide-y divide-editorial-border/60 py-2'}>
+                          {group.entries.map((entry, index) => (
+                            <ListReveal key={entry.source.id} index={index}>
+                              <LibraryCatalogRow
+                                entry={entry}
+                                view={view}
+                                selected={selection.selected.has(entry.source.id)}
+                                selecting={selection.selected.size > 0}
+                                providerLabel={entry.providerKey ? providerLabel(entry.providerKey) : undefined}
+                                workspaces={workspaces}
+                                onToggleLink={(workspaceId, linked) => void toggleLink(entry.source.id, workspaceId, linked)}
+                                collections={collections}
+                                onSetCollection={(collectionId, member) =>
+                                  void collectionAction(() => setCollection(entry.source.id, collectionId, member))}
+                                onCreateTranscription={() => setTranscriptionTarget(entry)}
+                                {...rowHandlers(entry)}
+                              />
+                            </ListReveal>
+                          ))}
+                        </div>
+                      )}
+                    </section>
                   ))}
                 </div>
               )}
