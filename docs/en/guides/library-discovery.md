@@ -53,8 +53,26 @@ disk usage and links. An unavailable count is not equivalent to zero.
 Collections group works without moving or duplicating them.
 
 A work can belong to several workspaces and collections. Removing a link does
-not delete the record or its files. Download, verification, image reduction,
-storage cleanup, archive and deletion controls are in the work’s menu.
+not delete the record or its files. The commands of a row — linking, adding to
+a collection, creating a transcription, and the menu with download,
+verification, image reduction, storage cleanup, archive and deletion — appear
+on hover or when the row has focus. The small line also tells how far the work
+has gone: being transcribed (a transcription not yet fully verified),
+transcribed, translated.
+
+### Several works at once
+
+A click opens the work. With Ctrl (⌘ on the Mac) a click adds it to the choice
+or removes it; with Shift every work between the last choice and the clicked
+one is chosen, in list order; the check mark on the left of the row does the
+same as Ctrl. While the choice is not empty, a bar above the list offers the
+commands that apply to all of them: collection (a new one too), workspace,
+download, archive or return to the catalogue. Archiving several works at once
+does not offer to free space, as it does for a single work. Esc or the cross
+clears the choice, which also clears when you change shelf or collection.
+
+A row can be dragged onto a collection in the left column: the row goes in, or
+the whole choice if the row is part of it.
 
 ## Work details
 

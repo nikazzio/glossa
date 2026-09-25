@@ -55,10 +55,27 @@ risoluzioni locali, spazio occupato e collegamenti. Un conteggio non disponibile
 non equivale a zero. Le raccolte raggruppano opere senza spostarle o
 duplicarle.
 
-Un’opera può essere collegata a più workspace e collezioni. Rimuovere un
-collegamento non elimina la scheda né i file. I comandi per scaricare,
-verificare, ridurre le immagini, liberare spazio, archiviare ed eliminare sono
-nel menu dell’opera.
+Un’opera può essere collegata a più workspace e raccolte. Rimuovere un
+collegamento non elimina la scheda né i file. I comandi di una riga —
+collegare, mettere in una raccolta, creare una trascrizione e il menu con
+scaricare, verificare, ridurre le immagini, liberare spazio, archiviare ed
+eliminare — compaiono al passaggio del puntatore o quando la riga ha il fuoco.
+La riga piccola dice anche a che punto è il lavoro: in trascrizione (una
+trascrizione non ancora verificata per intero), trascritta, tradotta.
+
+### Più opere insieme
+
+Un clic apre l'opera. Con Ctrl (⌘ sul Mac) un clic la aggiunge alla scelta o
+la toglie; con Maiuscolo si scelgono tutte le opere fra l'ultima scelta e
+quella cliccata, nell'ordine dell'elenco; il segno di spunta a sinistra della
+riga fa lo stesso di Ctrl. Finché la scelta non è vuota, sopra l'elenco una
+barra offre i comandi che valgono per tutte: raccolta (anche nuova), workspace,
+scaricamento, archiviazione o ritorno in catalogo. Archiviare più opere insieme
+non propone di liberare spazio, come fa per l'opera singola. Esc o la croce
+svuotano la scelta, che si svuota anche cambiando scaffale o raccolta.
+
+Una riga si trascina su una raccolta nella colonna di sinistra: entra la riga,
+oppure tutta la scelta se la riga ne fa parte.
 
 ## Scheda dell’opera
 

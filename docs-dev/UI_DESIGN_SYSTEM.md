@@ -338,6 +338,18 @@ Nessun pannello filtri a destra: stringendo la finestra si chiudeva da solo e
 non si riapriva. Una sola cosa è scelta nella colonna — uno scaffale o una
 raccolta —; i filtri rapidi la restringono e «azzera» toglie solo quelli.
 
+### Scelta multipla e comandi al passaggio
+
+In un catalogo lungo i comandi di riga non restano accesi: compaiono con
+`group-hover` e `group-focus-within` sulla riga (opacità, non `display`, così
+il tabulatore li raggiunge e il fuoco li mostra). Restano visibili le
+informazioni — collegamenti, stato — e l'avanzamento di un lavoro in corso.
+La scelta multipla segue i gestori di file: click apre, Ctrl/⌘ aggiunge o
+toglie, Maiuscolo sceglie l'intervallo; il segno di spunta a sinistra resta
+visibile su tutte le righe finché la scelta non è vuota. I comandi sulla scelta
+stanno in una barra `role="toolbar"` sopra l'elenco, con fondo verde tenue e il
+conteggio: sono comandi per l'insieme, quindi non sulla riga.
+
 ### Barre filtro
 
 - Label attiva in `font-display italic`.

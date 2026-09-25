@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type DragEvent, type ReactNode } from 'react';
 import {
   Archive,
   Bookmark,
@@ -23,6 +23,7 @@ import {
 } from '../../utils/libraryCatalogFilters';
 import type { LibrarySavedView } from '../../services/librarySavedViewsService';
 import type { SourceCollection } from '../../types';
+import { DRAGGED_SOURCES } from './LibraryCatalogRow';
 
 const SHELF_ICONS: Record<LibraryShelf, LucideIcon> = {
   all: Library,
@@ -33,17 +34,42 @@ const SHELF_ICONS: Record<LibraryShelf, LucideIcon> = {
   archived: Archive,
 };
 
-/** Una voce della colonna: segno, nome, quante opere. La scelta è in verde. */
-function ShelfItem({ icon: Icon, label, count, active, onSelect, action }: {
+/** Gli identificativi trascinati da una riga del catalogo, se lo sono davvero. */
+function draggedSources(event: DragEvent): string[] {
+  try {
+    const parsed: unknown = JSON.parse(event.dataTransfer.getData(DRAGGED_SOURCES));
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Una voce della colonna: segno, nome, quante opere. La scelta è in verde.
+ *  Con `onDropSources` la voce accetta le opere trascinate dal catalogo. */
+function ShelfItem({ icon: Icon, label, count, active, onSelect, action, onDropSources }: {
   icon: LucideIcon;
   label: string;
   count?: number;
   active: boolean;
   onSelect: () => void;
   action?: ReactNode;
+  onDropSources?: (sourceIds: string[]) => void;
 }) {
+  const [over, setOver] = useState(false);
+  const accepts = (event: DragEvent) => onDropSources !== undefined && event.dataTransfer.types.includes(DRAGGED_SOURCES);
   return (
-    <li className="group/shelf flex items-center gap-1">
+    <li
+      className={`group/shelf flex items-center gap-1 rounded ${over ? 'ring-2 ring-editorial-accent' : ''}`}
+      onDragOver={(event) => { if (!accepts(event)) return; event.preventDefault(); setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(event) => {
+        setOver(false);
+        if (!accepts(event)) return;
+        event.preventDefault();
+        const ids = draggedSources(event);
+        if (ids.length > 0) onDropSources?.(ids);
+      }}
+    >
       <button
         type="button"
         onClick={onSelect}
@@ -106,6 +132,7 @@ export function LibraryShelves({
   canSaveView,
   onCreateCollection,
   onDeleteCollection,
+  onDropOnCollection,
   onSaveView,
   onDeleteView,
 }: {
@@ -118,6 +145,7 @@ export function LibraryShelves({
   canSaveView: boolean;
   onCreateCollection: (name: string) => void;
   onDeleteCollection: (collectionId: string) => void;
+  onDropOnCollection: (collectionId: string, sourceIds: string[]) => void;
   onSaveView: (name: string) => void;
   onDeleteView: (viewId: string) => void;
 }) {
@@ -148,6 +176,7 @@ export function LibraryShelves({
               count={collectionCounts.get(collection.id) ?? 0}
               active={filters.collectionId === collection.id}
               onSelect={() => onChange({ ...filters, shelf: 'all', collectionId: collection.id })}
+              onDropSources={(sourceIds) => onDropOnCollection(collection.id, sourceIds)}
               action={
                 <IconButton size="xs" tone="danger" className="opacity-0 group-hover/shelf:opacity-100 focus-visible:opacity-100"
                   onClick={() => onDeleteCollection(collection.id)}

@@ -1567,6 +1567,25 @@
         "newCollection": "New collection…",
         "createCollection": "Create the collection",
         "deleteCollection": "Delete the collection «{{name}}»"
+      },
+      "selection": {
+        "label": "Commands on the chosen works",
+        "select": "Choose the work",
+        "deselect": "Remove from the choice",
+        "count_one": "{{count}} work chosen",
+        "count_other": "{{count}} works chosen",
+        "addToCollection": "Put the chosen works in a collection",
+        "linkToWorkspace": "Link the chosen works to a workspace",
+        "download": "Download the chosen works",
+        "archive": "Archive the chosen works",
+        "restore": "Bring the chosen works back to the catalogue",
+        "clear": "Clear the choice (Esc)"
+      },
+      "stage": {
+        "none": "No work yet",
+        "transcribing": "Being transcribed",
+        "transcribed": "Transcribed",
+        "translated": "Translated"
       }
     },
     "transcriptions": {
@@ -2617,6 +2636,15 @@
               "When a filter narrows the list, a field appears at the bottom of the saved views to save it with a name: the view updates by itself as you add works.",
               "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files.",
               "The item page shows every field it knows about, including those the library did not fill in: they stay empty and you write them with the pencil, as you already do for title and author. The library's original value is kept and can be restored. The essential fields are always in view, the rest sit in groups that open and stay as you leave them."
+            ]
+          },
+          {
+            "title": "Working on several works at once",
+            "paragraphs": [
+              "Hold Ctrl (⌘ on the Mac) and click several works to choose them; with Shift you choose every work between the last choice and the one you click. You can also press the check mark that appears on the left of the row. A click without keys opens the work.",
+              "A command bar for the choice appears above the list: put the works in a collection (a new one too), link them to a workspace, download them, archive them or bring them back to the catalogue. Esc or the cross clears the choice; changing shelf or collection clears it by itself.",
+              "To put works in a collection you can also drag them onto the collection in the left column: the dragged row moves, or the whole choice if the row is part of it.",
+              "The commands of a single row — linking, adding to a collection, creating a transcription, the menu with download and archive — appear when you hover over it. The small line also tells how far the work has gone: being transcribed, transcribed, translated."
             ]
           },
           {

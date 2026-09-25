@@ -1567,6 +1567,25 @@
         "newCollection": "Nuova raccolta…",
         "createCollection": "Crea la raccolta",
         "deleteCollection": "Elimina la raccolta «{{name}}»"
+      },
+      "selection": {
+        "label": "Comandi sulle opere scelte",
+        "select": "Scegli l'opera",
+        "deselect": "Togli dalla scelta",
+        "count_one": "{{count}} opera scelta",
+        "count_other": "{{count}} opere scelte",
+        "addToCollection": "Metti le opere scelte in una raccolta",
+        "linkToWorkspace": "Collega le opere scelte a un workspace",
+        "download": "Scarica le opere scelte",
+        "archive": "Archivia le opere scelte",
+        "restore": "Riporta in catalogo le opere scelte",
+        "clear": "Svuota la scelta (Esc)"
+      },
+      "stage": {
+        "none": "Nessun lavoro",
+        "transcribing": "In trascrizione",
+        "transcribed": "Trascritta",
+        "translated": "Tradotta"
       }
     },
     "transcriptions": {
@@ -2617,6 +2636,15 @@
               "Quando un filtro restringe l'elenco, in fondo alle viste salvate compare il campo per salvarlo con un nome: la vista si aggiorna da sola quando aggiungi opere.",
               "Collega le opere ai workspace e alle raccolte per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
               "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
+            ]
+          },
+          {
+            "title": "Lavorare su più opere insieme",
+            "paragraphs": [
+              "Tieni premuto Ctrl (⌘ sul Mac) e fai clic su più opere per sceglierle; con Maiuscolo scegli tutte quelle fra l'ultima scelta e quella su cui fai clic. Puoi anche premere il segno di spunta che compare a sinistra della riga. Un clic senza tasti apre l'opera.",
+              "Sopra l'elenco compare la barra dei comandi sulla scelta: metti le opere in una raccolta (anche nuova), collegale a un workspace, scaricale, archiviale o riportale in catalogo. Esc o la croce svuotano la scelta; cambiando scaffale o raccolta si svuota da sola.",
+              "Per mettere opere in una raccolta puoi anche trascinarle sulla raccolta nella colonna di sinistra: si sposta la riga trascinata, oppure tutta la scelta se la riga ne fa parte.",
+              "I comandi della singola riga — collegare, mettere in una raccolta, creare una trascrizione, il menu con scaricamento e archivio — compaiono al passaggio del puntatore. Nella riga piccola leggi anche a che punto è il lavoro: in trascrizione, trascritta, tradotta."
             ]
           },
           {

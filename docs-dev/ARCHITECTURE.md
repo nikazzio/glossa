@@ -333,6 +333,14 @@ cestino legate alle copie dell'opera, verificate quando hanno pagine e tutte
 approvate; traduzioni attive la cui origine è una copia dell'opera o una sua
 trascrizione.
 
+La scelta multipla del catalogo (`useCatalogSelection`) è stato della sola
+finestra: si svuota cambiando scaffale o raccolta. I comandi sulla scelta
+girano un'opera alla volta con le stesse azioni della singola riga
+(`setCollection`, `toggleWorkspaceLink`, `setArchived`, `enqueueEntryDownload`
+in `services/sourceDownload.ts`), con un solo messaggio d'errore alla fine. Il
+trascinamento su una raccolta porta gli identificativi nel tipo
+`application/x-glossa-sources`.
+
 Le correzioni a mano ai dati di un'opera vivono in `source_field_overrides`,
 come le correzioni locali ai dizionari: il valore della biblioteca resta intatto
 in `sources` e nei metadati della copia, e la lettura del catalogo applica la

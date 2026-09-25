@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useJobsStore, stillReasonOf } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
-import { enqueueSourceDownload, isTerminal } from '../../services/jobsService';
-import { versionProviderKey } from '../../services/libraryService';
+import { isTerminal } from '../../services/jobsService';
+import { enqueueEntryDownload, providerKeyOf } from '../../services/sourceDownload';
 import { versionInventory } from '../../services/inventoryService';
 import { enqueueOptimization } from '../../services/optimizeService';
 import { forgetVersionCache } from '../../services/cacheService';
@@ -56,10 +56,7 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
     const signature = `${entry.versionId ?? ''}:${entry.providerKey ?? ''}`;
     const cached = cachedProviderKey.current;
     if (cached && cached.signature === signature) return cached.key;
-    const key =
-      (entry.versionId ? await versionProviderKey(entry.versionId) : null) ??
-      entry.providerKey ??
-      'generic';
+    const key = await providerKeyOf(entry);
     cachedProviderKey.current = { signature, key };
     return key;
   };
@@ -68,11 +65,8 @@ export function useSourceActions(entry: LibraryCatalogEntry, handlers: SourceAct
     if (!entry.manifestUrl) return;
     setBusy(true);
     try {
-      const job = await enqueueSourceDownload({
-        providerKey: await providerKey(),
-        manifestUrl: entry.manifestUrl,
-        versionId: entry.versionId ?? undefined,
-      });
+      const job = await enqueueEntryDownload(entry);
+      if (!job) return;
       applyChange(job);
       toast.success(t('areas.library.downloadQueued'));
     } catch (error: unknown) {

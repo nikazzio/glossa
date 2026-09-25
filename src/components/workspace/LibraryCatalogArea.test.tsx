@@ -1079,6 +1079,37 @@ describe('LibraryCatalogArea', () => {
     expect(screen.queryByText('Scaricata')).not.toBeInTheDocument();
   });
 
+  it('con Ctrl si scelgono più opere, e la barra dei comandi vale per tutte', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Pantagruel' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Convivio' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByText('Pantagruel'), { ctrlKey: true });
+    fireEvent.click(screen.getByText('Convivio'), { ctrlKey: true });
+
+    expect(screen.getByRole('toolbar', { name: 'areas.library.selection.label' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.selection.archive' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledTimes(2));
+    expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true);
+    expect(service.setSourceArchived).toHaveBeenCalledWith('s2', true);
+  });
+
+  it('un click senza tasti apre l opera, non la sceglie', () => {
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByText('Book of Hours'));
+
+    expect(screen.queryByRole('toolbar', { name: 'areas.library.selection.label' })).not.toBeInTheDocument();
+    expect(useUiStore.getState().location).toMatchObject({ area: 'library', itemId: 's1' });
+  });
+
   it('mostra solo le opere collegate al workspace scelto', async () => {
     useWorkspaceStore.setState({
       workspaces: [{ id: 'ws-1', name: 'Scherma' } as never],
