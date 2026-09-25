@@ -85,6 +85,7 @@ interface SourceLibraryState {
   /** Aggiunge o toglie l'opera da una collezione; il nome crea la collezione. */
   setCollection: (sourceId: string, collectionId: string, member: boolean) => Promise<void>;
   addToNewCollection: (sourceId: string, name: string) => Promise<void>;
+  createCollection: (name: string) => Promise<void>;
   deleteCollection: (collectionId: string) => Promise<void>;
   refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
@@ -251,6 +252,11 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     await setSourceCollection(collection.id, sourceId, true);
     await get().loadCollections();
     await get().refreshSourceCollections(sourceId);
+  },
+
+  createCollection: async (name) => {
+    await createCollectionService(name);
+    await get().loadCollections();
   },
 
   deleteCollection: async (collectionId) => {

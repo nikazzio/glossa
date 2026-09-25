@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { firstYear, orderResults } from './searchResultOrder';
+import { orderResults } from './searchResultOrder';
+import { centuryOf, firstYear, romanNumeral } from './workYear';
 
 const result = (title: string, creator: string | null, date: string | null) => ({ card: { title, creator, date } });
 
@@ -10,6 +11,16 @@ describe('firstYear', () => {
     expect(firstYear('1542-1560')).toBe(1542);
     expect(firstYear('sec. XV')).toBeNull();
     expect(firstYear(null)).toBeNull();
+  });
+});
+
+describe('centuryOf e romanNumeral', () => {
+  it('conta i secoli come si contano, e li scrive in romano', () => {
+    expect(centuryOf(1542)).toBe(16);
+    expect(centuryOf(1500)).toBe(15);
+    expect(romanNumeral(16)).toBe('XVI');
+    expect(romanNumeral(9)).toBe('IX');
+    expect(romanNumeral(14)).toBe('XIV');
   });
 });
 

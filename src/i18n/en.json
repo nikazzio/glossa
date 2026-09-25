@@ -1294,40 +1294,40 @@
         "other": "Other"
       },
       "filters": {
-        "title": "Filters",
-        "activeCount_one": "{{count}} active filter",
-        "activeCount_other": "{{count}} active filters",
         "searchLabel": "Search the Library",
-        "searchPlaceholder": "Search by title or author…",
-        "kindLabel": "Work type",
-        "allKinds": "Any type",
-        "languageLabel": "Language",
-        "allLanguages": "Any language",
-        "providerLabel": "Library",
-        "allProviders": "Any library",
-        "availabilityLabel": "Availability",
-        "allAvailability": "Any availability",
+        "searchPlaceholder": "Search all data: title, author, printer, place, notes…",
         "availabilityRemote": "Online only",
-        "availabilityPartial": "Partial",
-        "availabilityComplete": "Complete",
+        "availabilityPartial": "Partly downloaded",
+        "availabilityComplete": "Downloaded",
         "clear": "Clear filters",
         "noMatches": "No work matches these filters",
-        "showArchived": "Show archived too",
-        "allCollections": "Any collection",
-        "collectionLabel": "Collection",
-        "savedViews": "Saved views",
         "saveView": "Save this view",
         "deleteView": "Delete the view “{{name}}”",
         "newViewPlaceholder": "Save as…",
-        "newViewLabel": "Name of the view to save",
-        "workspaceLabel": "Workspace",
-        "allWorkspaces": "Any workspace",
-        "noWorkspace": "In no workspace",
         "sortLabel": "Sort the catalogue",
         "sort": {
           "title": "By title",
           "creator": "By author",
-          "added": "Recently added"
+          "year": "By year",
+          "added": "Recently added",
+          "opened": "Recently opened"
+        },
+        "centuryValue": "{{century}} c.",
+        "all": {
+          "kind": "Any type",
+          "century": "Any century",
+          "language": "Any language",
+          "providerKey": "Any library",
+          "availability": "Any state",
+          "workspaceId": "Any workspace"
+        },
+        "facet": {
+          "kind": "Type of work",
+          "century": "Century",
+          "language": "Language",
+          "providerKey": "Library",
+          "availability": "Download",
+          "workspaceId": "Workspace"
         }
       },
       "archive": "Archive",
@@ -1553,7 +1553,21 @@
       "documentUnverified": "availability not checked",
       "documentVerify": "Check PDF availability",
       "documentShow": "Show the PDF in the viewer",
-      "documentShown": "PDF shown in the viewer"
+      "documentShown": "PDF shown in the viewer",
+      "shelves": {
+        "title": "Shelves",
+        "all": "All",
+        "recent": "Recent",
+        "toDownload": "To download",
+        "transcribing": "Being transcribed",
+        "unlinked": "Not linked",
+        "archived": "Archived",
+        "collections": "Collections",
+        "savedViews": "Saved views",
+        "newCollection": "New collection…",
+        "createCollection": "Create the collection",
+        "deleteCollection": "Delete the collection «{{name}}»"
+      }
     },
     "transcriptions": {
       "title": "Transcriptions",
@@ -2598,7 +2612,9 @@
             "title": "Finding a catalogue entry",
             "paragraphs": [
               "Every work looks the same in search, in the Library, and in the Studio: author, year, place, and printer stand out, then the title, cut after two lines. Hover over the title to read it in full.",
-              "Switch between list and grid views and use filters to narrow the catalogue. You can save a filter combination as a view. Include archived works to find an item you have set aside.",
+              "On the left are the shelves: All, Recent (added or opened in the last 30 days), To download, Being transcribed, Not linked to a workspace, Archived. Below are your collections, with the field to create a new one, and the saved views.",
+              "Above the list you search every piece of data about the work — title, author, printer, place, notes, identifier — and narrow down with the quick filters: type, century, language, library, download, workspace. Each value shows how many works it has. Sort by title, author, year, recently added or recently opened.",
+              "When a filter narrows the list, a field appears at the bottom of the saved views to save it with a name: the view updates by itself as you add works.",
               "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files.",
               "The item page shows every field it knows about, including those the library did not fill in: they stay empty and you write them with the pencil, as you already do for title and author. The library's original value is kept and can be restored. The essential fields are always in view, the rest sit in groups that open and stay as you leave them."
             ]

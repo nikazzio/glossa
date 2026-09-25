@@ -328,6 +328,16 @@ non in maiuscoletto spaziato: il maiuscolo su elenchi lunghi si legge peggio e
 rallenta. Vale per i dati che arrivano da fuori (le voci di un manifesto), dove
 i nomi li sceglie la biblioteca e possono essere lunghi.
 
+### Scaffali e filtri rapidi
+
+Un catalogo si organizza con una **colonna di scaffali** a sinistra (larghezza
+fissa `w-56`, voci con segno, nome e conteggio in `tabular-nums`, la scelta in
+verde tenue) e **filtri rapidi** sopra l'elenco: una `Select` per aspetto, con
+il conteggio accanto a ogni valore e il bordo verde quando il filtro è attivo.
+Nessun pannello filtri a destra: stringendo la finestra si chiudeva da solo e
+non si riapriva. Una sola cosa è scelta nella colonna — uno scaffale o una
+raccolta —; i filtri rapidi la restringono e «azzera» toglie solo quelli.
+
 ### Barre filtro
 
 - Label attiva in `font-display italic`.

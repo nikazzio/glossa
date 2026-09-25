@@ -197,6 +197,9 @@ export interface AddSourceToLibraryInput {
   raw: Record<string, string[]>;
 }
 
+/** A che punto è il lavoro su un'opera: il passo più avanzato raggiunto. */
+export type WorkStage = 'none' | 'transcribing' | 'transcribed' | 'translated';
+
 /** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */
 export type SourceStatus = 'active' | 'archived';
 
@@ -295,6 +298,8 @@ export interface LibraryCatalogEntry {
   original: SourceFieldValues;
   /** Le collezioni a cui l'opera è stata aggiunta. */
   collections: { id: string; name: string }[];
+  /** Trascrizioni e traduzioni nate da quest'opera. */
+  stage: WorkStage;
 }
 
 export interface LibrarySourceVersion {

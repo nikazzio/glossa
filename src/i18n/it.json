@@ -1294,40 +1294,40 @@
         "other": "Altro"
       },
       "filters": {
-        "title": "Filtri",
-        "activeCount_one": "{{count}} filtro attivo",
-        "activeCount_other": "{{count}} filtri attivi",
         "searchLabel": "Cerca in Biblioteca",
-        "searchPlaceholder": "Cerca per titolo o autore…",
-        "kindLabel": "Tipo di opera",
-        "allKinds": "Ogni tipo",
-        "languageLabel": "Lingua",
-        "allLanguages": "Ogni lingua",
-        "providerLabel": "Biblioteca",
-        "allProviders": "Ogni biblioteca",
-        "availabilityLabel": "Disponibilità",
-        "allAvailability": "Ogni disponibilità",
+        "searchPlaceholder": "Cerca in tutti i dati: titolo, autore, tipografo, luogo, note…",
         "availabilityRemote": "Solo online",
-        "availabilityPartial": "Parziale",
-        "availabilityComplete": "Completa",
+        "availabilityPartial": "Scaricate in parte",
+        "availabilityComplete": "Scaricate",
         "clear": "Azzera i filtri",
         "noMatches": "Nessuna opera corrisponde ai filtri",
-        "showArchived": "Mostra anche le archiviate",
-        "allCollections": "Ogni collezione",
-        "collectionLabel": "Collezione",
-        "savedViews": "Viste salvate",
         "saveView": "Salva questa vista",
         "deleteView": "Elimina la vista «{{name}}»",
         "newViewPlaceholder": "Salva come…",
-        "newViewLabel": "Nome della vista da salvare",
-        "workspaceLabel": "Workspace",
-        "allWorkspaces": "Ogni workspace",
-        "noWorkspace": "In nessun workspace",
         "sortLabel": "Ordina il catalogo",
         "sort": {
           "title": "Per titolo",
           "creator": "Per autore",
-          "added": "Aggiunte di recente"
+          "year": "Per anno",
+          "added": "Aggiunte di recente",
+          "opened": "Aperte di recente"
+        },
+        "centuryValue": "{{century}} sec.",
+        "all": {
+          "kind": "Ogni tipo",
+          "century": "Ogni secolo",
+          "language": "Ogni lingua",
+          "providerKey": "Ogni biblioteca",
+          "availability": "Ogni stato",
+          "workspaceId": "Ogni workspace"
+        },
+        "facet": {
+          "kind": "Tipo di opera",
+          "century": "Secolo",
+          "language": "Lingua",
+          "providerKey": "Biblioteca",
+          "availability": "Scaricamento",
+          "workspaceId": "Workspace"
         }
       },
       "archive": "Archivia",
@@ -1553,7 +1553,21 @@
       "documentUnverified": "disponibilità non verificata",
       "documentVerify": "Verifica disponibilità del PDF",
       "documentShow": "Visualizza il PDF nel lettore",
-      "documentShown": "PDF in visualizzazione"
+      "documentShown": "PDF in visualizzazione",
+      "shelves": {
+        "title": "Scaffali",
+        "all": "Tutte",
+        "recent": "Recenti",
+        "toDownload": "Da scaricare",
+        "transcribing": "In trascrizione",
+        "unlinked": "Non collegate",
+        "archived": "Archiviate",
+        "collections": "Raccolte",
+        "savedViews": "Viste salvate",
+        "newCollection": "Nuova raccolta…",
+        "createCollection": "Crea la raccolta",
+        "deleteCollection": "Elimina la raccolta «{{name}}»"
+      }
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -2598,8 +2612,10 @@
             "title": "Trovare un’opera nel catalogo",
             "paragraphs": [
               "Ogni opera si presenta allo stesso modo in ricerca, in Biblioteca e nello Studio: autore, anno, luogo e tipografo in evidenza, poi il titolo, che si ferma a due righe. Passa il puntatore sul titolo per leggerlo intero.",
-              "Alterna elenco e griglia e usa i filtri per restringere il catalogo. Puoi salvare una combinazione di filtri come vista. Includi le opere archiviate quando vuoi recuperare un elemento messo da parte.",
-              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
+              "A sinistra ci sono gli scaffali: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da scaricare, In trascrizione, Non collegate a un workspace, Archiviate. Sotto trovi le tue raccolte, con il campo per crearne una nuova, e le viste salvate.",
+              "Sopra l'elenco cerchi in tutti i dati dell'opera — titolo, autore, tipografo, luogo, note, identificativo — e restringi con i filtri rapidi: tipo, secolo, lingua, biblioteca, scaricamento, workspace. Accanto a ogni valore vedi quante opere ha. Ordina per titolo, autore, anno, aggiunte o aperte di recente.",
+              "Quando un filtro restringe l'elenco, in fondo alle viste salvate compare il campo per salvarlo con un nome: la vista si aggiorna da sola quando aggiungi opere.",
+              "Collega le opere ai workspace e alle raccolte per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
               "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
             ]
           },

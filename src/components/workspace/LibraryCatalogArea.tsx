@@ -1,33 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import {
   AlertCircle,
   BookOpenText,
-  Eraser,
   FilePen,
   LayoutGrid,
   Link2,
   List,
   RefreshCw,
-  SlidersHorizontal,
   Tags,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { EASE_EDITORIAL, PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
+import { EASE_EDITORIAL } from '../layout/motion';
 import {
   ClickPopover,
   EmptyState,
   IconButton,
-  InspectorShell,
   LinkChip,
   ListReveal,
   PopoverItem,
   Spinner,
-  Tooltip,
 } from '../ui';
-import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -35,7 +29,8 @@ import { useUiStore } from '../../stores/uiStore';
 import { listIIIFProviders } from '../../services/iiifProviderService';
 import { isTerminal } from '../../services/jobsService';
 import { useJobsStore } from '../../stores/jobsStore';
-import { LibraryFilterBar } from './LibraryFilterBar';
+import { LibraryShelves } from './LibraryShelves';
+import { LibraryQuickFilters } from './LibraryQuickFilters';
 import { LibrarySourcePage } from './LibrarySourcePage';
 import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
@@ -45,11 +40,13 @@ import { WorkIdentity } from '../common/WorkIdentity';
 import { CreateTranscriptionDialog } from '../transcription/CreateTranscriptionDialog';
 import {
   EMPTY_LIBRARY_FILTERS,
+  LIBRARY_FACETS,
+  collectionCounts,
+  facetCounts,
   filterLibraryCatalog,
   hasActiveLibraryFilters,
-  libraryLanguageOptions,
-  NO_WORKSPACE,
   orderLibraryCatalog,
+  shelfCounts,
   type LibraryFilters,
 } from '../../utils/libraryCatalogFilters';
 import { libraryLocation, transcriptionsLocation, withWorkspaceFilter } from '../../navigation/appLocation';
@@ -59,31 +56,14 @@ interface LibraryCatalogAreaProps {
   itemId?: string;
 }
 
-const FILTERS_COLLAPSED = 56;
-const FILTERS_MIN = 280;
-const FILTERS_MAX = 440;
-const CATALOG_MIN = 420;
-const SEPARATOR_WIDTH = 6;
-
-function clampWidth(width: number, min: number, max: number) {
-  return Math.min(Math.max(width, min), max);
+interface LibraryCatalogAreaProps {
+  itemId?: string;
 }
 
-function activeFilterCount(filters: LibraryFilters) {
-  return [
-    filters.query.trim() !== '',
-    filters.kind !== '',
-    filters.language !== '',
-    filters.providerKey !== '',
-    filters.availability !== '',
-    filters.includeArchived,
-    filters.collectionId !== '',
-    filters.workspaceId !== '',
-    filters.sort !== EMPTY_LIBRARY_FILTERS.sort,
-  ].filter(Boolean).length;
-}
-
-/** Catalogo delle fonti salvate in Biblioteca. */
+/**
+ * Catalogo delle fonti salvate in Biblioteca: scaffali e raccolte a sinistra,
+ * ricerca e filtri rapidi sopra l'elenco.
+ */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const { t } = useTranslation();
   const reducedMotion = useReducedMotion();
@@ -101,6 +81,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const loadCollections = useSourceLibraryStore((state) => state.loadCollections);
   const setCollection = useSourceLibraryStore((state) => state.setCollection);
   const addToNewCollection = useSourceLibraryStore((state) => state.addToNewCollection);
+  const createCollection = useSourceLibraryStore((state) => state.createCollection);
+  const deleteCollection = useSourceLibraryStore((state) => state.deleteCollection);
   const savedViews = useLibrarySavedViewsStore((state) => state.views);
   const loadSavedViews = useLibrarySavedViewsStore((state) => state.load);
   const saveView = useLibrarySavedViewsStore((state) => state.save);
@@ -114,12 +96,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const workspaceFilter = location.area === 'library' ? location.workspaceFilter : undefined;
   const view = useUiStore((state) => state.libraryView);
   const setView = useUiStore((state) => state.setLibraryView);
-  const filtersWidth = useUiStore((state) => state.libraryCatalogFiltersWidth);
-  const manualFiltersCollapsed = useUiStore((state) => state.libraryCatalogFiltersCollapsed);
-  const [narrow, setNarrow] = useState(false);
-  const filtersCollapsed = manualFiltersCollapsed || narrow;
-  const setFiltersWidth = useUiStore((state) => state.setLibraryCatalogFiltersWidth);
-  const setFiltersCollapsed = useUiStore((state) => state.setLibraryCatalogFiltersCollapsed);
+  const openedAt = useUiStore((state) => state.libraryOpenedAt);
+  const markOpened = useUiStore((state) => state.markLibraryOpened);
   const finishedDownloads = useJobsStore(
     (state) =>
       state.jobs.filter((job) => job.jobType === 'source_download' && isTerminal(job)).length,
@@ -127,13 +105,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const [filters, setFilters] = useState(EMPTY_LIBRARY_FILTERS);
   const [providers, setProviders] = useState<IIIFProvider[]>([]);
   const [transcriptionTarget, setTranscriptionTarget] = useState<LibraryCatalogEntry | null>(null);
-  const [filtersPanel, setFiltersPanel] = usePanelCallbackRef();
-  const [dragging, setDragging] = useResizeDragging();
-  const initialFiltersWidth = useRef(clampWidth(filtersWidth || 320, FILTERS_MIN, FILTERS_MAX));
-  const catalogArea = useRef<HTMLDivElement>(null);
-  // Chiusi dallo spazio, non da chi guarda: riaprendosi la finestra tornano
-  // come erano, mentre una chiusura decisa a mano resta.
-  const collapsedByWidth = useRef(false);
 
   useEffect(() => {
     void loadCatalog();
@@ -154,86 +125,35 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       .catch(() => setProviders([]));
   }, []);
 
+  // Il filtro workspace vive anche nell'indirizzo: arrivando da un workspace la
+  // Biblioteca si apre già ristretta alle sue opere.
   useEffect(() => {
-    setFilters((current) => {
-      if (workspaceFilter) {
-        return current.workspaceId === workspaceFilter
-          ? current
-          : { ...current, workspaceId: workspaceFilter };
-      }
-      if (current.workspaceId && current.workspaceId !== NO_WORKSPACE) {
-        return { ...current, workspaceId: '' };
-      }
-      return current;
-    });
+    setFilters((current) =>
+      current.workspaceId === (workspaceFilter ?? '') ? current : { ...current, workspaceId: workspaceFilter ?? '' });
   }, [workspaceFilter]);
-
-  useEffect(() => {
-    if (!filtersPanel) return;
-    if (filtersCollapsed && !filtersPanel.isCollapsed()) filtersPanel.collapse();
-    if (!filtersCollapsed && filtersPanel.isCollapsed()) filtersPanel.expand();
-  }, [filtersCollapsed, filtersPanel]);
-
-  // Sotto la somma delle due larghezze minime nessuna colonna può più
-  // stringersi: senza questo, i filtri uscivano dal bordo e comparivano le
-  // barre di scorrimento orizzontali.
-  useEffect(() => {
-    const element = catalogArea.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const narrow = entry.contentRect.width < CATALOG_MIN + FILTERS_MIN + SEPARATOR_WIDTH;
-      collapsedByWidth.current = narrow;
-      setNarrow(narrow);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
 
   const changeFilters = (next: LibraryFilters) => {
     setFilters(next);
-    const nextWorkspaceFilter =
-      next.workspaceId && next.workspaceId !== NO_WORKSPACE ? next.workspaceId : null;
+    const nextWorkspaceFilter = next.workspaceId || null;
     if (nextWorkspaceFilter !== (workspaceFilter ?? null)) {
       navigate(withWorkspaceFilter(location, nextWorkspaceFilter));
     }
   };
 
-  const persistFiltersLayout = () => {
-    if (!filtersPanel || collapsedByWidth.current) return;
-    const collapsed = filtersPanel.isCollapsed();
-    if (collapsed !== filtersCollapsed) setFiltersCollapsed(collapsed);
-    if (!collapsed) {
-      const px = Math.round(filtersPanel.getSize().inPixels);
-      if (px !== filtersWidth) setFiltersWidth(px);
-    }
+  // Un catalogo personale sono centinaia di opere, non milioni: filtri e
+  // conteggi si rifanno a ogni disegno senza costare niente di visibile.
+  const clock = { now: Date.now(), openedAt };
+  const filteredCatalog = orderLibraryCatalog(filterLibraryCatalog(catalog, filters, clock), filters.sort, openedAt);
+  const counts = Object.fromEntries(LIBRARY_FACETS.map((facet) => [facet, facetCounts(catalog, filters, clock, facet)])) as
+    Record<(typeof LIBRARY_FACETS)[number], Map<string, number>>;
+
+  const providerLabel = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
+  const workspaceName = (id: string) => workspaces.find((workspace) => workspace.id === id)?.name ?? id;
+
+  const openSource = (sourceId: string) => {
+    markOpened(sourceId);
+    navigate(libraryLocation({ itemId: sourceId, workspaceFilter }));
   };
-
-  const syncFiltersCollapsed = () => {
-    if (collapsedByWidth.current) return;
-    const collapsed = filtersPanel?.isCollapsed() ?? false;
-    if (collapsed !== filtersCollapsed) setFiltersCollapsed(collapsed);
-  };
-
-  const toggleFiltersCollapsed = (next: boolean) => {
-    if (!filtersPanel) return;
-    if (collapsedByWidth.current) return;
-    if (next) filtersPanel.collapse();
-    else filtersPanel.expand();
-    setFiltersCollapsed(next);
-  };
-
-  const filteredCatalog = orderLibraryCatalog(filterLibraryCatalog(catalog, filters), filters.sort);
-  // Le tendine offrono i valori delle opere che si stanno guardando: con le
-  // archiviate nascoste, una lingua presente solo lì sarebbe una scelta che
-  // non seleziona niente.
-  const visibleCatalog = filters.includeArchived
-    ? catalog
-    : catalog.filter((entry) => entry.source.status === 'active');
-  const providerOptions = providers.filter((provider) =>
-    visibleCatalog.some((entry) => entry.providerKey === provider.key),
-  );
-
-  const openSource = (sourceId: string) => navigate(libraryLocation({ itemId: sourceId, workspaceFilter }));
   const openCatalogue = () => navigate(libraryLocation({ workspaceFilter }));
 
   /** Si torna al catalogo **dopo** che l'opera è sparita davvero: navigare
@@ -267,21 +187,18 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
 
   /** Anche le collezioni raccontano il guasto invece di lasciarlo cadere: un
    *  errore che nessuno mostra è un comando che sembra non aver fatto niente. */
-  const changeCollection = async (sourceId: string, collectionId: string, member: boolean) => {
+  const collectionAction = async (work: () => Promise<void>) => {
     try {
-      await setCollection(sourceId, collectionId, member);
+      await work();
     } catch {
       toast.error(t('areas.library.collectionFailed'));
     }
   };
 
-  const createCollectionFor = async (sourceId: string, name: string) => {
-    try {
-      await addToNewCollection(sourceId, name);
-    } catch {
-      toast.error(t('areas.library.collectionFailed'));
-    }
-  };
+  const removeCollection = (collectionId: string) => collectionAction(async () => {
+    await deleteCollection(collectionId);
+    if (filters.collectionId === collectionId) setFilters({ ...filters, collectionId: '' });
+  });
 
   const archive = async (sourceId: string, archived: boolean) => {
     try {
@@ -301,7 +218,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   };
 
   const isSourcePage = Boolean(itemId && detail && detail.source.id === itemId);
-  const filterCount = activeFilterCount(filters);
   const transition = { duration: 0.28, ease: EASE_EDITORIAL };
   const yOffset = reducedMotion ? 0 : 8;
 
@@ -334,11 +250,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                 <IconButton size="sm" onClick={openCatalogue} title={t('areas.library.backToCatalogue')}>
                   <BookOpenText size={14} />
                 </IconButton>
-                <IconButton
-                  size="sm"
-                  onClick={() => void loadDetail(itemId)}
-                  title={t('areas.library.retry')}
-                >
+                <IconButton size="sm" onClick={() => void loadDetail(itemId)} title={t('areas.library.retry')}>
                   <RefreshCw size={14} />
                 </IconButton>
               </div>
@@ -367,8 +279,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
             onToggleLink={(workspaceId, linked) => void toggleLink(itemId, workspaceId, linked)}
             onCorrectField={(field, value) => correct(itemId, field, value)}
             collections={collections}
-            onSetCollection={(collectionId, member) => changeCollection(itemId, collectionId, member)}
-            onCreateCollection={(name) => createCollectionFor(itemId, name)}
+            onSetCollection={(collectionId, member) => collectionAction(() => setCollection(itemId, collectionId, member))}
+            onCreateCollection={(name) => collectionAction(() => addToNewCollection(itemId, name))}
             onResyncSource={() => resync(itemId)}
           />
         </motion.div>
@@ -379,181 +291,99 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -yOffset }}
           transition={transition}
-          className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
-          ref={catalogArea}
+          className="flex h-full min-h-0 w-full min-w-0 flex-1"
         >
-          <Group
-            orientation="horizontal"
-            className="flex h-full min-h-0 flex-1"
-            onLayoutChanged={persistFiltersLayout}
-          >
-            <Panel id="library-catalog" minSize={CATALOG_MIN} className="flex min-w-0 flex-col">
-              <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-surface-panel custom-scrollbar">
-                <div className="flex items-end justify-between gap-3 px-5 pt-5 md:px-6">
-                  <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-                    {t('areas.library.title')}
-                  </h1>
-                  {catalog.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <IconButton
-                        size="sm"
-                        tone={view === 'list' ? 'accent' : 'default'}
-                        onClick={() => setView('list')}
-                        title={t('areas.library.viewList')}
-                        ariaPressed={view === 'list'}
-                      >
-                        <List size={13} />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        tone={view === 'grid' ? 'accent' : 'default'}
-                        onClick={() => setView('grid')}
-                        title={t('areas.library.viewGrid')}
-                        ariaPressed={view === 'grid'}
-                      >
-                        <LayoutGrid size={13} />
-                      </IconButton>
-                    </div>
-                  )}
+          <aside className="flex w-56 shrink-0 flex-col border-r border-editorial-border bg-surface-panel">
+            <LibraryShelves
+              filters={filters}
+              onChange={changeFilters}
+              shelfCounts={shelfCounts(catalog, clock)}
+              collections={collections}
+              collectionCounts={collectionCounts(catalog)}
+              savedViews={savedViews}
+              canSaveView={hasActiveLibraryFilters(filters)}
+              onCreateCollection={(name) => void collectionAction(() => createCollection(name))}
+              onDeleteCollection={(collectionId) => void removeCollection(collectionId)}
+              onSaveView={(name) => void saveView(name, filters)}
+              onDeleteView={(viewId) => void removeSavedView(viewId)}
+            />
+          </aside>
+          <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-panel">
+            <div className="flex items-end justify-between gap-3 px-5 pt-5 md:px-6">
+              <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+                {t('areas.library.title')}
+              </h1>
+              {catalog.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <IconButton size="sm" tone={view === 'list' ? 'accent' : 'default'} onClick={() => setView('list')}
+                    title={t('areas.library.viewList')} ariaPressed={view === 'list'}>
+                    <List size={13} />
+                  </IconButton>
+                  <IconButton size="sm" tone={view === 'grid' ? 'accent' : 'default'} onClick={() => setView('grid')}
+                    title={t('areas.library.viewGrid')} ariaPressed={view === 'grid'}>
+                    <LayoutGrid size={13} />
+                  </IconButton>
                 </div>
+              )}
+            </div>
+            {catalog.length > 0 && (
+              <LibraryQuickFilters filters={filters} onChange={changeFilters} counts={counts}
+                providerLabel={providerLabel} workspaceName={workspaceName} />
+            )}
 
-                {catalogLoading && catalog.length === 0 ? (
-                  <div className="flex flex-1 items-center justify-center gap-3 text-sm text-editorial-muted">
-                    <Spinner size={14} />
-                    <span>{t('areas.library.catalogLoading')}</span>
-                  </div>
-                ) : catalogError && catalog.length === 0 ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-                    <EmptyState
-                      icon={<AlertCircle size={20} />}
-                      message={t('areas.library.catalogLoadError')}
-                      hint={t('areas.library.loadErrorHint')}
-                      className="flex flex-col items-center gap-3"
+            <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+              {catalogLoading && catalog.length === 0 ? (
+                <div className="flex h-full items-center justify-center gap-3 text-sm text-editorial-muted">
+                  <Spinner size={14} />
+                  <span>{t('areas.library.catalogLoading')}</span>
+                </div>
+              ) : catalogError && catalog.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+                  <EmptyState
+                    icon={<AlertCircle size={20} />}
+                    message={t('areas.library.catalogLoadError')}
+                    hint={t('areas.library.loadErrorHint')}
+                    className="flex flex-col items-center gap-3"
+                  />
+                  <IconButton size="sm" onClick={() => void loadCatalog()} title={t('areas.library.retry')}>
+                    <RefreshCw size={14} />
+                  </IconButton>
+                </div>
+              ) : catalog.length === 0 ? (
+                <EmptyState icon={<BookOpenText size={20} />} message={t('areas.library.empty')} hint={t('areas.library.emptyHint')} />
+              ) : filteredCatalog.length === 0 ? (
+                <EmptyState icon={<BookOpenText size={20} />} message={t('areas.library.filters.noMatches')} />
+              ) : (
+                <div
+                  className={
+                    view === 'grid'
+                      ? 'grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 px-5 py-4 md:px-6'
+                      : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
+                  }
+                >
+                  {filteredCatalog.map((entry, index) => (
+                    <ListReveal key={entry.source.id} index={index}>
+                    <CatalogEntryRow
+                      entry={entry}
+                      view={view}
+                      providerLabel={entry.providerKey ? providerLabel(entry.providerKey) : undefined}
+                      onOpen={() => openSource(entry.source.id)}
+                      onRemove={() => removeSource(entry.source.id)}
+                      onSetArchived={(archived) => archive(entry.source.id, archived)}
+                      onRefresh={() => void loadCatalog()}
+                      workspaces={workspaces}
+                      onToggleLink={(workspaceId, linked) => void toggleLink(entry.source.id, workspaceId, linked)}
+                      collections={collections}
+                      onSetCollection={(collectionId, member) =>
+                        void collectionAction(() => setCollection(entry.source.id, collectionId, member))}
+                      onCreateTranscription={() => setTranscriptionTarget(entry)}
                     />
-                    <IconButton size="sm" onClick={() => void loadCatalog()} title={t('areas.library.retry')}>
-                      <RefreshCw size={14} />
-                    </IconButton>
-                  </div>
-                ) : catalog.length === 0 ? (
-                  <EmptyState
-                    icon={<BookOpenText size={20} />}
-                    message={t('areas.library.empty')}
-                    hint={t('areas.library.emptyHint')}
-                  />
-                ) : filteredCatalog.length === 0 ? (
-                  <EmptyState
-                    icon={<BookOpenText size={20} />}
-                    message={t('areas.library.filters.noMatches')}
-                  />
-                ) : (
-                  <div
-                    className={
-                      view === 'grid'
-                        ? 'grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 px-5 py-4 md:px-6'
-                        : 'flex flex-col divide-y divide-editorial-border/60 px-5 py-2 md:px-6'
-                    }
-                  >
-                    {filteredCatalog.map((entry, index) => (
-                      <ListReveal key={entry.source.id} index={index}>
-                      <CatalogEntryRow
-                        entry={entry}
-                        view={view}
-                        providerLabel={providers.find((provider) => provider.key === entry.providerKey)?.label}
-                        onOpen={() => openSource(entry.source.id)}
-                        onRemove={() => removeSource(entry.source.id)}
-                        onSetArchived={(archived) => archive(entry.source.id, archived)}
-                        onRefresh={() => void loadCatalog()}
-                        workspaces={workspaces}
-                        onToggleLink={(workspaceId, linked) =>
-                          void toggleLink(entry.source.id, workspaceId, linked)
-                        }
-                        collections={collections}
-                        onSetCollection={(collectionId, member) =>
-                          void changeCollection(entry.source.id, collectionId, member)
-                        }
-                        onCreateTranscription={() => setTranscriptionTarget(entry)}
-                      />
-                      </ListReveal>
-                    ))}
-                  </div>
-                )}
-              </main>
-            </Panel>
-
-            <Separator
-              onPointerDown={() => setDragging(true)}
-              className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-                dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className={`relative h-7 w-px rounded-full transition-colors ${
-                  dragging
-                    ? 'bg-editorial-accent'
-                    : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-                }`}
-              />
-            </Separator>
-
-            <Panel
-              id="library-catalog-filters"
-              collapsible
-              collapsedSize={FILTERS_COLLAPSED}
-              minSize={FILTERS_MIN}
-              maxSize={FILTERS_MAX}
-              defaultSize={initialFiltersWidth.current}
-              panelRef={setFiltersPanel}
-              onResize={syncFiltersCollapsed}
-              className={`flex min-w-0 flex-col border-l border-editorial-border bg-surface-panel ${
-                dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
-              }`}
-            >
-              <InspectorShell
-                ariaLabel={t('areas.library.filters.title')}
-                tabs={[]}
-                activeTab=""
-                onTabChange={() => undefined}
-                panelIcon={<SlidersHorizontal size={15} />}
-                panelLabel={t('areas.library.filters.title')}
-                collapsed={filtersCollapsed}
-                onCollapsedChange={toggleFiltersCollapsed}
-                ownsPanelSemantics={false}
-                headerActions={
-                  hasActiveLibraryFilters(filters) ? (
-                    <IconButton
-                      size="sm"
-                      onClick={() => changeFilters(EMPTY_LIBRARY_FILTERS)}
-                      title={t('areas.library.filters.clear')}
-                    >
-                      <Eraser size={13} />
-                    </IconButton>
-                  ) : undefined
-                }
-                collapsedContent={
-                  filterCount > 0 ? (
-                    <Tooltip label={t('areas.library.filters.activeCount', { count: filterCount })} side="left">
-                      <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-editorial-accent/10 px-1.5 text-xs font-semibold tabular-nums text-editorial-accent">
-                        {filterCount}
-                      </span>
-                    </Tooltip>
-                  ) : undefined
-                }
-              >
-                <LibraryFilterBar
-                  filters={filters}
-                  onChange={changeFilters}
-                  languageOptions={libraryLanguageOptions(visibleCatalog)}
-                  providerOptions={providerOptions}
-                  collectionOptions={collections}
-                  workspaceOptions={workspaces}
-                  savedViews={savedViews}
-                  onSaveView={(name) => void saveView(name, filters)}
-                  onDeleteView={(viewId) => void removeSavedView(viewId)}
-                />
-              </InspectorShell>
-            </Panel>
-          </Group>
+                    </ListReveal>
+                  ))}
+                </div>
+              )}
+            </div>
+          </main>
         </motion.div>
       )}
     </AnimatePresence>

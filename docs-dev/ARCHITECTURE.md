@@ -218,10 +218,10 @@ la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed
 esito, senza criteri né indirizzi.
 
 La Biblioteca è tornata un'area unica con il solo catalogo
-(`LibraryCatalogArea`): nessuna linguetta. Le colonne
-ridimensionabili hanno larghezze minime in pixel: sotto la loro somma la
-colonna dei filtri si richiude da sola e si riapre quando lo spazio torna,
-mentre una chiusura decisa dall'utente resta. Ogni contenitore intermedio di
+(`LibraryCatalogArea`): nessuna linguetta. La colonna degli scaffali ha
+larghezza fissa e l'elenco prende il resto; non esiste più un pannello filtri
+ridimensionabile a destra, che sotto una certa larghezza si chiudeva da solo e
+ignorava il comando di riapertura (#484). Ogni contenitore intermedio di
 un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
 barre di scorrimento orizzontali.
 
@@ -316,6 +316,22 @@ sulle opere: appartenenza multipla, sempre reversibile, nessuna fusione di
 schede. Le viste salvate (`library_saved_views`) conservano i filtri come JSON,
 riletti in modo difensivo: una vista scritta quando i filtri erano altri resta
 valida, i campi che non si riconoscono tornano neutri.
+
+Il catalogo della Biblioteca si guarda per **scaffale** (`shelf`: tutte,
+recenti, da scaricare, in trascrizione, non collegate, archiviate) oppure per
+raccolta, poi si restringe con ricerca e **filtri rapidi** (`LIBRARY_FACETS`:
+tipo, secolo, lingua, biblioteca, disponibilità, workspace), tutto in
+`utils/libraryCatalogFilters.ts` e lato finestra. `facetCounts` conta i valori
+di un filtro applicando tutti gli altri. Il secolo viene dal primo anno della
+data (`utils/workYear.ts`). «Recenti» e l'ordine «aperte di recente» usano
+`uiStore.libraryOpenedAt`, la data dell'ultima apertura di ogni scheda,
+persistita con le preferenze e non nel database: è memoria di navigazione, non
+un fatto dell'opera. La riga del catalogo porta `stage` (`none`,
+`transcribing`, `transcribed`, `translated`), calcolato in una query sola da
+`workStagesOfMany` (`services/workStageService.ts`): trascrizioni non nel
+cestino legate alle copie dell'opera, verificate quando hanno pagine e tutte
+approvate; traduzioni attive la cui origine è una copia dell'opera o una sua
+trascrizione.
 
 Le correzioni a mano ai dati di un'opera vivono in `source_field_overrides`,
 come le correzioni locali ai dizionari: il valore della biblioteca resta intatto

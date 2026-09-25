@@ -150,6 +150,7 @@ const entry = (
   workspaces: [],
   original: {},
   collections: [],
+  stage: 'none',
   providerKey: 'gallica',
   ...overrides,
 });
@@ -159,10 +160,9 @@ const entry = (
 const openRowMenu = () =>
   fireEvent.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
 
-/** Le tendine dei filtri e "mostra archiviate" vivono nella colonna dei
- *  filtri, aperta di default: non c'è più niente da aprire prima. */
+/** Le archiviate stanno nel loro scaffale, nella colonna di sinistra. */
 const showArchived = () =>
-  fireEvent.click(screen.getByRole('switch', { name: 'areas.library.filters.showArchived' }));
+  fireEvent.click(screen.getByRole('button', { name: /areas\.library\.shelves\.archived/ }));
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
@@ -433,7 +433,7 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
-    // Di default le archiviate non si vedono: si accende il filtro.
+    // Di default le archiviate non si vedono: stanno nel loro scaffale.
     showArchived();
     openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
@@ -441,7 +441,7 @@ describe('LibraryCatalogArea', () => {
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', false));
   });
 
-  it('le opere archiviate stanno fuori dall elenco finché non si chiede di vederle', () => {
+  it('le opere archiviate stanno fuori dall elenco, nel loro scaffale', () => {
     useSourceLibraryStore.setState({
       catalog: [
         entry({ source: { ...entry().source, status: 'archived', archivedAt: '2026-08-30' } }),
@@ -1044,6 +1044,41 @@ describe('LibraryCatalogArea', () => {
     expect(titoli()[0]).toContain('Vita nuova');
   });
 
+  it('i filtri rapidi dicono quante opere ha ogni valore, e il secolo viene dalla data', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Pantagruel' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1542' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Convivio' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1490' } }),
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    const century = screen.getByRole('combobox', { name: 'areas.library.filters.facet.century' });
+    expect(within(century).getAllByRole('option', { hidden: true }).map((option) => option.textContent))
+      .toEqual(['areas.library.filters.all.century', 'areas.library.filters.centuryValue (1)', 'areas.library.filters.centuryValue (1)']);
+    await user.selectOptions(century, '16');
+
+    expect(screen.getByText('Pantagruel')).toBeInTheDocument();
+    expect(screen.queryByText('Convivio')).not.toBeInTheDocument();
+  });
+
+  it('lo scaffale «da scaricare» tiene solo le opere non ancora sul computer', () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Solo online' }, localPages: 0 }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Scaricata' }, localPages: 210, expectedPages: 210,
+          sizes: [{ sizeTag: '2000', pages: 210, bytes: 1, missing: 0, derived: false }], principalSize: '2000' }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: /areas\.library\.shelves\.toDownload/ }));
+
+    expect(screen.getByText('Solo online')).toBeInTheDocument();
+    expect(screen.queryByText('Scaricata')).not.toBeInTheDocument();
+  });
+
   it('mostra solo le opere collegate al workspace scelto', async () => {
     useWorkspaceStore.setState({
       workspaces: [{ id: 'ws-1', name: 'Scherma' } as never],
@@ -1062,7 +1097,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'areas.library.filters.workspaceLabel' }),
+      screen.getByRole('combobox', { name: 'areas.library.filters.facet.workspaceId' }),
       'ws-1',
     );
 
@@ -1110,15 +1145,13 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    // Nella colonna dei filtri i campi si scrivono con un evento diretto:
-    // userEvent non consegna i tasti dentro un pannello ridimensionabile in
-    // jsdom, come già per i comandi icona dentro un tooltip.
+    // Il campo per salvare la vista compare solo quando un filtro restringe l'elenco.
     fireEvent.change(
       screen.getByRole('searchbox', { name: 'areas.library.filters.searchLabel' }),
       { target: { value: 'hours' } },
     );
     fireEvent.change(
-      screen.getByRole('textbox', { name: 'areas.library.filters.newViewLabel' }),
+      screen.getByRole('textbox', { name: 'areas.library.filters.newViewPlaceholder' }),
       { target: { value: 'Miniati' } },
     );
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));

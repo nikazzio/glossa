@@ -31,10 +31,26 @@ hover. At the bottom, in small print, library, pages, and status. Early printed
 books are recognised by who wrote and printed them, not by titles half a page
 long.
 
+The left column holds the **shelves**, fixed ways of looking at the catalogue:
+All, Recent (added or opened in the last 30 days), To download (not all on the
+computer yet), Being transcribed (with a transcription not yet fully
+verified), Not linked to a workspace, Archived. Archived works appear only on
+their own shelf. Below are the **collections**, created with the field at the
+bottom of the section and deletable without touching the works, and the
+**saved views**. Every entry shows how many works it holds.
+
+Above the list the search looks at every piece of data about the work — title,
+author, printer, place, notes, identifier — and the **quick filters** narrow
+the chosen shelf or collection by type, century (from the first year in the
+date), language, library, download state and workspace. Each value shows how
+many works it would have with the other filters already applied. The list
+sorts by title, author, year, recently added or recently opened. When a filter
+is active, a field appears at the bottom of the saved views to save it with a
+name; the view stays a filter and updates by itself as new works come in.
+
 List and grid views show provenance, declared page count, local resolutions,
 disk usage and links. An unavailable count is not equivalent to zero.
-Filters narrow the catalogue and can include archived works; saved views retain
-filter combinations. Collections group works without moving or duplicating them.
+Collections group works without moving or duplicating them.
 
 A work can belong to several workspaces and collections. Removing a link does
 not delete the record or its files. Download, verification, image reduction,

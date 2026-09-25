@@ -32,11 +32,28 @@ intestazioni) e si legge intero al passaggio del puntatore. In fondo, in
 piccolo, biblioteca, pagine e stato. I libri antichi si riconoscono da chi li
 ha scritti e stampati, non da titoli che occupano mezza pagina.
 
+La colonna di sinistra raccoglie gli **scaffali**, modi fissi di guardare il
+catalogo: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da
+scaricare (non ancora tutte sul computer), In trascrizione (con una
+trascrizione non ancora verificata per intero), Non collegate a un workspace,
+Archiviate. Le archiviate compaiono solo nel loro scaffale. Sotto stanno le
+**raccolte**, create con il campo in fondo alla sezione ed eliminabili senza
+toccare le opere, e le **viste salvate**. Ogni voce dice quante opere contiene.
+
+Sopra l'elenco la ricerca guarda tutti i dati dell'opera — titolo, autore,
+tipografo, luogo, note, identificativo — e i **filtri rapidi** restringono lo
+scaffale o la raccolta scelti per tipo, secolo (ricavato dal primo anno della
+data), lingua, biblioteca, stato dello scaricamento e workspace. Accanto a ogni
+valore c'è il numero di opere che avrebbe con gli altri filtri già applicati.
+L'elenco si ordina per titolo, autore, anno, aggiunte o aperte di recente.
+Quando un filtro è attivo, in fondo alle viste salvate compare il campo per
+salvarlo con un nome; la vista resta un filtro, e si aggiorna da sola quando
+entrano opere nuove.
+
 Le viste a elenco e a griglia mostrano provenienza, pagine dichiarate,
 risoluzioni locali, spazio occupato e collegamenti. Un conteggio non disponibile
-non equivale a zero. I filtri permettono di restringere il catalogo e di
-includere le opere archiviate; una vista salvata conserva una combinazione di
-filtri. Le collezioni raggruppano opere senza spostarle o duplicarle.
+non equivale a zero. Le raccolte raggruppano opere senza spostarle o
+duplicarle.
 
 Un’opera può essere collegata a più workspace e collezioni. Rimuovere un
 collegamento non elimina la scheda né i file. I comandi per scaricare,

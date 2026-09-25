@@ -155,9 +155,9 @@ interface UiState {
   /** Colonna visore dello Studio di trascrizione. 0 = mai ridimensionata,
    *  vale la proporzione predefinita (3/5 visore, 2/5 testo). */
   transcriptionViewerWidth: number;
-  /** Colonna filtri del catalogo Biblioteca. */
-  libraryCatalogFiltersWidth: number;
-  libraryCatalogFiltersCollapsed: boolean;
+  /** Quando è stata aperta l'ultima volta ogni opera della Biblioteca: serve
+   *  allo scaffale «Recenti» e all'ordine «aperte di recente». */
+  libraryOpenedAt: Record<string, string>;
   /** Le sezioni della Panoramica, nell'ordine e nella colonna in cui l'utente
    *  le ha messe. Due elenchi e non uno solo: una sezione appartiene a una
    *  colonna, e spostarla dentro la sua o nell'altra dev'essere la stessa
@@ -221,8 +221,7 @@ interface UiState {
   setLibrarySourceInspectorWidth: (width: number) => void;
   setTranscriptionInspectorWidth: (width: number) => void;
   setTranscriptionViewerWidth: (width: number) => void;
-  setLibraryCatalogFiltersWidth: (width: number) => void;
-  setLibraryCatalogFiltersCollapsed: (collapsed: boolean) => void;
+  markLibraryOpened: (sourceId: string) => void;
   setLibrarySourceGroupOpen: (group: string, open: boolean) => void;
   setDashboardSectionColumns: (columns: { left: string[]; right: string[] }) => void;
   setDashboardJobsWidth: (width: number) => void;
@@ -382,8 +381,7 @@ export const useUiStore = create<UiState>()(
       librarySourceInspectorWidth: 400,
       transcriptionInspectorWidth: 380,
       transcriptionViewerWidth: 0,
-      libraryCatalogFiltersWidth: 320,
-      libraryCatalogFiltersCollapsed: false,
+      libraryOpenedAt: {},
       librarySourceGroups: {},
       dashboardSectionColumns: {
         left: ['resume', 'searches', 'activity'],
@@ -575,8 +573,8 @@ export const useUiStore = create<UiState>()(
       setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
       setTranscriptionInspectorWidth: (width) => set({ transcriptionInspectorWidth: width }),
       setTranscriptionViewerWidth: (width) => set({ transcriptionViewerWidth: width }),
-      setLibraryCatalogFiltersWidth: (width) => set({ libraryCatalogFiltersWidth: width }),
-      setLibraryCatalogFiltersCollapsed: (collapsed) => set({ libraryCatalogFiltersCollapsed: collapsed }),
+      markLibraryOpened: (sourceId) =>
+        set((state) => ({ libraryOpenedAt: { ...state.libraryOpenedAt, [sourceId]: new Date().toISOString() } })),
       setLibrarySourceGroupOpen: (group, open) =>
         set((state) => ({ librarySourceGroups: { ...state.librarySourceGroups, [group]: open } })),
       setDashboardSectionColumns: (columns) => set({ dashboardSectionColumns: columns }),
@@ -651,8 +649,7 @@ export const useUiStore = create<UiState>()(
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,
         transcriptionInspectorWidth: state.transcriptionInspectorWidth,
         transcriptionViewerWidth: state.transcriptionViewerWidth,
-        libraryCatalogFiltersWidth: state.libraryCatalogFiltersWidth,
-        libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
+        libraryOpenedAt: state.libraryOpenedAt,
         librarySourceGroups: state.librarySourceGroups,
         dashboardSectionColumns: state.dashboardSectionColumns,
         dashboardJobsWidth: state.dashboardJobsWidth,

@@ -1,6 +1,7 @@
 import { select, execute, runInTransaction } from './dbService';
 import { workspacesOfMany } from './workspaceItemsService';
 import { collectionsOfMany } from './libraryCollectionsService';
+import { workStagesOfMany } from './workStageService';
 import {
   inventoryBytes,
   libraryInventory,
@@ -239,6 +240,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   );
   const overridesBySource = await overridesOfMany(rows.map((row) => row.id));
   const collectionsBySource = await collectionsOfMany(rows.map((row) => row.id));
+  const stages = await workStagesOfMany();
 
   return rows.map((row) => {
     const metadata = parseMetadata(row.metadata);
@@ -268,6 +270,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       providerKey: found?.providerKey ?? metadata.providerKey,
       workspaces: workspacesBySource.get(row.id) ?? [],
       collections: collectionsBySource.get(row.id) ?? [],
+      stage: stages.get(row.id) ?? 'none',
     };
   });
 }
