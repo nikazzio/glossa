@@ -667,7 +667,7 @@ describe('LibraryCatalogArea', () => {
   it('la scheda mostra la fonte con identificativo pulito e link veri', async () => {
     const iiifService = await import('../../services/iiifProviderService');
     vi.mocked(iiifService.listIIIFProviders).mockResolvedValueOnce([
-      { key: 'gallica', label: 'Gallica', aliases: [], placeholder: '', isEnabled: true, resolver: 'gallica', searchHandler: 'gallica', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, filters: [] },
+      { key: 'gallica', label: 'Gallica', aliases: [], placeholder: '', isEnabled: true, resolver: 'gallica', searchHandler: 'gallica', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, searchFields: [] },
     ] as never);
     useSourceLibraryStore.setState({
       catalog: [entry()],

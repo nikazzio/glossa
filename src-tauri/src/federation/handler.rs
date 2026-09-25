@@ -94,12 +94,12 @@ impl JobHandler for SearchJob {
         let client = crate::iiif::discovery::client().map_err(failure)?;
         let request = crate::httpcache::request::CacheRequest::Search {
             provider_key: config.provider_key.clone(),
-            query: criteria.query.clone(),
+            // Tutti i criteri fanno parte della richiesta: Gallica li interroga
+            // campo per campo, e due ricerche con le stesse parole ma criteri
+            // diversi non sono la stessa risposta.
+            query: serde_json::to_string(&criteria).map_err(|e| failure(e.to_string()))?,
             page: config.page,
-            filters: std::collections::BTreeMap::from([(
-                "contract".into(),
-                "federated-raw-v1".into(),
-            )]),
+            filters: std::collections::BTreeMap::from([("contract".into(), "federated-v2".into())]),
         };
         let cache_entry = if config.fresh {
             None
@@ -126,7 +126,7 @@ impl JobHandler for SearchJob {
                 &client,
                 handler,
                 &endpoints,
-                &criteria.query,
+                &criteria,
                 config.page,
                 Some(&gate),
             )

@@ -20,6 +20,11 @@ describe('federated metadata and provenance', () => {
     expect(matchesCriteria(card({date:'1390–1410'}),criteria)).toBe('match');
     expect(matchesCriteria(card({date:'1500'}),criteria)).toBe('excluded');
   });
+  it('non ricontrolla i criteri che la biblioteca ha già cercato nel suo catalogo', () => {
+    const criteria = {...EMPTY_SEARCH, yearFrom: 1400, yearTo: 1450, material: 'manuscript'};
+    expect(matchesCriteria(card({date:'15..', mediaType:'text'}), criteria, ['years','material'])).toBe('match');
+    expect(matchesCriteria(card({date:'15..', mediaType:'text'}), criteria, ['years'])).toBe('unknown');
+  });
   it('deduplicates repeated provider occurrences but never equates cross-provider IDs', () => {
     const result=groupResults([page('a',[card(),card()]),page('b',[card({manifestUrl:'https://other.org/manifest'})])],EMPTY_SEARCH);
     expect(result).toHaveLength(2);

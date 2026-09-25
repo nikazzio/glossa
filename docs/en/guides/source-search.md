@@ -26,9 +26,8 @@ Earlier searches reopen from the **Searches** tab in the right-hand column,
 which keeps their criteria, results and attempts; opening one returns you to the
 execution tab.
 
-Above the results, on the right, controls filter what you see — everything,
-verified only, to verify only, excluded only — and sort by title. Each control
-explains itself on hover.
+Above the results, on the right, controls show one source or all of them and
+sort by title. Each control explains itself on hover.
 
 Starting a search records its criteria. Each provider’s result page is processed
 as an independent job, so a slow or failed source does not prevent others from
@@ -36,16 +35,26 @@ returning results. The execution monitor shows status, attempts and errors.
 Per-source controls support pausing, resuming, cancelling, retrying, restarting
 from the first page and loading further results.
 
-## Bibliographic filters
+## Bibliographic criteria
 
-Title, author, publisher, holding institution, language, material and year range
-filter the returned metadata. They are not uniform query fields across remote
-catalogues and do not make a search exhaustive.
+Libraries that can search field by field receive the criteria as written.
+Today that is Gallica: title, author and printer go to the matching catalogue
+fields, “manuscript” and “printed” to the document type, years to the date.
+Searching “Le guidon des capitaines” as a title, Gallica answers with 5 works;
+the same phrase searched everywhere, page text included, returned 17,427. The
+free words in the top field remain a general search.
 
-Missing values or dates that cannot be interpreted produce an unverified match
-status. A generic value such as `text` is not automatically classified as a
-manuscript or printed work. Check completed and failed source counts before
-interpreting an absence of results.
+Other sources receive the free words, or title, author and printer when the
+search uses fields only. The criteria then drop results whose data state
+something else. Language and holding institution always filter arriving
+results: Gallica expects language as codes nobody types by hand. The hint next
+to each criterion tells which of the chosen sources really search it.
+
+When the data needed to decide is missing — a catalogue without a year, a
+century-only date — the result stays in the list marked **incomplete data**. A
+generic value such as `text` is not converted to “manuscript” or “printed”.
+Check completed and failed source counts before interpreting an absence of
+results.
 
 ## Identity and provenance
 

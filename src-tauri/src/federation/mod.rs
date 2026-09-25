@@ -24,8 +24,23 @@ pub struct Criteria {
 }
 
 impl Criteria {
+    /// Le parole da mandare a una biblioteca che non cerca campo per campo:
+    /// quelle libere, oppure titolo, autore e tipografo quando si è cercato
+    /// solo per campi.
+    pub fn words(&self) -> String {
+        if !self.query.trim().is_empty() {
+            return self.query.trim().to_string();
+        }
+        [&self.title, &self.author, &self.publisher]
+            .iter()
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
     pub fn validate(&self) -> Result<(), String> {
-        if self.query.trim().is_empty() {
+        if self.words().is_empty() {
             return Err("federation.queryRequired".into());
         }
         if self.query.trim().starts_with("http://") || self.query.trim().starts_with("https://") {

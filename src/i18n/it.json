@@ -32,13 +32,12 @@
     "selectedCount": "{{count}} fonti selezionate",
     "draftHint": "I criteri modificati valgono per una nuova ricerca; non cambiano le esecuzioni già lanciate.",
     "queryHint": "Parole inviate ai cataloghi selezionati. Per indirizzi e segnature usa Ricerca singola / identificativo.",
-    "localHint": "Questi criteri filtrano i metadati ricevuti: non interrogano campi remoti equivalenti. Metadati assenti o date incerte restano non verificabili; la copertura dipende dal catalogo.",
-    "dateHint": "Intervallo inclusivo. Date espresse per secolo, approssimate o non dichiarate restano non verificabili.",
+    "dateHint": "Intervallo inclusivo. Dove si filtrano i risultati arrivati, le date per secolo o approssimate non bastano a decidere.",
     "aggregatorHint": "Le raccolte indicizzano più istituzioni e possono sovrapporsi alle biblioteche. Non sono selezionate automaticamente. Europeana richiede la chiave nelle impostazioni.",
     "providersFailed": "Impossibile leggere le fonti disponibili.",
     "readFailed": "Impossibile aggiornare le ricerche. I dati visibili possono non essere aggiornati.",
     "empty": "Imposta i criteri e seleziona le fonti per avviare una ricerca.",
-    "noVisible": "Nessun risultato visibile per questi criteri. Controlla esecuzioni e metadati non verificabili.",
+    "noVisible": "Nessun risultato per questi criteri.",
     "retry": "Riprova questa pagina",
     "restart": "Rifai la ricerca su questa biblioteca",
     "pageCount": "Pagina {{page}} · {{count}} record acquisiti",
@@ -58,12 +57,6 @@
       "yearFrom": "Dall’anno",
       "yearTo": "All’anno"
     },
-    "visibility": {
-      "all": "Tutti",
-      "match": "Verificati",
-      "unknown": "Da verificare",
-      "excluded": "Esclusi"
-    },
     "queryRequired": "Inserisci parole chiave.",
     "criteriaTooLong": "Un criterio supera 1000 caratteri.",
     "invalidYears": "Verifica l’intervallo degli anni.",
@@ -74,7 +67,6 @@
     "stopFirst": "Ferma l’esecuzione prima di ripeterla.",
     "useSearchControls": "Riprova dal monitor della ricerca.",
     "remoteGroup": "Inviato ai cataloghi",
-    "localGroup": "Filtri sui dati ricevuti",
     "unavailableGroup_one": "{{count}} fonte non interrogabile per parole",
     "unavailableGroup_other": "{{count}} fonti non interrogabili per parole",
     "viewAll": "Vedi tutte le ricerche",
@@ -107,18 +99,17 @@
     "onlyThisSource": "Mostra solo i risultati di questa fonte",
     "allSources": "Mostra i risultati di tutte le fonti",
     "filterLabel": "Filtra i risultati",
-    "visibilityHint": {
-      "all": "Mostra i risultati che i filtri confermano e quelli che non può verificare.",
-      "match": "Solo i risultati che rispettano tutti i criteri dichiarati dal catalogo.",
-      "unknown": "Solo i risultati su cui manca il dato per decidere: il catalogo non lo dichiara o la data è approssimata.",
-      "excluded": "Solo i risultati che i criteri escludono: utile per capire perché non compaiono."
-    },
     "tabHint": {
       "execution": "Come sta rispondendo ogni fonte di questa ricerca: stato, pagina raggiunta, quanto è arrivato e i comandi per intervenire su una sola biblioteca.",
       "history": "Le ricerche già fatte, caricate cinquanta alla volta. Ognuna conserva criteri, fonti ed esecuzioni proprie; aprendone una si torna all'esecuzione.",
       "criteria": "I criteri che restringono la ricerca e le fonti da interrogare. Valgono per la prossima ricerca: non cambiano quelle già avviate."
     },
-    "openProviderSite": "Cerca direttamente sul sito di {{provider}}"
+    "openProviderSite": "Cerca direttamente sul sito di {{provider}}",
+    "criteriaGroup": "Criteri",
+    "criteriaHint": "Le biblioteche che sanno cercare per campo ricevono ogni criterio così com'è. Alle altre arrivano le parole, e i criteri scartano poi i risultati che dichiarano altro.",
+    "fieldAsked": "Cercato nel catalogo di: {{libraries}}.",
+    "fieldFiltered": "Nessuna delle biblioteche scelte cerca questo campo: filtra i risultati arrivati.",
+    "missingData": "dati incompleti"
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -2593,7 +2584,7 @@
               "Apri Ricerca federata dalla barra a sinistra, sotto Dashboard.",
               "Scrivi le parole chiave nel campo in alto e avvia con il comando accanto.",
               "Per restringere la ricerca e scegliere le fonti apri i criteri avanzati, terza scheda della colonna di destra. Le raccolte vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
-              "I risultati compaiono man mano che le fonti rispondono. I comandi a destra della riga dei numeri filtrano quello che vedi — tutti, solo verificati, solo da verificare, solo esclusi — e ordinano per titolo; il significato di ciascuno compare al passaggio del mouse.",
+              "I risultati compaiono man mano che le fonti rispondono. I comandi a destra della riga dei numeri mostrano una fonte sola o tutte, e ordinano per titolo. Quando manca il dato per decidere su un criterio, il risultato resta in elenco segnato «dati incompleti».",
               "La scheda Esecuzione ha una riga per fonte: il segno dice come sta andando e il numero quanto è arrivato. Aprendo la riga trovi pagina e copertura, i comandi per fermare, riprendere, rifare o chiedere altre pagine, il comando per vedere solo i risultati di quella fonte e quello per i tentativi precedenti.",
               "Il comando della nuova ricerca svuota parole e criteri, lasciando le fonti che avevi scelto."
             ]
@@ -2601,7 +2592,7 @@
           {
             "title": "Interpretare filtri e risultati",
             "paragraphs": [
-              "Titolo, autore, lingua, materiale, date e altri filtri restringono i dati ricevuti. Non cercano gli stessi campi in tutti i cataloghi remoti. Se una fonte non fornisce il dato, la corrispondenza può restare non verificabile.",
+              "Le biblioteche che sanno cercare per campo — oggi Gallica — ricevono titolo, autore, tipografo, materiale e anni così come li scrivi, e rispondono solo con le opere che li rispettano. Alle altre arrivano le parole; i criteri scartano poi i risultati che dichiarano altro. Accanto a ogni criterio, il suggerimento dice quali delle fonti scelte lo cercano davvero.",
               "Una scheda può esistere senza una riproduzione leggibile. Durante il controllo compare lo stato di verifica; una riproduzione dichiarata assente viene indicata come non consultabile. Un errore di rete non significa che l’opera sia assente.",
               "Ogni risultato conserva la provenienza. Il servizio che restituisce la scheda può essere diverso dall’istituzione che conserva l’opera."
             ]

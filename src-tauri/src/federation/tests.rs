@@ -29,6 +29,17 @@ fn invalid_criteria_are_rejected_before_a_job_exists() {
 }
 
 #[test]
+fn a_search_by_fields_alone_is_valid_and_sends_those_words() {
+    let criteria = Criteria {
+        title: "Pantagruel".into(),
+        author: "Rabelais".into(),
+        ..Default::default()
+    };
+    assert!(criteria.validate().is_ok());
+    assert_eq!(criteria.words(), "Pantagruel Rabelais");
+}
+
+#[test]
 fn page_checkpoint_is_idempotent_and_history_survives_job_cleanup() {
     let conn = database();
     let criteria = serde_json::to_string(&Criteria {

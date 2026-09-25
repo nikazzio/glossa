@@ -11,14 +11,9 @@ export interface CustomProviderProfile {
 
 export type IIIFSearchMode = 'direct' | 'fallback' | 'search_first';
 
-export interface IIIFProviderFilterOption {
-  value: string;
-}
-
-export interface IIIFProviderFilter {
-  key: string;
-  options: IIIFProviderFilterOption[];
-}
+/** Un criterio che la biblioteca cerca davvero nel proprio catalogo. Dove
+ *  manca, il criterio filtra soltanto i risultati già arrivati. */
+export type IIIFSearchField = 'title' | 'author' | 'publisher' | 'material' | 'years';
 
 /** Che cosa è una fonte: una raccolta che indicizza altre istituzioni, una
  *  biblioteca che risponde del proprio fondo, o l'indirizzo diretto. */
@@ -45,7 +40,7 @@ export interface IIIFProvider {
   /** La pagina di ricerca della biblioteca sul suo sito, con `{query}` dove
    *  vanno le parole scritte. Vuota dove non esiste. */
   siteSearch: string;
-  filters: IIIFProviderFilter[];
+  searchFields: IIIFSearchField[];
 }
 
 export type IIIFDiscoveryStatus = 'manifest' | 'results' | 'not_found';

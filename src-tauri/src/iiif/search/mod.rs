@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 
 use super::discovery::{DiscoveryResult, Gate, SearchPage};
 use super::SearchHandlerKind;
+use crate::federation::Criteria;
 
 mod bodleian;
 mod cambridge;
@@ -114,16 +115,24 @@ pub(super) const PAGE_SIZE: u32 = 20;
 /// prima. Ogni gestore elencato qui è implementato davvero — il ramo che
 /// rispondeva «nessun risultato» per le biblioteche mai scritte faceva passare
 /// per catalogo vuoto una funzione che non esisteva.
+///
+/// Solo Gallica riceve i criteri campo per campo (`search_fields` nel
+/// registro); le altre ricevono le parole, e i criteri filtrano poi i
+/// risultati arrivati.
 pub async fn run(
     client: &Client,
     handler: SearchHandlerKind,
     endpoints: &SearchEndpoints,
-    query: &str,
+    criteria: &Criteria,
     page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
+    let words = criteria.words();
+    let query = words.as_str();
     match handler {
-        SearchHandlerKind::Gallica => gallica::gallica(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Gallica => {
+            gallica::gallica(client, endpoints, criteria, page, gate).await
+        }
         SearchHandlerKind::Vatican => vatican::vatican(client, endpoints, query, gate).await,
         SearchHandlerKind::Ecodices => ecodices::ecodices(client, endpoints, query, gate).await,
         SearchHandlerKind::Loc => loc::loc(client, endpoints, query, page, gate).await,

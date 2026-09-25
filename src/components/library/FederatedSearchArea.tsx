@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Activity, ArrowDown, ArrowUpDown, CheckCircle2, EyeOff, FilePlus, Globe, HelpCircle, History, Layers, RefreshCw, Search, SlidersHorizontal, Undo2 } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUpDown, FilePlus, Globe, History, RefreshCw, Search, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ProviderSiteLink } from './ProviderSiteLink';
 import { toast } from 'sonner';
@@ -21,13 +21,10 @@ import { SearchCriteriaPanel } from './SearchCriteriaPanel';
 import { SearchExecutionPanel } from './SearchExecutionPanel';
 import { logger } from '../../utils/logger';
 
-/** I filtri sono comandi icona: il nome e il significato stanno nel suggerimento. */
-const VISIBILITY_FILTERS = [
-  { value: 'all', icon: Layers },
-  { value: 'match', icon: CheckCircle2 },
-  { value: 'unknown', icon: HelpCircle },
-  { value: 'excluded', icon: EyeOff },
-] as const;
+/** Si può cercare anche solo per campi: basta un testo da mandare. */
+function hasSomethingToSend(criteria: SearchCriteria): boolean {
+  return [criteria.query, criteria.title, criteria.author, criteria.publisher].some((value) => value.trim() !== '');
+}
 
 export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const { t } = useTranslation();
@@ -45,7 +42,6 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   // La copia scelta si ricorda per identità: le occorrenze si ricostruiscono
   // a ogni pagina che arriva, e una posizione punterebbe a un'altra biblioteca.
   const [occurrenceChoice, setOccurrenceChoice] = useState<Record<string,string>>({});
-  const [visibility, setVisibility] = useState('all');
   const [providerFilter, setProviderFilter] = useState('all');
   const [byTitle, setByTitle] = useState(false);
   const [picker, setPicker] = useState<SearchResultGroup | null>(null);
@@ -117,13 +113,15 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const resultPages = historical && historical.searchId === searchId ? historical.pages : pages;
   const providerLabels = useMemo(() => new Map(providers.map((provider) => [provider.key, provider.label])), [providers]);
   const label = (key: string) => providerLabels.get(key) ?? key;
-  const groups = useMemo(() => selected ? groupResults(resultPages.filter((page) => providerFilter === 'all' || page.providerKey === providerFilter), selected.criteria) : [], [resultPages, selected, providerFilter]);
+  const remoteFields = useMemo(() => new Map(providers.map((provider) => [provider.key, provider.searchFields])), [providers]);
+  const groups = useMemo(() => selected ? groupResults(resultPages.filter((page) => providerFilter === 'all' || page.providerKey === providerFilter), selected.criteria, remoteFields) : [], [resultPages, selected, providerFilter, remoteFields]);
   const ordered = useMemo(() => byTitle
     ? [...groups].sort((a, b) => a.card.title.localeCompare(b.card.title))
     : groups, [groups, byTitle]);
+  // Un risultato che i dati dichiarati escludono non si mostra; quello su cui
+  // manca il dato per decidere resta, e il conteggio sopra lo dice.
   const visible = useMemo(() => ordered.filter((g) =>
-    (visibility === 'all' ? g.match !== 'excluded' : g.match === visibility) &&
-    (providerFilter === 'all' || g.origins.includes(providerFilter))), [ordered, visibility, providerFilter]);
+    g.match !== 'excluded' && (providerFilter === 'all' || g.origins.includes(providerFilter))), [ordered, providerFilter]);
   // Quattro conteggi su migliaia di risultati: si rifanno quando arrivano
   // pagine nuove, non a ogni disegno della schermata.
   const summary = useMemo(() => ({
@@ -156,7 +154,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         <input value={keywords} onChange={(event) => setKeywords(event.target.value)}
           aria-label={t('federation.fields.query')} placeholder={t('federation.queryPlaceholder')}
           className="min-w-0 flex-1 bg-transparent px-2 py-2 font-display text-xl italic text-editorial-ink outline-none placeholder:text-editorial-muted/70 focus-visible:ring-2 focus-visible:ring-editorial-accent" />
-        <IconButton type="submit" title={t('federation.launch')} disabled={busy || !keywords.trim() || !(draft.providers ?? []).length}>
+        <IconButton type="submit" title={t('federation.launch')} disabled={busy || !hasSomethingToSend({ ...draft.criteria, query: keywords }) || !(draft.providers ?? []).length}>
           {busy ? <Spinner size={16} /> : <Search size={16} />}
         </IconButton>
         <IconButton title={t('federation.advanced')} ariaPressed={tab === 'criteria'}
@@ -202,12 +200,6 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
             {providerFilter !== 'all' && <ProviderSiteLink
               provider={providers.find((provider) => provider.key === providerFilter)}
               query={selected?.criteria.query} />}
-            {VISIBILITY_FILTERS.map(({ value, icon: Icon }) => (
-              <IconButton key={value} size="sm" ariaPressed={visibility === value}
-                tone={visibility === value ? 'accent' : 'default'}
-                title={`${t(`federation.visibility.${value}`)} — ${t(`federation.visibilityHint.${value}`)}`}
-                onClick={() => setVisibility(value)}><Icon size={14} /></IconButton>
-            ))}
             <IconButton size="sm" title={byTitle ? t('federation.arrivalOrder') : t('federation.sortTitle')} ariaPressed={byTitle}
               tone={byTitle ? 'accent' : 'default'} onClick={() => setByTitle(!byTitle)}><ArrowUpDown size={14} /></IconButton>
           </div>
@@ -244,7 +236,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
                   providerLabel={group.origins.map((key) => label(key)).join(' · ')}
                   note={[
                     group.occurrences.length > 1 ? t('federation.copies', { count: group.occurrences.length }) : null,
-                    group.match === 'unknown' ? t('federation.visibility.unknown') : null,
+                    group.match === 'unknown' ? t('federation.missingData') : null,
                   ].filter(Boolean).join(' · ') || undefined}
                   expanded={expanded === group.id} onToggle={() => setExpanded(expanded === group.id ? null : group.id)}
                   onAddToLibrary={() => void library.addFromDiscovery(group.card, undefined, group.providerKey)}

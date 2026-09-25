@@ -97,17 +97,16 @@ pub enum SearchAvailability {
     Paused,
 }
 
+/// Un criterio che la biblioteca sa cercare nel proprio catalogo, campo per
+/// campo. Dove manca, il criterio filtra soltanto i risultati già arrivati.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ProviderFilterOption {
-    pub value: &'static str,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProviderFilter {
-    pub key: &'static str,
-    pub options: &'static [ProviderFilterOption],
+pub enum SearchField {
+    Title,
+    Author,
+    Publisher,
+    Material,
+    Years,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -140,20 +139,10 @@ pub struct IIIFProvider {
     /// l'indirizzo dell'opera e la si apre qui. Vuota dove non esiste una
     /// pagina di ricerca pubblica; senza `{query}` si apre e basta.
     pub site_search: &'static str,
-    pub filters: &'static [ProviderFilter],
+    /// I criteri che la sua ricerca interroga davvero, campo per campo.
+    pub search_fields: &'static [SearchField],
 }
 
-const GALLICA_FILTER_OPTIONS: &[ProviderFilterOption] = &[
-    ProviderFilterOption { value: "all" },
-    ProviderFilterOption {
-        value: "manuscript",
-    },
-    ProviderFilterOption { value: "printed" },
-];
-const GALLICA_FILTERS: &[ProviderFilter] = &[ProviderFilter {
-    key: "material_type",
-    options: GALLICA_FILTER_OPTIONS,
-}];
 pub const PROVIDERS: &[IIIFProvider] = &[
     IIIFProvider {
         key: "europeana",
@@ -173,7 +162,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Aggregator,
         availability: SearchAvailability::Searchable,
         site_search: "https://www.europeana.eu/en/search?query={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "wellcome",
@@ -190,7 +179,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://wellcomecollection.org/search/works?query={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "vatican",
@@ -207,7 +196,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://digi.vatlib.it/mss/search?k_f=0&k_v={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "gallica",
@@ -224,7 +213,13 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://gallica.bnf.fr/services/engine/search/sru?operation=searchRetrieve&version=1.2&query=gallica%20all%20%22{query}%22",
-        filters: GALLICA_FILTERS,
+        search_fields: &[
+            SearchField::Title,
+            SearchField::Author,
+            SearchField::Publisher,
+            SearchField::Material,
+            SearchField::Years,
+        ],
     },
     IIIFProvider {
         key: "institut",
@@ -241,7 +236,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://bibnum.institutdefrance.fr/records?search={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "bodleian",
@@ -258,7 +253,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://digital.bodleian.ox.ac.uk/search/?q={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "heidelberg",
@@ -275,7 +270,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
         site_search: "https://digi.ub.uni-heidelberg.de/diglit/",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "cambridge",
@@ -292,7 +287,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://cudl.lib.cam.ac.uk/search?keyword={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "ecodices",
@@ -312,7 +307,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://www.e-codices.unifr.ch/en/search/all?sQueryString={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "estense",
@@ -329,7 +324,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://edl.cultura.gov.it/search?q={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "harvard",
@@ -346,7 +341,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Paused,
         site_search: "https://id.lib.harvard.edu/search?q={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "loc",
@@ -363,7 +358,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://www.loc.gov/search/?q={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "archive_org",
@@ -380,7 +375,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Aggregator,
         availability: SearchAvailability::Searchable,
         site_search: "https://archive.org/search?query={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "e_rara",
@@ -400,7 +395,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
         site_search: "https://www.e-rara.ch/search?operation=searchRetrieve&query={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "e_manuscripta",
@@ -417,7 +412,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
         site_search: "https://www.e-manuscripta.ch/search?operation=searchRetrieve&query={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "mdz",
@@ -434,7 +429,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://www.digitale-sammlungen.de/en/search?query={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "nls",
@@ -454,7 +449,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::Searchable,
         site_search: "https://digital.nls.uk/gallery/",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "glasgow",
@@ -473,7 +468,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Library,
         availability: SearchAvailability::DirectOnly,
         site_search: "https://digitalresearchcollections.glasgow.ac.uk/documents/search?search={query}",
-        filters: &[],
+        search_fields: &[],
     },
     IIIFProvider {
         key: "generic",
@@ -490,7 +485,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::DirectUrl,
         availability: SearchAvailability::DirectOnly,
         site_search: "",
-        filters: &[],
+        search_fields: &[],
     },
 ];
 
@@ -595,11 +590,11 @@ mod tests {
     }
 
     #[test]
-    fn provider_capabilities_declare_search_modes_and_filters() {
+    fn provider_capabilities_declare_search_modes_and_fields() {
         let gallica = find_provider("gallica").expect("Gallica provider must exist");
         assert_eq!(gallica.search_mode, SearchMode::SearchFirst);
-        assert_eq!(gallica.filters[0].key, "material_type");
-        assert_eq!(gallica.filters[0].options.len(), 3);
+        assert!(gallica.search_fields.contains(&SearchField::Title));
+        assert!(gallica.search_fields.contains(&SearchField::Material));
         assert_eq!(gallica.search_handler, Some(SearchHandlerKind::Gallica));
     }
 

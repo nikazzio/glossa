@@ -66,7 +66,7 @@ export function SearchExecutionPanel({ run, providers, busy, providerFilter, onP
         onClick={() => act(() => Promise.all(resumable.map((e) => resumeJob(e.job.id))))}><Play size={14} /></IconButton>
       <IconButton title={t('federation.retryFailed')} disabled={busy || retryable.length === 0} size="sm"
         onClick={() => act(() => Promise.all(retryable.map((e) => relaunchSearch(run.id,e.job.id,'retry'))))}><RotateCcw size={14} /></IconButton>
-      {filters.length > 0 && <span className="ml-auto"><Hint label={`${t('federation.localHint')} — ${filters.join(' · ')}`} size="xs" /></span>}
+      {filters.length > 0 && <span className="ml-auto"><Hint label={`${t('federation.criteriaGroup')} — ${filters.join(' · ')}`} size="xs" /></span>}
     </div>
 
     <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">

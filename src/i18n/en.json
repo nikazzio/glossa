@@ -32,13 +32,12 @@
     "selectedCount": "{{count}} selected sources",
     "draftHint": "Edited criteria apply to a new search; they do not change running searches.",
     "queryHint": "Keywords sent to selected catalogues. Use Single source / identifier for URLs and shelfmarks.",
-    "localHint": "These criteria filter returned metadata, not equivalent remote fields. Missing metadata and uncertain dates remain unverifiable; coverage depends on each catalogue.",
-    "dateHint": "Inclusive range. Century-based, approximate and missing dates remain unverifiable.",
+    "dateHint": "Inclusive range. Where arriving results are filtered, century-based or approximate dates are not enough to decide.",
     "aggregatorHint": "Aggregators index multiple institutions and may overlap with libraries. They are never selected automatically. Europeana requires a key in settings.",
     "providersFailed": "Unable to load available sources.",
     "readFailed": "Unable to refresh searches. Visible data may be out of date.",
     "empty": "Set criteria and select sources to start searching.",
-    "noVisible": "No visible results for these criteria. Check executions and unverifiable metadata.",
+    "noVisible": "No results for these criteria.",
     "retry": "Retry this page",
     "restart": "Run this library again",
     "pageCount": "Page {{page}} · {{count}} records received",
@@ -58,12 +57,6 @@
       "yearFrom": "From year",
       "yearTo": "To year"
     },
-    "visibility": {
-      "all": "All",
-      "match": "Verified",
-      "unknown": "To verify",
-      "excluded": "Excluded"
-    },
     "queryRequired": "Enter keywords.",
     "criteriaTooLong": "A criterion exceeds 1000 characters.",
     "invalidYears": "Check the year range.",
@@ -74,7 +67,6 @@
     "stopFirst": "Stop the execution before restarting.",
     "useSearchControls": "Retry from the search monitor.",
     "remoteGroup": "Sent to catalogues",
-    "localGroup": "Filters on received data",
     "unavailableGroup_one": "{{count}} source cannot be searched by words",
     "unavailableGroup_other": "{{count}} sources cannot be searched by words",
     "viewAll": "See every search",
@@ -107,18 +99,17 @@
     "onlyThisSource": "Show only results from this source",
     "allSources": "Show results from every source",
     "filterLabel": "Filter the results",
-    "visibilityHint": {
-      "all": "Shows the results the filters confirm and those they cannot verify.",
-      "match": "Only results that meet every criterion the catalogue states.",
-      "unknown": "Only results where the deciding field is missing: the catalogue does not state it, or the date is approximate.",
-      "excluded": "Only the results the criteria rule out, useful to understand why they are missing."
-    },
     "tabHint": {
       "execution": "How each source of this search is answering: state, page reached, how much arrived, and the controls that act on a single library.",
       "history": "The searches already made, loaded fifty at a time. Each keeps its own criteria, sources and runs; opening one returns you to the execution tab.",
       "criteria": "The criteria that narrow the search and the sources to query. They apply to the next search: they do not change the ones already started."
     },
-    "openProviderSite": "Search directly on the {{provider}} website"
+    "openProviderSite": "Search directly on the {{provider}} website",
+    "criteriaGroup": "Criteria",
+    "criteriaHint": "Libraries that search by field receive each criterion as it is. The others receive the words, and the criteria then drop results that state something else.",
+    "fieldAsked": "Searched in the catalogue of: {{libraries}}.",
+    "fieldFiltered": "None of the chosen libraries searches this field: it filters the results that arrive.",
+    "missingData": "incomplete data"
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -2593,7 +2584,7 @@
               "Open Federated search from the left-hand rail, under Dashboard.",
               "Type your keywords in the field at the top and start with the control beside it.",
               "To narrow the search and choose the sources, open the advanced criteria, the third tab of the right-hand column. Collections must be chosen explicitly; Europeana needs a key in the Library settings.",
-              "Results appear as each source answers. The controls to the right of the counts filter what you see — everything, verified only, to verify only, excluded only — and sort by title; hovering explains each one.",
+              "Results appear as sources answer. The commands to the right of the counts show one source or all of them, and sort by title. When the data needed to judge a criterion is missing, the result stays in the list marked “incomplete data”.",
               "The Execution tab has one row per source: the mark says how it is going and the number how much arrived. Opening the row shows page and coverage, the controls to stop, resume, run again or ask for more pages, the control that shows only that source's results, and the earlier attempts.",
               "The new-search control clears the words and the criteria, keeping the sources you had chosen."
             ]
@@ -2601,7 +2592,7 @@
           {
             "title": "Understanding filters and results",
             "paragraphs": [
-              "Title, author, language, material, dates and other filters narrow the returned data. They do not search equivalent fields in every remote catalogue. If a source omits a value, a match may remain unverified.",
+              "Libraries that search by field — Gallica today — receive title, author, printer, material and years exactly as you write them, and answer only with works that match. The others receive the words; the criteria then drop results that state something else. Next to each criterion, the hint tells which of the chosen sources really search it.",
               "A record may exist without an accessible digital copy. A check status appears while Glossa verifies it; a copy explicitly reported as absent is marked unavailable. A network error does not mean the work is absent.",
               "Each result retains its provenance. The service returning the record may differ from the institution holding the work."
             ]

@@ -56,8 +56,8 @@ vi.mock('../../services/libraryService', () => ({
 }));
 
 const PROVIDERS = [
-  { key: 'archive_org', label: 'Internet Archive', aliases: [], placeholder: 'Search', isEnabled: true, resolver: 'archive_org', searchHandler: 'archive_org', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, kind: 'aggregator', availability: 'searchable', filters: [] },
-  { key: 'heidelberg', label: 'Heidelberg', aliases: [], placeholder: 'e.g. cpg848', isEnabled: true, resolver: 'heidelberg', searchHandler: null, searchMode: 'fallback', supportsDirectResolution: true, supportsSearch: false, kind: 'library', availability: 'directOnly', filters: [] },
+  { key: 'archive_org', label: 'Internet Archive', aliases: [], placeholder: 'Search', isEnabled: true, resolver: 'archive_org', searchHandler: 'archive_org', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, kind: 'aggregator', availability: 'searchable', searchFields: [] },
+  { key: 'heidelberg', label: 'Heidelberg', aliases: [], placeholder: 'e.g. cpg848', isEnabled: true, resolver: 'heidelberg', searchHandler: null, searchMode: 'fallback', supportsDirectResolution: true, supportsSearch: false, kind: 'library', availability: 'directOnly', searchFields: [] },
 ];
 
 describe('SourceDiscoveryPanel', () => {

@@ -287,7 +287,13 @@ async fn discover_with(
     }
 
     let search = match provider.search_handler {
-        Some(handler) => search::run(client, handler, endpoints, value, page, gate).await?,
+        Some(handler) => {
+            let criteria = crate::federation::Criteria {
+                query: value.to_string(),
+                ..Default::default()
+            };
+            search::run(client, handler, endpoints, &criteria, page, gate).await?
+        }
         None => return Ok(nothing()),
     };
 

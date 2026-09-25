@@ -162,9 +162,18 @@ impedisce doppi rilanci. I comandi generici non possono creare o ritentare quest
 job senza il dominio. Le ricerche accodate/interrotte si recuperano in pausa,
 anche se l’autoripresa degli scaricamenti è abilitata. Nessuna esecuzione ad app chiusa.
 
-Solo le parole chiave vengono inviate ai cataloghi. Gli altri criteri sono
-post-filtri espliciti sui metadati: assenza/approssimazione resta `unknown`, non
-una corrispondenza inventata. Materiale generico «text» non prova manoscritto
+Ogni provider dichiara nel registro i criteri che interroga campo per campo
+(`search_fields`, esposto come `searchFields`). `search::run` riceve i
+`Criteria` interi: Gallica li traduce in CQL (`gallica_cql`: parole libere su
+`gallica all`, titolo/autore/tipografo su `dc.title`/`dc.creator`/
+`dc.publisher`, materiale su `dc.type` = `manuscrit`/`monographie`, anni su
+`dc.date>=`/`<=`, forme verificate sul servizio il 25 settembre 2026); gli
+altri ricevono `Criteria::words()`, cioè le parole libere oppure titolo, autore
+e tipografo quando si cerca solo per campi. La chiave di cache della pagina è
+l'intero JSON dei criteri (`contract=federated-v2`). Lato finestra
+`matchesCriteria` non ricontrolla i campi che il provider ha già cercato; gli
+altri restano post-filtri espliciti sui metadati: assenza/approssimazione resta
+`unknown` (mostrato come «dati incompleti»), un'esclusione non si mostra. Materiale generico «text» non prova manoscritto
 o stampato. Un match deve appartenere a una singola occorrenza completa.
 Deduplicazione esclusivamente per manifesto identico; le occorrenze originali
 restano conservate. Risultati virtualizzati; ordinamento per titolo su snapshot

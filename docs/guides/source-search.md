@@ -26,9 +26,9 @@ Le ricerche già fatte si riaprono dalla scheda **Ricerche** nella colonna di
 destra, che conserva criteri, risultati e tentativi; aprendone una si torna alla
 scheda dell'esecuzione.
 
-Sopra i risultati, a destra, i comandi filtrano quello che vedi — tutti, solo
-verificati, solo da verificare, solo esclusi — e ordinano per titolo. Ogni
-comando spiega il proprio significato al passaggio del mouse.
+Sopra i risultati, a destra, i comandi mostrano una fonte sola o tutte e
+ordinano per titolo. Ogni comando spiega il proprio significato al passaggio
+del mouse.
 
 L’avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascun
 provider viene elaborata come lavoro indipendente: una fonte lenta o in errore
@@ -36,16 +36,28 @@ non impedisce alle altre di pubblicare risultati. Il monitor mostra stato,
 tentativi ed errori; permette di sospendere, riprendere, annullare, riprovare,
 ripetere dalla prima pagina o caricare altri risultati per fonte.
 
-## Filtri bibliografici
+## Criteri bibliografici
 
-Titolo, autore, editore, istituzione, lingua, materiale e intervallo di anni
-filtrano i metadati ricevuti. Non corrispondono a campi di interrogazione
-uniformi sui cataloghi remoti e non rendono la ricerca esaustiva.
+Le biblioteche che sanno cercare campo per campo ricevono i criteri così come
+sono scritti. Oggi è il caso di Gallica: titolo, autore e tipografo vanno sui
+rispettivi campi del catalogo, «manoscritto» e «stampato» sul tipo di
+documento, gli anni sulla data. Cercando «Le guidon des capitaines» come titolo
+Gallica risponde con 5 opere; la stessa frase cercata ovunque, testo delle
+pagine compreso, ne dava 17 427. Le parole libere del campo in cima restano una
+ricerca generale.
 
-I dati mancanti o le date non interpretabili producono un esito non verificabile.
-Un valore generico come `text` non viene convertito automaticamente in
-«manoscritto» o «stampato». Valuta il numero di fonti concluse e quelle in errore
-prima di interpretare l’assenza di risultati.
+Le altre fonti ricevono le parole libere, oppure titolo, autore e tipografo
+quando si è cercato solo per campi. I criteri scartano poi i risultati i cui
+dati dichiarano altro. Lingua e istituzione filtrano sempre i risultati
+arrivati: Gallica vuole la lingua in codici che nessuno scrive a mano. Il
+suggerimento accanto a ogni criterio dice quali delle fonti scelte lo cercano
+davvero.
+
+Quando manca il dato per decidere — un catalogo che non dichiara l’anno, una
+data per secolo — il risultato resta in elenco segnato **dati incompleti**. Un
+valore generico come `text` non viene convertito in «manoscritto» o «stampato».
+Valuta il numero di fonti concluse e quelle in errore prima di interpretare
+l’assenza di risultati.
 
 ## Identità e provenienza
 
