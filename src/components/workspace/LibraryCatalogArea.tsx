@@ -41,6 +41,7 @@ import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
 import { humanSize } from '../../utils';
 import { CachedThumbnail } from '../common/CachedThumbnail';
+import { WorkIdentity } from '../common/WorkIdentity';
 import { CreateTranscriptionDialog } from '../transcription/CreateTranscriptionDialog';
 import {
   EMPTY_LIBRARY_FILTERS,
@@ -606,10 +607,9 @@ function CatalogEntryRow({
   const linkedCollections = collections.filter((collection) => linkedCollectionIds.has(collection.id));
   const availableCollections = collections.filter((collection) => !linkedCollectionIds.has(collection.id));
 
-  const authorDate = [entry.creator, entry.date].filter(Boolean).join(' \u00b7 ');
   const summary = actions.summary;
   /**
-   * La riga tecnica sotto il titolo: pagine, misure presenti, spazio.
+   * La riga piccola sotto il titolo: biblioteca, pagine, misure presenti, spazio.
    *
    * Numeri e unità, niente frasi: quanto del libro è sul computer lo dice la
    * barra sotto, non una parola ripetuta su ogni riga del catalogo. Le misure
@@ -628,7 +628,7 @@ function CatalogEntryRow({
   }
   if (entry.localBytes > 0) facts.push(humanSize(entry.localBytes));
   if (entry.localPages === 0) facts.push(t('areas.library.availabilityRemoteShort'));
-  const factsLine = facts.join(' \u00b7 ');
+  const detailsLine = [providerLabel, ...facts].filter(Boolean).join(' \u00b7 ');
   // La barra c'è solo quando qualcosa è sul computer: su un libro tutto online
   // sarebbe una barra vuota su ogni riga, cioè rumore.
   const total = summary.expectedPages > 0 ? summary.expectedPages : entry.expectedPages ?? 0;
@@ -665,41 +665,37 @@ function CatalogEntryRow({
             />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-display text-base italic text-editorial-ink">
-              {entry.source.title}
-            </span>
-            {authorDate && (
-              <span className="mt-0.5 block truncate text-xs text-editorial-muted">
-                {authorDate}
-              </span>
-            )}
-            {providerLabel && (
-              <span className="mt-0.5 block truncate text-xs font-semibold text-editorial-ink">
-                {providerLabel}
-              </span>
-            )}
-            {/* Dati e completamento sulla stessa riga: la barra è un dato fra
-                gli altri, non un elemento grafico da stendere per tutta la
-                larghezza. Larghezza fissa e corta, così due righe vicine si
-                confrontano a occhio. */}
-            <span className="mt-1 flex items-center gap-2 text-xs text-editorial-muted">
-              <span className="min-w-0 truncate">{factsLine}</span>
-              {entry.localPages > 0 && (
+            <WorkIdentity
+              work={{
+                title: entry.source.title,
+                creator: entry.fields.creator,
+                date: entry.fields.date,
+                place: entry.fields.origin_place,
+                publisher: entry.fields.publisher,
+              }}
+              details={
                 <>
-                  <span className="h-[3px] w-10 shrink-0 overflow-hidden rounded-full bg-editorial-border">
-                    <span
-                      className={`block h-full rounded-full ${
-                        summary.availability === 'complete'
-                          ? 'bg-editorial-success'
-                          : 'bg-editorial-running'
-                      }`}
-                      style={{ width: `${Math.round((progress ?? 1) * 100)}%` }}
-                    />
-                  </span>
-                  <span className="shrink-0 tabular-nums">{progressLabel}</span>
+                  <span className="min-w-0 truncate">{detailsLine}</span>
+                  {/* Il completamento è un dato fra gli altri: barra corta a
+                      larghezza fissa, così due righe vicine si confrontano. */}
+                  {entry.localPages > 0 && (
+                    <>
+                      <span className="h-[3px] w-10 shrink-0 overflow-hidden rounded-full bg-editorial-border">
+                        <span
+                          className={`block h-full rounded-full ${
+                            summary.availability === 'complete'
+                              ? 'bg-editorial-success'
+                              : 'bg-editorial-running'
+                          }`}
+                          style={{ width: `${Math.round((progress ?? 1) * 100)}%` }}
+                        />
+                      </span>
+                      <span className="shrink-0 tabular-nums">{progressLabel}</span>
+                    </>
+                  )}
                 </>
-              )}
-            </span>
+              }
+            />
           </span>
         </button>
 

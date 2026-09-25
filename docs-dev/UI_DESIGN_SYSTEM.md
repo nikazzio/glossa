@@ -250,6 +250,25 @@ comandi propri dell'elenco (vista, ordinamento) stanno in fondo alla stessa
 riga, allineati alla base del titolo. La Biblioteca usava una `SectionLabel`
 piccola con icona: era l'unica area a non somigliare alle altre.
 
+### Identità di un'opera
+
+Un'opera si mostra ovunque con `WorkIdentity` (`components/common`): risultati
+di ricerca, righe del catalogo, intestazione della scheda e dello Studio di
+trascrizione. Ordine fisso, come una scheda di catalogo:
+
+1. **Autore** in grassetto · anno · luogo, tipografo — `text-sm`, inchiostro.
+2. **Titolo** in `font-display` corsivo, al massimo due righe (`row`), una
+   riga nelle intestazioni (`header`), intero nella riga aperta (`full`); il
+   testo completo sta nel suggerimento.
+3. Riga piccola `text-xs` muted: biblioteca, pagine, segni di stato. È una
+   riga flessibile: chi la riempie tronca il proprio testo, così barre e
+   avvisi a destra restano visibili.
+
+Luogo e tipografo sono una voce sola: se il luogo compare già nel nome del
+tipografo («Lyon : F. Juste») non si ripete. Un dato di stato si scrive solo
+quando dice qualcosa: il PDF si segna quando c'è, lo stato completo sta nella
+riga aperta.
+
 ### Provenienza di un dato: parola + pallino
 
 Quando un'informazione ha più provenienze possibili, la **parola** dice solo la

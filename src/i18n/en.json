@@ -2138,7 +2138,7 @@
             "title": "The viewer on the left, one text per page",
             "paragraphs": [
               "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text.",
-              "At the top, a document tied to a work shows the work's title and author, as on its Library page, with the link out to the library's site. The three-dot command offers only \"Remove transcription\": downloading, verifying, or archiving the work stay commands of the Library page."
+              "At the top, a document tied to a work presents it as its Library page does: author, year, place, and printer above, the title below, with the link out to the library's site. The three-dot command offers only \"Remove transcription\": downloading, verifying, or archiving the work stay commands of the Library page."
             ]
           },
           {
@@ -2633,6 +2633,7 @@
           {
             "title": "Finding a catalogue entry",
             "paragraphs": [
+              "Every work looks the same in search, in the Library, and in the Studio: author, year, place, and printer stand out, then the title, cut after two lines. Hover over the title to read it in full.",
               "Switch between list and grid views and use filters to narrow the catalogue. You can save a filter combination as a view. Include archived works to find an item you have set aside.",
               "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files.",
               "The item page shows every field it knows about, including those the library did not fill in: they stay empty and you write them with the pencil, as you already do for title and author. The library's original value is kept and can be restored. The essential fields are always in view, the rest sit in groups that open and stay as you leave them."
@@ -2663,7 +2664,7 @@
           {
             "title": "The PDF of the work",
             "paragraphs": [
-              "Some libraries, besides page-by-page images, offer the same work as a PDF. In search results every row states the status: “PDF available”, “PDF not available”, or “PDF not verified” when the library did not answer. Opening the row also shows the declared pages and the pixel size of the first page, the only hint about scan quality before downloading.",
+              "Some libraries, besides page-by-page images, offer the same work as a PDF. In search results the row says “PDF available” when there is one. Opening the row shows the full status — available, not available, or not verified when the library did not answer — with the declared pages and the pixel size of the first page, the only hint about scan quality before downloading.",
               "In the work record the PDF is a row of the book section, below the image copies: there it states whether it is available, whether it has been downloaded, how much space it takes and how many pages it has. The check command queries the library again, for when the PDF was published later; the same check runs on resynchronisation.",
               "From the same row you choose what to display: the PDF or the images. The viewer always states which of the two is on screen, because the pages of the PDF and those of the image sequence do not correspond. A very large PDF does not open in the built-in viewer: open it with the system application.",
               "Every check has a deadline: if the library is busy or does not answer, the status stays “not verified” and you can try again. No wait is left hanging and no request blocks the others."

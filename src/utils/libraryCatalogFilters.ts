@@ -118,7 +118,7 @@ export function availabilityOf(entry: LibraryCatalogEntry): SourceAvailability {
 }
 
 function matchesQuery(entry: LibraryCatalogEntry, query: string): boolean {
-  const haystack = [entry.source.title, entry.creator]
+  const haystack = [entry.source.title, entry.fields.creator]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
@@ -174,9 +174,11 @@ export function orderLibraryCatalog(
   }
   if (sort === 'creator') {
     return ordered.sort((a, b) => {
-      if (!a.creator) return b.creator ? 1 : 0;
-      if (!b.creator) return -1;
-      return a.creator.localeCompare(b.creator);
+      const left = a.fields.creator;
+      const right = b.fields.creator;
+      if (!left) return right ? 1 : 0;
+      if (!right) return -1;
+      return left.localeCompare(right);
     });
   }
   return ordered.sort((a, b) => a.source.title.localeCompare(b.source.title));

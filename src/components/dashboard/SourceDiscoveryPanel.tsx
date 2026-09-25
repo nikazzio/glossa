@@ -16,6 +16,7 @@ import { EASE_EDITORIAL } from '../layout/motion';
 import { relativeDateUnit } from '../../utils';
 import { errorMessage, logger } from '../../utils/logger';
 import { CachedThumbnail } from '../common/CachedThumbnail';
+import { WorkIdentity } from '../common/WorkIdentity';
 import { useManifestFacts } from '../../hooks/useManifestFacts';
 import { useSeenOnce } from '../../hooks/useSeenOnce';
 
@@ -158,7 +159,7 @@ function sourceStats(
 // deve restare identica senza ricalcolarla dalla stringa di classi.
 const THUMBNAIL_WIDTH_EXPANDED = 'w-24';
 const THUMBNAIL_SIZE = {
-  closed: 'h-10 w-8',
+  closed: 'h-16 w-12',
   expanded: `h-32 ${THUMBNAIL_WIDTH_EXPANDED}`,
 };
 
@@ -171,12 +172,12 @@ const THUMBNAIL_SIZE = {
  */
 function OpenableMark({ openable, checking }: { openable: boolean | null; checking: boolean }) {
   const { t } = useTranslation();
-  if (checking) return <span className="ml-2 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
+  if (checking) return <span className="shrink-0 italic opacity-70">{t('dashboard.discovery.checking')}</span>;
   if (openable !== false) return null;
   return (
     // L'etichetta porta la spiegazione: premerla la apre, così vale anche per
     // chi non usa il mouse.
-    <span className="ml-2 text-editorial-warning">
+    <span className="shrink-0 text-editorial-warning">
       <Hint label={`${t('dashboard.discovery.notOpenable')} — ${t('dashboard.discovery.notOpenableHint')}`}>
         {t('dashboard.discovery.notOpenable')}
       </Hint>
@@ -212,41 +213,21 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // chiusa lo si ripete perché è quello che fa decidere se aprire l'opera.
   // Quando il catalogo non lo dichiara la voce sparisce, senza scrivere zero.
   const pageCount = card.itemCount !== null ? t('dashboard.discovery.pagesCount', { count: card.itemCount }) : null;
-  // **Da dove viene l'opera**, in evidenza e per prima: cercando su un
-  // aggregatore i risultati arrivano da istituzioni diverse, e saperlo senza
-  // aprire la riga è la differenza fra scorrere e dover controllare uno per
-  // uno. Quando l'istituzione non è dichiarata vale chi ha risposto alla
-  // ricerca, che è sempre noto.
-  // Aperta la riga, l'istituzione è già fra i dati della scheda: ripeterla qui
-  // sarebbe la stessa frase due volte. Lì in evidenza resta chi ha risposto
-  // alla ricerca, che con un aggregatore non è la stessa cosa.
+  // Da dove viene l'opera: con un aggregatore i risultati arrivano da
+  // istituzioni diverse, e saperlo senza aprire la riga evita di controllarle
+  // una per una. Senza istituzione dichiarata vale chi ha risposto. Aperta la
+  // riga, l'istituzione è già fra i dati della scheda: lì resta chi ha risposto.
   const origin = (expanded ? providerLabel : card.holdingInstitution) || providerLabel;
   // «Bibliothèque nationale de France, département X, 8-K-5072» è istituto,
   // fondo e segnatura in una stringa sola: in riga chiusa vale il primo.
   const shortOrigin = expanded ? origin : origin.split(',')[0].trim();
-  const mediaType = !isManifest(card) ? card.mediaType : null;
-  // Lo stato del PDF si dice **sempre**, nei tre casi in cui può stare: c'è,
-  // non c'è, non si è potuto verificare. Dirlo solo quando c'è lascerebbe
-  // credere che l'assenza della scritta significhi qualcosa, e non significa
-  // niente. Sull'opera che la biblioteca dichiara senza riproduzione non si
-  // dice niente: lì non c'è nessun manifesto da leggere, e la riga lo scrive
-  // già con parole sue.
-  const documentPart =
-    openable === false
-      ? null
-      : checking
-        ? t('dashboard.discovery.documentChecking')
-        : facts.document
-          ? t('dashboard.discovery.documentAvailable')
-          : facts.openable !== null
-            ? t('dashboard.discovery.documentUnavailable')
-            : t('dashboard.discovery.documentUnverified');
-  const metaParts = [
-    card.creator,
-    card.date,
-    mediaType,
-    ...(expanded ? [] : [pageCount]),
-    documentPart,
+  // Il PDF si segna solo quando c'è: su ogni riga «PDF non verificato» era
+  // rumore. Lo stato completo, assenza compresa, sta nella riga aperta.
+  const detailParts = [
+    shortOrigin,
+    !isManifest(card) ? card.mediaType : null,
+    expanded ? null : pageCount,
+    facts.document ? t('dashboard.discovery.documentAvailable') : null,
     note,
   ].filter(Boolean) as string[];
   /** Quello che si sa solo leggendo il manifesto, e che il catalogo non dice. */
@@ -303,25 +284,24 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
               fallback={<BookOpenText size={expanded ? 20 : 14} className="text-editorial-muted" aria-hidden="true" />}
             />
           </span>
-          {expanded ? (
-            <span className="min-w-0 flex-1 pt-0.5">
-              <span className="block font-display text-lg italic leading-tight text-editorial-ink">{title}</span>
-              <span className="mt-1 block text-xs text-editorial-muted">
-                <strong className="font-semibold text-editorial-ink">{origin}</strong>
-                {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
-                <OpenableMark openable={openable} checking={checking} />
-              </span>
-            </span>
-          ) : (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display italic text-editorial-ink">{title}</span>
-              <span className="mt-0.5 block truncate text-xs text-editorial-muted">
-                <strong className="font-semibold text-editorial-ink">{shortOrigin}</strong>
-                {metaParts.length > 0 && ` · ${metaParts.join(' · ')}`}
-                <OpenableMark openable={openable} checking={checking} />
-              </span>
-            </span>
-          )}
+          <span className={`min-w-0 flex-1 ${expanded ? 'pt-0.5' : ''}`}>
+            <WorkIdentity
+              variant={expanded ? 'full' : 'row'}
+              work={{
+                title,
+                creator: card.creator,
+                date: card.date,
+                place: null,
+                publisher: isManifest(card) ? null : card.publisher,
+              }}
+              details={
+                <>
+                  <span className="min-w-0 truncate">{detailParts.join(' · ')}</span>
+                  <OpenableMark openable={openable} checking={checking} />
+                </>
+              }
+            />
+          </span>
         </div>
         <IconButton title={t('federation.details')} aria-expanded={expanded} onClick={onToggle} size="sm"><ChevronDown size={14} className={expanded ? 'rotate-180' : ''} /></IconButton>
         <CardActions adding={adding} alreadyAdded={alreadyAdded} onAddToLibrary={onAddToLibrary} onAddToWorkspace={onAddToWorkspace} />

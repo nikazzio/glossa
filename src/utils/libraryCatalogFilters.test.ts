@@ -8,7 +8,7 @@ import {
   orderLibraryCatalog,
   parseLibraryFilters,
 } from './libraryCatalogFilters';
-import type { LibraryCatalogEntry } from '../types';
+import { EMPTY_SOURCE_FIELDS, type LibraryCatalogEntry } from '../types';
 
 function entry(
   overrides: Partial<LibraryCatalogEntry> = {},
@@ -27,8 +27,7 @@ function entry(
     versionId: 'sver-1',
     manifestUrl: 'https://example.org/manifest.json',
     thumbnailUrl: null,
-    creator: 'Dante Alighieri',
-    date: null,
+    fields: { ...EMPTY_SOURCE_FIELDS, creator: 'Dante Alighieri' },
     expectedPages: 100,
     localPages: 100,
     localBytes: 0,
@@ -234,15 +233,15 @@ describe('workspace e ordinamento', () => {
   const catalogoDaOrdinare = [
     entry({
       source: { ...entry().source, id: 'b', title: 'Vita nuova', createdAt: '2026-01-02' },
-      creator: 'Dante Alighieri',
+      fields: { ...EMPTY_SOURCE_FIELDS, creator: 'Dante Alighieri' },
     }),
     entry({
       source: { ...entry().source, id: 'a', title: 'Convivio', createdAt: '2026-01-03' },
-      creator: 'Anonimo',
+      fields: { ...EMPTY_SOURCE_FIELDS, creator: 'Anonimo' },
     }),
     entry({
       source: { ...entry().source, id: 'c', title: 'Rime', createdAt: '2026-01-01' },
-      creator: null,
+      fields: EMPTY_SOURCE_FIELDS,
     }),
   ];
 
@@ -253,7 +252,7 @@ describe('workspace e ordinamento', () => {
   });
 
   it('ordina per autore, con le opere senza autore in fondo', () => {
-    expect(orderLibraryCatalog(catalogoDaOrdinare, 'creator').map((item) => item.creator)).toEqual([
+    expect(orderLibraryCatalog(catalogoDaOrdinare, 'creator').map((item) => item.fields.creator)).toEqual([
       'Anonimo',
       'Dante Alighieri',
       null,

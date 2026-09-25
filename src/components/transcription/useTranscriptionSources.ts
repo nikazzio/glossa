@@ -7,10 +7,10 @@ import {
 import { listIIIFProviders } from '../../services/iiifProviderService';
 import { versionInventory } from '../../services/inventoryService';
 import { logger } from '../../utils/logger';
+import type { WorkIdentityData } from '../common/WorkIdentity';
 
 export interface BookHeaderInfo {
-  title: string;
-  creatorDate: string;
+  work: WorkIdentityData;
   pageUrl: string | null;
   providerLabel: string | undefined;
 }
@@ -64,8 +64,13 @@ export function useTranscriptionSources(sourceVersionId: string | null) {
       .then(([sourceDetail, providers]) => {
         if (cancelled) return;
         setBookInfo({
-          title: sourceDetail.source.title,
-          creatorDate: [sourceDetail.creator, sourceDetail.date].filter(Boolean).join(' · '),
+          work: {
+            title: sourceDetail.source.title,
+            creator: sourceDetail.creator,
+            date: sourceDetail.date,
+            place: sourceDetail.originPlace,
+            publisher: sourceDetail.publisher,
+          },
           pageUrl: sourceDetail.pageUrl ?? sourceDetail.catalogUrl,
           providerLabel: providers.find((provider) => provider.key === viewerRef.providerKey)?.label,
         });

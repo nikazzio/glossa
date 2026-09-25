@@ -296,9 +296,11 @@ dell'originale non lascia una riga di correzione.
 
 Il vincolo su `source_field_overrides.field` accetta tutti i **20 campi
 anagrafici** (`SOURCE_FIELDS` in `src/types.ts`), non solo i 5 storici: motore
-e database sono generici su ognuno, `getLibrarySourceDetail` li applica tutti
-in un solo passaggio (`effectiveFieldValues`/`baseFieldValue` in
-`libraryService.ts`). Quali campi abbiano davvero un comando di modifica a
+e database sono generici su ognuno, `getLibrarySourceDetail` e
+`listLibraryCatalog` li applicano tutti con lo stesso passaggio
+(`effectiveFieldValues`/`baseFieldValue` in `libraryService.ts`): la riga del
+catalogo porta in `fields` tutti i campi già corretti, così elenco e scheda non
+possono mostrare valori diversi della stessa opera. Quali campi abbiano davvero un comando di modifica a
 schermo è una scelta separata, oggi limitata a titolo/autore/data/lingua — gli
 altri sono in tab Info come sola lettura. I campi che arrivano come più valori
 insieme (contributori, diritti, soggetti, provenienza, genere/forma, copertura,

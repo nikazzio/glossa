@@ -234,6 +234,11 @@ export const SOURCE_FIELDS = [
 
 export type SourceField = (typeof SOURCE_FIELDS)[number];
 
+/** Un'opera senza nessun dato anagrafico oltre al titolo. */
+export const EMPTY_SOURCE_FIELDS = Object.fromEntries(
+  SOURCE_FIELDS.map((field) => [field, null]),
+) as Record<SourceField, string | null>;
+
 /** Con cosa si uniscono i valori di un campo che ne porta più d'uno: si legge
  *  così e si corregge così, perché due forme diverse per lo stesso campo
  *  costringerebbero a indovinare quale usare quando si scrive. */
@@ -273,8 +278,8 @@ export interface LibraryCatalogEntry {
   versionId: string | null;
   manifestUrl: string | null;
   thumbnailUrl: string | null;
-  creator: string | null;
-  date: string | null;
+  /** Tutti i campi anagrafici come si mostrano, correzioni a mano comprese. */
+  fields: Record<SourceField, string | null>;
   /** Pagine dichiarate dal manifesto, quando si è già letto. */
   expectedPages: number | null;
   /** Pagine davvero presenti sul computer. */

@@ -8,3 +8,4 @@ export { MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from './MarkdownEditor';
 export { RunResumeBanner } from './RunResumeBanner';
 export { ProviderLogo } from './ProviderLogo';
 export { PanelTransitionVeil } from './PanelTransitionVeil';
+export { WorkIdentity, imprint, type WorkIdentityData } from './WorkIdentity';

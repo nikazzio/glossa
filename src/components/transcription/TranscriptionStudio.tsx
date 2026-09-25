@@ -67,6 +67,7 @@ import {
 import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
 import { useOcrPageActivity } from '../../hooks/useOcrPageActivity';
 import type { ModelProvider } from '../../types';
+import { WorkIdentity } from '../common/WorkIdentity';
 
 const SAVE_DELAY_MS = 30_000;
 const INSPECTOR_COLLAPSED = 56;
@@ -728,14 +729,15 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
             <ArrowLeft size={15} />
           </IconButton>
           {bookInfo && <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />}
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-base italic text-editorial-ink">
-              {bookInfo?.title ?? detail?.title ?? t('areas.transcriptions.title')}
-            </h1>
-            {bookInfo?.creatorDate && (
-              <p className="truncate text-xs text-editorial-muted">{bookInfo.creatorDate}</p>
+          <h1 className="min-w-0">
+            {bookInfo ? (
+              <WorkIdentity variant="header" work={bookInfo.work} />
+            ) : (
+              <span className="block truncate font-display text-base italic text-editorial-ink">
+                {detail?.title ?? t('areas.transcriptions.title')}
+              </span>
             )}
-          </div>
+          </h1>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {bookInfo?.providerLabel && (

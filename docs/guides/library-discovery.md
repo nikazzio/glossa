@@ -25,6 +25,13 @@ riduzione delle immagini anziché scaricamento.
 
 ## Organizzazione
 
+Ogni opera si presenta allo stesso modo nei risultati di ricerca, nel catalogo,
+nella sua scheda e nello Studio di trascrizione: prima autore, anno, luogo e
+tipografo, poi il titolo in corsivo, che si ferma a due righe (una nelle
+intestazioni) e si legge intero al passaggio del puntatore. In fondo, in
+piccolo, biblioteca, pagine e stato. I libri antichi si riconoscono da chi li
+ha scritti e stampati, non da titoli che occupano mezza pagina.
+
 Le viste a elenco e a griglia mostrano provenienza, pagine dichiarate,
 risoluzioni locali, spazio occupato e collegamenti. Un conteggio non disponibile
 non equivale a zero. I filtri permettono di restringere il catalogo e di
@@ -109,9 +116,10 @@ dichiarano nel loro manifesto — sulla radice o sulla sequenza, secondo la
 versione dello standard — ed è da lì che Glossa lo scopre: nessun indirizzo
 costruito per analogia.
 
-Nei **risultati della ricerca** ogni riga dichiara lo stato, sempre: «PDF
-disponibile», «PDF non disponibile», oppure «PDF non verificato» quando il
-manifesto non si è potuto leggere. La riga aperta aggiunge le pagine dichiarate
+Nei **risultati della ricerca** la riga chiusa scrive «PDF disponibile» solo
+quando il PDF c'è. La riga aperta dichiara sempre lo stato completo —
+disponibile, non disponibile, oppure non verificato quando il manifesto non si
+è potuto leggere — e aggiunge le pagine dichiarate
 e la misura in pixel della prima pagina, unico indizio sulla qualità della
 scansione disponibile prima di scaricare. Il manifesto si legge una volta sola
 per opera, solo per le righe che stanno sotto gli occhi, due letture alla volta

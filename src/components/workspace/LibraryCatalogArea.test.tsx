@@ -10,6 +10,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { EMPTY_LIBRARY_FILTERS } from '../../utils/libraryCatalogFilters';
+import { EMPTY_SOURCE_FIELDS } from '../../types';
 import { enqueueOptimization } from '../../services/optimizeService';
 import { versionInventory } from '../../services/inventoryService';
 import '../../test/i18n-mock';
@@ -140,8 +141,7 @@ const entry = (
   versionId: 'v1',
   manifestUrl: 'https://x.test/m.json',
   thumbnailUrl: null,
-  creator: null,
-  date: null,
+  fields: EMPTY_SOURCE_FIELDS,
   expectedPages: 210,
   localPages: 0,
   localBytes: 0,

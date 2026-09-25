@@ -123,7 +123,7 @@ describe('SourceDiscoveryPanel', () => {
     expect(screen.getByText('dashboard.discovery.groupHint.directOnly')).toBeInTheDocument();
   });
 
-  it('mette in evidenza da dove viene ogni risultato, senza aprire la riga', async () => {
+  it('mette in evidenza chi, quando e dove, e scrive l\'istituzione nella riga piccola', async () => {
     // Cercando su un aggregatore i risultati arrivano da istituzioni diverse:
     // saperlo scorrendo l'elenco è la differenza fra decidere e controllare
     // una riga per volta.
@@ -137,8 +137,8 @@ describe('SourceDiscoveryPanel', () => {
           ...RESULT_EXTRAS,
           id: 'e-1',
           title: 'Divina commedia',
-          creator: null,
-          date: null,
+          creator: 'Dante Alighieri',
+          date: '1481',
           description: null,
           thumbnailUrl: null,
           mediaType: null,
@@ -157,8 +157,10 @@ describe('SourceDiscoveryPanel', () => {
     await user.type(await screen.findByRole('textbox'), 'dante');
     await user.click(screen.getByRole('button', { name: 'dashboard.discovery.submit' }));
 
-    const origin = await screen.findByText('Biblioteca Estense Universitaria');
-    expect(origin.tagName).toBe('STRONG');
+    const author = await screen.findByText('Dante Alighieri');
+    expect(author.tagName).toBe('STRONG');
+    expect(screen.getByText('1481', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Biblioteca Estense Universitaria', { exact: false })).toBeInTheDocument();
   });
 
   it('shows every metadata field when a list row expands, not just title and author', async () => {

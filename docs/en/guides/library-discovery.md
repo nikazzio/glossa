@@ -24,6 +24,13 @@ than downloading them.
 
 ## Organisation
 
+Every work looks the same in search results, in the catalogue, on its page, and
+in the transcription Studio: author, year, place, and printer first, then the
+title in italics, cut after two lines (one in headers) and readable in full on
+hover. At the bottom, in small print, library, pages, and status. Early printed
+books are recognised by who wrote and printed them, not by titles half a page
+long.
+
 List and grid views show provenance, declared page count, local resolutions,
 disk usage and links. An unavailable count is not equivalent to zero.
 Filters narrow the catalogue and can include archived works; saved views retain
@@ -87,9 +94,10 @@ it in their manifest — on the root or on the sequence, depending on the versio
 of the standard — and that is where Glossa finds it: no addresses built by
 analogy.
 
-In **search results** every row states the status, always: “PDF available”,
-“PDF not available”, or “PDF not verified” when the manifest could not be read.
-The expanded row adds the declared pages and the pixel size of the first page,
+In **search results** the closed row says “PDF available” only when there is
+one. The expanded row always states the full status — available, not
+available, or not verified when the manifest could not be read — and adds the
+declared pages and the pixel size of the first page,
 the only hint about scan quality available before downloading. The manifest is
 read once per work, only for rows on screen, at most two reads at a time, and
 never for a result the catalogue already declares without a reproduction.

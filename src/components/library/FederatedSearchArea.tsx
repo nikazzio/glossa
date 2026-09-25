@@ -140,7 +140,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     ? currentExecutions(selected).filter((execution) => execution.job.status === 'error')
     : [], [selected]);
   const virtualizer = useVirtualizer({ count: visible.length, getScrollElement: () => scroll.current,
-    estimateSize: () => 72, getItemKey: (index) => visible[index].id, overscan: 5 });
+    estimateSize: () => 88, getItemKey: (index) => visible[index].id, overscan: 5 });
   const tabs = [
     { id: 'execution', label: selected ? `${t('federation.execution')} · ${summary.complete}/${summary.total}` : t('federation.execution'), icon: <Activity size={16} /> },
     { id: 'history', label: t('federation.history'), icon: <History size={16} /> },
