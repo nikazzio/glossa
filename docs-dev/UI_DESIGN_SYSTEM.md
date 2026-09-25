@@ -379,7 +379,14 @@ un'attesa, e la seconda volta è già di troppo.
   senza uscita animata — tenere montate due aree insieme costerebbe letture
   doppie.
 - Elenchi: `ListReveal` sfalsa le righe di `LIST_STAGGER`, e il ritardo smette
-  di crescere dopo `LIST_STAGGER_MAX`.
+  di crescere dopo `LIST_STAGGER_MAX`. La cascata vale solo alla prima
+  comparsa (`stagger={false}` dopo): le righe che entrano per un filtro
+  compaiono insieme, senza farsi riaspettare.
+- Elenco e scheda di un'opera: la nuova vista entra con dissolvenza e
+  `MOTION_SHIFT`, senza aspettare l'uscita della precedente — un'uscita
+  animata prima dell'ingresso rendeva ogni apertura più lenta.
+- Righe che si aprono (risultati di ricerca): altezza animata con
+  `MOTION_DURATION` ed `EASE_EDITORIAL`, gli stessi di ogni riquadro.
 - Riquadri richiudibili: altezza animata con `AnimatePresence`; chiuso, il
   contenuto **non resta** nel DOM, altrimenti lo raggiungerebbe il tabulatore.
 - `MotionConfig reducedMotion="user"` sta alla radice dell'applicazione: nessun

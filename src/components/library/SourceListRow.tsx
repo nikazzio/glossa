@@ -4,7 +4,7 @@ import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus } from 'lucide-r
 import { useTranslation } from 'react-i18next';
 import { Hint, IconButton, Spinner, StatBlock } from '../ui';
 import { isManifest, type SourceCard } from '../../types';
-import { EASE_EDITORIAL } from '../layout/motion';
+import { EASE_EDITORIAL, MOTION_DURATION } from '../layout/motion';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { WorkIdentity } from '../common/WorkIdentity';
 import { useManifestFacts } from '../../hooks/useManifestFacts';
@@ -214,9 +214,8 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   );
 
   return (
-    <motion.article
+    <article
       ref={rowRef}
-      transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
       className={
         expanded
           ? 'my-1 overflow-hidden rounded-xl border border-editorial-accent/50 bg-surface-elevated shadow-sm'
@@ -226,7 +225,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
       <div className={`flex gap-3 px-3 py-2.5 ${expanded ? 'items-start' : 'items-center'}`}>
         <div className="flex min-w-0 flex-1 gap-3 text-left">
           <span
-            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox transition-all duration-200 ${
+            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-editorial-border bg-editorial-textbox transition-all duration-[180ms] ${
               expanded ? THUMBNAIL_SIZE.expanded : THUMBNAIL_SIZE.closed
             }`}
           >
@@ -261,7 +260,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
       </div>
       <AnimatePresence initial={false}>
         {expanded && (
-          <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
+          <motion.div key="details" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: MOTION_DURATION, ease: EASE_EDITORIAL }} className="overflow-hidden">
             <div className="flex gap-3 px-3 pb-3">
               {/* Colonna vuota della stessa larghezza della copertina: fa allineare il testo sotto al titolo, non sotto alla copertina. */}
               <span className={`shrink-0 ${THUMBNAIL_WIDTH_EXPANDED}`} aria-hidden="true" />
@@ -287,6 +286,6 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.article>
+    </article>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState, type DragEvent } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 import { AlertCircle, BookOpenText, LayoutGrid, List, RefreshCw, Table2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { EASE_EDITORIAL } from '../layout/motion';
+import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion';
 import { EmptyState, IconButton, ListReveal, Spinner } from '../ui';
 import { useSourceLibraryStore } from '../../stores/sourceLibraryStore';
 import { useLibrarySavedViewsStore } from '../../stores/librarySavedViewsStore';
@@ -51,7 +51,6 @@ interface LibraryCatalogAreaProps {
  */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const { t } = useTranslation();
-  const reducedMotion = useReducedMotion();
   const catalog = useSourceLibraryStore((state) => state.catalog);
   const catalogLoading = useSourceLibraryStore((state) => state.catalogLoading);
   const catalogError = useSourceLibraryStore((state) => state.catalogError);
@@ -92,6 +91,13 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const [filters, setFilters] = useState(EMPTY_LIBRARY_FILTERS);
   const [providers, setProviders] = useState<IIIFProvider[]>([]);
   const [transcriptionTarget, setTranscriptionTarget] = useState<LibraryCatalogEntry | null>(null);
+  // La cascata delle righe vale solo la prima volta che il catalogo compare.
+  const [firstReveal, setFirstReveal] = useState(true);
+  // Le righe già montate hanno avviato il loro ingresso: spegnere la cascata
+  // dopo il primo disegno vale solo per quelle che entreranno.
+  useEffect(() => {
+    if (catalog.length > 0) setFirstReveal(false);
+  }, [catalog.length]);
 
   useEffect(() => {
     void loadCatalog();
@@ -287,19 +293,20 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   });
 
   const isSourcePage = Boolean(itemId && detail && detail.source.id === itemId);
-  const transition = { duration: 0.28, ease: EASE_EDITORIAL };
-  const yOffset = reducedMotion ? 0 : 8;
+  // Lista e scheda entrano senza aspettare che l'altra esca: un'uscita animata
+  // prima dell'ingresso rendeva ogni apertura più lenta di quello che era.
+  const enter = {
+    initial: { opacity: 0, y: MOTION_SHIFT },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: MOTION_DURATION, ease: EASE_EDITORIAL },
+  };
 
   return (
     <>
-    <AnimatePresence mode="wait" initial={false}>
       {itemId && !isSourcePage ? (
         <motion.div
           key={`source-state-${itemId}`}
-          initial={{ opacity: 0, y: yOffset }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -yOffset }}
-          transition={transition}
+          {...enter}
           className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-surface-panel"
         >
           {detailLoading || !detailError ? (
@@ -329,10 +336,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       ) : isSourcePage && itemId && detail ? (
         <motion.div
           key={itemId}
-          initial={{ opacity: 0, y: yOffset }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -yOffset }}
-          transition={transition}
+          {...enter}
           className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
         >
           <LibrarySourcePage
@@ -356,10 +360,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
       ) : (
         <motion.div
           key="catalogue"
-          initial={{ opacity: 0, y: yOffset }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -yOffset }}
-          transition={transition}
+          {...enter}
           className="flex h-full min-h-0 w-full min-w-0 flex-1"
         >
           <aside className="flex w-56 shrink-0 flex-col border-r border-editorial-border bg-surface-panel">
@@ -468,7 +469,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                           ? 'grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 py-4'
                           : 'flex flex-col divide-y divide-editorial-border/60 py-2'}>
                           {group.entries.map((entry, index) => (
-                            <ListReveal key={entry.source.id} index={index}>
+                            <ListReveal key={entry.source.id} index={index} stagger={firstReveal}>
                               <LibraryCatalogRow
                                 entry={entry}
                                 view={view}
@@ -495,7 +496,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           </main>
         </motion.div>
       )}
-    </AnimatePresence>
     <CreateTranscriptionDialog
       open={transcriptionTarget !== null}
       onClose={() => setTranscriptionTarget(null)}

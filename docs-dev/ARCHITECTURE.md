@@ -339,6 +339,10 @@ raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
 sull'elenco già filtrato e ordinato; un'opera in più raccolte compare in ogni
 gruppo, e la scelta per intervallo segue l'ordine visibile, gruppi compresi.
 
+Rileggere la scheda della stessa opera (`loadDetail` dopo un collegamento o una
+correzione) non svuota `detail`: la scheda resta visibile finché arriva la
+nuova lettura. Solo aprire un'opera diversa passa dall'attesa.
+
 La scelta multipla del catalogo (`useCatalogSelection`) è stato della sola
 finestra: si svuota cambiando scaffale o raccolta. I comandi sulla scelta
 girano un'opera alla volta con le stesse azioni della singola riga

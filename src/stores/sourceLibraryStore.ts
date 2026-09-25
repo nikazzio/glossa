@@ -288,7 +288,11 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     // guardando, e l'attesa non finirebbe più. Vale solo la lettura dell'opera
     // chiesta per ultima.
     pendingDetailSource = sourceId;
-    set({ detail: null, detailLoading: true, detailError: null });
+    // Rileggere la stessa opera — dopo un collegamento, una correzione — non
+    // svuota la scheda: resta quella di prima finché arriva la nuova, invece
+    // di lampeggiare sull'attesa.
+    const current = get().detail;
+    set({ detail: current?.source.id === sourceId ? current : null, detailLoading: true, detailError: null });
     try {
       const detail = await getLibrarySourceDetail(sourceId);
       if (pendingDetailSource !== sourceId) return;
