@@ -99,7 +99,7 @@ export function LibraryCatalogTable({ entries, sort, onSort, providerLabel, isSe
             const label = t(`areas.library.table.${column}`);
             return (
               <th key={column} scope="col" aria-sort={sortKey && sortKey === sort ? 'ascending' : undefined}
-                className="py-2 pr-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-editorial-muted">
+                className="py-2 pr-3 text-xs font-semibold uppercase tracking-[0.1em] text-editorial-muted">
                 {sortKey ? (
                   <button type="button" onClick={() => onSort(sortKey)}
                     className={`uppercase tracking-[0.1em] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${sortKey === sort ? 'text-editorial-accent' : 'hover:text-editorial-ink'}`}>

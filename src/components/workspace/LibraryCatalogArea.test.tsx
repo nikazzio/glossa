@@ -1128,6 +1128,25 @@ describe('LibraryCatalogArea', () => {
     useUiStore.setState({ libraryView: 'list' });
   });
 
+  it('raggruppa per biblioteca con il nome della biblioteca', async () => {
+    const iiifService = await import('../../services/iiifProviderService');
+    vi.mocked(iiifService.listIIIFProviders).mockResolvedValueOnce([
+      { key: 'gallica', label: 'Gallica' }, { key: 'mdz', label: 'BSB' },
+    ] as never);
+    useUiStore.setState({ libraryGrouping: 'provider' });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Uno' }, providerKey: 'gallica' }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Due' }, providerKey: 'mdz' }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    await waitFor(() => expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent))
+      .toEqual(['BSB1', 'Gallica1']));
+    useUiStore.setState({ libraryGrouping: 'none' });
+  });
+
   it('raggruppa per secolo, con le opere senza data in fondo', () => {
     useUiStore.setState({ libraryGrouping: 'century' });
     useSourceLibraryStore.setState({

@@ -10,22 +10,27 @@ import { IconButton, Spinner } from '../ui';
 /** Il tempo di finire di scrivere: riconoscere a ogni tasto è lavoro buttato. */
 const RECOGNITION_DELAY_MS = 300;
 
-/** Le opere che le biblioteche riconoscono in quello che si sta scrivendo. */
+/**
+ * Le opere che le biblioteche riconoscono in quello che si sta scrivendo.
+ * La risposta vale solo per il testo a cui risponde: finché l'attesa non è
+ * passata, per un testo appena cambiato non c'è niente da proporre.
+ */
 export function useRecognitions(input: string): IIIFRecognition[] {
-  const settled = useDebounce(input.trim(), RECOGNITION_DELAY_MS);
-  const [found, setFound] = useState<IIIFRecognition[]>([]);
+  const text = input.trim();
+  const settled = useDebounce(text, RECOGNITION_DELAY_MS);
+  const [answer, setAnswer] = useState<{ text: string; found: IIIFRecognition[] }>({ text: '', found: [] });
   useEffect(() => {
-    if (!settled) { setFound([]); return; }
+    if (!settled) { setAnswer({ text: '', found: [] }); return; }
     let disposed = false;
     recognizeWork(settled)
-      .then((list) => { if (!disposed) setFound(list); })
+      .then((found) => { if (!disposed) setAnswer({ text: settled, found }); })
       .catch((error: unknown) => {
         logger.warn('federation.recognition.failed', { error: errorMessage(error) });
-        if (!disposed) setFound([]);
+        if (!disposed) setAnswer({ text: settled, found: [] });
       });
     return () => { disposed = true; };
   }, [settled]);
-  return found;
+  return answer.text === text ? answer.found : [];
 }
 
 /**

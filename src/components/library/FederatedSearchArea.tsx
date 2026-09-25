@@ -64,6 +64,9 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const [opened, setOpened] = useState<OpenedWork | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const recognitions = useRecognitions(keywords);
+  // Il testo di adesso, per scartare un'opera aperta quando il testo era un altro.
+  const currentKeywords = useRef(keywords);
+  currentKeywords.current = keywords;
   const scroll = useRef<HTMLDivElement>(null);
   // The request ID survives a lost response, making resubmission idempotent.
   const pending = useRef<{ signature: string; id: string } | null>(null);
@@ -123,9 +126,11 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     setTab('sources');
   });
   const openRecognized = async (providerKey: string) => {
+    const text = keywords;
     setOpening(providerKey);
     try {
-      const manifest = await openWork(providerKey, keywords.trim());
+      const manifest = await openWork(providerKey, text.trim());
+      if (currentKeywords.current !== text) return;
       setOpened({ providerKey, card: { ...manifest, id: manifest.manifestUrl } });
     } catch (failure: unknown) {
       const code = String(failure);

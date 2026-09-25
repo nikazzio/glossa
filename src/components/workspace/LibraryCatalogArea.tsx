@@ -41,10 +41,6 @@ interface LibraryCatalogAreaProps {
   itemId?: string;
 }
 
-interface LibraryCatalogAreaProps {
-  itemId?: string;
-}
-
 /**
  * Catalogo delle fonti salvate in Biblioteca: scaffali e raccolte a sinistra,
  * ricerca e filtri rapidi sopra l'elenco.
@@ -140,6 +136,8 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const counts = Object.fromEntries(LIBRARY_FACETS.map((facet) => [facet, facetCounts(catalog, filters, clock, facet)])) as
     Record<(typeof LIBRARY_FACETS)[number], Map<string, number>>;
 
+  const providerLabel = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
+  const workspaceName = (id: string) => workspaces.find((workspace) => workspace.id === id)?.name ?? id;
   const groupLabel = (key: string): string => {
     if (key === '') return t(`areas.library.grouping.missing.${grouping}`);
     switch (grouping) {
@@ -155,10 +153,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const groups = groupCatalog(filteredCatalog, grouping, compareGroupKeys);
   // La scelta per intervallo segue l'ordine in cui le righe si vedono, gruppi compresi.
   const selection = useCatalogSelection([...new Set(groups.flatMap((group) => group.entries.map((entry) => entry.source.id)))]);
-  const selectedEntries = catalog.filter((entry) => selection.selected.has(entry.source.id));
+  // I comandi valgono solo per le opere scelte che si vedono: una scelta
+  // nascosta da un filtro non deve subire un comando dato guardando altro.
+  const selectedEntries = filteredCatalog.filter((entry) => selection.selected.has(entry.source.id));
   const applyJobChange = useJobsStore((state) => state.applyChange);
-  // Cambiando scaffale o raccolta la scelta si svuota: opere che non si vedono
-  // più non devono subire un comando dato guardando altro.
+  // Cambiando scaffale o raccolta la scelta si svuota.
   const { clear: clearSelection } = selection;
   useEffect(() => { clearSelection(); }, [filters.shelf, filters.collectionId, clearSelection]);
   // Esc svuota la scelta, tranne quando chiude un menu o un campo aperto.
@@ -173,9 +172,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [hasSelection, clearSelection]);
-
-  const providerLabel = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
-  const workspaceName = (id: string) => workspaces.find((workspace) => workspace.id === id)?.name ?? id;
 
   const openSource = (sourceId: string) => {
     markOpened(sourceId);
@@ -244,17 +240,23 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     }
   };
 
-  /** Un comando su più opere: una alla volta, e un messaggio solo alla fine. */
+  /** Un comando su più opere: tutte, una alla volta, anche se qualcuna non
+   *  riesce; un solo messaggio d'errore alla fine. Dice quante non sono riuscite. */
   const forEachEntry = async (
     entries: LibraryCatalogEntry[],
     work: (entry: LibraryCatalogEntry) => Promise<unknown>,
     failure: string,
-  ) => {
-    try {
-      for (const entry of entries) await work(entry);
-    } catch {
-      toast.error(t(failure));
+  ): Promise<number> => {
+    let failed = 0;
+    for (const entry of entries) {
+      try {
+        await work(entry);
+      } catch {
+        failed += 1;
+      }
     }
+    if (failed > 0) toast.error(t(failure));
+    return failed;
   };
   const forEachSelected = (work: (entry: LibraryCatalogEntry) => Promise<unknown>, failure: string) =>
     forEachEntry(selectedEntries, work, failure);
@@ -268,10 +270,16 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
     }, 'areas.library.linkFailed');
     await loadCatalog();
   };
-  const downloadSelection = () => forEachSelected(async (entry) => {
-    const job = await enqueueEntryDownload(entry);
-    if (job) applyJobChange(job);
-  }, 'areas.library.downloadFailed').then(() => toast.success(t('areas.library.downloadQueued')));
+  const downloadSelection = async () => {
+    let queued = 0;
+    const failed = await forEachSelected(async (entry) => {
+      const job = await enqueueEntryDownload(entry);
+      if (!job) return;
+      applyJobChange(job);
+      queued += 1;
+    }, 'areas.library.downloadFailed');
+    if (queued > 0 && failed === 0) toast.success(t('areas.library.downloadQueued'));
+  };
   const archiveSelection = async (archived: boolean) => {
     await forEachSelected((entry) => setArchived(entry.source.id, archived),
       archived ? 'areas.library.archiveFailed' : 'areas.library.restoreFailed');
@@ -282,7 +290,7 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
   const rowHandlers = (entry: LibraryCatalogEntry) => ({
     onPick: (pick: RowPick) => selection.pick(entry.source.id, pick),
     onDragStart: (event: DragEvent<HTMLElement>) => {
-      const ids = selection.selected.has(entry.source.id) ? [...selection.selected] : [entry.source.id];
+      const ids = selection.selected.has(entry.source.id) ? selectedEntries.map((item) => item.source.id) : [entry.source.id];
       event.dataTransfer.setData(DRAGGED_SOURCES, JSON.stringify(ids));
       event.dataTransfer.effectAllowed = 'copy';
     },
