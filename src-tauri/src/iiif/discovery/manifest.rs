@@ -416,7 +416,8 @@ pub(super) async fn enrich_results(
 #[cfg(test)]
 mod tests {
     use super::super::super::find_provider;
-    use super::super::{discover_with, DiscoveryStatus, SearchEndpoints};
+    use super::super::tests::search;
+    use super::super::SearchEndpoints;
     use super::*;
     use reqwest::Client;
 
@@ -483,19 +484,16 @@ mod tests {
             .await;
         let provider = find_provider("generic").expect("provider exists");
 
-        let outcome = discover_with(
+        let preview = super::super::open_recognized(
             &Client::new(),
             provider,
             &format!("{}/manifest.json", server.uri()),
-            &SearchEndpoints::default(),
-            1,
             None,
         )
         .await
         .expect("manifest resolves");
 
-        assert_eq!(outcome.status, DiscoveryStatus::Manifest);
-        assert_eq!(outcome.manifest.expect("preview").title, "Book of Hours");
+        assert_eq!(preview.title, "Book of Hours");
     }
 
     #[test]
@@ -614,8 +612,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("europeana").expect("provider exists"),
             "dante",
             &SearchEndpoints {
@@ -624,7 +621,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");

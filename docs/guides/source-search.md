@@ -4,37 +4,42 @@ title: Ricerca delle fonti
 
 # Ricerca delle fonti
 
-La Dashboard offre due modalità di ricerca: **Ricerca federata**, che interroga
-più servizi, e **Ricerca singola / identificativo**, per una fonte specifica o
-un indirizzo noto. I risultati restano separati dal catalogo personale finché
-non vengono aggiunti alla Biblioteca.
+La Dashboard offre una sola schermata di **Ricerca**: una casella per cercare
+opere nelle biblioteche e per aprire direttamente un'opera di cui si conosce
+l'identificativo o l'indirizzo. I risultati restano separati dal catalogo
+personale finché non vengono aggiunti alla Biblioteca.
 
-## Ricerca su più fonti
+## Cercare
 
-Le due ricerche si aprono dalla barra a sinistra, come voci sotto Dashboard.
+La ricerca si apre dalla barra a sinistra, sotto Dashboard.
 
-Le parole chiave si scrivono nel campo in cima alla pagina e la ricerca parte
-dal comando accanto. Il comando successivo apre i **criteri avanzati**, terza
-scheda della colonna di destra: lì si restringe la ricerca e si scelgono le
-fonti. Un altro comando avvia una ricerca nuova, svuotando parole e criteri e
-lasciando le fonti scelte. Le biblioteche e le
-raccolte aggregate sono selezionabili separatamente; Europeana e Internet Archive
-non vengono inclusi automaticamente nella selezione iniziale delle biblioteche.
-Europeana richiede una chiave in **Impostazioni → Biblioteca → Biblioteche**.
+A sinistra della casella si sceglie **dove cercare**: tutte le biblioteche, una
+sola, oppure una scelta personalizzata. «Tutte» comprende le biblioteche che
+cercano per parole, non le raccolte aggregate: Europeana e Internet Archive
+moltiplicano i risultati di altre istituzioni e si aggiungono di proposito nei
+**criteri avanzati**, terza scheda della colonna di destra, dove si spuntano le
+fonti una per una. Europeana richiede una chiave in **Impostazioni → Biblioteca
+→ Biblioteche**. La scelta delle fonti resta per le ricerche successive.
 
-Le ricerche già fatte si riaprono dalla scheda **Ricerche** nella colonna di
-destra, che conserva criteri, risultati e tentativi; aprendone una si torna alla
-scheda dell'esecuzione.
+Le parole si scrivono nella casella e la ricerca parte dal comando accanto. Il
+comando dei criteri avanzati apre titolo, autore, tipografo, istituzione,
+lingua, materiale e anni. Si può cercare anche solo per campi, senza parole
+libere. Un altro comando avvia una ricerca nuova, svuotando parole e criteri e
+lasciando le fonti scelte.
 
-Sopra i risultati, a destra, i comandi mostrano una fonte sola o tutte e
-ordinano per titolo. Ogni comando spiega il proprio significato al passaggio
-del mouse.
+Sopra i risultati si sceglie l'ordine: **per pertinenza** (l'ordine in cui le
+biblioteche rispondono), **per anno**, **per autore** o **per titolo**; i
+risultati senza il dato vanno in fondo. Quando qualche fonte ha altri
+risultati, il comando in fondo all'elenco li chiede a tutte quelle che ne
+hanno.
 
-L’avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascun
-provider viene elaborata come lavoro indipendente: una fonte lenta o in errore
-non impedisce alle altre di pubblicare risultati. Il monitor mostra stato,
-tentativi ed errori; permette di sospendere, riprendere, annullare, riprovare,
-ripetere dalla prima pagina o caricare altri risultati per fonte.
+L'avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascuna
+fonte è un lavoro indipendente: una fonte lenta o in errore non impedisce alle
+altre di pubblicare risultati. La scheda **Fonti**, a destra, ha una riga per
+biblioteca con stato, numero di risultati arrivati, il comando «riprova» dopo
+un errore e il filtro per guardare solo quella fonte. Pause, ripartenze e
+tentativi stanno nel pannello dei lavori. Le ricerche già fatte si riaprono
+dalla scheda **Ricerche**, che conserva criteri e risultati.
 
 ## Criteri bibliografici
 
@@ -61,21 +66,33 @@ l’assenza di risultati.
 
 ## Identità e provenienza
 
-Il raggruppamento usa l’identità esatta del manifesto IIIF. Titoli simili non
-sono sufficienti per unire risultati. Le occorrenze e i riferimenti ai servizi
-che li hanno restituiti restano disponibili. Il servizio interrogato,
+Ogni risultato mostra autore, anno, luogo e tipografo, poi il titolo; in
+piccolo la biblioteca, le pagine e «PDF disponibile» quando c'è. Il
+raggruppamento usa l’identità esatta del manifesto IIIF: la stessa opera
+arrivata da più biblioteche è una riga sola con il numero delle copie, e
+aprendo la riga si sceglie quale copia usare. Titoli simili non bastano per
+unire risultati. Il servizio interrogato,
 l’istituzione di conservazione e il servizio delle immagini possono essere
 organizzazioni diverse.
 
-L’ordinamento per titolo permette di integrare esplicitamente i nuovi risultati.
-Lo storico distingue le esecuzioni precedenti da quella corrente. **Estendi
-alle raccolte** crea una ricerca collegata con gli stessi criteri, limitata
+**Estendi alle raccolte** crea una ricerca collegata con gli stessi criteri, limitata
 alle raccolte selezionate che non erano già incluse.
 
-## Apertura per identificativo
+## Apertura per identificativo o indirizzo
 
-La ricerca singola interpreta l’input secondo la fonte selezionata. Gli esempi
-nel campo indicano la sintassi accettata.
+Nella stessa casella si può scrivere o incollare l'identificativo di un'opera,
+una segnatura o un indirizzo. Mentre si scrive, Glossa controlla quali
+biblioteche lo riconoscono — senza nessuna richiesta di rete — e per ciascuna
+mostra sopra i risultati la riga **Apri su …**: il comando accanto apre
+l'opera, pronta da aggiungere alla Biblioteca. Chi cerca per parole non vede
+niente in più.
+
+Una forma inequivocabile, come un indirizzo o un ARK, viene sempre proposta.
+Un identificativo nudo viene proposto solo se è una parola sola con almeno una
+cifra: su Gallica qualunque parola di sei lettere ha la forma di un
+identificativo, e proporre di aprire «Rabelais» come un'opera sarebbe rumore.
+Un indirizzo completo si apre anche con Invio; il manifesto IIIF di
+un'istituzione non elencata si apre allo stesso modo, incollandone l'indirizzo.
 
 | Fonte | Ricerca per parole | Esempio di riferimento diretto |
 | --- | --- | --- |
@@ -112,10 +129,9 @@ interroga è ciò che la biblioteca espone a un programma, che quasi mai coincid
 con tutto il suo catalogo. Si cerca sul loro sito, si copia l’indirizzo
 dell’opera e lo si incolla qui per aprirla.
 
-Il comando compare nella ricerca su una sola fonte, accanto alla biblioteca
-scelta; nella ricerca su più fonti quando l’elenco dei risultati resta vuoto e
-quando si stanno guardando i risultati di una sola biblioteca; e nella scheda
-di un’opera che non porta con sé l’indirizzo della propria pagina.
+Il comando compare quando l’elenco dei risultati resta vuoto, quando si stanno
+guardando i risultati di una sola biblioteca, e nella scheda di un’opera che
+non porta con sé l’indirizzo della propria pagina.
 
 ## Disponibilità delle riproduzioni
 
@@ -134,4 +150,5 @@ stesso manifesto non duplica la fonte.
 Le ricerche persistenti conservano criteri, esecuzioni e risultati fra le
 sessioni e sono incluse nel backup. I lavori si fermano quando l’app è chiusa.
 La cache delle risposte di rete è distinta dallo storico: il comando di
-aggiornamento della ricerca singola permette di interrogare nuovamente la fonte.
+aggiornamento rilegge lo stato della ricerca, mentre «riprova» e una ricerca
+nuova interrogano di nuovo le fonti.

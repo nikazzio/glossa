@@ -1,21 +1,19 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { IIIFDiscoveryOutcome, IIIFProvider } from '../types';
+import type { IIIFManifestPreview, IIIFProvider, IIIFRecognition } from '../types';
 
 export async function listIIIFProviders(): Promise<IIIFProvider[]> {
   return invoke<IIIFProvider[]>('list_iiif_providers');
 }
 
-/**
- * `fresh` salta il risultato conservato e ripassa dalla biblioteca: è l'unico
- * modo di sapere se il catalogo è cresciuto prima che quello conservato scada.
- */
-export async function discoverIIIF(
-  providerKey: string,
-  input: string,
-  page = 1,
-  fresh = false,
-): Promise<IIIFDiscoveryOutcome> {
-  return invoke<IIIFDiscoveryOutcome>('discover_iiif', { providerKey, input, page, fresh });
+/** Le biblioteche che riconoscono quello che è stato scritto come un'opera
+ *  precisa: nessuna richiesta di rete, solo le forme note di ciascuna. */
+export async function recognizeWork(input: string): Promise<IIIFRecognition[]> {
+  return invoke<IIIFRecognition[]>('recognize_work', { input });
+}
+
+/** Apre l'opera che la biblioteca riconosce in quello che è stato scritto. */
+export async function openWork(providerKey: string, input: string): Promise<IIIFManifestPreview> {
+  return invoke<IIIFManifestPreview>('open_work', { providerKey, input });
 }
 
 /** Una rappresentazione alternativa dell'opera dichiarata dalla biblioteca:

@@ -8,14 +8,6 @@ pub mod search;
 pub mod settings;
 pub mod viewer;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SearchMode {
-    Direct,
-    Fallback,
-    SearchFirst,
-}
-
 /// Stable dispatch names. #215 binds implementations to these identifiers;
 /// provider metadata never needs to know about a caller or UI surface.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -124,7 +116,6 @@ pub struct IIIFProvider {
     pub is_enabled: bool,
     pub resolver: ResolverKind,
     pub search_handler: Option<SearchHandlerKind>,
-    pub search_mode: SearchMode,
     pub supports_direct_resolution: bool,
     pub supports_search: bool,
     /// Raccolta, biblioteca o indirizzo diretto: serve alla schermata per
@@ -156,7 +147,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         // l'opera senza chiedere la chiave.
         resolver: ResolverKind::Europeana,
         search_handler: Some(SearchHandlerKind::Europeana),
-        search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Aggregator,
@@ -173,7 +163,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Generic,
         search_handler: Some(SearchHandlerKind::Wellcome),
-        search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -190,7 +179,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Vatican,
         search_handler: Some(SearchHandlerKind::Vatican),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -207,7 +195,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Gallica,
         search_handler: Some(SearchHandlerKind::Gallica),
-        search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -230,7 +217,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Institut,
         search_handler: Some(SearchHandlerKind::Institut),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -247,7 +233,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Bodleian,
         search_handler: Some(SearchHandlerKind::Bodleian),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -264,7 +249,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Heidelberg,
         search_handler: None,
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: false,
         kind: ProviderKind::Library,
@@ -281,7 +265,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Cambridge,
         search_handler: Some(SearchHandlerKind::Cambridge),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -301,7 +284,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         // La segnatura composta si riconosce da sola; tutto il resto è testo da
         // cercare. Dichiarandosi `Direct`, questa biblioteca teneva spenta la
         // propria ricerca: il campo prometteva di cercare e non cercava.
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -318,7 +300,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Estense,
         search_handler: Some(SearchHandlerKind::Estense),
-        search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -335,7 +316,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Harvard,
         search_handler: None,
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: false,
         kind: ProviderKind::Library,
@@ -352,7 +332,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Loc,
         search_handler: Some(SearchHandlerKind::Loc),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -369,7 +348,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::ArchiveOrg,
         search_handler: Some(SearchHandlerKind::ArchiveOrg),
-        search_mode: SearchMode::SearchFirst,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Aggregator,
@@ -386,7 +364,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::ERara,
         search_handler: None,
-        search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         // La sua pagina di ricerca risponde con un controllo anti-robot: si
         // dichiara, invece di offrire una ricerca che restituirebbe sempre
@@ -406,7 +383,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::EManuscripta,
         search_handler: None,
-        search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         supports_search: false,
         kind: ProviderKind::Library,
@@ -423,7 +399,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Mdz,
         search_handler: Some(SearchHandlerKind::Mdz),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -443,7 +418,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         // catalogo della biblioteca: il catalogo ha un suo servizio, ma i suoi
         // record non dicono se e dove l'opera è stata digitalizzata.
         search_handler: Some(SearchHandlerKind::Nls),
-        search_mode: SearchMode::Fallback,
         supports_direct_resolution: true,
         supports_search: true,
         kind: ProviderKind::Library,
@@ -462,7 +436,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         // La piattaforma pubblica i manifesti ma non un modo di interrogarli:
         // nessuna raccolta IIIF, nessuna risposta strutturata alla ricerca.
         search_handler: None,
-        search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         supports_search: false,
         kind: ProviderKind::Library,
@@ -479,7 +452,6 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         is_enabled: true,
         resolver: ResolverKind::Generic,
         search_handler: None,
-        search_mode: SearchMode::Direct,
         supports_direct_resolution: true,
         supports_search: false,
         kind: ProviderKind::DirectUrl,
@@ -590,9 +562,8 @@ mod tests {
     }
 
     #[test]
-    fn provider_capabilities_declare_search_modes_and_fields() {
+    fn provider_capabilities_declare_search_fields() {
         let gallica = find_provider("gallica").expect("Gallica provider must exist");
-        assert_eq!(gallica.search_mode, SearchMode::SearchFirst);
         assert!(gallica.search_fields.contains(&SearchField::Title));
         assert!(gallica.search_fields.contains(&SearchField::Material));
         assert_eq!(gallica.search_handler, Some(SearchHandlerKind::Gallica));
@@ -612,7 +583,7 @@ mod tests {
             .expect("provider serializes");
 
         assert!(provider.get("isEnabled").is_some());
-        assert!(provider.get("searchMode").is_some());
+        assert!(provider.get("searchFields").is_some());
         assert!(provider.get("searchHandler").is_some());
         assert!(provider.get("supportsSearch").is_some());
     }

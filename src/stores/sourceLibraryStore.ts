@@ -21,7 +21,7 @@ import {
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
   versionProviderKey,
 } from '../services/libraryService';
-import { discoverIIIF } from '../services/iiifProviderService';
+import { openWork } from '../services/iiifProviderService';
 import { readManifestFacts } from '../hooks/useManifestFacts';
 import {
   collectionsOfMany,
@@ -315,11 +315,8 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       throw new Error('library_source_resync_missing_manifest');
     }
 
-    const outcome = await discoverIIIF(providerKey, primary.sourceUrl, 1, true);
-    if (!outcome.manifest) {
-      throw new Error('library_source_resync_not_found');
-    }
-    const card = { ...outcome.manifest, id: outcome.manifest.manifestUrl };
+    const manifest = await openWork(providerKey, primary.sourceUrl);
+    const card = { ...manifest, id: manifest.manifestUrl };
 
     await resyncSourceFromManifest(sourceId, {
       title: card.title,

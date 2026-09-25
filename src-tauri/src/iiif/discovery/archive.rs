@@ -182,7 +182,8 @@ fn archive_extra_fields(document: &Value) -> BTreeMap<String, Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::super::super::find_provider;
-    use super::super::{discover_with, DiscoveryStatus, SearchEndpoints};
+    use super::super::tests::search;
+    use super::super::SearchEndpoints;
     use super::*;
     use reqwest::Client;
 
@@ -197,8 +198,7 @@ mod tests {
         Mock::given(method("GET")).and(path("/search")).respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"response": {"docs": [{"identifier": "ms-1", "title": "Manuscript", "creator": "Anonimo"}]}}))).mount(&server).await;
         let provider = find_provider("archive_org").expect("provider exists");
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             provider,
             "manuscript",
             &SearchEndpoints {
@@ -206,12 +206,10 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
 
-        assert_eq!(outcome.status, DiscoveryStatus::Results);
         assert_eq!(
             outcome.results[0].manifest_url,
             "https://iiif.archive.org/iiif/ms-1/manifest.json"
@@ -238,8 +236,7 @@ mod tests {
             .await;
         let provider = find_provider("archive_org").expect("provider exists");
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             provider,
             "manuscript",
             &SearchEndpoints {
@@ -247,7 +244,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
-import { discoverIIIF, listIIIFProviders } from './iiifProviderService';
+import { listIIIFProviders, openWork, recognizeWork } from './iiifProviderService';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 
@@ -14,30 +14,20 @@ describe('listIIIFProviders', () => {
   });
 });
 
-describe('discoverIIIF', () => {
-  it('sends selected collection and input to the native discovery command', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce({ status: 'not_found', providerKey: 'generic', manifest: null, results: [], hasMore: false });
+describe('recognizeWork e openWork', () => {
+  it('chiede al motore chi riconosce quello che è stato scritto', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce([{ providerKey: 'gallica', docId: 'bpt6k3282120' }]);
 
-    await discoverIIIF('generic', 'https://example.org/manifest.json', 2);
+    await expect(recognizeWork('bpt6k3282120')).resolves.toEqual([{ providerKey: 'gallica', docId: 'bpt6k3282120' }]);
 
-    expect(invoke).toHaveBeenCalledWith('discover_iiif', {
-      providerKey: 'generic',
-      input: 'https://example.org/manifest.json',
-      page: 2,
-      fresh: false,
-    });
+    expect(invoke).toHaveBeenCalledWith('recognize_work', { input: 'bpt6k3282120' });
   });
 
-  it('chiede alla biblioteca invece di rispondere con quello che ha, quando glielo si dice', async () => {
-    vi.mocked(invoke).mockResolvedValueOnce({ status: 'not_found', providerKey: 'generic', manifest: null, results: [], hasMore: false });
+  it('apre l\'opera dalla biblioteca che la riconosce', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce({ manifestUrl: 'https://example.org/manifest.json' });
 
-    await discoverIIIF('gallica', 'heures', 1, true);
+    await openWork('gallica', 'bpt6k3282120');
 
-    expect(invoke).toHaveBeenCalledWith('discover_iiif', {
-      providerKey: 'gallica',
-      input: 'heures',
-      page: 1,
-      fresh: true,
-    });
+    expect(invoke).toHaveBeenCalledWith('open_work', { providerKey: 'gallica', input: 'bpt6k3282120' });
   });
 });

@@ -88,7 +88,11 @@ impl JobHandler for SearchJob {
             profile: &profile,
         };
         let endpoints = SearchEndpoints {
-            europeana_key: crate::keystore::get_api_key(&self.0, "europeana").ok(),
+            europeana_key: crate::keystore::get_api_key(
+                &self.0,
+                crate::iiif::discovery::EUROPEANA_KEY_ID,
+            )
+            .ok(),
             ..SearchEndpoints::default()
         };
         let client = crate::iiif::discovery::client().map_err(failure)?;
@@ -122,7 +126,7 @@ impl JobHandler for SearchJob {
             if let Some(page) = cached {
                 return Ok(page);
             }
-            crate::iiif::search::run(
+            crate::iiif::discovery::search_provider(
                 &client,
                 handler,
                 &endpoints,

@@ -9,8 +9,6 @@ export interface CustomProviderProfile {
   requiresApiKey: boolean;
 }
 
-export type IIIFSearchMode = 'direct' | 'fallback' | 'search_first';
-
 /** Un criterio che la biblioteca cerca davvero nel proprio catalogo. Dove
  *  manca, il criterio filtra soltanto i risultati già arrivati. */
 export type IIIFSearchField = 'title' | 'author' | 'publisher' | 'material' | 'years';
@@ -32,7 +30,6 @@ export interface IIIFProvider {
   isEnabled: boolean;
   resolver: string;
   searchHandler: string | null;
-  searchMode: IIIFSearchMode;
   supportsDirectResolution: boolean;
   supportsSearch: boolean;
   kind: IIIFProviderKind;
@@ -42,8 +39,6 @@ export interface IIIFProvider {
   siteSearch: string;
   searchFields: IIIFSearchField[];
 }
-
-export type IIIFDiscoveryStatus = 'manifest' | 'results' | 'not_found';
 
 export interface IIIFManifestPreview {
   manifestUrl: string;
@@ -140,18 +135,11 @@ export function classifySourceKind(card: SourceCard): SourceKind {
   return 'other';
 }
 
-export interface IIIFDiscoveryOutcome {
-  status: IIIFDiscoveryStatus;
+/** Un'opera precisa di una biblioteca, riconosciuta in quello che è stato
+ *  scritto: un indirizzo, una segnatura, un identificativo. */
+export interface IIIFRecognition {
   providerKey: string;
-  manifest: IIIFManifestPreview | null;
-  results: IIIFDiscoveryResult[];
-  hasMore: boolean;
-  /**
-   * Secondi dall'epoca: quando questo risultato è arrivato dalla biblioteca.
-   * Assente se è arrivato adesso. Serve a dire a chi guarda **di quando** è
-   * quello che ha davanti, e quindi se vale la pena rifare la ricerca.
-   */
-  cachedAt?: number;
+  docId: string;
 }
 
 /**

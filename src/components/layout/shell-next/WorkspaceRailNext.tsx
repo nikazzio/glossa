@@ -6,7 +6,6 @@ import {
   FilePen,
   LayoutDashboard,
   LibraryBig,
-  Link2,
   PanelLeftClose,
   Plus,
   Search,
@@ -69,14 +68,12 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
 }
 
 /**
- * Le tre viste della Dashboard: panoramica, ricerca su più fonti e ricerca per
- * indirizzo. Stanno qui, sotto la voce a cui appartengono, invece di occupare
+ * Le due viste della Dashboard: panoramica e ricerca. Stanno qui, sotto la voce a cui appartengono, invece di occupare
  * una riga di linguette dentro la pagina.
  */
-const DASHBOARD_VIEWS: { view?: 'search' | 'direct'; labelKey: string; icon: LucideIcon }[] = [
+const DASHBOARD_VIEWS: { view?: 'search'; labelKey: string; icon: LucideIcon }[] = [
   { labelKey: 'overview.title', icon: LayoutDashboard },
   { view: 'search', labelKey: 'federation.title', icon: Search },
-  { view: 'direct', labelKey: 'federation.single', icon: Link2 },
 ];
 
 function DashboardViews({ collapsed }: { collapsed: boolean }) {

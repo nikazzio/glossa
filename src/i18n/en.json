@@ -1,14 +1,5 @@
 {
   "federation": {
-    "viewExecution": "Show results from this execution",
-    "historical": "You are looking at an earlier attempt",
-    "currentResults": "Return to current results",
-    "moreAvailable": "More pages available",
-    "exhausted": "No further pages",
-    "partial": "Incomplete coverage",
-    "pauseAll": "Pause every source",
-    "resumeAll": "Resume the paused sources",
-    "retryFailed": "Retry the sources that did not answer",
     "details": "Show / hide details",
     "stopBeforeRestore": "Pause searches before restoring a backup.",
     "material": {
@@ -16,11 +7,10 @@
       "manuscript": "Manuscripts",
       "printed": "Printed books"
     },
-    "title": "Federated search",
+    "title": "Search",
     "catalog": "Catalogue",
-    "single": "Single source / identifier",
     "criteria": "Criteria",
-    "execution": "Execution",
+    "execution": "Sources",
     "history": "Searches",
     "new": "New search",
     "launch": "Start search",
@@ -31,21 +21,14 @@
     "aggregator": "Aggregators",
     "selectedCount": "{{count}} selected sources",
     "draftHint": "Edited criteria apply to a new search; they do not change running searches.",
-    "queryHint": "Keywords sent to selected catalogues. Use Single source / identifier for URLs and shelfmarks.",
     "dateHint": "Inclusive range. Where arriving results are filtered, century-based or approximate dates are not enough to decide.",
     "aggregatorHint": "Aggregators index multiple institutions and may overlap with libraries. They are never selected automatically. Europeana requires a key in settings.",
     "providersFailed": "Unable to load available sources.",
     "readFailed": "Unable to refresh searches. Visible data may be out of date.",
-    "empty": "Set criteria and select sources to start searching.",
+    "empty": "Type the words to search, or paste an identifier or an address to open the work directly.",
     "noVisible": "No results for these criteria.",
-    "retry": "Retry this page",
-    "restart": "Run this library again",
+    "retry": "Retry",
     "pageCount": "Page {{page}} · {{count}} records received",
-    "generation": "Execution {{count}}",
-    "executionHistory": "Previous executions",
-    "waiting": "Waiting for network limits",
-    "sortTitle": "Sort by title",
-    "arrivalOrder": "Back to arrival order",
     "fields": {
       "query": "Keywords",
       "title": "Title",
@@ -60,7 +43,7 @@
     "queryRequired": "Enter keywords.",
     "criteriaTooLong": "A criterion exceeds 1000 characters.",
     "invalidYears": "Check the year range.",
-    "useDirect": "Open URLs in single-source search.",
+    "useDirect": "An address is not searched: open it from the “Open” row above the results.",
     "invalidRequest": "Invalid request: check criteria and sources.",
     "providerUnavailable": "This source does not support search.",
     "missingJob": "Execution unavailable.",
@@ -70,11 +53,6 @@
     "unavailableGroup_one": "{{count}} source cannot be searched by words",
     "unavailableGroup_other": "{{count}} sources cannot be searched by words",
     "viewAll": "See every search",
-    "pageLabel": "Page",
-    "receivedLabel": "Records received",
-    "generationLabel": "Run",
-    "coverageLabel": "Coverage",
-    "stateLabel": "State",
     "copies": "{{count}} copies",
     "copies_one": "{{count}} copy",
     "failedSources_one": "{{count}} source did not answer",
@@ -83,7 +61,7 @@
     "occurrence": "Copy to use",
     "bestOccurrence": "Best copy",
     "advanced": "Advanced criteria",
-    "queryPlaceholder": "Search by keywords in the chosen sources",
+    "queryPlaceholder": "Words, identifier or address",
     "resultsShort_one": "{{count}} result",
     "resultsShort_other": "{{count}} results",
     "resultsHint": "{{visible}} visible with the current filters, out of {{unique}} distinct works drawn from {{received}} records received: copies of the same work count once.",
@@ -93,15 +71,13 @@
     "unknownShort_other": "{{count}} unverifiable",
     "unknownHint": "Results the filters can neither confirm nor rule out, because the catalogue does not state that field or the date is approximate.",
     "failedHint": "These sources did not answer: whatever they list is missing from the results.",
-    "restartHint": "Asks this library again from its first results, without reusing the answers already received. Earlier attempts stay available.",
-    "retryHint": "Repeats only the page that failed, leaving the pages already received.",
     "extendHint": "Searches the same words in the selected collections that were not included, as a linked search.",
     "onlyThisSource": "Show only results from this source",
     "allSources": "Show results from every source",
     "filterLabel": "Filter the results",
     "tabHint": {
-      "execution": "How each source of this search is answering: state, page reached, how much arrived, and the controls that act on a single library.",
-      "history": "The searches already made, loaded fifty at a time. Each keeps its own criteria, sources and runs; opening one returns you to the execution tab.",
+      "sources": "One row per source: state, how many results arrived, “retry” after an error, and the filter to look at one source only.",
+      "history": "The searches already made, loaded fifty at a time. Each keeps its criteria, sources and results; opening one returns you to the sources.",
       "criteria": "The criteria that narrow the search and the sources to query. They apply to the next search: they do not change the ones already started."
     },
     "openProviderSite": "Search directly on the {{provider}} website",
@@ -109,7 +85,22 @@
     "criteriaHint": "Libraries that search by field receive each criterion as it is. The others receive the words, and the criteria then drop results that state something else.",
     "fieldAsked": "Searched in the catalogue of: {{libraries}}.",
     "fieldFiltered": "None of the chosen libraries searches this field: it filters the results that arrive.",
-    "missingData": "incomplete data"
+    "missingData": "incomplete data",
+    "openDirectly": "Open on {{library}}",
+    "openDirectlyAction": "Open the work on {{library}}",
+    "scope": {
+      "label": "Where to search",
+      "all": "All libraries",
+      "custom_one": "Custom choice ({{count}})",
+      "custom_other": "Custom choice ({{count}})"
+    },
+    "order": {
+      "label": "Sort results",
+      "arrival": "By relevance",
+      "year": "By year",
+      "creator": "By author",
+      "title": "By title"
+    }
   },
   "overview": {
     "transcriptions": "Transcriptions",
@@ -911,11 +902,7 @@
       "europeanaForgotten": "Europeana key removed",
       "europeanaForgetFailed": "The key could not be removed",
       "europeanaSavedFallback": "Key saved, but not in the system keychain: it is not available here, so Glossa put it in an encrypted file on this computer.",
-      "europeanaKeySavedFileHint": "The key is stored in an encrypted file on this computer, because the system keychain is not available here: that protects it less than the keychain. It is never read back from this screen and never ends up in a backup.",
-      "defaultSourceTitle": "Search",
-      "defaultSource": "Default source",
-      "defaultSourceHint": "Where a new search starts when you open Glossa. During the session the source you pick in the panel wins. Only sources that search by keyword are listed.",
-      "defaultSourceLastUsed": "The last one I used"
+      "europeanaKeySavedFileHint": "The key is stored in an encrypted file on this computer, because the system keychain is not available here: that protects it less than the keychain. It is never read back from this screen and never ends up in a backup."
     },
     "transcriptions": {
       "ocrImage": "Image for OCR",
@@ -1701,11 +1688,7 @@
     "navHint": "Application home",
     "loadFailed": "Failed to load the dashboard",
     "discovery": {
-      "source": "Collection",
-      "input": "Title, author, treatise, shelfmark, or place",
-      "submit": "Find sources",
       "loadMore": "Load more results",
-      "notFound": "No sources found.",
       "searchFailed": "Search unavailable. Try again.",
       "untitled": "Untitled source",
       "checking": "checking",
@@ -1734,10 +1717,6 @@
       "addToLibraryFailed": "Adding to Library failed. Try again.",
       "addToWorkspace": "Add to a workspace",
       "noWorkspaces": "No workspace available. Create one before linking a source.",
-      "alreadyLinked": "Already linked",
-      "fromCache": "results from {{when}}",
-      "searchAgain": "Search again, skipping the kept results",
-      "onlyDirect": "This library does not search by keyword: it only opens with the identifier or address shown in the example above. Its search either cannot be queried by a program, or refuses automated requests.",
       "errorRefused": "This library refused the request because it was automated. Retrying will not help: you can still open a work by pasting its address.",
       "errorRateLimited": "This library is asking to slow down: too many requests. Try again in a few minutes.",
       "errorUnavailable": "The library's service is not responding. Try again later.",
@@ -1747,12 +1726,6 @@
       "errorManifestUnreachable": "The book could not be reached at the library.",
       "errorManifestUnreadable": "The library did not return the book.",
       "errorManifestInvalid": "The book arrived in a format Glossa does not recognise.",
-      "group": {
-        "aggregator": "Collections",
-        "library": "Libraries",
-        "paused": "Search on hold",
-        "directOnly": "By identifier only"
-      },
       "groupHint": {
         "aggregator": "◈ A collection: it indexes material from many institutions. Each result states who holds the original, which is another library.",
         "paused": "⏸ This library's search exists but refuses automated requests. You can still open a work by typing its identifier or pasting its address.",
@@ -2574,45 +2547,45 @@
         ]
       },
       "search": {
-        "title": "Finding sources",
-        "intro": "Open the Dashboard to search supported sources. Results are added to the Library only when you choose to keep them.",
+        "title": "Searching for sources",
+        "intro": "From the Dashboard open Search: a single field to look for works in the libraries or to open one whose identifier you know. Results enter the Library only when you decide.",
         "blocks": [
           {
-            "title": "Searching multiple sources",
+            "title": "Searching",
             "paragraphs": [],
             "steps": [
-              "Open Federated search from the left-hand rail, under Dashboard.",
-              "Type your keywords in the field at the top and start with the control beside it.",
-              "To narrow the search and choose the sources, open the advanced criteria, the third tab of the right-hand column. Collections must be chosen explicitly; Europeana needs a key in the Library settings.",
-              "Results appear as sources answer. The commands to the right of the counts show one source or all of them, and sort by title. When the data needed to judge a criterion is missing, the result stays in the list marked “incomplete data”.",
-              "The Execution tab has one row per source: the mark says how it is going and the number how much arrived. Opening the row shows page and coverage, the controls to stop, resume, run again or ask for more pages, the control that shows only that source's results, and the earlier attempts.",
-              "The new-search control clears the words and the criteria, keeping the sources you had chosen."
+              "Open Search from the left bar, under Dashboard.",
+              "To the left of the field choose where to search: all libraries, a single one, or a custom choice made in the advanced criteria.",
+              "Type the words and start with the command next to them. To narrow down, open the advanced criteria, third tab of the right column: title, author, printer, material, years. Aggregators such as Europeana are added on purpose; Europeana needs a key in the Library settings.",
+              "Results appear as sources answer. Above the list choose the order: by relevance, year, author, or title. When the data needed to judge a criterion is missing, the result stays in the list marked “incomplete data”.",
+              "When more results are available, the command at the bottom of the list asks every source that has them.",
+              "The new search command clears words and criteria, keeping the sources you chose."
             ]
           },
           {
-            "title": "Understanding filters and results",
+            "title": "Reading the results",
             "paragraphs": [
+              "Each row shows author, year, place, and printer, then the title; in small print library, pages, and “PDF available” when there is one. Open the row for every detail.",
               "Libraries that search by field — Gallica today — receive title, author, printer, material and years exactly as you write them, and answer only with works that match. The others receive the words; the criteria then drop results that state something else. Next to each criterion, the hint tells which of the chosen sources really search it.",
-              "A record may exist without an accessible digital copy. A check status appears while Glossa verifies it; a copy explicitly reported as absent is marked unavailable. A network error does not mean the work is absent.",
-              "Each result retains its provenance. The service returning the record may differ from the institution holding the work."
+              "The same work arriving from several libraries is a single row, with the number of copies. Open the row to choose which copy to use.",
+              "A record can exist without a readable reproduction: the row then says “not viewable”. A network error does not mean the work is missing."
             ]
           },
           {
-            "title": "Using an address or identifier",
+            "title": "Opening an identifier or an address",
             "paragraphs": [
-              "Open single-source search, choose the source and follow the example in the field. Depending on the source, you can use keywords, a shelfmark, an identifier or a URL.",
-              "Some sources support direct opening only; the panel indicates this. For a manifest from an institution not listed, choose Direct IIIF URL.",
-              "Next to the chosen library there is a command that opens its search page in the browser, carrying the words already typed where the library accepts them. What Glossa queries is what the library offers to a program, which is rarely its whole catalogue: when in doubt, search on their site, copy the address of the work and paste it here.",
-              "The National Library of Scotland is searched by title across its digital collections, or opened by pasting the work number. The University of Glasgow digital collections open with the manifest address, which their item page offers with a dedicated command."
+              "Type or paste the identifier of a work, or its address, in the same field. If a library recognises it, an “Open on …” row appears above the results: press the command next to it and the work opens, ready to add to the Library.",
+              "A full address also opens with Enter. An IIIF manifest from an institution not listed opens the same way, by pasting its address.",
+              "When the list stays empty, or you are looking at one source only, a command opens the library’s own search in the browser with the same words. What Glossa queries is what the library offers to a program, rarely its whole catalogue: when in doubt, search on their site, copy the address of the work and paste it here."
             ]
           },
           {
-            "title": "Keeping and resuming a search",
+            "title": "Sources, history and saving",
             "paragraphs": [
-              "The search history lives in the tab on the right: from there you reopen an earlier search with its criteria, results and attempts.",
-              "Add to Library saves the record. Add to workspace also links it to the chosen workspace. The same manifest is not duplicated.",
-              "History retains criteria, results and attempts. Use the monitor to control an individual source, retry after an error or load more pages. Extend to aggregators starts a linked search using only newly selected aggregators.",
-              "You can switch screens while jobs continue. Closing Glossa stops them; history remains available when you reopen it."
+              "The Sources tab, on the right, has one row per library: state, how many results arrived, “retry” after an error, and the filter to look at that source only.",
+              "The search history lives in the next tab: from there you reopen an earlier search with its criteria and results.",
+              "Add to Library saves the record. Add to workspace also links it to the chosen workspace. The same manifest is not duplicated. Extend to aggregators starts a linked search using only newly selected aggregators.",
+              "You can switch screens while the search goes on. Closing Glossa stops it; history remains available when you reopen it."
             ]
           }
         ]
@@ -3112,11 +3085,6 @@
       "coverage": "Coverage ratio (translation / source)",
       "chunksProgress": "Completed segments"
     },
-    "discoveryResults_one": "{{count}} result",
-    "discoveryResults_other": "{{count}} results",
-    "discoveryMore": "more available",
-    "discoveryPages_one": "{{count}} page",
-    "discoveryPages_other": "{{count}} pages",
     "panelToggle": "Logs and jobs",
     "workspaceFilter": "· filter: {{name}}",
     "network": {

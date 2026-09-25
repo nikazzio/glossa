@@ -307,15 +307,13 @@ viene prima del segno: `Select` accetta un `group` per voce e raccoglie le voci
 **consecutive** con lo stesso gruppo, senza riordinarle — l'ordine è quello di
 chi costruisce l'elenco, non una sorpresa del componente.
 
-Il segno accanto al nome serve dove non c'è spazio per una frase (la tendina di
-sistema non accetta marcatori grafici). Il suo significato non si lascia
-indovinare: sotto il campo compare una riga che lo spiega **per la voce
-scelta**, non una legenda di tutti i simboli che nessuno legge.
-
-Nel pannello di ricerca delle fonti i gruppi sono quattro: raccolte (`◈`),
-biblioteche, ricerca ferma (`⏸`), solo per identificativo (`#`). Sono quattro
-comportamenti diversi, non quattro categorie decorative: chi sceglie deve sapere
-se cercare per parole ha senso prima di scrivere.
+L'intestazione del gruppo basta: niente simboli davanti ai nomi né frasi sotto
+la tendina che spiegano cosa sia un gruppo. Nella scelta di dove cercare i
+gruppi sono «Biblioteche» e «Raccolte», preceduti da «Tutte le biblioteche» e
+dalla scelta personalizzata. Le fonti che non cercano per parole non stanno in
+quella tendina: si aprono incollando identificativo o indirizzo nella stessa
+casella, e compaiono nei criteri avanzati in un gruppo a parte con il motivo al
+passaggio del mouse.
 
 ### Elenchi di indirizzi
 
