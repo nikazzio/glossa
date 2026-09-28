@@ -1,6 +1,6 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 13 settembre 2026.
+Aggiornata: 29 settembre 2026.
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
@@ -14,8 +14,17 @@ indirizzi. Monta
 solo la vista attiva. La Biblioteca è
 tornata area unica con il solo catalogo.
 
+Il 28 settembre 2026 ogni biblioteca è stata verificata contro il servizio vero
+(#486): sintassi delle richieste, paginazione, lettura dei campi, parole
+evidenziate nei risultati, frase esatta dove la biblioteca la sa fare, Library
+of Congress e Scozia fuori da «tutte». Restano: ricerca nel testo delle pagine
+come ricerca a parte e «cerca in questo libro» (#487); operatori booleani e
+frasi tradotti per biblioteca (#468); una fonte vera per la Biblioteca di
+Scozia, oggi limitata a un elenco di titoli; Library of Congress dietro una
+verifica anti-robot.
+
 Il piano dettagliato resta riferimento per il consolidamento, non promessa di
-funzioni già presenti. Restano: criteri per campo sulle biblioteche oltre a
+funzioni già presenti. Restano inoltre: criteri per campo sulle biblioteche oltre a
 Gallica;
 retry automatici configurabili; archiviazione/eliminazione delle ricerche;
 paginazione server dei risultati (lo storico delle ricerche è già paginato);
