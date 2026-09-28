@@ -52,7 +52,10 @@ pub(crate) async fn search_archive(
             // costruito per convenzione non esiste — il risultato si vedrebbe e
             // non si aprirebbe. Stesso filtro di Scriptoria
             // (`resolvers/search/archive_org.py`).
-            ("q", &format!("({query}) AND mediatype:texts") as &str),
+            (
+                "q",
+                &format!("({}) AND mediatype:texts", escape_lucene(query)) as &str,
+            ),
             // Si chiede **tutto** quello che la biblioteca ha indicizzato, non
             // un elenco di campi scelti. Misurato sul servizio vero, a regime,
             // su venti risultati: chiedere i venti campi di prima costava
@@ -87,7 +90,7 @@ pub(crate) async fn search_archive(
     // «nessun risultato», che manda a cercare l'errore dalla parte sbagliata.
     if let Some(error) = value.get("error").and_then(Value::as_str) {
         log::warn!("discovery archive search failed error={error}");
-        return Err(crate::iiif::search::SEARCH_UNAVAILABLE.to_string());
+        return Err(archive_error_reason(error).to_string());
     }
 
     let results = value
@@ -118,6 +121,7 @@ pub(crate) async fn search_archive(
                 catalog_url: None,
                 page_url: Some(format!("https://archive.org/details/{id}")),
                 raw: archive_extra_fields(document),
+                match_hints: Vec::new(),
                 openable: None,
                 id,
             })
@@ -136,6 +140,35 @@ pub(crate) async fn search_archive(
         has_more: u64::from(page) * 20 < total,
         results,
     })
+}
+
+/// I caratteri che la sintassi di ricerca di Internet Archive (Lucene) legge
+/// come operatori. `&&` e `||` si neutralizzano già togliendo senso a `&` e `|`.
+const LUCENE_SPECIAL: &[char] = &[
+    '+', '-', '&', '|', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '*', '?', ':', '\\', '/',
+];
+
+/// Le parole dell'utente come testo, non come sintassi: una parentesi non
+/// chiusa, altrimenti, fa rispondere al servizio con un errore di struttura.
+fn escape_lucene(query: &str) -> String {
+    query
+        .chars()
+        .flat_map(|character| {
+            let escape = LUCENE_SPECIAL.contains(&character).then_some('\\');
+            escape.into_iter().chain(std::iter::once(character))
+        })
+        .collect()
+}
+
+/// Solo `[BACKEND_ERROR]` è il motore della biblioteca che non risponde; il
+/// resto (sintassi, ordinamento) è una domanda che il servizio rifiuta, e
+/// riprovare più tardi non cambierebbe niente.
+fn archive_error_reason(error: &str) -> &'static str {
+    if error.starts_with("[BACKEND_ERROR]") {
+        crate::iiif::search::SEARCH_UNAVAILABLE
+    } else {
+        crate::iiif::search::SEARCH_FAILED
+    }
 }
 
 fn archive_rights(document: &Value) -> Vec<String> {
@@ -274,6 +307,72 @@ mod tests {
         )
         .await;
 
-        assert!(outcome.is_err(), "un guasto della biblioteca si dice");
+        assert_eq!(
+            outcome.err().as_deref(),
+            Some(crate::iiif::search::SEARCH_UNAVAILABLE),
+            "un guasto della biblioteca si dice"
+        );
+    }
+
+    #[test]
+    fn lucene_operators_in_the_query_are_escaped() {
+        assert_eq!(escape_lucene("marozzo (1536"), "marozzo \\(1536");
+        assert_eq!(
+            escape_lucene("a+b -c && d || !e {f} [g] ^h \"i\" ~j *k ?l :m \\n /o"),
+            "a\\+b \\-c \\&\\& d \\|\\| \\!e \\{f\\} \\[g\\] \\^h \\\"i\\\" \\~j \\*k \\?l \\:m \\\\n \\/o"
+        );
+        assert_eq!(escape_lucene("book of hours"), "book of hours");
+    }
+
+    #[tokio::test]
+    async fn an_unbalanced_parenthesis_reaches_the_service_escaped() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/advancedsearch.php"))
+            .and(query_param("q", "(marozzo \\(1536) AND mediatype:texts"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"response": {"numFound": 0, "docs": []}})),
+            )
+            .mount(&server)
+            .await;
+
+        let outcome = search_archive(
+            &Client::new(),
+            &format!("{}/advancedsearch.php", server.uri()),
+            "marozzo (1536",
+            1,
+            None,
+        )
+        .await
+        .expect("la domanda arriva come testo");
+
+        assert!(outcome.results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_rejected_query_is_not_an_unavailable_library() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/advancedsearch.php"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "error": "a structure was opened but not closed (group open at position 1)"
+            })))
+            .mount(&server)
+            .await;
+
+        let outcome = search_archive(
+            &Client::new(),
+            &format!("{}/advancedsearch.php", server.uri()),
+            "dante",
+            1,
+            None,
+        )
+        .await;
+
+        assert_eq!(
+            outcome.err().as_deref(),
+            Some(crate::iiif::search::SEARCH_FAILED)
+        );
     }
 }

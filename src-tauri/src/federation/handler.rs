@@ -171,7 +171,10 @@ impl JobHandler for SearchJob {
         );
         // Una pagina arrivata dalla cache non si riscrive nella cache: sarebbe
         // una serializzazione e una scrittura identiche a quello che c'è già.
-        if cached_at.is_none() {
+        // Una pagina vuota non si ricorda: può essere una risposta anomala
+        // (una pagina di verifica, una sintassi rifiutata) e terrebbe lo zero
+        // anche dopo che la biblioteca, o l'app, torna a rispondere bene.
+        if cached_at.is_none() && !page.results.is_empty() {
             if let Ok(bytes) = serde_json::to_vec(&page) {
                 crate::httpcache::commands::store(
                     &self.0,

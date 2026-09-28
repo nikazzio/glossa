@@ -109,6 +109,22 @@ pub struct DiscoveryResult {
     /// dato serve davvero, gli si dà un campo proprio.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub raw: BTreeMap<String, Vec<String>>,
+    /// Dove la biblioteca dice di aver trovato le parole: la sezione della
+    /// scheda e il pezzo di testo intorno, senza marcatori (le parole si
+    /// rievidenziano nell'interfaccia). Vuoto quando la biblioteca non lo
+    /// dice: allora il confronto lo fa l'interfaccia sui dati della scheda.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub match_hints: Vec<MatchHint>,
+}
+
+/// Un punto della scheda in cui la biblioteca ha trovato le parole cercate.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchHint {
+    /// Il nome della sezione come lo scrive la biblioteca («Title», «Additional
+    /// Bibliography»); `None` quando dà solo il testo.
+    pub section: Option<String>,
+    pub text: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -234,8 +250,13 @@ pub(crate) async fn search_provider(
     // ogni pagina le fa rispondere 429 e poi chiudere le connessioni: anche
     // la pagina successiva e il «riprova» fallivano per qualche minuto. I
     // risultati senza manifesto (le schede di catalogo `cb…`) non si aprono
-    // comunque.
-    let results = if handler == SearchHandlerKind::Gallica {
+    // comunque. e-codices porta titolo, segnatura, copertina e sommario nella
+    // pagina dei risultati, e non dà mai l'autore: leggere venti manifesti da
+    // 100–400 KB ciascuno portava una ricerca a 49 secondi.
+    let results = if matches!(
+        handler,
+        SearchHandlerKind::Gallica | SearchHandlerKind::Ecodices
+    ) {
         found.results
     } else {
         enrich_results(client, gate, found.results).await
@@ -982,7 +1003,9 @@ mod tests {
             ..SearchEndpoints::default()
         };
 
-        let outcome = search(provider, "graduale", &endpoints, 1)
+        // La parola deve comparire nel risultato: e-codices unisce le parole
+        // con «o», e i risultati che non le contengono tutte si scartano.
+        let outcome = search(provider, "livius", &endpoints, 1)
             .await
             .expect("ricerca");
 

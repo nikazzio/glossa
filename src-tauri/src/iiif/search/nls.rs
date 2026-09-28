@@ -27,6 +27,10 @@ const INDEX_TTL: Duration = Duration::from_secs(6 * 60 * 60);
 /// che protegge dal caso in cui la radice cresca di molto.
 const MAX_COLLECTIONS: usize = 80;
 
+/// Quante raccolte si leggono insieme: abbastanza da non aspettarle una per
+/// una, non tante da sembrare un assalto al server della biblioteca.
+const COLLECTIONS_AT_ONCE: usize = 8;
+
 #[derive(Clone, Debug)]
 struct Entry {
     id: String,
@@ -130,6 +134,7 @@ fn result_of(entry: &Entry) -> DiscoveryResult {
         // L'albero delle raccolte dà titolo e indirizzo del manifesto: il
         // resto dei dati sta nel manifesto, che si legge quando si apre.
         raw: BTreeMap::new(),
+        match_hints: Vec::new(),
         openable: None,
         id: entry.id.clone(),
     }
@@ -169,38 +174,54 @@ async fn read_tree(
     endpoints: &SearchEndpoints,
     gate: Option<&Gate<'_>>,
 ) -> Result<Vec<Entry>, String> {
+    use futures_util::StreamExt;
+
     let root = fetch_json(client, &endpoints.nls_collections, gate).await?;
     let mut entries = Vec::new();
-    let mut opened = 0usize;
-
     collect_manifests(&root, None, &mut entries);
-    for child in members(&root, "collections") {
-        if opened >= MAX_COLLECTIONS {
-            break;
-        }
-        let Some(url) = child.get("@id").and_then(|value| value.as_str()) else {
-            continue;
-        };
-        if type_of(child) != "sc:Collection" {
-            continue;
-        }
-        opened += 1;
-        // Una raccolta che non risponde non ferma le altre: la ricerca dice
-        // quello che ha trovato, e il motivo resta nel log.
-        match fetch_json(client, url, gate).await {
-            Ok(collection) => {
-                let label = label_of(&collection).or_else(|| label_of(child));
-                collect_manifests(&collection, label.as_deref(), &mut entries);
-            }
-            Err(reason) => log::warn!(
-                "discovery nls collection skipped url={} reason={reason}",
-                without_query(url)
-            ),
-        }
-    }
+
+    let children: Vec<(String, Option<String>)> = members(&root, "collections")
+        .into_iter()
+        .filter(|child| type_of(child) == "sc:Collection")
+        .filter_map(|child| Some((child.get("@id")?.as_str()?.to_string(), label_of(child))))
+        .take(MAX_COLLECTIONS)
+        .collect();
+    // Qualche raccolta alla volta, nell'ordine della radice: una dopo l'altra
+    // l'albero intero costava vari secondi alla prima ricerca.
+    let collections: Vec<Vec<Entry>> = futures_util::stream::iter(children)
+        .map(|(url, label)| read_collection(client, url, label, gate))
+        .buffered(COLLECTIONS_AT_ONCE)
+        .collect()
+        .await;
+    entries.extend(collections.into_iter().flatten());
 
     log::info!("discovery nls index built entries={}", entries.len());
     Ok(entries)
+}
+
+/// Le opere di una raccolta. Una raccolta che non risponde non ferma le
+/// altre: la ricerca dice quello che ha trovato, e il motivo resta nel log.
+async fn read_collection(
+    client: &Client,
+    url: String,
+    fallback_label: Option<String>,
+    gate: Option<&Gate<'_>>,
+) -> Vec<Entry> {
+    match fetch_json(client, &url, gate).await {
+        Ok(collection) => {
+            let label = label_of(&collection).or(fallback_label);
+            let mut entries = Vec::new();
+            collect_manifests(&collection, label.as_deref(), &mut entries);
+            entries
+        }
+        Err(reason) => {
+            log::warn!(
+                "discovery nls collection skipped url={} reason={reason}",
+                without_query(&url)
+            );
+            Vec::new()
+        }
+    }
 }
 
 fn collect_manifests(
@@ -290,7 +311,7 @@ async fn fetch_json(
             );
             super::reason_for(&error)
         })?
-        .json::<serde_json::Value>()
+        .text()
         .await
         .map_err(|error| {
             log::warn!(
@@ -299,6 +320,51 @@ async fn fetch_json(
             );
             super::SEARCH_INVALID_DATA.to_string()
         })
+        .and_then(|body| {
+            parse_tolerant(&body).map_err(|error| {
+                log::warn!(
+                    "discovery nls json failed url={} error={error}",
+                    without_query(url)
+                );
+                super::SEARCH_INVALID_DATA.to_string()
+            })
+        })
+}
+
+/// Qualche raccolta della biblioteca è scritta a mano e lascia una virgola
+/// prima di `]` o `}` (per esempio «Marjory Fleming»): il JSON rigoroso la
+/// rifiuta, e con lei tutte le opere della raccolta. Si riprova senza quelle
+/// virgole solo quando la lettura rigorosa non riesce.
+fn parse_tolerant(body: &str) -> Result<serde_json::Value, serde_json::Error> {
+    serde_json::from_str(body)
+        .or_else(|error| serde_json::from_str(&without_trailing_commas(body)).map_err(|_| error))
+}
+
+/// Il testo senza le virgole che precedono (a meno di spazi) una chiusura,
+/// lasciando intatto quello che sta dentro le stringhe.
+fn without_trailing_commas(body: &str) -> String {
+    let characters: Vec<char> = body.chars().collect();
+    let mut output = String::with_capacity(body.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    for (index, &character) in characters.iter().enumerate() {
+        if in_string {
+            in_string = escaped || character != '"';
+            escaped = !escaped && character == '\\';
+        } else if character == '"' {
+            in_string = true;
+        } else if character == ',' {
+            let closes = characters[index + 1..]
+                .iter()
+                .find(|next| !next.is_whitespace())
+                .is_some_and(|next| matches!(next, ']' | '}'));
+            if closes {
+                continue;
+            }
+        }
+        output.push(character);
+    }
+    output
 }
 
 #[cfg(test)]
@@ -480,6 +546,75 @@ mod tests {
         assert!(nls(&Client::new(), &endpoints, "qualsiasi", 1, None)
             .await
             .is_err());
+    }
+
+    #[test]
+    fn a_trailing_comma_does_not_lose_the_collection() {
+        let body = r#"{"label": "Marjory Fleming, [a,]", "manifests": [
+            {"@id": "x", "label": "Journal",},
+        ],}"#;
+        let value = parse_tolerant(body).expect("la raccolta si legge");
+        assert_eq!(value["label"], "Marjory Fleming, [a,]");
+        assert_eq!(value["manifests"][0]["label"], "Journal");
+        assert!(parse_tolerant("{\"a\": ").is_err());
+    }
+
+    #[tokio::test]
+    async fn collections_are_read_together_and_kept_in_root_order() {
+        let server = MockServer::start().await;
+        let children: Vec<serde_json::Value> = (0..12)
+            .map(|index| {
+                serde_json::json!({
+                    "@id": format!("{}/insieme-{index}.json", server.uri()),
+                    "@type": "sc:Collection", "label": format!("Raccolta {index}")
+                })
+            })
+            .collect();
+        Mock::given(method("GET"))
+            .and(path("/top-insieme.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "@type": "sc:Collection", "collections": children
+            })))
+            .mount(&server)
+            .await;
+        for index in 0..12 {
+            // L'ultima con la virgola in più, come la raccolta vera.
+            let body = format!(
+                r#"{{"@type": "sc:Collection", "label": "Raccolta {index}", "manifests": [
+                    {{"@id": "https://view.nls.uk/manifest/1/2/{index}/manifest.json",
+                      "@type": "sc:Manifest", "label": "Journal {index}"}},
+                ]}}"#
+            );
+            Mock::given(method("GET"))
+                .and(path(format!("/insieme-{index}.json")))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_string(body)
+                        .set_delay(Duration::from_millis(200)),
+                )
+                .mount(&server)
+                .await;
+        }
+        let endpoints = SearchEndpoints {
+            nls_collections: format!("{}/top-insieme.json", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let started = Instant::now();
+        let page = nls(&Client::new(), &endpoints, "journal", 1, None)
+            .await
+            .expect("la ricerca risponde");
+
+        // Dodici raccolte da 200 ms una dopo l'altra sarebbero 2,4 s.
+        assert!(started.elapsed() < Duration::from_millis(1200));
+        assert_eq!(page.results.len(), 12);
+        let order: Vec<_> = page
+            .results
+            .iter()
+            .map(|result| result.collection.as_deref().unwrap_or_default())
+            .collect();
+        assert_eq!(order[0], "Raccolta 0");
+        assert_eq!(order[11], "Raccolta 11");
     }
 
     #[tokio::test]

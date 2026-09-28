@@ -402,15 +402,14 @@ pub(super) async fn enrich_results(
     gate: Option<&Gate<'_>>,
     results: Vec<DiscoveryResult>,
 ) -> Vec<DiscoveryResult> {
-    let mut enriched = Vec::with_capacity(results.len());
-    for group in results.chunks(ENRICHMENT_AT_ONCE) {
-        let batch = group
-            .iter()
-            .cloned()
-            .map(|result| enrich_from_manifest(client, gate, result));
-        enriched.extend(futures_util::future::join_all(batch).await);
-    }
-    enriched
+    // Sempre quattro letture in corso, nell'ordine dei risultati: a blocchi
+    // fissi ogni blocco aspettava il suo manifesto più lento.
+    use futures_util::StreamExt;
+    futures_util::stream::iter(results)
+        .map(|result| enrich_from_manifest(client, gate, result))
+        .buffered(ENRICHMENT_AT_ONCE)
+        .collect()
+        .await
 }
 
 #[cfg(test)]
@@ -658,6 +657,7 @@ mod tests {
             catalog_url: None,
             page_url: None,
             raw: std::collections::BTreeMap::new(),
+            match_hints: Vec::new(),
             openable: None,
         }
     }
