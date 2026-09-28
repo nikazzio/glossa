@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { motion } from 'motion/react';
 import { Activity, ArrowDown, FilePlus, Globe, History, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -23,6 +24,13 @@ import { SearchExecutionPanel } from './SearchExecutionPanel';
 import { SearchScopeSelect, allLibraries } from './SearchScopeSelect';
 import { RecognizedWorks, useRecognitions } from './RecognizedWorks';
 import { logger } from '../../utils/logger';
+import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion';
+
+/** La riga della casella e quella delle schede a destra sono una linea sola. */
+const HEADER_ROW_HEIGHT = 'h-14';
+
+/** Una pagina chiesta è in viaggio solo in questi stati: in pausa non gira. */
+const IN_FLIGHT_STATES: ReadonlySet<string> = new Set(['queued', 'running']);
 
 /** Si può cercare anche solo per campi: basta un testo da mandare. */
 function hasSomethingToSend(criteria: SearchCriteria): boolean {
@@ -182,12 +190,20 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   // altrimenti «dodici risultati» si legge come «tutto quello che c'è».
   const failed = executions.filter((execution) => execution.job.status === 'error');
   const continuable = executions.filter((execution) => execution.job.status === 'completed' && execution.hasMore);
+  // «Altri risultati» resta al suo posto e gira finché le pagine chieste non
+  // sono arrivate: sparire appena premuto sembrava un comando fallito.
+  const fetchingMore = executions.some((execution) => execution.mode === 'continue' && IN_FLIGHT_STATES.has(execution.job.status));
+  // I risultati già mostrati non si rianimano: entra con una dissolvenza solo
+  // quello che arriva dopo, a pagina successiva o da una biblioteca più lenta.
+  const shownIds = useRef(new Set<string>());
+  useEffect(() => { shownIds.current = new Set(); }, [searchId]);
+  useEffect(() => { for (const group of visible) shownIds.current.add(group.id); }, [visible]);
   const virtualizer = useVirtualizer({ count: visible.length, getScrollElement: () => scroll.current,
     estimateSize: () => 88, getItemKey: (index) => visible[index].id, overscan: 5 });
   const tabs = [
+    { id: 'criteria', label: t('federation.advanced'), icon: <SlidersHorizontal size={16} /> },
     { id: 'sources', label: selected ? `${t('federation.execution')} · ${summary.complete}/${summary.total}` : t('federation.execution'), icon: <Activity size={16} /> },
     { id: 'history', label: t('federation.history'), icon: <History size={16} /> },
-    { id: 'criteria', label: t('federation.advanced'), icon: <SlidersHorizontal size={16} /> },
   ];
   const extensionPossible = selected && chosen.some((key) => !selected.providers.includes(key) && providers.some((p) => p.key === key && p.kind === 'aggregator'));
   const canSubmit = isAddress(keywords) ? recognitions.length > 0 : hasSomethingToSend({ ...draft.criteria, query: keywords }) && chosen.length > 0;
@@ -212,7 +228,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
 
   return <div className="grid h-full min-h-0 w-full min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
     <section className="flex min-h-96 min-w-0 flex-col lg:min-h-0">
-      <form className="flex shrink-0 items-center gap-2 border-b border-editorial-border px-3 py-2"
+      <form className={`flex ${HEADER_ROW_HEIGHT} shrink-0 items-center gap-2 border-b border-editorial-border px-3`}
         onSubmit={(event) => { event.preventDefault(); submit(); }}>
         <SearchScopeSelect providers={providers} chosen={chosen} onChange={draft.setProviders}
           onCustomize={() => setTab('criteria')} />
@@ -283,16 +299,21 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
               const group = visible[item.index];
               const occurrence = group.occurrences.find((entry) => occurrenceKey(entry) === occurrenceChoice[group.id]);
               const work = occurrence ?? { card: group.card, providerKey: group.providerKey };
+              const arriving = shownIds.current.size > 0 && !shownIds.current.has(group.id);
               return <div key={item.key} data-index={item.index} ref={virtualizer.measureElement}
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.start}px)` }}>
-                {rowFor(work, group)}
+                <motion.div initial={arriving ? { opacity: 0, y: MOTION_SHIFT } : false} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: MOTION_DURATION, ease: EASE_EDITORIAL }}>
+                  {rowFor(work, group)}
+                </motion.div>
               </div>;
             })}
           </div>
-          {continuable.length > 0 && <div className="flex justify-center py-3">
-            <IconButton title={t('dashboard.discovery.loadMore')} disabled={busy}
+          {(continuable.length > 0 || fetchingMore) && <div className="flex justify-center py-3">
+            <IconButton title={fetchingMore && continuable.length === 0 ? t('federation.loadingMore') : t('dashboard.discovery.loadMore')}
+              disabled={busy || continuable.length === 0}
               onClick={() => void act(() => Promise.all(continuable.map((execution) => relaunchSearch(selected.id, execution.job.id, 'continue'))))}>
-              <ArrowDown size={16} />
+              {busy || (fetchingMore && continuable.length === 0) ? <Spinner size={16} /> : <ArrowDown size={16} />}
             </IconButton>
           </div>}
         </div>
@@ -300,6 +321,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     </section>
     <aside className="flex min-h-0 min-w-0 flex-col border-t border-editorial-border bg-surface-panel lg:border-l lg:border-t-0">
       <InspectorShell ariaLabel={t('federation.title')} tabs={tabs} activeTab={tab} onTabChange={setTab}
+        tabRowHeightClassName={HEADER_ROW_HEIGHT}
         actions={<span className="font-display text-sm italic text-editorial-ink">
           <Hint label={t(`federation.tabHint.${tab}`)}>{tabs.find((item) => item.id === tab)?.label}</Hint>
         </span>}>
