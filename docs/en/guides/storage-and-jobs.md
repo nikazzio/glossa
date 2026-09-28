@@ -201,7 +201,8 @@ resolution: it replaces the recompressed one.
 ## Messages and system log
 
 The bottom panel holds three tabs: messages from the running translation, the
-**system log**, and jobs. The system log is available in every area and shows
+**system log**, and jobs. The panel command in the status bar always opens it on
+the system log, which is available in every area and shows
 what the program wrote while working — library searches, downloads, storage,
 saves — reading the application log file directly, including the rotated files
 from previous sessions.
@@ -212,8 +213,15 @@ Lines produced by third-party libraries — database queries, keyring, network
 connections — stay hidden until explicitly requested: on their own they are most
 of the file.
 
-"Clear the view" empties the window without touching the file on disk: reloading
-brings the lines back. "Load earlier messages" continues reading backwards. The
+New lines arrive by themselves while the tab is open, at the top of the list;
+whoever is reading further down does not see them shift under their eyes. The
+data of a line — the part in curly braces — is colored as in a code editor:
+field names, strings, numbers and values each in their own color. The braces
+command turns the coloring on and off, and the choice is remembered.
+
+"Clear the view" hides the lines currently shown without touching the file on
+disk: lines arriving afterwards keep appearing, and reloading brings them all
+back. "Load earlier messages" continues reading backwards. The
 log folder path is shown in the in-app guide, under troubleshooting.
 
 ## Job history and retention

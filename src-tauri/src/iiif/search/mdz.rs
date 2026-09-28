@@ -12,7 +12,12 @@ use reqwest::Client;
 
 use super::super::discovery::{DiscoveryResult, Gate, SearchPage};
 use super::super::resolvers;
-use super::{fetch_text, result_from, SearchEndpoints, PAGE_SIZE};
+use super::{fetch_text, result_from, SearchEndpoints, PAGE_SIZE, SEARCH_FAILED};
+
+/// Il campo locale con cui Monaco marca le schede che hanno una copia digitale:
+/// chiederlo nella ricerca toglie alla fonte i libri che in Glossa non si
+/// aprono, invece di scartarli dopo aver già consumato la pagina.
+const DIGITISED_ONLY: &str = "alma.local_field_912=digit";
 
 pub(super) async fn mdz(
     client: &Client,
@@ -29,7 +34,7 @@ pub(super) async fn mdz(
         &[
             ("operation", "searchRetrieve"),
             ("version", "1.2"),
-            ("query", &format!("all_for_ui={query}")),
+            ("query", &cql_query(query)),
             ("maximumRecords", &PAGE_SIZE.to_string()),
             ("startRecord", &start),
             ("recordSchema", "marcxml"),
@@ -40,12 +45,22 @@ pub(super) async fn mdz(
     )
     .await?;
 
-    let (results, total) = parse_marc_records(&body);
+    let (results, total) = parse_marc_records(&body)?;
     log::info!("discovery mdz search found={}", results.len());
     Ok(SearchPage {
         has_more: u64::from(page.max(1) * PAGE_SIZE) < total,
         results,
     })
+}
+
+/// La domanda nella lingua del catalogo (CQL).
+///
+/// Le parole vanno fra virgolette con `all`: scritte nude dopo `=`, due parole
+/// bastano perché il catalogo risponda «Invalid query» — con stato 200, che
+/// senza leggere la diagnostica passerebbe per nessun risultato.
+fn cql_query(query: &str) -> String {
+    let escaped = query.trim().replace('\\', "\\\\").replace('"', "\\\"");
+    format!("alma.all_for_ui all \"{escaped}\" and {DIGITISED_ONLY}")
 }
 
 /// Una scheda MARC in lavorazione: solo i campi che servono a una riga di
@@ -61,7 +76,12 @@ struct MarcRecord {
 
 /// Legge le schede e tiene **solo quelle con una riproduzione**: una scheda
 /// senza copia digitale è un libro che si può leggere a Monaco, non in Glossa.
-fn parse_marc_records(body: &str) -> (Vec<DiscoveryResult>, u64) {
+/// La ricerca chiede già solo il digitalizzato; il controllo resta perché è il
+/// collegamento «Volltext», non il campo del catalogo, a dare l'identificativo.
+///
+/// Una diagnostica SRU è un errore: il catalogo non ha eseguito la ricerca, e
+/// dirlo «nessun risultato» farebbe credere che l'opera non ci sia.
+fn parse_marc_records(body: &str) -> Result<(Vec<DiscoveryResult>, u64), String> {
     let mut reader = Reader::from_str(body);
     let mut results = Vec::new();
     let mut total = 0_u64;
@@ -75,6 +95,8 @@ fn parse_marc_records(body: &str) -> (Vec<DiscoveryResult>, u64) {
     let mut link_url = String::new();
     let mut link_kind = String::new();
     let mut element = String::new();
+    let mut diagnostic_message = String::new();
+    let mut diagnostic: Option<String> = None;
 
     loop {
         match reader.read_event() {
@@ -97,6 +119,8 @@ fn parse_marc_records(body: &str) -> (Vec<DiscoveryResult>, u64) {
                 let value = collected.trim().to_string();
                 match name.as_str() {
                     "numberOfRecords" => total = value.parse().unwrap_or(0),
+                    "message" => diagnostic_message = value,
+                    "diagnostic" => diagnostic = Some(std::mem::take(&mut diagnostic_message)),
                     "subfield" => {
                         if let Some(current) = record.as_mut() {
                             store_subfield(
@@ -155,7 +179,11 @@ fn parse_marc_records(body: &str) -> (Vec<DiscoveryResult>, u64) {
         }
     }
 
-    (results, total)
+    if let Some(message) = diagnostic {
+        log::warn!("discovery mdz diagnostic message={message}");
+        return Err(SEARCH_FAILED.to_string());
+    }
+    Ok((results, total))
 }
 
 fn store_subfield(
@@ -261,7 +289,7 @@ mod tests {
 
     #[test]
     fn only_the_digitised_link_becomes_a_manifest() {
-        let (results, total) = parse_marc_records(MARC_RESPONSE);
+        let (results, total) = parse_marc_records(MARC_RESPONSE).expect("valid answer");
 
         assert_eq!(total, 42);
         // La seconda scheda ha solo descrizioni: non si apre, non si mostra.
@@ -281,9 +309,45 @@ mod tests {
 
     #[test]
     fn a_broken_answer_is_an_empty_search_not_a_crash() {
-        let (results, total) = parse_marc_records("<searchRetrieveResponse><records>");
+        let (results, total) =
+            parse_marc_records("<searchRetrieveResponse><records>").expect("no diagnostic");
 
         assert!(results.is_empty());
         assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn a_query_of_several_words_is_quoted_and_asks_only_for_digitised_books() {
+        assert_eq!(
+            cql_query(" achille marozzo "),
+            r#"alma.all_for_ui all "achille marozzo" and alma.local_field_912=digit"#
+        );
+    }
+
+    #[test]
+    fn quotes_and_backslashes_cannot_break_out_of_the_query() {
+        assert_eq!(
+            cql_query(r#"il "libro" \ d'ore"#),
+            r#"alma.all_for_ui all "il \"libro\" \\ d'ore" and alma.local_field_912=digit"#
+        );
+    }
+
+    #[test]
+    fn an_sru_diagnostic_is_an_error_not_an_empty_search() {
+        let body = r#"<?xml version="1.0"?>
+<searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/" xmlns:diag="http://www.loc.gov/zing/srw/diagnostic/">
+  <version>1.2</version>
+  <diagnostics>
+    <diag:diagnostic>
+      <diag:uri>200812</diag:uri>
+      <diag:message>Invalid query</diag:message>
+    </diag:diagnostic>
+  </diagnostics>
+</searchRetrieveResponse>"#;
+
+        assert_eq!(
+            parse_marc_records(body).err().as_deref(),
+            Some(SEARCH_FAILED)
+        );
     }
 }

@@ -25,16 +25,73 @@ riduzione delle immagini anziché scaricamento.
 
 ## Organizzazione
 
+Ogni opera si presenta allo stesso modo nei risultati di ricerca, nel catalogo,
+nella sua scheda e nello Studio di trascrizione: prima autore, anno, luogo e
+tipografo, poi il titolo in corsivo, che si ferma a due righe (una nelle
+intestazioni) e si legge intero al passaggio del puntatore. In fondo, in
+piccolo, biblioteca, pagine e stato. I libri antichi si riconoscono da chi li
+ha scritti e stampati, non da titoli che occupano mezza pagina.
+
+La colonna di destra raccoglie gli **scaffali**, modi fissi di guardare il
+catalogo: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da
+scaricare (non ancora tutte sul computer), In trascrizione (con una
+trascrizione non ancora verificata per intero), Non collegate a un workspace,
+Archiviate. Le archiviate compaiono solo nel loro scaffale. Sotto stanno le
+**raccolte** e le **viste salvate**. Ogni voce dice quante opere contiene. Il
+«+» accanto al titoletto di ciascuna sezione apre il campo per il nome, nel punto
+dove la voce comparirà: Invio salva, Esc o un clic altrove annullano. Una
+raccolta si elimina senza toccare le opere.
+
+Sopra l'elenco, in una riga sua, la ricerca guarda tutti i dati dell'opera — titolo, autore,
+tipografo, luogo, note, identificativo — e sotto i **filtri rapidi** restringono lo
+scaffale o la raccolta scelti per tipo, secolo (ricavato dal primo anno della
+data), lingua, biblioteca, stato dello scaricamento e workspace. Accanto a ogni
+valore c'è il numero di opere che avrebbe con gli altri filtri già applicati.
+L'elenco si ordina per titolo, autore, anno, aggiunte o aperte di recente.
+Una vista salvata ricorda i filtri scelti: il suo «+» si attiva solo quando
+almeno un filtro è acceso, e al passaggio del puntatore dice perché. La vista
+resta un filtro, e si aggiorna da sola quando entrano opere nuove.
+
+L'elenco si vede a righe, a copertine o in **tabella**. Le copertine hanno
+tutte la stessa misura: quando lo spazio manca si accorcia il titolo, e dei
+collegamenti se ne vedono due; gli altri si contano («+3») e si leggono al
+passaggio del puntatore. La tabella ha una
+colonna per autore, titolo, anno, luogo e tipografo, biblioteca, pagine e stato
+(lavoro e scaricamento); autore, titolo e anno si ordinano cliccando
+l'intestazione. Con **Raggruppa** l'elenco si divide per secolo, autore,
+biblioteca o raccolta, con il numero di opere accanto a ogni gruppo; le opere
+senza il dato vanno in un gruppo in fondo, e un'opera in più raccolte compare
+sotto ognuna. Vista e raggruppamento restano come li lasci.
+
 Le viste a elenco e a griglia mostrano provenienza, pagine dichiarate,
 risoluzioni locali, spazio occupato e collegamenti. Un conteggio non disponibile
-non equivale a zero. I filtri permettono di restringere il catalogo e di
-includere le opere archiviate; una vista salvata conserva una combinazione di
-filtri. Le collezioni raggruppano opere senza spostarle o duplicarle.
+non equivale a zero. Le raccolte raggruppano opere senza spostarle o
+duplicarle.
 
-Un’opera può essere collegata a più workspace e collezioni. Rimuovere un
-collegamento non elimina la scheda né i file. I comandi per scaricare,
-verificare, ridurre le immagini, liberare spazio, archiviare ed eliminare sono
-nel menu dell’opera.
+Un’opera può essere collegata a più workspace e raccolte. Rimuovere un
+collegamento non elimina la scheda né i file. In basso a sinistra della riga
+stanno i comandi per collegarla a un workspace e metterla in una raccolta; in
+alto a destra, sulla prima riga, gli altri comandi come icone con il nome al
+passaggio del puntatore, in tre gruppi: creare una trascrizione | scaricare,
+verificare, ridurre le immagini, liberare spazio | archiviare, eliminare. Tutti
+compaiono al passaggio del puntatore o quando la riga ha il fuoco. Nella
+griglia a copertine e nella tabella gli stessi comandi stanno in un menu.
+La riga piccola dice anche a che punto è il lavoro: in trascrizione (una
+trascrizione non ancora verificata per intero), trascritta, tradotta.
+
+### Più opere insieme
+
+Un clic apre l'opera. Con Ctrl (⌘ sul Mac) un clic la aggiunge alla scelta o
+la toglie; con Maiuscolo si scelgono tutte le opere fra l'ultima scelta e
+quella cliccata, nell'ordine dell'elenco; il segno di spunta a sinistra della
+riga fa lo stesso di Ctrl. Finché la scelta non è vuota, sopra l'elenco una
+barra offre i comandi che valgono per tutte: raccolta (anche nuova), workspace,
+scaricamento, archiviazione o ritorno in catalogo. Archiviare più opere insieme
+non propone di liberare spazio, come fa per l'opera singola. Esc o la croce
+svuotano la scelta, che si svuota anche cambiando scaffale o raccolta.
+
+Una riga si trascina su una raccolta nella colonna degli scaffali: entra la riga,
+oppure tutta la scelta se la riga ne fa parte.
 
 ## Scheda dell’opera
 
@@ -109,9 +166,10 @@ dichiarano nel loro manifesto — sulla radice o sulla sequenza, secondo la
 versione dello standard — ed è da lì che Glossa lo scopre: nessun indirizzo
 costruito per analogia.
 
-Nei **risultati della ricerca** ogni riga dichiara lo stato, sempre: «PDF
-disponibile», «PDF non disponibile», oppure «PDF non verificato» quando il
-manifesto non si è potuto leggere. La riga aperta aggiunge le pagine dichiarate
+Nei **risultati della ricerca** la riga chiusa scrive «PDF disponibile» solo
+quando il PDF c'è. La riga aperta dichiara sempre lo stato completo —
+disponibile, non disponibile, oppure non verificato quando il manifesto non si
+è potuto leggere — e aggiunge le pagine dichiarate
 e la misura in pixel della prima pagina, unico indizio sulla qualità della
 scansione disponibile prima di scaricare. Il manifesto si legge una volta sola
 per opera, solo per le righe che stanno sotto gli occhi, due letture alla volta

@@ -1,6 +1,7 @@
 import { select, execute, runInTransaction } from './dbService';
 import { workspacesOfMany } from './workspaceItemsService';
 import { collectionsOfMany } from './libraryCollectionsService';
+import { workStagesOfMany } from './workStageService';
 import {
   inventoryBytes,
   libraryInventory,
@@ -132,6 +133,16 @@ function rowToSource(row: SourceRow): LibrarySource {
   };
 }
 
+/** La fonte con titolo, tipo e lingua corretti a mano, dove lo sono. */
+function correctedSource(row: SourceRow, effective: Record<SourceField, string | null>): LibrarySource {
+  return {
+    ...rowToSource(row),
+    title: effective.title ?? row.title,
+    kind: effective.kind ?? row.kind,
+    primaryLanguage: effective.primary_language,
+  };
+}
+
 function rowToVersion(row: SourceVersionRow, metadata: SourceMetadata): LibrarySourceVersion {
   return {
     id: row.id,
@@ -161,46 +172,6 @@ interface OverrideRow {
 }
 
 /**
- * Applica le correzioni a mano a un'opera e restituisce, accanto ai valori da
- * mostrare, quelli che la biblioteca aveva dato: l'originale non si perde mai,
- * e da lì si può sempre tornare indietro.
- */
-function withOverrides(
-  source: LibrarySource,
-  creator: string | null,
-  date: string | null,
-  overrides: SourceFieldValues,
-): { source: LibrarySource; creator: string | null; date: string | null; original: SourceFieldValues } {
-  const original: SourceFieldValues = {};
-  const corrected = { ...source };
-  let effectiveCreator = creator;
-  let effectiveDate = date;
-
-  if (overrides.title !== undefined) {
-    original.title = source.title;
-    corrected.title = overrides.title;
-  }
-  if (overrides.kind !== undefined) {
-    original.kind = source.kind;
-    corrected.kind = overrides.kind;
-  }
-  if (overrides.primary_language !== undefined) {
-    original.primary_language = source.primaryLanguage ?? '';
-    corrected.primaryLanguage = overrides.primary_language;
-  }
-  if (overrides.creator !== undefined) {
-    original.creator = creator ?? '';
-    effectiveCreator = overrides.creator;
-  }
-  if (overrides.date !== undefined) {
-    original.date = date ?? '';
-    effectiveDate = overrides.date;
-  }
-
-  return { source: corrected, creator: effectiveCreator, date: effectiveDate, original };
-}
-
-/**
  * Le correzioni a mano di tutte le opere in **una lettura sola**: una query per
  * scheda sarebbe una query per riga del catalogo.
  */
@@ -220,6 +191,7 @@ async function overridesOfMany(sourceIds: string[]): Promise<Map<string, SourceF
 }
 
 interface CatalogRow extends SourceRow {
+  description: string | null;
   version_id: string | null;
   manifest_url: string | null;
   metadata: string | null;
@@ -245,7 +217,7 @@ interface CatalogRow extends SourceRow {
 export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   const rows = await select<CatalogRow>(
     `SELECT s.id, s.title, s.kind, s.primary_language, s.external_ref,
-            s.status, s.archived_at, s.created_at,
+            s.status, s.archived_at, s.created_at, s.description,
             v.id AS version_id, v.source_url AS manifest_url, v.metadata,
             v.expected_asset_count
        FROM sources s
@@ -268,24 +240,19 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
   );
   const overridesBySource = await overridesOfMany(rows.map((row) => row.id));
   const collectionsBySource = await collectionsOfMany(rows.map((row) => row.id));
+  const stages = await workStagesOfMany();
 
   return rows.map((row) => {
     const metadata = parseMetadata(row.metadata);
     const found = row.version_id ? byVersion.get(row.version_id) : undefined;
-    const corrected = withOverrides(
-      rowToSource(row),
-      metadata.creator,
-      metadata.date,
-      overridesBySource.get(row.id) ?? {},
-    );
+    const { effective, original } = effectiveFieldValues(row, metadata, overridesBySource.get(row.id) ?? {});
     return {
-      source: corrected.source,
+      source: correctedSource(row, effective),
       versionId: row.version_id,
       manifestUrl: row.manifest_url,
       thumbnailUrl: metadata.thumbnailUrl,
-      creator: corrected.creator,
-      date: corrected.date,
-      original: corrected.original,
+      fields: effective,
+      original,
       // Quante pagine ha l'opera. Lo scaricamento lo scrive leggendo il
       // manifesto; prima di allora vale quello che la biblioteca aveva
       // dichiarato all'aggiunta, che è già salvato nei metadati.
@@ -303,6 +270,7 @@ export async function listLibraryCatalog(): Promise<LibraryCatalogEntry[]> {
       providerKey: found?.providerKey ?? metadata.providerKey,
       workspaces: workspacesBySource.get(row.id) ?? [],
       collections: collectionsBySource.get(row.id) ?? [],
+      stage: stages.get(row.id) ?? 'none',
     };
   });
 }
@@ -763,12 +731,7 @@ export async function getLibrarySourceDetail(sourceId: string): Promise<LibraryS
   const { effective, original } = effectiveFieldValues(source, metadata, overrides);
 
   return {
-    source: {
-      ...rowToSource(source),
-      title: effective.title ?? source.title,
-      kind: effective.kind ?? source.kind,
-      primaryLanguage: effective.primary_language,
-    },
+    source: correctedSource(source, effective),
     versions: versionRows.map((row) => rowToVersion(row, parseMetadata(row.metadata))),
     linkedWorkspaceIds: linkRows.map((row) => row.workspace_id),
     creator: effective.creator,

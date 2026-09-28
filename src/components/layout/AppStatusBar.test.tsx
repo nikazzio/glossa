@@ -8,6 +8,10 @@ import { useJobsStore } from '../../stores/jobsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 
 vi.mock('../../hooks/useStatusBarData');
+vi.mock('../../services/appLogService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../services/appLogService')>()),
+  readAppLog: vi.fn().mockResolvedValue([]),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -196,39 +200,22 @@ describe('pannello dei lavori dalla barra di stato', () => {
 });
 
 describe('continuità della barra di stato', () => {
-  it('dentro una traduzione il pannello si apre sui messaggi', async () => {
+  it.each([
+    ['dentro una traduzione', { area: 'translations', projectId: 'p1' }, {
+      kind: 'project', projectName: 'Manoscritto', saveState: 'saved', lastSavedAt: null, totalChunks: 0,
+    }],
+    ['fuori da una traduzione', { area: 'library' }, {
+      kind: 'workspace', workspaceName: 'Archivio', areaName: 'library', projectCount: 1,
+    }],
+  ])('%s il comando del pannello apre il log di sistema', async (_context, location, bar) => {
     const user = userEvent.setup();
-    useUiStore.setState({ location: { area: 'translations', projectId: 'p1' } });
-    useUiStore.setState({ showConsoleDrawer: false, drawerTab: 'jobs' });
-    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
-      kind: 'project',
-      projectName: 'Manoscritto',
-      saveState: 'saved',
-      lastSavedAt: null,
-      totalChunks: 0,
-    });
+    useUiStore.setState({ location: location as never, showConsoleDrawer: false, drawerTab: 'jobs' });
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue(bar as never);
 
     render(<AppStatusBar />);
     await user.click(screen.getByRole('button', { name: 'statusBar.panelToggle' }));
 
-    expect(useUiStore.getState().drawerTab).toBe('console');
-  });
-
-  it('fuori da una traduzione lo stesso comando apre i lavori, che è ciò che esiste', async () => {
-    const user = userEvent.setup();
-    useUiStore.setState({ location: { area: 'library' } });
-    useUiStore.setState({ showConsoleDrawer: false, drawerTab: 'console' });
-    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
-      kind: 'workspace',
-      workspaceName: 'Archivio',
-      areaName: 'library',
-      projectCount: 1,
-    });
-
-    render(<AppStatusBar />);
-    await user.click(screen.getByRole('button', { name: 'statusBar.panelToggle' }));
-
-    expect(useUiStore.getState().drawerTab).toBe('jobs');
+    expect(useUiStore.getState().drawerTab).toBe('system');
   });
 
   it('la posizione compare in ogni sezione, non solo nella dashboard', () => {

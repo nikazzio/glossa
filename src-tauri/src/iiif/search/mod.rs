@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 
 use super::discovery::{DiscoveryResult, Gate, SearchPage};
 use super::SearchHandlerKind;
+use crate::federation::Criteria;
 
 mod bodleian;
 mod cambridge;
@@ -114,18 +115,28 @@ pub(super) const PAGE_SIZE: u32 = 20;
 /// prima. Ogni gestore elencato qui è implementato davvero — il ramo che
 /// rispondeva «nessun risultato» per le biblioteche mai scritte faceva passare
 /// per catalogo vuoto una funzione che non esisteva.
+///
+/// Solo Gallica riceve i criteri campo per campo (`search_fields` nel
+/// registro); le altre ricevono le parole, e i criteri filtrano poi i
+/// risultati arrivati.
 pub async fn run(
     client: &Client,
     handler: SearchHandlerKind,
     endpoints: &SearchEndpoints,
-    query: &str,
+    criteria: &Criteria,
     page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
+    let words = criteria.words();
+    let query = words.as_str();
     match handler {
-        SearchHandlerKind::Gallica => gallica::gallica(client, endpoints, query, page, gate).await,
-        SearchHandlerKind::Vatican => vatican::vatican(client, endpoints, query, gate).await,
-        SearchHandlerKind::Ecodices => ecodices::ecodices(client, endpoints, query, gate).await,
+        SearchHandlerKind::Gallica => {
+            gallica::gallica(client, endpoints, criteria, page, gate).await
+        }
+        SearchHandlerKind::Vatican => vatican::vatican(client, endpoints, query, page, gate).await,
+        SearchHandlerKind::Ecodices => {
+            ecodices::ecodices(client, endpoints, query, page, gate).await
+        }
         SearchHandlerKind::Loc => loc::loc(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Mdz => mdz::mdz(client, endpoints, query, page, gate).await,
         SearchHandlerKind::Cambridge => {
@@ -137,16 +148,27 @@ pub async fn run(
         SearchHandlerKind::Wellcome => {
             wellcome::wellcome(client, endpoints, query, page, gate).await
         }
-        SearchHandlerKind::Bodleian => bodleian::bodleian(client, endpoints, query, gate).await,
+        SearchHandlerKind::Bodleian => {
+            bodleian::bodleian(client, endpoints, query, page, gate).await
+        }
         SearchHandlerKind::Estense => estense::estense(client, endpoints, query, page, gate).await,
-        SearchHandlerKind::Institut => institut::institut(client, endpoints, query, gate).await,
+        SearchHandlerKind::Institut => {
+            institut::institut(client, endpoints, query, page, gate).await
+        }
         SearchHandlerKind::Nls => nls::nls(client, endpoints, query, page, gate).await,
         // Internet Archive aveva un percorso suo, da prima che questo modulo
         // esistesse: la funzione resta dov'è, ma la si chiama da qui come le
         // altre, così esiste un punto solo in cui si cerca.
         SearchHandlerKind::ArchiveOrg => {
-            super::discovery::search_archive(client, &endpoints.archive_search, query, page, gate)
-                .await
+            super::discovery::search_archive(
+                client,
+                &endpoints.archive_search,
+                query,
+                criteria.exact_phrase,
+                page,
+                gate,
+            )
+            .await
         }
     }
 }
@@ -217,6 +239,34 @@ pub(super) async fn fetch_json(
 }
 
 /// Una scheda con i soli campi che la biblioteca ha davvero dato.
+/// Le parole di un testo, piegate come `fold`: si divide su tutto quello che
+/// non è lettera o cifra, così virgole e virgolette non restano attaccate.
+pub(super) fn words(text: &str) -> Vec<String> {
+    fold(text)
+        .split(|character: char| !character.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Minuscole e senza accenti, così «Rosenplüt» e «rosenplut» coincidono.
+pub(super) fn fold(text: &str) -> String {
+    text.chars()
+        .flat_map(char::to_lowercase)
+        .map(|character| match character {
+            'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' => 'a',
+            'ç' => 'c',
+            'è' | 'é' | 'ê' | 'ë' | 'ē' => 'e',
+            'ì' | 'í' | 'î' | 'ï' | 'ī' => 'i',
+            'ñ' => 'n',
+            'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' => 'o',
+            'ù' | 'ú' | 'û' | 'ü' | 'ū' => 'u',
+            'ý' | 'ÿ' => 'y',
+            other => other,
+        })
+        .collect()
+}
+
 pub(super) fn result_from(id: String, title: String, manifest_url: String) -> DiscoveryResult {
     DiscoveryResult {
         id,
@@ -240,6 +290,7 @@ pub(super) fn result_from(id: String, title: String, manifest_url: String) -> Di
         catalog_url: None,
         page_url: None,
         raw: BTreeMap::new(),
+        match_hints: Vec::new(),
         openable: None,
     }
 }

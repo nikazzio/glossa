@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { IIIFDiscoveryResult } from '../types';
+import type { IIIFDiscoveryResult, IIIFSearchField } from '../types';
 import type { Job } from './jobsService';
 import { logger } from '../utils/logger';
 
@@ -21,10 +21,12 @@ export interface SearchCriteria {
   query: string; title: string; author: string; publisher: string;
   institution: string; language: string; material: string;
   yearFrom: number | null; yearTo: number | null;
+  /** Le parole come frase esatta, dove la biblioteca lo sa fare. */
+  exactPhrase: boolean;
 }
 export const EMPTY_SEARCH: SearchCriteria = {
   query: '', title: '', author: '', publisher: '', institution: '', language: '',
-  material: '', yearFrom: null, yearTo: null,
+  material: '', yearFrom: null, yearTo: null, exactPhrase: false,
 };
 export interface SearchExecution {
   providerKey: string; generation: number; resultSetId: string;
@@ -60,6 +62,15 @@ export function currentExecutions(run: SearchRun): SearchExecution[] {
   }
   return run.providers.flatMap((key) => { const execution=latest.get(key); return execution ? [execution] : []; });
 }
+/** Le pagine vuote arrivate di fila da una biblioteca, dall'ultima indietro. */
+export function emptyStreak(run: SearchRun, providerKey: string): number {
+  const pages = run.executions
+    .filter((execution) => execution.providerKey === providerKey)
+    .sort((a, b) => b.generation - a.generation);
+  const firstFull = pages.findIndex((execution) => execution.received > 0);
+  return firstFull < 0 ? pages.length : firstFull;
+}
+
 export function searchStatus(run: SearchRun): Job['status'] {
   const states = currentExecutions(run).map((e) => e.job.status);
   for (const state of ['running','pausing','cancelling','queued','paused','error','cancelled'] as const) {
@@ -69,26 +80,47 @@ export function searchStatus(run: SearchRun): Job['status'] {
 }
 
 export type Match = 'match' | 'unknown' | 'excluded';
-export function matchesCriteria(card: IIIFDiscoveryResult, criteria: SearchCriteria): Match {
+
+/** Il criterio come lo dichiara il registro delle biblioteche. Lingua e
+ *  istituzione non si cercano campo per campo da nessuna parte. */
+const CRITERION_FIELD = {
+  title: 'title', author: 'author', publisher: 'publisher', institution: null, language: null,
+} as const satisfies Partial<Record<keyof SearchCriteria, IIIFSearchField | null>>;
+
+/**
+ * Se una scheda rispetta i criteri, guardando i dati che dichiara.
+ *
+ * Un criterio che la biblioteca ha già cercato nel suo catalogo (`remote`) non
+ * si ricontrolla qui: l'ha deciso lei, e sui suoi dati — una data «15..» o un
+ * tipo scritto in francese — il controllo locale sbaglierebbe.
+ */
+export function matchesCriteria(
+  card: IIIFDiscoveryResult,
+  criteria: SearchCriteria,
+  remote: readonly IIIFSearchField[] = [],
+): Match {
+  const local = (field: IIIFSearchField | null) => field === null || !remote.includes(field);
   let unknown = false;
   const pairs = [
-    [criteria.title,card.title], [criteria.author,card.creator],
-    [criteria.publisher,card.publisher], [criteria.institution,card.holdingInstitution],
-    [criteria.language,card.language],
-  ];
-  for (const [wanted, actual] of pairs) {
-    if (!wanted?.trim()) continue;
+    [criteria.title, card.title, CRITERION_FIELD.title],
+    [criteria.author, card.creator, CRITERION_FIELD.author],
+    [criteria.publisher, card.publisher, CRITERION_FIELD.publisher],
+    [criteria.institution, card.holdingInstitution, CRITERION_FIELD.institution],
+    [criteria.language, card.language, CRITERION_FIELD.language],
+  ] as const;
+  for (const [wanted, actual, field] of pairs) {
+    if (!wanted.trim() || !local(field)) continue;
     if (!actual?.trim()) unknown = true;
     else if (!actual.toLocaleLowerCase().includes(wanted.trim().toLocaleLowerCase())) return 'excluded';
   }
-  if (criteria.material) {
+  if (criteria.material && local('material')) {
     const material = card.mediaType?.toLowerCase() ?? '';
     const declared = /manuscri|manoscritt|handschrift/.test(material) ? 'manuscript'
       : /print|imprim|stampa|druck/.test(material) ? 'printed' : null;
     if (!declared) unknown = true;
     else if (declared !== criteria.material) return 'excluded';
   }
-  if (criteria.yearFrom !== null || criteria.yearTo !== null) {
+  if ((criteria.yearFrom !== null || criteria.yearTo !== null) && local('years')) {
     const date = card.date?.trim() ?? '';
     const range = /^(\d{1,4})(?:\s*[-–]\s*(\d{1,4}))?$/.exec(date);
     if (!range) unknown = true;
@@ -114,7 +146,11 @@ export interface SearchResultGroup {
   occurrences: Array<{card: IIIFDiscoveryResult; providerKey: string; match: Match}>;
 }
 /** Exact manifest identity only. Occurrences survive grouping and retries. */
-export function groupResults(pages: SearchResultPage[], criteria: SearchCriteria): SearchResultGroup[] {
+export function groupResults(
+  pages: SearchResultPage[],
+  criteria: SearchCriteria,
+  remoteFields: ReadonlyMap<string, readonly IIIFSearchField[]> = new Map(),
+): SearchResultGroup[] {
   const groups = new Map<string, SearchResultGroup>();
   const seen = new Set<string>();
   for (const page of pages) for (const card of page.results) {
@@ -122,7 +158,7 @@ export function groupResults(pages: SearchResultPage[], criteria: SearchCriteria
     if (seen.has(occurrence)) continue;
     seen.add(occurrence);
     const id = card.manifestUrl || occurrence;
-    const match = matchesCriteria(card,criteria);
+    const match = matchesCriteria(card, criteria, remoteFields.get(page.providerKey));
     const previous = groups.get(id);
     if (!previous) groups.set(id,{id,card,providerKey:page.providerKey,origins:[page.providerKey],match,occurrences:[{card,providerKey:page.providerKey,match}]});
     else {

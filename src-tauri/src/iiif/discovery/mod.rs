@@ -9,7 +9,9 @@ use std::sync::atomic::AtomicBool;
 use super::network::NetworkProfile;
 use super::resolvers::{self, Strength};
 use super::search::{self, SearchEndpoints};
-use super::{find_provider, IIIFProvider, SearchMode};
+use super::{
+    enabled_providers, find_provider, IIIFProvider, ProviderKind, ResolverKind, SearchHandlerKind,
+};
 use crate::download::courtesy::{Courtesy, Lane, Signals, Turn};
 use tauri::Manager;
 
@@ -19,14 +21,6 @@ mod manifest;
 pub(super) use archive::search_archive;
 use manifest::enrich_results;
 pub(super) use manifest::{resolve_manifest, thumbnail_of};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DiscoveryStatus {
-    Manifest,
-    Results,
-    NotFound,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -115,24 +109,25 @@ pub struct DiscoveryResult {
     /// dato serve davvero, gli si dà un campo proprio.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub raw: BTreeMap<String, Vec<String>>,
+    /// Dove la biblioteca dice di aver trovato le parole: la sezione della
+    /// scheda e il pezzo di testo intorno, senza marcatori (le parole si
+    /// rievidenziano nell'interfaccia). Vuoto quando la biblioteca non lo
+    /// dice: allora il confronto lo fa l'interfaccia sui dati della scheda.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub match_hints: Vec<MatchHint>,
 }
 
+/// Un punto della scheda in cui la biblioteca ha trovato le parole cercate.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DiscoveryOutcome {
-    pub status: DiscoveryStatus,
-    /// Quando questo risultato è arrivato dalla biblioteca, se non è arrivato
-    /// adesso. Chi guarda deve sapere **di quando** è quello che ha davanti,
-    /// altrimenti non può decidere se vale la pena rifare la ricerca.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cached_at: Option<i64>,
-    pub provider_key: String,
-    pub manifest: Option<ManifestPreview>,
-    pub results: Vec<DiscoveryResult>,
-    pub has_more: bool,
+pub struct MatchHint {
+    /// Il nome della sezione come lo scrive la biblioteca («Title», «Additional
+    /// Bibliography»); `None` quando dà solo il testo.
+    pub section: Option<String>,
+    pub text: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SearchPage {
     pub results: Vec<DiscoveryResult>,
     pub has_more: bool,
@@ -234,94 +229,107 @@ pub(super) async fn wait_aside(gate: Option<&Gate<'_>>, url: &str) -> Option<Tur
     }
 }
 
-/// Come si arriva da quello che l'utente ha scritto a un risultato.
+/// Cercare in una biblioteca: la risposta del catalogo, più quello che serve
+/// leggere dai manifesti.
 ///
-/// Due strade, nell'ordine che la biblioteca dichiara: **riconoscere** ciò che
-/// è stato scritto (indirizzo, segnatura, identificativo) e aprire il
-/// manifesto, oppure **cercare** dentro il suo catalogo. Le biblioteche che
-/// cercano prima usano il riconoscimento solo quando è inequivocabile: su
-/// Gallica una parola qualsiasi somiglia a un identificativo, e trattarla come
-/// tale porterebbe a un manifesto che non esiste invece che ai risultati.
-async fn discover_with(
+/// Chi ha già detto tutto non viene riletto: `enrich_from_manifest` si ferma da
+/// sé se la scheda ha autore e copertina. Chi non li dà — Vaticana, e le
+/// biblioteche le cui pagine di ricerca elencano solo i collegamenti — paga una
+/// lettura del manifesto per risultato, il prezzo di una riga leggibile invece
+/// di un segnaposto.
+pub(crate) async fn search_provider(
+    client: &Client,
+    handler: SearchHandlerKind,
+    endpoints: &SearchEndpoints,
+    criteria: &crate::federation::Criteria,
+    page: u32,
+    gate: Option<&Gate<'_>>,
+) -> Result<SearchPage, String> {
+    let found = search::run(client, handler, endpoints, criteria, page, gate).await?;
+    // L'SRU di Gallica dà già autore e date, e una raffica di manifesti dopo
+    // ogni pagina le fa rispondere 429 e poi chiudere le connessioni: anche
+    // la pagina successiva e il «riprova» fallivano per qualche minuto. I
+    // risultati senza manifesto (le schede di catalogo `cb…`) non si aprono
+    // comunque. e-codices porta titolo, segnatura, copertina e sommario nella
+    // pagina dei risultati, e non dà mai l'autore: leggere venti manifesti da
+    // 100–400 KB ciascuno portava una ricerca a 49 secondi.
+    let results = if matches!(
+        handler,
+        SearchHandlerKind::Gallica | SearchHandlerKind::Ecodices
+    ) {
+        found.results
+    } else {
+        enrich_results(client, gate, found.results).await
+    };
+    Ok(SearchPage {
+        results,
+        has_more: found.has_more,
+    })
+}
+
+/// Un'opera precisa di una biblioteca, riconosciuta in quello che è stato
+/// scritto: un indirizzo, una segnatura, un identificativo.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recognition {
+    pub provider_key: String,
+    pub doc_id: String,
+}
+
+/// Le biblioteche che riconoscono quello che è stato scritto come un'opera.
+///
+/// Una forma inequivocabile (un indirizzo, un ARK) vale sempre. Una forma
+/// debole vale solo se è una parola sola con almeno una cifra: su Gallica
+/// qualunque parola di sei lettere ha la forma di un identificativo, e
+/// proporre di aprire «Rabelais» come un'opera sarebbe rumore. Il
+/// riconoscimento generico — qualunque indirizzo preso come manifesto — vale
+/// solo per l'indirizzo IIIF diretto, e solo quando nessuna biblioteca ha
+/// riconosciuto l'indirizzo come suo.
+pub fn recognitions(input: &str) -> Vec<Recognition> {
+    let value = input.trim();
+    let identifier_like =
+        !value.contains(char::is_whitespace) && value.chars().any(|c| c.is_ascii_digit());
+    let recognise = |provider: &'static IIIFProvider| {
+        let resolution = resolvers::resolve(provider.resolver, value)?;
+        (resolution.strength == Strength::Strong || identifier_like)
+            .then_some((provider, resolution))
+    };
+    let generic = |provider: &&IIIFProvider| provider.resolver == ResolverKind::Generic;
+    let mut seen = std::collections::HashSet::new();
+    let specific: Vec<Recognition> = enabled_providers()
+        .into_iter()
+        .filter(|provider| !generic(provider))
+        .filter_map(recognise)
+        .filter(|(_, resolution)| seen.insert(resolution.manifest_url.clone()))
+        .map(|(provider, resolution)| Recognition {
+            provider_key: provider.key.to_string(),
+            doc_id: resolution.doc_id,
+        })
+        .collect();
+    if !specific.is_empty() {
+        return specific;
+    }
+    enabled_providers()
+        .into_iter()
+        .filter(|provider| generic(provider) && provider.kind == ProviderKind::DirectUrl)
+        .filter_map(recognise)
+        .map(|(provider, resolution)| Recognition {
+            provider_key: provider.key.to_string(),
+            doc_id: resolution.doc_id,
+        })
+        .collect()
+}
+
+/// Apre l'opera che la biblioteca riconosce in quello che è stato scritto.
+pub(crate) async fn open_recognized(
     client: &Client,
     provider: &IIIFProvider,
     input: &str,
-    endpoints: &SearchEndpoints,
-    page: u32,
     gate: Option<&Gate<'_>>,
-) -> Result<DiscoveryOutcome, String> {
-    let value = input.trim();
-    let nothing = || DiscoveryOutcome {
-        cached_at: None,
-        status: DiscoveryStatus::NotFound,
-        provider_key: provider.key.to_string(),
-        manifest: None,
-        results: Vec::new(),
-        has_more: false,
-    };
-    if value.is_empty() {
-        return Ok(nothing());
-    }
-
-    let recognised = resolvers::resolve(provider.resolver, value);
-    let recognised_first = match provider.search_mode {
-        SearchMode::Direct | SearchMode::Fallback => recognised.clone(),
-        SearchMode::SearchFirst => recognised
-            .clone()
-            .filter(|resolution| resolution.strength == Strength::Strong),
-    };
-
-    if let Some(resolution) = recognised_first {
-        return Ok(DiscoveryOutcome {
-            cached_at: None,
-            status: DiscoveryStatus::Manifest,
-            provider_key: provider.key.to_string(),
-            manifest: Some(resolve_manifest(client, resolution.manifest_url, gate).await?),
-            results: Vec::new(),
-            has_more: false,
-        });
-    }
-
-    if matches!(provider.search_mode, SearchMode::Direct) {
-        return Ok(nothing());
-    }
-
-    let search = match provider.search_handler {
-        Some(handler) => search::run(client, handler, endpoints, value, page, gate).await?,
-        None => return Ok(nothing()),
-    };
-
-    if !search.results.is_empty() {
-        // Chi ha già detto tutto non viene riletto: `enrich_from_manifest` si
-        // ferma da sé se la scheda ha autore e copertina. Chi non li dà —
-        // Vaticana, e le biblioteche le cui pagine di ricerca elencano solo i
-        // collegamenti — paga una lettura del manifesto per risultato, che è il
-        // prezzo di una riga leggibile invece di un segnaposto.
-        let results = enrich_results(client, gate, search.results).await;
-        return Ok(DiscoveryOutcome {
-            cached_at: None,
-            status: DiscoveryStatus::Results,
-            provider_key: provider.key.to_string(),
-            manifest: None,
-            results,
-            has_more: search.has_more,
-        });
-    }
-
-    // La ricerca non ha trovato niente: se quello che è stato scritto somigliava
-    // comunque a un identificativo, vale la pena provarlo prima di dire di no.
-    if let Some(resolution) = recognised {
-        return Ok(DiscoveryOutcome {
-            cached_at: None,
-            status: DiscoveryStatus::Manifest,
-            provider_key: provider.key.to_string(),
-            manifest: Some(resolve_manifest(client, resolution.manifest_url, gate).await?),
-            results: Vec::new(),
-            has_more: false,
-        });
-    }
-
-    Ok(nothing())
+) -> Result<ManifestPreview, String> {
+    let resolution = resolvers::resolve(provider.resolver, input)
+        .ok_or_else(|| search::MANIFEST_INVALID.to_string())?;
+    resolve_manifest(client, resolution.manifest_url, gate).await
 }
 
 /// Cosa la biblioteca offre davvero di quest'opera, letto dal suo manifesto.
@@ -534,46 +542,18 @@ pub async fn read_iiif_manifest_text(
 pub const EUROPEANA_KEY_ID: &str = "europeana";
 
 #[tauri::command]
-pub async fn discover_iiif(
+pub fn recognize_work(input: String) -> Vec<Recognition> {
+    recognitions(&input)
+}
+
+/// Apre un'opera riconosciuta, dall'identificativo o dall'indirizzo scritto.
+#[tauri::command]
+pub async fn open_work(
     app: tauri::AppHandle,
     provider_key: String,
     input: String,
-    page: Option<u32>,
-    // `fresh`: «rifalla davvero». Salta il risultato conservato e ripassa dalla
-    // biblioteca — l'unico modo di sapere se il catalogo è cresciuto prima che
-    // il risultato conservato scada.
-    fresh: Option<bool>,
-) -> Result<DiscoveryOutcome, String> {
+) -> Result<ManifestPreview, String> {
     let provider = find_provider(&provider_key).ok_or_else(|| "Unknown collection.".to_string())?;
-    let page = page.unwrap_or(1).max(1);
-    log::info!(
-        "discovery requested provider={provider_key} page={page} input_len={}",
-        input.len()
-    );
-
-    // La stessa ricerca fatta due volte non deve ripassare dalla biblioteca.
-    // È l'unica cosa in cache che scade: i cataloghi crescono, e una ricerca
-    // di ieri va rifatta.
-    let request = crate::httpcache::request::CacheRequest::Search {
-        provider_key: provider_key.clone(),
-        query: input.clone(),
-        page,
-        filters: Default::default(),
-    };
-    if !fresh.unwrap_or(false) {
-        if let Some((cached, stored_at)) =
-            crate::httpcache::commands::lookup_with_age(&app, &request)
-        {
-            if let Ok(outcome) = serde_json::from_slice::<DiscoveryOutcome>(&cached) {
-                log::info!("discovery answered from cache provider={provider_key} page={page}");
-                return Ok(DiscoveryOutcome {
-                    cached_at: stored_at,
-                    ..outcome
-                });
-            }
-        }
-    }
-
     let profile = crate::db::open_connection(&crate::storage_config::db_path(&app)?)
         .map(|conn| crate::iiif::settings::effective_profile(&conn, &provider_key, None))
         .unwrap_or(super::network::CAUTIOUS);
@@ -582,47 +562,55 @@ pub async fn discover_iiif(
         courtesy: &courtesy,
         profile: &profile,
     };
-    // La chiave di Europeana vive nel portachiavi del sistema, come quelle dei
-    // modelli: si legge al momento della ricerca e non viene mai scritta nel
-    // database né nei registri.
-    let endpoints = SearchEndpoints {
-        europeana_key: crate::keystore::get_api_key(&app, EUROPEANA_KEY_ID).ok(),
-        ..SearchEndpoints::default()
-    };
-    let outcome = discover_with(&client()?, provider, &input, &endpoints, page, Some(&gate)).await;
-
-    if let Ok(found) = &outcome {
-        // Un risultato vuoto non si conserva: il più delle volte è un guasto
-        // passeggero della biblioteca, e ricordarlo per un giorno intero
-        // significherebbe far sembrare vuoto un catalogo che non lo è.
-        if !found.results.is_empty() || found.manifest.is_some() {
-            if let Ok(encoded) = serde_json::to_vec(found) {
-                crate::httpcache::commands::store(
-                    &app,
-                    &request,
-                    &encoded,
-                    Some("application/json".to_string()),
-                );
-            }
-        }
+    let opened = open_recognized(&client()?, provider, &input, Some(&gate)).await;
+    // È il caso che l'utente vede come «non funziona»: senza una riga qui, di
+    // un guasto della biblioteca non resta traccia da nessuna parte.
+    if let Err(error) = &opened {
+        log::warn!("discovery open failed provider={provider_key} error={error}");
     }
-    match &outcome {
-        Ok(found) => log::info!(
-            "discovery answered provider={provider_key} status={:?} results={} manifest={}",
-            found.status,
-            found.results.len(),
-            found.manifest.is_some()
-        ),
-        // È il caso che l'utente vede come «non funziona»: senza una riga qui,
-        // di un guasto della biblioteca non resta traccia da nessuna parte.
-        Err(error) => log::warn!("discovery failed provider={provider_key} error={error}"),
-    }
-    outcome
+    opened
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Una ricerca per parole in una sola biblioteca, come la fa il lavoro di
+    /// ricerca.
+    pub(super) async fn search(
+        provider: &IIIFProvider,
+        words: &str,
+        endpoints: &SearchEndpoints,
+        page: u32,
+    ) -> Result<SearchPage, String> {
+        let handler = provider.search_handler.expect("la biblioteca cerca");
+        let criteria = crate::federation::Criteria {
+            query: words.to_string(),
+            ..Default::default()
+        };
+        search_provider(&Client::new(), handler, endpoints, &criteria, page, None).await
+    }
+
+    #[test]
+    fn an_ark_address_is_recognised_as_a_gallica_work() {
+        let found = recognitions("https://gallica.bnf.fr/ark:/12148/bpt6k3282120.image");
+        assert_eq!(
+            found,
+            vec![Recognition {
+                provider_key: "gallica".into(),
+                doc_id: "bpt6k3282120".into(),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_bare_identifier_with_digits_is_proposed_a_plain_word_is_not() {
+        assert!(recognitions("bpt6k3282120")
+            .iter()
+            .any(|found| found.provider_key == "gallica"));
+        assert!(recognitions("Rabelais").is_empty());
+        assert!(recognitions("le guidon des capitaines").is_empty());
+    }
     use wiremock::{
         matchers::{header, method, path, query_param},
         Mock, MockServer, ResponseTemplate,
@@ -655,8 +643,7 @@ mod tests {
             .await;
         let provider = find_provider("loc").expect("provider exists");
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             provider,
             "book of hours",
             &SearchEndpoints {
@@ -664,7 +651,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
@@ -704,8 +690,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("bodleian").expect("provider exists"),
             "book of hours",
             &SearchEndpoints {
@@ -713,7 +698,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
@@ -740,8 +724,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("estense").expect("provider exists"),
             "bibbia",
             &SearchEndpoints {
@@ -749,7 +732,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
@@ -771,8 +753,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("institut").expect("provider exists"),
             "manoscritto",
             &SearchEndpoints {
@@ -780,7 +761,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
@@ -818,8 +798,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("wellcome").expect("provider exists"),
             "anatomy",
             &SearchEndpoints {
@@ -827,7 +806,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
@@ -843,13 +821,11 @@ mod tests {
 
     #[tokio::test]
     async fn europeana_without_a_key_says_so_instead_of_failing_like_a_network_fault() {
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("europeana").expect("provider exists"),
             "dante",
             &SearchEndpoints::default(),
             1,
-            None,
         )
         .await;
 
@@ -858,7 +834,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_vatican_shelfmark_opens_its_manuscript_without_searching() {
+    async fn a_vatican_shelfmark_is_recognised_and_a_word_is_searched() {
         let server = MockServer::start().await;
         // La segnatura si riconosce da sola: nessuna richiesta di ricerca deve
         // partire, e infatti il server finto non ne offre nessuna.
@@ -917,11 +893,10 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(&Client::new(), provider, "vergilius", &endpoints, 1, None)
+        let outcome = search(provider, "vergilius", &endpoints, 1)
             .await
             .expect("ricerca");
 
-        assert_eq!(outcome.status, DiscoveryStatus::Results);
         assert_eq!(outcome.results[0].id, "MSS_Vat.lat.3225");
         assert_eq!(
             outcome.results[0].creator.as_deref(),
@@ -960,7 +935,7 @@ mod tests {
             ..SearchEndpoints::default()
         };
 
-        discover_with(&Client::new(), provider, "vergilius", &endpoints, 1, None)
+        search(provider, "vergilius", &endpoints, 1)
             .await
             .expect("ricerca");
     }
@@ -998,7 +973,7 @@ mod tests {
             ..SearchEndpoints::default()
         };
 
-        let outcome = discover_with(&Client::new(), provider, "sparito", &endpoints, 1, None)
+        let outcome = search(provider, "sparito", &endpoints, 1)
             .await
             .expect("ricerca");
 
@@ -1028,11 +1003,12 @@ mod tests {
             ..SearchEndpoints::default()
         };
 
-        let outcome = discover_with(&Client::new(), provider, "graduale", &endpoints, 1, None)
+        // La parola deve comparire nel risultato: e-codices unisce le parole
+        // con «o», e i risultati che non le contengono tutte si scartano.
+        let outcome = search(provider, "livius", &endpoints, 1)
             .await
             .expect("ricerca");
 
-        assert_eq!(outcome.status, DiscoveryStatus::Results);
         assert_eq!(outcome.results[0].id, "bbb-0264");
     }
 
@@ -1060,11 +1036,10 @@ mod tests {
 
         // «heures» somiglia a un identificativo Gallica: senza la ricerca
         // prima, finirebbe su un manifesto inesistente.
-        let outcome = discover_with(&Client::new(), provider, "heures", &endpoints, 1, None)
+        let outcome = search(provider, "heures", &endpoints, 1)
             .await
             .expect("ricerca");
 
-        assert_eq!(outcome.status, DiscoveryStatus::Results);
         assert_eq!(
             outcome.results[0].manifest_url,
             "https://gallica.bnf.fr/iiif/ark:/12148/btv1b84260335/manifest.json"
@@ -1093,18 +1068,11 @@ mod tests {
             ..SearchEndpoints::default()
         };
 
-        let outcome = discover_with(
-            &Client::new(),
-            provider,
-            "cavalcabo di cremona",
-            &endpoints,
-            1,
-            None,
-        )
-        .await
-        .expect("ricerca");
+        let outcome = search(provider, "cavalcabo di cremona", &endpoints, 1)
+            .await
+            .expect("ricerca");
 
-        assert_eq!(outcome.status, DiscoveryStatus::NotFound);
+        assert!(outcome.results.is_empty());
     }
 
     /// Cosa si riesce a dire di un'opera leggendo il suo manifesto: le tre

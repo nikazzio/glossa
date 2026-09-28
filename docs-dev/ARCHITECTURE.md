@@ -16,8 +16,8 @@ dichiarata. Aggiornare il lucchetto è legittimo solo per aggiungere una riga.
 
 ## Ricerca federata e Dashboard
 
-Le tre viste vivono nella Dashboard (`DashboardArea`): `overview`, ricerca
-federata e ricerca singola/identificativo. Si scelgono dalla barra a sinistra,
+Le due viste vivono nella Dashboard (`DashboardArea`): `overview` e ricerca
+(`view: 'search'`). Si scelgono dalla barra a sinistra,
 come voci sotto la Dashboard (`WorkspaceRailNext`), non da una fila di linguette
 dentro la pagina; solo la vista corrente monta, così una ricerca nascosta non
 continua a leggere. Contratto di navigazione: la variante `dashboard` di
@@ -25,12 +25,79 @@ continua a leggere. Contratto di navigazione: la variante `dashboard` di
 `itemId` e `workspaceFilter` e non ha più concetto di linguetta. Navigare non
 annulla lavori.
 
-Nella ricerca federata le parole cercate stanno nella barra in cima, con avvio,
-criteri avanzati, estensione e aggiornamento; gli altri criteri e la scelta
-delle fonti sono la terza scheda della colonna di destra, insieme a esecuzione e
-storico; l'elenco delle ricerche non è duplicato da una tendina. Il pannello di
-esecuzione è una riga per fonte — segno di stato, nome, record ricevuti — che si
-apre sui dati completi, i comandi e i tentativi precedenti.
+La ricerca è una sola (`FederatedSearchArea`): la ricerca singola per
+biblioteca e il comando `discover_iiif` non esistono più. Nella barra in cima
+stanno la scelta di dove cercare (`SearchScopeSelect`: tutte le biblioteche,
+una sola, scelta personalizzata), la casella, avvio, criteri avanzati,
+estensione e aggiornamento; criteri e fonti una per una sono la terza scheda
+della colonna di destra, insieme a Fonti e storico. La scheda Fonti è una riga
+per fonte — stato, nome, record ricevuti, «riprova» dopo un errore, filtro sulla
+sola fonte — senza pause, ripartenze né tentativi, che restano nel pannello dei
+lavori; il comando «altri risultati» in fondo all'elenco rilancia in modo
+`continue` tutte le esecuzioni concluse con `hasMore`. L'ordine dei risultati
+(`utils/searchResultOrder.ts`) è pertinenza, anno, autore o titolo; la copia di
+un'opera raggruppata si sceglie nella riga aperta.
+
+Identificativi e indirizzi non passano dalla ricerca. Mentre si scrive,
+`recognize_work` (sincrono, nessuna rete) interroga i riconoscitori di tutte le
+biblioteche abilitate (`discovery::recognitions`): una forma forte vale sempre,
+una debole solo se è una parola sola con almeno una cifra; il riconoscitore
+generico (`ResolverKind::Generic`) vale solo per l'indirizzo IIIF diretto e solo
+quando nessuna biblioteca ha riconosciuto l'indirizzo come suo. Ogni
+riconoscimento è una riga «Apri su …» sopra i risultati; `open_work` risolve e
+legge il manifesto (`open_recognized`), e l'opera compare come riga
+aggiungibile alla Biblioteca. Un indirizzo completo si apre anche con Invio. La
+risincronizzazione di un'opera usa lo stesso `open_work` sul manifesto
+salvato. Il lavoro di ricerca arricchisce i risultati dai manifesti
+(`search_provider` = `search::run` + `enrich_results`), come faceva la ricerca
+singola, **tranne per Gallica**: l'SRU porta già autore e date, e una raffica di
+manifesti dopo ogni pagina faceva rispondere Gallica 429 e poi chiudere le
+connessioni, così la pagina successiva e il «riprova» fallivano per minuti
+(`search_unreachable`, broken pipe sul log del 25 settembre 2026). Anche
+e-codices non si arricchisce: la pagina dei risultati ha già titolo, segnatura,
+copertina e sommario, e venti manifesti da 100–400 KB portavano una ricerca a
+49 s. Per le altre l'arricchimento tiene sempre quattro letture in corso
+(`buffered`), non blocchi fissi da quattro.
+
+**Perché un risultato è uscito.** Le parole (`matchTerms`) si evidenziano dove
+compaiono (`ui/Highlighted`: identità dell'opera, dati della scheda aperta);
+nessuna frase sotto la riga. `DiscoveryResult.match_hints` (sezione e testo
+senza marcatori), mostrati come dati della scheda aperta, raccolgono quello che
+la biblioteca dichiara: e-codices
+(`found-in` + snippet), Bodleian (`snippet`), Cambridge (`highlighting`),
+Institut (descrizione con `<em>`), Vaticana (righe di contenuto), Estense (il
+campo che contiene le parole). `utils/searchMatch.ts` confronta le parole
+(senza accenti, come inizio di parola, almeno tre lettere); se nessun dato della
+scheda né alcun `match_hint` le contiene, la riga porta un'icona con la
+spiegazione (su Gallica «solo nel testo delle pagine»).
+
+**Frase esatta**: `Criteria.exact_phrase` (`serde(default)`), rispettato da chi
+dichiara `SearchField::Phrase` (oggi Internet Archive, che la mette fra
+virgolette); il pannello dei criteri dice quali delle biblioteche scelte la
+rispettano.
+
+**Pagine vuote**: una pagina completata con 0 risultati e `has_more` si
+continua da sola dall'interfaccia (`emptyStreak`, al massimo 5 pagine vuote di
+fila per biblioteca, una volta per esecuzione).
+
+**Come cerca ogni biblioteca** (verificato il 28 settembre 2026):
+- MDZ: `alma.all_for_ui all "<parole>" and alma.local_field_912=digit`; un blocco
+  `diagnostics` dell'SRU è un errore, non uno zero.
+- e-codices: le parole vanno com'erano (il sito le unisce in «o», le virgolette
+  perdono parole in sezioni diverse), poi si tengono i risultati che le
+  contengono tutte come inizio di parola; `iCurrentPage`, `has_more` dal pager,
+  quindi una pagina filtrata può essere vuota con altre dopo.
+- Estense: la ricerca è a frase; con più parole si chiede la più lunga
+  (`size=200`) e si filtra su `sgtt`/`autn`/`pressmark`, paginando in locale.
+- Vaticana `p=`, Bodleian `page` + `view.next`, Institut `perpage=20&page=`,
+  LoC `c=20&sp=` + `pagination.next`: nessuna salta o ripete risultati.
+- Internet Archive: i caratteri speciali di Lucene si proteggono; un errore di
+  sintassi è `search_failed`, solo `[BACKEND_ERROR]` è `search_unavailable`.
+- NLS: raccolte lette otto alla volta, JSON con virgole finali accettato.
+- LoC e NLS restano fuori da «tutte» (`NOT_IN_ALL` in `SearchScopeSelect`).
+
+Le pagine vuote non entrano nella cache HTTP delle ricerche: uno zero dovuto a
+una risposta anomala resterebbe anche dopo la correzione.
 La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
 Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
@@ -42,9 +109,9 @@ riconoscimento, gestore di ricerca, capacità dichiarate e `site_search`, cioè 
 pagina di ricerca della biblioteca sul suo sito con `{query}` dove vanno le
 parole. Serve da via d'uscita quando la ricerca interna non basta — quello che
 una biblioteca espone a un programma quasi mai è tutto il suo catalogo — e si
-apre dalla ricerca singola, dai risultati vuoti, dai risultati di una sola fonte
-e dalla scheda di un'opera senza indirizzo proprio. Un solo componente
-(`ProviderSiteLink`) per tutti e quattro i punti; l'assenza della pagina è
+apre dai risultati vuoti, dai risultati di una sola fonte e dalla scheda di
+un'opera senza indirizzo proprio. Un solo componente (`ProviderSiteLink`) per
+tutti e tre i punti; l'assenza della pagina è
 dichiarata dal record, non decisa dalla schermata.
 
 I comandi sulla pagina vivono nella scheda (`OpenPageSection`), non nella barra
@@ -162,9 +229,18 @@ impedisce doppi rilanci. I comandi generici non possono creare o ritentare quest
 job senza il dominio. Le ricerche accodate/interrotte si recuperano in pausa,
 anche se l’autoripresa degli scaricamenti è abilitata. Nessuna esecuzione ad app chiusa.
 
-Solo le parole chiave vengono inviate ai cataloghi. Gli altri criteri sono
-post-filtri espliciti sui metadati: assenza/approssimazione resta `unknown`, non
-una corrispondenza inventata. Materiale generico «text» non prova manoscritto
+Ogni provider dichiara nel registro i criteri che interroga campo per campo
+(`search_fields`, esposto come `searchFields`). `search::run` riceve i
+`Criteria` interi: Gallica li traduce in CQL (`gallica_cql`: parole libere su
+`gallica all`, titolo/autore/tipografo su `dc.title`/`dc.creator`/
+`dc.publisher`, materiale su `dc.type` = `manuscrit`/`monographie`, anni su
+`dc.date>=`/`<=`, forme verificate sul servizio il 25 settembre 2026); gli
+altri ricevono `Criteria::words()`, cioè le parole libere oppure titolo, autore
+e tipografo quando si cerca solo per campi. La chiave di cache della pagina è
+l'intero JSON dei criteri (`contract=federated-v2`). Lato finestra
+`matchesCriteria` non ricontrolla i campi che il provider ha già cercato; gli
+altri restano post-filtri espliciti sui metadati: assenza/approssimazione resta
+`unknown` (mostrato come «dati incompleti»), un'esclusione non si mostra. Materiale generico «text» non prova manoscritto
 o stampato. Un match deve appartenere a una singola occorrenza completa.
 Deduplicazione esclusivamente per manifesto identico; le occorrenze originali
 restano conservate. Risultati virtualizzati; ordinamento per titolo su snapshot
@@ -189,10 +265,10 @@ la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed
 esito, senza criteri né indirizzi.
 
 La Biblioteca è tornata un'area unica con il solo catalogo
-(`LibraryCatalogArea`): nessuna linguetta. Le colonne
-ridimensionabili hanno larghezze minime in pixel: sotto la loro somma la
-colonna dei filtri si richiude da sola e si riapre quando lo spazio torna,
-mentre una chiusura decisa dall'utente resta. Ogni contenitore intermedio di
+(`LibraryCatalogArea`): nessuna linguetta. La colonna degli scaffali sta a
+destra, ha larghezza fissa e l'elenco prende il resto; non esiste più un pannello filtri
+ridimensionabile a destra, che sotto una certa larghezza si chiudeva da solo e
+ignorava il comando di riapertura (#484). Ogni contenitore intermedio di
 un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
 barre di scorrimento orizzontali.
 
@@ -288,6 +364,40 @@ schede. Le viste salvate (`library_saved_views`) conservano i filtri come JSON,
 riletti in modo difensivo: una vista scritta quando i filtri erano altri resta
 valida, i campi che non si riconoscono tornano neutri.
 
+Il catalogo della Biblioteca si guarda per **scaffale** (`shelf`: tutte,
+recenti, da scaricare, in trascrizione, non collegate, archiviate) oppure per
+raccolta, poi si restringe con ricerca e **filtri rapidi** (`LIBRARY_FACETS`:
+tipo, secolo, lingua, biblioteca, disponibilità, workspace), tutto in
+`utils/libraryCatalogFilters.ts` e lato finestra. `facetCounts` conta i valori
+di un filtro applicando tutti gli altri. Il secolo viene dal primo anno della
+data (`utils/workYear.ts`). «Recenti» e l'ordine «aperte di recente» usano
+`uiStore.libraryOpenedAt`, la data dell'ultima apertura di ogni scheda,
+persistita con le preferenze e non nel database: è memoria di navigazione, non
+un fatto dell'opera. La riga del catalogo porta `stage` (`none`,
+`transcribing`, `transcribed`, `translated`), calcolato in una query sola da
+`workStagesOfMany` (`services/workStageService.ts`): trascrizioni non nel
+cestino legate alle copie dell'opera, verificate quando hanno pagine e tutte
+approvate; traduzioni attive la cui origine è una copia dell'opera o una sua
+trascrizione.
+
+Vista (`libraryView`: elenco, copertine, tabella) e raggruppamento
+(`libraryGrouping`, `utils/libraryGrouping.ts`: secolo, autore, biblioteca,
+raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
+sull'elenco già filtrato e ordinato; un'opera in più raccolte compare in ogni
+gruppo, e la scelta per intervallo segue l'ordine visibile, gruppi compresi.
+
+Rileggere la scheda della stessa opera (`loadDetail` dopo un collegamento o una
+correzione) non svuota `detail`: la scheda resta visibile finché arriva la
+nuova lettura. Solo aprire un'opera diversa passa dall'attesa.
+
+La scelta multipla del catalogo (`useCatalogSelection`) è stato della sola
+finestra: si svuota cambiando scaffale o raccolta. I comandi sulla scelta
+girano un'opera alla volta con le stesse azioni della singola riga
+(`setCollection`, `toggleWorkspaceLink`, `setArchived`, `enqueueEntryDownload`
+in `services/sourceDownload.ts`), con un solo messaggio d'errore alla fine. Il
+trascinamento su una raccolta porta gli identificativi nel tipo
+`application/x-glossa-sources`.
+
 Le correzioni a mano ai dati di un'opera vivono in `source_field_overrides`,
 come le correzioni locali ai dizionari: il valore della biblioteca resta intatto
 in `sources` e nei metadati della copia, e la lettura del catalogo applica la
@@ -296,9 +406,11 @@ dell'originale non lascia una riga di correzione.
 
 Il vincolo su `source_field_overrides.field` accetta tutti i **20 campi
 anagrafici** (`SOURCE_FIELDS` in `src/types.ts`), non solo i 5 storici: motore
-e database sono generici su ognuno, `getLibrarySourceDetail` li applica tutti
-in un solo passaggio (`effectiveFieldValues`/`baseFieldValue` in
-`libraryService.ts`). Quali campi abbiano davvero un comando di modifica a
+e database sono generici su ognuno, `getLibrarySourceDetail` e
+`listLibraryCatalog` li applicano tutti con lo stesso passaggio
+(`effectiveFieldValues`/`baseFieldValue` in `libraryService.ts`): la riga del
+catalogo porta in `fields` tutti i campi già corretti, così elenco e scheda non
+possono mostrare valori diversi della stessa opera. Quali campi abbiano davvero un comando di modifica a
 schermo è una scelta separata, oggi limitata a titolo/autore/data/lingua — gli
 altri sono in tab Info come sola lettura. I campi che arrivano come più valori
 insieme (contributori, diritti, soggetti, provenienza, genere/forma, copertura,
@@ -836,8 +948,28 @@ mostrate. Le righe delle dipendenze (`sqlx`, `keyring`, `hyper`, `reqwest`) sono
 l'87% del file e restano fuori finché non si chiedono. Le origini del programma
 (`federation`, `glossa_lib::*`, `webview`) si raggruppano in quattro aree lato
 interfaccia (`src/components/console/logAreas.ts`): Biblioteca, Traduzione,
-Lavori, Interfaccia. «Svuota la vista» agisce solo su ciò che è a schermo: il
-file non si riscrive mai dall'interfaccia.
+Lavori, Interfaccia. «Svuota la vista» agisce solo su ciò che è a schermo
+(nasconde le righe fino a quella in cima in quel momento; il confine è la
+riga, non l'orario, così restano visibili quelle arrivate nello stesso
+secondo): il file non si
+riscrive mai dall'interfaccia.
+
+La scheda si aggiorna da sola: ogni 2 s, finché è montata, rilegge l'ultima
+pagina (200 righe) e mette in cima solo quelle che precedono il tratto già a
+schermo — il confine è il punto da cui la pagina letta ricalca, fino in fondo,
+la cima dell'elenco, così due eventi identici nello stesso secondo restano
+due righe;
+il resto dell'elenco, comprese le pagine chieste con «carica le precedenti»,
+non si tocca. Una rilettura partita prima di un cambio di filtro o di un
+caricamento a mano si scarta (contatore di generazione), e lo stesso vale per
+un caricamento superato da un altro. Nessun evento dal backend: il plugin di log non ne
+emette, e rileggere la coda del file costa meno di un canale nuovo. Se chi legge
+è sceso nell'elenco, la posizione si corregge dell'altezza delle righe arrivate
+in cima. La colorazione dei dati (`logMessageTokens.ts`) prende l'oggetto JSON
+che segue il nome dell'evento solo se è JSON valido; la preferenza
+`systemLogHighlightData` sta in `uiStore`, persistita. Il comando del pannello
+nella barra di stato apre sempre la scheda Sistema (`drawerTab: 'system'`, anche
+predefinito); l'indicatore dei lavori continua ad aprire i lavori.
 
 I messaggi del frontend arrivano nello stesso file solo da quando `log:default`
 sta fra i permessi in `capabilities/default.json`: senza quel permesso le

@@ -3,15 +3,21 @@
 use reqwest::Client;
 use std::collections::BTreeMap;
 
-use super::super::discovery::{DiscoveryResult, Gate, SearchPage};
+use super::super::discovery::{DiscoveryResult, Gate, MatchHint, SearchPage};
 use super::super::resolvers;
 use super::super::ResolverKind;
-use super::{between, strip_tags, SearchEndpoints, PAGE_SIZE};
+use super::{between, strip_tags, unescape, words, SearchEndpoints, PAGE_SIZE};
+
+const RESULT_MARKER: &str = "<div class=\"search-result\">";
+const HINT_MARKER: &str = "<div class=\"found-in-container\">";
+const SNIPPET_MARKER: &str = "<span class=\"search-result-snippet\">";
+const SECTION_MARKER: &str = "<span class=\"found-in\">";
 
 pub(super) async fn ecodices(
     client: &Client,
     endpoints: &SearchEndpoints,
     query: &str,
+    page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
     let _turn = super::super::discovery::wait_if_gated(gate, &endpoints.ecodices_search).await;
@@ -22,6 +28,7 @@ pub(super) async fn ecodices(
             ("sSearchField", "fullText"),
             ("iResultsPerPage", &PAGE_SIZE.to_string()),
             ("sSortField", "score"),
+            ("iCurrentPage", &page.max(1).to_string()),
         ])
         .send()
         .await
@@ -41,17 +48,114 @@ pub(super) async fn ecodices(
             super::SEARCH_INVALID_DATA.to_string()
         })?;
 
-    let results = parse_ecodices_results(&body);
+    let found = parse_ecodices_results(&body);
+    let results = keep_results_with_every_word(found, query);
     log::info!("discovery ecodices search found={}", results.len());
     Ok(SearchPage {
-        has_more: false,
+        // Il filtro sopra può svuotare la pagina, ma la successiva va chiesta
+        // comunque: lo dice il paginatore del sito, non quanto è rimasto.
+        has_more: body.contains("rel=\"next\""),
         results,
     })
 }
 
+/// e-codices unisce le parole con un OR e le riduce alla radice: «achille
+/// marozzo» trova i registri contabili che citano un «Achilles» in
+/// bibliografia, mentre AND e «+» non danno nulla e le virgolette cercano la
+/// frase esatta, perdendo chi ha le parole in punti diversi della scheda. Si
+/// mandano quindi le parole così come sono e si tengono solo i risultati in cui
+/// ognuna compare, nel titolo, nel riassunto o nei brani che il sito indica,
+/// come inizio di una parola (maiuscole e accenti non contano).
+fn keep_results_with_every_word(
+    results: Vec<DiscoveryResult>,
+    query: &str,
+) -> Vec<DiscoveryResult> {
+    let wanted = words(query);
+    // Con una parola sola l'«o» del sito non allarga niente: quello che ha
+    // trovato è quello che si è chiesto, anche in un'altra forma.
+    if wanted.len() < 2 {
+        return results;
+    }
+    results
+        .into_iter()
+        .filter(|result| {
+            let found = result_words(result);
+            wanted
+                .iter()
+                .all(|word| found.iter().any(|candidate| same_root(candidate, word)))
+        })
+        .collect()
+}
+
+/// Il sito riduce le parole alla radice: «Heilige» risponde a «heiligen»,
+/// «manuscript» a «manuscripts». Una parola vale se una delle due inizia con
+/// l'altra, con una parte comune abbastanza lunga da non unire parole
+/// diverse (sotto le quattro lettere serve l'inizio esatto).
+fn same_root(candidate: &str, word: &str) -> bool {
+    const MIN_SHARED_ROOT: usize = 4;
+    candidate.starts_with(word)
+        || (candidate.chars().count() >= MIN_SHARED_ROOT && word.starts_with(candidate))
+}
+
+fn result_words(result: &DiscoveryResult) -> Vec<String> {
+    let texts = [Some(&result.title), result.description.as_ref()]
+        .into_iter()
+        .flatten()
+        .chain(result.match_hints.iter().map(|hint| &hint.text));
+    texts.flat_map(|text| words(text)).collect()
+}
+
+/// I punti della scheda in cui il sito ha trovato le parole: il brano (con le
+/// parole racchiuse in `<em>`) e, dopo «Found in:», il nome della sezione.
+/// Lo stesso brano torna identico per ogni lingua del titolo: basta una volta.
+fn ecodices_match_hints(chunk: &str) -> Vec<MatchHint> {
+    let hints: Vec<MatchHint> = chunk
+        .split(HINT_MARKER)
+        .skip(1)
+        .filter_map(match_hint)
+        .collect();
+    hints
+        .iter()
+        .enumerate()
+        .filter(|(index, hint)| !hints[..*index].iter().any(|seen| seen.text == hint.text))
+        .map(|(_, hint)| hint.clone())
+        .collect()
+}
+
+fn match_hint(block: &str) -> Option<MatchHint> {
+    let snippet_start = block.find(SNIPPET_MARKER)? + SNIPPET_MARKER.len();
+    let section_start = block[snippet_start..]
+        .find(SECTION_MARKER)
+        .map(|offset| snippet_start + offset);
+    // Senza «Found in» il testo si ferma alla fine del suo riquadro: arrivare
+    // in fondo al blocco portava dentro il piè di pagina dell'ultimo risultato.
+    let end = section_start
+        .or_else(|| {
+            block[snippet_start..]
+                .find("</div>")
+                .map(|offset| snippet_start + offset)
+        })
+        .unwrap_or(block.len());
+    let text = clean_text(&block[snippet_start..end]);
+    let section = section_start
+        .and_then(|start| section_name(&block[start..]))
+        .filter(|value| !value.is_empty());
+    (!text.is_empty()).then_some(MatchHint { section, text })
+}
+
+fn section_name(found_in: &str) -> Option<String> {
+    let start = found_in.find("<strong>")?;
+    let end = found_in[start..].find("</strong>")? + start;
+    Some(clean_text(&found_in[start..end]))
+}
+
+fn clean_text(html: &str) -> String {
+    unescape(&strip_tags(html).replace("&hellip;", " "))
+}
+
 fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
     let mut results = Vec::new();
-    for chunk in body.split("<div class=\"search-result\">").skip(1) {
+    for chunk in body.split(RESULT_MARKER).skip(1) {
         let Some(viewer_url) =
             ecodices_facsimile_href(chunk).filter(|href| href.contains("e-codices"))
         else {
@@ -93,6 +197,7 @@ fn parse_ecodices_results(body: &str) -> Vec<DiscoveryResult> {
             // Come la Vaticana: pagina web raschiata, niente risposta
             // strutturata da conservare.
             raw: BTreeMap::new(),
+            match_hints: ecodices_match_hints(chunk),
             openable: None,
             id: resolved.doc_id,
         });
@@ -172,5 +277,120 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "hba-chart0161");
+    }
+
+    const ACHILLE_ONLY: &str = r#"
+      <div class="search-result">
+        <a href="https://www.e-codices.unifr.ch/en/bcuf/L1200">Facsimile</a>
+        <div class="document-ms-title">Alain Chartier; Achille Caulier; Hans Rosenplüt</div>
+        <div class="found-in-container">
+          <span class="search-result-snippet"><span><i class="fa fa-arrow-right"></i></span> &hellip;Baudet Herenc; <em>Achille</em> Caulier&hellip;</span>
+          <span class="found-in">Found in:
+          </span>
+          <strong><a href="https://www.e-codices.unifr.ch/en/list/one/bcuf/L1200">Title (English)</a></strong>
+        </div>
+        <div class="found-in-container">
+          <span class="search-result-snippet"><span><i class="fa fa-arrow-right"></i></span> &hellip;Baudet Herenc; <em>Achille</em> Caulier&hellip;</span>
+          <span class="found-in">Found in:
+          </span>
+          <strong><a href="https://www.e-codices.unifr.ch/de/list/one/bcuf/L1200">Title (German)</a></strong>
+        </div>
+      </div>"#;
+
+    const BOTH_WORDS: &str = r#"
+      <div class="search-result">
+        <a href="https://www.e-codices.unifr.ch/en/bge/lat0052">Facsimile</a>
+        <div class="document-ms-title">Trattato di scherma</div>
+        <div class="found-in-container">
+          <span class="search-result-snippet"><span><i class="fa fa-arrow-right"></i></span> &hellip;opera di <em>Achilles</em> <em>Marozzò</em>&hellip;</span>
+          <span class="found-in">Found in:
+          </span>
+          <strong><a href="https://www.e-codices.unifr.ch/en/list/one/bge/lat0052">Additional Bibliography</a></strong>
+        </div>
+      </div>"#;
+
+    #[test]
+    fn ecodices_match_hints_read_snippet_and_section_once_per_text() {
+        let results = parse_ecodices_results(ACHILLE_ONLY);
+
+        assert_eq!(
+            results[0].match_hints,
+            vec![MatchHint {
+                section: Some("Title (English)".to_string()),
+                text: "Baudet Herenc; Achille Caulier".to_string(),
+            }]
+        );
+    }
+
+    #[test]
+    fn ecodices_keeps_only_results_containing_every_word() {
+        let html = format!("{ACHILLE_ONLY}{BOTH_WORDS}");
+
+        let results =
+            keep_results_with_every_word(parse_ecodices_results(&html), "achille marozzo");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "bge-lat0052");
+        assert_eq!(
+            results[0].match_hints[0].section.as_deref(),
+            Some("Additional Bibliography")
+        );
+    }
+
+    #[test]
+    fn ecodices_word_filter_ignores_case_and_accents_but_not_missing_words() {
+        let results = parse_ecodices_results(ACHILLE_ONLY);
+
+        assert_eq!(
+            keep_results_with_every_word(results.clone(), "ROSENPLUT \"caulier\"").len(),
+            1
+        );
+        assert!(keep_results_with_every_word(results, "caulier marozzo").is_empty());
+    }
+
+    #[test]
+    fn one_word_is_never_filtered_and_roots_count_as_the_same_word() {
+        let result = super::super::result_from(
+            "x".to_string(),
+            "Legenda der Heilige".to_string(),
+            String::new(),
+        );
+
+        assert_eq!(
+            keep_results_with_every_word(vec![result.clone()], "graduale").len(),
+            1
+        );
+        assert_eq!(
+            keep_results_with_every_word(vec![result.clone()], "heiligen legenda").len(),
+            1
+        );
+        assert!(keep_results_with_every_word(vec![result], "heiligtum legenda").is_empty());
+    }
+
+    #[tokio::test]
+    async fn ecodices_asks_for_the_requested_page_and_reads_the_pager() {
+        use wiremock::matchers::{method, query_param};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        let body = format!(
+            "{BOTH_WORDS}<div class=\"browse-pagination\"><a href=\"?iCurrentPage=3\" rel=\"next\">→</a></div>"
+        );
+        Mock::given(method("GET"))
+            .and(query_param("iCurrentPage", "2"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+        let endpoints = SearchEndpoints {
+            ecodices_search: server.uri(),
+            ..SearchEndpoints::default()
+        };
+
+        let page = ecodices(&Client::new(), &endpoints, "achille marozzo", 2, None)
+            .await
+            .expect("pagina finta");
+
+        assert!(page.has_more);
+        assert_eq!(page.results.len(), 1);
     }
 }

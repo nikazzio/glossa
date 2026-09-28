@@ -4,6 +4,10 @@ import type { DocumentLayoutPreference } from '../types';
 import { dashboardLocation, locationsEqual, type AppLocation } from '../navigation/appLocation';
 import type { LogFilterKey } from '../components/console/logAreas';
 import type { LogLevel } from '../services/appLogService';
+import type { LibraryGrouping } from '../utils/libraryGrouping';
+
+/** Come si vede l'elenco della Biblioteca. */
+export type LibraryView = 'list' | 'grid' | 'table';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -92,9 +96,6 @@ interface UiState {
   documentPaneFocus: DocumentPaneFocus;
   syncScrollEnabled: boolean;
   showDeprecatedModels: boolean;
-  /** La fonte da cui parte una ricerca nuova. Vuota vuol dire «l'ultima che ho
-   *  usato», che è il comportamento di sempre. */
-  defaultSearchProvider: string;
   uiFont: UiFont;
   colorScheme: ColorScheme;
   documentFontSize: DocumentFontSize;
@@ -125,8 +126,12 @@ interface UiState {
    *  chi guarda il log torna sempre sullo stesso sottoinsieme. */
   systemLogAreas: LogFilterKey[];
   systemLogLevels: LogLevel[];
+  /** Colora i dati delle righe della scheda Sistema come in un editor. */
+  systemLogHighlightData: boolean;
   /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
-  libraryView: 'list' | 'grid';
+  libraryView: LibraryView;
+  /** Come si raggruppa l'elenco della Biblioteca. */
+  libraryGrouping: LibraryGrouping;
   /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
@@ -158,9 +163,9 @@ interface UiState {
   /** Colonna visore dello Studio di trascrizione. 0 = mai ridimensionata,
    *  vale la proporzione predefinita (3/5 visore, 2/5 testo). */
   transcriptionViewerWidth: number;
-  /** Colonna filtri del catalogo Biblioteca. */
-  libraryCatalogFiltersWidth: number;
-  libraryCatalogFiltersCollapsed: boolean;
+  /** Quando è stata aperta l'ultima volta ogni opera della Biblioteca: serve
+   *  allo scaffale «Recenti» e all'ordine «aperte di recente». */
+  libraryOpenedAt: Record<string, string>;
   /** Le sezioni della Panoramica, nell'ordine e nella colonna in cui l'utente
    *  le ha messe. Due elenchi e non uno solo: una sezione appartiene a una
    *  colonna, e spostarla dentro la sua o nell'altra dev'essere la stessa
@@ -182,7 +187,6 @@ interface UiState {
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
   setSyncScrollEnabled: (enabled: boolean) => void;
   setShowDeprecatedModels: (show: boolean) => void;
-  setDefaultSearchProvider: (providerKey: string) => void;
   setUiFont: (font: UiFont) => void;
   setColorScheme: (scheme: ColorScheme) => void;
   setDocumentFontSize: (size: DocumentFontSize) => void;
@@ -204,7 +208,9 @@ interface UiState {
   setDrawerTab: (tab: 'console' | 'transcriptionLog' | 'jobs' | 'system') => void;
   setSystemLogAreas: (areas: LogFilterKey[]) => void;
   setSystemLogLevels: (levels: LogLevel[]) => void;
-  setLibraryView: (view: 'list' | 'grid') => void;
+  setSystemLogHighlightData: (enabled: boolean) => void;
+  setLibraryView: (view: LibraryView) => void;
+  setLibraryGrouping: (grouping: LibraryGrouping) => void;
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
@@ -225,8 +231,7 @@ interface UiState {
   setLibrarySourceInspectorWidth: (width: number) => void;
   setTranscriptionInspectorWidth: (width: number) => void;
   setTranscriptionViewerWidth: (width: number) => void;
-  setLibraryCatalogFiltersWidth: (width: number) => void;
-  setLibraryCatalogFiltersCollapsed: (collapsed: boolean) => void;
+  markLibraryOpened: (sourceId: string) => void;
   setLibrarySourceGroupOpen: (group: string, open: boolean) => void;
   setDashboardSectionColumns: (columns: { left: string[]; right: string[] }) => void;
   setDashboardJobsWidth: (width: number) => void;
@@ -338,7 +343,6 @@ export const useUiStore = create<UiState>()(
       documentPaneFocus: 'both',
       syncScrollEnabled: false,
       showDeprecatedModels: false,
-      defaultSearchProvider: '',
       uiFont: 'jakarta',
       colorScheme: 'system',
       documentFontSize: 'md',
@@ -357,13 +361,15 @@ export const useUiStore = create<UiState>()(
       showInsightPanel: false,
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
-      drawerTab: 'console',
+      drawerTab: 'system',
       // Di partenza le aree del programma senza le librerie di terze parti,
       // che da sole sono l'87% delle righe scritte, e i livelli che dicono
       // qualcosa a chi non sta diagnosticando un guasto.
       systemLogAreas: ['library', 'translation', 'jobs', 'interface'],
       systemLogLevels: ['ERROR', 'WARN', 'INFO'],
+      systemLogHighlightData: true,
       libraryView: 'list',
+      libraryGrouping: 'none',
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
@@ -387,8 +393,7 @@ export const useUiStore = create<UiState>()(
       librarySourceInspectorWidth: 400,
       transcriptionInspectorWidth: 380,
       transcriptionViewerWidth: 0,
-      libraryCatalogFiltersWidth: 320,
-      libraryCatalogFiltersCollapsed: false,
+      libraryOpenedAt: {},
       librarySourceGroups: {},
       dashboardSectionColumns: {
         left: ['resume', 'searches', 'activity'],
@@ -402,7 +407,6 @@ export const useUiStore = create<UiState>()(
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
       setShowDeprecatedModels: (show) => set({ showDeprecatedModels: show }),
-      setDefaultSearchProvider: (providerKey) => set({ defaultSearchProvider: providerKey }),
       setUiFont: (font) => set({ uiFont: font }),
       setColorScheme: (scheme) => set({ colorScheme: scheme }),
       setDocumentFontSize: (size) => set({ documentFontSize: size }),
@@ -497,7 +501,9 @@ export const useUiStore = create<UiState>()(
       setDrawerTab: (tab) => set({ drawerTab: tab }),
       setSystemLogAreas: (areas) => set({ systemLogAreas: areas }),
       setSystemLogLevels: (levels) => set({ systemLogLevels: levels }),
+      setSystemLogHighlightData: (enabled) => set({ systemLogHighlightData: enabled }),
       setLibraryView: (view) => set({ libraryView: view }),
+      setLibraryGrouping: (grouping) => set({ libraryGrouping: grouping }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
@@ -581,8 +587,8 @@ export const useUiStore = create<UiState>()(
       setLibrarySourceInspectorWidth: (width) => set({ librarySourceInspectorWidth: width }),
       setTranscriptionInspectorWidth: (width) => set({ transcriptionInspectorWidth: width }),
       setTranscriptionViewerWidth: (width) => set({ transcriptionViewerWidth: width }),
-      setLibraryCatalogFiltersWidth: (width) => set({ libraryCatalogFiltersWidth: width }),
-      setLibraryCatalogFiltersCollapsed: (collapsed) => set({ libraryCatalogFiltersCollapsed: collapsed }),
+      markLibraryOpened: (sourceId) =>
+        set((state) => ({ libraryOpenedAt: { ...state.libraryOpenedAt, [sourceId]: new Date().toISOString() } })),
       setLibrarySourceGroupOpen: (group, open) =>
         set((state) => ({ librarySourceGroups: { ...state.librarySourceGroups, [group]: open } })),
       setDashboardSectionColumns: (columns) => set({ dashboardSectionColumns: columns }),
@@ -640,7 +646,6 @@ export const useUiStore = create<UiState>()(
         documentPaneFocus: state.documentPaneFocus,
         syncScrollEnabled: state.syncScrollEnabled,
         showDeprecatedModels: state.showDeprecatedModels,
-        defaultSearchProvider: state.defaultSearchProvider,
         uiFont: state.uiFont,
         colorScheme: state.colorScheme,
         documentFontSize: state.documentFontSize,
@@ -658,8 +663,7 @@ export const useUiStore = create<UiState>()(
         librarySourceInspectorWidth: state.librarySourceInspectorWidth,
         transcriptionInspectorWidth: state.transcriptionInspectorWidth,
         transcriptionViewerWidth: state.transcriptionViewerWidth,
-        libraryCatalogFiltersWidth: state.libraryCatalogFiltersWidth,
-        libraryCatalogFiltersCollapsed: state.libraryCatalogFiltersCollapsed,
+        libraryOpenedAt: state.libraryOpenedAt,
         librarySourceGroups: state.librarySourceGroups,
         dashboardSectionColumns: state.dashboardSectionColumns,
         dashboardJobsWidth: state.dashboardJobsWidth,
@@ -668,7 +672,9 @@ export const useUiStore = create<UiState>()(
         drawerTab: state.drawerTab,
         systemLogAreas: state.systemLogAreas,
         systemLogLevels: state.systemLogLevels,
+        systemLogHighlightData: state.systemLogHighlightData,
         libraryView: state.libraryView,
+        libraryGrouping: state.libraryGrouping,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
         editorialAccentColor: state.editorialAccentColor,

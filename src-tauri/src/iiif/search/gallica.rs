@@ -9,22 +9,54 @@ use super::super::discovery::{DiscoveryResult, Gate, SearchPage};
 use super::super::resolvers;
 use super::super::ResolverKind;
 use super::{local_name, SearchEndpoints, PAGE_SIZE};
+use crate::federation::Criteria;
+
+/// La richiesta CQL: ogni criterio sul proprio indice, uniti da `and`.
+///
+/// `gallica all` è l'indice generale — metadati **e testo trascritto delle
+/// pagine** — e da solo porta risultati estranei (17427 opere per un titolo
+/// che ne ha 5). Si usa solo per le parole libere; titolo, autore e tipografo
+/// vanno sui loro campi. `dc.type` distingue `manuscrit` da `monographie`
+/// (lo stampato); le date si confrontano su `dc.date`.
+pub(super) fn gallica_cql(criteria: &Criteria) -> String {
+    // Le virgolette chiuderebbero la stringa della richiesta: si sostituiscono
+    // invece di rifiutare la ricerca.
+    let quoted = |value: &str| format!("\"{}\"", value.trim().replace('"', "'"));
+    let texts = [
+        ("gallica", &criteria.query),
+        ("dc.title", &criteria.title),
+        ("dc.creator", &criteria.author),
+        ("dc.publisher", &criteria.publisher),
+    ];
+    let material = match criteria.material.as_str() {
+        "manuscript" => Some("manuscrit"),
+        "printed" => Some("monographie"),
+        _ => None,
+    };
+    texts
+        .iter()
+        .filter(|(_, value)| !value.trim().is_empty())
+        .map(|(index, value)| format!("{index} all {}", quoted(value)))
+        .chain(material.map(|kind| format!("dc.type all \"{kind}\"")))
+        .chain(
+            criteria
+                .year_from
+                .map(|year| format!("dc.date>=\"{year}\"")),
+        )
+        .chain(criteria.year_to.map(|year| format!("dc.date<=\"{year}\"")))
+        .collect::<Vec<_>>()
+        .join(" and ")
+}
 
 pub(super) async fn gallica(
     client: &Client,
     endpoints: &SearchEndpoints,
-    query: &str,
+    criteria: &Criteria,
     page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
     let start_record = (page.max(1) - 1) * PAGE_SIZE + 1;
-    // Le virgolette chiuderebbero la stringa della richiesta: si sostituiscono,
-    // come fa il riferimento, invece di rifiutare la ricerca.
-    let cleaned = query.replace('"', "'");
-    // `gallica all` è l'indice di ricerca generale del sito (metadati, testo,
-    // tabelle): cercare solo `dc.title` perdeva le opere dove il termine sta
-    // nell'autore o altrove, come un coautore che sul sito compare e qui no.
-    let cql = format!("gallica all \"{cleaned}\"");
+    let cql = gallica_cql(criteria);
 
     let _turn = super::super::discovery::wait_if_gated(gate, &endpoints.gallica_sru).await;
     let response = client
@@ -321,6 +353,7 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
         catalog_url: record.relation.as_deref().and_then(extract_url),
         page_url: Some(page_url),
         raw: record.extra,
+        match_hints: Vec::new(),
         openable: None,
         id: resolved.doc_id,
     })
@@ -329,6 +362,50 @@ fn gallica_result(record: GallicaRecord) -> Option<DiscoveryResult> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parole_libere_sull_indice_generale() {
+        let criteria = Criteria {
+            query: "cavalcabo \"di\" cremona".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            gallica_cql(&criteria),
+            "gallica all \"cavalcabo 'di' cremona\""
+        );
+    }
+
+    #[test]
+    fn ogni_criterio_sul_proprio_indice() {
+        let criteria = Criteria {
+            title: "Le guidon des capitaines".into(),
+            author: "Rabelais".into(),
+            publisher: "Juste".into(),
+            material: "printed".into(),
+            year_from: Some(1500),
+            year_to: Some(1560),
+            ..Default::default()
+        };
+        assert_eq!(
+            gallica_cql(&criteria),
+            "dc.title all \"Le guidon des capitaines\" and dc.creator all \"Rabelais\" \
+             and dc.publisher all \"Juste\" and dc.type all \"monographie\" \
+             and dc.date>=\"1500\" and dc.date<=\"1560\""
+        );
+    }
+
+    #[test]
+    fn manoscritto_diventa_manuscrit() {
+        let criteria = Criteria {
+            query: "heures".into(),
+            material: "manuscript".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            gallica_cql(&criteria),
+            "gallica all \"heures\" and dc.type all \"manuscrit\""
+        );
+    }
 
     const SRU_RESPONSE: &str = r#"<?xml version="1.0"?>
 <srw:searchRetrieveResponse xmlns:srw="http://www.loc.gov/zing/srw/">

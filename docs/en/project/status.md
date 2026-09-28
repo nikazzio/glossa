@@ -11,7 +11,7 @@ your installed version with the
 
 ## Available features
 
-- Dashboard summaries and single-source or multi-source search with persistent history.
+- Dashboard summaries and a single search over one or more sources, with direct opening of identifiers and addresses and persistent history.
 - A catalogue of works with editable metadata, collections and workspace links.
 - IIIF viewing, downloads, local versions, image reduction and integrity checks.
 - Translation workspaces and projects with text import and segmentation.

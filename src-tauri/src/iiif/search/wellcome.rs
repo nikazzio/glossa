@@ -26,7 +26,10 @@ pub(super) async fn wellcome(
             ("query", query),
             ("pageSize", &PAGE_SIZE.to_string()),
             ("page", &page.max(1).to_string()),
-            ("include", "items,production,languages,subjects"),
+            (
+                "include",
+                "items,production,contributors,languages,subjects",
+            ),
             ("items.locations.locationType", "iiif-presentation"),
         ],
         None,
@@ -50,7 +53,7 @@ pub(super) async fn wellcome(
         };
         let title = first_string(work.get("title")).unwrap_or_else(|| id.to_string());
         let mut result = result_from(id.to_string(), title, manifest_url);
-        result.creator = wellcome_first_label(work.pointer("/production/0/agents"));
+        result.creator = wellcome_creator(work);
         result.date = wellcome_first_label(work.pointer("/production/0/dates"));
         result.description = first_string(work.get("description"));
         result.physical_description = first_string(work.get("physicalDescription"));
@@ -105,6 +108,15 @@ fn wellcome_manifest(work: &serde_json::Value) -> Option<String> {
         })
 }
 
+/// L'autore sta fra i `contributors`; gli agenti della produzione sono chi ha
+/// stampato o pubblicato, e valgono solo quando l'autore manca.
+fn wellcome_creator(work: &serde_json::Value) -> Option<String> {
+    work.pointer("/contributors/0/agent/label")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
+        .or_else(|| wellcome_first_label(work.pointer("/production/0/agents")))
+}
+
 /// Wellcome descrive persone, date e soggetti come oggetti con un'etichetta.
 fn wellcome_first_label(value: Option<&serde_json::Value>) -> Option<String> {
     value?
@@ -125,4 +137,31 @@ fn wellcome_labels(value: Option<&serde_json::Value>) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_author_comes_before_the_printer() {
+        let work = serde_json::json!({
+            "contributors": [{"agent": {"label": "Andreas Vesalius"}}],
+            "production": [{"agents": [{"label": "Per Joannem Oporinum"}]}],
+        });
+
+        assert_eq!(wellcome_creator(&work).as_deref(), Some("Andreas Vesalius"));
+    }
+
+    #[test]
+    fn without_contributors_the_production_agent_is_kept() {
+        let work = serde_json::json!({
+            "production": [{"agents": [{"label": "Per Joannem Oporinum"}]}],
+        });
+
+        assert_eq!(
+            wellcome_creator(&work).as_deref(),
+            Some("Per Joannem Oporinum")
+        );
+    }
 }

@@ -7,13 +7,25 @@
 
 use reqwest::Client;
 
-use super::super::discovery::{Gate, SearchPage};
+use super::super::discovery::{Gate, MatchHint, SearchPage};
 use super::super::resolvers;
-use super::{fetch_json, first_string, result_from, SearchEndpoints};
+use super::{
+    fetch_json, first_string, result_from, strings, strip_tags, unescape, SearchEndpoints,
+};
 
 /// Il servizio risponde per pagine di otto o venti schede: un numero diverso
 /// viene riportato a venti, quindi si chiede direttamente quello.
 const CUDL_PAGE_SIZE: u32 = 20;
+
+/// I campi evidenziati che si mostrano, col nome da dare alla sezione; gli
+/// altri (il testo trascritto di ogni pagina, la scrittura) restano fuori.
+const HIGHLIGHT_SECTIONS: [(&str, &str); 5] = [
+    ("title", "Title"),
+    ("alternativeTitles", "Alternative titles"),
+    ("authors", "Authors"),
+    ("abstract", "Abstract"),
+    ("bibliographies", "Bibliography"),
+];
 
 pub(super) async fn cambridge(
     client: &Client,
@@ -75,6 +87,8 @@ pub(super) async fn cambridge(
         let mut result = result_from(id.to_string(), title, resolvers::cambridge_manifest_url(id));
         result.holding_institution = first_string(doc.get("documentShelfLocator"));
         result.collection = first_string(doc.get("collection"));
+        result.date = date_of(doc);
+        result.match_hints = match_hints(value.get("highlighting"), id);
         result.item_count = doc
             .get("numberOfPages")
             .and_then(|value| match value {
@@ -105,4 +119,136 @@ pub(super) async fn cambridge(
 /// misura, come qualunque servizio IIIF.
 fn thumbnail_url(image_id: String) -> String {
     format!("https://images.lib.cam.ac.uk/iiif/{image_id}.jp2/full/!400,400/0/default.jpg")
+}
+
+/// Gli anni come li legge il criterio di ricerca («1430-1475», «1848»): la data
+/// descrittiva («Mid- to third quarter of the 15th century») non ne ha, e con
+/// quella la scheda non si potrebbe filtrare. Si ripiega su di essa solo quando
+/// gli anni mancano.
+fn date_of(doc: &serde_json::Value) -> Option<String> {
+    let years: Vec<u64> = doc
+        .get("years")
+        .and_then(serde_json::Value::as_array)
+        .map(|items| items.iter().filter_map(serde_json::Value::as_u64).collect())
+        .unwrap_or_default();
+    match (years.iter().min(), years.iter().max()) {
+        (Some(from), Some(to)) if from == to => Some(from.to_string()),
+        (Some(from), Some(to)) => Some(format!("{from}-{to}")),
+        _ => first_string(doc.get("creations-dateDisplay")),
+    }
+}
+
+/// I brani evidenziati della scheda: il servizio li mette in un blocco a parte,
+/// con chiave `<fileID>-<n>` e le parole avvolte in `<em class="match">`.
+fn match_hints(highlighting: Option<&serde_json::Value>, id: &str) -> Vec<MatchHint> {
+    let prefix = format!("{id}-");
+    let blocks: Vec<&serde_json::Value> = highlighting
+        .and_then(serde_json::Value::as_object)
+        .map(|blocks| {
+            blocks
+                .iter()
+                .filter(|(key, _)| {
+                    key.strip_prefix(&prefix)
+                        .is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))
+                })
+                .map(|(_, block)| block)
+                .collect()
+        })
+        .unwrap_or_default();
+    HIGHLIGHT_SECTIONS
+        .iter()
+        .flat_map(|(field, label)| {
+            blocks
+                .iter()
+                .flat_map(|block| strings(block.get(*field)))
+                .map(|fragment| unescape(&strip_tags(&fragment)))
+                .filter(|text| !text.is_empty())
+                .map(|text| MatchHint {
+                    section: Some((*label).to_string()),
+                    text,
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::matchers::{method, path, query_param};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[test]
+    fn dates_come_from_the_years_the_criterion_can_read() {
+        assert_eq!(
+            date_of(&serde_json::json!({
+                "creations-dateDisplay": ["Mid- to third quarter of the 15th century."],
+                "years": [1430, 1475]
+            })),
+            Some("1430-1475".to_string())
+        );
+        assert_eq!(
+            date_of(&serde_json::json!({"years": [1848, 1848]})),
+            Some("1848".to_string())
+        );
+        assert_eq!(
+            date_of(&serde_json::json!({"creations-dateDisplay": ["c. 1500"]})),
+            Some("c. 1500".to_string())
+        );
+        assert_eq!(date_of(&serde_json::json!({})), None);
+    }
+
+    #[tokio::test]
+    async fn reads_the_highlights_of_each_record() {
+        // Campione accorciato della risposta vera a «dante».
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/items"))
+            .and(query_param("start", "0"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "response": {"numFound": 1, "docs": [{
+                    "fileID": "MS-MM-00002-00003-00002",
+                    "documentTitle": ["Dante Alighieri, Divina commedia and Credo"],
+                    "creations-dateDisplay": ["Second quarter to mid-14th century."],
+                    "years": [1330, 1375]
+                }]},
+                "highlighting": {
+                    "MS-MM-00002-00003-00002-1": {
+                        "bibliographies": ["</div><div style='display: list-item;' id=\"P1966\">Petrocchi, <i>Le opere di <em class=\"match\">Dante</em> Alighieri</i> &amp; altro"],
+                        "title": ["<em class=\"match\">Dante</em> Alighieri, Divina commedia and Credo"],
+                        "textual_content": ["<em class=\"match\">Dante</em> in una carta"]
+                    },
+                    "MS-MM-00002-00003-00002-00001-1": {
+                        "title": ["un'altra scheda con lo stesso inizio"]
+                    }
+                }
+            })))
+            .mount(&server)
+            .await;
+        let endpoints = SearchEndpoints {
+            cambridge_search: format!("{}/items", server.uri()),
+            ..SearchEndpoints::default()
+        };
+
+        let page = cambridge(&Client::new(), &endpoints, "dante", 1, None)
+            .await
+            .expect("search resolves");
+
+        let result = &page.results[0];
+        assert_eq!(result.date.as_deref(), Some("1330-1375"));
+        assert_eq!(
+            result.match_hints,
+            vec![
+                MatchHint {
+                    section: Some("Title".to_string()),
+                    text: "Dante Alighieri, Divina commedia and Credo".to_string(),
+                },
+                MatchHint {
+                    section: Some("Bibliography".to_string()),
+                    text: "Petrocchi, Le opere di Dante Alighieri & altro".to_string(),
+                },
+            ]
+        );
+        assert!(!page.has_more);
+    }
 }

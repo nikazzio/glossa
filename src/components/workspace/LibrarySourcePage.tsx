@@ -47,7 +47,7 @@ import { confirm } from '../../stores/confirmStore';
 import { useSourceActions } from './useSourceActions';
 import { CopiesSection } from './CopiesSection';
 import { SourceFieldRow } from './SourceFieldRow';
-import { MarkdownEditor } from '../common';
+import { MarkdownEditor, WorkIdentity } from '../common';
 import { PageViewer, type PageStatus } from '../viewer/PageViewer';
 import { DocumentViewer } from '../viewer/DocumentViewer';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -137,7 +137,6 @@ export function LibrarySourcePage({
     detail.pageUrl
     ?? detail.catalogUrl
     ?? libraryItemUrl(manifestVersion?.providerKey ?? null, manifestVersion?.sourceUrl ?? '');
-  const creatorDate = [detail.creator, detail.date].filter(Boolean).join(' · ');
   /** La pagina aperta nel visore: i dati tecnici ne mostrano gli indirizzi. */
   const [shownPage, setShownPage] = useState<ShownPage | null>(null);
   /** La pagina che il visore sta aprendo o ha appena fallito, quando è
@@ -222,14 +221,18 @@ export function LibrarySourcePage({
             <ArrowLeft size={15} />
           </IconButton>
           <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-base italic text-editorial-ink">
-              {detail.source.title}
-            </h1>
-            {creatorDate && (
-              <p className="truncate text-xs text-editorial-muted">{creatorDate}</p>
-            )}
-          </div>
+          <h1 className="min-w-0">
+            <WorkIdentity
+              variant="header"
+              work={{
+                title: detail.source.title,
+                creator: detail.creator,
+                date: detail.date,
+                place: detail.originPlace,
+                publisher: detail.publisher,
+              }}
+            />
+          </h1>
         </div>
 
         {/* Biblioteca e uscite stanno con i comandi, a destra: al centro

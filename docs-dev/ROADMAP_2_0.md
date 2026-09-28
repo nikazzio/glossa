@@ -1,24 +1,35 @@
 # Roadmap verso il completamento della beta
 
-Aggiornata: 13 settembre 2026.
+Aggiornata: 29 settembre 2026.
 
 ## Ricerca e Dashboard: consegna corrente e consolidamento
 
 Prima implementazione di #395/#396: ricerca persistente con un job per pagina e
 provider, risultati progressivi, filtri locali dichiarati, raccolte opt-in ed
-estensione collegata, monitor/storico/rilanci, backup dei risultati. Le tre
+estensione collegata, monitor/storico/rilanci, backup dei risultati. Le due
 viste stanno nella Dashboard come voci di nav laterale, non come linguette
 interne: quadro d'insieme (patrimonio, ripresa, attenzione, lavori, ricerche
-recenti, attività), ricerca federata e ricerca singola/identificativo. Monta
+recenti, attività) e ricerca unica, con apertura diretta di identificativi e
+indirizzi. Monta
 solo la vista attiva. La Biblioteca è
 tornata area unica con il solo catalogo.
 
+Il 28 settembre 2026 ogni biblioteca è stata verificata contro il servizio vero
+(#486): sintassi delle richieste, paginazione, lettura dei campi, parole
+evidenziate nei risultati, frase esatta dove la biblioteca la sa fare, Library
+of Congress e Scozia fuori da «tutte». Restano: ricerca nel testo delle pagine
+come ricerca a parte e «cerca in questo libro» (#487); operatori booleani e
+frasi tradotti per biblioteca (#468); una fonte vera per la Biblioteca di
+Scozia, oggi limitata a un elenco di titoli; Library of Congress dietro una
+verifica anti-robot.
+
 Il piano dettagliato resta riferimento per il consolidamento, non promessa di
-funzioni già presenti. Restano: piano capacità per campo e filtri remoti nativi;
+funzioni già presenti. Restano inoltre: criteri per campo sulle biblioteche oltre a
+Gallica;
 retry automatici configurabili; archiviazione/eliminazione delle ricerche;
 paginazione server dei risultati (lo storico delle ricerche è già paginato);
 consultazione affiancata delle occorrenze; statistiche temporali più complete;
-unificazione della ricerca singola per parole sul nuovo motore; riepiloghi per
+riepiloghi per
 workspace. Il filtro workspace della Dashboard resta stato locale, non
 persistito, e non entra nella posizione di navigazione. Il pannello log generale
 resta #413.

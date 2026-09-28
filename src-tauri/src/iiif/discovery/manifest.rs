@@ -402,21 +402,21 @@ pub(super) async fn enrich_results(
     gate: Option<&Gate<'_>>,
     results: Vec<DiscoveryResult>,
 ) -> Vec<DiscoveryResult> {
-    let mut enriched = Vec::with_capacity(results.len());
-    for group in results.chunks(ENRICHMENT_AT_ONCE) {
-        let batch = group
-            .iter()
-            .cloned()
-            .map(|result| enrich_from_manifest(client, gate, result));
-        enriched.extend(futures_util::future::join_all(batch).await);
-    }
-    enriched
+    // Sempre quattro letture in corso, nell'ordine dei risultati: a blocchi
+    // fissi ogni blocco aspettava il suo manifesto più lento.
+    use futures_util::StreamExt;
+    futures_util::stream::iter(results)
+        .map(|result| enrich_from_manifest(client, gate, result))
+        .buffered(ENRICHMENT_AT_ONCE)
+        .collect()
+        .await
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::super::find_provider;
-    use super::super::{discover_with, DiscoveryStatus, SearchEndpoints};
+    use super::super::tests::search;
+    use super::super::SearchEndpoints;
     use super::*;
     use reqwest::Client;
 
@@ -483,19 +483,16 @@ mod tests {
             .await;
         let provider = find_provider("generic").expect("provider exists");
 
-        let outcome = discover_with(
+        let preview = super::super::open_recognized(
             &Client::new(),
             provider,
             &format!("{}/manifest.json", server.uri()),
-            &SearchEndpoints::default(),
-            1,
             None,
         )
         .await
         .expect("manifest resolves");
 
-        assert_eq!(outcome.status, DiscoveryStatus::Manifest);
-        assert_eq!(outcome.manifest.expect("preview").title, "Book of Hours");
+        assert_eq!(preview.title, "Book of Hours");
     }
 
     #[test]
@@ -614,8 +611,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let outcome = discover_with(
-            &Client::new(),
+        let outcome = search(
             find_provider("europeana").expect("provider exists"),
             "dante",
             &SearchEndpoints {
@@ -624,7 +620,6 @@ mod tests {
                 ..SearchEndpoints::default()
             },
             1,
-            None,
         )
         .await
         .expect("search resolves");
@@ -662,6 +657,7 @@ mod tests {
             catalog_url: None,
             page_url: None,
             raw: std::collections::BTreeMap::new(),
+            match_hints: Vec::new(),
             openable: None,
         }
     }

@@ -4,65 +4,136 @@ title: Source search
 
 # Source search
 
-The Dashboard provides two search modes: **Federated search** queries multiple
-services, while **Single search / identifier** targets one source or a known
-address. Results remain separate from your personal catalogue until you add
-them to the Library.
+The Dashboard provides a single **Search** screen: one field to look for works
+in the libraries and to open directly a work whose identifier or address you
+know. Results remain separate from your personal catalogue until you add them
+to the Library.
 
-## Searching multiple sources
+## Searching
 
-Both searches open from the left-hand rail, as entries under Dashboard.
+Search opens from the left-hand rail, under Dashboard.
 
-Keywords go in the field at the top of the page, and the control beside it
-starts the search. The next control opens the **advanced criteria**, the third tab
-of the right-hand column, where you narrow the search and choose the sources.
-Another control starts a new search, clearing the words and the criteria while
-keeping the chosen sources. Libraries and aggregators are
-selected separately; Europeana and Internet Archive are not automatically
-included in the initial library selection. Europeana requires an API key under
-**Settings → Library → Libraries**.
+To the left of the field you choose **where to search**: all libraries, a
+single one, or a custom choice. “All” means the libraries that search by
+words, not aggregators: Europeana and Internet Archive multiply results from
+other institutions and are added on purpose in the **advanced criteria**, the
+first tab of the right-hand column, where sources are ticked one by one.
+Europeana requires an API key under **Settings → Library → Libraries**. The
+chosen sources stay for later searches.
 
-Earlier searches reopen from the **Searches** tab in the right-hand column,
-which keeps their criteria, results and attempts; opening one returns you to the
-execution tab.
+Words go in the field and the control beside it starts the search. The
+advanced criteria control opens title, author, printer, holding institution,
+language, material and years. You can also search by fields alone, without
+free words. Another control starts a new search, clearing words and criteria
+while keeping the chosen sources.
 
-Above the results, on the right, controls filter what you see — everything,
-verified only, to verify only, excluded only — and sort by title. Each control
-explains itself on hover.
+Above the results you choose the order: **by relevance** (the order in which
+libraries answer), **by year**, **by author** or **by title**; results without
+the value go last. When some source has more results, the command at the
+bottom of the list asks every source that has them: it stays in place and spins
+until the new pages have arrived, and the added results come in with a short
+fade.
 
-Starting a search records its criteria. Each provider’s result page is processed
-as an independent job, so a slow or failed source does not prevent others from
-returning results. The execution monitor shows status, attempts and errors.
-Per-source controls support pausing, resuming, cancelling, retrying, restarting
-from the first page and loading further results.
+Starting a search records its criteria. Each result page from each source is an
+independent job, so a slow or failed source does not prevent others from
+returning results. The **Sources** tab, on the right, has one row per library
+with state, number of results received, a “retry” command after an error, and
+the filter to look at that source only. Pausing, restarting and attempts live
+in the jobs panel. Earlier searches reopen from the **Searches** tab, which
+keeps their criteria and results.
 
-## Bibliographic filters
+## Bibliographic criteria
 
-Title, author, publisher, holding institution, language, material and year range
-filter the returned metadata. They are not uniform query fields across remote
-catalogues and do not make a search exhaustive.
+Libraries that can search field by field receive the criteria as written.
+Today that is Gallica: title, author and printer go to the matching catalogue
+fields, “manuscript” and “printed” to the document type, years to the date.
+Searching “Le guidon des capitaines” as a title, Gallica answers with 5 works;
+the same phrase searched everywhere, page text included, returned 17,427. The
+free words in the top field remain a general search.
 
-Missing values or dates that cannot be interpreted produce an unverified match
-status. A generic value such as `text` is not automatically classified as a
-manuscript or printed work. Check completed and failed source counts before
-interpreting an absence of results.
+Other sources receive the free words, or title, author and printer when the
+search uses fields only. The criteria then drop results whose data state
+something else. Language and holding institution always filter arriving
+results: Gallica expects language as codes nobody types by hand. The hint next
+to each criterion tells which of the chosen sources really search it.
+
+When the data needed to decide is missing — a catalogue without a year, a
+century-only date — the result stays in the list marked **incomplete data**. A
+generic value such as `text` is not converted to “manuscript” or “printed”.
+Check completed and failed source counts before interpreting an absence of
+results.
+
+## Why a result came up
+
+The searched words are **in bold and in the accent color** where they appear:
+in the author, year or title of the row, and, opening the row, in the record
+data — subjects, description, other contributors. When the library itself says
+in which section it found them (e-codices, Bodleian, Cambridge, Estense,
+Institut de France, Vatican), the section appears among the data of the opened
+record with its own name, for example "Bibliography", and the text around the
+words.
+
+If the words appear in no field of the record, an icon sits next to the small
+line: on hover it says that on Gallica they were found only in the transcribed
+page text, which Gallica's free-word search includes, or more generally that the
+library found them elsewhere.
+
+The comparison ignores case and accents and accepts a word as the start of a
+longer one ("achille" finds "Achilles"); two-letter words do not count.
+
+**Exact phrase**, in the advanced criteria, searches the words in sequence
+instead of one by one, where the library supports it: Internet Archive today.
+The hint next to it says which of the chosen libraries honor it; the others
+search the words as usual.
+
+## How libraries search
+
+Libraries do not all search the same way, and results reflect it:
+
+- **Gallica** with free words looks at the record **and the page text**: many
+  newspaper or periodical results come up because of a word on some page.
+  Title, author and printer in the criteria search the record only.
+- **e-codices** joins words with "or": Glossa keeps only results containing all
+  of them. A page left empty with more pages after it continues by itself, up to
+  five empty pages in a row; then the "load more" command remains.
+- **Estense** searches the words as a single phrase: with several words Glossa
+  asks for the longest one and keeps results containing all of them, looking at
+  the first 200.
+- **Munich (MDZ)** returns digitised works only.
+- **Library of Congress** answers automated searches with a check only a browser
+  passes; the **National Library of Scotland** has no queryable search, and
+  Glossa searches a list of titles from its collections. Both stay out of "all"
+  and are chosen by hand.
+
+A search that comes back empty is not kept in the cache: repeated, it asks the
+library again.
 
 ## Identity and provenance
 
-Grouping uses exact IIIF manifest identity. Similar titles are not enough to
-merge results. Occurrences and the services that returned them remain available.
-The queried service, holding institution and image service may be different
-organisations.
+Every result shows author, year, place and printer, then the title; in small
+print the library, pages, and “PDF available” when there is one. Grouping uses
+exact IIIF manifest identity: the same work arriving from several libraries is
+a single row with the number of copies, and opening the row lets you choose
+which copy to use. Similar titles are not enough to merge results. The queried
+service, holding institution and image service may be different organisations.
 
-Title ordering lets you explicitly incorporate newly arrived results. History
-keeps earlier executions separate from the current one. **Extend to aggregators**
-creates a linked search with the same criteria, restricted to selected
-aggregators that were not already included.
+**Extend to aggregators** creates a linked search with the same criteria,
+restricted to selected aggregators that were not already included.
 
-## Opening an identifier
+## Opening an identifier or address
 
-Single-source search interprets input according to the selected service.
-The field’s example shows the accepted syntax.
+The same field accepts a work identifier, a shelfmark or an address. While you
+type, Glossa checks which libraries recognise it — without any network request
+— and for each one shows an **Open on …** row above the results: the command
+next to it opens the work, ready to add to the Library. Word searches show
+nothing extra.
+
+An unambiguous form, such as an address or an ARK, is always offered. A bare
+identifier is offered only when it is a single word with at least one digit: on
+Gallica any six-letter word has the shape of an identifier, and offering to
+open “Rabelais” as a work would be noise. A full address also opens with Enter;
+an IIIF manifest from an institution not listed opens the same way, by pasting
+its address.
 
 | Source | Keyword search | Direct reference example |
 | --- | --- | --- |
@@ -106,8 +177,8 @@ duplicate the source.
 
 Persistent searches retain criteria, executions and results between sessions
 and are included in backups. Jobs stop when the application closes. Network
-response caching is separate from search history; the refresh control in
-single-source search requests a fresh response from the service.
+response caching is separate from search history: the refresh control rereads
+the search state, while “retry” and a new search query the sources again.
 
 ## Searching on the library's own site
 
@@ -118,9 +189,8 @@ queries is what the library exposes to a program, which rarely matches its whole
 catalogue. Search on their site, copy the address of the work, paste it here to
 open it.
 
-The command appears in the single-source search next to the chosen library; in
-the multi-source search when the result list stays empty and when the results of
-a single library are being read; and on the page of a work that does not carry
+The command appears when the result list stays empty, when the results of a
+single library are being read, and on the page of a work that does not carry
 the address of its own page.
 
 ## Availability of reproductions

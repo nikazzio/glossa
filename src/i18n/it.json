@@ -1,14 +1,12 @@
 {
   "federation": {
-    "viewExecution": "Mostra risultati di questa esecuzione",
-    "historical": "Stai guardando un tentativo precedente",
-    "currentResults": "Torna ai risultati correnti",
-    "moreAvailable": "Ci sono altre pagine",
-    "exhausted": "Nessuna altra pagina",
-    "partial": "Copertura incompleta",
-    "pauseAll": "Metti in pausa tutte le fonti",
-    "resumeAll": "Riprendi le fonti in pausa",
-    "retryFailed": "Riprova le fonti che non hanno risposto",
+    "phraseIgnored": "Nessuna delle biblioteche scelte cerca la frase esatta: le parole si cercano una per una.",
+    "match": {
+      "pageText": "Trovato solo nel testo delle pagine, non nella scheda",
+      "elsewhere": "Le parole non sono nella scheda: la biblioteca le ha trovate altrove",
+      "libraryFound": "Trovato dalla biblioteca"
+    },
+    "loadingMore": "Arrivano altri risultati",
     "details": "Mostra / nascondi dettagli",
     "stopBeforeRestore": "Metti in pausa le ricerche prima di ripristinare il backup.",
     "material": {
@@ -16,11 +14,10 @@
       "manuscript": "Manoscritti",
       "printed": "Libri a stampa"
     },
-    "title": "Ricerca federata",
+    "title": "Ricerca",
     "catalog": "Catalogo",
-    "single": "Ricerca singola / identificativo",
     "criteria": "Criteri",
-    "execution": "Esecuzione",
+    "execution": "Fonti",
     "history": "Ricerche",
     "new": "Nuova ricerca",
     "launch": "Avvia ricerca",
@@ -31,23 +28,16 @@
     "aggregator": "Raccolte",
     "selectedCount": "{{count}} fonti selezionate",
     "draftHint": "I criteri modificati valgono per una nuova ricerca; non cambiano le esecuzioni già lanciate.",
-    "queryHint": "Parole inviate ai cataloghi selezionati. Per indirizzi e segnature usa Ricerca singola / identificativo.",
-    "localHint": "Questi criteri filtrano i metadati ricevuti: non interrogano campi remoti equivalenti. Metadati assenti o date incerte restano non verificabili; la copertura dipende dal catalogo.",
-    "dateHint": "Intervallo inclusivo. Date espresse per secolo, approssimate o non dichiarate restano non verificabili.",
+    "dateHint": "Intervallo inclusivo. Dove si filtrano i risultati arrivati, le date per secolo o approssimate non bastano a decidere.",
     "aggregatorHint": "Le raccolte indicizzano più istituzioni e possono sovrapporsi alle biblioteche. Non sono selezionate automaticamente. Europeana richiede la chiave nelle impostazioni.",
     "providersFailed": "Impossibile leggere le fonti disponibili.",
     "readFailed": "Impossibile aggiornare le ricerche. I dati visibili possono non essere aggiornati.",
-    "empty": "Imposta i criteri e seleziona le fonti per avviare una ricerca.",
-    "noVisible": "Nessun risultato visibile per questi criteri. Controlla esecuzioni e metadati non verificabili.",
-    "retry": "Riprova questa pagina",
-    "restart": "Rifai la ricerca su questa biblioteca",
+    "empty": "Scrivi le parole da cercare, oppure incolla un identificativo o un indirizzo per aprire direttamente l'opera.",
+    "noVisible": "Nessun risultato per questi criteri.",
+    "retry": "Riprova",
     "pageCount": "Pagina {{page}} · {{count}} record acquisiti",
-    "generation": "Esecuzione {{count}}",
-    "executionHistory": "Esecuzioni precedenti",
-    "waiting": "Attesa dei limiti di rete",
-    "sortTitle": "Ordina per titolo",
-    "arrivalOrder": "Torna all'ordine di arrivo",
     "fields": {
+      "exactPhrase": "Frase esatta",
       "query": "Parole chiave",
       "title": "Titolo",
       "author": "Autore",
@@ -58,31 +48,19 @@
       "yearFrom": "Dall’anno",
       "yearTo": "All’anno"
     },
-    "visibility": {
-      "all": "Tutti",
-      "match": "Verificati",
-      "unknown": "Da verificare",
-      "excluded": "Esclusi"
-    },
     "queryRequired": "Inserisci parole chiave.",
     "criteriaTooLong": "Un criterio supera 1000 caratteri.",
     "invalidYears": "Verifica l’intervallo degli anni.",
-    "useDirect": "Apri gli indirizzi dalla ricerca singola.",
+    "useDirect": "Un indirizzo non si cerca: si apre dalla riga «Apri» sopra i risultati.",
     "invalidRequest": "Richiesta non valida: controlla criteri e fonti.",
     "providerUnavailable": "Questa fonte non supporta la ricerca.",
     "missingJob": "Esecuzione non disponibile.",
     "stopFirst": "Ferma l’esecuzione prima di ripeterla.",
     "useSearchControls": "Riprova dal monitor della ricerca.",
     "remoteGroup": "Inviato ai cataloghi",
-    "localGroup": "Filtri sui dati ricevuti",
     "unavailableGroup_one": "{{count}} fonte non interrogabile per parole",
     "unavailableGroup_other": "{{count}} fonti non interrogabili per parole",
     "viewAll": "Vedi tutte le ricerche",
-    "pageLabel": "Pagina",
-    "receivedLabel": "Record ricevuti",
-    "generationLabel": "Esecuzione",
-    "coverageLabel": "Copertura",
-    "stateLabel": "Stato",
     "copies": "{{count}} copie",
     "copies_one": "{{count}} copia",
     "failedSources_one": "{{count}} fonte non ha risposto",
@@ -91,7 +69,7 @@
     "occurrence": "Copia da usare",
     "bestOccurrence": "Copia migliore",
     "advanced": "Criteri avanzati",
-    "queryPlaceholder": "Cerca per parole chiave nelle fonti scelte",
+    "queryPlaceholder": "Parole, identificativo o indirizzo",
     "resultsShort_one": "{{count}} risultato",
     "resultsShort_other": "{{count}} risultati",
     "resultsHint": "{{visible}} visibili con i filtri attuali, su {{unique}} opere distinte ricavate da {{received}} schede ricevute: le copie della stessa opera contano una volta sola.",
@@ -101,24 +79,36 @@
     "unknownShort_other": "{{count}} non verificabili",
     "unknownHint": "Risultati che i filtri non possono confermare né escludere, perché il catalogo non dichiara quel dato o la data è approssimata.",
     "failedHint": "Queste fonti non hanno risposto: quello che elencano manca dai risultati.",
-    "restartHint": "Interroga di nuovo questa biblioteca partendo dai primi risultati, senza riusare le risposte già ricevute. I tentativi precedenti restano consultabili.",
-    "retryHint": "Ripete solo la pagina che non è riuscita, senza rifare quelle già arrivate.",
     "extendHint": "Cerca le stesse parole anche nelle raccolte selezionate che non erano incluse, in una ricerca collegata.",
     "onlyThisSource": "Mostra solo i risultati di questa fonte",
     "allSources": "Mostra i risultati di tutte le fonti",
     "filterLabel": "Filtra i risultati",
-    "visibilityHint": {
-      "all": "Mostra i risultati che i filtri confermano e quelli che non può verificare.",
-      "match": "Solo i risultati che rispettano tutti i criteri dichiarati dal catalogo.",
-      "unknown": "Solo i risultati su cui manca il dato per decidere: il catalogo non lo dichiara o la data è approssimata.",
-      "excluded": "Solo i risultati che i criteri escludono: utile per capire perché non compaiono."
-    },
     "tabHint": {
-      "execution": "Come sta rispondendo ogni fonte di questa ricerca: stato, pagina raggiunta, quanto è arrivato e i comandi per intervenire su una sola biblioteca.",
-      "history": "Le ricerche già fatte, caricate cinquanta alla volta. Ognuna conserva criteri, fonti ed esecuzioni proprie; aprendone una si torna all'esecuzione.",
+      "sources": "Una riga per fonte: stato, quanti risultati sono arrivati, «riprova» dopo un errore e il filtro per guardare una fonte sola.",
+      "history": "Le ricerche già fatte, caricate cinquanta alla volta. Ognuna conserva criteri, fonti e risultati; aprendone una si torna alle fonti.",
       "criteria": "I criteri che restringono la ricerca e le fonti da interrogare. Valgono per la prossima ricerca: non cambiano quelle già avviate."
     },
-    "openProviderSite": "Cerca direttamente sul sito di {{provider}}"
+    "openProviderSite": "Cerca direttamente sul sito di {{provider}}",
+    "criteriaGroup": "Criteri",
+    "criteriaHint": "Le biblioteche che sanno cercare per campo ricevono ogni criterio così com'è. Alle altre arrivano le parole, e i criteri scartano poi i risultati che dichiarano altro.",
+    "fieldAsked": "Cercato nel catalogo di: {{libraries}}.",
+    "fieldFiltered": "Nessuna delle biblioteche scelte cerca questo campo: filtra i risultati arrivati.",
+    "missingData": "dati incompleti",
+    "openDirectly": "Apri su {{library}}",
+    "openDirectlyAction": "Apri l'opera su {{library}}",
+    "scope": {
+      "label": "Dove cercare",
+      "all": "Tutte le biblioteche",
+      "custom_one": "Scelta personalizzata ({{count}})",
+      "custom_other": "Scelta personalizzata ({{count}})"
+    },
+    "order": {
+      "label": "Ordina i risultati",
+      "arrival": "Per pertinenza",
+      "year": "Per anno",
+      "creator": "Per autore",
+      "title": "Per titolo"
+    }
   },
   "overview": {
     "transcriptions": "Trascrizioni",
@@ -920,11 +910,7 @@
       "europeanaForgotten": "Chiave di Europeana rimossa",
       "europeanaForgetFailed": "Non è stato possibile togliere la chiave",
       "europeanaSavedFallback": "Chiave salvata, ma non nel portachiavi del sistema: qui non è disponibile, e Glossa l'ha messa in un file cifrato sul computer.",
-      "europeanaKeySavedFileHint": "La chiave è salvata in un file cifrato sul computer, perché il portachiavi del sistema non è disponibile qui: protegge meno del portachiavi. Non si rilegge da questa schermata e non entra nei backup.",
-      "defaultSourceTitle": "Ricerca",
-      "defaultSource": "Fonte predefinita",
-      "defaultSourceHint": "Da dove parte una ricerca nuova quando apri Glossa. Durante la sessione vale la fonte che scegli nel pannello. Compaiono solo le fonti che cercano per parole.",
-      "defaultSourceLastUsed": "L'ultima che ho usato"
+      "europeanaKeySavedFileHint": "La chiave è salvata in un file cifrato sul computer, perché il portachiavi del sistema non è disponibile qui: protegge meno del portachiavi. Non si rilegge da questa schermata e non entra nei backup."
     },
     "transcriptions": {
       "ocrImage": "Immagine per l’OCR",
@@ -1316,40 +1302,41 @@
         "other": "Altro"
       },
       "filters": {
-        "title": "Filtri",
-        "activeCount_one": "{{count}} filtro attivo",
-        "activeCount_other": "{{count}} filtri attivi",
         "searchLabel": "Cerca in Biblioteca",
-        "searchPlaceholder": "Cerca per titolo o autore…",
-        "kindLabel": "Tipo di opera",
-        "allKinds": "Ogni tipo",
-        "languageLabel": "Lingua",
-        "allLanguages": "Ogni lingua",
-        "providerLabel": "Biblioteca",
-        "allProviders": "Ogni biblioteca",
-        "availabilityLabel": "Disponibilità",
-        "allAvailability": "Ogni disponibilità",
+        "searchPlaceholder": "Cerca in tutti i dati: titolo, autore, tipografo, luogo, note…",
         "availabilityRemote": "Solo online",
-        "availabilityPartial": "Parziale",
-        "availabilityComplete": "Completa",
+        "availabilityPartial": "Scaricate in parte",
+        "availabilityComplete": "Scaricate",
         "clear": "Azzera i filtri",
         "noMatches": "Nessuna opera corrisponde ai filtri",
-        "showArchived": "Mostra anche le archiviate",
-        "allCollections": "Ogni collezione",
-        "collectionLabel": "Collezione",
-        "savedViews": "Viste salvate",
-        "saveView": "Salva questa vista",
+        "saveView": "Salva i filtri attuali come vista",
+        "saveViewNeedsFilters": "Scegli prima dei filtri sopra l'elenco: la vista li ricorda",
         "deleteView": "Elimina la vista «{{name}}»",
-        "newViewPlaceholder": "Salva come…",
-        "newViewLabel": "Nome della vista da salvare",
-        "workspaceLabel": "Workspace",
-        "allWorkspaces": "Ogni workspace",
-        "noWorkspace": "In nessun workspace",
+        "newViewPlaceholder": "Nome della vista…",
         "sortLabel": "Ordina il catalogo",
         "sort": {
           "title": "Per titolo",
           "creator": "Per autore",
-          "added": "Aggiunte di recente"
+          "year": "Per anno",
+          "added": "Aggiunte di recente",
+          "opened": "Aperte di recente"
+        },
+        "centuryValue": "{{century}} sec.",
+        "all": {
+          "kind": "Ogni tipo",
+          "century": "Ogni secolo",
+          "language": "Ogni lingua",
+          "providerKey": "Ogni biblioteca",
+          "availability": "Ogni stato",
+          "workspaceId": "Ogni workspace"
+        },
+        "facet": {
+          "kind": "Tipo di opera",
+          "century": "Secolo",
+          "language": "Lingua",
+          "providerKey": "Biblioteca",
+          "availability": "Scaricamento",
+          "workspaceId": "Workspace"
         }
       },
       "archive": "Archivia",
@@ -1575,7 +1562,67 @@
       "documentUnverified": "disponibilità non verificata",
       "documentVerify": "Verifica disponibilità del PDF",
       "documentShow": "Visualizza il PDF nel lettore",
-      "documentShown": "PDF in visualizzazione"
+      "documentShown": "PDF in visualizzazione",
+      "shelves": {
+        "title": "Scaffali",
+        "all": "Tutte",
+        "recent": "Recenti",
+        "toDownload": "Da scaricare",
+        "transcribing": "In trascrizione",
+        "unlinked": "Non collegate",
+        "archived": "Archiviate",
+        "collections": "Raccolte",
+        "savedViews": "Viste salvate",
+        "newCollection": "Nuova raccolta…",
+        "noCollections": "Nessuna raccolta. Creane una con +, poi trascinaci le opere.",
+        "noSavedViews": "Nessuna vista. Scegli dei filtri e salvali con +.",
+        "createCollection": "Crea la raccolta",
+        "deleteCollection": "Elimina la raccolta «{{name}}»"
+      },
+      "selection": {
+        "label": "Comandi sulle opere scelte",
+        "select": "Scegli l'opera",
+        "deselect": "Togli dalla scelta",
+        "count_one": "{{count}} opera scelta",
+        "count_other": "{{count}} opere scelte",
+        "addToCollection": "Metti le opere scelte in una raccolta",
+        "linkToWorkspace": "Collega le opere scelte a un workspace",
+        "download": "Scarica le opere scelte",
+        "archive": "Archivia le opere scelte",
+        "restore": "Riporta in catalogo le opere scelte",
+        "clear": "Svuota la scelta (Esc)"
+      },
+      "stage": {
+        "none": "Nessun lavoro",
+        "transcribing": "In trascrizione",
+        "transcribed": "Trascritta",
+        "translated": "Tradotta"
+      },
+      "grouping": {
+        "label": "Raggruppa",
+        "none": "Nessun gruppo",
+        "century": "Per secolo",
+        "creator": "Per autore",
+        "provider": "Per biblioteca",
+        "collection": "Per raccolta",
+        "missing": {
+          "century": "Senza data",
+          "creator": "Senza autore",
+          "provider": "Biblioteca sconosciuta",
+          "collection": "In nessuna raccolta",
+          "none": ""
+        }
+      },
+      "table": {
+        "creator": "Autore",
+        "title": "Titolo",
+        "year": "Anno",
+        "imprint": "Luogo e tipografo",
+        "provider": "Biblioteca",
+        "pages": "Pagine",
+        "state": "Stato"
+      },
+      "viewTable": "Tabella"
     },
     "transcriptions": {
       "title": "Trascrizioni",
@@ -1710,11 +1757,7 @@
     "navHint": "Home dell'applicazione",
     "loadFailed": "Caricamento della dashboard non riuscito",
     "discovery": {
-      "source": "Archivio",
-      "input": "Titolo, autore, trattato, segnatura o luogo",
-      "submit": "Cerca fonti",
       "loadMore": "Carica altri risultati",
-      "notFound": "Nessuna fonte trovata.",
       "searchFailed": "Ricerca non disponibile. Riprova.",
       "untitled": "Fonte senza titolo",
       "checking": "in verifica",
@@ -1743,10 +1786,6 @@
       "addToLibraryFailed": "Aggiunta alla Biblioteca non riuscita. Riprova.",
       "addToWorkspace": "Aggiungi a un workspace",
       "noWorkspaces": "Nessun workspace disponibile. Creane uno prima di collegare una fonte.",
-      "alreadyLinked": "Già collegato",
-      "fromCache": "risultati di {{when}}",
-      "searchAgain": "Cerca di nuovo, saltando i risultati conservati",
-      "onlyDirect": "Questa biblioteca non cerca per parole: apre solo con l'identificativo o l'indirizzo che l'esempio qui sopra mostra. La sua ricerca non è interrogabile da un programma, oppure rifiuta le richieste automatiche.",
       "errorRefused": "Questa biblioteca ha respinto la richiesta perché automatica. Non si risolve riprovando: si può aprire l'opera incollando il suo indirizzo.",
       "errorRateLimited": "Questa biblioteca chiede di rallentare: troppe richieste. Riprova fra qualche minuto.",
       "errorUnavailable": "Il servizio della biblioteca non risponde. Riprova più tardi.",
@@ -1756,12 +1795,6 @@
       "errorManifestUnreachable": "Non è stato possibile raggiungere il libro presso la biblioteca.",
       "errorManifestUnreadable": "La biblioteca non ha restituito il libro.",
       "errorManifestInvalid": "Il libro è arrivato in un formato che Glossa non riconosce.",
-      "group": {
-        "aggregator": "Raccolte",
-        "library": "Biblioteche",
-        "paused": "Ricerca ferma",
-        "directOnly": "Solo per identificativo"
-      },
       "groupHint": {
         "aggregator": "◈ Raccolta: indicizza il materiale di molte istituzioni. Di ogni risultato leggi chi conserva l'originale, che è un'altra biblioteca.",
         "paused": "⏸ La ricerca di questa biblioteca esiste ma respinge le richieste automatiche. Puoi aprire un'opera scrivendo il suo identificativo o incollando il suo indirizzo.",
@@ -2138,7 +2171,7 @@
             "title": "Il visore a sinistra, un testo per pagina",
             "paragraphs": [
               "Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra la pagina della digitalizzazione collegata, con zoom e trascinamento — cambiando pagina, il testo a destra cambia con lei: ogni pagina ha il proprio blocco di testo e il proprio storico. Un documento creato da zero non ha una digitalizzazione da mostrare: al posto del visore compare un avviso, e resta un solo blocco di testo.",
-              "In alto, un documento legato a un'opera mostra titolo e autore dell'opera, come nella sua scheda in Biblioteca, con l'uscita verso il sito della biblioteca. Il comando con i tre puntini offre solo \"Rimuovi trascrizione\": scaricare, verificare o archiviare l'opera restano comandi della scheda in Biblioteca."
+              "In alto, un documento legato a un'opera la presenta come la sua scheda in Biblioteca: autore, anno, luogo e tipografo sopra, il titolo sotto, con l'uscita verso il sito della biblioteca. Il comando con i tre puntini offre solo \"Rimuovi trascrizione\": scaricare, verificare o archiviare l'opera restano comandi della scheda in Biblioteca."
             ]
           },
           {
@@ -2502,8 +2535,8 @@
           {
             "title": "Leggere i messaggi del programma",
             "paragraphs": [
-              "Il pannello in basso ha tre schede: i messaggi della traduzione in corso, il log di sistema e i lavori. Il log di sistema si apre ovunque e mostra quello che il programma ha scritto mentre lavorava: ricerche, scaricamenti, deposito, salvataggi.",
-              "I filtri restringono per area e per livello, e la ricerca funziona sul testo della riga. Le righe delle librerie di terze parti restano nascoste finché non le chiedi: da sole sono la maggior parte del file. Svuota la vista ripulisce la finestra senza toccare il file su disco, e ricaricando le righe tornano."
+              "Il pannello in basso ha tre schede: i messaggi della traduzione in corso, il log di sistema e i lavori. Il comando del pannello nella barra di stato lo apre sempre sul log di sistema, che si apre ovunque e mostra quello che il programma ha scritto mentre lavorava: ricerche, scaricamenti, deposito, salvataggi. Le righe nuove arrivano da sole mentre lo guardi.",
+              "I filtri restringono per area e per livello, e la ricerca funziona sul testo della riga. Le righe delle librerie di terze parti restano nascoste finché non le chiedi: da sole sono la maggior parte del file. I dati fra parentesi graffe sono colorati come in un editor di codice: il comando con le graffe accende e spegne i colori. Svuota la vista nasconde le righe presenti senza toccare il file su disco: quelle nuove continuano ad arrivare, e ricaricando tornano tutte."
             ]
           },
           {
@@ -2584,44 +2617,45 @@
       },
       "search": {
         "title": "Cercare fonti",
-        "intro": "Apri la Dashboard per cercare opere nelle fonti supportate. I risultati vengono aggiunti alla Biblioteca solo quando lo decidi.",
+        "intro": "Dalla Dashboard apri Ricerca: una casella sola per cercare opere nelle biblioteche o aprirne una di cui conosci l'identificativo. I risultati entrano in Biblioteca solo quando lo decidi.",
         "blocks": [
           {
-            "title": "Cercare in più fonti",
+            "title": "Cercare",
             "paragraphs": [],
             "steps": [
-              "Apri Ricerca federata dalla barra a sinistra, sotto Dashboard.",
-              "Scrivi le parole chiave nel campo in alto e avvia con il comando accanto.",
-              "Per restringere la ricerca e scegliere le fonti apri i criteri avanzati, terza scheda della colonna di destra. Le raccolte vanno scelte esplicitamente; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
-              "I risultati compaiono man mano che le fonti rispondono. I comandi a destra della riga dei numeri filtrano quello che vedi — tutti, solo verificati, solo da verificare, solo esclusi — e ordinano per titolo; il significato di ciascuno compare al passaggio del mouse.",
-              "La scheda Esecuzione ha una riga per fonte: il segno dice come sta andando e il numero quanto è arrivato. Aprendo la riga trovi pagina e copertura, i comandi per fermare, riprendere, rifare o chiedere altre pagine, il comando per vedere solo i risultati di quella fonte e quello per i tentativi precedenti.",
+              "Apri Ricerca dalla barra a sinistra, sotto Dashboard.",
+              "A sinistra della casella scegli dove cercare: tutte le biblioteche, una sola, oppure una scelta personalizzata che fai nei criteri avanzati.",
+              "Scrivi le parole e avvia con il comando accanto. Per restringere apri i criteri avanzati, prima scheda della colonna di destra: titolo, autore, tipografo, materiale, anni. Le raccolte come Europeana si aggiungono di proposito; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
+              "I risultati compaiono man mano che le fonti rispondono. Sopra l'elenco scegli l'ordine: per pertinenza, anno, autore o titolo. Quando manca il dato per decidere su un criterio, il risultato resta in elenco segnato «dati incompleti».",
+              "Le parole cercate sono in grassetto e nel colore d'accento dove compaiono, nella riga e nei dati della scheda aperta. Un'icona accanto alla riga segna i risultati le cui parole non sono nella scheda: su Gallica, trovate solo nel testo delle pagine. «Frase esatta», nei criteri avanzati, cerca le parole in fila dove la biblioteca lo sa fare. Library of Congress e Biblioteca di Scozia non fanno parte di «tutte»: si scelgono a mano nei criteri avanzati.",
+              "Se ci sono altri risultati, il comando in fondo all'elenco li chiede a tutte le fonti che ne hanno. Mentre arrivano il comando gira, poi i nuovi risultati compaiono in fondo.",
               "Il comando della nuova ricerca svuota parole e criteri, lasciando le fonti che avevi scelto."
             ]
           },
           {
-            "title": "Interpretare filtri e risultati",
+            "title": "Leggere i risultati",
             "paragraphs": [
-              "Titolo, autore, lingua, materiale, date e altri filtri restringono i dati ricevuti. Non cercano gli stessi campi in tutti i cataloghi remoti. Se una fonte non fornisce il dato, la corrispondenza può restare non verificabile.",
-              "Una scheda può esistere senza una riproduzione leggibile. Durante il controllo compare lo stato di verifica; una riproduzione dichiarata assente viene indicata come non consultabile. Un errore di rete non significa che l’opera sia assente.",
-              "Ogni risultato conserva la provenienza. Il servizio che restituisce la scheda può essere diverso dall’istituzione che conserva l’opera."
+              "Ogni riga mostra autore, anno, luogo e tipografo, poi il titolo; in piccolo biblioteca, pagine e «PDF disponibile» quando c'è. Apri la riga per tutti i dati.",
+              "Le biblioteche che sanno cercare per campo — oggi Gallica — ricevono titolo, autore, tipografo, materiale e anni così come li scrivi, e rispondono solo con le opere che li rispettano. Alle altre arrivano le parole; i criteri scartano poi i risultati che dichiarano altro. Accanto a ogni criterio, il suggerimento dice quali delle fonti scelte lo cercano davvero.",
+              "La stessa opera arrivata da più biblioteche è una riga sola, con il numero delle copie. Aprendo la riga scegli quale copia usare.",
+              "Una scheda può esistere senza una riproduzione leggibile: in quel caso la riga dice «non consultabile». Un errore di rete non significa che l'opera sia assente."
             ]
           },
           {
-            "title": "Usare un indirizzo o un identificativo",
+            "title": "Aprire un identificativo o un indirizzo",
             "paragraphs": [
-              "Apri la ricerca singola, scegli la fonte e segui l’esempio nel campo. Puoi usare, secondo la fonte, parole chiave, segnatura, identificativo o indirizzo.",
-              "Alcune fonti permettono solo l’apertura diretta: il pannello lo indica. Per un manifesto di un’istituzione non elencata, scegli l’indirizzo IIIF diretto.",
-              "Accanto alla biblioteca scelta c'è un comando che apre la sua pagina di ricerca nel browser, portandoci le parole già scritte dove la biblioteca le accetta. Quello che Glossa interroga è ciò che la biblioteca offre a un programma, che quasi mai è tutto il suo catalogo: nel dubbio si cerca sul loro sito, si copia l'indirizzo dell'opera e lo si incolla qui.",
-              "La Biblioteca nazionale scozzese si cerca per titolo fra le sue raccolte digitali, oppure si apre incollando il numero dell'opera. Le collezioni digitali dell'Università di Glasgow si aprono con l'indirizzo del manifesto, che la loro scheda offre con un comando apposito."
+              "Scrivi o incolla nella stessa casella l'identificativo di un'opera o il suo indirizzo. Se una biblioteca lo riconosce, sopra i risultati compare la riga «Apri su …»: premi il comando accanto e l'opera si apre, pronta da aggiungere alla Biblioteca.",
+              "Un indirizzo completo si apre anche con Invio. Un manifesto IIIF di un'istituzione non elencata si apre allo stesso modo, incollandone l'indirizzo.",
+              "Quando l'elenco resta vuoto, o guardi i risultati di una sola fonte, compare il comando che apre la ricerca della biblioteca nel browser con le stesse parole. Quello che Glossa interroga è ciò che la biblioteca offre a un programma, quasi mai tutto il suo catalogo: nel dubbio cerca sul loro sito, copia l'indirizzo dell'opera e incollalo qui."
             ]
           },
           {
-            "title": "Conservare e riprendere una ricerca",
+            "title": "Fonti, storico e salvataggio",
             "paragraphs": [
-              "Lo storico delle ricerche vive nella scheda a destra: da lì riapri una ricerca precedente con i suoi criteri, i risultati e i tentativi.",
-              "Aggiungi alla Biblioteca salva la scheda. Aggiungi a un workspace salva anche il collegamento al workspace scelto. Lo stesso manifesto non viene duplicato.",
-              "Lo storico conserva criteri, risultati e tentativi. Nel monitor puoi agire sulla singola fonte, riprovare dopo un errore o caricare altre pagine. Estendi alle raccolte avvia una ricerca collegata sulle sole raccolte nuove selezionate.",
-              "Puoi cambiare schermata mentre i lavori proseguono. Chiudendo Glossa si fermano; lo storico resta disponibile alla riapertura."
+              "La scheda Fonti, a destra, ha una riga per biblioteca: stato, quanti risultati sono arrivati, «riprova» dopo un errore e il filtro per guardare solo quella fonte.",
+              "Lo storico delle ricerche vive nella scheda accanto: da lì riapri una ricerca precedente con i suoi criteri e i risultati.",
+              "Aggiungi alla Biblioteca salva la scheda. Aggiungi a un workspace salva anche il collegamento al workspace scelto. Lo stesso manifesto non viene duplicato. Estendi alle raccolte avvia una ricerca collegata sulle sole raccolte nuove selezionate.",
+              "Puoi cambiare schermata mentre la ricerca prosegue. Chiudendo Glossa si ferma; lo storico resta disponibile alla riapertura."
             ]
           }
         ]
@@ -2633,9 +2667,22 @@
           {
             "title": "Trovare un’opera nel catalogo",
             "paragraphs": [
-              "Alterna elenco e griglia e usa i filtri per restringere il catalogo. Puoi salvare una combinazione di filtri come vista. Includi le opere archiviate quando vuoi recuperare un elemento messo da parte.",
-              "Collega le opere ai workspace e alle collezioni per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
+              "Ogni opera si presenta allo stesso modo in ricerca, in Biblioteca e nello Studio: autore, anno, luogo e tipografo in evidenza, poi il titolo, che si ferma a due righe. Passa il puntatore sul titolo per leggerlo intero.",
+              "A destra ci sono gli scaffali: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da scaricare, In trascrizione, Non collegate a un workspace, Archiviate. Sotto trovi le tue raccolte e le viste salvate. Per crearne una premi il «+» accanto al titoletto, scrivi il nome e premi Invio; Esc annulla.",
+              "Sopra l'elenco, in una riga sua, cerchi in tutti i dati dell'opera — titolo, autore, tipografo, luogo, note, identificativo — e sotto restringi con i filtri rapidi: tipo, secolo, lingua, biblioteca, scaricamento, workspace. Accanto a ogni valore vedi quante opere ha. Ordina per titolo, autore, anno, aggiunte o aperte di recente.",
+              "Accanto al titolo Biblioteca scegli come vedere l'elenco: righe, copertine o tabella. La tabella ha una colonna per autore, titolo, anno, luogo e tipografo, biblioteca, pagine e stato; clic sull'intestazione di autore, titolo o anno per ordinare. Con «Raggruppa» dividi l'elenco per secolo, autore, biblioteca o raccolta.",
+              "Una vista salvata ricorda i filtri scelti: accendi almeno un filtro, poi premi il «+» delle viste salvate e dai un nome. La vista si aggiorna da sola quando aggiungi opere.",
+              "Collega le opere ai workspace e alle raccolte per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
               "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
+            ]
+          },
+          {
+            "title": "Lavorare su più opere insieme",
+            "paragraphs": [
+              "Tieni premuto Ctrl (⌘ sul Mac) e fai clic su più opere per sceglierle; con Maiuscolo scegli tutte quelle fra l'ultima scelta e quella su cui fai clic. Puoi anche premere il segno di spunta che compare a sinistra della riga. Un clic senza tasti apre l'opera.",
+              "Sopra l'elenco compare la barra dei comandi sulla scelta: metti le opere in una raccolta (anche nuova), collegale a un workspace, scaricale, archiviale o riportale in catalogo. Esc o la croce svuotano la scelta; cambiando scaffale o raccolta si svuota da sola.",
+              "Per mettere opere in una raccolta puoi anche trascinarle sulla raccolta nella colonna degli scaffali: si sposta la riga trascinata, oppure tutta la scelta se la riga ne fa parte.",
+              "I comandi della singola riga compaiono al passaggio del puntatore. In basso a sinistra colleghi l'opera a un workspace o la metti in una raccolta; in alto a destra trovi, in tre gruppi, la trascrizione, i comandi sulle immagini (scarica, verifica, riduci, libera spazio) e quelli per archiviare o eliminare. Nelle copertine e nella tabella gli stessi comandi stanno in un menu. Nella riga piccola leggi anche a che punto è il lavoro: in trascrizione, trascritta, tradotta."
             ]
           },
           {
@@ -2663,7 +2710,7 @@
           {
             "title": "Il PDF dell’opera",
             "paragraphs": [
-              "Alcune biblioteche, oltre alle immagini pagina per pagina, offrono la stessa opera come PDF. Nei risultati della ricerca ogni riga dichiara lo stato: «PDF disponibile», «PDF non disponibile» oppure «PDF non verificato» quando la biblioteca non ha risposto. Aprendo la riga trovi anche le pagine dichiarate e la misura in pixel della prima pagina, che è l’unico indizio sulla qualità della scansione prima di scaricare.",
+              "Alcune biblioteche, oltre alle immagini pagina per pagina, offrono la stessa opera come PDF. Nei risultati della ricerca la riga scrive «PDF disponibile» quando c'è. Aprendo la riga trovi lo stato completo — disponibile, non disponibile o non verificato se la biblioteca non ha risposto — con le pagine dichiarate e la misura in pixel della prima pagina, l'unico indizio sulla qualità della scansione prima di scaricare.",
               "Nella scheda dell’opera il PDF è una riga della sezione del libro, sotto le copie a immagini: lì dice se è disponibile, se è già scaricato, quanto occupa e quante pagine ha. Il comando di verifica interroga di nuovo la biblioteca, per quando il PDF è stato pubblicato dopo; lo stesso controllo lo fa il riallineamento.",
               "Dalla stessa riga scegli cosa visualizzare: il PDF oppure le immagini. In alto il visore dichiara sempre quale delle due stai guardando, perché le pagine del PDF e quelle della sequenza di immagini non corrispondono. Un PDF molto grande non si apre nel visore integrato: si apre con l’applicazione di sistema.",
               "La verifica ha sempre una scadenza: se la biblioteca è occupata o non risponde, lo stato resta «non verificato» e puoi riprovare. Nessuna attesa resta appesa e nessuna richiesta blocca le altre."
@@ -3120,11 +3167,6 @@
       "coverage": "Rapporto di copertura (traduzione / sorgente)",
       "chunksProgress": "Segmenti completati"
     },
-    "discoveryResults_one": "{{count}} risultato",
-    "discoveryResults_other": "{{count}} risultati",
-    "discoveryMore": "altri disponibili",
-    "discoveryPages_one": "{{count}} pagina",
-    "discoveryPages_other": "{{count}} pagine",
     "panelToggle": "Log e jobs",
     "workspaceFilter": "· filtro: {{name}}",
     "network": {
@@ -3292,6 +3334,7 @@
     "title": "Log di sistema",
     "reload": "Ricarica dal file",
     "clearView": "Svuota la vista",
+    "highlightData": "Colora i dati come in un editor",
     "loadMore": "Carica le precedenti",
     "loading": "Lettura in corso",
     "empty": "Nessun messaggio con questi filtri.",

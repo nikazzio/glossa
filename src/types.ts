@@ -9,16 +9,9 @@ export interface CustomProviderProfile {
   requiresApiKey: boolean;
 }
 
-export type IIIFSearchMode = 'direct' | 'fallback' | 'search_first';
-
-export interface IIIFProviderFilterOption {
-  value: string;
-}
-
-export interface IIIFProviderFilter {
-  key: string;
-  options: IIIFProviderFilterOption[];
-}
+/** Un criterio che la biblioteca cerca davvero nel proprio catalogo. Dove
+ *  manca, il criterio filtra soltanto i risultati già arrivati. */
+export type IIIFSearchField = 'title' | 'author' | 'publisher' | 'material' | 'years' | 'phrase';
 
 /** Che cosa è una fonte: una raccolta che indicizza altre istituzioni, una
  *  biblioteca che risponde del proprio fondo, o l'indirizzo diretto. */
@@ -37,7 +30,6 @@ export interface IIIFProvider {
   isEnabled: boolean;
   resolver: string;
   searchHandler: string | null;
-  searchMode: IIIFSearchMode;
   supportsDirectResolution: boolean;
   supportsSearch: boolean;
   kind: IIIFProviderKind;
@@ -45,10 +37,8 @@ export interface IIIFProvider {
   /** La pagina di ricerca della biblioteca sul suo sito, con `{query}` dove
    *  vanno le parole scritte. Vuota dove non esiste. */
   siteSearch: string;
-  filters: IIIFProviderFilter[];
+  searchFields: IIIFSearchField[];
 }
-
-export type IIIFDiscoveryStatus = 'manifest' | 'results' | 'not_found';
 
 export interface IIIFManifestPreview {
   manifestUrl: string;
@@ -73,6 +63,11 @@ export interface IIIFManifestPreview {
   /** `homepage` nello standard IIIF: la pagina pensata per un lettore umano,
    *  non il manifesto tecnico (`manifestUrl`). */
   pageUrl: string | null;
+}
+
+export interface IIIFMatchHint {
+  section: string | null;
+  text: string;
 }
 
 export interface IIIFDiscoveryResult {
@@ -114,6 +109,9 @@ export interface IIIFDiscoveryResult {
    * non l'opera.
    */
   openable?: boolean | null;
+  /** Dove la biblioteca dice di aver trovato le parole: sezione e testo, senza
+   *  marcatori. Assente quando la biblioteca non lo dice. */
+  matchHints?: IIIFMatchHint[];
   /**
    * Tutto il resto che la biblioteca ha dichiarato e che non ha un campo suo,
    * com'è arrivato. Il motore lo omette quando è vuoto, quindi qui è
@@ -145,18 +143,11 @@ export function classifySourceKind(card: SourceCard): SourceKind {
   return 'other';
 }
 
-export interface IIIFDiscoveryOutcome {
-  status: IIIFDiscoveryStatus;
+/** Un'opera precisa di una biblioteca, riconosciuta in quello che è stato
+ *  scritto: un indirizzo, una segnatura, un identificativo. */
+export interface IIIFRecognition {
   providerKey: string;
-  manifest: IIIFManifestPreview | null;
-  results: IIIFDiscoveryResult[];
-  hasMore: boolean;
-  /**
-   * Secondi dall'epoca: quando questo risultato è arrivato dalla biblioteca.
-   * Assente se è arrivato adesso. Serve a dire a chi guarda **di quando** è
-   * quello che ha davanti, e quindi se vale la pena rifare la ricerca.
-   */
-  cachedAt?: number;
+  docId: string;
 }
 
 /**
@@ -214,6 +205,9 @@ export interface AddSourceToLibraryInput {
   raw: Record<string, string[]>;
 }
 
+/** A che punto è il lavoro su un'opera: il passo più avanzato raggiunto. */
+export type WorkStage = 'none' | 'transcribing' | 'transcribed' | 'translated';
+
 /** Un'opera archiviata resta in catalogo ma fuori dai risultati normali. */
 export type SourceStatus = 'active' | 'archived';
 
@@ -233,6 +227,11 @@ export const SOURCE_FIELDS = [
 ] as const;
 
 export type SourceField = (typeof SOURCE_FIELDS)[number];
+
+/** Un'opera senza nessun dato anagrafico oltre al titolo. */
+export const EMPTY_SOURCE_FIELDS = Object.fromEntries(
+  SOURCE_FIELDS.map((field) => [field, null]),
+) as Record<SourceField, string | null>;
 
 /** Con cosa si uniscono i valori di un campo che ne porta più d'uno: si legge
  *  così e si corregge così, perché due forme diverse per lo stesso campo
@@ -273,8 +272,8 @@ export interface LibraryCatalogEntry {
   versionId: string | null;
   manifestUrl: string | null;
   thumbnailUrl: string | null;
-  creator: string | null;
-  date: string | null;
+  /** Tutti i campi anagrafici come si mostrano, correzioni a mano comprese. */
+  fields: Record<SourceField, string | null>;
   /** Pagine dichiarate dal manifesto, quando si è già letto. */
   expectedPages: number | null;
   /** Pagine davvero presenti sul computer. */
@@ -307,6 +306,8 @@ export interface LibraryCatalogEntry {
   original: SourceFieldValues;
   /** Le collezioni a cui l'opera è stata aggiunta. */
   collections: { id: string; name: string }[];
+  /** Trascrizioni e traduzioni nate da quest'opera. */
+  stage: WorkStage;
 }
 
 export interface LibrarySourceVersion {

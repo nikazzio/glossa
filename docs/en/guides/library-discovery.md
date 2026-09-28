@@ -24,14 +24,70 @@ than downloading them.
 
 ## Organisation
 
+Every work looks the same in search results, in the catalogue, on its page, and
+in the transcription Studio: author, year, place, and printer first, then the
+title in italics, cut after two lines (one in headers) and readable in full on
+hover. At the bottom, in small print, library, pages, and status. Early printed
+books are recognised by who wrote and printed them, not by titles half a page
+long.
+
+The right-hand column holds the **shelves**, fixed ways of looking at the catalogue:
+All, Recent (added or opened in the last 30 days), To download (not all on the
+computer yet), Being transcribed (with a transcription not yet fully
+verified), Not linked to a workspace, Archived. Archived works appear only on
+their own shelf. Below are the **collections** and the **saved views**. Every
+entry shows how many works it holds. The "+" next to each section heading opens
+the name field where the new entry will appear: Enter saves, Esc or a click
+elsewhere cancels. Deleting a collection does not touch its works.
+
+Above the list, on its own line, the search looks at every piece of data about
+the work — title, author, printer, place, notes, identifier — and below it the
+**quick filters** narrow
+the chosen shelf or collection by type, century (from the first year in the
+date), language, library, download state and workspace. Each value shows how
+many works it would have with the other filters already applied. The list
+sorts by title, author, year, recently added or recently opened. A saved view
+remembers the chosen filters: its "+" is enabled only when at least one filter
+is on, and says why on hover. The view stays a filter and updates by itself as
+new works come in.
+
+The list shows as rows, covers or a **table**. Covers are all the same size:
+when space runs out the title gets shorter, and two links are shown; the others
+are counted ("+3") and listed on hover. The table has a column for
+author, title, year, place and printer, library, pages and state (work and
+download); author, title and year sort by clicking the header. With **Group**
+the list splits by century, author, library or collection, with the number of
+works next to each group; works without the value go into a group at the end,
+and a work in several collections appears under each. View and grouping stay
+as you leave them.
+
 List and grid views show provenance, declared page count, local resolutions,
 disk usage and links. An unavailable count is not equivalent to zero.
-Filters narrow the catalogue and can include archived works; saved views retain
-filter combinations. Collections group works without moving or duplicating them.
+Collections group works without moving or duplicating them.
 
 A work can belong to several workspaces and collections. Removing a link does
-not delete the record or its files. Download, verification, image reduction,
-storage cleanup, archive and deletion controls are in the work’s menu.
+not delete the record or its files. At the bottom left of a row are the
+commands to link it to a workspace and add it to a collection; at the top right,
+on the first line, the other commands as icons named on hover, in three groups:
+create a transcription | download, verify, reduce images, free space | archive,
+delete. All of them appear on hover or when the row has focus. In the cover
+grid and in the table the same commands sit in a menu. The small line also tells how far the work
+has gone: being transcribed (a transcription not yet fully verified),
+transcribed, translated.
+
+### Several works at once
+
+A click opens the work. With Ctrl (⌘ on the Mac) a click adds it to the choice
+or removes it; with Shift every work between the last choice and the clicked
+one is chosen, in list order; the check mark on the left of the row does the
+same as Ctrl. While the choice is not empty, a bar above the list offers the
+commands that apply to all of them: collection (a new one too), workspace,
+download, archive or return to the catalogue. Archiving several works at once
+does not offer to free space, as it does for a single work. Esc or the cross
+clears the choice, which also clears when you change shelf or collection.
+
+A row can be dragged onto a collection in the shelves column: the row goes in, or
+the whole choice if the row is part of it.
 
 ## Work details
 
@@ -87,9 +143,10 @@ it in their manifest — on the root or on the sequence, depending on the versio
 of the standard — and that is where Glossa finds it: no addresses built by
 analogy.
 
-In **search results** every row states the status, always: “PDF available”,
-“PDF not available”, or “PDF not verified” when the manifest could not be read.
-The expanded row adds the declared pages and the pixel size of the first page,
+In **search results** the closed row says “PDF available” only when there is
+one. The expanded row always states the full status — available, not
+available, or not verified when the manifest could not be read — and adds the
+declared pages and the pixel size of the first page,
 the only hint about scan quality available before downloading. The manifest is
 read once per work, only for rows on screen, at most two reads at a time, and
 never for a result the catalogue already declares without a reproduction.

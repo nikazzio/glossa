@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IIIFDiscoveryResult } from '../types';
-import { EMPTY_SEARCH, groupResults, matchesCriteria, type SearchResultPage } from './federatedSearchService';
+import { EMPTY_SEARCH, emptyStreak, groupResults, matchesCriteria, type SearchExecution, type SearchResultPage, type SearchRun } from './federatedSearchService';
 
 const card = (overrides: Partial<IIIFDiscoveryResult> = {}): IIIFDiscoveryResult => ({
   id:'1',title:'Dante',creator:null,date:null,description:null,thumbnailUrl:null,
@@ -19,6 +19,11 @@ describe('federated metadata and provenance', () => {
     expect(matchesCriteria(card({date:'ca. 1420'}),criteria)).toBe('unknown');
     expect(matchesCriteria(card({date:'1390–1410'}),criteria)).toBe('match');
     expect(matchesCriteria(card({date:'1500'}),criteria)).toBe('excluded');
+  });
+  it('non ricontrolla i criteri che la biblioteca ha già cercato nel suo catalogo', () => {
+    const criteria = {...EMPTY_SEARCH, yearFrom: 1400, yearTo: 1450, material: 'manuscript'};
+    expect(matchesCriteria(card({date:'15..', mediaType:'text'}), criteria, ['years','material'])).toBe('match');
+    expect(matchesCriteria(card({date:'15..', mediaType:'text'}), criteria, ['years'])).toBe('unknown');
   });
   it('deduplicates repeated provider occurrences but never equates cross-provider IDs', () => {
     const result=groupResults([page('a',[card(),card()]),page('b',[card({manifestUrl:'https://other.org/manifest'})])],EMPTY_SEARCH);
@@ -39,5 +44,18 @@ describe('federated metadata and provenance', () => {
     expect(groups[0].match).toBe('match');
     expect(groups[0].providerKey).toBe('b');
     expect(groups[0].card.creator).toBe('Dante');
+  });
+});
+
+describe('emptyStreak', () => {
+  const execution = (providerKey: string, generation: number, received: number) =>
+    ({ providerKey, generation, received } as SearchExecution);
+  const run = (executions: SearchExecution[]) => ({ executions } as SearchRun);
+
+  it('conta le pagine vuote di fila dall\'ultima indietro, per biblioteca', () => {
+    const executions = [execution('ecodices', 1, 20), execution('ecodices', 2, 0), execution('ecodices', 3, 0), execution('mdz', 1, 0)];
+    expect(emptyStreak(run(executions), 'ecodices')).toBe(2);
+    expect(emptyStreak(run(executions), 'mdz')).toBe(1);
+    expect(emptyStreak(run([...executions, execution('ecodices', 4, 3)]), 'ecodices')).toBe(0);
   });
 });

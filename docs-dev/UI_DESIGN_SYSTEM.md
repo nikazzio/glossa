@@ -194,6 +194,10 @@ solo**.
   lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
   scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
   destinazioni e nessuna delle due si comporta come ci si aspetta.
+- `tabRowHeightClassName`: altezza fissa della barra tab quando accanto c'è
+  un'altra intestazione (la casella della Ricerca, la barra di un visore): le
+  due righe hanno la stessa altezza e lo stesso filetto, e la linea sotto è una
+  sola da una colonna all'altra.
 
 ### SettingRow e campi
 
@@ -250,6 +254,25 @@ comandi propri dell'elenco (vista, ordinamento) stanno in fondo alla stessa
 riga, allineati alla base del titolo. La Biblioteca usava una `SectionLabel`
 piccola con icona: era l'unica area a non somigliare alle altre.
 
+### Identità di un'opera
+
+Un'opera si mostra ovunque con `WorkIdentity` (`components/common`): risultati
+di ricerca, righe del catalogo, intestazione della scheda e dello Studio di
+trascrizione. Ordine fisso, come una scheda di catalogo:
+
+1. **Autore** in grassetto · anno · luogo, tipografo — `text-sm`, inchiostro.
+2. **Titolo** in `font-display` corsivo, al massimo due righe (`row`), una
+   riga nelle intestazioni (`header`), intero nella riga aperta (`full`); il
+   testo completo sta nel suggerimento.
+3. Riga piccola `text-xs` muted: biblioteca, pagine, segni di stato. È una
+   riga flessibile: chi la riempie tronca il proprio testo, così barre e
+   avvisi a destra restano visibili.
+
+Luogo e tipografo sono una voce sola: se il luogo compare già nel nome del
+tipografo («Lyon : F. Juste») non si ripete. Un dato di stato si scrive solo
+quando dice qualcosa: il PDF si segna quando c'è, lo stato completo sta nella
+riga aperta.
+
 ### Provenienza di un dato: parola + pallino
 
 Quando un'informazione ha più provenienze possibili, la **parola** dice solo la
@@ -288,15 +311,13 @@ viene prima del segno: `Select` accetta un `group` per voce e raccoglie le voci
 **consecutive** con lo stesso gruppo, senza riordinarle — l'ordine è quello di
 chi costruisce l'elenco, non una sorpresa del componente.
 
-Il segno accanto al nome serve dove non c'è spazio per una frase (la tendina di
-sistema non accetta marcatori grafici). Il suo significato non si lascia
-indovinare: sotto il campo compare una riga che lo spiega **per la voce
-scelta**, non una legenda di tutti i simboli che nessuno legge.
-
-Nel pannello di ricerca delle fonti i gruppi sono quattro: raccolte (`◈`),
-biblioteche, ricerca ferma (`⏸`), solo per identificativo (`#`). Sono quattro
-comportamenti diversi, non quattro categorie decorative: chi sceglie deve sapere
-se cercare per parole ha senso prima di scrivere.
+L'intestazione del gruppo basta: niente simboli davanti ai nomi né frasi sotto
+la tendina che spiegano cosa sia un gruppo. Nella scelta di dove cercare i
+gruppi sono «Biblioteche» e «Raccolte», preceduti da «Tutte le biblioteche» e
+dalla scelta personalizzata. Le fonti che non cercano per parole non stanno in
+quella tendina: si aprono incollando identificativo o indirizzo nella stessa
+casella, e compaiono nei criteri avanzati in un gruppo a parte con il motivo al
+passaggio del mouse.
 
 ### Elenchi di indirizzi
 
@@ -310,6 +331,57 @@ Nelle righe dati dei blocchi tecnici il nome del campo è in **grassetto normale
 non in maiuscoletto spaziato: il maiuscolo su elenchi lunghi si legge peggio e
 rallenta. Vale per i dati che arrivano da fuori (le voci di un manifesto), dove
 i nomi li sceglie la biblioteca e possono essere lunghi.
+
+### Scaffali e filtri rapidi
+
+Un catalogo si organizza con una **colonna di scaffali** a destra (larghezza
+fissa `w-56`, voci con segno, nome e conteggio in `tabular-nums`, la scelta in
+verde tenue) e, sopra l'elenco, la ricerca in una riga sua con sotto i **filtri
+rapidi**: una `Select` per aspetto, con
+il conteggio accanto a ogni valore e il bordo verde quando il filtro è attivo.
+Nessun pannello filtri a destra: stringendo la finestra si chiudeva da solo e
+non si riapriva. Una sola cosa è scelta nella colonna — uno scaffale o una
+raccolta —; i filtri rapidi la restringono e «azzera» toglie solo quelli.
+
+Le voci nuove di una sezione (raccolte, viste salvate) si creano dal «+»
+`IconButton` accanto al titoletto: il campo per il nome compare dove comparirà
+la voce, con il fuoco, e si chiude con Invio (salva), Esc o uscendo (annulla).
+Un campo che compare da solo quando cambia qualcos'altro disorienta. Se il «+»
+non si può usare resta visibile, disattivato, e il suggerimento dice perché;
+una sezione vuota lo dice con una riga `text-xs` muted.
+
+### Scelta multipla e comandi al passaggio
+
+In un catalogo lungo i comandi di riga non restano accesi: compaiono con
+`group-hover` e `group-focus-within` sulla riga (opacità, non `display`, così
+il tabulatore li raggiunge e il fuoco li mostra). Restano visibili le
+informazioni — collegamenti, stato — e l'avanzamento di un lavoro in corso.
+Nella riga a elenco i collegamenti (workspace, raccolte) stanno in basso a
+sinistra; gli altri comandi in alto a destra, allineati alla prima riga, come
+`IconButton` in fila divisi in gruppi da un filetto verticale (`h-4 w-px
+bg-editorial-border`): creazione | lavori sulle immagini | conservazione.
+Eliminare resta neutro: la conferma arriva dopo. Dove lo spazio è poco
+(copertine, tabella) gli stessi comandi stanno in un menu.
+
+Le copertine di una griglia hanno tutte la stessa misura (`auto-rows-fr`, scheda
+`h-full`): a stringersi è il titolo. Dei collegamenti se ne mostrano due, gli
+altri diventano «+N» con i nomi nel suggerimento: tagliarli con `overflow-hidden`
+lasciava comandi invisibili raggiungibili col tabulatore.
+La scelta multipla segue i gestori di file: click apre, Ctrl/⌘ aggiunge o
+toglie, Maiuscolo sceglie l'intervallo; il segno di spunta a sinistra resta
+visibile su tutte le righe finché la scelta non è vuota. I comandi sulla scelta
+stanno in una barra `role="toolbar"` sopra l'elenco, con fondo verde tenue e il
+conteggio: sono comandi per l'insieme, quindi non sulla riga.
+
+### Tabella di catalogo
+
+Accanto a righe e copertine, un catalogo può offrire la tabella: `table`
+semantica, intestazioni in maiuscoletto `text-[11px]`, quelle ordinabili come
+pulsanti con `aria-sort` e la scelta in verde. Il titolo resta in
+`font-display` corsivo su due righe al massimo, l'autore in grassetto, i dati
+secondari in `text-xs` muted. Selezione, trascinamento e comandi al passaggio
+sono gli stessi della riga. Il raggruppamento divide l'elenco in sezioni con
+intestazione `sticky` in `font-display` e il conteggio accanto.
 
 ### Barre filtro
 
@@ -330,7 +402,21 @@ un'attesa, e la seconda volta è già di troppo.
   senza uscita animata — tenere montate due aree insieme costerebbe letture
   doppie.
 - Elenchi: `ListReveal` sfalsa le righe di `LIST_STAGGER`, e il ritardo smette
-  di crescere dopo `LIST_STAGGER_MAX`.
+  di crescere dopo `LIST_STAGGER_MAX`. La cascata vale solo alla prima
+  comparsa (`stagger={false}` dopo): le righe che entrano per un filtro
+  compaiono insieme, senza farsi riaspettare.
+- Elenco e scheda di un'opera: la nuova vista entra con dissolvenza e
+  `MOTION_SHIFT`, senza aspettare l'uscita della precedente — un'uscita
+  animata prima dell'ingresso rendeva ogni apertura più lenta.
+- Parole cercate nei risultati: `ui/Highlighted`, `font-semibold` nel colore
+  d'accento, dove compaiono (riga e scheda aperta); nessuna riga di spiegazione.
+  Un risultato senza parole nella scheda porta un'icona muted con `Hint`.
+- Risultati che arrivano dopo i primi (pagina successiva, biblioteca più
+  lenta): dissolvenza con `MOTION_SHIFT`; quelli già visti non si rianimano
+  quando ritornano sullo schermo scorrendo. Il comando che li ha chiesti resta al
+  suo posto e mostra lo `Spinner` finché non sono arrivati.
+- Righe che si aprono (risultati di ricerca): altezza animata con
+  `MOTION_DURATION` ed `EASE_EDITORIAL`, gli stessi di ogni riquadro.
 - Riquadri richiudibili: altezza animata con `AnimatePresence`; chiuso, il
   contenuto **non resta** nel DOM, altrimenti lo raggiungerebbe il tabulatore.
 - `MotionConfig reducedMotion="user"` sta alla radice dell'applicazione: nessun
@@ -438,8 +524,13 @@ Niente colori neon o valori locali.
 - Filtro spento = testo barrato in `terminal-dim`, non colore assente: lo stato
   si legge senza distinguere le tinte.
 - Il pannello in basso ha tre schede — messaggi della pipeline (solo dentro una
-  traduzione), log di sistema e lavori — e ricorda l'ultima usata. Fuori da una
+  traduzione), log di sistema e lavori. Aperto dalla barra di stato parte sempre
+  dal log di sistema; l'indicatore dei lavori apre i lavori. Fuori da una
   traduzione ripiega sul log di sistema, mai su una scheda vuota.
+- Il log di sistema scorre da solo e colora i dati JSON come un editor, con i
+  token esistenti: chiavi `terminal-info`, testi `terminal-success`, numeri
+  `terminal-accent`, `true`/`false`/`null` `terminal-error`, punteggiatura
+  `terminal-secondary`. Il comando `{}` nella toolbar spegne i colori.
 
 ## Controllo prima di aggiungere UI
 

@@ -45,9 +45,9 @@ non un filtro dei cataloghi remoti.
 | Codice attuale | Conseguenza per il piano |
 | --- | --- |
 | `src/components/dashboard/AppDashboard.tsx` | La ricerca occupa la colonna principale; Riprendi, Attenzione e attività esistono già a lato. Redistribuire responsabilità, non rifare tutto. |
-| `src/components/dashboard/SourceDiscoveryPanel.tsx` | Riutilizzare risultati, anteprima, aggiunta al catalogo/workspace e riconoscimento delle fonti già presenti. Verificare il contratto integrato prima di estrarre componenti. |
-| `src/stores/discoverySearchStore.ts` | Conserva una ricerca singola in memoria fra navigazioni. Evolvere verso sessione federata, senza duplicare lo stato. |
-| `src/services/iiifProviderService.ts` | Espone `listIIIFProviders` e `discoverIIIF(providerKey,input,page,fresh)`. Contratto singolo da preservare finché usato. |
+| `src/components/library/SourceListRow.tsx` | Riga dei risultati (estratta dalla ricerca singola, rimossa il 25 settembre 2026): anteprima, aggiunta al catalogo/workspace, riconoscimento delle fonti già presenti. |
+| `src/components/library/RecognizedWorks.tsx` | Riconoscimento di identificativi e indirizzi nella casella unica (`recognize_work`, `open_work`); sostituisce la ricerca singola e il suo store. |
+| `src/services/iiifProviderService.ts` | Espone `listIIIFProviders`, `recognizeWork`, `openWork`. `discoverIIIF` non esiste più. |
 | `src-tauri/src/iiif/mod.rs` | Registro con `supports_search`, risoluzione diretta, strategia e filtri dichiarati. È la fonte delle capacità; niente elenco parallelo in React. |
 | `src-tauri/src/iiif/discovery/mod.rs`, `discovery/manifest.rs`, `search/` | Moduli ora separati per dominio/provider; riusarli. Risultati normalizzati e cache esistenti, contratto federato ancora da implementare. |
 | `src/navigation/appLocation.ts` | Posizione tipizzata; workspace operativo e filtro sono già distinti. |

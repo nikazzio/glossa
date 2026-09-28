@@ -125,12 +125,7 @@ export function Header() {
     location.area === 'transcriptions' && location.documentId && transcriptionDetail?.id === location.documentId
       ? transcriptionDetail.title
       : null;
-  const dashboardTabLabel =
-    dashboardSection === 'search'
-      ? t('federation.title')
-      : dashboardSection === 'direct'
-        ? t('federation.single')
-        : null;
+  const dashboardTabLabel = dashboardSection === 'search' ? t('federation.title') : null;
   const backToContextLabel = globalArea
     ? t(GLOBAL_AREA_BACK_KEYS[globalArea])
     : dashboardSection

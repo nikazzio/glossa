@@ -21,7 +21,7 @@ import {
   setWorkspaceSourceLink as setWorkspaceSourceLinkService,
   versionProviderKey,
 } from '../services/libraryService';
-import { discoverIIIF } from '../services/iiifProviderService';
+import { openWork } from '../services/iiifProviderService';
 import { readManifestFacts } from '../hooks/useManifestFacts';
 import {
   collectionsOfMany,
@@ -85,6 +85,7 @@ interface SourceLibraryState {
   /** Aggiunge o toglie l'opera da una collezione; il nome crea la collezione. */
   setCollection: (sourceId: string, collectionId: string, member: boolean) => Promise<void>;
   addToNewCollection: (sourceId: string, name: string) => Promise<void>;
+  createCollection: (name: string) => Promise<void>;
   deleteCollection: (collectionId: string) => Promise<void>;
   refreshSourceCollections: (sourceId: string) => Promise<void>;
   loadDetail: (sourceId: string) => Promise<void>;
@@ -253,6 +254,11 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     await get().refreshSourceCollections(sourceId);
   },
 
+  createCollection: async (name) => {
+    await createCollectionService(name);
+    await get().loadCollections();
+  },
+
   deleteCollection: async (collectionId) => {
     await deleteCollectionService(collectionId);
     await get().loadCollections();
@@ -282,7 +288,11 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
     // guardando, e l'attesa non finirebbe più. Vale solo la lettura dell'opera
     // chiesta per ultima.
     pendingDetailSource = sourceId;
-    set({ detail: null, detailLoading: true, detailError: null });
+    // Rileggere la stessa opera — dopo un collegamento, una correzione — non
+    // svuota la scheda: resta quella di prima finché arriva la nuova, invece
+    // di lampeggiare sull'attesa.
+    const current = get().detail;
+    set({ detail: current?.source.id === sourceId ? current : null, detailLoading: true, detailError: null });
     try {
       const detail = await getLibrarySourceDetail(sourceId);
       if (pendingDetailSource !== sourceId) return;
@@ -315,11 +325,8 @@ export const useSourceLibraryStore = create<SourceLibraryState>((set, get) => ({
       throw new Error('library_source_resync_missing_manifest');
     }
 
-    const outcome = await discoverIIIF(providerKey, primary.sourceUrl, 1, true);
-    if (!outcome.manifest) {
-      throw new Error('library_source_resync_not_found');
-    }
-    const card = { ...outcome.manifest, id: outcome.manifest.manifestUrl };
+    const manifest = await openWork(providerKey, primary.sourceUrl);
+    const card = { ...manifest, id: manifest.manifestUrl };
 
     await resyncSourceFromManifest(sourceId, {
       title: card.title,

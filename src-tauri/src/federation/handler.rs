@@ -88,18 +88,22 @@ impl JobHandler for SearchJob {
             profile: &profile,
         };
         let endpoints = SearchEndpoints {
-            europeana_key: crate::keystore::get_api_key(&self.0, "europeana").ok(),
+            europeana_key: crate::keystore::get_api_key(
+                &self.0,
+                crate::iiif::discovery::EUROPEANA_KEY_ID,
+            )
+            .ok(),
             ..SearchEndpoints::default()
         };
         let client = crate::iiif::discovery::client().map_err(failure)?;
         let request = crate::httpcache::request::CacheRequest::Search {
             provider_key: config.provider_key.clone(),
-            query: criteria.query.clone(),
+            // Tutti i criteri fanno parte della richiesta: Gallica li interroga
+            // campo per campo, e due ricerche con le stesse parole ma criteri
+            // diversi non sono la stessa risposta.
+            query: serde_json::to_string(&criteria).map_err(|e| failure(e.to_string()))?,
             page: config.page,
-            filters: std::collections::BTreeMap::from([(
-                "contract".into(),
-                "federated-raw-v1".into(),
-            )]),
+            filters: std::collections::BTreeMap::from([("contract".into(), "federated-v2".into())]),
         };
         let cache_entry = if config.fresh {
             None
@@ -122,11 +126,11 @@ impl JobHandler for SearchJob {
             if let Some(page) = cached {
                 return Ok(page);
             }
-            crate::iiif::search::run(
+            crate::iiif::discovery::search_provider(
                 &client,
                 handler,
                 &endpoints,
-                &criteria.query,
+                &criteria,
                 config.page,
                 Some(&gate),
             )
@@ -167,7 +171,10 @@ impl JobHandler for SearchJob {
         );
         // Una pagina arrivata dalla cache non si riscrive nella cache: sarebbe
         // una serializzazione e una scrittura identiche a quello che c'è già.
-        if cached_at.is_none() {
+        // Una pagina vuota non si ricorda: può essere una risposta anomala
+        // (una pagina di verifica, una sintassi rifiutata) e terrebbe lo zero
+        // anche dopo che la biblioteca, o l'app, torna a rispondere bene.
+        if cached_at.is_none() && !page.results.is_empty() {
             if let Ok(bytes) = serde_json::to_vec(&page) {
                 crate::httpcache::commands::store(
                     &self.0,

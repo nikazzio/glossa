@@ -10,6 +10,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useJobsStore } from '../../stores/jobsStore';
 import { confirm } from '../../stores/confirmStore';
 import { EMPTY_LIBRARY_FILTERS } from '../../utils/libraryCatalogFilters';
+import { EMPTY_SOURCE_FIELDS } from '../../types';
 import { enqueueOptimization } from '../../services/optimizeService';
 import { versionInventory } from '../../services/inventoryService';
 import '../../test/i18n-mock';
@@ -140,8 +141,7 @@ const entry = (
   versionId: 'v1',
   manifestUrl: 'https://x.test/m.json',
   thumbnailUrl: null,
-  creator: null,
-  date: null,
+  fields: EMPTY_SOURCE_FIELDS,
   expectedPages: 210,
   localPages: 0,
   localBytes: 0,
@@ -150,19 +150,14 @@ const entry = (
   workspaces: [],
   original: {},
   collections: [],
+  stage: 'none',
   providerKey: 'gallica',
   ...overrides,
 });
 
-/** Scarica/verifica/ottimizza/libera spazio vivono nel menu "···" della riga:
- *  vanno aperti prima di poterci cliccare o leggerne lo stato. */
-const openRowMenu = () =>
-  fireEvent.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
-
-/** Le tendine dei filtri e "mostra archiviate" vivono nella colonna dei
- *  filtri, aperta di default: non c'è più niente da aprire prima. */
+/** Le archiviate stanno nel loro scaffale, nella colonna degli scaffali. */
 const showArchived = () =>
-  fireEvent.click(screen.getByRole('switch', { name: 'areas.library.filters.showArchived' }));
+  fireEvent.click(screen.getByRole('button', { name: /areas\.library\.shelves\.archived/ }));
 
 describe('LibraryCatalogArea', () => {
   beforeEach(async () => {
@@ -187,6 +182,8 @@ describe('LibraryCatalogArea', () => {
     // Anche la posizione è globale: senza riportarla al catalogo, un test
     // erediterebbe la scheda aperta da quello prima.
     useUiStore.setState({ location: { area: 'library' } });
+    // Anche la vista: nelle copertine i comandi di riga stanno in un menu.
+    useUiStore.setState({ libraryView: 'list', libraryGrouping: 'none' });
     const service = await import('../../services/libraryService');
     // Evita che l'effetto di mount (che ricarica dettaglio e catalogo)
     // sovrascriva il fixture impostato dal test — mantiene la stessa forma.
@@ -251,7 +248,6 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.optimizeAction' }));
 
     await waitFor(() => expect(enqueueOptimization).toHaveBeenCalledWith('v1', '2000'));
@@ -355,7 +351,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
 
-    openRowMenu();
     await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() =>
@@ -369,7 +364,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
     render(<LibraryCatalogArea />);
 
-    openRowMenu();
     await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith('areas.library.filesBusy'));
@@ -381,7 +375,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0, localBytes: 0 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -402,7 +395,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -416,7 +408,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -433,15 +424,14 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
-    // Di default le archiviate non si vedono: si accende il filtro.
+    // Di default le archiviate non si vedono: stanno nel loro scaffale.
     showArchived();
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', false));
   });
 
-  it('le opere archiviate stanno fuori dall elenco finché non si chiede di vederle', () => {
+  it('le opere archiviate stanno fuori dall elenco, nel loro scaffale', () => {
     useSourceLibraryStore.setState({
       catalog: [
         entry({ source: { ...entry().source, status: 'archived', archivedAt: '2026-08-30' } }),
@@ -459,7 +449,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'areas.library.remove' })).toBeInTheDocument();
@@ -474,7 +463,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     // I comandi icona vivono dentro un tooltip: con userEvent il clic non
     // arriva al bottone in jsdom, come già visto nella testata.
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
@@ -496,7 +484,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ providerKey: null })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
 
     await waitFor(() =>
@@ -513,7 +500,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 210 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
     expect(screen.getByText('100%')).toBeInTheDocument();
@@ -523,7 +509,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
@@ -533,7 +518,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 48_234_496 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
@@ -667,7 +651,7 @@ describe('LibraryCatalogArea', () => {
   it('la scheda mostra la fonte con identificativo pulito e link veri', async () => {
     const iiifService = await import('../../services/iiifProviderService');
     vi.mocked(iiifService.listIIIFProviders).mockResolvedValueOnce([
-      { key: 'gallica', label: 'Gallica', aliases: [], placeholder: '', isEnabled: true, resolver: 'gallica', searchHandler: 'gallica', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, filters: [] },
+      { key: 'gallica', label: 'Gallica', aliases: [], placeholder: '', isEnabled: true, resolver: 'gallica', searchHandler: 'gallica', searchMode: 'search_first', supportsDirectResolution: true, supportsSearch: true, searchFields: [] },
     ] as never);
     useSourceLibraryStore.setState({
       catalog: [entry()],
@@ -821,12 +805,10 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
     showArchived();
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
     // Scegliendo una voce il menu si chiude: si riapre per guardare com'è il
     // comando *mentre* la richiesta è ancora in volo.
-    openRowMenu();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'areas.library.restore' })).toBeDisabled(),
     );
@@ -1044,6 +1026,124 @@ describe('LibraryCatalogArea', () => {
     expect(titoli()[0]).toContain('Vita nuova');
   });
 
+  it('i filtri rapidi dicono quante opere ha ogni valore, e il secolo viene dalla data', async () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Pantagruel' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1542' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Convivio' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1490' } }),
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<LibraryCatalogArea />);
+    const century = screen.getByRole('combobox', { name: 'areas.library.filters.facet.century' });
+    expect(within(century).getAllByRole('option', { hidden: true }).map((option) => option.textContent))
+      .toEqual(['areas.library.filters.all.century', 'areas.library.filters.centuryValue (1)', 'areas.library.filters.centuryValue (1)']);
+    await user.selectOptions(century, '16');
+
+    expect(screen.getByText('Pantagruel')).toBeInTheDocument();
+    expect(screen.queryByText('Convivio')).not.toBeInTheDocument();
+  });
+
+  it('lo scaffale «da scaricare» tiene solo le opere non ancora sul computer', () => {
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Solo online' }, localPages: 0 }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Scaricata' }, localPages: 210, expectedPages: 210,
+          sizes: [{ sizeTag: '2000', pages: 210, bytes: 1, missing: 0, derived: false }], principalSize: '2000' }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByRole('button', { name: /areas\.library\.shelves\.toDownload/ }));
+
+    expect(screen.getByText('Solo online')).toBeInTheDocument();
+    expect(screen.queryByText('Scaricata')).not.toBeInTheDocument();
+  });
+
+  it('con Ctrl si scelgono più opere, e la barra dei comandi vale per tutte', async () => {
+    const service = await import('../../services/libraryService');
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Pantagruel' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Convivio' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByText('Pantagruel'), { ctrlKey: true });
+    fireEvent.click(screen.getByText('Convivio'), { ctrlKey: true });
+
+    expect(screen.getByRole('toolbar', { name: 'areas.library.selection.label' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.selection.archive' }));
+
+    await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledTimes(2));
+    expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true);
+    expect(service.setSourceArchived).toHaveBeenCalledWith('s2', true);
+  });
+
+  it('un click senza tasti apre l opera, non la sceglie', () => {
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    fireEvent.click(screen.getByText('Book of Hours'));
+
+    expect(screen.queryByRole('toolbar', { name: 'areas.library.selection.label' })).not.toBeInTheDocument();
+    expect(useUiStore.getState().location).toMatchObject({ area: 'library', itemId: 's1' });
+  });
+
+  it('la vista a tabella ordina cliccando l intestazione', () => {
+    useUiStore.setState({ libraryView: 'table' });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Vita nuova' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1576' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Convivio' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1490' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.table.year' }));
+
+    const titles = screen.getAllByRole('row').slice(1).map((row) => within(row).getByRole('button', { name: /Convivio|Vita nuova/ }).textContent);
+    expect(titles).toEqual(['Convivio', 'Vita nuova']);
+    useUiStore.setState({ libraryView: 'list' });
+  });
+
+  it('raggruppa per biblioteca con il nome della biblioteca', async () => {
+    const iiifService = await import('../../services/iiifProviderService');
+    vi.mocked(iiifService.listIIIFProviders).mockResolvedValueOnce([
+      { key: 'gallica', label: 'Gallica' }, { key: 'mdz', label: 'BSB' },
+    ] as never);
+    useUiStore.setState({ libraryGrouping: 'provider' });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Uno' }, providerKey: 'gallica' }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Due' }, providerKey: 'mdz' }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    await waitFor(() => expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent))
+      .toEqual(['BSB1', 'Gallica1']));
+    useUiStore.setState({ libraryGrouping: 'none' });
+  });
+
+  it('raggruppa per secolo, con le opere senza data in fondo', () => {
+    useUiStore.setState({ libraryGrouping: 'century' });
+    useSourceLibraryStore.setState({
+      catalog: [
+        entry({ source: { ...entry().source, id: 's1', title: 'Pantagruel' }, fields: { ...EMPTY_SOURCE_FIELDS, date: '1542' } }),
+        entry({ source: { ...entry().source, id: 's2', title: 'Senza data' } }),
+      ],
+    });
+
+    render(<LibraryCatalogArea />);
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+    expect(headings).toEqual(['areas.library.filters.centuryValue1', 'areas.library.grouping.missing.century1']);
+    useUiStore.setState({ libraryGrouping: 'none' });
+  });
+
   it('mostra solo le opere collegate al workspace scelto', async () => {
     useWorkspaceStore.setState({
       workspaces: [{ id: 'ws-1', name: 'Scherma' } as never],
@@ -1062,7 +1162,7 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'areas.library.filters.workspaceLabel' }),
+      screen.getByRole('combobox', { name: 'areas.library.filters.facet.workspaceId' }),
       'ws-1',
     );
 
@@ -1105,23 +1205,43 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
+  it('una raccolta nuova si crea dal «+» della sezione, e Esc annulla', async () => {
+    const collectionsService = await import('../../services/libraryCollectionsService');
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    expect(screen.queryByRole('textbox', { name: 'areas.library.shelves.newCollection' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.shelves.createCollection' }));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'areas.library.shelves.newCollection' }), { key: 'Escape' });
+    expect(screen.queryByRole('textbox', { name: 'areas.library.shelves.newCollection' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.shelves.createCollection' }));
+    const name = screen.getByRole('textbox', { name: 'areas.library.shelves.newCollection' });
+    fireEvent.change(name, { target: { value: 'Trattati di scherma' } });
+    fireEvent.keyDown(name, { key: 'Enter' });
+
+    await waitFor(() => expect(collectionsService.createCollection).toHaveBeenCalledWith('Trattati di scherma'));
+    expect(screen.queryByRole('textbox', { name: 'areas.library.shelves.newCollection' })).not.toBeInTheDocument();
+  });
+
   it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {
     const views = await import('../../services/librarySavedViewsService');
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    // Nella colonna dei filtri i campi si scrivono con un evento diretto:
-    // userEvent non consegna i tasti dentro un pannello ridimensionabile in
-    // jsdom, come già per i comandi icona dentro un tooltip.
+    // Senza filtri il «+» delle viste c'è ma non si usa, e dice perché.
+    expect(screen.getByRole('button', { name: 'areas.library.filters.saveViewNeedsFilters' })).toBeDisabled();
     fireEvent.change(
       screen.getByRole('searchbox', { name: 'areas.library.filters.searchLabel' }),
       { target: { value: 'hours' } },
     );
-    fireEvent.change(
-      screen.getByRole('textbox', { name: 'areas.library.filters.newViewLabel' }),
-      { target: { value: 'Miniati' } },
-    );
+    // Il campo per il nome compare solo dopo il «+», mai da solo.
+    expect(screen.queryByRole('textbox', { name: 'areas.library.filters.newViewPlaceholder' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));
+    const name = screen.getByRole('textbox', { name: 'areas.library.filters.newViewPlaceholder' });
+    fireEvent.change(name, { target: { value: 'Miniati' } });
+    fireEvent.keyDown(name, { key: 'Enter' });
 
     await waitFor(() =>
       expect(views.saveView).toHaveBeenCalledWith(
@@ -1282,7 +1402,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ providerKey: 'archive_org' })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
 
     await waitFor(() =>
