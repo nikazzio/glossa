@@ -160,8 +160,15 @@ pub async fn run(
         // esistesse: la funzione resta dov'è, ma la si chiama da qui come le
         // altre, così esiste un punto solo in cui si cerca.
         SearchHandlerKind::ArchiveOrg => {
-            super::discovery::search_archive(client, &endpoints.archive_search, query, page, gate)
-                .await
+            super::discovery::search_archive(
+                client,
+                &endpoints.archive_search,
+                query,
+                criteria.exact_phrase,
+                page,
+                gate,
+            )
+            .await
         }
     }
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Tooltip } from '../ui';
+import { Highlighted, Tooltip } from '../ui';
 
 export interface WorkIdentityData {
   title: string;
@@ -29,10 +29,12 @@ export function imprint(place: string | null, publisher: string | null): string 
  * flessibile: chi la riempie tronca il proprio testo, così un segno a destra
  * (una barra, un avviso) resta visibile.
  */
-export function WorkIdentity({ work, details, variant = 'row' }: {
+export function WorkIdentity({ work, details, variant = 'row', highlight }: {
   work: WorkIdentityData;
   details?: ReactNode;
   variant?: 'row' | 'header' | 'full';
+  /** Le parole cercate, evidenziate dove compaiono (risultati di ricerca). */
+  highlight?: string[];
 }) {
   const whenWhere = [work.date, imprint(work.place, work.publisher)]
     .filter((part): part is string => Boolean(part))
@@ -48,14 +50,14 @@ export function WorkIdentity({ work, details, variant = 'row' }: {
     <span className="block min-w-0">
       {hasIdentity && (
         <span className={`block truncate text-editorial-ink ${variant === 'header' ? 'text-xs' : 'text-sm'}`}>
-          {work.creator && <strong className="font-semibold">{work.creator}</strong>}
+          {work.creator && <strong className="font-semibold"><Highlighted text={work.creator} terms={highlight} /></strong>}
           {work.creator && whenWhere && ' · '}
-          {whenWhere}
+          <Highlighted text={whenWhere} terms={highlight} />
         </span>
       )}
       <Tooltip label={variant === 'full' ? undefined : work.title} variant="panel" className="w-full min-w-0">
         <span className={`block font-display italic leading-snug text-editorial-ink ${titleClass}`}>
-          {work.title}
+          <Highlighted text={work.title} terms={highlight} />
         </span>
       </Tooltip>
       {details && (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_SEARCH } from '../services/federatedSearchService';
 import type { IIIFDiscoveryResult } from '../types';
-import { explainMatch, highlightTerms, matchTerms, snippetAround } from './searchMatch';
+import { foundOutsideRecord, highlightTerms, matchTerms } from './searchMatch';
 
 const card = (overrides: Partial<IIIFDiscoveryResult>): IIIFDiscoveryResult => ({
   id: 'x', title: 'Opera nova', creator: null, date: null, description: null, thumbnailUrl: null,
@@ -28,38 +28,14 @@ describe('highlightTerms', () => {
   });
 });
 
-describe('snippetAround', () => {
-  it('riduce un testo lungo intorno alla prima parola trovata', () => {
-    const text = `${'a '.repeat(100)}Achille Caulier${' b'.repeat(100)}`;
-    const snippet = snippetAround(text, ['achille']);
-    expect(snippet.startsWith('…')).toBe(true);
-    expect(snippet.endsWith('…')).toBe(true);
-    expect(snippet).toContain('Achille Caulier');
-  });
-});
-
-describe('explainMatch', () => {
-  it('usa prima la sezione dichiarata dalla biblioteca', () => {
-    const explanation = explainMatch(card({
-      matchHints: [{ section: 'Additional Bibliography', text: 'Baudet Herenc; Achille Caulier' }],
-    }), ['achille']);
-    expect(explanation).toEqual({ kind: 'section', section: 'Additional Bibliography', localSection: false, text: 'Baudet Herenc; Achille Caulier' });
+describe('foundOutsideRecord', () => {
+  it('vale solo quando nessun dato della scheda contiene le parole', () => {
+    expect(foundOutsideRecord(card({ title: 'Le Journal illustré' }), ['marozzo'])).toBe(true);
+    expect(foundOutsideRecord(card({ subjects: ['Scherma', 'Achille Marozzo'] }), ['marozzo'])).toBe(false);
+    expect(foundOutsideRecord(card({ matchHints: [{ section: 'Bibliography', text: 'Achille Caulier' }] }), ['achille'])).toBe(false);
   });
 
-  it('senza indicazioni cerca nei dati della scheda, e l\'autore non si ripete', () => {
-    expect(explainMatch(card({ creator: 'Marozzo, Achille' }), ['marozzo'])).toEqual({
-      kind: 'section', section: 'author', localSection: true, text: null,
-    });
-    expect(explainMatch(card({ subjects: ['Scherma', 'Achille Marozzo'] }), ['marozzo'])).toMatchObject({
-      section: 'subjects', text: 'Scherma · Achille Marozzo',
-    });
-  });
-
-  it('dice quando le parole non sono da nessuna parte nella scheda', () => {
-    expect(explainMatch(card({ title: 'Le Journal illustré' }), ['marozzo'])).toEqual({ kind: 'elsewhere' });
-  });
-
-  it('senza parole da cercare non spiega niente', () => {
-    expect(explainMatch(card({}), [])).toBeNull();
+  it('senza parole da cercare non segna niente', () => {
+    expect(foundOutsideRecord(card({}), [])).toBe(false);
   });
 });

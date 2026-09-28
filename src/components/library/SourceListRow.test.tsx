@@ -33,6 +33,28 @@ function renderRow(result: IIIFDiscoveryResult, expanded = false) {
 }
 
 describe('SourceListRow', () => {
+  it('evidenzia le parole cercate nella riga e nella scheda aperta', () => {
+    render(
+      <SourceListRow card={card({ creator: 'Marozzo, Achille', subjects: ['Scherma'] })} providerKey="gallica"
+        providerLabel="Gallica" expanded onToggle={vi.fn()} onAddToLibrary={vi.fn()} onAddToWorkspace={vi.fn()}
+        adding={false} alreadyAdded={false} matchTerms={['marozzo', 'scherma']} />,
+    );
+
+    expect(screen.getAllByText('Marozzo')[0]).toHaveClass('text-editorial-accent');
+    expect(screen.getByText('Scherma')).toHaveClass('text-editorial-accent');
+    expect(screen.queryByLabelText('federation.match.pageText')).not.toBeInTheDocument();
+  });
+
+  it('segna con un\'icona i risultati di Gallica trovati solo nel testo delle pagine', () => {
+    render(
+      <SourceListRow card={card({ title: 'Le Journal illustré' })} providerKey="gallica" providerLabel="Gallica"
+        expanded={false} onToggle={vi.fn()} onAddToLibrary={vi.fn()} onAddToWorkspace={vi.fn()}
+        adding={false} alreadyAdded={false} matchTerms={['marozzo']} />,
+    );
+
+    expect(screen.getByLabelText('federation.match.pageText')).toBeInTheDocument();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockInspect.mockResolvedValue(UNKNOWN_FACTS);

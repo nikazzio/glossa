@@ -11,7 +11,7 @@ export interface CustomProviderProfile {
 
 /** Un criterio che la biblioteca cerca davvero nel proprio catalogo. Dove
  *  manca, il criterio filtra soltanto i risultati già arrivati. */
-export type IIIFSearchField = 'title' | 'author' | 'publisher' | 'material' | 'years';
+export type IIIFSearchField = 'title' | 'author' | 'publisher' | 'material' | 'years' | 'phrase';
 
 /** Che cosa è una fonte: una raccolta che indicizza altre istituzioni, una
  *  biblioteca che risponde del proprio fondo, o l'indirizzo diretto. */

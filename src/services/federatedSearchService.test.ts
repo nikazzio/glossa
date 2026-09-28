@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IIIFDiscoveryResult } from '../types';
-import { EMPTY_SEARCH, groupResults, matchesCriteria, type SearchResultPage } from './federatedSearchService';
+import { EMPTY_SEARCH, emptyStreak, groupResults, matchesCriteria, type SearchExecution, type SearchResultPage, type SearchRun } from './federatedSearchService';
 
 const card = (overrides: Partial<IIIFDiscoveryResult> = {}): IIIFDiscoveryResult => ({
   id:'1',title:'Dante',creator:null,date:null,description:null,thumbnailUrl:null,
@@ -44,5 +44,18 @@ describe('federated metadata and provenance', () => {
     expect(groups[0].match).toBe('match');
     expect(groups[0].providerKey).toBe('b');
     expect(groups[0].card.creator).toBe('Dante');
+  });
+});
+
+describe('emptyStreak', () => {
+  const execution = (providerKey: string, generation: number, received: number) =>
+    ({ providerKey, generation, received } as SearchExecution);
+  const run = (executions: SearchExecution[]) => ({ executions } as SearchRun);
+
+  it('conta le pagine vuote di fila dall\'ultima indietro, per biblioteca', () => {
+    const executions = [execution('ecodices', 1, 20), execution('ecodices', 2, 0), execution('ecodices', 3, 0), execution('mdz', 1, 0)];
+    expect(emptyStreak(run(executions), 'ecodices')).toBe(2);
+    expect(emptyStreak(run(executions), 'mdz')).toBe(1);
+    expect(emptyStreak(run([...executions, execution('ecodices', 4, 3)]), 'ecodices')).toBe(0);
   });
 });

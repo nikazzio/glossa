@@ -59,14 +59,26 @@ copertina e sommario, e venti manifesti da 100–400 KB portavano una ricerca a
 49 s. Per le altre l'arricchimento tiene sempre quattro letture in corso
 (`buffered`), non blocchi fissi da quattro.
 
-**Perché un risultato è uscito.** `DiscoveryResult.match_hints` (sezione e testo
-senza marcatori) raccoglie quello che la biblioteca dichiara: e-codices
+**Perché un risultato è uscito.** Le parole (`matchTerms`) si evidenziano dove
+compaiono (`ui/Highlighted`: identità dell'opera, dati della scheda aperta);
+nessuna frase sotto la riga. `DiscoveryResult.match_hints` (sezione e testo
+senza marcatori), mostrati come dati della scheda aperta, raccolgono quello che
+la biblioteca dichiara: e-codices
 (`found-in` + snippet), Bodleian (`snippet`), Cambridge (`highlighting`),
 Institut (descrizione con `<em>`), Vaticana (righe di contenuto), Estense (il
-campo che contiene le parole). Dove manca, `utils/searchMatch.ts` confronta le
-parole (senza accenti, come inizio di parola, almeno tre lettere) con autore,
-titolo, tipografo, altri responsabili, soggetti, descrizione; nessun dato ⇒
-«trovato altrove», su Gallica «solo nel testo delle pagine».
+campo che contiene le parole). `utils/searchMatch.ts` confronta le parole
+(senza accenti, come inizio di parola, almeno tre lettere); se nessun dato della
+scheda né alcun `match_hint` le contiene, la riga porta un'icona con la
+spiegazione (su Gallica «solo nel testo delle pagine»).
+
+**Frase esatta**: `Criteria.exact_phrase` (`serde(default)`), rispettato da chi
+dichiara `SearchField::Phrase` (oggi Internet Archive, che la mette fra
+virgolette); il pannello dei criteri dice quali delle biblioteche scelte la
+rispettano.
+
+**Pagine vuote**: una pagina completata con 0 risultati e `has_more` si
+continua da sola dall'interfaccia (`emptyStreak`, al massimo 5 pagine vuote di
+fila per biblioteca, una volta per esecuzione).
 
 **Come cerca ogni biblioteca** (verificato il 28 settembre 2026):
 - MDZ: `alma.all_for_ui all "<parole>" and alma.local_field_912=digit`; un blocco

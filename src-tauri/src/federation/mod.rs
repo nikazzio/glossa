@@ -21,6 +21,10 @@ pub struct Criteria {
     pub material: String,
     pub year_from: Option<u32>,
     pub year_to: Option<u32>,
+    /// Le parole come frase esatta, dove la biblioteca lo sa fare
+    /// (`SearchField::Phrase` nel registro); le altre la ignorano.
+    #[serde(default)]
+    pub exact_phrase: bool,
 }
 
 impl Criteria {

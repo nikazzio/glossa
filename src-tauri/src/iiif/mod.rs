@@ -99,6 +99,8 @@ pub enum SearchField {
     Publisher,
     Material,
     Years,
+    /// Le parole come frase esatta invece che una per una.
+    Phrase,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -353,7 +355,7 @@ pub const PROVIDERS: &[IIIFProvider] = &[
         kind: ProviderKind::Aggregator,
         availability: SearchAvailability::Searchable,
         site_search: "https://archive.org/search?query={query}",
-        search_fields: &[],
+        search_fields: &[SearchField::Phrase],
     },
     IIIFProvider {
         key: "e_rara",

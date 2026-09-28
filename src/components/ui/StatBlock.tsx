@@ -1,4 +1,5 @@
 import { CopyButton } from './CopyButton';
+import { Highlighted } from './Highlighted';
 
 interface StatBlockProps {
   label: string;
@@ -6,6 +7,8 @@ interface StatBlockProps {
   /** Se presente, il valore si mostra come link cliccabile invece che testo,
    *  con un comando per copiarlo affiancato. */
   href?: string;
+  /** Le parole cercate, evidenziate nel valore. */
+  highlight?: string[];
 }
 
 /**
@@ -14,7 +17,7 @@ interface StatBlockProps {
  * conservazione) e deve andare a capo, non troncare su una riga — a
  * differenza di `StatRow`, pensata per coppie label/valore corte affiancate.
  */
-export function StatBlock({ label, value, href }: StatBlockProps) {
+export function StatBlock({ label, value, href, highlight }: StatBlockProps) {
   return (
     <div className="min-w-0">
       <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{label}</p>
@@ -31,7 +34,9 @@ export function StatBlock({ label, value, href }: StatBlockProps) {
           <CopyButton text={value} size="xs" />
         </span>
       ) : (
-        <p className="mt-0.5 break-words font-display text-sm italic text-editorial-ink">{value || '—'}</p>
+        <p className="mt-0.5 break-words font-display text-sm italic text-editorial-ink">
+          {value ? <Highlighted text={value} terms={highlight} /> : '—'}
+        </p>
       )}
     </div>
   );

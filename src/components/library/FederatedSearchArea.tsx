@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ProviderSiteLink } from './ProviderSiteLink';
 import { useFederatedSearch } from '../../hooks/useFederatedSearch';
-import { EMPTY_SEARCH, createSearch, currentExecutions, groupResults, occurrenceKey, relaunchSearch, searchStatus, type SearchCriteria, type SearchResultGroup } from '../../services/federatedSearchService';
+import { EMPTY_SEARCH, createSearch, currentExecutions, groupResults, occurrenceKey, relaunchSearch, searchStatus, type SearchCriteria, type SearchResultGroup, emptyStreak } from '../../services/federatedSearchService';
 import { listIIIFProviders, openWork } from '../../services/iiifProviderService';
 import { getLibrarySourceDetail } from '../../services/libraryService';
 import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
@@ -29,6 +29,14 @@ import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion'
 
 /** La riga della casella e quella delle schede a destra sono una linea sola. */
 const HEADER_ROW_HEIGHT = 'h-14';
+
+/**
+ * Quante pagine vuote di fila si chiedono da sole a una biblioteca. Una pagina
+ * può arrivare vuota dopo i filtri (e-codices tiene solo i risultati con
+ * tutte le parole) anche se dopo ce ne sono altre; oltre questo limite ci si
+ * ferma, e resta il comando «altri risultati».
+ */
+const AUTO_EMPTY_PAGES = 5;
 
 /** Una pagina chiesta è in viaggio solo in questi stati: in pausa non gira. */
 const IN_FLIGHT_STATES: ReadonlySet<string> = new Set(['queued', 'running']);
@@ -197,6 +205,21 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
   const fetchingMore = executions.some((execution) => execution.mode === 'continue' && IN_FLIGHT_STATES.has(execution.job.status));
   // I risultati già mostrati non si rianimano: entra con una dissolvenza solo
   // quello che arriva dopo, a pagina successiva o da una biblioteca più lenta.
+  // Una pagina vuota con altre dopo si continua da sola, una volta per
+  // esecuzione e fino a AUTO_EMPTY_PAGES di fila.
+  const autoContinued = useRef(new Set<string>());
+  useEffect(() => { autoContinued.current = new Set(); }, [searchId]);
+  useEffect(() => {
+    if (!selected) return;
+    const due = executions.filter((execution) => execution.job.status === 'completed' && execution.hasMore
+      && execution.received === 0 && !autoContinued.current.has(execution.job.id)
+      && emptyStreak(selected, execution.providerKey) <= AUTO_EMPTY_PAGES);
+    if (due.length === 0) return;
+    due.forEach((execution) => autoContinued.current.add(execution.job.id));
+    void Promise.all(due.map((execution) => relaunchSearch(selected.id, execution.job.id, 'continue')))
+      .then(refresh)
+      .catch((failure: unknown) => logger.warn('federation.autoContinue.failed', { searchId: selected.id, reason: String(failure) }));
+  }, [executions, selected, refresh]);
   const shownIds = useRef(new Set<string>());
   useEffect(() => { shownIds.current = new Set(); }, [searchId]);
   useEffect(() => { for (const group of visible) shownIds.current.add(group.id); }, [visible]);

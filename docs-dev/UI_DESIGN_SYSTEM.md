@@ -408,6 +408,9 @@ un'attesa, e la seconda volta è già di troppo.
 - Elenco e scheda di un'opera: la nuova vista entra con dissolvenza e
   `MOTION_SHIFT`, senza aspettare l'uscita della precedente — un'uscita
   animata prima dell'ingresso rendeva ogni apertura più lenta.
+- Parole cercate nei risultati: `ui/Highlighted`, `font-semibold` nel colore
+  d'accento, dove compaiono (riga e scheda aperta); nessuna riga di spiegazione.
+  Un risultato senza parole nella scheda porta un'icona muted con `Hint`.
 - Risultati che arrivano dopo i primi (pagina successiva, biblioteca più
   lenta): dissolvenza con `MOTION_SHIFT`; quelli già visti non si rianimano
   quando ritornano sullo schermo scorrendo. Il comando che li ha chiesti resta al

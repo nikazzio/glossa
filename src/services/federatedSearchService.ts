@@ -21,10 +21,12 @@ export interface SearchCriteria {
   query: string; title: string; author: string; publisher: string;
   institution: string; language: string; material: string;
   yearFrom: number | null; yearTo: number | null;
+  /** Le parole come frase esatta, dove la biblioteca lo sa fare. */
+  exactPhrase: boolean;
 }
 export const EMPTY_SEARCH: SearchCriteria = {
   query: '', title: '', author: '', publisher: '', institution: '', language: '',
-  material: '', yearFrom: null, yearTo: null,
+  material: '', yearFrom: null, yearTo: null, exactPhrase: false,
 };
 export interface SearchExecution {
   providerKey: string; generation: number; resultSetId: string;
@@ -60,6 +62,15 @@ export function currentExecutions(run: SearchRun): SearchExecution[] {
   }
   return run.providers.flatMap((key) => { const execution=latest.get(key); return execution ? [execution] : []; });
 }
+/** Le pagine vuote arrivate di fila da una biblioteca, dall'ultima indietro. */
+export function emptyStreak(run: SearchRun, providerKey: string): number {
+  const pages = run.executions
+    .filter((execution) => execution.providerKey === providerKey)
+    .sort((a, b) => b.generation - a.generation);
+  const firstFull = pages.findIndex((execution) => execution.received > 0);
+  return firstFull < 0 ? pages.length : firstFull;
+}
+
 export function searchStatus(run: SearchRun): Job['status'] {
   const states = currentExecutions(run).map((e) => e.job.status);
   for (const state of ['running','pausing','cancelling','queued','paused','error','cancelled'] as const) {

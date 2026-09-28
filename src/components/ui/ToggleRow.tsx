@@ -1,19 +1,22 @@
 import type { ReactNode } from 'react';
+import { Hint } from './Hint';
 
 interface ToggleRowProps {
   icon: ReactNode;
   label: string;
   checked: boolean;
   disabled?: boolean;
+  /** Spiegazione al passaggio del mouse sull'etichetta. */
+  hint?: string;
   onChange: () => void;
 }
 
-export function ToggleRow({ icon, label, checked, disabled = false, onChange }: ToggleRowProps) {
+export function ToggleRow({ icon, label, checked, disabled = false, hint, onChange }: ToggleRowProps) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
         <span className="text-editorial-accent">{icon}</span>
-        <span>{label}</span>
+        {hint ? <Hint label={hint}>{label}</Hint> : <span>{label}</span>}
       </div>
       <button
         type="button"

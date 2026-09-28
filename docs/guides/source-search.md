@@ -67,18 +67,26 @@ l’assenza di risultati.
 
 ## Perché un risultato è uscito
 
-Sotto ogni risultato una riga piccola dice **dove sono state trovate le parole**,
-con le parole in grassetto: «Trovato in autore», «Trovato in Bibliography — …
-*Achille* Caulier…». e-codices, Bodleian, Cambridge, Estense, Institut de France
-e Vaticana dicono da sé la sezione della scheda e il testo intorno; per le altre
-il confronto lo fa Glossa sui dati arrivati (autore, titolo, tipografo, altri
-responsabili, soggetti, descrizione). Quando le parole non compaiono in nessun
-dato, la riga lo dice: su Gallica vuol dire che sono state trovate solo nel
-testo trascritto delle pagine, che la ricerca per parole libere di Gallica
-comprende.
+Le parole cercate sono **in grassetto e nel colore d'accento** dove compaiono:
+nell'autore, nell'anno o nel titolo della riga, e aprendo la riga nei dati della
+scheda — soggetti, descrizione, altri responsabili. Quando la biblioteca dice da
+sé in quale sezione le ha trovate (e-codices, Bodleian, Cambridge, Estense,
+Institut de France, Vaticana), la sezione compare fra i dati della scheda aperta
+con il suo nome, per esempio «Bibliography», e il testo intorno alle parole.
+
+Se le parole non compaiono in nessun dato della scheda, accanto alla riga
+piccola c'è un'icona: al passaggio del mouse dice che su Gallica sono state
+trovate solo nel testo trascritto delle pagine, che la ricerca per parole
+libere di Gallica comprende, o in generale che la biblioteca le ha trovate
+altrove.
 
 Il confronto ignora maiuscole e accenti e accetta una parola come inizio di una
 più lunga («achille» trova «Achilles»); le parole di due lettere non contano.
+
+**Frase esatta**, nei criteri avanzati, cerca le parole in fila invece che una
+per una, dove la biblioteca lo sa fare: oggi Internet Archive. Il suggerimento
+accanto dice quali delle biblioteche scelte la rispettano; le altre cercano le
+parole come sempre.
 
 ## Come cercano le biblioteche
 
@@ -88,8 +96,9 @@ Le biblioteche non cercano tutte allo stesso modo, e i risultati lo riflettono:
   molti risultati di giornali o riviste escono per una parola in una pagina
   qualunque. Titolo, autore e tipografo nei criteri cercano solo nella scheda.
 - **e-codices** unisce le parole con «o»: Glossa tiene solo i risultati che le
-  contengono tutte, quindi una pagina può arrivare vuota anche se ce ne sono
-  altre.
+  contengono tutte. Una pagina che resta vuota con altre dopo si continua da
+  sola, fino a cinque pagine vuote di fila; poi resta il comando «altri
+  risultati».
 - **Estense** cerca le parole come frase unica: con più parole Glossa chiede la
   più lunga e tiene i risultati che le contengono tutte, guardando i primi 200.
 - **Monaco (MDZ)** restituisce solo le opere digitalizzate.

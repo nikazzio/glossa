@@ -1,13 +1,6 @@
 import type { SearchCriteria } from '../services/federatedSearchService';
 import type { IIIFDiscoveryResult } from '../types';
 
-/** Dove sono state trovate le parole cercate, per la riga «Trovato in». */
-export type MatchExplanation =
-  /** La biblioteca ha detto la sezione, o la si è trovata nei dati della scheda. */
-  | { kind: 'section'; section: string; localSection: boolean; text: string | null }
-  /** Nessun dato della scheda contiene le parole: le ha trovate altrove. */
-  | { kind: 'elsewhere' };
-
 export interface TextSegment {
   text: string;
   match: boolean;
@@ -15,8 +8,6 @@ export interface TextSegment {
 
 /** Parole più corte non spiegano niente: «de», «la», «of» stanno ovunque. */
 const MIN_TERM_LENGTH = 3;
-/** Quanto testo si mostra intorno alla prima parola trovata. */
-const SNIPPET_CONTEXT = 60;
 
 const DIACRITICS = /\p{Diacritic}/gu;
 
@@ -76,44 +67,27 @@ const containsTerm = (text: string, terms: string[]) => {
   return terms.some((term) => haystack.includes(term));
 };
 
-/** Un tratto di testo lungo ridotto intorno alla prima parola trovata. */
-export function snippetAround(text: string, terms: string[]): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  const segments = highlightTerms(clean, terms);
-  const firstMatch = segments.findIndex((segment) => segment.match);
-  if (firstMatch < 0 || clean.length <= SNIPPET_CONTEXT * 2) return clean;
-  const offset = segments.slice(0, firstMatch).reduce((sum, segment) => sum + segment.text.length, 0);
-  const start = Math.max(0, offset - SNIPPET_CONTEXT);
-  const end = Math.min(clean.length, offset + SNIPPET_CONTEXT * 2);
-  return `${start > 0 ? '…' : ''}${clean.slice(start, end).trim()}${end < clean.length ? '…' : ''}`;
-}
-
 /**
- * Perché un risultato è uscito. Prima quello che dice la biblioteca (la
- * sezione e il testo in cui ha trovato le parole); dove non lo dice, il
- * confronto fra le parole e i dati della scheda, nell'ordine in cui chi cerca
- * riconosce un'opera. Se nessun dato le contiene, le ha trovate altrove —
- * su Gallica, nel testo trascritto delle pagine.
+ * Se le parole non compaiono da nessuna parte nella scheda: né in quello che
+ * la biblioteca dichiara di aver trovato, né nei dati che la scheda mostra.
+ * Allora la biblioteca le ha trovate altrove — su Gallica, nel testo delle
+ * pagine — e il risultato va segnato, perché non c'è niente da evidenziare.
  */
-export function explainMatch(card: IIIFDiscoveryResult, terms: string[]): MatchExplanation | null {
-  if (terms.length === 0) return null;
-  const hints = card.matchHints ?? [];
-  const hint = hints.find((entry) => containsTerm(entry.text, terms)) ?? hints[0];
-  if (hint) {
-    return { kind: 'section', section: hint.section ?? 'record', localSection: hint.section === null, text: snippetAround(hint.text, terms) };
-  }
-  // Titolo, autore, anno e tipografo sono già in vista nella riga: basta dire
-  // dove, senza ripeterli.
-  const fields: Array<[string, string | null | undefined, boolean]> = [
-    ['author', card.creator, false],
-    ['title', card.title, false],
-    ['publisher', card.publisher, false],
-    ['contributors', card.contributors.join(' · '), true],
-    ['subjects', card.subjects.join(' · '), true],
-    ['description', card.description, true],
+export function foundOutsideRecord(card: IIIFDiscoveryResult, terms: string[]): boolean {
+  if (terms.length === 0) return false;
+  const texts = [
+    ...(card.matchHints ?? []).map((hint) => hint.text),
+    card.title,
+    card.creator,
+    card.date,
+    card.publisher,
+    card.description,
+    card.language,
+    card.holdingInstitution,
+    card.physicalDescription,
+    card.collection,
+    ...card.contributors,
+    ...card.subjects,
   ];
-  const found = fields.find(([, value]) => value && containsTerm(value, terms));
-  if (!found) return { kind: 'elsewhere' };
-  const [section, value, showText] = found;
-  return { kind: 'section', section, localSection: true, text: showText && value ? snippetAround(value, terms) : null };
+  return !texts.some((text) => text && containsTerm(text, terms));
 }

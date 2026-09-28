@@ -1,15 +1,15 @@
 import { type ReactNode, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus } from 'lucide-react';
+import { BookOpenText, BookPlus, Check, ChevronDown, FolderPlus, TextSearch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Hint, IconButton, Spinner, StatBlock } from '../ui';
+import { Highlighted, Hint, IconButton, Spinner, StatBlock } from '../ui';
 import { isManifest, type SourceCard } from '../../types';
 import { EASE_EDITORIAL, MOTION_DURATION } from '../layout/motion';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { WorkIdentity } from '../common/WorkIdentity';
 import { useManifestFacts } from '../../hooks/useManifestFacts';
 import { useSeenOnce } from '../../hooks/useSeenOnce';
-import { explainMatch, highlightTerms } from '../../utils/searchMatch';
+import { foundOutsideRecord } from '../../utils/searchMatch';
 
 /**
  * I motivi per cui una ricerca non riesce, come li dichiara il motore.
@@ -80,44 +80,26 @@ interface RowProps {
   note?: string;
   /** La scelta fra le copie della stessa opera, nella riga aperta. */
   copyPicker?: ReactNode;
-  /** Le parole cercate: la riga dice dove sono state trovate. */
+  /** Le parole cercate: si evidenziano dove compaiono, nella riga e nella
+   *  scheda aperta. */
   matchTerms?: string[];
 }
 
-/** Le sezioni che l'app riconosce da sé; quelle dichiarate dalla biblioteca
- *  si mostrano col loro nome. */
-const LOCAL_SECTIONS = new Set(['author', 'title', 'publisher', 'contributors', 'subjects', 'description', 'record']);
-
 /**
- * «Trovato in …»: dove sono le parole cercate, con le parole in grassetto. Senza
- * questa riga un risultato uscito per una parola nel testo delle pagine, o in
- * una bibliografia, non si capisce perché ci sia.
+ * Il segno di un risultato le cui parole non stanno nella scheda: la biblioteca
+ * le ha trovate altrove (su Gallica, nel testo delle pagine), e senza il segno
+ * il risultato sembrerebbe capitato lì per caso. La spiegazione al passaggio
+ * del mouse.
  */
-function MatchLine({ card, providerKey, terms }: { card: SourceCard; providerKey: string; terms: string[] }) {
+function OutsideRecordMark({ providerKey }: { providerKey: string }) {
   const { t } = useTranslation();
-  const explanation = useMemo(() => (isManifest(card) ? null : explainMatch(card, terms)), [card, terms]);
-  if (!explanation) return null;
-  if (explanation.kind === 'elsewhere') {
-    return (
-      <p className="mt-0.5 text-xs italic text-editorial-muted">
-        {providerKey === 'gallica' ? t('federation.match.pageText') : t('federation.match.elsewhere')}
-      </p>
-    );
-  }
-  const section = LOCAL_SECTIONS.has(explanation.section) ? t(`federation.match.section.${explanation.section}`) : explanation.section;
+  const label = providerKey === 'gallica' ? t('federation.match.pageText') : t('federation.match.elsewhere');
   return (
-    <p className="mt-0.5 line-clamp-2 text-xs text-editorial-muted">
-      <span>{t('federation.match.foundIn', { section })}</span>
-      {explanation.text && (
-        <>
-          {' — '}
-          {highlightTerms(explanation.text, terms).map((segment, index) =>
-            segment.match
-              ? <strong key={index} className="font-semibold text-editorial-ink">{segment.text}</strong>
-              : <span key={index}>{segment.text}</span>)}
-        </>
-      )}
-    </p>
+    <span className="shrink-0 text-editorial-muted">
+      <Hint label={label}>
+        <TextSearch size={12} aria-hidden="true" />
+      </Hint>
+    </span>
   );
 }
 
@@ -191,6 +173,10 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
   // misura la prima, e se accanto alle immagini c'è un documento da scaricare.
   const { facts, checking } = useManifestFacts(providerKey, card.manifestUrl, declaredOpenable, seen);
   const openable = facts.openable;
+  const outsideRecord = useMemo(() => !isManifest(card) && foundOutsideRecord(card, matchTerms), [card, matchTerms]);
+  // Dove la biblioteca dice di aver trovato le parole, se non è un dato già
+  // fra quelli della scheda: una bibliografia, una riga di contenuto.
+  const hints = !isManifest(card) ? card.matchHints ?? [] : [];
   const title = card.title || t('dashboard.discovery.untitled');
   // Il collegamento alla pagina web e quello al catalogo cartaceo sono
   // indirizzi veri: si aprono, non si leggono come le altre etichette.
@@ -279,6 +265,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
           <span className={`min-w-0 flex-1 ${expanded ? 'pt-0.5' : ''}`}>
             <WorkIdentity
               variant={expanded ? 'full' : 'row'}
+              highlight={matchTerms}
               work={{
                 title,
                 creator: card.creator,
@@ -290,10 +277,10 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
                 <>
                   <span className="min-w-0 truncate">{detailParts.join(' · ')}</span>
                   <OpenableMark openable={openable} checking={checking} />
+                  {outsideRecord && <OutsideRecordMark providerKey={providerKey} />}
                 </>
               }
             />
-            <MatchLine card={card} providerKey={providerKey} terms={matchTerms} />
           </span>
         </div>
         <IconButton title={t('federation.details')} aria-expanded={expanded} onClick={onToggle} size="sm"><ChevronDown size={14} className={expanded ? 'rotate-180' : ''} /></IconButton>
@@ -307,10 +294,18 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
               <span className={`shrink-0 ${THUMBNAIL_WIDTH_EXPANDED}`} aria-hidden="true" />
               <div className="min-w-0 flex-1 space-y-3">
                 {copyPicker}
-                {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80">{card.description}</p>}
+                {card.description && <p className="text-sm leading-relaxed text-editorial-ink/80"><Highlighted text={card.description} terms={matchTerms} /></p>}
                 {stats.length > 0 && (
                   <div className="grid grid-cols-1 gap-y-2">
-                    {stats.map(([label, value]) => <StatBlock key={label} label={label} value={value} />)}
+                    {stats.map(([label, value]) => <StatBlock key={label} label={label} value={value} highlight={matchTerms} />)}
+                  </div>
+                )}
+                {hints.length > 0 && (
+                  <div className="grid grid-cols-1 gap-y-2">
+                    {hints.filter((hint) => hint.text !== card.description).map((hint, index) => (
+                      <StatBlock key={`${hint.section ?? ''}-${index}`} label={hint.section ?? t('federation.match.libraryFound')}
+                        value={hint.text} highlight={matchTerms} />
+                    ))}
                   </div>
                 )}
                 {manifestStats.length > 0 && (

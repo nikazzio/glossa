@@ -1,4 +1,4 @@
-import { BookOpen, Globe, Info, Search } from 'lucide-react';
+import { BookOpen, Globe, Info, Quote, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IIIFProvider, IIIFSearchField } from '../../types';
 import { useFederatedSearchStore } from '../../stores/federatedSearchStore';
@@ -7,9 +7,9 @@ import { FIELD_CLASSNAME, FIELD_NUMBER_CLASSNAME, FieldLabel, Hint, IconButton, 
 const TEXT_FIELDS = ['title', 'author', 'publisher', 'institution', 'language'] as const;
 
 /** Il campo del registro che corrisponde a ogni criterio, se qualcuno lo cerca. */
-const SEARCH_FIELD: Record<typeof TEXT_FIELDS[number] | 'material' | 'years', IIIFSearchField | null> = {
+const SEARCH_FIELD: Record<typeof TEXT_FIELDS[number] | 'material' | 'years' | 'phrase', IIIFSearchField | null> = {
   title: 'title', author: 'author', publisher: 'publisher', institution: null, language: null,
-  material: 'material', years: 'years',
+  material: 'material', years: 'years', phrase: 'phrase',
 };
 
 /** Chi non cerca per parole non è un errore da spiegare riga per riga: sta in
@@ -32,14 +32,14 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
   const unavailable = providers.filter((provider) => !provider.supportsSearch);
   /** Chi fra le biblioteche scelte cerca davvero questo criterio: le altre lo
    *  usano solo per filtrare i risultati arrivati. */
-  const reach = (key: keyof typeof SEARCH_FIELD) => {
+  const reach = (key: keyof typeof SEARCH_FIELD, fallbackKey = 'federation.fieldFiltered') => {
     const field = SEARCH_FIELD[key];
     const asking = field === null ? [] : providers
       .filter((provider) => selected.includes(provider.key) && provider.searchFields.includes(field))
       .map((provider) => provider.label);
     return asking.length > 0
       ? t('federation.fieldAsked', { libraries: asking.join(' · ') })
-      : t('federation.fieldFiltered');
+      : t(fallbackKey);
   };
   const field = (key: typeof TEXT_FIELDS[number]) => (
     <label key={key} className="block space-y-1.5">
@@ -66,6 +66,11 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
 
     <section className="space-y-3">
       <SectionLabel icon={Info} label={t('federation.criteriaGroup')} hint={t('federation.criteriaHint')} />
+      {/* Solo dove la biblioteca lo sa fare: le altre cercano le parole come
+          sempre, e il suggerimento dice quali la rispettano. */}
+      <ToggleRow icon={<Quote size={14} />} label={t('federation.fields.exactPhrase')}
+        hint={reach('phrase', 'federation.phraseIgnored')} checked={Boolean(criteria.exactPhrase)}
+        onChange={() => setCriteria({ ...criteria, exactPhrase: !criteria.exactPhrase })} />
       {TEXT_FIELDS.map(field)}
       <label className="block space-y-1.5">
         <FieldLabel block hint={reach('material')}>{t('federation.fields.material')}</FieldLabel>

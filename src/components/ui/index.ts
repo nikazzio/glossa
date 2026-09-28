@@ -20,6 +20,7 @@ export { ClickPopover } from './ClickPopover';
 export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';
 export { StatBlock } from './StatBlock';
+export { Highlighted } from './Highlighted';
 export { MenuActionRow } from './MenuActionRow';
 export { TabButton } from './TabButton';
 export { TabStrip, type TabStripItem } from './TabStrip';

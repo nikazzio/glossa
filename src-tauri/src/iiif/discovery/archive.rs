@@ -40,10 +40,21 @@ pub(crate) async fn search_archive(
     client: &Client,
     base_url: &str,
     query: &str,
+    exact_phrase: bool,
     page: u32,
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
     let _turn = wait_if_gated(gate, base_url).await;
+    // Parole sciolte: basta che ci siano, in qualunque ordine, e in cima
+    // arrivano titoli che ne contengono una sola («book of hours» → «Twenty-
+    // Four Hours a day»). La frase esatta le vuole in fila; è una scelta di chi
+    // cerca, perché per altre ricerche («dante commedia») perde quasi tutto.
+    let words = escape_lucene(query);
+    let terms = if exact_phrase {
+        format!("\"{words}\"")
+    } else {
+        words
+    };
     let response = client
         .get(base_url)
         .query(&[
@@ -52,10 +63,7 @@ pub(crate) async fn search_archive(
             // costruito per convenzione non esiste — il risultato si vedrebbe e
             // non si aprirebbe. Stesso filtro di Scriptoria
             // (`resolvers/search/archive_org.py`).
-            (
-                "q",
-                &format!("({}) AND mediatype:texts", escape_lucene(query)) as &str,
-            ),
+            ("q", &format!("({terms}) AND mediatype:texts") as &str),
             // Si chiede **tutto** quello che la biblioteca ha indicizzato, non
             // un elenco di campi scelti. Misurato sul servizio vero, a regime,
             // su venti risultati: chiedere i venti campi di prima costava
@@ -302,6 +310,7 @@ mod tests {
             &Client::new(),
             &format!("{}/advancedsearch.php", server.uri()),
             "dante",
+            false,
             1,
             None,
         )
@@ -341,6 +350,7 @@ mod tests {
             &Client::new(),
             &format!("{}/advancedsearch.php", server.uri()),
             "marozzo (1536",
+            false,
             1,
             None,
         )
@@ -365,6 +375,7 @@ mod tests {
             &Client::new(),
             &format!("{}/advancedsearch.php", server.uri()),
             "dante",
+            false,
             1,
             None,
         )
@@ -374,5 +385,33 @@ mod tests {
             outcome.err().as_deref(),
             Some(crate::iiif::search::SEARCH_FAILED)
         );
+    }
+
+    #[tokio::test]
+    async fn the_exact_phrase_keeps_the_words_together() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/advancedsearch.php"))
+            .and(query_param("q", "(\"book of hours\") AND mediatype:texts"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"response": {"numFound": 0, "docs": []}})),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let outcome = search_archive(
+            &Client::new(),
+            &format!("{}/advancedsearch.php", server.uri()),
+            "book of hours",
+            true,
+            1,
+            None,
+        )
+        .await
+        .expect("ricerca");
+
+        assert!(outcome.results.is_empty());
     }
 }

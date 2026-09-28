@@ -65,17 +65,26 @@ results.
 
 ## Why a result came up
 
-Under each result a small line says **where the words were found**, with the
-words in bold: "Found in author", "Found in Bibliography — … *Achille*
-Caulier…". e-codices, Bodleian, Cambridge, Estense, Institut de France and the
-Vatican report the record section and the surrounding text themselves; for the
-others Glossa compares the words with the data received (author, title,
-printer, other contributors, subjects, description). When the words appear in
-no field, the line says so: on Gallica it means they were found only in the
-transcribed page text, which Gallica's free-word search includes.
+The searched words are **in bold and in the accent color** where they appear:
+in the author, year or title of the row, and, opening the row, in the record
+data — subjects, description, other contributors. When the library itself says
+in which section it found them (e-codices, Bodleian, Cambridge, Estense,
+Institut de France, Vatican), the section appears among the data of the opened
+record with its own name, for example "Bibliography", and the text around the
+words.
+
+If the words appear in no field of the record, an icon sits next to the small
+line: on hover it says that on Gallica they were found only in the transcribed
+page text, which Gallica's free-word search includes, or more generally that the
+library found them elsewhere.
 
 The comparison ignores case and accents and accepts a word as the start of a
 longer one ("achille" finds "Achilles"); two-letter words do not count.
+
+**Exact phrase**, in the advanced criteria, searches the words in sequence
+instead of one by one, where the library supports it: Internet Archive today.
+The hint next to it says which of the chosen libraries honor it; the others
+search the words as usual.
 
 ## How libraries search
 
@@ -85,7 +94,8 @@ Libraries do not all search the same way, and results reflect it:
   newspaper or periodical results come up because of a word on some page.
   Title, author and printer in the criteria search the record only.
 - **e-codices** joins words with "or": Glossa keeps only results containing all
-  of them, so a page can arrive empty even when more pages exist.
+  of them. A page left empty with more pages after it continues by itself, up to
+  five empty pages in a row; then the "load more" command remains.
 - **Estense** searches the words as a single phrase: with several words Glossa
   asks for the longest one and keeps results containing all of them, looking at
   the first 200.
