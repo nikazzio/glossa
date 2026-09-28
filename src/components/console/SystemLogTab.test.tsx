@@ -83,6 +83,47 @@ describe('SystemLogTab', () => {
     expect(screen.queryByText('vecchia')).not.toBeInTheDocument();
   });
 
+  it('due eventi identici nello stesso secondo restano due righe', async () => {
+    const event = line('2026-09-26 20:59:00', 'search.page.committed');
+    vi.mocked(readAppLog).mockResolvedValue([event]);
+    render(<SystemLogTab panelId="p" labelledBy="l" />);
+    await settle();
+
+    vi.mocked(readAppLog).mockResolvedValue([{ ...event }, event]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+
+    expect(screen.getAllByText('search.page.committed')).toHaveLength(2);
+  });
+
+  it('dopo aver svuotato, una riga dello stesso secondo compare', async () => {
+    const shown = line('2026-09-26 20:59:00', 'vecchia');
+    vi.mocked(readAppLog).mockResolvedValue([shown]);
+    render(<SystemLogTab panelId="p" labelledBy="l" />);
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: 'systemLog.clearView' }));
+
+    vi.mocked(readAppLog).mockResolvedValue([line('2026-09-26 20:59:00', 'stesso secondo'), shown]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+
+    expect(screen.getByText('stesso secondo')).toBeInTheDocument();
+    expect(screen.queryByText('vecchia')).not.toBeInTheDocument();
+  });
+
+  it('una lettura superata da un cambio di filtro non sovrascrive quella nuova', async () => {
+    let finishOld: (lines: LogLine[]) => void = () => {};
+    vi.mocked(readAppLog)
+      .mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; }))
+      .mockResolvedValueOnce([line('2026-09-26 20:59:00', 'con il filtro nuovo')]);
+    render(<SystemLogTab panelId="p" labelledBy="l" />);
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'gallica' } });
+    await settle();
+    await act(async () => { finishOld([line('2026-09-26 20:58:00', 'con il filtro vecchio')]); await Promise.resolve(); });
+
+    expect(screen.getByText('con il filtro nuovo')).toBeInTheDocument();
+    expect(screen.queryByText('con il filtro vecchio')).not.toBeInTheDocument();
+  });
+
   it('i dati si colorano come in un editor, e il comando spegne i colori', async () => {
     vi.mocked(readAppLog).mockResolvedValue([line('2026-09-26 20:59:00', 'evento {"page":1}')]);
     render(<SystemLogTab panelId="p" labelledBy="l" />);

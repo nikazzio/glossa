@@ -905,14 +905,20 @@ l'87% del file e restano fuori finché non si chiedono. Le origini del programma
 (`federation`, `glossa_lib::*`, `webview`) si raggruppano in quattro aree lato
 interfaccia (`src/components/console/logAreas.ts`): Biblioteca, Traduzione,
 Lavori, Interfaccia. «Svuota la vista» agisce solo su ciò che è a schermo
-(nasconde le righe fino all'ultima mostrata, per orario): il file non si
+(nasconde le righe fino a quella in cima in quel momento; il confine è la
+riga, non l'orario, così restano visibili quelle arrivate nello stesso
+secondo): il file non si
 riscrive mai dall'interfaccia.
 
 La scheda si aggiorna da sola: ogni 2 s, finché è montata, rilegge l'ultima
-pagina (200 righe) e mette in cima solo quelle più nuove della prima a schermo;
+pagina (200 righe) e mette in cima solo quelle che precedono il tratto già a
+schermo — il confine è il punto da cui la pagina letta ricalca, fino in fondo,
+la cima dell'elenco, così due eventi identici nello stesso secondo restano
+due righe;
 il resto dell'elenco, comprese le pagine chieste con «carica le precedenti»,
 non si tocca. Una rilettura partita prima di un cambio di filtro o di un
-caricamento a mano si scarta (contatore di generazione). Nessun evento dal backend: il plugin di log non ne
+caricamento a mano si scarta (contatore di generazione), e lo stesso vale per
+un caricamento superato da un altro. Nessun evento dal backend: il plugin di log non ne
 emette, e rileggere la coda del file costa meno di un canale nuovo. Se chi legge
 è sceso nell'elenco, la posizione si corregge dell'altezza delle righe arrivate
 in cima. La colorazione dei dati (`logMessageTokens.ts`) prende l'oggetto JSON

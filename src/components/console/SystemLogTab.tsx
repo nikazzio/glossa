@@ -35,13 +35,23 @@ const TOKEN_COLOR: Record<LogTokenKind, string> = {
 
 const lineIdentity = (line: LogLine) => `${line.timestamp}|${line.target}|${line.level}|${line.message}`;
 
-/** Le righe di `batch` più nuove della prima già mostrata. Se nessuna delle
- *  mostrate compare nel tratto letto, sono tutte nuove. */
+/**
+ * Le righe di `batch` più nuove di quelle già mostrate. `batch` è l'ultima
+ * pagina del file: dal confine in poi deve ricalcare, fino al suo fondo, le
+ * righe in cima a `shown`. Cercare solo la prima riga uguale scambiava per già
+ * vista la seconda di due righe identiche nello stesso secondo. Nessuna
+ * sovrapposizione: sono tutte nuove.
+ */
 function newerLines(batch: LogLine[], shown: LogLine[]): LogLine[] {
   if (shown.length === 0) return batch;
-  const top = lineIdentity(shown[0]);
-  const index = batch.findIndex((line) => lineIdentity(line) === top);
-  return index < 0 ? batch : batch.slice(0, index);
+  const shownIds = shown.map(lineIdentity);
+  const batchIds = batch.map(lineIdentity);
+  for (let start = 0; start < batchIds.length; start += 1) {
+    const rest = batchIds.length - start;
+    if (rest > shownIds.length) continue;
+    if (batchIds.slice(start).every((id, offset) => id === shownIds[offset])) return batch.slice(0, start);
+  }
+  return batch;
 }
 
 /** Chiavi stabili quando le righe arrivano in cima: l'identità della riga più
@@ -84,8 +94,9 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
   const [failed, setFailed] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   // «Svuota la vista» nasconde quello che c'era fino a quel momento; le righe
-  // che arrivano dopo continuano a comparire.
-  const [clearedAt, setClearedAt] = useState<string | null>(null);
+  // che arrivano dopo continuano a comparire. Il confine è la riga stessa, non
+  // l'orario: le righe arrivate nello stesso secondo devono restare visibili.
+  const [clearedLine, setClearedLine] = useState<LogLine | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const refreshingRef = useRef(false);
   const loadingRef = useRef(false);
@@ -100,6 +111,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
   const load = useCallback(
     async (skip: number) => {
       generationRef.current += 1;
+      const generation = generationRef.current;
       loadingRef.current = true;
       setLoading(true);
       try {
@@ -111,6 +123,10 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
           includeDependencies: areaSet.has('dependencies'),
           targetPrefixes: prefixesFor(areaSet),
         });
+        // Una lettura superata da un'altra (filtri cambiati mentre era in
+        // volo) non deve sovrascrivere quella giusta.
+        if (generation !== generationRef.current) return;
+        if (skip === 0) setClearedLine(null);
         setLines((previous) => (skip === 0 ? batch : [...previous, ...batch]));
         setExhausted(batch.length < PAGE_SIZE);
         setFailed(false);
@@ -118,11 +134,14 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
         // Il motivo tecnico resta nel log, a schermo va un testo fisso: la
         // console non può diventare l'unico posto dove si legge un guasto
         // della console stessa.
+        if (generation !== generationRef.current) return;
         logger.error('appLog.readFailed', { reason: errorMessage(error) });
         setFailed(true);
       } finally {
-        loadingRef.current = false;
-        setLoading(false);
+        if (generation === generationRef.current) {
+          loadingRef.current = false;
+          setLoading(false);
+        }
       }
     },
     [areaSet, levels, search],
@@ -184,7 +203,8 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
     container.scrollTop = anchor.top + (container.scrollHeight - anchor.height);
   }, [lines]);
 
-  const visibleLines = clearedAt === null ? lines : lines.filter((line) => line.timestamp > clearedAt);
+  const clearedIndex = clearedLine === null ? -1 : lines.indexOf(clearedLine);
+  const visibleLines = clearedIndex < 0 ? lines : lines.slice(0, clearedIndex);
   const visibleKeys = lineKeys(visibleLines);
 
   const toggleArea = (value: string) => {
@@ -249,7 +269,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
               <button
                 type="button"
                 onClick={() => {
-                  setClearedAt(null);
+                  setClearedLine(null);
                   void load(0);
                 }}
                 aria-label={t('systemLog.reload')}
@@ -263,7 +283,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
             <Tooltip label={t('systemLog.clearView')} side="top">
               <button
                 type="button"
-                onClick={() => setClearedAt(lines[0]?.timestamp ?? null)}
+                onClick={() => setClearedLine(lines[0] ?? null)}
                 aria-label={t('systemLog.clearView')}
                 className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
               >
@@ -293,7 +313,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
             <LogMessage message={line.message} highlight={highlightData} />
           </div>
         ))}
-        {!failed && !exhausted && visibleLines.length > 0 && clearedAt === null && (
+        {!failed && !exhausted && visibleLines.length > 0 && clearedIndex < 0 && (
           <div className="flex justify-center py-3">
             <button
               type="button"
