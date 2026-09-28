@@ -155,12 +155,7 @@ const entry = (
   ...overrides,
 });
 
-/** Scarica/verifica/ottimizza/libera spazio vivono nel menu "···" della riga:
- *  vanno aperti prima di poterci cliccare o leggerne lo stato. */
-const openRowMenu = () =>
-  fireEvent.click(screen.getByRole('button', { name: 'areas.library.moreActions' }));
-
-/** Le archiviate stanno nel loro scaffale, nella colonna di sinistra. */
+/** Le archiviate stanno nel loro scaffale, nella colonna degli scaffali. */
 const showArchived = () =>
   fireEvent.click(screen.getByRole('button', { name: /areas\.library\.shelves\.archived/ }));
 
@@ -187,6 +182,8 @@ describe('LibraryCatalogArea', () => {
     // Anche la posizione è globale: senza riportarla al catalogo, un test
     // erediterebbe la scheda aperta da quello prima.
     useUiStore.setState({ location: { area: 'library' } });
+    // Anche la vista: nelle copertine i comandi di riga stanno in un menu.
+    useUiStore.setState({ libraryView: 'list', libraryGrouping: 'none' });
     const service = await import('../../services/libraryService');
     // Evita che l'effetto di mount (che ricarica dettaglio e catalogo)
     // sovrascriva il fixture impostato dal test — mantiene la stessa forma.
@@ -251,7 +248,6 @@ describe('LibraryCatalogArea', () => {
     });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.optimizeAction' }));
 
     await waitFor(() => expect(enqueueOptimization).toHaveBeenCalledWith('v1', '2000'));
@@ -355,7 +351,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 8_200_000 })] });
     render(<LibraryCatalogArea />);
 
-    openRowMenu();
     await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() =>
@@ -369,7 +364,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34 })] });
     render(<LibraryCatalogArea />);
 
-    openRowMenu();
     await user.click(await screen.findByRole('button', { name: 'areas.library.remove' }));
 
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith('areas.library.filesBusy'));
@@ -381,7 +375,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0, localBytes: 0 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -402,7 +395,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -416,7 +408,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [conPagineSulComputer()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.archive' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', true));
@@ -435,7 +426,6 @@ describe('LibraryCatalogArea', () => {
     render(<LibraryCatalogArea />);
     // Di default le archiviate non si vedono: stanno nel loro scaffale.
     showArchived();
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
     await waitFor(() => expect(service.setSourceArchived).toHaveBeenCalledWith('s1', false));
@@ -459,7 +449,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'areas.library.remove' })).toBeInTheDocument();
@@ -474,7 +463,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     // I comandi icona vivono dentro un tooltip: con userEvent il clic non
     // arriva al bottone in jsdom, come già visto nella testata.
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
@@ -496,7 +484,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ providerKey: null })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
 
     await waitFor(() =>
@@ -513,7 +500,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 210 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.download' })).toBeDisabled();
     expect(screen.getByText('100%')).toBeInTheDocument();
@@ -523,7 +509,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 0 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeDisabled();
@@ -533,7 +518,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ localPages: 34, localBytes: 48_234_496 })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
 
     expect(screen.getByRole('button', { name: 'areas.library.verify' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'areas.library.freeSpace' })).toBeEnabled();
@@ -821,12 +805,10 @@ describe('LibraryCatalogArea', () => {
 
     render(<LibraryCatalogArea />);
     showArchived();
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.restore' }));
 
     // Scegliendo una voce il menu si chiude: si riapre per guardare com'è il
     // comando *mentre* la richiesta è ancora in volo.
-    openRowMenu();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'areas.library.restore' })).toBeDisabled(),
     );
@@ -1223,21 +1205,43 @@ describe('LibraryCatalogArea', () => {
     );
   });
 
+  it('una raccolta nuova si crea dal «+» della sezione, e Esc annulla', async () => {
+    const collectionsService = await import('../../services/libraryCollectionsService');
+    useSourceLibraryStore.setState({ catalog: [entry()] });
+
+    render(<LibraryCatalogArea />);
+    expect(screen.queryByRole('textbox', { name: 'areas.library.shelves.newCollection' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.shelves.createCollection' }));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'areas.library.shelves.newCollection' }), { key: 'Escape' });
+    expect(screen.queryByRole('textbox', { name: 'areas.library.shelves.newCollection' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'areas.library.shelves.createCollection' }));
+    const name = screen.getByRole('textbox', { name: 'areas.library.shelves.newCollection' });
+    fireEvent.change(name, { target: { value: 'Trattati di scherma' } });
+    fireEvent.keyDown(name, { key: 'Enter' });
+
+    await waitFor(() => expect(collectionsService.createCollection).toHaveBeenCalledWith('Trattati di scherma'));
+    expect(screen.queryByRole('textbox', { name: 'areas.library.shelves.newCollection' })).not.toBeInTheDocument();
+  });
+
   it('salva la vista corrente con un nome, coi filtri di quel momento', async () => {
     const views = await import('../../services/librarySavedViewsService');
     useSourceLibraryStore.setState({ catalog: [entry()] });
 
     render(<LibraryCatalogArea />);
-    // Il campo per salvare la vista compare solo quando un filtro restringe l'elenco.
+    // Senza filtri il «+» delle viste c'è ma non si usa, e dice perché.
+    expect(screen.getByRole('button', { name: 'areas.library.filters.saveViewNeedsFilters' })).toBeDisabled();
     fireEvent.change(
       screen.getByRole('searchbox', { name: 'areas.library.filters.searchLabel' }),
       { target: { value: 'hours' } },
     );
-    fireEvent.change(
-      screen.getByRole('textbox', { name: 'areas.library.filters.newViewPlaceholder' }),
-      { target: { value: 'Miniati' } },
-    );
+    // Il campo per il nome compare solo dopo il «+», mai da solo.
+    expect(screen.queryByRole('textbox', { name: 'areas.library.filters.newViewPlaceholder' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.filters.saveView' }));
+    const name = screen.getByRole('textbox', { name: 'areas.library.filters.newViewPlaceholder' });
+    fireEvent.change(name, { target: { value: 'Miniati' } });
+    fireEvent.keyDown(name, { key: 'Enter' });
 
     await waitFor(() =>
       expect(views.saveView).toHaveBeenCalledWith(
@@ -1398,7 +1402,6 @@ describe('LibraryCatalogArea', () => {
     useSourceLibraryStore.setState({ catalog: [entry({ providerKey: 'archive_org' })] });
 
     render(<LibraryCatalogArea />);
-    openRowMenu();
     fireEvent.click(screen.getByRole('button', { name: 'areas.library.download' }));
 
     await waitFor(() =>

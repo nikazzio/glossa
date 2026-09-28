@@ -21,9 +21,9 @@ const AVAILABILITY_LABEL_KEY: Record<string, string> = {
 };
 
 /**
- * Sopra l'elenco: la ricerca su tutti i dati, un filtro rapido per ogni
- * aspetto con quante opere ha ogni valore, l'ordine. I filtri restringono lo
- * scaffale o la raccolta scelti a sinistra.
+ * Sopra l'elenco: la ricerca su tutti i dati in una riga sua, sotto un filtro
+ * rapido per ogni aspetto con quante opere ha ogni valore, l'ordine. I filtri
+ * restringono lo scaffale o la raccolta scelti a destra.
  */
 export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, workspaceName, grouping, onGrouping }: {
   filters: LibraryFilters;
@@ -60,8 +60,8 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-editorial-border px-5 py-2.5 md:px-6">
-      <div className="relative min-w-[12rem] flex-1">
+    <div className="flex flex-col gap-2 border-b border-editorial-border px-5 py-2.5 md:px-6">
+      <div className="relative">
         <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-editorial-muted" aria-hidden="true" />
         <input
           type="search"
@@ -72,6 +72,7 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
           className={`${FIELD_CLASSNAME} py-1.5 pl-8 text-xs`}
         />
       </div>
+      <div className="flex flex-wrap items-center gap-2">
       {LIBRARY_FACETS.filter((facet) => counts[facet].size > 0 || filters[facet]).map((facet) => (
         <Select
           key={facet}
@@ -102,6 +103,7 @@ export function LibraryQuickFilters({ filters, onChange, counts, providerLabel, 
           <Eraser size={13} />
         </IconButton>
       )}
+      </div>
     </div>
   );
 }

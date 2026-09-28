@@ -11,9 +11,11 @@ import { EASE_EDITORIAL, LIST_STAGGER, LIST_STAGGER_MAX, MOTION_DURATION } from 
  * prima comparsa: dopo, chi usa l'elenco non deve riaspettarlo a ogni filtro. Chi ha chiesto meno
  * animazioni al sistema operativo vede le righe ferme al loro posto.
  */
-export function ListReveal({ index, children, stagger = true }: {
+export function ListReveal({ index, children, stagger = true, className }: {
   index: number;
   children: ReactNode;
+  /** Per chi mette la riga in una griglia che la deve stirare. */
+  className?: string;
   /** Falso quando l'elenco è già sullo schermo: le righe che entrano dopo un
    *  filtro compaiono tutte insieme, senza farsi aspettare una dopo l'altra. */
   stagger?: boolean;
@@ -23,6 +25,7 @@ export function ListReveal({ index, children, stagger = true }: {
 
   return (
     <motion.div
+      className={className}
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{

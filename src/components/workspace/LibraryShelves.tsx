@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import {
   Archive,
   Bookmark,
@@ -7,8 +7,8 @@ import {
   Download,
   FilePen,
   FolderMinus,
-  FolderPlus,
   Library,
+  Plus,
   Tags,
   Trash2,
   type LucideIcon,
@@ -87,31 +87,55 @@ function ShelfItem({ icon: Icon, label, count, active, onSelect, action, onDropS
   );
 }
 
-/** Un nome nuovo scritto in fondo a una sezione: Invio salva, vuoto non salva. */
-function NameField({ placeholder, label, icon: Icon, onSave }: {
-  placeholder: string;
+/**
+ * Il nome di una voce nuova, scritto dove la voce comparirà. Si apre solo dal
+ * «+» della sezione: Invio salva, Esc o un click fuori annullano.
+ */
+function NameField({ label, onSave, onCancel }: {
   label: string;
-  icon: LucideIcon;
   onSave: (name: string) => void;
+  onCancel: () => void;
 }) {
   const [name, setName] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  // Il campo si apre perché lo si è chiesto col «+»: il fuoco ci va subito.
+  useEffect(() => { input.current?.focus(); }, []);
   const save = () => {
     if (!name.trim()) return;
     onSave(name.trim());
-    setName('');
   };
   return (
-    <div className="flex items-center gap-1 px-2 pt-1">
+    <div className="px-2 pt-1">
       <input
+        ref={input}
         value={name}
         onChange={(event) => setName(event.target.value)}
-        onKeyDown={(event) => { if (event.key === 'Enter') save(); }}
-        placeholder={placeholder}
-        aria-label={placeholder}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') save();
+          if (event.key === 'Escape') onCancel();
+        }}
+        onBlur={onCancel}
+        placeholder={label}
+        aria-label={label}
         className={`${FIELD_CLASSNAME} py-1 text-xs`}
       />
-      <IconButton size="xs" disabled={!name.trim()} onClick={save} title={label}>
-        <Icon size={12} />
+    </div>
+  );
+}
+
+/** Titoletto di sezione con il suo «+» per aggiungere una voce. */
+function SectionHeader({ icon, label, addLabel, canAdd, onAdd }: {
+  icon: LucideIcon;
+  label: string;
+  addLabel: string;
+  canAdd: boolean;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 px-2">
+      <SectionLabel icon={icon} label={label} />
+      <IconButton size="xs" disabled={!canAdd} onClick={onAdd} title={addLabel}>
+        <Plus size={12} />
       </IconButton>
     </div>
   );
@@ -150,6 +174,7 @@ export function LibraryShelves({
   onDeleteView: (viewId: string) => void;
 }) {
   const { t } = useTranslation();
+  const [adding, setAdding] = useState<'collection' | 'view' | null>(null);
   return (
     <nav aria-label={t('areas.library.shelves.title')} className="flex min-w-0 flex-col gap-5 overflow-y-auto px-2 py-4 custom-scrollbar">
       <ul className="space-y-0.5">
@@ -166,7 +191,8 @@ export function LibraryShelves({
       </ul>
 
       <section className="space-y-1">
-        <div className="px-2"><SectionLabel icon={Tags} label={t('areas.library.shelves.collections')} /></div>
+        <SectionHeader icon={Tags} label={t('areas.library.shelves.collections')}
+          addLabel={t('areas.library.shelves.createCollection')} canAdd onAdd={() => setAdding('collection')} />
         <ul className="space-y-0.5">
           {collections.map((collection) => (
             <ShelfItem
@@ -187,12 +213,20 @@ export function LibraryShelves({
             />
           ))}
         </ul>
-        <NameField placeholder={t('areas.library.shelves.newCollection')} label={t('areas.library.shelves.createCollection')}
-          icon={FolderPlus} onSave={onCreateCollection} />
+        {adding === 'collection' ? (
+          <NameField label={t('areas.library.shelves.newCollection')} onCancel={() => setAdding(null)}
+            onSave={(name) => { onCreateCollection(name); setAdding(null); }} />
+        ) : collections.length === 0 && (
+          <p className="px-2 text-xs text-editorial-muted">{t('areas.library.shelves.noCollections')}</p>
+        )}
       </section>
 
       <section className="space-y-1">
-        <div className="px-2"><SectionLabel icon={Bookmark} label={t('areas.library.shelves.savedViews')} /></div>
+        {/* Una vista ricorda i filtri scelti sopra l'elenco: senza filtri non
+            c'è niente da ricordare, e il «+» lo dice invece di sparire. */}
+        <SectionHeader icon={Bookmark} label={t('areas.library.shelves.savedViews')}
+          addLabel={canSaveView ? t('areas.library.filters.saveView') : t('areas.library.filters.saveViewNeedsFilters')}
+          canAdd={canSaveView} onAdd={() => setAdding('view')} />
         <ul className="space-y-0.5">
           {savedViews.map((view) => (
             <ShelfItem
@@ -211,9 +245,11 @@ export function LibraryShelves({
             />
           ))}
         </ul>
-        {canSaveView && (
-          <NameField placeholder={t('areas.library.filters.newViewPlaceholder')} label={t('areas.library.filters.saveView')}
-            icon={Bookmark} onSave={onSaveView} />
+        {adding === 'view' && canSaveView ? (
+          <NameField label={t('areas.library.filters.newViewPlaceholder')} onCancel={() => setAdding(null)}
+            onSave={(name) => { onSaveView(name); setAdding(null); }} />
+        ) : savedViews.length === 0 && (
+          <p className="px-2 text-xs text-editorial-muted">{t('areas.library.shelves.noSavedViews')}</p>
         )}
       </section>
     </nav>

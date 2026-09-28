@@ -42,7 +42,7 @@ interface LibraryCatalogAreaProps {
 }
 
 /**
- * Catalogo delle fonti salvate in Biblioteca: scaffali e raccolte a sinistra,
+ * Catalogo delle fonti salvate in Biblioteca: scaffali e raccolte a destra,
  * ricerca e filtri rapidi sopra l'elenco.
  */
 export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
@@ -371,23 +371,6 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
           {...enter}
           className="flex h-full min-h-0 w-full min-w-0 flex-1"
         >
-          <aside className="flex w-56 shrink-0 flex-col border-r border-editorial-border bg-surface-panel">
-            <LibraryShelves
-              filters={filters}
-              onChange={changeFilters}
-              shelfCounts={shelfCounts(catalog, clock)}
-              collections={collections}
-              collectionCounts={collectionCounts(catalog)}
-              savedViews={savedViews}
-              canSaveView={hasActiveLibraryFilters(filters)}
-              onCreateCollection={(name) => void collectionAction(() => createCollection(name))}
-              onDeleteCollection={(collectionId) => void removeCollection(collectionId)}
-              onDropOnCollection={(collectionId, sourceIds) =>
-                addToCollection(collectionId, catalog.filter((entry) => sourceIds.includes(entry.source.id)))}
-              onSaveView={(name) => void saveView(name, filters)}
-              onDeleteView={(viewId) => void removeSavedView(viewId)}
-            />
-          </aside>
           <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-panel">
             <div className="flex items-end justify-between gap-3 px-5 pt-5 md:px-6">
               <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
@@ -474,10 +457,11 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
                         />
                       ) : (
                         <div className={view === 'grid'
-                          ? 'grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 py-4'
+                          ? 'grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 py-4'
                           : 'flex flex-col divide-y divide-editorial-border/60 py-2'}>
                           {group.entries.map((entry, index) => (
-                            <ListReveal key={entry.source.id} index={index} stagger={firstReveal}>
+                            <ListReveal key={entry.source.id} index={index} stagger={firstReveal}
+                              className={view === 'grid' ? 'h-full' : undefined}>
                               <LibraryCatalogRow
                                 entry={entry}
                                 view={view}
@@ -502,6 +486,23 @@ export function LibraryCatalogArea({ itemId }: LibraryCatalogAreaProps) {
               )}
             </div>
           </main>
+          <aside className="flex w-56 shrink-0 flex-col border-l border-editorial-border bg-surface-panel">
+            <LibraryShelves
+              filters={filters}
+              onChange={changeFilters}
+              shelfCounts={shelfCounts(catalog, clock)}
+              collections={collections}
+              collectionCounts={collectionCounts(catalog)}
+              savedViews={savedViews}
+              canSaveView={hasActiveLibraryFilters(filters)}
+              onCreateCollection={(name) => void collectionAction(() => createCollection(name))}
+              onDeleteCollection={(collectionId) => void removeCollection(collectionId)}
+              onDropOnCollection={(collectionId, sourceIds) =>
+                addToCollection(collectionId, catalog.filter((entry) => sourceIds.includes(entry.source.id)))}
+              onSaveView={(name) => void saveView(name, filters)}
+              onDeleteView={(viewId) => void removeSavedView(viewId)}
+            />
+          </aside>
         </motion.div>
       )}
     <CreateTranscriptionDialog

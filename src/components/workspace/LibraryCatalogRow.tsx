@@ -1,7 +1,7 @@
 import type { DragEvent, MouseEvent } from 'react';
 import { BookOpenText, Check, FilePen, Link2, Tags } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, LinkChip } from '../ui';
+import { IconButton, LinkChip, Tooltip } from '../ui';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { WorkIdentity } from '../common/WorkIdentity';
 import { SourceActionBar } from './SourceActionBar';
@@ -12,6 +12,9 @@ import type { LibraryCatalogEntry, SourceCollection, Workspace } from '../../typ
 
 /** Come si sceglie una riga: da sola, aggiungendola o togliendola, oppure fino a lei. */
 export type RowPick = 'only' | 'toggle' | 'range';
+
+/** Quanti collegamenti si vedono su una copertina prima del «+N». */
+const GRID_CHIPS = 2;
 
 /** Il tipo dei dati trascinati da una riga: gli identificativi delle opere. */
 export const DRAGGED_SOURCES = 'application/x-glossa-sources';
@@ -37,9 +40,11 @@ interface LibraryCatalogRowProps {
 }
 
 /**
- * Una riga del catalogo: l'opera, i suoi collegamenti e lo stato. I comandi
- * compaiono al passaggio del puntatore o quando la riga ha il fuoco: su trenta
- * righe, centinaia di icone sempre accese erano rumore.
+ * Una riga del catalogo: l'opera, i suoi collegamenti e lo stato. In basso a
+ * sinistra si collega a workspace e raccolte; in alto a destra, sulla prima
+ * riga, i comandi dell'opera in tre gruppi (trascrizione | immagini |
+ * archivio). Compaiono al passaggio del puntatore o quando la riga ha il
+ * fuoco: su trenta righe, centinaia di icone sempre accese erano rumore.
  *
  * Un click apre l'opera; con Ctrl (⌘ sul Mac) la aggiunge alla scelta, con
  * Maiuscolo sceglie fino a lei. La riga si trascina su una raccolta.
@@ -95,6 +100,34 @@ export function LibraryCatalogRow({
     else if (event.ctrlKey || event.metaKey) onPick('toggle');
     else onOpen();
   };
+  const isGrid = view === 'grid';
+  const chips = [
+    ...entry.workspaces.map((link) => ({
+      key: `w:${link.workspaceId}`,
+      label: link.workspaceName,
+      hint: t('areas.library.unlinkFromWorkspace'),
+      remove: () => onToggleLink(link.workspaceId, false),
+    })),
+    ...entry.collections.map((collection) => ({
+      key: `c:${collection.id}`,
+      label: collection.name,
+      hint: t('areas.library.removeFromCollection', { name: collection.name }),
+      remove: () => onSetCollection(collection.id, false),
+    })),
+  ];
+  // Nelle copertine ne stanno pochi: gli altri si contano, e si leggono al
+  // passaggio del puntatore. Tagliarli e basta lasciava comandi invisibili
+  // raggiungibili col tabulatore.
+  const visibleChips = isGrid ? chips.slice(0, GRID_CHIPS) : chips;
+  const hiddenChips = isGrid ? chips.slice(GRID_CHIPS) : [];
+  const shownChips = visibleChips.map((chip) => (
+    <LinkChip key={chip.key} label={chip.label} hint={chip.hint} onClick={chip.remove} />
+  ));
+  const transcriptionButton = (
+    <IconButton size="xs" title={t('transcription.createFromSource')} onClick={onCreateTranscription}>
+      <FilePen size={12} />
+    </IconButton>
+  );
   const revealed = 'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100';
 
   return (
@@ -103,11 +136,11 @@ export function LibraryCatalogRow({
       onDragStart={onDragStart}
       className={`group/row ${
         view === 'grid'
-          ? 'flex flex-col gap-2 rounded-2xl border bg-surface-elevated p-3'
-          : 'flex items-center gap-3 rounded px-1 py-2.5'
+          ? 'flex h-full flex-col justify-between gap-2 rounded-2xl border bg-surface-elevated p-3'
+          : 'flex items-start gap-3 rounded px-1 py-2.5'
       } ${selected ? 'border-editorial-accent bg-editorial-accent/5' : 'border-editorial-border'}${actions.archived ? ' opacity-60' : ''}`}
     >
-      <div className={view === 'grid' ? 'flex min-w-0 flex-col gap-2' : 'flex min-w-0 flex-1 items-start gap-2'}>
+      <div className={isGrid ? 'flex min-w-0 flex-col gap-2' : 'flex min-w-0 flex-1 items-start gap-2'}>
         <IconButton
           size="xs"
           tone={selected ? 'accent' : 'default'}
@@ -162,17 +195,18 @@ export function LibraryCatalogRow({
             </span>
           </button>
 
-          <div className={`${view === 'grid' ? '' : 'ml-[3.75rem]'} mt-1.5 flex flex-wrap items-center gap-1`}>
-            {entry.workspaces.map((link) => (
-              <LinkChip key={link.workspaceId} label={link.workspaceName} hint={t('areas.library.unlinkFromWorkspace')}
-                onClick={() => onToggleLink(link.workspaceId, false)} />
-            ))}
-            {entry.collections.map((collection) => (
-              <LinkChip key={collection.id} label={collection.name}
-                hint={t('areas.library.removeFromCollection', { name: collection.name })}
-                onClick={() => onSetCollection(collection.id, false)} />
-            ))}
-            <span className={`flex items-center gap-1 ${revealed}`}>
+          {/* Nella griglia i collegamenti stanno su una riga sola: le schede
+              devono essere tutte uguali, e a stringersi è il titolo. */}
+          <div className={`${isGrid ? 'flex-nowrap' : 'ml-[3.75rem] flex-wrap'} mt-1.5 flex min-w-0 items-center gap-1`}>
+            <span className={isGrid ? 'flex min-w-0 flex-1 items-center gap-1 overflow-hidden' : 'contents'}>
+              {shownChips}
+              {hiddenChips.length > 0 && (
+                <Tooltip label={hiddenChips.map((chip) => chip.label).join(' · ')}>
+                  <span className="shrink-0 text-xs tabular-nums text-editorial-muted">+{hiddenChips.length}</span>
+                </Tooltip>
+              )}
+            </span>
+            <span className={`flex shrink-0 items-center gap-1 ${revealed}`}>
               <ListPicker icon={<Link2 size={12} />} title={t('areas.library.linkToWorkspace')}
                 items={workspaces.filter((workspace) => !linkedWorkspaceIds.has(workspace.id))
                   .map((workspace) => ({ id: workspace.id, label: workspace.name }))}
@@ -181,16 +215,16 @@ export function LibraryCatalogRow({
                 items={collections.filter((collection) => !linkedCollectionIds.has(collection.id))
                   .map((collection) => ({ id: collection.id, label: collection.name }))}
                 onPick={(collectionId) => onSetCollection(collectionId, true)} />
-              <IconButton size="xs" title={t('transcription.createFromSource')} onClick={onCreateTranscription}>
-                <FilePen size={12} />
-              </IconButton>
+              {isGrid && transcriptionButton}
             </span>
           </div>
         </div>
       </div>
 
       <div className={actions.runningJob ? '' : revealed}>
-        <SourceActionBar entry={entry} actions={actions} />
+        {isGrid
+          ? <SourceActionBar entry={entry} actions={actions} />
+          : <SourceActionBar entry={entry} actions={actions} variant="inline" leading={transcriptionButton} />}
       </div>
     </article>
   );
