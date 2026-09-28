@@ -1,5 +1,19 @@
 {
   "federation": {
+    "match": {
+      "foundIn": "Found in {{section}}",
+      "pageText": "Found only in the page text, not in the record",
+      "elsewhere": "The words are not in the record: the library found them elsewhere",
+      "section": {
+        "author": "author",
+        "title": "title",
+        "publisher": "printer",
+        "contributors": "other contributors",
+        "subjects": "subjects",
+        "description": "description",
+        "record": "record"
+      }
+    },
     "loadingMore": "More results on the way",
     "details": "Show / hide details",
     "stopBeforeRestore": "Pause searches before restoring a backup.",
@@ -2620,6 +2634,7 @@
               "To the left of the field choose where to search: all libraries, a single one, or a custom choice made in the advanced criteria.",
               "Type the words and start with the command next to them. To narrow down, open the advanced criteria, first tab of the right column: title, author, printer, material, years. Aggregators such as Europeana are added on purpose; Europeana needs a key in the Library settings.",
               "Results appear as sources answer. Above the list choose the order: by relevance, year, author, or title. When the data needed to judge a criterion is missing, the result stays in the list marked “incomplete data”.",
+              "Under each result the \"Found in\" line says where the searched words are, in bold: author, title, a section of the record. On Gallica, when they are not in the record, the line says they were found only in the page text. Library of Congress and National Library of Scotland are not part of \"all\": choose them by hand in the advanced criteria.",
               "When more results are available, the command at the bottom of the list asks every source that has them. The command spins while they arrive, then the new results appear at the bottom.",
               "The new search command clears words and criteria, keeping the sources you chose."
             ]

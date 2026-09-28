@@ -1,5 +1,19 @@
 {
   "federation": {
+    "match": {
+      "foundIn": "Trovato in {{section}}",
+      "pageText": "Trovato solo nel testo delle pagine, non nella scheda",
+      "elsewhere": "Le parole non sono nella scheda: la biblioteca le ha trovate altrove",
+      "section": {
+        "author": "autore",
+        "title": "titolo",
+        "publisher": "tipografo",
+        "contributors": "altri responsabili",
+        "subjects": "soggetti",
+        "description": "descrizione",
+        "record": "scheda"
+      }
+    },
     "loadingMore": "Arrivano altri risultati",
     "details": "Mostra / nascondi dettagli",
     "stopBeforeRestore": "Metti in pausa le ricerche prima di ripristinare il backup.",
@@ -2620,6 +2634,7 @@
               "A sinistra della casella scegli dove cercare: tutte le biblioteche, una sola, oppure una scelta personalizzata che fai nei criteri avanzati.",
               "Scrivi le parole e avvia con il comando accanto. Per restringere apri i criteri avanzati, prima scheda della colonna di destra: titolo, autore, tipografo, materiale, anni. Le raccolte come Europeana si aggiungono di proposito; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
               "I risultati compaiono man mano che le fonti rispondono. Sopra l'elenco scegli l'ordine: per pertinenza, anno, autore o titolo. Quando manca il dato per decidere su un criterio, il risultato resta in elenco segnato «dati incompleti».",
+              "Sotto ogni risultato la riga «Trovato in» dice dove sono le parole cercate, in grassetto: autore, titolo, una sezione della scheda. Su Gallica, quando non sono nella scheda, la riga dice che sono state trovate solo nel testo delle pagine. Library of Congress e Biblioteca di Scozia non fanno parte di «tutte»: si scelgono a mano nei criteri avanzati.",
               "Se ci sono altri risultati, il comando in fondo all'elenco li chiede a tutte le fonti che ne hanno. Mentre arrivano il comando gira, poi i nuovi risultati compaiono in fondo.",
               "Il comando della nuova ricerca svuota parole e criteri, lasciando le fonti che avevi scelto."
             ]

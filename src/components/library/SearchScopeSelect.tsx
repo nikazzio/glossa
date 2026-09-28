@@ -5,11 +5,20 @@ import { Select } from '../ui';
 const ALL = 'all';
 const CUSTOM = 'custom';
 
+/**
+ * Biblioteche che restano fuori da «tutte» e si scelgono a mano. La Library of
+ * Congress risponde alle ricerche automatiche con una verifica anti-robot che
+ * solo un browser supera; la Biblioteca di Scozia non ha una ricerca
+ * interrogabile, e Glossa cerca soltanto in un elenco di titoli scaricato.
+ * In «tutte» darebbero un errore o uno zero a ogni ricerca.
+ */
+const NOT_IN_ALL: ReadonlySet<string> = new Set(['loc', 'nls']);
+
 /** Le biblioteche che una ricerca «in tutte» interroga: le raccolte si
  *  aggiungono di proposito, perché moltiplicano i risultati di altre istituzioni. */
 export function allLibraries(providers: IIIFProvider[]): string[] {
   return providers
-    .filter((provider) => provider.kind === 'library' && provider.supportsSearch)
+    .filter((provider) => provider.kind === 'library' && provider.supportsSearch && !NOT_IN_ALL.has(provider.key))
     .map((provider) => provider.key);
 }
 

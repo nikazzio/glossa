@@ -63,6 +63,41 @@ generic value such as `text` is not converted to “manuscript” or “printed�
 Check completed and failed source counts before interpreting an absence of
 results.
 
+## Why a result came up
+
+Under each result a small line says **where the words were found**, with the
+words in bold: "Found in author", "Found in Bibliography — … *Achille*
+Caulier…". e-codices, Bodleian, Cambridge, Estense, Institut de France and the
+Vatican report the record section and the surrounding text themselves; for the
+others Glossa compares the words with the data received (author, title,
+printer, other contributors, subjects, description). When the words appear in
+no field, the line says so: on Gallica it means they were found only in the
+transcribed page text, which Gallica's free-word search includes.
+
+The comparison ignores case and accents and accepts a word as the start of a
+longer one ("achille" finds "Achilles"); two-letter words do not count.
+
+## How libraries search
+
+Libraries do not all search the same way, and results reflect it:
+
+- **Gallica** with free words looks at the record **and the page text**: many
+  newspaper or periodical results come up because of a word on some page.
+  Title, author and printer in the criteria search the record only.
+- **e-codices** joins words with "or": Glossa keeps only results containing all
+  of them, so a page can arrive empty even when more pages exist.
+- **Estense** searches the words as a single phrase: with several words Glossa
+  asks for the longest one and keeps results containing all of them, looking at
+  the first 200.
+- **Munich (MDZ)** returns digitised works only.
+- **Library of Congress** answers automated searches with a check only a browser
+  passes; the **National Library of Scotland** has no queryable search, and
+  Glossa searches a list of titles from its collections. Both stay out of "all"
+  and are chosen by hand.
+
+A search that comes back empty is not kept in the cache: repeated, it asks the
+library again.
+
 ## Identity and provenance
 
 Every result shows author, year, place and printer, then the title; in small

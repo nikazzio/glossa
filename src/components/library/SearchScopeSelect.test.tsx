@@ -20,6 +20,10 @@ describe('SearchScopeSelect', () => {
     expect(allLibraries(PROVIDERS)).toEqual(['gallica', 'mdz']);
   });
 
+  it('«tutte» lascia fuori Library of Congress e Scozia, che si scelgono a mano', () => {
+    expect(allLibraries([...PROVIDERS, provider('loc', 'library'), provider('nls', 'library')])).toEqual(['gallica', 'mdz']);
+  });
+
   it('mostra la scelta attuale e cambia fonte con una scelta sola', () => {
     const onChange = vi.fn();
     render(<SearchScopeSelect providers={PROVIDERS} chosen={['gallica', 'mdz']} onChange={onChange} onCustomize={vi.fn()} />);

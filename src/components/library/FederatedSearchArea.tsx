@@ -17,6 +17,7 @@ import { dashboardLocation } from '../../navigation/appLocation';
 import type { IIIFProvider, SourceCard } from '../../types';
 import { formatDateTime } from '../../utils';
 import { RESULT_ORDERS, orderResults, type ResultOrder } from '../../utils/searchResultOrder';
+import { matchTerms } from '../../utils/searchMatch';
 import { Dialog, EmptyState, Hint, IconButton, InspectorShell, PopoverItem, Select, Spinner } from '../ui';
 import { SEARCH_ERRORS, SourceListRow } from './SourceListRow';
 import { SearchCriteriaPanel } from './SearchCriteriaPanel';
@@ -176,6 +177,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
     group.match !== 'excluded' && (providerFilter === 'all' || group.origins.includes(providerFilter))), order),
   [groups, providerFilter, order]);
   const executions = useMemo(() => selected ? currentExecutions(selected) : [], [selected]);
+  const terms = useMemo(() => selected ? matchTerms(selected.criteria) : [], [selected]);
   // Quattro conteggi su migliaia di risultati: si rifanno quando arrivano
   // pagine nuove, non a ogni disegno della schermata.
   const summary = useMemo(() => ({
@@ -220,6 +222,7 @@ export function FederatedSearchArea({ searchId }: { searchId?: string }) {
         value={occurrenceChoice[group.id] ?? ''}
         onChange={(value) => setOccurrenceChoice((current) => ({ ...current, [group.id]: value }))}
         options={[{ value: '', label: t('federation.bestOccurrence') }, ...group.occurrences.map((entry) => ({ value: occurrenceKey(entry), label: label(entry.providerKey) }))]} /> : undefined}
+      matchTerms={group ? terms : undefined}
       expanded={expanded === id} onToggle={() => setExpanded(expanded === id ? null : id)}
       onAddToLibrary={() => void library.addFromDiscovery(work.card, undefined, work.providerKey)}
       onAddToWorkspace={() => setPicker(work)} adding={library.addingUrls.has(work.card.manifestUrl)}

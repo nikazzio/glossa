@@ -9,6 +9,7 @@ import { CachedThumbnail } from '../common/CachedThumbnail';
 import { WorkIdentity } from '../common/WorkIdentity';
 import { useManifestFacts } from '../../hooks/useManifestFacts';
 import { useSeenOnce } from '../../hooks/useSeenOnce';
+import { explainMatch, highlightTerms } from '../../utils/searchMatch';
 
 /**
  * I motivi per cui una ricerca non riesce, come li dichiara il motore.
@@ -79,6 +80,45 @@ interface RowProps {
   note?: string;
   /** La scelta fra le copie della stessa opera, nella riga aperta. */
   copyPicker?: ReactNode;
+  /** Le parole cercate: la riga dice dove sono state trovate. */
+  matchTerms?: string[];
+}
+
+/** Le sezioni che l'app riconosce da sé; quelle dichiarate dalla biblioteca
+ *  si mostrano col loro nome. */
+const LOCAL_SECTIONS = new Set(['author', 'title', 'publisher', 'contributors', 'subjects', 'description', 'record']);
+
+/**
+ * «Trovato in …»: dove sono le parole cercate, con le parole in grassetto. Senza
+ * questa riga un risultato uscito per una parola nel testo delle pagine, o in
+ * una bibliografia, non si capisce perché ci sia.
+ */
+function MatchLine({ card, providerKey, terms }: { card: SourceCard; providerKey: string; terms: string[] }) {
+  const { t } = useTranslation();
+  const explanation = useMemo(() => (isManifest(card) ? null : explainMatch(card, terms)), [card, terms]);
+  if (!explanation) return null;
+  if (explanation.kind === 'elsewhere') {
+    return (
+      <p className="mt-0.5 text-xs italic text-editorial-muted">
+        {providerKey === 'gallica' ? t('federation.match.pageText') : t('federation.match.elsewhere')}
+      </p>
+    );
+  }
+  const section = LOCAL_SECTIONS.has(explanation.section) ? t(`federation.match.section.${explanation.section}`) : explanation.section;
+  return (
+    <p className="mt-0.5 line-clamp-2 text-xs text-editorial-muted">
+      <span>{t('federation.match.foundIn', { section })}</span>
+      {explanation.text && (
+        <>
+          {' — '}
+          {highlightTerms(explanation.text, terms).map((segment, index) =>
+            segment.match
+              ? <strong key={index} className="font-semibold text-editorial-ink">{segment.text}</strong>
+              : <span key={index}>{segment.text}</span>)}
+        </>
+      )}
+    </p>
+  );
 }
 
 /** Tutte le informazioni disponibili per una scheda, etichetta/valore. */
@@ -138,7 +178,7 @@ function OpenableMark({ openable, checking }: { openable: boolean | null; checki
   );
 }
 
-export function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded, note, copyPicker }: RowProps) {
+export function SourceListRow({ card, providerKey, providerLabel, expanded, onToggle, onAddToLibrary, onAddToWorkspace, adding, alreadyAdded, note, copyPicker, matchTerms = [] }: RowProps) {
   const { t } = useTranslation();
   // La riga si controlla solo quando entra nello schermo: un elenco di venti
   // risultati scorso a metà non deve costare venti richieste.
@@ -253,6 +293,7 @@ export function SourceListRow({ card, providerKey, providerLabel, expanded, onTo
                 </>
               }
             />
+            <MatchLine card={card} providerKey={providerKey} terms={matchTerms} />
           </span>
         </div>
         <IconButton title={t('federation.details')} aria-expanded={expanded} onClick={onToggle} size="sm"><ChevronDown size={14} className={expanded ? 'rotate-180' : ''} /></IconButton>

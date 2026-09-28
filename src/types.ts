@@ -65,6 +65,11 @@ export interface IIIFManifestPreview {
   pageUrl: string | null;
 }
 
+export interface IIIFMatchHint {
+  section: string | null;
+  text: string;
+}
+
 export interface IIIFDiscoveryResult {
   id: string;
   title: string;
@@ -104,6 +109,9 @@ export interface IIIFDiscoveryResult {
    * non l'opera.
    */
   openable?: boolean | null;
+  /** Dove la biblioteca dice di aver trovato le parole: sezione e testo, senza
+   *  marcatori. Assente quando la biblioteca non lo dice. */
+  matchHints?: IIIFMatchHint[];
   /**
    * Tutto il resto che la biblioteca ha dichiarato e che non ha un campo suo,
    * com'è arrivato. Il motore lo omette quando è vuoto, quindi qui è

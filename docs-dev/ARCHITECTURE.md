@@ -53,7 +53,39 @@ salvato. Il lavoro di ricerca arricchisce i risultati dai manifesti
 singola, **tranne per Gallica**: l'SRU porta già autore e date, e una raffica di
 manifesti dopo ogni pagina faceva rispondere Gallica 429 e poi chiudere le
 connessioni, così la pagina successiva e il «riprova» fallivano per minuti
-(`search_unreachable`, broken pipe sul log del 25 settembre 2026).
+(`search_unreachable`, broken pipe sul log del 25 settembre 2026). Anche
+e-codices non si arricchisce: la pagina dei risultati ha già titolo, segnatura,
+copertina e sommario, e venti manifesti da 100–400 KB portavano una ricerca a
+49 s. Per le altre l'arricchimento tiene sempre quattro letture in corso
+(`buffered`), non blocchi fissi da quattro.
+
+**Perché un risultato è uscito.** `DiscoveryResult.match_hints` (sezione e testo
+senza marcatori) raccoglie quello che la biblioteca dichiara: e-codices
+(`found-in` + snippet), Bodleian (`snippet`), Cambridge (`highlighting`),
+Institut (descrizione con `<em>`), Vaticana (righe di contenuto), Estense (il
+campo che contiene le parole). Dove manca, `utils/searchMatch.ts` confronta le
+parole (senza accenti, come inizio di parola, almeno tre lettere) con autore,
+titolo, tipografo, altri responsabili, soggetti, descrizione; nessun dato ⇒
+«trovato altrove», su Gallica «solo nel testo delle pagine».
+
+**Come cerca ogni biblioteca** (verificato il 28 settembre 2026):
+- MDZ: `alma.all_for_ui all "<parole>" and alma.local_field_912=digit`; un blocco
+  `diagnostics` dell'SRU è un errore, non uno zero.
+- e-codices: le parole vanno com'erano (il sito le unisce in «o», le virgolette
+  perdono parole in sezioni diverse), poi si tengono i risultati che le
+  contengono tutte come inizio di parola; `iCurrentPage`, `has_more` dal pager,
+  quindi una pagina filtrata può essere vuota con altre dopo.
+- Estense: la ricerca è a frase; con più parole si chiede la più lunga
+  (`size=200`) e si filtra su `sgtt`/`autn`/`pressmark`, paginando in locale.
+- Vaticana `p=`, Bodleian `page` + `view.next`, Institut `perpage=20&page=`,
+  LoC `c=20&sp=` + `pagination.next`: nessuna salta o ripete risultati.
+- Internet Archive: i caratteri speciali di Lucene si proteggono; un errore di
+  sintassi è `search_failed`, solo `[BACKEND_ERROR]` è `search_unavailable`.
+- NLS: raccolte lette otto alla volta, JSON con virgole finali accettato.
+- LoC e NLS restano fuori da «tutte» (`NOT_IN_ALL` in `SearchScopeSelect`).
+
+Le pagine vuote non entrano nella cache HTTP delle ricerche: uno zero dovuto a
+una risposta anomala resterebbe anche dopo la correzione.
 La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
 Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.

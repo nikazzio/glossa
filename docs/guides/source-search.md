@@ -65,6 +65,42 @@ valore generico come `text` non viene convertito in «manoscritto» o «stampato
 Valuta il numero di fonti concluse e quelle in errore prima di interpretare
 l’assenza di risultati.
 
+## Perché un risultato è uscito
+
+Sotto ogni risultato una riga piccola dice **dove sono state trovate le parole**,
+con le parole in grassetto: «Trovato in autore», «Trovato in Bibliography — …
+*Achille* Caulier…». e-codices, Bodleian, Cambridge, Estense, Institut de France
+e Vaticana dicono da sé la sezione della scheda e il testo intorno; per le altre
+il confronto lo fa Glossa sui dati arrivati (autore, titolo, tipografo, altri
+responsabili, soggetti, descrizione). Quando le parole non compaiono in nessun
+dato, la riga lo dice: su Gallica vuol dire che sono state trovate solo nel
+testo trascritto delle pagine, che la ricerca per parole libere di Gallica
+comprende.
+
+Il confronto ignora maiuscole e accenti e accetta una parola come inizio di una
+più lunga («achille» trova «Achilles»); le parole di due lettere non contano.
+
+## Come cercano le biblioteche
+
+Le biblioteche non cercano tutte allo stesso modo, e i risultati lo riflettono:
+
+- **Gallica** con le parole libere guarda la scheda **e il testo delle pagine**:
+  molti risultati di giornali o riviste escono per una parola in una pagina
+  qualunque. Titolo, autore e tipografo nei criteri cercano solo nella scheda.
+- **e-codices** unisce le parole con «o»: Glossa tiene solo i risultati che le
+  contengono tutte, quindi una pagina può arrivare vuota anche se ce ne sono
+  altre.
+- **Estense** cerca le parole come frase unica: con più parole Glossa chiede la
+  più lunga e tiene i risultati che le contengono tutte, guardando i primi 200.
+- **Monaco (MDZ)** restituisce solo le opere digitalizzate.
+- **Library of Congress** risponde alle ricerche automatiche con una verifica
+  che solo un browser supera; la **Biblioteca di Scozia** non ha una ricerca
+  interrogabile, e Glossa cerca in un elenco di titoli delle sue raccolte.
+  Tutte e due restano fuori da «tutte» e si scelgono a mano.
+
+Una ricerca che torna vuota non si conserva nella cache: rifatta, interroga di
+nuovo la biblioteca.
+
 ## Identità e provenienza
 
 Ogni risultato mostra autore, anno, luogo e tipografo, poi il titolo; in
