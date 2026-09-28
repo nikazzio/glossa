@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RotateCw, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Braces, RotateCw, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { LOG_LEVELS, readAppLog, type LogLevel, type LogLine } from '../../services/appLogService';
 import { errorMessage, logger } from '../../utils/logger';
@@ -8,10 +8,14 @@ import { Tooltip } from '../ui';
 import { ConsoleChrome } from './ConsoleChrome';
 import { ConsoleToolbar, type ConsoleFilterGroup } from './ConsoleToolbar';
 import { LOG_FILTER_KEYS, areaOf, prefixesFor, type LogFilterKey } from './logAreas';
+import { tokenizeLogMessage, type LogTokenKind } from './logMessageTokens';
 
 /** Quante righe si chiedono per volta. Il file corrente arriva a 5 MB: si
  *  legge dalla fine e ci si ferma appena il tratto è pieno. */
 const PAGE_SIZE = 200;
+
+/** Ogni quanto si rilegge il file mentre la scheda è aperta. */
+const LIVE_REFRESH_MS = 2000;
 
 const LEVEL_COLOR: Record<string, string> = {
   ERROR: 'text-terminal-error',
@@ -20,25 +24,83 @@ const LEVEL_COLOR: Record<string, string> = {
   DEBUG: 'text-terminal-secondary',
 };
 
+const TOKEN_COLOR: Record<LogTokenKind, string> = {
+  text: 'text-terminal-ink',
+  key: 'text-terminal-info',
+  string: 'text-terminal-success',
+  number: 'text-terminal-accent',
+  literal: 'text-terminal-error',
+  punctuation: 'text-terminal-secondary',
+};
+
+const lineIdentity = (line: LogLine) => `${line.timestamp}|${line.target}|${line.level}|${line.message}`;
+
+/** Le righe di `batch` più nuove della prima già mostrata. Se nessuna delle
+ *  mostrate compare nel tratto letto, sono tutte nuove. */
+function newerLines(batch: LogLine[], shown: LogLine[]): LogLine[] {
+  if (shown.length === 0) return batch;
+  const top = lineIdentity(shown[0]);
+  const index = batch.findIndex((line) => lineIdentity(line) === top);
+  return index < 0 ? batch : batch.slice(0, index);
+}
+
+/** Chiavi stabili quando le righe arrivano in cima: l'identità della riga più
+ *  un contatore per quelle identiche nello stesso secondo. */
+function lineKeys(lines: LogLine[]): string[] {
+  const seen = new Map<string, number>();
+  return lines.map((line) => {
+    const identity = lineIdentity(line);
+    const count = seen.get(identity) ?? 0;
+    seen.set(identity, count + 1);
+    return `${identity}#${count}`;
+  });
+}
+
+function LogMessage({ message, highlight }: { message: string; highlight: boolean }) {
+  if (!highlight) return <span className="min-w-0 break-all text-terminal-ink">{message}</span>;
+  return (
+    <span className="min-w-0 break-all">
+      {tokenizeLogMessage(message).map((token, index) => (
+        <span key={index} className={TOKEN_COLOR[token.kind]}>
+          {token.value}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelledBy: string }) {
   const { t } = useTranslation();
   const areas = useUiStore((state) => state.systemLogAreas);
   const levels = useUiStore((state) => state.systemLogLevels);
   const setAreas = useUiStore((state) => state.setSystemLogAreas);
   const setLevels = useUiStore((state) => state.setSystemLogLevels);
+  const highlightData = useUiStore((state) => state.systemLogHighlightData);
+  const setHighlightData = useUiStore((state) => state.setSystemLogHighlightData);
 
   const [search, setSearch] = useState('');
   const [lines, setLines] = useState<LogLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [exhausted, setExhausted] = useState(false);
+  // «Svuota la vista» nasconde quello che c'era fino a quel momento; le righe
+  // che arrivano dopo continuano a comparire.
+  const [clearedAt, setClearedAt] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const refreshingRef = useRef(false);
+  const loadingRef = useRef(false);
+  // Cresce a ogni lettura voluta dall'utente: una rilettura partita prima,
+  // con altri filtri o prima di «carica le precedenti», arriva scaduta.
+  const generationRef = useRef(0);
+  const scrollAnchorRef = useRef<{ height: number; top: number } | null>(null);
 
   const areaSet = useMemo(() => new Set(areas), [areas]);
   const levelSet = useMemo(() => new Set(levels), [levels]);
 
   const load = useCallback(
     async (skip: number) => {
+      generationRef.current += 1;
+      loadingRef.current = true;
       setLoading(true);
       try {
         const batch = await readAppLog({
@@ -59,6 +121,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
         logger.error('appLog.readFailed', { reason: errorMessage(error) });
         setFailed(true);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     },
@@ -71,6 +134,58 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
     void load(0);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [load]);
+
+  // Rilettura in tempo reale: l'ultima pagina, dalla riga più recente, e in
+  // cima si aggiungono solo le righe più nuove di quelle già a schermo. Il
+  // resto dell'elenco non si tocca, così restano le pagine caricate a mano e
+  // chi legge più in basso non perde il segno. Un errore qui resta silenzioso a
+  // schermo — ci pensa la prossima rilettura — ma finisce nel log.
+  const refresh = useCallback(async () => {
+    if (refreshingRef.current || loadingRef.current) return;
+    refreshingRef.current = true;
+    const generation = generationRef.current;
+    try {
+      const batch = await readAppLog({
+        limit: PAGE_SIZE,
+        skip: 0,
+        levels,
+        query: search.trim() || undefined,
+        includeDependencies: areaSet.has('dependencies'),
+        targetPrefixes: prefixesFor(areaSet),
+      });
+      if (generation !== generationRef.current) return;
+      setFailed(false);
+      setLines((previous) => {
+        const newer = newerLines(batch, previous);
+        if (newer.length === 0) return previous;
+        const container = scrollRef.current;
+        scrollAnchorRef.current = container ? { height: container.scrollHeight, top: container.scrollTop } : null;
+        return [...newer, ...previous];
+      });
+    } catch (error) {
+      logger.error('appLog.refreshFailed', { reason: errorMessage(error) });
+    } finally {
+      refreshingRef.current = false;
+    }
+  }, [areaSet, levels, search]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => void refresh(), LIVE_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  // Chi sta leggendo più in basso non deve vedersi spostare le righe sotto
+  // gli occhi quando in cima ne arrivano di nuove.
+  useLayoutEffect(() => {
+    const anchor = scrollAnchorRef.current;
+    const container = scrollRef.current;
+    scrollAnchorRef.current = null;
+    if (!anchor || !container || anchor.top === 0) return;
+    container.scrollTop = anchor.top + (container.scrollHeight - anchor.height);
+  }, [lines]);
+
+  const visibleLines = clearedAt === null ? lines : lines.filter((line) => line.timestamp > clearedAt);
+  const visibleKeys = lineKeys(visibleLines);
 
   const toggleArea = (value: string) => {
     const key = value as LogFilterKey;
@@ -110,17 +225,33 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
       aria-labelledby={labelledBy}
       className="flex h-full flex-col bg-terminal-bg"
     >
-      <ConsoleChrome title={t('systemLog.title')} rowCount={lines.length} />
+      <ConsoleChrome title={t('systemLog.title')} rowCount={visibleLines.length} />
       <ConsoleToolbar
         search={search}
         onSearchChange={setSearch}
         groups={groups}
         actions={
           <>
+            <Tooltip label={t('systemLog.highlightData')} side="top">
+              <button
+                type="button"
+                onClick={() => setHighlightData(!highlightData)}
+                aria-label={t('systemLog.highlightData')}
+                aria-pressed={highlightData}
+                className={`shrink-0 transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent ${
+                  highlightData ? 'text-terminal-accent' : 'text-terminal-secondary'
+                }`}
+              >
+                <Braces size={14} />
+              </button>
+            </Tooltip>
             <Tooltip label={t('systemLog.reload')} side="top">
               <button
                 type="button"
-                onClick={() => void load(0)}
+                onClick={() => {
+                  setClearedAt(null);
+                  void load(0);
+                }}
                 aria-label={t('systemLog.reload')}
                 className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
               >
@@ -132,10 +263,7 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
             <Tooltip label={t('systemLog.clearView')} side="top">
               <button
                 type="button"
-                onClick={() => {
-                  setLines([]);
-                  setExhausted(true);
-                }}
+                onClick={() => setClearedAt(lines[0]?.timestamp ?? null)}
                 aria-label={t('systemLog.clearView')}
                 className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
               >
@@ -152,20 +280,20 @@ export function SystemLogTab({ panelId, labelledBy }: { panelId: string; labelle
             {t('systemLog.readFailed')}
           </p>
         )}
-        {!failed && lines.length === 0 && !loading && (
+        {!failed && visibleLines.length === 0 && !loading && (
           <p className="py-6 text-center text-terminal-secondary">{t('systemLog.empty')}</p>
         )}
-        {lines.map((line, index) => (
-          <div key={`${line.timestamp}-${index}`} className="flex gap-2 py-0.5">
+        {visibleLines.map((line, index) => (
+          <div key={visibleKeys[index]} className="flex gap-2 py-0.5">
             <span className="shrink-0 text-terminal-dim">{line.timestamp.slice(11)}</span>
             <span className="shrink-0 text-terminal-secondary">{t(`systemLog.area.${areaOf(line.target)}`)}</span>
             <span className={`shrink-0 ${LEVEL_COLOR[line.level] ?? 'text-terminal-secondary'}`}>
               {line.level}
             </span>
-            <span className="min-w-0 break-all text-terminal-ink">{line.message}</span>
+            <LogMessage message={line.message} highlight={highlightData} />
           </div>
         ))}
-        {!failed && !exhausted && lines.length > 0 && (
+        {!failed && !exhausted && visibleLines.length > 0 && clearedAt === null && (
           <div className="flex justify-center py-3">
             <button
               type="button"

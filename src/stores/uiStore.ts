@@ -126,6 +126,8 @@ interface UiState {
    *  chi guarda il log torna sempre sullo stesso sottoinsieme. */
   systemLogAreas: LogFilterKey[];
   systemLogLevels: LogLevel[];
+  /** Colora i dati delle righe della scheda Sistema come in un editor. */
+  systemLogHighlightData: boolean;
   /** Come si guarda il catalogo della Biblioteca: elenco o griglia. */
   libraryView: LibraryView;
   /** Come si raggruppa l'elenco della Biblioteca. */
@@ -206,6 +208,7 @@ interface UiState {
   setDrawerTab: (tab: 'console' | 'transcriptionLog' | 'jobs' | 'system') => void;
   setSystemLogAreas: (areas: LogFilterKey[]) => void;
   setSystemLogLevels: (levels: LogLevel[]) => void;
+  setSystemLogHighlightData: (enabled: boolean) => void;
   setLibraryView: (view: LibraryView) => void;
   setLibraryGrouping: (grouping: LibraryGrouping) => void;
   setConsoleDrawerHeight: (height: number) => void;
@@ -358,12 +361,13 @@ export const useUiStore = create<UiState>()(
       showInsightPanel: false,
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
-      drawerTab: 'console',
+      drawerTab: 'system',
       // Di partenza le aree del programma senza le librerie di terze parti,
       // che da sole sono l'87% delle righe scritte, e i livelli che dicono
       // qualcosa a chi non sta diagnosticando un guasto.
       systemLogAreas: ['library', 'translation', 'jobs', 'interface'],
       systemLogLevels: ['ERROR', 'WARN', 'INFO'],
+      systemLogHighlightData: true,
       libraryView: 'list',
       libraryGrouping: 'none',
       consoleDrawerHeight: 256,
@@ -497,6 +501,7 @@ export const useUiStore = create<UiState>()(
       setDrawerTab: (tab) => set({ drawerTab: tab }),
       setSystemLogAreas: (areas) => set({ systemLogAreas: areas }),
       setSystemLogLevels: (levels) => set({ systemLogLevels: levels }),
+      setSystemLogHighlightData: (enabled) => set({ systemLogHighlightData: enabled }),
       setLibraryView: (view) => set({ libraryView: view }),
       setLibraryGrouping: (grouping) => set({ libraryGrouping: grouping }),
       setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
@@ -667,6 +672,7 @@ export const useUiStore = create<UiState>()(
         drawerTab: state.drawerTab,
         systemLogAreas: state.systemLogAreas,
         systemLogLevels: state.systemLogLevels,
+        systemLogHighlightData: state.systemLogHighlightData,
         libraryView: state.libraryView,
         libraryGrouping: state.libraryGrouping,
         highlightsEnabled: state.highlightsEnabled,

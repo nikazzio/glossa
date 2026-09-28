@@ -469,10 +469,8 @@ export function AppStatusBar() {
             size="xs"
             tone={showConsoleDrawer ? 'accent' : 'default'}
             onClick={() => {
-              // Aprendolo da qui si va sui messaggi dove esistono — dentro una
-              // traduzione — e sui lavori altrove, come prima della scheda
-              // Sistema, che resta raggiungibile con un click.
-              if (!showConsoleDrawer) setDrawerTab(data.kind === 'project' ? 'console' : 'jobs');
+              // Aperto da qui, il pannello mostra sempre il log di sistema.
+              if (!showConsoleDrawer) setDrawerTab('system');
               setShowConsoleDrawer(!showConsoleDrawer);
             }}
             title={t('statusBar.panelToggle')}
