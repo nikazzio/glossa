@@ -230,8 +230,18 @@ pub(crate) async fn search_provider(
     gate: Option<&Gate<'_>>,
 ) -> Result<SearchPage, String> {
     let found = search::run(client, handler, endpoints, criteria, page, gate).await?;
+    // L'SRU di Gallica dà già autore e date, e una raffica di manifesti dopo
+    // ogni pagina le fa rispondere 429 e poi chiudere le connessioni: anche
+    // la pagina successiva e il «riprova» fallivano per qualche minuto. I
+    // risultati senza manifesto (le schede di catalogo `cb…`) non si aprono
+    // comunque.
+    let results = if handler == SearchHandlerKind::Gallica {
+        found.results
+    } else {
+        enrich_results(client, gate, found.results).await
+    };
     Ok(SearchPage {
-        results: enrich_results(client, gate, found.results).await,
+        results,
         has_more: found.has_more,
     })
 }
