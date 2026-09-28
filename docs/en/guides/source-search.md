@@ -17,7 +17,7 @@ To the left of the field you choose **where to search**: all libraries, a
 single one, or a custom choice. “All” means the libraries that search by
 words, not aggregators: Europeana and Internet Archive multiply results from
 other institutions and are added on purpose in the **advanced criteria**, the
-third tab of the right-hand column, where sources are ticked one by one.
+first tab of the right-hand column, where sources are ticked one by one.
 Europeana requires an API key under **Settings → Library → Libraries**. The
 chosen sources stay for later searches.
 
@@ -30,7 +30,9 @@ while keeping the chosen sources.
 Above the results you choose the order: **by relevance** (the order in which
 libraries answer), **by year**, **by author** or **by title**; results without
 the value go last. When some source has more results, the command at the
-bottom of the list asks every source that has them.
+bottom of the list asks every source that has them: it stays in place and spins
+until the new pages have arrived, and the added results come in with a short
+fade.
 
 Starting a search records its criteria. Each result page from each source is an
 independent job, so a slow or failed source does not prevent others from

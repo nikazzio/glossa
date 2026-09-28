@@ -17,7 +17,7 @@ A sinistra della casella si sceglie **dove cercare**: tutte le biblioteche, una
 sola, oppure una scelta personalizzata. «Tutte» comprende le biblioteche che
 cercano per parole, non le raccolte aggregate: Europeana e Internet Archive
 moltiplicano i risultati di altre istituzioni e si aggiungono di proposito nei
-**criteri avanzati**, terza scheda della colonna di destra, dove si spuntano le
+**criteri avanzati**, prima scheda della colonna di destra, dove si spuntano le
 fonti una per una. Europeana richiede una chiave in **Impostazioni → Biblioteca
 → Biblioteche**. La scelta delle fonti resta per le ricerche successive.
 
@@ -31,7 +31,8 @@ Sopra i risultati si sceglie l'ordine: **per pertinenza** (l'ordine in cui le
 biblioteche rispondono), **per anno**, **per autore** o **per titolo**; i
 risultati senza il dato vanno in fondo. Quando qualche fonte ha altri
 risultati, il comando in fondo all'elenco li chiede a tutte quelle che ne
-hanno.
+hanno: resta al suo posto e gira finché le pagine nuove non sono arrivate, e i
+risultati che si aggiungono entrano con una breve dissolvenza.
 
 L'avvio registra i criteri della ricerca. Ogni pagina di risultati di ciascuna
 fonte è un lavoro indipendente: una fonte lenta o in errore non impedisce alle

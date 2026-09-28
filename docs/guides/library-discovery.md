@@ -32,25 +32,30 @@ intestazioni) e si legge intero al passaggio del puntatore. In fondo, in
 piccolo, biblioteca, pagine e stato. I libri antichi si riconoscono da chi li
 ha scritti e stampati, non da titoli che occupano mezza pagina.
 
-La colonna di sinistra raccoglie gli **scaffali**, modi fissi di guardare il
+La colonna di destra raccoglie gli **scaffali**, modi fissi di guardare il
 catalogo: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da
 scaricare (non ancora tutte sul computer), In trascrizione (con una
 trascrizione non ancora verificata per intero), Non collegate a un workspace,
 Archiviate. Le archiviate compaiono solo nel loro scaffale. Sotto stanno le
-**raccolte**, create con il campo in fondo alla sezione ed eliminabili senza
-toccare le opere, e le **viste salvate**. Ogni voce dice quante opere contiene.
+**raccolte** e le **viste salvate**. Ogni voce dice quante opere contiene. Il
+«+» accanto al titoletto di ciascuna sezione apre il campo per il nome, nel punto
+dove la voce comparirà: Invio salva, Esc o un clic altrove annullano. Una
+raccolta si elimina senza toccare le opere.
 
-Sopra l'elenco la ricerca guarda tutti i dati dell'opera — titolo, autore,
-tipografo, luogo, note, identificativo — e i **filtri rapidi** restringono lo
+Sopra l'elenco, in una riga sua, la ricerca guarda tutti i dati dell'opera — titolo, autore,
+tipografo, luogo, note, identificativo — e sotto i **filtri rapidi** restringono lo
 scaffale o la raccolta scelti per tipo, secolo (ricavato dal primo anno della
 data), lingua, biblioteca, stato dello scaricamento e workspace. Accanto a ogni
 valore c'è il numero di opere che avrebbe con gli altri filtri già applicati.
 L'elenco si ordina per titolo, autore, anno, aggiunte o aperte di recente.
-Quando un filtro è attivo, in fondo alle viste salvate compare il campo per
-salvarlo con un nome; la vista resta un filtro, e si aggiorna da sola quando
-entrano opere nuove.
+Una vista salvata ricorda i filtri scelti: il suo «+» si attiva solo quando
+almeno un filtro è acceso, e al passaggio del puntatore dice perché. La vista
+resta un filtro, e si aggiorna da sola quando entrano opere nuove.
 
-L'elenco si vede a righe, a copertine o in **tabella**. La tabella ha una
+L'elenco si vede a righe, a copertine o in **tabella**. Le copertine hanno
+tutte la stessa misura: quando lo spazio manca si accorcia il titolo, e dei
+collegamenti se ne vedono due; gli altri si contano («+3») e si leggono al
+passaggio del puntatore. La tabella ha una
 colonna per autore, titolo, anno, luogo e tipografo, biblioteca, pagine e stato
 (lavoro e scaricamento); autore, titolo e anno si ordinano cliccando
 l'intestazione. Con **Raggruppa** l'elenco si divide per secolo, autore,
@@ -64,10 +69,13 @@ non equivale a zero. Le raccolte raggruppano opere senza spostarle o
 duplicarle.
 
 Un’opera può essere collegata a più workspace e raccolte. Rimuovere un
-collegamento non elimina la scheda né i file. I comandi di una riga —
-collegare, mettere in una raccolta, creare una trascrizione e il menu con
-scaricare, verificare, ridurre le immagini, liberare spazio, archiviare ed
-eliminare — compaiono al passaggio del puntatore o quando la riga ha il fuoco.
+collegamento non elimina la scheda né i file. In basso a sinistra della riga
+stanno i comandi per collegarla a un workspace e metterla in una raccolta; in
+alto a destra, sulla prima riga, gli altri comandi come icone con il nome al
+passaggio del puntatore, in tre gruppi: creare una trascrizione | scaricare,
+verificare, ridurre le immagini, liberare spazio | archiviare, eliminare. Tutti
+compaiono al passaggio del puntatore o quando la riga ha il fuoco. Nella
+griglia a copertine e nella tabella gli stessi comandi stanno in un menu.
 La riga piccola dice anche a che punto è il lavoro: in trascrizione (una
 trascrizione non ancora verificata per intero), trascritta, tradotta.
 
@@ -82,7 +90,7 @@ scaricamento, archiviazione o ritorno in catalogo. Archiviare più opere insieme
 non propone di liberare spazio, come fa per l'opera singola. Esc o la croce
 svuotano la scelta, che si svuota anche cambiando scaffale o raccolta.
 
-Una riga si trascina su una raccolta nella colonna di sinistra: entra la riga,
+Una riga si trascina su una raccolta nella colonna degli scaffali: entra la riga,
 oppure tutta la scelta se la riga ne fa parte.
 
 ## Scheda dell’opera

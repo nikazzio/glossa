@@ -1,5 +1,6 @@
 {
   "federation": {
+    "loadingMore": "More results on the way",
     "details": "Show / hide details",
     "stopBeforeRestore": "Pause searches before restoring a backup.",
     "material": {
@@ -1301,9 +1302,10 @@
         "availabilityComplete": "Downloaded",
         "clear": "Clear filters",
         "noMatches": "No work matches these filters",
-        "saveView": "Save this view",
+        "saveView": "Save the current filters as a view",
+        "saveViewNeedsFilters": "Choose some filters above the list first: the view remembers them",
         "deleteView": "Delete the view “{{name}}”",
-        "newViewPlaceholder": "Save as…",
+        "newViewPlaceholder": "View name…",
         "sortLabel": "Sort the catalogue",
         "sort": {
           "title": "By title",
@@ -1565,6 +1567,8 @@
         "collections": "Collections",
         "savedViews": "Saved views",
         "newCollection": "New collection…",
+        "noCollections": "No collections. Create one with +, then drag works onto it.",
+        "noSavedViews": "No views. Choose some filters and save them with +.",
         "createCollection": "Create the collection",
         "deleteCollection": "Delete the collection «{{name}}»"
       },
@@ -2524,8 +2528,8 @@
           {
             "title": "Reading the program's messages",
             "paragraphs": [
-              "The bottom panel has three tabs: messages from the running translation, the system log, and jobs. The system log opens anywhere and shows what the program wrote while working: searches, downloads, storage, saves.",
-              "Filters narrow by area and by level, and the search box works on the text of each line. Third-party library lines stay hidden until you ask for them: on their own they are most of the file. Clearing the view empties the window without touching the file on disk, and reloading brings the lines back."
+              "The bottom panel has three tabs: messages from the running translation, the system log, and jobs. The panel command in the status bar always opens it on the system log, which opens anywhere and shows what the program wrote while working: searches, downloads, storage, saves. New lines arrive by themselves while you watch.",
+              "Filters narrow by area and by level, and the search box works on the text of each line. Third-party library lines stay hidden until you ask for them: on their own they are most of the file. The data in curly braces is colored as in a code editor: the braces command turns the colors on and off. Clearing the view hides the current lines without touching the file on disk: new ones keep arriving, and reloading brings them all back."
             ]
           },
           {
@@ -2614,9 +2618,9 @@
             "steps": [
               "Open Search from the left bar, under Dashboard.",
               "To the left of the field choose where to search: all libraries, a single one, or a custom choice made in the advanced criteria.",
-              "Type the words and start with the command next to them. To narrow down, open the advanced criteria, third tab of the right column: title, author, printer, material, years. Aggregators such as Europeana are added on purpose; Europeana needs a key in the Library settings.",
+              "Type the words and start with the command next to them. To narrow down, open the advanced criteria, first tab of the right column: title, author, printer, material, years. Aggregators such as Europeana are added on purpose; Europeana needs a key in the Library settings.",
               "Results appear as sources answer. Above the list choose the order: by relevance, year, author, or title. When the data needed to judge a criterion is missing, the result stays in the list marked “incomplete data”.",
-              "When more results are available, the command at the bottom of the list asks every source that has them.",
+              "When more results are available, the command at the bottom of the list asks every source that has them. The command spins while they arrive, then the new results appear at the bottom.",
               "The new search command clears words and criteria, keeping the sources you chose."
             ]
           },
@@ -2656,10 +2660,10 @@
             "title": "Finding a catalogue entry",
             "paragraphs": [
               "Every work looks the same in search, in the Library, and in the Studio: author, year, place, and printer stand out, then the title, cut after two lines. Hover over the title to read it in full.",
-              "On the left are the shelves: All, Recent (added or opened in the last 30 days), To download, Being transcribed, Not linked to a workspace, Archived. Below are your collections, with the field to create a new one, and the saved views.",
-              "Above the list you search every piece of data about the work — title, author, printer, place, notes, identifier — and narrow down with the quick filters: type, century, language, library, download, workspace. Each value shows how many works it has. Sort by title, author, year, recently added or recently opened.",
+              "On the right are the shelves: All, Recent (added or opened in the last 30 days), To download, Being transcribed, Not linked to a workspace, Archived. Below are your collections and the saved views. To create one, press the \"+\" next to the heading, type the name and press Enter; Esc cancels.",
+              "Above the list, on its own line, you search every piece of data about the work — title, author, printer, place, notes, identifier — and below it you narrow down with the quick filters: type, century, language, library, download, workspace. Each value shows how many works it has. Sort by title, author, year, recently added or recently opened.",
               "Next to the Library title choose how to see the list: rows, covers or table. The table has a column for author, title, year, place and printer, library, pages and state; click the author, title or year header to sort. With “Group” you split the list by century, author, library or collection.",
-              "When a filter narrows the list, a field appears at the bottom of the saved views to save it with a name: the view updates by itself as you add works.",
+              "A saved view remembers the chosen filters: turn on at least one filter, then press the \"+\" of the saved views and give it a name. The view updates by itself as you add works.",
               "Link works to workspaces and collections to organise them. A work can have several links without duplicating its record or files.",
               "The item page shows every field it knows about, including those the library did not fill in: they stay empty and you write them with the pencil, as you already do for title and author. The library's original value is kept and can be restored. The essential fields are always in view, the rest sit in groups that open and stay as you leave them."
             ]
@@ -2669,8 +2673,8 @@
             "paragraphs": [
               "Hold Ctrl (⌘ on the Mac) and click several works to choose them; with Shift you choose every work between the last choice and the one you click. You can also press the check mark that appears on the left of the row. A click without keys opens the work.",
               "A command bar for the choice appears above the list: put the works in a collection (a new one too), link them to a workspace, download them, archive them or bring them back to the catalogue. Esc or the cross clears the choice; changing shelf or collection clears it by itself.",
-              "To put works in a collection you can also drag them onto the collection in the left column: the dragged row moves, or the whole choice if the row is part of it.",
-              "The commands of a single row — linking, adding to a collection, creating a transcription, the menu with download and archive — appear when you hover over it. The small line also tells how far the work has gone: being transcribed, transcribed, translated."
+              "To put works in a collection you can also drag them onto the collection in the shelves column: the dragged row moves, or the whole choice if the row is part of it.",
+              "The commands of a single row appear when you hover over it. At the bottom left you link the work to a workspace or add it to a collection; at the top right, in three groups, are the transcription, the image commands (download, verify, reduce, free space) and those to archive or delete. In the covers and the table the same commands sit in a menu. The small line also tells how far the work has gone: being transcribed, transcribed, translated."
             ]
           },
           {
@@ -3322,6 +3326,7 @@
     "title": "System log",
     "reload": "Reload from file",
     "clearView": "Clear the view",
+    "highlightData": "Color the data as in a code editor",
     "loadMore": "Load earlier messages",
     "loading": "Reading",
     "empty": "No messages match these filters.",

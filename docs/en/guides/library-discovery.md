@@ -31,24 +31,29 @@ hover. At the bottom, in small print, library, pages, and status. Early printed
 books are recognised by who wrote and printed them, not by titles half a page
 long.
 
-The left column holds the **shelves**, fixed ways of looking at the catalogue:
+The right-hand column holds the **shelves**, fixed ways of looking at the catalogue:
 All, Recent (added or opened in the last 30 days), To download (not all on the
 computer yet), Being transcribed (with a transcription not yet fully
 verified), Not linked to a workspace, Archived. Archived works appear only on
-their own shelf. Below are the **collections**, created with the field at the
-bottom of the section and deletable without touching the works, and the
-**saved views**. Every entry shows how many works it holds.
+their own shelf. Below are the **collections** and the **saved views**. Every
+entry shows how many works it holds. The "+" next to each section heading opens
+the name field where the new entry will appear: Enter saves, Esc or a click
+elsewhere cancels. Deleting a collection does not touch its works.
 
-Above the list the search looks at every piece of data about the work — title,
-author, printer, place, notes, identifier — and the **quick filters** narrow
+Above the list, on its own line, the search looks at every piece of data about
+the work — title, author, printer, place, notes, identifier — and below it the
+**quick filters** narrow
 the chosen shelf or collection by type, century (from the first year in the
 date), language, library, download state and workspace. Each value shows how
 many works it would have with the other filters already applied. The list
-sorts by title, author, year, recently added or recently opened. When a filter
-is active, a field appears at the bottom of the saved views to save it with a
-name; the view stays a filter and updates by itself as new works come in.
+sorts by title, author, year, recently added or recently opened. A saved view
+remembers the chosen filters: its "+" is enabled only when at least one filter
+is on, and says why on hover. The view stays a filter and updates by itself as
+new works come in.
 
-The list shows as rows, covers or a **table**. The table has a column for
+The list shows as rows, covers or a **table**. Covers are all the same size:
+when space runs out the title gets shorter, and two links are shown; the others
+are counted ("+3") and listed on hover. The table has a column for
 author, title, year, place and printer, library, pages and state (work and
 download); author, title and year sort by clicking the header. With **Group**
 the list splits by century, author, library or collection, with the number of
@@ -61,10 +66,12 @@ disk usage and links. An unavailable count is not equivalent to zero.
 Collections group works without moving or duplicating them.
 
 A work can belong to several workspaces and collections. Removing a link does
-not delete the record or its files. The commands of a row — linking, adding to
-a collection, creating a transcription, and the menu with download,
-verification, image reduction, storage cleanup, archive and deletion — appear
-on hover or when the row has focus. The small line also tells how far the work
+not delete the record or its files. At the bottom left of a row are the
+commands to link it to a workspace and add it to a collection; at the top right,
+on the first line, the other commands as icons named on hover, in three groups:
+create a transcription | download, verify, reduce images, free space | archive,
+delete. All of them appear on hover or when the row has focus. In the cover
+grid and in the table the same commands sit in a menu. The small line also tells how far the work
 has gone: being transcribed (a transcription not yet fully verified),
 transcribed, translated.
 
@@ -79,7 +86,7 @@ download, archive or return to the catalogue. Archiving several works at once
 does not offer to free space, as it does for a single work. Esc or the cross
 clears the choice, which also clears when you change shelf or collection.
 
-A row can be dragged onto a collection in the left column: the row goes in, or
+A row can be dragged onto a collection in the shelves column: the row goes in, or
 the whole choice if the row is part of it.
 
 ## Work details

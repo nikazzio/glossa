@@ -210,7 +210,8 @@ risoluzione: sostituisce quella ricompressa.
 ## Messaggi e log di sistema
 
 Il pannello in basso raccoglie tre schede: i messaggi della traduzione in corso,
-il **log di sistema** e i lavori. Il log di sistema è disponibile in ogni area e
+il **log di sistema** e i lavori. Il comando del pannello nella barra di stato lo
+apre sempre sul log di sistema, che è disponibile in ogni area e
 mostra quanto il programma ha scritto mentre lavorava — ricerche nelle
 biblioteche, scaricamenti, deposito, salvataggi — leggendo direttamente il file
 di log dell'applicazione, compresi i file ruotati delle sessioni precedenti.
@@ -221,8 +222,15 @@ riga. Le righe prodotte dalle librerie di terze parti — interrogazioni al
 database, portachiavi, connessioni di rete — restano nascoste finché non le si
 richiede esplicitamente: da sole costituiscono la maggior parte del file.
 
-«Svuota la vista» ripulisce la finestra e non tocca il file su disco: ricaricando,
-le righe tornano. «Carica le precedenti» prosegue la lettura all'indietro.
+Le righe nuove arrivano da sole mentre la scheda è aperta, in cima all'elenco;
+chi sta leggendo più in basso non se le vede spostare sotto gli occhi. I dati di
+una riga — la parte fra parentesi graffe — sono colorati come in un editor di
+codice: nomi dei campi, testi, numeri e valori ciascuno con il suo colore. Il
+comando con le graffe accende e spegne la colorazione, e la scelta resta.
+
+«Svuota la vista» nasconde le righe presenti e non tocca il file su disco: le
+righe che arrivano dopo continuano a comparire, e ricaricando tornano tutte.
+«Carica le precedenti» prosegue la lettura all'indietro.
 Il percorso della cartella dei log resta indicato nella guida dentro
 l'applicazione, alla voce di risoluzione dei problemi.
 

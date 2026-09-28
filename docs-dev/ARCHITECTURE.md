@@ -50,7 +50,10 @@ aggiungibile alla Biblioteca. Un indirizzo completo si apre anche con Invio. La
 risincronizzazione di un'opera usa lo stesso `open_work` sul manifesto
 salvato. Il lavoro di ricerca arricchisce i risultati dai manifesti
 (`search_provider` = `search::run` + `enrich_results`), come faceva la ricerca
-singola.
+singola, **tranne per Gallica**: l'SRU porta già autore e date, e una raffica di
+manifesti dopo ogni pagina faceva rispondere Gallica 429 e poi chiudere le
+connessioni, così la pagina successiva e il «riprova» fallivano per minuti
+(`search_unreachable`, broken pipe sul log del 25 settembre 2026).
 La Dashboard legge patrimonio, oggetti modificati, attenzione e fatti locali in
 sezioni indipendenti: una lettura fallita non diventa zero e non cancella le altre.
 Ambito workspace esplicito; ricerche e riepilogo lavori restano globali.
@@ -218,8 +221,8 @@ la prima. Ogni comando di ricerca lascia una riga di log con comando, durata ed
 esito, senza criteri né indirizzi.
 
 La Biblioteca è tornata un'area unica con il solo catalogo
-(`LibraryCatalogArea`): nessuna linguetta. La colonna degli scaffali ha
-larghezza fissa e l'elenco prende il resto; non esiste più un pannello filtri
+(`LibraryCatalogArea`): nessuna linguetta. La colonna degli scaffali sta a
+destra, ha larghezza fissa e l'elenco prende il resto; non esiste più un pannello filtri
 ridimensionabile a destra, che sotto una certa larghezza si chiudeva da solo e
 ignorava il comando di riapertura (#484). Ogni contenitore intermedio di
 un'area porta `min-w-0`: senza, le colonne non possono stringersi e comparivano
@@ -901,8 +904,22 @@ mostrate. Le righe delle dipendenze (`sqlx`, `keyring`, `hyper`, `reqwest`) sono
 l'87% del file e restano fuori finché non si chiedono. Le origini del programma
 (`federation`, `glossa_lib::*`, `webview`) si raggruppano in quattro aree lato
 interfaccia (`src/components/console/logAreas.ts`): Biblioteca, Traduzione,
-Lavori, Interfaccia. «Svuota la vista» agisce solo su ciò che è a schermo: il
-file non si riscrive mai dall'interfaccia.
+Lavori, Interfaccia. «Svuota la vista» agisce solo su ciò che è a schermo
+(nasconde le righe fino all'ultima mostrata, per orario): il file non si
+riscrive mai dall'interfaccia.
+
+La scheda si aggiorna da sola: ogni 2 s, finché è montata, rilegge l'ultima
+pagina (200 righe) e mette in cima solo quelle più nuove della prima a schermo;
+il resto dell'elenco, comprese le pagine chieste con «carica le precedenti»,
+non si tocca. Una rilettura partita prima di un cambio di filtro o di un
+caricamento a mano si scarta (contatore di generazione). Nessun evento dal backend: il plugin di log non ne
+emette, e rileggere la coda del file costa meno di un canale nuovo. Se chi legge
+è sceso nell'elenco, la posizione si corregge dell'altezza delle righe arrivate
+in cima. La colorazione dei dati (`logMessageTokens.ts`) prende l'oggetto JSON
+che segue il nome dell'evento solo se è JSON valido; la preferenza
+`systemLogHighlightData` sta in `uiStore`, persistita. Il comando del pannello
+nella barra di stato apre sempre la scheda Sistema (`drawerTab: 'system'`, anche
+predefinito); l'indicatore dei lavori continua ad aprire i lavori.
 
 I messaggi del frontend arrivano nello stesso file solo da quando `log:default`
 sta fra i permessi in `capabilities/default.json`: senza quel permesso le

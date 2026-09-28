@@ -1,5 +1,6 @@
 {
   "federation": {
+    "loadingMore": "Arrivano altri risultati",
     "details": "Mostra / nascondi dettagli",
     "stopBeforeRestore": "Metti in pausa le ricerche prima di ripristinare il backup.",
     "material": {
@@ -1301,9 +1302,10 @@
         "availabilityComplete": "Scaricate",
         "clear": "Azzera i filtri",
         "noMatches": "Nessuna opera corrisponde ai filtri",
-        "saveView": "Salva questa vista",
+        "saveView": "Salva i filtri attuali come vista",
+        "saveViewNeedsFilters": "Scegli prima dei filtri sopra l'elenco: la vista li ricorda",
         "deleteView": "Elimina la vista «{{name}}»",
-        "newViewPlaceholder": "Salva come…",
+        "newViewPlaceholder": "Nome della vista…",
         "sortLabel": "Ordina il catalogo",
         "sort": {
           "title": "Per titolo",
@@ -1565,6 +1567,8 @@
         "collections": "Raccolte",
         "savedViews": "Viste salvate",
         "newCollection": "Nuova raccolta…",
+        "noCollections": "Nessuna raccolta. Creane una con +, poi trascinaci le opere.",
+        "noSavedViews": "Nessuna vista. Scegli dei filtri e salvali con +.",
         "createCollection": "Crea la raccolta",
         "deleteCollection": "Elimina la raccolta «{{name}}»"
       },
@@ -2524,8 +2528,8 @@
           {
             "title": "Leggere i messaggi del programma",
             "paragraphs": [
-              "Il pannello in basso ha tre schede: i messaggi della traduzione in corso, il log di sistema e i lavori. Il log di sistema si apre ovunque e mostra quello che il programma ha scritto mentre lavorava: ricerche, scaricamenti, deposito, salvataggi.",
-              "I filtri restringono per area e per livello, e la ricerca funziona sul testo della riga. Le righe delle librerie di terze parti restano nascoste finché non le chiedi: da sole sono la maggior parte del file. Svuota la vista ripulisce la finestra senza toccare il file su disco, e ricaricando le righe tornano."
+              "Il pannello in basso ha tre schede: i messaggi della traduzione in corso, il log di sistema e i lavori. Il comando del pannello nella barra di stato lo apre sempre sul log di sistema, che si apre ovunque e mostra quello che il programma ha scritto mentre lavorava: ricerche, scaricamenti, deposito, salvataggi. Le righe nuove arrivano da sole mentre lo guardi.",
+              "I filtri restringono per area e per livello, e la ricerca funziona sul testo della riga. Le righe delle librerie di terze parti restano nascoste finché non le chiedi: da sole sono la maggior parte del file. I dati fra parentesi graffe sono colorati come in un editor di codice: il comando con le graffe accende e spegne i colori. Svuota la vista nasconde le righe presenti senza toccare il file su disco: quelle nuove continuano ad arrivare, e ricaricando tornano tutte."
             ]
           },
           {
@@ -2614,9 +2618,9 @@
             "steps": [
               "Apri Ricerca dalla barra a sinistra, sotto Dashboard.",
               "A sinistra della casella scegli dove cercare: tutte le biblioteche, una sola, oppure una scelta personalizzata che fai nei criteri avanzati.",
-              "Scrivi le parole e avvia con il comando accanto. Per restringere apri i criteri avanzati, terza scheda della colonna di destra: titolo, autore, tipografo, materiale, anni. Le raccolte come Europeana si aggiungono di proposito; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
+              "Scrivi le parole e avvia con il comando accanto. Per restringere apri i criteri avanzati, prima scheda della colonna di destra: titolo, autore, tipografo, materiale, anni. Le raccolte come Europeana si aggiungono di proposito; Europeana richiede una chiave nelle impostazioni della Biblioteca.",
               "I risultati compaiono man mano che le fonti rispondono. Sopra l'elenco scegli l'ordine: per pertinenza, anno, autore o titolo. Quando manca il dato per decidere su un criterio, il risultato resta in elenco segnato «dati incompleti».",
-              "Se ci sono altri risultati, il comando in fondo all'elenco li chiede a tutte le fonti che ne hanno.",
+              "Se ci sono altri risultati, il comando in fondo all'elenco li chiede a tutte le fonti che ne hanno. Mentre arrivano il comando gira, poi i nuovi risultati compaiono in fondo.",
               "Il comando della nuova ricerca svuota parole e criteri, lasciando le fonti che avevi scelto."
             ]
           },
@@ -2656,10 +2660,10 @@
             "title": "Trovare un’opera nel catalogo",
             "paragraphs": [
               "Ogni opera si presenta allo stesso modo in ricerca, in Biblioteca e nello Studio: autore, anno, luogo e tipografo in evidenza, poi il titolo, che si ferma a due righe. Passa il puntatore sul titolo per leggerlo intero.",
-              "A sinistra ci sono gli scaffali: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da scaricare, In trascrizione, Non collegate a un workspace, Archiviate. Sotto trovi le tue raccolte, con il campo per crearne una nuova, e le viste salvate.",
-              "Sopra l'elenco cerchi in tutti i dati dell'opera — titolo, autore, tipografo, luogo, note, identificativo — e restringi con i filtri rapidi: tipo, secolo, lingua, biblioteca, scaricamento, workspace. Accanto a ogni valore vedi quante opere ha. Ordina per titolo, autore, anno, aggiunte o aperte di recente.",
+              "A destra ci sono gli scaffali: Tutte, Recenti (aggiunte o aperte negli ultimi 30 giorni), Da scaricare, In trascrizione, Non collegate a un workspace, Archiviate. Sotto trovi le tue raccolte e le viste salvate. Per crearne una premi il «+» accanto al titoletto, scrivi il nome e premi Invio; Esc annulla.",
+              "Sopra l'elenco, in una riga sua, cerchi in tutti i dati dell'opera — titolo, autore, tipografo, luogo, note, identificativo — e sotto restringi con i filtri rapidi: tipo, secolo, lingua, biblioteca, scaricamento, workspace. Accanto a ogni valore vedi quante opere ha. Ordina per titolo, autore, anno, aggiunte o aperte di recente.",
               "Accanto al titolo Biblioteca scegli come vedere l'elenco: righe, copertine o tabella. La tabella ha una colonna per autore, titolo, anno, luogo e tipografo, biblioteca, pagine e stato; clic sull'intestazione di autore, titolo o anno per ordinare. Con «Raggruppa» dividi l'elenco per secolo, autore, biblioteca o raccolta.",
-              "Quando un filtro restringe l'elenco, in fondo alle viste salvate compare il campo per salvarlo con un nome: la vista si aggiorna da sola quando aggiungi opere.",
+              "Una vista salvata ricorda i filtri scelti: accendi almeno un filtro, poi premi il «+» delle viste salvate e dai un nome. La vista si aggiorna da sola quando aggiungi opere.",
               "Collega le opere ai workspace e alle raccolte per organizzarle. La stessa opera può avere più collegamenti senza duplicare scheda o file.",
               "La scheda mostra tutti i campi previsti, anche quelli che la biblioteca non ha compilato: sono vuoti e li scrivi tu con la matita, come fai con titolo e autore. Il valore originale della biblioteca resta conservato e si può ripristinare. I campi essenziali stanno sempre in vista, il resto in gruppi che si aprono e restano come li lasci."
             ]
@@ -2669,8 +2673,8 @@
             "paragraphs": [
               "Tieni premuto Ctrl (⌘ sul Mac) e fai clic su più opere per sceglierle; con Maiuscolo scegli tutte quelle fra l'ultima scelta e quella su cui fai clic. Puoi anche premere il segno di spunta che compare a sinistra della riga. Un clic senza tasti apre l'opera.",
               "Sopra l'elenco compare la barra dei comandi sulla scelta: metti le opere in una raccolta (anche nuova), collegale a un workspace, scaricale, archiviale o riportale in catalogo. Esc o la croce svuotano la scelta; cambiando scaffale o raccolta si svuota da sola.",
-              "Per mettere opere in una raccolta puoi anche trascinarle sulla raccolta nella colonna di sinistra: si sposta la riga trascinata, oppure tutta la scelta se la riga ne fa parte.",
-              "I comandi della singola riga — collegare, mettere in una raccolta, creare una trascrizione, il menu con scaricamento e archivio — compaiono al passaggio del puntatore. Nella riga piccola leggi anche a che punto è il lavoro: in trascrizione, trascritta, tradotta."
+              "Per mettere opere in una raccolta puoi anche trascinarle sulla raccolta nella colonna degli scaffali: si sposta la riga trascinata, oppure tutta la scelta se la riga ne fa parte.",
+              "I comandi della singola riga compaiono al passaggio del puntatore. In basso a sinistra colleghi l'opera a un workspace o la metti in una raccolta; in alto a destra trovi, in tre gruppi, la trascrizione, i comandi sulle immagini (scarica, verifica, riduci, libera spazio) e quelli per archiviare o eliminare. Nelle copertine e nella tabella gli stessi comandi stanno in un menu. Nella riga piccola leggi anche a che punto è il lavoro: in trascrizione, trascritta, tradotta."
             ]
           },
           {
@@ -3322,6 +3326,7 @@
     "title": "Log di sistema",
     "reload": "Ricarica dal file",
     "clearView": "Svuota la vista",
+    "highlightData": "Colora i dati come in un editor",
     "loadMore": "Carica le precedenti",
     "loading": "Lettura in corso",
     "empty": "Nessun messaggio con questi filtri.",

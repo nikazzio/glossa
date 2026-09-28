@@ -194,6 +194,10 @@ solo**.
   lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
   scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
   destinazioni e nessuna delle due si comporta come ci si aspetta.
+- `tabRowHeightClassName`: altezza fissa della barra tab quando accanto c'è
+  un'altra intestazione (la casella della Ricerca, la barra di un visore): le
+  due righe hanno la stessa altezza e lo stesso filetto, e la linea sotto è una
+  sola da una colonna all'altra.
 
 ### SettingRow e campi
 
@@ -330,13 +334,21 @@ i nomi li sceglie la biblioteca e possono essere lunghi.
 
 ### Scaffali e filtri rapidi
 
-Un catalogo si organizza con una **colonna di scaffali** a sinistra (larghezza
+Un catalogo si organizza con una **colonna di scaffali** a destra (larghezza
 fissa `w-56`, voci con segno, nome e conteggio in `tabular-nums`, la scelta in
-verde tenue) e **filtri rapidi** sopra l'elenco: una `Select` per aspetto, con
+verde tenue) e, sopra l'elenco, la ricerca in una riga sua con sotto i **filtri
+rapidi**: una `Select` per aspetto, con
 il conteggio accanto a ogni valore e il bordo verde quando il filtro è attivo.
 Nessun pannello filtri a destra: stringendo la finestra si chiudeva da solo e
 non si riapriva. Una sola cosa è scelta nella colonna — uno scaffale o una
 raccolta —; i filtri rapidi la restringono e «azzera» toglie solo quelli.
+
+Le voci nuove di una sezione (raccolte, viste salvate) si creano dal «+»
+`IconButton` accanto al titoletto: il campo per il nome compare dove comparirà
+la voce, con il fuoco, e si chiude con Invio (salva), Esc o uscendo (annulla).
+Un campo che compare da solo quando cambia qualcos'altro disorienta. Se il «+»
+non si può usare resta visibile, disattivato, e il suggerimento dice perché;
+una sezione vuota lo dice con una riga `text-xs` muted.
 
 ### Scelta multipla e comandi al passaggio
 
@@ -344,6 +356,17 @@ In un catalogo lungo i comandi di riga non restano accesi: compaiono con
 `group-hover` e `group-focus-within` sulla riga (opacità, non `display`, così
 il tabulatore li raggiunge e il fuoco li mostra). Restano visibili le
 informazioni — collegamenti, stato — e l'avanzamento di un lavoro in corso.
+Nella riga a elenco i collegamenti (workspace, raccolte) stanno in basso a
+sinistra; gli altri comandi in alto a destra, allineati alla prima riga, come
+`IconButton` in fila divisi in gruppi da un filetto verticale (`h-4 w-px
+bg-editorial-border`): creazione | lavori sulle immagini | conservazione.
+Eliminare resta neutro: la conferma arriva dopo. Dove lo spazio è poco
+(copertine, tabella) gli stessi comandi stanno in un menu.
+
+Le copertine di una griglia hanno tutte la stessa misura (`auto-rows-fr`, scheda
+`h-full`): a stringersi è il titolo. Dei collegamenti se ne mostrano due, gli
+altri diventano «+N» con i nomi nel suggerimento: tagliarli con `overflow-hidden`
+lasciava comandi invisibili raggiungibili col tabulatore.
 La scelta multipla segue i gestori di file: click apre, Ctrl/⌘ aggiunge o
 toglie, Maiuscolo sceglie l'intervallo; il segno di spunta a sinistra resta
 visibile su tutte le righe finché la scelta non è vuota. I comandi sulla scelta
@@ -385,6 +408,10 @@ un'attesa, e la seconda volta è già di troppo.
 - Elenco e scheda di un'opera: la nuova vista entra con dissolvenza e
   `MOTION_SHIFT`, senza aspettare l'uscita della precedente — un'uscita
   animata prima dell'ingresso rendeva ogni apertura più lenta.
+- Risultati che arrivano dopo i primi (pagina successiva, biblioteca più
+  lenta): dissolvenza con `MOTION_SHIFT`; quelli già visti non si rianimano
+  quando ritornano sullo schermo scorrendo. Il comando che li ha chiesti resta al
+  suo posto e mostra lo `Spinner` finché non sono arrivati.
 - Righe che si aprono (risultati di ricerca): altezza animata con
   `MOTION_DURATION` ed `EASE_EDITORIAL`, gli stessi di ogni riquadro.
 - Riquadri richiudibili: altezza animata con `AnimatePresence`; chiuso, il
@@ -494,8 +521,13 @@ Niente colori neon o valori locali.
 - Filtro spento = testo barrato in `terminal-dim`, non colore assente: lo stato
   si legge senza distinguere le tinte.
 - Il pannello in basso ha tre schede — messaggi della pipeline (solo dentro una
-  traduzione), log di sistema e lavori — e ricorda l'ultima usata. Fuori da una
+  traduzione), log di sistema e lavori. Aperto dalla barra di stato parte sempre
+  dal log di sistema; l'indicatore dei lavori apre i lavori. Fuori da una
   traduzione ripiega sul log di sistema, mai su una scheda vuota.
+- Il log di sistema scorre da solo e colora i dati JSON come un editor, con i
+  token esistenti: chiavi `terminal-info`, testi `terminal-success`, numeri
+  `terminal-accent`, `true`/`false`/`null` `terminal-error`, punteggiatura
+  `terminal-secondary`. Il comando `{}` nella toolbar spegne i colori.
 
 ## Controllo prima di aggiungere UI
 
