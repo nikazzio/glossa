@@ -3,7 +3,7 @@ import { CommandBar, Tooltip } from '../ui';
 import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import type { TranscriptionCatalogEntry } from '../../services/transcriptionCatalogService';
 import type { TranscriptionSort } from '../../utils/transcriptionCatalogFilters';
-import { RenameField, useProgressFacts, type TranscriptionRowProps } from './TranscriptionCatalogRow';
+import { TranscriptionRenameField, useProgressFacts, type TranscriptionRowProps } from './TranscriptionCatalogRow';
 
 /** Le colonne che si ordinano cliccando l'intestazione, con l'ordine che scelgono. */
 const SORTABLE: Partial<Record<string, TranscriptionSort>> = {
@@ -20,7 +20,7 @@ function TableRow({ entry, workspaceName, providerLabel, commands, renaming, onR
       entry.document.status === 'archived' ? ' opacity-60' : ''}`}>
       <td className="py-2 pr-3">
         {renaming ? (
-          <RenameField initial={entry.document.title} onSave={onRename} onCancel={onRenameCancel} />
+          <TranscriptionRenameField initial={entry.document.title} onSave={onRename} onCancel={onRenameCancel} />
         ) : (
           <Tooltip label={entry.document.title} variant="panel" className="w-full min-w-0">
             <button type="button" onClick={onOpen}

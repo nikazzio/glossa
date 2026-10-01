@@ -875,6 +875,31 @@ lavoro sul testo di riferimento è stato rimosso perché nessuno lo calcolava.
 
 ## Pipeline di traduzione
 
+**Catalogo delle Traduzioni** (`TranslationsArea`): stesso modello e stessi
+pezzi del catalogo delle Trascrizioni (scaffali, ricerca, filtri rapidi, tre
+viste, `CommandBar`, `CompletionBar`, `RenameField` comune in `ui/`).
+`listTranslationCatalog` (`services/translationCatalogService.ts`) legge in una
+query tutti i progetti di tutti i workspace con lingue, `updated_at` e i
+conteggi dei frammenti della **prima pipeline** (quella che `openProject`
+apre): totale, tradotti (`chunk_status = 'completed'`), verificati
+(`translation_locked = 1`). Scaffali (Tutte, Recenti, Da iniziare, In corso,
+Verificate), filtri rapidi (workspace, coppia di lingue), ordine e
+raggruppamento vivono in `utils/translationCatalogFilters.ts`; vista e
+raggruppamento sono preferenze persistite (`translationsView`,
+`translationsGrouping` in `uiStore`), il filtro workspace segue l'indirizzo.
+Comandi di riga: rinomina (`renameProject`) ed elimina (`removeProject`, che
+cancella davvero: i progetti non hanno archivio). Nessun legame con opera o
+trascrizione: `translation_origins` resta non scritta fino alla strada «da una
+trascrizione».
+
+Creazione «da zero» (`CreateProjectDialog`): nome, workspace e file
+facoltativo. Il file si legge alla scelta con `importTextFile` (errori mappati
+da `importErrorMessageKey`, mostrati nella finestra; nulla si crea). Dopo
+`createAndOpen` il file va in `uiStore.pendingImportFile` (non persistito):
+l'editor montato lo consuma con `startImport`, la stessa via del comando di
+import, e apre `ImportPreviewDialog`. Chiudendo l'anteprima il progetto resta
+vuoto.
+
 Il motore frontend coordina:
 
 1. controllo di provider e modelli;

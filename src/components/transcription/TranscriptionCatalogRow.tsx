@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { AREA_INK_CLASSNAME, CommandBar, CompletionBar, Tooltip, type RowCommand } from '../ui';
-import { FIELD_CLASSNAME } from '../ui/fieldStyles';
+import { AREA_INK_CLASSNAME, CommandBar, CompletionBar, RenameField, Tooltip, type RowCommand } from '../ui';
 import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { WorkIdentity, type WorkIdentityData } from '../common/WorkIdentity';
@@ -45,37 +43,10 @@ export function useProgressFacts(entry: TranscriptionCatalogEntry) {
   return { total, written, verified };
 }
 
-/** Il nome scritto dove compare: Invio salva, Esc o un click fuori annullano. */
-export function RenameField({ initial, onSave, onCancel, className = '' }: {
-  initial: string;
-  onSave: (title: string) => void;
-  onCancel: () => void;
-  className?: string;
-}) {
+/** Il nome della trascrizione scritto dove compare. */
+export function TranscriptionRenameField(props: { initial: string; onSave: (title: string) => void; onCancel: () => void }) {
   const { t } = useTranslation();
-  const [title, setTitle] = useState(initial);
-  const input = useRef<HTMLInputElement>(null);
-  useEffect(() => { input.current?.select(); }, []);
-  const save = () => {
-    const trimmed = title.trim();
-    if (!trimmed || trimmed === initial) onCancel();
-    else onSave(trimmed);
-  };
-  return (
-    <input
-      ref={input}
-      value={title}
-      maxLength={DOCUMENT_TITLE_MAX}
-      onChange={(event) => setTitle(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') save();
-        if (event.key === 'Escape') onCancel();
-      }}
-      onBlur={onCancel}
-      aria-label={t('areas.transcriptions.catalog.renameLabel')}
-      className={`${FIELD_CLASSNAME} py-1 font-display text-base italic ${className}`}
-    />
-  );
+  return <RenameField {...props} label={t('areas.transcriptions.catalog.renameLabel')} maxLength={DOCUMENT_TITLE_MAX} />;
 }
 
 /**
@@ -146,7 +117,7 @@ export function TranscriptionCatalogRow({ entry, workspaceName, commands, renami
         <div className="flex min-w-0 flex-1 items-start gap-3">
           {cover}
           <span className="flex min-w-0 flex-1 flex-col gap-1">
-            <RenameField initial={entry.document.title} onSave={onRename} onCancel={onRenameCancel} />
+            <TranscriptionRenameField initial={entry.document.title} onSave={onRename} onCancel={onRenameCancel} />
             {identity}
           </span>
         </div>

@@ -1067,7 +1067,13 @@
     "updatedYearsAgo_other": "updated {{count}} years ago",
     "loadFailed": "Failed to load project",
     "rename": "Rename the project",
-    "untitled": "Untitled project"
+    "untitled": "Untitled project",
+    "sourceFile": "File to translate",
+    "chooseSourceFile": "Choose the file to translate",
+    "changeSourceFile": "Choose another file",
+    "removeSourceFile": "Remove the file",
+    "noSourceFile": "No file: you can import it from the editor",
+    "readingSourceFile": "Reading the file…"
   },
   "transcription": {
     "create": "Create document",
@@ -1223,7 +1229,64 @@
   "areas": {
     "translations": {
       "title": "Translations",
-      "sidebarHint": "Projects and pipelines"
+      "sidebarHint": "Projects and pipelines",
+      "emptyMessage": "The Translations catalogue has no content yet.",
+      "emptyHint": "Create a translation with the «+» next to the title and pick the file to translate right away.",
+      "catalog": {
+        "shelves": {
+          "title": "Shelves",
+          "all": "All",
+          "recent": "Recent",
+          "toStart": "Not started",
+          "inProgress": "In progress",
+          "verified": "Verified"
+        },
+        "filters": {
+          "searchPlaceholder": "Search by name…",
+          "searchLabel": "Search translations",
+          "clear": "Clear filters",
+          "all": {
+            "workspaceId": "All workspaces",
+            "languagePair": "All languages"
+          },
+          "facet": {
+            "workspaceId": "Workspace",
+            "languagePair": "Languages"
+          },
+          "sortLabel": "Sort",
+          "sort": {
+            "name": "By name",
+            "edited": "Last edited",
+            "progress": "By progress"
+          },
+          "noMatches": "No translation matches the filters."
+        },
+        "grouping": {
+          "label": "Group",
+          "none": "No groups",
+          "workspace": "By workspace",
+          "languagePair": "By languages",
+          "missing": {
+            "workspace": "Unknown workspace"
+          }
+        },
+        "table": {
+          "name": "Name",
+          "languages": "Languages",
+          "workspace": "Workspace",
+          "progress": "Translated",
+          "verified": "Verified",
+          "edited": "Last edited"
+        },
+        "noText": "No text imported",
+        "chunksTranslated": "{{done}}/{{total}} segments translated",
+        "verifiedCount": "{{count}} verified",
+        "rename": "Rename",
+        "renameLabel": "Translation name",
+        "renameFailed": "Could not rename the translation",
+        "newTranslation": "New translation",
+        "loadFailed": "Could not read the translations"
+      }
     },
     "library": {
       "title": "Library",
@@ -1832,12 +1895,6 @@
       "ocrDefaultPromptHint": "Every document starts from this. In the Studio the prompt is changed from any page and applies to the whole document.",
       "ocrDefaultModel": "Default OCR model",
       "ocrDefaultPrompt": "Default OCR prompt"
-    },
-    "translationsArea": {
-      "sort": {
-        "updatedAt": "Recent",
-        "name": "Name"
-      }
     },
     "hub": {
       "lockedArea": "Coming in version 2.0"
@@ -2688,9 +2745,18 @@
         "intro": "A workspace organises projects and shared resources. Each translation project belongs to one workspace.",
         "blocks": [
           {
+            "title": "The Translations catalogue",
+            "paragraphs": [
+              "The Translations page gathers the translations of every workspace and is laid out like the Transcriptions page: shelves on the right, search and quick filters above the list, three views (list, covers, table) at the end of the title row.",
+              "Each row shows the translation name in italics and, below it, the source and target languages. At the end of the row: workspace, translated segments out of the total, verified segments and the completion bar, green when every segment is verified. A translation with no imported text says so instead of the counts.",
+              "The shelves are All, Recent (edited in the last 30 days), Not started (no segment translated), In progress and Verified (every segment verified). Quick filters narrow by workspace and language pair; the workspace filter stays when you leave the page and come back. You can sort by name, last edit or progress, and group by workspace or language pair.",
+              "Clicking a row opens the translation in the editor. Hovering a row shows its commands: rename (the name becomes a field: Enter saves, Esc cancels) and delete. In the cover and table views the same commands sit in the three-dot menu."
+            ]
+          },
+          {
             "title": "Creating and identifying a project",
             "paragraphs": [
-              "Create a project from a workspace page or the Translations area, choosing its destination workspace. Change the workspace name, description and icon in its settings.",
+              "Create a translation with the «+» next to the Translations title, or from the workspace page. The window asks for the name, the workspace (unless it already knows it) and, optionally, the file to translate, in the same formats as the editor import. The file is read as soon as you choose it: if it cannot be read, for example a scanned PDF with no text or a file not in UTF-8, the reason appears under the field and nothing is created. Pressing Create opens the translation in the editor with the import preview, where you choose languages and segments; if you close the preview the translation stays empty and you can import the file later from the editor. The workspace name, description and icon are edited in its settings.",
               "A project can contain multiple pipelines with separate settings and results. Select the pipeline you want to work on before changing its configuration."
             ]
           },

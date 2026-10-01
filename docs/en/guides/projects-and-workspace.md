@@ -23,9 +23,39 @@ produces an independent dictionary.
 
 ## Creation and saving
 
-You can create projects from a workspace page or the **Translations** area.
-Translations lists projects across all workspaces. A workspace’s name,
-description and icon identify it throughout the application.
+You can create projects from a workspace page or the **Translations** area:
+the «+» next to the Translations title opens a window asking for the name, the
+workspace and, optionally, the file to translate, in the same formats as the
+editor import. The file is read as soon as you choose it: if it cannot be read
+(a scanned PDF with no text, a file not in UTF-8) the reason appears under the
+field and nothing is created. **Create** opens the translation in the editor
+with the import preview, where you choose languages and segments; closing the
+preview leaves the translation empty, and you can import the file later from
+the editor. A workspace’s name, description and icon identify it throughout
+the application.
+
+## The Translations catalogue
+
+The Translations area gathers the translations of every workspace and is laid
+out like the [Transcriptions catalogue](./transcription#the-transcriptions-catalogue):
+shelves on the right, search and quick filters above the list, three views
+(list, covers, table).
+
+- **Row**: name in italics, below it the source and target languages, then
+  workspace, translated segments out of the total, verified segments and the
+  completion bar, green when every segment is verified.
+- **Shelves**: All, Recent (edited in the last 30 days), Not started (no
+  segment translated), In progress, Verified (every segment verified).
+- **Quick filters**: workspace (kept when you leave the page and come back)
+  and language pair; sort by name, last edit or progress; group by workspace
+  or language pair.
+- **Row commands**: rename and delete; in the cover and table views they sit
+  in the three-dot menu. Clicking a row opens the editor.
+
+Current limits: the counts cover the project's first pipeline, the one the
+editor opens; a translation is not yet linked to the work or transcription it
+starts from, so there are no commands to open them, no library or century
+filters and no archiving.
 
 Autosave operates on projects that have already been created. It detects changes
 and saves them after a short idle interval; while processing is active, it waits
@@ -40,8 +70,6 @@ sepia and indigo — so you can tell them apart at a glance: the area icon in th
 left sidebar, a short rule under the large title and a slightly different
 background paper. State colours stay the same in every area: green marks what
 is selected or active, red errors, ochre cautions, gold running jobs.
-Translations do not have the Library-style catalogue yet: for now they only
-take the title and paper.
 
 ## Dashboard
 

@@ -31,7 +31,7 @@ import { TranslationsArea } from './components/workspace/TranslationsArea';
 import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
 import { TranscriptionsCatalogArea } from './components/workspace/TranscriptionsCatalogArea';
 import { AnalysisArea } from './components/workspace/AnalysisArea';
-import { importTextFile } from './services/fileService';
+import { importErrorMessageKey, importTextFile, type ImportedTextFile } from './services/fileService';
 import { ollamaService } from './services/llmService';
 import { savePipelineConfig } from './services/pipelineService';
 import { extractFootnotes } from './utils/footnoteExtractor';
@@ -211,34 +211,45 @@ function EditorView() {
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}`;
 
+  /** Apre l'anteprima dell'import con un file già letto: dal comando
+   *  dell'editor o dalla finestra che crea una traduzione con il suo file. */
+  const startImport = useCallback((imported: ImportedTextFile) => {
+    const isMarkdown = imported.format === 'markdown';
+    const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
+    setPendingImport({
+      fileName: imported.name,
+      text: cleanText,
+      rawText: imported.text,
+      useChunking: config.useChunking !== false,
+      wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
+      headingAware: config.headingAware ?? true,
+      carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
+      format: imported.format,
+      experimental: imported.experimental,
+    });
+  }, [chunkPresetMedium, config]);
+
   const handleImportDocument = useCallback(async () => {
     try {
       const imported = await importTextFile();
-      if (!imported) return;
-      const isMarkdown = imported.format === 'markdown';
-      const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
-      setPendingImport({
-        fileName: imported.name,
-        text: cleanText,
-        rawText: imported.text,
-        useChunking: config.useChunking !== false,
-        wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
-        headingAware: config.headingAware ?? true,
-        carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
-        format: imported.format,
-        experimental: imported.experimental,
-      });
+      if (imported) startImport(imported);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg === 'pdf_no_text_layer') {
-        toast.error(t('files.pdfScannedError'));
-      } else if (msg === 'text_not_utf8') {
-        toast.error(t('files.textEncodingError'));
-      } else {
-        toast.error(t('files.importError'), { description: msg });
-      }
+      const key = importErrorMessageKey(msg);
+      if (key === 'files.importError') toast.error(t(key), { description: msg });
+      else toast.error(t(key));
     }
-  }, [chunkPresetMedium, config, t]);
+  }, [startImport, t]);
+
+  // Il file scelto nella finestra che crea la traduzione arriva qui quando
+  // l'editor della traduzione appena creata è montato.
+  const pendingImportFile = useUiStore((state) => state.pendingImportFile);
+  const setPendingImportFile = useUiStore((state) => state.setPendingImportFile);
+  useEffect(() => {
+    if (!pendingImportFile) return;
+    setPendingImportFile(null);
+    startImport(pendingImportFile);
+  }, [pendingImportFile, setPendingImportFile, startImport]);
 
   const handleConfirmImport = useCallback(async (
     manualChunks?: string[],

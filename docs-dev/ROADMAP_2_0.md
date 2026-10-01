@@ -225,9 +225,14 @@ sceglie in Impostazioni → Trascrizioni e per sessione nella scheda OCR.
 ogni larghezza; salvataggio manuale di una versione (comando e Ctrl+S). La
 pagina iniziale delle Trascrizioni è un catalogo sul modello della Biblioteca,
 con gli stessi pezzi condivisi (scaffali, ricerca, filtri rapidi, tre viste,
-comandi di riga, barretta di completamento). **Restano**: portare lo stesso
-modello alla pagina iniziale delle Traduzioni; scelta multipla nel catalogo
-delle Trascrizioni, non chiesta per ora.
+comandi di riga, barretta di completamento). Anche la pagina iniziale delle
+Traduzioni segue lo stesso modello (#485 N, primo passo: scaffali, filtri
+workspace e lingue, rinomina | elimina, creazione «da zero» con il file).
+**Restano**: strada «da una trascrizione» con copia fissata, legame con opera
+e trascrizione d'origine e, solo allora, i comandi apri l'opera / apri la
+trascrizione, filtri per biblioteca e secolo, raggruppamento per biblioteca;
+Studio di traduzione, scheda Memoria e costi (#485 N); scelta multipla nei
+cataloghi, non chiesta per ora.
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

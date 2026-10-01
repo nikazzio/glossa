@@ -1067,7 +1067,13 @@
     "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
     "loadFailed": "Caricamento progetto fallito",
     "rename": "Rinomina il progetto",
-    "untitled": "Progetto senza nome"
+    "untitled": "Progetto senza nome",
+    "sourceFile": "File da tradurre",
+    "chooseSourceFile": "Scegli il file da tradurre",
+    "changeSourceFile": "Scegli un altro file",
+    "removeSourceFile": "Togli il file",
+    "noSourceFile": "Nessun file: potrai importarlo dall'editor",
+    "readingSourceFile": "Lettura del file…"
   },
   "transcription": {
     "create": "Crea documento",
@@ -1223,7 +1229,64 @@
   "areas": {
     "translations": {
       "title": "Traduzioni",
-      "sidebarHint": "Progetti e pipeline"
+      "sidebarHint": "Progetti e pipeline",
+      "emptyMessage": "Il catalogo Traduzioni non ha ancora contenuto.",
+      "emptyHint": "Crea una traduzione con il «+» accanto al titolo e scegli già il file da tradurre.",
+      "catalog": {
+        "shelves": {
+          "title": "Scaffali",
+          "all": "Tutte",
+          "recent": "Recenti",
+          "toStart": "Da iniziare",
+          "inProgress": "In corso",
+          "verified": "Verificate"
+        },
+        "filters": {
+          "searchPlaceholder": "Cerca per nome…",
+          "searchLabel": "Cerca nelle traduzioni",
+          "clear": "Azzera i filtri",
+          "all": {
+            "workspaceId": "Tutti i workspace",
+            "languagePair": "Tutte le lingue"
+          },
+          "facet": {
+            "workspaceId": "Workspace",
+            "languagePair": "Lingue"
+          },
+          "sortLabel": "Ordina",
+          "sort": {
+            "name": "Per nome",
+            "edited": "Ultima modifica",
+            "progress": "Per avanzamento"
+          },
+          "noMatches": "Nessuna traduzione corrisponde ai filtri."
+        },
+        "grouping": {
+          "label": "Raggruppa",
+          "none": "Nessun gruppo",
+          "workspace": "Per workspace",
+          "languagePair": "Per lingue",
+          "missing": {
+            "workspace": "Workspace sconosciuto"
+          }
+        },
+        "table": {
+          "name": "Nome",
+          "languages": "Lingue",
+          "workspace": "Workspace",
+          "progress": "Tradotti",
+          "verified": "Verificati",
+          "edited": "Ultima modifica"
+        },
+        "noText": "Nessun testo importato",
+        "chunksTranslated": "{{done}}/{{total}} frammenti tradotti",
+        "verifiedCount": "{{count}} verificati",
+        "rename": "Rinomina",
+        "renameLabel": "Nome della traduzione",
+        "renameFailed": "Non è stato possibile rinominare la traduzione",
+        "newTranslation": "Nuova traduzione",
+        "loadFailed": "Non è stato possibile leggere le traduzioni"
+      }
     },
     "library": {
       "title": "Biblioteca",
@@ -1832,12 +1895,6 @@
       "ocrDefaultPromptHint": "Ogni documento parte da qui. Nello Studio il prompt si cambia da una pagina qualsiasi e vale per tutto il documento.",
       "ocrDefaultModel": "Modello OCR predefinito",
       "ocrDefaultPrompt": "Prompt OCR predefinito"
-    },
-    "translationsArea": {
-      "sort": {
-        "updatedAt": "Recenti",
-        "name": "Nome"
-      }
     },
     "hub": {
       "lockedArea": "In arrivo nella versione 2.0"
@@ -2688,9 +2745,18 @@
         "intro": "Un workspace organizza progetti e risorse condivise. Ogni progetto di traduzione appartiene a un solo workspace.",
         "blocks": [
           {
+            "title": "Il catalogo delle Traduzioni",
+            "paragraphs": [
+              "La pagina Traduzioni raccoglie le traduzioni di tutti i workspace ed è organizzata come quella delle Trascrizioni: scaffali a destra, ricerca e filtri rapidi sopra l'elenco, tre viste (elenco, copertine, tabella) in fondo alla riga del titolo.",
+              "Ogni riga mostra il nome della traduzione in corsivo e, sotto, le lingue di partenza e di arrivo. In fondo alla riga: workspace, frammenti tradotti sul totale, frammenti verificati e la barretta di completamento, verde quando tutti i frammenti sono verificati. Una traduzione senza testo importato lo dice al posto dei conteggi.",
+              "Gli scaffali sono Tutte, Recenti (modificate negli ultimi 30 giorni), Da iniziare (nessun frammento tradotto), In corso e Verificate (tutti i frammenti verificati). I filtri rapidi restringono per workspace e coppia di lingue; il filtro workspace resta anche cambiando pagina e tornando indietro. Si può ordinare per nome, ultima modifica o avanzamento, e raggruppare per workspace o coppia di lingue.",
+              "Un click sulla riga apre la traduzione nell'editor. Passando sulla riga compaiono i comandi: rinomina (il nome diventa un campo: Invio salva, Esc annulla) ed elimina. Nelle copertine e nella tabella gli stessi comandi stanno nel menu con i tre puntini."
+            ]
+          },
+          {
             "title": "Creare e riconoscere un progetto",
             "paragraphs": [
-              "Crea un progetto dalla pagina del workspace o dall’area Traduzioni, scegliendo il workspace di destinazione. Nome, descrizione e icona del workspace si modificano nelle sue impostazioni.",
+              "Crea una traduzione con il «+» accanto al titolo Traduzioni, o dalla pagina del workspace. La finestra chiede il nome, il workspace (se non lo sa già) e, se vuoi, il file da tradurre, negli stessi formati dell'import dall'editor. Il file si legge appena lo scegli: se non è leggibile, per esempio un PDF scansionato senza testo o un file non in UTF-8, il motivo compare sotto il campo e non si crea nulla. Premendo Crea la traduzione si apre nell'editor con l'anteprima dell'import, dove scegli lingue e frammenti; se chiudi l'anteprima la traduzione resta vuota e il file si importa poi dall'editor. Nome, descrizione e icona del workspace si modificano nelle sue impostazioni.",
               "Un progetto può contenere più pipeline con impostazioni e risultati distinti. Scegli la pipeline su cui vuoi lavorare prima di modificare la configurazione."
             ]
           },
