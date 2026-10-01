@@ -366,7 +366,7 @@ export function ImportPreviewDialog({
         <RadixDialog.Overlay className="fixed inset-0 z-[200] bg-editorial-ink/30 backdrop-blur-sm" />
         <RadixDialog.Content
           aria-labelledby="import-preview-title"
-          className="fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
+          className="fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-modal">
 
         {/* ── Unified header (filename + title + stats + controls) ───────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
@@ -391,7 +391,7 @@ export function ImportPreviewDialog({
                     type="button"
                     onClick={() => setEditorMode('cards')}
                     aria-label={t('files.viewCards')}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-on-accent' : 'text-editorial-muted hover:text-editorial-accent'}`}
                   >
                     <LayoutGrid size={16} />
                   </button>
@@ -401,7 +401,7 @@ export function ImportPreviewDialog({
                     type="button"
                     onClick={() => setEditorMode('segments')}
                     aria-label={t('files.viewSegments')}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-on-accent' : 'text-editorial-muted hover:text-editorial-accent'}`}
                   >
                     <SplitSquareVertical size={16} />
                   </button>
@@ -526,7 +526,7 @@ export function ImportPreviewDialog({
           </div>
 
           {/* Row 5: pipeline setup — language pair + model */}
-          <div className="mt-3 pt-3 border-t border-editorial-border/60">
+          <div className="mt-3 pt-3 border-t border-rule">
             <div className="grid grid-cols-[1.25rem_1fr] gap-y-2.5 gap-x-2 items-center">
               {/* Language pair */}
               <Globe size={11} className="text-editorial-accent shrink-0" />

@@ -52,7 +52,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
   const setChunkRailTab = useUiStore((s) => s.setChunkRailTab);
   const setProjectContextCollapsed = useUiStore((s) => s.setProjectContextCollapsed);
   return (
-    <div className="mt-4 divide-y divide-editorial-border/55">
+    <div className="mt-4 divide-y divide-rule">
       {issues.map((issue, index) => {
         const issueKey = `${issue.type}-${index}`;
         const isResolved = issue.resolved ?? false;
@@ -68,11 +68,11 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <IssueIcon size={13} className={`shrink-0 ${severityMeta.textClass}`} />
-                  <span className={`truncate text-[11px] font-bold uppercase tracking-[0.14em] ${severityMeta.textClass}`}>
+                  <span className={`truncate text-caption font-bold uppercase tracking-section ${severityMeta.textClass}`}>
                     {issue.type}
                   </span>
                   <span className="h-1 w-1 shrink-0 rounded-full bg-editorial-border" aria-hidden="true" />
-                  <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.12em] text-editorial-muted">
+                  <span className="shrink-0 text-xs font-semibold uppercase tracking-caption text-editorial-muted">
                     {issue.severity}
                   </span>
                 </div>
@@ -140,10 +140,10 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
             </p>
 
             {(issue.phrase || issue.sourcePhrase) && (
-              <div className="mt-3 ml-5 space-y-3 border-l border-editorial-border/70 pl-3">
+              <div className="mt-3 ml-5 space-y-3 border-l border-rule pl-3">
                 {issue.phrase && (
                   <div className="min-w-0">
-                    <span className="text-xs font-bold uppercase tracking-[0.12em] text-editorial-accent">
+                    <span className="text-xs font-bold uppercase tracking-caption text-editorial-accent">
                       {t('audit.issuePhraseContext')}
                     </span>
                     <p className="mt-0.5 w-full font-display text-sm italic leading-snug text-editorial-ink">
@@ -153,7 +153,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
                 )}
                 {issue.sourcePhrase && (
                   <div className="min-w-0">
-                    <span className="text-xs font-bold uppercase tracking-[0.12em] text-editorial-muted">
+                    <span className="text-xs font-bold uppercase tracking-caption text-editorial-muted">
                       {t('audit.issueSourcePhraseContext')}
                     </span>
                     <p className="mt-0.5 w-full font-display text-sm italic leading-snug text-editorial-muted">
@@ -165,8 +165,8 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
             )}
 
             {issue.suggestedFix && (
-              <div className="mt-3 ml-5 min-w-0 border-l border-editorial-border/70 pl-3">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-editorial-accent">
+              <div className="mt-3 ml-5 min-w-0 border-l border-rule pl-3">
+                <span className="text-xs font-bold uppercase tracking-caption text-editorial-accent">
                   {t('audit.fix')}
                 </span>
                 <p className="mt-0.5 w-full text-sm leading-relaxed text-editorial-muted">{issue.suggestedFix}</p>

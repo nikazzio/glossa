@@ -138,9 +138,9 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
   }, [deletePipeline, t]);
 
   return (
-    <div className="border-b border-editorial-border/70 px-4 pt-4 pb-4">
+    <div className="border-b border-rule px-4 pt-4 pb-4">
       <div className="flex min-w-0 items-center justify-between gap-3">
-        <span className="block min-w-0 truncate text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
+        <span className="block min-w-0 truncate text-xs font-sans uppercase tracking-section text-editorial-muted">
           {activeName}
         </span>
         {/* Il comando che cambia pipeline sta accanto al nome della pipeline:
@@ -207,7 +207,7 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
             })}
             {hasProject && pipelines.length < maxPipelines && (
               <>
-                <div className="border-t border-editorial-border/60" />
+                <div className="border-t border-rule" />
                 <button
                   onClick={() => {
                     void createNewPipeline(

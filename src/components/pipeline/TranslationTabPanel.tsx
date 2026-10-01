@@ -59,7 +59,7 @@ export function TranslationTabPanel({
   const blobContextCard = (
     <div className="space-y-3">
       <SectionLabel icon={FileText} label={t('pipeline.blobContext')} />
-      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-rule bg-editorial-bg/65 px-5 py-4">
         <p className="text-xs leading-relaxed text-editorial-muted/80">
           {t('pipeline.blobContextExplainer')}
         </p>
@@ -92,7 +92,7 @@ export function TranslationTabPanel({
                     ...prev,
                     blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
                   }))}
-                  className="w-24 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="w-24 rounded-md border border-rule bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.blobBudgetTokens')}
                 />
               </div>
@@ -106,7 +106,7 @@ export function TranslationTabPanel({
                     ...prev,
                     blobOverlap: Math.max(0, Number(e.target.value) || 0),
                   }))}
-                  className="w-16 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="w-16 rounded-md border border-rule bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.blobOverlap')}
                 />
               </div>
@@ -161,7 +161,7 @@ export function TranslationTabPanel({
                 icon={STAGE_ROLE_ICON[stage.role ?? 'translation']}
                 label={t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
               />
-              <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />
+              <span className="h-px flex-1 bg-rule" aria-hidden="true" />
             </div>
             <StageCard
               stage={stage}

@@ -76,7 +76,7 @@ export function LibraryProfilesSection({
           {/* Il salvataggio qui è esplicito: se non si vede che c'è qualcosa da
               salvare, si chiude la finestra credendo di aver salvato. */}
           {draft && (
-            <span className="shrink-0 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-warning">
+            <span className="shrink-0 text-caption font-sans uppercase tracking-caption text-editorial-warning">
               {t('settings.network.unsaved')}
             </span>
           )}
@@ -132,7 +132,7 @@ export function LibraryProfilesSection({
         </div>
       </div>
 
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+      <div className="divide-y divide-rule border-y border-rule">
         <SettingRow
           label={t('settings.network.selectedProfile')}
           hint={t('settings.network.selectedProfileHint')}

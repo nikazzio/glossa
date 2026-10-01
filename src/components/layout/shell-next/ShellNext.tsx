@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
+import { Group, Panel, usePanelCallbackRef } from 'react-resizable-panels';
+import { ResizeHandle } from '../../ui';
 import { useUiStore } from '../../../stores/uiStore';
 import { ProjectRailNext, type ProjectRailNextProps } from './ProjectRailNext';
 import { ProjectInspectorNext } from './ProjectInspectorNext';
@@ -151,23 +152,7 @@ export function ShellNext({
   };
 
   const railSeparator = (
-    <Separator
-      onPointerDown={() => setDragging(true)}
-      className={`group/sep relative z-30 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-        dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-20 border-b border-editorial-border bg-editorial-page"
-      />
-      <span
-        aria-hidden="true"
-        className={`relative h-7 w-px rounded-full transition-colors ${
-          dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-        }`}
-      />
-    </Separator>
+    <ResizeHandle dragging={dragging} onDragStart={() => setDragging(true)} layer="shell" cap={<span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-20 border-b border-editorial-border bg-editorial-page" />} />
   );
 
   return (

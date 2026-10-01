@@ -115,7 +115,7 @@ export function CacheSection() {
   return (
     <section className="space-y-4">
       <SectionLabel icon={Images} label={t('settings.cache.title')} />
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+      <div className="divide-y divide-rule border-y border-rule">
         <SettingRow label={t('settings.cache.used')} hint={t('settings.cache.usedHint')}>
           <span className="flex items-center gap-2">
             <span className="font-mono text-sm text-editorial-ink">

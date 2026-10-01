@@ -22,8 +22,7 @@ describe('StatRow', () => {
     );
 
     const label = screen.getByText('Token');
-    expect(label.className).toContain('text-[11px]');
-    expect(label.className).toContain('tracking-[0.1em]');
+    expect(label.className).toContain('caption-label');
 
     // Serif value larger than the sans caption — serif italic needs more size to read.
     const value = screen.getByText('135,434');

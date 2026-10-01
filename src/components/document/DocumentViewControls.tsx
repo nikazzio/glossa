@@ -92,7 +92,7 @@ export function DocumentViewOptionsMenu() {
         icon={<PanelRight size={13} />}
         label={t('document.focusTranslation')}
       />
-      <div className="border-t border-editorial-border/60" />
+      <div className="border-t border-rule" />
       <ViewOptionRow
         active={syncOn}
         disabled={syncDisabled}

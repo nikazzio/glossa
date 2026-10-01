@@ -173,7 +173,7 @@ export function ProviderSettingsTab({
       {/* Provider workspace */}
       <section className="space-y-4">
         <SectionLabel icon={Server} label={t('settings.providerConfig')} />
-        <div className="space-y-4 border-y border-editorial-border/70 py-5">
+        <div className="space-y-4 border-y border-rule py-5">
           {/* Le linguette dei provider sono `IconButton` come quelle della
               finestra: prima erano cerchi verdi pieni fatti a mano, l'unico
               elemento attivo dell'app disegnato per conto suo. Le frecce
@@ -192,7 +192,7 @@ export function ProviderSettingsTab({
                       separatore canonico, non un margine inventato. */}
                   {provider === 'custom' && (
                     <span
-                      className="mx-1 h-4 w-px self-center bg-editorial-border/70"
+                      className="mx-1 h-4 w-px self-center bg-rule"
                       aria-hidden="true"
                     />
                   )}
@@ -232,7 +232,7 @@ export function ProviderSettingsTab({
               {activeProviderTab === 'custom' ? (
                 <CustomProviderSection />
               ) : activeProviderTab === 'ollama' ? (
-                <div className="space-y-4 border-y border-editorial-border/70 py-4">
+                <div className="space-y-4 border-y border-rule py-4">
                   <div className="space-y-1.5">
                     <FieldLabel htmlFor="settings-ollama-url" block>
                       {t('ollama.baseUrl')}
@@ -288,7 +288,7 @@ export function ProviderSettingsTab({
                   />
 
                   {ollamaModels.length > 0 && (
-                    <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+                    <div className="divide-y divide-rule border-y border-rule">
                       {ollamaModels.map((modelId) => (
                         <div key={modelId} className="py-2.5">
                           <span className="font-mono text-sm text-editorial-ink">{modelId}</span>
@@ -298,7 +298,7 @@ export function ProviderSettingsTab({
                   )}
                 </div>
               ) : (
-                <div className="border-b border-editorial-border/70 pb-4">
+                <div className="border-b border-rule pb-4">
                   <ApiKeyInput
                     label={PROVIDER_LABELS[activeProviderTab]}
                     provider={activeProviderTab}
@@ -329,7 +329,7 @@ export function ProviderSettingsTab({
                   {groups.map(({ label, ids }) => (
                     <div key={label || '_all'} className="space-y-1.5">
                       {label && <FieldLabel>{label}</FieldLabel>}
-                      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+                      <div className="divide-y divide-rule border-y border-rule">
                         {ids.map((modelId) => {
                           const entry = getModelEntry(activeProviderTab, modelId);
                           // I dati del modello sono metadati, non pastiglie: erano
@@ -371,7 +371,7 @@ export function ProviderSettingsTab({
                                   </span>
                                 )}
                                 {state && (
-                                  <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-warning">
+                                  <span className="text-caption font-sans uppercase tracking-caption text-editorial-warning">
                                     {state}
                                   </span>
                                 )}
@@ -419,10 +419,10 @@ export function ProviderSettingsTab({
         {showPricingOverrides && (
           <div className="space-y-3">
             <p className="text-sm leading-relaxed text-editorial-muted">{t('cost.overrideHint')}</p>
-            <div className="overflow-x-auto border-y border-editorial-border/70">
+            <div className="overflow-x-auto border-y border-rule">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-editorial-border/70">
+                  <tr className="border-b border-rule">
                     <th className="px-1 py-2 text-left">
                       <FieldLabel>{t('cost.overrideModel')}</FieldLabel>
                     </th>
@@ -435,7 +435,7 @@ export function ProviderSettingsTab({
                     <th className="px-1 py-2" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-editorial-border/60">
+                <tbody className="divide-y divide-rule">
                   {MODEL_CATALOG.filter((e) => e.pricing).map((entry) => {
                     const key = `${entry.provider}/${entry.id}`;
                     const current = overrides[key] ?? MODEL_PRICING[key] ?? entry.pricing!;

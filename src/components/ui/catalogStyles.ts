@@ -18,7 +18,7 @@ export const QUICK_FILTER_CLASSNAME = 'max-w-[11rem]';
 export const CATALOG_GRID_CLASSNAME = 'grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3 py-4';
 
 /** Elenco a righe separate da un filetto. */
-export const CATALOG_LIST_CLASSNAME = 'flex flex-col divide-y divide-editorial-border/60 py-2';
+export const CATALOG_LIST_CLASSNAME = 'flex flex-col divide-y divide-rule py-2';
 
 /** Intestazione di un gruppo dell'elenco, ferma in cima mentre si scorre. Il
  *  fondo lo mette chi la usa: è la carta della sua area. */

@@ -40,7 +40,7 @@ export function PreflightDialog() {
         ) : null
       }
     >
-      <ul className="divide-y divide-editorial-border/70 border-y border-editorial-border/70" aria-label={t('preflight.title')}>
+      <ul className="divide-y divide-rule border-y border-rule" aria-label={t('preflight.title')}>
                 {results.map((result) => (
                   <li key={`${result.provider}:${result.model}`} className="flex items-start gap-3 py-3">
                     {result.ok ? (

@@ -252,7 +252,7 @@ export function StageCard({
       ) : (
       <>
       {/* Model + provider card */}
-      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-rule bg-editorial-bg/65 px-5 py-4">
         <SectionLabel icon={Cpu} label={t('pipeline.stageModelLabel')} />
         <div className="flex items-center gap-2">
           <Select
@@ -292,7 +292,7 @@ export function StageCard({
                 onChange={(e) => handleModelChange(e.target.value)}
                 disabled={modelDisabled}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 rounded-md border border-rule bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}
               />
             </div>
@@ -318,7 +318,7 @@ export function StageCard({
               onChange={(e) => handleModelChange(e.target.value)}
               disabled={modelDisabled}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 rounded-md border border-rule bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={t('pipeline.stageModelLabel')}
             />
           )}
@@ -375,7 +375,7 @@ export function StageCard({
               type="button"
               onClick={onRefreshOllama}
               disabled={isRefreshingOllama}
-              className="flex items-center gap-1.5 rounded-md border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex items-center gap-1.5 rounded-md border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-on-accent disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {isRefreshingOllama ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               {t('ollama.loadModels')}
@@ -401,12 +401,12 @@ export function StageCard({
       </div>
 
       {/* Prompt editor */}
-      <div className="border-l-4 border-l-editorial-accent/40 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
+      <div className="border-l-4 border-l-editorial-accent/40 border-y border-rule bg-editorial-bg/85 px-5 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <SectionLabel icon={FileText} label={t('pipeline.prompt')} />
             {isCustomPrompt && !isEditingPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
+              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-caption font-bold uppercase tracking-section text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -482,7 +482,7 @@ export function StageCard({
               aria-label={t('pipeline.templates.namePlaceholder')}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (salva template)
               autoFocus
-              className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md bg-editorial-textbox/60 border border-rule px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
             <IconButton
               onClick={handleSaveTemplate}
@@ -504,7 +504,7 @@ export function StageCard({
 
         {isEditingPrompt && showTemplateList && (
           <div className="border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
-            <div className="p-2 border-b border-editorial-border/60">
+            <div className="p-2 border-b border-rule">
               <input
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
@@ -512,10 +512,10 @@ export function StageCard({
                 aria-label={t('pipeline.templates.searchPlaceholder')}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- casella di ricerca che compare aprendo l'elenco template
                 autoFocus
-              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md bg-editorial-textbox/60 border border-rule-faint px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
-            <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
+            <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-rule">
               {filteredTemplates.length === 0 ? (
                 <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                   {t('pipeline.templates.empty')}
@@ -560,10 +560,10 @@ export function StageCard({
           placeholder={t('pipeline.stagePromptPlaceholder')}
           disabled={!promptEditable}
           rows={12}
-          className={`w-full rounded-md border-2 p-4 text-[13px] font-mono outline-none leading-6 resize-y min-h-[12rem] ${
+          className={`w-full rounded-md border-2 p-4 text-xs font-mono outline-none leading-6 resize-y min-h-[12rem] ${
             promptEditable
               ? 'bg-editorial-paper border-editorial-accent/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-              : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
+              : 'bg-editorial-textbox/12 border-rule-faint text-editorial-muted/70 cursor-default'
           }`}
         />
       </div>

@@ -1,92 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  AlertCircle,
-  ArrowLeft,
-  BookOpenText,
-  Check,
-  Circle,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  FileText,
-  Images,
-  Link2,
-  Loader2,
-  Lock,
-  MoreVertical,
-  RefreshCw,
-  Save,
-  SlidersHorizontal,
-  Trash2,
-  Unlink2,
-} from 'lucide-react';
-import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
+import { useEffect, useState } from 'react';
+import { Group, Panel } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { MarkdownEditor, PanelTransitionVeil } from '../common';
-import { ClickPopover, EmptyState, IconButton, IconLink, MenuActionRow, Spinner } from '../ui';
-import { PageViewer, type PageStatus } from '../viewer/PageViewer';
-import { DocumentViewer } from '../viewer/DocumentViewer';
-import { CopyProvenance } from '../workspace/CopyProvenance';
+import { MarkdownEditor } from '../common';
+import { INSPECTOR_WIDTH, ResizeHandle } from '../ui';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
-import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
-import { useDebounce } from '../../hooks/useDebounce';
-import { useUiStore } from '../../stores/uiStore';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { confirm } from '../../stores/confirmStore';
-import type { ViewerVersionRef } from '../../services/libraryService';
-import { computeSyncState } from './transcriptionSync';
 import { useTranscriptionSources } from './useTranscriptionSources';
 import { PagePendingOverlay } from './PagePendingOverlay';
-import {
-  TranscriptionInspector,
-  type TranscriptionInspectorTab,
-} from './TranscriptionInspector';
-import {
-  ensureSegment,
-  deleteTranscriptionRevision,
-  nameTranscriptionRevision,
-  clearTranscriptionHistory,
-  getSegmentByPosition,
-  listRevisions,
-  restoreRevision,
-  saveSegmentText,
-  setDocumentStatus,
-  unverifySegment,
-  updateDocumentOcrSettings,
-  verifySegment,
-  type TranscriptionRevision,
-  type TranscriptionSegment,
-} from '../../services/transcriptionService';
-import { startOcrForPage } from '../../services/ocrService';
-import {
-  DEFAULT_OCR_IMAGE_PREFERENCES,
-  getOcrImagePreferences,
-  type OcrImageMode,
-} from '../../services/ocrImageSettingsService';
-import { onJobChanged, OCR_JOB_TYPE } from '../../services/jobsService';
-import { useOcrPageActivity } from '../../hooks/useOcrPageActivity';
-import type { ModelProvider } from '../../types';
-import { WorkIdentity } from '../common/WorkIdentity';
-
-const SAVE_DELAY_MS = 30_000;
-const INSPECTOR_COLLAPSED = 56;
-const INSPECTOR_MIN = 300;
-const INSPECTOR_MAX = 520;
-const VIEWER_MIN = 280;
-const VIEWER_MAX = 1400;
-const TEXT_MIN = 280;
-/** Proporzione al primo apertura, prima che l'utente sposti il divisore: 3/5
- *  visore, 2/5 testo. */
-const VIEWER_DEFAULT_RATIO = '60%';
-/** Altezza della barra di intestazione del testo: la stessa di
- *  `ViewerToolbar` a sinistra, così le due colonne partono allineate. */
-const TEXT_HEADER_HEIGHT = 'h-12';
-
-function clampWidth(width: number, min: number, max: number) {
-  return Math.min(Math.max(width, min), max);
-}
+import { TranscriptionInspector, type TranscriptionInspectorTab } from './TranscriptionInspector';
+import { useSegmentEditor } from './useSegmentEditor';
+import { useRevisionActions } from './useRevisionActions';
+import { useStudioOcr } from './useStudioOcr';
+import { useViewerSync } from './useViewerSync';
+import { TEXT_MIN, VIEWER_MAX, VIEWER_MIN, useInspectorLayout } from './useInspectorLayout';
+import { useSaveShortcut } from './useSaveShortcut';
+import { formatRevisionDate } from './formatRevisionDate';
+import { StudioPageHeader } from './StudioPageHeader';
+import { StudioViewerPane } from './StudioViewerPane';
+import { StudioTextHeader } from './StudioTextHeader';
 
 interface TranscriptionStudioProps {
   documentId: string;
@@ -95,10 +27,8 @@ interface TranscriptionStudioProps {
 
 /**
  * Studio di trascrizione (#388): visore a sinistra — zoom/pan della pagina
- * collegata, riuso di `PageViewer`/`DocumentViewer` già scritti per la scheda
- * opera in Biblioteca; un documento nato senza digitalizzazione mostra un
- * avviso al posto suo — testo al centro, strumenti a destra. Filtri visuali,
- * preset e cambio fonte restano il resto di #221.
+ * collegata; un documento nato senza digitalizzazione mostra un avviso al
+ * posto suo — testo al centro, strumenti a destra.
  *
  * **Un segmento per pagina**, non uno per documento: cambiare pagina nel
  * visore cambia il testo mostrato, ancorato a quella posizione
@@ -106,525 +36,39 @@ interface TranscriptionStudioProps {
  * primo tocco del segmento dopo che un lavoro di scaricamento ha popolato
  * `source_pages`). L'OCR (#220) non aspetta quel collegamento: gli basta la
  * copia che il visore sta già mostrando.
- * Un documento senza visore (nato da zero) resta su un solo blocco di testo,
- * in posizione 0.
  */
 export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioProps) {
   const { t, i18n } = useTranslation();
   const detail = useTranscriptionStore((s) => s.detail);
   const loadDetail = useTranscriptionStore((s) => s.loadDetail);
-  const patchDetail = useTranscriptionStore((s) => s.patchDetail);
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-
-  const [segment, setSegment] = useState<TranscriptionSegment | null>(null);
-  const [revisions, setRevisions] = useState<TranscriptionRevision[]>([]);
-  const [loadingSegment, setLoadingSegment] = useState(true);
-  const [draft, setDraft] = useState('');
-  const [saveState, setSaveState] = useState<'saved' | 'pending' | 'saving' | 'error'>('saved');
-  const [verifying, setVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState<TranscriptionInspectorTab>('history');
   const [textMenuOpen, setTextMenuOpen] = useState(false);
-  const [removingDocument, setRemovingDocument] = useState(false);
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
-
-  const {
-    viewerRef,
-    viewerLoading,
-    bookInfo,
-    siblingVersion,
-    siblingPageCount,
-    activeSource,
-    setActiveSource,
-    manualUnlinked,
-    setManualUnlinked,
-  } = useTranscriptionSources(detail?.source_version_id ?? null);
-  const [jumpRequest, setJumpRequest] = useState<{ index: number; token: number } | null>(null);
-
-  // La pagina mostrata a sinistra: un documento senza visore resta sempre a
-  // 0, l'unico blocco di testo che ha senso per lui.
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageLabel, setPageLabel] = useState<string | null>(null);
-  const [pageTotal, setPageTotal] = useState<number | null>(null);
-  /** La pagina richiesta è in corso o è appena fallita: stesso segnale che
-   *  la scheda opera in Biblioteca usa già, qui applicato al testo e allo
-   *  storico invece che ai dati tecnici della copia. */
-  const [pendingStatus, setPendingStatus] = useState<PageStatus | null>(null);
-
-  const debouncedDraft = useDebounce(draft, SAVE_DELAY_MS);
-  const savedRef = useRef('');
-  const ocrPromptSaveChainRef = useRef<Promise<void>>(Promise.resolve());
-  const draftRef = useRef(draft);
-  const saveStateRef = useRef(saveState);
-  useEffect(() => {
-    draftRef.current = draft;
-    saveStateRef.current = saveState;
-  }, [draft, saveState]);
-  const attemptRef = useRef<string | null>(null);
-  // Un salvataggio in corso quando si cambia pagina non deve scrivere il suo
-  // risultato sullo stato della pagina nuova, arrivato nel frattempo.
-  const pageIndexRef = useRef(pageIndex);
-  useEffect(() => { pageIndexRef.current = pageIndex; }, [pageIndex]);
-  const loadedPageRef = useRef<number | null>(null);
-  const loadRequestRef = useRef(0);
-  // Il cambio pagina (salvataggio immediato) e il debounce possono chiedere
-  // di salvare quasi nello stesso istante: senza serializzare, entrambi
-  // leggono la stessa revisione precedente e calcolano lo stesso numero
-  // successivo, e uno dei due testi sparisce in silenzio (scartato dal
-  // vincolo di unicità). Incodare sulla stessa catena li rende sequenziali.
-  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
-
-  const inspectorWidth = useUiStore((state) => state.transcriptionInspectorWidth);
-  const setInspectorWidth = useUiStore((state) => state.setTranscriptionInspectorWidth);
-  const viewerWidth = useUiStore((state) => state.transcriptionViewerWidth);
-  const setViewerWidth = useUiStore((state) => state.setTranscriptionViewerWidth);
-  const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
-  const [viewerPanel, setViewerPanel] = usePanelCallbackRef();
-  const [dragging, setDragging] = useResizeDragging();
-  // Chiuso di default a ogni apertura dello Studio: solo la larghezza si
-  // ricorda fra le sessioni, non se il pannello era aperto o chiuso.
-  const [inspectorCollapsed, setInspectorCollapsed] = useState(true);
-  const initialInspectorWidth = useRef(clampWidth(inspectorWidth || 380, INSPECTOR_MIN, INSPECTOR_MAX));
-  const initialViewerSize = useRef<number | string>(
-    viewerWidth > 0 ? clampWidth(viewerWidth, VIEWER_MIN, VIEWER_MAX) : VIEWER_DEFAULT_RATIO,
-  );
 
   useEffect(() => {
     void loadDetail(documentId);
   }, [documentId, loadDetail]);
 
-  const handleRemoveDocument = async () => {
-    const ok = await confirm({
-      title: t('transcription.confirmDeleteTitle'),
-      message: t('transcription.confirmDeleteMessage', { name: detail?.title ?? '' }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
-    setRemovingDocument(true);
-    try {
-      await setDocumentStatus(documentId, 'trashed');
-      toast.success(t('transcription.deleted'));
-      onBack();
-    } catch (err: unknown) {
-      toast.error(t('transcription.deleteFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setRemovingDocument(false);
-    }
-  };
-
-  const loadSegmentForPage = useCallback(async (preserveDirty = false) => {
-    const requestedPage = pageIndex;
-    const request = ++loadRequestRef.current;
-    setLoadingSegment(true);
-    try {
-      // Tornando subito a una pagina lasciata con testo da salvare, leggi
-      // solo dopo che la sua scrittura in coda è terminata.
-      await saveChainRef.current;
-      if (request !== loadRequestRef.current || pageIndexRef.current !== requestedPage) return;
-      const existing = await getSegmentByPosition(documentId, requestedPage);
-      const history = existing ? await listRevisions(existing.id) : [];
-      if (request !== loadRequestRef.current || pageIndexRef.current !== requestedPage) return;
-      if (preserveDirty && (draftRef.current !== savedRef.current || saveStateRef.current !== 'saved')) return;
-      setSegment(existing);
-      setRevisions(history);
-      const currentText = history[0]?.text ?? '';
-      draftRef.current = currentText;
-      setDraft(currentText);
-      savedRef.current = currentText;
-      loadedPageRef.current = requestedPage;
-      attemptRef.current = null;
-      setSaveState('saved');
-    } catch (err: unknown) {
-      if (request === loadRequestRef.current) toast.error(t('transcription.loadFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      if (request === loadRequestRef.current) setLoadingSegment(false);
-    }
-  }, [documentId, pageIndex, t]);
-
-  useEffect(() => { void loadSegmentForPage(); }, [loadSegmentForPage]);
-
-  // Assistenza OCR/HTR (#220).
-  const [ocrStarting, setOcrStarting] = useState(false);
-  // Quali pagine di questo documento sono in lettura adesso: viene dai lavori
-  // in coda, quindi resta vero anche riaprendo il documento o dopo un riavvio.
-  const ocrActivity = useOcrPageActivity(detail?.id ?? null);
-  // Immagine inviata: la scelta delle impostazioni generali, cambiabile qui
-  // per la sessione — non si salva nel documento.
-  const [ocrImage, setOcrImage] = useState(DEFAULT_OCR_IMAGE_PREFERENCES);
-  useEffect(() => {
-    getOcrImagePreferences().then(setOcrImage).catch((err: unknown) => {
-      toast.error(t('transcription.assist.imageSettingsFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    });
-  }, [t]);
-  const handleOcrImageModeChange = (mode: OcrImageMode) => setOcrImage((current) => ({ ...current, mode }));
-
-  // Il lavoro gira in background: quando un lavoro OCR finisce si rilegge la
-  // pagina corrente, così la revisione appena scritta compare da sola nello
-  // storico, senza che l'utente debba cambiare pagina e tornare indietro.
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
-    onJobChanged((job) => {
-      if (job.jobType !== OCR_JOB_TYPE || job.status !== 'completed' || !segment) return;
-      try {
-        const config = JSON.parse(job.config) as { pages?: unknown };
-        if (!Array.isArray(config.pages)) return;
-        const affectsPage = config.pages.some((page: unknown) =>
-          typeof page === 'object' && page !== null &&
-          'documentId' in page && page.documentId === documentId &&
-          'segmentId' in page && page.segmentId === segment.id,
-        );
-        if (affectsPage) void loadSegmentForPage(true);
-      } catch { /* Un lavoro con configurazione illeggibile non riguarda la pagina aperta. */ }
-    }).then((fn) => { if (!cancelled) unlisten = fn; else fn(); });
-    return () => { cancelled = true; unlisten?.(); };
-  }, [documentId, segment, loadSegmentForPage]);
-
-  const handleDocumentOcrProviderChange = (provider: ModelProvider | '', model: string) => {
-    if (!detail) return;
-    patchDetail({ ocr_provider: provider || null, ocr_model: model || null });
-    void updateDocumentOcrSettings(detail.id, {
-      ocrProvider: provider || null,
-      ocrModel: model || null,
-    }).catch((err: unknown) => {
-      toast.error(t('transcription.assist.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    });
-  };
-
-  const handleDocumentOcrModelChange = (model: string) => {
-    if (!detail) return;
-    patchDetail({ ocr_model: model || null });
-    void updateDocumentOcrSettings(detail.id, { ocrModel: model || null }).catch((err: unknown) => {
-      toast.error(t('transcription.assist.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    });
-  };
-
-  // Il prompt appartiene al documento: modificato da una pagina qualsiasi,
-  // vale per tutte. `null` torna al prompt di partenza del workspace.
-  const handleDocumentOcrPromptChange = (prompt: string | null) => {
-    if (!detail) return;
-    patchDetail({ ocr_prompt: prompt });
-    const targetDocumentId = detail.id;
-    // Le digitazioni rapide devono arrivare al database nello stesso ordine.
-    ocrPromptSaveChainRef.current = ocrPromptSaveChainRef.current
-      .catch(() => undefined)
-      .then(() => updateDocumentOcrSettings(targetDocumentId, { ocrPrompt: prompt }));
-    void ocrPromptSaveChainRef.current.catch((err: unknown) => {
-      toast.error(t('transcription.assist.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    });
-  };
-
-  const handleStartOcr = async () => {
-    if (!detail || !activeWorkspace || !viewerRef) return;
-    setOcrStarting(true);
-    try {
-      // Una pagina mai toccata non ha ancora un segmento: nasce qui, come già
-      // fa il primo salvataggio manuale — l'OCR non deve aspettare che
-      // qualcuno scriva prima a mano.
-      const target = segment ?? (await ensureSegment(detail.id, pageIndex, pageLabel));
-      if (!segment) setSegment(target);
-      await startOcrForPage({
-        document: detail,
-        segment: target,
-        workspace: activeWorkspace,
-        viewerRef,
-        // La posizione nel libro contando dalla copertina, come nel titolo
-        // della pagina: la numerazione stampata della biblioteca («3») non
-        // corrisponde quasi mai.
-        pageLabel: String(pageIndex + 1),
-        image: ocrImage,
-      });
-      toast.success(t('transcription.assist.jobStarted'));
-    } catch (err: unknown) {
-      toast.error(t('transcription.assist.jobStartFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setOcrStarting(false);
-    }
-  };
-
-  const save = useCallback(
-    (text: string) => {
-      const savingPage = pageIndex;
-      const savingSegment = loadedPageRef.current === savingPage ? segment : null;
-      const savingLabel = pageLabel;
-      // Incodato: parte solo a salvataggio precedente concluso, così legge
-      // sempre l'ultima revisione davvero scritta e non ne collide il numero.
-      const run = saveChainRef.current.then(async () => {
-        if (pageIndexRef.current === savingPage) {
-          attemptRef.current = text;
-          setSaveState('saving');
-        }
-        try {
-          // Sfogliare pagine mai trascritte non crea righe vuote: il segmento
-          // nasce solo al primo salvataggio davvero.
-          const target = savingSegment ?? await ensureSegment(documentId, savingPage, savingLabel);
-          if (pageIndexRef.current === savingPage && loadedPageRef.current === savingPage && !savingSegment) setSegment(target);
-          const revision = await saveSegmentText(target.id, text, 'user');
-          if (pageIndexRef.current !== savingPage || loadedPageRef.current !== savingPage) return;
-          if (revision) {
-            // Il testo davvero persistito, non quello tentato: su collisione
-            // la revisione restituita è quella dell'altro salvataggio, non la nostra.
-            savedRef.current = revision.text;
-            if (attemptRef.current === text) {
-              setSaveState(revision.text !== text ? 'error' : draftRef.current === text ? 'saved' : 'pending');
-            }
-            setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
-          } else if (attemptRef.current === text) {
-            savedRef.current = text;
-            setSaveState(draftRef.current === text ? 'saved' : 'pending');
-          }
-        } catch (error: unknown) {
-          if (pageIndexRef.current === savingPage && attemptRef.current === text) {
-            setSaveState('error');
-          } else {
-            toast.error(t('transcription.saveError'), {
-              description: error instanceof Error ? error.message : String(error),
-            });
-          }
-        }
-      });
-      saveChainRef.current = run;
-      return run;
-    },
-    [segment, documentId, pageIndex, pageLabel, t],
-  );
-  const saveOnExitRef = useRef(save);
-  saveOnExitRef.current = save;
-  useEffect(() => () => {
-    if (loadedPageRef.current === pageIndexRef.current && draftRef.current !== savedRef.current) {
-      void saveOnExitRef.current(draftRef.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (loadingSegment || loadedPageRef.current !== pageIndex || debouncedDraft !== draftRef.current) return;
-    if (debouncedDraft === savedRef.current) return;
-    if (attemptRef.current === debouncedDraft) return;
-    void save(debouncedDraft);
-  }, [debouncedDraft, save, loadingSegment, pageIndex]);
-
-  const { aligned, synced } = computeSyncState({
-    activeSource,
-    manualUnlinked,
-    mainPageTotal: pageTotal,
-    siblingPageCount,
+  const sources = useTranscriptionSources(detail?.source_version_id ?? null);
+  const editor = useSegmentEditor(documentId);
+  const revisionActions = useRevisionActions(editor, documentId, detail);
+  const ocr = useStudioOcr({ editor, documentId, detail, workspace: activeWorkspace, viewerRef: sources.viewerRef });
+  const sync = useViewerSync({
+    activeSource: sources.activeSource,
+    setActiveSource: sources.setActiveSource,
+    manualUnlinked: sources.manualUnlinked,
+    siblingPageCount: sources.siblingPageCount,
+    pageIndex: editor.pageIndex,
+    pageTotal: editor.pageTotal,
   });
+  const layout = useInspectorLayout();
+  const { segment, draft, pageIndex, pageTotal, pendingStatus, saveState } = editor;
 
-  /** Il visore ha disegnato un'altra pagina davvero (non solo richiesta): se
-   *  quella che si lascia ha testo non ancora salvato, lo si salva subito —
-   *  aspettare il debounce lo perderebbe cambiando pagina in fretta.
-   *
-   *  Fuori sincronia il visore sfoglia per conto suo: i suoi eventi non
-   *  toccano più la pagina di testo, che si sposta solo con le frecce
-   *  indipendenti. */
-  const handleViewerPageChange = useCallback(
-    (index: number, label: string | null, total: number | null) => {
-      if (!synced) return;
-      if (index === pageIndex) { setPageLabel(label); setPageTotal(total); setPendingStatus(null); return; }
-      if (loadedPageRef.current === pageIndex && draftRef.current !== savedRef.current) void save(draftRef.current);
-      pageIndexRef.current = index;
-      loadedPageRef.current = null;
-      ++loadRequestRef.current;
-      setLoadingSegment(true);
-      setPageIndex(index);
-      setPageLabel(label);
-      setPageTotal(total);
-      setPendingStatus(null);
-    },
-    [save, synced, pageIndex],
-  );
-
-  // Tornando in sincronia (si rientra sulla principale, o si riallinea la
-  // secondaria) il visore attivo salta dove sta il testo: senza, resterebbe
-  // dov'era rimasto sfogliando da solo.
-  const wasSyncedRef = useRef(synced);
-  useEffect(() => {
-    if (synced && !wasSyncedRef.current) {
-      setJumpRequest({ index: pageIndex, token: Date.now() });
-    }
-    wasSyncedRef.current = synced;
-  }, [synced, pageIndex]);
-
-  /** Le frecce indipendenti del testo, fuori sincronia: stessa cautela di
-   *  `handleViewerPageChange` per non perdere testo non salvato. La pagina
-   *  raggiunta così non ha un'etichetta nota (non viene da un visore), va
-   *  azzerata perché non resti quella della pagina lasciata. */
-  const handleTextPageChange = (nextIndex: number) => {
-    if (nextIndex === pageIndex) return;
-    if (loadedPageRef.current === pageIndex && draftRef.current !== savedRef.current) void save(draftRef.current);
-    pageIndexRef.current = nextIndex;
-    loadedPageRef.current = null;
-    ++loadRequestRef.current;
-    setLoadingSegment(true);
-    setPageIndex(nextIndex);
-    setPageLabel(null);
-  };
-
-  const handleVerify = async () => {
-    if (!detail || !draftRef.current.trim()) return;
-    const verifyingPage = pageIndex;
-    setVerifying(true);
-    try {
-      const text = draftRef.current;
-      if (text !== savedRef.current) await save(text);
-      if (pageIndexRef.current !== verifyingPage) return;
-      if (savedRef.current !== text) throw new Error(t('transcription.saveError'));
-      const target = await getSegmentByPosition(documentId, verifyingPage);
-      if (!target) throw new Error(t('transcription.noRevisions'));
-      const revision = await verifySegment(target.id, detail.workspace_id);
-      if (pageIndexRef.current === verifyingPage) setSegment({ ...target, approved_revision_id: revision.id });
-      toast.success(t('transcription.verified'));
-    } catch (err: unknown) {
-      toast.error(t('transcription.verifyFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleUnverify = async () => {
-    if (!segment || !detail) return;
-    const verifyingPage = pageIndex;
-    setVerifying(true);
-    try {
-      await unverifySegment(segment.id, detail.workspace_id);
-      if (pageIndexRef.current === verifyingPage) setSegment({ ...segment, approved_revision_id: null });
-    } catch (err: unknown) {
-      toast.error(t('transcription.verifyFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleRestore = async (revisionId: string) => {
-    if (!segment) return;
-    const restoringPage = pageIndex;
-    try {
-      const unsavedText = draftRef.current;
-      if (unsavedText !== savedRef.current) await save(unsavedText);
-      if (pageIndexRef.current !== restoringPage) return;
-      if (savedRef.current !== unsavedText) throw new Error(t('transcription.saveError'));
-      const revision = await restoreRevision(segment.id, revisionId);
-      if (pageIndexRef.current !== restoringPage) return;
-      draftRef.current = revision.text;
-      setDraft(revision.text);
-      savedRef.current = revision.text;
-      setRevisions((current) => [revision, ...current.filter((r) => r.id !== revision.id)]);
-      toast.success(t('transcription.restored'));
-    } catch (err: unknown) {
-      toast.error(t('transcription.restoreFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
-
-  const handleDeleteRevision = async (revisionId: string) => {
-    if (!segment) return;
-    const deletingPage = pageIndex;
-    const segmentId = segment.id;
-    const ok = await confirm({
-      title: t('transcription.deleteRevisionTitle'),
-      message: t('transcription.deleteRevisionMessage'),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await deleteTranscriptionRevision(segmentId, revisionId);
-      if (pageIndexRef.current === deletingPage) {
-        setRevisions((current) => current.filter((revision) => revision.id !== revisionId));
-      }
-    } catch (error: unknown) {
-      toast.error(t('transcription.deleteRevisionFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const handleNameRevision = async (revisionId: string, name: string | null) => {
-    if (!segment) return;
-    const namingPage = pageIndex;
-    try {
-      await nameTranscriptionRevision(segment.id, revisionId, name);
-      if (pageIndexRef.current === namingPage) {
-        setRevisions((current) => current.map((revision) =>
-          revision.id === revisionId ? { ...revision, consolidated_name: name } : revision));
-      }
-    } catch (error: unknown) {
-      toast.error(t('transcription.nameRevisionFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  const handleClearHistory = async () => {
-    if (!segment) return;
-    const clearingPage = pageIndex;
-    const segmentId = segment.id;
-    const ok = await confirm({
-      title: t('transcription.clearHistoryTitle'),
-      message: t('transcription.clearHistoryMessage'),
-      confirmLabel: t('transcription.clearHistory'),
-      danger: true,
-    });
-    if (!ok || pageIndexRef.current !== clearingPage) return;
-    try {
-      const text = draftRef.current;
-      if (text !== savedRef.current) await save(text);
-      if (pageIndexRef.current !== clearingPage) return;
-      if (savedRef.current !== text) throw new Error(t('transcription.saveError'));
-      await clearTranscriptionHistory(segmentId);
-      const remaining = await listRevisions(segmentId);
-      if (pageIndexRef.current === clearingPage) setRevisions(remaining);
-    } catch (error: unknown) {
-      toast.error(t('transcription.clearHistoryFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    }
-  };
-
-  // Il pannello destro nasce chiuso: l'unica cosa che si ricorda è la sua
-  // larghezza, per quando l'utente lo riapre.
-  useEffect(() => {
-    if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
-    inspectorPanel.collapse();
-  }, [inspectorPanel]);
-
-  const persistInspectorLayout = () => {
-    if (!inspectorPanel || inspectorPanel.isCollapsed()) return;
-    const px = Math.round(inspectorPanel.getSize().inPixels);
-    if (px !== inspectorWidth) setInspectorWidth(px);
-  };
-  const persistViewerLayout = () => {
-    if (!viewerPanel) return;
-    const px = Math.round(viewerPanel.getSize().inPixels);
-    if (px !== viewerWidth) setViewerWidth(px);
-  };
-  const syncInspectorCollapsed = () => {
-    setInspectorCollapsed(inspectorPanel?.isCollapsed() ?? false);
-  };
-  const toggleInspectorCollapsed = (next: boolean) => {
-    if (!inspectorPanel) return;
-    if (next) inspectorPanel.collapse();
-    else inspectorPanel.expand();
-    setInspectorCollapsed(next);
+  // Fuori sincronia il visore sfoglia per conto suo: i suoi eventi non
+  // toccano più la pagina di testo, che si sposta solo con le frecce
+  // indipendenti.
+  const handleViewerPageChange = (index: number, label: string | null, total: number | null) => {
+    if (sync.synced) editor.goToViewerPage(index, label, total);
   };
 
   const isVerified = Boolean(segment?.approved_revision_id);
@@ -632,429 +76,175 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   // confermata: la stessa convenzione della scheda opera in Biblioteca. Fuori
   // sincronia il visore sfoglia per conto suo: il suo stato di caricamento
   // non riguarda più la pagina di testo mostrata qui.
-  const displayIndex = synced ? pendingStatus?.index ?? pageIndex : pageIndex;
-  const isPagePending = loadingSegment || (synced && pendingStatus?.state === 'loading');
+  const displayIndex = sync.synced ? pendingStatus?.index ?? pageIndex : pageIndex;
+  const isPagePending = editor.loadingSegment || (sync.synced && pendingStatus?.state === 'loading');
   // Questa pagina è dentro un lavoro di lettura in corso: il foglio si vela e
   // resta in sola lettura, perché scrivere su un testo che sta per essere
   // sostituito è lavoro buttato.
-  const isPageReading = ocrActivity.isReading(segment?.id);
+  const isPageReading = ocr.activity.isReading(segment?.id);
   // La prima pagina in lettura del documento, anche se non è quella aperta:
   // sfogliare avanti non deve far sparire il segnale.
-  const readingPage = ocrActivity.pages[0] ?? null;
-  const pagePendingError = synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
+  const readingPage = ocr.activity.pages[0] ?? null;
+  const pagePendingError = sync.synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
   const isTextReadOnly = isVerified || isPageReading || isPagePending || Boolean(pagePendingError);
   const hasUnsavedText = saveState === 'pending' || saveState === 'error';
   const canSaveNow = hasUnsavedText && !isTextReadOnly;
   const handleSaveNow = () => {
-    if (canSaveNow) void save(draftRef.current);
+    if (canSaveNow) void editor.save(editor.draftRef.current);
   };
-  // Ctrl/⌘+S vale anche mentre si scrive nel foglio: è lì che serve.
-  const saveNowRef = useRef(handleSaveNow);
-  saveNowRef.current = handleSaveNow;
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 's') return;
-      event.preventDefault();
-      saveNowRef.current();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  useSaveShortcut(handleSaveNow);
+
+  const busyReason = !detail || isPagePending
+    ? t('transcription.blockedPageLoading')
+    : isPageReading
+      ? t('transcription.blockedReading')
+      : null;
+  const verifyBlockedReason = busyReason ?? (!isVerified && !draft.trim() ? t('transcription.blockedEmptyPage') : null);
+
   const pageTitle =
-    viewerRef && pageTotal
+    sources.viewerRef && pageTotal
       ? t('areas.library.viewerPageOf', { index: displayIndex + 1, total: pageTotal })
-      : viewerRef
+      : sources.viewerRef
         ? t('transcription.pageTitle', { n: displayIndex + 1 })
         : t('transcription.paneLabel');
-  const formatDate = (value: string) => {
-    // `value` è già ISO (revisione appena scritta, in attesa della rilettura
-    // dal database) oppure "AAAA-MM-GG HH:MM:SS" di SQLite, sempre UTC. Solo
-    // la seconda forma va completata: aggiungere "Z" alla prima produceva due
-    // fusi orari sulla stessa stringa e una data non finita.
-    const iso = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`;
-    return new Intl.DateTimeFormat(i18n.language, {
-      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-    }).format(new Date(iso));
-  };
-
-  /** Cambio fonte: se le due copie restano sincrone (allineate, o si torna
-   *  alla principale) il visore che si monta è un altro componente — chiave
-   *  diversa, stato interno nuovo — e senza una richiesta esplicita apre la
-   *  sua prima pagina invece di quella che il testo sta mostrando. */
-  const handleSourceChange = (source: 'main' | 'sibling') => {
-    setActiveSource(source);
-    const nextSynced = computeSyncState({
-      activeSource: source,
-      manualUnlinked,
-      mainPageTotal: pageTotal,
-      siblingPageCount,
-    }).synced;
-    if (nextSynced) setJumpRequest({ index: pageIndex, token: Date.now() });
-  };
-
-  const displayedVersion = activeSource === 'main' ? viewerRef : siblingVersion;
-  const sourceIcon = (kind: ViewerVersionRef['versionKind']) => (kind === 'pdf' ? FileText : Images);
-  const sourceLabelKey = (kind: ViewerVersionRef['versionKind'], forAligned: boolean) =>
-    kind === 'pdf'
-      ? forAligned ? 'transcription.sourcePdf' : 'transcription.sourcePdfUnaligned'
-      : forAligned ? 'transcription.sourceImages' : 'transcription.sourceImagesUnaligned';
-  // Comandi del cambio fonte: stessa barra del visore (accanto a "leggi solo
-  // file locali"), non una riga a parte. Il cambio fonte compare solo con
-  // una secondaria; lo sgancio manuale sempre, anche con una copia sola —
-  // può tornare comodo curiosare senza spostare il punto di scrittura.
-  const sourceSwitchControls = viewerRef && (
-    <div className="flex items-center gap-1">
-      {siblingVersion && (
-        <>
-          {(['main', 'sibling'] as const).map((source) => {
-            const version = source === 'main' ? viewerRef : siblingVersion;
-            const Icon = sourceIcon(version.versionKind);
-            return (
-              <IconButton
-                key={source}
-                size="sm"
-                tone={activeSource === source ? 'accent' : 'default'}
-                ariaPressed={activeSource === source}
-                onClick={() => handleSourceChange(source)}
-                title={t(sourceLabelKey(version.versionKind, aligned))}
-              >
-                <Icon size={14} />
-              </IconButton>
-            );
-          })}
-        </>
-      )}
-      <IconButton
-        size="sm"
-        tone={manualUnlinked ? 'accent' : 'default'}
-        ariaPressed={manualUnlinked}
-        onClick={() => setManualUnlinked((current) => !current)}
-        title={t(manualUnlinked ? 'transcription.relink' : 'transcription.unlink')}
-      >
-        {manualUnlinked ? <Unlink2 size={14} /> : <Link2 size={14} />}
-      </IconButton>
-    </div>
-  );
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-surface-panel">
-      {/* Stessa riga della scheda opera in Biblioteca (icona, titolo/autore,
-          uscita verso la biblioteca): quando il documento è legato a
-          un'opera è quella a identificarlo qui, non il titolo scelto per la
-          trascrizione — visibile comunque nel breadcrumb in alto. */}
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <IconButton size="sm" onClick={onBack} title={t('transcription.backToCatalogue')}>
-            <ArrowLeft size={15} />
-          </IconButton>
-          {bookInfo && <BookOpenText size={16} className="shrink-0 text-editorial-accent" aria-hidden="true" />}
-          <h1 className="min-w-0">
-            {bookInfo ? (
-              <WorkIdentity variant="header" work={bookInfo.work} />
-            ) : (
-              <span className="block truncate font-display text-base italic text-editorial-ink">
-                {detail?.title ?? t('areas.transcriptions.title')}
-              </span>
-            )}
-          </h1>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {bookInfo?.providerLabel && (
-            <CopyProvenance providerLabel={bookInfo.providerLabel} className="mr-1 text-xs text-editorial-ink" />
-          )}
-          {bookInfo?.pageUrl && (
-            <IconLink size="sm" href={bookInfo.pageUrl} title={t('areas.library.openOnLibrarySite')}>
-              <ExternalLink size={13} />
-            </IconLink>
-          )}
-          <ClickPopover
-            open={headerMenuOpen}
-            onOpenChange={setHeaderMenuOpen}
-            trigger={
-              <IconButton size="sm" title={t('areas.library.moreActions')} disabled={removingDocument} ariaPressed={headerMenuOpen}>
-                <MoreVertical size={13} />
-              </IconButton>
-            }
-          >
-            <div className="min-w-44 py-1">
-              <MenuActionRow
-                icon={<Trash2 size={14} />}
-                label={t('transcription.removeDocument')}
-                tone="danger"
-                onClick={() => {
-                  setHeaderMenuOpen(false);
-                  void handleRemoveDocument();
-                }}
-              />
-            </div>
-          </ClickPopover>
-        </div>
-      </header>
+      <StudioPageHeader
+        documentId={documentId}
+        documentTitle={detail?.title ?? null}
+        bookInfo={sources.bookInfo}
+        onBack={onBack}
+      />
 
-      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistInspectorLayout}>
+      <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={layout.persistInspectorLayout}>
         <Panel id="transcription-main" className="flex min-w-0 flex-col">
-        <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistViewerLayout}>
-        <Panel
-          id="transcription-viewer"
-          defaultSize={initialViewerSize.current}
-          minSize={VIEWER_MIN}
-          maxSize={VIEWER_MAX}
-          panelRef={setViewerPanel}
-          className="relative flex min-w-0 flex-col border-r border-editorial-border bg-surface-panel"
-        >
-          {viewerLoading ? (
-            <Spinner size={14} label={t('common.loading')} className="flex h-full items-center justify-center gap-2 text-xs text-editorial-muted" />
-          ) : displayedVersion?.versionKind === 'pdf' && displayedVersion.providerKey ? (
-            <DocumentViewer
-              key={displayedVersion.versionId}
-              versionId={displayedVersion.versionId}
-              providerKey={displayedVersion.providerKey}
-              onPageChange={(index, total) => handleViewerPageChange(index, null, total)}
-              onPageStatusChange={setPendingStatus}
-              requestedIndex={jumpRequest?.index ?? null}
-              requestToken={jumpRequest?.token ?? 0}
-              onRequestedIndexHandled={() => setJumpRequest(null)}
-              extraControls={sourceSwitchControls}
-            />
-          ) : displayedVersion?.versionKind === 'iiif_manifest' && displayedVersion.sourceUrl ? (
-            <PageViewer
-              key={displayedVersion.versionId}
-              sourceId={displayedVersion.sourceId}
-              versionId={displayedVersion.versionId}
-              manifestUrl={displayedVersion.sourceUrl}
-              providerKey={displayedVersion.providerKey}
-              onPageChange={(page) => handleViewerPageChange(page.index, page.label, page.total)}
-              onPageStatusChange={setPendingStatus}
-              requestedIndex={jumpRequest?.index ?? null}
-              requestToken={jumpRequest?.token ?? 0}
-              onRequestedIndexHandled={() => setJumpRequest(null)}
-              extraControls={sourceSwitchControls}
-            />
-          ) : (
-            // Filtri visuali, preset e cambio fonte restano il resto di #221:
-            // questa colonna oggi offre solo zoom/pan della pagina. I comandi
-            // del cambio fonte restano visibili anche qui — se la copia
-            // scelta non si apre, si deve poter tornare indietro senza
-            // restare bloccati su una schermata senza uscita.
-            <div className="flex h-full min-h-0 flex-col">
-              {sourceSwitchControls && (
-                <div className="flex h-12 shrink-0 items-center justify-end border-b border-editorial-border px-3">
-                  {sourceSwitchControls}
-                </div>
-              )}
-              <EmptyState
-                icon={<Images size={28} aria-hidden="true" />}
-                message={t(displayedVersion ? 'transcription.viewerOpenFailed' : 'transcription.viewerUnavailable')}
+          <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={layout.persistViewerLayout}>
+            <Panel
+              id="transcription-viewer"
+              defaultSize={layout.initialViewerSize}
+              minSize={VIEWER_MIN}
+              maxSize={VIEWER_MAX}
+              panelRef={layout.setViewerPanel}
+              className="relative flex min-w-0 flex-col border-r border-editorial-border bg-surface-panel"
+            >
+              <StudioViewerPane
+                loading={sources.viewerLoading}
+                viewerRef={sources.viewerRef}
+                siblingVersion={sources.siblingVersion}
+                activeSource={sources.activeSource}
+                aligned={sync.aligned}
+                manualUnlinked={sources.manualUnlinked}
+                onSourceChange={sync.changeSource}
+                onToggleUnlinked={() => sources.setManualUnlinked((current) => !current)}
+                onPageChange={handleViewerPageChange}
+                onPageStatusChange={editor.setPendingStatus}
+                jumpRequest={sync.jumpRequest}
+                onJumpHandled={sync.clearJumpRequest}
               />
-            </div>
-          )}
-          {/* Cambiare fonte smonta e rimonta il visore (chiavi diverse, dati
-              diversi): senza questo velo si vede il vuoto per un istante fra
-              i due, uno scatto invece di una transizione. */}
-          <PanelTransitionVeil panelKey={displayedVersion?.versionId ?? 'none'} tone="panel" variant="project" />
+            </Panel>
+
+            <ResizeHandle dragging={layout.dragging} onDragStart={layout.startDragging} />
+
+            <Panel id="transcription-text" minSize={TEXT_MIN} className="flex min-w-0 flex-1 flex-col bg-surface-panel">
+              {/* Niente "spinner al posto di tutto": scambiare l'intera
+                  sezione a ogni cambio pagina smontava e rimontava intestazione
+                  e editor per una lettura locale che dura pochi millisecondi —
+                  uno scatto visibile per niente. La struttura resta, un velo la
+                  copre se e quando il caricamento si fa sentire davvero. */}
+              <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+                <StudioTextHeader
+                  title={pageTitle}
+                  synced={sync.synced}
+                  pageIndex={pageIndex}
+                  pageTotal={pageTotal}
+                  onTextPageChange={editor.goToTextPage}
+                  verified={isVerified}
+                  verifying={revisionActions.verifying}
+                  verifyBlockedReason={verifyBlockedReason}
+                  onToggleVerified={() => void (isVerified ? revisionActions.unverify() : revisionActions.verify())}
+                  readingPageLabel={readingPage?.pageLabel ?? null}
+                  saveState={saveState}
+                  canSave={canSaveNow}
+                  saveBlockedReason={hasUnsavedText ? busyReason : null}
+                  onSave={handleSaveNow}
+                  textMenuOpen={textMenuOpen}
+                  onTextMenuToggle={() => setTextMenuOpen((open) => !open)}
+                />
+                <div className="flex min-h-0 flex-1 flex-col bg-editorial-bg px-12 py-8">
+                  <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-rule bg-editorial-page px-7 py-4 shadow-page-card">
+                    <MarkdownEditor
+                      identityKey={segment?.id ?? `${documentId}:${pageIndex}`}
+                      flatToolbar
+                      menuOpen={textMenuOpen}
+                      onMenuOpenChange={setTextMenuOpen}
+                      value={draft}
+                      onChange={editor.changeDraft}
+                      markdownEnabled
+                      readOnly={isTextReadOnly}
+                      fillHeight
+                      textClassName="doc-content text-editorial-ink"
+                      previewClassName="min-h-[280px] doc-content text-editorial-ink"
+                      placeholder={t('transcription.textPlaceholder')}
+                    />
+                    <PagePendingOverlay
+                      pending={isPagePending || isPageReading}
+                      label={isPageReading && !isPagePending ? t('transcription.assist.readingInProgress') : undefined}
+                      errorMessage={pagePendingError}
+                    />
+                  </div>
+                </div>
+              </section>
+            </Panel>
+          </Group>
         </Panel>
 
-        <Separator
-          onPointerDown={() => setDragging(true)}
-          className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-            dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`relative h-7 w-px rounded-full transition-colors ${
-              dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-            }`}
-          />
-        </Separator>
-
-        <Panel id="transcription-text" minSize={TEXT_MIN} className="flex min-w-0 flex-1 flex-col bg-surface-panel">
-          {/* Niente più "spinner al posto di tutto": scambiare l'intera
-              sezione a ogni cambio pagina smontava e rimontava intestazione
-              e editor per una lettura locale che dura pochi millisecondi —
-              uno scatto visibile per niente. La struttura resta, un velo la
-              copre se e quando il caricamento si fa sentire davvero. */}
-            <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-              {/* Stessa altezza della barra comandi del visore a sinistra
-                  (`ViewerToolbar`, h-12): le due colonne partono allineate. */}
-              <div className={`flex ${TEXT_HEADER_HEIGHT} shrink-0 items-center justify-between gap-3 border-b border-editorial-border px-3`}>
-                <div className="flex min-w-0 items-center gap-3">
-                  {/* Navigazione autonoma del testo: sempre presente, attiva
-                      solo fuori sincronia (visore staccato sulla secondaria,
-                      o sgancio manuale). Stesse pagine di sempre — cambia
-                      solo chi le comanda. */}
-                  <span className="flex shrink-0 items-center gap-0.5">
-                    <IconButton
-                      size="sm"
-                      disabled={synced || pageIndex <= 0}
-                      onClick={() => handleTextPageChange(Math.max(0, pageIndex - 1))}
-                      title={t('transcription.textPrevPage')}
-                    >
-                      <ChevronLeft size={14} />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      disabled={synced || (pageTotal !== null && pageIndex >= pageTotal - 1)}
-                      onClick={() => handleTextPageChange(pageTotal !== null ? Math.min(pageTotal - 1, pageIndex + 1) : pageIndex + 1)}
-                      title={t('transcription.textNextPage')}
-                    >
-                      <ChevronRight size={14} />
-                    </IconButton>
-                  </span>
-                  <h3 className="min-w-0 flex-1 truncate font-display text-lg italic text-editorial-ink">
-                    {pageTitle}
-                  </h3>
-                  <span className="shrink-0">
-                    <IconButton
-                      size="sm"
-                      tone={isVerified ? 'success' : 'muted'}
-                      onClick={() => void (isVerified ? handleUnverify() : handleVerify())}
-                      disabled={verifying || !detail || isPagePending || (!isVerified && !draft.trim())}
-                      title={t(isVerified ? 'transcription.unverify' : 'transcription.verify')}
-                      ariaPressed={isVerified}
-                    >
-                      {verifying ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
-                    </IconButton>
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {readingPage && (
-                    <span
-                      className="flex items-center gap-1.5 rounded-full bg-editorial-accent/10 px-2.5 py-1 text-xs text-editorial-accent"
-                      role="status"
-                    >
-                      <Loader2 size={12} className="shrink-0 animate-spin" aria-hidden="true" />
-                      {t('transcription.assist.readingPage', { page: readingPage.pageLabel })}
-                    </span>
-                  )}
-                  <span
-                    className={`flex items-center gap-1 text-xs ${
-                      saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'
-                    }`}
-                    role="status"
-                  >
-                    {saveState === 'saving' ? (
-                      <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-                    ) : saveState === 'pending' ? (
-                      <Circle size={12} aria-hidden="true" />
-                    ) : saveState === 'error' ? (
-                      <AlertCircle size={12} aria-hidden="true" />
-                    ) : (
-                      <Check size={12} aria-hidden="true" />
-                    )}
-                    {t(`transcription.save${saveState === 'saved' ? 'Saved' : saveState === 'pending' ? 'Pending' : saveState === 'saving' ? 'Saving' : 'Error'}`)}
-                    {saveState === 'error' && (
-                      <IconButton size="xs" tone="danger" onClick={() => void save(draft)} title={t('transcription.saveRetry')}>
-                        <RefreshCw size={12} />
-                      </IconButton>
-                    )}
-                  </span>
-                  <IconButton
-                    size="sm"
-                    onClick={handleSaveNow}
-                    disabled={!canSaveNow}
-                    title={t(canSaveNow ? 'transcription.saveNow' : 'transcription.saveNowNothing')}
-                  >
-                    <Save size={13} />
-                  </IconButton>
-                  <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-                  <IconButton
-                    size="lg"
-                    tone={textMenuOpen ? 'accent' : 'default'}
-                    onClick={() => setTextMenuOpen((open) => !open)}
-                    title={t('editor.textMenu')}
-                    ariaPressed={textMenuOpen}
-                  >
-                    <SlidersHorizontal size={14} />
-                  </IconButton>
-                </div>
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col bg-editorial-bg px-12 py-8">
-                <div className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)]">
-                  <MarkdownEditor
-                    identityKey={segment?.id ?? `${documentId}:${pageIndex}`}
-                    flatToolbar
-                    menuOpen={textMenuOpen}
-                    onMenuOpenChange={setTextMenuOpen}
-                    value={draft}
-                    onChange={(text) => { draftRef.current = text; setDraft(text); setSaveState('pending'); }}
-                    markdownEnabled
-                    readOnly={isTextReadOnly}
-                    fillHeight
-                    textClassName="doc-content text-editorial-ink"
-                    previewClassName="min-h-[280px] doc-content text-editorial-ink"
-                    placeholder={t('transcription.textPlaceholder')}
-                  />
-                  <PagePendingOverlay
-                    pending={isPagePending || isPageReading}
-                    label={isPageReading && !isPagePending ? t('transcription.assist.readingInProgress') : undefined}
-                    errorMessage={pagePendingError}
-                  />
-                </div>
-              </div>
-            </section>
-        </Panel>
-        </Group>
-        </Panel>
-
-        <Separator
-          onPointerDown={() => setDragging(true)}
-          className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-            dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`relative h-7 w-px rounded-full transition-colors ${
-              dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-            }`}
-          />
-        </Separator>
+        <ResizeHandle dragging={layout.dragging} onDragStart={layout.startDragging} />
 
         <Panel
           id="transcription-inspector"
           collapsible
-          collapsedSize={INSPECTOR_COLLAPSED}
-          minSize={INSPECTOR_MIN}
-          maxSize={INSPECTOR_MAX}
-          defaultSize={initialInspectorWidth.current}
-          panelRef={setInspectorPanel}
-          onResize={syncInspectorCollapsed}
+          collapsedSize={INSPECTOR_WIDTH.collapsed}
+          minSize={INSPECTOR_WIDTH.min}
+          maxSize={INSPECTOR_WIDTH.max}
+          defaultSize={layout.initialInspectorWidth}
+          panelRef={layout.setInspectorPanel}
+          onResize={layout.syncInspectorCollapsed}
           className={`flex min-w-0 flex-col border-l border-editorial-border bg-surface-panel ${
-            dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
+            layout.dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
           }`}
         >
           <TranscriptionInspector
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            collapsed={inspectorCollapsed}
-            onCollapsedChange={toggleInspectorCollapsed}
-            revisions={revisions}
+            collapsed={layout.inspectorCollapsed}
+            onCollapsedChange={layout.toggleInspectorCollapsed}
+            revisions={editor.revisions}
             segment={segment}
             draft={draft}
-            formatDate={formatDate}
-            onRestore={(revisionId) => void handleRestore(revisionId)}
-            onDeleteRevision={(revisionId) => void handleDeleteRevision(revisionId)}
-            onNameRevision={(revisionId, name) => void handleNameRevision(revisionId, name)}
-            onClearHistory={() => void handleClearHistory()}
+            formatDate={(value) => formatRevisionDate(value, i18n.language)}
+            onRestore={(revisionId) => void revisionActions.restore(revisionId)}
+            onDeleteRevision={(revisionId) => void revisionActions.deleteRevision(revisionId)}
+            onNameRevision={(revisionId, name) => void revisionActions.nameRevision(revisionId, name)}
+            onClearHistory={() => void revisionActions.clearHistory()}
             pagePending={isPagePending}
             pagePendingError={pagePendingError}
             displayIndex={displayIndex}
-            pageLabel={pageLabel}
+            pageLabel={editor.pageLabel}
             pageTotal={pageTotal}
             verified={isVerified}
             document={detail}
             workspace={activeWorkspace}
-            viewerRef={viewerRef}
-            ocrStarting={ocrStarting}
+            viewerRef={sources.viewerRef}
+            ocrStarting={ocr.starting}
             ocrReading={isPageReading}
             pageTitleShort={String(displayIndex + 1)}
-            onStartOcr={() => void handleStartOcr()}
-            onDocumentOcrProviderChange={handleDocumentOcrProviderChange}
-            onDocumentOcrModelChange={handleDocumentOcrModelChange}
-            onDocumentOcrPromptChange={handleDocumentOcrPromptChange}
-            ocrImage={ocrImage}
-            onOcrImageModeChange={handleOcrImageModeChange}
+            onStartOcr={() => void ocr.start()}
+            onDocumentOcrProviderChange={ocr.changeProvider}
+            onDocumentOcrModelChange={ocr.changeModel}
+            onDocumentOcrPromptChange={ocr.changePrompt}
+            ocrImage={ocr.image}
+            onOcrImageModeChange={ocr.changeImageMode}
           />
         </Panel>
       </Group>

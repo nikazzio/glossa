@@ -154,7 +154,7 @@ export function PromptTemplatesTab() {
               </IconButton>
             );
           })}
-          <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+          <span className="mx-1 h-4 w-px self-center bg-rule" aria-hidden="true" />
           <span className="self-center font-display text-sm italic text-editorial-ink">
             {filterLabel(filterContext)}
           </span>
@@ -169,7 +169,7 @@ export function PromptTemplatesTab() {
       </div>
 
       {creating && (
-        <div className="space-y-4 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-5">
+        <div className="space-y-4 border-l-4 border-l-editorial-accent/35 border-y border-rule bg-editorial-bg/45 px-4 py-5">
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
             <input
               // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo template)
@@ -214,7 +214,7 @@ export function PromptTemplatesTab() {
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted">
+              <span className="text-xs font-bold uppercase tracking-section text-editorial-muted">
                 {t('pipeline.prompt')}
               </span>
               <div className="flex flex-wrap items-center gap-2">
@@ -251,21 +251,21 @@ export function PromptTemplatesTab() {
               onChange={(e) => setNewPrompt(e.target.value)}
               placeholder={t('library.templatePromptPlaceholder')}
               rows={6}
-              className="w-full resize-y rounded-md border border-editorial-border bg-editorial-bg/70 px-4 py-3 text-[13px] leading-relaxed font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-full resize-y rounded-md border border-editorial-border bg-editorial-bg/70 px-4 py-3 text-xs leading-relaxed font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               onClick={() => setCreating(false)}
-              className="flex items-center gap-2 rounded-md border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex items-center gap-2 rounded-md border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-section text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <X size={13} /> {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
               disabled={!newName.trim() || !newPrompt.trim()}
-              className="flex items-center gap-2 rounded-md bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-md bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-section text-on-accent transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Check size={13} /> {t('library.saveTemplate')}
             </button>
@@ -274,7 +274,7 @@ export function PromptTemplatesTab() {
       )}
 
       {filtered.length === 0 && !creating ? (
-        <p className="border-y border-dashed border-editorial-border/70 py-8 text-center text-sm italic text-editorial-muted/70">
+        <p className="border-y border-dashed border-rule py-8 text-center text-sm italic text-editorial-muted/70">
           {t('library.noTemplates')}
         </p>
       ) : null}
@@ -283,11 +283,11 @@ export function PromptTemplatesTab() {
         {filtered.map((tmpl) => (
           <div
             key={tmpl.id}
-            className="space-y-3 border-l-4 border-l-editorial-accent/30 border-y border-editorial-border/70 bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-accent"
+            className="space-y-3 border-l-4 border-l-editorial-accent/30 border-y border-rule bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-accent"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <span className={`inline-block border-l-2 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] ${contextBadgeClass(tmpl.context)}`}>
+                <span className={`inline-block border-l-2 px-2 py-0.5 text-caption font-bold uppercase tracking-section ${contextBadgeClass(tmpl.context)}`}>
                   {contextLabel(tmpl.context)}
                 </span>
                 <div className="font-display text-base italic text-editorial-ink">{tmpl.name}</div>
@@ -301,7 +301,7 @@ export function PromptTemplatesTab() {
                 <Trash2 size={16} />
               </IconButton>
             </div>
-            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap bg-editorial-textbox/20 px-4 py-3 text-[12px] leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
+            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap bg-editorial-textbox/20 px-4 py-3 text-xs leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
               {tmpl.prompt}
             </pre>
           </div>

@@ -23,6 +23,7 @@ import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
 import { FieldLabel, IconButton, Select } from '../ui';
+import { FIELD_MONO_CLASSNAME } from '../ui/fieldStyles';
 
 interface MemoryExtractorSettingsProps {
   provider: ModelProvider;
@@ -127,7 +128,7 @@ export function MemoryExtractorSettings({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3 border-y border-editorial-border/70 py-4">
+      <div className="space-y-3 border-y border-rule py-4">
         <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
           {t('workspace.memoryExtractorModel')}
         </FieldLabel>
@@ -162,21 +163,21 @@ export function MemoryExtractorSettings({
               value={model}
               onChange={(e) => onModelChange(e.target.value)}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={`${FIELD_MONO_CLASSNAME} flex-1`}
               aria-label={t('workspace.memoryExtractorModel')}
             />
           )}
         </div>
       </div>
 
-      <div className="space-y-3 border-y border-editorial-border/70 py-4">
+      <div className="space-y-3 border-y border-rule py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <FieldLabel icon={<FileText size={11} className="shrink-0 text-editorial-accent" />}>
               {t('workspace.memoryExtractorPrompt')}
             </FieldLabel>
             {isCustomPrompt && !isEditingPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.14em] text-editorial-accent">
+              <span className="rounded-full bg-editorial-accent/15 px-2 py-0.5 text-xs font-bold uppercase tracking-section text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -249,7 +250,7 @@ export function MemoryExtractorSettings({
               aria-label={t('pipeline.templates.namePlaceholder')}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (salva template)
               autoFocus
-              className="flex-1 rounded border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={`${FIELD_MONO_CLASSNAME} flex-1`}
             />
             <IconButton
               size="sm"
@@ -271,7 +272,7 @@ export function MemoryExtractorSettings({
 
         {isEditingPrompt && showTemplateList && (
           <div className="overflow-hidden border-y border-editorial-border bg-editorial-bg">
-            <div className="border-b border-editorial-border/60 p-2">
+            <div className="border-b border-rule p-2">
               <input
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
@@ -279,7 +280,7 @@ export function MemoryExtractorSettings({
                 aria-label={t('pipeline.templates.searchPlaceholder')}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- casella di ricerca che compare aprendo l'elenco template
                 autoFocus
-                className="w-full rounded border border-editorial-border/40 bg-editorial-textbox/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                className={FIELD_MONO_CLASSNAME}
               />
             </div>
             <ul className="max-h-48 overflow-y-auto custom-scrollbar">
@@ -324,8 +325,8 @@ export function MemoryExtractorSettings({
           disabled={!isEditingPrompt}
           className={`min-h-[10rem] w-full resize-y rounded-md border p-4 font-mono text-sm leading-relaxed outline-none ${
             isEditingPrompt
-              ? 'border-editorial-border/60 bg-editorial-textbox/40 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-              : 'cursor-default border-editorial-border/30 bg-editorial-textbox/10 text-editorial-muted/60'
+              ? 'border-rule bg-editorial-textbox/40 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+              : 'cursor-default border-rule-faint bg-editorial-textbox/10 text-editorial-muted/60'
           }`}
           aria-label={t('workspace.memoryExtractorPrompt')}
         />

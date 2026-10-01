@@ -87,7 +87,7 @@ export function CommandBar({ groups, variant = 'inline', size = 'sm', leading, s
         <div className="min-w-44 py-1">
           {filled.map((group, index) => (
             <Fragment key={index}>
-              {index > 0 && <div className="my-1 border-t border-editorial-border/70" />}
+              {index > 0 && <div className="my-1 border-t border-rule" />}
               {group.map(menuRow)}
             </Fragment>
           ))}

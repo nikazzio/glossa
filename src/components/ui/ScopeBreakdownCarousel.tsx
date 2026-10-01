@@ -21,7 +21,7 @@ export function ScopeBreakdownCarousel({ entries, title }: Props) {
   return (
     <section className="py-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
+        <div className="flex items-center gap-1.5 text-xs font-sans uppercase tracking-section text-editorial-muted">
           <Layers size={11} className="text-editorial-accent shrink-0" />
           {title}
         </div>
@@ -36,7 +36,7 @@ export function ScopeBreakdownCarousel({ entries, title }: Props) {
             >
               <ChevronLeft size={14} />
             </button>
-            <span className="font-display text-[12px] italic tabular-nums text-editorial-ink">
+            <span className="font-display text-xs italic tabular-nums text-editorial-ink">
               {safeIndex + 1}/{entries.length}
             </span>
             <button

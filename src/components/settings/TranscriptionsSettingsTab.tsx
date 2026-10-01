@@ -58,7 +58,7 @@ export function TranscriptionsSettingsTab() {
     >
       <section className="space-y-4">
         <SectionLabel icon={ImageIcon} label={t('settings.transcriptions.ocrImage')} />
-        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <div className="divide-y divide-rule border-y border-rule">
           <SettingRow
             label={t('settings.transcriptions.imageMode')}
             hint={t('settings.transcriptions.imageModeHint')}

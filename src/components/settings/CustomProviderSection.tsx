@@ -128,7 +128,7 @@ function ProfileForm({
   };
 
   return (
-    <div className="space-y-4 border-y border-editorial-border/70 py-4">
+    <div className="space-y-4 border-y border-rule py-4">
       <FormField label={t('settings.customProvider.name')}>
         <input
           type="text"
@@ -154,7 +154,7 @@ function ProfileForm({
         </p>
       )}
 
-      <div className="border-y border-editorial-border/60 py-3">
+      <div className="border-y border-rule py-3">
         <ToggleRow
           icon={<Key size={12} />}
           label={t('settings.customProvider.requiresApiKey')}
@@ -196,7 +196,7 @@ function ProfileForm({
         </div>
       </FormField>
 
-      <div className="flex items-center justify-end gap-2 pt-1 border-t border-editorial-border/40">
+      <div className="flex items-center justify-end gap-2 pt-1 border-t border-rule-faint">
         <IconButton
           size="md"
           tone="default"
@@ -280,7 +280,7 @@ export function CustomProviderSection() {
       {profiles.map((profile) => (
         <div
           key={profile.id}
-          className="flex items-center justify-between gap-3 border-b border-editorial-border/70 py-3"
+          className="flex items-center justify-between gap-3 border-b border-rule py-3"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -288,7 +288,7 @@ export function CustomProviderSection() {
               {profile.requiresApiKey ? (
                 <CheckCircle2 size={11} className="text-editorial-success shrink-0" />
               ) : (
-                <span className="text-[11px] uppercase tracking-[0.1em] text-editorial-muted">
+                <span className="caption-label">
                   {t('settings.customProvider.noAuth')}
                 </span>
               )}

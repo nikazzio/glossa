@@ -123,7 +123,7 @@ export function CopiesSection({
     // Niente intestazione di sezione qui: la tab la dà già ("Copie digitali").
     // Niente riquadro a sfondo: la tab stessa è già il contenitore, un'altra
     // cornice attorno sarebbe una scatola dentro la scatola.
-    <ul className="divide-y divide-editorial-border/70">
+    <ul className="divide-y divide-rule">
       {imageVersions.map((version) => (
         <li key={version.id} className="space-y-3 py-4 first:pt-0">
           <div>
@@ -134,7 +134,7 @@ export function CopiesSection({
             {/* Il tipo sta sotto il nome della biblioteca; senza nome sarebbe
                 l'unica riga e ripeterebbe quello che il segno già dice. */}
             {provider?.label && (
-              <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              <span className="caption-label">
                 {t(`areas.library.versionKindLabels.${version.versionKind}`)}
               </span>
             )}
@@ -445,7 +445,7 @@ function CopyDetails({
   };
 
   return (
-    <div className="space-y-8 border-t border-editorial-border/60 pt-4">
+    <div className="space-y-8 border-t border-rule pt-4">
       {/* La pagina aperta viene prima: è il contesto in cui si sta mentre si
           legge, e i suoi comandi sono quelli che si cercano subito. */}
       {version.versionKind === 'iiif_manifest' && (
@@ -586,7 +586,7 @@ function ResolutionRow({
   const complete = expectedPages > 0 && size.pages + size.missing + excluded >= expectedPages;
 
   return (
-    <div className="space-y-2 border-t border-editorial-border/60 pt-3 first:border-t-0 first:pt-0">
+    <div className="space-y-2 border-t border-rule pt-3 first:border-t-0 first:pt-0">
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate font-display text-sm italic text-editorial-ink">
           {resolutionLabel(size.sizeTag, t)}

@@ -15,7 +15,7 @@ export function AnthropicCacheConfig({ value, onChange, disabled = false }: Anth
   const extendedCacheTtl = value?.extendedCacheTtl ?? false;
 
   return (
-    <div className="space-y-2 border-l-4 border-l-editorial-charcoal/25 border-y border-editorial-border/70 bg-editorial-textbox/18 px-4 py-3">
+    <div className="space-y-2 border-l-4 border-l-editorial-charcoal/25 border-y border-rule bg-editorial-textbox/18 px-4 py-3">
       <ToggleRow
         icon={<Database size={13} className={enableCaching ? 'text-editorial-ink' : 'text-editorial-muted'} />}
         label={t('pipeline.anthropicCache.toggle')}

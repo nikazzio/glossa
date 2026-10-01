@@ -145,7 +145,7 @@ export function PipelineSidebarRunSection({
           </IconButton>
         )}
         {workMode === 'all' && hasDocument && (
-          <span className="text-xs font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+          <span className="text-xs font-bold tabular-nums tracking-caption text-editorial-muted">
             {completedCount}/{runChunkCount}
           </span>
         )}
@@ -264,7 +264,7 @@ export function PipelineSidebarRunSection({
             }`}
           >
             <span
-              className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
+              className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-on-accent shadow-sm transition-transform ${
                 workMode === 'all' ? 'translate-x-6' : 'translate-x-0'
               }`}
             >

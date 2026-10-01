@@ -216,7 +216,7 @@ export function DictionariesTab() {
       )}
 
       {!isGlobalScope && creating && (
-        <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 border-y border-rule py-4 sm:flex-row sm:items-center">
           <input
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
             autoFocus
@@ -243,7 +243,7 @@ export function DictionariesTab() {
       )}
 
       {glossaries.length === 0 && !creating ? (
-        <p className="border-y border-dashed border-editorial-border/70 py-8 text-center text-sm italic text-editorial-muted/70">
+        <p className="border-y border-dashed border-rule py-8 text-center text-sm italic text-editorial-muted/70">
           {t('library.noDictionaries')}
         </p>
       ) : null}
@@ -260,7 +260,7 @@ export function DictionariesTab() {
           return (
             <div
               key={g.id}
-              className={`border-b border-editorial-border/70 transition-colors ${
+              className={`border-b border-rule transition-colors ${
                 isAssigned
                   ? 'bg-editorial-accent/5'
                   : 'hover:bg-editorial-textbox/15'
@@ -355,7 +355,7 @@ export function DictionariesTab() {
               </div>
 
               {isExpanded && (
-                <div className="border-t border-editorial-border/40 px-4 pb-4 pt-4">
+                <div className="border-t border-rule-faint px-4 pb-4 pt-4">
                   <DictionaryEntryEditor
                     entries={entriesMap[g.id] ?? []}
                     onChange={(entries) => handleEntriesChange(g.id, entries)}
@@ -365,7 +365,7 @@ export function DictionariesTab() {
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
-                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-section text-on-accent transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       >
                         <Check size={13} />
                         {t('common.save')}
@@ -413,7 +413,7 @@ export function DictionariesTab() {
           </div>
         }
       >
-        <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
+        <div className="divide-y divide-rule border-y border-rule">
           <button
             type="button"
             onClick={() => exportTarget && handleExport(exportTarget.id, exportTarget.name, 'csv')}

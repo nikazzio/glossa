@@ -126,7 +126,7 @@ export function AuditPromptEditor({
   };
 
   return (
-    <div className={`border-l-4 ${styles.card} border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3`}>
+    <div className={`border-l-4 ${styles.card} border-y border-rule bg-editorial-bg/85 px-5 py-4 space-y-3`}>
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
@@ -138,7 +138,7 @@ export function AuditPromptEditor({
               </FieldLabel>
             )}
             {isCustomPrompt && !(variant === 'stage' && isEditing) && (
-              <span className={`${styles.badge} px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent`}>
+              <span className={`${styles.badge} px-1.5 py-0.5 text-caption font-bold uppercase tracking-section text-editorial-accent`}>
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -216,7 +216,7 @@ export function AuditPromptEditor({
             aria-label={t('pipeline.templates.namePlaceholder')}
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (salva template)
             autoFocus
-            className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded-md bg-editorial-textbox/60 border border-rule px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <IconButton
             onClick={handleSaveTemplate}
@@ -238,7 +238,7 @@ export function AuditPromptEditor({
 
       {showTemplateList && (
         <div className="border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-editorial-border/60">
+          <div className="p-2 border-b border-rule">
             <input
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
@@ -246,10 +246,10 @@ export function AuditPromptEditor({
               aria-label={t('pipeline.templates.searchPlaceholder')}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- casella di ricerca che compare aprendo l'elenco template
               autoFocus
-              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md bg-editorial-textbox/60 border border-rule-faint px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
-          <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
+          <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-rule">
             {filteredTemplates.length === 0 ? (
               <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                 {t('pipeline.templates.empty')}
@@ -293,10 +293,10 @@ export function AuditPromptEditor({
         placeholder={placeholder}
         disabled={!isEditing}
         rows={isEditing ? 12 : 4}
-        className={`w-full rounded-md border-2 p-4 text-[13px] font-mono outline-none leading-6 resize-y min-h-[12rem] ${
+        className={`w-full rounded-md border-2 p-4 text-xs font-mono outline-none leading-6 resize-y min-h-[12rem] ${
           isEditing
             ? `bg-editorial-paper ${styles.editing} focus-visible:ring-2 focus-visible:ring-editorial-accent`
-            : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
+            : 'bg-editorial-textbox/12 border-rule-faint text-editorial-muted/70 cursor-default'
         }`}
       />
     </div>

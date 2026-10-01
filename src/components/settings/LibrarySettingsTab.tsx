@@ -46,7 +46,7 @@ export function LibrarySettingsTab({
       aria-labelledby="settings-tab-library"
       className="space-y-6"
     >
-      <div className="flex items-center gap-3 border-b border-editorial-border/70 pb-3">
+      <div className="flex items-center gap-3 border-b border-rule pb-3">
         <TabStrip
           tabs={tabs}
           activeId={subTab}

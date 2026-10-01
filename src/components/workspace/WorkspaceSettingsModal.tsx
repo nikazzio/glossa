@@ -11,6 +11,7 @@ import { OcrSettingsSection } from './OcrSettingsSection';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 import { DEFAULT_WORKSPACE_ICON, isWorkspaceIconKey, type WorkspaceIconKey } from '../../workspaceIdentity';
 import { WorkspaceIcon, WorkspaceIconPicker } from './WorkspaceIdentity';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 type WorkspaceSettingsTab = 'general' | 'memory' | 'ocr';
 
@@ -132,7 +133,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
           </IconButton>
         );
       })}
-      <span className="mx-1 h-4 w-px shrink-0 self-center bg-editorial-border/70" aria-hidden="true" />
+      <span className="mx-1 h-4 w-px shrink-0 self-center bg-rule" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
         {tabConfig.find((tb) => tb.id === activeTab)?.label}
       </span>
@@ -181,7 +182,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder={t('workspace.namePlaceholder')}
-                      className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className={FIELD_CLASSNAME}
                       // eslint-disable-next-line jsx-a11y/no-autofocus -- finestra impostazioni aperta da un click esplicito
                       autoFocus
                     />
@@ -195,7 +196,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder={t('workspace.descriptionPlaceholder')}
-                      className="min-h-24 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className={`${FIELD_CLASSNAME} min-h-24`}
                     />
                   </div>
                 </div>
@@ -208,7 +209,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   aria-labelledby="workspace-settings-tab-memory"
                   className="space-y-4"
                 >
-                  <div className="space-y-3 border-y border-editorial-border/70 py-4">
+                  <div className="space-y-3 border-y border-rule py-4">
                     <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
                       {t('workspace.embeddingModel')}
                     </FieldLabel>

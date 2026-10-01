@@ -115,7 +115,7 @@ export function ShellNavFooter({
       className={
         variant === 'header'
           ? 'flex items-center gap-1'
-          : `mt-auto flex border-t border-editorial-border/50 ${
+          : `mt-auto flex border-t border-rule ${
               collapsed ? 'flex-col items-center gap-1.5 py-2.5' : 'items-center gap-1 px-3 py-2.5'
             }`
       }

@@ -389,7 +389,7 @@ export function PipelineConfig({
         >
           <Settings size={16} />
         </IconButton>
-        <span className="h-4 w-px bg-editorial-border/70 mx-1" aria-hidden="true" />
+        <span className="h-4 w-px bg-rule mx-1" aria-hidden="true" />
         <IconButton
           size="lg"
           tone={activeTab === 'translation' ? 'accent' : 'default'}
@@ -438,7 +438,7 @@ export function PipelineConfig({
         >
           <Eye size={16} />
         </IconButton>
-        <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+        <span className="mx-1 h-4 w-px bg-rule" aria-hidden="true" />
         <span className="text-sm font-display italic text-editorial-ink">{TAB_TITLE[activeTab]}</span>
       </div>
 
@@ -532,7 +532,7 @@ export function PipelineConfig({
               className="space-y-6"
             >
               {libraryGlossarySection ?? (
-                <div className="flex flex-col items-center gap-3 border-y border-dashed border-editorial-border/60 px-6 py-10 text-center">
+                <div className="flex flex-col items-center gap-3 border-y border-dashed border-rule px-6 py-10 text-center">
                   <BookOpen size={20} className="text-editorial-muted/40" />
                   <p className="text-sm text-editorial-muted/70">
                     {t('pipeline.glossaryOpenProject')}
@@ -572,14 +572,14 @@ export function PipelineConfig({
       </>}
 
       {showActions && (
-        <div className="shrink-0 border-t border-editorial-border/60 px-8 py-6 flex flex-col gap-3">
+        <div className="shrink-0 border-t border-rule px-8 py-6 flex flex-col gap-3">
           <CostBadge estimate={costEstimate} />
           <Tooltip label={runReason ?? t('pipeline.beginPipeline')} className="w-full">
             <button
               type="button"
               onClick={onRunPipeline}
               disabled={cannotRun}
-              className="w-full bg-editorial-ink text-white px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              className="w-full bg-editorial-ink text-on-ink px-6 py-4 text-sm font-bold uppercase tracking-section transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {isProcessing ? (
                 <span className="flex items-center justify-center gap-2">
@@ -598,7 +598,7 @@ export function PipelineConfig({
               <button
                 type="button"
                 onClick={handleRerunAll}
-                className="w-full bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+                className="w-full bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-sm font-bold uppercase tracking-section transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
               >
                 <RotateCcw size={13} /> {t('pipeline.rerunAll')}
               </button>
@@ -609,7 +609,7 @@ export function PipelineConfig({
               type="button"
               onClick={onRunAuditOnly}
               disabled={cannotRun}
-              className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-sm font-bold uppercase tracking-section transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {t('pipeline.runAuditOnly')}
             </button>
@@ -620,7 +620,7 @@ export function PipelineConfig({
                 type="button"
                 onClick={onCancelPipeline}
                 disabled={cancelRequested}
-                className="w-full bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+                className="w-full bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-sm font-bold uppercase tracking-section transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
               >
                 {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
               </button>

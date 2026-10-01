@@ -181,6 +181,7 @@ export function LibraryCatalogRow({
                     <span className="min-w-0 truncate">{facts}</span>
                     {entry.localPages > 0 && (
                       <CompletionBar ratio={progress ?? 1} label={progressLabel}
+                        ariaLabel={t('areas.library.filters.facet.availability')}
                         complete={summary.availability === 'complete'} />
                     )}
                   </>

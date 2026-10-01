@@ -14,8 +14,9 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useJobsFeed } from './hooks/useJobsFeed';
 import { useRestoreFollowUp } from './hooks/useRestoreFollowUp';
 import { useCloseGuard } from './hooks/useCloseGuard';
+import { useIsDarkTheme } from './hooks/useIsDarkTheme';
 import { useUiStore } from './stores/uiStore';
-import type { UiFont, DocumentLineHeight, ColorScheme } from './stores/uiStore';
+import type { UiFont, DocumentLineHeight } from './stores/uiStore';
 import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
@@ -43,11 +44,9 @@ import { toast } from 'sonner';
 import { HL_COLORS_LIGHT, HL_COLORS_DARK } from './stores/uiStore';
 
 function HighlightColorSync() {
-  const colorScheme = useUiStore((s) => s.colorScheme);
+  const isDark = useIsDarkTheme();
   const highlightColors = useUiStore((s) => s.highlightColors);
   useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
     const fallback = isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT;
     // Merge chiave per chiave (non solo a livello di oggetto): uno stato persistito
     // incompleto (chiavi mancanti da una migrazione precedente) non deve scrivere
@@ -60,19 +59,17 @@ function HighlightColorSync() {
     root.style.setProperty('--hl-search-bg', colors.search);
     root.style.setProperty('--hl-audit-bg', colors.auditPhrase);
     root.style.setProperty('--hl-annot-bg', colors.annotation);
-  }, [colorScheme, highlightColors]);
+  }, [isDark, highlightColors]);
   return null;
 }
 
 function AccentColorSync() {
-  const colorScheme = useUiStore((s) => s.colorScheme);
+  const isDark = useIsDarkTheme();
   const editorialAccentColor = useUiStore((s) => s.editorialAccentColor);
   useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
     const color = isDark ? editorialAccentColor.dark : editorialAccentColor.light;
     document.documentElement.style.setProperty('--color-editorial-accent', color);
-  }, [colorScheme, editorialAccentColor]);
+  }, [isDark, editorialAccentColor]);
   return null;
 }
 
@@ -110,20 +107,10 @@ function DocTypographySync() {
 }
 
 function ThemeSync() {
-  const colorScheme = useUiStore((s) => s.colorScheme);
+  const isDark = useIsDarkTheme();
   useEffect(() => {
-    const root = document.documentElement;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = (scheme: ColorScheme, prefersDark: boolean) => {
-      const dark = scheme === 'dark' || (scheme === 'system' && prefersDark);
-      root.classList.toggle('dark', dark);
-    };
-    apply(colorScheme, mq.matches);
-    if (colorScheme !== 'system') return;
-    const handler = (e: MediaQueryListEvent) => apply('system', e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [colorScheme]);
+    document.documentElement.classList.toggle('dark', isDark);
+  }, [isDark]);
   return null;
 }
 

@@ -41,7 +41,7 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
           </thead>
           <tbody>
             {allRows.map((row) => (
-              <tr key={row.stageId} className="border-t border-editorial-border/40">
+              <tr key={row.stageId} className="border-t border-rule-faint">
                 <td className="py-1 pr-2 truncate max-w-[90px]">{row.stageName}</td>
                 <td className="py-1 text-right text-editorial-muted">
                   {(row.inputTokens + row.outputTokens).toLocaleString()}
@@ -95,7 +95,7 @@ export function CostBadge({ estimate }: CostBadgeProps) {
         onBlur={() => setOpen(false)}
         aria-label={`${t('header.estimatedCost')}: ${label}`}
         aria-describedby={open ? TOOLTIP_ID : undefined}
-        className="inline-flex items-center gap-1 rounded-full border border-editorial-border/70 bg-editorial-textbox/40 px-2.5 py-1 text-xs font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="inline-flex items-center gap-1 rounded-full border border-rule bg-editorial-textbox/40 px-2.5 py-1 text-xs font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         {estimate.isFree && <Sparkles size={10} />}
         {label}

@@ -181,7 +181,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
               </p>
               <button
                 onClick={handlePickFile}
-                className="w-full border-y border-dashed border-editorial-border/60 py-6 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-full border-y border-dashed border-rule py-6 text-xs font-bold uppercase tracking-section text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {t('library.importPickButton')}
               </button>
@@ -200,7 +200,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                   { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
                 ] as const).map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <label htmlFor={`csv-map-${key}`} className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                    <label htmlFor={`csv-map-${key}`} className="w-36 shrink-0 text-caption font-bold uppercase tracking-section text-editorial-muted">
                       {label}
                     </label>
                     <Select
@@ -232,12 +232,12 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
               <p className="text-xs text-editorial-muted">
                 {t('library.csvPreviewDesc', { count: totalRows })}
               </p>
-              <div className="overflow-x-auto border-y border-editorial-border/70">
+              <div className="overflow-x-auto border-y border-rule">
                 <table className="w-full text-xs font-mono">
                   <thead className="bg-editorial-textbox/30">
                     <tr>
                       {previewHeaders.map((h, i) => (
-                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-[0.14em] truncate max-w-[120px]">
+                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-section truncate max-w-[120px]">
                           {h}
                         </th>
                       ))}
@@ -245,7 +245,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                   </thead>
                   <tbody>
                     {previewRows.map((row, ri) => (
-                      <tr key={ri} className="border-t border-editorial-border/20">
+                      <tr key={ri} className="border-t border-rule-faint">
                         {row.map((cell, ci) => (
                           <td key={ci} className="px-2 py-1.5 text-editorial-ink/80 truncate max-w-[120px]">
                             {cell}

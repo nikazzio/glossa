@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, FileInput, Pencil, Pin, PinOff, RotateCcw, ScanText, Trash2, User, X } from 'lucide-react';
+import {
+  Check, FileInput, History, Pencil, Pin, PinOff, RotateCcw, ScanText, Trash2, User, X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton } from '../ui';
+import { IconButton, PANEL_BODY_CLASSNAME, PanelSection } from '../ui';
 import type { TranscriptionRevision, TranscriptionSegment } from '../../services/transcriptionService';
 import { PagePendingOverlay } from './PagePendingOverlay';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface Props {
   revisions: TranscriptionRevision[];
@@ -31,9 +34,9 @@ export function TranscriptionHistoryTab({ revisions, segment, draft, formatDate,
   const consolidated = revisions.filter((revision) => revision.consolidated_name);
   const ordinary = revisions.filter((revision) => !revision.consolidated_name);
   const currentId = revisions[0]?.id;
-  const deletableOrdinary = ordinary.filter((revision) =>
-    revision.id !== currentId && revision.id !== segment?.approved_revision_id,
-  );
+  const verifiedId = segment?.approved_revision_id ?? null;
+  const deletableOrdinary = ordinary.filter((revision) => revision.id !== currentId && revision.id !== verifiedId);
+
   const edit = (revision: TranscriptionRevision) => {
     setEditingId(revision.id);
     setName(revision.consolidated_name ?? '');
@@ -43,91 +46,114 @@ export function TranscriptionHistoryTab({ revisions, segment, draft, formatDate,
     onName(revisionId, name.trim());
     setEditingId(null);
   };
-  const card = (revision: TranscriptionRevision) => {
-    const Icon = AUTHOR_ICONS[revision.created_by];
-    const approved = revision.id === segment?.approved_revision_id;
-    const currentText = revision.text === draft;
+
+  const nameField = (revision: TranscriptionRevision) => (
+    <div className="flex items-center gap-1">
+      <input ref={nameInputRef} value={name} maxLength={120}
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') saveName(revision.id);
+          if (event.key === 'Escape') setEditingId(null);
+        }}
+        aria-label={t('transcription.versionName')}
+        className={`${FIELD_CLASSNAME} min-w-0 flex-1 py-1 text-sm`} />
+      <IconButton size="sm" tone="accent" onClick={() => saveName(revision.id)}
+        title={name.trim() ? t('common.save') : t('transcription.versionNameRequired')}
+        disabled={!name.trim()}><Check size={13} /></IconButton>
+      <IconButton size="sm" onClick={() => setEditingId(null)}
+        title={t('common.cancel')}><X size={13} /></IconButton>
+    </div>
+  );
+
+  const row = (revision: TranscriptionRevision) => {
+    const AuthorIcon = AUTHOR_ICONS[revision.created_by];
+    const isCurrent = revision.id === currentId;
+    const isVerified = revision.id === verifiedId;
+    const textInPage = revision.text === draft;
+    const isEditing = editingId === revision.id;
+    const renameTitle = revision.consolidated_name ? 'transcription.renameVersion' : 'transcription.consolidateVersion';
     return (
-      <div key={revision.id} className={`flex items-start gap-2 rounded-md border px-3 py-2 text-xs ${
-        approved ? 'border-editorial-success/40 bg-editorial-success/5' : 'border-editorial-border'
-      }`}>
-        <Icon size={13} className="mt-0.5 shrink-0 text-editorial-muted" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          {editingId === revision.id ? (
-            <div className="flex items-center gap-1">
-              <input ref={nameInputRef} value={name} maxLength={120}
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') saveName(revision.id);
-                  if (event.key === 'Escape') setEditingId(null);
-                }}
-                aria-label={t('transcription.versionName')}
-                className="min-w-0 flex-1 rounded border border-editorial-border bg-editorial-textbox px-2 py-1 text-xs text-editorial-ink" />
-              <IconButton size="xs" onClick={() => saveName(revision.id)}
-                title={t('common.save')} disabled={!name.trim()}><Check size={12} /></IconButton>
-              <IconButton size="xs" onClick={() => setEditingId(null)}
-                title={t('common.cancel')}><X size={12} /></IconButton>
+      <li key={revision.id} className="space-y-2 py-4 first:pt-0">
+        {isEditing ? nameField(revision) : (
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-sm italic text-editorial-ink">
+                {revision.consolidated_name
+                  ?? t('transcription.versionNumber', { number: revision.revision_number })}
+              </p>
+              <p className="caption-label flex flex-wrap items-center gap-x-1.5">
+                <AuthorIcon size={11} className="shrink-0" aria-hidden="true" />
+                <span>{t(`transcription.authorLabels.${revision.created_by}`)}</span>
+                <span aria-hidden="true">·</span>
+                <span>{formatDate(revision.created_at)}</span>
+                {isCurrent && <span className="text-editorial-accent">· {t('transcription.currentBadge')}</span>}
+                {isVerified && (
+                  <span className="text-editorial-success">· {t('transcription.verifiedVersionBadge')}</span>
+                )}
+              </p>
             </div>
-          ) : revision.consolidated_name ? (
-            <p className="font-semibold text-editorial-ink">{revision.consolidated_name}</p>
-          ) : null}
-          <div className="flex items-center gap-1.5 text-editorial-muted">
-            <span>{t(`transcription.authorLabels.${revision.created_by}`)}</span>
-            <span>·</span><span>{formatDate(revision.created_at)}</span>
-            {approved && <span className="text-editorial-success">· {t('transcription.verifiedBadge')}</span>}
+            <div className="flex shrink-0 items-center gap-1">
+              <IconButton size="sm" onClick={() => onRestore(revision.id)}
+                title={t(textInPage ? 'transcription.alreadyCurrent' : 'transcription.restore')}
+                disabled={pending || textInPage}><RotateCcw size={13} /></IconButton>
+              <IconButton size="sm" onClick={() => edit(revision)}
+                title={t(editingId !== null ? 'transcription.finishRenameFirst' : renameTitle)}
+                disabled={pending || editingId !== null}>
+                {revision.consolidated_name ? <Pencil size={13} /> : <Pin size={13} />}
+              </IconButton>
+              {revision.consolidated_name && (
+                <IconButton size="sm" onClick={() => onName(revision.id, null)}
+                  title={t('transcription.removeConsolidation')} disabled={pending}>
+                  <PinOff size={13} />
+                </IconButton>
+              )}
+              <IconButton size="sm" onClick={() => onDelete(revision.id)}
+                title={t(isCurrent || isVerified
+                  ? 'transcription.cannotDeleteCurrentOrVerified'
+                  : 'transcription.deleteRevision')}
+                disabled={pending || isCurrent || isVerified}>
+                <Trash2 size={13} />
+              </IconButton>
+            </div>
           </div>
-          <p className="mt-1 line-clamp-3 text-editorial-ink">{revision.text}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          <IconButton size="xs" onClick={() => onRestore(revision.id)}
-            title={t(currentText ? 'transcription.alreadyCurrent' : 'transcription.restore')}
-            disabled={pending || currentText}><RotateCcw size={12} /></IconButton>
-          <IconButton size="xs" onClick={() => edit(revision)}
-            title={t(revision.consolidated_name ? 'transcription.renameVersion' : 'transcription.consolidateVersion')}
-            disabled={pending || editingId !== null}>
-            {revision.consolidated_name ? <Pencil size={12} /> : <Pin size={12} />}
-          </IconButton>
-          {revision.consolidated_name && (
-            <IconButton size="xs" onClick={() => onName(revision.id, null)}
-              title={t('transcription.removeConsolidation')} disabled={pending}>
-              <PinOff size={12} />
-            </IconButton>
-          )}
-          {revision.id !== currentId && !approved && (
-            <IconButton size="xs" tone="danger" onClick={() => onDelete(revision.id)}
-              title={t('transcription.deleteRevision')} disabled={pending}>
-              <Trash2 size={12} />
-            </IconButton>
-          )}
-        </div>
-      </div>
+        )}
+        <p className="line-clamp-3 text-xs text-editorial-ink">{revision.text}</p>
+      </li>
     );
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col gap-3 p-3">
-      {consolidated.length > 0 && (
-        <section className="space-y-2" aria-label={t('transcription.consolidatedVersions')}>
-          <h3 className="px-1 text-[11px] uppercase tracking-[0.16em] text-editorial-muted">
-            {t('transcription.consolidatedVersions')}
-          </h3>
-          {consolidated.map(card)}
-        </section>
-      )}
-      <section className="space-y-2" aria-label={t('transcription.tabs.history')}>
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-[11px] uppercase tracking-[0.16em] text-editorial-muted">
-            {t('transcription.tabs.history')}
-          </h3>
-          <IconButton size="xs" tone="danger" onClick={onClear}
-            title={t('transcription.clearHistory')} disabled={pending || deletableOrdinary.length === 0}>
-            <Trash2 size={12} />
-          </IconButton>
-        </div>
-        {ordinary.length === 0
-          ? <p className="px-1 py-4 text-center text-xs text-editorial-muted">{t('transcription.noRevisions')}</p>
-          : ordinary.map(card)}
-      </section>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className={PANEL_BODY_CLASSNAME}>
+        {consolidated.length > 0 && (
+          <PanelSection icon={Pin} label={t('transcription.consolidatedVersions')}>
+            <ul className="divide-y divide-rule" aria-label={t('transcription.consolidatedVersions')}>
+              {consolidated.map(row)}
+            </ul>
+          </PanelSection>
+        )}
+        <PanelSection
+          icon={History}
+          label={t('transcription.tabs.history')}
+          actions={
+            <IconButton size="sm" onClick={onClear}
+              title={t(deletableOrdinary.length === 0 ? 'transcription.clearHistoryNothing' : 'transcription.clearHistory')}
+              disabled={pending || deletableOrdinary.length === 0}>
+              <Trash2 size={13} />
+            </IconButton>
+          }
+        >
+          {ordinary.length === 0 ? (
+            <p className="text-sm text-editorial-muted">
+              {t(consolidated.length > 0 ? 'transcription.noOtherRevisions' : 'transcription.noRevisions')}
+            </p>
+          ) : (
+            <ul className="divide-y divide-rule" aria-label={t('transcription.tabs.history')}>
+              {ordinary.map(row)}
+            </ul>
+          )}
+        </PanelSection>
+      </div>
       <PagePendingOverlay pending={pending} errorMessage={pendingError} roundedClassName="rounded-none" />
     </div>
   );

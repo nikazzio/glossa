@@ -12,7 +12,7 @@ export function DialogConfirmButton({ children, className = '', type = 'button',
   return (
     <button
       type={type}
-      className={`${BASE} bg-editorial-ink text-white hover:bg-editorial-ink/90 ${className}`.trim()}
+      className={`${BASE} bg-editorial-ink text-on-ink hover:bg-editorial-ink/90 ${className}`.trim()}
       {...rest}
     >
       {children}

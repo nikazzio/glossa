@@ -87,6 +87,7 @@ export function RenameField({ initial, onSave, onCancel, className = '' }: {
  */
 export function TranscriptionCatalogRow({ entry, workspaceName, commands, renaming, onRename, onRenameCancel, onOpen, view }:
   TranscriptionRowProps & { view: 'list' | 'grid' }) {
+  const { t } = useTranslation();
   const work = workOf(entry);
   const { total, written, verified } = useProgressFacts(entry);
   const isGrid = view === 'grid';
@@ -97,7 +98,8 @@ export function TranscriptionCatalogRow({ entry, workspaceName, commands, renami
   const details = (
     <>
       <span className="min-w-0 truncate">{[workspaceName, written, verified].filter(Boolean).join(' · ')}</span>
-      {total && entry.pagesWithText > 0 && <CompletionBar ratio={progress} label={`${Math.round(progress * 100)}%`} />}
+      {total && entry.pagesWithText > 0 && <CompletionBar ratio={progress} label={`${Math.round(progress * 100)}%`}
+        ariaLabel={t('areas.transcriptions.catalog.table.progress')} />}
     </>
   );
   const name = (

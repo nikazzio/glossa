@@ -38,7 +38,7 @@ export function StageTraceDialog({
         </div>
       }
     >
-      <div className="border-y border-editorial-border/70">
+      <div className="border-y border-rule">
           {result?.status === 'processing' || result?.status === 'retrying' ? (
             <div className="py-5">
               <ProcessingLine />

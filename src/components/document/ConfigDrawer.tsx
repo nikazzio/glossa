@@ -98,11 +98,11 @@ export function ConfigDrawer({
   };
 
   const libraryGlossarySection = (
-    <div className="space-y-3 border-y border-editorial-border/70 py-4">
+    <div className="space-y-3 border-y border-rule py-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <LibraryBig size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="caption-label">
             {t('library.assignedDictionary')}
           </span>
         </div>
@@ -179,7 +179,7 @@ export function ConfigDrawer({
           }}
           placeholder={t('pipeline.globalSetup')}
           aria-label={t('pipeline.pipelineNameLabel')}
-          className="w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent border-b border-transparent group-hover:border-editorial-border/60 focus:border-editorial-accent/50"
+          className="w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent border-b border-transparent group-hover:border-rule focus:border-editorial-accent/50"
         />
         {!isNameDirty && (
           <Pencil
@@ -248,7 +248,7 @@ export function ConfigDrawer({
         <div className="shrink-0 border-b border-editorial-border px-6 py-4">{nameInput}</div>
         {configForm}
         {resetButton ? (
-          <div className="flex shrink-0 justify-center border-t border-editorial-border/40 px-6 py-4">{resetButton}</div>
+          <div className="flex shrink-0 justify-center border-t border-rule-faint px-6 py-4">{resetButton}</div>
         ) : null}
       </div>
     </Dialog>

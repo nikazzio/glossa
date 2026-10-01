@@ -56,7 +56,7 @@ function TypeSelector({ selected, onSelect }: { selected: AnnotationType; onSele
           </IconButton>
         );
       })}
-      <span className="mx-1 h-3 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+      <span className="mx-1 h-3 w-px self-center bg-rule" aria-hidden="true" />
       <span className="font-display text-sm italic text-editorial-ink">{t(ANNOTATION_META[selected].labelKey)}</span>
     </div>
   );
@@ -64,7 +64,7 @@ function TypeSelector({ selected, onSelect }: { selected: AnnotationType; onSele
 
 function AnchorPill({ text, onClear }: { text: string; onClear: () => void }) {
   return (
-    <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-editorial-border/50 bg-editorial-textbox/40 px-3 py-1.5">
+    <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-rule bg-editorial-textbox/40 px-3 py-1.5">
       <span className="flex-1 truncate font-display text-sm italic text-editorial-muted">«{text}»</span>
       <IconButton size="sm" tone="default" onClick={onClear} title="Rimuovi ancora">
         <X size={11} />
@@ -148,7 +148,7 @@ function AnnotationCard({
               </Tooltip>
             )}
             <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
-            <span className={`truncate text-[11px] font-bold uppercase tracking-[0.14em] ${meta.colorClass}`}>
+            <span className={`truncate text-caption font-bold uppercase tracking-section ${meta.colorClass}`}>
               {t(meta.labelKey)}
             </span>
           </div>
@@ -287,9 +287,9 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
       {/* Add form */}
       {showForm && (
-        <div className="border-y border-editorial-border/55 py-3">
+        <div className="border-y border-rule py-3">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted">
+            <span className="text-xs font-bold uppercase tracking-section text-editorial-muted">
               {t('annotations.addButton')}
             </span>
             <IconButton size="sm" tone="default" onClick={closeForm} title={t('annotations.cancelButton')}>
@@ -323,7 +323,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
         <p className="px-1 text-xs text-editorial-muted">{t('annotations.emptyNoAnnotations')}</p>
       )}
       {annotations.length > 0 && (
-        <div className="divide-y divide-editorial-border/55">
+        <div className="divide-y divide-rule">
           {annotations.map((ann) => (
             <AnnotationCard
               key={ann.id}
@@ -343,9 +343,9 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       {/* Source footnotes */}
       {footnotes.length > 0 && (
         <>
-          <div className="mx-0 my-1 h-px bg-editorial-border/40" />
+          <div className="mx-0 my-1 h-px bg-rule-faint" />
           <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-xs font-sans font-bold uppercase tracking-[0.16em] text-editorial-danger/80 transition-colors hover:text-editorial-danger">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-xs font-sans font-bold uppercase tracking-section text-editorial-danger/80 transition-colors hover:text-editorial-danger">
               <ChevronRight size={11} className="shrink-0 text-editorial-danger/70 transition-transform group-open:rotate-90" />
               {t('annotations.sourceTitle')}
             </summary>
@@ -353,7 +353,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
               {footnotes.map((note) => (
                 <article key={note.id} className="py-2">
                   <div className="mb-1 font-display text-sm italic text-editorial-danger">{note.marker}</div>
-                  <p className="text-[12px] leading-relaxed text-editorial-danger/90">{note.text}</p>
+                  <p className="text-xs leading-relaxed text-editorial-danger/90">{note.text}</p>
                 </article>
               ))}
             </div>

@@ -22,7 +22,7 @@ export function LibraryLibrariesSection({
   return (
     <section className="space-y-4">
       <SectionLabel icon={Landmark} label={t('settings.network.libraries')} />
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+      <div className="divide-y divide-rule border-y border-rule">
         {settings.libraries.map((library) => (
           <SettingRow
             key={library.key}

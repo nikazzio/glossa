@@ -145,7 +145,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
 
       {/* Contatore risultati */}
       {debouncedQuery.trim() && (
-        <div className="px-5 pb-2 shrink-0 text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted">
+        <div className="px-5 pb-2 shrink-0 text-xs font-bold uppercase tracking-section text-editorial-muted">
           {matches.length > 0
             ? t('document.searchResults', { count: matches.length })
             : t('document.searchNoResults')}
@@ -177,7 +177,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
                   style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
-                  className="border-b border-editorial-border/55"
+                  className="border-b border-rule"
                 >
                   <button
                     type="button"
@@ -195,7 +195,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                         {scopes.map((scope) => (
                           <span
                             key={scope}
-                            className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.15em] bg-editorial-textbox text-editorial-muted"
+                            className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-bold uppercase tracking-section bg-editorial-textbox text-editorial-muted"
                           >
                             {SCOPE_ICON[scope]}
                             {t(`document.searchScope_${scope}`)}

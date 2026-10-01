@@ -21,12 +21,12 @@ export function FewShotExamplesConfig({ examples, onChange, disabled = false }: 
     <div className="space-y-3">
       <SectionLabel icon={BookMarked} label={t('settings.fewShotTab')} />
 
-      <div className="space-y-3 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-accent/35 border-y border-rule bg-editorial-bg/65 px-5 py-4">
         {examples.length === 0 ? (
           <p className="text-xs leading-relaxed text-editorial-muted/70">{t('settings.fewShotEmptyHint')}</p>
         ) : (
           examples.map((example) => (
-            <div key={example.id} className="space-y-2 border border-editorial-border/60 bg-editorial-bg/80 p-3">
+            <div key={example.id} className="space-y-2 border border-rule bg-editorial-bg/80 p-3">
               <div className="flex items-center justify-between gap-2">
                 <input
                   type="text"
@@ -34,7 +34,7 @@ export function FewShotExamplesConfig({ examples, onChange, disabled = false }: 
                   onChange={(e) => updateExample(example.id, { label: e.target.value })}
                   disabled={disabled}
                   placeholder={t('settings.fewShotLabelPlaceholder')}
-                  className="w-full bg-transparent text-xs font-sans uppercase tracking-[0.18em] text-editorial-muted outline-none disabled:opacity-40"
+                  className="w-full bg-transparent text-xs font-sans uppercase tracking-section text-editorial-muted outline-none disabled:opacity-40"
                 />
                 <IconButton
                   size="sm"
@@ -47,7 +47,7 @@ export function FewShotExamplesConfig({ examples, onChange, disabled = false }: 
                 </IconButton>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-sans uppercase tracking-[0.18em] text-editorial-muted">
+                <label className="block text-xs font-sans uppercase tracking-section text-editorial-muted">
                   {t('settings.fewShotSourceLabel')}
                 </label>
                 <textarea
@@ -59,7 +59,7 @@ export function FewShotExamplesConfig({ examples, onChange, disabled = false }: 
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-sans uppercase tracking-[0.18em] text-editorial-muted">
+                <label className="block text-xs font-sans uppercase tracking-section text-editorial-muted">
                   {t('settings.fewShotTargetLabel')}
                 </label>
                 <textarea

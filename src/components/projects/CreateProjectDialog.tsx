@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, DialogCancelButton, DialogConfirmButton, Select } from '../ui';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -78,7 +79,7 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
       <div className="space-y-4">
         {!workspaceId && (
           <label className="block space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
+            <span className="text-xs font-bold uppercase tracking-caption text-editorial-muted">
               {t('projects.chooseWorkspace')}
             </span>
             <Select
@@ -91,7 +92,7 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
           </label>
         )}
         <label className="block space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="text-xs font-bold uppercase tracking-caption text-editorial-muted">
             {t('workspace.newBookCard')}
           </span>
           <input
@@ -102,7 +103,7 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
               if (e.key === 'Escape') close();
             }}
             placeholder={t('projects.namePlaceholder')}
-            className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={FIELD_CLASSNAME}
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (nuovo progetto)
             autoFocus
           />

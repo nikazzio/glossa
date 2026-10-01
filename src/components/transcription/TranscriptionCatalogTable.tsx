@@ -16,7 +16,7 @@ function TableRow({ entry, workspaceName, providerLabel, commands, renaming, onR
   const { written } = useProgressFacts(entry);
   const work = entry.work;
   return (
-    <tr className={`group/row border-b border-editorial-border/60 align-top hover:bg-surface-hover/50${
+    <tr className={`group/row border-b border-rule align-top hover:bg-surface-hover/50${
       entry.document.status === 'archived' ? ' opacity-60' : ''}`}>
       <td className="py-2 pr-3">
         {renaming ? (
@@ -71,10 +71,10 @@ export function TranscriptionCatalogTable({ entries, sort, onSort, rowPropsFor, 
             const label = t(`areas.transcriptions.catalog.table.${column}`);
             return (
               <th key={column} scope="col" aria-sort={sortKey && sortKey === sort ? 'ascending' : undefined}
-                className="py-2 pr-3 text-xs font-semibold uppercase tracking-[0.1em] text-editorial-muted">
+                className="py-2 pr-3 text-xs font-semibold uppercase tracking-caption text-editorial-muted">
                 {sortKey ? (
                   <button type="button" onClick={() => onSort(sortKey)}
-                    className={`uppercase tracking-[0.1em] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${sortKey === sort ? 'text-editorial-accent' : 'hover:text-editorial-ink'}`}>
+                    className={`uppercase tracking-caption focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${sortKey === sort ? 'text-editorial-accent' : 'hover:text-editorial-ink'}`}>
                     {label}
                   </button>
                 ) : label}

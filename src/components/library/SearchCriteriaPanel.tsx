@@ -96,7 +96,7 @@ export function SearchCriteriaPanel({ providers, busy, onSubmit }: {
           <SectionLabel icon={kind === 'library' ? BookOpen : Globe} label={t(`federation.${kind}`)}
             hint={kind === 'aggregator' ? t('federation.aggregatorHint') : undefined} />
         </div>
-        <div className="divide-y divide-editorial-border/50 border-y border-editorial-border/70">
+        <div className="divide-y divide-rule border-y border-rule">
           {group.map((provider) => <div key={provider.key} className="py-2">
             <ToggleRow icon={kind === 'library' ? <BookOpen size={14} /> : <Globe size={14} />}
               label={provider.label} checked={selected.includes(provider.key)} onChange={() => toggle(provider.key)} />

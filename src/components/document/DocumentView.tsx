@@ -121,7 +121,7 @@ function DocumentPage({
       {/* Header: riga unica allineata al titolo — controlli pagina + pulsante menu testo a destra. */}
       <div className="shrink-0 mb-6 border-b border-editorial-divider-soft pb-4">
         <div className="flex items-center gap-2">
-          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
+          <div className="text-caption font-bold uppercase tracking-section text-editorial-muted">
             {eyebrow}
           </div>
           {eyebrowMeta}
@@ -137,14 +137,14 @@ function DocumentPage({
             {searchToggle}
             {actions}
             {(searchToggle || actions) && textMenuButton && (
-              <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+              <span className="h-4 w-px bg-rule" aria-hidden="true" />
             )}
             {textMenuButton}
           </div>
         </div>
         {subtitle && (
           <div className="mt-0.5 flex items-center gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">
+            <p className="text-caption font-bold uppercase tracking-section text-editorial-accent">
               {subtitle}
             </p>
             {subtitleAction}
@@ -153,7 +153,7 @@ function DocumentPage({
       </div>
       <div
         ref={scrollRef}
-        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)] ${readOnly ? 'opacity-90' : ''}`}
+        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-rule bg-editorial-page px-7 py-4 shadow-page-card ${readOnly ? 'opacity-90' : ''}`}
       >
         {showSearch && onSearchChange && searchLabel ? (
           <PaneSearch
@@ -306,7 +306,7 @@ export function DocumentView({
     return (
       <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-section text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
               <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
               <span>{t('document.projectHomeEyebrow')}</span>
@@ -323,12 +323,12 @@ export function DocumentView({
             type="button"
             onClick={onImportDocument}
             aria-label={t('document.projectHomeImport')}
-            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-inset-highlight transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
               <FileText size={22} />
             </span>
-            <span className="mt-3 text-xs font-bold uppercase tracking-[0.24em] text-editorial-muted transition-colors group-hover:text-editorial-accent">
+            <span className="mt-3 text-xs font-bold uppercase tracking-section text-editorial-muted transition-colors group-hover:text-editorial-accent">
               {t('document.projectHomeImport')}
             </span>
           </button>
@@ -547,7 +547,7 @@ export function DocumentView({
             const stageActions = isEditorialMode ? (
               <div className="flex items-center gap-1">
                 {stageButtons}
-                <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+                <span className="mx-1 h-4 w-px bg-rule" aria-hidden="true" />
                 <IconButton
                   size="lg"
                   tone={showDiffMode ? 'accent' : 'default'}

@@ -124,12 +124,12 @@ export function WorkspaceDisposalDialog({
 
             {/* Archiviare viene prima: è l'unica strada che non toglie
                 niente, e su un lavoro finito è quasi sempre quella giusta. */}
-            <div className="flex flex-col gap-2 border-t border-editorial-border/60 pt-4">
+            <div className="flex flex-col gap-2 border-t border-rule pt-4">
               <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
                 <span className="text-editorial-accent"><Archive size={13} /></span>
                 <span>{t('workspace.disposal.archiveLabel')}</span>
               </div>
-              <p className="text-[11px] leading-relaxed text-editorial-muted">
+              <p className="text-caption leading-relaxed text-editorial-muted">
                 {t('workspace.disposal.archiveHint')}
               </p>
               <DialogConfirmButton
@@ -145,7 +145,7 @@ export function WorkspaceDisposalDialog({
             </div>
 
             {!empty && others.length > 0 && (
-              <div className="flex flex-col gap-2 border-t border-editorial-border/60 pt-4">
+              <div className="flex flex-col gap-2 border-t border-rule pt-4">
                 <div className="flex items-center gap-2 text-xs font-medium text-editorial-ink">
                   <span className="text-editorial-accent"><FolderInput size={13} /></span>
                   <span>{t('workspace.disposal.moveLabel')}</span>
@@ -171,7 +171,7 @@ export function WorkspaceDisposalDialog({
               </div>
             )}
 
-            <div className="flex flex-col gap-2 border-t border-editorial-border/60 pt-4">
+            <div className="flex flex-col gap-2 border-t border-rule pt-4">
               <p className="flex items-start gap-2 text-xs leading-relaxed text-editorial-warning">
                 <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                 {empty

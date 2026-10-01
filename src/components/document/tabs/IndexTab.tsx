@@ -100,7 +100,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
-              className={`relative border-b border-editorial-border/55 ${isActive ? 'bg-editorial-charcoal/10' : ''}`}
+              className={`relative border-b border-rule ${isActive ? 'bg-editorial-charcoal/10' : ''}`}
             >
               {isActive && <span className="absolute left-0 top-0 h-full w-[3px] bg-editorial-charcoal" aria-hidden="true" />}
               <button type="button" onClick={() => onSelect(chunk.id)} className="w-full px-4 pt-3 pb-2 text-left">
@@ -122,7 +122,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                       {notePills.map(({ type, count }) => (
                         <Tooltip key={type} label={`${count} × ${t(ANNOTATION_META[type].labelKey)}`} side="top">
                           <span
-                            className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${ANNOTATION_META[type].bgClass}`}
+                            className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-on-accent ${ANNOTATION_META[type].bgClass}`}
                             aria-label={`${count} × ${t(ANNOTATION_META[type].labelKey)}`}
                           >
                             {count}
@@ -132,7 +132,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {chunk.judgeResult.status === 'completed' && (
-                        <span className={`text-xs font-bold uppercase tracking-[0.1em] ${QUALITY_TONE_COLOR[tone]}`}>
+                        <span className={`text-xs font-bold uppercase tracking-caption ${QUALITY_TONE_COLOR[tone]}`}>
                           {t(qualityLabelKey(chunk.judgeResult.rating))}
                         </span>
                       )}
@@ -142,7 +142,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                         </Tooltip>
                       )}
                       {matchCount > 0 && (
-                        <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
+                        <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-caption text-editorial-accent">
                           <Brain size={11} />
                           {t('memory.matchBadge', { count: matchCount })}
                         </span>
@@ -153,8 +153,8 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
               </button>
 
               {isStuck && chunk.status === 'processing' && (
-                <div className="flex items-center justify-between gap-2 border-t border-editorial-border/60 px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-warning">
+                <div className="flex items-center justify-between gap-2 border-t border-rule px-3 py-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-caption text-editorial-warning">
                     <Clock size={11} />
                     {t('document.watchdogStuck')}
                   </div>

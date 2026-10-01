@@ -85,6 +85,9 @@ export const HL_COLORS_DARK: HLColorSet = {
 
 export const EDITORIAL_ACCENT_LIGHT = '#2F746C';
 export const EDITORIAL_ACCENT_DARK = '#3A7A72';
+/** Sfondo della pagina nei due temi (`--color-editorial-bg`), per il controllo
+ *  del contrasto dell'accento: servono tutti e due qualunque tema sia attivo. */
+export const EDITORIAL_BG: Record<'light' | 'dark', string> = { light: '#F8F5F0', dark: '#1c1814' };
 export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chunk';
 
 /** Pannelli che vivono inline nella barra primaria (non aprono il fly-out). */
@@ -255,15 +258,8 @@ export function migrateUiStorePersistedState(persisted: unknown, fromVersion: nu
     }
   }
   if (fromVersion < 2) {
-    const defaults: Record<string, string> = {
-      sourceTerm: '#3b82f6',
-      matchTerm: 'rgba(34,197,94,0.18)',
-      mismatchTerm: 'rgba(239,68,68,0.15)',
-      search: 'rgba(234,179,8,0.25)',
-      auditPhrase: 'rgba(249,115,22,0.25)',
-    };
     const existing = (s.highlightColors ?? {}) as Record<string, string>;
-    s.highlightColors = { ...defaults, ...existing };
+    s.highlightColors = { ...HL_COLORS_LIGHT, ...existing };
   }
   if (fromVersion < 3) {
     s.maxPipelines = 5;

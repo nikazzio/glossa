@@ -117,7 +117,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
             <BookMarked size={14} />
           </IconButton>
           <span
-            className="font-mono text-[11px] text-editorial-muted"
+            className="font-mono text-caption text-editorial-muted"
             aria-label={t('memory.fewShotCountLabel', { count: fewShotExamples.length, max: MAX_FEW_SHOT_EXAMPLES })}
           >
             {fewShotExamples.length}/{MAX_FEW_SHOT_EXAMPLES}

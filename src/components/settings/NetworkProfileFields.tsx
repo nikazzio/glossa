@@ -145,7 +145,7 @@ export function NetworkProfileFields({
     </SettingRow>
   );
 
-  const rows = 'divide-y divide-editorial-border/60 border-y border-editorial-border/70';
+  const rows = 'divide-y divide-rule border-y border-rule';
 
   return (
     <div className="space-y-10">

@@ -178,8 +178,8 @@ export function SettingsModal() {
           </IconButton>
         );
       })}
-      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+      <span className="mx-1 h-4 w-px self-center bg-rule" aria-hidden="true" />
+      <span className="mx-1 h-4 w-px self-center bg-rule" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
         {activeTabConfig.find((tb) => tb.id === activeTab)?.label}
       </span>

@@ -32,14 +32,14 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
           {/* La spiegazione la porta il titolo del blocco. */}
           {hint ? (
             <Hint label={`${title} — ${hint}`} side="bottom">
-              <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{title}</span>
+              <span className="text-caption font-sans uppercase tracking-section text-editorial-muted">{title}</span>
             </Hint>
           ) : (
-            <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{title}</span>
+            <span className="text-caption font-sans uppercase tracking-section text-editorial-muted">{title}</span>
           )}
         </div>
         <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest ${
+          className={`rounded-full px-2 py-0.5 text-caption font-bold uppercase tracking-widest ${
             block.kind === 'static'
               ? 'bg-editorial-success/10 text-editorial-success'
               : 'bg-editorial-accent/10 text-editorial-accent'
@@ -48,7 +48,7 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
           {block.kind === 'static' ? t('pipeline.promptPreviewStatic') : t('pipeline.promptPreviewRuntime')}
         </span>
       </div>
-      <pre className="whitespace-pre-wrap break-words border-l border-editorial-border/70 bg-editorial-textbox/18 px-3 py-2 text-xs leading-relaxed font-mono text-editorial-ink">
+      <pre className="whitespace-pre-wrap break-words border-l border-rule bg-editorial-textbox/18 px-3 py-2 text-xs leading-relaxed font-mono text-editorial-ink">
         {block.body}
       </pre>
     </section>
@@ -109,7 +109,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
           <Eye size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
+          <p className="text-caption font-sans uppercase tracking-section text-editorial-muted">
             {t('pipeline.promptPreviewTitle')}
           </p>
         </div>

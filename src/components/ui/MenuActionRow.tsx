@@ -6,6 +6,8 @@ interface MenuActionRowProps {
   onClick: () => void;
   tone?: 'default' | 'danger';
   disabled?: boolean;
+  /** Voce che accende o spegne qualcosa: vero quando è accesa. */
+  pressed?: boolean;
 }
 
 /**
@@ -14,19 +16,20 @@ interface MenuActionRowProps {
  * (niente icona) né i pattern locali tipo `ViewOptionRow` (niente tono
  * danger, pensato per opzioni "attive"/"non attive" non per azioni) coprono.
  */
-export function MenuActionRow({ icon, label, onClick, tone = 'default', disabled = false }: MenuActionRowProps) {
+export function MenuActionRow({ icon, label, onClick, tone = 'default', disabled = false, pressed }: MenuActionRowProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={pressed}
       className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         tone === 'danger'
           ? 'text-editorial-danger hover:bg-editorial-danger/10'
           : 'text-editorial-ink hover:bg-editorial-textbox/60'
       }`}
     >
-      <span className={tone === 'danger' ? 'text-editorial-danger' : 'text-editorial-muted'}>{icon}</span>
+      <span className={tone === 'danger' ? 'text-editorial-danger' : pressed ? 'text-editorial-accent' : 'text-editorial-muted'}>{icon}</span>
       <span className="truncate">{label}</span>
     </button>
   );

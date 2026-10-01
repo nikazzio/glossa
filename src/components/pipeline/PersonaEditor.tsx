@@ -105,7 +105,7 @@ export function PersonaEditor({
         <div className="flex items-center gap-1.5">
           <SectionLabel icon={Bot} label={t('pipeline.personaLabel')} />
           {isCustom && (
-            <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
+            <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-caption font-bold uppercase tracking-section text-editorial-accent">
               {t('pipeline.personaCustomBadge')}
             </span>
           )}
@@ -179,7 +179,7 @@ export function PersonaEditor({
             aria-label={t('pipeline.templates.namePlaceholder')}
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (salva template)
             autoFocus
-            className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded-md bg-editorial-textbox/60 border border-rule px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
           />
           <IconButton
             onClick={handleSaveTemplate}
@@ -201,7 +201,7 @@ export function PersonaEditor({
 
       {isEditing && showTemplateList && (
         <div className="border-l-4 border-l-editorial-accent/35 border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-editorial-border/60">
+          <div className="p-2 border-b border-rule">
             <input
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
@@ -209,10 +209,10 @@ export function PersonaEditor({
               aria-label={t('pipeline.templates.searchPlaceholder')}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- casella di ricerca che compare aprendo l'elenco template
               autoFocus
-              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md bg-editorial-textbox/60 border border-rule-faint px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
-          <ul className="max-h-40 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
+          <ul className="max-h-40 overflow-y-auto custom-scrollbar divide-y divide-rule">
             {filteredTemplates.length === 0 ? (
               <li className="px-3 py-3 text-xs text-editorial-muted text-center">
                 {t('pipeline.templates.empty')}
@@ -248,10 +248,10 @@ export function PersonaEditor({
         disabled={!isEditing}
         onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
         rows={isEditing ? 12 : isCustom ? 4 : 2}
-        className={`w-full rounded-md border-2 px-4 py-3 text-[13px] font-mono outline-none leading-6 resize-y ${isEditing ? 'min-h-[10rem] ' : ''}${
+        className={`w-full rounded-md border-2 px-4 py-3 text-xs font-mono outline-none leading-6 resize-y ${isEditing ? 'min-h-[10rem] ' : ''}${
           isEditing
             ? 'bg-editorial-paper border-editorial-accent/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-            : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
+            : 'bg-editorial-textbox/12 border-rule-faint text-editorial-muted/70 cursor-default'
         }`}
       />
     </div>

@@ -170,7 +170,7 @@ export function TranslationsSettingsTab({
           <SectionLabel icon={Palette} label={t('settings.highlights')} />
           {/* Quale tema si sta modificando: una didascalia, non una pastiglia —
               non è cliccabile e non deve sembrarlo. */}
-          <span className="flex items-center gap-1 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="flex items-center gap-1 caption-label">
             {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
             {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
           </span>
@@ -195,7 +195,7 @@ export function TranslationsSettingsTab({
         ]).map(({ groupLabel, items }) => (
           <div key={groupLabel} className="space-y-1.5">
             <FieldLabel>{groupLabel}</FieldLabel>
-            <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+            <div className="divide-y divide-rule border-y border-rule">
               {items.map(({ key, label }) => (
                 // La pastiglia del colore sta a destra come ogni altro comando
                 // di riga, e l'etichetta ha il corpo delle altre etichette:

@@ -12,6 +12,7 @@ import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
 import { FieldLabel, Select } from '../ui';
+import { FIELD_MONO_CLASSNAME } from '../ui/fieldStyles';
 
 interface OcrSettingsSectionProps {
   /** '' = nessun default a questo livello — la select del provider resta vuota. */
@@ -142,7 +143,7 @@ export function OcrSettingsSection({
               value={model}
               onChange={(event) => onModelChange(event.target.value)}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className={`${FIELD_MONO_CLASSNAME} flex-1`}
               aria-label={t('workspace.settings.ocrDefaultModel')}
             />
           )}

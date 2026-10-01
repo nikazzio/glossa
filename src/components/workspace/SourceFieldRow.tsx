@@ -69,7 +69,7 @@ export function SourceFieldRow({
   if (editing) {
     return (
       <div className="min-w-0">
-        <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+        <dt className="caption-label">
           {label}
         </dt>
         <dd className="mt-0.5 flex min-w-0 items-center gap-1">
@@ -122,7 +122,7 @@ export function SourceFieldRow({
 
   return (
     <div className="group min-w-0">
-      <dt className="flex items-center gap-1 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+      <dt className="flex items-center gap-1 caption-label">
         {label}
         {original !== undefined && (
           <Tooltip

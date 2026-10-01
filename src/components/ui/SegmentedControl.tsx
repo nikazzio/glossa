@@ -52,7 +52,7 @@ export function SegmentedControl<T extends string>({
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => handleKeyDown(opt.value, e)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-md border py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+            className={`flex flex-1 items-center justify-center gap-2 rounded-md border py-2.5 text-xs font-bold uppercase tracking-section transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
               isActive
                 ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
                 : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'

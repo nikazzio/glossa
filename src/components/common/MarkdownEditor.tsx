@@ -494,7 +494,7 @@ export function MarkdownEditor({
   // Menu esterno (shell nuova): pannello a scomparsa unico con tutti i controlli testo.
   // Il pulsante che lo apre vive nell'header della pagina, non qui.
   const textMenuPanel = (
-    <div className="flex flex-col gap-3 border-b border-editorial-border/60 px-1 py-3">
+    <div className="flex flex-col gap-3 border-b border-rule px-1 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <ToolbarLabel>{t('editor.viewLabel')}</ToolbarLabel>
         {modeControls}
@@ -506,7 +506,7 @@ export function MarkdownEditor({
         {helpButton}
       </div>
       {markdownEnabled ? (
-        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-editorial-border/60">
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-rule">
           {formattingControls}
         </div>
       ) : null}
@@ -524,8 +524,8 @@ export function MarkdownEditor({
       ) : (
         <div className={`sticky top-0 z-20 bg-editorial-page/95 backdrop-blur${fillHeight ? ' shrink-0' : ''}${
           flatToolbar
-            ? ' border-b border-editorial-border/60 px-1 py-2'
-            : ' rounded-xl border border-editorial-border/70 px-3 py-3 shadow-sm'
+            ? ' border-b border-rule px-1 py-2'
+            : ' rounded-xl border border-rule px-3 py-3 shadow-sm'
         }`}>
           <div className="flex items-center gap-1.5">
             {markdownEnabled && (
@@ -539,14 +539,14 @@ export function MarkdownEditor({
                 {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
               </IconButton>
             )}
-            {markdownEnabled && <span className="mx-0.5 h-4 w-px shrink-0 bg-editorial-border/50" aria-hidden="true" />}
+            {markdownEnabled && <span className="mx-0.5 h-4 w-px shrink-0 bg-rule" aria-hidden="true" />}
             {modeControls}
             <div className="flex-1" />
             {fontControls}
             {helpButton}
           </div>
           {toolbarOpen && markdownEnabled ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-editorial-border/60">
+            <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-rule">
               {formattingControls}
             </div>
           ) : null}
@@ -679,12 +679,12 @@ function ToolbarButton({
 
 function ToolbarLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+    <span className="text-caption font-bold uppercase tracking-section text-editorial-muted">
       {children}
     </span>
   );
 }
 
 function ToolbarSeparator() {
-  return <span className="mx-1 h-5 w-px bg-editorial-border/80" aria-hidden="true" />;
+  return <span className="mx-1 h-5 w-px bg-rule" aria-hidden="true" />;
 }

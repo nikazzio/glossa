@@ -32,7 +32,7 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 
 function SectionHeader({ icon, label, info }: { icon: React.ReactNode; label: string; info?: string }) {
   return (
-    <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
+    <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-section text-editorial-muted">
       <span className="text-editorial-accent shrink-0">{icon}</span>
       {label}
       {info && (
@@ -93,7 +93,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   }
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="divide-y divide-editorial-border/55 px-5">
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="divide-y divide-rule px-5">
       <section className="py-4">
         <SectionHeader icon={<FileText size={11} />} label={t('document.infoLabel')} />
         <dl className="space-y-2">
@@ -105,7 +105,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
 
       <section className="py-4">
         <SectionHeader icon={<BarChart2 size={11} />} label={t('pipeline.chunkStatus.completed')} />
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-editorial-border/40">
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-rule-faint">
           <div className="h-full rounded-full bg-editorial-success transition-all" style={{ width: `${progressPct}%` }} />
         </div>
         <div className="mb-2 font-display text-lg italic text-editorial-ink">{progressPct}%</div>
@@ -141,9 +141,9 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           />
           {totalTokens > 0 && (
             <div className="flex items-baseline gap-1.5 pl-3">
-              <dt className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">in</dt>
+              <dt className="text-caption font-bold uppercase tracking-caption text-editorial-muted">in</dt>
               <dd className="font-display text-sm italic text-editorial-muted">{usageSummary.overall.totalInput.toLocaleString()}</dd>
-              <dt className="ml-2 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">out</dt>
+              <dt className="ml-2 text-caption font-bold uppercase tracking-caption text-editorial-muted">out</dt>
               <dd className="font-display text-sm italic text-editorial-muted">{usageSummary.overall.totalOutput.toLocaleString()}</dd>
             </div>
           )}

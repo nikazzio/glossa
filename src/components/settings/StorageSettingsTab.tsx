@@ -70,9 +70,9 @@ export function StorageSettingsTab() {
             onClick={() => void handleChangeFolder()}
             disabled={loading || migrating}
             aria-label={t('settings.storage.changeFolder')}
-            className="w-full border-y border-editorial-border/70 py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full border-y border-rule py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            <p className="caption-label">
               {isOverride
                 ? t('settings.storage.customLocation')
                 : t('settings.storage.defaultLocation')}

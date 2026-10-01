@@ -1,13 +1,7 @@
 import { Type, Sun, Moon, Monitor, Palette, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme } from '../../stores/uiStore';
+import { EDITORIAL_BG, type UiFont, type DocumentFontSize, type DocumentLineHeight, type ColorScheme } from '../../stores/uiStore';
 import { ContrastBadge, SectionLabel, SegmentedControl, SettingRow } from '../ui';
-
-/** Sfondo editoriale di riferimento per il controllo contrasto AA dell'accento. */
-const ACCENT_CONTRAST_BG: Record<'light' | 'dark', string> = {
-  light: '#F8F5F0',
-  dark: '#1c1814',
-};
 
 // Anteprima resa nel font stesso: il preview è il nome del font, mostrato nel proprio carattere.
 const UI_FONT_OPTIONS: Array<{ value: UiFont; name: string; family: string }> = [
@@ -61,7 +55,7 @@ export function TypographySettingsTab({
         <div
           role="radiogroup"
           aria-label={t('settings.uiFont')}
-          className="divide-y divide-editorial-border/60 border-y border-editorial-border/70"
+          className="divide-y divide-rule border-y border-rule"
         >
           {UI_FONT_OPTIONS.map((opt) => {
             const isActive = uiFont === opt.value;
@@ -121,7 +115,7 @@ export function TypographySettingsTab({
         <SectionLabel icon={Palette} label={t('settings.accentColor')} />
         {/* Righe, non due riquadri che somigliavano a un selettore: qui non si
             scegliono due alternative, si impostano due valori. */}
-        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <div className="divide-y divide-rule border-y border-rule">
           {(['light', 'dark'] as const).map((mode) => {
             const label = t(
               mode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light',
@@ -129,7 +123,7 @@ export function TypographySettingsTab({
             return (
               <SettingRow key={mode} label={label} hint={t('settings.accentColorHint')}>
                 <span className="flex items-center gap-2">
-                  <ContrastBadge fg={editorialAccentColor[mode]} bg={ACCENT_CONTRAST_BG[mode]} />
+                  <ContrastBadge fg={editorialAccentColor[mode]} bg={EDITORIAL_BG[mode]} />
                   <label className="relative h-5 w-5 shrink-0 cursor-pointer overflow-hidden rounded-full border border-editorial-border">
                     <span
                       className="absolute inset-0"

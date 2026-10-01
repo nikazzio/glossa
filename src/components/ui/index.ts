@@ -1,7 +1,7 @@
 export { AlertDialog } from './AlertDialog';
 export { Dialog } from './Dialog';
 export { DialogConfirmButton, DialogCancelButton, DialogDangerButton } from './DialogButtons';
-export { IconButton, IconLink, type IconButtonTone, type IconButtonSize } from './IconButton';
+export { IconButton, IconLink, useOpenExternal, type IconButtonTone, type IconButtonSize } from './IconButton';
 export { Menu, type MenuItem } from './Menu';
 export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';
@@ -36,3 +36,8 @@ export { CatalogSearchField } from './CatalogSearchField';
 export { CatalogViewSwitch, type CatalogView } from './CatalogViewSwitch';
 export { CompletionBar } from './CompletionBar';
 export { AreaHeading, AREA_INK_CLASSNAME, AREA_PAPER_CLASSNAME, type InkedArea } from './AreaHeading';
+export { ResizeHandle } from './ResizeHandle';
+export { PanelSection } from './PanelSection';
+export { PANEL_BODY_CLASSNAME, STAT_LIST_CLASSNAME, INSPECTOR_WIDTH, clampInspectorWidth } from './panelStyles';
+export { PageHeader } from './PageHeader';
+export { ChoiceDots, type ChoiceDotsOption } from './ChoiceDots';

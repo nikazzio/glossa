@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
+import { Group, Panel, usePanelCallbackRef } from 'react-resizable-panels';
 import { Activity, AlertTriangle, ArrowRight, BookOpenText, History, RefreshCw, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ import { DashboardBoard, type BoardSection } from './DashboardBoard';
 import { DashboardSection } from './DashboardSection';
 import { JobsOverviewChart } from './JobsOverviewChart';
 import { JobsHistoryList } from '../jobs/JobsHistoryList';
-import { EmptyState, FieldLabel, IconButton, InspectorShell, Select, Spinner, StatBlock, Tooltip } from '../ui';
+import { EmptyState, FieldLabel, IconButton, InspectorShell, ResizeHandle, Select, Spinner, StatBlock, Tooltip } from '../ui';
 
 const JOBS_COLLAPSED = 56;
 const JOBS_MIN = 320;
@@ -150,7 +150,7 @@ export function AppDashboard() {
         </DashboardSection> },
       { id: 'activity', node: <DashboardSection id="activity" icon={Activity} label={t('dashboard.activityTitle')} hint={t('overview.activityHint')} initiallyOpen={false}>
           {sectionState(facts)}
-          {facts.data?.map((fact) => <div key={fact.id} className="border-b border-editorial-border/60 py-2 last:border-0">
+          {facts.data?.map((fact) => <div key={fact.id} className="border-b border-rule py-2 last:border-0">
             <p className="text-sm text-editorial-ink">{t('overview.events.' + fact.event_type, { defaultValue: fact.event_type })}</p>
             <p className="truncate font-display italic text-editorial-muted">{fact.title ?? t('overview.entities.' + fact.entity_type, { defaultValue: fact.entity_type })}</p>
             <p className="text-xs text-editorial-muted">{formatDateTime(fact.occurred_at)}{fact.outcome ? ' · ' + t('overview.outcomes.' + fact.outcome, { defaultValue: fact.outcome }) : ''}</p>
@@ -175,19 +175,7 @@ export function AppDashboard() {
     </main>
     </Panel>
 
-    <Separator
-      onPointerDown={() => setDragging(true)}
-      className={`group/sep relative z-10 flex w-1.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center outline-none transition-colors focus-visible:bg-editorial-accent/30 focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-        dragging ? 'bg-editorial-accent/40' : 'hover:bg-editorial-accent/25'
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className={`relative h-7 w-px rounded-full transition-colors ${
-          dragging ? 'bg-editorial-accent' : 'bg-editorial-border group-hover/sep:bg-editorial-accent/60'
-        }`}
-      />
-    </Separator>
+    <ResizeHandle dragging={dragging} onDragStart={() => setDragging(true)} />
 
     <Panel
       id="dashboard-jobs"
@@ -232,7 +220,7 @@ export function AppDashboard() {
 const EMPTY_CLASSNAME = 'flex flex-col items-center gap-2 px-3 py-6 text-center';
 
 function DashboardRow({ title, detail, label, onOpen }: { title: string; detail?: string; label: string; onOpen: () => void }) {
-  return <div className="flex items-center justify-between gap-3 border-b border-editorial-border/60 py-2 last:border-0">
+  return <div className="flex items-center justify-between gap-3 border-b border-rule py-2 last:border-0">
     <div className="min-w-0"><p className="truncate font-display italic text-editorial-ink">{title}</p>{detail && <p className="truncate text-xs text-editorial-muted">{detail}</p>}</div>
     <IconButton size="sm" title={label} onClick={onOpen}><ArrowRight size={16} /></IconButton>
   </div>;

@@ -227,9 +227,9 @@ export function VaultSection() {
           onClick={() => void handleChoose()}
           disabled={busy || loading}
           aria-label={t('settings.storage.vault.chooseFolder')}
-          className="w-full border-y border-editorial-border/70 py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full border-y border-rule py-3 text-left transition-colors hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <p className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          <p className="caption-label">
             {status?.isDefault
               ? t('settings.storage.vault.defaultLocation')
               : t('settings.storage.vault.customLocation')}
@@ -262,7 +262,7 @@ export function VaultSection() {
         </p>
       )}
 
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+      <div className="divide-y divide-rule border-y border-rule">
         <SettingRow
           label={t('settings.storage.vault.verifyQuick')}
           hint={t('settings.storage.vault.verifyHint')}
@@ -305,10 +305,10 @@ export function VaultSection() {
           spariva, quindi «com'era andata» non aveva più risposta. */}
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="caption-label">
             {t('settings.storage.vault.lastCheck')}
           </span>
-          <span className="font-mono text-[11px] text-editorial-muted">
+          <span className="font-mono text-caption text-editorial-muted">
             {check?.at
               ? `${new Date(check.at.replace(' ', 'T') + 'Z').toLocaleString(undefined, {
                   dateStyle: 'short',
@@ -333,7 +333,7 @@ export function VaultSection() {
               })}
             </p>
 
-            <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+            <div className="divide-y divide-rule border-y border-rule">
               <SettingRow
                 label={
                   check.orphans > 0

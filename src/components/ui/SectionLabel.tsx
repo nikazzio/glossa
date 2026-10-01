@@ -37,7 +37,7 @@ export function SectionLabel({
       {/* 11px: è la misura che le intestazioni di sezione hanno già in tutta
           l'app (ventisei punti la scrivevano a mano). La primitiva si allinea a
           loro invece del contrario, così adottarla non sposta niente. */}
-      <span className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+      <span className="text-caption font-sans uppercase tracking-section text-editorial-muted">
         {label}
       </span>
     </span>

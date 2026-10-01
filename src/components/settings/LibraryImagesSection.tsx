@@ -21,7 +21,7 @@ import {
   setOptimizeQuality,
 } from '../../services/optimizeService';
 
-const ROWS = 'divide-y divide-editorial-border/60 border-y border-editorial-border/70';
+const ROWS = 'divide-y divide-rule border-y border-rule';
 
 /**
  * Le misure che valgono per tutte le biblioteche: quanto grande si vuole una

@@ -91,12 +91,12 @@ export function ProviderRuntimeEditor({
   };
 
   return (
-    <section className="border-l-4 border-l-editorial-charcoal/25 border-y border-editorial-border/70 bg-editorial-textbox/18 overflow-hidden">
+    <section className="border-l-4 border-l-editorial-charcoal/25 border-y border-rule bg-editorial-textbox/18 overflow-hidden">
       {/* Header / toggle row — always visible */}
       <div
         className={`px-4 py-3 transition-colors ${
           overrideEnabled
-            ? 'bg-editorial-ink/5 border-b border-editorial-border/50'
+            ? 'bg-editorial-ink/5 border-b border-rule'
             : 'hover:bg-editorial-textbox/30'
         }`}
       >
@@ -134,10 +134,10 @@ export function ProviderRuntimeEditor({
                       if (parsed !== undefined) patchOllama({ temperature: parsed });
                     }}
                     disabled={advancedEnabled}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                   {temperatureIgnored && (
-                    <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-editorial-warning">
+                    <p className="mt-1.5 flex items-start gap-1.5 text-caption leading-relaxed text-editorial-warning">
                       <AlertTriangle size={12} className="mt-0.5 shrink-0" />
                       {t('pipeline.providerOptions.temperatureIgnored')}
                     </p>
@@ -153,7 +153,7 @@ export function ProviderRuntimeEditor({
                       if (parsed !== undefined) patchOllama({ topP: parsed });
                     }}
                     disabled={advancedEnabled}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.seed')}>
@@ -166,7 +166,7 @@ export function ProviderRuntimeEditor({
                     }}
                     disabled={advancedEnabled}
                     placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.keepAlive')}>
@@ -174,7 +174,7 @@ export function ProviderRuntimeEditor({
                     type="text"
                     value={String(ollama.keepAlive ?? '')}
                     onChange={(e) => patchOllama({ keepAlive: e.target.value })}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.numCtx')}>
@@ -187,7 +187,7 @@ export function ProviderRuntimeEditor({
                     }}
                     disabled={advancedEnabled}
                     placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.numPredict')}>
@@ -200,7 +200,7 @@ export function ProviderRuntimeEditor({
                     }}
                     disabled={advancedEnabled}
                     placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
               </div>
@@ -233,8 +233,8 @@ export function ProviderRuntimeEditor({
               <div
                 className={`space-y-1.5 border-l-4 border-y px-3 py-3 transition-colors ${
                   advancedEnabled
-                    ? 'border-l-editorial-ink border-y-editorial-border/70 bg-editorial-bg/90'
-                    : 'border-l-editorial-border/70 border-y-editorial-border/60 bg-editorial-bg/50'
+                    ? 'border-l-editorial-ink border-y-rule bg-editorial-bg/90'
+                    : 'border-l-rule border-y-rule bg-editorial-bg/50'
                 }`}
               >
                 <ToggleRow
@@ -249,7 +249,7 @@ export function ProviderRuntimeEditor({
               </div>
 
               <div className="space-y-2">
-                <label htmlFor={textareaId} className="block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                <label htmlFor={textareaId} className="block caption-label">
                   {t('pipeline.providerOptions.advancedJson')}
                 </label>
                 <textarea
@@ -276,7 +276,7 @@ export function ProviderRuntimeEditor({
                   disabled={!advancedEnabled}
                   rows={6}
                   spellCheck={false}
-                  className="w-full rounded-md border-2 border-editorial-border/60 bg-editorial-bg/80 px-3 py-3 text-sm font-mono outline-none resize-y leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  className="w-full rounded-md border-2 border-rule bg-editorial-bg/80 px-3 py-3 text-sm font-mono outline-none resize-y leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                 />
                 {jsonError ? (
                   <div className="flex items-center gap-2 text-xs text-editorial-accent">
@@ -307,7 +307,7 @@ function LabeledField({
 }) {
   return (
     <label className="space-y-1.5">
-      <span className="block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+      <span className="block caption-label">
         {label}
       </span>
       {children}

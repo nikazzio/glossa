@@ -93,7 +93,7 @@ export function DeeplStageConfig({
       {/* 1. Opzioni (toggle) */}
       <div className="space-y-3">
         <SectionLabel icon={SlidersHorizontal} label={t('pipeline.deepl.optionsTitle')} />
-        <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+        <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-rule bg-editorial-bg/65 px-5 py-4">
           <ToggleRow
             icon={null}
             label={t('pipeline.deepl.preserveFormatting')}
@@ -113,7 +113,7 @@ export function DeeplStageConfig({
       <div className="space-y-3">
         <SectionLabel icon={Network} label={t('pipeline.deepl.sectionTranslation')} />
         <div className="space-y-2">
-          <label htmlFor="deepl-model-type" className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          <label htmlFor="deepl-model-type" className="text-xs font-sans uppercase tracking-caption text-editorial-muted">
             {t('pipeline.deepl.modelType')}
           </label>
           <Select
@@ -132,7 +132,7 @@ export function DeeplStageConfig({
         {/* 3. Registro formalità (condizionale) */}
         {supportsFormality && (
           <div className="space-y-2">
-            <label htmlFor="deepl-formality" className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            <label htmlFor="deepl-formality" className="text-xs font-sans uppercase tracking-caption text-editorial-muted">
               {t('pipeline.deepl.formality')}
             </label>
             <Select

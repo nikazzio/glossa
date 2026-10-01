@@ -15,7 +15,7 @@ primitive condivise resta la sorgente di verità per API e varianti disponibili.
 - Ocra per cautele; giallo solo per attività in corso.
 - Comandi visivi neutri, icon-only, con tooltip.
 - Nessuna variante locale quando esiste una primitiva condivisa.
-- Testo leggibile almeno `text-xs`; `text-[11px]` solo per caption uppercase.
+- Testo leggibile almeno `text-xs`; `text-caption` solo per caption uppercase.
 - Focus, tastiera e ruoli ARIA fanno parte del componente.
 
 ## Palette
@@ -55,6 +55,22 @@ ocra e oro. Contrasto sul fondo ≥ 7:1 in entrambi i temi.
 Campi, select e textarea usano `editorial-textbox` pieno. Vietati colori
 Tailwind grezzi e valori esadecimali nei componenti.
 
+**Tema scuro.** Ogni colore è un token di `index.css` con il suo valore in
+`html.dark`; la variante `dark:` segue la scelta fatta nell'app, non il
+sistema. Il testo sopra un fondo pieno d'inchiostro o d'accento usa
+`text-on-ink` / `text-on-accent`, mai `text-white`: nel tema scuro l'inchiostro
+diventa chiaro e il bianco sopra non si legge. I colori che servono anche nel
+codice (accento modificabile, sfondo per il controllo del contrasto,
+evidenziazioni) hanno un test che li confronta con il foglio di stile.
+
+**Bordi.** Tre forze: `editorial-border` pieno per i bordi strutturali, `rule`
+per filetti e separatori di elenco, `rule-faint` per quelli appena accennati
+(valgono con `border-`, `divide-`, `bg-`). Niente opacità scritte a mano.
+
+**Ombre.** `shadow-modal`, `shadow-tooltip`, `shadow-warm-sm`, `shadow-warm-md`,
+`shadow-page-card`, `shadow-inset-highlight(-strong)`, `shadow-chunk-current-ring`:
+token con la variante scura, mai `shadow-[var(...)]`.
+
 ## Tipografia
 
 - `font-display`: titoli di vista e valori editoriali.
@@ -63,8 +79,10 @@ Tailwind grezzi e valori esadecimali nei componenti.
 - Scala: `text-xs` 13 px, `text-sm` 15 px, `text-base` 16 px,
   `text-lg` 18 px, `text-xl` 22 px, `text-2xl` 26 px.
 - Titolo di vista: `font-display italic`, responsive solo quando serve.
-- Titolo sezione: uppercase, `text-[11px]`, `tracking-[0.16em]`.
-- Label statistica: uppercase, `text-[11px]`, `tracking-[0.1em]`.
+- Titolo sezione: uppercase, `text-caption` (11 px), `tracking-section`.
+- Label statistica, intestazione di tabella: lo stile `caption-label`
+  (`text-caption`, maiuscolo, `tracking-caption`, muted). Mai `text-[..px]` né
+  `tracking-[..]` scritti a mano.
 - Valore statistico: `font-display text-sm italic`.
 - Metrica focale singola: `font-display text-lg italic`.
 
@@ -209,6 +227,34 @@ solo**.
   due righe hanno la stessa altezza e lo stesso filetto, e la linea sotto è una
   sola da una colonna all'altra.
 
+### PanelSection, PageHeader, ResizeHandle
+
+- `PanelSection`: sezione di una colonna a schede — `SectionLabel` con icona,
+  filetto `rule` sotto, comandi della sezione a destra. Il corpo della scheda
+  usa `PANEL_BODY_CLASSNAME` e gli elenchi etichetta–valore
+  `STAT_LIST_CLASSNAME` (`ui/panelStyles.ts`); le larghezze della colonna sono
+  `INSPECTOR_WIDTH` (Biblioteca e Studio uguali).
+- `PageHeader`: la riga `h-14` in cima a una pagina di dettaglio — ritorno,
+  segno dell'area nel suo inchiostro, identità, comandi a destra.
+- `ResizeHandle`: l'unico divisore trascinabile fra colonne, con nome per chi
+  legge con la voce; `layer="shell"` fra colonne dell'applicazione.
+
+### ChoiceDots
+
+Scelta esclusiva fra poche opzioni a cerchietti da 24 px con icona o lettera
+(immagine inviata all'OCR, livello di ragionamento): `role="radiogroup"`,
+frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
+accento pieno con `text-on-accent`. L'icona di categoria accanto è muted dentro
+un `Hint`, mai in ocra. Nessun cerchietto scritto a mano.
+
+### Barre strette
+
+Una barra che non ci sta non taglia i comandi: sfoglio, salto a pagina e zoom
+restano, i secondari passano nel menu con i tre puntini (una sola misura
+decide barra e menu insieme). Una parola di stato accanto al suo segno (la
+provenienza della pagina, lo stato del salvataggio) si riduce al segno, con il
+testo nel suggerimento e per chi legge con la voce.
+
 ### SettingRow e campi
 
 - Ogni impostazione usa `SettingRow` dentro una lista con `divide-y` e
@@ -250,7 +296,7 @@ solo**.
 ### Badge numerici
 
 Conteggi compatti non interattivi: cerchio `h-5 w-5`, testo
-`text-[10px] font-bold text-white`, tooltip e `aria-label`. Il colore deriva
+`text-[10px] font-bold text-on-accent`, tooltip e `aria-label`. Il colore deriva
 dalla mappa semantica esistente. Conteggi cliccabili usano una primitiva
 interattiva.
 

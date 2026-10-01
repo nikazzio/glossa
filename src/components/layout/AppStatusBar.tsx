@@ -448,7 +448,7 @@ export function AppStatusBar() {
       <div
         role="status"
         aria-live="polite"
-        className="grid h-8 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
+        className="grid h-8 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-t border-rule bg-editorial-bg px-4 text-xs text-editorial-muted"
       >
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           <LocationLabel data={data} />
@@ -482,7 +482,7 @@ export function AppStatusBar() {
           {/* Lo spazio del salvataggio è riservato anche dove non c'è niente
               da salvare: senza, tutto il gruppo scivolerebbe a destra cambiando
               sezione. Generalizzarlo a trascrizioni e fonti è lavoro di #413. */}
-          <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+          <span className="h-3.5 w-px bg-rule" aria-hidden="true" />
           <div className="flex min-w-[5.5rem] justify-end">
             {data.kind === 'project' && (
               <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} />

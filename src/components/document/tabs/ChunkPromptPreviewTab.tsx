@@ -31,7 +31,7 @@ function PromptBlockView({ title, body }: { title: string; body: string }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">{title}</p>
+        <p className="text-xs font-sans uppercase tracking-caption text-editorial-muted">{title}</p>
         <IconButton size="md" title={t('promptPreview.copyBlock')} onClick={() => void handleCopy()} tooltipSide="left">
           {copied ? <Check size={13} className="text-editorial-success" /> : <Clipboard size={13} />}
         </IconButton>
@@ -66,7 +66,7 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
       <div className="sticky top-0 z-10 shrink-0 space-y-3 border-b border-editorial-border bg-editorial-bg px-4 py-3">
         <div className="flex items-center gap-1.5">
           <Eye size={13} className="text-editorial-accent shrink-0" />
-          <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
+          <p className="text-xs font-sans uppercase tracking-section text-editorial-muted">
             {t('promptPreview.title')}
           </p>
         </div>

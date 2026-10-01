@@ -1023,7 +1023,8 @@
       "yearsAgo_one": "{{count}} year ago",
       "yearsAgo_other": "{{count}} years ago"
     },
-    "openLinkFailed": "The link could not be opened in the browser."
+    "openLinkFailed": "The link could not be opened in the browser.",
+    "resizeColumns": "Resize columns"
   },
   "projects": {
     "title": "Projects",
@@ -1138,27 +1139,25 @@
       "history": "History",
       "summary": "Summary",
       "assist": "OCR",
-      "metadata": "Metadata",
       "log": "Transcription log"
     },
     "meta": {
       "page": "Page",
       "pageLabel": "Page label",
-      "status": "Status",
-      "revisionCount": "Saved revisions",
-      "segmentId": "Segment id",
-      "sourcePageId": "Linked page",
-      "sourcePageIdUnset": "not linked"
+      "status": "Status"
     },
     "summary": {
-      "title": "Project summary",
       "pagesWithText": "Transcribed pages",
       "words": "Transcribed words",
       "verifiedPages": "Verified pages",
       "progress": "Progress",
       "ocr": "Automatic recognition",
       "runs": "Completed readings",
-      "loadFailed": "Could not load the summary"
+      "loadFailed": "Could not load the summary",
+      "documentTitle": "Document summary",
+      "pageSection": "Page",
+      "pageVersions": "Saved versions",
+      "retry": "Retry"
     },
     "authorLabels": {
       "user": "Manual correction",
@@ -1200,8 +1199,26 @@
         "image": "Image",
         "prompt": "Prompt",
         "end": "Outcome"
-      }
-    }
+      },
+      "loadFailed": "Could not read the transcription log.",
+      "retry": "Retry",
+      "groupedOn": "Grouped by page: press for a single list",
+      "groupedOff": "Single list: press to group by page"
+    },
+    "unlinkSource": "Unlink the work",
+    "noSourceFound": "No work found",
+    "versionNumber": "Version {{number}}",
+    "currentBadge": "Current",
+    "verifiedVersionBadge": "Verified",
+    "finishRenameFirst": "Finish renaming the other version first",
+    "cannotDeleteCurrentOrVerified": "The current or verified version can't be deleted",
+    "clearHistoryNothing": "No old versions to delete",
+    "noOtherRevisions": "No other saves.",
+    "versionNameRequired": "Type a name for the version",
+    "commandBlocked": "{{command}} — {{reason}}",
+    "blockedEmptyPage": "Write some text before verifying",
+    "blockedPageLoading": "Page loading",
+    "blockedReading": "Reading in progress"
   },
   "areas": {
     "translations": {
@@ -2254,14 +2271,14 @@
             "title": "The viewer on the left, one text per page",
             "paragraphs": [
               "A document created from a work's page in the Library shows the linked digitization's page on the left, with zoom and panning — change page, and the text on the right changes with it: each page has its own block of text and its own history. A document created from scratch has no digitization to show: a notice appears in place of the viewer, and it stays a single block of text.",
-              "At the top, a document tied to a work presents it as its Library page does: author, year, place, and printer above, the title below, with the link out to the library's site. The three-dot command offers only \"Remove transcription\": downloading, verifying, or archiving the work stay commands of the Library page."
+              "At the top, a document tied to a work presents it as its Library page does: author, year, place, and printer above, the title below, with the link out to the library's site. On the right, the bin deletes the transcription after confirmation: downloading, verifying, or archiving the work stay commands of the Library page."
             ]
           },
           {
             "title": "Writing and saving",
             "paragraphs": [
               "Text saves after 30 seconds without changes. The indicator distinguishes unsaved text from a save in progress, completed, or failed. To save a version to the history right away, use the disk command next to the indicator, or Ctrl + S even while typing; the command stays off when there is nothing new to save. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
-              "When the text is ready, mark it as verified with the lock next to the \"Page N\" title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command."
+              "When the text is ready, mark it as verified with the check next to the page title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command. When the check is off, hover it to read why: empty page, loading, or being read. If a save fails, the same disk command retries it."
             ]
           },
           {
@@ -2273,7 +2290,7 @@
           {
             "title": "Switching source, images or PDF",
             "paragraphs": [
-              "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows next to the \"Page N\" title. Switching back to the main copy restores the link on its own.",
+              "If the work has both copies, two commands in the viewer's bar switch between them. If they declare the same number of pages the switch is smooth, same numbering. If the number doesn't match, on the secondary copy the viewer detaches from the text: browse it freely, while the text pages through its own arrows, which appear next to the page title only when text and viewer are detached. Switching back to the main copy restores the link on its own. In a narrow window the viewer's secondary commands (copy switch, detach, local files only, open the page on the site) move into the three-dots menu.",
               "A third command detaches the link regardless of page counts, even while staying on the main copy: handy for glancing at a different page without moving where you're writing."
             ]
           },
@@ -2284,21 +2301,21 @@
               "The command stays disabled until the conditions are met: the page must belong to a digitization linked to the document, and you need a provider and a model that can read images, chosen for the document or inherited from the workspace settings. The reason a command is disabled is in its own tooltip.",
               "The text that comes back enters the history as a normal revision, marked \"Automatic recognition\": it never overwrites what is there, it stays editable like any other version, and a later manual correction simply creates the next revision.",
               "The prompt that drives the reading belongs to the document: you edit it from any page and it applies to all of its pages, not to other documents. A new document starts from the workspace prompt, chosen in the settings under OCR, also from the library. To reuse it elsewhere, save it to the library from the edit command; reset brings the document back to the workspace prompt.",
-              "Under the model two small circles choose the image sent: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
-              "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a pill in the top row names the page being read.",
+              "Under the model two small circles choose the image sent: optimised (reduced to the size in Settings, Transcriptions tab, and recompressed) or the copy on this computer as it is, the same as the viewer; if the copy is missing the optimised one is sent. The arrow keys choose too. The starting choice is in Settings, here it applies to the session. With the panel closed the reading command stays visible.",
+              "While a page is being read its sheet is veiled and stays read-only, even after you ask to cancel the job, until reading actually stops. Text you are still editing on another page is not replaced when the job finishes; a gold label in the top row names the page being read.",
               "Reading is queued like a download: you find it in the jobs panel while it runs, and you can pause or cancel it the same way. A passing problem is retried on its own; a wrong key or an empty answer is not, because retrying would give the same answer. An empty answer usually means the model found no text on the page.",
               "Open the bottom panel and choose \"Transcription log\" — it only appears here, inside a transcription document, mirroring the Translation log. Every reading leaves four rows: start, image sent with its real size, weight and origin, the full prompt that was sent, and the outcome with duration, tokens, estimated cost and the number of the revision created. On top there are search, filters by row type and by level, and grouping by page."
             ]
           },
           {
-            "title": "History, summary and metadata",
+            "title": "History and summary",
             "paragraphs": [
-              "Every save stays in that page's history, on the right: it shows who wrote that version — manual correction, automatic recognition, or import — and when.",
-              "The command on each history entry brings that version's text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
+              "The right column has three tabs: History, OCR and Summary. It opens on History.",
+              "Every save stays in that page's history: for each version you see who wrote it — manual correction, automatic recognition, or import —, when, and whether it is the current or the verified version.",
+              "The command on each version brings its text back as a new save, without overwriting earlier versions. Changing page changes the history shown, too.",
               "You can consolidate a version and give it an editable name: it appears in the upper section without duplicating the text. Remove the name to return it to ordinary history.",
-              "You can delete an older version individually after confirmation, or clear the page's ordinary history. Cleanup keeps consolidated, current, and verified versions. The last two cannot be deleted; deleting a version removes the ability to restore its text.",
-              "The Summary tab shows pages with text, word count, verified pages, and progress, then completed OCR readings, tokens, and estimated cost, like the Translation summary.",
-              "The Metadata tab, next to History, shows the raw data saved for the current page — position, label, status, revision count — useful to see what's recorded today."
+              "You can delete an older version individually after confirmation, or clear the page's ordinary history. Cleanup keeps consolidated, current, and verified versions. The last two cannot be deleted, and the disabled command says why; deleting a version removes the ability to restore its text.",
+              "The Summary starts from the open page — number, the library's page label if any, status and saved versions — then the document: pages with text, word count, verified pages and progress, completed OCR readings, tokens and estimated cost."
             ]
           }
         ]

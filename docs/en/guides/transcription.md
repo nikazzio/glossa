@@ -62,9 +62,9 @@ viewer, not an error, and it stays a single block of text.
 
 At the top, a document tied to a work presents it as the Library page does —
 author, year, place, and printer above, title below — with the link out to the library's site.
-The three-dot command offers only "Remove transcription": downloading,
-verifying, or archiving the work stay commands of the Library page, not of
-the Studio.
+On the right, the bin deletes the transcription after confirmation:
+downloading, verifying, or archiving the work stay commands of the Library
+page, not of the Studio.
 
 ## Writing and saving
 
@@ -78,10 +78,12 @@ Changing page or leaving the Studio normally
 saves pending text immediately. A forced shutdown before a save can lose the
 latest edits.
 
-When the text is ready, mark it as **verified** with the lock next to the
-"Page N" title: the text becomes locked, so an already-checked transcription
+When the text is ready, mark it as **verified** with the check next to the
+page title: the text becomes locked, so an already-checked transcription
 doesn't get overwritten by accident. You can return it to draft at any time
-with the same command.
+with the same command. When the check is off, its tooltip says why: empty
+page, loading, or being read. If a save fails, the same disk command retries
+it.
 
 While the viewer is still opening the chosen page, a veil covers the text
 and history with a spinner in the middle: writing or restoring stay
@@ -95,8 +97,11 @@ between them. If the two declare the same number of pages, the switch is
 smooth: same numbering, the text follows. If the number doesn't match,
 switching to the secondary copy detaches the viewer from the text — browse
 it freely to find what you need, while the text pages through its own
-arrows, next to the "Page N" title. Switching back to the main copy
-restores the link on its own.
+arrows, which appear next to the page title only when text and viewer are
+detached. Switching back to the main copy restores the link on its own. In a
+narrow window the viewer's secondary commands — copy switch, detach, local
+files only, open the page on the site — move into the three-dots menu;
+paging, go-to-page and zoom always stay visible.
 
 A third command detaches the link **regardless** of page counts, even
 while staying on the main copy: handy for glancing at a different page
@@ -147,7 +152,7 @@ the reading command stays under the reopen command.
 While a page is being read its sheet is veiled and stays read-only, even
 after a cancellation request, until the job actually stops.
 Text you are still editing on another page is not replaced when reading finishes.
-A pill in the top row of the text column names the page being read, and stays visible even if you page
+A gold label in the top row of the text column names the page being read, and stays visible even if you page
 ahead in the meantime.
 
 The reading starts in the queue, like a download: you'll find it in the
@@ -165,11 +170,12 @@ was sent (expandable row by row), and the outcome with duration, tokens,
 estimated cost and the number of the revision created. On top there are
 search, filters by row type and by level, and grouping by page.
 
-## History, summary and metadata
+## History and summary
 
-Every save stays in that page's history, in the panel on the right: it
-shows who wrote that version — manual correction, automatic recognition, or
-import — and when. The command on each history entry brings that version's
+The right column has three tabs — **History**, **OCR**, **Summary** — and
+opens on History. Every save stays in that page's history: for each version
+it shows who wrote it — manual correction, automatic recognition, or import
+—, when, and whether it is the current or the verified version. The command on each history entry brings that version's
 text back as a new save, without overwriting earlier versions, even after a
 restore. Changing page changes the history shown, too.
 You can consolidate any version and give it a name, which you can edit later.
@@ -177,16 +183,14 @@ Consolidated versions appear above ordinary saves without duplicating their
 text. Remove a name to move a version back to ordinary history. You can
 delete older versions one by one, or use **Clear history** to delete older
 ordinary saves. Consolidated, current, and verified versions survive the
-cleanup. The current and verified versions cannot be deleted. Deleting a
+cleanup. The current and verified versions cannot be deleted: the command stays off
+and its tooltip says why. Deleting a
 version removes the ability to restore its text.
 
-The **Summary** tab follows the Translation summary layout: it shows pages
-with text, word count, verified pages, and progress. It also shows completed
-OCR readings, tokens, and estimated cost.
-
-The **Metadata** tab, next to History, shows the raw data saved for the
-current page: position, label, status, and revision count. It's there to
-show what's recorded today; how it's presented will change.
+The **Summary** starts from the open page — number, the library's page label
+if any, status and saved versions — then the document: pages with text, word
+count, verified pages and progress, completed OCR readings, tokens and
+estimated cost.
 
 ## Current limits
 

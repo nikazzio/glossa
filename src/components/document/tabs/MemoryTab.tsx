@@ -194,7 +194,7 @@ function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
         )}
       </label>
       <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-        <p className="mb-1 text-xs uppercase tracking-[0.1em] text-editorial-muted">
+        <p className="mb-1 text-xs uppercase tracking-caption text-editorial-muted">
           {t('memory.sourcePhraseLabel')}
         </p>
         <textarea
@@ -206,7 +206,7 @@ function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
         />
       </div>
       <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-        <p className="mb-1 text-xs uppercase tracking-[0.1em] text-editorial-muted">
+        <p className="mb-1 text-xs uppercase tracking-caption text-editorial-muted">
           {t('glossary.translation')}
         </p>
         <textarea

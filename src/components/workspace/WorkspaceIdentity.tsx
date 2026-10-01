@@ -84,7 +84,7 @@ export function WorkspaceIconPicker({ value, onChange }: {
       <FieldLabel icon={<WorkspaceIcon iconKey={value} size={12} className="shrink-0 text-editorial-accent" />}>
         {t('workspace.iconLabel')}
       </FieldLabel>
-      <div className="grid grid-cols-4 gap-1.5 border-y border-editorial-border/70 py-3 sm:grid-cols-7" role="group" aria-label={t('workspace.iconLabel')}>
+      <div className="grid grid-cols-4 gap-1.5 border-y border-rule py-3 sm:grid-cols-7" role="group" aria-label={t('workspace.iconLabel')}>
         {WORKSPACE_ICON_KEYS.map((iconKey) => (
           <IconButton
             key={iconKey}

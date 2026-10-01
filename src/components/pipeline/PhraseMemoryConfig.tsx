@@ -39,7 +39,7 @@ export function PhraseMemoryConfig({
     <div className="space-y-3">
       <SectionLabel icon={Brain} label={t('settings.phraseMemoryTab')} />
 
-      <div className="space-y-3 border-l-4 border-l-editorial-success/35 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-success/35 border-y border-rule bg-editorial-bg/65 px-5 py-4">
         <ToggleRow
           icon={<Brain size={13} />}
           label={t('settings.phraseMemoryToggle')}
@@ -61,7 +61,7 @@ export function PhraseMemoryConfig({
             <div className="space-y-1.5">
               <label
                 htmlFor="pm-max-results"
-                className="block text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted"
+                className="block text-xs font-sans uppercase tracking-section text-editorial-muted"
               >
                 {t('settings.phraseMemoryMaxResults')}
               </label>
@@ -80,7 +80,7 @@ export function PhraseMemoryConfig({
             </div>
 
             {!autoSearchPhraseMemory && (
-              <div className="flex items-center gap-2 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs leading-relaxed text-editorial-muted">
+              <div className="flex items-center gap-2 border-l-4 border-l-editorial-accent/35 border-y border-rule bg-editorial-bg/60 px-3 py-2 text-xs leading-relaxed text-editorial-muted">
                 <RefreshCcw size={13} className="shrink-0 text-editorial-accent" />
                 <span>{t('settings.phraseMemoryManualRefreshHint')}</span>
               </div>

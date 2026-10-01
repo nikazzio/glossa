@@ -65,7 +65,7 @@ export function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps)
         <table className="w-full text-sm">
           <tbody>
             {glossary.map((entry, i) => (
-              <tr key={entry.id ?? i} className="border-b border-editorial-border/40 last:border-0">
+              <tr key={entry.id ?? i} className="border-b border-rule-faint last:border-0">
                 <td className="py-2 pr-3 font-medium text-editorial-ink">{entry.term}</td>
                 <td className="py-2 text-editorial-muted/60">→</td>
                 <td className="py-2 pl-3 text-editorial-ink">{entry.translation}</td>

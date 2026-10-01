@@ -5,6 +5,7 @@ import { listGlossaries } from '../../services/glossaryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { Glossary } from '../../types';
 import { Dialog, DialogCancelButton, DialogConfirmButton, Spinner } from '../ui';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CopyGlossaryDialogProps {
   open: boolean;
@@ -81,11 +82,11 @@ export function CopyGlossaryDialog({
         {isLoading ? (
           <Spinner size={14} label={t('common.loading')} className="py-6" />
         ) : sources.length === 0 ? (
-          <p className="border-y border-dashed border-editorial-border/70 py-6 text-center text-sm italic text-editorial-muted">
+          <p className="border-y border-dashed border-rule py-6 text-center text-sm italic text-editorial-muted">
             {t('library.noOtherWorkspaceDictionaries')}
           </p>
         ) : (
-          <div className="max-h-56 space-y-1 overflow-y-auto border-y border-editorial-border/70 py-2 custom-scrollbar">
+          <div className="max-h-56 space-y-1 overflow-y-auto border-y border-rule py-2 custom-scrollbar">
             {sources.map((source) => {
               const owner = workspaces.find((workspace) => workspace.id === source.workspaceId);
               const selected = source.id === selectedId;
@@ -106,14 +107,14 @@ export function CopyGlossaryDialog({
           </div>
         )}
         <label className="block space-y-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="text-caption font-bold uppercase tracking-caption text-editorial-muted">
             {t('library.dictionaryNameLabel')}
           </span>
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             disabled={!selectedId || isCopying}
-            className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-45"
+            className={`${FIELD_CLASSNAME} font-display italic`}
           />
         </label>
       </div>

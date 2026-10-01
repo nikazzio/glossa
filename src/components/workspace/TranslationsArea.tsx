@@ -108,7 +108,7 @@ export function TranslationsArea() {
                     <Icon size={14} />
                   </IconButton>
                 ))}
-                <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+                <span className="mx-1 h-4 w-px self-center bg-rule" aria-hidden="true" />
                 <span className="self-center font-display text-sm italic text-editorial-ink">
                   {t(`workspace.translationsArea.sort.${sortKey}`)}
                 </span>
@@ -132,7 +132,7 @@ export function TranslationsArea() {
                 initial={false}
                 animate={{ opacity: isDimmed ? 0.42 : 1, scale: isOpening ? 0.985 : 1, y: isOpening ? -2 : 0 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
-                className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors duration-150 ${
+                className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-inset-highlight transition-colors duration-150 ${
                   isOpening
                     ? 'border-editorial-accent/55 bg-editorial-paper'
                     : 'border-editorial-border hover:border-editorial-accent/45 hover:bg-editorial-paper'

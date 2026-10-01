@@ -105,7 +105,7 @@ export function AuditTabPanel({
       aria-labelledby="pconfig-tab-audit"
       className="space-y-6"
     >
-      <div className="space-y-3 border-l-4 border-l-editorial-warning/45 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-warning/45 border-y border-rule bg-editorial-bg/65 px-5 py-4">
         <ToggleRow
           icon={<RefreshCw size={13} />}
           label={t('pipeline.judgeRefineLoopSectionLabel')}
@@ -137,7 +137,7 @@ export function AuditTabPanel({
         )}
       </div>
 
-      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-rule bg-editorial-bg/65 px-5 py-4">
         <SectionLabel icon={Cpu} label={t('pipeline.auditModelLabel')} />
         <div className="flex gap-2">
           <Select
@@ -172,7 +172,7 @@ export function AuditTabPanel({
               value={config.judgeModel}
               onChange={(e) => handleJudgeModelChange(e.target.value)}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-rule bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               aria-label={t('pipeline.auditModelLabel')}
             />
           ) : (

@@ -85,7 +85,7 @@ export function EuropeanaKeySection() {
   return (
     <section className="space-y-4">
       <SectionLabel icon={KeyRound} label={t('settings.library.europeanaTitle')} />
-      <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+      <div className="divide-y divide-rule border-y border-rule">
         <SettingRow
           label={t('settings.library.europeanaKey')}
           hint={

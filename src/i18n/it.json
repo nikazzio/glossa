@@ -1023,7 +1023,8 @@
       "yearsAgo_one": "{{count}} anno fa",
       "yearsAgo_other": "{{count}} anni fa"
     },
-    "openLinkFailed": "Non è stato possibile aprire il collegamento nel browser."
+    "openLinkFailed": "Non è stato possibile aprire il collegamento nel browser.",
+    "resizeColumns": "Ridimensiona le colonne"
   },
   "projects": {
     "title": "Progetti",
@@ -1138,27 +1139,25 @@
       "history": "Storico",
       "summary": "Riepilogo",
       "assist": "OCR",
-      "metadata": "Metadati",
       "log": "Log trascrizione"
     },
     "meta": {
       "page": "Pagina",
       "pageLabel": "Etichetta pagina",
-      "status": "Stato",
-      "revisionCount": "Revisioni salvate",
-      "segmentId": "Id segmento",
-      "sourcePageId": "Pagina collegata",
-      "sourcePageIdUnset": "non collegata"
+      "status": "Stato"
     },
     "summary": {
-      "title": "Riepilogo progetto",
       "pagesWithText": "Pagine trascritte",
       "words": "Parole trascritte",
       "verifiedPages": "Pagine verificate",
       "progress": "Avanzamento",
       "ocr": "Riconoscimento automatico",
       "runs": "Letture completate",
-      "loadFailed": "Impossibile caricare il riepilogo"
+      "loadFailed": "Impossibile caricare il riepilogo",
+      "documentTitle": "Riepilogo documento",
+      "pageSection": "Pagina",
+      "pageVersions": "Versioni salvate",
+      "retry": "Riprova"
     },
     "authorLabels": {
       "user": "Correzione manuale",
@@ -1200,8 +1199,26 @@
         "image": "Immagine",
         "prompt": "Prompt",
         "end": "Esito"
-      }
-    }
+      },
+      "loadFailed": "Impossibile leggere il log della trascrizione.",
+      "retry": "Riprova",
+      "groupedOn": "Raggruppato per pagina: premi per l'elenco unico",
+      "groupedOff": "Elenco unico: premi per raggruppare per pagina"
+    },
+    "unlinkSource": "Scollega l'opera",
+    "noSourceFound": "Nessuna opera trovata",
+    "versionNumber": "Versione {{number}}",
+    "currentBadge": "Corrente",
+    "verifiedVersionBadge": "Verificata",
+    "finishRenameFirst": "Finisci prima di rinominare l'altra versione",
+    "cannotDeleteCurrentOrVerified": "Non si elimina la versione corrente o verificata",
+    "clearHistoryNothing": "Nessuna versione vecchia da eliminare",
+    "noOtherRevisions": "Nessun altro salvataggio.",
+    "versionNameRequired": "Scrivi un nome per la versione",
+    "commandBlocked": "{{command}} — {{reason}}",
+    "blockedEmptyPage": "Scrivi del testo prima di verificare",
+    "blockedPageLoading": "Pagina in caricamento",
+    "blockedReading": "Lettura in corso"
   },
   "areas": {
     "translations": {
@@ -2254,14 +2271,14 @@
             "title": "Il visore a sinistra, un testo per pagina",
             "paragraphs": [
               "Un documento creato dalla scheda di un'opera in Biblioteca mostra a sinistra la pagina della digitalizzazione collegata, con zoom e trascinamento — cambiando pagina, il testo a destra cambia con lei: ogni pagina ha il proprio blocco di testo e il proprio storico. Un documento creato da zero non ha una digitalizzazione da mostrare: al posto del visore compare un avviso, e resta un solo blocco di testo.",
-              "In alto, un documento legato a un'opera la presenta come la sua scheda in Biblioteca: autore, anno, luogo e tipografo sopra, il titolo sotto, con l'uscita verso il sito della biblioteca. Il comando con i tre puntini offre solo \"Rimuovi trascrizione\": scaricare, verificare o archiviare l'opera restano comandi della scheda in Biblioteca."
+              "In alto, un documento legato a un'opera la presenta come la sua scheda in Biblioteca: autore, anno, luogo e tipografo sopra, il titolo sotto, con l'uscita verso il sito della biblioteca. A destra il cestino elimina la trascrizione, dopo conferma: scaricare, verificare o archiviare l'opera restano comandi della scheda in Biblioteca."
             ]
           },
           {
             "title": "Scrivere e salvare",
             "paragraphs": [
               "Il testo si salva dopo 30 secondi senza modifiche. L'indicatore distingue il testo ancora da salvare dal salvataggio in corso, riuscito o fallito. Per salvare subito una versione nello storico usa il comando con il dischetto accanto all'indicatore, oppure Ctrl + S anche mentre scrivi; il comando resta spento quando non c'è niente di nuovo da salvare. Cambiando pagina o uscendo normalmente dallo Studio, il testo si salva subito; una chiusura forzata prima del salvataggio può perdere le ultime modifiche.",
-              "Quando il testo è pronto, segnalo come verificato con il lucchetto accanto al titolo \"Pagina N\": il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando."
+              "Quando il testo è pronto, segnalo come verificato con la spunta accanto al titolo della pagina: il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando. Se la spunta è spenta, passandoci sopra leggi il motivo: pagina vuota, in caricamento o in lettura. Se un salvataggio non riesce, lo stesso comando con il dischetto lo riprova."
             ]
           },
           {
@@ -2273,7 +2290,7 @@
           {
             "title": "Cambiare fonte, immagini o PDF",
             "paragraphs": [
-              "Se l'opera ha entrambe le copie, nella barra del visore compaiono due comandi per passare dall'una all'altra. Se dichiarano lo stesso numero di pagine il cambio è fluido, stessa numerazione. Se il numero non combacia, sulla copia secondaria il visore si stacca dal testo: si sfoglia liberamente, mentre il testo si sfoglia con le proprie frecce accanto al titolo \"Pagina N\". Tornando sulla copia principale l'aggancio si ripristina da solo.",
+              "Se l'opera ha entrambe le copie, nella barra del visore compaiono due comandi per passare dall'una all'altra. Se dichiarano lo stesso numero di pagine il cambio è fluido, stessa numerazione. Se il numero non combacia, sulla copia secondaria il visore si stacca dal testo: si sfoglia liberamente, mentre il testo si sfoglia con le proprie frecce, che compaiono accanto al titolo della pagina solo quando testo e visore sono sganciati. Tornando sulla copia principale l'aggancio si ripristina da solo. Con la finestra stretta i comandi secondari del visore (cambio di copia, sgancio, solo file locali, apertura della pagina nel sito) passano nel menu con i tre puntini.",
               "Un terzo comando stacca il collegamento a prescindere dal numero di pagine, anche restando sulla copia principale: comodo per guardare una pagina diversa senza spostare il punto in cui si sta scrivendo."
             ]
           },
@@ -2284,21 +2301,21 @@
               "Il comando compare disattivato finché mancano le condizioni: la pagina deve appartenere a una digitalizzazione collegata al documento, e serve un fornitore e un modello che sappiano leggere le immagini, scelti per il documento o ereditati dalle impostazioni del workspace. Il motivo di un comando disattivato è nel suo stesso suggerimento.",
               "Il testo letto entra nello storico come una revisione normale, marcata \"Riconoscimento automatico\": non sovrascrive mai quello che c'è, resta modificabile come qualunque altra versione, e una correzione manuale successiva crea semplicemente la revisione dopo.",
               "Il prompt che guida la lettura appartiene al documento: lo modifichi da una pagina qualsiasi e vale per tutte le sue pagine, non per gli altri documenti. Un documento nuovo parte dal prompt del workspace, scelto nelle impostazioni alla voce OCR, anche dalla libreria. Per riusarlo altrove salvalo nella libreria dal comando di modifica; il ripristino riporta il documento al prompt del workspace.",
-              "Sotto il modello due cerchietti scelgono l'immagine inviata: ottimizzata (ridotta alla misura delle Impostazioni, scheda Trascrizioni, e ricompressa) o copia sul computer così com'è, la stessa del visore; se la copia manca parte l'ottimizzata. La scelta di partenza sta nelle Impostazioni, qui vale per la sessione. Con il pannello chiuso il comando di lettura resta visibile.",
-              "Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura, anche dopo che chiedi di annullare il lavoro, finché la lettura si ferma davvero. Il testo che stai ancora modificando su un'altra pagina non viene rimpiazzato quando il lavoro finisce; nella riga in alto una pastiglia dice quale pagina è in lettura.",
+              "Sotto il modello due cerchietti scelgono l'immagine inviata: ottimizzata (ridotta alla misura delle Impostazioni, scheda Trascrizioni, e ricompressa) o copia sul computer così com'è, la stessa del visore; se la copia manca parte l'ottimizzata. Si scelgono anche con le frecce della tastiera. La scelta di partenza sta nelle Impostazioni, qui vale per la sessione. Con il pannello chiuso il comando di lettura resta visibile.",
+              "Mentre una pagina viene letta il suo foglio si vela e resta in sola lettura, anche dopo che chiedi di annullare il lavoro, finché la lettura si ferma davvero. Il testo che stai ancora modificando su un'altra pagina non viene rimpiazzato quando il lavoro finisce; nella riga in alto una scritta color oro dice quale pagina è in lettura.",
               "La lettura parte in coda, come uno scaricamento: la trovi nel pannello lavori mentre procede, e puoi metterla in pausa o annullarla allo stesso modo. Un intoppo passeggero viene ritentato da solo; una chiave sbagliata o una risposta vuota no, perché riprovare darebbe la stessa risposta. Una risposta vuota di solito vuol dire che il modello non ha trovato testo sulla pagina.",
               "Apri il pannello in basso e scegli \"Log trascrizione\" — compare solo qui, dentro un documento di trascrizione, speculare al Log traduzione. Ogni lettura lascia quattro righe: avvio, immagine inviata con misura reale, peso e provenienza, prompt inviato per intero, esito con durata, token, costo stimato e numero della revisione creata. In testa ci sono ricerca, filtri per tipo di riga e per livello, e il raggruppamento per pagina."
             ]
           },
           {
-            "title": "Storico, riepilogo e metadati",
+            "title": "Storico e riepilogo",
             "paragraphs": [
-              "Ogni salvataggio resta nello storico della pagina, a destra: mostra chi ha scritto quella versione — correzione manuale, riconoscimento automatico o importazione — e quando.",
-              "Il comando su ogni voce dello storico riporta il testo di quella versione come nuovo salvataggio, senza sovrascrivere le versioni precedenti. Cambiando pagina, lo storico mostrato cambia con lei.",
+              "La colonna a destra ha tre schede: Storico, OCR e Riepilogo. Si apre sullo Storico.",
+              "Ogni salvataggio resta nello storico della pagina: per ogni versione vedi chi l'ha scritta — correzione manuale, riconoscimento automatico o importazione —, quando, e se è la versione corrente o quella verificata.",
+              "Il comando su ogni versione riporta il suo testo come nuovo salvataggio, senza sovrascrivere le versioni precedenti. Cambiando pagina, lo storico mostrato cambia con lei.",
               "Puoi consolidare una versione e darle un nome modificabile: compare nella sezione in alto senza duplicare il testo. Togliendo il nome torna nello storico ordinario.",
-              "Puoi eliminare una vecchia versione singolarmente dopo conferma, oppure svuotare lo storico ordinario della pagina. La pulizia conserva le versioni consolidate, quella corrente e quella verificata. Queste ultime due non si possono eliminare; eliminando una versione perdi la possibilità di ripristinarne il testo.",
-              "La scheda Riepilogo mostra pagine con testo, parole, pagine verificate e avanzamento, poi letture OCR completate, token e costo stimato, come nel riepilogo della traduzione.",
-              "La scheda Metadati, di fianco a Storico, mostra i dati grezzi salvati per la pagina corrente — posizione, etichetta, stato, numero di revisioni — utile per vedere cosa viene registrato oggi."
+              "Puoi eliminare una vecchia versione singolarmente dopo conferma, oppure svuotare lo storico ordinario della pagina. La pulizia conserva le versioni consolidate, quella corrente e quella verificata. Queste ultime due non si possono eliminare, e il comando spento dice perché; eliminando una versione perdi la possibilità di ripristinarne il testo.",
+              "Il Riepilogo parte dalla pagina aperta — numero, etichetta della biblioteca se c'è, stato e versioni salvate — poi il documento: pagine con testo, parole, pagine verificate e avanzamento, letture OCR completate, token e costo stimato."
             ]
           }
         ]

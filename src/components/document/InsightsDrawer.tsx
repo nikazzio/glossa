@@ -166,11 +166,11 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
       <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
         <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex flex-1 items-center gap-1">
           {CHUNK_RAIL_TABS_BEFORE_TRANSLATION.map(renderTab)}
-          <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+          <span className="mx-1 h-4 w-px bg-rule" aria-hidden="true" />
           {CHUNK_RAIL_TABS_AFTER_TRANSLATION.map(renderTab)}
           <div className="ml-auto">{renderTab('notes')}</div>
         </div>
-        <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+        <span className="mx-1 h-4 w-px bg-rule" aria-hidden="true" />
         <span className="font-display text-sm italic text-editorial-ink">{CHUNK_RAIL_TAB_LABEL[chunkRailTab]}</span>
       </div>
 

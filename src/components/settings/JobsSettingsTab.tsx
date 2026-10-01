@@ -73,7 +73,7 @@ export function JobsSettingsTab() {
     >
       <section className="space-y-4">
         <SectionLabel icon={Layers} label={t('settings.jobs.limits')} />
-        <div className="divide-y divide-editorial-border/60 border-y border-editorial-border/70">
+        <div className="divide-y divide-rule border-y border-rule">
           {limits &&
             RESOURCE_CLASSES.map((resource) => (
               <SettingRow key={resource} label={t(`settings.jobs.resource.${resource}`)}>
@@ -96,7 +96,7 @@ export function JobsSettingsTab() {
 
       <section className="space-y-4">
         <SectionLabel icon={RotateCw} label={t('settings.jobs.reopening')} />
-        <div className="border-y border-editorial-border/70 py-3">
+        <div className="border-y border-rule py-3">
           <ToggleRow
             icon={<RotateCw size={13} />}
             label={t('settings.jobs.autoResume')}

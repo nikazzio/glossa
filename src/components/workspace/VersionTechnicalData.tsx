@@ -84,7 +84,7 @@ export function VersionTechnicalData({ version, detail, provider, shownPage }: {
   if (shown.length === 0) return null;
 
   return (
-    <details className="border-t border-editorial-border/70 pt-2 text-xs text-editorial-muted">
+    <details className="border-t border-rule pt-2 text-xs text-editorial-muted">
       <summary className="cursor-pointer font-semibold">{t('areas.library.technicalData')}</summary>
 
       <ul className="mt-2 space-y-1">
@@ -113,7 +113,7 @@ export function VersionTechnicalData({ version, detail, provider, shownPage }: {
       </ul>
 
       {version.sourceUrl && providerKey && (
-        <div className="mt-2 border-t border-editorial-border/70 pt-2">
+        <div className="mt-2 border-t border-rule pt-2">
           {/* Si preme la riga intera, segno e parole: un bersaglio da tredici
               pixel accanto a un testo inerte si sbaglia tutte le volte. */}
           <button

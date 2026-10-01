@@ -466,6 +466,11 @@ modo immutabile. Stato confinato a un componente resta locale.
 chiesta e scarta le risposte più lente: aprendo A e poi B, la risposta di A
 sostituiva il dettaglio di B e l'attesa non finiva più.
 
+**Tema.** `useIsDarkTheme` è l'unico calcolo di «tema scuro» (scelta
+dell'utente o sistema, seguito anche mentre l'app è aperta): lo usano
+`ThemeSync` (classe `dark` su `<html>`), l'accento e le evidenziazioni
+applicati a runtime.
+
 **Impostazioni.** `uiStore.settingsTab` ha una sola linguetta per la Biblioteca
 (`library`), che al suo interno si divide in tre sotto-linguette — ritmi di
 rete, biblioteche, immagini — tenute in stato locale. Le vecchie `download` e
@@ -553,16 +558,32 @@ copia principale e dell'eventuale copia alternativa vive in
 `useTranscriptionSources`; storico e metadati vivono in
 `TranscriptionInspector`, separati dallo stato di salvataggio del testo.
 
+**Struttura dello Studio.** `TranscriptionStudio` compone soltanto: lo stato
+del testo per pagina (segmento, revisioni, bozza, catena dei salvataggi,
+debounce, cambio pagina, salvataggio all'uscita) vive in `useSegmentEditor`;
+verifica, ripristino, nomi, eliminazione e pulizia dello storico in
+`useRevisionActions`; l'OCR in `useStudioOcr`; aggancio fra visore e testo,
+richiesta di salto e cambio di copia in `useViewerSync`; larghezze e collasso
+della colonna in `useInspectorLayout` (`INSPECTOR_WIDTH`, condivise con la
+scheda opera); Ctrl/⌘+S in `useSaveShortcut`. Le parti visive sono
+`StudioPageHeader`, `StudioViewerPane`, `StudioTextHeader`. I comandi della
+copia (cambio immagini/PDF, sgancio) arrivano alla barra del visore come
+elenco `ViewerCommand`, non come elementi già disegnati: sotto i 560 px la
+barra (`useNarrowWidth`, una sola misura per barra e menu) li sposta nel menu
+con i tre puntini insieme a «solo file locali» e «apri la pagina», così un
+comando non è mai in due posti o in nessuno. `PagePendingOverlay`, mentre
+copre la pagina, mette `inert` e `aria-busy` sugli elementi accanto nel suo
+contenitore e li toglie quando sparisce.
+
 **Intestazione**, quando il documento è legato a un'opera: stessa riga della
 scheda opera in Biblioteca (icona, titolo e autore dell'opera, uscita verso
 la biblioteca) — non il titolo scelto per la trascrizione, che identifica il
 documento nel catalogo e nel breadcrumb ma non qui, per non mostrare due
 titoli nella stessa schermata. Letta una volta per opera
 (`getLibrarySourceDetail` + `listIIIFProviders`, tenuti in `bookInfo`), non a
-ogni cambio pagina. Il menu a tre puntini è **volutamente più povero** di
-quello della scheda opera: solo "Rimuovi trascrizione", perché scaricare,
-verificare, archiviare sono azioni sull'opera, non sul suo studio di
-trascrizione — vivono già nella scheda opera. Un documento senza opera
+ogni cambio pagina. L'unico comando della riga è il cestino della trascrizione:
+scaricare, verificare, archiviare sono azioni sull'opera, non sul suo studio
+di trascrizione — vivono già nella scheda opera. Un documento senza opera
 collegata mostra il proprio titolo, come prima.
 
 **Visore a sinistra** (#221, parte zoom/pan e cambio fonte — filtri visuali e

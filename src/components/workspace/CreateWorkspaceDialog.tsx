@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { Dialog, DialogCancelButton, DialogConfirmButton } from '../ui';
 import { DEFAULT_WORKSPACE_ICON, type WorkspaceIconKey } from '../../workspaceIdentity';
 import { WorkspaceIconPicker } from './WorkspaceIdentity';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CreateWorkspaceDialogProps {
   open: boolean;
@@ -74,7 +75,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
     >
       <div className="space-y-4">
         <label className="block space-y-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="text-caption font-bold uppercase tracking-caption text-editorial-muted">
             {t('workspace.nameLabel')}
           </span>
           <input
@@ -84,21 +85,21 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
               if (e.key === 'Enter') void handleCreate();
             }}
             placeholder={t('workspace.namePlaceholder')}
-            className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={FIELD_CLASSNAME}
             // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo workspace)
             autoFocus
           />
         </label>
         <WorkspaceIconPicker value={iconKey} onChange={setIconKey} />
         <label className="block space-y-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+          <span className="text-caption font-bold uppercase tracking-caption text-editorial-muted">
             {t('workspace.descriptionLabel')}
           </span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('workspace.descriptionPlaceholder')}
-            className="min-h-16 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={`${FIELD_CLASSNAME} min-h-16`}
           />
         </label>
       </div>

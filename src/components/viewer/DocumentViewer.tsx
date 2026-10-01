@@ -1,10 +1,10 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- Come il visore delle immagini: la superficie deep-zoom è un widget ARIA application che riceve il fuoco e gestisce le frecce. */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import OpenSeadragon from 'openseadragon';
 import { useTranslation } from 'react-i18next';
 import { FileText, RefreshCw } from 'lucide-react';
 import { EmptyState, IconButton, Spinner } from '../ui';
-import { ViewerToolbar } from './ViewerToolbar';
+import { ViewerToolbar, type ViewerCommand } from './ViewerToolbar';
 import { documentBytes, isTooLarge, openDocumentExternally } from '../../services/documentService';
 import { renderDocumentPage, openDocument, type LoadedDocument } from './pdfDocument';
 import type { PageStatus } from './PageViewer';
@@ -48,7 +48,7 @@ export function DocumentViewer({
   requestToken?: number;
   onRequestedIndexHandled?: () => void;
   /** Comandi di chi ospita il visore (cambio fonte), nella stessa barra. */
-  extraControls?: ReactNode;
+  extraControls?: ViewerCommand[];
 }) {
   const { t } = useTranslation();
   const viewerElementRef = useRef<HTMLDivElement>(null);
@@ -214,7 +214,7 @@ export function DocumentViewer({
       className="flex h-full min-h-0 flex-1"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        {(total > 0 || extraControls) && (
+        {(total > 0 || (extraControls?.length ?? 0) > 0) && (
           <ViewerToolbar
             fromDisk
             origin={{ source: 'vault', size: '' }}

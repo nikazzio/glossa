@@ -212,7 +212,7 @@ export function MemoriesTab() {
         </div>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+            <span className="text-caption font-bold uppercase tracking-section text-editorial-muted">
               {t('library.workspaceFilter')}
             </span>
             <Select
@@ -250,8 +250,8 @@ export function MemoriesTab() {
           : null;
         if (!filteredWs) return null;
         return (
-          <div className="flex items-center gap-2 border-y border-editorial-border/70 py-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+          <div className="flex items-center gap-2 border-y border-rule py-2">
+            <span className="text-caption font-bold uppercase tracking-section text-editorial-muted">
               {t('library.embeddingModel')}
             </span>
             <span className="font-mono text-xs text-editorial-accent">{filteredWs.embeddingModel}</span>
@@ -263,13 +263,13 @@ export function MemoriesTab() {
         <Spinner
           size={14}
           label={t('common.loading')}
-          className="flex items-center justify-center gap-2 border-y border-editorial-border/70 py-8 text-xs text-editorial-muted"
+          className="flex items-center justify-center gap-2 border-y border-rule py-8 text-xs text-editorial-muted"
         />
       ) : entries.length === 0 ? (
         <EmptyState
           icon={<Brain size={28} />}
           message={t('library.noMemories')}
-          className="flex flex-col items-center justify-center gap-3 border-y border-dashed border-editorial-border/70 py-12 text-center"
+          className="flex flex-col items-center justify-center gap-3 border-y border-dashed border-rule py-12 text-center"
         />
       ) : (
         <div className="space-y-3">
@@ -281,11 +281,11 @@ export function MemoriesTab() {
             return (
               <article
                 key={entry.id}
-                className="border-l-4 border-l-editorial-success/35 border-y border-editorial-border/70 bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-success"
+                className="border-l-4 border-l-editorial-success/35 border-y border-rule bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-success"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-xs uppercase tracking-[0.16em] text-editorial-muted">
+                    <p className="font-mono text-xs uppercase tracking-section text-editorial-muted">
                       {entry.sourceLanguage} → {entry.targetLanguage}
                     </p>
                     <p className="mt-1 truncate text-xs text-editorial-muted/80">
@@ -378,14 +378,14 @@ export function MemoriesTab() {
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    <div className="border-l border-editorial-border/70 bg-editorial-textbox/18 px-4 py-3">
-                      <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                    <div className="border-l border-rule bg-editorial-textbox/18 px-4 py-3">
+                      <div className="mb-1 text-caption font-bold uppercase tracking-section text-editorial-muted">
                         {t('memory.sourcePhraseLabel')}
                       </div>
                       <p className="text-sm italic leading-relaxed text-editorial-ink">{entry.sourcePhrase}</p>
                     </div>
                     <div className="border-l border-editorial-success/45 bg-editorial-success/5 px-4 py-3">
-                      <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-success">
+                      <div className="mb-1 text-caption font-bold uppercase tracking-section text-editorial-success">
                         {t('glossary.translation')}
                       </div>
                       <p className="text-sm italic leading-relaxed text-editorial-ink">{entry.targetPhrase}</p>
@@ -508,7 +508,7 @@ function MemoryTextarea({
 }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+      <span className="text-caption font-bold uppercase tracking-section text-editorial-muted">
         {label}
       </span>
       <textarea
