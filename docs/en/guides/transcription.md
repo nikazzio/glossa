@@ -8,9 +8,37 @@ The Transcription Studio is the focused mode for writing and correcting a
 document's text: viewer on the left, text in the middle, tools on the right.
 It follows the same idea as Translation, applied to transcription.
 
-## Creating a document
+## The Transcriptions catalogue
 
-From the **Transcriptions** area, choose "New document" and give it a title.
+The **Transcriptions** area gathers the transcriptions of every workspace and
+is organised like the Library: shelves on the right, search and quick filters
+above the list, three views — list, covers, table — at the end of the title
+row.
+
+Each row shows the transcription name in italics and, below it, the
+transcribed work: author, year, place and printer, title. When the name is the
+work's own title, which is the name suggested at creation, it is not repeated.
+At the end of the row are the workspace, the pages written out of the work's
+total, the verified pages and the completion bar. A transcription with no
+linked work has no total: it only counts the written pages.
+
+The shelves are **All**, **Recent** (edited in the last 30 days), **Not
+started**, **In progress**, **Verified** (every page verified), **No work**
+(started from scratch) and **Archived**; archived transcriptions only appear
+on their own shelf. Search looks at the name and at every field of the work.
+Quick filters narrow by workspace, library and century of the work, with the
+count next to each value; the list sorts by name, author, year, last edit or
+progress, and groups by workspace or library.
+
+Clicking a row opens the Studio. Hovering a row shows its commands: open the
+work in the Library, rename — the name turns into a field, Enter saves, Esc
+cancels —, archive or restore, delete. In covers and table view the same
+commands are in the three-dots menu. Selecting several transcriptions at once
+is not available yet.
+
+## Creating a transcription
+
+From the **Transcriptions** area, use the **+** command next to the title and give it a name.
 You can also link it right away to a work already in the Library, searching
 by title in the same dialog — optional: without it, the document has no
 viewer, a single block of text. From a work's page in the **Library** you
@@ -42,7 +70,11 @@ the Studio.
 
 Text saves after 30 seconds without changes. The indicator in the top right
 distinguishes unsaved text from a save in progress, completed, or failed, with
-a command to retry on failure. Changing page or leaving the Studio normally
+a command to retry on failure. To save a version to the history right away,
+use the disk command next to the indicator, or **Ctrl + S** even while typing
+on the page: the command stays off when there is nothing new to save, and the
+version is created without a name — pin it in the history to give it one.
+Changing page or leaving the Studio normally
 saves pending text immediately. A forced shutdown before a save can lose the
 latest edits.
 

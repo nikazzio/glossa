@@ -34,6 +34,16 @@ modifiche da salvare, salvataggio in corso, completamento ed errore.
 `Ctrl + S` richiede un salvataggio manuale, con i limiti descritti nelle
 [scorciatoie](./keyboard-shortcuts).
 
+## Aree e loro inchiostro
+
+Biblioteca, Trascrizioni e Traduzioni hanno ognuna un inchiostro proprio —
+petrolio, seppia e indaco — per riconoscerle a colpo d'occhio: l'icona
+dell'area nella barra di sinistra, un filetto corto sotto il titolo grande e una
+carta di fondo appena diversa. I colori di stato restano gli stessi in ogni
+area: il verde segna ciò che è scelto o attivo, il rosso gli errori, l'ocra le
+cautele, l'oro i lavori in corso. Le Traduzioni non hanno ancora il catalogo
+sul modello della Biblioteca: per ora prendono solo titolo e carta.
+
 ## Dashboard
 
 La Dashboard comprende una panoramica, la ricerca su più fonti e la ricerca

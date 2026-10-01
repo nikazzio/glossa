@@ -381,8 +381,8 @@ approvate; traduzioni attive la cui origine è una copia dell'opera o una sua
 trascrizione.
 
 Vista (`libraryView`: elenco, copertine, tabella) e raggruppamento
-(`libraryGrouping`, `utils/libraryGrouping.ts`: secolo, autore, biblioteca,
-raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
+(`libraryGrouping`, `utils/libraryGrouping.ts` sopra `utils/catalogGrouping.ts`:
+secolo, autore, biblioteca, raccolta) sono preferenze persistite in `uiStore`. Il raggruppamento lavora
 sull'elenco già filtrato e ordinato; un'opera in più raccolte compare in ogni
 gruppo, e la scelta per intervallo segue l'ordine visibile, gruppi compresi.
 
@@ -486,6 +486,10 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 di stato propria.
 
 Il testo si salva dopo 30 secondi senza modifiche, e subito lasciando la pagina.
+Il salvataggio manuale (comando accanto all'indicatore, Ctrl/⌘+S ascoltato sulla
+finestra mentre lo Studio è montato, anche dentro il foglio) passa dalla stessa
+coda di `save` e scrive una revisione senza nome; è spento quando il testo è
+già salvato o il foglio è in sola lettura.
 Ogni caricamento è legato all'indice di pagina che lo ha richiesto: una risposta
 tardiva non può sostituire testo e storico della pagina ora aperta. Le versioni
 consolidate sono le stesse revisioni con `consolidated_name` valorizzato: nessuna
@@ -519,6 +523,24 @@ della roadmap). Un documento senza visore (nato da zero, non da una
 digitalizzazione) resta su un solo blocco di testo, in posizione 0,
 `source_page_id` sempre `NULL` — lo stesso codice, solo che la pagina non
 cambia mai.
+
+**Catalogo** (`TranscriptionsCatalogArea`): stesso modello della Biblioteca e
+stessi pezzi (`ShelfItem`, `CatalogSearchField`, `CatalogViewSwitch`,
+`CompletionBar`, `CommandBar`, `ui/catalogStyles.ts`,
+`utils/catalogGrouping.ts`). `listTranscriptionCatalog`
+(`services/transcriptionCatalogService.ts`) legge in una query tutte le
+trascrizioni attive e archiviate di tutti i workspace, con pagine scritte
+(ultima revisione con testo non vuoto), pagine verificate e ultima revisione;
+l'opera arriva da `listLibraryCatalog` tramite `source_versions.source_id`,
+quindi con le correzioni manuali e il totale di pagine della Biblioteca.
+Scaffali, filtri rapidi (workspace, biblioteca, secolo), ordine e
+raggruppamento vivono in `utils/transcriptionCatalogFilters.ts`; vista e
+raggruppamento sono preferenze persistite (`transcriptionsView`,
+`transcriptionsGrouping` in `uiStore`), il filtro workspace segue
+l'indirizzo come in Biblioteca. «Verificata» vuol dire tutte le pagine
+dell'opera verificate, o tutte quelle scritte se il totale non si conosce.
+Rinomina (`renameDocument`) e archiviazione (`setDocumentStatus` con
+`archived`) sono comandi di riga; il cestino resta `trashed`.
 
 **Studio di trascrizione** (`TranscriptionsCatalogArea` + `TranscriptionStudio`,
 #388): stessa convenzione della scheda opera in Biblioteca, non quella dello

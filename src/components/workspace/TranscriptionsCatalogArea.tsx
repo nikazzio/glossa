@@ -1,78 +1,103 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { FilePen, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, ArchiveRestore, BookOpenText, FilePen, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion';
+import { AREA_PAPER_CLASSNAME, AreaHeading, CatalogViewSwitch, EmptyState, IconButton, ListReveal, Spinner, type RowCommand } from '../ui';
+import { CATALOG_GRID_CLASSNAME, CATALOG_GROUP_HEADER_CLASSNAME, CATALOG_LIST_CLASSNAME } from '../ui/catalogStyles';
 import { confirm } from '../../stores/confirmStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { transcriptionsLocation } from '../../navigation/appLocation';
+import { libraryLocation, transcriptionsLocation, withWorkspaceFilter } from '../../navigation/appLocation';
+import { listIIIFProviders } from '../../services/iiifProviderService';
+import { renameDocument, setDocumentStatus } from '../../services/transcriptionService';
+import { listTranscriptionCatalog, type TranscriptionCatalogEntry } from '../../services/transcriptionCatalogService';
 import {
-  listDocuments,
-  setDocumentStatus,
-  type TranscriptionDocument,
-} from '../../services/transcriptionService';
-import { EmptyState, IconButton, Spinner } from '../ui';
+  EMPTY_TRANSCRIPTION_FILTERS,
+  TRANSCRIPTION_FACETS,
+  filterTranscriptionCatalog,
+  groupTranscriptionCatalog,
+  orderTranscriptionCatalog,
+  transcriptionFacetCounts,
+  transcriptionShelfCounts,
+  type TranscriptionFacet,
+  type TranscriptionFilters,
+} from '../../utils/transcriptionCatalogFilters';
+import type { IIIFProvider } from '../../types';
 import { CreateTranscriptionDialog } from '../transcription/CreateTranscriptionDialog';
 import { TranscriptionStudio } from '../transcription/TranscriptionStudio';
+import { TranscriptionCatalogRow, type TranscriptionRowProps } from '../transcription/TranscriptionCatalogRow';
+import { TranscriptionCatalogTable } from '../transcription/TranscriptionCatalogTable';
+import { TranscriptionQuickFilters } from '../transcription/TranscriptionQuickFilters';
+import { TranscriptionShelves } from '../transcription/TranscriptionShelves';
 
 interface TranscriptionsCatalogAreaProps {
   documentId?: string;
 }
 
+const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
 /**
- * Area globale Trascrizioni (#210 Passo B): catalogo di tutti i documenti di
- * trascrizione di TUTTI i workspace, e — con `documentId` — lo Studio (#388)
- * concentrato su uno di essi.
+ * Area globale Trascrizioni: il catalogo di tutte le trascrizioni di tutti i
+ * workspace, sul modello della Biblioteca — scaffali a destra, ricerca e
+ * filtri rapidi sopra l'elenco, tre viste — e, con `documentId`, lo Studio.
  */
 export function TranscriptionsCatalogArea({ documentId }: TranscriptionsCatalogAreaProps) {
   const { t } = useTranslation();
   const navigate = useUiStore((s) => s.navigate);
+  const location = useUiStore((s) => s.location);
+  const view = useUiStore((s) => s.transcriptionsView);
+  const setView = useUiStore((s) => s.setTranscriptionsView);
+  const grouping = useUiStore((s) => s.transcriptionsGrouping);
+  const setGrouping = useUiStore((s) => s.setTranscriptionsGrouping);
+  const markLibraryOpened = useUiStore((s) => s.markLibraryOpened);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const workspaceFilter = location.area === 'transcriptions' ? location.workspaceFilter : undefined;
 
-  const [documents, setDocuments] = useState<TranscriptionDocument[]>([]);
+  const [catalog, setCatalog] = useState<TranscriptionCatalogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [providers, setProviders] = useState<IIIFProvider[]>([]);
+  const [filters, setFilters] = useState(EMPTY_TRANSCRIPTION_FILTERS);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [firstReveal, setFirstReveal] = useState(true);
 
-  const loadAll = useCallback(async () => {
+  const loadCatalog = useCallback(async () => {
     try {
-      const perWorkspace = await Promise.all(workspaces.map((w) => listDocuments(w.id)));
-      setDocuments(perWorkspace.flat());
+      setCatalog(await listTranscriptionCatalog());
+      setLoadError(false);
     } catch (err: unknown) {
-      toast.error(t('transcription.loadFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      setLoadError(true);
+      toast.error(t('areas.transcriptions.catalog.loadFailed'), { description: errorText(err) });
     } finally {
       setIsLoading(false);
     }
-  }, [workspaces, t]);
+  }, [t]);
 
-  useEffect(() => { void loadAll(); }, [loadAll]);
+  useEffect(() => {
+    if (!documentId) void loadCatalog();
+  }, [documentId, loadCatalog]);
 
-  const sorted = useMemo(
-    () => [...documents].sort((a, b) => a.title.localeCompare(b.title)),
-    [documents],
-  );
+  useEffect(() => {
+    if (catalog.length > 0) setFirstReveal(false);
+  }, [catalog.length]);
 
-  const openDocument = (id: string) => navigate(transcriptionsLocation({ documentId: id }));
+  useEffect(() => {
+    void listIIIFProviders().then(setProviders).catch(() => setProviders([]));
+  }, []);
 
-  const handleDelete = async (document: TranscriptionDocument) => {
-    const ok = await confirm({
-      title: t('transcription.confirmDeleteTitle'),
-      message: t('transcription.confirmDeleteMessage', { name: document.title }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await setDocumentStatus(document.id, 'trashed');
-      await loadAll();
-      toast.success(t('transcription.deleted'));
-    } catch (err: unknown) {
-      toast.error(t('transcription.deleteFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
+  // Il filtro workspace vive anche nell'indirizzo, come in Biblioteca.
+  useEffect(() => {
+    setFilters((current) =>
+      current.workspaceId === (workspaceFilter ?? '') ? current : { ...current, workspaceId: workspaceFilter ?? '' });
+  }, [workspaceFilter]);
+
+  const changeFilters = (next: TranscriptionFilters) => {
+    setFilters(next);
+    const nextWorkspaceFilter = next.workspaceId || null;
+    if (nextWorkspaceFilter !== (workspaceFilter ?? null)) navigate(withWorkspaceFilter(location, nextWorkspaceFilter));
   };
 
   if (documentId) {
@@ -80,108 +105,192 @@ export function TranscriptionsCatalogArea({ documentId }: TranscriptionsCatalogA
       <TranscriptionStudio
         key={documentId}
         documentId={documentId}
-        onBack={() => navigate(transcriptionsLocation())}
+        onBack={() => navigate(transcriptionsLocation({ workspaceFilter }))}
       />
     );
   }
 
-  return (
-    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
-      <div className="px-5 py-5 md:px-6">
-        <div className="mb-5 flex items-end justify-between gap-3">
-          <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-            {t('areas.transcriptions.title')}
-          </h1>
-        </div>
+  const now = Date.now();
+  const filtered = orderTranscriptionCatalog(filterTranscriptionCatalog(catalog, filters, now), filters.sort);
+  const counts = Object.fromEntries(TRANSCRIPTION_FACETS.map((facet) =>
+    [facet, transcriptionFacetCounts(catalog, filters, now, facet)])) as Record<TranscriptionFacet, Map<string, number>>;
+  const providerLabel = (key: string) => providers.find((provider) => provider.key === key)?.label ?? key;
+  const workspaceName = (id: string) => workspaces.find((workspace) => workspace.id === id)?.name ?? '';
+  const groupLabel = (key: string) => key === ''
+    ? t(`areas.transcriptions.catalog.grouping.missing.${grouping}`)
+    : grouping === 'workspace' ? workspaceName(key) || t('areas.transcriptions.catalog.grouping.missing.workspace') : providerLabel(key);
+  const groups = groupTranscriptionCatalog(filtered, grouping, (a, b) => groupLabel(a).localeCompare(groupLabel(b)));
 
-        {isLoading ? (
-          <Spinner size={14} label={t('common.loading')} className="flex items-center gap-2 px-1 py-2 text-xs text-editorial-muted" />
-        ) : sorted.length === 0 ? (
-          <>
-            <EmptyState
-              icon={<FilePen size={28} />}
-              message={t('areas.transcriptions.emptyMessage')}
-              hint={t('areas.transcriptions.emptyHint')}
-            />
-            <div className="mt-4">
-              <NewDocumentCard onClick={() => setShowNewDialog(true)} />
+  const openDocument = (id: string) => navigate(transcriptionsLocation({ documentId: id, workspaceFilter }));
+
+  const run = async (work: () => Promise<void>, failure: string) => {
+    try {
+      await work();
+      await loadCatalog();
+    } catch (err: unknown) {
+      toast.error(t(failure), { description: errorText(err) });
+    }
+  };
+
+  const remove = async (entry: TranscriptionCatalogEntry) => {
+    const ok = await confirm({
+      title: t('transcription.confirmDeleteTitle'),
+      message: t('transcription.confirmDeleteMessage', { name: entry.document.title }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    await run(async () => {
+      await setDocumentStatus(entry.document.id, 'trashed');
+      toast.success(t('transcription.deleted'));
+    }, 'transcription.deleteFailed');
+  };
+
+  /** I comandi di una trascrizione, uguali in elenco, copertine e tabella:
+   *  opera e nome | conservazione. */
+  const commandsFor = (entry: TranscriptionCatalogEntry): RowCommand[][] => {
+    const archived = entry.document.status === 'archived';
+    const work = entry.work;
+    return [
+      [
+        {
+          key: 'openWork',
+          icon: <BookOpenText size={14} />,
+          label: t(work ? 'areas.transcriptions.catalog.openWork' : 'areas.transcriptions.catalog.noWork'),
+          disabled: !work,
+          onClick: () => {
+            if (!work) return;
+            markLibraryOpened(work.source.id);
+            navigate(libraryLocation({ itemId: work.source.id }));
+          },
+        },
+        {
+          key: 'rename',
+          icon: <Pencil size={14} />,
+          label: t('areas.transcriptions.catalog.rename'),
+          onClick: () => setRenamingId(entry.document.id),
+        },
+      ],
+      [
+        {
+          key: 'archive',
+          icon: archived ? <ArchiveRestore size={14} /> : <Archive size={14} />,
+          label: t(archived ? 'areas.transcriptions.catalog.restore' : 'areas.transcriptions.catalog.archive'),
+          onClick: () => void run(() => setDocumentStatus(entry.document.id, archived ? 'active' : 'archived'),
+            archived ? 'areas.transcriptions.catalog.restoreFailed' : 'areas.transcriptions.catalog.archiveFailed'),
+        },
+        {
+          key: 'remove',
+          icon: <Trash2 size={14} />,
+          label: t('transcription.delete'),
+          tone: 'danger',
+          onClick: () => void remove(entry),
+        },
+      ],
+    ];
+  };
+
+  const rowPropsFor = (entry: TranscriptionCatalogEntry): TranscriptionRowProps => ({
+    entry,
+    workspaceName: workspaceName(entry.document.workspace_id),
+    commands: commandsFor(entry),
+    renaming: renamingId === entry.document.id,
+    onRename: (title) => {
+      setRenamingId(null);
+      void run(() => renameDocument(entry.document.id, title), 'areas.transcriptions.catalog.renameFailed');
+    },
+    onRenameCancel: () => setRenamingId(null),
+    onOpen: () => openDocument(entry.document.id),
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: MOTION_SHIFT }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: MOTION_DURATION, ease: EASE_EDITORIAL }}
+      className="flex h-full min-h-0 w-full min-w-0 flex-1"
+    >
+      <main className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${AREA_PAPER_CLASSNAME.transcriptions}`}>
+        <div className="px-5 pt-5 md:px-6">
+          <AreaHeading area="transcriptions" title={t('areas.transcriptions.title')}>
+            <div className="flex items-center gap-1">
+              <IconButton size="sm" onClick={() => setShowNewDialog(true)} title={t('areas.transcriptions.catalog.newTranscription')}>
+                <Plus size={13} />
+              </IconButton>
+              {catalog.length > 0 && <CatalogViewSwitch view={view} onChange={setView} />}
             </div>
-          </>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-            {sorted.map((document) => {
-              const workspace = workspaces.find((w) => w.id === document.workspace_id);
-              return (
-                <motion.article
-                  key={document.id}
-                  layout
-                  initial={false}
-                  className="group relative overflow-hidden rounded-[26px] border border-editorial-border bg-editorial-paper/75 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors duration-150 hover:border-editorial-accent/45 hover:bg-editorial-paper"
-                >
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => openDocument(document.id)}
-                      className="min-w-0 flex-1 pr-10 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <FilePen size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
-                        <span className="truncate font-display text-xl italic text-editorial-ink">
-                          {document.title}
-                        </span>
-                      </span>
-                      {workspace && (
-                        <span className="mt-1 block truncate text-xs text-editorial-muted">
-                          {workspace.name}
-                        </span>
-                      )}
-                    </button>
-                    <IconButton
-                      size="sm"
-                      tone="muted"
-                      onClick={() => void handleDelete(document)}
-                      title={`${t('transcription.delete')} ${document.title}`}
-                      ariaLabel={`${t('transcription.delete')} ${document.title}`}
-                      className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
-                    >
-                      <Trash2 size={12} />
-                    </IconButton>
-                  </div>
-                </motion.article>
-              );
-            })}
-            <NewDocumentCard onClick={() => setShowNewDialog(true)} />
-          </div>
+          </AreaHeading>
+        </div>
+        {catalog.length > 0 && (
+          <TranscriptionQuickFilters filters={filters} onChange={changeFilters} counts={counts}
+            providerLabel={providerLabel} workspaceName={workspaceName}
+            grouping={grouping} onGrouping={setGrouping} />
         )}
-      </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <Spinner size={14} label={t('common.loading')} className="flex items-center gap-2 text-sm text-editorial-muted" />
+            </div>
+          ) : loadError && catalog.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+              <EmptyState icon={<AlertCircle size={20} />} message={t('areas.transcriptions.catalog.loadFailed')}
+                className="flex flex-col items-center gap-3" />
+              <IconButton size="sm" onClick={() => void loadCatalog()} title={t('areas.library.retry')}>
+                <RefreshCw size={14} />
+              </IconButton>
+            </div>
+          ) : catalog.length === 0 ? (
+            <EmptyState icon={<FilePen size={20} />} message={t('areas.transcriptions.emptyMessage')}
+              hint={t('areas.transcriptions.emptyHint')} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<FilePen size={20} />} message={t('areas.transcriptions.catalog.filters.noMatches')} />
+          ) : (
+            <div className="px-5 pb-4 md:px-6">
+              {groups.map((group) => (
+                <section key={group.key} aria-label={groupLabel(group.key)}>
+                  {grouping !== 'none' && (
+                    <h2 className={`${CATALOG_GROUP_HEADER_CLASSNAME} ${AREA_PAPER_CLASSNAME.transcriptions}`}>
+                      {groupLabel(group.key)}
+                      <span className="font-sans text-xs not-italic tabular-nums text-editorial-muted">{group.entries.length}</span>
+                    </h2>
+                  )}
+                  {view === 'table' ? (
+                    <TranscriptionCatalogTable
+                      entries={group.entries}
+                      sort={filters.sort}
+                      onSort={(sort) => changeFilters({ ...filters, sort })}
+                      rowPropsFor={rowPropsFor}
+                      providerLabel={(entry) => (entry.work?.providerKey ? providerLabel(entry.work.providerKey) : undefined)}
+                    />
+                  ) : (
+                    <div className={view === 'grid' ? CATALOG_GRID_CLASSNAME : CATALOG_LIST_CLASSNAME}>
+                      {group.entries.map((entry, index) => (
+                        <ListReveal key={entry.document.id} index={index} stagger={firstReveal}
+                          className={view === 'grid' ? 'h-full' : undefined}>
+                          <TranscriptionCatalogRow view={view} {...rowPropsFor(entry)} />
+                        </ListReveal>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+      <aside className="flex w-56 shrink-0 flex-col border-l border-editorial-border bg-surface-panel">
+        <TranscriptionShelves filters={filters} onChange={changeFilters} counts={transcriptionShelfCounts(catalog, now)} />
+      </aside>
 
       <CreateTranscriptionDialog
         open={showNewDialog}
         onClose={() => setShowNewDialog(false)}
         onCreated={(id) => {
-          void loadAll();
+          void loadCatalog();
           openDocument(id);
         }}
       />
-    </main>
-  );
-}
-
-function NewDocumentCard({ onClick }: { onClick: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <motion.div
-      layout
-      className="flex min-h-[100px] w-full items-center justify-center rounded-[26px] border border-dashed border-editorial-border bg-transparent"
-    >
-      <IconButton
-        size="lg"
-        tone="muted"
-        onClick={onClick}
-        title={t('transcription.newDocumentCard')}
-      >
-        <Plus size={16} />
-      </IconButton>
     </motion.div>
   );
 }

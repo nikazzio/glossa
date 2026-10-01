@@ -110,6 +110,17 @@
   --color-surface-panel: var(--color-editorial-bg);       /* wrapper strutturali di pannello/colonna/sidebar */
   --color-surface-hover: var(--color-editorial-textbox);  /* usa con /50 — hover su riga/voce cliccabile */
 
+  /* ── Inchiostro e carta d'area — identità di Biblioteca, Trascrizioni e
+     Traduzioni. Solo segni piccoli (filetto del titolo, icona, segnaposto) e
+     una carta appena percepibile: verde, rosso, ocra e oro restano agli stati.
+     Contrasto sul fondo ≥ 7:1 (5.66:1 per la Biblioteca, che è l'inchiostro). */
+  --color-area-library: var(--color-editorial-ink);
+  --color-area-transcriptions: #6B4A3A; /* seppia */
+  --color-area-translations: #4B4C8C;   /* indaco */
+  --color-area-library-paper: var(--color-surface-panel);
+  --color-area-transcriptions-paper: #F8F3EA;
+  --color-area-translations-paper: #F3F3F1;
+
   /* ── Dark mode — token overrides attivi su html.dark ────────────────────── */
   /* Vedi ThemeSync in App.tsx */
 
@@ -157,6 +168,12 @@ html.dark {
   --color-editorial-page:         #231f1b;
   --color-editorial-divider:      #2c2520;
   --color-editorial-divider-soft: #261f1c;
+
+  /* Inchiostri e carte d'area schiariti per il fondo scuro: ≥ 7:1. */
+  --color-area-transcriptions:       #C9A08A;
+  --color-area-translations:         #A3A5DE;
+  --color-area-transcriptions-paper: #1e1813;
+  --color-area-translations-paper:   #1a1919;
 
   /* Gradient header */
   --header-bg-from: #201c18;

@@ -8,9 +8,37 @@ Lo Studio di trascrizione è la modalità concentrata per scrivere e correggere
 il testo di un documento: visore a sinistra, testo al centro, strumenti a
 destra. È la stessa idea della Traduzione, applicata alla trascrizione.
 
-## Creare un documento
+## Il catalogo delle Trascrizioni
 
-Dall'area **Trascrizioni** scegli "Nuovo documento" e dai un titolo. Puoi
+L'area **Trascrizioni** raccoglie le trascrizioni di tutti i workspace ed è
+organizzata come la Biblioteca: scaffali a destra, ricerca e filtri rapidi
+sopra l'elenco, tre viste — elenco, copertine, tabella — in fondo alla riga
+del titolo.
+
+Ogni riga mostra il nome della trascrizione in corsivo e, sotto, l'opera
+trascritta: autore, anno, luogo e tipografo, titolo. Se il nome è lo stesso
+titolo dell'opera, che è il nome proposto alla creazione, non si ripete. In
+fondo alla riga stanno il workspace, le pagine scritte sul totale dell'opera,
+le pagine verificate e la barretta di completamento. Una trascrizione senza
+opera collegata non ha un totale: conta solo le pagine scritte.
+
+Gli scaffali sono **Tutte**, **Recenti** (modificate negli ultimi 30 giorni),
+**Da iniziare**, **In corso**, **Verificate** (tutte le pagine verificate),
+**Senza opera** (nate da zero) e **Archiviate**; le archiviate compaiono solo
+nel loro scaffale. La ricerca guarda il nome e tutti i dati dell'opera. I
+filtri rapidi restringono per workspace, biblioteca e secolo dell'opera, con
+il conteggio accanto a ogni valore; l'elenco si ordina per nome, autore, anno,
+ultima modifica o avanzamento, e si raggruppa per workspace o biblioteca.
+
+Un click sulla riga apre lo Studio. Passando sulla riga compaiono i comandi:
+apri l'opera in Biblioteca, rinomina — il nome diventa un campo, Invio salva,
+Esc annulla —, archivia o ripristina, elimina. Nelle copertine e nella
+tabella gli stessi comandi stanno nel menu con i tre puntini. Non c'è ancora
+la scelta di più trascrizioni insieme.
+
+## Creare una trascrizione
+
+Dall'area **Trascrizioni** usa il comando **+** accanto al titolo e dai un nome. Puoi
 anche collegarlo subito a un'opera già in Biblioteca cercandola per titolo
 nello stesso dialogo — facoltativo: senza, il documento resta senza visore,
 un solo blocco di testo. Dalla scheda di un'opera in **Biblioteca** puoi
@@ -42,7 +70,12 @@ Biblioteca, non dello Studio.
 
 Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in alto a
 destra distingue il testo ancora da salvare dal salvataggio in corso, riuscito
-o fallito, con un comando per riprovare in caso di errore. Cambiando pagina o
+o fallito, con un comando per riprovare in caso di errore. Per salvare subito
+una versione nello storico usa il comando con il dischetto accanto
+all'indicatore, oppure **Ctrl + S** anche mentre scrivi nel foglio: il comando
+resta spento quando non c'è niente di nuovo da salvare, e la versione nasce
+senza nome — per fissarla con un nome si usa la puntina nello storico.
+Cambiando pagina o
 uscendo normalmente dallo Studio, il testo ancora da salvare viene scritto
 subito. Una chiusura forzata prima del salvataggio può perdere le ultime
 modifiche.

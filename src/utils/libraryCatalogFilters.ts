@@ -15,7 +15,7 @@ export type LibraryShelf = (typeof LIBRARY_SHELVES)[number];
 
 /** «Recenti»: aggiunte o aperte in questi giorni. */
 export const RECENT_DAYS = 30;
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Come si ordina il catalogo. Il titolo è il punto di partenza: è il modo in
  *  cui si cerca un libro a occhio su uno scaffale. */
@@ -104,7 +104,7 @@ export function centuryOfEntry(entry: LibraryCatalogEntry): string {
 }
 
 /** SQLite scrive «2026-09-25 10:00:00» in UTC, senza dirlo. */
-function timestampOf(value: string): number {
+export function timestampOf(value: string): number {
   return Date.parse(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`);
 }
 

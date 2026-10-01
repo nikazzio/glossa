@@ -1128,6 +1128,8 @@
     "saveSaving": "Saving",
     "saveError": "Save failed",
     "saveRetry": "Retry",
+    "saveNow": "Save a version to the history now (Ctrl+S)",
+    "saveNowNothing": "No changes to save",
     "textPlaceholder": "Write the transcribed text here...",
     "inspectorLabel": "Transcription tools",
     "inspectorPanelTitle": "Tools",
@@ -1628,7 +1630,79 @@
       "title": "Transcriptions",
       "sidebarHint": "OCR and source prep",
       "emptyMessage": "The Transcriptions catalogue has no content yet.",
-      "emptyHint": "Create a document to start transcribing, or start from a work in the Library."
+      "emptyHint": "Create a document to start transcribing, or start from a work in the Library.",
+      "catalog": {
+        "shelves": {
+          "title": "Shelves",
+          "all": "All",
+          "recent": "Recent",
+          "toStart": "Not started",
+          "inProgress": "In progress",
+          "verified": "Verified",
+          "unlinked": "No work",
+          "archived": "Archived"
+        },
+        "filters": {
+          "searchPlaceholder": "Search by name, author, title, year…",
+          "searchLabel": "Search transcriptions",
+          "clear": "Clear filters",
+          "all": {
+            "workspaceId": "All workspaces",
+            "providerKey": "All libraries",
+            "century": "All centuries"
+          },
+          "facet": {
+            "workspaceId": "Workspace",
+            "providerKey": "Library",
+            "century": "Century"
+          },
+          "sortLabel": "Sort",
+          "sort": {
+            "title": "By name",
+            "creator": "By author",
+            "year": "By year",
+            "edited": "Last edited",
+            "progress": "By progress"
+          },
+          "noMatches": "No transcription matches the filters."
+        },
+        "grouping": {
+          "label": "Group",
+          "none": "No groups",
+          "workspace": "By workspace",
+          "provider": "By library",
+          "missing": {
+            "workspace": "Unknown workspace",
+            "provider": "No library",
+            "none": ""
+          }
+        },
+        "table": {
+          "name": "Name",
+          "creator": "Author",
+          "work": "Work",
+          "year": "Year",
+          "workspace": "Workspace",
+          "provider": "Library",
+          "progress": "Written",
+          "verified": "Verified"
+        },
+        "pagesWritten": "{{done}}/{{total}} written",
+        "pagesWrittenCount_one": "{{count}} page written",
+        "pagesWrittenCount_other": "{{count}} pages written",
+        "verifiedCount": "{{count}} verified",
+        "openWork": "Open the work in the Library",
+        "noWork": "No Library work linked",
+        "rename": "Rename",
+        "renameLabel": "Transcription name",
+        "renameFailed": "Could not rename the transcription",
+        "archive": "Archive",
+        "restore": "Restore",
+        "archiveFailed": "Could not archive the transcription",
+        "restoreFailed": "Could not restore the transcription",
+        "newTranscription": "New transcription",
+        "loadFailed": "Could not read the transcriptions"
+      }
     },
     "analysis": {
       "title": "Analysis",
@@ -2158,9 +2232,18 @@
         "intro": "The Transcription Studio is the focused mode for writing and correcting a document's text: viewer on the left, text in the middle, tools on the right.",
         "blocks": [
           {
-            "title": "Creating a document",
+            "title": "The Transcriptions catalogue",
             "paragraphs": [
-              "From Transcriptions, choose \"New document\" and give it a title.",
+              "The Transcriptions page gathers the transcriptions of every workspace and is organised like the Library: shelves on the right, search and quick filters above the list, three views (list, covers, table) at the end of the title row.",
+              "Each row shows the transcription name in italics and, below it, the transcribed work: author, year, place and printer, title. When the name is the work's own title it is not repeated. At the end of the row: workspace, pages written out of the work's total, verified pages and the completion bar.",
+              "The shelves are All, Recent (edited in the last 30 days), Not started, In progress, Verified (every page verified), No work (started from scratch) and Archived. Quick filters narrow by workspace, library and century of the work; you can sort by name, author, year, last edit or progress, and group by workspace or library.",
+              "Clicking a row opens the Studio. Hovering a row shows its commands: open the work in the Library, rename (the name turns into a field: Enter saves, Esc cancels), archive or restore, delete. In covers and table view the same commands are in the three-dots menu."
+            ]
+          },
+          {
+            "title": "Creating a transcription",
+            "paragraphs": [
+              "From the Transcriptions page, use the + command next to the title and give it a name.",
               "From a workspace Overview, the Transcriptions section shows only that workspace's documents: open one from the list or use the + command to create one already assigned there.",
               "You can also link it right away to a work already in the Library, searching by title in the same dialog — optional, without it the document stays a single block of text with no viewer.",
               "From a work's page in the Library you can instead create a transcription directly from that digitization.",
@@ -2177,7 +2260,7 @@
           {
             "title": "Writing and saving",
             "paragraphs": [
-              "Text saves after 30 seconds without changes. The indicator distinguishes unsaved text from a save in progress, completed, or failed. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
+              "Text saves after 30 seconds without changes. The indicator distinguishes unsaved text from a save in progress, completed, or failed. To save a version to the history right away, use the disk command next to the indicator, or Ctrl + S even while typing; the command stays off when there is nothing new to save. Changing page or leaving the Studio normally saves pending text immediately; a forced shutdown before a save can lose the latest edits.",
               "When the text is ready, mark it as verified with the lock next to the \"Page N\" title: the text locks, so an already-checked transcription doesn't get overwritten by accident. Return it to draft at any time with the same command."
             ]
           },
@@ -2494,6 +2577,7 @@
             "paragraphs": [
               "Ctrl + Enter starts the selected translation action, including from a text field. Segment mode requires a selected segment.",
               "Ctrl + S saves the existing project and modified language resources. Project saving waits while processing is active.",
+              "In the transcription Studio, Ctrl + S saves a version of the page to the history right away, even while typing on the page.",
               "Ctrl + E opens export when the document has segments. Ctrl + comma opens pipeline configuration."
             ]
           },
@@ -2568,6 +2652,7 @@
             "paragraphs": [
               "The Dashboard shows recent activity, items requiring attention and current jobs. Its other two tabs search across multiple sources or within one source, including by identifier.",
               "The Library contains works you have added to the catalogue. Translations lists projects from every workspace. Open a workspace to access its projects and resources.",
+              "Library, Transcriptions and Translations each have their own ink: petrol, sepia and indigo. You see it in the area icon in the left sidebar, in the short rule under the large title and in a slightly different background paper. State colours do not change: green always marks what is selected or active.",
               "Hover over an icon control, or focus it with the keyboard, to read what it does. Sidebars can be resized or collapsed.",
               "The Dashboard cards can be moved: grab the handle to the left of the title and drag the card higher, lower or into the other column. The arrangement stays as you left it."
             ]

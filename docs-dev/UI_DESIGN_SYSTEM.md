@@ -42,6 +42,16 @@ Usare ruoli semantici per le superfici:
 | `bg-surface-panel` | sidebar, colonne e pannelli |
 | `bg-surface-hover/50` | hover su righe cliccabili |
 
+Ogni area con un catalogo ha un **inchiostro** e una **carta** propri
+(`area-library`, `area-transcriptions` seppia, `area-translations` indaco, e le
+rispettive `-paper`), con le classi in `AREA_INK_CLASSNAME` e
+`AREA_PAPER_CLASSNAME`. L'inchiostro va solo su segni piccoli: il filetto sotto
+il titolo (`AreaHeading`), l'icona dell'area a riposo nella barra di sinistra,
+il segnaposto di una copertina mancante. La carta è il fondo dell'elenco e dei
+titoletti di gruppo fermi in cima; la colonna degli scaffali resta
+`surface-panel`. Mai su comandi, selezione o stati: lì restano verde, rosso,
+ocra e oro. Contrasto sul fondo ≥ 7:1 in entrambi i temi.
+
 Campi, select e textarea usano `editorial-textbox` pieno. Vietati colori
 Tailwind grezzi e valori esadecimali nei componenti.
 
@@ -249,7 +259,8 @@ interattiva.
 ### Intestazione di un'area
 
 Ogni area globale apre con il **titolo grande** in `font-display` corsivo
-(`text-4xl md:text-5xl`): Traduzioni, Trascrizioni, Analisi, Biblioteca. I
+(`text-4xl md:text-5xl`): Traduzioni, Trascrizioni, Analisi, Biblioteca; le tre
+aree con un inchiostro usano `AreaHeading`, che aggiunge il filetto. I
 comandi propri dell'elenco (vista, ordinamento) stanno in fondo alla stessa
 riga, allineati alla base del titolo. La Biblioteca usava una `SectionLabel`
 piccola con icona: era l'unica area a non somigliare alle altre.
@@ -331,6 +342,28 @@ Nelle righe dati dei blocchi tecnici il nome del campo è in **grassetto normale
 non in maiuscoletto spaziato: il maiuscolo su elenchi lunghi si legge peggio e
 rallenta. Vale per i dati che arrivano da fuori (le voci di un manifesto), dove
 i nomi li sceglie la biblioteca e possono essere lunghi.
+
+### Catalogo: un solo modello
+
+Biblioteca e Trascrizioni sono lo stesso catalogo, e le Traduzioni lo
+seguiranno: titolo grande con `CatalogViewSwitch` (elenco, copertine, tabella)
+e i comandi d'insieme in fondo alla riga, `CatalogSearchField` e filtri rapidi
+sotto, elenco con `CATALOG_LIST_CLASSNAME`/`CATALOG_GRID_CLASSNAME`, gruppi
+con `CATALOG_GROUP_HEADER_CLASSNAME`, colonna di `ShelfItem` a destra. I
+comandi di riga sono sempre `CommandBar`: icone neutre con la descrizione al
+passaggio, in gruppi divisi da un filetto, `inline` nella riga a elenco,
+`menu` nelle copertine e nella tabella. L'avanzamento è `CompletionBar`. Le
+classi condivise stanno in `ui/catalogStyles.ts`. Un catalogo nuovo copia la
+Biblioteca pezzo per pezzo: nessuna riga, scaffale o barra di comandi scritta
+a mano.
+
+Nelle Trascrizioni la riga apre con il **nome** della trascrizione in
+`font-display` corsivo `text-lg`, e sotto l'opera in forma compatta
+(`WorkIdentity` `header`: autore · anno · luogo, tipografo, titolo su una
+riga). Se il nome è il titolo dell'opera non si ripete, e la riga torna quella
+della Biblioteca (`WorkIdentity` `row`). Il nome si cambia nel posto in cui
+sta: il campo sostituisce la riga del nome, Invio salva, Esc o uscire
+annullano.
 
 ### Scaffali e filtri rapidi
 

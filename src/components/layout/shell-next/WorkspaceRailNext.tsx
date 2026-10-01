@@ -17,11 +17,16 @@ import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { dashboardLocation, workspaceLocation, type GlobalArea } from '../../../navigation/appLocation';
 import type { Workspace } from '../../../types';
-import { IconButton } from '../../ui';
+import { AREA_INK_CLASSNAME, IconButton, type InkedArea } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
 import { RailBrandToggle } from './RailBrandToggle';
 import { WorkspaceIcon } from '../../workspace/WorkspaceIdentity';
+
+/** Le aree con un inchiostro proprio: la loro icona lo porta anche a riposo. */
+function isInkedArea(area: GlobalArea): area is InkedArea {
+  return area in AREA_INK_CLASSNAME;
+}
 
 const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; enabled: boolean }> = [
   { id: 'library', icon: LibraryBig, enabled: true },
@@ -144,7 +149,8 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
                   active
                     ? 'border-editorial-accent text-editorial-accent'
                     : enabled
-                      ? 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-accent'
+                      ? `border-editorial-border bg-editorial-textbox/30 hover:border-editorial-accent/30 hover:text-editorial-accent ${
+                        isInkedArea(id) ? AREA_INK_CLASSNAME[id] : 'text-editorial-muted'}`
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
                 }`}
               >

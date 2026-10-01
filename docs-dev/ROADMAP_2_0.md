@@ -221,6 +221,14 @@ e il testo delle pagine vicine come contesto di continuità nel prompt.
 L'immagine inviata (ottimizzata a misura scelta o copia locale così com'è) si
 sceglie in Impostazioni → Trascrizioni e per sessione nella scheda OCR.
 
+**Stato al 1° ottobre 2026 (#485 H e L).** Lo Studio sta nella finestra a
+ogni larghezza; salvataggio manuale di una versione (comando e Ctrl+S). La
+pagina iniziale delle Trascrizioni è un catalogo sul modello della Biblioteca,
+con gli stessi pezzi condivisi (scaffali, ricerca, filtri rapidi, tre viste,
+comandi di riga, barretta di completamento). **Restano**: portare lo stesso
+modello alla pagina iniziale delle Traduzioni; scelta multipla nel catalogo
+delle Trascrizioni, non chiesta per ora.
+
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti
 alla fonte.

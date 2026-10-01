@@ -2,6 +2,7 @@ import type { DragEvent, MouseEvent } from 'react';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Tooltip } from '../ui';
+import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import { imprint } from '../common/WorkIdentity';
 import { SourceActionBar } from './SourceActionBar';
 import { useSourceActions } from './useSourceActions';
@@ -32,7 +33,7 @@ function TableRow({ entry, providerLabel, selected, selecting, handlers }: {
   const { t } = useTranslation();
   const actions = useSourceActions(entry, handlers);
   const { summary } = actions;
-  const revealed = 'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100';
+  const revealed = ROW_REVEAL_CLASSNAME;
   const download = entry.localPages === 0
     ? t('areas.library.availabilityRemoteShort')
     : summary.availability === 'complete' ? '100%' : `${summary.presentPages}/${summary.expectedPages || entry.expectedPages || '?'}`;

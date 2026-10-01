@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { confirm } from '../../stores/confirmStore';
 import { listAllProjects, type WorkspaceProject } from '../../services/projectService';
-import { IconButton, Spinner } from '../ui';
+import { AREA_PAPER_CLASSNAME, AreaHeading, IconButton, Spinner } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { WorkspaceIdentity } from './WorkspaceIdentity';
@@ -87,35 +87,34 @@ export function TranslationsArea() {
   };
 
   return (
-    <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
+    <main className={`flex flex-1 h-full min-h-0 flex-col overflow-y-auto custom-scrollbar ${AREA_PAPER_CLASSNAME.translations}`}>
       <div className="px-5 py-5 md:px-6">
-        <div className="mb-5 flex items-end justify-between gap-3">
-          <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-            {t('areas.translations.title')}
-          </h1>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-2">
-              {([
-                { key: 'updatedAt' as SortKey, icon: Clock },
-                { key: 'name' as SortKey, icon: ArrowUpAZ },
-              ]).map(({ key, icon: Icon }) => (
-                <IconButton
-                  key={key}
-                  size="md"
-                  tone={sortKey === key ? 'accent' : 'default'}
-                  onClick={() => setSortKey(key)}
-                  title={t(`workspace.translationsArea.sort.${key}`)}
-                  ariaPressed={sortKey === key}
-                >
-                  <Icon size={14} />
-                </IconButton>
-              ))}
-              <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-              <span className="self-center font-display text-sm italic text-editorial-ink">
-                {t(`workspace.translationsArea.sort.${sortKey}`)}
-              </span>
+        <div className="mb-5">
+          <AreaHeading area="translations" title={t('areas.translations.title')}>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                {([
+                  { key: 'updatedAt' as SortKey, icon: Clock },
+                  { key: 'name' as SortKey, icon: ArrowUpAZ },
+                ]).map(({ key, icon: Icon }) => (
+                  <IconButton
+                    key={key}
+                    size="md"
+                    tone={sortKey === key ? 'accent' : 'default'}
+                    onClick={() => setSortKey(key)}
+                    title={t(`workspace.translationsArea.sort.${key}`)}
+                    ariaPressed={sortKey === key}
+                  >
+                    <Icon size={14} />
+                  </IconButton>
+                ))}
+                <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+                <span className="self-center font-display text-sm italic text-editorial-ink">
+                  {t(`workspace.translationsArea.sort.${sortKey}`)}
+                </span>
+              </div>
             </div>
-          </div>
+          </AreaHeading>
         </div>
 
         {isLoading ? (

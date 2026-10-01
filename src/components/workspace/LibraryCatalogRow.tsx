@@ -1,7 +1,8 @@
 import type { DragEvent, MouseEvent } from 'react';
 import { BookOpenText, Check, FilePen, Link2, Tags } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, LinkChip, Tooltip } from '../ui';
+import { CompletionBar, IconButton, LinkChip, Tooltip } from '../ui';
+import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import { CachedThumbnail } from '../common/CachedThumbnail';
 import { WorkIdentity } from '../common/WorkIdentity';
 import { SourceActionBar } from './SourceActionBar';
@@ -128,7 +129,7 @@ export function LibraryCatalogRow({
       <FilePen size={12} />
     </IconButton>
   );
-  const revealed = 'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100';
+  const revealed = ROW_REVEAL_CLASSNAME;
 
   return (
     <article
@@ -179,15 +180,8 @@ export function LibraryCatalogRow({
                   <>
                     <span className="min-w-0 truncate">{facts}</span>
                     {entry.localPages > 0 && (
-                      <>
-                        <span className="h-[3px] w-10 shrink-0 overflow-hidden rounded-full bg-editorial-border">
-                          <span
-                            className={`block h-full rounded-full ${summary.availability === 'complete' ? 'bg-editorial-success' : 'bg-editorial-running'}`}
-                            style={{ width: `${Math.round((progress ?? 1) * 100)}%` }}
-                          />
-                        </span>
-                        <span className="shrink-0 tabular-nums">{progressLabel}</span>
-                      </>
+                      <CompletionBar ratio={progress ?? 1} label={progressLabel}
+                        complete={summary.availability === 'complete'} />
                     )}
                   </>
                 }

@@ -15,6 +15,7 @@ import {
   Lock,
   MoreVertical,
   RefreshCw,
+  Save,
   SlidersHorizontal,
   Trash2,
   Unlink2,
@@ -641,6 +642,24 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   // sfogliare avanti non deve far sparire il segnale.
   const readingPage = ocrActivity.pages[0] ?? null;
   const pagePendingError = synced && pendingStatus?.state === 'error' ? pendingStatus.message : null;
+  const isTextReadOnly = isVerified || isPageReading || isPagePending || Boolean(pagePendingError);
+  const hasUnsavedText = saveState === 'pending' || saveState === 'error';
+  const canSaveNow = hasUnsavedText && !isTextReadOnly;
+  const handleSaveNow = () => {
+    if (canSaveNow) void save(draftRef.current);
+  };
+  // Ctrl/⌘+S vale anche mentre si scrive nel foglio: è lì che serve.
+  const saveNowRef = useRef(handleSaveNow);
+  saveNowRef.current = handleSaveNow;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 's') return;
+      event.preventDefault();
+      saveNowRef.current();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
   const pageTitle =
     viewerRef && pageTotal
       ? t('areas.library.viewerPageOf', { index: displayIndex + 1, total: pageTotal })
@@ -718,7 +737,7 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-surface-panel">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-surface-panel">
       {/* Stessa riga della scheda opera in Biblioteca (icona, titolo/autore,
           uscita verso la biblioteca): quando il documento è legato a
           un'opera è quella a identificarlo qui, non il titolo scelto per la
@@ -930,6 +949,14 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                       </IconButton>
                     )}
                   </span>
+                  <IconButton
+                    size="sm"
+                    onClick={handleSaveNow}
+                    disabled={!canSaveNow}
+                    title={t(canSaveNow ? 'transcription.saveNow' : 'transcription.saveNowNothing')}
+                  >
+                    <Save size={13} />
+                  </IconButton>
                   <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
                   <IconButton
                     size="lg"
@@ -952,7 +979,7 @@ export function TranscriptionStudio({ documentId, onBack }: TranscriptionStudioP
                     value={draft}
                     onChange={(text) => { draftRef.current = text; setDraft(text); setSaveState('pending'); }}
                     markdownEnabled
-                    readOnly={isVerified || isPageReading || isPagePending || Boolean(pagePendingError)}
+                    readOnly={isTextReadOnly}
                     fillHeight
                     textClassName="doc-content text-editorial-ink"
                     previewClassName="min-h-[280px] doc-content text-editorial-ink"

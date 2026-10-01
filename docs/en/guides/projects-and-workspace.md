@@ -33,6 +33,16 @@ for a stable state. The status bar distinguishes unsaved changes, saving,
 successful saves and errors. `Ctrl + S` requests a manual save, subject to the
 conditions described under [keyboard shortcuts](./keyboard-shortcuts).
 
+## Areas and their ink
+
+Library, Transcriptions and Translations each have their own ink — petrol,
+sepia and indigo — so you can tell them apart at a glance: the area icon in the
+left sidebar, a short rule under the large title and a slightly different
+background paper. State colours stay the same in every area: green marks what
+is selected or active, red errors, ochre cautions, gold running jobs.
+Translations do not have the Library-style catalogue yet: for now they only
+take the title and paper.
+
 ## Dashboard
 
 The Dashboard contains an overview, a search across multiple sources, and a
