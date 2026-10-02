@@ -67,8 +67,10 @@ dopo un errore, il motivo.
 
 Per salvare subito c’è il dischetto in cima al foglio della traduzione (su
 quello dell’originale quando è aperto solo l’originale), oppure `Ctrl + S`,
-che funziona anche mentre scrivi nei fogli. Il dischetto è spento quando non
-c’è niente da salvare e durante la traduzione automatica; se un salvataggio
+che funziona anche mentre scrivi nei fogli. Il dischetto scrive anche una
+versione nello [storico](./document-pipeline#storico-del-frammento) di ogni
+frammento cambiato. È spento quando non c’è niente da salvare né versioni nuove
+da scrivere, e durante la traduzione automatica; se un salvataggio
 fallisce diventa rosso e il suo clic riprova.
 
 Uscire dalla traduzione — ritorno al catalogo, barra principale, percorso in

@@ -108,6 +108,23 @@ yet. Every disabled control gives its reason in the tooltip.
 Current limit: “needs updating” is not kept when the translation is closed;
 reopening it, the mark is gone.
 
+### Segment history
+
+**Review → History** lists the open segment’s versions, newest first, with the
+author (**Pipeline** or **Manual**), date and time, and the **Current** and
+**Verified** marks. A version is written at every pipeline pass (including the
+rewrite after the audit), at every save with the disk or `Ctrl + S` if the
+segment’s text changed since its last version, and on verification when the
+verified text differs. Automatic saving writes no versions, so the history does
+not fill up at every pause.
+
+Restore puts a version’s text back on the page and writes it as a new version:
+the earlier ones stay. It is off on a verified translation (return it to draft
+first) and while the segment is being translated. Current limits: versions
+cannot be deleted or named, and the history does not show the model used,
+because a pipeline uses more than one. History is per pipeline and is lost if
+the document is split again into different segments.
+
 ## Request previews
 
 Pipeline configuration shows the structure of the prompts. The segment’s

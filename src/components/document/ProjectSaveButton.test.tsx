@@ -3,14 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectSaveButton } from './ProjectSaveButton';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useTranslationHistoryStore } from '../../stores/translationHistoryStore';
+import { makeTranslationChunk } from '../../test/chunkFactory';
 
 describe('ProjectSaveButton', () => {
-  const saveCurrentProject = vi.fn().mockResolvedValue(undefined);
+  const saveVersionNow = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.clearAllMocks();
     useChunksStore.setState({ isProcessing: false });
-    useProjectStore.setState({ saveState: 'saved', lastSaveError: null, saveCurrentProject });
+    useProjectStore.setState({ saveState: 'saved', lastSaveError: null, saveVersionNow });
+    useChunksStore.setState({ chunks: [] });
+    useTranslationHistoryStore.setState({ latestText: {} });
   });
 
   it('is off when there is nothing to save', () => {
@@ -24,7 +28,17 @@ describe('ProjectSaveButton', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'document.saveNow (Ctrl+S)' }));
 
-    expect(saveCurrentProject).toHaveBeenCalledTimes(1);
+    expect(saveVersionNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers a new version when a page changed since the last one, even if already saved', () => {
+    useChunksStore.setState({ chunks: [makeTranslationChunk({ id: 'c1', translationDisplayText: 'Nuovo' })] });
+    useTranslationHistoryStore.setState({ latestText: { c1: 'Vecchio' } });
+    render(<ProjectSaveButton />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'document.saveNow (Ctrl+S)' }));
+
+    expect(saveVersionNow).toHaveBeenCalledTimes(1);
   });
 
   it('turns into a retry after a failed save', () => {
@@ -33,7 +47,7 @@ describe('ProjectSaveButton', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'transcription.saveRetry' }));
 
-    expect(saveCurrentProject).toHaveBeenCalledTimes(1);
+    expect(saveVersionNow).toHaveBeenCalledTimes(1);
   });
 
   it('is off with the reason while the pipeline runs', () => {

@@ -48,7 +48,7 @@ function isMemoryView(tab: TranslationStudioTab): tab is MemoryView {
 }
 
 function isReviewView(tab: TranslationStudioTab): tab is ReviewView {
-  return tab === 'audit' || tab === 'notes' || tab === 'sourceNotes';
+  return tab === 'audit' || tab === 'notes' || tab === 'sourceNotes' || tab === 'history';
 }
 
 function isDocumentView(tab: TranslationStudioTab): tab is DocumentView {

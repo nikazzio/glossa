@@ -1,6 +1,7 @@
 import { execute, select } from './dbService';
 import { contentHash, recordFact } from './provenanceService';
 import { logger } from '../utils/logger';
+import { useTranslationHistoryStore } from '../stores/translationHistoryStore';
 
 /**
  * Lo storico delle traduzioni, simmetrico a quello che le trascrizioni
@@ -11,7 +12,8 @@ import { logger } from '../utils/logger';
  *
  * - `model` — quando la pipeline produce la traduzione di un chunk;
  * - `human` — quando l'utente approva una versione diversa da quella che
- *   c'era.
+ *   c'era, salva a mano (dischetto, Ctrl/⌘+S) un testo cambiato o ripristina
+ *   una versione. Il salvataggio automatico non ne scrive.
  *
  * **Le revisioni non hanno uno stato di approvazione.** L'approvazione si
  * sposta — si approva, si va avanti, e più tardi si torna indietro a cambiare
@@ -35,6 +37,10 @@ export interface TranslationRevision {
   created_by: 'model' | 'human';
   derived_from_revision_id: string | null;
   content_hash: string;
+}
+
+export interface TranslationRevisionRow extends TranslationRevision {
+  created_at: string;
 }
 
 async function latestRevision(translationId: string): Promise<TranslationRevision | null> {
@@ -90,6 +96,7 @@ async function insertRevision(
       revision.content_hash,
     ],
   );
+  useTranslationHistoryStore.getState().noteRevision(translationId, text);
   return revision;
 }
 
@@ -208,4 +215,51 @@ export async function withdrawTranslationApproval(
     workspaceId,
     inputRef: approvedRevisionId,
   });
+}
+
+/**
+ * Una versione scritta dall'utente: salvataggio manuale o ripristino. Come per
+ * la pipeline, un testo identico all'ultima versione non ne crea una nuova.
+ */
+export async function recordManualRevision(
+  translationId: string,
+  text: string,
+): Promise<TranslationRevision | null> {
+  if (text.trim() === '') return null;
+  const previous = await latestRevision(translationId);
+  if (previous?.content_hash === contentHash(text)) return previous;
+  return insertRevision(translationId, text, 'human', previous);
+}
+
+/** Le versioni di un frammento, dalla più recente, e quella verificata ora. */
+export async function listTranslationRevisions(
+  translationId: string,
+): Promise<{ revisions: TranslationRevisionRow[]; approvedRevisionId: string | null }> {
+  const [revisions, approved] = await Promise.all([
+    select<TranslationRevisionRow>(
+      `SELECT * FROM translation_revisions WHERE translation_id = $1
+        ORDER BY revision_number DESC`,
+      [translationId],
+    ),
+    select<{ approved_revision_id: string | null }>(
+      'SELECT approved_revision_id FROM translations WHERE id = $1',
+      [translationId],
+    ),
+  ]);
+  return { revisions, approvedRevisionId: approved[0]?.approved_revision_id ?? null };
+}
+
+/** Il testo dell'ultima versione di ogni frammento della pipeline. */
+export async function latestRevisionTexts(pipelineId: string): Promise<Record<string, string>> {
+  const rows = await select<{ translation_id: string; text: string }>(
+    `SELECT r.translation_id, r.text
+       FROM translation_revisions r
+       JOIN translations t ON t.id = r.translation_id
+      WHERE t.pipeline_id = $1
+        AND r.revision_number = (
+          SELECT MAX(revision_number) FROM translation_revisions WHERE translation_id = r.translation_id
+        )`,
+    [pipelineId],
+  );
+  return Object.fromEntries(rows.map((row) => [row.translation_id, row.text]));
 }

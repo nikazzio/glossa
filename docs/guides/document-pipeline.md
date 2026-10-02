@@ -114,6 +114,24 @@ suggerimento.
 Limite attuale: il «da aggiornare» non si conserva chiudendo la traduzione;
 riaprendola, il segno non c’è più.
 
+### Storico del frammento
+
+**Revisione → Storico** elenca le versioni del frammento aperto, dalla più
+recente, con l’autore (**Pipeline** o **Manuale**), data e ora, e i segni
+**Corrente** e **Verificata**. Una versione nasce a ogni passata della pipeline
+(anche la riscrittura dopo l’audit), a ogni salvataggio col dischetto o con
+`Ctrl + S` se il testo del frammento è cambiato dall’ultima versione, e alla
+verifica quando il testo verificato è diverso. Il salvataggio automatico non
+scrive versioni, per non riempire lo storico a ogni pausa.
+
+Il comando di ripristino riporta il testo di una versione nel foglio e lo
+scrive come versione nuova: le precedenti restano. È spento su una traduzione
+verificata (prima va riportata in bozza) e mentre il frammento è in
+traduzione. Limiti attuali: le versioni non si eliminano, non si possono
+nominare, e lo storico non indica il modello usato, perché una pipeline ne usa
+più d’uno. Lo storico è per pipeline e si perde se il documento viene diviso di
+nuovo in frammenti diversi.
+
 ## Anteprima delle richieste
 
 La configurazione mostra la struttura dei prompt. La scheda **Anteprima** del

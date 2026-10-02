@@ -6,6 +6,7 @@ import { useLibraryStore } from '../stores/libraryStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
 import { useConfigStore } from '../stores/configStore';
+import { saveVersionWithFeedback } from '../components/document/manualSave';
 
 function isInputActive(): boolean {
   const el = document.activeElement;
@@ -32,12 +33,11 @@ export function useKeyboardShortcuts({ onRunPipeline, onRunSingleChunk }: Option
      *  quindi niente avviso se va bene; un errore della traduzione resta lì,
      *  con il dischetto che diventa «Riprova». */
     const saveOpenProject = () => {
-      const { saveCurrentProject } = useProjectStore.getState();
       const { dirtyIds, saveAllDirty } = useLibraryStore.getState();
       if (useChunksStore.getState().isProcessing) {
         toast.warning(t('header.projectSaveDeferred'));
       } else {
-        saveCurrentProject().catch(() => undefined);
+        saveVersionWithFeedback(t);
       }
       if (dirtyIds.length > 0) {
         saveAllDirty().catch((err: unknown) =>

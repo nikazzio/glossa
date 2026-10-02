@@ -2182,7 +2182,6 @@
     "searchInTranslation": "Cerca nella candidata",
     "clearPaneSearch": "Cancella ricerca",
     "searchInPane": "Cerca nel testo",
-    "saveNow": "Salva ora",
     "reasonRunning": "traduzione in corso",
     "reasonChunkProcessing": "frammento in traduzione",
     "reasonNoTranslation": "nessuna traduzione da verificare",
@@ -2212,6 +2211,16 @@
     "insightsTabReview": "Revisione",
     "insightsTabDocument": "Documento",
     "reviewSourceNotes": "Note del testo",
+    "reviewHistory": "Storico",
+    "historyAuthor": {
+      "model": "Pipeline",
+      "human": "Manuale"
+    },
+    "historyEmpty": "Nessuna versione ancora: la prima arriva dalla pipeline o dal dischetto.",
+    "historyLoadFailed": "Storico non leggibile: {{message}}",
+    "reasonVerified": "traduzione verificata: riportala in bozza",
+    "versionSaveFailed": "Versione non scritta nello storico",
+    "saveNow": "Salva ora una versione nello storico",
     "reviewViewsLabel": "Revisione del frammento",
     "insightsTabOperations": "Console",
     "chunkPanelTitle": "Chunk",
@@ -2443,7 +2452,7 @@
             "paragraphs": [
               "La barra principale resta a sinistra: da lì passi a un’altra area, e la traduzione si chiude. Mentre la pipeline lavora le voci sono spente.",
               "La riga in cima riporta al catalogo e mostra il nome della traduzione e la pipeline aperta con le sue lingue: un clic su un nome lo rinomina, ⇄ cambia pipeline, l’ingranaggio ne apre le opzioni. A destra trovi importa, esporta, risorse linguistiche del workspace, configurazione ed elimina.",
-              "La colonna Strumenti a destra tiene in cima traduci, Blocchi multipli con il numero di frammenti e i costi. Sotto trovi Glossario, Memoria (frasi simili ed estrazione), Anteprima Revisione (Audit, Note e Note del testo) e Documento (Indice, Statistiche e Coerenza). Chiusa, lascia in vista il solo pulsante traduci."
+              "La colonna Strumenti a destra tiene in cima traduci, Blocchi multipli con il numero di frammenti e i costi. Sotto trovi Glossario, Memoria (frasi simili ed estrazione), Anteprima, Revisione (Audit, Note, Note del testo e Storico) e Documento (Indice, Statistiche e Coerenza). Chiusa, lascia in vista il solo pulsante traduci."
             ]
           },
           {
@@ -2460,6 +2469,7 @@
               "Il menu dell’editor raccoglie modalità di scrittura, anteprima e vista affiancata, dimensione del testo, copia e strumenti Markdown. Usa i comandi per grassetto, corsivo, titoli, elenchi e note.",
               "Puoi ispezionare gli output delle fasi e confrontarli per capire dove è cambiato il testo: i comandi stanno in colonna nel margine destro del foglio della traduzione, accanto alla barra di scorrimento. In alto le fasi nell'ordine della pipeline, poi il confronto e le coppie da confrontare; quella che stai guardando è evidenziata. Abilita la modifica dell’originale con la matita solo quando devi correggere il sorgente: la traduzione viene segnalata come da aggiornare, con l’etichetta ocra «Sorgente modificata» accanto al titolo.",
               "Quando la traduzione è pronta, segnala come verificata con la spunta accanto al titolo «Traduzione candidata»: diventa verde, il testo si blocca e la traduzione automatica dei soli frammenti non verificati la salta. Segnarla come verificata toglie anche il «da aggiornare»: vuol dire che l’hai controllata sull’originale di adesso. Riporta in bozza con lo stesso comando. Se un comando è spento, passandoci sopra leggi il motivo.",
+              "Revisione → Storico elenca le versioni del frammento, dalla più recente: chi l’ha prodotta (Pipeline o Manuale), quando, e quale è la corrente e quale la verificata. Una versione nasce a ogni passata della pipeline, a ogni salvataggio col dischetto se il testo è cambiato e alla verifica. Il comando di ripristino riporta il testo nel foglio e lo scrive come versione nuova, senza cancellare le altre; è spento su una traduzione verificata. Le versioni non si eliminano e non si possono ancora nominare.",
               "Impostazioni → Tipografia regola caratteri, dimensioni, interlinea e aspetto. Le impostazioni delle traduzioni comprendono layout ed evidenziazioni."
             ]
           },
@@ -2791,7 +2801,7 @@
             "title": "Salvare il lavoro",
             "paragraphs": [
               "La traduzione si salva da sola poco dopo l’ultima modifica, intera: testo di partenza e tutti i frammenti. Lo stato si legge in basso a destra nella barra di stato: salvato, modifiche non salvate, salvataggio in corso o errore; passandoci sopra leggi l’ora dell’ultimo salvataggio e, dopo un errore, il motivo.",
-              "Per salvare subito usa il dischetto in cima al foglio della traduzione (su quello dell’originale quando è aperto solo l’originale), oppure Ctrl + S anche mentre scrivi nei fogli; su macOS usa Cmd. Il dischetto resta spento quando non c’è niente da salvare e mentre la traduzione automatica lavora, perché la pipeline salva da sé alla fine. Se un salvataggio fallisce, il dischetto diventa rosso e lo riprova.",
+              "Per salvare subito usa il dischetto in cima al foglio della traduzione (su quello dell’originale quando è aperto solo l’originale), oppure Ctrl + S anche mentre scrivi nei fogli; su macOS usa Cmd. Oltre a salvare, il dischetto scrive una versione nello storico di ogni frammento cambiato dall’ultima versione; il salvataggio automatico non ne scrive. Il dischetto resta spento quando non c’è niente da salvare né versioni nuove da scrivere e mentre la traduzione automatica lavora, perché la pipeline salva da sé alla fine. Se un salvataggio fallisce, il dischetto diventa rosso e lo riprova.",
               "Tornando al catalogo, o passando altrove dalla barra principale o dal percorso in alto, la traduzione si salva prima di chiudersi. Se quel salvataggio fallisce resti nella traduzione, con l’errore in vista, invece di perdere l’ultima modifica."
             ]
           },

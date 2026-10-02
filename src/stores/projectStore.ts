@@ -30,6 +30,8 @@ import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
 import { useWorkspaceStore } from './workspaceStore';
 import { useAnnotationsStore } from './annotationsStore';
+import { unversionedChunks, useTranslationHistoryStore } from './translationHistoryStore';
+import { recordManualRevision } from '../services/translationRevisionsService';
 import type { Pipeline, PipelineConfig, TranslationChunk } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
@@ -64,6 +66,9 @@ interface ProjectState {
   openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
+  /** Il salvataggio manuale (dischetto, Ctrl/⌘+S): salva e scrive una versione
+   *  nello storico per ogni frammento il cui testo è cambiato. */
+  saveVersionNow: () => Promise<void>;
   renameCurrentProject: (name: string) => Promise<void>;
   closeProject: () => void;
   /** Salva se c'è qualcosa da salvare, poi chiude. `false`: salvataggio fallito, la traduzione resta aperta con l'errore in vista. */
@@ -280,6 +285,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     usePipelineStore.getState().resetToDefaults();
     useOperationLogStore.setState({ entries: [], currentProjectId: null, currentPipelineId: null });
     useAnnotationsStore.getState().clearAll();
+    useTranslationHistoryStore.getState().setLatestTexts({});
     set({
       currentProjectId: null,
       pipelines: [],
@@ -310,6 +316,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
     get().closeProject();
     return true;
+  },
+
+  saveVersionNow: async () => {
+    await get().saveCurrentProject();
+    const changed = unversionedChunks(
+      useChunksStore.getState().chunks,
+      useTranslationHistoryStore.getState().latestText,
+    );
+    // Una alla volta: ognuna legge l'ultima versione del suo frammento.
+    for (const chunk of changed) {
+      await recordManualRevision(chunk.id, chunk.translationDisplayText);
+    }
   },
 
   setRunInterrupted: (value) => set({ runInterrupted: value }),

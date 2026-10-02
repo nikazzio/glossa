@@ -953,6 +953,22 @@ portano il motivo nel formato «Comando — motivo»
 `translationStale` vive solo in memoria (non è in `translation_chunks`), quindi
 riaprendo il progetto il «da aggiornare» si perde; non si aggiunge una colonna.
 
+Storico del frammento (Revisione → Storico, `TranslationHistoryList`): legge
+`translation_revisions` del frammento (`listTranslationRevisions`, con
+`translations.approved_revision_id` per il segno «verificata»). Autori: `model`
+(passata della pipeline e riscrittura dopo l'audit, non distinte: lo schema non
+lo dice) e `human` (verifica con testo diverso, salvataggio manuale, ripristino).
+Il salvataggio manuale è `projectStore.saveVersionNow`: `saveCurrentProject`,
+poi `recordManualRevision` per ogni frammento di `unversionedChunks` (testo non
+vuoto, non verificato, diverso dall'ultima versione). L'ultima versione per
+frammento sta in `translationHistoryStore.latestText`, caricata all'apertura
+della pipeline (`useLatestRevisionTexts`, una query) e aggiornata da
+`insertRevision` stesso (`noteRevision`, che fa anche rileggere lo storico
+aperto). Il dischetto è acceso se c'è da salvare **o** da versionare.
+Ripristino = `updateChunkDraft` + versione manuale: nessuna riga si modifica o
+si cancella (registro immutabile, voluto). Niente nomi né puntine: servirebbe
+una colonna `consolidated_name`, rimandata.
+
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
 `RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile
 (`renamePipeline`), ⇄ con `PopoverItem`/`MenuActionRow`, ⚙ della

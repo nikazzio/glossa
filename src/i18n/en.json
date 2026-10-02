@@ -2182,7 +2182,6 @@
     "searchInTranslation": "Search candidate",
     "clearPaneSearch": "Clear search",
     "searchInPane": "Search this text",
-    "saveNow": "Save now",
     "reasonRunning": "translation running",
     "reasonChunkProcessing": "segment being translated",
     "reasonNoTranslation": "no translation to verify",
@@ -2212,6 +2211,16 @@
     "insightsTabReview": "Review",
     "insightsTabDocument": "Document",
     "reviewSourceNotes": "Source notes",
+    "reviewHistory": "History",
+    "historyAuthor": {
+      "model": "Pipeline",
+      "human": "Manual"
+    },
+    "historyEmpty": "No versions yet: the first comes from the pipeline or the disk.",
+    "historyLoadFailed": "History unreadable: {{message}}",
+    "reasonVerified": "translation verified: return it to draft",
+    "versionSaveFailed": "Version not written to the history",
+    "saveNow": "Save a version to the history now",
     "reviewViewsLabel": "Segment review",
     "insightsTabOperations": "Console",
     "chunkPanelTitle": "Chunk",
@@ -2443,7 +2452,7 @@
             "paragraphs": [
               "The main bar stays on the left: from there you move to another area, and the translation closes. While the pipeline is running its entries are off.",
               "The top row leads back to the catalogue and shows the translation name and the open pipeline with its languages: click a name to rename it, ⇄ switches pipeline, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
-              "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview Review (Audit, Notes and Source notes) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
+              "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview, Review (Audit, Notes, Source notes and History) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
             ]
           },
           {
@@ -2460,6 +2469,7 @@
               "The editor menu provides writing, preview and split views, text size, copying and Markdown tools. Use the controls for bold, italic, headings, lists and footnotes.",
               "Inspect and compare stage outputs to see where the text changed: the controls sit in a column in the right margin of the translation page, next to the scrollbar. At the top the stages in pipeline order, then comparison and the pairs to compare; the one you are viewing is highlighted. Enable source editing with the pencil only when you need to correct the original; its translation will be flagged for updating, with the ochre “Source changed” label next to the title.",
               "When the translation is ready, mark it as verified with the check next to the “Candidate translation” title: it turns green, the text locks and automatic translation of unverified segments skips it. Marking it as verified also clears “needs updating”: it means you checked it against the current original. Return it to draft with the same control. When a control is off, hover it to read why.",
+              "Review → History lists the segment’s versions, newest first: who produced it (Pipeline or Manual), when, and which is current and which verified. A version is written at every pipeline pass, at every save with the disk if the text changed, and on verification. Restore puts the text back on the page and writes it as a new version, without deleting the others; it is off on a verified translation. Versions cannot be deleted and cannot be named yet.",
               "Settings → Typography controls fonts, size, line spacing and appearance. Translation settings include layout and highlighting."
             ]
           },
@@ -2791,7 +2801,7 @@
             "title": "Saving your work",
             "paragraphs": [
               "A translation saves itself shortly after the last edit, as a whole: source text and every segment. The status bar, bottom right, shows its state: saved, unsaved changes, saving or error; hover it to read the time of the last save and, after an error, the reason.",
-              "To save right away use the disk at the top of the translation page (on the source page when only the source is open), or Ctrl + S even while typing on the pages; use Cmd on macOS. The disk stays off when there is nothing to save and while automatic translation runs, because the pipeline saves by itself at the end. If a save fails, the disk turns red and retries it.",
+              "To save right away use the disk at the top of the translation page (on the source page when only the source is open), or Ctrl + S even while typing on the pages; use Cmd on macOS. Besides saving, the disk writes a version to the history of every segment changed since its last version; automatic saving writes none. The disk stays off when there is nothing to save and no new version to write and while automatic translation runs, because the pipeline saves by itself at the end. If a save fails, the disk turns red and retries it.",
               "Going back to the catalogue, or elsewhere from the main bar or the path at the top, saves the translation before closing it. If that save fails you stay in the translation with the error in view, instead of losing the last edit."
             ]
           },

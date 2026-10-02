@@ -3,25 +3,27 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { unversionedChunks, useTranslationHistoryStore } from '../../stores/translationHistoryStore';
 import { IconButton } from '../ui';
+import { saveVersionWithFeedback } from './manualSave';
 
 /**
  * Il dischetto della traduzione, nella testata del foglio. Lo stato (salvato,
- * da salvare, errore) lo dice la barra di stato; qui resta il comando, che in
+ * da salvare, errore) lo dice la barra di stato; qui resta il comando, che
+ * salva e scrive una versione nello storico per i frammenti cambiati, e in
  * caso di errore diventa rosso e riprova.
  */
 export function ProjectSaveButton() {
   const { t } = useTranslation();
-  const { saveState, lastSaveError, saveCurrentProject } = useProjectStore(
-    useShallow((s) => ({
-      saveState: s.saveState,
-      lastSaveError: s.lastSaveError,
-      saveCurrentProject: s.saveCurrentProject,
-    })),
+  const { saveState, lastSaveError } = useProjectStore(
+    useShallow((s) => ({ saveState: s.saveState, lastSaveError: s.lastSaveError })),
   );
   const isProcessing = useChunksStore((s) => s.isProcessing);
+  const chunks = useChunksStore((s) => s.chunks);
+  const latestText = useTranslationHistoryStore((s) => s.latestText);
 
-  const hasUnsaved = saveState === 'dirty' || saveState === 'error';
+  const hasUnsaved = saveState === 'dirty' || saveState === 'error'
+    || unversionedChunks(chunks, latestText).length > 0;
   const canSave = hasUnsaved && !isProcessing;
   const saveNow = t('document.saveNow');
   const label = isProcessing && hasUnsaved
@@ -38,7 +40,7 @@ export function ProjectSaveButton() {
     <IconButton
       size="sm"
       tone={saveState === 'error' ? 'danger' : 'default'}
-      onClick={() => { saveCurrentProject().catch(() => undefined); }}
+      onClick={() => saveVersionWithFeedback(t)}
       disabled={!canSave}
       title={label}
     >

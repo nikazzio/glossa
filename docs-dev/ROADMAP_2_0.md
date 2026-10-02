@@ -237,8 +237,9 @@ sempre in vista, riga d'intestazione, una colonna Strumenti a destra) e il
 salvataggio (T2: stato nella barra di stato anche per le trascrizioni,
 dischetto e Ctrl/⌘+S nei fogli, salvataggio prima di uscire) e la verifica (T3: spunta, motivi dei comandi
 spenti; il «da aggiornare» resta solo in memoria per scelta, si perde
-riaprendo); restano storico del
-frammento (T4), pannello modello e istruzioni comune (T5), velo sul frammento
+riaprendo) e lo storico (T4: sottolinguetta in Revisione, versioni dal
+dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
+colonna nuova); restano pannello modello e istruzioni comune (T5), velo sul frammento
 in traduzione (T6), scheda Memoria (T7) e costi (T8); quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.

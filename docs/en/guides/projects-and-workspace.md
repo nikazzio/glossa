@@ -65,8 +65,10 @@ time of the last save and, after an error, the reason.
 
 To save right away there is the disk at the top of the translation page (on
 the source page when only the source is open), or `Ctrl + S`, which also works
-while typing on the pages. The disk is off when there is nothing to save and
-during automatic translation; if a save fails it turns red and clicking it
+while typing on the pages. The disk also writes a version to the
+[history](./document-pipeline#segment-history) of every changed segment. It is
+off when there is nothing to save and no new version to write, and during
+automatic translation; if a save fails it turns red and clicking it
 retries.
 
 Leaving the translation — back to the catalogue, main bar, path at the top,

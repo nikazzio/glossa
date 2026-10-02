@@ -8,6 +8,7 @@ import { useResizeDragging } from '../layout/shell-next/useResizeDragging';
 import { useUiStore } from '../../stores/uiStore';
 import { TranslationInspector } from './TranslationInspector';
 import { TranslationStudioHeader } from './TranslationStudioHeader';
+import { useLatestRevisionTexts } from './useLatestRevisionTexts';
 
 interface TranslationStudioProps {
   children: ReactNode;
@@ -48,6 +49,8 @@ export function TranslationStudio({
   const [collapsed, setCollapsed] = useState(!inspectorOpen);
   const [dragging, setDragging] = useResizeDragging();
   const initialWidth = useRef(clampInspectorWidth(inspectorWidth));
+
+  useLatestRevisionTexts();
 
   // Smontare il gruppo durante un trascinamento lascia bloccato il cursore di
   // ridimensionamento su tutta l'app.

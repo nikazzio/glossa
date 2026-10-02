@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
 import type { TranslationChunk } from '../../types';
-import { FileText, NotebookText, ShieldCheck } from 'lucide-react';
+import { FileText, History, NotebookText, ShieldCheck } from 'lucide-react';
 import type { TabStripItem } from '../ui';
 import { AuditTab } from '../document/tabs/AuditTab';
 import { NotesTab, SourceNotesList } from '../document/tabs/NotesTab';
 import { SubTabsPanel, subTabIds } from './SubTabsPanel';
+import { TranslationHistoryList } from './TranslationHistoryList';
 
-export type ReviewView = 'audit' | 'notes' | 'sourceNotes';
+export type ReviewView = 'audit' | 'notes' | 'sourceNotes' | 'history';
 
 const REVIEW_ID_PREFIX = 'review';
 
@@ -30,8 +31,8 @@ interface ReviewTabProps {
 }
 
 /**
- * Revisione del frammento: audit, note e note del testo originale in tre
- * sottolinguette, ognuna con il suo elenco che scorre. Le note del testo
+ * Revisione del frammento: audit, note, note del testo originale e storico
+ * delle versioni in sottolinguette, ognuna con il suo elenco che scorre. Le note del testo
  * compaiono solo se il frammento ne ha; l'audit si accende a frammento
  * tradotto.
  */
@@ -63,16 +64,19 @@ export function ReviewTab({
     audit: auditOff ? `${auditLabel} — ${t('document.chunkTabLockedForAudit')}` : auditLabel,
     notes: withCount(t('document.insightsTabNotes'), annotationCount),
     sourceNotes: withCount(t('document.reviewSourceNotes'), footnoteCount),
+    history: t('document.reviewHistory'),
   };
   const tabs: TabStripItem[] = [
     { id: 'audit', label: labels.audit, icon: <ShieldCheck size={16} />, disabled: auditOff },
     { id: 'notes', label: labels.notes, icon: <NotebookText size={16} /> },
     ...(footnoteCount > 0 ? [{ id: 'sourceNotes', label: labels.sourceNotes, icon: <FileText size={16} /> }] : []),
+    { id: 'history', label: labels.history, icon: <History size={16} /> },
   ];
   const shownName: Record<ReviewView, string> = {
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
     sourceNotes: t('document.reviewSourceNotes'),
+    history: t('document.reviewHistory'),
   };
 
   const ids = subTabIds(REVIEW_ID_PREFIX, shownView);
@@ -98,6 +102,8 @@ export function ReviewTab({
           onSelectChunk={onSelectChunk}
           onFocusIssue={onFocusIssue}
         />
+      ) : shownView === 'history' ? (
+        <TranslationHistoryList panelId={ids.panelId} labelledBy={ids.tabId} currentChunk={currentChunk} />
       ) : shownView === 'sourceNotes' ? (
         <SourceNotesList panelId={ids.panelId} labelledBy={ids.tabId} currentChunk={currentChunk} />
       ) : (

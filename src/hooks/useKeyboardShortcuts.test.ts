@@ -13,7 +13,7 @@ function pressSaveInside(element: HTMLElement) {
 }
 
 describe('Ctrl/⌘+S', () => {
-  const saveCurrentProject = vi.fn().mockResolvedValue(undefined);
+  const saveVersionNow = vi.fn().mockResolvedValue(undefined);
   let textarea: HTMLTextAreaElement;
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe('Ctrl/⌘+S', () => {
     textarea.focus();
     useChunksStore.setState({ isProcessing: false });
     useLibraryStore.setState({ dirtyIds: [] });
-    useProjectStore.setState({ currentProjectId: 'proj-1', saveCurrentProject });
+    useProjectStore.setState({ currentProjectId: 'proj-1', saveVersionNow });
   });
 
   afterEach(() => {
@@ -36,7 +36,7 @@ describe('Ctrl/⌘+S', () => {
 
     pressSaveInside(textarea);
 
-    expect(saveCurrentProject).toHaveBeenCalledTimes(1);
+    expect(saveVersionNow).toHaveBeenCalledTimes(1);
     expect(toast.success).not.toHaveBeenCalled();
   });
 
@@ -46,7 +46,7 @@ describe('Ctrl/⌘+S', () => {
 
     pressSaveInside(textarea);
 
-    expect(saveCurrentProject).not.toHaveBeenCalled();
+    expect(saveVersionNow).not.toHaveBeenCalled();
     expect(toast.warning).toHaveBeenCalledWith('header.projectSaveDeferred');
   });
 
@@ -56,7 +56,7 @@ describe('Ctrl/⌘+S', () => {
 
     pressSaveInside(textarea);
 
-    expect(saveCurrentProject).not.toHaveBeenCalled();
+    expect(saveVersionNow).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
   });
 });
