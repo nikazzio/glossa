@@ -57,11 +57,23 @@ editor opens; a translation is not yet linked to the work or transcription it
 starts from, so there are no commands to open them, no library or century
 filters and no archiving.
 
-Autosave operates on projects that have already been created. It detects changes
-and saves them after a short idle interval; while processing is active, it waits
-for a stable state. The status bar distinguishes unsaved changes, saving,
-successful saves and errors. `Ctrl + S` requests a manual save, subject to the
-conditions described under [keyboard shortcuts](./keyboard-shortcuts).
+A translation saves itself shortly after the last edit, always as a whole:
+source text and every segment. During automatic translation saving waits for
+the end, because the pipeline saves by itself. The status bar, bottom right,
+distinguishes unsaved changes, saving, saved and error; its tooltip gives the
+time of the last save and, after an error, the reason.
+
+To save right away there is the disk at the top of the translation page (on
+the source page when only the source is open), or `Ctrl + S`, which also works
+while typing on the pages. The disk is off when there is nothing to save and
+during automatic translation; if a save fails it turns red and clicking it
+retries.
+
+Leaving the translation — back to the catalogue, main bar, path at the top,
+switching workspace — saves before closing. If that save fails, the
+translation stays open with the error in view: no edit is lost by leaving. One
+limit remains: closing the Glossa window an instant after the last edit can
+lose it.
 
 ## Areas and their ink
 

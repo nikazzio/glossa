@@ -21,7 +21,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
   const [saving, setSaving] = useState(false);
 
   const createAndActivate = useWorkspaceStore((s) => s.createAndActivate);
-  const closeProject = useProjectStore((s) => s.closeProject);
+  const leaveProject = useProjectStore((s) => s.leaveProject);
   const loadProjects = useProjectStore((s) => s.loadProjects);
 
   const close = () => {
@@ -35,7 +35,7 @@ export function CreateWorkspaceDialog({ open, onClose }: CreateWorkspaceDialogPr
     if (!name.trim()) return;
     setSaving(true);
     try {
-      closeProject();
+      if (!(await leaveProject())) return;
       await createAndActivate({
         name: name.trim(),
         description: description.trim() || undefined,

@@ -31,10 +31,10 @@ assessments; schema compliance concerns the response format.
 3. Edit the text manually or rerun the relevant stage.
 4. Use **Re-evaluate** to update the assessment without translating again.
 5. Record decisions and unresolved questions in **Notes**.
-6. Lock the translation when review is complete.
+6. Mark the translation as verified when review is complete.
 
 An audit finding can be converted into an annotation. Passage lookup uses
-text supplied by the model and may not find the exact location. Locking a
+text supplied by the model and may not find the exact location. Verifying a
 translation is a reviewer decision, separate from the automated rating and
 annotation type.
 

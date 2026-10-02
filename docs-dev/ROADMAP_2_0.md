@@ -140,7 +140,8 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
 
 - Verificare i percorsi già presenti e correggere le regressioni prima di
   aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
-- Rendere visibili log generali, salvataggio e stato dei lavori (#413),
+- Rendere visibili log generali, salvataggio (fatto per traduzioni e
+  trascrizioni, mancano le fonti) e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca
   aggregata (#395) viene dopo la verifica dei singoli provider. I risultati
@@ -232,8 +233,11 @@ workspace e lingue, rinomina | elimina, creazione «da zero» con il file).
 e trascrizione d'origine e, solo allora, i comandi apri l'opera / apri la
 trascrizione, filtri per biblioteca e secolo, raggruppamento per biblioteca;
 Studio di traduzione (#485 N): fatta la disposizione (T1: barra principale
-sempre in vista, riga d'intestazione, una colonna Strumenti a destra); restano
-salvataggio visibile e manuale (T2), verifica con la spunta (T3), storico del
+sempre in vista, riga d'intestazione, una colonna Strumenti a destra) e il
+salvataggio (T2: stato nella barra di stato anche per le trascrizioni,
+dischetto e Ctrl/⌘+S nei fogli, salvataggio prima di uscire) e la verifica (T3: spunta, motivi dei comandi
+spenti; il «da aggiornare» resta solo in memoria per scelta, si perde
+riaprendo); restano storico del
 frammento (T4), pannello modello e istruzioni comune (T5), velo sul frammento
 in traduzione (T6), scheda Memoria (T7) e costi (T8); quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per

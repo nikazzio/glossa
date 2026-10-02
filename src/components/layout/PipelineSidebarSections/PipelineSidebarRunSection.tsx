@@ -63,6 +63,20 @@ export function PipelineSidebarRunSection({
 
   const hasDocument = totalChunks > 0;
   const countEnabled = workMode === 'all' && hasDocument;
+  /** «Comando — motivo» quando è spento, come negli Studi. */
+  const blockedTitle = (command: string, reason: string | null) =>
+    reason ? t('transcription.commandBlocked', { command, reason }) : command;
+  const translateChunkTitle = blockedTitle(
+    t('pipeline.translateChunk'),
+    isProcessing
+      ? t('document.reasonRunning')
+      : !currentChunk
+        ? t('document.reasonNoDocumentToTranslate')
+        : !currentChunk.hasSourceText
+          ? t('document.reasonNoSourceText')
+          : null,
+  );
+  const runTitle = blockedTitle(runActionLabel, hasDocument ? null : t('document.reasonNoDocumentToTranslate'));
 
   if (collapsed) {
     return (
@@ -78,11 +92,11 @@ export function PipelineSidebarRunSection({
             </IconButton>
           )
         ) : workMode === 'chunk' ? (
-          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasSourceText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-9 w-9">
+          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasSourceText} title={translateChunkTitle} tooltipSide="right" className="h-9 w-9">
             <Languages size={14} />
           </IconButton>
         ) : (
-          <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={runActionLabel} tooltipSide="right" className="h-9 w-9">
+          <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={runTitle} tooltipSide="right" className="h-9 w-9">
             <Play size={14} fill="currentColor" />
           </IconButton>
         )}
@@ -99,8 +113,8 @@ export function PipelineSidebarRunSection({
             tone="charcoal"
             onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
             disabled={isProcessing || !currentChunk || !currentChunk.hasSourceText}
-            title={t('pipeline.translateChunk')}
-            ariaLabel={t('pipeline.translateChunk')}
+            title={translateChunkTitle}
+            ariaLabel={translateChunkTitle}
             tooltipSide="bottom"
             className="h-14 w-14"
           >
@@ -137,8 +151,8 @@ export function PipelineSidebarRunSection({
             tone="charcoal"
             onClick={onRunPipeline}
             disabled={!hasDocument}
-            title={runActionLabel}
-            ariaLabel={runActionLabel}
+            title={runTitle}
+            ariaLabel={runTitle}
             tooltipSide="bottom"
             className="h-14 w-14"
           >

@@ -45,7 +45,7 @@ frammenti; il numero impostato limita il gruppo da elaborare.
 L’elaborazione procede per frammenti e ne aggiorna lo stato. L’annullamento
 interrompe il lavoro corrente senza eliminare i risultati già completati.
 La ripresa e la rielaborazione hanno scopi diversi: la prima completa il lavoro
-restante, la seconda ricalcola i frammenti non bloccati selezionati dall’azione.
+restante, la seconda ricalcola i frammenti non verificati selezionati dall’azione.
 
 ## Lettura e revisione
 
@@ -95,10 +95,24 @@ colonna lascia in vista il solo pulsante traduci, o lo stop durante
 l’esecuzione.
 
 I risultati intermedi delle fasi permettono di individuare dove è stata
-introdotta una modifica. Dopo una correzione manuale, **Rivaluta** esegue il
-solo controllo qualità. **Blocca traduzione** protegge un risultato approvato
-dalla rielaborazione. Se cambia il testo sorgente, l’interfaccia segnala che
-la traduzione richiede un aggiornamento.
+introdotta una modifica. I comandi stanno in colonna nel margine destro del
+foglio della traduzione, accanto alla barra di scorrimento: in alto le fasi
+nell’ordine della pipeline, poi il confronto e le coppie da confrontare; quella
+che stai guardando è evidenziata. Dopo una correzione manuale, **Rivaluta** esegue il
+solo controllo qualità. Se correggi l’originale con la matita, accanto al titolo della traduzione
+compare l’etichetta ocra **Sorgente modificata** e il pallino del frammento ha
+un segno ocra: la traduzione va aggiornata.
+
+La spunta accanto al titolo **Traduzione candidata** segna la traduzione come
+verificata: diventa verde, il testo si blocca e la rielaborazione dei soli
+frammenti non verificati la salta. Verificare toglie anche il «da aggiornare»,
+perché vuol dire averla controllata sull’originale di adesso; lo stesso comando
+la riporta in bozza. La spunta è spenta mentre il frammento è in traduzione o
+quando non c’è ancora una traduzione. Ogni comando spento dice il motivo nel
+suggerimento.
+
+Limite attuale: il «da aggiornare» non si conserva chiudendo la traduzione;
+riaprendola, il segno non c’è più.
 
 ## Anteprima delle richieste
 

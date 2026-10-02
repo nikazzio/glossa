@@ -3,6 +3,7 @@ import { useProjectStore } from '../stores/projectStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 import { useChunksStore } from '../stores/chunksStore';
+import { useTranscriptionStore, type TextSaveStatus } from '../stores/transcriptionStore';
 
 /**
  * Quello che la barra di stato mostra, ricavato dagli store.
@@ -25,11 +26,14 @@ export type StatusBarContext =
       projectName: string;
       saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
       lastSavedAt: number | null;
+      lastSaveError: string | null;
       totalChunks: number;
     }
   | {
       kind: 'transcription';
       documentId: string;
+      /** `null` finché lo Studio non ha caricato il testo. */
+      textSave: TextSaveStatus | null;
     };
 
 export function useStatusBarData(): StatusBarContext {
@@ -39,13 +43,15 @@ export function useStatusBarData(): StatusBarContext {
   const projects = useProjectStore((s) => s.projects);
   const saveState = useProjectStore((s) => s.saveState);
   const lastSavedAt = useProjectStore((s) => s.lastSavedAt);
+  const lastSaveError = useProjectStore((s) => s.lastSaveError);
+  const textSave = useTranscriptionStore((s) => s.textSave);
   const totalChunks = useChunksStore((s) => s.chunks.length);
 
   return useMemo<StatusBarContext>(() => {
     if (!activeWorkspace) return { kind: 'idle' };
 
     if (location.area === 'transcriptions' && location.documentId) {
-      return { kind: 'transcription', documentId: location.documentId };
+      return { kind: 'transcription', documentId: location.documentId, textSave };
     }
 
     if (!currentProjectId) {
@@ -62,6 +68,7 @@ export function useStatusBarData(): StatusBarContext {
       projectName: projects.find((p) => p.id === currentProjectId)?.name ?? '',
       saveState,
       lastSavedAt,
+      lastSaveError,
       totalChunks,
     };
   }, [
@@ -71,6 +78,8 @@ export function useStatusBarData(): StatusBarContext {
     projects,
     saveState,
     lastSavedAt,
+    lastSaveError,
+    textSave,
     totalChunks,
   ]);
 }

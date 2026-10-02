@@ -755,7 +755,7 @@
     "phraseMemoryMaxResults": "Risultati massimi",
     "phraseMemoryManualRefreshHint": "L'aggiornamento manuale resta disponibile nel pannello Memoria del frammento.",
     "fewShotTab": "Esempi di traduzione",
-    "fewShotEmptyHint": "Aggiungi esempi da un chunk bloccato nell'editor documento (Revisione → Audit).",
+    "fewShotEmptyHint": "Aggiungi esempi da un frammento verificato nell'editor documento (Revisione → Audit).",
     "fewShotSourceLabel": "Testo sorgente",
     "fewShotTargetLabel": "Traduzione",
     "fewShotLabelPlaceholder": "Nota (facoltativa)",
@@ -986,7 +986,7 @@
     "issueTypeGlossary": "Glossario",
     "lockedRequired": "Valida tutti i blocchi prima di eseguire l'audit di coerenza",
     "translationsRequired": "Completa una traduzione per tutti i blocchi prima di eseguire l'audit di coerenza",
-    "unlockedWarning": "{{count}} blocco/i non sono ancora validati: l'audit puo comunque partire, ma il risultato potrebbe essere meno affidabile."
+    "unlockedWarning": "{{count}} frammento/i non sono ancora verificati: l'audit può comunque partire, ma il risultato potrebbe essere meno affidabile."
   },
   "language": {
     "label": "Lingua",
@@ -1132,9 +1132,6 @@
     "viewerOpenFailed": "Questa copia non si apre. Torna all'altra con i comandi qui sopra.",
     "paneLabel": "Testo",
     "pageTitle": "Pagina {{n}}",
-    "saveSaved": "Salvato",
-    "savePending": "Da salvare",
-    "saveSaving": "Salvataggio",
     "saveError": "Salvataggio fallito",
     "saveRetry": "Riprova",
     "saveNow": "Salva ora una versione nello storico (Ctrl+S)",
@@ -2169,11 +2166,9 @@
     "stageTrace": "Traccia delle fasi",
     "noStageTrace": "Nessun output disponibile per questa fase.",
     "viewStageResult": "Visualizza output: {{stage}}",
-    "lockTranslation": "Blocca traduzione candidata",
-    "unlockTranslation": "Sblocca traduzione candidata",
-    "translationLockedTitle": "Traduzione validata e bloccata",
-    "translationLockedBody": "Questa traduzione e protetta da modifiche accidentali. Puoi sbloccarla dal pulsante con spunta verde nella barra del chunk.",
-    "translationLockedBadge": "Validata",
+    "lockTranslation": "Segna come verificata",
+    "unlockTranslation": "Riporta in bozza",
+    "translationLockedBadge": "Verificata",
     "currentChunkBadge": "Chunk corrente",
     "translationStaleBadge": "Sorgente modificata",
     "configDrawerHint": "Lingua, modelli, fasi di traduzione e glossario del progetto corrente.",
@@ -2187,6 +2182,18 @@
     "searchInTranslation": "Cerca nella candidata",
     "clearPaneSearch": "Cancella ricerca",
     "searchInPane": "Cerca nel testo",
+    "saveNow": "Salva ora",
+    "reasonRunning": "traduzione in corso",
+    "reasonChunkProcessing": "frammento in traduzione",
+    "reasonNoTranslation": "nessuna traduzione da verificare",
+    "reasonHasDocument": "la traduzione ha già un documento",
+    "reasonNoDocument": "nessun documento da esportare",
+    "reasonStageNotRun": "fase non ancora eseguita",
+    "reasonDiffOn": "spegni il confronto per vedere una fase",
+    "reasonDiffOff": "accendi il confronto",
+    "reasonNoStageRun": "nessuna fase eseguita",
+    "reasonNoSourceText": "frammento senza testo",
+    "reasonNoDocumentToTranslate": "nessun documento da tradurre",
     "searchInDocument": "Cerca nel documento",
     "searchEmptyTitle": "Ricerca nel documento",
     "searchEmptyBody": "Digita una parola o frase per cercare in tutti i chunk, sia nel testo originale che nella traduzione e nell'audit.",
@@ -2254,7 +2261,6 @@
     "summaryMiss": "fuori cache",
     "translationCacheLabel": "Cache traduzione",
     "auditCacheLabel": "Cache audit",
-    "sourceLockedTitle": "Sorgente non modificabile",
     "sourceLockedBody": "Questo testo resta non modificabile. Usa il pulsante matita qui sopra per abilitare la modifica.",
     "enableSourceEditing": "Modifica sorgente",
     "disableSourceEditing": "Blocca sorgente",
@@ -2346,8 +2352,8 @@
           {
             "title": "Scrivere e salvare",
             "paragraphs": [
-              "Il testo si salva dopo 30 secondi senza modifiche. L'indicatore distingue il testo ancora da salvare dal salvataggio in corso, riuscito o fallito. Per salvare subito una versione nello storico usa il comando con il dischetto accanto all'indicatore, oppure Ctrl + S anche mentre scrivi; il comando resta spento quando non c'è niente di nuovo da salvare. Cambiando pagina o uscendo normalmente dallo Studio, il testo si salva subito; una chiusura forzata prima del salvataggio può perdere le ultime modifiche.",
-              "Quando il testo è pronto, segnalo come verificato con la spunta accanto al titolo della pagina: il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando. Se la spunta è spenta, passandoci sopra leggi il motivo: pagina vuota, in caricamento o in lettura. Se un salvataggio non riesce, lo stesso comando con il dischetto lo riprova."
+              "Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in basso a destra, nella barra di stato, distingue il testo ancora da salvare dal salvataggio in corso, riuscito o fallito; passandoci sopra leggi l'ora dell'ultimo salvataggio. Per salvare subito una versione nello storico usa il dischetto in cima al foglio, oppure Ctrl + S anche mentre scrivi; il comando resta spento quando non c'è niente di nuovo da salvare. Cambiando pagina o uscendo normalmente dallo Studio, il testo si salva subito; una chiusura forzata prima del salvataggio può perdere le ultime modifiche.",
+              "Quando il testo è pronto, segnalo come verificato con la spunta accanto al titolo della pagina: il testo si blocca, per non sovrascrivere per sbaglio una trascrizione già controllata. Torna in bozza in qualsiasi momento con lo stesso comando. Se la spunta è spenta, passandoci sopra leggi il motivo: pagina vuota, in caricamento o in lettura. Se un salvataggio non riesce, il dischetto diventa rosso e lo riprova."
             ]
           },
           {
@@ -2416,7 +2422,7 @@
             "paragraphs": [
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
-              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non bloccati può sostituirne il risultato."
+              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato."
             ]
           },
           {
@@ -2452,7 +2458,8 @@
             "title": "Modificare e formattare",
             "paragraphs": [
               "Il menu dell’editor raccoglie modalità di scrittura, anteprima e vista affiancata, dimensione del testo, copia e strumenti Markdown. Usa i comandi per grassetto, corsivo, titoli, elenchi e note.",
-              "Puoi ispezionare gli output delle fasi e confrontarli per capire dove è cambiato il testo. Abilita la modifica dell’originale solo quando devi correggere il sorgente: la traduzione viene segnalata come da aggiornare.",
+              "Puoi ispezionare gli output delle fasi e confrontarli per capire dove è cambiato il testo: i comandi stanno in colonna nel margine destro del foglio della traduzione, accanto alla barra di scorrimento. In alto le fasi nell'ordine della pipeline, poi il confronto e le coppie da confrontare; quella che stai guardando è evidenziata. Abilita la modifica dell’originale con la matita solo quando devi correggere il sorgente: la traduzione viene segnalata come da aggiornare, con l’etichetta ocra «Sorgente modificata» accanto al titolo.",
+              "Quando la traduzione è pronta, segnala come verificata con la spunta accanto al titolo «Traduzione candidata»: diventa verde, il testo si blocca e la traduzione automatica dei soli frammenti non verificati la salta. Segnarla come verificata toglie anche il «da aggiornare»: vuol dire che l’hai controllata sull’originale di adesso. Riporta in bozza con lo stesso comando. Se un comando è spento, passandoci sopra leggi il motivo.",
               "Impostazioni → Tipografia regola caratteri, dimensioni, interlinea e aspetto. Le impostazioni delle traduzioni comprendono layout ed evidenziazioni."
             ]
           },
@@ -2460,7 +2467,7 @@
             "title": "Leggere gli indicatori",
             "paragraphs": [
               "Sopra il documento una finestra di sette cerchi: il frammento aperto sta fermo al centro. Le frecce singole passano al frammento vicino, le doppie saltano di sette; la rotella sopra i cerchi li scorre, un clic ne apre uno. A destra le spie delle fasi del frammento aperto e la lente per cercare in tutto il documento. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
-              "Gli indicatori agli angoli segnalano problemi dell’audit, note, blocco della traduzione e modifiche al sorgente. Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
+              "Gli indicatori agli angoli segnalano problemi dell’audit, note, traduzione verificata (verde) e originale modificato dopo la traduzione (ocra). Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
               "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria, Anteprima e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti."
             ]
           },
@@ -2520,7 +2527,7 @@
             "title": "Salvare nuove frasi",
             "paragraphs": [],
             "steps": [
-              "Rivedi e blocca la traduzione del frammento.",
+              "Rivedi la traduzione del frammento e segnala come verificata.",
               "Apri Memoria → Estrai frasi. Le frasi già salvate compaiono selezionate.",
               "Premi Estrai frasi per ottenere proposte, oppure inserisci una coppia manualmente.",
               "Correggi i testi e seleziona le coppie da conservare.",
@@ -2531,7 +2538,7 @@
             "title": "Usare un esempio di stile",
             "paragraphs": [
               "Un esempio di stile comprende un intero frammento e la sua traduzione. Serve a orientare la pipeline, mentre la memoria recupera singole coppie pertinenti.",
-              "Dopo aver bloccato un frammento, apri Audit e usa il comando per aggiungerlo come esempio. Nelle impostazioni della pipeline puoi rivederlo o rimuoverlo. Puoi conservarne fino a cinque."
+              "Dopo aver segnato un frammento come verificato, apri Audit e usa il comando per aggiungerlo come esempio. Nelle impostazioni della pipeline puoi rivederlo o rimuoverlo. Puoi conservarne fino a cinque."
             ]
           }
         ]
@@ -2548,7 +2555,7 @@
               "Verifica ogni segnalazione sul testo. Il collegamento al passaggio può non individuare la frase esatta.",
               "Correggi la traduzione oppure riesegui la fase che richiede una revisione.",
               "Usa Rivaluta per aggiornare il giudizio senza eseguire tutta la traduzione.",
-              "Blocca la traduzione quando la consideri approvata."
+              "Segna la traduzione come verificata quando la consideri approvata."
             ]
           },
           {
@@ -2569,7 +2576,7 @@
             "paragraphs": [
               "Seleziona un passaggio della traduzione e scegli Aggiungi annotazione dal menu contestuale. Puoi anche inserire una nota senza selezione nella scheda Note del frammento.",
               "Le segnalazioni dell’audit possono essere convertite in annotazioni. Scegli Commento, Dubbio, Problema o Approvato secondo lo scopo della nota.",
-              "Approvato è un tipo di nota: non blocca la traduzione. Usa il comando di blocco quando vuoi proteggerla dalla rielaborazione."
+              "Approvato è un tipo di nota: non verifica la traduzione. Usa la spunta accanto al titolo del foglio quando vuoi proteggerla dalla rielaborazione."
             ]
           },
           {
@@ -2664,13 +2671,13 @@
       },
       "shortcuts": {
         "title": "Scorciatoie e comandi",
-        "intro": "Su macOS usa Cmd al posto di Ctrl. Le scorciatoie globali, tranne Ctrl + Invio, non intervengono mentre scrivi in un campo modificabile.",
+        "intro": "Su macOS usa Cmd al posto di Ctrl. Le scorciatoie globali, tranne Ctrl + Invio e Ctrl + S negli Studi, non intervengono mentre scrivi in un campo modificabile.",
         "blocks": [
           {
             "title": "Traduzione e progetto",
             "paragraphs": [
               "Ctrl + Invio avvia l’azione di traduzione selezionata, anche da un campo di testo. In modalità frammento deve essere selezionato un frammento.",
-              "Ctrl + S salva il progetto esistente e le risorse linguistiche modificate. Il salvataggio del progetto attende se è in corso un’elaborazione.",
+              "Ctrl + S salva la traduzione aperta e le risorse linguistiche modificate, anche mentre scrivi nei fogli. Durante la traduzione automatica il salvataggio della traduzione viene rimandato.",
               "Nello Studio di trascrizione Ctrl + S salva subito una versione della pagina nello storico, anche mentre scrivi nel foglio.",
               "Ctrl + E apre l’esportazione quando il documento contiene frammenti. Ctrl + virgola apre la configurazione della pipeline."
             ]
@@ -2783,8 +2790,9 @@
           {
             "title": "Salvare il lavoro",
             "paragraphs": [
-              "I progetti già creati vengono salvati automaticamente dopo le modifiche, quando l’elaborazione consente il salvataggio. Controlla lo stato nella barra inferiore: un errore di salvataggio richiede attenzione.",
-              "Puoi richiedere un salvataggio con Ctrl + S, fuori dai campi di testo. Su macOS usa Cmd. Durante l’elaborazione, il salvataggio del progetto viene rimandato."
+              "La traduzione si salva da sola poco dopo l’ultima modifica, intera: testo di partenza e tutti i frammenti. Lo stato si legge in basso a destra nella barra di stato: salvato, modifiche non salvate, salvataggio in corso o errore; passandoci sopra leggi l’ora dell’ultimo salvataggio e, dopo un errore, il motivo.",
+              "Per salvare subito usa il dischetto in cima al foglio della traduzione (su quello dell’originale quando è aperto solo l’originale), oppure Ctrl + S anche mentre scrivi nei fogli; su macOS usa Cmd. Il dischetto resta spento quando non c’è niente da salvare e mentre la traduzione automatica lavora, perché la pipeline salva da sé alla fine. Se un salvataggio fallisce, il dischetto diventa rosso e lo riprova.",
+              "Tornando al catalogo, o passando altrove dalla barra principale o dal percorso in alto, la traduzione si salva prima di chiudersi. Se quel salvataggio fallisce resti nella traduzione, con l’errore in vista, invece di perdere l’ultima modifica."
             ]
           },
           {
@@ -3240,7 +3248,7 @@
     "matchBadge": "{{count}} match",
     "similarityThreshold": "Soglia di similarità",
     "extractButton": "Estrai frasi",
-    "extractDisabledLockHint": "Blocca la traduzione di questo frammento per estrarre le frasi.",
+    "extractDisabledLockHint": "Segna come verificata la traduzione di questo frammento per estrarre le frasi.",
     "extracting": "Estrazione delle frasi in corso…",
     "extractFailed": "Estrazione delle frasi non riuscita",
     "extractFailedQuota": "Credito API esaurito: controlla piano e fatturazione del provider, poi riprova.",
@@ -3248,7 +3256,7 @@
     "extractFailedConfig": "Chiave API non configurata o non valida: controlla le Impostazioni.",
     "extractFailedNetwork": "Connessione assente o instabile: controlla la rete e riprova.",
     "addFewShotButton": "Usa come esempio di stile",
-    "addFewShotDisabledLockHint": "Blocca la traduzione di questo frammento per usarlo come esempio di stile.",
+    "addFewShotDisabledLockHint": "Segna come verificata la traduzione di questo frammento per usarlo come esempio di stile.",
     "addFewShotSuccess": "Esempio aggiunto alla pipeline",
     "addFewShotAlreadyAdded": "Questo frammento è già un esempio della pipeline",
     "addFewShotCapReached": "Hai raggiunto il numero massimo di esempi: rimuovine uno dalle Impostazioni della pipeline",

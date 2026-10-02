@@ -44,7 +44,7 @@ count limits the group to process.
 Processing advances through the segments and updates their states. Cancelling
 stops the current work without removing completed results. Resuming and rerunning
 serve different purposes: resuming processes outstanding work, while rerunning
-recalculates the unlocked segments covered by the selected action.
+recalculates the unverified segments covered by the selected action.
 
 ## Reading and review
 
@@ -90,9 +90,23 @@ tooltip. Collapsed to icons, the column
 keeps only the translate button visible, or stop while running.
 
 Intermediate stage outputs help identify where a change was introduced.
+Their controls sit in a column in the right margin of the translation page,
+next to the scrollbar: at the top the stages in pipeline order, then
+comparison and the pairs to compare; the one you are viewing is highlighted.
 After a manual edit, **Re-evaluate** runs the quality assessment alone.
-**Lock translation** protects an approved result from reprocessing. If the
-source text changes, the interface flags the translation for updating.
+If you correct the source with the pencil, the ochre **Source changed** label
+appears next to the translation title and the segment’s circle gets an ochre
+mark: the translation needs updating.
+
+The check next to the **Candidate translation** title marks the translation as
+verified: it turns green, the text locks and rerunning unverified segments
+skips it. Verifying also clears “needs updating”, because it means you checked
+it against the current source; the same control returns it to draft. The check
+is off while the segment is being translated or when there is no translation
+yet. Every disabled control gives its reason in the tooltip.
+
+Current limit: “needs updating” is not kept when the translation is closed;
+reopening it, the mark is gone.
 
 ## Request previews
 

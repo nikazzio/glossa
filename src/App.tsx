@@ -209,12 +209,11 @@ function EditorView() {
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const closeProject = useProjectStore((state) => state.closeProject);
+  const leaveProject = useProjectStore((state) => state.leaveProject);
   const navigate = useUiStore((state) => state.navigate);
-  const leaveTranslation = useCallback(() => {
-    closeProject();
-    navigate({ area: 'translations' });
-  }, [closeProject, navigate]);
+  const leaveTranslation = useCallback(async () => {
+    if (await leaveProject()) navigate({ area: 'translations' });
+  }, [leaveProject, navigate]);
   const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}`;
 
   /** Apre l'anteprima dell'import con un file già letto: dal comando

@@ -60,7 +60,7 @@ resolved with that service before the sequence can complete.
 
 ## Examples and context
 
-A pipeline can hold up to five translation examples, added from a locked
+A pipeline can hold up to five translation examples, added from a verified
 segment’s Audit tab and edited in settings. [Phrase memory](../guides/phrase-memory)
 instead supplies references selected for an individual segment.
 [Prompt caching](../guides/context-and-caching) has provider-specific rules.

@@ -32,11 +32,11 @@ identici né valutazioni corrette; il rispetto dello schema riguarda il formato.
 3. Correggi il testo manualmente o riesegui la fase pertinente.
 4. Usa **Rivaluta** per aggiornare il giudizio senza ritradurre.
 5. Registra le decisioni e i dubbi nelle **Note**.
-6. Blocca la traduzione quando la revisione è conclusa.
+6. Segna la traduzione come verificata quando la revisione è conclusa.
 
 Un problema dell’audit può essere convertito in annotazione. La ricerca del
 passaggio usa il testo fornito dal modello e può non trovare la posizione
-esatta. Il blocco della traduzione è una scelta del revisore, distinta
+esatta. La verifica della traduzione è una scelta del revisore, distinta
 dall’esito automatico e dal tipo di annotazione.
 
 ## Coerenza del documento

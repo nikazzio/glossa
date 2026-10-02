@@ -491,7 +491,12 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 di stato propria.
 
 Il testo si salva dopo 30 secondi senza modifiche, e subito lasciando la pagina.
-Il salvataggio manuale (comando accanto all'indicatore, Ctrl/⌘+S ascoltato sulla
+Lo stato del salvataggio sta nella barra di stato, come per le traduzioni:
+`useSegmentEditor` lo pubblica in `transcriptionStore.textSave` (stato, ora
+dell'ultimo salvataggio riuscito, messaggio d'errore; `null` a Studio chiuso) e
+`AppStatusBar` lo mostra con lo stesso `SaveIndicator` del progetto («da
+salvare» = `dirty`). Il salvataggio manuale (dischetto nella testata del foglio,
+rosso dopo un errore; Ctrl/⌘+S ascoltato sulla
 finestra mentre lo Studio è montato, anche dentro il foglio) passa dalla stessa
 coda di `save` e scrive una revisione senza nome; è spento quando il testo è
 già salvato o il foglio è in sola lettura.
@@ -908,9 +913,45 @@ come area attiva; ogni voce chiude il progetto (`closeProject`) prima di
 `navigate`, e tutte si spengono mentre `chunksStore.isProcessing`: chiudere il
 progetto sotto la pipeline svuoterebbe i frammenti a lavoro in corso. Il
 ritorno al catalogo (`leaveTranslation` in `App`) fa lo stesso e porta a
-`{ area: 'translations' }`. Nota: `closeProject` non salva; un'uscita entro il
-ritardo dell'autosalvataggio perde l'ultima modifica (da chiudere con il
-salvataggio visibile, T2).
+`{ area: 'translations' }`. Ogni uscita (ritorno, voci della barra, percorso
+nell'`Header`, cambio di workspace, creazione di un workspace,
+`openProjectInWorkspace`) passa da `projectStore.leaveProject`: aspetta un
+salvataggio già in volo, confronta l'istantanea corrente con `trackedSnapshot`
+e salva se diverse; se il salvataggio fallisce restituisce `false` e la
+traduzione resta aperta con l'errore. `closeProject` resta la chiusura secca
+(dopo l'eliminazione, o dove non c'è niente da salvare). Limite: la chiusura
+della finestra non salva.
+
+Salvataggio: autosalvataggio dell'intero progetto (`useProjectAutosave`, 1,2 s,
+fermo durante la pipeline). Lo stato lo mostra `SaveIndicator` nella barra di
+stato (suggerimento: ora dell'ultimo salvataggio e, dopo un errore,
+`lastSaveError`; la barra è una regione `aria-live`, quindi si annuncia solo
+l'errore). Il comando è `ProjectSaveButton` nella testata del foglio della
+traduzione, o dell'originale con `paneFocus === 'source'`: spento senza
+modifiche e durante la pipeline (motivo nel suggerimento), `danger` con
+«Riprova» dopo un errore. Ctrl/⌘+S (`useKeyboardShortcuts`) a progetto aperto
+vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
+salva solo le risorse linguistiche, fuori dai campi, come prima.
+
+I comandi delle fasi (una per fase, confronto, coppie del confronto) sono una
+colonna verticale nel margine destro della pagina (`DocumentPage.sideRail`,
+`IconButton` xs con suggerimento a sinistra, ferma mentre il testo scorre): la
+testata non cresce e resta alta come quella dell'originale. Il margine destro è
+più largo su entrambe le pagine (`pr-11`), con o senza colonna.
+
+Verifica: `translationLocked` resta il dato (e `translation_locked` la colonna),
+ma in interfaccia è «verificata» — `CircleCheck` accanto al titolo del foglio
+della traduzione, `success` quando acceso, spento con il motivo a frammento in
+lavorazione o senza testo. Accanto, non al posto, l'etichetta ocra
+«Sorgente modificata» (`translationStale`); il segno del pallino è
+`editorial-warning`. `toggleChunkTranslationLock`, quando verifica, azzera
+`translationStale`. Nessun lucchetto sull'originale: lo stato modificabile lo
+dice la matita. I comandi spenti di fogli, colonna delle fasi, riga in cima,
+riquadro di esecuzione e barra principale (`ShellNavItem.disabledReason`)
+portano il motivo nel formato «Comando — motivo»
+(`transcription.commandBlocked`). **Limite accettato** (Niki, 2 ottobre):
+`translationStale` vive solo in memoria (non è in `translation_chunks`), quindi
+riaprendo il progetto il «da aggiornare» si perde; non si aggiunge una colonna.
 
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
 `RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile

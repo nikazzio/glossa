@@ -61,7 +61,7 @@ DeepL deve essere risolto su quel servizio prima di completare la sequenza.
 ## Esempi e contesto
 
 Puoi mantenere fino a cinque esempi di traduzione nella pipeline, aggiunti
-dalla scheda Audit di un frammento bloccato. Sono modificabili nelle impostazioni.
+dalla scheda Audit di un frammento verificato. Sono modificabili nelle impostazioni.
 La [memoria di frasi](../guides/phrase-memory) fornisce invece riferimenti
 selezionati per il singolo frammento. La [cache dei prompt](../guides/context-and-caching)
 ha regole specifiche per provider.

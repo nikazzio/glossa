@@ -26,7 +26,7 @@ current context.
 
 ## Creating and reviewing phrases
 
-1. Review the translation and lock the segment.
+1. Review the translation and mark it as verified.
 2. Open **Memory** → **Extract phrases**: previously saved pairs are loaded and selected.
 3. Use **Extract phrases** to generate proposals, or add pairs manually.
 4. Edit the text and select the pairs to retain.
@@ -50,7 +50,7 @@ Translation examples are complete source and translation segment pairs used
 to guide a pipeline’s register and style. They are not retrieved according
 to similarity with the current segment.
 
-For a locked segment, **Use as a style example** in the Audit tab adds the
+For a verified segment, **Use as a style example** in the Audit tab adds the
 pair to pipeline settings, where it can be edited or removed. The limit is
 five examples. Since they form part of the static context, their length
 contributes to request size.

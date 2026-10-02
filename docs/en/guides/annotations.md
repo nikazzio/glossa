@@ -17,8 +17,8 @@ note can be edited or removed without rewriting the translation.
 | Problem | An error requiring action |
 | Approved | A note recording the outcome of review |
 
-The Approved type does not replace **Lock translation**. Annotations describe
-review work; locking controls whether a segment can be reprocessed.
+The Approved type does not replace the **Mark as verified** check. Annotations
+describe review work; verification controls whether a segment can be reprocessed.
 
 ## Creating an annotation
 

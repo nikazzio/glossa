@@ -6,6 +6,16 @@ import { useUiStore } from '../../stores/uiStore';
 import { makeTranslationChunk } from '../../test/chunkFactory';
 import { TranslationStudio } from './TranslationStudio';
 
+// I comandi spenti dicono «Comando — motivo»: qui il formato si vede davvero.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { command?: string; reason?: string }) =>
+      key === 'transcription.commandBlocked' && options ? `${options.command} — ${options.reason}` : key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+  initReactI18next: { type: '3rdParty', init: vi.fn() },
+}));
+
 const initialUiState = useUiStore.getState();
 
 function renderStudio(onBack = vi.fn()) {
@@ -47,8 +57,9 @@ describe('TranslationStudio', () => {
 
     expect(screen.getByText('Seneca')).toBeInTheDocument();
     expect(screen.getByText('document-content')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'files.import' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'header.exportLabel' })).toBeInTheDocument();
+    // Il documento c'è già: importa è spento e dice il motivo.
+    expect(screen.getByRole('button', { name: 'files.import — document.reasonHasDocument' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'header.exportLabel' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'pipeline.configurePipeline' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'projects.delete' })).toBeInTheDocument();
   });
@@ -66,7 +77,16 @@ describe('TranslationStudio', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
 
     act(() => useChunksStore.setState({ isProcessing: true }));
-    expect(screen.getByRole('button', { name: 'sidebar.backToTranslations' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'sidebar.backToTranslations — document.reasonRunning' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'projects.delete — document.reasonRunning' })).toBeDisabled();
+  });
+
+  it('offers import on an empty translation and says why export is off', () => {
+    useChunksStore.setState({ chunks: [] });
+    renderStudio();
+
+    expect(screen.getByRole('button', { name: 'files.import' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'header.exportLabel — document.reasonNoDocument' })).toBeDisabled();
   });
 
   it('orders the column tabs: glossary first, then the chunk work, the document last', () => {

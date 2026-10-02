@@ -584,6 +584,29 @@ riapertura.
 Tre zone stabili: contesto a sinistra, stato centrale, comandi globali a
 destra. Un'informazione non cambia posizione passando tra sezioni.
 
+Lo stato del salvataggio di uno Studio (traduzione o trascrizione) vive qui,
+in fondo a destra: pallino e parola, suggerimento con l'ora dell'ultimo
+salvataggio e il motivo dell'errore. Nella testata del foglio resta solo il
+dischetto, spento senza niente da salvare (motivo nel suggerimento se è
+bloccato), `danger` con «Riprova» dopo un errore. La barra è una regione
+`aria-live`: si annuncia solo l'errore, mai «da salvare» o «salvato».
+
+### Verifica di un testo
+
+Verificato = `CircleCheck` in un `IconButton` accanto al titolo del foglio,
+`success` quando acceso, `ariaPressed`; mai un lucchetto. Il lucchetto non
+serve a dire «non modificabile»: lo dice il comando che rende modificabile
+(matita accesa o spenta). Uno stato di cautela («da aggiornare») si affianca
+alla spunta, non la sostituisce, ed è ocra, non oro (oro = lavoro in corso).
+
+### Comandi nel margine della pagina
+
+Due pagine affiancate (originale e traduzione) devono restare in linea: una
+testata non cresce per ospitare comandi in più. I comandi di vista di una
+pagina (fasi, confronto) stanno in colonna nel margine destro della pagina,
+`IconButton` xs con suggerimento a sinistra, fermi mentre il testo scorre; il
+margine è uguale sulle due pagine anche dove la colonna non c'è.
+
 ## Accessibilità
 
 - Focus visibile: `focus-visible:ring-2 focus-visible:ring-editorial-accent`.

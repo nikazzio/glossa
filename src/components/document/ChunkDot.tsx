@@ -81,7 +81,7 @@ export function ChunkDot({ chunk, index, total, isCurrent, hidden, onSelect }: C
       {unresolvedIssueCount > 0 && <span aria-hidden="true" className={`${CORNER_MARK_CLASSNAME} left-1 top-1 bg-editorial-danger`} />}
       {annotationColor && <span aria-hidden="true" className={`${CORNER_MARK_CLASSNAME} right-1 top-1 ${annotationColor}`} />}
       {chunk.translationLocked && <span aria-hidden="true" className={`${CORNER_MARK_CLASSNAME} bottom-1 left-1 bg-editorial-success`} />}
-      {chunk.translationStale && <span aria-hidden="true" className={`${CORNER_MARK_CLASSNAME} bottom-1 right-1 bg-editorial-running`} />}
+      {chunk.translationStale && <span aria-hidden="true" className={`${CORNER_MARK_CLASSNAME} bottom-1 right-1 bg-editorial-warning`} />}
     </button>
   );
 

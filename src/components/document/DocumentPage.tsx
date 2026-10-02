@@ -21,6 +21,10 @@ export interface DocumentPageProps {
   // Pulsante che apre il menu controlli testo, in fila con le azioni pagina.
   textMenuButton?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Colonna di comandi piccoli nel margine destro della pagina, ferma mentre
+   *  il testo scorre: tiene libera la testata, che deve restare alta come
+   *  quella del foglio accanto. */
+  sideRail?: React.ReactNode;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchLabel?: string;
@@ -40,6 +44,7 @@ export function DocumentPage({
   actions,
   textMenuButton,
   footer,
+  sideRail,
   searchValue,
   onSearchChange,
   searchLabel,
@@ -104,8 +109,13 @@ export function DocumentPage({
       </div>
       <div
         ref={scrollRef}
-        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-rule bg-editorial-page px-7 py-4 shadow-page-card ${readOnly ? 'opacity-90' : ''}`}
+        // Margine destro più largo su entrambi i fogli, con o senza colonna:
+        // le due pagine restano larghe uguali.
+        className={`relative flex flex-col flex-1 min-h-0 rounded-2xl border border-rule bg-editorial-page py-4 pl-7 pr-11 shadow-page-card ${readOnly ? 'opacity-90' : ''}`}
       >
+        {sideRail ? (
+          <div className="absolute right-2 top-4 flex flex-col items-center gap-1">{sideRail}</div>
+        ) : null}
         {showSearch && onSearchChange && searchLabel ? (
           <PaneSearch
             value={searchValue ?? ''}

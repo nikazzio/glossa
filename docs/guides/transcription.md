@@ -68,11 +68,11 @@ Biblioteca, non dello Studio.
 
 ## Scrivere e salvare
 
-Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in alto a
-destra distingue il testo ancora da salvare dal salvataggio in corso, riuscito
-o fallito, con un comando per riprovare in caso di errore. Per salvare subito
-una versione nello storico usa il comando con il dischetto accanto
-all'indicatore, oppure **Ctrl + S** anche mentre scrivi nel foglio: il comando
+Il testo si salva dopo 30 secondi senza modifiche. L'indicatore in basso a
+destra, nella barra di stato come per le traduzioni, distingue il testo ancora
+da salvare dal salvataggio in corso, riuscito o fallito; il suggerimento dà
+l'ora dell'ultimo salvataggio. Per salvare subito una versione nello storico
+usa il dischetto in cima al foglio, oppure **Ctrl + S** anche mentre scrivi nel foglio: il comando
 resta spento quando non c'è niente di nuovo da salvare, e la versione nasce
 senza nome — per fissarla con un nome si usa la puntina nello storico.
 Cambiando pagina o
@@ -85,7 +85,7 @@ al titolo della pagina: il testo diventa bloccato, per non sovrascrivere per
 sbaglio una trascrizione già controllata. Puoi tornare in bozza in qualsiasi
 momento con lo stesso comando. Se la spunta è spenta, il suggerimento dice
 perché: pagina vuota, in caricamento o in lettura. Se un salvataggio non
-riesce, lo stesso comando con il dischetto lo riprova.
+riesce, il dischetto diventa rosso e lo riprova.
 
 Mentre il visore sta ancora aprendo la pagina scelta, un velo copre il testo
 e lo storico con una rotellina al centro: scrivere o ripristinare restano

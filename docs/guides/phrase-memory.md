@@ -27,7 +27,7 @@ semantica o l’adeguatezza della resa al contesto corrente.
 
 ## Creazione e revisione delle frasi
 
-1. Rivedi la traduzione e blocca il frammento.
+1. Rivedi la traduzione e segnala come verificata.
 2. Apri **Memoria** → **Estrai frasi**: le coppie già salvate vengono caricate e selezionate.
 3. Usa **Estrai frasi** per ottenere nuove proposte, oppure aggiungi coppie manualmente.
 4. Correggi i testi e seleziona le coppie da conservare.
@@ -52,7 +52,7 @@ Gli esempi di traduzione sono coppie di frammenti completi usate per orientare
 registro e stile della pipeline. Non vengono recuperati in base alla
 somiglianza del frammento corrente.
 
-Da un frammento bloccato, il comando **Usa come esempio di stile** nella scheda
+Da un frammento verificato, il comando **Usa come esempio di stile** nella scheda
 Audit aggiunge la coppia alle impostazioni della pipeline. Qui puoi modificarla
 o rimuoverla. Il limite è cinque esempi; poiché entrano nel contesto statico,
 la loro lunghezza contribuisce alla dimensione delle richieste.

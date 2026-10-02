@@ -58,12 +58,24 @@ che l’editor apre; una traduzione non è ancora legata all’opera o alla
 trascrizione da cui parte, quindi mancano i comandi per aprirle, i filtri per
 biblioteca e secolo e l’archiviazione.
 
-Il salvataggio automatico opera su progetti già creati. Le modifiche vengono
-rilevate e salvate dopo un breve intervallo di inattività; durante l’elaborazione
-il salvataggio automatico attende uno stato stabile. La barra di stato distingue
-modifiche da salvare, salvataggio in corso, completamento ed errore.
-`Ctrl + S` richiede un salvataggio manuale, con i limiti descritti nelle
-[scorciatoie](./keyboard-shortcuts).
+Una traduzione si salva da sola poco dopo l’ultima modifica, sempre per intero:
+testo di partenza e tutti i frammenti. Durante la traduzione automatica il
+salvataggio attende la fine, perché la pipeline salva da sé. La barra di stato,
+in basso a destra, distingue modifiche non salvate, salvataggio in corso,
+salvato ed errore; il suggerimento riporta l’ora dell’ultimo salvataggio e,
+dopo un errore, il motivo.
+
+Per salvare subito c’è il dischetto in cima al foglio della traduzione (su
+quello dell’originale quando è aperto solo l’originale), oppure `Ctrl + S`,
+che funziona anche mentre scrivi nei fogli. Il dischetto è spento quando non
+c’è niente da salvare e durante la traduzione automatica; se un salvataggio
+fallisce diventa rosso e il suo clic riprova.
+
+Uscire dalla traduzione — ritorno al catalogo, barra principale, percorso in
+alto, cambio di workspace — salva prima di chiudere. Se quel salvataggio
+fallisce, la traduzione resta aperta con l’errore in vista: nessuna modifica
+si perde uscendo. Resta un limite: chiudere la finestra di Glossa entro un
+istante dall’ultima modifica può perderla.
 
 ## Aree e loro inchiostro
 

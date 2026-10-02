@@ -46,19 +46,23 @@ function useRailNavigation() {
   const navigate = useUiStore((state) => state.navigate);
   const location = useUiStore((state) => state.location);
   const projectOpen = useProjectStore((s) => s.currentProjectId !== null);
-  const closeProject = useProjectStore((s) => s.closeProject);
+  const leaveProject = useProjectStore((s) => s.leaveProject);
   const isProcessing = useChunksStore((s) => s.isProcessing);
-  const go = (next: AppLocation) => {
-    if (projectOpen) closeProject();
+  // Prima si salva: se il salvataggio fallisce si resta nella traduzione,
+  // con l'errore in vista, invece di perdere l'ultima modifica.
+  const go = async (next: AppLocation) => {
+    if (projectOpen && !(await leaveProject())) return;
     navigate(next);
   };
-  return { location, projectOpen, blocked: projectOpen && isProcessing, go };
+  const { t } = useTranslation();
+  const blocked = projectOpen && isProcessing;
+  return { location, projectOpen, blocked, blockedReason: blocked ? t('document.reasonRunning') : null, go };
 }
 
 /** Dashboard: home dell'applicazione — sopra e fuori dalle aree del workspace. */
 function DashboardItem({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const { location, projectOpen, blocked, go } = useRailNavigation();
+  const { location, projectOpen, blocked, blockedReason, go } = useRailNavigation();
   const active = !projectOpen && location.area === 'dashboard';
 
   return (
@@ -66,9 +70,10 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
       <ShellNavItem
         active={active}
         disabled={blocked}
+        disabledReason={blockedReason}
         collapsed={collapsed}
         labelFont="display"
-        onClick={() => go(dashboardLocation())}
+        onClick={() => void go(dashboardLocation())}
         ariaCurrent={active ? 'page' : undefined}
         icon={
           // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
@@ -103,7 +108,7 @@ const DASHBOARD_VIEWS: { view?: 'search'; labelKey: string; icon: LucideIcon }[]
 
 function DashboardViews({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const { location, projectOpen, blocked, go } = useRailNavigation();
+  const { location, projectOpen, blocked, blockedReason, go } = useRailNavigation();
   const current = location.area === 'dashboard' ? location.view : undefined;
 
   return (
@@ -115,8 +120,9 @@ function DashboardViews({ collapsed }: { collapsed: boolean }) {
             key={labelKey}
             active={active}
             disabled={blocked}
+            disabledReason={blockedReason}
             collapsed={collapsed}
-            onClick={() => go(dashboardLocation(view ? { view } : undefined))}
+            onClick={() => void go(dashboardLocation(view ? { view } : undefined))}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
@@ -145,7 +151,7 @@ function DashboardViews({ collapsed }: { collapsed: boolean }) {
  */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const { location, projectOpen, blocked, go } = useRailNavigation();
+  const { location, projectOpen, blocked, blockedReason, go } = useRailNavigation();
 
   return (
     <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
@@ -156,9 +162,10 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
             key={id}
             active={active}
             disabled={!enabled || blocked}
+            disabledReason={blockedReason}
             collapsed={collapsed}
             labelFont="display"
-            onClick={enabled ? () => go({ area: id }) : undefined}
+            onClick={enabled ? () => void go({ area: id }) : undefined}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
@@ -198,15 +205,15 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const setActive = useWorkspaceStore((s) => s.setActive);
   const loadProjects = useProjectStore((s) => s.loadProjects);
-  const { location, projectOpen, blocked, go } = useRailNavigation();
+  const { location, projectOpen, blocked, blockedReason, go } = useRailNavigation();
 
   const handleOpenWorkspace = async (ws: Workspace) => {
     if (ws.id !== activeWorkspace?.id) {
-      useProjectStore.getState().closeProject();
+      if (!(await useProjectStore.getState().leaveProject())) return;
       await setActive(ws);
       await loadProjects();
     }
-    go(workspaceLocation(ws.id));
+    await go(workspaceLocation(ws.id));
   };
 
   return (
@@ -235,6 +242,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
               key={ws.id}
               active={isCurrentView}
               disabled={blocked}
+              disabledReason={blockedReason}
               collapsed={collapsed}
               labelFont="display"
               onClick={() => void handleOpenWorkspace(ws)}

@@ -11,10 +11,11 @@ import {
   type TranscriptionRevision,
   type TranscriptionSegment,
 } from '../../services/transcriptionService';
+import { useTranscriptionStore, type TextSaveState } from '../../stores/transcriptionStore';
 
 const SAVE_DELAY_MS = 30_000;
 
-export type SaveState = 'saved' | 'pending' | 'saving' | 'error';
+export type SaveState = TextSaveState;
 
 export interface SegmentEditor {
   segment: TranscriptionSegment | null;
@@ -57,6 +58,7 @@ export function useSegmentEditor(documentId: string): SegmentEditor {
   const [loadingSegment, setLoadingSegment] = useState(true);
   const [draft, setDraft] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('saved');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // La pagina mostrata a sinistra: un documento senza visore resta sempre a
   // 0, l'unico blocco di testo che ha senso per lui.
@@ -76,6 +78,22 @@ export function useSegmentEditor(documentId: string): SegmentEditor {
     draftRef.current = draft;
     saveStateRef.current = saveState;
   }, [draft, saveState]);
+  // La barra di stato mostra il salvataggio: passa di qui, e l'ora
+  // dell'ultimo salvataggio riuscito è quella in cui si esce da «Salvataggio».
+  const previousSaveStateRef = useRef(saveState);
+  const lastSavedAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (previousSaveStateRef.current === 'saving' && saveState !== 'saving' && saveState !== 'error') {
+      lastSavedAtRef.current = Date.now();
+    }
+    previousSaveStateRef.current = saveState;
+    useTranscriptionStore.getState().setTextSave({
+      state: saveState,
+      lastSavedAt: lastSavedAtRef.current,
+      error: saveState === 'error' ? saveError : null,
+    });
+  }, [saveState, saveError]);
+  useEffect(() => () => useTranscriptionStore.getState().setTextSave(null), []);
   const attemptRef = useRef<string | null>(null);
   // Un salvataggio in corso quando si cambia pagina non deve scrivere il suo
   // risultato sullo stato della pagina nuova, arrivato nel frattempo.
@@ -133,6 +151,7 @@ export function useSegmentEditor(documentId: string): SegmentEditor {
       const run = saveChainRef.current.then(async () => {
         if (pageIndexRef.current === savingPage) {
           attemptRef.current = text;
+          setSaveError(null);
           setSaveState('saving');
         }
         try {
@@ -156,6 +175,7 @@ export function useSegmentEditor(documentId: string): SegmentEditor {
           }
         } catch (error: unknown) {
           if (pageIndexRef.current === savingPage && attemptRef.current === text) {
+            setSaveError(error instanceof Error ? error.message : String(error));
             setSaveState('error');
           } else {
             toast.error(t('transcription.saveError'), {

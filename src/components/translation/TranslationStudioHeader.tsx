@@ -105,12 +105,17 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
     }
   };
 
+  /** «Comando — motivo» quando è spento, come negli altri Studi. */
+  const blockedTitle = (command: string, reason: string | null) =>
+    reason ? t('transcription.commandBlocked', { command, reason }) : command;
+  const running = isProcessing ? t('document.reasonRunning') : null;
+
   return (
     <PageHeader
       area="translations"
       icon={BookOpenText}
       onBack={onBack}
-      backLabel={t('sidebar.backToTranslations')}
+      backLabel={blockedTitle(t('sidebar.backToTranslations'), running)}
       backDisabled={isProcessing}
       title={<TranslationName />}
       center={
@@ -129,7 +134,7 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
             size="sm"
             onClick={onImportDocument}
             disabled={hasDocument || isProcessing}
-            title={t('files.import')}
+            title={blockedTitle(t('files.import'), hasDocument ? t('document.reasonHasDocument') : running)}
             tooltipSide="bottom"
           >
             <Upload size={14} />
@@ -138,7 +143,7 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
             size="sm"
             onClick={() => setShowExportDialog(true)}
             disabled={!hasDocument}
-            title={t('header.exportLabel')}
+            title={blockedTitle(t('header.exportLabel'), hasDocument ? null : t('document.reasonNoDocument'))}
             tooltipSide="bottom"
           >
             <FileOutput size={14} />
@@ -155,7 +160,7 @@ export function TranslationStudioHeader({ onBack, onImportDocument }: Translatio
             size="sm"
             onClick={() => void removeTranslation()}
             disabled={removing || isProcessing}
-            title={t('projects.delete')}
+            title={blockedTitle(t('projects.delete'), running)}
             tooltipSide="bottom"
           >
             <Trash2 size={14} />

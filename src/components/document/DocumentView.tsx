@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText, GitCompare, Languages, Lock, Pencil, Search, SlidersHorizontal, Wand2 } from 'lucide-react';
+import { AlertTriangle, CircleCheck, FileText, GitCompare, Languages, Pencil, Search, SlidersHorizontal, Wand2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip } from '../ui';
 import { DocumentPage } from './DocumentPage';
+import { ProjectSaveButton } from './ProjectSaveButton';
 import { ChunkStrip } from './ChunkStrip';
 import { SearchTab } from './SearchTab';
 import { StageStatusRow } from './StageStatusRow';
@@ -196,6 +197,9 @@ export function DocumentView({
     currentChunk.status === 'processing' ||
     currentChunk.sourceEditable !== true;
   const sourceEditDisabled = currentChunk.status === 'processing';
+  /** «Comando — motivo» quando è spento, come negli altri Studi. */
+  const blockedTitle = (command: string, reason: string | null) =>
+    reason ? t('transcription.commandBlocked', { command, reason }) : command;
 
   // Pulsante unico che apre il menu controlli testo, in fila con le azioni pagina.
   const renderTextMenuButton = (open: boolean, toggle: () => void) => (
@@ -256,21 +260,22 @@ export function DocumentView({
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
               readOnly={sourceReadOnly}
-              statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
-                <InlineStatusBadge tone="amber" icon={<Lock size={13} />} ariaLabel={t('document.sourceLockedTitle')} />
-              ) : null}
               actions={
                 <div className="flex items-center gap-1">
                   <IconButton
                     size="lg"
                     tone={currentChunk.sourceEditable === true ? 'accent' : 'default'}
                     onClick={() => toggleChunkSourceEditing(currentChunk.id)}
-                    title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
+                    title={blockedTitle(
+                      currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing'),
+                      sourceEditDisabled ? t('document.reasonChunkProcessing') : null,
+                    )}
                     disabled={sourceEditDisabled}
                     ariaPressed={currentChunk.sourceEditable === true}
                   >
                     <Pencil size={14} />
                   </IconButton>
+                  {paneFocus === 'source' && <ProjectSaveButton />}
                 </div>
               }
               searchValue={sourcePaneSearch}
@@ -304,16 +309,24 @@ export function DocumentView({
 
           {paneFocus !== 'source' && (() => {
             const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
-            const lockToggle = (
+            const verifyBlockedReason = currentChunk.status === 'processing'
+              ? t('document.reasonChunkProcessing')
+              : !currentChunk.translationDisplayText.trim()
+                ? t('document.reasonNoTranslation')
+                : null;
+            const verifyToggle = (
               <IconButton
                 size="sm"
-                tone={currentChunk.translationLocked ? 'success' : 'muted'}
-                title={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}
+                tone={currentChunk.translationLocked ? 'success' : 'default'}
+                title={blockedTitle(
+                  currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation'),
+                  verifyBlockedReason,
+                )}
                 onClick={() => handleLockToggle(currentChunk)}
-                disabled={!currentChunk.translationDisplayText.trim()}
+                disabled={verifyBlockedReason !== null}
                 ariaPressed={currentChunk.translationLocked === true}
               >
-                <Lock size={13} />
+                <CircleCheck size={14} />
               </IconButton>
             );
             const hasStageContent = (s: (typeof enabledStages)[number]) =>
@@ -328,10 +341,14 @@ export function DocumentView({
               return (
                 <IconButton
                   key={s.id}
-                  size="lg"
+                  size="xs"
+                  tooltipSide="left"
                   tone={isActive && !showDiffMode ? 'accent' : 'default'}
                   onClick={() => setSelectedStageId(s.id)}
-                  title={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                  title={blockedTitle(
+                    t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) }),
+                    showDiffMode ? t('document.reasonDiffOn') : !hasContent ? t('document.reasonStageNotRun') : null,
+                  )}
                   disabled={!hasContent || showDiffMode}
                   ariaPressed={isActive && !showDiffMode}
                 >
@@ -346,10 +363,11 @@ export function DocumentView({
               return (
                 <IconButton
                   key={pair.key}
-                  size="lg"
+                  size="xs"
+                  tooltipSide="left"
                   tone={isActive ? 'accent' : 'default'}
                   onClick={() => setDiffPairKey(pair.key)}
-                  title={`${pair.fromName} → ${pair.toName}`}
+                  title={blockedTitle(`${pair.fromName} → ${pair.toName}`, showDiffMode ? null : t('document.reasonDiffOff'))}
                   disabled={!showDiffMode}
                   ariaPressed={isActive}
                 >
@@ -357,12 +375,13 @@ export function DocumentView({
                 </IconButton>
               );
             });
-            const stageActions = isEditorialMode ? (
-              <div className="flex items-center gap-1">
+            const stageRail = isEditorialMode ? (
+              <>
                 {stageButtons}
-                <span className="mx-1 h-4 w-px bg-rule" aria-hidden="true" />
+                <span className="my-1 h-px w-4 bg-rule" aria-hidden="true" />
                 <IconButton
-                  size="lg"
+                  size="xs"
+                  tooltipSide="left"
                   tone={showDiffMode ? 'accent' : 'default'}
                   onClick={() => {
                     // Il confronto richiede la sola traduzione (spazio pieno): se siamo su
@@ -374,14 +393,17 @@ export function DocumentView({
                     }
                     setShowDiffMode(!showDiffMode);
                   }}
-                  title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
+                  title={blockedTitle(
+                    showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable'),
+                    hasAnyStageContent ? null : t('document.reasonNoStageRun'),
+                  )}
                   disabled={!hasAnyStageContent}
                   ariaPressed={showDiffMode}
                 >
                   <GitCompare size={14} />
                 </IconButton>
                 {diffButtons}
-              </div>
+              </>
             ) : null;
 
             return (
@@ -393,11 +415,17 @@ export function DocumentView({
                     ? `${activeDiffPair.fromName} → ${activeDiffPair.toName}`
                     : undefined
                 }
-                actions={stageActions}
+                actions={<ProjectSaveButton />}
+                sideRail={stageRail}
                 textMenuButton={!showDiffMode ? renderTextMenuButton(translationMenuOpen, () => setTranslationMenuOpen((open) => !open)) : null}
-                statusBadge={currentChunk.translationStale ? (
-                  <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
-                ) : lockToggle}
+                statusBadge={
+                  <span className="flex items-center gap-2">
+                    {verifyToggle}
+                    {currentChunk.translationStale && (
+                      <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
+                    )}
+                  </span>
+                }
                 searchValue={translationPaneSearch}
                 onSearchChange={setTranslationPaneSearch}
                 searchLabel={t('document.searchInTranslation')}

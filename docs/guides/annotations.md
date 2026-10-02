@@ -17,8 +17,8 @@ così una nota può essere modificata o rimossa senza riscrivere la traduzione.
 | Problema | Errore che richiede un intervento |
 | Approvato | Nota che registra l’esito della revisione |
 
-Il tipo Approvato non sostituisce il comando **Blocca traduzione**. Le
-annotazioni descrivono il lavoro di revisione; il blocco controlla la
+Il tipo Approvato non sostituisce la spunta **Segna come verificata**. Le
+annotazioni descrivono il lavoro di revisione; la verifica controlla la
 possibilità di rielaborare il frammento.
 
 ## Creazione
