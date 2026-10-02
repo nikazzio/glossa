@@ -158,6 +158,8 @@ interattivi.
 - `LinkChip`: etichetta di un legame già stabilito che, cliccata, lo scioglie.
   Il motivo sta nel `Tooltip`, mai nel `title` nativo; il nome leggibile del
   legame resta il nome del comando.
+- `PopoverItem` accetta `description`, una seconda riga a spaziatura fissa
+  (l'inizio di un modello di prompt salvato).
 - Nessuna riga di elenco, etichetta di legame o voce di menu scritta a mano
   nei componenti.
 
@@ -258,7 +260,9 @@ solo**.
 ### ChoiceDots
 
 Scelta esclusiva fra poche opzioni a cerchietti da 24 px con icona o lettera
-(immagine inviata all'OCR, livello di ragionamento): `role="radiogroup"`,
+(immagine inviata all'OCR, livello di ragionamento, modalità della pipeline).
+Un'opzione può essere `disabled` (la modalità DeepL senza chiave): resta
+visibile, il motivo è nell'etichetta, le frecce la saltano; `role="radiogroup"`,
 frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
 accento pieno con `text-on-accent`. L'icona di categoria accanto è muted dentro
 un `Hint`, mai in ocra. Nessun cerchietto scritto a mano.
@@ -311,6 +315,14 @@ testo nel suggerimento e per chi legge con la voce.
 - Conferma e annullamento usano i pulsanti dialog condivisi.
 - Niente overlay, focus trap o gestione Escape implementati localmente.
 - Comandi di conferma testuali sono ammessi solo dentro dialog.
+- Una finestra a linguette (Impostazioni, configurazione della pipeline) mette
+  la fila `TabStrip` nello slot `tabBar`, con il nome della linguetta aperta in
+  `font-display text-sm italic` accanto. Un'azione distruttiva sull'insieme
+  (azzerare le traduzioni) è un `IconButton` danger a sinistra del footer,
+  sempre visibile e spento con il motivo, mai un pulsante a scritta.
+- Contenuto bloccato durante un lavoro: il velo comune `PagePendingOverlay`
+  (`components/common`) con la sua riga di stato; rende inerti i comandi
+  coperti. Nessun velo scritto a mano.
 
 ### Badge numerici
 
@@ -566,12 +578,20 @@ separati da «·» non si leggono.
 ### Pannelli modello + prompt
 
 Ogni pannello che configura una chiamata a un modello (fase di traduzione,
-scheda OCR della trascrizione) ha la stessa forma: una sezione **Modello**
-(bordo sinistro neutro, fornitore + modello + lucchetto su una riga, comandi
-di taratura sotto) e una sezione **Prompt** (bordo sinistro verde, pillola
-«Personalizzato», solo ripristino e modifica fuori dalla modifica). Nessun
-testo di spiegazione fisso: il perché sta nei suggerimenti dei comandi.
-L'editor prompt è uno solo, `AuditPromptEditor`, con `variant="stage"` per
+giudizio, scheda OCR della trascrizione) ha la stessa forma: una `PanelSection`
+con il **Modello** (fornitore + modello + lucchetto su una riga, comandi di
+taratura sotto, opzioni del fornitore come righe con interruttore) e una sezione
+**Prompt** (bordo sinistro verde, pillola «Personalizzato», solo ripristino e
+modifica fuori dalla modifica). Nella configurazione della pipeline la sezione
+Modello è una sola, `ModelSection`, per fasi e giudizio. Nessun testo di
+spiegazione fisso: il perché sta nei suggerimenti dei titoli, delle righe e dei
+comandi, e un comando spento dice il motivo («Modifica prompt — esistono già
+traduzioni», «Rifinisci… — manca la chiave di X»). Le icone di categoria della
+taratura (ragionamento, temperatura) sono muted dentro un `Hint`, mai in ocra.
+L'editor prompt è uno solo, `AuditPromptEditor`: i modelli salvati stanno in
+due `ClickPopover` (`PromptTemplateMenus`), il libro con `CatalogSearchField` e
+`PopoverItem`, il segnalibro con `RenameField`; niente eliminazione lì, si
+elimina nelle risorse linguistiche. `variant="stage"` dà
 questa resa; la variante predefinita resta quella del giudizio traduzione.
 Le scelte di taratura sotto il modello (livello di ragionamento, immagine
 inviata dall'OCR) sono cerchietti da 24 px con icona e suggerimento, preceduti

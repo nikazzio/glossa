@@ -60,7 +60,8 @@ riutilizzabile.
 
 ## Configurazione e verifica
 
-La cache Anthropic è disattivata per impostazione predefinita. Attivala quando
+La cache Anthropic è disattivata per impostazione predefinita; l’interruttore sta
+sotto il modello di ogni fase Anthropic, nella linguetta Fasi. Attivala quando
 prevedi di riutilizzare un prefisso e valuta l’opzione di durata estesa in
 base agli intervalli tra richieste. La scrittura in cache può avere un costo,
 quindi un prefisso mai riutilizzato non produce necessariamente un risparmio.

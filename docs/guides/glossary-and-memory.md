@@ -30,7 +30,8 @@ Assegna il dizionario al progetto con il comando dedicato. La scheda
 **Glossario** della colonna Strumenti mostra l’intero glossario assegnato, con
 il numero dei termini nel titolo; il comando di evidenziazione colora i termini
 nei fogli e, finché è acceso, mostra la legenda dei colori;
-la configurazione della pipeline ne espone il registro terminologico.
+nella linguetta Glossario della configurazione della pipeline si assegna il
+dizionario e se ne modificano i termini, salvandoli con il dischetto.
 
 ## Applicazione alla traduzione
 

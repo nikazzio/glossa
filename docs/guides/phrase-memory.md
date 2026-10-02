@@ -53,7 +53,8 @@ registro e stile della pipeline. Non vengono recuperati in base alla
 somiglianza del frammento corrente.
 
 Da un frammento verificato, il comando **Usa come esempio di stile** nella scheda
-Audit aggiunge la coppia alle impostazioni della pipeline. Qui puoi modificarla
+Audit aggiunge la coppia alla linguetta Memoria della configurazione della
+pipeline. Lì puoi modificarla
 o rimuoverla. Il limite è cinque esempi; poiché entrano nel contesto statico,
 la loro lunghezza contribuisce alla dimensione delle richieste.
 

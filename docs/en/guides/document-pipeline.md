@@ -21,8 +21,9 @@ for formats, size limits and imported footnotes.
 
 ## Configuration
 
-Open pipeline configuration and set the languages, mode, providers, models
-and instructions. Pipeline modes define these sequences:
+Open the pipeline configuration (the gear in the Studio's top row) and set the
+languages, mode, providers, models and instructions: its tabs are described in
+[pipeline configuration](../reference/pipeline-config). Pipeline modes define these sequences:
 
 | Mode | Processing |
 | --- | --- |

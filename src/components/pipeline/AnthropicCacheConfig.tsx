@@ -1,4 +1,3 @@
-import { Database, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AnthropicConfig } from '../../types';
 import { ToggleRow } from '../ui';
@@ -15,32 +14,28 @@ export function AnthropicCacheConfig({ value, onChange, disabled = false }: Anth
   const extendedCacheTtl = value?.extendedCacheTtl ?? false;
 
   return (
-    <div className="space-y-2 border-l-4 border-l-editorial-charcoal/25 border-y border-rule bg-editorial-textbox/18 px-4 py-3">
-      <ToggleRow
-        icon={<Database size={13} className={enableCaching ? 'text-editorial-ink' : 'text-editorial-muted'} />}
-        label={t('pipeline.anthropicCache.toggle')}
-        checked={enableCaching}
-        disabled={disabled}
-        onChange={() => onChange({ ...value, enableCaching: !enableCaching })}
-      />
-      {!enableCaching && (
-        <p className="pl-[21px] text-xs leading-relaxed text-editorial-muted/70">
-          {t('pipeline.anthropicCache.hint')}
-        </p>
-      )}
+    <div className="divide-y divide-rule border-y border-rule">
+      <div className="py-2.5">
+        <ToggleRow
+          icon={null}
+          label={t('pipeline.anthropicCache.toggle')}
+          hint={t('pipeline.anthropicCache.hint')}
+          checked={enableCaching}
+          disabled={disabled}
+          onChange={() => onChange({ ...value, enableCaching: !enableCaching })}
+        />
+      </div>
       {enableCaching && (
-        <>
+        <div className="py-2.5">
           <ToggleRow
-            icon={<Timer size={13} className={extendedCacheTtl ? 'text-editorial-ink' : 'text-editorial-muted'} />}
+            icon={null}
             label={t('pipeline.anthropicCache.extendedTtlToggle')}
+            hint={t('pipeline.anthropicCache.extendedTtlHint')}
             checked={extendedCacheTtl}
             disabled={disabled}
             onChange={() => onChange({ ...value, enableCaching, extendedCacheTtl: !extendedCacheTtl })}
           />
-          <p className="pl-[21px] text-xs leading-relaxed text-editorial-muted/70">
-            {t('pipeline.anthropicCache.extendedTtlHint')}
-          </p>
-        </>
+        </div>
       )}
     </div>
   );

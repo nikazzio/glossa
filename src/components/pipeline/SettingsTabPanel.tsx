@@ -1,15 +1,40 @@
-import { ArrowRightLeft, FileText, Globe, KeyRound, Languages, Layers, Network, ShieldCheck, Wand2 } from 'lucide-react';
+import { ArrowRightLeft, FileText, Globe, Languages, Layers, Network, ShieldCheck, Wand2, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
-import { LANGUAGES } from '../../constants';
-import { IconButton, SectionLabel, Select, Tooltip } from '../ui';
-import { FewShotExamplesConfig } from './FewShotExamplesConfig';
-import { PersonaEditor } from './PersonaEditor';
-import { PhraseMemoryConfig } from './PhraseMemoryConfig';
+import { defaultPersonaText, LANGUAGES } from '../../constants';
+import { ChoiceDots, Hint, IconButton, PanelSection, Select, type ChoiceDotsOption } from '../ui';
+import { AuditPromptEditor } from './AuditPromptEditor';
+
+const MODE_ICON: Record<PipelineMode, LucideIcon> = {
+  standard: Languages,
+  editorial: Layers,
+  'deepl-hybrid': Network,
+};
+
+/** Le fasi che ogni modalità esegue, nell'ordine. */
+const MODE_PHASES: Record<PipelineMode, Array<{ Icon: LucideIcon; labelKey: string }>> = {
+  standard: [
+    { Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
+    { Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+  ],
+  editorial: [
+    { Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
+    { Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
+    { Icon: FileText, labelKey: 'pipeline.stageRole.format' },
+    { Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+  ],
+  'deepl-hybrid': [
+    { Icon: Network, labelKey: 'pipeline.stageRole.deepl-translation' },
+    { Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
+    { Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+  ],
+};
+
+const MODES: PipelineMode[] = ['standard', 'editorial', 'deepl-hybrid'];
 
 interface SettingsTabPanelProps {
   config: PipelineConfig;
@@ -21,21 +46,12 @@ interface SettingsTabPanelProps {
   isRefiningPersona: boolean;
   canRefinePersona: boolean;
   personaRefineLabel: string;
+  personaRefineProvider: string;
   handleRefinePersona: () => void;
   saveTemplate: SaveTemplateFn;
-  deleteTemplate: (id: string) => Promise<void>;
-  keyStatusLoading: boolean;
-  missingRefineProviders: string[];
-  usePhraseMemory: boolean;
-  autoSearchPhraseMemory: boolean;
-  phraseMemoryMaxResults: number;
-  onPhraseMemoryChange: (value: {
-    usePhraseMemory: boolean;
-    autoSearchPhraseMemory: boolean;
-    phraseMemoryMaxResults: number;
-  }) => void;
 }
 
+/** Generale: modalità, coppia di lingue, persona. */
 export function SettingsTabPanel({
   config,
   setConfig,
@@ -46,18 +62,11 @@ export function SettingsTabPanel({
   isRefiningPersona,
   canRefinePersona,
   personaRefineLabel,
+  personaRefineProvider,
   handleRefinePersona,
   saveTemplate,
-  deleteTemplate,
-  keyStatusLoading,
-  missingRefineProviders,
-  usePhraseMemory,
-  autoSearchPhraseMemory,
-  phraseMemoryMaxResults,
-  onPhraseMemoryChange,
 }: SettingsTabPanelProps) {
   const { t } = useTranslation();
-
   const [deeplKeyConfigured, setDeeplKeyConfigured] = useState(false);
   useEffect(() => {
     invoke<boolean>('get_api_key_status', { provider: 'deepl' })
@@ -65,192 +74,122 @@ export function SettingsTabPanel({
       .catch(() => setDeeplKeyConfigured(false));
   }, []);
 
-  return (
-    <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
-      {/* Mode selector */}
-      <div className="space-y-2">
-        <SectionLabel icon={Layers} label={t('pipeline.modeLabel')} />
-        <div role="radiogroup" aria-label={t('pipeline.modeLabel')} className="flex gap-2">
-          {([
-            { mode: 'standard' as PipelineMode, Icon: Languages },
-            { mode: 'editorial' as PipelineMode, Icon: Layers },
-          ]).map(({ mode: m, Icon }) => {
-            const isActive = (config.mode ?? 'standard') === m;
-            return (
-              <IconButton
-                key={m}
-                size="lg"
-                tone={isActive ? 'accent' : 'default'}
-                onClick={() => setMode(m)}
-                disabled={translationsExist || isProcessing}
-                title={t(`pipeline.mode.${m}`)}
-                role="radio"
-                aria-checked={isActive}
-              >
-                <Icon size={16} />
-              </IconButton>
-            );
-          })}
-          {(() => {
-            const isActive = config.mode === 'deepl-hybrid';
-            return (
-              <IconButton
-                size="lg"
-                tone={isActive ? 'accent' : 'default'}
-                onClick={() => deeplKeyConfigured && setMode('deepl-hybrid')}
-                disabled={!deeplKeyConfigured || translationsExist || isProcessing}
-                title={
-                  !deeplKeyConfigured
-                    ? t('pipeline.deepl.keyRequired')
-                    : t('pipeline.mode.deepl-hybrid', 'DeepL Hybrid')
-                }
-                role="radio"
-                aria-checked={isActive}
-                className={!deeplKeyConfigured ? 'opacity-40 cursor-not-allowed' : undefined}
-              >
-                <Network size={16} />
-              </IconButton>
-            );
-          })()}
-        </div>
-        <div className="border-l-4 border-l-editorial-charcoal/30 border-y border-rule bg-editorial-bg/65 px-4 py-4 space-y-2.5">
-          {([
-            {
-              mode: 'standard' as PipelineMode,
-              stages: [
-                { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
-                { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
-              ],
-            },
-            {
-              mode: 'editorial' as PipelineMode,
-              stages: [
-                { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
-                { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
-                { role: 'format', Icon: FileText, labelKey: 'pipeline.stageRole.format' },
-                { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
-              ],
-            },
-            {
-              mode: 'deepl-hybrid' as PipelineMode,
-              stages: [
-                { role: 'deepl', Icon: Network, labelKey: 'pipeline.stageRole.deepl-translation' },
-                { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
-                { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
-              ],
-            },
-          ]).map(({ mode: m, stages }) => {
-            const isActive = (config.mode ?? 'standard') === m;
-            return (
-              <div key={m} className={`flex items-center gap-2.5 transition-opacity ${isActive ? '' : 'opacity-25'}`}>
-                <span className={`shrink-0 w-[68px] text-caption font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
-                  {t(`pipeline.mode.${m}`)}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {stages.map(({ role, Icon, labelKey }, i) => (
-                    <span key={role} className="flex items-center gap-1.5">
-                      {i > 0 && <span className="text-editorial-muted/40 text-xs">›</span>}
-                      <Tooltip label={t(labelKey)}>
-                        <span
-                          aria-label={t(labelKey)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
-                        >
-                          <Icon size={14} strokeWidth={1.9} />
-                        </span>
-                      </Tooltip>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+  const mode = config.mode ?? 'standard';
+  const blocked = (command: string, reason: string) => t('transcription.commandBlocked', { command, reason });
+  const modeOptions: ChoiceDotsOption<PipelineMode>[] = MODES.map((entry) => {
+    const Icon = MODE_ICON[entry];
+    const label = t(`pipeline.mode.${entry}`);
+    const keyMissing = entry === 'deepl-hybrid' && !deeplKeyConfigured;
+    return {
+      value: entry,
+      label: keyMissing ? blocked(label, t('pipeline.deepl.keyRequired')) : label,
+      content: <Icon size={11} />,
+      disabled: keyMissing,
+    };
+  });
+  const modeLockedReason = isProcessing
+    ? t('document.operationsRunning')
+    : translationsExist
+      ? t('pipeline.reasonTranslationsExist')
+      : undefined;
 
-      {/* Language pair */}
-      <div className="space-y-2">
-        <SectionLabel icon={Globe} label={t('pipeline.languagePair')} />
-        <div className={`flex items-center gap-3 transition-opacity ${config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+  // Una persona personalizzata è scritta per una coppia: le lingue restano
+  // ferme finché non la si ripristina.
+  const languagesLocked = Boolean(config.persona);
+  const languageOptions = LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }));
+  const swapLabel = t('pipeline.swapLanguages');
+
+  const defaultPersona = defaultPersonaText(config.sourceLanguage, config.targetLanguage);
+  const handlePersonaChange = (value: string) => {
+    const isDefault = !value.trim() || value.trim() === defaultPersona.trim();
+    setConfig((prev) => ({ ...prev, persona: isDefault ? undefined : value }));
+  };
+
+  return (
+    <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-8">
+      <PanelSection icon={Layers} label={t('pipeline.modeLabel')} hint={modeLockedReason}>
+        <div className="flex items-center gap-4">
+          <ChoiceDots
+            options={modeOptions}
+            value={mode}
+            onChange={setMode}
+            disabled={Boolean(modeLockedReason)}
+            ariaLabel={t('pipeline.modeLabel')}
+          />
+          <span className="h-4 w-px bg-rule" aria-hidden="true" />
+          <span className="flex items-center gap-1.5 text-editorial-muted">
+            {MODE_PHASES[mode].map(({ Icon, labelKey }, index) => (
+              <Fragment key={labelKey}>
+                {index > 0 && <span className="text-xs text-editorial-muted/50" aria-hidden="true">›</span>}
+                <Hint label={t(labelKey)}>
+                  <Icon size={13} aria-hidden="true" />
+                </Hint>
+              </Fragment>
+            ))}
+          </span>
+        </div>
+      </PanelSection>
+
+      <PanelSection
+        icon={Globe}
+        label={t('pipeline.languagePair')}
+        hint={languagesLocked ? t('pipeline.languagePairLockedByPersona') : undefined}
+      >
+        <div className="flex items-center gap-3">
           <Select
             value={config.sourceLanguage}
             onChange={(value) => setConfig((prev) => ({ ...prev, sourceLanguage: value }))}
-            options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
-            className="w-full font-mono appearance-none"
+            options={languageOptions}
+            size="md"
+            className="w-full"
             ariaLabel={t('pipeline.sourceLanguage')}
-            disabled={!!config.persona}
+            disabled={languagesLocked}
           />
           <IconButton
             size="md"
             className="shrink-0"
             onClick={() =>
-              setConfig((prev) => ({
-                ...prev,
-                sourceLanguage: prev.targetLanguage,
-                targetLanguage: prev.sourceLanguage,
-              }))
+              setConfig((prev) => ({ ...prev, sourceLanguage: prev.targetLanguage, targetLanguage: prev.sourceLanguage }))
             }
-            disabled={!!config.persona}
-            title={t('pipeline.swapLanguages')}
+            disabled={languagesLocked}
+            title={languagesLocked ? blocked(swapLabel, t('pipeline.languagePairLockedByPersona')) : swapLabel}
           >
             <ArrowRightLeft size={13} />
           </IconButton>
           <Select
             value={config.targetLanguage}
             onChange={(value) => setConfig((prev) => ({ ...prev, targetLanguage: value }))}
-            options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
-            className="w-full font-mono appearance-none"
+            options={languageOptions}
+            size="md"
+            className="w-full"
             ariaLabel={t('pipeline.targetLanguage')}
-            disabled={!!config.persona}
+            disabled={languagesLocked}
           />
         </div>
-        {!!config.persona && (
-          <p className="text-xs leading-relaxed text-editorial-muted/60">
-            {t('pipeline.languagePairLockedByPersona')}
-          </p>
-        )}
-      </div>
+      </PanelSection>
 
-      <PersonaEditor
-        persona={config.persona}
-        sourceLanguage={config.sourceLanguage}
-        targetLanguage={config.targetLanguage}
+      <AuditPromptEditor
+        variant="stage"
+        label={t('pipeline.personaLabel')}
+        hint=""
+        customLabel={t('pipeline.personaCustomBadge')}
+        value={config.persona ?? defaultPersona}
+        placeholder={defaultPersona}
         templates={personaTemplates}
         isRefining={isRefiningPersona}
         canRefine={canRefinePersona}
         refineLabel={personaRefineLabel}
-        onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+        refineDisabledReason={t('pipeline.reasonMissingKey', { provider: personaRefineProvider })}
         onRefine={handleRefinePersona}
-        onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona', 'translation')}
-        onDeleteTemplate={deleteTemplate}
+        onChange={handlePersonaChange}
+        onApplyTemplate={(template) => handlePersonaChange(template.prompt)}
+        saveTemplate={saveTemplate}
+        defaultValue={defaultPersona}
+        onReset={() => setConfig((prev) => ({ ...prev, persona: undefined }))}
+        templateContext="persona"
+        templateWorkflow="translation"
+        editDisabledReason={isProcessing ? t('document.operationsRunning') : undefined}
       />
-
-      {/* Refine keys status */}
-      <div className="space-y-2">
-        <SectionLabel icon={KeyRound} label={t('pipeline.refineKeyLabel')} />
-        {!keyStatusLoading && (
-          <p className="text-xs leading-relaxed text-editorial-muted">
-            {missingRefineProviders.length > 0
-              ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
-              : t('pipeline.refineKeyReadyHint')}
-          </p>
-        )}
-      </div>
-      {config.mode !== 'deepl-hybrid' && (
-        <PhraseMemoryConfig
-          usePhraseMemory={usePhraseMemory ?? false}
-          autoSearchPhraseMemory={autoSearchPhraseMemory}
-          phraseMemoryMaxResults={phraseMemoryMaxResults}
-          onChange={onPhraseMemoryChange}
-          disabled={isProcessing}
-        />
-      )}
-      {config.mode !== 'deepl-hybrid' && (
-        <FewShotExamplesConfig
-          examples={config.fewShotExamples ?? []}
-          onChange={(fewShotExamples) => setConfig((prev) => ({ ...prev, fewShotExamples }))}
-          disabled={isProcessing}
-        />
-      )}
     </div>
   );
 }

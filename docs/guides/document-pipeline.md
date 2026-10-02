@@ -22,8 +22,9 @@ e revisione. I dettagli su formati, limiti e note importate sono nel
 
 ## Configurazione
 
-Apri la configurazione della pipeline e imposta lingue, modalità, provider,
-modelli e istruzioni. Le modalità definiscono questa sequenza:
+Apri la configurazione della pipeline (l’ingranaggio nella riga in cima allo
+Studio) e imposta lingue, modalità, provider, modelli e istruzioni: le
+linguette sono descritte nella [configurazione della pipeline](../reference/pipeline-config). Le modalità definiscono questa sequenza:
 
 | Modalità | Elaborazione |
 | --- | --- |

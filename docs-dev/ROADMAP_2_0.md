@@ -239,7 +239,9 @@ dischetto e Ctrl/⌘+S nei fogli, salvataggio prima di uscire) e la verifica (T3
 spenti; il «da aggiornare» resta solo in memoria per scelta, si perde
 riaprendo) e lo storico (T4: sottolinguetta in Revisione, versioni dal
 dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
-colonna nuova); restano pannello modello e istruzioni comune (T5), velo sul frammento
+colonna nuova) e la configurazione della pipeline (T5: finestra a sei linguette
+comuni, sezione Modello e editor dei prompt comuni, niente spiegazioni fisse,
+«Azzera tutte le traduzioni» a icona, velo comune); restano velo sul frammento
 in traduzione (T6), scheda Memoria (T7) e costi (T8); quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.

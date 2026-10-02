@@ -42,7 +42,7 @@ export function OcrSettingsSection({
 }: OcrSettingsSectionProps) {
   const { t } = useTranslation();
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
-  const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
+  const { templates, isLoaded, loadTemplates, saveTemplate } = usePromptTemplateStore();
   const { statuses: keyStatuses } = useProviderKeyStatus();
   const [isRefining, setIsRefining] = useState(false);
 
@@ -163,7 +163,6 @@ export function OcrSettingsSection({
         onChange={handlePromptChange}
         onApplyTemplate={handleApplyTemplate}
         saveTemplate={saveTemplate}
-        onDeleteTemplate={deleteTemplate}
         defaultModel={model}
         defaultProvider={provider || undefined}
         defaultValue={DEFAULT_OCR_PROMPT}

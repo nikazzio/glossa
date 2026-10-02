@@ -180,7 +180,6 @@ function EditorView() {
   const { t } = useTranslation();
   const {
     runPipeline,
-    runAuditOnly,
     runSingleChunk,
     auditSingleChunk,
     runCoherenceAudit,
@@ -354,11 +353,7 @@ function EditorView() {
             onReauditChunk={auditSingleChunk}
             onRunCoherenceAudit={runCoherenceAudit}
           >
-            <ConfigDrawer
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
+            <ConfigDrawer />
             <div className="relative flex min-w-0 flex-1">
               <DocumentView
                 onRetranslateChunk={handleRetranslateChunk}

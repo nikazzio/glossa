@@ -969,6 +969,32 @@ Ripristino = `updateChunkDraft` + versione manuale: nessuna riga si modifica o
 si cancella (registro immutabile, voluto). Niente nomi né puntine: servirebbe
 una colonna `consolidated_name`, rimandata.
 
+Configurazione della pipeline (`document/ConfigDrawer`, `Dialog` aperto da ⚙ in
+`PipelineSwitch` o Ctrl/⌘+,): eyebrow «Configura pipeline», titolo = nome della
+pipeline (la rinomina resta in `PipelineSwitch`), `TabStrip` (`idPrefix`
+`pconfig`) nella fila della finestra con il nome della linguetta accanto.
+Linguette (`ConfigSection`): `settings` Generale (`SettingsTabPanel`: modalità
+su `ChoiceDots` con la riga delle fasi della modalità scelta, lingue spente con
+persona personalizzata, persona sull'editor comune), `translation` Fasi
+(`TranslationTabPanel` → `StageCard` per fase + memoria di contesto in fondo),
+`audit` Controllo qualità (`AuditTabPanel`), `memory` Memoria (`MemoryTabPanel`,
+spenta con motivo in modalità DeepL; se era aperta si torna a Generale),
+`glossary` (`GlossaryTabPanel`: assegnazione, termini, dischetto acceso solo con
+modifiche, caricamento DeepL), `preview` (`PromptPreviewTab`, fasi su
+`TabStrip`). `PipelineConfig` monta solo il corpo della linguetta aperta e il
+velo comune `PagePendingOverlay` (`components/common`, lo stesso delle
+Trascrizioni) durante la pipeline, che rende inerti i comandi coperti. Fase e
+giudizio condividono `ModelSection` (fornitore, modello, lucchetto se
+esistono traduzioni, ricarica Ollama, ragionamento e temperatura, opzioni
+Ollama in `ProviderRuntimeEditor`, cache Anthropic); le regole di taratura
+sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt (fasi, persona,
+giudizio, coerenza) usa `AuditPromptEditor` con `editDisabledReason` e
+`refineDisabledReason`. I modelli di prompt salvati si applicano e si salvano da
+`PromptTemplateMenus` (anche nell'OCR); si eliminano solo dalle risorse
+linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hint` di
+`PanelSection`, `SettingRow`, `ToggleRow`. Footer: `IconButton` danger
+«Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
+
 Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
 `RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile
 (`renamePipeline`), ⇄ con `PopoverItem`/`MenuActionRow`, ⚙ della

@@ -246,12 +246,14 @@
     },
     "blobContext": "Memoria di contesto",
     "blobContextExplainer": "Quando il testo viene diviso in più blocchi da tradurre, questa opzione decide quanto del blocco precedente il modello vede, per non perdere il filo tra un blocco e l'altro.",
-    "blobOverrideToggle": "Override manuale",
+    "blobOverrideToggle": "Misura manuale",
     "blobContextAutoDesc": "Automatica — ~{{tokens}} token basati su {{model}}",
-    "blobBudgetTokens": "Budget token",
+    "blobBudgetTokens": "Ampiezza",
+    "unitTokens": "token",
+    "unitChunks": "frammenti",
     "blobContextReset": "Ripristina automatica",
     "blobComputeFailed": "Calcolo della memoria contestuale fallito — la traduzione proseguirà senza contesto cross-chunk",
-    "blobOverlap": "Sovrapposizione (chunk)",
+    "blobOverlap": "Sovrapposizione",
     "blobOverlapHint": "Quanti chunk dalla coda del blocco precedente includere all'inizio del successivo, per non perdere il filo ai confini.",
     "inheritDefault": "Eredita dal progetto",
     "personaActive": "System prompt (persona)",
@@ -261,10 +263,8 @@
     "keywordRegistry": "Registro Termini",
     "source": "Sorgente",
     "target": "Destinazione",
-    "beginPipeline": "Avvia Pipeline",
     "run": "Avvia",
     "audit": "Audit",
-    "executing": "In esecuzione...",
     "stopPipeline": "Richiedi arresto",
     "stopping": "Arresto in corso...",
     "stopRequested": "Arresto richiesto. Glossa completerà il chunk corrente e poi si fermerà.",
@@ -296,8 +296,6 @@
     "copy": "Copia",
     "copied": "Copiato",
     "copyFailed": "Copia non riuscita",
-    "runDisabledNoChunks": "Prepara prima il contenuto da elaborare",
-    "runDisabledProcessing": "Pipeline in esecuzione, attendi…",
     "settingsLockedWhileRunning": "Impostazioni bloccate durante l'esecuzione",
     "words": "Parole",
     "paragraphs": "Paragrafi",
@@ -323,15 +321,12 @@
     "unlockSourceHint": "Modificare il testo sorgente eliminerà la traduzione, i risultati delle fasi e i dati di audit/valutazione di questo blocco.",
     "confirmUnlockTitle": "Modificare il testo sorgente?",
     "confirmUnlockMessage": "La traduzione, i risultati delle fasi e i dati di audit/valutazione di questo blocco verranno eliminati per consentire la modifica. L'azione non è reversibile.",
-    "rerunAll": "Rilancia tutto",
-    "rerunAllHint": "Scarta le {{count}} traduzioni completate e rilancia la pipeline da zero.",
-    "confirmRerunAllTitle": "Rilanciare l'intera pipeline?",
-    "confirmRerunAllMessage": "{{count}} traduzioni completate e i relativi audit verranno scartati prima del riavvio della pipeline. L'azione non è reversibile.",
     "runChunkCount": "Questa esecuzione elaborerà {{count}} blocchi.",
     "testChunkCountHint": "Quanti blocchi pronti deve elaborare il test.",
     "increaseTestChunkCount": "Aumenta il numero di blocchi del test",
     "decreaseTestChunkCount": "Diminuisci il numero di blocchi del test",
-    "resetAll": "Reset completo",
+    "resetAll": "Azzera tutte le traduzioni",
+    "resetAllNothing": "nessuna traduzione da azzerare",
     "confirmResetAllTitle": "Azzerare tutte le traduzioni?",
     "confirmResetAllMessage": "{{count}} traduzioni e i relativi audit verranno eliminati. L'azione non è reversibile.",
     "resetAllDone": "Traduzioni azzerate",
@@ -340,7 +335,6 @@
     "modeProductionShort": "Prod",
     "modeTestHint": "Esegue la pipeline su un numero limitato di blocchi. La configurazione rimane modificabile.",
     "modeProductionHint": "Esegue la pipeline sull'intero documento.",
-    "modeLockedHint": "Modalità bloccata — esistono già traduzioni. Usa Reset completo per ricominciare.",
     "retestChunk": "Riesegui test",
     "singleChunkCompleted": "Blocco ritradotto",
     "singleChunkAudited": "Audit del blocco aggiornato",
@@ -369,13 +363,11 @@
     "judgeRefineLoop": "Affina automaticamente sulla base dei risultati dell'audit",
     "judgeRefineLoopMaxIter": "Iterazioni massime",
     "providerOptions": {
-      "stageTitle": "Runtime stage",
+      "stageTitle": "Opzioni di generazione Ollama",
       "stageHint": "Controlli di generazione specifici del provider per questa fase di traduzione.",
       "temperatureIgnored": "Il giudizio arriva in un formato vincolato: per quello la temperatura resta a zero, qualunque valore tu scriva. Vale solo per il giudice, non per le traduzioni.",
-      "reviewTitle": "Runtime audit",
+      "reviewTitle": "Opzioni di generazione Ollama",
       "reviewHint": "Controlli di generazione condivisi tra giudice e verifica di coerenza.",
-      "enableOverride": "Override config",
-      "enableOverrideHint": "Se disattivato, questo pannello usa i default interni del runtime.",
       "enableAdvanced": "Usa JSON avanzato",
       "enableAdvancedHint": "Usa opzioni raw del provider e lascia che sovrascrivano i controlli tipizzati quando le chiavi coincidono.",
       "temperature": "Temperatura",
@@ -402,15 +394,21 @@
       "extendedTtlToggle": "Estendi a 1 ora",
       "extendedTtlHint": "La cache resta valida un'ora invece di 5 minuti — utile se nella pipeline c'è uno stage lento (es. Ollama) tra un frammento Anthropic e l'altro. Costa il doppio in scrittura invece di 1.25 volte."
     },
-    "tabSettings": "Impostazioni",
+    "tabSettings": "Generale",
     "tabStages": "Traduzione",
-    "tabTranslation": "Traduzione",
-    "modelLockedHint": "Modello bloccato — esistono traduzioni che devono essere preservate. Crea un nuovo progetto per cambiare modello.",
+    "tabTranslation": "Fasi",
+    "tabMemory": "Memoria",
+    "glossarySave": "Salva i termini nel dizionario",
+    "reasonNoChanges": "nessuna modifica da salvare",
+    "memoryUnavailableDeepl": "la modalità DeepL non usa memoria né esempi",
     "modelContextWindowChangedHint": "La context window è cambiata dall'importazione — la dimensione dei chunk potrebbe non essere più ottimale. Considera di re-importare il documento.",
     "stageModelLabel": "Modello",
     "modelDeprecatedHint": "Modello non più tra le scelte consigliate: potrebbe funzionare ancora, ma prezzo e capienza mostrati potrebbero non essere aggiornati.",
-    "unlockModelChange": "Sblocca cambio modello",
-    "unlockModelChangeWarning": "Cambiando modello ora, i chunk già tradotti restano con il modello precedente: possibile incoerenza di stile/qualità tra le parti del documento.",
+    "unlockModelChange": "Sblocca il cambio di modello — i frammenti già tradotti restano col modello precedente",
+    "lockModelChange": "Blocca il modello",
+    "ollamaOfflineReload": "Ollama non raggiungibile — ricarica i modelli",
+    "reasonTranslationsExist": "esistono già traduzioni",
+    "reasonMissingKey": "manca la chiave di {{provider}}",
     "modelReasoning": {
       "reasoning": "Reasoning",
       "non_reasoning": "Diretto",
@@ -429,10 +427,10 @@
       "neutral": "Usabile per {{target}}"
     },
     "tabAudit": "Controllo qualità",
-    "tabGlossary": "Registro Termini",
-    "tabPreview": "Anteprima Prompt",
+    "tabGlossary": "Glossario",
+    "tabPreview": "Anteprima prompt",
     "promptPreviewTitle": "Anteprima Prompt",
-    "promptPreviewHint": "Vista frontend-only della struttura del prompt costruita dalla configurazione corrente. I placeholder mostrano dove vengono inseriti testo del chunk e contesto blob.",
+    "promptPreviewHint": "Com'è costruito il prompt con la configurazione attuale; i segnaposto indicano dove entrano il testo del frammento e il contesto.",
     "promptPreviewEmpty": "Non ci sono ancora fasi di traduzione abilitate.",
     "promptPreviewStatic": "Statico",
     "promptPreviewRuntime": "Runtime",
@@ -493,7 +491,6 @@
     "tabPersona": "Persona",
     "personaLabel": "Persona",
     "personaCustomBadge": "Personalizzata",
-    "personaCustomize": "Personalizza",
     "personaReset": "Ripristina automatica",
     "languagePairLockedByPersona": "La coppia linguistica è bloccata quando è attiva una persona personalizzata — resettala per modificarla",
     "customLanguageToggle": "Usa lingua personalizzata",
@@ -505,7 +502,6 @@
     "noProjectTitle": "Nessun progetto aperto",
     "noProjectHint": "Apri o crea un progetto per configurare fasi, modelli, audit e glossario.",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
-    "glossaryOpenProject": "Apri un progetto e assegna un dizionario dalle Risorse linguistiche per gestire i termini.",
     "glossaryNotes": "Note",
     "templates": {
       "save": "Salva come template",
@@ -516,10 +512,7 @@
       "saved": "Template salvato",
       "deleted": "Template eliminato",
       "saveFailed": "Salvataggio template fallito",
-      "deleteFailed": "Eliminazione template fallita",
-      "loadFailed": "Caricamento template fallito",
-      "deleteConfirmTitle": "Elimina template",
-      "deleteConfirmMessage": "Elimina il template \"{{name}}\"? Questa azione è irreversibile."
+      "loadFailed": "Caricamento template fallito"
     },
     "editPrompt": "Modifica prompt",
     "promptCustomBadge": "Personalizzato",
@@ -529,9 +522,6 @@
     "refining": "Rifinendo...",
     "refined": "Prompt rifinito",
     "refineFailed": "Rifinizione fallita",
-    "refineKeyLabel": "Rifinitura prompt",
-    "refineKeyMissingHint": "La rifinitura dei prompt è disabilitata per i provider remoti senza API key. Configura: {{providers}}. Ollama resta disponibile senza chiave.",
-    "refineKeyReadyHint": "La rifinitura dei prompt è pronta per i provider configurati. Ollama non richiede API key.",
     "contextOverflowWarning": "Il chunk più lungo (~{{tokens}} token) potrebbe superare la finestra di contesto di {{model}} ({{window}} token). Riduci la dimensione dei chunk o usa un modello con contesto più grande.",
     "deleteTitle": "Eliminare \"{{name}}\"?",
     "deleteMessage": "Le traduzioni associate a questa pipeline verranno eliminate definitivamente.",
@@ -557,10 +547,8 @@
     "deepl": {
       "confirmDeleteGlossaryTitle": "Eliminare il glossario DeepL?",
       "confirmDeleteGlossaryMessage": "Il glossario «{{name}}» verrà eliminato definitivamente da DeepL. L'azione non è reversibile.",
-      "optionsTitle": "Opzioni",
       "preserveFormatting": "Mantieni la formattazione",
       "showBilledCharacters": "Mostra i caratteri fatturati",
-      "sectionTranslation": "Traduzione DeepL",
       "modelType": "Modalità di traduzione",
       "preferQuality": "Qualità (consigliata)",
       "qualityOnly": "Solo qualità",
@@ -573,13 +561,13 @@
       "formalityLess": "Informale",
       "glossary": "Glossario DeepL",
       "noGlossary": "Nessun glossario",
+      "glossaryOption": "{{name}} ({{count}} termini)",
       "deleteGlossary": "Elimina il glossario DeepL",
       "context": "Contesto della traduzione",
       "contextPlaceholder": "Testo facoltativo che aiuta DeepL a capire di che cosa parla il documento",
       "glossaryUploaded": "Glossario caricato su DeepL",
       "glossaryUploadFailed": "Caricamento del glossario su DeepL non riuscito",
       "uploadGlossaryTooltip": "Carica su DeepL il glossario di Glossa",
-      "uploadGlossaryLabel": "Carica su DeepL",
       "keyRequired": "Richiede la chiave DeepL, da inserire in Impostazioni"
     },
     "configSections": "Sezioni della configurazione"
@@ -2417,13 +2405,15 @@
           },
           {
             "title": "Configurare le fasi",
-            "paragraphs": [],
+            "paragraphs": [
+              "L’icona rossa in fondo alla finestra azzera tutte le traduzioni e i loro audit, dopo una conferma. È spenta, con il motivo, mentre la pipeline lavora o quando non c’è niente da azzerare."
+            ],
             "steps": [
-              "Apri la configurazione della pipeline e imposta lingua sorgente e destinazione.",
-              "Se usi una persona, descrivi ruolo, lingue e registro desiderati: questo testo sostituisce l’introduzione predefinita delle istruzioni.",
-              "Nelle schede Traduzione e Controllo qualità scegli provider, modello e istruzioni delle fasi attive.",
-              "Assegna il glossario e controlla i riferimenti di memoria selezionati.",
-              "Consulta l’anteprima del prompt per verificare le istruzioni prima dell’esecuzione."
+              "Apri la configurazione con l’ingranaggio nella riga in cima allo Studio, o con Ctrl + virgola. Il titolo è il nome della pipeline; le linguette sono Generale, Fasi, Controllo qualità, Memoria, Glossario e Anteprima prompt.",
+              "In Generale scegli la modalità e le lingue. Se usi una persona, descrivi ruolo, lingue e registro desiderati: questo testo sostituisce l’introduzione predefinita delle istruzioni, e finché è personalizzata le lingue restano ferme.",
+              "In Fasi e Controllo qualità scegli servizio, modello e istruzioni di ogni fase. Con traduzioni già fatte il modello è chiuso dal lucchetto: aprirlo lascia i frammenti già tradotti con il modello precedente. Le spiegazioni compaiono passando sopra i titoli e le voci.",
+              "In Memoria regola la memoria delle frasi e gli esempi di traduzione (la modalità DeepL non li usa); in Glossario assegna il dizionario e salvane i termini con il dischetto.",
+              "Consulta l’anteprima del prompt per verificare le istruzioni prima dell’esecuzione. Mentre la pipeline lavora la finestra resta visibile ma bloccata."
             ]
           },
           {
@@ -2437,7 +2427,7 @@
           {
             "title": "Riutilizzare le istruzioni",
             "paragraphs": [
-              "Salva un prompt come modello per riutilizzarlo in altri lavori. I modelli sono distinti per contesto, per esempio traduzione, valutazione o persona.",
+              "Salva un prompt come modello per riutilizzarlo in altri lavori: mentre lo modifichi, il segnalibro chiede il nome (Invio salva, Esc annulla) e il libro apre l’elenco dei modelli salvati, con la ricerca; un clic applica quello scelto. I modelli sono distinti per contesto, per esempio traduzione, valutazione o persona, e si eliminano dalle risorse linguistiche.",
               "Il comando con la bacchetta riscrive il prompt tramite il servizio configurato. Rileggi il testo proposto prima di usarlo: è un’elaborazione del modello e può modificare le tue istruzioni."
             ]
           }
@@ -3535,7 +3525,8 @@
     "hideFinished": "Togli dal pannello i {{count}} conclusi"
   },
   "models": {
-    "provider": "Servizio del modello"
+    "provider": "Servizio del modello",
+    "deprecatedShort": "superato"
   },
   "systemLog": {
     "tab": "Sistema",

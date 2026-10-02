@@ -57,7 +57,6 @@ export function TranscriptionAssistTab({
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const { templates, isLoaded, loadTemplates } = usePromptTemplateStore();
   const saveTemplate = usePromptTemplateStore((s) => s.saveTemplate);
-  const deleteTemplate = usePromptTemplateStore((s) => s.deleteTemplate);
   const { statuses: keyStatuses } = useProviderKeyStatus();
   const [isRefining, setIsRefining] = useState(false);
   // Bloccato per default: la select mostra il valore ereditato dal workspace
@@ -235,7 +234,6 @@ export function TranscriptionAssistTab({
         onChange={handlePromptChange}
         onApplyTemplate={(template: PromptTemplate) => handlePromptChange(template.prompt)}
         saveTemplate={saveTemplate}
-        onDeleteTemplate={deleteTemplate}
         defaultModel={resolved.model}
         defaultProvider={resolved.provider}
         defaultValue={defaultPrompt}

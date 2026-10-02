@@ -29,7 +29,8 @@ Use the assignment control to attach a dictionary to the project. The
 **Glossary** tab in the Tools column shows the full assigned glossary, with the
 number of terms in its title; the highlight command colours the terms in the
 sheets and, while on, shows the colour legend;
-pipeline configuration provides access to its terminology register.
+in the Glossary tab of the pipeline configuration you assign the dictionary and
+edit its terms, saving them with the disk icon.
 
 ## Use during translation
 

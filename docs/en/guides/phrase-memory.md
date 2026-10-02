@@ -51,7 +51,7 @@ to guide a pipeline’s register and style. They are not retrieved according
 to similarity with the current segment.
 
 For a verified segment, **Use as a style example** in the Audit tab adds the
-pair to pipeline settings, where it can be edited or removed. The limit is
+pair to the Memory tab of the pipeline configuration, where it can be edited or removed. The limit is
 five examples. Since they form part of the static context, their length
 contributes to request size.
 

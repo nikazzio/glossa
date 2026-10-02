@@ -7,15 +7,30 @@ title: Pipeline configuration
 Configuration belongs to a project’s pipeline. Service credentials and
 connections belong to application settings.
 
-## Sections
+## The window
 
-| Section | Parameters |
+The configuration opens from the gear in the Translation Studio's top row, or
+with Ctrl + comma. The title is the pipeline name: rename it from the Studio's
+top row, not here. Explanations are not written under the fields: they appear
+when you hover a section title or a row name.
+
+| Tab | Parameters |
 | --- | --- |
-| Settings | Mode, languages, persona, examples and general options |
-| Translation | Providers, models, prompts and generation-stage options |
-| Quality Control | Evaluator and consistency check |
-| Term registry | Assigned glossary |
-| Prompt Preview | Request structure for active stages |
+| General | Mode, languages, persona |
+| Stages | Service, model, prompt and options for each stage; context memory |
+| Quality control | Refinement loop, assessment model, assessment and consistency prompts |
+| Memory | Phrase memory and translation examples (off in DeepL mode) |
+| Glossary | Assigned dictionary and its terms |
+| Prompt preview | Request structure for active stages |
+
+While the pipeline runs the window stays open and readable, but a veil locks
+its controls. At the bottom, the red **Reset all translations** icon deletes
+translations and their audits after a confirmation; it is off, with the reason,
+during a run or when there is nothing to reset.
+
+Once translations exist, mode, stage prompts and context memory cannot be
+changed; a stage's model is closed by a lock. Opening it lets you change the
+model, but chunks already translated keep the previous one.
 
 Standard, Editorial and DeepL Hybrid modes are described in the
 [translation workflow](../guides/document-pipeline).
@@ -24,13 +39,17 @@ Standard, Editorial and DeepL Hybrid modes are described in the
 
 Set source and target languages. A persona is free text that replaces the
 default opening of the system message. It can specify role, subject area,
-languages and register. When enabled, it should state the intended language
-pair and instructions accurately.
+languages and register. When customised, it should state the language pair
+accurately; the pair stays fixed until the persona is reset.
 
-Prompts can be saved as reusable templates, organised by context. Prompt
+Prompts can be saved as reusable templates, organised by context: while
+editing, the bookmark saves the prompt under a name and the book opens the
+list of saved templates, with search. Templates are deleted from the language
+resources. Prompt
 refinement sends the current text to a configured model and places a revised
 version in the field. It requires a connection and any credentials needed
-by the selected provider.
+by the selected provider: without a key the command is off and its tooltip
+says which one is missing.
 
 ## Model parameters
 
@@ -61,15 +80,13 @@ resolved with that service before the sequence can complete.
 ## Examples and context
 
 A pipeline can hold up to five translation examples, added from a verified
-segment’s Audit tab and edited in settings. [Phrase memory](../guides/phrase-memory)
+segment’s Audit tab and edited in the Memory tab. [Phrase memory](../guides/phrase-memory)
 instead supplies references selected for an individual segment.
 [Prompt caching](../guides/context-and-caching) has provider-specific rules.
 
 ## Cost estimates
 
-The configuration estimate covers the entire document, including consistency
-review when configured. In the document sidebar, the estimate follows the
-selected action. Details distinguish stages and models.
+In the Studio's tools column, the estimate follows the selected action. Details distinguish stages and models.
 
 Estimates use an approximate word-to-token conversion and the model prices
 recorded in Glossa. Usage shown after execution uses token counts returned

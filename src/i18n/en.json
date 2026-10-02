@@ -246,12 +246,14 @@
     },
     "blobContext": "Context memory",
     "blobContextExplainer": "When the text is split into multiple translation blocks, this option decides how much of the previous block the model sees, so it doesn't lose the thread between one block and the next.",
-    "blobOverrideToggle": "Manual override",
+    "blobOverrideToggle": "Manual size",
     "blobContextAutoDesc": "Automatic — ~{{tokens}} tokens based on {{model}}",
-    "blobBudgetTokens": "Token budget",
+    "blobBudgetTokens": "Size",
+    "unitTokens": "tokens",
+    "unitChunks": "chunks",
     "blobContextReset": "Restore automatic",
     "blobComputeFailed": "Context memory computation failed — translation will proceed without cross-chunk context",
-    "blobOverlap": "Overlap (chunks)",
+    "blobOverlap": "Overlap",
     "blobOverlapHint": "How many chunks from the end of the previous block to prepend to the next, to avoid losing the thread at block boundaries.",
     "inheritDefault": "Inherit from project",
     "personaActive": "System prompt (persona)",
@@ -261,10 +263,8 @@
     "keywordRegistry": "Keyword Registry",
     "source": "Source",
     "target": "Target",
-    "beginPipeline": "Begin Pipeline",
     "run": "Run",
     "audit": "Audit",
-    "executing": "Executing...",
     "stopPipeline": "Request Stop",
     "stopping": "Stopping...",
     "stopRequested": "Stop requested. Glossa will finish the current chunk and then stop.",
@@ -296,8 +296,6 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyFailed": "Copy failed",
-    "runDisabledNoChunks": "Stage some content first",
-    "runDisabledProcessing": "Pipeline is running, please wait…",
     "settingsLockedWhileRunning": "Settings locked while running",
     "words": "Words",
     "paragraphs": "Paragraphs",
@@ -323,15 +321,12 @@
     "unlockSourceHint": "Editing the source will discard this chunk's translation, stage outputs, and audit.",
     "confirmUnlockTitle": "Edit the source text?",
     "confirmUnlockMessage": "The translation, all stage outputs, and the audit for this chunk will be discarded so you can edit. This cannot be undone.",
-    "rerunAll": "Re-run all",
-    "rerunAllHint": "Discard the {{count}} completed translation(s) and run the pipeline from scratch.",
-    "confirmRerunAllTitle": "Re-run the whole pipeline?",
-    "confirmRerunAllMessage": "{{count}} completed translation(s) and their audits will be discarded before the pipeline restarts. This cannot be undone.",
     "runChunkCount": "This run will process {{count}} chunk(s).",
     "testChunkCountHint": "How many ready chunks the test run should process.",
     "increaseTestChunkCount": "Increase test chunk count",
     "decreaseTestChunkCount": "Decrease test chunk count",
-    "resetAll": "Full reset",
+    "resetAll": "Reset all translations",
+    "resetAllNothing": "no translations to reset",
     "confirmResetAllTitle": "Reset all translations?",
     "confirmResetAllMessage": "{{count}} translations and their audits will be deleted. This cannot be undone.",
     "resetAllDone": "Translations reset",
@@ -340,7 +335,6 @@
     "modeProductionShort": "Prod",
     "modeTestHint": "Runs the pipeline on a limited number of chunks. Configuration stays editable.",
     "modeProductionHint": "Runs the pipeline on the entire document.",
-    "modeLockedHint": "Mode locked — real translations exist. Use Full Reset to start over.",
     "retestChunk": "Re-run test",
     "singleChunkCompleted": "Chunk re-translated",
     "singleChunkAudited": "Chunk audit refreshed",
@@ -369,13 +363,11 @@
     "judgeRefineLoop": "Auto-refine based on audit findings",
     "judgeRefineLoopMaxIter": "Max iterations",
     "providerOptions": {
-      "stageTitle": "Stage runtime",
+      "stageTitle": "Ollama generation options",
       "stageHint": "Provider-specific generation controls for this translation stage only.",
       "temperatureIgnored": "The verdict comes back in a constrained format: for that, temperature stays at zero whatever you write here. It applies to the judge only, not to translations.",
-      "reviewTitle": "Audit runtime",
+      "reviewTitle": "Ollama generation options",
       "reviewHint": "Shared provider-specific generation controls for judge and coherence checks.",
-      "enableOverride": "Override config",
-      "enableOverrideHint": "When disabled, this panel uses the built-in runtime defaults.",
       "enableAdvanced": "Use advanced JSON",
       "enableAdvancedHint": "Use raw provider options and let them override the typed numeric controls where keys overlap.",
       "temperature": "Temperature",
@@ -402,15 +394,21 @@
       "extendedTtlToggle": "Extend to 1 hour",
       "extendedTtlHint": "Keeps the cache valid for an hour instead of 5 minutes — useful when the pipeline has a slow stage (e.g. Ollama) between one Anthropic chunk and the next. Costs 2x on writes instead of 1.25x."
     },
-    "tabSettings": "Settings",
+    "tabSettings": "General",
     "tabStages": "Translation",
-    "tabTranslation": "Translation",
-    "modelLockedHint": "Model locked — existing translations must be preserved. Start a new project to change model.",
+    "tabTranslation": "Stages",
+    "tabMemory": "Memory",
+    "glossarySave": "Save the terms to the dictionary",
+    "reasonNoChanges": "no changes to save",
+    "memoryUnavailableDeepl": "DeepL mode uses neither memory nor examples",
     "modelContextWindowChangedHint": "Context window changed since import — chunk size may no longer be optimal. Consider re-importing the document.",
     "stageModelLabel": "Model",
     "modelDeprecatedHint": "This model is no longer a recommended choice: it may still work, but the shown price and context window may be out of date.",
-    "unlockModelChange": "Unlock model change",
-    "unlockModelChangeWarning": "Changing the model now leaves already-translated chunks on the previous model — the document may end up with inconsistent style/quality across sections.",
+    "unlockModelChange": "Unlock model change — chunks already translated keep the previous model",
+    "lockModelChange": "Lock the model",
+    "ollamaOfflineReload": "Ollama unreachable — reload models",
+    "reasonTranslationsExist": "translations already exist",
+    "reasonMissingKey": "missing key for {{provider}}",
     "modelReasoning": {
       "reasoning": "Reasoning",
       "non_reasoning": "Direct",
@@ -429,10 +427,10 @@
       "neutral": "Usable for {{target}}"
     },
     "tabAudit": "Quality Control",
-    "tabGlossary": "Term Registry",
-    "tabPreview": "Prompt Preview",
+    "tabGlossary": "Glossary",
+    "tabPreview": "Prompt preview",
     "promptPreviewTitle": "Prompt Preview",
-    "promptPreviewHint": "Frontend-only view of the prompt structure built from the current configuration. Runtime placeholders show where chunk text and blob context are injected.",
+    "promptPreviewHint": "How the prompt is built from the current configuration; placeholders mark where the chunk text and the context go.",
     "promptPreviewEmpty": "No translation stages are enabled yet.",
     "promptPreviewStatic": "Static",
     "promptPreviewRuntime": "Runtime",
@@ -493,7 +491,6 @@
     "tabPersona": "Persona",
     "personaLabel": "Persona",
     "personaCustomBadge": "Custom",
-    "personaCustomize": "Customize",
     "personaReset": "Reset to automatic",
     "languagePairLockedByPersona": "Language pair is locked when a custom persona is active — reset it to edit",
     "customLanguageToggle": "Use custom language",
@@ -505,7 +502,6 @@
     "noProjectTitle": "No project open",
     "noProjectHint": "Open or create a project to configure stages, models, audit and glossary.",
     "glossaryEmpty": "No terms in the registry. Use + to add one.",
-    "glossaryOpenProject": "Open a project and assign a dictionary from the Library to manage glossary terms.",
     "glossaryNotes": "Notes",
     "templates": {
       "save": "Save as template",
@@ -516,10 +512,7 @@
       "saved": "Template saved",
       "deleted": "Template deleted",
       "saveFailed": "Failed to save template",
-      "deleteFailed": "Failed to delete template",
-      "loadFailed": "Failed to load templates",
-      "deleteConfirmTitle": "Delete template",
-      "deleteConfirmMessage": "Delete template \"{{name}}\"? This action is irreversible."
+      "loadFailed": "Failed to load templates"
     },
     "editPrompt": "Edit prompt",
     "promptCustomBadge": "Custom",
@@ -529,9 +522,6 @@
     "refining": "Refining...",
     "refined": "Prompt refined",
     "refineFailed": "Refinement failed",
-    "refineKeyLabel": "Prompt refinement",
-    "refineKeyMissingHint": "Prompt refinement is disabled for remote providers without API keys. Configure: {{providers}}. Ollama remains available without a key.",
-    "refineKeyReadyHint": "Prompt refinement is ready for configured providers. Ollama does not require an API key.",
     "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window.",
     "deleteTitle": "Delete \"{{name}}\"?",
     "deleteMessage": "All translations associated with this pipeline will be permanently deleted.",
@@ -557,10 +547,8 @@
     "deepl": {
       "confirmDeleteGlossaryTitle": "Delete the DeepL glossary?",
       "confirmDeleteGlossaryMessage": "The glossary “{{name}}” will be permanently deleted from DeepL. This cannot be undone.",
-      "optionsTitle": "Options",
       "preserveFormatting": "Keep formatting",
       "showBilledCharacters": "Show billed characters",
-      "sectionTranslation": "DeepL translation",
       "modelType": "Translation mode",
       "preferQuality": "Quality (recommended)",
       "qualityOnly": "Quality only",
@@ -573,13 +561,13 @@
       "formalityLess": "Informal",
       "glossary": "DeepL glossary",
       "noGlossary": "No glossary",
+      "glossaryOption": "{{name}} ({{count}} terms)",
       "deleteGlossary": "Delete the DeepL glossary",
       "context": "Translation context",
       "contextPlaceholder": "Optional text that helps DeepL understand what the document is about",
       "glossaryUploaded": "Glossary uploaded to DeepL",
       "glossaryUploadFailed": "Uploading the glossary to DeepL failed",
       "uploadGlossaryTooltip": "Upload the Glossa glossary to DeepL",
-      "uploadGlossaryLabel": "Upload to DeepL",
       "keyRequired": "Needs the DeepL key, entered in Settings"
     },
     "configSections": "Configuration sections"
@@ -2417,13 +2405,15 @@
           },
           {
             "title": "Configuring stages",
-            "paragraphs": [],
+            "paragraphs": [
+              "The red icon at the bottom of the window resets all translations and their audits, after a confirmation. It is off, with the reason, while the pipeline runs or when there is nothing to reset."
+            ],
             "steps": [
-              "Open pipeline configuration and set the source and target languages.",
-              "If you use a persona, describe the intended role, languages and register. This text replaces the default opening instructions.",
-              "In Translation and Quality control, choose the providers, models and instructions for active stages.",
-              "Assign the glossary and check selected memory references.",
-              "Inspect the prompt preview before running the pipeline."
+              "Open the configuration with the gear in the Studio's top row, or with Ctrl + comma. The title is the pipeline name; the tabs are General, Stages, Quality control, Memory, Glossary and Prompt preview.",
+              "In General choose the mode and the languages. If you use a persona, describe the intended role, languages and register: this text replaces the default opening instructions, and while it is customised the languages stay fixed.",
+              "In Stages and Quality control choose service, model and instructions for each stage. Once translations exist the model is closed by the lock: opening it leaves already translated chunks on the previous model. Explanations appear when you hover titles and rows.",
+              "In Memory set phrase memory and translation examples (DeepL mode does not use them); in Glossary assign the dictionary and save its terms with the disk icon.",
+              "Inspect the prompt preview before running the pipeline. While the pipeline runs the window stays visible but locked."
             ]
           },
           {
@@ -2437,7 +2427,7 @@
           {
             "title": "Reusing instructions",
             "paragraphs": [
-              "Save a prompt as a template to reuse it in other work. Templates are separated by context, such as translation, assessment or persona.",
+              "Save a prompt as a template to reuse it in other work: while editing, the bookmark asks for a name (Enter saves, Esc cancels) and the book opens the list of saved templates, with search; a click applies the one you pick. Templates are organised by context, such as translation, assessment or persona, and are deleted from the language resources.",
               "The wand control rewrites the prompt through the configured service. Review the proposed text before using it: it is model-generated and may change your instructions."
             ]
           }
@@ -3535,7 +3525,8 @@
     "hideFinished": "Hide the {{count}} finished from the panel"
   },
   "models": {
-    "provider": "Model service"
+    "provider": "Model service",
+    "deprecatedShort": "superseded"
   },
   "systemLog": {
     "tab": "System",

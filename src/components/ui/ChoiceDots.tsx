@@ -9,6 +9,9 @@ export interface ChoiceDotsOption<T extends string> {
   label: string;
   /** Il segno dentro il cerchietto: un'icona da 11 px o una lettera. */
   content: ReactNode;
+  /** Scelta non disponibile: resta visibile, il motivo va nell'etichetta, e
+   *  le frecce la saltano. */
+  disabled?: boolean;
 }
 
 interface ChoiceDotsProps<T extends string> {
@@ -47,8 +50,10 @@ export function ChoiceDots<T extends string>({
   const tabbableValue = options.some((option) => option.value === value) ? value : options[0]?.value;
 
   const handleKeyDown = (current: T, event: KeyboardEvent<HTMLButtonElement>) => {
-    const index = options.findIndex((option) => option.value === current);
-    const total = options.length;
+    const enabled = options.filter((option) => !option.disabled);
+    const index = enabled.findIndex((option) => option.value === current);
+    const total = enabled.length;
+    if (total === 0) return;
     const nextIndex =
       event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? (index - 1 + total) % total
         : event.key === 'ArrowRight' || event.key === 'ArrowDown' ? (index + 1) % total
@@ -57,7 +62,7 @@ export function ChoiceDots<T extends string>({
               : null;
     if (nextIndex === null) return;
     event.preventDefault();
-    const next = options[nextIndex].value;
+    const next = enabled[nextIndex].value;
     onChange(next);
     buttonRefs.current[next]?.focus();
   };
@@ -81,7 +86,7 @@ export function ChoiceDots<T extends string>({
                 aria-checked={chosen}
                 aria-label={option.label}
                 tabIndex={option.value === tabbableValue ? 0 : -1}
-                disabled={disabled}
+                disabled={disabled || option.disabled}
                 onClick={() => onChange(option.value)}
                 onKeyDown={(event) => handleKeyDown(option.value, event)}
                 className={`${DOT_CLASSNAME} ${chosen ? DOT_CHOSEN_CLASSNAME : DOT_IDLE_CLASSNAME}`}

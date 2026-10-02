@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineCostEstimate } from '../../utils/costEstimate';
 
@@ -8,12 +6,6 @@ export function formatCost(usd: number): string {
   if (usd < 0.01) return `~$${usd.toFixed(4)}`;
   return `~$${usd.toFixed(2)}`;
 }
-
-interface CostBadgeProps {
-  estimate: PipelineCostEstimate;
-}
-
-const TOOLTIP_ID = 'cost-badge-tooltip';
 
 export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimate }) {
   const { t } = useTranslation();
@@ -69,49 +61,6 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
         </table>
         <p className="text-xs italic text-editorial-muted">{t('cost.disclaimer')}</p>
       </div>
-    </div>
-  );
-}
-
-export function CostBadge({ estimate }: CostBadgeProps) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-
-  if (estimate.stages.length === 0 && estimate.judge === null) return null;
-
-  const label = estimate.isFree
-    ? t('cost.free')
-    : estimate.totalUsd === null
-      ? t('cost.unknown')
-      : formatCost(estimate.totalUsd);
-
-  return (
-    <div className="relative inline-flex items-center">
-      <button
-        type="button"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        aria-label={`${t('header.estimatedCost')}: ${label}`}
-        aria-describedby={open ? TOOLTIP_ID : undefined}
-        className="inline-flex items-center gap-1 rounded-full border border-rule bg-editorial-textbox px-2.5 py-1 text-xs font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
-        {estimate.isFree && <Sparkles size={10} />}
-        {label}
-      </button>
-
-      {open && (
-        <div
-          id={TOOLTIP_ID}
-          role="tooltip"
-          className="absolute bottom-full left-0 z-50 w-64 pb-2"
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-        >
-          <CostBreakdownPanel estimate={estimate} />
-        </div>
-      )}
     </div>
   );
 }
