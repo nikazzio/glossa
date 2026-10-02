@@ -15,7 +15,7 @@ Quando la funzione è attiva, Glossa cerca corrispondenze per i frammenti del
 documento. La ricerca usa le risorse accessibili al workspace e non modifica
 né traduzioni né frasi salvate.
 
-La scheda **Riferimenti** mostra i risultati e permette di regolare la soglia
+La sottolinguetta **Frasi simili in memoria** della scheda **Memoria** mostra i risultati e permette di regolare la soglia
 di somiglianza. Solo le coppie selezionate vengono incluse nella successiva
 richiesta per quel frammento. Se esistono risultati ma nessuno è selezionato,
 l’avvio segnala che la traduzione procederà senza quei riferimenti.
@@ -28,7 +28,7 @@ semantica o l’adeguatezza della resa al contesto corrente.
 ## Creazione e revisione delle frasi
 
 1. Rivedi la traduzione e blocca il frammento.
-2. Apri **Memoria**: le coppie già salvate vengono caricate e selezionate.
+2. Apri **Memoria** → **Estrai frasi**: le coppie già salvate vengono caricate e selezionate.
 3. Usa **Estrai frasi** per ottenere nuove proposte, oppure aggiungi coppie manualmente.
 4. Correggi i testi e seleziona le coppie da conservare.
 5. Salva per applicare la selezione.

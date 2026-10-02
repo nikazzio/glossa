@@ -48,10 +48,46 @@ recalculates the unlocked segments covered by the selected action.
 
 ## Reading and review
 
-The document view places source and translation side by side. The segment
-sidebar contains **References**, **Preview**, **Audit**, **Memory** and **Notes**.
-The **Insight** panel provides the document index, search, statistics,
-consistency review and glossary.
+The translation studio opens inside the application frame: the main bar on
+the left stays visible and leads to any area, closing the translation. While
+the pipeline is running its entries are off, like the way back to the
+catalogue.
+
+At the top, the header row leads back to the Translations catalogue and shows
+the translation name (one click renames it); in the middle of the row, the
+open pipeline: its name
+(also renamed with a click), ⇄ to pick another one, create or delete one, the
+gear with its options and its language pair. Languages belong to the pipeline:
+two pipelines of the same translation can differ. On the right of the same row
+are the whole-translation commands: import, export, the workspace language
+resources and deletion.
+
+In the middle the two sheets place source and translation side by side. Above
+them, on the left, the number of the open segment; in the middle a window of
+seven dots, one per segment with its state: the open segment stays still under
+the central mark while the others slide to the sides. The single arrows move
+to the neighbouring segment, the double ones jump by seven; the mouse wheel
+over the dots also scrolls through segments, and clicking a dot opens it. To
+the right of the dots, the stage indicators show where the open segment stands
+(translation, revision, formatting, audit): a click opens that stage's detail.
+The magnifier next to them opens the whole-document search below the row; a
+result leads to its segment, Esc closes it.
+
+On the right, the **Tools** column starts with execution — translate, the **Multiple chunks** switch with the number of
+segments to process (always visible, off when translating a single segment) —
+and costs, then the tabs, in this order: **Glossary**,
+**Memory**, **Preview**, **Review** and **Document**, which gathers the
+whole-document summaries as three sub-tabs: **Index**, **Statistics** and
+**Coherence**. Memory gathers two sub-tabs: **similar phrases
+in memory**, to use while translating, and **Extract phrases**, which saves the
+segment's pairs; extraction turns on once the segment is translated. Review gathers three sub-tabs,
+**Audit**, **Notes** and **Source notes** (the footnotes imported with the
+source, shown only when the segment has some): icon tabs with name and count
+in the tooltip, each with its own list; it opens on the audit when it has open findings,
+otherwise on the notes. Audit turns on once the segment is translated,
+Glossary once a glossary is assigned; the reason stays in the
+tooltip. Collapsed to icons, the column
+keeps only the translate button visible, or stop while running.
 
 Intermediate stage outputs help identify where a change was introduced.
 After a manual edit, **Re-evaluate** runs the quality assessment alone.

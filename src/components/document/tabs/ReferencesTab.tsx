@@ -8,7 +8,7 @@ import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../../../stores/phraseMemoryStore';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { classifyError } from '../../../utils/retry';
-import { IconButton } from '../../ui';
+import { IconButton, PanelSection } from '../../ui';
 import { ExtractTermDialog } from '../ExtractTermDialog';
 import type { TranslationChunk } from '../../../types';
 
@@ -63,29 +63,30 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 space-y-3 border-b border-editorial-border px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-sans uppercase tracking-section text-editorial-muted">
-            {t('memory.referencesMemorySectionTitle')}
-          </p>
-          <IconButton
-            size="md"
-            tone={searchStatus === 'searching' ? 'running' : 'default'}
-            title={searchStatus === 'searching' ? t('memory.searching') : t('memory.refreshButton')}
-            onClick={() => void handleRefresh()}
-            disabled={!currentChunkId || searchStatus === 'searching'}
-            tooltipSide="left"
-          >
-            {searchStatus === 'searching'
-              ? <Loader2 size={13} className="animate-spin" />
-              : <RefreshCcw size={13} />}
-          </IconButton>
-        </div>
+      <div className="shrink-0 border-b border-editorial-border px-4 py-5">
+        <PanelSection
+          icon={Layers}
+          label={t('memory.referencesMemorySectionTitle')}
+          actions={
+              <IconButton
+                size="md"
+                tone={searchStatus === 'searching' ? 'running' : 'default'}
+                title={searchStatus === 'searching' ? t('memory.searching') : t('memory.refreshButton')}
+                onClick={() => void handleRefresh()}
+                disabled={!currentChunkId || searchStatus === 'searching'}
+                tooltipSide="left"
+              >
+                {searchStatus === 'searching'
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <RefreshCcw size={13} />}
+              </IconButton>
+          }
+        >
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label
               htmlFor="memory-threshold"
-              className="text-xs font-sans uppercase tracking-caption text-editorial-muted"
+              className="caption-label"
             >
               {t('memory.similarityThreshold')}
             </label>
@@ -105,6 +106,7 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
             aria-label={t('memory.similarityThreshold')}
           />
         </div>
+        </PanelSection>
       </div>
 
       {hasMatches ? (
@@ -169,7 +171,7 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
   };
 
   return (
-    <article className={`space-y-4 rounded-lg border bg-editorial-bg p-4 transition-colors ${enabled ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
+    <article className={`space-y-4 rounded-lg border bg-editorial-bg p-4 transition-colors ${enabled ? 'border-editorial-accent' : 'border-editorial-border'}`}>
       <div className="flex items-center justify-between gap-3">
         <label className="flex min-w-0 cursor-pointer items-center gap-2">
           <input
@@ -189,16 +191,16 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
       </div>
 
       <div className="space-y-3">
-        <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-          <p className="mb-1 text-xs uppercase tracking-caption text-editorial-muted">
+        <div className="rounded-md bg-editorial-textbox px-3 py-2">
+          <p className="mb-1 caption-label">
             {t('memory.sourcePhraseShort')}
           </p>
           <div className="text-sm leading-relaxed text-editorial-charcoal">
             {match.sourcePhrase}
           </div>
         </div>
-        <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-          <p className="mb-1 text-xs uppercase tracking-caption text-editorial-muted">
+        <div className="rounded-md bg-editorial-textbox px-3 py-2">
+          <p className="mb-1 caption-label">
             {t('glossary.translation')}
           </p>
           <div className="text-sm leading-relaxed text-editorial-ink">

@@ -544,6 +544,8 @@
     "ariaAdd": "Add pipeline",
     "saveFirstToAdd": "Save the project before adding pipelines",
     "pipelineNameLabel": "Pipeline name",
+    "renamePipeline": "Rename the pipeline",
+    "renameFailed": "The pipeline could not be renamed",
     "newPipeline": "New pipeline",
     "pipelineNumber": "Pipeline {{number}}",
     "deletePipeline": "Delete pipeline",
@@ -778,7 +780,7 @@
     "phraseMemoryMaxResults": "Max results",
     "phraseMemoryManualRefreshHint": "Manual refresh remains available in the chunk Memory panel.",
     "fewShotTab": "Translation examples",
-    "fewShotEmptyHint": "Add examples from a locked chunk in the document editor (Audit tab).",
+    "fewShotEmptyHint": "Add examples from a locked chunk in the document editor (Review → Audit).",
     "fewShotSourceLabel": "Source text",
     "fewShotTargetLabel": "Translation",
     "fewShotLabelPlaceholder": "Note (optional)",
@@ -2159,6 +2161,8 @@
     "projectHomeUnits": "Units loaded",
     "projectHomeMode": "Pipeline mode",
     "previousChunk": "Previous chunk",
+    "jumpBackChunks": "Back {{count}} segments",
+    "jumpForwardChunks": "Forward {{count}} segments",
     "nextChunk": "Next chunk",
     "leftPage": "Source page",
     "rightPage": "Translation page",
@@ -2183,6 +2187,7 @@
     "searchInTranslation": "Search candidate",
     "clearPaneSearch": "Clear search",
     "searchInPane": "Search this text",
+    "searchInDocument": "Search the document",
     "searchEmptyTitle": "Document search",
     "searchEmptyBody": "Type a word or phrase to search across all chunks — source text, translation, and audit findings.",
     "searchNoResults": "No results found.",
@@ -2194,9 +2199,16 @@
     "insightsTabStats": "Stats",
     "insightsTabCoherence": "Coherence",
     "insightsTabGlossary": "Glossary",
+    "glossaryTermCount_one": "{{count}} term",
+    "glossaryTermCount_other": "{{count}} terms",
     "insightsTabNotes": "Notes",
+    "insightsTabReview": "Review",
+    "insightsTabDocument": "Document",
+    "reviewSourceNotes": "Source notes",
+    "reviewViewsLabel": "Segment review",
     "insightsTabOperations": "Console",
     "chunkPanelTitle": "Chunk",
+    "studioInspectorLabel": "Translation tools",
     "openChunkPanel": "Open chunk panel",
     "operationsEmpty": "No frontend operation logs yet.",
     "operationsEmptyFiltered": "No rows for the selected fragment or filters.",
@@ -2421,9 +2433,17 @@
         "intro": "The document view places source and translation side by side. Editor controls let you edit text, check formatting and compare stage outputs.",
         "blocks": [
           {
+            "title": "The translation studio",
+            "paragraphs": [
+              "The main bar stays on the left: from there you move to another area, and the translation closes. While the pipeline is running its entries are off.",
+              "The top row leads back to the catalogue and shows the translation name and the open pipeline with its languages: click a name to rename it, ⇄ switches pipeline, the gear opens its options. On the right are import, export, the workspace language resources, configuration and delete.",
+              "The Tools column on the right starts with translate, Multiple chunks with the number of segments and the costs. Below are Glossary, Memory (similar phrases and extraction), Preview Review (Audit, Notes and Source notes) and Document (Index, Statistics and Coherence). Collapsed, it keeps only the translate button visible."
+            ]
+          },
+          {
             "title": "Importing and dividing text",
             "paragraphs": [
-              "Use Import in the project sidebar. Supported formats are TXT and Markdown up to 50 MiB, DOCX up to 100 MiB and PDF up to 50 MiB. DOCX extraction is experimental; PDFs must contain text rather than images alone.",
+              "Use Import in the studio’s top row. Supported formats are TXT and Markdown up to 50 MiB, DOCX up to 100 MiB and PDF up to 50 MiB. DOCX extraction is experimental; PDFs must contain text rather than images alone.",
               "Check the preview before confirming. Automatic segmentation divides text using a target word count. Markdown provides additional heading options.",
               "Choose a size appropriate for the text and review segment boundaries. Text files using an encoding other than UTF-8 must be converted before import."
             ]
@@ -2439,9 +2459,9 @@
           {
             "title": "Reading status indicators",
             "paragraphs": [
-              "The circles above the document select segments. The central mark shows whether a segment is ready, processing, completed or in error.",
+              "Above the document a window of seven circles keeps the open segment still in the middle. Single arrows move to the neighbouring segment, double ones jump by seven; the wheel over the circles scrolls them, a click opens one. On the right are the open segment's stage indicators and the magnifier to search the whole document. The central mark shows whether a segment is ready, processing, completed or in error.",
               "Corner indicators identify audit findings, notes, a locked translation and source changes. The triangle marks the current segment. The tooltip provides a full summary.",
-              "The Insight panel contains the document index, search, statistics, consistency and glossary. The segment sidebar contains References, Preview, Audit, Memory and Notes."
+              "Glossary and Document (Index, Statistics, Coherence) cover the whole document; Memory, Preview and Review the open segment. They all live in the Tools column."
             ]
           },
           {
@@ -2465,7 +2485,7 @@
               "Open Language Resources in the workspace and select Dictionaries.",
               "Create a dictionary or choose an existing resource.",
               "Enter the source term, required translation and any notes. You can also import CSV or TSV, checking the preview and whether to merge or replace entries.",
-              "Assign the dictionary to the project and check its entries in the Insight panel’s Glossary tab."
+              "Assign the dictionary to the project and check its entries in the Tools column’s Glossary tab."
             ]
           },
           {
@@ -2479,7 +2499,7 @@
             "title": "Checking terminology",
             "paragraphs": [
               "The pipeline receives instructions to follow the glossary. Still check the result: a model may ignore or misapply an entry.",
-              "The Glossary legend distinguishes source terms, matching translations and missing translations. Highlighting shows textual matches, not a check of meaning.",
+              "With highlighting on, the Glossary legend distinguishes source terms, matching translations and missing translations. Highlighting shows textual matches, not a check of meaning.",
               "The glossary specifies required wording. Phrase memory instead suggests references to select for each segment."
             ]
           }
@@ -2492,7 +2512,7 @@
           {
             "title": "Using saved phrases",
             "paragraphs": [
-              "Open References for the segment. When memory is enabled, Glossa searches the workspace’s resources for matches. You can adjust the similarity threshold.",
+              "Open Memory → Similar phrases in memory for the segment. When memory is enabled, Glossa searches the workspace’s resources for matches. You can adjust the similarity threshold.",
               "Select only relevant pairs. They will be included when you translate or reprocess the segment. Unselected pairs are excluded."
             ]
           },
@@ -2501,7 +2521,7 @@
             "paragraphs": [],
             "steps": [
               "Review and lock the segment’s translation.",
-              "Open Memory. Previously saved phrases appear selected.",
+              "Open Memory → Extract phrases. Previously saved phrases appear selected.",
               "Choose Extract phrases to generate proposals, or enter a pair manually.",
               "Edit the text and select the pairs to keep.",
               "Save the selection. A previously saved phrase that you deselected is removed from the collection."
@@ -2524,7 +2544,7 @@
             "title": "Checking and correcting",
             "paragraphs": [],
             "steps": [
-              "Open Audit after translation and read findings about terminology, accuracy, fluency, grammar and consistency.",
+              "Open Review → Audit after translation and read findings about terminology, accuracy, fluency, grammar and consistency.",
               "Check each finding against the text. A passage link may not locate the exact phrase.",
               "Edit the translation or rerun the stage that needs revision.",
               "Use Re-evaluate to update the assessment without translating everything again.",
@@ -2534,7 +2554,7 @@
           {
             "title": "Checking document consistency",
             "paragraphs": [
-              "After completing the segments, run the consistency check from the Insight panel. It compares translated passages for terminology and style variations.",
+              "After completing the segments, run the consistency check from Document → Coherence in the Tools column. It compares translated passages for terminology and style variations.",
               "This check is separate from assessing accuracy against the source. A positive rating does not replace human review."
             ]
           }
@@ -3263,6 +3283,8 @@
     "addButton": "Add annotation",
     "placeholder": "Describe the issue, doubt, or observation...",
     "anchorLabel": "Anchor to text (optional)",
+    "clearAnchor": "Remove the text anchor",
+    "typeLabel": "Note type",
     "anchorPlaceholder": "Paste the phrase it refers to...",
     "saveButton": "Add",
     "updateButton": "Save",

@@ -49,10 +49,50 @@ restante, la seconda ricalcola i frammenti non bloccati selezionati dall’azion
 
 ## Lettura e revisione
 
-La vista documento affianca originale e traduzione. La barra del frammento
-contiene **Riferimenti**, **Anteprima**, **Audit**, **Memoria** e **Note**.
-Il pannello **Insight** raccoglie indice, ricerca, statistiche, coerenza e
-glossario dell’intero documento.
+Lo Studio di traduzione si apre dentro la cornice dell’applicazione: la barra
+principale a sinistra resta in vista e porta a qualunque area, chiudendo la
+traduzione. Mentre la pipeline lavora le sue voci sono spente, come il ritorno
+al catalogo.
+
+In cima, la riga d’intestazione riporta al catalogo delle Traduzioni e mostra
+il nome della traduzione (un clic lo rinomina); al centro della riga, la
+pipeline aperta: il suo
+nome (anche questo si rinomina con un clic), ⇄ per sceglierne un’altra, crearne
+una o eliminarla, l’ingranaggio con le sue opzioni e la sua coppia di lingue.
+Le lingue appartengono alla pipeline: due pipeline della stessa traduzione
+possono averne di diverse. A destra della stessa riga stanno i comandi della
+traduzione intera: importa, esporta, risorse linguistiche del workspace ed
+eliminazione.
+
+Al centro i due fogli affiancano originale e traduzione. Sopra di loro, a
+sinistra, il numero del frammento aperto; al centro una finestra di sette
+pallini, uno per frammento con il suo stato: il frammento aperto resta fermo
+sotto il segno centrale e gli altri scorrono ai lati. Le frecce singole passano
+al frammento vicino, quelle doppie saltano di sette; anche la rotella del mouse
+sopra i pallini scorre i frammenti, e un clic su un pallino lo apre. A destra
+dei pallini, le spie delle fasi dicono a che punto è il frammento aperto
+(traduzione, revisione, formattazione, audit): un clic apre il dettaglio della
+fase. La lente accanto apre, sotto la fila, la ricerca in tutto il documento;
+un risultato porta al suo frammento, Esc la chiude.
+
+A destra, la colonna **Strumenti** tiene in cima l’esecuzione — traduci, l’interruttore **Blocchi multipli** con il
+numero di frammenti da elaborare (sempre in vista, spento quando si traduce un
+frammento solo) — e i costi, poi le linguette, in quest’ordine:
+**Glossario**, **Memoria**, **Anteprima**, **Revisione** e **Documento**, che
+raccoglie in tre sottolinguette i riepiloghi del documento intero: **Indice**,
+**Statistiche** e **Coerenza**. Memoria raccoglie in due
+sottolinguette le **frasi simili in memoria**, da usare traducendo, e
+**Estrai frasi**, che salva le coppie del frammento; l’estrazione si accende a
+frammento tradotto. Revisione
+raccoglie in tre sottolinguette **Audit**, **Note** e **Note del testo** (le
+note a piè di pagina importate con l’originale, presenti solo se il frammento
+ne ha), linguette a icona con nome e conteggio nel suggerimento, ognuna con il
+suo elenco; si apre
+sull’audit se ha segnalazioni aperte, altrimenti sulle note. L’audit si
+accende a frammento tradotto, il Glossario con un glossario assegnato; il
+motivo resta nel suggerimento. Chiusa a icone, la
+colonna lascia in vista il solo pulsante traduci, o lo stop durante
+l’esecuzione.
 
 I risultati intermedi delle fasi permettono di individuare dove è stata
 introdotta una modifica. Dopo una correzione manuale, **Rivaluta** esegue il

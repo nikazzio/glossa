@@ -27,7 +27,9 @@ correzioni o esclusioni applicate nel workspace modificano la vista locale
 delle voci senza alterare l’originale condiviso.
 
 Assegna il dizionario al progetto con il comando dedicato. La scheda
-**Glossario** del pannello Insight mostra l’intero glossario assegnato;
+**Glossario** della colonna Strumenti mostra l’intero glossario assegnato, con
+il numero dei termini nel titolo; il comando di evidenziazione colora i termini
+nei fogli e, finché è acceso, mostra la legenda dei colori;
 la configurazione della pipeline ne espone il registro terminologico.
 
 ## Applicazione alla traduzione

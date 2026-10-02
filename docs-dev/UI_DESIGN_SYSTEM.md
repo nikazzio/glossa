@@ -177,12 +177,21 @@ interattivi.
 
 ### TabStrip
 
+Dentro una linguetta di colonna che raccoglie più viste (Memoria, Revisione,
+Documento nello Studio di traduzione) la fila sta in `SubTabsPanel`: ferma in
+cima, nome della vista aperta accanto in `font-display text-sm italic`, un solo
+corpo che scorre. Mai `SegmentedControl` per questo: è per le scelte con nome
+nelle impostazioni.
+
 Fila di linguette icona con la propria navigazione da tastiera: frecce, Home ed
 End, con il focus che segue la linguetta scelta come vuole il modello ARIA.
 Usarla per ogni gruppo di linguette che non sia già dentro `InspectorShell` —
 sotto-schede di una finestra di impostazioni, linguette di un pannello.
 
 - `tabs`: `{ id, label, icon }`; l'etichetta vive nel tooltip, non a schermo.
+- `disabled` per linguetta: stessa regola dei tab di `InspectorShell` —
+  visibile, spenta, motivo nell'etichetta, saltata da frecce e Home/End
+  (sottolinguette della Revisione nello Studio di traduzione).
 - `idPrefix`: da cui derivano `<prefix>-tab-<id>` e `<prefix>-panel-<id>`, così
   il pannello si collega con `aria-labelledby`.
 - Il pannello attivo lo monta il chiamante, con `role="tabpanel"`.
@@ -222,6 +231,11 @@ solo**.
   lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
   scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
   destinazioni e nessuna delle due si comporta come ci si aspetta.
+- `beforeTabs`: blocco fisso fra intestazione e linguette, in vista con
+  qualunque scheda (l'esecuzione nello Studio di traduzione).
+- Larghezza: `INSPECTOR_WIDTH` per tutti, con una sola eccezione — lo Studio di
+  traduzione parte da 440 px (minimo e iniziale) perché tiene dieci linguette
+  a misura piena in una riga; si allarga fino al massimo comune.
 - `tabRowHeightClassName`: altezza fissa della barra tab quando accanto c'è
   un'altra intestazione (la casella della Ricerca, la barra di un visore): le
   due righe hanno la stessa altezza e lo stesso filetto, e la linea sotto è una
@@ -235,7 +249,9 @@ solo**.
   `STAT_LIST_CLASSNAME` (`ui/panelStyles.ts`); le larghezze della colonna sono
   `INSPECTOR_WIDTH` (Biblioteca e Studio uguali).
 - `PageHeader`: la riga `h-14` in cima a una pagina di dettaglio — ritorno,
-  segno dell'area nel suo inchiostro, identità, comandi a destra.
+  segno dell'area nel suo inchiostro, identità, comandi a destra. `center`
+  aggiunge un gruppo a sé centrato nella riga (la pipeline con le sue lingue
+  nello Studio di traduzione): griglia a tre colonne con le ali uguali.
 - `ResizeHandle`: l'unico divisore trascinabile fra colonne, con nome per chi
   legge con la voce; `layer="shell"` fra colonne dell'applicazione.
 
@@ -284,6 +300,9 @@ testo nel suggerimento e per chi legge con la voce.
   scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
   un tetto per i testi lunghi.
 - Scelte esclusive con nome usano `SegmentedControl`.
+- Ogni campo di ricerca usa `CatalogSearchField` (anche nei pannelli e nei
+  fogli dello Studio): `onKeyDown` per Esc, `focusOnMount` quando si apre da un
+  comando esplicito.
 - Interruttori booleani usano `ToggleRow`.
 
 ### Dialog

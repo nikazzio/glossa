@@ -44,7 +44,7 @@ dall’esito automatico e dal tipo di annotazione.
 Dopo aver completato i frammenti, avvia il controllo di coerenza. Esamina
 le traduzioni con il contesto dei frammenti vicini, senza confrontarle con
 il sorgente. Usa il prompt dedicato in **Controllo qualità** e presenta
-i risultati nella scheda **Coerenza** del pannello Insight.
+i risultati in **Documento** → **Coerenza**, nella colonna Strumenti.
 
 Questo controllo può evidenziare variazioni terminologiche o stilistiche tra
 passaggi. Non sostituisce l’audit di fedeltà del singolo frammento.

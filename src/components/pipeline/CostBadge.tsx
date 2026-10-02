@@ -28,12 +28,12 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
   return (
     <div className="rounded border border-editorial-border bg-editorial-bg shadow-lg">
       <div className="p-3 space-y-2">
-        <p className="text-xs font-sans uppercase tracking-widest text-editorial-muted">
+        <p className="caption-label">
           {t('cost.breakdown')}
         </p>
         <table className="w-full text-xs font-mono">
           <thead>
-            <tr className="text-editorial-muted/70">
+            <tr className="text-editorial-muted">
               <th className="text-left pb-1">{t('cost.stage')}</th>
               <th className="text-right pb-1">{t('header.tokenCount')}</th>
               <th className="text-right pb-1">{t('header.estimatedCost')}</th>
@@ -58,7 +58,7 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
           </tbody>
           {!estimate.isFree && (
             <tfoot>
-              <tr className="border-t border-editorial-ink/20 font-bold">
+              <tr className="border-t border-rule font-bold">
                 <td className="pt-1" colSpan={2}>{t('cost.total')}</td>
                 <td className="pt-1 text-right">
                   {estimate.totalUsd === null ? t('cost.unknown') : formatCost(estimate.totalUsd)}
@@ -67,7 +67,7 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
             </tfoot>
           )}
         </table>
-        <p className="text-xs text-editorial-muted/60 italic">{t('cost.disclaimer')}</p>
+        <p className="text-xs italic text-editorial-muted">{t('cost.disclaimer')}</p>
       </div>
     </div>
   );
@@ -95,7 +95,7 @@ export function CostBadge({ estimate }: CostBadgeProps) {
         onBlur={() => setOpen(false)}
         aria-label={`${t('header.estimatedCost')}: ${label}`}
         aria-describedby={open ? TOOLTIP_ID : undefined}
-        className="inline-flex items-center gap-1 rounded-full border border-rule bg-editorial-textbox/40 px-2.5 py-1 text-xs font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="inline-flex items-center gap-1 rounded-full border border-rule bg-editorial-textbox px-2.5 py-1 text-xs font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         {estimate.isFree && <Sparkles size={10} />}
         {label}

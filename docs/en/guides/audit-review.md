@@ -43,8 +43,8 @@ annotation type.
 After completing the segments, run the consistency check. It examines
 translations with neighbouring translated segments as context, without
 comparing them with the source. It uses the dedicated prompt under
-**Quality Control** and displays results in the Insight panel’s
-**Coherence** tab.
+**Quality Control** and displays results in **Document** → **Coherence**, in
+the Tools column.
 
 This check can identify terminology or style variations between passages.
 It does not replace a segment-level accuracy assessment.

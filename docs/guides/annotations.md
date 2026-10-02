@@ -25,10 +25,10 @@ possibilità di rielaborare il frammento.
 
 Seleziona un passaggio nella traduzione e usa **Aggiungi annotazione** dal
 menu contestuale. Il testo selezionato diventa il riferimento della nota.
-Puoi anche aggiungere una nota senza selezione dalla scheda **Note** del
-frammento, oppure convertire una segnalazione dell’audit in annotazione.
+Puoi anche aggiungere una nota senza selezione con **+** nella sottolinguetta
+**Note** di **Revisione**, oppure convertire una segnalazione dell’audit in annotazione.
 
-Le note del frammento si trovano nella barra laterale del progetto. Non sono
+Le note del frammento si trovano nella colonna Strumenti dello Studio. Non sono
 le note bibliografiche dell’opera, che appartengono alla scheda della Biblioteca.
 
 ## Visualizzazione ed esportazione

@@ -101,7 +101,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
             <Loader2 size={14} className="animate-spin text-editorial-muted" aria-label={t('memory.loadingMemories')} />
           ) : chunkMemoryCount !== null && (
             <>
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
+              <div className="flex h-7 min-w-7 shrink-0 items-center justify-center font-display text-sm italic text-editorial-ink tabular-nums">
                 {chunkMemoryCount}
               </div>
               <p className="text-xs text-editorial-muted">{t('memory.memoriesLabel')}</p>
@@ -173,7 +173,7 @@ function autoResizeTextarea(el: HTMLTextAreaElement | null) {
 function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
   const { t } = useTranslation();
   return (
-    <article className={`space-y-3 rounded-lg border bg-editorial-bg p-3 transition-colors ${candidate.accepted ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
+    <article className={`space-y-3 rounded-lg border bg-editorial-bg p-3 transition-colors ${candidate.accepted ? 'border-editorial-accent' : 'border-editorial-border'}`}>
       <label className="flex min-w-0 cursor-pointer items-center gap-2">
         <input
           type="checkbox"
@@ -193,8 +193,8 @@ function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
           </span>
         )}
       </label>
-      <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-        <p className="mb-1 text-xs uppercase tracking-caption text-editorial-muted">
+      <div className="rounded-md bg-editorial-textbox px-3 py-2">
+        <p className="mb-1 caption-label">
           {t('memory.sourcePhraseLabel')}
         </p>
         <textarea
@@ -205,8 +205,8 @@ function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
           className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-editorial-charcoal outline-none"
         />
       </div>
-      <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-        <p className="mb-1 text-xs uppercase tracking-caption text-editorial-muted">
+      <div className="rounded-md bg-editorial-textbox px-3 py-2">
+        <p className="mb-1 caption-label">
           {t('glossary.translation')}
         </p>
         <textarea

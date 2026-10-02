@@ -12,7 +12,9 @@ import type { CatalogView } from '../components/ui/CatalogViewSwitch';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
-export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references' | 'promptPreview';
+export type ChunkRailTab = 'audit' | 'notes' | 'sourceNotes' | 'memory' | 'references' | 'promptPreview';
+/** Le linguette della colonna destra dello Studio di traduzione: quelle del frammento e quelle del documento. */
+export type TranslationStudioTab = ChunkRailTab | InsightsDrawerTab;
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 /**
  * Gli argomenti della guida, raccolti nei gruppi in cui compaiono nel menu.
@@ -116,8 +118,8 @@ interface UiState {
   chunkDrawerTab: ChunkDrawerTab;
   /** Shell nuova: pannello Insight destro espanso (sostituisce showDocumentDrawer || showChunkDrawer). */
   showInsightPanel: boolean;
-  /** Shell nuova: tab attiva nel pannello Frammento embedded nella rail sinistra. */
-  chunkRailTab: ChunkRailTab;
+  /** Linguetta attiva nella colonna destra dello Studio di traduzione. */
+  studioTab: TranslationStudioTab;
   /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
   showConsoleDrawer: boolean;
   /**
@@ -214,7 +216,7 @@ interface UiState {
   setShowChunkDrawer: (show: boolean, tab?: ChunkDrawerTab) => void;
   setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
   setShowInsightPanel: (show: boolean) => void;
-  setChunkRailTab: (tab: ChunkRailTab) => void;
+  setStudioTab: (tab: TranslationStudioTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
   setDrawerTab: (tab: 'console' | 'transcriptionLog' | 'jobs' | 'system') => void;
   setSystemLogAreas: (areas: LogFilterKey[]) => void;
@@ -368,7 +370,7 @@ export const useUiStore = create<UiState>()(
       showChunkDrawer: false,
       chunkDrawerTab: 'summary',
       showInsightPanel: false,
-      chunkRailTab: 'audit',
+      studioTab: 'references',
       showConsoleDrawer: false,
       drawerTab: 'system',
       // Di partenza le aree del programma senza le librerie di terze parti,
@@ -510,7 +512,7 @@ export const useUiStore = create<UiState>()(
         ),
       setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
       setShowInsightPanel: (show) => set({ showInsightPanel: show }),
-      setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
+      setStudioTab: (tab) => set({ studioTab: tab }),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
       setDrawerTab: (tab) => set({ drawerTab: tab }),
       setSystemLogAreas: (areas) => set({ systemLogAreas: areas }),

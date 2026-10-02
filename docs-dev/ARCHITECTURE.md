@@ -900,6 +900,51 @@ l'editor montato lo consuma con `startImport`, la stessa via del comando di
 import, e apre `ImportPreviewDialog`. Chiudendo l'anteprima il progetto resta
 vuoto.
 
+**Studio di traduzione** (`components/translation/TranslationStudio`): si apre
+quando `projectStore.currentProjectId` è valorizzato, **dentro**
+`WorkspaceShellNext` come ogni altra area — la barra principale
+(`WorkspaceRailNext`) resta. Con un progetto aperto la barra marca Traduzioni
+come area attiva; ogni voce chiude il progetto (`closeProject`) prima di
+`navigate`, e tutte si spengono mentre `chunksStore.isProcessing`: chiudere il
+progetto sotto la pipeline svuoterebbe i frammenti a lavoro in corso. Il
+ritorno al catalogo (`leaveTranslation` in `App`) fa lo stesso e porta a
+`{ area: 'translations' }`. Nota: `closeProject` non salva; un'uscita entro il
+ritardo dell'autosalvataggio perde l'ultima modifica (da chiudere con il
+salvataggio visibile, T2).
+
+Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
+`RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile
+(`renamePipeline`), ⇄ con `PopoverItem`/`MenuActionRow`, ⚙ della
+configurazione — e le lingue della pipeline; a destra importa, esporta,
+risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
+`ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
+aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i
+pallini fuori finestra restano montati per lo scorrimento ma con `tabIndex`
+-1 e `aria-hidden`; frecce ±1 e ±7, rotella con ascoltatore nativo non
+passivo), `StageStatusRow` (spie delle fasi del frammento aperto, aprono
+`StageTraceDialog`) e la lente che apre `SearchTab` sotto la fila (regione,
+non più linguetta; Esc dal campo la chiude), a destra `TranslationInspector`: `InspectorShell` con `beforeTabs`
+per l'esecuzione (le lingue, nella riga in cima, sono della pipeline:
+`projects.source_language/target_language` ne è solo la copia dell'ultima
+salvata): (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
+della stima si apre a sinistra del riquadro) e cinque
+linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
+stato, `uiStore.studioTab` (`TranslationStudioTab` =
+linguette del frammento ∪ linguette del documento). Revisione (`ReviewTab`) è
+una linguetta della colonna ma tre valori di `studioTab` — `audit`, `notes`,
+`sourceNotes` — mostrati come sottolinguette (`TabStrip`, linguette a icona con
+nome e conteggio nell'etichetta, Audit spento con il motivo); `setStudioTab('notes')` da altri punti apre quindi Revisione
+sulle note. Le note del testo (`SourceNotesList`) sono le note a piè di
+pagina importate, in sola lettura. Memoria (`MemoryGroupTab`, colonna
+`phraseMemory`) segue lo stesso schema con `references` e `memory`, Documento
+(`DocumentGroupTab`) con `index`, `stats`, `coherence`; tutte e tre usano `SubTabsPanel` (fila `TabStrip` ferma, nome della sottolinguetta
+accanto, un solo corpo che scorre). Le schede con barra fissa
+sopra un elenco (Riferimenti, Memoria, Glossario, Indice) scorrono da
+sé (`bodyScrolls` falso), le altre scorrono nella colonna. Aperta/chiusa e
+larghezza restano `showInsightPanel` e `projectFlyoutWidth`; colonna chiusa =
+solo traduci/stop. Le note aperte da altri punti (menu contestuale,
+segnalazione dell'audit) usano `setShowInsightPanel(true)` + `setStudioTab('notes')`.
+
 Il motore frontend coordina:
 
 1. controllo di provider e modelli;

@@ -544,6 +544,8 @@
     "ariaAdd": "Aggiungi pipeline",
     "saveFirstToAdd": "Salva il progetto prima di aggiungere pipeline",
     "pipelineNameLabel": "Nome pipeline",
+    "renamePipeline": "Rinomina la pipeline",
+    "renameFailed": "Non è stato possibile rinominare la pipeline",
     "newPipeline": "Nuova pipeline",
     "pipelineNumber": "Pipeline {{number}}",
     "deletePipeline": "Elimina pipeline",
@@ -753,7 +755,7 @@
     "phraseMemoryMaxResults": "Risultati massimi",
     "phraseMemoryManualRefreshHint": "L'aggiornamento manuale resta disponibile nel pannello Memoria del frammento.",
     "fewShotTab": "Esempi di traduzione",
-    "fewShotEmptyHint": "Aggiungi esempi da un chunk bloccato nell'editor documento (scheda Audit).",
+    "fewShotEmptyHint": "Aggiungi esempi da un chunk bloccato nell'editor documento (Revisione → Audit).",
     "fewShotSourceLabel": "Testo sorgente",
     "fewShotTargetLabel": "Traduzione",
     "fewShotLabelPlaceholder": "Nota (facoltativa)",
@@ -2159,6 +2161,8 @@
     "projectHomeUnits": "Unità caricate",
     "projectHomeMode": "Modalità pipeline",
     "previousChunk": "Chunk precedente",
+    "jumpBackChunks": "Indietro di {{count}} frammenti",
+    "jumpForwardChunks": "Avanti di {{count}} frammenti",
     "nextChunk": "Chunk successivo",
     "leftPage": "Pagina sorgente",
     "rightPage": "Pagina traduzione",
@@ -2183,6 +2187,7 @@
     "searchInTranslation": "Cerca nella candidata",
     "clearPaneSearch": "Cancella ricerca",
     "searchInPane": "Cerca nel testo",
+    "searchInDocument": "Cerca nel documento",
     "searchEmptyTitle": "Ricerca nel documento",
     "searchEmptyBody": "Digita una parola o frase per cercare in tutti i chunk, sia nel testo originale che nella traduzione e nell'audit.",
     "searchNoResults": "Nessun risultato trovato.",
@@ -2194,9 +2199,16 @@
     "insightsTabStats": "Statistiche",
     "insightsTabCoherence": "Coerenza",
     "insightsTabGlossary": "Glossario",
+    "glossaryTermCount_one": "{{count}} termine",
+    "glossaryTermCount_other": "{{count}} termini",
     "insightsTabNotes": "Note",
+    "insightsTabReview": "Revisione",
+    "insightsTabDocument": "Documento",
+    "reviewSourceNotes": "Note del testo",
+    "reviewViewsLabel": "Revisione del frammento",
     "insightsTabOperations": "Console",
     "chunkPanelTitle": "Chunk",
+    "studioInspectorLabel": "Strumenti della traduzione",
     "openChunkPanel": "Apri pannello chunk",
     "operationsEmpty": "Nessun log operativo frontend per ora.",
     "operationsEmptyFiltered": "Nessuna riga per il frammento o i filtri selezionati.",
@@ -2421,9 +2433,17 @@
         "intro": "La vista documento affianca originale e traduzione. I comandi dell’editor permettono di modificare il testo, controllare la formattazione e confrontare i risultati delle fasi.",
         "blocks": [
           {
+            "title": "Lo Studio di traduzione",
+            "paragraphs": [
+              "La barra principale resta a sinistra: da lì passi a un’altra area, e la traduzione si chiude. Mentre la pipeline lavora le voci sono spente.",
+              "La riga in cima riporta al catalogo e mostra il nome della traduzione e la pipeline aperta con le sue lingue: un clic su un nome lo rinomina, ⇄ cambia pipeline, l’ingranaggio ne apre le opzioni. A destra trovi importa, esporta, risorse linguistiche del workspace, configurazione ed elimina.",
+              "La colonna Strumenti a destra tiene in cima traduci, Blocchi multipli con il numero di frammenti e i costi. Sotto trovi Glossario, Memoria (frasi simili ed estrazione), Anteprima Revisione (Audit, Note e Note del testo) e Documento (Indice, Statistiche e Coerenza). Chiusa, lascia in vista il solo pulsante traduci."
+            ]
+          },
+          {
             "title": "Importare e dividere il testo",
             "paragraphs": [
-              "Usa Importa nella barra del progetto. Sono supportati TXT e Markdown fino a 50 MiB, DOCX fino a 100 MiB e PDF fino a 50 MiB. L’estrazione DOCX è sperimentale; i PDF devono contenere testo, non soltanto immagini.",
+              "Usa Importa nella riga in cima allo Studio. Sono supportati TXT e Markdown fino a 50 MiB, DOCX fino a 100 MiB e PDF fino a 50 MiB. L’estrazione DOCX è sperimentale; i PDF devono contenere testo, non soltanto immagini.",
               "Controlla l’anteprima prima di confermare. La segmentazione automatica divide il testo secondo una lunghezza obiettivo in parole. Per Markdown sono disponibili opzioni dedicate ai titoli.",
               "Scegli una dimensione adatta al testo e rivedi i confini dei frammenti. Un file di testo con codifica diversa da UTF-8 deve essere convertito prima dell’importazione."
             ]
@@ -2439,9 +2459,9 @@
           {
             "title": "Leggere gli indicatori",
             "paragraphs": [
-              "I cerchi sopra il documento selezionano i frammenti. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
+              "Sopra il documento una finestra di sette cerchi: il frammento aperto sta fermo al centro. Le frecce singole passano al frammento vicino, le doppie saltano di sette; la rotella sopra i cerchi li scorre, un clic ne apre uno. A destra le spie delle fasi del frammento aperto e la lente per cercare in tutto il documento. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
               "Gli indicatori agli angoli segnalano problemi dell’audit, note, blocco della traduzione e modifiche al sorgente. Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
-              "Il pannello Insight contiene indice, ricerca, statistiche, coerenza e glossario del documento. La barra del frammento contiene invece Riferimenti, Anteprima, Audit, Memoria e Note."
+              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria, Anteprima e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti."
             ]
           },
           {
@@ -2465,7 +2485,7 @@
               "Apri Risorse linguistiche nel workspace e seleziona Dizionari.",
               "Crea un dizionario o scegli una risorsa esistente.",
               "Inserisci termine sorgente, resa richiesta ed eventuali note. Puoi anche importare CSV o TSV, controllando anteprima e modalità di integrazione o sostituzione.",
-              "Assegna il dizionario al progetto e controlla le voci nella scheda Glossario del pannello Insight."
+              "Assegna il dizionario al progetto e controlla le voci nella scheda Glossario della colonna Strumenti."
             ]
           },
           {
@@ -2479,7 +2499,7 @@
             "title": "Controllare l’applicazione dei termini",
             "paragraphs": [
               "La pipeline riceve istruzioni per rispettare il glossario. Controlla comunque il risultato: il modello può ignorare o applicare male una voce.",
-              "La legenda della scheda Glossario distingue termini sorgente, rese trovate e rese mancanti. Le evidenziazioni mostrano corrispondenze testuali, non una verifica del significato.",
+              "Con l’evidenziazione accesa, la legenda della scheda Glossario distingue termini sorgente, rese trovate e rese mancanti. Le evidenziazioni mostrano corrispondenze testuali, non una verifica del significato.",
               "Il glossario indica rese richieste. La memoria di frasi suggerisce invece riferimenti da selezionare per ciascun frammento."
             ]
           }
@@ -2492,7 +2512,7 @@
           {
             "title": "Usare frasi già salvate",
             "paragraphs": [
-              "Apri Riferimenti nel frammento. Se la memoria è attiva, Glossa cerca corrispondenze nelle risorse del workspace. Puoi regolare la soglia di somiglianza.",
+              "Apri Memoria → Frasi simili in memoria nel frammento. Se la memoria è attiva, Glossa cerca corrispondenze nelle risorse del workspace. Puoi regolare la soglia di somiglianza.",
               "Seleziona solo le coppie pertinenti. Entreranno nella richiesta quando tradurrai o rielaborerai il frammento. Le coppie non selezionate restano escluse."
             ]
           },
@@ -2501,7 +2521,7 @@
             "paragraphs": [],
             "steps": [
               "Rivedi e blocca la traduzione del frammento.",
-              "Apri Memoria. Le frasi già salvate compaiono selezionate.",
+              "Apri Memoria → Estrai frasi. Le frasi già salvate compaiono selezionate.",
               "Premi Estrai frasi per ottenere proposte, oppure inserisci una coppia manualmente.",
               "Correggi i testi e seleziona le coppie da conservare.",
               "Salva la selezione. Una frase già salvata che hai deselezionato viene rimossa dalla raccolta."
@@ -2524,7 +2544,7 @@
             "title": "Esaminare e correggere",
             "paragraphs": [],
             "steps": [
-              "Apri Audit dopo la traduzione e leggi le segnalazioni su terminologia, fedeltà, fluidità, grammatica e coerenza.",
+              "Apri Revisione → Audit dopo la traduzione e leggi le segnalazioni su terminologia, fedeltà, fluidità, grammatica e coerenza.",
               "Verifica ogni segnalazione sul testo. Il collegamento al passaggio può non individuare la frase esatta.",
               "Correggi la traduzione oppure riesegui la fase che richiede una revisione.",
               "Usa Rivaluta per aggiornare il giudizio senza eseguire tutta la traduzione.",
@@ -2534,7 +2554,7 @@
           {
             "title": "Controllare la coerenza del documento",
             "paragraphs": [
-              "Dopo aver completato i frammenti, avvia il controllo di coerenza dal pannello Insight. Confronta i passaggi tradotti per rilevare variazioni di terminologia e stile.",
+              "Dopo aver completato i frammenti, avvia il controllo di coerenza da Documento → Coerenza, nella colonna Strumenti. Confronta i passaggi tradotti per rilevare variazioni di terminologia e stile.",
               "Questo controllo è separato dalla verifica di fedeltà rispetto all’originale. Una valutazione positiva non sostituisce la revisione umana."
             ]
           }
@@ -3263,6 +3283,8 @@
     "addButton": "Aggiungi annotazione",
     "placeholder": "Descrivi il problema, il dubbio o l'osservazione...",
     "anchorLabel": "Ancora al testo (opzionale)",
+    "clearAnchor": "Togli il riferimento al testo",
+    "typeLabel": "Tipo di nota",
     "anchorPlaceholder": "Incolla la frase a cui si riferisce...",
     "saveButton": "Aggiungi",
     "updateButton": "Salva",

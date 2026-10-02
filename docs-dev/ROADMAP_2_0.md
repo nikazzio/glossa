@@ -231,8 +231,13 @@ workspace e lingue, rinomina | elimina, creazione «da zero» con il file).
 **Restano**: strada «da una trascrizione» con copia fissata, legame con opera
 e trascrizione d'origine e, solo allora, i comandi apri l'opera / apri la
 trascrizione, filtri per biblioteca e secolo, raggruppamento per biblioteca;
-Studio di traduzione, scheda Memoria e costi (#485 N); scelta multipla nei
-cataloghi, non chiesta per ora.
+Studio di traduzione (#485 N): fatta la disposizione (T1: barra principale
+sempre in vista, riga d'intestazione, una colonna Strumenti a destra); restano
+salvataggio visibile e manuale (T2), verifica con la spunta (T3), storico del
+frammento (T4), pannello modello e istruzioni comune (T5), velo sul frammento
+in traduzione (T6), scheda Memoria (T7) e costi (T8); quali riepiloghi unire
+nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
+ora.
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

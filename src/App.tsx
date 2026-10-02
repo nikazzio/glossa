@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { initLogger } from './utils/logger';
 import { Header } from './components/layout';
-import { ShellNext } from './components/layout/shell-next/ShellNext';
+import { TranslationStudio } from './components/translation/TranslationStudio';
 import { WorkspaceShellNext } from './components/layout/shell-next/WorkspaceShellNext';
 import { AppStatusBar } from './components/layout/AppStatusBar';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner, PanelTransitionVeil } from './components/common';
@@ -209,6 +209,12 @@ function EditorView() {
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const closeProject = useProjectStore((state) => state.closeProject);
+  const navigate = useUiStore((state) => state.navigate);
+  const leaveTranslation = useCallback(() => {
+    closeProject();
+    navigate({ area: 'translations' });
+  }, [closeProject, navigate]);
   const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}`;
 
   /** Apre l'anteprima dell'import con un file già letto: dal comando
@@ -340,11 +346,12 @@ function EditorView() {
     <>
       <Suspense fallback={null}>
         <main className="relative flex flex-1 min-h-0 overflow-hidden">
-          <ShellNext
+          <TranslationStudio
+            onBack={leaveTranslation}
+            onImportDocument={handleImportDocument}
             onRunPipeline={runPipeline}
             onCancelPipeline={cancelPipeline}
             onRetranslateChunk={handleRetranslateChunk}
-            onImportDocument={handleImportDocument}
             onReauditChunk={auditSingleChunk}
             onRunCoherenceAudit={runCoherenceAudit}
           >
@@ -360,7 +367,7 @@ function EditorView() {
               />
               <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
             </div>
-          </ShellNext>
+          </TranslationStudio>
         </main>
       </Suspense>
 
@@ -495,15 +502,17 @@ export default function App() {
         <div className="flex-shrink-0">
           <Header />
         </div>
-        {isShellView ? (
-          <div className="flex flex-1 min-h-0">
-            <WorkspaceShellNext>
-              <div className="relative flex min-w-0 flex-1">
-                {/* Cambiando area il contenuto entra con una dissolvenza e
-                    pochi pixel di scivolo: il salto secco fra due schermate
-                    piene non dice se si è arrivati o se qualcosa è saltato.
-                    Niente uscita animata — l'area vecchia se ne va subito,
-                    tenerne due montate insieme costa letture doppie. */}
+        {/* La barra principale resta anche dentro una traduzione, come nelle
+            altre aree: da lì si cambia area senza passare dal catalogo. */}
+        <div className="flex flex-1 min-h-0">
+          <WorkspaceShellNext>
+            <div className="relative flex min-w-0 flex-1">
+              {/* Cambiando area il contenuto entra con una dissolvenza e
+                  pochi pixel di scivolo: il salto secco fra due schermate
+                  piene non dice se si è arrivati o se qualcosa è saltato.
+                  Niente uscita animata — l'area vecchia se ne va subito,
+                  tenerne due montate insieme costa letture doppie. */}
+              {isShellView ? (
                 <motion.div
                   key={
                     location.area === 'workspace'
@@ -531,23 +540,19 @@ export default function App() {
                     <DashboardArea location={location.area === 'dashboard' ? location : {area:'dashboard'}} />
                   )}
                 </motion.div>
-              </div>
-            </WorkspaceShellNext>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <EditorView />
-          </div>
-        )}
+              ) : (
+                <EditorView />
+              )}
+            </div>
+          </WorkspaceShellNext>
+        </div>
         {isShellView ? (
           <Suspense fallback={null}>
             <SettingsModal />
             <LibraryPanel />
           </Suspense>
         ) : null}
-        {/* In vista progetto la barra di stato vive dentro ShellNext (solo sotto rail+documento,
-            non sotto l'ispettore destro); qui resta solo per la vista workspace/home. */}
-        {isShellView && <AppStatusBar />}
+        <AppStatusBar />
         <ConfirmDialog />
       </div>
       </MotionConfig>

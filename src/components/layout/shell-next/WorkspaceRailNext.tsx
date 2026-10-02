@@ -13,9 +13,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../../stores/projectStore';
+import { useChunksStore } from '../../../stores/chunksStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { dashboardLocation, workspaceLocation, type GlobalArea } from '../../../navigation/appLocation';
+import { dashboardLocation, workspaceLocation, type AppLocation, type GlobalArea } from '../../../navigation/appLocation';
 import type { Workspace } from '../../../types';
 import { AREA_INK_CLASSNAME, IconButton, type InkedArea } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
@@ -35,20 +36,39 @@ const AREA_ITEMS: ReadonlyArray<{ id: GlobalArea; icon: typeof BookOpenText; ena
   { id: 'analysis', icon: BarChart3, enabled: true },
 ];
 
+/**
+ * La barra resta anche dentro una traduzione aperta: lì l'area attiva è
+ * Traduzioni, e ogni voce chiude la traduzione prima di portare altrove.
+ * Mentre la pipeline lavora le voci si spengono, come il ritorno al catalogo:
+ * uscire chiuderebbe il progetto sotto i piedi del lavoro in corso.
+ */
+function useRailNavigation() {
+  const navigate = useUiStore((state) => state.navigate);
+  const location = useUiStore((state) => state.location);
+  const projectOpen = useProjectStore((s) => s.currentProjectId !== null);
+  const closeProject = useProjectStore((s) => s.closeProject);
+  const isProcessing = useChunksStore((s) => s.isProcessing);
+  const go = (next: AppLocation) => {
+    if (projectOpen) closeProject();
+    navigate(next);
+  };
+  return { location, projectOpen, blocked: projectOpen && isProcessing, go };
+}
+
 /** Dashboard: home dell'applicazione — sopra e fuori dalle aree del workspace. */
 function DashboardItem({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const location = useUiStore((state) => state.location);
-  const navigate = useUiStore((state) => state.navigate);
-  const active = location.area === 'dashboard';
+  const { location, projectOpen, blocked, go } = useRailNavigation();
+  const active = !projectOpen && location.area === 'dashboard';
 
   return (
     <div className="px-2.5 pt-1">
       <ShellNavItem
         active={active}
+        disabled={blocked}
         collapsed={collapsed}
         labelFont="display"
-        onClick={() => navigate(dashboardLocation())}
+        onClick={() => go(dashboardLocation())}
         ariaCurrent={active ? 'page' : undefined}
         icon={
           // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
@@ -83,20 +103,20 @@ const DASHBOARD_VIEWS: { view?: 'search'; labelKey: string; icon: LucideIcon }[]
 
 function DashboardViews({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const location = useUiStore((state) => state.location);
-  const navigate = useUiStore((state) => state.navigate);
+  const { location, projectOpen, blocked, go } = useRailNavigation();
   const current = location.area === 'dashboard' ? location.view : undefined;
 
   return (
     <div className={collapsed ? 'mt-1 space-y-0.5' : 'mt-0.5 space-y-0.5 pl-4'}>
       {DASHBOARD_VIEWS.map(({ view, labelKey, icon: Icon }) => {
-        const active = location.area === 'dashboard' && current === view;
+        const active = !projectOpen && location.area === 'dashboard' && current === view;
         return (
           <ShellNavItem
             key={labelKey}
             active={active}
+            disabled={blocked}
             collapsed={collapsed}
-            onClick={() => navigate(dashboardLocation(view ? { view } : undefined))}
+            onClick={() => go(dashboardLocation(view ? { view } : undefined))}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
@@ -125,21 +145,20 @@ function DashboardViews({ collapsed }: { collapsed: boolean }) {
  */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const location = useUiStore((state) => state.location);
-  const navigate = useUiStore((state) => state.navigate);
+  const { location, projectOpen, blocked, go } = useRailNavigation();
 
   return (
     <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
       {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
-        const active = enabled && location.area === id;
+        const active = enabled && (projectOpen ? id === 'translations' : location.area === id);
         return (
           <ShellNavItem
             key={id}
             active={active}
-            disabled={!enabled}
+            disabled={!enabled || blocked}
             collapsed={collapsed}
             labelFont="display"
-            onClick={enabled ? () => navigate({ area: id }) : undefined}
+            onClick={enabled ? () => go({ area: id }) : undefined}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
@@ -178,18 +197,16 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const setActive = useWorkspaceStore((s) => s.setActive);
-  const closeProject = useProjectStore((s) => s.closeProject);
   const loadProjects = useProjectStore((s) => s.loadProjects);
-  const location = useUiStore((state) => state.location);
-  const navigate = useUiStore((state) => state.navigate);
+  const { location, projectOpen, blocked, go } = useRailNavigation();
 
   const handleOpenWorkspace = async (ws: Workspace) => {
     if (ws.id !== activeWorkspace?.id) {
-      closeProject();
+      useProjectStore.getState().closeProject();
       await setActive(ws);
       await loadProjects();
     }
-    navigate(workspaceLocation(ws.id));
+    go(workspaceLocation(ws.id));
   };
 
   return (
@@ -212,11 +229,12 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
         }
       >
         {workspaces.map((ws) => {
-          const isCurrentView = location.area === 'workspace' && location.workspaceId === ws.id;
+          const isCurrentView = !projectOpen && location.area === 'workspace' && location.workspaceId === ws.id;
           return (
             <ShellNavItem
               key={ws.id}
               active={isCurrentView}
+              disabled={blocked}
               collapsed={collapsed}
               labelFont="display"
               onClick={() => void handleOpenWorkspace(ws)}

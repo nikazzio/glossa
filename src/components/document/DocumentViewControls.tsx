@@ -21,7 +21,7 @@ function ViewOptionRow({ active, disabled, onClick, icon, label }: ViewOptionRow
       disabled={disabled}
       aria-pressed={active}
       className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        active ? 'font-medium text-editorial-accent' : 'text-editorial-ink hover:bg-editorial-textbox/60'
+        active ? 'font-medium text-editorial-accent' : 'text-editorial-ink hover:bg-surface-hover/50'
       }`}
     >
       <span className={active ? 'text-editorial-accent' : 'text-editorial-muted'}>{icon}</span>

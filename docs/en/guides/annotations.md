@@ -24,10 +24,10 @@ review work; locking controls whether a segment can be reprocessed.
 
 Select a passage in the translation and choose **Add annotation** from the
 context menu. The selected text becomes the note’s anchor. You can also add
-an unanchored note in the segment’s **Notes** tab or convert an audit finding
+an unanchored note with **+** in the **Notes** sub-tab of **Review** or convert an audit finding
 into an annotation.
 
-Segment notes are in the project sidebar. They are separate from notes about
+Segment notes are in the studio’s Tools column. They are separate from notes about
 a bibliographic work, which belong to its Library record.
 
 ## Display and export
