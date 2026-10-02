@@ -2171,6 +2171,7 @@
     "clearPaneSearch": "Cancella ricerca",
     "searchInPane": "Cerca nel testo",
     "reasonRunning": "traduzione in corso",
+    "chunkTranslating": "Traduzione in corso…",
     "reasonChunkProcessing": "frammento in traduzione",
     "reasonNoTranslation": "nessuna traduzione da verificare",
     "reasonHasDocument": "la traduzione ha già un documento",
@@ -2421,7 +2422,8 @@
             "paragraphs": [
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
-              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato."
+              "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato.",
+              "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi."
             ]
           },
           {

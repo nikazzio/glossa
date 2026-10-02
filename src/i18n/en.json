@@ -2171,6 +2171,7 @@
     "clearPaneSearch": "Clear search",
     "searchInPane": "Search this text",
     "reasonRunning": "translation running",
+    "chunkTranslating": "Translation in progress…",
     "reasonChunkProcessing": "segment being translated",
     "reasonNoTranslation": "no translation to verify",
     "reasonHasDocument": "the translation already has a document",
@@ -2421,7 +2422,8 @@
             "paragraphs": [
               "Use Test on a representative segment to inspect the result while keeping configuration editable. Then switch to production and choose whether to process one segment or several.",
               "The estimate beside the controls applies to the selected action. It is approximate: usage depends on the submitted text and response. Statistics show available usage data after processing.",
-              "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results."
+              "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results.",
+              "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free."
             ]
           },
           {

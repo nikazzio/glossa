@@ -322,7 +322,9 @@ testo nel suggerimento e per chi legge con la voce.
   sempre visibile e spento con il motivo, mai un pulsante a scritta.
 - Contenuto bloccato durante un lavoro: il velo comune `PagePendingOverlay`
   (`components/common`) con la sua riga di stato; rende inerti i comandi
-  coperti. Nessun velo scritto a mano.
+  coperti. Nessun velo scritto a mano. `tone="running"` lo fa oro, per il
+  frammento che la pipeline sta traducendo (solo il testo, non la colonna
+  delle fasi).
 
 ### Badge numerici
 

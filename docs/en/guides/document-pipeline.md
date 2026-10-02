@@ -47,6 +47,11 @@ stops the current work without removing completed results. Resuming and rerunnin
 serve different purposes: resuming processes outstanding work, while rerunning
 recalculates the unverified segments covered by the selected action.
 
+While a segment is being translated, its translation text is covered by a gold
+veil, “Translation in progress…”, and cannot be edited: the text does not
+appear as it is generated, it arrives when the stage finishes. The stage column
+in the margin stays usable; the original is read-only and the pencil says why.
+
 ## Reading and review
 
 The translation studio opens inside the application frame: the main bar on

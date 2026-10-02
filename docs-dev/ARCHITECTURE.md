@@ -933,6 +933,15 @@ modifiche e durante la pipeline (motivo nel suggerimento), `danger` con
 vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
 salva solo le risorse linguistiche, fuori dai campi, come prima.
 
+Frammento in lavorazione (`status === 'processing'`): il testo della traduzione
+(editor o confronto) è coperto da `PagePendingOverlay` `tone="running"`
+(«Traduzione in corso…»), che lo rende inerte; prima restava scrivibile e si
+scontrava col risultato della pipeline. La colonna delle fasi è fuori dal velo.
+I token di Ollama arrivano solo in `stageResults[stage].content`
+(`appendChunkStageContent`); il foglio sull'ultima fase mostra
+`translationDisplayText`, scritto a fine fase, quindi nella vista normale non
+c'è testo che arriva man mano.
+
 I comandi delle fasi (una per fase, confronto, coppie del confronto) sono una
 colonna verticale nel margine destro della pagina (`DocumentPage.sideRail`,
 `IconButton` xs con suggerimento a sinistra, ferma mentre il testo scorre): la

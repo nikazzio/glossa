@@ -48,6 +48,11 @@ interrompe il lavoro corrente senza eliminare i risultati già completati.
 La ripresa e la rielaborazione hanno scopi diversi: la prima completa il lavoro
 restante, la seconda ricalcola i frammenti non verificati selezionati dall’azione.
 
+Mentre un frammento si traduce, il testo della sua traduzione è coperto da un
+velo oro, «Traduzione in corso…», e non si modifica: il testo non compare man
+mano, arriva quando la fase finisce. La colonna delle fasi nel margine resta
+usabile; l’originale è in sola lettura e la matita dice perché.
+
 ## Lettura e revisione
 
 Lo Studio di traduzione si apre dentro la cornice dell’applicazione: la barra

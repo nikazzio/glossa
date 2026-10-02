@@ -6,7 +6,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
+import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX, PagePendingOverlay } from '../common';
 import { IconButton, Tooltip } from '../ui';
 import { DocumentPage } from './DocumentPage';
 import { ProjectSaveButton } from './ProjectSaveButton';
@@ -432,7 +432,7 @@ export function DocumentView({
                 scrollRef={scrollTranslationRef}
               >
                 <div
-                  className="flex flex-col flex-1 min-h-0 min-w-0"
+                  className="relative flex flex-col flex-1 min-h-0 min-w-0"
                   onContextMenu={(e) => {
                     const text = window.getSelection()?.toString().trim() ?? '';
                     if (!text) return;
@@ -470,6 +470,16 @@ export function DocumentView({
                       useDocLineHeight
                     />
                   )}
+                  {/* Il frammento in lavorazione: il testo è della pipeline finché
+                      non finisce, e scriverci sopra si scontrerebbe con il suo.
+                      La colonna delle fasi resta fuori dal velo. */}
+                  <PagePendingOverlay
+                    pending={currentChunk.status === 'processing'}
+                    errorMessage={null}
+                    label={t('document.chunkTranslating')}
+                    tone="running"
+                    roundedClassName="rounded-lg"
+                  />
                 </div>
               </DocumentPage>
             );

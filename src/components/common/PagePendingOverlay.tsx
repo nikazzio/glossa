@@ -11,11 +11,15 @@ export function PagePendingOverlay({
   errorMessage,
   label,
   roundedClassName = 'rounded-2xl',
+  tone = 'neutral',
 }: {
   pending: boolean;
   errorMessage: string | null;
   label?: string;
   roundedClassName?: string;
+  /** `running`: cerchietto e riga in oro, il colore di «in esecuzione» (un
+   *  frammento che la pipeline sta traducendo). */
+  tone?: 'neutral' | 'running';
 }) {
   const { t } = useTranslation();
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -56,7 +60,12 @@ export function PagePendingOverlay({
       className={`absolute inset-0 z-10 flex items-center justify-center bg-editorial-bg/70 ${roundedClassName}`}
     >
       {pending ? (
-        <span role="status" className="flex flex-col items-center gap-2 text-center text-xs text-editorial-muted">
+        <span
+          role="status"
+          className={`flex flex-col items-center gap-2 text-center text-xs ${
+            tone === 'running' ? 'text-editorial-running' : 'text-editorial-muted'
+          }`}
+        >
           <Loader2 size={20} className="animate-spin" aria-hidden="true" />
           {label ?? <span className="sr-only">{t('common.loading')}</span>}
         </span>

@@ -241,8 +241,8 @@ riaprendo) e lo storico (T4: sottolinguetta in Revisione, versioni dal
 dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
 colonna nuova) e la configurazione della pipeline (T5: finestra a sei linguette
 comuni, sezione Modello e editor dei prompt comuni, niente spiegazioni fisse,
-«Azzera tutte le traduzioni» a icona, velo comune); restano velo sul frammento
-in traduzione (T6), scheda Memoria (T7) e costi (T8); quali riepiloghi unire
+«Azzera tutte le traduzioni» a icona, velo comune) e il velo oro sul frammento
+in traduzione (T6); restano scheda Memoria (T7) e costi (T8); quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.
 
