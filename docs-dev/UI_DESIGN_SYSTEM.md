@@ -158,6 +158,8 @@ interattivi.
 - `LinkChip`: etichetta di un legame già stabilito che, cliccata, lo scioglie.
   Il motivo sta nel `Tooltip`, mai nel `title` nativo; il nome leggibile del
   legame resta il nome del comando.
+- `PopoverItem` accetta `description`, una seconda riga a spaziatura fissa
+  (l'inizio di un modello di prompt salvato).
 - Nessuna riga di elenco, etichetta di legame o voce di menu scritta a mano
   nei componenti.
 
@@ -177,12 +179,21 @@ interattivi.
 
 ### TabStrip
 
+Dentro una linguetta di colonna che raccoglie più viste (Memoria, Revisione,
+Documento nello Studio di traduzione) la fila sta in `SubTabsPanel`: ferma in
+cima, nome della vista aperta accanto in `font-display text-sm italic`, un solo
+corpo che scorre. Mai `SegmentedControl` per questo: è per le scelte con nome
+nelle impostazioni.
+
 Fila di linguette icona con la propria navigazione da tastiera: frecce, Home ed
 End, con il focus che segue la linguetta scelta come vuole il modello ARIA.
 Usarla per ogni gruppo di linguette che non sia già dentro `InspectorShell` —
 sotto-schede di una finestra di impostazioni, linguette di un pannello.
 
 - `tabs`: `{ id, label, icon }`; l'etichetta vive nel tooltip, non a schermo.
+- `disabled` per linguetta: stessa regola dei tab di `InspectorShell` —
+  visibile, spenta, motivo nell'etichetta, saltata da frecce e Home/End
+  (sottolinguette della Revisione nello Studio di traduzione).
 - `idPrefix`: da cui derivano `<prefix>-tab-<id>` e `<prefix>-panel-<id>`, così
   il pannello si collega con `aria-labelledby`.
 - Il pannello attivo lo monta il chiamante, con `role="tabpanel"`.
@@ -222,6 +233,11 @@ solo**.
   lungo, come la colonna dei lavori in Panoramica. **Un solo contenitore che
   scorre per colonna**: due aree annidate dividono rotellina e tasti fra due
   destinazioni e nessuna delle due si comporta come ci si aspetta.
+- `beforeTabs`: blocco fisso fra intestazione e linguette, in vista con
+  qualunque scheda (l'esecuzione nello Studio di traduzione).
+- Larghezza: `INSPECTOR_WIDTH` per tutti, con una sola eccezione — lo Studio di
+  traduzione parte da 440 px (minimo e iniziale) perché tiene dieci linguette
+  a misura piena in una riga; si allarga fino al massimo comune.
 - `tabRowHeightClassName`: altezza fissa della barra tab quando accanto c'è
   un'altra intestazione (la casella della Ricerca, la barra di un visore): le
   due righe hanno la stessa altezza e lo stesso filetto, e la linea sotto è una
@@ -235,14 +251,18 @@ solo**.
   `STAT_LIST_CLASSNAME` (`ui/panelStyles.ts`); le larghezze della colonna sono
   `INSPECTOR_WIDTH` (Biblioteca e Studio uguali).
 - `PageHeader`: la riga `h-14` in cima a una pagina di dettaglio — ritorno,
-  segno dell'area nel suo inchiostro, identità, comandi a destra.
+  segno dell'area nel suo inchiostro, identità, comandi a destra. `center`
+  aggiunge un gruppo a sé centrato nella riga (la pipeline con le sue lingue
+  nello Studio di traduzione): griglia a tre colonne con le ali uguali.
 - `ResizeHandle`: l'unico divisore trascinabile fra colonne, con nome per chi
   legge con la voce; `layer="shell"` fra colonne dell'applicazione.
 
 ### ChoiceDots
 
 Scelta esclusiva fra poche opzioni a cerchietti da 24 px con icona o lettera
-(immagine inviata all'OCR, livello di ragionamento): `role="radiogroup"`,
+(immagine inviata all'OCR, livello di ragionamento, modalità della pipeline).
+Un'opzione può essere `disabled` (la modalità DeepL senza chiave): resta
+visibile, il motivo è nell'etichetta, le frecce la saltano; `role="radiogroup"`,
 frecce/Home/End spostano scelta e fuoco, suggerimento per opzione, la scelta in
 accento pieno con `text-on-accent`. L'icona di categoria accanto è muted dentro
 un `Hint`, mai in ocra. Nessun cerchietto scritto a mano.
@@ -284,6 +304,9 @@ testo nel suggerimento e per chi legge con la voce.
   scelta fatta. La larghezza si lascia al contenuto, senza numeri fissi, salvo
   un tetto per i testi lunghi.
 - Scelte esclusive con nome usano `SegmentedControl`.
+- Ogni campo di ricerca usa `CatalogSearchField` (anche nei pannelli e nei
+  fogli dello Studio): `onKeyDown` per Esc, `focusOnMount` quando si apre da un
+  comando esplicito.
 - Interruttori booleani usano `ToggleRow`.
 
 ### Dialog
@@ -292,6 +315,16 @@ testo nel suggerimento e per chi legge con la voce.
 - Conferma e annullamento usano i pulsanti dialog condivisi.
 - Niente overlay, focus trap o gestione Escape implementati localmente.
 - Comandi di conferma testuali sono ammessi solo dentro dialog.
+- Una finestra a linguette (Impostazioni, configurazione della pipeline) mette
+  la fila `TabStrip` nello slot `tabBar`, con il nome della linguetta aperta in
+  `font-display text-sm italic` accanto. Un'azione distruttiva sull'insieme
+  (azzerare le traduzioni) è un `IconButton` danger a sinistra del footer,
+  sempre visibile e spento con il motivo, mai un pulsante a scritta.
+- Contenuto bloccato durante un lavoro: il velo comune `PagePendingOverlay`
+  (`components/common`) con la sua riga di stato; rende inerti i comandi
+  coperti. Nessun velo scritto a mano. `tone="running"` lo fa oro, per il
+  frammento che la pipeline sta traducendo (solo il testo, non la colonna
+  delle fasi).
 
 ### Badge numerici
 
@@ -547,12 +580,20 @@ separati da «·» non si leggono.
 ### Pannelli modello + prompt
 
 Ogni pannello che configura una chiamata a un modello (fase di traduzione,
-scheda OCR della trascrizione) ha la stessa forma: una sezione **Modello**
-(bordo sinistro neutro, fornitore + modello + lucchetto su una riga, comandi
-di taratura sotto) e una sezione **Prompt** (bordo sinistro verde, pillola
-«Personalizzato», solo ripristino e modifica fuori dalla modifica). Nessun
-testo di spiegazione fisso: il perché sta nei suggerimenti dei comandi.
-L'editor prompt è uno solo, `AuditPromptEditor`, con `variant="stage"` per
+giudizio, scheda OCR della trascrizione) ha la stessa forma: una `PanelSection`
+con il **Modello** (fornitore + modello + lucchetto su una riga, comandi di
+taratura sotto, opzioni del fornitore come righe con interruttore) e una sezione
+**Prompt** (bordo sinistro verde, pillola «Personalizzato», solo ripristino e
+modifica fuori dalla modifica). Nella configurazione della pipeline la sezione
+Modello è una sola, `ModelSection`, per fasi e giudizio. Nessun testo di
+spiegazione fisso: il perché sta nei suggerimenti dei titoli, delle righe e dei
+comandi, e un comando spento dice il motivo («Modifica prompt — esistono già
+traduzioni», «Rifinisci… — manca la chiave di X»). Le icone di categoria della
+taratura (ragionamento, temperatura) sono muted dentro un `Hint`, mai in ocra.
+L'editor prompt è uno solo, `AuditPromptEditor`: i modelli salvati stanno in
+due `ClickPopover` (`PromptTemplateMenus`), il libro con `CatalogSearchField` e
+`PopoverItem`, il segnalibro con `RenameField`; niente eliminazione lì, si
+elimina nelle risorse linguistiche. `variant="stage"` dà
 questa resa; la variante predefinita resta quella del giudizio traduzione.
 Le scelte di taratura sotto il modello (livello di ragionamento, immagine
 inviata dall'OCR) sono cerchietti da 24 px con icona e suggerimento, preceduti
@@ -564,6 +605,29 @@ riapertura.
 
 Tre zone stabili: contesto a sinistra, stato centrale, comandi globali a
 destra. Un'informazione non cambia posizione passando tra sezioni.
+
+Lo stato del salvataggio di uno Studio (traduzione o trascrizione) vive qui,
+in fondo a destra: pallino e parola, suggerimento con l'ora dell'ultimo
+salvataggio e il motivo dell'errore. Nella testata del foglio resta solo il
+dischetto, spento senza niente da salvare (motivo nel suggerimento se è
+bloccato), `danger` con «Riprova» dopo un errore. La barra è una regione
+`aria-live`: si annuncia solo l'errore, mai «da salvare» o «salvato».
+
+### Verifica di un testo
+
+Verificato = `CircleCheck` in un `IconButton` accanto al titolo del foglio,
+`success` quando acceso, `ariaPressed`; mai un lucchetto. Il lucchetto non
+serve a dire «non modificabile»: lo dice il comando che rende modificabile
+(matita accesa o spenta). Uno stato di cautela («da aggiornare») si affianca
+alla spunta, non la sostituisce, ed è ocra, non oro (oro = lavoro in corso).
+
+### Comandi nel margine della pagina
+
+Due pagine affiancate (originale e traduzione) devono restare in linea: una
+testata non cresce per ospitare comandi in più. I comandi di vista di una
+pagina (fasi, confronto) stanno in colonna nel margine destro della pagina,
+`IconButton` xs con suggerimento a sinistra, fermi mentre il testo scorre; il
+margine è uguale sulle due pagine anche dove la colonna non c'è.
 
 ## Accessibilità
 

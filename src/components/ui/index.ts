@@ -35,6 +35,7 @@ export { ShelfItem } from './ShelfItem';
 export { CatalogSearchField } from './CatalogSearchField';
 export { CatalogViewSwitch, type CatalogView } from './CatalogViewSwitch';
 export { CompletionBar } from './CompletionBar';
+export { RenameField } from './RenameField';
 export { AreaHeading, AREA_INK_CLASSNAME, AREA_PAPER_CLASSNAME, type InkedArea } from './AreaHeading';
 export { ResizeHandle } from './ResizeHandle';
 export { PanelSection } from './PanelSection';

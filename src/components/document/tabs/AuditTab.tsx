@@ -126,7 +126,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
       </div>
 
       {currentChunk.judgeResult.status === 'error' && (
-        <div className="mt-4 border-t border-editorial-danger/25 pt-3 text-sm leading-relaxed text-editorial-danger">
+        <div className="mt-4 border-t border-rule pt-3 text-sm leading-relaxed text-editorial-danger">
           {currentChunk.judgeResult.error || t('audit.auditFailed')}
         </div>
       )}

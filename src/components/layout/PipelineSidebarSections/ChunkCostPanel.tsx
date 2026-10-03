@@ -51,9 +51,11 @@ function SidebarCostPanel({
     if (!anchorRef.current) return;
     const anchorRect = anchorRef.current.getBoundingClientRect();
     const panelHeight = panelRef.current?.offsetHeight ?? 220;
-    const left = Math.min(
-      anchorRect.right + COST_PANEL_OFFSET,
-      window.innerWidth - VIEWPORT_MARGIN - COST_PANEL_WIDTH,
+    // Il riquadro sta nella colonna di destra: il dettaglio si apre verso
+    // sinistra, sopra i fogli, invece di uscire dallo schermo.
+    const left = Math.max(
+      anchorRect.left - COST_PANEL_OFFSET - COST_PANEL_WIDTH,
+      VIEWPORT_MARGIN,
     );
     const top = clamp(
       anchorRect.top + anchorRect.height / 2,
@@ -198,11 +200,11 @@ export function ChunkCostPanel() {
   }, []);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 text-xs">
+    <div className="flex min-w-0 flex-1 items-center justify-between gap-3 text-xs">
       {runActionCostEstimate.stages.length > 0 && (
         <div
           ref={costButtonRef}
-          className="ml-auto flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-muted"
+          className="flex w-fit min-w-0 cursor-default items-center gap-1.5 text-editorial-muted"
           onMouseEnter={openCostPanel}
           onMouseLeave={scheduleCloseCostPanel}
         >
@@ -216,6 +218,8 @@ export function ChunkCostPanel() {
           </span>
         </div>
       )}
+      {/* Stima a sinistra, consumo a destra, ognuna larga quanto la sua
+          scritta: il passaggio del mouse apre il dettaglio solo lì sopra. */}
       {currentChunk && (
         <Popover
           side="bottom"
@@ -223,7 +227,7 @@ export function ChunkCostPanel() {
           className="w-72 px-3"
           trigger={
             <div
-              className={`ml-auto flex w-fit min-w-0 cursor-default items-center gap-1.5 ${
+              className={`flex w-fit min-w-0 cursor-default items-center gap-1.5 ${
                 hasCurrentChunkUsage ? 'text-editorial-accent' : 'text-editorial-muted'
               }`}
             >

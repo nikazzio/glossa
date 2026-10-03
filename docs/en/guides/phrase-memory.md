@@ -14,7 +14,7 @@ When enabled, Glossa searches for matches for the document’s segments using
 resources available to the workspace. This search changes neither translations
 nor saved phrases.
 
-The **References** tab displays matches and lets you adjust the similarity
+The **Similar phrases in memory** sub-tab of the **Memory** tab displays matches and lets you adjust the similarity
 threshold. Only selected pairs are included in the next request for that
 segment. If matches exist but none are selected, starting translation warns
 that those references will not be used.
@@ -26,8 +26,8 @@ current context.
 
 ## Creating and reviewing phrases
 
-1. Review the translation and lock the segment.
-2. Open **Memory**: previously saved pairs are loaded and selected.
+1. Review the translation and mark it as verified.
+2. Open **Memory** → **Extract phrases**: previously saved pairs are loaded and selected.
 3. Use **Extract phrases** to generate proposals, or add pairs manually.
 4. Edit the text and select the pairs to retain.
 5. Save to apply the selection.
@@ -50,10 +50,20 @@ Translation examples are complete source and translation segment pairs used
 to guide a pipeline’s register and style. They are not retrieved according
 to similarity with the current segment.
 
-For a locked segment, **Use as a style example** in the Audit tab adds the
-pair to pipeline settings, where it can be edited or removed. The limit is
+For a verified segment, **Use as a style example** in the Audit tab adds the
+pair to the Memory tab of the pipeline configuration, where it can be edited or removed. The limit is
 five examples. Since they form part of the static context, their length
 contributes to request size.
 
 Use the [glossary](./glossary-and-memory) for mandatory terminology and memory
 references for wording relevant to an individual passage.
+
+## In the Translation Studio
+
+In the Memory tab, **References** shows similar phrases already in memory: for
+each, under the pair, where it comes from (workspace, translation, segment, or
+“imported”). The circled check decides which to use in the translation.
+**Memory** opens only once the translation is verified: saved pairs are removed
+one by one with the bin; new ones are checked and added with the disk, which
+never deletes the others. The search only uses phrases of the same language
+pair.

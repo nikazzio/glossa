@@ -1,12 +1,13 @@
 import {
   AlertTriangle,
+  Check,
   CheckCircle2,
-  ChevronRight,
   Crosshair,
   HelpCircle,
   MessageSquare,
   NotebookText,
   Pencil,
+  Plus,
   Trash2,
   X,
 } from 'lucide-react';
@@ -16,9 +17,10 @@ import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { EmptyState, IconButton, PillButton, Tooltip } from '../../ui';
+import { ChoiceDots, EmptyState, IconButton, SectionLabel, Tooltip, type ChoiceDotsOption } from '../../ui';
 import type { AnnotationType, TranslationChunk } from '../../../types';
 import type { Annotation } from '../../../types';
+import { FIELD_CLASSNAME } from '../../ui/fieldStyles';
 
 export interface NotesTabProps {
   panelId: string;
@@ -36,37 +38,27 @@ export const ANNOTATION_META: Record<AnnotationType, { icon: LucideIcon; colorCl
 
 const ANNOTATION_TYPES: AnnotationType[] = ['comment', 'doubt', 'problem', 'approved'];
 
+/** Il tipo di nota: scelta esclusiva fra quattro, sui cerchietti comuni. */
 function TypeSelector({ selected, onSelect }: { selected: AnnotationType; onSelect: (t: AnnotationType) => void }) {
   const { t } = useTranslation();
+  const options: ChoiceDotsOption<AnnotationType>[] = ANNOTATION_TYPES.map((type) => {
+    const Icon = ANNOTATION_META[type].icon;
+    return { value: type, label: t(ANNOTATION_META[type].labelKey), content: <Icon size={12} /> };
+  });
   return (
-    <div className="mb-3 flex items-center gap-1">
-      {ANNOTATION_TYPES.map((type) => {
-        const meta = ANNOTATION_META[type];
-        const Icon = meta.icon;
-        return (
-          <IconButton
-            key={type}
-            size="sm"
-            tone={selected === type ? 'accent' : 'default'}
-            onClick={() => onSelect(type)}
-            title={t(meta.labelKey)}
-            ariaPressed={selected === type}
-          >
-            <Icon size={12} />
-          </IconButton>
-        );
-      })}
-      <span className="mx-1 h-3 w-px self-center bg-rule" aria-hidden="true" />
+    <div className="mb-3 flex items-center gap-2">
+      <ChoiceDots options={options} value={selected} onChange={onSelect} ariaLabel={t('annotations.typeLabel')} />
       <span className="font-display text-sm italic text-editorial-ink">{t(ANNOTATION_META[selected].labelKey)}</span>
     </div>
   );
 }
 
 function AnchorPill({ text, onClear }: { text: string; onClear: () => void }) {
+  const { t } = useTranslation();
   return (
-    <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-rule bg-editorial-textbox/40 px-3 py-1.5">
+    <div className="mt-2 flex items-center gap-1.5 rounded-md border border-rule bg-editorial-textbox px-3 py-1.5">
       <span className="flex-1 truncate font-display text-sm italic text-editorial-muted">«{text}»</span>
-      <IconButton size="sm" tone="default" onClick={onClear} title="Rimuovi ancora">
+      <IconButton size="sm" tone="default" onClick={onClear} title={t('annotations.clearAnchor')}>
         <X size={11} />
       </IconButton>
     </div>
@@ -109,7 +101,7 @@ function AnnotationCard({
           value={editContent}
           onChange={(e) => setEditContent(e.target.value)}
           rows={5}
-          className="w-full resize-none rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm leading-relaxed text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className={`${FIELD_CLASSNAME} resize-none leading-relaxed placeholder:text-editorial-muted`}
         />
         <input
           type="text"
@@ -117,19 +109,20 @@ function AnnotationCard({
           onChange={(e) => setEditAnchor(e.target.value)}
           placeholder={t('annotations.anchorPlaceholder')}
           aria-label={t('annotations.anchorPlaceholder')}
-          className="mt-2 w-full rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-1.5 text-xs text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className={`${FIELD_CLASSNAME} mt-2 py-1.5 text-xs placeholder:text-editorial-muted`}
         />
-        <div className="mt-3 flex items-center gap-2">
-          <PillButton
-            variant="accent"
+        <div className="mt-3 flex items-center justify-end gap-1">
+          <IconButton
+            size="sm"
             onClick={() => onSave({ type: editType, content: editContent, anchorText: editAnchor.trim() || undefined })}
             disabled={!editContent.trim()}
+            title={t('annotations.updateButton')}
           >
-            {t('annotations.updateButton')}
-          </PillButton>
-          <PillButton variant="secondary" onClick={onCancelEdit}>
-            {t('annotations.cancelButton')}
-          </PillButton>
+            <Check size={13} />
+          </IconButton>
+          <IconButton size="sm" onClick={onCancelEdit} title={t('annotations.cancelButton')}>
+            <X size={13} />
+          </IconButton>
         </div>
       </article>
     );
@@ -208,7 +201,6 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const [formAnchor, setFormAnchor] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const footnotes = currentChunk?.footnotes ?? [];
   const currentChunkId = currentChunk?.id;
   const annotations = useMemo(
     () => (currentChunkId ? annotationsByChunkId.get(currentChunkId) ?? [] : []),
@@ -284,17 +276,29 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col gap-4 px-5 py-5">
+      {/* Una nota si scrive anche senza selezionare un passaggio: senza
+          riferimento al testo, vale per tutto il frammento. */}
+      {!showForm && (
+        <div className="flex justify-end">
+          <IconButton size="sm" onClick={() => setShowForm(true)} title={t('annotations.addButton')}>
+            <Plus size={13} />
+          </IconButton>
+        </div>
+      )}
 
       {/* Add form */}
       {showForm && (
         <div className="border-y border-rule py-3">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-section text-editorial-muted">
-              {t('annotations.addButton')}
+            <SectionLabel icon={NotebookText} label={t('annotations.addButton')} />
+            <span className="flex items-center gap-1">
+              <IconButton size="sm" onClick={handleAdd} disabled={!formContent.trim()} title={t('annotations.saveButton')}>
+                <Check size={13} />
+              </IconButton>
+              <IconButton size="sm" onClick={closeForm} title={t('annotations.cancelButton')}>
+                <X size={13} />
+              </IconButton>
             </span>
-            <IconButton size="sm" tone="default" onClick={closeForm} title={t('annotations.cancelButton')}>
-              <X size={12} />
-            </IconButton>
           </div>
           <TypeSelector selected={formType} onSelect={setFormType} />
           <textarea
@@ -304,17 +308,9 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
             onChange={(e) => setFormContent(e.target.value)}
             placeholder={t('annotations.placeholder')}
             rows={3}
-            className="w-full resize-none rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm leading-relaxed text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={`${FIELD_CLASSNAME} resize-none leading-relaxed placeholder:text-editorial-muted`}
           />
           {formAnchor && <AnchorPill text={formAnchor} onClear={() => setFormAnchor('')} />}
-          <div className="mt-3 flex items-center gap-2">
-            <PillButton variant="accent" onClick={handleAdd} disabled={!formContent.trim()}>
-              {t('annotations.saveButton')}
-            </PillButton>
-            <PillButton variant="secondary" onClick={closeForm}>
-              {t('annotations.cancelButton')}
-            </PillButton>
-          </div>
         </div>
       )}
 
@@ -340,26 +336,25 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
         </div>
       )}
 
-      {/* Source footnotes */}
-      {footnotes.length > 0 && (
-        <>
-          <div className="mx-0 my-1 h-px bg-rule-faint" />
-          <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-xs font-sans font-bold uppercase tracking-section text-editorial-danger/80 transition-colors hover:text-editorial-danger">
-              <ChevronRight size={11} className="shrink-0 text-editorial-danger/70 transition-transform group-open:rotate-90" />
-              {t('annotations.sourceTitle')}
-            </summary>
-            <div className="mt-3 divide-y divide-editorial-danger/25">
-              {footnotes.map((note) => (
-                <article key={note.id} className="py-2">
-                  <div className="mb-1 font-display text-sm italic text-editorial-danger">{note.marker}</div>
-                  <p className="text-xs leading-relaxed text-editorial-danger/90">{note.text}</p>
-                </article>
-              ))}
-            </div>
-          </details>
-        </>
-      )}
+    </div>
+  );
+}
+
+/**
+ * Le note del testo originale, importate con il documento: si leggono e
+ * basta. Stesso trattamento delle altre righe della colonna, senza il rosso
+ * degli errori.
+ */
+export function SourceNotesList({ panelId, labelledBy, currentChunk }: NotesTabProps) {
+  const footnotes = currentChunk?.footnotes ?? [];
+  return (
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="divide-y divide-rule px-5 py-3">
+      {footnotes.map((note) => (
+        <article key={note.id} className="py-3">
+          <div className="mb-1 font-display text-sm italic text-editorial-ink">{note.marker}</div>
+          <p className="text-sm leading-relaxed text-editorial-ink">{note.text}</p>
+        </article>
+      ))}
     </div>
   );
 }

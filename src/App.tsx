@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { initLogger } from './utils/logger';
 import { Header } from './components/layout';
-import { ShellNext } from './components/layout/shell-next/ShellNext';
+import { TranslationStudio } from './components/translation/TranslationStudio';
 import { WorkspaceShellNext } from './components/layout/shell-next/WorkspaceShellNext';
 import { AppStatusBar } from './components/layout/AppStatusBar';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner, PanelTransitionVeil } from './components/common';
@@ -31,7 +31,7 @@ import { TranslationsArea } from './components/workspace/TranslationsArea';
 import { LibraryCatalogArea } from './components/workspace/LibraryCatalogArea';
 import { TranscriptionsCatalogArea } from './components/workspace/TranscriptionsCatalogArea';
 import { AnalysisArea } from './components/workspace/AnalysisArea';
-import { importTextFile } from './services/fileService';
+import { importErrorMessageKey, importTextFile, type ImportedTextFile } from './services/fileService';
 import { ollamaService } from './services/llmService';
 import { savePipelineConfig } from './services/pipelineService';
 import { extractFootnotes } from './utils/footnoteExtractor';
@@ -180,7 +180,6 @@ function EditorView() {
   const { t } = useTranslation();
   const {
     runPipeline,
-    runAuditOnly,
     runSingleChunk,
     auditSingleChunk,
     runCoherenceAudit,
@@ -209,36 +208,52 @@ function EditorView() {
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const leaveProject = useProjectStore((state) => state.leaveProject);
+  const navigate = useUiStore((state) => state.navigate);
+  const leaveTranslation = useCallback(async () => {
+    if (await leaveProject()) navigate({ area: 'translations' });
+  }, [leaveProject, navigate]);
   const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}`;
+
+  /** Apre l'anteprima dell'import con un file già letto: dal comando
+   *  dell'editor o dalla finestra che crea una traduzione con il suo file. */
+  const startImport = useCallback((imported: ImportedTextFile) => {
+    const isMarkdown = imported.format === 'markdown';
+    const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
+    setPendingImport({
+      fileName: imported.name,
+      text: cleanText,
+      rawText: imported.text,
+      useChunking: config.useChunking !== false,
+      wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
+      headingAware: config.headingAware ?? true,
+      carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
+      format: imported.format,
+      experimental: imported.experimental,
+    });
+  }, [chunkPresetMedium, config]);
 
   const handleImportDocument = useCallback(async () => {
     try {
       const imported = await importTextFile();
-      if (!imported) return;
-      const isMarkdown = imported.format === 'markdown';
-      const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
-      setPendingImport({
-        fileName: imported.name,
-        text: cleanText,
-        rawText: imported.text,
-        useChunking: config.useChunking !== false,
-        wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
-        headingAware: config.headingAware ?? true,
-        carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
-        format: imported.format,
-        experimental: imported.experimental,
-      });
+      if (imported) startImport(imported);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg === 'pdf_no_text_layer') {
-        toast.error(t('files.pdfScannedError'));
-      } else if (msg === 'text_not_utf8') {
-        toast.error(t('files.textEncodingError'));
-      } else {
-        toast.error(t('files.importError'), { description: msg });
-      }
+      const key = importErrorMessageKey(msg);
+      if (key === 'files.importError') toast.error(t(key), { description: msg });
+      else toast.error(t(key));
     }
-  }, [chunkPresetMedium, config, t]);
+  }, [startImport, t]);
+
+  // Il file scelto nella finestra che crea la traduzione arriva qui quando
+  // l'editor della traduzione appena creata è montato.
+  const pendingImportFile = useUiStore((state) => state.pendingImportFile);
+  const setPendingImportFile = useUiStore((state) => state.setPendingImportFile);
+  useEffect(() => {
+    if (!pendingImportFile) return;
+    setPendingImportFile(null);
+    startImport(pendingImportFile);
+  }, [pendingImportFile, setPendingImportFile, startImport]);
 
   const handleConfirmImport = useCallback(async (
     manualChunks?: string[],
@@ -329,19 +344,16 @@ function EditorView() {
     <>
       <Suspense fallback={null}>
         <main className="relative flex flex-1 min-h-0 overflow-hidden">
-          <ShellNext
+          <TranslationStudio
+            onBack={leaveTranslation}
+            onImportDocument={handleImportDocument}
             onRunPipeline={runPipeline}
             onCancelPipeline={cancelPipeline}
             onRetranslateChunk={handleRetranslateChunk}
-            onImportDocument={handleImportDocument}
             onReauditChunk={auditSingleChunk}
             onRunCoherenceAudit={runCoherenceAudit}
           >
-            <ConfigDrawer
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
+            <ConfigDrawer />
             <div className="relative flex min-w-0 flex-1">
               <DocumentView
                 onRetranslateChunk={handleRetranslateChunk}
@@ -349,7 +361,7 @@ function EditorView() {
               />
               <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
             </div>
-          </ShellNext>
+          </TranslationStudio>
         </main>
       </Suspense>
 
@@ -484,15 +496,17 @@ export default function App() {
         <div className="flex-shrink-0">
           <Header />
         </div>
-        {isShellView ? (
-          <div className="flex flex-1 min-h-0">
-            <WorkspaceShellNext>
-              <div className="relative flex min-w-0 flex-1">
-                {/* Cambiando area il contenuto entra con una dissolvenza e
-                    pochi pixel di scivolo: il salto secco fra due schermate
-                    piene non dice se si è arrivati o se qualcosa è saltato.
-                    Niente uscita animata — l'area vecchia se ne va subito,
-                    tenerne due montate insieme costa letture doppie. */}
+        {/* La barra principale resta anche dentro una traduzione, come nelle
+            altre aree: da lì si cambia area senza passare dal catalogo. */}
+        <div className="flex flex-1 min-h-0">
+          <WorkspaceShellNext>
+            <div className="relative flex min-w-0 flex-1">
+              {/* Cambiando area il contenuto entra con una dissolvenza e
+                  pochi pixel di scivolo: il salto secco fra due schermate
+                  piene non dice se si è arrivati o se qualcosa è saltato.
+                  Niente uscita animata — l'area vecchia se ne va subito,
+                  tenerne due montate insieme costa letture doppie. */}
+              {isShellView ? (
                 <motion.div
                   key={
                     location.area === 'workspace'
@@ -520,23 +534,19 @@ export default function App() {
                     <DashboardArea location={location.area === 'dashboard' ? location : {area:'dashboard'}} />
                   )}
                 </motion.div>
-              </div>
-            </WorkspaceShellNext>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <EditorView />
-          </div>
-        )}
+              ) : (
+                <EditorView />
+              )}
+            </div>
+          </WorkspaceShellNext>
+        </div>
         {isShellView ? (
           <Suspense fallback={null}>
             <SettingsModal />
             <LibraryPanel />
           </Suspense>
         ) : null}
-        {/* In vista progetto la barra di stato vive dentro ShellNext (solo sotto rail+documento,
-            non sotto l'ispettore destro); qui resta solo per la vista workspace/home. */}
-        {isShellView && <AppStatusBar />}
+        <AppStatusBar />
         <ConfirmDialog />
       </div>
       </MotionConfig>

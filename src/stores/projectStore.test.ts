@@ -497,6 +497,43 @@ describe('projectStore', () => {
     expect(mockOpenProject).toHaveBeenCalledWith('proj-2');
   });
 
+  it('leaveProject saves unsaved changes before closing', async () => {
+    const closeProject = vi.fn();
+    useProjectStore.setState({ currentProjectId: 'proj-1', activePipelineId: 'pipeline-1', trackedSnapshot: 'old', closeProject });
+    usePipelineStore.getState().setInputText('Last edit');
+
+    await expect(useProjectStore.getState().leaveProject()).resolves.toBe(true);
+
+    expect(projectServiceMocks.saveProjectSource).toHaveBeenCalledWith(
+      'proj-1', 'Last edit', 'Last edit', [], expect.anything(),
+    );
+    expect(closeProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaveProject closes without saving when nothing changed', async () => {
+    const closeProject = vi.fn();
+    useProjectStore.setState({ currentProjectId: 'proj-1', activePipelineId: 'pipeline-1', closeProject });
+    await useProjectStore.getState().saveCurrentProject();
+    projectServiceMocks.saveProjectSource.mockClear();
+
+    await expect(useProjectStore.getState().leaveProject()).resolves.toBe(true);
+
+    expect(projectServiceMocks.saveProjectSource).not.toHaveBeenCalled();
+    expect(closeProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaveProject keeps the translation open with the error when the save fails', async () => {
+    const closeProject = vi.fn();
+    useProjectStore.setState({ currentProjectId: 'proj-1', activePipelineId: 'pipeline-1', trackedSnapshot: 'old', closeProject });
+    projectServiceMocks.saveProjectSource.mockRejectedValueOnce(new Error('disk full'));
+
+    await expect(useProjectStore.getState().leaveProject()).resolves.toBe(false);
+
+    expect(closeProject).not.toHaveBeenCalled();
+    expect(useProjectStore.getState().saveState).toBe('error');
+    expect(useProjectStore.getState().lastSaveError).toBe('disk full');
+  });
+
   it('openProjectInWorkspace throws without opening anything when the target workspace cannot be found', async () => {
     const mockOpenProject = vi.fn().mockResolvedValue(undefined);
     useProjectStore.setState({ openProject: mockOpenProject });

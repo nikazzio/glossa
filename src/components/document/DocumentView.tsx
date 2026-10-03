@@ -1,13 +1,18 @@
-import { AlertTriangle, FileText, GitCompare, Languages, Lock, Pencil, Search, SlidersHorizontal, Wand2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, CircleCheck, FileText, GitCompare, Languages, Pencil, Search, SlidersHorizontal, Wand2 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
+import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX, PagePendingOverlay } from '../common';
 import { IconButton, Tooltip } from '../ui';
+import { DocumentPage } from './DocumentPage';
+import { ProjectSaveButton } from './ProjectSaveButton';
+import { ChunkStrip } from './ChunkStrip';
+import { SearchTab } from './SearchTab';
+import { StageStatusRow } from './StageStatusRow';
 import {
   approveTranslation,
   withdrawTranslationApproval,
@@ -21,158 +26,15 @@ import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
 import { AnnotationContextMenu } from './AnnotationContextMenu';
-import { PaneSearch } from './PaneSearch';
 import { DocumentViewOptionsMenu } from './DocumentViewControls';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
 const NOOP_CHANGE = () => {};
+const DOCUMENT_SEARCH_TOGGLE_ID = 'document-search-toggle';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
   onImportDocument: () => void;
-}
-
-function buildChunkMinimapLabel(
-  t: (key: string, options?: Record<string, unknown>) => string,
-  chunk: {
-    status: string;
-    translationLocked?: boolean;
-    translationStale?: boolean;
-  },
-  index: number,
-  total: number,
-  isCurrent: boolean,
-  annotationCount: number,
-  unresolvedIssueCount: number,
-): string {
-  const parts = [
-    `${t('document.chunkLabel')} ${index + 1}/${total}`,
-    t(`pipeline.chunkStatus.${chunk.status}`),
-  ];
-  if (chunk.translationLocked) parts.push(t('document.translationLockedBadge'));
-  if (annotationCount > 0) parts.push(t('annotations.badgeCount', { count: annotationCount }));
-  if (unresolvedIssueCount > 0) parts.push(t('audit.issuesCount', { count: unresolvedIssueCount }));
-  if (chunk.translationStale) parts.push(t('document.translationStaleBadge'));
-  if (isCurrent) parts.push(t('document.currentChunkBadge'));
-  return parts.join(' · ');
-}
-
-interface DocumentPageProps {
-  label: string;
-  eyebrow: string;
-  eyebrowMeta?: React.ReactNode;
-  subtitle?: string;
-  subtitleAction?: React.ReactNode;
-  readOnly?: boolean;
-  highlighted?: boolean;
-  statusBadge?: React.ReactNode;
-  actions?: React.ReactNode | null;
-  // Pulsante che apre il menu controlli testo, in fila con le azioni pagina.
-  textMenuButton?: React.ReactNode;
-  footer?: React.ReactNode;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
-  searchLabel?: string;
-  scrollRef?: React.RefObject<HTMLDivElement | null>;
-  children: React.ReactNode;
-}
-
-function DocumentPage({
-  label,
-  eyebrow,
-  eyebrowMeta,
-  subtitle,
-  subtitleAction,
-  readOnly = false,
-  highlighted = false,
-  statusBadge,
-  actions,
-  textMenuButton,
-  footer,
-  searchValue,
-  onSearchChange,
-  searchLabel,
-  scrollRef,
-  children,
-}: DocumentPageProps) {
-  const { t } = useTranslation();
-  const searchable = Boolean(onSearchChange && searchLabel);
-  const [searchOpen, setSearchOpen] = useState(false);
-  // Il campo resta aperto finché c'è una query attiva.
-  const showSearch = searchable && (searchOpen || Boolean(searchValue));
-
-  const searchToggle = searchable ? (
-    <IconButton
-      size="sm"
-      tone={showSearch ? 'accent' : 'default'}
-      onClick={() => setSearchOpen((open) => !open)}
-      title={t('document.searchInPane')}
-      ariaLabel={t('document.searchInPane')}
-      ariaPressed={showSearch}
-    >
-      <Search size={13} />
-    </IconButton>
-  ) : null;
-
-  return (
-    <section className={`relative bg-editorial-bg px-12 py-8 flex flex-col flex-1 min-h-0 min-w-0 ${
-      highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''
-    }`}>
-      {/* Header: riga unica allineata al titolo — controlli pagina + pulsante menu testo a destra. */}
-      <div className="shrink-0 mb-6 border-b border-editorial-divider-soft pb-4">
-        <div className="flex items-center gap-2">
-          <div className="text-caption font-bold uppercase tracking-section text-editorial-muted">
-            {eyebrow}
-          </div>
-          {eyebrowMeta}
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <h3 className="truncate font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
-              {label}
-            </h3>
-            {statusBadge}
-          </div>
-          <div className="shrink-0 flex items-center gap-2">
-            {searchToggle}
-            {actions}
-            {(searchToggle || actions) && textMenuButton && (
-              <span className="h-4 w-px bg-rule" aria-hidden="true" />
-            )}
-            {textMenuButton}
-          </div>
-        </div>
-        {subtitle && (
-          <div className="mt-0.5 flex items-center gap-2">
-            <p className="text-caption font-bold uppercase tracking-section text-editorial-accent">
-              {subtitle}
-            </p>
-            {subtitleAction}
-          </div>
-        )}
-      </div>
-      <div
-        ref={scrollRef}
-        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-rule bg-editorial-page px-7 py-4 shadow-page-card ${readOnly ? 'opacity-90' : ''}`}
-      >
-        {showSearch && onSearchChange && searchLabel ? (
-          <PaneSearch
-            value={searchValue ?? ''}
-            onChange={onSearchChange}
-            label={searchLabel}
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- si apre da un'azione esplicita dell'utente (mostra ricerca)
-            autoFocus
-          />
-        ) : null}
-        {children}
-      </div>
-      {footer && (
-        <div className="mt-3 pt-3 border-t border-editorial-divider-soft shrink-0">
-          {footer}
-        </div>
-      )}
-    </section>
-  );
 }
 
 export function DocumentView({
@@ -199,8 +61,8 @@ export function DocumentView({
     focusedIssueQuery,
     focusedSourceIssueQuery,
     focusedIssueRequestId,
-    setChunkRailTab,
-    setProjectContextCollapsed,
+    setStudioTab,
+    setShowInsightPanel,
     setPendingAnnotationAnchor,
     documentFontSize,
     setDocumentPaneFocus,
@@ -212,10 +74,7 @@ export function DocumentView({
   // Shell nuova (#291): menu controlli testo, uno per pannello (sorgente / traduzione).
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const [translationMenuOpen, setTranslationMenuOpen] = useState(false);
-
-  // Minimap frammenti: tiene sempre in vista il pallino del frammento corrente,
-  // anche quando la riga è scrollata altrove o il documento ha molti frammenti.
-  const currentDotRef = useRef<HTMLButtonElement | null>(null);
+  const [documentSearchOpen, setDocumentSearchOpen] = useState(false);
 
   const {
     paneFocus,
@@ -249,10 +108,6 @@ export function DocumentView({
   const { sourceRef: scrollSourceRef, translationRef: scrollTranslationRef } = usePanelScrollSync(
     paneFocus === 'both' && syncScrollEnabled,
   );
-
-  useEffect(() => {
-    currentDotRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }, [currentChunk?.id]);
 
   /**
    * Approvare e ritirare l'approvazione sono **fatti** che restano nel
@@ -306,9 +161,9 @@ export function DocumentView({
     return (
       <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-section text-editorial-muted">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-caption font-bold uppercase tracking-section text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
-              <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
+              <span className="h-1 w-1 rounded-full bg-editorial-border" aria-hidden="true" />
               <span>{t('document.projectHomeEyebrow')}</span>
           </div>
           <h2 className="mt-4 max-w-3xl font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
@@ -323,12 +178,12 @@ export function DocumentView({
             type="button"
             onClick={onImportDocument}
             aria-label={t('document.projectHomeImport')}
-            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-inset-highlight transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-lg border border-dashed border-editorial-border bg-surface-panel px-6 py-8 text-center transition-colors hover:border-editorial-accent hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
-            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent group-hover:text-editorial-accent">
               <FileText size={22} />
             </span>
-            <span className="mt-3 text-xs font-bold uppercase tracking-section text-editorial-muted transition-colors group-hover:text-editorial-accent">
+            <span className="mt-3 text-caption font-bold uppercase tracking-section text-editorial-muted transition-colors group-hover:text-editorial-accent">
               {t('document.projectHomeImport')}
             </span>
           </button>
@@ -342,71 +197,9 @@ export function DocumentView({
     currentChunk.status === 'processing' ||
     currentChunk.sourceEditable !== true;
   const sourceEditDisabled = currentChunk.status === 'processing';
-
-  // Pallini minimap dei frammenti, estratti per poterli mettere in linea fra le frecce
-  // (shell nuova, barra di navigazione stretta) o su una riga sotto (shell vecchia).
-  const chunkMinimapDots =
-    chunks.length > 1
-      ? chunks.map((chunk, idx) => {
-          const statusDotClass =
-            chunk.status === 'completed'
-              ? 'h-1.5 w-1.5 rounded-full bg-editorial-success'
-              : chunk.status === 'error'
-                ? 'h-2 w-2 rounded-[2px] bg-editorial-danger'
-                : chunk.status === 'processing'
-                  ? 'h-1 w-2.5 rounded-full bg-editorial-running animate-pulse'
-                  : 'h-2.5 w-2.5 rounded-full border border-editorial-border bg-transparent';
-          const isCurrent = idx === currentIndex;
-          const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
-          const unresolvedIssueCount = chunk.judgeResult.status === 'completed'
-            ? chunk.judgeResult.issues.filter((issue) => !issue.resolved && !issue.rejected).length
-            : 0;
-          const annotDotColor = chunkAnnotations.some((a) => a.type === 'problem')
-            ? 'bg-editorial-danger'
-            : chunkAnnotations.some((a) => a.type === 'doubt')
-              ? 'bg-editorial-warning'
-              : chunkAnnotations.length > 0
-                ? 'bg-editorial-charcoal/70'
-                : null;
-          const buttonLabel = buildChunkMinimapLabel(
-            t,
-            chunk,
-            idx,
-            chunks.length,
-            isCurrent,
-            chunkAnnotations.length,
-            unresolvedIssueCount,
-          );
-          return (
-            <Tooltip key={chunk.id} label={buttonLabel}>
-              <button
-                type="button"
-                ref={isCurrent ? currentDotRef : undefined}
-                onClick={() => setSelectedChunkId(chunk.id)}
-                aria-label={buttonLabel}
-                aria-current={isCurrent ? 'true' : undefined}
-                className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-transform duration-150 ease-out hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border bg-surface-elevated">
-                  <span aria-hidden="true" className={statusDotClass} />
-                </span>
-                {unresolvedIssueCount > 0 && <span aria-hidden="true" className="absolute left-1 top-1 h-2 w-2 rounded-full bg-editorial-danger ring-1 ring-editorial-page" />}
-                {annotDotColor && (
-                  <span aria-hidden="true" className={`absolute right-1 top-1 h-2 w-2 rounded-full ${annotDotColor} ring-1 ring-editorial-page`} />
-                )}
-                {chunk.translationLocked && <span aria-hidden="true" className="absolute bottom-1 left-1 h-2 w-2 rounded-full bg-editorial-success ring-1 ring-editorial-page" />}
-                {chunk.translationStale && <span aria-hidden="true" className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-editorial-running ring-1 ring-editorial-page" />}
-                {isCurrent && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -bottom-1.5 left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3.5px] border-b-[4.5px] border-x-transparent border-b-editorial-accent"
-                  />
-                )}
-              </button>
-            </Tooltip>
-          );
-        })
-      : null;
+  /** «Comando — motivo» quando è spento, come negli altri Studi. */
+  const blockedTitle = (command: string, reason: string | null) =>
+    reason ? t('transcription.commandBlocked', { command, reason }) : command;
 
   // Pulsante unico che apre il menu controlli testo, in fila con le azioni pagina.
   const renderTextMenuButton = (open: boolean, toggle: () => void) => (
@@ -422,19 +215,43 @@ export function DocumentView({
   );
 
   return (
-    <section className="w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col bg-editorial-page">
+    <section className="w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col bg-surface-panel">
       <div className="@container mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="shrink-0">
-          {/* Barra di navigazione a filo (border-b, h-20 come le testate dei
-              pannelli laterali). Minimap pallini dei frammenti, che ora hanno
-              tutto lo spazio; costo/consumo del frammento sono nella rail
-              sinistra insieme al pulsante di traduzione. */}
-          <div className="w-full h-20 flex items-center gap-5 border-b border-editorial-border bg-editorial-page px-6">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-visible custom-scrollbar py-1.5">
-              {chunkMinimapDots}
-            </div>
-            <DocumentViewOptionsMenu />
+          {/* Alta come l'intestazione della colonna degli strumenti, così le
+              due righe partono allineate. */}
+          <div className="w-full h-14 flex items-center gap-5 border-b border-editorial-border px-4">
+            <ChunkStrip chunks={chunks} currentIndex={currentIndex} onSelect={setSelectedChunkId} />
+            <StageStatusRow />
+            <span className="flex shrink-0 items-center gap-1">
+              <IconButton
+                size="sm"
+                tone={documentSearchOpen ? 'accent' : 'default'}
+                onClick={() => setDocumentSearchOpen((open) => !open)}
+                title={t('document.searchInDocument')}
+                ariaPressed={documentSearchOpen}
+                id={DOCUMENT_SEARCH_TOGGLE_ID}
+                tooltipSide="bottom"
+              >
+                <Search size={14} />
+              </IconButton>
+              <DocumentViewOptionsMenu />
+            </span>
           </div>
+          {/* La ricerca in tutto il documento si apre sotto la fila, sopra i
+              fogli: i risultati portano al frammento senza chiuderla. */}
+          {documentSearchOpen && (
+            <div className="flex h-80 flex-col border-b border-editorial-border">
+              <SearchTab
+                panelId="document-search-panel"
+                labelledBy={DOCUMENT_SEARCH_TOGGLE_ID}
+                chunks={chunks}
+                currentChunkId={currentChunk.id}
+                onSelectChunk={setSelectedChunkId}
+                onClose={() => setDocumentSearchOpen(false)}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-1 min-h-0 divide-x divide-editorial-border">
@@ -443,21 +260,22 @@ export function DocumentView({
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
               readOnly={sourceReadOnly}
-              statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
-                <InlineStatusBadge tone="amber" icon={<Lock size={13} />} ariaLabel={t('document.sourceLockedTitle')} />
-              ) : null}
               actions={
                 <div className="flex items-center gap-1">
                   <IconButton
                     size="lg"
                     tone={currentChunk.sourceEditable === true ? 'accent' : 'default'}
                     onClick={() => toggleChunkSourceEditing(currentChunk.id)}
-                    title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
+                    title={blockedTitle(
+                      currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing'),
+                      sourceEditDisabled ? t('document.reasonChunkProcessing') : null,
+                    )}
                     disabled={sourceEditDisabled}
                     ariaPressed={currentChunk.sourceEditable === true}
                   >
                     <Pencil size={14} />
                   </IconButton>
+                  {paneFocus === 'source' && <ProjectSaveButton />}
                 </div>
               }
               searchValue={sourcePaneSearch}
@@ -491,16 +309,24 @@ export function DocumentView({
 
           {paneFocus !== 'source' && (() => {
             const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
-            const lockToggle = (
+            const verifyBlockedReason = currentChunk.status === 'processing'
+              ? t('document.reasonChunkProcessing')
+              : !currentChunk.translationDisplayText.trim()
+                ? t('document.reasonNoTranslation')
+                : null;
+            const verifyToggle = (
               <IconButton
                 size="sm"
-                tone={currentChunk.translationLocked ? 'success' : 'muted'}
-                title={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}
+                tone={currentChunk.translationLocked ? 'success' : 'default'}
+                title={blockedTitle(
+                  currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation'),
+                  verifyBlockedReason,
+                )}
                 onClick={() => handleLockToggle(currentChunk)}
-                disabled={!currentChunk.translationDisplayText.trim()}
+                disabled={verifyBlockedReason !== null}
                 ariaPressed={currentChunk.translationLocked === true}
               >
-                <Lock size={13} />
+                <CircleCheck size={14} />
               </IconButton>
             );
             const hasStageContent = (s: (typeof enabledStages)[number]) =>
@@ -515,10 +341,14 @@ export function DocumentView({
               return (
                 <IconButton
                   key={s.id}
-                  size="lg"
+                  size="xs"
+                  tooltipSide="left"
                   tone={isActive && !showDiffMode ? 'accent' : 'default'}
                   onClick={() => setSelectedStageId(s.id)}
-                  title={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                  title={blockedTitle(
+                    t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) }),
+                    showDiffMode ? t('document.reasonDiffOn') : !hasContent ? t('document.reasonStageNotRun') : null,
+                  )}
                   disabled={!hasContent || showDiffMode}
                   ariaPressed={isActive && !showDiffMode}
                 >
@@ -533,10 +363,11 @@ export function DocumentView({
               return (
                 <IconButton
                   key={pair.key}
-                  size="lg"
+                  size="xs"
+                  tooltipSide="left"
                   tone={isActive ? 'accent' : 'default'}
                   onClick={() => setDiffPairKey(pair.key)}
-                  title={`${pair.fromName} → ${pair.toName}`}
+                  title={blockedTitle(`${pair.fromName} → ${pair.toName}`, showDiffMode ? null : t('document.reasonDiffOff'))}
                   disabled={!showDiffMode}
                   ariaPressed={isActive}
                 >
@@ -544,12 +375,13 @@ export function DocumentView({
                 </IconButton>
               );
             });
-            const stageActions = isEditorialMode ? (
-              <div className="flex items-center gap-1">
+            const stageRail = isEditorialMode ? (
+              <>
                 {stageButtons}
-                <span className="mx-1 h-4 w-px bg-rule" aria-hidden="true" />
+                <span className="my-1 h-px w-4 bg-rule" aria-hidden="true" />
                 <IconButton
-                  size="lg"
+                  size="xs"
+                  tooltipSide="left"
                   tone={showDiffMode ? 'accent' : 'default'}
                   onClick={() => {
                     // Il confronto richiede la sola traduzione (spazio pieno): se siamo su
@@ -561,14 +393,17 @@ export function DocumentView({
                     }
                     setShowDiffMode(!showDiffMode);
                   }}
-                  title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
+                  title={blockedTitle(
+                    showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable'),
+                    hasAnyStageContent ? null : t('document.reasonNoStageRun'),
+                  )}
                   disabled={!hasAnyStageContent}
                   ariaPressed={showDiffMode}
                 >
                   <GitCompare size={14} />
                 </IconButton>
                 {diffButtons}
-              </div>
+              </>
             ) : null;
 
             return (
@@ -580,18 +415,24 @@ export function DocumentView({
                     ? `${activeDiffPair.fromName} → ${activeDiffPair.toName}`
                     : undefined
                 }
-                actions={stageActions}
+                actions={<ProjectSaveButton />}
+                sideRail={stageRail}
                 textMenuButton={!showDiffMode ? renderTextMenuButton(translationMenuOpen, () => setTranslationMenuOpen((open) => !open)) : null}
-                statusBadge={currentChunk.translationStale ? (
-                  <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
-                ) : lockToggle}
+                statusBadge={
+                  <span className="flex items-center gap-2">
+                    {verifyToggle}
+                    {currentChunk.translationStale && (
+                      <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
+                    )}
+                  </span>
+                }
                 searchValue={translationPaneSearch}
                 onSearchChange={setTranslationPaneSearch}
                 searchLabel={t('document.searchInTranslation')}
                 scrollRef={scrollTranslationRef}
               >
                 <div
-                  className="flex flex-col flex-1 min-h-0 min-w-0"
+                  className="relative flex flex-col flex-1 min-h-0 min-w-0"
                   onContextMenu={(e) => {
                     const text = window.getSelection()?.toString().trim() ?? '';
                     if (!text) return;
@@ -629,6 +470,16 @@ export function DocumentView({
                       useDocLineHeight
                     />
                   )}
+                  {/* Il frammento in lavorazione: il testo è della pipeline finché
+                      non finisce, e scriverci sopra si scontrerebbe con il suo.
+                      La colonna delle fasi resta fuori dal velo. */}
+                  <PagePendingOverlay
+                    pending={currentChunk.status === 'processing'}
+                    errorMessage={null}
+                    label={t('document.chunkTranslating')}
+                    tone="running"
+                    roundedClassName="rounded-lg"
+                  />
                 </div>
               </DocumentPage>
             );
@@ -649,9 +500,9 @@ export function DocumentView({
           x={annotationMenu.x}
           y={annotationMenu.y}
           onAddAnnotation={() => {
-            setProjectContextCollapsed(false);
+            setShowInsightPanel(true);
             setPendingAnnotationAnchor({ chunkId: annotationMenu.chunkId, text: annotationMenu.text });
-            setChunkRailTab('notes');
+            setStudioTab('notes');
           }}
           onClose={() => setAnnotationMenu(null)}
         />

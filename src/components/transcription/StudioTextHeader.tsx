@@ -1,14 +1,7 @@
-import { AlertCircle, Check, ChevronLeft, ChevronRight, Circle, CircleCheck, Loader2, Save, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleCheck, Loader2, Save, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, Tooltip } from '../ui';
+import { IconButton } from '../ui';
 import type { SaveState } from './useSegmentEditor';
-
-const SAVE_STATE_KEY: Record<SaveState, string> = {
-  saved: 'transcription.saveSaved',
-  pending: 'transcription.savePending',
-  saving: 'transcription.saveSaving',
-  error: 'transcription.saveError',
-};
 
 const DIVIDER_CLASSNAME = 'h-4 w-px shrink-0 bg-editorial-border';
 
@@ -35,17 +28,11 @@ interface StudioTextHeaderProps {
   onTextMenuToggle: () => void;
 }
 
-function SaveStateIcon({ state }: { state: SaveState }) {
-  if (state === 'saving') return <Loader2 size={14} className="animate-spin" aria-hidden="true" />;
-  if (state === 'pending') return <Circle size={14} aria-hidden="true" />;
-  if (state === 'error') return <AlertCircle size={14} aria-hidden="true" />;
-  return <Check size={14} aria-hidden="true" />;
-}
-
 /**
  * La barra sopra il foglio: stessa altezza della barra del visore a sinistra
- * (h-12), così le due colonne partono allineate. Quando la colonna è stretta
- * le parole di stato cedono il posto al titolo e restano nel suggerimento.
+ * (h-12), così le due colonne partono allineate. Lo stato del salvataggio sta
+ * nella barra di stato, come per le traduzioni; qui resta il dischetto, rosso
+ * se il salvataggio è fallito.
  */
 export function StudioTextHeader({
   title,
@@ -67,7 +54,6 @@ export function StudioTextHeader({
 }: StudioTextHeaderProps) {
   const { t } = useTranslation();
   const verifyLabel = t(verified ? 'transcription.unverify' : 'transcription.verify');
-  const saveStateText = t(SAVE_STATE_KEY[saveState]);
   const saveLabel = saveState === 'error' && canSave
     ? t('transcription.saveRetry')
     : canSave
@@ -75,9 +61,6 @@ export function StudioTextHeader({
       : saveBlockedReason
         ? t('transcription.commandBlocked', { command: t('transcription.saveNow'), reason: saveBlockedReason })
         : t('transcription.saveNowNothing');
-  // Si annuncia solo quello che chiede attenzione: un «da salvare» a ogni
-  // tasto premuto sarebbe un rumore continuo per chi legge con la voce.
-  const announcedSaveState = saveState === 'saving' || saveState === 'error' ? saveStateText : '';
 
   return (
     <div className="@container shrink-0 border-b border-editorial-border">
@@ -131,14 +114,13 @@ export function StudioTextHeader({
               </span>
             </span>
           )}
-          <span className={`flex items-center gap-1 text-xs ${saveState === 'error' ? 'text-editorial-danger' : 'text-editorial-muted'}`}>
-            <Tooltip label={saveStateText} side="bottom">
-              <SaveStateIcon state={saveState} />
-            </Tooltip>
-            <span className="@max-md:hidden">{saveStateText}</span>
-          </span>
-          <span className="sr-only" role="status">{announcedSaveState}</span>
-          <IconButton size="sm" onClick={onSave} disabled={!canSave} title={saveLabel}>
+          <IconButton
+            size="sm"
+            tone={saveState === 'error' ? 'danger' : 'default'}
+            onClick={onSave}
+            disabled={!canSave}
+            title={saveLabel}
+          >
             <Save size={14} />
           </IconButton>
           <span className={DIVIDER_CLASSNAME} aria-hidden="true" />

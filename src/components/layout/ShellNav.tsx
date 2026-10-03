@@ -194,6 +194,8 @@ interface ShellNavItemProps {
   tabIndex?: number;
   buttonRef?: Ref<HTMLButtonElement>;
   trailing?: ReactNode;
+  /** Perché la voce è spenta: nel suggerimento, come per i comandi a icona. */
+  disabledReason?: string | null;
 }
 
 export function ShellNavItem({
@@ -214,7 +216,9 @@ export function ShellNavItem({
   tabIndex,
   buttonRef,
   trailing,
+  disabledReason = null,
 }: ShellNavItemProps) {
+  const shownReason = disabled ? disabledReason : null;
   const labelClassName = labelFont === 'display' ? 'font-display text-sm italic' : 'font-sans text-sm';
 
   const toneClassName = active
@@ -242,7 +246,7 @@ export function ShellNavItem({
     >
       <span className="inline-flex shrink-0 items-center justify-center">{icon}</span>
       {collapsed ? (
-        <span className="sr-only">{hint ? `${label} ${hint}` : label}</span>
+        <span className="sr-only">{[label, hint, shownReason].filter(Boolean).join(' — ')}</span>
       ) : (
         <span className="min-w-0 flex-1">
           <span className={`block truncate ${labelClassName}`}>{label}</span>
@@ -260,8 +264,8 @@ export function ShellNavItem({
           className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-editorial-accent"
         />
       ) : null}
-      {collapsed ? (
-        <Tooltip label={hint ? `${label} — ${hint}` : label} side="right" className="w-full">
+      {collapsed || shownReason ? (
+        <Tooltip label={[label, hint, shownReason].filter(Boolean).join(' — ')} side="right" className="w-full">
           {button}
         </Tooltip>
       ) : (

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Header } from './Header';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -6,7 +6,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 
-const originalCloseProject = useProjectStore.getState().closeProject;
+const originalLeaveProject = useProjectStore.getState().leaveProject;
 
 describe('Header', () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('Header', () => {
     useProjectStore.setState({
       currentProjectId: null,
       projects: [],
-      closeProject: originalCloseProject,
+      leaveProject: originalLeaveProject,
     });
     useWorkspaceStore.setState({
       activeWorkspace: null,
@@ -51,8 +51,8 @@ describe('Header', () => {
     expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
   });
 
-  it('uses translations as the parent of a project without a workspace', () => {
-    const closeProject = vi.fn();
+  it('uses translations as the parent of a project without a workspace', async () => {
+    const leaveProject = vi.fn().mockResolvedValue(true);
     useWorkspaceStore.setState({
       activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
       workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
@@ -60,7 +60,7 @@ describe('Header', () => {
     useProjectStore.setState({
       currentProjectId: 'project-1',
       projects: [{ id: 'project-1', name: 'Draft', workspace_id: null } as never],
-      closeProject,
+      leaveProject,
     });
 
     render(<Header />);
@@ -71,12 +71,12 @@ describe('Header', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'areas.translations.title' }));
 
-    expect(closeProject).toHaveBeenCalledTimes(1);
-    expect(useUiStore.getState().location).toEqual({ area: 'translations' });
+    expect(leaveProject).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(useUiStore.getState().location).toEqual({ area: 'translations' }));
   });
 
   it('renders the project breadcrumb and returns to the workspace dashboard', () => {
-    const closeProject = vi.fn();
+    const leaveProject = vi.fn().mockResolvedValue(true);
     useWorkspaceStore.setState({
       activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
       workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
@@ -84,7 +84,7 @@ describe('Header', () => {
     useProjectStore.setState({
       currentProjectId: 'project-1',
       projects: [{ id: 'project-1', name: 'Draft', workspace_id: 'workspace-1' } as never],
-      closeProject,
+      leaveProject,
     });
 
     render(<Header />);
@@ -92,7 +92,27 @@ describe('Header', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scholars' }));
 
     expect(screen.getByText('Draft')).toBeInTheDocument();
-    expect(closeProject).toHaveBeenCalledTimes(1);
+    expect(leaveProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays in the translation when saving before leaving fails', async () => {
+    const leaveProject = vi.fn().mockResolvedValue(false);
+    useWorkspaceStore.setState({
+      activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
+      workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
+    });
+    useUiStore.setState({ location: { area: 'translations' } });
+    useProjectStore.setState({
+      currentProjectId: 'project-1',
+      projects: [{ id: 'project-1', name: 'Draft', workspace_id: null } as never],
+      leaveProject,
+    });
+
+    render(<Header />);
+    fireEvent.click(screen.getByRole('button', { name: 'areas.translations.title' }));
+
+    await waitFor(() => expect(leaveProject).toHaveBeenCalledTimes(1));
+    expect(useUiStore.getState().location).toEqual({ area: 'translations' });
   });
 });
 

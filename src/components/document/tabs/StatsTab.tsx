@@ -6,7 +6,6 @@ import {
   Cpu,
   FileText,
   Gauge,
-  Info,
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +20,7 @@ import {
   summarizeGlobalUsage,
 } from '../../../utils/operationLogStats';
 import type { TranslationChunk } from '../../../types';
-import { StatRow, ScopeBreakdownCarousel, Tooltip } from '../../ui';
+import { PANEL_BODY_CLASSNAME, PanelSection, StatRow, ScopeBreakdownCarousel } from '../../ui';
 
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -29,22 +28,6 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   ok: 'text-editorial-warning',
   weak: 'text-editorial-danger',
 };
-
-function SectionHeader({ icon, label, info }: { icon: React.ReactNode; label: string; info?: string }) {
-  return (
-    <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-section text-editorial-muted">
-      <span className="text-editorial-accent shrink-0">{icon}</span>
-      {label}
-      {info && (
-        <Tooltip label={info} side="right">
-          <button type="button" aria-label={info} className="ml-0.5 inline-flex cursor-help rounded-full p-0.5 text-editorial-muted/60 hover:text-editorial-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent">
-            <Info size={11} />
-          </button>
-        </Tooltip>
-      )}
-    </div>
-  );
-}
 
 export interface StatsTabProps {
   panelId: string;
@@ -93,47 +76,35 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   }
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="divide-y divide-rule px-5">
-      <section className="py-4">
-        <SectionHeader icon={<FileText size={11} />} label={t('document.infoLabel')} />
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className={PANEL_BODY_CLASSNAME}>
+      <PanelSection icon={FileText} label={t('document.infoLabel')}>
         <dl className="space-y-2">
           <StatRow label={t('document.infoSourceWords')} value={sourceWords.toLocaleString()} />
           <StatRow label={t('document.infoTranslatedWords')} value={`${translatedWords.toLocaleString()} (${coverageRatio}%)`} />
           <StatRow label={t('document.infoChunks')} value={`${completedCount} / ${total}`} />
         </dl>
-      </section>
+      </PanelSection>
 
-      <section className="py-4">
-        <SectionHeader icon={<BarChart2 size={11} />} label={t('pipeline.chunkStatus.completed')} />
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-rule-faint">
+      <PanelSection icon={BarChart2} label={t('pipeline.chunkStatus.completed')}>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-rule-faint">
           <div className="h-full rounded-full bg-editorial-success transition-all" style={{ width: `${progressPct}%` }} />
         </div>
-        <div className="mb-2 font-display text-lg italic text-editorial-ink">{progressPct}%</div>
+        <div className="font-display text-lg italic text-editorial-ink">{progressPct}%</div>
         <div className="flex flex-wrap gap-3">
-          {idleCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-muted"><Circle size={10} className="text-editorial-muted/70" /><span className="font-bold">{idleCount}</span> {t('pipeline.chunkStatus.ready')}</div>}
+          {idleCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-muted"><Circle size={10} className="text-editorial-muted" /><span className="font-bold">{idleCount}</span> {t('pipeline.chunkStatus.ready')}</div>}
           {processingCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-warning"><Loader2 size={10} className="animate-spin" /><span className="font-bold">{processingCount}</span> {t('pipeline.chunkStatus.processing')}</div>}
           {completedCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-success"><CheckCircle2 size={10} /><span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}</div>}
           {errorCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-danger"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
         </div>
-      </section>
+      </PanelSection>
 
-      <section className="py-4">
-        <SectionHeader
-          icon={<Gauge size={11} />}
-          label={t('document.infoQuality')}
-          info={t('stats.qualityHint')}
-        />
+      <PanelSection icon={Gauge} label={t('document.infoQuality')} hint={t('stats.qualityHint')}>
         {compositeLabel
           ? <div className={`font-display text-lg italic ${QUALITY_TONE_COLOR[compositeTone]}`}>{compositeLabel}</div>
-          : <div className="font-display text-lg italic text-editorial-muted/40">—</div>}
-      </section>
+          : <div className="font-display text-lg italic text-editorial-muted">—</div>}
+      </PanelSection>
 
-      <section className="py-4">
-        <SectionHeader
-          icon={<Cpu size={11} />}
-          label={t('header.tokenCount')}
-          info={t('stats.tokenTotalsHint')}
-        />
+      <PanelSection icon={Cpu} label={t('header.tokenCount')} hint={t('stats.tokenTotalsHint')}>
         <dl className="space-y-2">
           <StatRow
             label={t('header.tokenCount')}
@@ -167,11 +138,11 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           <StatRow label={t('document.summaryCoherenceRuns')} value={usageSummary.coherenceRuns.toLocaleString()} />
         </dl>
         {!hasPersistedUsage && (
-          <p className="mt-3 text-xs leading-relaxed text-editorial-muted">
+          <p className="text-xs leading-relaxed text-editorial-muted">
             {t('document.summaryNoPersistedStats')}
           </p>
         )}
-      </section>
+      </PanelSection>
 
       {usageSummary.scopeBreakdown.length > 0 && (
         <ScopeBreakdownCarousel

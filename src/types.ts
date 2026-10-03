@@ -699,6 +699,9 @@ export type Workspace = {
   ocrDefaultProvider: ModelProvider | '';
   ocrDefaultModel: string;
   ocrDefaultPrompt: string;
+  /** La ricerca dei riferimenti guarda anche le frasi degli altri workspace e
+   *  delle traduzioni senza workspace (sempre della stessa coppia di lingue). */
+  memorySearchAllWorkspaces: boolean;
   createdAt: string;
   /** Messo da parte: resta com'è, ma non compare fra quelli in cui si lavora. */
   archivedAt?: string;
@@ -710,6 +713,11 @@ export type PhraseMatch = {
   targetPhrase: string;
   distance: number;
   confidence: number;
+  /** Provenienza: workspace di casa (`null` = traduzione senza workspace),
+   *  traduzione e frammento (`null` = frase importata). */
+  workspaceId: string | null;
+  projectId: string | null;
+  chunkId: string | null;
 };
 
 export type EmbeddingJobStatus =

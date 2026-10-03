@@ -31,12 +31,27 @@ const QUALITY_ICON = {
   weak: <AlertCircle size={11} className="text-editorial-danger" />,
 };
 
-function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'; lastSavedAt: number | null }) {
+type SaveIndicatorState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+
+interface SaveIndicatorProps {
+  state: SaveIndicatorState;
+  lastSavedAt: number | null;
+  error: string | null;
+}
+
+/** Stesso indicatore per traduzioni e trascrizioni: il testo dello Studio ha «da salvare» dove il progetto ha «dirty». */
+function transcriptionSaveProps(data: Extract<ReturnType<typeof useStatusBarData>, { kind: 'transcription' }>): SaveIndicatorProps {
+  const save = data.textSave;
+  if (!save) return { state: 'idle', lastSavedAt: null, error: null };
+  return { state: save.state === 'pending' ? 'dirty' : save.state, lastSavedAt: save.lastSavedAt, error: save.error };
+}
+
+function SaveIndicator({ state, lastSavedAt, error }: SaveIndicatorProps) {
   const { t } = useTranslation();
 
   if (state === 'idle') return null;
 
-  const tooltipLabel = lastSavedAt
+  const timeLabel = lastSavedAt
     ? t('statusBar.lastSavedTooltip', {
         // Sempre su 24 ore, come nel pannello dei lavori.
         time: new Date(lastSavedAt).toLocaleTimeString(undefined, {
@@ -46,6 +61,7 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
         }),
       })
     : t('statusBar.neverSavedTooltip');
+  const tooltipLabel = state === 'error' && error ? `${error} — ${timeLabel}` : timeLabel;
 
   if (state === 'saving') {
     return (
@@ -73,7 +89,10 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
     <Tooltip label={tooltipLabel} side="top">
       <span className="flex items-center gap-1.5">
         <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
-        <span className="text-xs text-editorial-muted">{label}</span>
+        {/* La barra intera annuncia i cambi: «da salvare» a ogni tasto e
+            «salvato» a ogni pausa sarebbero rumore continuo per chi legge
+            con la voce, quindi si annuncia solo l'errore. */}
+        <span className="text-xs text-editorial-muted" aria-hidden={state !== 'error'}>{label}</span>
       </span>
     </Tooltip>
   );
@@ -481,12 +500,13 @@ export function AppStatusBar() {
           </IconButton>
           {/* Lo spazio del salvataggio è riservato anche dove non c'è niente
               da salvare: senza, tutto il gruppo scivolerebbe a destra cambiando
-              sezione. Generalizzarlo a trascrizioni e fonti è lavoro di #413. */}
+              sezione. Traduzioni e trascrizioni lo usano; le fonti no (#413). */}
           <span className="h-3.5 w-px bg-rule" aria-hidden="true" />
           <div className="flex min-w-[5.5rem] justify-end">
             {data.kind === 'project' && (
-              <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} />
+              <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} error={data.lastSaveError} />
             )}
+            {data.kind === 'transcription' && <SaveIndicator {...transcriptionSaveProps(data)} />}
           </div>
         </div>
       </div>

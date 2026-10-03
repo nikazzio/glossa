@@ -140,7 +140,8 @@ Issue: #183, #187, #397, #459, #462, #413, #471, #472; shell generale #210.
 
 - Verificare i percorsi già presenti e correggere le regressioni prima di
   aggiungere nuove varianti. Revisione UI/UX generale ancora da fare.
-- Rendere visibili log generali, salvataggio e stato dei lavori (#413),
+- Rendere visibili log generali, salvataggio (fatto per traduzioni e
+  trascrizioni, mancano le fonti) e stato dei lavori (#413),
   riusando la coda e i pannelli esistenti.
 - Riallineare capacità dichiarate e reali dei provider (#397). La ricerca
   aggregata (#395) viene dopo la verifica dei singoli provider. I risultati
@@ -225,9 +226,25 @@ sceglie in Impostazioni → Trascrizioni e per sessione nella scheda OCR.
 ogni larghezza; salvataggio manuale di una versione (comando e Ctrl+S). La
 pagina iniziale delle Trascrizioni è un catalogo sul modello della Biblioteca,
 con gli stessi pezzi condivisi (scaffali, ricerca, filtri rapidi, tre viste,
-comandi di riga, barretta di completamento). **Restano**: portare lo stesso
-modello alla pagina iniziale delle Traduzioni; scelta multipla nel catalogo
-delle Trascrizioni, non chiesta per ora.
+comandi di riga, barretta di completamento). Anche la pagina iniziale delle
+Traduzioni segue lo stesso modello (#485 N, primo passo: scaffali, filtri
+workspace e lingue, rinomina | elimina, creazione «da zero» con il file).
+**Restano**: strada «da una trascrizione» con copia fissata, legame con opera
+e trascrizione d'origine e, solo allora, i comandi apri l'opera / apri la
+trascrizione, filtri per biblioteca e secolo, raggruppamento per biblioteca;
+Studio di traduzione (#485 N): fatta la disposizione (T1: barra principale
+sempre in vista, riga d'intestazione, una colonna Strumenti a destra) e il
+salvataggio (T2: stato nella barra di stato anche per le trascrizioni,
+dischetto e Ctrl/⌘+S nei fogli, salvataggio prima di uscire) e la verifica (T3: spunta, motivi dei comandi
+spenti; il «da aggiornare» resta solo in memoria per scelta, si perde
+riaprendo) e lo storico (T4: sottolinguetta in Revisione, versioni dal
+dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
+colonna nuova) e la configurazione della pipeline (T5: finestra a sei linguette
+comuni, sezione Modello e editor dei prompt comuni, niente spiegazioni fisse,
+«Azzera tutte le traduzioni» a icona, velo comune) e il velo oro sul frammento
+in traduzione (T6); restano scheda Memoria (T7) e costi (T8); quali riepiloghi unire
+nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
+ora.
 
 Uscita: aprire una fonte reale, trascrivere più pagine — a mano o assistite
 da OCR/HTR —, correggere, riaprire e ritrovare testo, revisioni e riferimenti

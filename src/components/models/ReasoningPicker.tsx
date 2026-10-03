@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ban, Zap, BrainCircuit } from 'lucide-react';
+import { Ban, Zap, BrainCircuit, Wand2 } from 'lucide-react';
 import { ChoiceDots } from '../ui';
 import type { ReasoningEffortLevel } from '../../types';
 
@@ -44,6 +44,7 @@ export function ReasoningPicker({ value, showNone, disabled, onChange }: Reasoni
       onChange={onChange}
       disabled={disabled}
       ariaLabel={t('pipeline.reasoningEffort')}
+      categoryIcon={Wand2}
     />
   );
 }

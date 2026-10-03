@@ -5,7 +5,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { IconButton, PANEL_BODY_CLASSNAME, PanelSection } from '../ui';
 import type { TranscriptionRevision, TranscriptionSegment } from '../../services/transcriptionService';
-import { PagePendingOverlay } from './PagePendingOverlay';
+import { PagePendingOverlay } from '../common';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface Props {

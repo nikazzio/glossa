@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { BookOpenText } from 'lucide-react';
+import { BookOpenText, FileUp, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, DialogCancelButton, DialogConfirmButton, Select } from '../ui';
+import { importErrorMessageKey, importTextFile, type ImportedTextFile } from '../../services/fileService';
+import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, Select } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CreateProjectDialogProps {
@@ -14,14 +16,25 @@ interface CreateProjectDialogProps {
   workspaceId?: string;
 }
 
-/** Dialog di creazione progetto: crea nel workspace scelto e lo apre subito. */
+const LABEL_CLASSNAME = 'text-xs font-bold uppercase tracking-caption text-editorial-muted';
+
+/**
+ * Dialog di creazione progetto: nome, workspace e, se si vuole, già il file da
+ * tradurre. Il file si legge appena scelto, così un file illeggibile si scopre
+ * qui e non si crea nulla; a creazione fatta la traduzione si apre e il file
+ * passa all'anteprima dell'import.
+ */
 export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjectDialogProps) {
   const { t } = useTranslation();
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const createAndOpen = useProjectStore((s) => s.createAndOpen);
+  const setPendingImportFile = useUiStore((s) => s.setPendingImportFile);
 
   const [name, setName] = useState('');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(workspaceId ?? null);
+  const [file, setFile] = useState<ImportedTextFile | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [readingFile, setReadingFile] = useState(false);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -35,14 +48,32 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
 
   const close = () => {
     setName('');
+    setFile(null);
+    setFileError(null);
     onClose();
   };
 
+  const chooseFile = async () => {
+    setReadingFile(true);
+    try {
+      const imported = await importTextFile();
+      if (!imported) return;
+      setFile(imported);
+      setFileError(null);
+    } catch (err: unknown) {
+      setFile(null);
+      setFileError(t(importErrorMessageKey(err instanceof Error ? err.message : String(err))));
+    } finally {
+      setReadingFile(false);
+    }
+  };
+
   const handleCreate = async () => {
-    if (!name.trim() || !selectedWorkspaceId) return;
+    if (!name.trim() || !selectedWorkspaceId || readingFile) return;
     setCreating(true);
     try {
       await createAndOpen(name.trim(), selectedWorkspaceId);
+      if (file) setPendingImportFile(file);
       close();
     } catch (err: unknown) {
       toast.error(t('projects.saveFailed'), {
@@ -70,7 +101,7 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
       footer={
         <div className="flex justify-end gap-2">
           <DialogCancelButton onClick={close}>{t('common.cancel')}</DialogCancelButton>
-          <DialogConfirmButton onClick={() => void handleCreate()} disabled={!name.trim() || !selectedWorkspaceId || creating}>
+          <DialogConfirmButton onClick={() => void handleCreate()} disabled={!name.trim() || !selectedWorkspaceId || creating || readingFile}>
             {creating ? t('workspace.saving') : t('projects.create')}
           </DialogConfirmButton>
         </div>
@@ -79,9 +110,7 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
       <div className="space-y-4">
         {!workspaceId && (
           <label className="block space-y-1.5">
-            <span className="text-xs font-bold uppercase tracking-caption text-editorial-muted">
-              {t('projects.chooseWorkspace')}
-            </span>
+            <span className={LABEL_CLASSNAME}>{t('projects.chooseWorkspace')}</span>
             <Select
               value={selectedWorkspaceId ?? ''}
               onChange={setSelectedWorkspaceId}
@@ -92,9 +121,7 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
           </label>
         )}
         <label className="block space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-caption text-editorial-muted">
-            {t('workspace.newBookCard')}
-          </span>
+          <span className={LABEL_CLASSNAME}>{t('workspace.newBookCard')}</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -108,6 +135,25 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
             autoFocus
           />
         </label>
+        <div className="space-y-1.5">
+          <span className={LABEL_CLASSNAME}>{t('projects.sourceFile')}</span>
+          <div className="flex items-center gap-2">
+            <IconButton size="md" onClick={() => void chooseFile()} disabled={readingFile || creating}
+              title={t(file ? 'projects.changeSourceFile' : 'projects.chooseSourceFile')}>
+              <FileUp size={14} />
+            </IconButton>
+            <span className={`min-w-0 flex-1 truncate text-sm ${file ? 'text-editorial-ink' : 'text-editorial-muted'}`}>
+              {readingFile ? t('projects.readingSourceFile') : file?.name ?? t('projects.noSourceFile')}
+            </span>
+            {file && (
+              <IconButton size="sm" tone="muted" onClick={() => setFile(null)} disabled={creating}
+                title={t('projects.removeSourceFile')}>
+                <X size={12} />
+              </IconButton>
+            )}
+          </div>
+          {fileError && <p role="alert" className="text-xs text-editorial-danger">{fileError}</p>}
+        </div>
       </div>
     </Dialog>
   );

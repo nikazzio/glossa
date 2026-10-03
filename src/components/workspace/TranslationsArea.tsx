@@ -1,228 +1,255 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUpAZ, BookOpenText, Clock, Plus, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { AlertCircle, Languages, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useProjectStore } from '../../stores/projectStore';
+import { EASE_EDITORIAL, MOTION_DURATION, MOTION_SHIFT } from '../layout/motion';
+import { AREA_PAPER_CLASSNAME, AreaHeading, CatalogViewSwitch, EmptyState, IconButton, ListReveal, Spinner, type RowCommand } from '../ui';
+import { CATALOG_GRID_CLASSNAME, CATALOG_GROUP_HEADER_CLASSNAME, CATALOG_LIST_CLASSNAME } from '../ui/catalogStyles';
 import { confirm } from '../../stores/confirmStore';
-import { listAllProjects, type WorkspaceProject } from '../../services/projectService';
-import { AREA_PAPER_CLASSNAME, AreaHeading, IconButton, Spinner } from '../ui';
-import { CreateProjectDialog } from '../projects/CreateProjectDialog';
+import { useProjectStore } from '../../stores/projectStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { WorkspaceIdentity } from './WorkspaceIdentity';
+import { withWorkspaceFilter } from '../../navigation/appLocation';
+import { renameProject } from '../../services/projectService';
+import { listTranslationCatalog, type TranslationCatalogEntry } from '../../services/translationCatalogService';
+import {
+  EMPTY_TRANSLATION_FILTERS,
+  TRANSLATION_FACETS,
+  filterTranslationCatalog,
+  groupTranslationCatalog,
+  orderTranslationCatalog,
+  splitLanguagePair,
+  translationFacetCounts,
+  translationShelfCounts,
+  type TranslationFacet,
+  type TranslationFilters,
+} from '../../utils/translationCatalogFilters';
+import { CreateProjectDialog } from '../projects/CreateProjectDialog';
+import { TranslationCatalogRow, useLanguageLabel, type TranslationRowProps } from '../projects/TranslationCatalogRow';
+import { TranslationCatalogTable } from '../projects/TranslationCatalogTable';
+import { TranslationQuickFilters } from '../projects/TranslationQuickFilters';
+import { TranslationShelves } from '../projects/TranslationShelves';
 
-type SortKey = 'updatedAt' | 'name';
+const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-/** Area Traduzioni: tutti i progetti di TUTTI i workspace — a differenza della
- * pagina Workspace, che mostra solo i progetti del workspace attivo. */
+/**
+ * Area globale Traduzioni: il catalogo delle traduzioni di tutti i workspace,
+ * sul modello delle Trascrizioni — scaffali a destra, ricerca e filtri rapidi
+ * sopra l'elenco, tre viste. Un click apre la traduzione nell'editor.
+ */
 export function TranslationsArea() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const navigate = useUiStore((s) => s.navigate);
+  const location = useUiStore((s) => s.location);
+  const view = useUiStore((s) => s.translationsView);
+  const setView = useUiStore((s) => s.setTranslationsView);
+  const grouping = useUiStore((s) => s.translationsGrouping);
+  const setGrouping = useUiStore((s) => s.setTranslationsGrouping);
   const openProjectInWorkspace = useProjectStore((s) => s.openProjectInWorkspace);
   const removeProject = useProjectStore((s) => s.removeProject);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const languageLabel = useLanguageLabel();
+  const workspaceFilter = location.area === 'translations' ? location.workspaceFilter : undefined;
 
-  const [allProjects, setAllProjects] = useState<WorkspaceProject[]>([]);
+  const [catalog, setCatalog] = useState<TranslationCatalogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
-  const [showNewProjectForm, setShowNewProjectForm] = useState(false);
-  const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [filters, setFilters] = useState(EMPTY_TRANSLATION_FILTERS);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [showNewDialog, setShowNewDialog] = useState(false);
+  const [firstReveal, setFirstReveal] = useState(true);
 
-  const loadAllProjects = useCallback(async () => {
+  const loadCatalog = useCallback(async () => {
     try {
-      setAllProjects(await listAllProjects());
+      setCatalog(await listTranslationCatalog());
+      setLoadError(false);
     } catch (err: unknown) {
-      toast.error(t('dashboard.loadFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      setLoadError(true);
+      toast.error(t('areas.translations.catalog.loadFailed'), { description: errorText(err) });
     } finally {
       setIsLoading(false);
     }
   }, [t]);
 
-  useEffect(() => { void loadAllProjects(); }, [loadAllProjects]);
+  useEffect(() => { void loadCatalog(); }, [loadCatalog]);
 
-  const sortedProjects = useMemo(() =>
-    [...allProjects].sort((a, b) =>
-      sortKey === 'name'
-        ? a.name.localeCompare(b.name)
-        : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    ),
-    [allProjects, sortKey]
-  );
+  useEffect(() => {
+    if (catalog.length > 0) setFirstReveal(false);
+  }, [catalog.length]);
 
-  const formatSavedAt = (updatedAt: string) =>
-    new Intl.DateTimeFormat(i18n.language, {
-      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-    }).format(new Date(updatedAt));
+  // Il filtro workspace vive anche nell'indirizzo, come in Biblioteca e Trascrizioni.
+  useEffect(() => {
+    setFilters((current) =>
+      current.workspaceId === (workspaceFilter ?? '') ? current : { ...current, workspaceId: workspaceFilter ?? '' });
+  }, [workspaceFilter]);
 
-  const handleOpenProject = async (project: WorkspaceProject) => {
-    setOpeningProjectId(project.id);
+  const changeFilters = (next: TranslationFilters) => {
+    setFilters(next);
+    const nextWorkspaceFilter = next.workspaceId || null;
+    if (nextWorkspaceFilter !== (workspaceFilter ?? null)) navigate(withWorkspaceFilter(location, nextWorkspaceFilter));
+  };
+
+  const now = Date.now();
+  const filtered = orderTranslationCatalog(filterTranslationCatalog(catalog, filters, now), filters.sort);
+  const counts = Object.fromEntries(TRANSLATION_FACETS.map((facet) =>
+    [facet, translationFacetCounts(catalog, filters, now, facet)])) as Record<TranslationFacet, Map<string, number>>;
+  const workspaceName = (id: string) =>
+    workspaces.find((workspace) => workspace.id === id)?.name
+    ?? catalog.find((entry) => entry.workspaceId === id)?.workspaceName
+    ?? t('areas.translations.catalog.grouping.missing.workspace');
+  const pairLabel = (key: string) => {
+    const [source, target] = splitLanguagePair(key);
+    return `${languageLabel(source)} → ${languageLabel(target)}`;
+  };
+  const valueLabel = (facet: TranslationFacet, value: string) =>
+    facet === 'workspaceId' ? workspaceName(value) : pairLabel(value);
+  const groupLabel = (key: string) => (grouping === 'workspace' ? workspaceName(key) : pairLabel(key));
+  const groups = groupTranslationCatalog(filtered, grouping, (a, b) => groupLabel(a).localeCompare(groupLabel(b)));
+
+  const open = async (entry: TranslationCatalogEntry) => {
+    setOpeningId(entry.id);
     try {
-      await openProjectInWorkspace(project.id, project.workspace_id);
+      await openProjectInWorkspace(entry.id, entry.workspaceId);
     } catch (err: unknown) {
-      setOpeningProjectId(null);
-      toast.error(t('projects.loadFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      setOpeningId(null);
+      toast.error(t('projects.loadFailed'), { description: errorText(err) });
     }
   };
 
-  const handleDeleteProject = async (project: { id: string; name: string }) => {
+  const run = async (work: () => Promise<void>, failure: string) => {
+    try {
+      await work();
+      await loadCatalog();
+    } catch (err: unknown) {
+      toast.error(t(failure), { description: errorText(err) });
+    }
+  };
+
+  const remove = async (entry: TranslationCatalogEntry) => {
     const ok = await confirm({
       title: t('projects.confirmDeleteTitle'),
-      message: t('projects.confirmDeleteMessage', { name: project.name }),
+      message: t('projects.confirmDeleteMessage', { name: entry.name }),
       confirmLabel: t('common.delete'),
       danger: true,
     });
     if (!ok) return;
-    try {
-      await removeProject(project.id);
-      await loadAllProjects();
+    await run(async () => {
+      await removeProject(entry.id);
       toast.success(t('projects.deleted'));
-    } catch (err: unknown) {
-      toast.error(t('projects.deleteFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
+    }, 'projects.deleteFailed');
   };
 
+  /** I comandi di una traduzione, uguali in elenco, copertine e tabella: nome | eliminazione. */
+  const commandsFor = (entry: TranslationCatalogEntry): RowCommand[][] => [
+    [{
+      key: 'rename',
+      icon: <Pencil size={14} />,
+      label: t('areas.translations.catalog.rename'),
+      onClick: () => setRenamingId(entry.id),
+    }],
+    [{
+      key: 'remove',
+      icon: <Trash2 size={14} />,
+      label: t('projects.delete'),
+      tone: 'danger',
+      onClick: () => void remove(entry),
+    }],
+  ];
+
+  const rowPropsFor = (entry: TranslationCatalogEntry): TranslationRowProps => ({
+    entry,
+    commands: commandsFor(entry),
+    renaming: renamingId === entry.id,
+    onRename: (name) => {
+      setRenamingId(null);
+      void run(() => renameProject(entry.id, name), 'areas.translations.catalog.renameFailed');
+    },
+    onRenameCancel: () => setRenamingId(null),
+    onOpen: () => void open(entry),
+    disabled: openingId !== null,
+  });
+
   return (
-    <main className={`flex flex-1 h-full min-h-0 flex-col overflow-y-auto custom-scrollbar ${AREA_PAPER_CLASSNAME.translations}`}>
-      <div className="px-5 py-5 md:px-6">
-        <div className="mb-5">
+    <motion.div
+      initial={{ opacity: 0, y: MOTION_SHIFT }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: MOTION_DURATION, ease: EASE_EDITORIAL }}
+      className="flex h-full min-h-0 w-full min-w-0 flex-1"
+    >
+      <main className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${AREA_PAPER_CLASSNAME.translations}`}>
+        <div className="px-5 pt-5 md:px-6">
           <AreaHeading area="translations" title={t('areas.translations.title')}>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-2">
-                {([
-                  { key: 'updatedAt' as SortKey, icon: Clock },
-                  { key: 'name' as SortKey, icon: ArrowUpAZ },
-                ]).map(({ key, icon: Icon }) => (
-                  <IconButton
-                    key={key}
-                    size="md"
-                    tone={sortKey === key ? 'accent' : 'default'}
-                    onClick={() => setSortKey(key)}
-                    title={t(`workspace.translationsArea.sort.${key}`)}
-                    ariaPressed={sortKey === key}
-                  >
-                    <Icon size={14} />
-                  </IconButton>
-                ))}
-                <span className="mx-1 h-4 w-px self-center bg-rule" aria-hidden="true" />
-                <span className="self-center font-display text-sm italic text-editorial-ink">
-                  {t(`workspace.translationsArea.sort.${sortKey}`)}
-                </span>
-              </div>
+            <div className="flex items-center gap-1">
+              <IconButton size="sm" onClick={() => setShowNewDialog(true)} title={t('areas.translations.catalog.newTranslation')}>
+                <Plus size={13} />
+              </IconButton>
+              {catalog.length > 0 && <CatalogViewSwitch view={view} onChange={setView} />}
             </div>
           </AreaHeading>
         </div>
-
-        {isLoading ? (
-          <Spinner size={14} label={t('common.loading')} className="flex items-center gap-2 px-1 py-2 text-xs text-editorial-muted" />
-        ) : (
-        <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-          {sortedProjects.map((project) => {
-            const isOpening = openingProjectId === project.id;
-            const isDimmed = openingProjectId !== null && !isOpening;
-            const workspace = workspaces.find((item) => item.id === project.workspace_id);
-            return (
-              <motion.article
-                key={project.id}
-                layout
-                initial={false}
-                animate={{ opacity: isDimmed ? 0.42 : 1, scale: isOpening ? 0.985 : 1, y: isOpening ? -2 : 0 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-inset-highlight transition-colors duration-150 ${
-                  isOpening
-                    ? 'border-editorial-accent/55 bg-editorial-paper'
-                    : 'border-editorial-border hover:border-editorial-accent/45 hover:bg-editorial-paper'
-                }`}
-              >
-                <AnimatePresence>
-                  {isOpening ? (
-                    <motion.span
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      transition={{ duration: 0.12, ease: 'easeOut' }}
-                      className="pointer-events-none absolute inset-0 bg-editorial-accent/8"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                </AnimatePresence>
-                <div className="relative z-10 flex items-start gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleOpenProject(project)}
-                    disabled={openingProjectId !== null}
-                    aria-busy={isOpening}
-                    className="min-w-0 flex-1 pr-10 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
-                  >
-                    <span className="min-w-0">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <BookOpenText size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
-                        <span className="truncate font-display text-xl italic text-editorial-ink">
-                          {project.name}
-                        </span>
-                      </span>
-                      <span className="mt-1 flex items-center gap-2">
-                        <span className="truncate text-xs text-editorial-muted">
-                          {workspace?.name ?? project.workspace_name}
-                        </span>
-                        <span className="text-xs text-editorial-muted">
-                          {formatSavedAt(project.updated_at)}
-                        </span>
-                      </span>
-                      <span className="mt-2 block text-xs text-editorial-ink">
-                        {t('workspace.pipelineBadge', { count: project.pipeline_count })}
-                      </span>
-                    </span>
-                  </button>
-                  <IconButton
-                    size="sm" tone="muted"
-                    onClick={() => void handleDeleteProject(project)}
-                    title={`${t('projects.delete')} ${project.name}`}
-                    disabled={openingProjectId !== null}
-                    ariaLabel={`${t('projects.delete')} ${project.name}`}
-                    className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
-                  >
-                    <Trash2 size={12} />
-                  </IconButton>
-                  {workspace && (
-                    <WorkspaceIdentity
-                      workspace={workspace}
-                      iconOnly
-                      iconSize={22}
-                      className={`absolute bottom-0 right-0 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
-                        isOpening
-                          ? 'border-editorial-accent/45 text-editorial-accent'
-                          : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
-                      }`}
-                    />
-                  )}
-                </div>
-              </motion.article>
-            );
-          })}
-          {/* New project card */}
-          <motion.button
-            type="button"
-            layout
-            onClick={() => setShowNewProjectForm(true)}
-            disabled={showNewProjectForm}
-            className="group flex min-h-[100px] w-full items-center justify-center gap-3 rounded-[26px] border border-dashed border-editorial-border bg-transparent transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label={t('workspace.newBookCard')}
-          >
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-editorial-border text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
-              <Plus size={16} />
-            </span>
-            <span className="font-display text-lg italic text-editorial-muted transition-colors group-hover:text-editorial-ink">
-              {t('workspace.newBookCard')}
-            </span>
-          </motion.button>
-        </div>
+        {catalog.length > 0 && (
+          <TranslationQuickFilters filters={filters} onChange={changeFilters} counts={counts}
+            valueLabel={valueLabel} grouping={grouping} onGrouping={setGrouping} />
         )}
-      </div>
 
-      <CreateProjectDialog open={showNewProjectForm} onClose={() => setShowNewProjectForm(false)} />
-    </main>
+        <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <Spinner size={14} label={t('common.loading')} className="flex items-center gap-2 text-sm text-editorial-muted" />
+            </div>
+          ) : loadError && catalog.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+              <EmptyState icon={<AlertCircle size={20} />} message={t('areas.translations.catalog.loadFailed')}
+                className="flex flex-col items-center gap-3" />
+              <IconButton size="sm" onClick={() => void loadCatalog()} title={t('areas.library.retry')}>
+                <RefreshCw size={14} />
+              </IconButton>
+            </div>
+          ) : catalog.length === 0 ? (
+            <EmptyState icon={<Languages size={20} />} message={t('areas.translations.emptyMessage')}
+              hint={t('areas.translations.emptyHint')} />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon={<Languages size={20} />} message={t('areas.translations.catalog.filters.noMatches')} />
+          ) : (
+            <div className="px-5 pb-4 md:px-6">
+              {groups.map((group) => (
+                <section key={group.key} aria-label={grouping === 'none' ? undefined : groupLabel(group.key)}>
+                  {grouping !== 'none' && (
+                    <h2 className={`${CATALOG_GROUP_HEADER_CLASSNAME} ${AREA_PAPER_CLASSNAME.translations}`}>
+                      {groupLabel(group.key)}
+                      <span className="font-sans text-xs not-italic tabular-nums text-editorial-muted">{group.entries.length}</span>
+                    </h2>
+                  )}
+                  {view === 'table' ? (
+                    <TranslationCatalogTable
+                      entries={group.entries}
+                      sort={filters.sort}
+                      onSort={(sort) => changeFilters({ ...filters, sort })}
+                      rowPropsFor={rowPropsFor}
+                    />
+                  ) : (
+                    <div className={view === 'grid' ? CATALOG_GRID_CLASSNAME : CATALOG_LIST_CLASSNAME}>
+                      {group.entries.map((entry, index) => (
+                        <ListReveal key={entry.id} index={index} stagger={firstReveal}
+                          className={view === 'grid' ? 'h-full' : undefined}>
+                          <TranslationCatalogRow view={view} {...rowPropsFor(entry)} />
+                        </ListReveal>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+      <aside className="flex w-56 shrink-0 flex-col border-l border-editorial-border bg-surface-panel">
+        <TranslationShelves filters={filters} onChange={changeFilters} counts={translationShelfCounts(catalog, now)} />
+      </aside>
+
+      <CreateProjectDialog open={showNewDialog} onClose={() => setShowNewDialog(false)} />
+    </motion.div>
   );
 }

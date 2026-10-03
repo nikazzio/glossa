@@ -491,7 +491,12 @@ deduplicate per impronta del contenuto (`content_hash`), un segmento senza
 di stato propria.
 
 Il testo si salva dopo 30 secondi senza modifiche, e subito lasciando la pagina.
-Il salvataggio manuale (comando accanto all'indicatore, Ctrl/⌘+S ascoltato sulla
+Lo stato del salvataggio sta nella barra di stato, come per le traduzioni:
+`useSegmentEditor` lo pubblica in `transcriptionStore.textSave` (stato, ora
+dell'ultimo salvataggio riuscito, messaggio d'errore; `null` a Studio chiuso) e
+`AppStatusBar` lo mostra con lo stesso `SaveIndicator` del progetto («da
+salvare» = `dirty`). Il salvataggio manuale (dischetto nella testata del foglio,
+rosso dopo un errore; Ctrl/⌘+S ascoltato sulla
 finestra mentre lo Studio è montato, anche dentro il foglio) passa dalla stessa
 coda di `save` e scrive una revisione senza nome; è spento quando il testo è
 già salvato o il foglio è in sola lettura.
@@ -874,6 +879,174 @@ prima dell'invio. Nessuno dei tre ha oggi codice a metà strada in attesa: il
 lavoro sul testo di riferimento è stato rimosso perché nessuno lo calcolava.
 
 ## Pipeline di traduzione
+
+**Catalogo delle Traduzioni** (`TranslationsArea`): stesso modello e stessi
+pezzi del catalogo delle Trascrizioni (scaffali, ricerca, filtri rapidi, tre
+viste, `CommandBar`, `CompletionBar`, `RenameField` comune in `ui/`).
+`listTranslationCatalog` (`services/translationCatalogService.ts`) legge in una
+query tutti i progetti di tutti i workspace con lingue, `updated_at` e i
+conteggi dei frammenti della **prima pipeline** (quella che `openProject`
+apre): totale, tradotti (`chunk_status = 'completed'`), verificati
+(`translation_locked = 1`). Scaffali (Tutte, Recenti, Da iniziare, In corso,
+Verificate), filtri rapidi (workspace, coppia di lingue), ordine e
+raggruppamento vivono in `utils/translationCatalogFilters.ts`; vista e
+raggruppamento sono preferenze persistite (`translationsView`,
+`translationsGrouping` in `uiStore`), il filtro workspace segue l'indirizzo.
+Comandi di riga: rinomina (`renameProject`) ed elimina (`removeProject`, che
+cancella davvero: i progetti non hanno archivio). Nessun legame con opera o
+trascrizione: `translation_origins` resta non scritta fino alla strada «da una
+trascrizione».
+
+Creazione «da zero» (`CreateProjectDialog`): nome, workspace e file
+facoltativo. Il file si legge alla scelta con `importTextFile` (errori mappati
+da `importErrorMessageKey`, mostrati nella finestra; nulla si crea). Dopo
+`createAndOpen` il file va in `uiStore.pendingImportFile` (non persistito):
+l'editor montato lo consuma con `startImport`, la stessa via del comando di
+import, e apre `ImportPreviewDialog`. Chiudendo l'anteprima il progetto resta
+vuoto.
+
+**Studio di traduzione** (`components/translation/TranslationStudio`): si apre
+quando `projectStore.currentProjectId` è valorizzato, **dentro**
+`WorkspaceShellNext` come ogni altra area — la barra principale
+(`WorkspaceRailNext`) resta. Con un progetto aperto la barra marca Traduzioni
+come area attiva; ogni voce chiude il progetto (`closeProject`) prima di
+`navigate`, e tutte si spengono mentre `chunksStore.isProcessing`: chiudere il
+progetto sotto la pipeline svuoterebbe i frammenti a lavoro in corso. Il
+ritorno al catalogo (`leaveTranslation` in `App`) fa lo stesso e porta a
+`{ area: 'translations' }`. Ogni uscita (ritorno, voci della barra, percorso
+nell'`Header`, cambio di workspace, creazione di un workspace,
+`openProjectInWorkspace`) passa da `projectStore.leaveProject`: aspetta un
+salvataggio già in volo, confronta l'istantanea corrente con `trackedSnapshot`
+e salva se diverse; se il salvataggio fallisce restituisce `false` e la
+traduzione resta aperta con l'errore. `closeProject` resta la chiusura secca
+(dopo l'eliminazione, o dove non c'è niente da salvare). Limite: la chiusura
+della finestra non salva.
+
+Salvataggio: autosalvataggio dell'intero progetto (`useProjectAutosave`, 1,2 s,
+fermo durante la pipeline). Lo stato lo mostra `SaveIndicator` nella barra di
+stato (suggerimento: ora dell'ultimo salvataggio e, dopo un errore,
+`lastSaveError`; la barra è una regione `aria-live`, quindi si annuncia solo
+l'errore). Il comando è `ProjectSaveButton` nella testata del foglio della
+traduzione, o dell'originale con `paneFocus === 'source'`: spento senza
+modifiche e durante la pipeline (motivo nel suggerimento), `danger` con
+«Riprova» dopo un errore. Ctrl/⌘+S (`useKeyboardShortcuts`) a progetto aperto
+vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
+salva solo le risorse linguistiche, fuori dai campi, come prima.
+
+Memoria di frasi (T7, in corso): `vec_save_locked_phrases` **aggiunge** e
+basta (niente più cancellazione delle coppie del frammento); una coppia si
+toglie con `vec_delete_phrase_memory`. `vec_list_phrase_memory(workspaceId?,
+chunkId?)`: senza workspace tutte le frasi. `vec_search_phrase_memory` ha
+`allWorkspaces` e `sourceLanguage`/`targetLanguage`, e restituisce la
+provenienza (workspace di casa = quello della traduzione o dell'importazione,
+`NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
+`PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
+`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo
+dell'interruttore, ancora senza interfaccia.
+
+Frammento in lavorazione (`status === 'processing'`): il testo della traduzione
+(editor o confronto) è coperto da `PagePendingOverlay` `tone="running"`
+(«Traduzione in corso…»), che lo rende inerte; prima restava scrivibile e si
+scontrava col risultato della pipeline. La colonna delle fasi è fuori dal velo.
+I token di Ollama arrivano solo in `stageResults[stage].content`
+(`appendChunkStageContent`); il foglio sull'ultima fase mostra
+`translationDisplayText`, scritto a fine fase, quindi nella vista normale non
+c'è testo che arriva man mano.
+
+I comandi delle fasi (una per fase, confronto, coppie del confronto) sono una
+colonna verticale nel margine destro della pagina (`DocumentPage.sideRail`,
+`IconButton` xs con suggerimento a sinistra, ferma mentre il testo scorre): la
+testata non cresce e resta alta come quella dell'originale. Il margine destro è
+più largo su entrambe le pagine (`pr-11`), con o senza colonna.
+
+Verifica: `translationLocked` resta il dato (e `translation_locked` la colonna),
+ma in interfaccia è «verificata» — `CircleCheck` accanto al titolo del foglio
+della traduzione, `success` quando acceso, spento con il motivo a frammento in
+lavorazione o senza testo. Accanto, non al posto, l'etichetta ocra
+«Sorgente modificata» (`translationStale`); il segno del pallino è
+`editorial-warning`. `toggleChunkTranslationLock`, quando verifica, azzera
+`translationStale`. Nessun lucchetto sull'originale: lo stato modificabile lo
+dice la matita. I comandi spenti di fogli, colonna delle fasi, riga in cima,
+riquadro di esecuzione e barra principale (`ShellNavItem.disabledReason`)
+portano il motivo nel formato «Comando — motivo»
+(`transcription.commandBlocked`). **Limite accettato** (Niki, 2 ottobre):
+`translationStale` vive solo in memoria (non è in `translation_chunks`), quindi
+riaprendo il progetto il «da aggiornare» si perde; non si aggiunge una colonna.
+
+Storico del frammento (Revisione → Storico, `TranslationHistoryList`): legge
+`translation_revisions` del frammento (`listTranslationRevisions`, con
+`translations.approved_revision_id` per il segno «verificata»). Autori: `model`
+(passata della pipeline e riscrittura dopo l'audit, non distinte: lo schema non
+lo dice) e `human` (verifica con testo diverso, salvataggio manuale, ripristino).
+Il salvataggio manuale è `projectStore.saveVersionNow`: `saveCurrentProject`,
+poi `recordManualRevision` per ogni frammento di `unversionedChunks` (testo non
+vuoto, non verificato, diverso dall'ultima versione). L'ultima versione per
+frammento sta in `translationHistoryStore.latestText`, caricata all'apertura
+della pipeline (`useLatestRevisionTexts`, una query) e aggiornata da
+`insertRevision` stesso (`noteRevision`, che fa anche rileggere lo storico
+aperto). Il dischetto è acceso se c'è da salvare **o** da versionare.
+Ripristino = `updateChunkDraft` + versione manuale: nessuna riga si modifica o
+si cancella (registro immutabile, voluto). Niente nomi né puntine: servirebbe
+una colonna `consolidated_name`, rimandata.
+
+Configurazione della pipeline (`document/ConfigDrawer`, `Dialog` aperto da ⚙ in
+`PipelineSwitch` o Ctrl/⌘+,): eyebrow «Configura pipeline», titolo = nome della
+pipeline (la rinomina resta in `PipelineSwitch`), `TabStrip` (`idPrefix`
+`pconfig`) nella fila della finestra con il nome della linguetta accanto.
+Linguette (`ConfigSection`): `settings` Generale (`SettingsTabPanel`: modalità
+su `ChoiceDots` con la riga delle fasi della modalità scelta, lingue spente con
+persona personalizzata, persona sull'editor comune), `translation` Fasi
+(`TranslationTabPanel` → `StageCard` per fase + memoria di contesto in fondo),
+`audit` Controllo qualità (`AuditTabPanel`), `memory` Memoria (`MemoryTabPanel`,
+spenta con motivo in modalità DeepL; se era aperta si torna a Generale),
+`glossary` (`GlossaryTabPanel`: assegnazione, termini, dischetto acceso solo con
+modifiche, caricamento DeepL), `preview` (`PromptPreviewTab`, fasi su
+`TabStrip`). `PipelineConfig` monta solo il corpo della linguetta aperta e il
+velo comune `PagePendingOverlay` (`components/common`, lo stesso delle
+Trascrizioni) durante la pipeline, che rende inerti i comandi coperti. Fase e
+giudizio condividono `ModelSection` (fornitore, modello, lucchetto se
+esistono traduzioni, ricarica Ollama, ragionamento e temperatura, opzioni
+Ollama in `ProviderRuntimeEditor`, cache Anthropic); le regole di taratura
+sono funzioni pure in `pipeline/modelTuning.ts`. Ogni prompt (fasi, persona,
+giudizio, coerenza) usa `AuditPromptEditor` con `editDisabledReason` e
+`refineDisabledReason`. I modelli di prompt salvati si applicano e si salvano da
+`PromptTemplateMenus` (anche nell'OCR); si eliminano solo dalle risorse
+linguistiche (`PromptTemplatesTab`). Nessuna spiegazione fissa: stanno negli `hint` di
+`PanelSection`, `SettingRow`, `ToggleRow`. Footer: `IconButton` danger
+«Azzera tutte le traduzioni» (`resetAllChunks`, conferma), spento con motivo.
+
+Composizione: `TranslationStudioHeader` (`PageHeader` area traduzioni: nome con
+`RenameField`, poi `PipelineSwitch` — nome della pipeline rinominabile
+(`renamePipeline`), ⇄ con `PopoverItem`/`MenuActionRow`, ⚙ della
+configurazione — e le lingue della pipeline; a destra importa, esporta,
+risorse linguistiche del workspace, elimina), al centro `DocumentView` invariato salvo la fila
+`ChunkStrip` («nn/nn», poi una finestra di 7 `ChunkDot` con il frammento
+aperto fisso al centro: la fila intera trasla di `SLOT_PX` per posto, i
+pallini fuori finestra restano montati per lo scorrimento ma con `tabIndex`
+-1 e `aria-hidden`; frecce ±1 e ±7, rotella con ascoltatore nativo non
+passivo), `StageStatusRow` (spie delle fasi del frammento aperto, aprono
+`StageTraceDialog`) e la lente che apre `SearchTab` sotto la fila (regione,
+non più linguetta; Esc dal campo la chiude), a destra `TranslationInspector`: `InspectorShell` con `beforeTabs`
+per l'esecuzione (le lingue, nella riga in cima, sono della pipeline:
+`projects.source_language/target_language` ne è solo la copia dell'ultima
+salvata): (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
+della stima si apre a sinistra del riquadro) e cinque
+linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
+stato, `uiStore.studioTab` (`TranslationStudioTab` =
+linguette del frammento ∪ linguette del documento). Revisione (`ReviewTab`) è
+una linguetta della colonna ma tre valori di `studioTab` — `audit`, `notes`,
+`sourceNotes` — mostrati come sottolinguette (`TabStrip`, linguette a icona con
+nome e conteggio nell'etichetta, Audit spento con il motivo); `setStudioTab('notes')` da altri punti apre quindi Revisione
+sulle note. Le note del testo (`SourceNotesList`) sono le note a piè di
+pagina importate, in sola lettura. Memoria (`MemoryGroupTab`, colonna
+`phraseMemory`) segue lo stesso schema con `references` e `memory`, Documento
+(`DocumentGroupTab`) con `index`, `stats`, `coherence`; tutte e tre usano `SubTabsPanel` (fila `TabStrip` ferma, nome della sottolinguetta
+accanto, un solo corpo che scorre). Le schede con barra fissa
+sopra un elenco (Riferimenti, Memoria, Glossario, Indice) scorrono da
+sé (`bodyScrolls` falso), le altre scorrono nella colonna. Aperta/chiusa e
+larghezza restano `showInsightPanel` e `projectFlyoutWidth`; colonna chiusa =
+solo traduci/stop. Le note aperte da altri punti (menu contestuale,
+segnalazione dell'audit) usano `setShowInsightPanel(true)` + `setStudioTab('notes')`.
 
 Il motore frontend coordina:
 

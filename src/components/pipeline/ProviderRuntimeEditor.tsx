@@ -1,11 +1,14 @@
 import { useEffect, useId, useState } from 'react';
-import { AlertTriangle, Braces, SlidersHorizontal } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, OllamaConfig, ProviderRuntimeConfig } from '../../types';
 import { defaultOllamaConfig } from '../../utils/providerOptions';
 import { advancedOptionsSchema } from '../../schemas/externalData';
-import { Select, ToggleRow } from '../ui';
+import { FIELD_INLINE_CLASSNAME, FIELD_MONO_CLASSNAME, FieldLabel, Select, SettingRow, ToggleRow } from '../ui';
+import { NumberSettingRow } from './NumberSettingRow';
+
+const SETTING_LIST_CLASSNAME = 'divide-y divide-rule border-y border-rule';
+const OLLAMA_SAMPLING_STEP = 0.05;
 
 interface ProviderRuntimeEditorProps {
   provider: ModelProvider;
@@ -19,6 +22,7 @@ interface ProviderRuntimeEditorProps {
    * deterministico. Dirlo dove il campo si compila è l'unico posto utile.
    */
   temperatureIgnored?: boolean;
+  disabled?: boolean;
 }
 
 function parseOptionalNumber(value: string): number | undefined {
@@ -39,6 +43,7 @@ export function ProviderRuntimeEditor({
   title,
   hint,
   temperatureIgnored = false,
+  disabled = false,
 }: ProviderRuntimeEditorProps) {
   const { t } = useTranslation();
   const textareaId = useId();
@@ -90,227 +95,158 @@ export function ProviderRuntimeEditor({
     });
   };
 
+  const optionalNumber = (key: 'temperature' | 'topP') => (raw: string) => {
+    const parsed = parseOptionalNumber(raw);
+    if (parsed !== undefined) patchOllama({ [key]: parsed });
+  };
+  const nullableNumber = (key: 'seed' | 'numCtx' | 'numPredict') => (raw: string) => {
+    const parsed = parseNullableNumber(raw);
+    if (parsed !== undefined) patchOllama({ [key]: parsed });
+  };
+  const typedDisabled = disabled || advancedEnabled;
+
+  const handleAdvancedJsonChange = (next: string) => {
+    setAdvancedJson(next);
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(next);
+    } catch {
+      setJsonError(t('pipeline.providerOptions.invalidJson'));
+      return;
+    }
+    const parsed = advancedOptionsSchema.safeParse(parsedJson);
+    if (!parsed.success) {
+      setJsonError(t('pipeline.providerOptions.invalidJsonObject'));
+      return;
+    }
+    patchOllama({ advancedOptions: parsed.data });
+    setJsonError(null);
+  };
+
   return (
-    <section className="border-l-4 border-l-editorial-charcoal/25 border-y border-rule bg-editorial-textbox/18 overflow-hidden">
-      {/* Header / toggle row — always visible */}
-      <div
-        className={`px-4 py-3 transition-colors ${
-          overrideEnabled
-            ? 'bg-editorial-ink/5 border-b border-rule'
-            : 'hover:bg-editorial-textbox/30'
-        }`}
-      >
+    <div className={SETTING_LIST_CLASSNAME}>
+      <div className="py-2.5">
         <ToggleRow
-          icon={<SlidersHorizontal size={13} className={overrideEnabled ? 'text-editorial-ink' : 'text-editorial-muted'} />}
+          icon={null}
           label={title}
+          hint={hint}
           checked={overrideEnabled}
+          disabled={disabled}
           onChange={() => setOverrideEnabled(!overrideEnabled)}
         />
-        {!overrideEnabled && (
-          <p className="mt-1 pl-[21px] text-xs leading-relaxed text-editorial-muted/70">{hint}</p>
-        )}
       </div>
-
-      {/* Collapsible fields — only when override is enabled */}
-      <AnimatePresence initial={false}>
-        {overrideEnabled && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-4 p-4">
-
-              <div className="grid grid-cols-2 gap-3">
-                <LabeledField label={t('pipeline.providerOptions.temperature')}>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={ollama.temperature ?? ''}
-                    onChange={(e) => {
-                      const parsed = parseOptionalNumber(e.target.value);
-                      if (parsed !== undefined) patchOllama({ temperature: parsed });
-                    }}
-                    disabled={advancedEnabled}
-                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                  />
-                  {temperatureIgnored && (
-                    <p className="mt-1.5 flex items-start gap-1.5 text-caption leading-relaxed text-editorial-warning">
-                      <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-                      {t('pipeline.providerOptions.temperatureIgnored')}
-                    </p>
-                  )}
-                </LabeledField>
-                <LabeledField label={t('pipeline.providerOptions.topP')}>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={ollama.topP ?? ''}
-                    onChange={(e) => {
-                      const parsed = parseOptionalNumber(e.target.value);
-                      if (parsed !== undefined) patchOllama({ topP: parsed });
-                    }}
-                    disabled={advancedEnabled}
-                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                  />
-                </LabeledField>
-                <LabeledField label={t('pipeline.providerOptions.seed')}>
-                  <input
-                    type="number"
-                    value={ollama.seed ?? ''}
-                    onChange={(e) => {
-                      const parsed = parseNullableNumber(e.target.value);
-                      if (parsed !== undefined) patchOllama({ seed: parsed as number | null });
-                    }}
-                    disabled={advancedEnabled}
-                    placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                  />
-                </LabeledField>
-                <LabeledField label={t('pipeline.providerOptions.keepAlive')}>
-                  <input
-                    type="text"
-                    value={String(ollama.keepAlive ?? '')}
-                    onChange={(e) => patchOllama({ keepAlive: e.target.value })}
-                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  />
-                </LabeledField>
-                <LabeledField label={t('pipeline.providerOptions.numCtx')}>
-                  <input
-                    type="number"
-                    value={ollama.numCtx ?? ''}
-                    onChange={(e) => {
-                      const parsed = parseNullableNumber(e.target.value);
-                      if (parsed !== undefined) patchOllama({ numCtx: parsed as number | null });
-                    }}
-                    disabled={advancedEnabled}
-                    placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                  />
-                </LabeledField>
-                <LabeledField label={t('pipeline.providerOptions.numPredict')}>
-                  <input
-                    type="number"
-                    value={ollama.numPredict ?? ''}
-                    onChange={(e) => {
-                      const parsed = parseNullableNumber(e.target.value);
-                      if (parsed !== undefined) patchOllama({ numPredict: parsed as number | null });
-                    }}
-                    disabled={advancedEnabled}
-                    placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-md border border-rule bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                  />
-                </LabeledField>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <LabeledField label={t('pipeline.providerOptions.think')}>
-                  <Select
-                    value={String(ollama.think)}
-                    onChange={(value) => {
-                      patchOllama({
-                        think: value === 'false'
-                          ? false
-                          : value === 'true'
-                            ? true
-                            : value as 'low' | 'medium' | 'high',
-                      });
-                    }}
-                    className="w-full"
-                    options={[
-                      { value: 'false', label: t('pipeline.providerOptions.thinkDisabled') },
-                      { value: 'true', label: t('pipeline.providerOptions.thinkEnabled') },
-                      { value: 'low', label: t('pipeline.providerOptions.thinkLow') },
-                      { value: 'medium', label: t('pipeline.providerOptions.thinkMedium') },
-                      { value: 'high', label: t('pipeline.providerOptions.thinkHigh') },
-                    ]}
-                  />
-                </LabeledField>
-              </div>
-
-              <div
-                className={`space-y-1.5 border-l-4 border-y px-3 py-3 transition-colors ${
-                  advancedEnabled
-                    ? 'border-l-editorial-ink border-y-rule bg-editorial-bg/90'
-                    : 'border-l-rule border-y-rule bg-editorial-bg/50'
-                }`}
-              >
-                <ToggleRow
-                  checked={advancedEnabled}
-                  icon={<Braces size={13} />}
-                  label={t('pipeline.providerOptions.enableAdvanced')}
-                  onChange={() => patchOllama({ useAdvancedOptions: !advancedEnabled })}
-                />
-                <p className="text-xs leading-relaxed text-editorial-muted">
-                  {t('pipeline.providerOptions.enableAdvancedHint')}
+      {overrideEnabled && (
+        <>
+          <NumberSettingRow
+            label={t('pipeline.providerOptions.temperature')}
+            hint={temperatureIgnored ? t('pipeline.providerOptions.temperatureIgnored') : undefined}
+            value={ollama.temperature ?? ''}
+            step={OLLAMA_SAMPLING_STEP}
+            disabled={typedDisabled}
+            onChange={optionalNumber('temperature')}
+          />
+          <NumberSettingRow
+            label={t('pipeline.providerOptions.topP')}
+            value={ollama.topP ?? ''}
+            step={OLLAMA_SAMPLING_STEP}
+            disabled={typedDisabled}
+            onChange={optionalNumber('topP')}
+          />
+          <NumberSettingRow
+            label={t('pipeline.providerOptions.seed')}
+            value={ollama.seed ?? ''}
+            placeholder={t('pipeline.providerOptions.optional')}
+            wide
+            disabled={typedDisabled}
+            onChange={nullableNumber('seed')}
+          />
+          <NumberSettingRow
+            label={t('pipeline.providerOptions.numCtx')}
+            value={ollama.numCtx ?? ''}
+            placeholder={t('pipeline.providerOptions.optional')}
+            unit={t('pipeline.unitTokens')}
+            wide
+            disabled={typedDisabled}
+            onChange={nullableNumber('numCtx')}
+          />
+          <NumberSettingRow
+            label={t('pipeline.providerOptions.numPredict')}
+            value={ollama.numPredict ?? ''}
+            placeholder={t('pipeline.providerOptions.optional')}
+            unit={t('pipeline.unitTokens')}
+            wide
+            disabled={typedDisabled}
+            onChange={nullableNumber('numPredict')}
+          />
+          <SettingRow label={t('pipeline.providerOptions.keepAlive')}>
+            <input
+              type="text"
+              value={String(ollama.keepAlive ?? '')}
+              onChange={(e) => patchOllama({ keepAlive: e.target.value })}
+              disabled={disabled}
+              aria-label={t('pipeline.providerOptions.keepAlive')}
+              className={`${FIELD_INLINE_CLASSNAME} w-24 font-mono`}
+            />
+            <span className="w-16" aria-hidden="true" />
+          </SettingRow>
+          <SettingRow label={t('pipeline.providerOptions.think')}>
+            <Select
+              value={String(ollama.think)}
+              size="md"
+              disabled={disabled}
+              ariaLabel={t('pipeline.providerOptions.think')}
+              onChange={(next) => {
+                patchOllama({
+                  think: next === 'false'
+                    ? false
+                    : next === 'true'
+                      ? true
+                      : next as 'low' | 'medium' | 'high',
+                });
+              }}
+              options={[
+                { value: 'false', label: t('pipeline.providerOptions.thinkDisabled') },
+                { value: 'true', label: t('pipeline.providerOptions.thinkEnabled') },
+                { value: 'low', label: t('pipeline.providerOptions.thinkLow') },
+                { value: 'medium', label: t('pipeline.providerOptions.thinkMedium') },
+                { value: 'high', label: t('pipeline.providerOptions.thinkHigh') },
+              ]}
+            />
+          </SettingRow>
+          <div className="py-2.5">
+            <ToggleRow
+              icon={null}
+              label={t('pipeline.providerOptions.enableAdvanced')}
+              hint={t('pipeline.providerOptions.enableAdvancedHint')}
+              checked={advancedEnabled}
+              disabled={disabled}
+              onChange={() => patchOllama({ useAdvancedOptions: !advancedEnabled })}
+            />
+          </div>
+          {advancedEnabled && (
+            <div className="space-y-2 py-2.5">
+              <FieldLabel htmlFor={textareaId} hint={t('pipeline.providerOptions.advancedHint')} block>
+                {t('pipeline.providerOptions.advancedJson')}
+              </FieldLabel>
+              <textarea
+                id={textareaId}
+                value={advancedJson}
+                onChange={(e) => handleAdvancedJsonChange(e.target.value)}
+                disabled={disabled}
+                rows={6}
+                spellCheck={false}
+                className={`${FIELD_MONO_CLASSNAME} resize-y leading-relaxed`}
+              />
+              {jsonError && (
+                <p role="alert" className="flex items-center gap-2 text-xs text-editorial-danger">
+                  <AlertTriangle size={13} aria-hidden="true" />
+                  {jsonError}
                 </p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor={textareaId} className="block caption-label">
-                  {t('pipeline.providerOptions.advancedJson')}
-                </label>
-                <textarea
-                  id={textareaId}
-                  value={advancedJson}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setAdvancedJson(next);
-                    let parsedJson: unknown;
-                    try {
-                      parsedJson = JSON.parse(next);
-                    } catch {
-                      setJsonError(t('pipeline.providerOptions.invalidJson'));
-                      return;
-                    }
-                    const parsed = advancedOptionsSchema.safeParse(parsedJson);
-                    if (!parsed.success) {
-                      setJsonError(t('pipeline.providerOptions.invalidJsonObject'));
-                      return;
-                    }
-                    patchOllama({ advancedOptions: parsed.data });
-                    setJsonError(null);
-                  }}
-                  disabled={!advancedEnabled}
-                  rows={6}
-                  spellCheck={false}
-                  className="w-full rounded-md border-2 border-rule bg-editorial-bg/80 px-3 py-3 text-sm font-mono outline-none resize-y leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                />
-                {jsonError ? (
-                  <div className="flex items-center gap-2 text-xs text-editorial-accent">
-                    <AlertTriangle size={13} />
-                    <span>{jsonError}</span>
-                  </div>
-                ) : (
-                  <p className="text-xs leading-relaxed text-editorial-muted">
-                    {t('pipeline.providerOptions.advancedHint')}
-                  </p>
-                )}
-              </div>
-
+              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
-
-function LabeledField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="space-y-1.5">
-      <span className="block caption-label">
-        {label}
-      </span>
-      {children}
-    </label>
+          )}
+        </>
+      )}
+    </div>
   );
 }

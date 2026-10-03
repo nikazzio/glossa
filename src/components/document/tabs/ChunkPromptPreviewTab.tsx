@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunkPromptPreview } from '../../../hooks/useChunkPromptPreview';
-import { EmptyState, IconButton, Select, Spinner } from '../../ui';
+import { EmptyState, IconButton, PANEL_BODY_CLASSNAME, PanelSection, Select, Spinner } from '../../ui';
 import type { TranslationChunk } from '../../../types';
 
 interface ChunkPromptPreviewTabProps {
@@ -31,12 +31,12 @@ function PromptBlockView({ title, body }: { title: string; body: string }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-sans uppercase tracking-caption text-editorial-muted">{title}</p>
+        <p className="caption-label">{title}</p>
         <IconButton size="md" title={t('promptPreview.copyBlock')} onClick={() => void handleCopy()} tooltipSide="left">
           {copied ? <Check size={13} className="text-editorial-success" /> : <Clipboard size={13} />}
         </IconButton>
       </div>
-      <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-editorial-textbox/45 px-3 py-2 text-xs leading-relaxed text-editorial-charcoal custom-scrollbar">
+      <pre className="whitespace-pre-wrap break-words rounded-md bg-editorial-textbox px-3 py-2 font-mono text-xs leading-relaxed text-editorial-ink">
         {body}
       </pre>
     </div>
@@ -62,14 +62,8 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
   }, [currentChunk?.id, selectedStageId]);
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
-      <div className="sticky top-0 z-10 shrink-0 space-y-3 border-b border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <Eye size={13} className="text-editorial-accent shrink-0" />
-          <p className="text-xs font-sans uppercase tracking-section text-editorial-muted">
-            {t('promptPreview.title')}
-          </p>
-        </div>
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className={PANEL_BODY_CLASSNAME}>
+      <PanelSection icon={Eye} label={t('promptPreview.title')}>
         <div className="flex items-center gap-2">
           <Select
             id="prompt-preview-stage"
@@ -90,9 +84,6 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
             <Wand2 size={13} />
           </IconButton>
         </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
         {!currentChunk ? (
           <EmptyState icon={<Eye size={28} />} message={t('promptPreview.emptyNoChunk')} />
         ) : isBuilding ? (
@@ -109,7 +100,7 @@ export function ChunkPromptPreviewTab({ panelId, labelledBy, currentChunk }: Chu
         ) : (
           <EmptyState icon={<Eye size={28} />} message={t('promptPreview.emptyBeforeBuild')} />
         )}
-      </div>
+      </PanelSection>
     </div>
   );
 }

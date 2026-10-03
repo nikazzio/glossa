@@ -27,7 +27,7 @@ const workspace = {
   memoryExtractorProvider: 'openai' as const,
   memoryExtractorModel: 'gpt-5-nano',
   memoryExtractorPrompt: 'Extract',
-  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '',
+  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -154,17 +154,18 @@ describe('useMemoryExtractionDraft', () => {
     expect(savedCount).toBe(0);
   });
 
-  it('carica in automatico le frasi già salvate per il frammento', async () => {
+  it('carica in automatico le frasi già salvate per il frammento, solo le sue', async () => {
     mockListEntries.mockResolvedValueOnce([
       makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
-      makeSavedEntry({ id: 'pm-2', sourcePhrase: 'Buonasera', targetPhrase: 'Good evening', chunkId: 'other-chunk' }),
     ]);
     const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
 
     await waitFor(() => expect(result.current.candidates).toHaveLength(1));
+    expect(mockListEntries).toHaveBeenCalledWith(expect.any(String), lockedChunk.id);
     expect(result.current.candidates[0]).toMatchObject({
-      sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning', origin: 'saved', accepted: true,
+      sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning', origin: 'saved', accepted: true, entryId: 'pm-1',
     });
+    expect(result.current.savedCount).toBe(1);
   });
 
   it('non ricarica le frasi salvate se esiste già una bozza in corso per il frammento', async () => {

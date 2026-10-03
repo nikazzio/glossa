@@ -10,10 +10,10 @@ interface InlineStatusBadgeProps {
 export function InlineStatusBadge({ tone, icon, label, ariaLabel }: InlineStatusBadgeProps) {
   const toneClasses =
     tone === 'amber'
-      ? 'border-editorial-warning/40 bg-editorial-textbox text-editorial-ink'
+      ? 'border-editorial-warning bg-editorial-textbox text-editorial-warning'
       : tone === 'emerald'
-        ? 'border-editorial-success/50 bg-editorial-success/8 text-editorial-success'
-        : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
+        ? 'border-editorial-success bg-editorial-textbox text-editorial-success'
+        : 'border-editorial-border bg-editorial-textbox text-editorial-muted';
 
   return (
     <Tooltip label={label ?? ariaLabel}>
@@ -23,7 +23,7 @@ export function InlineStatusBadge({ tone, icon, label, ariaLabel }: InlineStatus
       >
         {icon}
         {label && (
-          <span className="text-xs font-bold uppercase tracking-section">{label}</span>
+          <span className="text-caption font-bold uppercase tracking-section">{label}</span>
         )}
       </span>
     </Tooltip>

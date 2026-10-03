@@ -26,8 +26,11 @@ resource; a copy creates an independent dictionary. Workspace overrides and
 exclusions change the local view of entries without altering the shared original.
 
 Use the assignment control to attach a dictionary to the project. The
-**Glossary** tab in the Insight panel shows the full assigned glossary;
-pipeline configuration provides access to its terminology register.
+**Glossary** tab in the Tools column shows the full assigned glossary, with the
+number of terms in its title; the highlight command colours the terms in the
+sheets and, while on, shows the colour legend;
+in the Glossary tab of the pipeline configuration you assign the dictionary and
+edit its terms, saving them with the disk icon.
 
 ## Use during translation
 

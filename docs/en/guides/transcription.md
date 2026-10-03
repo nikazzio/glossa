@@ -68,10 +68,11 @@ page, not of the Studio.
 
 ## Writing and saving
 
-Text saves after 30 seconds without changes. The indicator in the top right
-distinguishes unsaved text from a save in progress, completed, or failed, with
-a command to retry on failure. To save a version to the history right away,
-use the disk command next to the indicator, or **Ctrl + S** even while typing
+Text saves after 30 seconds without changes. The indicator at the bottom
+right, in the status bar as for translations, distinguishes unsaved text from
+a save in progress, completed, or failed; its tooltip gives the time of the
+last save. To save a version to the history right away, use the disk at the
+top of the page, or **Ctrl + S** even while typing
 on the page: the command stays off when there is nothing new to save, and the
 version is created without a name — pin it in the history to give it one.
 Changing page or leaving the Studio normally
@@ -82,7 +83,7 @@ When the text is ready, mark it as **verified** with the check next to the
 page title: the text becomes locked, so an already-checked transcription
 doesn't get overwritten by accident. You can return it to draft at any time
 with the same command. When the check is off, its tooltip says why: empty
-page, loading, or being read. If a save fails, the same disk command retries
+page, loading, or being read. If a save fails, the disk turns red and retries
 it.
 
 While the viewer is still opening the chosen page, a veil covers the text

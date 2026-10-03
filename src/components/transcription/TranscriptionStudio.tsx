@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Group, Panel } from 'react-resizable-panels';
 import { useTranslation } from 'react-i18next';
-import { MarkdownEditor } from '../common';
+import { MarkdownEditor, PagePendingOverlay } from '../common';
 import { INSPECTOR_WIDTH, ResizeHandle } from '../ui';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../layout/motion';
 import { useTranscriptionStore } from '../../stores/transcriptionStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTranscriptionSources } from './useTranscriptionSources';
-import { PagePendingOverlay } from './PagePendingOverlay';
 import { TranscriptionInspector, type TranscriptionInspectorTab } from './TranscriptionInspector';
 import { useSegmentEditor } from './useSegmentEditor';
 import { useRevisionActions } from './useRevisionActions';

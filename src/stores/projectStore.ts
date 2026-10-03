@@ -30,10 +30,23 @@ import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
 import { useWorkspaceStore } from './workspaceStore';
 import { useAnnotationsStore } from './annotationsStore';
+import { unversionedChunks, useTranslationHistoryStore } from './translationHistoryStore';
+import { recordManualRevision } from '../services/translationRevisionsService';
 import type { Pipeline, PipelineConfig, TranslationChunk } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 let createPipelineInFlight: Promise<void> | null = null;
+
+function currentProjectSnapshot(): string {
+  const pipeline = usePipelineStore.getState();
+  return buildProjectSnapshot({
+    inputText: pipeline.inputText,
+    inputProcessingText: pipeline.inputProcessingText,
+    sourceFootnotes: pipeline.sourceFootnotes,
+    config: pipeline.config,
+    chunks: useChunksStore.getState().chunks,
+  });
+}
 
 interface ProjectState {
   projects: Project[];
@@ -53,8 +66,13 @@ interface ProjectState {
   openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
+  /** Il salvataggio manuale (dischetto, Ctrl/⌘+S): salva e scrive una versione
+   *  nello storico per ogni frammento il cui testo è cambiato. */
+  saveVersionNow: () => Promise<void>;
   renameCurrentProject: (name: string) => Promise<void>;
   closeProject: () => void;
+  /** Salva se c'è qualcosa da salvare, poi chiude. `false`: salvataggio fallito, la traduzione resta aperta con l'errore in vista. */
+  leaveProject: () => Promise<boolean>;
   setRunInterrupted: (value: boolean) => void;
   clearResumeState: () => void;
 
@@ -246,7 +264,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (workspaceId !== activeWorkspace?.id) {
       const ws = workspaces.find((w) => w.id === workspaceId);
       if (!ws) throw new Error(`Workspace not found: ${workspaceId}`);
-      get().closeProject();
+      if (!(await get().leaveProject())) return;
       await setActive(ws);
       await get().loadProjects();
     }
@@ -267,6 +285,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     usePipelineStore.getState().resetToDefaults();
     useOperationLogStore.setState({ entries: [], currentProjectId: null, currentPipelineId: null });
     useAnnotationsStore.getState().clearAll();
+    useTranslationHistoryStore.getState().setLatestTexts({});
     set({
       currentProjectId: null,
       pipelines: [],
@@ -278,6 +297,37 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       runInterrupted: false,
       lastRunConfig: null,
     });
+  },
+
+  leaveProject: async () => {
+    // Durante la pipeline non si salva a mano: la pipeline salva da sé alla fine.
+    if (get().currentProjectId && !useChunksStore.getState().isProcessing) {
+      // Un salvataggio già partito può non contenere l'ultima modifica: lo si
+      // aspetta e poi si confronta di nuovo. Il suo eventuale errore non va
+      // riportato qui, perché il confronto qui sotto ritenta comunque.
+      if (saveInFlight) await saveInFlight.catch(() => undefined);
+      if (currentProjectSnapshot() !== get().trackedSnapshot) {
+        try {
+          await get().saveCurrentProject();
+        } catch {
+          return false;
+        }
+      }
+    }
+    get().closeProject();
+    return true;
+  },
+
+  saveVersionNow: async () => {
+    await get().saveCurrentProject();
+    const changed = unversionedChunks(
+      useChunksStore.getState().chunks,
+      useTranslationHistoryStore.getState().latestText,
+    );
+    // Una alla volta: ognuna legge l'ultima versione del suo frammento.
+    for (const chunk of changed) {
+      await recordManualRevision(chunk.id, chunk.translationDisplayText);
+    }
   },
 
   setRunInterrupted: (value) => set({ runInterrupted: value }),
@@ -294,13 +344,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (chunksStore.isProcessing) throw new Error('Cannot save while the pipeline is processing.');
 
       const pipeline = usePipelineStore.getState();
-      const effectiveSnapshot = buildProjectSnapshot({
-        inputText: pipeline.inputText,
-        inputProcessingText: pipeline.inputProcessingText,
-        sourceFootnotes: pipeline.sourceFootnotes,
-        config: pipeline.config,
-        chunks: chunksStore.chunks,
-      });
+      const effectiveSnapshot = currentProjectSnapshot();
 
       logger.info('saveCurrentProject: start', {
         trigger: name ? 'first-save' : 'manual-or-autosave',

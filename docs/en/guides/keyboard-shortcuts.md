@@ -11,7 +11,7 @@ field, select control or editable text area.
 | Shortcut | Action | Conditions |
 | --- | --- | --- |
 | `Ctrl + Enter` | Starts the selected translation action | Segment mode requires a selected segment; also works inside text fields |
-| `Ctrl + S` | Saves the project and modified language resources | Requires an existing project; project saving is deferred while processing |
+| `Ctrl + S` | Saves the open translation (with a history version of changed segments) and modified language resources | With a translation open it also works while typing on the pages; the translation is not saved while processing |
 | `Ctrl + S` in the transcription Studio | Saves a version of the page to the history right away | Also works while typing on the page; does nothing when there is nothing new to save |
 | `Ctrl + E` | Opens export | Requires at least one segment |
 | `Ctrl + ,` | Opens pipeline configuration | Outside editable fields |

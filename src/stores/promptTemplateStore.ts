@@ -3,6 +3,7 @@ import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } fr
 import {
   getPromptTemplates,
   savePromptTemplate,
+  updatePromptTemplate,
   deletePromptTemplate,
 } from '../services/promptTemplateService';
 
@@ -27,6 +28,7 @@ interface PromptTemplateState {
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;
+  updateTemplate: (id: string, input: Omit<PromptTemplate, 'id' | 'createdAt'>) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
 }
 
@@ -48,6 +50,12 @@ export const usePromptTemplateStore = create<PromptTemplateState>((set, get) => 
 
   saveTemplate: async (name, prompt, context, workflow, defaultModel, defaultProvider) => {
     await savePromptTemplate({ name, prompt, context, workflow, defaultModel, defaultProvider });
+    const templates = await getPromptTemplates();
+    set({ templates });
+  },
+
+  updateTemplate: async (id, input) => {
+    await updatePromptTemplate(id, input);
     const templates = await getPromptTemplates();
     set({ templates });
   },

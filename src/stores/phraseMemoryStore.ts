@@ -12,6 +12,11 @@ export type PhraseMemoryMatch = {
   author?: string;
   work?: string;
   createdAt: string;
+  /** Provenienza: workspace di casa (`null` = senza workspace), traduzione e
+   *  frammento (`null` = frase importata). */
+  workspaceId: string | null;
+  projectId: string | null;
+  chunkId: string | null;
 };
 
 export type ChunkPhraseMatches = {
@@ -41,6 +46,9 @@ function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
     score: Math.max(0, Math.min(1, 1 - m.distance)),
     confidence: Math.max(0, Math.min(1, m.confidence)),
     createdAt: new Date().toISOString(),
+    workspaceId: m.workspaceId,
+    projectId: m.projectId,
+    chunkId: m.chunkId,
   };
 }
 

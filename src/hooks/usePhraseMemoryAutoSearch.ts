@@ -9,6 +9,7 @@ import {
   listPhraseMemoryEntries,
   searchPhraseMemory,
   searchPhraseMemoryBatch,
+  type PhraseMemoryEntry,
 } from '../services/phraseMemoryService';
 import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
@@ -21,18 +22,16 @@ type UsePhraseMemoryAutoSearchOptions = {
 const DEFAULT_THRESHOLD = 0.75;
 const DEFAULT_MAX_RESULTS = 10;
 
-function exactMatchFromMemoryEntry(entry: {
-  id: string;
-  sourcePhrase: string;
-  targetPhrase: string;
-  confidence: number;
-}): PhraseMatch {
+function exactMatchFromMemoryEntry(entry: PhraseMemoryEntry): PhraseMatch {
   return {
     phraseMemoryId: entry.id,
     sourcePhrase: entry.sourcePhrase,
     targetPhrase: entry.targetPhrase,
     distance: 0,
     confidence: entry.confidence,
+    workspaceId: entry.workspaceId,
+    projectId: entry.projectId,
+    chunkId: entry.chunkId,
   };
 }
 
@@ -123,6 +122,9 @@ export function usePhraseMemoryAutoSearch(
           chunks: toSearch,
           threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
           maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+          allWorkspaces: activeWorkspace.memorySearchAllWorkspaces,
+          sourceLanguage: config.sourceLanguage,
+          targetLanguage: config.targetLanguage,
         });
         if (requestIdRef.current !== requestId) return;
 
@@ -193,16 +195,17 @@ export function usePhraseMemoryAutoSearch(
     });
 
     try {
-      const memoryEntries = await listPhraseMemoryEntries(activeWorkspace.id);
-      const exactMatches = memoryEntries
-        .filter((entry) => entry.chunkId === chunkId)
-        .map(exactMatchFromMemoryEntry);
+      const memoryEntries = await listPhraseMemoryEntries(activeWorkspace.id, chunkId);
+      const exactMatches = memoryEntries.map(exactMatchFromMemoryEntry);
       const matches = await searchPhraseMemory({
         workspaceId: activeWorkspace.id,
         embeddingModel: activeWorkspace.embeddingModel,
         queryText: chunk.sourceProcessingText,
         threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
         maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+        allWorkspaces: activeWorkspace.memorySearchAllWorkspaces,
+        sourceLanguage: config.sourceLanguage,
+        targetLanguage: config.targetLanguage,
       });
       if (requestIdRef.current !== requestId) return;
       setMatches(chunkId, mergePhraseMatches(matches, exactMatches));

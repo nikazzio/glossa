@@ -31,7 +31,7 @@ const workspace = {
   memoryExtractorProvider: 'openai' as const,
   memoryExtractorModel: 'gpt-5-nano',
   memoryExtractorPrompt: 'Extract',
-  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '',
+  ocrDefaultProvider: '' as const, ocrDefaultModel: '', ocrDefaultPrompt: '', memorySearchAllWorkspaces: false,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -45,8 +45,7 @@ describe('usePhraseMemoryAutoSearch', () => {
           sourcePhrase: 'Ciao',
           targetPhrase: 'Hello',
           distance: 0.1,
-          confidence: 0.9,
-        },
+          confidence: 0.9, workspaceId: null, projectId: null, chunkId: null },
       ]],
     ]));
     mockSearchPhraseMemory.mockResolvedValue([
@@ -55,8 +54,7 @@ describe('usePhraseMemoryAutoSearch', () => {
         sourcePhrase: 'Mondo',
         targetPhrase: 'World',
         distance: 0.2,
-      confidence: 0.8,
-    },
+      confidence: 0.8, workspaceId: null, projectId: null, chunkId: null },
     ]);
     mockListPhraseMemoryEntries.mockResolvedValue([]);
 
@@ -149,7 +147,7 @@ describe('usePhraseMemoryAutoSearch', () => {
       await result.current.runSearchForChunk('c1');
     });
 
-    expect(mockListPhraseMemoryEntries).toHaveBeenCalledWith('ws-1');
+    expect(mockListPhraseMemoryEntries).toHaveBeenCalledWith('ws-1', expect.any(String));
     expect(mockSearchPhraseMemory).toHaveBeenCalledWith(expect.objectContaining({
       workspaceId: 'ws-1',
       queryText: 'Ciao mondo.',

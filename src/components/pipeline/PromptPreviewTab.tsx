@@ -2,8 +2,8 @@ import { Eye, FileText, Languages, Network, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
-import { buildPromptPreviewStages, type PromptPreviewBlock, type PromptPreviewStage } from './promptPreview';
-import { IconButton, Hint } from '../ui';
+import { buildPromptPreviewStages, type PromptPreviewBlock } from './promptPreview';
+import { Hint, PanelSection, TabStrip, type TabStripItem } from '../ui';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -55,38 +55,6 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
   );
 }
 
-function StageSwitch({
-  stage,
-  label,
-  active,
-  controls,
-  onClick,
-}: {
-  stage: PromptPreviewStage;
-  label: string;
-  active: boolean;
-  controls: string;
-  onClick: () => void;
-}) {
-  const Icon = STAGE_ICON[stage.role];
-
-  return (
-    <IconButton
-      size="md"
-      tone={active ? 'accent' : 'default'}
-      onClick={onClick}
-      title={label}
-      id={`prompt-preview-tab-${stage.id}`}
-      role="tab"
-      aria-selected={active}
-      aria-controls={controls}
-      tabIndex={active ? 0 : -1}
-    >
-      <Icon size={14} />
-    </IconButton>
-  );
-}
-
 export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
   const { t } = useTranslation();
   const stages = useMemo(() => buildPromptPreviewStages(config), [config]);
@@ -104,35 +72,27 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
 
   const activeStage = stages.find((stage) => stage.id === activeStageId) ?? stages[0] ?? null;
 
+  const stageTabs: TabStripItem[] = stages.map((stage) => {
+    const Icon = STAGE_ICON[stage.role];
+    return { id: stage.id, label: t(`pipeline.stageRole.${stage.role}`), icon: <Icon size={14} /> };
+  });
+
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="flex items-center gap-1.5">
-          <Eye size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-caption font-sans uppercase tracking-section text-editorial-muted">
-            {t('pipeline.promptPreviewTitle')}
-          </p>
-        </div>
-        <p className="text-xs leading-relaxed text-editorial-muted">
-          {t('pipeline.promptPreviewHint')}
-        </p>
-      </div>
-
-      {stages.length > 1 && (
-        <div role="tablist" aria-label={t('pipeline.promptPreviewTitle')} className="flex flex-wrap gap-2">
-          {stages.map((stage) => (
-            <StageSwitch
-              key={stage.id}
-              stage={stage}
-              label={t(`pipeline.stageRole.${stage.role}`)}
-              active={activeStage?.id === stage.id}
-              controls={`prompt-preview-panel-${stage.id}`}
-              onClick={() => setActiveStageId(stage.id)}
-            />
-          ))}
-        </div>
-      )}
-
+      <PanelSection
+        icon={Eye}
+        label={t('pipeline.promptPreviewTitle')}
+        hint={t('pipeline.promptPreviewHint')}
+        actions={stages.length > 1 && activeStage ? (
+          <TabStrip
+            tabs={stageTabs}
+            activeId={activeStage.id}
+            onChange={setActiveStageId}
+            ariaLabel={t('pipeline.promptPreviewTitle')}
+            idPrefix="prompt-preview"
+          />
+        ) : undefined}
+      >
       {activeStage ? (
         <div
           id={`prompt-preview-panel-${activeStage.id}`}
@@ -151,6 +111,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
           {t('pipeline.promptPreviewEmpty')}
         </div>
       )}
+      </PanelSection>
     </div>
   );
 }
