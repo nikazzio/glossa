@@ -61,6 +61,20 @@ export async function savePromptTemplate(
   );
 }
 
+/** Riscrive un modello esistente. Nome, contesto e flusso restano unici: un
+ *  nome già usato nello stesso contesto fa fallire la scrittura. */
+export async function updatePromptTemplate(
+  id: string,
+  input: Omit<PromptTemplate, 'id' | 'createdAt'>,
+): Promise<void> {
+  await execute(
+    `UPDATE prompt_templates SET name = $1, prompt = $2, context = $3, workflow = $4,
+       default_model = $5, default_provider = $6, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $7`,
+    [input.name, input.prompt, input.context, input.workflow, input.defaultModel ?? '', input.defaultProvider ?? '', id],
+  );
+}
+
 export async function deletePromptTemplate(id: string): Promise<void> {
   await execute('DELETE FROM prompt_templates WHERE id = $1', [id]);
 }

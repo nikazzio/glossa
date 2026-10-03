@@ -88,7 +88,7 @@ export function MemoriesTab() {
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setEntries(loaded);
 
-      const uniqueWsIds = [...new Set(loaded.map((e) => e.workspaceId))];
+      const uniqueWsIds = [...new Set(loaded.map((e) => e.workspaceId).filter((id): id is string => id !== null))];
       const projectLists = await Promise.all(uniqueWsIds.map((id) => listProjects(id).catch(() => [])));
       const projectMap: Record<string, string> = {};
       projectLists.flat().forEach((p) => { projectMap[p.id] = p.name; });
@@ -530,6 +530,7 @@ function formatDate(value: string) {
   return `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} ${p(date.getHours())}:${p(date.getMinutes())}`;
 }
 
-function workspaceName(workspaceId: string, workspaces: Workspace[]) {
+function workspaceName(workspaceId: string | null, workspaces: Workspace[]) {
+  if (workspaceId === null) return '—';
   return workspaces.find((workspace) => workspace.id === workspaceId)?.name ?? workspaceId;
 }

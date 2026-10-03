@@ -60,3 +60,13 @@ la loro lunghezza contribuisce alla dimensione delle richieste.
 
 Usa il [glossario](./glossary-and-memory) per le rese obbligatorie e i
 riferimenti di memoria per formulazioni pertinenti al singolo passaggio.
+
+## Nello Studio di traduzione
+
+Nella linguetta Memoria, **Riferimenti** mostra le frasi simili già in memoria:
+per ognuna, sotto la coppia, da dove viene (workspace, traduzione, frammento,
+oppure «importata»). La spunta in cerchio decide quali usare nella traduzione.
+**Memoria** si apre solo a traduzione verificata: le coppie già salvate si
+tolgono una a una con il cestino; quelle nuove si spuntano e si aggiungono con
+il dischetto, che non cancella mai le altre. La ricerca usa solo frasi della
+stessa coppia di lingue.

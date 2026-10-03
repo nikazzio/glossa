@@ -933,6 +933,17 @@ modifiche e durante la pipeline (motivo nel suggerimento), `danger` con
 vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
 salva solo le risorse linguistiche, fuori dai campi, come prima.
 
+Memoria di frasi (T7, in corso): `vec_save_locked_phrases` **aggiunge** e
+basta (niente più cancellazione delle coppie del frammento); una coppia si
+toglie con `vec_delete_phrase_memory`. `vec_list_phrase_memory(workspaceId?,
+chunkId?)`: senza workspace tutte le frasi. `vec_search_phrase_memory` ha
+`allWorkspaces` e `sourceLanguage`/`targetLanguage`, e restituisce la
+provenienza (workspace di casa = quello della traduzione o dell'importazione,
+`NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
+`PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
+`workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo
+dell'interruttore, ancora senza interfaccia.
+
 Frammento in lavorazione (`status === 'processing'`): il testo della traduzione
 (editor o confronto) è coperto da `PagePendingOverlay` `tone="running"`
 («Traduzione in corso…»), che lo rende inerte; prima restava scrivibile e si

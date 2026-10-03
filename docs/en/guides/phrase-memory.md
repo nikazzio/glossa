@@ -57,3 +57,13 @@ contributes to request size.
 
 Use the [glossary](./glossary-and-memory) for mandatory terminology and memory
 references for wording relevant to an individual passage.
+
+## In the Translation Studio
+
+In the Memory tab, **References** shows similar phrases already in memory: for
+each, under the pair, where it comes from (workspace, translation, segment, or
+“imported”). The circled check decides which to use in the translation.
+**Memory** opens only once the translation is verified: saved pairs are removed
+one by one with the bin; new ones are checked and added with the disk, which
+never deletes the others. The search only uses phrases of the same language
+pair.

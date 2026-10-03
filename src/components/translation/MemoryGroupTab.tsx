@@ -21,11 +21,12 @@ interface MemoryGroupTabProps {
 /**
  * La memoria di frasi del frammento: le frasi simili già in memoria, da usare
  * traducendo, e l'estrazione delle frasi del frammento per salvarle. Due
- * sottolinguette; l'estrazione si accende a frammento tradotto.
+ * sottolinguette; l'estrazione si accende a traduzione verificata: in memoria
+ * vanno solo frasi controllate.
  */
 export function MemoryGroupTab({ panelId, labelledBy, view, onViewChange, currentChunk }: MemoryGroupTabProps) {
   const { t } = useTranslation();
-  const extractOff = currentChunk?.status !== 'completed';
+  const extractOff = currentChunk?.translationLocked !== true;
   const shownView: MemoryView = view === 'memory' && extractOff ? 'references' : view;
 
   const names: Record<MemoryView, string> = {
@@ -36,7 +37,7 @@ export function MemoryGroupTab({ panelId, labelledBy, view, onViewChange, curren
     { id: 'references', label: names.references, icon: <Layers size={16} /> },
     {
       id: 'memory',
-      label: extractOff ? `${names.memory} — ${t('document.chunkTabLockedForMemory')}` : names.memory,
+      label: extractOff ? `${names.memory} — ${t('memory.reasonNotVerified')}` : names.memory,
       icon: <Database size={16} />,
       disabled: extractOff,
     },

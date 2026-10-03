@@ -149,6 +149,14 @@ const IN_WORKSPACE: &str = "(pm.project_id IN (SELECT id FROM projects WHERE wor
      OR EXISTS (SELECT 1 FROM workspace_items wi \
                  WHERE wi.item_type = 'phrase' AND wi.item_id = pm.id AND wi.workspace_id = :ws))";
 
+/// Il workspace di casa di una frase: quello della sua traduzione, o per una
+/// frase importata quello in cui è nata. `NULL` = traduzione senza workspace.
+const HOME_WORKSPACE: &str = "COALESCE( \
+     (SELECT p.workspace_id FROM projects p WHERE p.id = pm.project_id), \
+     (SELECT wi.workspace_id FROM workspace_items wi \
+       WHERE wi.item_type = 'phrase' AND wi.item_id = pm.id \
+       ORDER BY wi.is_origin DESC LIMIT 1))";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PhraseMatchResult {
     pub phrase_memory_id: String,
@@ -156,12 +164,16 @@ pub struct PhraseMatchResult {
     pub target_phrase: String,
     pub distance: f64,
     pub confidence: f64,
+    /// Provenienza, mostrata accanto al riferimento.
+    pub workspace_id: Option<String>,
+    pub project_id: Option<String>,
+    pub chunk_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PhraseMemoryEntryResult {
     pub id: String,
-    pub workspace_id: String,
+    pub workspace_id: Option<String>,
     pub source_phrase: String,
     pub target_phrase: String,
     pub confidence: f64,
@@ -181,7 +193,12 @@ pub struct PhraseMemoryEntryResult {
 #[tauri::command]
 pub async fn vec_list_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
-    workspace_id: String,
+    // Senza workspace: tutte le frasi, anche quelle di traduzioni che non ne
+    // hanno uno (le risorse linguistiche generali).
+    workspace_id: Option<String>,
+    // Solo le frasi di un frammento (la scheda Memoria dello Studio), senza
+    // leggere tutta la memoria per contarle.
+    chunk_id: Option<String>,
 ) -> Result<Vec<PhraseMemoryEntryResult>, EmbeddingError> {
     let connection = database.connection().map_err(EmbeddingError::Http)?;
     run_blocking(connection, move |conn| {
@@ -189,18 +206,20 @@ pub async fn vec_list_phrase_memory(
         let query = format!(
             "SELECT pm.id, pm.source_phrase, pm.target_phrase, pm.confidence, pm.source_language, \
                     pm.target_language, pm.author, pm.work, pm.domain, pm.tags, pm.notes, \
-                    pm.chunk_id, pm.project_id, pm.embedding_model, pm.created_at \
-             FROM phrase_memory pm WHERE {IN_WORKSPACE} \
+                    pm.chunk_id, pm.project_id, pm.embedding_model, pm.created_at, \
+                    {HOME_WORKSPACE} \
+             FROM phrase_memory pm \
+             WHERE (:ws IS NULL OR {IN_WORKSPACE}) AND (:chunk IS NULL OR pm.chunk_id = :chunk) \
              ORDER BY datetime(pm.created_at) DESC, pm.id DESC"
         );
         let mut statement = conn
             .prepare(&query)
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
         let entries = statement
-            .query_map(rusqlite::named_params! { ":ws": workspace_id }, |row| {
+            .query_map(rusqlite::named_params! { ":ws": workspace_id, ":chunk": chunk_id }, |row| {
                 Ok(PhraseMemoryEntryResult {
                     id: row.get(0)?,
-                    workspace_id: workspace_id.clone(),
+                    workspace_id: row.get(15)?,
                     source_phrase: row.get(1)?,
                     target_phrase: row.get(2)?,
                     confidence: row.get(3)?,
@@ -229,7 +248,8 @@ pub async fn vec_list_phrase_memory(
 pub async fn vec_delete_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
     write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
-    workspace_id: String,
+    // Senza workspace (risorse generali) la frase si cancella per id.
+    workspace_id: Option<String>,
     phrase_memory_id: String,
 ) -> Result<u32, EmbeddingError> {
     let _write_guard = write_coordinator.lock().await;
@@ -240,7 +260,8 @@ pub async fn vec_delete_phrase_memory(
         // controllo, un id indovinato toglierebbe una frase di un altro.
         let query = format!(
             "DELETE FROM phrase_memory WHERE id = :id \
-             AND EXISTS (SELECT 1 FROM phrase_memory pm WHERE pm.id = :id AND {IN_WORKSPACE})"
+             AND EXISTS (SELECT 1 FROM phrase_memory pm WHERE pm.id = :id \
+                         AND (:ws IS NULL OR {IN_WORKSPACE}))"
         );
         conn.execute(
             &query,
@@ -256,7 +277,7 @@ pub async fn vec_delete_phrase_memory(
 pub async fn vec_update_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
     write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
-    workspace_id: String,
+    workspace_id: Option<String>,
     phrase_memory_id: String,
     source_phrase: String,
     target_phrase: String,
@@ -270,7 +291,8 @@ pub async fn vec_update_phrase_memory(
             "UPDATE phrase_memory SET source_phrase = :source, target_phrase = :target, \
                     embedding = :embedding \
              WHERE id = :id \
-               AND EXISTS (SELECT 1 FROM phrase_memory pm WHERE pm.id = :id AND {IN_WORKSPACE})"
+               AND EXISTS (SELECT 1 FROM phrase_memory pm WHERE pm.id = :id \
+                           AND (:ws IS NULL OR {IN_WORKSPACE}))"
         );
         conn.execute(
             &query,
@@ -288,6 +310,9 @@ pub async fn vec_update_phrase_memory(
     .await
 }
 
+// Ambito e lingue si sommano ai parametri della ricerca: una struct cambierebbe
+// la firma del comando Tauri.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn vec_search_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
@@ -296,6 +321,12 @@ pub async fn vec_search_phrase_memory(
     threshold: f64,
     max_results: u32,
     embedding_model: String,
+    // Anche le frasi degli altri workspace e delle traduzioni senza workspace.
+    all_workspaces: bool,
+    // Solo le frasi della stessa coppia di lingue: aperta a tutti i workspace,
+    // la ricerca troverebbe frasi di lavori che non c'entrano.
+    source_language: Option<String>,
+    target_language: Option<String>,
 ) -> Result<Vec<PhraseMatchResult>, EmbeddingError> {
     let blob = floats_to_blob(&query_embedding);
     let connection = database.connection().map_err(EmbeddingError::Http)?;
@@ -305,12 +336,16 @@ pub async fn vec_search_phrase_memory(
             .prepare(&format!(
                 "WITH ranked AS ( \
                    SELECT pm.id, pm.source_phrase, pm.target_phrase, pm.confidence, \
-                          vec_distance_cosine(pm.embedding, :query) AS distance \
+                          vec_distance_cosine(pm.embedding, :query) AS distance, \
+                          {HOME_WORKSPACE} AS home_workspace, pm.project_id, pm.chunk_id \
                    FROM phrase_memory pm \
-                   WHERE {IN_WORKSPACE} \
+                   WHERE (:all = 1 OR {IN_WORKSPACE}) \
                      AND (pm.embedding_model IS NULL OR pm.embedding_model = :model) \
+                     AND (:src IS NULL OR pm.source_language = :src) \
+                     AND (:tgt IS NULL OR pm.target_language = :tgt) \
                  ) \
-                 SELECT id, source_phrase, target_phrase, confidence, distance FROM ranked \
+                 SELECT id, source_phrase, target_phrase, confidence, distance, \
+                        home_workspace, project_id, chunk_id FROM ranked \
                  WHERE distance < :threshold ORDER BY distance ASC LIMIT :limit"
             ))
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
@@ -322,6 +357,9 @@ pub async fn vec_search_phrase_memory(
                     ":threshold": threshold,
                     ":limit": max_results,
                     ":model": embedding_model,
+                    ":all": all_workspaces,
+                    ":src": source_language,
+                    ":tgt": target_language,
                 },
                 |row| {
                     Ok(PhraseMatchResult {
@@ -330,6 +368,9 @@ pub async fn vec_search_phrase_memory(
                         target_phrase: row.get(2)?,
                         confidence: row.get(3)?,
                         distance: row.get(4)?,
+                        workspace_id: row.get(5)?,
+                        project_id: row.get(6)?,
+                        chunk_id: row.get(7)?,
                     })
                 },
             )
@@ -409,21 +450,9 @@ pub async fn vec_save_locked_phrases(
         EmbeddingError::Http(e.to_string())
     })?;
 
-    let replaced_rows = tx
-        .execute(
-            "DELETE FROM phrase_memory WHERE chunk_id = ?1 AND project_id = ?2",
-            rusqlite::params![&chunk_id, &project_id],
-        )
-        .map_err(|e| {
-            log::warn!(
-                "phrase_memory.vec_save_locked_phrases.replace_failed project_id={project_id} chunk_id={chunk_id} error={e}"
-            );
-            EmbeddingError::Http(e.to_string())
-        })?;
-    log::debug!(
-        "phrase_memory.vec_save_locked_phrases.replace_done deleted_phrase_memory_rows={replaced_rows}"
-    );
-
+    // Si aggiunge e basta: le coppie già in memoria del frammento restano.
+    // Toglierne una è un comando a sé (`vec_delete_phrase_memory`), mai un
+    // effetto collaterale del salvataggio.
     for (index, pair) in pairs.iter().enumerate() {
         attempted += 1;
         let rows = tx

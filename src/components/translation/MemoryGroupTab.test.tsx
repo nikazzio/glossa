@@ -15,18 +15,18 @@ describe('MemoryGroupTab', () => {
     expect(screen.getByText('similar-phrases')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /memory\.extractButton/ })).toBeDisabled();
     expect(screen.getByRole('tab', { name: /memory\.extractButton/ })).toHaveAccessibleName(
-      'memory.extractButton — document.chunkTabLockedForMemory',
+      'memory.extractButton — memory.reasonNotVerified',
     );
   });
 
-  it('shows the extraction once the chunk is translated', () => {
+  it('shows the extraction once the translation is verified', () => {
     render(
       <MemoryGroupTab
         panelId="m"
         labelledBy="m-tab"
         view="memory"
         onViewChange={vi.fn()}
-        currentChunk={makeTranslationChunk({ id: 'c1', status: 'completed' })}
+        currentChunk={makeTranslationChunk({ id: 'c1', status: 'completed', translationLocked: true })}
       />,
     );
 

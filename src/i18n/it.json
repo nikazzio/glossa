@@ -2423,7 +2423,8 @@
               "Usa Test su un frammento rappresentativo per controllare il risultato mantenendo modificabile la configurazione. Poi passa alla produzione e scegli se elaborare un frammento o più frammenti.",
               "La stima accanto ai comandi riguarda l’azione scelta. È indicativa: il consumo dipende dal testo inviato e dalla risposta. Le statistiche mostrano i dati disponibili dopo l’elaborazione.",
               "Puoi annullare l’esecuzione. I risultati già completati restano disponibili; alla ripresa verifica quali frammenti saranno elaborati. La rielaborazione dei frammenti non verificati può sostituirne il risultato.",
-              "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi."
+              "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
+              "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente."
             ]
           },
           {
@@ -3275,7 +3276,33 @@
     "savedCandidateLabel": "Già salvata",
     "referencesGlossaryHint": "L'intero glossario del progetto viene sempre incluso nella traduzione di questo frammento.",
     "referencesMemorySectionTitle": "Frasi simili in memoria",
-    "selectionHint": "Seleziona le frasi da usare per la traduzione di questo frammento."
+    "selectionHint": "Seleziona le frasi da usare per la traduzione di questo frammento.",
+    "addCheckedToMemory": "Aggiungi alla memoria le coppie spuntate",
+    "reasonNoNewChecked": "nessuna coppia nuova spuntata",
+    "reasonNotVerified": "traduzione non verificata",
+    "inMemoryBadge": "In memoria",
+    "inMemoryCount_one": "coppia in memoria",
+    "inMemoryCount_other": "coppie in memoria",
+    "removeFromMemory": "Togli dalla memoria",
+    "removeConfirmTitle": "Togliere la coppia dalla memoria?",
+    "removeConfirmMessage": "La coppia non verrà più proposta come riferimento.",
+    "removeFailed": "Non è stato possibile togliere la coppia dalla memoria",
+    "savedLoadFailed": "Non è stato possibile leggere la memoria del frammento",
+    "chunkEmpty": "Nessuna coppia: estrai le frasi o aggiungine una",
+    "addPair": "Aggiungi coppia",
+    "useInTranslation": "Usa nella traduzione",
+    "noSimilar": "Nessuna frase simile in memoria",
+    "provenance": {
+      "workspace": "Workspace",
+      "thisWorkspace": "Questo workspace",
+      "noWorkspace": "Senza workspace",
+      "unknownWorkspace": "Workspace non più presente",
+      "translation": "Traduzione",
+      "unknownTranslation": "Traduzione non più presente",
+      "chunk": "Frammento",
+      "origin": "Origine",
+      "imported": "Importata"
+    }
   },
   "glossary": {
     "translation": "Traduzione",

@@ -2423,7 +2423,8 @@
               "Use Test on a representative segment to inspect the result while keeping configuration editable. Then switch to production and choose whether to process one segment or several.",
               "The estimate beside the controls applies to the selected action. It is approximate: usage depends on the submitted text and response. Statistics show available usage data after processing.",
               "You can cancel execution. Completed results remain available; before resuming, check which segments will be processed. Rerunning unverified segments can replace their results.",
-              "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free."
+              "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free.",
+              "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything."
             ]
           },
           {
@@ -3275,7 +3276,33 @@
     "savedCandidateLabel": "Already saved",
     "referencesGlossaryHint": "The entire project glossary is always included when translating this segment.",
     "referencesMemorySectionTitle": "Similar phrases in memory",
-    "selectionHint": "Select the phrases to use for translating this segment."
+    "selectionHint": "Select the phrases to use for translating this segment.",
+    "addCheckedToMemory": "Add the checked pairs to memory",
+    "reasonNoNewChecked": "no new pair checked",
+    "reasonNotVerified": "translation not verified",
+    "inMemoryBadge": "In memory",
+    "inMemoryCount_one": "pair in memory",
+    "inMemoryCount_other": "pairs in memory",
+    "removeFromMemory": "Remove from memory",
+    "removeConfirmTitle": "Remove the pair from memory?",
+    "removeConfirmMessage": "The pair will no longer be offered as a reference.",
+    "removeFailed": "Could not remove the pair from memory",
+    "savedLoadFailed": "Could not read the chunk memory",
+    "chunkEmpty": "No pairs: extract the phrases or add one",
+    "addPair": "Add pair",
+    "useInTranslation": "Use in translation",
+    "noSimilar": "No similar phrases in memory",
+    "provenance": {
+      "workspace": "Workspace",
+      "thisWorkspace": "This workspace",
+      "noWorkspace": "No workspace",
+      "unknownWorkspace": "Workspace no longer present",
+      "translation": "Translation",
+      "unknownTranslation": "Translation no longer present",
+      "chunk": "Chunk",
+      "origin": "Origin",
+      "imported": "Imported"
+    }
   },
   "glossary": {
     "translation": "Translation",
