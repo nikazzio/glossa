@@ -347,6 +347,10 @@ dentro.
 baseline si fissa e vale di nuovo la regola sopra — ogni cambiamento riceve un
 file di migrazione nuovo, la baseline non si tocca più.
 
+Per il ramo Studio/corpus (PR #488), istruzione esplicita dell'utente:
+conservare 0001 applicata e usare 0003 incrementale. L'eventuale consolidamento
+prima del merge viene eseguito dall'utente, non dall'agente.
+
 ## Modello di prodotto
 
 Biblioteca, Trascrizioni, Traduzioni e Analisi sono cataloghi globali. Un

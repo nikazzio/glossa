@@ -160,6 +160,8 @@ registrando quali pattern sono adottati, adattati o scartati (#186/#446).
 
 Base unità/revisioni/misure/tag separata; flussi Memoria su questa base; più modelli
 conservati, ricerca compatibile, correzioni atomiche e provenienza visibile; scelta
-esplicita del libro alla creazione; backup dei dati testuali. Nessuna conversione
-automatica dei dati beta. Non comprende selettore di pagine/sezioni, analisi del
+esplicita del libro alla creazione; backup dei dati testuali. La migrazione
+incrementale 0003 conserva i testi esistenti e trasferisce le misure identificate;
+non attribuisce modelli ai vettori anonimi e non ricrea il database.
+Non comprende selettore di pagine/sezioni, analisi del
 corpus, tag automatici, ricerca ibrida o modelli locali: restano nelle issue collegate.

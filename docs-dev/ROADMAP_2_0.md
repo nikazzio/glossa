@@ -254,6 +254,7 @@ consolidamento prima del merge riservato all'utente.
 Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
 T9: revisione finale e nove correzioni della review implementate; i due Studio
 sono inclusi nello stesso ramo della PR #488. Restano CI e prova dal vivo;
+la UI/UX non è approvata dall'utente e richiede una nuova revisione visuale.
 quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.
