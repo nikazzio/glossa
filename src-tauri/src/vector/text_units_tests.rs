@@ -6,10 +6,48 @@ type TestResult = Result<(), Box<dyn std::error::Error>>;
 const SMALL: &str = "text-embedding-3-small";
 const LARGE: &str = "text-embedding-3-large";
 
+#[test]
+fn incremental_upgrade_preserves_texts_and_only_identified_embeddings() -> TestResult {
+    let conn = Connection::open_in_memory()?;
+    conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))?;
+    for (id, model) in [("known", Some(SMALL)), ("unknown", None)] {
+        conn.execute(
+            "INSERT INTO phrase_memory(id,source_phrase,target_phrase,confidence,
+             source_language,target_language,tags,embedding,embedding_model,created_at)
+             VALUES(?1,'È già: spada ⚔','A sword',0.9,'it','en','[\"arma\"]',?2,?3,CURRENT_TIMESTAMP)",
+            params![id, super::embedding::floats_to_blob(&vector(SMALL)), model],
+        )?;
+    }
+    conn.execute_batch(include_str!(
+        "../../migrations/0002_workspace_memory_scope.sql"
+    ))?;
+    conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
+    let entries = list(&conn, None, None)?;
+    assert_eq!(entries.len(), 2);
+    for entry in &entries {
+        assert_eq!(entry.source_phrase, "È già: spada ⚔");
+        assert_eq!(entry.target_phrase, "A sword");
+        assert_eq!(entry.tags, vec!["arma"]);
+        assert_eq!(entry.embeddings.len(), usize::from(entry.id == "known"));
+        let hash: String = conn.query_row(
+            "SELECT content_hash FROM text_unit_revisions WHERE id=?1",
+            [&entry.source_revision_id],
+            |row| row.get(0),
+        )?;
+        assert_eq!(hash, crate::provenance::fnv1a_hex(&entry.source_phrase));
+    }
+    assert!(!conn.prepare("PRAGMA foreign_key_check")?.exists([])?);
+    Ok(())
+}
+
 fn connection() -> Result<Connection, Box<dyn std::error::Error>> {
     super::register_vec_extension();
     let conn = Connection::open_in_memory()?;
     conn.execute_batch(include_str!("../../migrations/0001_baseline_2_0.sql"))?;
+    conn.execute_batch(include_str!(
+        "../../migrations/0002_workspace_memory_scope.sql"
+    ))?;
+    conn.execute_batch(include_str!("../../migrations/0003_text_corpus.sql"))?;
     conn.execute_batch("INSERT INTO workspaces(id,name,created_at) VALUES('ws-a','Archivio',CURRENT_TIMESTAMP),('ws-b','Studio',CURRENT_TIMESTAMP);
         INSERT INTO projects(id,name,workspace_id) VALUES('project','Traduzione','ws-a');
         INSERT INTO translations(id,project_id,source_processing_text,translation_processing_text,position,translation_locked)

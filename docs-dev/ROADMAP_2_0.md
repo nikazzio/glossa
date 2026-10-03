@@ -249,6 +249,8 @@ resta la prova dal vivo. Decisione del 3 ottobre: nessuna retrocompatibilità
 per embedding senza modello; più misure per unità testuale, modello obbligatorio
 e ricerca compatibile. Base corpus implementata: unità/revisioni/misure/tag,
 provenienza e libro esplicito; selezione di pagine/sezioni e analisi restano future.
+Schema aggiornato da `0003_text_corpus.sql`, baseline applicata conservata;
+consolidamento prima del merge riservato all'utente.
 Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
 T9: revisione finale e nove correzioni della review implementate; i due Studio
 sono inclusi nello stesso ramo della PR #488. Restano CI e prova dal vivo;

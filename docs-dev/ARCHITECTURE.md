@@ -1995,8 +1995,11 @@ Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario contro
 Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel
 registro esistente con chiave distinta per ogni azione. Backup aggiunge le quattro
 tabelle prima delle coppie, differisce i parent autocorrelati, ripristina con INSERT
-rigoroso e include revisioni/vettori/tag. Nessun backfill o reset implicito: baseline
-beta consolidata; database di test precedente da ricreare esplicitamente.
+rigoroso e include revisioni/vettori/tag. `0003_text_corpus.sql` aggiorna lo schema
+senza modificare la baseline già applicata e conserva testi, metadati e provenienza.
+Trasferisce solo vettori con modello registrato e dimensione compatibile; nessun
+modello viene inferito per quelli senza identità. Nessun reset del database.
+Il consolidamento prima del merge è riservato all'utente.
 
 `createProject` crea progetto, pipeline e origine di libro opzionale nella stessa
 transazione. La finestra di creazione propone versioni della Biblioteca, senza

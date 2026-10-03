@@ -60,8 +60,8 @@ registrando quali pattern sono adottati, adattati o scartati (#186/#446).
 - Mappare tutti i percorsi attuali di scrittura, lettura, ricalcolo, eliminazione
   e backup, inclusa la cache delle misure del testo sorgente.
 - Definire la base comune minima e separare i vettori dal testo; aggiungere
-  vincoli, relazioni e indici. Schema beta nella baseline, senza migrazioni
-  speculative per dati distribuiti inesistenti.
+  vincoli, relazioni e indici. Schema in `0003_text_corpus.sql`, senza modificare
+  migrazioni già applicate. Il consolidamento prima del merge resta all'utente.
 - Aggiornare controlli di schema, formati di backup/ripristino e relativi
   contratti; non attribuire retroattivamente modelli ai dati di test.
 

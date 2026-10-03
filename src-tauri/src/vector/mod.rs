@@ -73,7 +73,7 @@ pub fn verify_phrase_memory_schema(conn: &Connection) -> Result<(), String> {
     }
     if !columns.iter().any(|column| column == "source_revision_id") {
         return Err(
-            "phrase_memory.source_revision_id is missing; recreate the beta test database with the current schema"
+            "phrase_memory.source_revision_id is missing; the text corpus migration has not been applied"
                 .to_string(),
         );
     }
