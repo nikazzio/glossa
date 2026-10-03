@@ -150,3 +150,19 @@ Controlla anche i frammenti incompleti prima di esportare: nei formati ordinari,
 un frammento senza traduzione può essere esportato con il testo sorgente.
 Il formato bilingue distingue esplicitamente originale e traduzione assente.
 Vedi [formati e contenuto esportato](../reference/import-export).
+
+
+## Salvataggio, navigazione e costi
+
+Durante una traduzione in corso lo Studio resta aperto: per uscire, attendi la fine
+o interrompi l’elaborazione. Il dischetto e Ctrl/⌘+S salvano; dopo un errore il
+comando propone **Riprova**. Gli errori visibili sono messaggi tradotti; i dettagli
+tecnici sono nel log. Lo stesso vale per caricamento e ripristino dello storico.
+
+Le schede disattivate restano raggiungibili col tabulatore, così puoi leggere il
+motivo nell’etichetta. Non si attivano; le frecce passano alle schede disponibili.
+I selettori circolari restano raggiungibili anche se la scelta corrente non è disponibile.
+
+Nella colonna Strumenti, passa sulla stima o sui consumi per aprire il dettaglio.
+La stima segue modalità e numero di blocchi selezionati; i consumi sono quelli
+del frammento aperto. Il numero di blocchi non indica ripetizioni della traduzione.

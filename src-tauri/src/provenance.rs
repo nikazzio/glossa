@@ -58,6 +58,8 @@ pub struct Event {
     /// **allora**.
     pub input_hash: Option<String>,
     pub output_hash: Option<String>,
+    pub provider: Option<String>,
+    pub model: Option<String>,
     /// Il resto, in JSON: i dettagli propri di quel tipo di evento.
     pub config: Option<String>,
     /// Che cosa rende **distinto** questo fatto dagli altri dello stesso tipo
@@ -91,6 +93,8 @@ impl Event {
             error_kind: None,
             input_hash: None,
             output_hash: None,
+            provider: None,
+            model: None,
             config: Some(serde_json::json!({ "jobType": job_type }).to_string()),
             key_ref: None,
         }
@@ -140,12 +144,13 @@ pub fn fnv1a_hex(text: &str) -> String {
 pub fn record(conn: &Connection, event: &Event) -> Result<(), String> {
     conn.execute(
         "INSERT INTO provenance_events (id, event_type, entity_type, entity_id, workspace_id, \
-             actor, job_id, outcome, duration_ms, error_kind, input_hash, output_hash, config) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13) \
+             actor, job_id, outcome, duration_ms, error_kind, input_hash, output_hash, config, provider, model) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15) \
          ON CONFLICT(id) DO UPDATE SET occurred_at = CURRENT_TIMESTAMP, \
            outcome = excluded.outcome, duration_ms = excluded.duration_ms, \
            error_kind = excluded.error_kind, input_hash = excluded.input_hash, \
-           output_hash = excluded.output_hash, config = excluded.config",
+           output_hash = excluded.output_hash, config = excluded.config, \
+           provider = excluded.provider, model = excluded.model",
         params![
             event_id(event),
             event.event_type,
@@ -160,6 +165,8 @@ pub fn record(conn: &Connection, event: &Event) -> Result<(), String> {
             event.input_hash,
             event.output_hash,
             event.config,
+            event.provider,
+            event.model,
         ],
     )
     .map_err(|error| format!("registro dei fatti: {error}"))?;
@@ -189,7 +196,9 @@ mod tests {
                  duration_ms INTEGER,
                  error_kind TEXT,
                  input_hash TEXT,
-                 output_hash TEXT
+                 output_hash TEXT,
+                 provider TEXT,
+                 model TEXT
              );",
         )
         .unwrap();

@@ -1,3 +1,4 @@
+import { makeMemoryEntry } from '../test/memoryEntryFactory';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePhraseMemoryDraftStore } from '../stores/phraseMemoryDraftStore';
@@ -39,7 +40,7 @@ const lockedChunk = makeTranslationChunk({
 });
 
 function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntry {
-  return {
+  return makeMemoryEntry({
     id: 'pm-1',
     workspaceId: 'ws-1',
     sourcePhrase: 'Buongiorno',
@@ -50,14 +51,13 @@ function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntr
     author: null,
     work: null,
     domain: null,
-    tags: null,
+    tags: [],
     notes: null,
     chunkId: 'c1',
     projectId: 'proj-1',
-    embeddingModel: 'text-embedding-3-small',
     createdAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
-  };
+  });
 }
 
 describe('useMemoryExtractionDraft', () => {

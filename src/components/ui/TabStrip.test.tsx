@@ -9,11 +9,23 @@ const TABS = [
 ];
 
 describe('TabStrip', () => {
+  it('keeps unavailable tabs focusable for their explanation without activating them', () => {
+    const onChange = vi.fn();
+    render(<TabStrip tabs={TABS} activeId="a" onChange={onChange} ariaLabel="Viste" idPrefix="t" />);
+    const disabled = screen.getByRole('tab', { name: 'B — spenta' });
+    expect(disabled).not.toBeDisabled();
+    expect(disabled).toHaveAttribute('aria-disabled', 'true');
+    expect(disabled).toHaveAttribute('tabindex', '0');
+    disabled.focus();
+    expect(disabled).toHaveFocus();
+    fireEvent.click(disabled);
+    expect(onChange).not.toHaveBeenCalled();
+  });
   it('keeps a disabled tab visible but skips it with the arrow keys', () => {
     const onChange = vi.fn();
     render(<TabStrip tabs={TABS} activeId="a" onChange={onChange} ariaLabel="Viste" idPrefix="t" />);
 
-    expect(screen.getByRole('tab', { name: 'B — spenta' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'B — spenta' })).toHaveAttribute('aria-disabled', 'true');
     fireEvent.keyDown(screen.getByRole('tab', { name: 'A' }), { key: 'ArrowRight' });
     expect(onChange).toHaveBeenLastCalledWith('c');
     fireEvent.keyDown(screen.getByRole('tab', { name: 'C' }), { key: 'ArrowRight' });

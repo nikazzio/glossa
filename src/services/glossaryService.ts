@@ -59,7 +59,9 @@ export async function listGlossaries(workspaceId?: string | null): Promise<Gloss
   const rows = workspaceId
     ? await select<GlossaryRow>(
         `SELECT g.id, g.name, g.description, g.source_language, g.target_language, g.created_at,
-                wi.workspace_id
+                (SELECT origin.workspace_id FROM workspace_items origin
+                  WHERE origin.item_type = 'glossary' AND origin.item_id = g.id AND origin.is_origin = 1
+                  LIMIT 1) AS workspace_id
            FROM glossaries g
            JOIN workspace_items wi
              ON wi.item_type = 'glossary' AND wi.item_id = g.id AND wi.workspace_id = $1

@@ -70,6 +70,8 @@ describe('usePhraseMemoryAutoSearch', () => {
       config: {
         ...state.config,
         usePhraseMemory: true,
+        sourceLanguage: 'Italian',
+        targetLanguage: 'English',
         autoSearchPhraseMemory: true,
         phraseMemorySimilarityThreshold: 0.75,
         phraseMemoryMaxResults: 5,
@@ -121,33 +123,13 @@ describe('usePhraseMemoryAutoSearch', () => {
       ...state,
       config: { ...state.config, autoSearchPhraseMemory: false },
     }));
-    mockListPhraseMemoryEntries.mockResolvedValueOnce([
-      {
-        id: 'pm-exact',
-        workspaceId: 'ws-1',
-        sourcePhrase: 'Ciao mondo',
-        targetPhrase: 'Hello world',
-        confidence: 0.95,
-        sourceLanguage: 'Italian',
-        targetLanguage: 'English',
-        author: null,
-        work: null,
-        domain: null,
-        tags: null,
-        notes: null,
-        chunkId: 'c1',
-        projectId: 'proj-1',
-        embeddingModel: null,
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ]);
     const { result } = renderHook(() => usePhraseMemoryAutoSearch({ auto: false }));
 
     await act(async () => {
       await result.current.runSearchForChunk('c1');
     });
 
-    expect(mockListPhraseMemoryEntries).toHaveBeenCalledWith('ws-1', expect.any(String));
+    expect(mockListPhraseMemoryEntries).not.toHaveBeenCalled();
     expect(mockSearchPhraseMemory).toHaveBeenCalledWith(expect.objectContaining({
       workspaceId: 'ws-1',
       queryText: 'Ciao mondo.',
@@ -155,7 +137,6 @@ describe('usePhraseMemoryAutoSearch', () => {
       maxResults: 5,
     }));
     expect(usePhraseMemoryStore.getState().matchesByChunk.get('c1')?.matches.map((match) => match.id)).toEqual([
-      'pm-exact',
       'pm-2',
     ]);
   });
@@ -180,5 +161,21 @@ describe('usePhraseMemoryAutoSearch', () => {
     await waitFor(() => {
       expect(usePhraseMemoryStore.getState().searchStatus).toBe('error');
     });
+  });
+  it('repeats automatic search after the cross-workspace setting changes', async () => {
+    renderHook(() => usePhraseMemoryAutoSearch());
+    await waitFor(() => expect(mockSearchPhraseMemoryBatch).toHaveBeenCalledTimes(1));
+    act(() => { useWorkspaceStore.setState({ activeWorkspace: { ...workspace, memorySearchAllWorkspaces: true } }); });
+    await waitFor(() => expect(mockSearchPhraseMemoryBatch).toHaveBeenLastCalledWith(expect.objectContaining({
+      allWorkspaces: true, sourceLanguage: 'Italian', targetLanguage: 'English', embeddingModel: workspace.embeddingModel,
+    })));
+  });
+  it('removes previous selected references after an scope change with automatic search off', async () => {
+    const { result } = renderHook(() => usePhraseMemoryAutoSearch({ auto: false }));
+    await act(async () => { await result.current.runSearchForChunk('c1'); });
+    act(() => { usePhraseMemoryStore.getState().toggleMatchEnabled('c1', 'pm-2'); });
+    expect(usePhraseMemoryStore.getState().matchesByChunk.get('c1')?.enabledMatchIds.has('pm-2')).toBe(true);
+    act(() => { useWorkspaceStore.setState({ activeWorkspace: { ...workspace, memorySearchAllWorkspaces: true } }); });
+    expect(usePhraseMemoryStore.getState().matchesByChunk.size).toBe(0);
   });
 });

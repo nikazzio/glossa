@@ -9,7 +9,7 @@ const dbMocks = vi.hoisted(() => ({
 vi.mock('./dbService', () => dbMocks);
 
 const {
-  deleteProject, getProjectSource, listProjects, saveProjectSource,
+  createProject, deleteProject, getProjectSource, listProjects, saveProjectSource,
   getDashboardOverviewStats, listProjectsNeedingAttention,
 } = await import('./projectService');
 
@@ -128,20 +128,40 @@ describe('projectService — deleteProject', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.runInTransaction.mockImplementation(async (callback: (run: typeof dbMocks.execute) => Promise<void>) => callback(dbMocks.execute));
   });
 
   it('deletes project-scoped data before deleting the project row', async () => {
     await deleteProject('proj-1');
+    expect(dbMocks.runInTransaction).toHaveBeenCalledOnce();
 
     expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
       'DELETE FROM operation_logs WHERE project_id = $1',
       'DELETE FROM project_glossaries WHERE project_id = $1',
-      'DELETE FROM source_phrase_embeddings WHERE project_id = $1',
       'UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1',
       'DELETE FROM translations WHERE project_id = $1',
       'DELETE FROM pipelines WHERE project_id = $1',
       'DELETE FROM projects WHERE id = $1',
     ]);
+  });
+});
+
+describe('projectService — explicit book origin', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.runInTransaction.mockImplementation(async (callback: (run: typeof dbMocks.execute) => Promise<void>) => callback(dbMocks.execute));
+  });
+  it('creates the translation, pipeline and selected source version in one transaction', async () => {
+    const id = await createProject('Fiore', 'la', 'it', 'ws-1', 'version-a');
+    expect(dbMocks.runInTransaction).toHaveBeenCalledOnce();
+    expect(dbMocks.execute).toHaveBeenCalledTimes(3);
+    expect(dbMocks.execute.mock.calls[2]).toEqual([expect.stringContaining('INSERT INTO translation_origins'), [id, 'version-a']]);
+  });
+  it('does not infer a book when no version is selected', async () => {
+    await createProject('Fiore.txt', 'la', 'it', 'ws-1');
+    expect(dbMocks.execute).toHaveBeenCalledTimes(2);
+    expect(dbMocks.execute.mock.calls.some(([query]) => String(query).includes('translation_origins'))).toBe(false);
   });
 });
 

@@ -3,15 +3,18 @@ import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { GlossaryEntry } from '../../types';
 import { generateId } from '../../utils';
-import { IconButton } from '../ui';
+import { IconButton, SectionLabel } from '../ui';
+import { BookMarked } from 'lucide-react';
+import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface Props {
   entries: GlossaryEntry[];
   onChange: (entries: GlossaryEntry[]) => void;
   readOnly?: boolean;
+  sourceReadOnly?: boolean;
 }
 
-export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: Props) {
+export function DictionaryEntryEditor({ entries, onChange, readOnly = false, sourceReadOnly = false }: Props) {
   const { t } = useTranslation();
 
   const duplicateTermIds = useMemo(() => {
@@ -43,14 +46,14 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-caption font-bold uppercase tracking-section text-editorial-muted">
-          {t('pipeline.keywordRegistry')}
+        <div className="flex items-center gap-2">
+          <SectionLabel icon={BookMarked} label={t('pipeline.keywordRegistry')} />
           {entries.length > 0 && (
             <span className="ml-2 font-mono font-normal normal-case tracking-normal text-editorial-muted/60">
               ({entries.length})
             </span>
           )}
-        </span>
+        </div>
         {!readOnly && (
           <IconButton onClick={addEntry} title={t('pipeline.addGlossaryEntry')} size="xs">
             <Plus size={16} />
@@ -90,10 +93,10 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                   <input
                     value={g.term}
                     onChange={(e) => g.id && updateEntry(g.id, { term: e.target.value })}
-                    readOnly={readOnly}
+                    readOnly={readOnly || sourceReadOnly && g.overridden !== undefined}
                     placeholder={t('pipeline.source')}
                     aria-label={`${t('pipeline.source')} ${i + 1}`}
-                    className="border-r border-rule-faint bg-transparent px-3 py-2 text-xs font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
+                    className={`${FIELD_CLASSNAME} font-mono`}
                   />
                   <input
                     value={g.translation}
@@ -101,7 +104,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                     readOnly={readOnly}
                     placeholder={t('pipeline.target')}
                     aria-label={`${t('pipeline.target')} ${i + 1}`}
-                    className="bg-transparent px-3 py-2 text-xs font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
+                    className={`${FIELD_CLASSNAME} font-mono`}
                   />
                   {!readOnly ? (
                     <IconButton
@@ -123,7 +126,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                   readOnly={readOnly}
                   placeholder={t('pipeline.glossaryNotes')}
                   aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
-                  className="w-full border-t border-rule-faint bg-editorial-textbox/20 px-3 py-1.5 pl-5 text-xs font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/30 focus:bg-editorial-accent/5 read-only:opacity-60"
+                  className={`${FIELD_CLASSNAME} mt-2 font-mono`}
                 />
                 {isDuplicate && (
                   <div className="border-t border-editorial-warning/30 bg-editorial-warning/8 px-3 py-1">

@@ -216,38 +216,83 @@ CREATE INDEX IF NOT EXISTS idx_operation_logs_model_at ON operation_logs(model, 
 CREATE INDEX IF NOT EXISTS idx_operation_logs_transcription
   ON operation_logs(transcription_document_id, at);
 
+-- Unità testuali e revisioni indipendenti dalla memoria traduttiva.
+CREATE TABLE IF NOT EXISTS text_units (
+  id TEXT PRIMARY KEY,
+  source_id TEXT REFERENCES sources(id) ON DELETE SET NULL,
+  source_version_id TEXT REFERENCES source_versions(id) ON DELETE SET NULL,
+  parent_unit_id TEXT REFERENCES text_units(id) ON DELETE SET NULL,
+  workspace_id TEXT REFERENCES workspaces(id) ON DELETE SET NULL,
+  provenance TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(provenance)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS text_unit_revisions (
+  id TEXT PRIMARY KEY,
+  unit_id TEXT NOT NULL REFERENCES text_units(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('source', 'translation', 'normalized')),
+  language TEXT NOT NULL CHECK (length(trim(language)) > 0),
+  text TEXT NOT NULL CHECK (length(trim(text)) > 0),
+  content_hash TEXT NOT NULL CHECK (length(content_hash) > 0),
+  revision_number INTEGER NOT NULL CHECK (revision_number > 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(unit_id, role, language, revision_number),
+  UNIQUE(unit_id, id)
+);
+
+CREATE TRIGGER IF NOT EXISTS text_unit_revisions_immutable
+BEFORE UPDATE ON text_unit_revisions
+BEGIN
+  SELECT RAISE(ABORT, 'Text revisions are immutable; create a new revision');
+END;
+
+CREATE TABLE IF NOT EXISTS text_embeddings (
+  revision_id TEXT NOT NULL REFERENCES text_unit_revisions(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL CHECK (length(trim(provider)) > 0),
+  model TEXT NOT NULL CHECK (length(trim(model)) > 0),
+  dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+  profile TEXT NOT NULL CHECK (length(trim(profile)) > 0),
+  embedding BLOB NOT NULL CHECK (length(embedding) = dimensions * 4),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(revision_id, provider, model, dimensions, profile)
+);
+CREATE INDEX IF NOT EXISTS idx_text_embeddings_profile
+  ON text_embeddings(provider, model, dimensions, profile, revision_id);
+
+CREATE TABLE IF NOT EXISTS text_unit_tags (
+  unit_id TEXT NOT NULL REFERENCES text_units(id) ON DELETE CASCADE,
+  name TEXT NOT NULL COLLATE NOCASE CHECK (length(trim(name)) > 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(unit_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS phrase_memory (
   id TEXT PRIMARY KEY,
-  source_phrase TEXT NOT NULL,
-  target_phrase TEXT NOT NULL,
-  confidence REAL NOT NULL DEFAULT 1.0,
-  source_language TEXT NOT NULL,
-  target_language TEXT NOT NULL,
+  unit_id TEXT NOT NULL UNIQUE REFERENCES text_units(id) ON DELETE CASCADE,
+  source_revision_id TEXT NOT NULL,
+  target_revision_id TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 1.0 CHECK (confidence BETWEEN 0 AND 1),
   author TEXT,
   work TEXT,
   domain TEXT,
-  tags TEXT,
   notes TEXT,
   chunk_id TEXT,
-  project_id TEXT REFERENCES projects(id),
-  embedding BLOB NOT NULL,
-  embedding_model TEXT,
-  created_at TEXT NOT NULL
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(unit_id, source_revision_id) REFERENCES text_unit_revisions(unit_id, id),
+  FOREIGN KEY(unit_id, target_revision_id) REFERENCES text_unit_revisions(unit_id, id)
 );
-
 CREATE INDEX IF NOT EXISTS idx_phrase_memory_chunk_project ON phrase_memory(chunk_id, project_id);
 
-CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
-  id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
-  chunk_id TEXT,
-  source_phrase TEXT NOT NULL,
-  embedding BLOB NOT NULL,
-  created_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_source_phrase_embeddings_chunk_project
-  ON source_phrase_embeddings(chunk_id, project_id);
+CREATE VIEW IF NOT EXISTS phrase_memory_entries AS
+SELECT pm.*, sr.text AS source_phrase, tr.text AS target_phrase,
+  sr.language AS source_language, tr.language AS target_language,
+  tu.source_id, tu.source_version_id, tu.provenance,
+  (SELECT p.workspace_id FROM projects p WHERE p.id = pm.project_id) AS workspace_id
+FROM phrase_memory pm
+JOIN text_units tu ON tu.id = pm.unit_id
+JOIN text_unit_revisions sr ON sr.id = pm.source_revision_id
+JOIN text_unit_revisions tr ON tr.id = pm.target_revision_id;
 
 CREATE TABLE IF NOT EXISTS annotations (
   id TEXT PRIMARY KEY,
@@ -553,7 +598,8 @@ CREATE TABLE IF NOT EXISTS provenance_events (
   entity_type TEXT NOT NULL CHECK (
     entity_type IN (
       'source', 'source_version', 'transcription_document', 'transcription_segment',
-      'transcription_revision', 'project', 'translation_chunk', 'artifact', 'job'
+      'transcription_revision', 'project', 'translation_chunk', 'artifact', 'job',
+      'text_unit', 'text_revision'
     )
   ),
   entity_id TEXT NOT NULL,

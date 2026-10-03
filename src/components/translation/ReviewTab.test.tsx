@@ -30,7 +30,7 @@ describe('ReviewTab', () => {
     renderReview('audit');
 
     const audit = screen.getByRole('tab', { name: /document\.insightsTabAudit/ });
-    expect(audit).toBeDisabled();
+    expect(audit).toHaveAttribute('aria-disabled', 'true');
     expect(audit).toHaveAccessibleName('document.insightsTabAudit — document.chunkTabLockedForAudit');
     expect(screen.getByRole('tab', { name: 'document.insightsTabNotes' })).toHaveAttribute('aria-selected', 'true');
   });

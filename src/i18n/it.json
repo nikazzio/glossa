@@ -1063,7 +1063,11 @@
     "changeSourceFile": "Scegli un altro file",
     "removeSourceFile": "Togli il file",
     "noSourceFile": "Nessun file: potrai importarlo dall'editor",
-    "readingSourceFile": "Lettura del file…"
+    "readingSourceFile": "Lettura del file…",
+    "sourceBook": "Libro e versione di origine",
+    "sourceBookUnspecified": "Libro non specificato",
+    "sourceBookHint": "Collega esplicitamente una versione della Biblioteca. Il nome del file importato non determina il libro.",
+    "sourceBookLoadError": "Impossibile caricare i libri disponibili"
   },
   "transcription": {
     "create": "Crea documento",
@@ -1838,6 +1842,8 @@
     "technicalSummary": "Riepilogo tecnico",
     "createdAt": "Creato",
     "memoryScope": "Ambito memoria",
+    "memorySearchAllWorkspaces": "Cerca anche nella memoria degli altri workspace",
+    "memorySearchAllWorkspacesHint": "Include anche frasi di altri workspace e senza workspace, della stessa coppia di lingue. Quando il modello di misura è registrato, deve coincidere con quello del workspace; ogni riferimento mostra la provenienza.",
     "workspaceScoped": "Per workspace",
     "pipelineBadge_one": "1 pipeline",
     "pipelineBadge_other": "{{count}} pipeline",
@@ -1869,9 +1875,9 @@
     },
     "namePlaceholder": "Nome workspace",
     "descriptionPlaceholder": "Descrizione del workspace",
-    "embeddingChangeWarning": "Modello cambiato. Rigenera gli embedding per applicare.",
+    "embeddingChangeWarning": "La ricerca userà il modello selezionato dopo il salvataggio. I testi senza questo embedding resteranno nel catalogo ma non compariranno tra le frasi simili.",
     "regenerateEmbeddings": "Rigenera tutti gli embedding",
-    "regenerateEmbeddingsHint": "Ri-embeds tutte le entry della memoria con il modello corrente ({{model}}).",
+    "regenerateEmbeddingsHint": "Calcola l’embedding con {{model}} per tutte le frasi di questo workspace tramite OpenAI, con i relativi costi. Conserva gli embedding degli altri modelli. Vuoi procedere?",
     "embeddingsRegenerated": "{{count}} entry ri-embedded con successo.",
     "embeddingsRegenerateFailed": "Rigenerazione embedding fallita.",
     "settings": {
@@ -2206,7 +2212,7 @@
       "human": "Manuale"
     },
     "historyEmpty": "Nessuna versione ancora: la prima arriva dalla pipeline o dal dischetto.",
-    "historyLoadFailed": "Storico non leggibile: {{message}}",
+    "historyLoadFailed": "Impossibile caricare lo storico. Riprova aprendo la scheda.",
     "reasonVerified": "traduzione verificata: riportala in bozza",
     "versionSaveFailed": "Versione non scritta nello storico",
     "saveNow": "Salva ora una versione nello storico",
@@ -2288,8 +2294,7 @@
     "insightsTabReferences": "Riferimenti",
     "insightsTabPromptPreview": "Anteprima",
     "viewOptions": "Opzioni vista",
-    "chunkTabLockedForAudit": "Disponibile dopo la traduzione del frammento",
-    "chunkTabLockedForMemory": "Disponibile dopo la traduzione del frammento"
+    "chunkTabLockedForAudit": "Disponibile dopo la traduzione del frammento"
   },
   "promptPreview": {
     "title": "Anteprima messaggio",
@@ -2471,7 +2476,8 @@
             "paragraphs": [
               "Sopra il documento una finestra di sette cerchi: il frammento aperto sta fermo al centro. Le frecce singole passano al frammento vicino, le doppie saltano di sette; la rotella sopra i cerchi li scorre, un clic ne apre uno. A destra le spie delle fasi del frammento aperto e la lente per cercare in tutto il documento. Il segno centrale indica se il frammento è da tradurre, in elaborazione, completato o in errore.",
               "Gli indicatori agli angoli segnalano problemi dell’audit, note, traduzione verificata (verde) e originale modificato dopo la traduzione (ocra). Il triangolo identifica il frammento corrente. Il suggerimento fornisce il riepilogo completo.",
-              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria, Anteprima e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti."
+              "Glossario e Documento (Indice, Statistiche, Coerenza) riguardano tutto il documento; Memoria, Anteprima e Revisione il frammento aperto. Stanno tutti nella colonna Strumenti.",
+              "Durante una traduzione in corso non puoi lasciare lo Studio: aspetta la fine o interrompi l’elaborazione. In caso di salvataggio fallito usa «Riprova»; i dettagli tecnici dell’errore sono nel log. Le schede disattivate restano raggiungibili col tabulatore per leggerne il motivo, ma non si aprono."
             ]
           },
           {
@@ -2512,6 +2518,22 @@
               "Con l’evidenziazione accesa, la legenda della scheda Glossario distingue termini sorgente, rese trovate e rese mancanti. Le evidenziazioni mostrano corrispondenze testuali, non una verifica del significato.",
               "Il glossario indica rese richieste. La memoria di frasi suggerisce invece riferimenti da selezionare per ciascun frammento."
             ]
+          },
+          {
+            "title": "Gestire i modelli di prompt",
+            "paragraphs": [
+              "Nelle Risorse linguistiche, apri Modelli Prompt. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Persona, Memoria oppure OCR.",
+              "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
+              "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
+            ]
+          },
+          {
+            "title": "Risorse generali e ambito delle modifiche",
+            "paragraphs": [
+              "Nelle Risorse linguistiche generali, il filtro per workspace mostra tutti i dizionari collegati, anche condivisi. Qui modifichi sempre il dizionario originale; il filtro cambia soltanto l’elenco.",
+              "Nel dizionario aperto, «Stai modificando» e «Le modifiche valgono per» indicano originale condiviso o correzioni locali e il workspace interessato. Le correzioni locali valgono solo nel workspace ospite, ma le voci nuove entrano nell’originale condiviso: una riga separata lo indica.",
+              "Il dischetto e «Salva e chiudi» rispettano questo ambito. Un errore lascia la finestra aperta; «Chiudi senza salvare» scarta le modifiche. Rinomina ed elimina riguardano l’originale condiviso. Scegli il workspace di destinazione per creare, importare o copiare dalle risorse generali."
+            ]
           }
         ]
       },
@@ -2522,8 +2544,9 @@
           {
             "title": "Usare frasi già salvate",
             "paragraphs": [
-              "Apri Memoria → Frasi simili in memoria nel frammento. Se la memoria è attiva, Glossa cerca corrispondenze nelle risorse del workspace. Puoi regolare la soglia di somiglianza.",
-              "Seleziona solo le coppie pertinenti. Entreranno nella richiesta quando tradurrai o rielaborerai il frammento. Le coppie non selezionate restano escluse."
+              "Apri Memoria → Riferimenti nel frammento. Glossa confronta soltanto testi della stessa coppia di lingue con un embedding dello stesso modello, dimensione e tipo di input del workspace. Regola la soglia e spunta soltanto i riferimenti pertinenti.",
+              "Ogni riferimento mostra libro quando noto, workspace, traduzione e frammento di origine, insieme al modello usato. La spunta decide se usarlo nella successiva traduzione; non modifica la raccolta. Le coppie già salvate nel frammento restano nella sottolinguetta Memoria: non vengono inserite automaticamente fra i risultati della ricerca.",
+              "Nelle impostazioni del workspace puoi attivare «Cerca anche nella memoria degli altri workspace» e salvare. Include anche frasi senza workspace, mantenendo compatibilità degli embedding e lingue. Consultare una frase non la collega al workspace."
             ]
           },
           {
@@ -2531,10 +2554,10 @@
             "paragraphs": [],
             "steps": [
               "Rivedi la traduzione del frammento e segnala come verificata.",
-              "Apri Memoria → Estrai frasi. Le frasi già salvate compaiono selezionate.",
-              "Premi Estrai frasi per ottenere proposte, oppure inserisci una coppia manualmente.",
-              "Correggi i testi e seleziona le coppie da conservare.",
-              "Salva la selezione. Una frase già salvata che hai deselezionato viene rimossa dalla raccolta."
+              "Apri Memoria → Memoria. Le coppie già salvate sono in sola lettura e hanno un proprio cestino.",
+              "Estrai nuove proposte oppure aggiungi una coppia manualmente.",
+              "Correggi le coppie nuove e spunta quelle da conservare.",
+              "Usa il dischetto per aggiungere le coppie spuntate: quelle già in memoria restano. Per rimuoverne una usa il suo cestino e conferma."
             ]
           },
           {
@@ -2542,6 +2565,18 @@
             "paragraphs": [
               "Un esempio di stile comprende un intero frammento e la sua traduzione. Serve a orientare la pipeline, mentre la memoria recupera singole coppie pertinenti.",
               "Dopo aver segnato un frammento come verificato, apri Audit e usa il comando per aggiungerlo come esempio. Nelle impostazioni della pipeline puoi rivederlo o rimuoverlo. Puoi conservarne fino a cinque."
+            ]
+          },
+          {
+            "title": "Consultare la raccolta",
+            "paragraphs": [
+              "Nelle Risorse linguistiche apri Memorie. Filtra per workspace, tutti o senza workspace; cerca nei testi e nelle etichette, oppure scegli un’etichetta. Le risorse generali partono da tutti, quelle del workspace dal workspace corrente.",
+              "Ogni testo mostra provenienza e tutti gli embedding disponibili. Scegli un modello e usa il più per aggiungerlo o la freccia circolare per ricalcolarlo: gli altri embedding restano. Il calcolo tramite OpenAI richiede una chiave e comporta costi, indicati nella conferma.",
+              "La matita corregge i due testi della memoria, senza cambiare la traduzione di origine. Cambiare solo la traduzione conserva gli embedding; cambiare l’originale ricalcola tutti quelli disponibili e conserva la versione precedente. Se un calcolo fallisce non viene salvata alcuna modifica.",
+              "Aggiungi etichette manuali separate da punto e virgola. Il cestino elimina il testo dalla memoria con le sue versioni ed embedding dopo conferma. Il comando del dizionario copia la coppia nel dizionario scelto. Esporta CSV conserva testi, etichette, provenienza e modelli delle sole frasi visibili.",
+              "Creando una traduzione puoi indicare il libro e la sua versione dalla Biblioteca. Senza questa scelta il libro resta «Non specificato». Non viene dedotto dal nome del file e non vengono inventati numeri di pagina.",
+              "Se correggi l’originale archiviato, la provenienza continua a descrivere l’estrazione iniziale e la riga «Originale archiviato» segnala la correzione. Non cambia il testo del libro.",
+              "Eliminare la traduzione conserva i testi già archiviati, con libro e provenienza. Compaiono come memorie senza workspace e indicano che la traduzione non è più disponibile."
             ]
           }
         ]
@@ -2614,7 +2649,8 @@
             "paragraphs": [
               "Alcuni servizi possono riutilizzare parti ripetute delle richieste tramite una cache. Il risparmio dipende dal servizio, dal modello e dal riuso effettivo: non è garantito.",
               "La cache Anthropic è disattivata per impostazione predefinita. Puoi abilitarla nella pipeline e scegliere una durata estesa, valutando quanto spesso riusi le stesse istruzioni.",
-              "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati."
+              "Le statistiche mostrano token, cache e costi calcolati quando questi dati sono disponibili. Un token è un’unità di testo usata dal modello, non necessariamente una parola. DeepL misura invece i caratteri fatturati.",
+              "Nella colonna Strumenti, passa sul costo stimato o sui consumi del frammento per aprire il dettaglio. La stima segue la modalità e il numero di blocchi selezionati; i consumi riguardano il frammento aperto."
             ]
           }
         ]
@@ -3073,6 +3109,49 @@
     "newTemplate": "Nuovo",
     "saveTemplate": "Salva modello",
     "templateNamePlaceholder": "Nome modello...",
+    "templateNameLabel": "Nome",
+    "editTemplate": "Modifica modello",
+    "templateSearch": "Cerca nei modelli",
+    "templateLoadError": "Non è stato possibile leggere i modelli",
+    "templateSaveError": "Non è stato possibile salvare il modello",
+    "templateDuplicate": "Esiste già un modello con questo nome, ambito e flusso. Modifica quello esistente o cambia nome.",
+    "templateDefaultModel": "Modello predefinito",
+    "templateDefaultModelHint": "Facoltativo: viene proposto quando applichi il modello di prompt. Qui serve anche per rifinire il testo.",
+    "templateWorkflowHint": "Indica il flusso per cui conservi queste istruzioni: traduzione o trascrizione.",
+    "templateOcrHint": "I modelli OCR sono disponibili nelle impostazioni OCR del workspace e nello Studio di trascrizione.",
+    "noDefaultModel": "Nessuno",
+    "workInProgress": "operazione in corso",
+    "promptRequired": "scrivi prima il testo del prompt",
+    "refineModelRequired": "scegli servizio e modello per rifinire",
+    "refineKeyRequired": "manca la chiave di {{provider}}",
+    "templateFieldsRequired": "scrivi nome e testo del prompt",
+    "memorySearch": "Cerca nelle frasi",
+    "memoryModelUnavailable": "modello di misura della frase non disponibile",
+    "modelNotRecorded": "Non registrato",
+    "memoryModelMissingHint": "Questa frase non ha un modello di misura registrato: non è possibile verificare quale sia stato usato. Resta consultabile e segue le regole attuali della ricerca. La modifica è spenta finché non viene ricalcolata nel suo workspace.",
+    "phrasesRequired": "scrivi entrambe le frasi",
+    "saveDictionaryFirst": "salva prima le modifiche al dizionario",
+    "createdAt": "Salvata",
+    "dictionaryLoadError": "Non è stato possibile leggere i dizionari",
+    "dictionarySearch": "Cerca nei dizionari",
+    "chooseWorkspace": "scegli il workspace di destinazione",
+    "destinationWorkspace": "Workspace di destinazione",
+    "dictionaryNameRequired": "scrivi il nome del dizionario",
+    "renameDictionary": "Rinomina l’originale condiviso",
+    "editOriginalHint": "Qui modifichi il dizionario originale: le modifiche valgono per tutti i workspace collegati. Le correzioni locali già presenti restano valide.",
+    "editWorkspaceHint": "Le correzioni alle traduzioni, le note e le voci nascoste valgono solo in questo workspace. Le voci nuove entrano invece nell’originale condiviso.",
+    "editingWhat": "Stai modificando",
+    "sharedOriginal": "Originale condiviso",
+    "localCorrections": "Correzioni locali alle voci",
+    "appliesWhere": "Le modifiche valgono per",
+    "linkedWorkspaces": "Tutti i workspace collegati",
+    "newEntriesWhere": "Le voci nuove entrano in",
+    "newEntriesSharedHint": "Un termine nuovo entra nel dizionario originale e sarà disponibile per tutti. Solo le correzioni di voci esistenti restano locali.",
+    "noChanges": "nessuna modifica da salvare",
+    "finishEditing": "salva o annulla la modifica in corso",
+    "discardDraftTitle": "Abbandonare la modifica?",
+    "discardDraftMessage": "La modifica in corso non è stata salvata. Chiudendo verrà scartata.",
+    "discardDraft": "Abbandona modifica",
     "templateContextLabel": "Ambito del template",
     "templateWorkflowLabel": "Flusso di lavoro del template",
     "templateRefineProviderLabel": "Provider per affinare il prompt",
@@ -3132,14 +3211,30 @@
     "memoryDeleteTitle": "Eliminare questa memoria?",
     "memoryDeleteMessage": "La memoria selezionata verrà rimossa dal workspace.",
     "memoryDeleteError": "Errore nell'eliminazione",
-    "embeddingModel": "Modello embedding",
+    "embeddingModel": "Modello di embedding",
     "fromProject": "Progetto",
     "fromChunk": "Chunk",
     "addToGlossary": "Aggiungi a glossario",
     "addedToGlossary": "Aggiunto al glossario",
     "addToGlossaryError": "Errore nell'aggiunta al glossario",
     "exportCsv": "Esporta CSV",
-    "exportCsvError": "Errore durante l'esportazione CSV"
+    "exportCsvError": "Errore durante l'esportazione CSV",
+    "embeddingModels": "Embedding del testo",
+    "embeddingModelsHint": "Ogni modello misura questa versione dell’originale. Aggiungerne uno conserva gli altri; la ricerca usa solo il modello attivo del workspace.",
+    "recalculateMeasure": "Ricalcola questo embedding",
+    "addMeasure": "Aggiungi un embedding",
+    "measureDimensions": "{{count}} dimensioni",
+    "noMeasures": "Nessun embedding",
+    "textTags": "Etichette del testo",
+    "textTagsHint": "Etichette manuali riutilizzabili. Separale con un punto e virgola.",
+    "noTags": "Nessuna etichetta",
+    "editTags": "Modifica etichette",
+    "filterByTag": "Filtra per etichetta",
+    "allTags": "Tutte le etichette",
+    "measureTitle": "Calcolo embedding",
+    "measureMessage": "Verrà calcolato l’embedding con {{model}} tramite OpenAI, con i relativi costi. Gli embedding degli altri modelli resteranno disponibili.",
+    "measureSaved": "Embedding salvato",
+    "sourceRecalculateMessage": "Modificando l’originale verranno ricalcolati {{count}} embedding tramite OpenAI, con i relativi costi. La versione precedente resterà archiviata. Se un calcolo fallisce, nessuna modifica verrà salvata."
   },
   "stats": {
     "cacheHitRateHint": "Percentuale di token serviti dalla cache del provider. Più è alta, minore il costo.",
@@ -3161,7 +3256,9 @@
     "resetAll": "Ripristina tutti",
     "overrideModel": "Modello",
     "overrideInput": "Ingresso $/1M",
-    "overrideOutput": "Uscita $/1M"
+    "overrideOutput": "Uscita $/1M",
+    "estimateDetails": "Dettaglio della stima",
+    "actualDetails": "Dettaglio dei consumi del frammento"
   },
   "languages": {
     "English": "Inglese",
@@ -3219,12 +3316,6 @@
     "dismiss": "Ignora"
   },
   "memory": {
-    "coldStartTitle": "Nessun match trovato",
-    "coldStartBodyShort": "Qui compaiono le frasi di memoria simili a questo frammento, se ce ne sono.",
-    "copyTranslationTitle": "Copia traduzione",
-    "appliedToClipboard": "Traduzione copiata negli appunti",
-    "enableMatch": "Usa questo match nella pipeline",
-    "matchToggleLabel": "Usa match",
     "extractTermButton": "Aggiungi al glossario",
     "extractTermTitle": "Estrai termine",
     "sourcePhraseShort": "Sorgente",
@@ -3242,7 +3333,6 @@
     "searchFailedRateLimit": "Troppe richieste al provider in questo momento: riprova tra qualche secondo.",
     "searchFailedConfig": "Chiave API non configurata o non valida: controlla le Impostazioni.",
     "searchFailedNetwork": "Connessione assente o instabile: controlla la rete e riprova.",
-    "memoriesLabel": "memorie",
     "loadingMemories": "Verifico le memorie salvate…",
     "chunkAlreadySaved_one": "Questo chunk ha già {{count}} frase salvata.",
     "chunkAlreadySaved_other": "Questo chunk ha già {{count}} frasi salvate.",
@@ -3251,7 +3341,6 @@
     "matchBadge": "{{count}} match",
     "similarityThreshold": "Soglia di similarità",
     "extractButton": "Estrai frasi",
-    "extractDisabledLockHint": "Segna come verificata la traduzione di questo frammento per estrarre le frasi.",
     "extracting": "Estrazione delle frasi in corso…",
     "extractFailed": "Estrazione delle frasi non riuscita",
     "extractFailedQuota": "Credito API esaurito: controlla piano e fatturazione del provider, poi riprova.",
@@ -3273,7 +3362,6 @@
     "confirmSaveButton": "Salva",
     "toggleSavedListShow": "Mostra frasi già salvate",
     "toggleSavedListHide": "Nascondi frasi già salvate",
-    "savedCandidateLabel": "Già salvata",
     "referencesGlossaryHint": "L'intero glossario del progetto viene sempre incluso nella traduzione di questo frammento.",
     "referencesMemorySectionTitle": "Frasi simili in memoria",
     "selectionHint": "Seleziona le frasi da usare per la traduzione di questo frammento.",
@@ -3301,7 +3389,14 @@
       "unknownTranslation": "Traduzione non più presente",
       "chunk": "Frammento",
       "origin": "Origine",
-      "imported": "Importata"
+      "imported": "Importata",
+      "book": "Libro",
+      "noBook": "Non specificato",
+      "translationRemoved": "Traduzione non più disponibile",
+      "originWorkspace": "Workspace di origine",
+      "bookVersion": "Versione del libro",
+      "textVersion": "Originale archiviato",
+      "sourceEdited": "Corretto dopo l’estrazione"
     }
   },
   "glossary": {

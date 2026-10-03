@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { EmbeddingJobStatus, PhraseMatch } from '../types';
+import type { EmbeddingJobStatus, PhraseMatch, TextProvenance } from '../types';
 
 export type PhraseMemorySearchStatus = 'idle' | 'searching' | 'done' | 'error';
 
@@ -17,6 +17,9 @@ export type PhraseMemoryMatch = {
   workspaceId: string | null;
   projectId: string | null;
   chunkId: string | null;
+  provenance?: TextProvenance;
+  embeddingModel?: string;
+  dimensions?: number;
 };
 
 export type ChunkPhraseMatches = {
@@ -49,6 +52,9 @@ function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
     workspaceId: m.workspaceId,
     projectId: m.projectId,
     chunkId: m.chunkId,
+    provenance: m.provenance,
+    embeddingModel: m.embeddingModel,
+    dimensions: m.dimensions,
   };
 }
 

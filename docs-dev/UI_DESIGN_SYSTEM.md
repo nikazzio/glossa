@@ -567,6 +567,17 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 
 ### Elenchi di versioni e comandi per riga
 
+Le Risorse linguistiche usano `TabStrip` nella fila della finestra, ricerca
+`CatalogSearchField`, righe piatte e campi comuni. Modelli di prompt: modulo
+esplicito con nome, ambito (suggerimento), flusso, modello facoltativo e testo,
+con rifinitura, salvataggio e annullamento a icona; nessun editor a matita dello
+Studio dentro il modulo. Dizionari aperti: `StatRow` «Stai modificando» e «Le
+modifiche valgono per» rendono **visibile** la distinzione fra originale
+condiviso e correzioni locali; in un workspace ospite una terza riga dice che
+le voci nuove entrano nell’originale. Il suggerimento approfondisce, non
+sostituisce questa informazione necessaria per scegliere cosa modificare.
+Memorie: provenienza comune, coppie su `StatBlock`, campi e comandi per riga.
+
 Quando una riga descrive una cosa su cui si può agire — una versione locale di
 un libro, un profilo, un file — i comandi che la riguardano stanno **su quella
 riga**, non nell'intestazione della sezione: nell'intestazione non si capisce su
@@ -608,7 +619,7 @@ destra. Un'informazione non cambia posizione passando tra sezioni.
 
 Lo stato del salvataggio di uno Studio (traduzione o trascrizione) vive qui,
 in fondo a destra: pallino e parola, suggerimento con l'ora dell'ultimo
-salvataggio e il motivo dell'errore. Nella testata del foglio resta solo il
+salvataggio e un messaggio tradotto in caso di errore; dettagli tecnici nel log. Nella testata del foglio resta solo il
 dischetto, spento senza niente da salvare (motivo nel suggerimento se è
 bloccato), `danger` con «Riprova» dopo un errore. La barra è una regione
 `aria-live`: si annuncia solo l'errore, mai «da salvare» o «salvato».
@@ -684,3 +695,12 @@ Niente colori neon o valori locali.
    quelle esistenti.
 
 Il riferimento visivo live è nella guida di stile interna dell'app.
+
+
+Risorse Memorie: elenco piatto, provenienza con StatRow/StatBlock, modelli e tag
+con SettingRow/Select e IconButton neutri. Bozze protette durante cambio scheda,
+filtri e chiusura. Le correzioni ai testi riguardano la memoria: evidenza iniziale
+congelata e riga esplicita dopo modifica dell’originale. Costi su Popover comune,
+nessun pannello con portal/posizionamento/timer propri. Opzioni vista su righe
+comuni; importazione a vuoto con IconButton. Tab indisponibili aria-disabled,
+focusabili per il motivo e mai attivabili. Dettagli tecnici di errore nel log.

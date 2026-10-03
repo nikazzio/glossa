@@ -439,7 +439,7 @@ describe('projectStore', () => {
 
     await useProjectStore.getState().createAndOpen('New Project', 'ws-other');
 
-    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('New Project', 'English', 'Italian', 'ws-other');
+    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('New Project', 'English', 'Italian', 'ws-other', undefined);
     expect(workspaceState.setActive).toHaveBeenCalledWith(otherWorkspace);
   });
 
@@ -508,6 +508,17 @@ describe('projectStore', () => {
       'proj-1', 'Last edit', 'Last edit', [], expect.anything(),
     );
     expect(closeProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaveProject refuses to close or clear chunks while the pipeline runs', async () => {
+    const closeProject = vi.fn();
+    useProjectStore.setState({ currentProjectId: 'proj-1', closeProject });
+    useChunksStore.setState({ isProcessing: true });
+    await expect(useProjectStore.getState().leaveProject()).resolves.toBe(false);
+    expect(closeProject).not.toHaveBeenCalled();
+    expect(projectServiceMocks.saveProjectSource).not.toHaveBeenCalled();
+    expect(useProjectStore.getState().currentProjectId).toBe('proj-1');
+    expect(useChunksStore.getState().isProcessing).toBe(true);
   });
 
   it('leaveProject closes without saving when nothing changed', async () => {

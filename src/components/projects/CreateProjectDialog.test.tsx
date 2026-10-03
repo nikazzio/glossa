@@ -13,6 +13,8 @@ vi.mock('../../services/fileService', async (importOriginal) => ({
   importTextFile: vi.fn(),
 }));
 
+vi.mock('../../services/projectService', () => ({ listProjectSourceVersions: vi.fn().mockResolvedValue([{ id: 'version-a', title: 'Fiore', label: 'Testimone A' }]) }));
+
 describe('CreateProjectDialog', () => {
   const createAndOpen = vi.fn().mockResolvedValue(undefined);
 
@@ -32,23 +34,23 @@ describe('CreateProjectDialog', () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onClose={vi.fn()} workspaceId="ws-2" />);
 
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('projects.chooseWorkspace')).not.toBeInTheDocument();
     await user.type(screen.getByPlaceholderText('projects.namePlaceholder'), 'Nuovo progetto');
     await user.click(screen.getByRole('button', { name: 'projects.create' }));
 
-    expect(createAndOpen).toHaveBeenCalledWith('Nuovo progetto', 'ws-2');
+    expect(createAndOpen).toHaveBeenCalledWith('Nuovo progetto', 'ws-2', undefined);
   });
 
   it('requires an explicit workspace pick when none is given (never falls back silently)', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onClose={vi.fn()} />);
 
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
-    await user.selectOptions(screen.getByRole('combobox'), 'ws-2');
+    expect(screen.getByLabelText('projects.chooseWorkspace')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('projects.chooseWorkspace'), 'ws-2');
     await user.type(screen.getByPlaceholderText('projects.namePlaceholder'), 'Nuovo progetto');
     await user.click(screen.getByRole('button', { name: 'projects.create' }));
 
-    expect(createAndOpen).toHaveBeenCalledWith('Nuovo progetto', 'ws-2');
+    expect(createAndOpen).toHaveBeenCalledWith('Nuovo progetto', 'ws-2', undefined);
   });
 
   it('keeps create disabled when there is no workspace to pick from', async () => {
@@ -72,7 +74,7 @@ describe('CreateProjectDialog', () => {
     expect(await screen.findByText('de-officiis.txt')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'projects.create' }));
 
-    expect(createAndOpen).toHaveBeenCalledWith('De officiis', 'ws-1');
+    expect(createAndOpen).toHaveBeenCalledWith('De officiis', 'ws-1', undefined);
     expect(useUiStore.getState().pendingImportFile).toEqual(file);
   });
 
@@ -88,6 +90,16 @@ describe('CreateProjectDialog', () => {
     expect(useUiStore.getState().pendingImportFile).toBeNull();
   });
 
+  it('links an explicitly selected book version without guessing from the file', async () => {
+    const user = userEvent.setup();
+    render(<CreateProjectDialog open onClose={vi.fn()} workspaceId="ws-1" />);
+    await screen.findByRole('option', { name: 'Fiore — Testimone A' });
+    await user.selectOptions(screen.getByLabelText('projects.sourceBook'), 'version-a');
+    await user.type(screen.getByPlaceholderText('projects.namePlaceholder'), 'Fiore');
+    await user.click(screen.getByRole('button', { name: 'projects.create' }));
+    expect(createAndOpen).toHaveBeenCalledWith('Fiore', 'ws-1', 'version-a');
+  });
+
   it('creates an empty translation when no file is chosen', async () => {
     const user = userEvent.setup();
     render(<CreateProjectDialog open onClose={vi.fn()} workspaceId="ws-1" />);
@@ -95,7 +107,7 @@ describe('CreateProjectDialog', () => {
     await user.type(screen.getByPlaceholderText('projects.namePlaceholder'), 'Bozza');
     await user.click(screen.getByRole('button', { name: 'projects.create' }));
 
-    expect(createAndOpen).toHaveBeenCalledWith('Bozza', 'ws-1');
+    expect(createAndOpen).toHaveBeenCalledWith('Bozza', 'ws-1', undefined);
     expect(useUiStore.getState().pendingImportFile).toBeNull();
   });
 });

@@ -29,5 +29,8 @@
 # Consolidamento pre-1.0 (23 settembre 2026): nome delle versioni consolidate
 # della trascrizione nella baseline, prima del merge. Database locale ricreato.
 
-0001_baseline_2_0.sql 78fd5b2f9c0d3588
+# 3 ottobre 2026: base corpus/embedding, beta senza dati distribuiti;
+# ricreazione esplicita dei database di test, nessun backfill implicito.
+
+0001_baseline_2_0.sql e637839c84d55bd5
 0002_workspace_memory_scope.sql c55dcc7e778fe168

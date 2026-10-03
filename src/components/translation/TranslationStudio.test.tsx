@@ -107,7 +107,7 @@ describe('TranslationStudio', () => {
     renderStudio();
 
     const glossary = screen.getByRole('tab', { name: /document\.insightsTabGlossary/ });
-    expect(glossary).toBeDisabled();
+    expect(glossary).toHaveAttribute('aria-disabled', 'true');
     expect(glossary).toHaveAccessibleName('document.insightsTabGlossary — document.insightsGlossaryEmpty');
     expect(screen.getByRole('tab', { name: 'document.insightsTabMemory' })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: 'document.insightsTabReview' })).not.toBeDisabled();

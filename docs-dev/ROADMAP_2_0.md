@@ -242,7 +242,17 @@ dischetto, ripristino; **in futuro**: nomi/puntine sulle versioni, con una
 colonna nuova) e la configurazione della pipeline (T5: finestra a sei linguette
 comuni, sezione Modello e editor dei prompt comuni, niente spiegazioni fisse,
 «Azzera tutte le traduzioni» a icona, velo comune) e il velo oro sul frammento
-in traduzione (T6); restano scheda Memoria (T7) e costi (T8); quali riepiloghi unire
+in traduzione (T6) e Memoria/risorse linguistiche (T7: scheda del frammento,
+modelli modificabili con filtro OCR, dizionari con ambito visibile, memorie
+con provenienza/modello e filtri, ricerca fra workspace). T7 implementato:
+resta la prova dal vivo. Decisione del 3 ottobre: nessuna retrocompatibilità
+per embedding senza modello; più misure per unità testuale, modello obbligatorio
+e ricerca compatibile. Base corpus implementata: unità/revisioni/misure/tag,
+provenienza e libro esplicito; selezione di pagine/sezioni e analisi restano future.
+Costi T8 su pannelli comuni; conteggio blocchi confermato dall'utente.
+T9: revisione finale e nove correzioni della review implementate; i due Studio
+sono inclusi nello stesso ramo della PR #488. Restano CI e prova dal vivo;
+quali riepiloghi unire
 nella colonna si decide dopo. Scelta multipla nei cataloghi, non chiesta per
 ora.
 
@@ -258,6 +268,10 @@ Issue: #208, #221, #222, #209, #223, #189, #224; risorse contestuali #227.
 - Creare il progetto di traduzione dal testo approvato senza perdere provenienza.
 - Collegare fonte, trascrizioni e traduzioni dalla scheda dell'opera.
 - Integrare corpus e suggerimenti contestuali con ambito workspace chiaro.
+- Generalizzare #227 a unità testuali di lunghezza variabile, anche passaggi
+  attraverso più pagine; tecniche storiche come esempio di classificazione.
+  Tenere distinti corpus testuale ed evidenze visive #209/#223, collegandone
+  le provenienze. Tag manuali riutilizzabili e versioni del testo nella base.
 
 Uscita: image workbench e corpus di frammenti pronti; passaggio trascrizione
 → traduzione con provenienza conservata, storico ricostruibile.
@@ -291,6 +305,16 @@ L'addestramento resta esterno a Glossa.
 
 Il loro perimetro minimo per la prima beta completa va deciso sulla base dei
 casi reali: non dichiararli rimossi né prometterli tutti nel prossimo tag.
+
+Fondazione da strutturare ora: testo/versione/provenienza separati dalle misure,
+più embedding con modello/dimensione/input obbligatori; un modello attivo per
+workspace e nessuna cancellazione implicita degli altri. #391 va riallineata
+alla conservazione delle misure; #382 riusa questa base per originali e
+traduzioni. Backup/dataset conservano relazioni e revisioni. Ricerca ibrida,
+tag automatici, vocabolari multilingui e analisi di opere intere restano passi
+successivi, da valutare su testi medievali reali.
+
+Ordine e verifiche: [piano del corpus testuale](./PIANO_CORPUS_TESTUALE_EMBEDDING.md).
 
 ## Riferimenti e lavori trasversali
 

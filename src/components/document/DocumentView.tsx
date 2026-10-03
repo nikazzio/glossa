@@ -7,7 +7,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX, PagePendingOverlay } from '../common';
-import { IconButton, Tooltip } from '../ui';
+import { IconButton } from '../ui';
 import { DocumentPage } from './DocumentPage';
 import { ProjectSaveButton } from './ProjectSaveButton';
 import { ChunkStrip } from './ChunkStrip';
@@ -173,21 +173,10 @@ export function DocumentView({
             {t('document.projectHomeEmpty')}
           </p>
 
-          <Tooltip label={t('document.projectHomeImport')} className="w-full max-w-xl">
-          <button
-            type="button"
-            onClick={onImportDocument}
-            aria-label={t('document.projectHomeImport')}
-            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-lg border border-dashed border-editorial-border bg-surface-panel px-6 py-8 text-center transition-colors hover:border-editorial-accent hover:bg-surface-hover/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent group-hover:text-editorial-accent">
-              <FileText size={22} />
-            </span>
-            <span className="mt-3 text-caption font-bold uppercase tracking-section text-editorial-muted transition-colors group-hover:text-editorial-accent">
-              {t('document.projectHomeImport')}
-            </span>
-          </button>
-          </Tooltip>
+          <div className="mt-8 flex items-center gap-3 border-y border-rule py-4">
+            <IconButton size="md" onClick={onImportDocument} title={t('document.projectHomeImport')}><FileText size={20} /></IconButton>
+            <span className="text-sm text-editorial-muted">{t('document.projectHomeImport')}</span>
+          </div>
         </div>
       </section>
     );

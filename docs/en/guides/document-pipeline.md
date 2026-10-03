@@ -143,3 +143,19 @@ Check incomplete segments before exporting: standard formats may use the
 source text where a segment has no translation. Bilingual export explicitly
 distinguishes the source from a missing translation. See
 [export formats and contents](../reference/import-export).
+
+
+## Saving, navigation and cost details
+
+While translation is running, the Studio remains open. Wait until it finishes
+or stop processing before leaving. The save icon and Ctrl/⌘+S save changes;
+after a failure the command offers **Retry**. User feedback is translated;
+technical details remain in the log. History loading and restoration follow the same rule.
+
+Unavailable tabs remain reachable with Tab so their labels explain why they
+cannot be opened. Arrow keys skip them. Circular selectors remain reachable
+even when the currently selected option is unavailable.
+
+Hover over estimated cost or usage in Tools to open details. The estimate follows
+the selected mode and block count; usage refers to the open chunk. The block
+count does not represent repeated translations.

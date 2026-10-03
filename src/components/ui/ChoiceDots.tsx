@@ -46,8 +46,8 @@ export function ChoiceDots<T extends string>({
   tooltipSide = 'top',
 }: ChoiceDotsProps<T>) {
   const buttonRefs = useRef<Partial<Record<T, HTMLButtonElement | null>>>({});
-  // Se il valore non è fra le scelte mostrate, il tabulatore entra dalla prima.
-  const tabbableValue = options.some((option) => option.value === value) ? value : options[0]?.value;
+  const enabledOptions = options.filter((option) => !option.disabled);
+  const tabbableValue = enabledOptions.some((option) => option.value === value) ? value : enabledOptions[0]?.value;
 
   const handleKeyDown = (current: T, event: KeyboardEvent<HTMLButtonElement>) => {
     const enabled = options.filter((option) => !option.disabled);

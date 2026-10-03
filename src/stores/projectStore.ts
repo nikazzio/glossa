@@ -61,7 +61,7 @@ interface ProjectState {
   lastRunConfig: string | null;
 
   loadProjects: () => Promise<void>;
-  createAndOpen: (name: string, workspaceId: string) => Promise<void>;
+  createAndOpen: (name: string, workspaceId: string, sourceVersionId?: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
@@ -112,7 +112,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ projects });
   },
 
-  createAndOpen: async (name: string, workspaceId: string) => {
+  createAndOpen: async (name: string, workspaceId: string, sourceVersionId?: string) => {
     const pipeline = usePipelineStore.getState();
     const chunks = useChunksStore.getState().chunks;
     const workspaceStore = useWorkspaceStore.getState();
@@ -122,7 +122,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await workspaceStore.setActive(workspace);
     }
 
-    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, workspace.id);
+    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, workspace.id, sourceVersionId);
 
     const pipelines = await listPipelines(id);
     const activePipelineId = pipelines[0]?.id ?? null;
@@ -300,12 +300,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   leaveProject: async () => {
-    // Durante la pipeline non si salva a mano: la pipeline salva da sé alla fine.
-    if (get().currentProjectId && !useChunksStore.getState().isProcessing) {
+    if (get().currentProjectId && useChunksStore.getState().isProcessing) return false;
+    if (get().currentProjectId) {
       // Un salvataggio già partito può non contenere l'ultima modifica: lo si
       // aspetta e poi si confronta di nuovo. Il suo eventuale errore non va
       // riportato qui, perché il confronto qui sotto ritenta comunque.
       if (saveInFlight) await saveInFlight.catch(() => undefined);
+      if (useChunksStore.getState().isProcessing) return false;
       if (currentProjectSnapshot() !== get().trackedSnapshot) {
         try {
           await get().saveCurrentProject();
@@ -314,6 +315,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
       }
     }
+    if (get().currentProjectId && useChunksStore.getState().isProcessing) return false;
     get().closeProject();
     return true;
   },

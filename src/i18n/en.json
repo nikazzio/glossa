@@ -1063,7 +1063,11 @@
     "changeSourceFile": "Choose another file",
     "removeSourceFile": "Remove the file",
     "noSourceFile": "No file: you can import it from the editor",
-    "readingSourceFile": "Reading the file…"
+    "readingSourceFile": "Reading the file…",
+    "sourceBook": "Source book and version",
+    "sourceBookUnspecified": "Book not specified",
+    "sourceBookHint": "Explicitly link a Library version. The imported file name does not determine the book.",
+    "sourceBookLoadError": "Could not load available books"
   },
   "transcription": {
     "create": "Create document",
@@ -1838,6 +1842,8 @@
     "technicalSummary": "Technical summary",
     "createdAt": "Created",
     "memoryScope": "Memory scope",
+    "memorySearchAllWorkspaces": "Also search other workspaces’ memory",
+    "memorySearchAllWorkspacesHint": "Includes phrases from other workspaces and without a workspace, for the same language pair. When the embedding model is recorded, it must match the workspace model; each reference shows its origin.",
     "workspaceScoped": "Workspace-scoped",
     "pipelineBadge_one": "1 pipeline",
     "pipelineBadge_other": "{{count}} pipelines",
@@ -1869,9 +1875,9 @@
     },
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
-    "embeddingChangeWarning": "Model changed. Regenerate embeddings to apply.",
+    "embeddingChangeWarning": "After saving, search uses the selected model. Texts without this embedding remain in the catalogue but do not appear among similar phrases.",
     "regenerateEmbeddings": "Regenerate all embeddings",
-    "regenerateEmbeddingsHint": "Re-embeds all memory entries with the current model ({{model}}).",
+    "regenerateEmbeddingsHint": "Calculate embeddings with {{model}} for every phrase in this workspace through OpenAI, incurring API costs. Embeddings from other models are preserved. Continue?",
     "embeddingsRegenerated": "{{count}} entries successfully re-embedded.",
     "embeddingsRegenerateFailed": "Embedding regeneration failed.",
     "settings": {
@@ -2206,7 +2212,7 @@
       "human": "Manual"
     },
     "historyEmpty": "No versions yet: the first comes from the pipeline or the disk.",
-    "historyLoadFailed": "History unreadable: {{message}}",
+    "historyLoadFailed": "Could not load history. Try opening the tab again.",
     "reasonVerified": "translation verified: return it to draft",
     "versionSaveFailed": "Version not written to the history",
     "saveNow": "Save a version to the history now",
@@ -2288,8 +2294,7 @@
     "insightsTabReferences": "References",
     "insightsTabPromptPreview": "Preview",
     "viewOptions": "View options",
-    "chunkTabLockedForAudit": "Available after the chunk is translated",
-    "chunkTabLockedForMemory": "Available after the chunk is translated"
+    "chunkTabLockedForAudit": "Available after the chunk is translated"
   },
   "promptPreview": {
     "title": "Message preview",
@@ -2471,7 +2476,8 @@
             "paragraphs": [
               "Above the document a window of seven circles keeps the open segment still in the middle. Single arrows move to the neighbouring segment, double ones jump by seven; the wheel over the circles scrolls them, a click opens one. On the right are the open segment's stage indicators and the magnifier to search the whole document. The central mark shows whether a segment is ready, processing, completed or in error.",
               "Corner indicators identify audit findings, notes, a verified translation (green) and a source changed after translation (ochre). The triangle marks the current segment. The tooltip provides a full summary.",
-              "Glossary and Document (Index, Statistics, Coherence) cover the whole document; Memory, Preview and Review the open segment. They all live in the Tools column."
+              "Glossary and Document (Index, Statistics, Coherence) cover the whole document; Memory, Preview and Review the open segment. They all live in the Tools column.",
+              "You cannot leave the Studio while translation is running: wait until it finishes or stop processing. If saving fails, use “Retry”; technical details remain in the log. Disabled tabs stay reachable with Tab so you can read why they are unavailable, but cannot be opened."
             ]
           },
           {
@@ -2512,6 +2518,22 @@
               "With highlighting on, the Glossary legend distinguishes source terms, matching translations and missing translations. Highlighting shows textual matches, not a check of meaning.",
               "The glossary specifies required wording. Phrase memory instead suggests references to select for each segment."
             ]
+          },
+          {
+            "title": "Managing prompt templates",
+            "paragraphs": [
+              "In Language resources, open Prompt Templates. Search names and text, and filter by Stages, Quality control, Persona, Memory, or OCR.",
+              "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
+              "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
+            ]
+          },
+          {
+            "title": "General resources and editing scope",
+            "paragraphs": [
+              "In General language resources, the workspace filter shows all linked dictionaries, including shared ones. You always edit originals here; filtering only changes the list.",
+              "In an open dictionary, “You are editing” and “Changes apply to” identify the shared original or local overrides and the affected workspace. Local overrides apply only to the guest workspace, but new entries are added to the shared original, as a separate row explains.",
+              "The disk and “Save and close” respect this scope. A save error keeps the window open; “Close without saving” discards edits. Rename and delete affect the shared original. Choose a destination workspace to create, import or copy from general resources."
+            ]
           }
         ]
       },
@@ -2522,8 +2544,9 @@
           {
             "title": "Using saved phrases",
             "paragraphs": [
-              "Open Memory → Similar phrases in memory for the segment. When memory is enabled, Glossa searches the workspace’s resources for matches. You can adjust the similarity threshold.",
-              "Select only relevant pairs. They will be included when you translate or reprocess the segment. Unselected pairs are excluded."
+              "Open Memory → References for the chunk. Glossa compares only texts with the same language pair and an embedding matching the workspace model, dimensions and input profile. Adjust the similarity threshold and select relevant references.",
+              "Each reference shows the book when known, workspace, translation and source chunk, plus the model used. Selecting it controls inclusion in the next translation, without changing the collection. Pairs already saved in the chunk remain in the Memory subtab; they are not automatically inserted among search results.",
+              "In workspace settings enable “Search memory from other workspaces too” and save to include other workspaces and unassigned phrases. Language and embedding compatibility still apply. Viewing a phrase does not link it to this workspace."
             ]
           },
           {
@@ -2531,10 +2554,10 @@
             "paragraphs": [],
             "steps": [
               "Review the segment’s translation and mark it as verified.",
-              "Open Memory → Extract phrases. Previously saved phrases appear selected.",
-              "Choose Extract phrases to generate proposals, or enter a pair manually.",
-              "Edit the text and select the pairs to keep.",
-              "Save the selection. A previously saved phrase that you deselected is removed from the collection."
+              "Open Memory → Memory. Saved pairs are read-only and each has its own trash command.",
+              "Extract new proposals or add a pair manually.",
+              "Edit new pairs and select those to keep.",
+              "Use the disk command to add selected pairs. Existing pairs remain saved; use their own trash command and confirm to remove them."
             ]
           },
           {
@@ -2542,6 +2565,18 @@
             "paragraphs": [
               "A style example contains an entire segment and its translation. It guides the pipeline, while phrase memory retrieves individual relevant pairs.",
               "After marking a segment as verified, open Audit and use the control to add it as an example. Review or remove it in pipeline settings. You can keep up to five examples."
+            ]
+          },
+          {
+            "title": "Browsing the collection",
+            "paragraphs": [
+              "Open Linguistic resources → Memories. Filter by workspace, all or unassigned; search texts and tags, or select a tag. General resources start with all entries; workspace resources start with the current workspace.",
+              "Each text shows provenance and all available embeddings. Select a model and use plus to add it or the circular arrow to recalculate it. Other embeddings remain. OpenAI calculation needs a key and incurs costs, described in the confirmation.",
+              "The pencil edits both memory texts without changing the original translation. Editing only the translation preserves embeddings. Editing the source recalculates all available embeddings and archives the previous revision. If any calculation fails, no changes are saved.",
+              "Add manual tags separated by semicolons. After confirmation, the bin removes the memory text, revisions and embeddings. The dictionary command copies the pair into the selected dictionary. CSV export preserves text, tags, provenance and models for visible phrases only.",
+              "When creating a translation, you can select a Library book and version. Without this choice, the book is “Not specified”. It is not inferred from the imported filename and page numbers are not invented.",
+              "If you edit the archived source, provenance continues to describe the initial extraction and the “Archived source” row identifies the edit. The book text does not change.",
+              "Deleting a translation preserves archived texts, book and provenance. They appear as unassigned memory entries and indicate that the translation is no longer available."
             ]
           }
         ]
@@ -2614,7 +2649,8 @@
             "paragraphs": [
               "Some services can reuse repeated request content through a cache. Savings depend on the service, model and actual reuse; they are not guaranteed.",
               "Anthropic caching is off by default. You can enable it in the pipeline and choose extended retention, considering how often you reuse the same instructions.",
-              "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead."
+              "Statistics show tokens, cache usage and calculated costs when those data are available. A token is a unit of text used by the model, not necessarily a word. DeepL measures billed characters instead.",
+              "In the Tools column, hover over estimated cost or chunk usage to open details. The estimate follows the selected mode and block count; usage refers to the open chunk."
             ]
           }
         ]
@@ -3073,6 +3109,49 @@
     "newTemplate": "New",
     "saveTemplate": "Save template",
     "templateNamePlaceholder": "Template name...",
+    "templateNameLabel": "Name",
+    "editTemplate": "Edit template",
+    "templateSearch": "Search templates",
+    "templateLoadError": "Could not load templates",
+    "templateSaveError": "Could not save the template",
+    "templateDuplicate": "A template with this name, scope and workflow already exists. Edit it or use a different name.",
+    "templateDefaultModel": "Default model",
+    "templateDefaultModelHint": "Optional: suggested when you apply this prompt template. Also used here to refine the text.",
+    "templateWorkflowHint": "The workflow these instructions are saved for: translation or transcription.",
+    "templateOcrHint": "OCR templates are available in workspace OCR settings and the transcription Studio.",
+    "noDefaultModel": "None",
+    "workInProgress": "operation in progress",
+    "promptRequired": "enter prompt text first",
+    "refineModelRequired": "choose a provider and model to refine",
+    "refineKeyRequired": "missing {{provider}} API key",
+    "templateFieldsRequired": "enter a name and prompt text",
+    "memorySearch": "Search phrases",
+    "memoryModelUnavailable": "phrase embedding model unavailable",
+    "modelNotRecorded": "Not recorded",
+    "memoryModelMissingHint": "This phrase has no recorded embedding model, so its original model cannot be verified. It remains visible and follows the current search rules. Editing is disabled until it is recalculated in its own workspace.",
+    "phrasesRequired": "enter both phrases",
+    "saveDictionaryFirst": "save dictionary changes first",
+    "createdAt": "Saved",
+    "dictionaryLoadError": "Could not load dictionaries",
+    "dictionarySearch": "Search dictionaries",
+    "chooseWorkspace": "choose a destination workspace",
+    "destinationWorkspace": "Destination workspace",
+    "dictionaryNameRequired": "enter a dictionary name",
+    "renameDictionary": "Rename the shared original",
+    "editOriginalHint": "You are editing the original dictionary: changes apply to all linked workspaces. Existing local overrides remain in effect.",
+    "editWorkspaceHint": "Translation overrides, notes and hidden entries apply only to this workspace. New entries are added to the shared original.",
+    "editingWhat": "You are editing",
+    "sharedOriginal": "Shared original",
+    "localCorrections": "Local entry overrides",
+    "appliesWhere": "Changes apply to",
+    "linkedWorkspaces": "All linked workspaces",
+    "newEntriesWhere": "New entries are added to",
+    "newEntriesSharedHint": "A new term is added to the original dictionary for everyone. Only changes to existing entries stay local.",
+    "noChanges": "no changes to save",
+    "finishEditing": "save or cancel the current edit",
+    "discardDraftTitle": "Discard the current edit?",
+    "discardDraftMessage": "Your current edit has not been saved. Closing will discard it.",
+    "discardDraft": "Discard edit",
     "templateContextLabel": "Template scope",
     "templateWorkflowLabel": "Template workflow",
     "templateRefineProviderLabel": "Provider to refine the prompt",
@@ -3139,7 +3218,23 @@
     "addedToGlossary": "Added to glossary",
     "addToGlossaryError": "Error adding to glossary",
     "exportCsv": "Export CSV",
-    "exportCsvError": "Failed to export CSV"
+    "exportCsvError": "Failed to export CSV",
+    "embeddingModels": "Text embeddings",
+    "embeddingModelsHint": "Each model measures this revision of the source. Adding one preserves the others; search uses only the active workspace model.",
+    "recalculateMeasure": "Recalculate this embedding",
+    "addMeasure": "Add an embedding",
+    "measureDimensions": "{{count}} dimensions",
+    "noMeasures": "No embeddings",
+    "textTags": "Text tags",
+    "textTagsHint": "Reusable manual tags. Separate them with a semicolon.",
+    "noTags": "No tags",
+    "editTags": "Edit tags",
+    "filterByTag": "Filter by tag",
+    "allTags": "All tags",
+    "measureTitle": "Calculate embedding",
+    "measureMessage": "The embedding will be calculated with {{model}} through OpenAI, incurring API costs. Embeddings from other models will remain available.",
+    "measureSaved": "Embedding saved",
+    "sourceRecalculateMessage": "Editing the source will recalculate {{count}} embeddings through OpenAI, incurring API costs. The previous revision remains archived. If any calculation fails, no changes will be saved."
   },
   "stats": {
     "cacheHitRateHint": "Percentage of tokens served from the provider cache. Higher means lower cost.",
@@ -3161,7 +3256,9 @@
     "resetAll": "Reset all",
     "overrideModel": "Model",
     "overrideInput": "Input $/1M",
-    "overrideOutput": "Output $/1M"
+    "overrideOutput": "Output $/1M",
+    "estimateDetails": "Estimated cost details",
+    "actualDetails": "Chunk usage details"
   },
   "languages": {
     "English": "English",
@@ -3219,12 +3316,6 @@
     "dismiss": "Dismiss"
   },
   "memory": {
-    "coldStartTitle": "No matches found",
-    "coldStartBodyShort": "Similar saved phrases for this segment will appear here, if any are found.",
-    "copyTranslationTitle": "Copy translation",
-    "appliedToClipboard": "Translation copied to clipboard",
-    "enableMatch": "Use this match in the pipeline",
-    "matchToggleLabel": "Use match",
     "extractTermButton": "Add to glossary",
     "extractTermTitle": "Extract term",
     "sourcePhraseShort": "Source",
@@ -3242,7 +3333,6 @@
     "searchFailedRateLimit": "Too many requests to the provider right now: try again in a few seconds.",
     "searchFailedConfig": "API key missing or invalid: check Settings.",
     "searchFailedNetwork": "No or unstable connection: check your network and try again.",
-    "memoriesLabel": "memories",
     "loadingMemories": "Checking saved memories…",
     "chunkAlreadySaved_one": "This chunk already has {{count}} saved phrase.",
     "chunkAlreadySaved_other": "This chunk already has {{count}} saved phrases.",
@@ -3251,7 +3341,6 @@
     "matchBadge": "{{count}} match",
     "similarityThreshold": "Similarity threshold",
     "extractButton": "Extract phrases",
-    "extractDisabledLockHint": "Mark this segment's translation as verified to extract phrases.",
     "extracting": "Extracting phrases…",
     "extractFailed": "Phrase extraction failed",
     "extractFailedQuota": "API credit exhausted: check the provider's plan and billing, then try again.",
@@ -3273,7 +3362,6 @@
     "confirmSaveButton": "Save",
     "toggleSavedListShow": "Show already saved phrases",
     "toggleSavedListHide": "Hide already saved phrases",
-    "savedCandidateLabel": "Already saved",
     "referencesGlossaryHint": "The entire project glossary is always included when translating this segment.",
     "referencesMemorySectionTitle": "Similar phrases in memory",
     "selectionHint": "Select the phrases to use for translating this segment.",
@@ -3301,7 +3389,14 @@
       "unknownTranslation": "Translation no longer present",
       "chunk": "Chunk",
       "origin": "Origin",
-      "imported": "Imported"
+      "imported": "Imported",
+      "book": "Book",
+      "noBook": "Not specified",
+      "translationRemoved": "Translation no longer available",
+      "originWorkspace": "Original workspace",
+      "bookVersion": "Book version",
+      "textVersion": "Archived source",
+      "sourceEdited": "Edited after extraction"
     }
   },
   "glossary": {

@@ -933,7 +933,7 @@ modifiche e durante la pipeline (motivo nel suggerimento), `danger` con
 vale anche dentro i campi e non mostra l'avviso di riuscita; senza progetto
 salva solo le risorse linguistiche, fuori dai campi, come prima.
 
-Memoria di frasi (T7, in corso): `vec_save_locked_phrases` **aggiunge** e
+Memoria di frasi: `vec_save_locked_phrases` **aggiunge** e
 basta (niente più cancellazione delle coppie del frammento); una coppia si
 toglie con `vec_delete_phrase_memory`. `vec_list_phrase_memory(workspaceId?,
 chunkId?)`: senza workspace tutte le frasi. `vec_search_phrase_memory` ha
@@ -942,7 +942,32 @@ provenienza (workspace di casa = quello della traduzione o dell'importazione,
 `NULL` = senza workspace; `project_id`, `chunk_id`), mostrata da
 `PhraseProvenance` con `usePhraseProvenanceLookup` (due letture in tutto).
 `workspaces.memory_search_all_workspaces` (migrazione 0002) è il campo
-dell'interruttore, ancora senza interfaccia.
+dell’interruttore nella scheda Memoria delle impostazioni workspace, salvato
+con le altre impostazioni della scheda. Cambiare workspace, modello di misura,
+coppia di lingue o ambito invalida i riferimenti selezionati anche a ricerca
+automatica spenta; con ricerca automatica attiva ne avvia una nuova.
+
+Risorse linguistiche: `LibraryPanel` usa `TabStrip`; Modelli aggiunge ricerca,
+filtro OCR e `PromptTemplateForm` per creazione/modifica in posto tramite
+`updateTemplate`. Un duplicato nome/ambito/flusso mantiene il modulo aperto
+senza sovrascrivere un modello diverso. I modelli restano globali.
+Memorie legge `listPhraseMemoryEntries(null)` per «tutti» e «senza workspace»,
+senza dipendere dall’esistenza di workspace; filtro e ricerca restringono
+anche l’esportazione. Correggere la sola resa conserva le misure; correggere l’originale crea una revisione e ricalcola atomicamente tutti i modelli già presenti.
+La ricerca richiede misure con modello, dimensioni e profilo compatibili.
+Non esistono embedding senza modello né riferimenti esatti inseriti fuori
+dalla graduatoria semantica. Le coppie salvate restano nella Memoria del frammento.
+
+Dizionari: il filtro globale usa i **collegamenti** (`listGlossaries(ws)`),
+con provenienza dal legame `is_origin`; il filtro non modifica l’ambito di
+lettura/scrittura delle voci, che resta canonico (`null`) nelle risorse generali.
+Nel workspace ospite la scrittura usa `saveGlossaryEntriesAsOverrides`; il
+termine originale resta in sola lettura e nuove voci entrano nel canonico.
+La vista aperta dichiara risorsa, destinatari delle modifiche e ambito delle
+nuove voci. `entriesWorkspaceMap` conserva l’ambito della bozza per dizionario:
+letture con ambito diverso ricaricano, le risposte superate si ignorano e
+`saveAllDirty` conserva le correzioni locali. Chiudere dopo un salvataggio
+fallito mantiene la finestra; scartare elimina le bozze dalla cache.
 
 Frammento in lavorazione (`status === 'processing'`): il testo della traduzione
 (editor o confronto) è coperto da `PagePendingOverlay` `tone="running"`
@@ -1933,3 +1958,63 @@ aprire lo stesso archivio. I backup precedenti non sono supportati.
 - E2E: smoke test Chromium sul primo avvio e sul flusso progetto.
 - CI: TypeScript/ESLint, test frontend, E2E, `cargo check`, `cargo fmt`,
   `cargo clippy -D warnings`, test Rust e audit dipendenze.
+
+
+### Corpus testuale e misure multiple (base attuale)
+
+`text_units` identifica un testo con riferimenti opzionali a opera/versione, parent e
+provenienza JSON congelata. `text_unit_revisions` contiene revisioni immutabili per
+ruolo (`source`, `translation`, `normalized`) e lingua, impronta e numero progressivo.
+Un trigger impedisce UPDATE delle revisioni. La base non richiede una traduzione;
+l’interfaccia attuale crea le unità dal percorso Memoria. Pagine/sezioni e analisi
+restano nella roadmap, non vengono simulate associando indici di chunk a pagine.
+
+`text_embeddings` usa chiave `(revision_id, provider, model, dimensions, profile)`;
+ogni record richiede metadati completi e un BLOB della misura corretta. Il profilo
+attuale è `source-verbatim-v1`, OpenAI small 1536 / large 3072. Il comando di rete
+controlla indici, completezza, dimensioni e valori; non si scartano coppie approvate
+per risposte incomplete. Cache legacy `source_phrase_embeddings` rimossa: nessun
+writer o consumer attivo. Vettori utente inclusi nei backup, artefatti cache no.
+
+`phrase_memory` punta alle revisioni correnti source/translation della stessa unità;
+`phrase_memory_entries` espone i campi per UI e ricerca e deriva il workspace dal
+progetto vivo. Uno spostamento non modifica le evidenze storiche; senza progetto
+la coppia è senza workspace. Snapshot conserva libro/versione, traduzione/chunk,
+workspace originale, impronte e selezione testuale. Offset solo quando univoco.
+
+`vector/text_units` gestisce salvataggio, revisioni, misure e tag; `memory_search`
+filtra modello/provider/dimensioni/profilo/lingue/scope prima della distanza cosine
+tramite CTE MATERIALIZED. `memory_commands` contiene i wrapper Tauri. Non inserisce
+coppie salvate come match a distanza zero; il frontend conserva queste nella Memoria.
+`vec_add_phrase_embedding` verifica la revisione attesa, `vec_set_phrase_tags`
+modifica solo tag dell’unità. `vec_update_phrase_memory(input)` confronta entrambe
+le revisioni prima della scrittura atomica. La rigenerazione del workspace aggiunge
+il modello selezionato e conserva tutti gli altri, con controllo dello snapshot.
+
+Tag manuali in `text_unit_tags`, non proposte automatiche né vocabolario controllato.
+Fatti `text.revision.created`, `text.embedding.saved`, `text.tags.changed` nel
+registro esistente con chiave distinta per ogni azione. Backup aggiunge le quattro
+tabelle prima delle coppie, differisce i parent autocorrelati, ripristina con INSERT
+rigoroso e include revisioni/vettori/tag. Nessun backfill o reset implicito: baseline
+beta consolidata; database di test precedente da ricreare esplicitamente.
+
+`createProject` crea progetto, pipeline e origine di libro opzionale nella stessa
+transazione. La finestra di creazione propone versioni della Biblioteca, senza
+deduzioni dal file. Il collegamento non cambia né importa una trascrizione.
+
+Costi Studio: stima e consumi usano il Popover comune; eliminati posizionamento,
+portal e timer privati. Calcoli di stima e contatori del frammento invariati.
+Opzioni vista su SettingRow/IconButton; importazione nella schermata vuota con
+IconButton neutro. Dettagli futuri: PIANO_CORPUS_TESTUALE_EMBEDDING.md.
+
+
+### Protezioni Studio e accessibilità
+
+`leaveProject` rifiuta l’uscita quando il progetto aperto è in elaborazione e
+ricontrolla dopo le attese di salvataggio: nessuna pulizia dei chunk mentre
+la pipeline lavora. Feedback di salvataggio/storico tradotti, eccezioni nel log.
+`reportUiError` applica la stessa regola ai nuovi flussi delle risorse.
+Date del catalogo e memorie normalizzate UTC con `timestampOf` già comune.
+`ChoiceDots` assegna il tab stop alla scelta corrente solo se disponibile,
+altrimenti alla prima abilitata. `TabButton` usa aria-disabled e blocca il click;
+le linguette indisponibili sono focusabili per la spiegazione e saltate dalle frecce.

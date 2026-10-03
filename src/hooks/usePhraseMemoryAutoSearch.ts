@@ -6,14 +6,11 @@ import { useChunksStore } from '../stores/chunksStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import type { PhraseMemorySearchStatus } from '../stores/phraseMemoryStore';
 import {
-  listPhraseMemoryEntries,
   searchPhraseMemory,
   searchPhraseMemoryBatch,
-  type PhraseMemoryEntry,
 } from '../services/phraseMemoryService';
 import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
-import type { PhraseMatch } from '../types';
 
 type UsePhraseMemoryAutoSearchOptions = {
   auto?: boolean;
@@ -21,30 +18,6 @@ type UsePhraseMemoryAutoSearchOptions = {
 
 const DEFAULT_THRESHOLD = 0.75;
 const DEFAULT_MAX_RESULTS = 10;
-
-function exactMatchFromMemoryEntry(entry: PhraseMemoryEntry): PhraseMatch {
-  return {
-    phraseMemoryId: entry.id,
-    sourcePhrase: entry.sourcePhrase,
-    targetPhrase: entry.targetPhrase,
-    distance: 0,
-    confidence: entry.confidence,
-    workspaceId: entry.workspaceId,
-    projectId: entry.projectId,
-    chunkId: entry.chunkId,
-  };
-}
-
-function mergePhraseMatches(primary: PhraseMatch[], secondary: PhraseMatch[]): PhraseMatch[] {
-  const seen = new Set<string>();
-  const merged: PhraseMatch[] = [];
-  for (const match of [...secondary, ...primary]) {
-    if (seen.has(match.phraseMemoryId)) continue;
-    seen.add(match.phraseMemoryId);
-    merged.push(match);
-  }
-  return merged.sort((a, b) => a.distance - b.distance || a.sourcePhrase.localeCompare(b.sourcePhrase));
-}
 
 export function usePhraseMemoryAutoSearch(
   options: UsePhraseMemoryAutoSearchOptions = {},
@@ -64,6 +37,12 @@ export function usePhraseMemoryAutoSearch(
     }),
   );
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspace?.id ?? '');
+  const workspaceScopeKey = useWorkspaceStore((s) => JSON.stringify({
+    id: s.activeWorkspace?.id,
+    model: s.activeWorkspace?.embeddingModel,
+    all: s.activeWorkspace?.memorySearchAllWorkspaces,
+  }));
+  const languagePairKey = usePipelineStore((s) => `${s.config.sourceLanguage}|${s.config.targetLanguage}`);
   const chunksSearchKey = useChunksStore((s) =>
     s.chunks.map((c) => `${c.id}:${c.sourceProcessingText ?? ''}`).join('\u001f'),
   );
@@ -108,14 +87,6 @@ export function usePhraseMemoryAutoSearch(
 
     void (async () => {
       try {
-        const memoryEntries = await listPhraseMemoryEntries(activeWorkspace.id);
-        const exactMatchesByChunk = new Map<string, PhraseMatch[]>();
-        for (const entry of memoryEntries) {
-          if (!entry.chunkId) continue;
-          const current = exactMatchesByChunk.get(entry.chunkId) ?? [];
-          current.push(exactMatchFromMemoryEntry(entry));
-          exactMatchesByChunk.set(entry.chunkId, current);
-        }
         const results = await searchPhraseMemoryBatch({
           workspaceId: activeWorkspace.id,
           embeddingModel: activeWorkspace.embeddingModel,
@@ -131,8 +102,7 @@ export function usePhraseMemoryAutoSearch(
         const { setMatches, setSearchStatus: setLatestSearchStatus } = usePhraseMemoryStore.getState();
         for (const chunk of toSearch) {
           const vectorMatches = results.get(chunk.id) ?? [];
-          const exactMatches = exactMatchesByChunk.get(chunk.id) ?? [];
-          setMatches(chunk.id, mergePhraseMatches(vectorMatches, exactMatches));
+          setMatches(chunk.id, vectorMatches);
         }
         setLatestSearchStatus('done');
         logOperation({
@@ -195,8 +165,6 @@ export function usePhraseMemoryAutoSearch(
     });
 
     try {
-      const memoryEntries = await listPhraseMemoryEntries(activeWorkspace.id, chunkId);
-      const exactMatches = memoryEntries.map(exactMatchFromMemoryEntry);
       const matches = await searchPhraseMemory({
         workspaceId: activeWorkspace.id,
         embeddingModel: activeWorkspace.embeddingModel,
@@ -208,7 +176,7 @@ export function usePhraseMemoryAutoSearch(
         targetLanguage: config.targetLanguage,
       });
       if (requestIdRef.current !== requestId) return;
-      setMatches(chunkId, mergePhraseMatches(matches, exactMatches));
+      setMatches(chunkId, matches);
       setSearchStatus('done');
       logOperation({
         level: 'success',
@@ -218,8 +186,7 @@ export function usePhraseMemoryAutoSearch(
         chunkId,
         meta: {
           workspaceId: activeWorkspace.id,
-          resultCount: Math.max(matches.length, exactMatches.length),
-          exactMatchCount: exactMatches.length,
+          resultCount: matches.length,
         },
       });
     } catch (err: unknown) {
@@ -244,6 +211,14 @@ export function usePhraseMemoryAutoSearch(
   }, []);
 
   useEffect(() => {
+    // Un cambio d'ambito non deve lasciare selezionati riferimenti ora esclusi,
+    // anche quando la ricerca automatica è spenta o la nuova lettura fallisce.
+    requestIdRef.current += 1;
+    const memory = usePhraseMemoryStore.getState();
+    for (const id of memory.matchesByChunk.keys()) memory.clearMatches(id);
+  }, [workspaceScopeKey, languagePairKey]);
+
+  useEffect(() => {
     if (!auto) return;
     if (currentProjectId && usePhraseMemory && autoSearchPhraseMemory) {
       runSearch();
@@ -253,6 +228,8 @@ export function usePhraseMemoryAutoSearch(
     }
   }, [
     activeWorkspaceId,
+    workspaceScopeKey,
+    languagePairKey,
     auto,
     autoSearchPhraseMemory,
     chunksSearchKey,

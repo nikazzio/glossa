@@ -53,7 +53,7 @@ describe('ConfigDrawer', () => {
   it('turns the memory tab off, with its reason, in DeepL mode', () => {
     usePipelineStore.setState((state) => ({ config: { ...state.config, mode: 'deepl-hybrid' } }));
     render(<ConfigDrawer />);
-    expect(screen.getByRole('tab', { name: 'transcription.commandBlocked' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'transcription.commandBlocked' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('keeps the reset icon visible but off when nothing is translated', () => {

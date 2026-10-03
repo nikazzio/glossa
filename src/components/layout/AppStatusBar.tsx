@@ -46,7 +46,7 @@ function transcriptionSaveProps(data: Extract<ReturnType<typeof useStatusBarData
   return { state: save.state === 'pending' ? 'dirty' : save.state, lastSavedAt: save.lastSavedAt, error: save.error };
 }
 
-function SaveIndicator({ state, lastSavedAt, error }: SaveIndicatorProps) {
+function SaveIndicator({ state, lastSavedAt }: SaveIndicatorProps) {
   const { t } = useTranslation();
 
   if (state === 'idle') return null;
@@ -61,7 +61,7 @@ function SaveIndicator({ state, lastSavedAt, error }: SaveIndicatorProps) {
         }),
       })
     : t('statusBar.neverSavedTooltip');
-  const tooltipLabel = state === 'error' && error ? `${error} — ${timeLabel}` : timeLabel;
+  const tooltipLabel = state === 'error' ? `${t('statusBar.saveError')} — ${timeLabel}` : timeLabel;
 
   if (state === 'saving') {
     return (

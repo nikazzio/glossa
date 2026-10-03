@@ -1,12 +1,13 @@
+import { reportUiError } from '../../utils/reportUiError';
 import { useEffect, useState } from 'react';
 import { BookOpenText, FileUp, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { importErrorMessageKey, importTextFile, type ImportedTextFile } from '../../services/fileService';
-import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, Select } from '../ui';
+import { listProjectSourceVersions, type ProjectSourceVersion } from '../../services/projectService';
+import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, Select, SettingRow } from '../ui';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CreateProjectDialogProps {
@@ -31,6 +32,9 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
   const setPendingImportFile = useUiStore((s) => s.setPendingImportFile);
 
   const [name, setName] = useState('');
+  const [sources, setSources] = useState<ProjectSourceVersion[]>([]);
+  const [sourceVersionId, setSourceVersionId] = useState('');
+  const [sourcesFailed, setSourcesFailed] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(workspaceId ?? null);
   const [file, setFile] = useState<ImportedTextFile | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -46,8 +50,18 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
     });
   }, [open, workspaceId, workspaces]);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setSourcesFailed(false);
+    void listProjectSourceVersions().then((loaded) => { if (!cancelled) setSources(loaded); })
+      .catch((error: unknown) => { if (!cancelled) { setSourcesFailed(true); reportUiError(t('projects.sourceBookLoadError'), error); } });
+    return () => { cancelled = true; };
+  }, [open, t]);
+
   const close = () => {
     setName('');
+    setSourceVersionId('');
     setFile(null);
     setFileError(null);
     onClose();
@@ -72,13 +86,11 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
     if (!name.trim() || !selectedWorkspaceId || readingFile) return;
     setCreating(true);
     try {
-      await createAndOpen(name.trim(), selectedWorkspaceId);
+      await createAndOpen(name.trim(), selectedWorkspaceId, sourceVersionId || undefined);
       if (file) setPendingImportFile(file);
       close();
     } catch (err: unknown) {
-      toast.error(t('projects.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      reportUiError(t('projects.saveFailed'), err);
     } finally {
       setCreating(false);
     }
@@ -135,6 +147,13 @@ export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjec
             autoFocus
           />
         </label>
+        <div className="border-y border-rule">
+          <SettingRow label={t('projects.sourceBook')} hint={t('projects.sourceBookHint')}>
+            <Select value={sourceVersionId} onChange={setSourceVersionId} disabled={creating || sourcesFailed}
+              ariaLabel={t('projects.sourceBook')} options={[{ value: '', label: t('memory.provenance.noBook') },
+                ...sources.map((source) => ({ value: source.id, label: `${source.title} — ${source.label}` }))]} />
+          </SettingRow>
+        </div>
         <div className="space-y-1.5">
           <span className={LABEL_CLASSNAME}>{t('projects.sourceFile')}</span>
           <div className="flex items-center gap-2">

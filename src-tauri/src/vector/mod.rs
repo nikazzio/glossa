@@ -1,4 +1,9 @@
 pub mod embedding;
+pub mod memory_commands;
+pub mod memory_search;
+pub mod text_units;
+#[cfg(test)]
+mod text_units_tests;
 
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, Result as RusqliteResult};
 use std::path::PathBuf;
@@ -50,7 +55,7 @@ pub fn open_vec_connection(db_path: &PathBuf) -> RusqliteResult<Connection> {
     Ok(conn)
 }
 
-/// The frontend owns DDL. Native vector commands only verify the columns they
+/// The Rust/sqlx migrator owns DDL. Native vector commands only verify the columns they
 /// require so a stale or partially initialized database fails clearly instead
 /// of attempting an ad-hoc migration.
 pub fn verify_phrase_memory_schema(conn: &Connection) -> Result<(), String> {
@@ -66,9 +71,9 @@ pub fn verify_phrase_memory_schema(conn: &Connection) -> Result<(), String> {
     if columns.is_empty() {
         return Err("phrase_memory schema is not initialized yet".to_string());
     }
-    if !columns.iter().any(|column| column == "embedding_model") {
+    if !columns.iter().any(|column| column == "source_revision_id") {
         return Err(
-            "phrase_memory.embedding_model is missing; run the frontend schema migration first"
+            "phrase_memory.source_revision_id is missing; recreate the beta test database with the current schema"
                 .to_string(),
         );
     }
@@ -124,13 +129,13 @@ mod tests {
     }
 
     #[test]
-    fn rejects_a_phrase_memory_schema_without_embedding_model() -> RusqliteResult<()> {
+    fn rejects_a_phrase_memory_schema_without_revisions() -> RusqliteResult<()> {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch("CREATE TABLE phrase_memory (id TEXT PRIMARY KEY)")?;
 
         let error = verify_phrase_memory_schema(&conn).expect_err("expected missing column error");
 
-        assert!(error.contains("embedding_model"));
+        assert!(error.contains("source_revision_id"));
         Ok(())
     }
 }

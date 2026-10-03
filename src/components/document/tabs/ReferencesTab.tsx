@@ -8,7 +8,7 @@ import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../../../stores/phraseMemoryStore';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { classifyError } from '../../../utils/retry';
-import { CopyButton, EmptyState, IconButton, PanelSection, SettingRow } from '../../ui';
+import { CopyButton, EmptyState, IconButton, PanelSection, SettingRow, StatRow } from '../../ui';
 import { PhraseProvenance } from '../../library/PhraseProvenance';
 import { usePhraseProvenanceLookup, type PhraseProvenanceLookup } from '../../../hooks/usePhraseProvenanceLookup';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
@@ -163,12 +163,14 @@ function MatchRow({ match, enabled, lookup, currentWorkspaceId, onToggle, onExtr
         <span className="font-mono text-xs text-editorial-muted">{Math.round(match.score * 100)}%</span>
         <p className="text-sm leading-relaxed text-editorial-charcoal">{match.sourcePhrase}</p>
         <p className="text-sm leading-relaxed text-editorial-ink">{match.targetPhrase}</p>
+        {match.embeddingModel && <dl><StatRow label={t('library.embeddingModel')} value={match.embeddingModel} /></dl>}
         <PhraseProvenance
           workspaceId={match.workspaceId}
           projectId={match.projectId}
           chunkId={match.chunkId}
           lookup={lookup}
           currentWorkspaceId={currentWorkspaceId}
+          provenance={match.provenance} sourcePhrase={match.sourcePhrase}
         />
       </div>
       <div className="flex shrink-0 flex-col items-center gap-1">

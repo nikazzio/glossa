@@ -18,8 +18,8 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
   if (allRows.length === 0) return null;
 
   return (
-    <div className="rounded border border-editorial-border bg-editorial-bg shadow-lg">
-      <div className="p-3 space-y-2">
+    <div className="space-y-2">
+      <div className="space-y-2">
         <p className="caption-label">
           {t('cost.breakdown')}
         </p>

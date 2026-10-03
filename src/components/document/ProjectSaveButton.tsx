@@ -1,6 +1,5 @@
 import { Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { unversionedChunks, useTranslationHistoryStore } from '../../stores/translationHistoryStore';
@@ -15,9 +14,7 @@ import { saveVersionWithFeedback } from './manualSave';
  */
 export function ProjectSaveButton() {
   const { t } = useTranslation();
-  const { saveState, lastSaveError } = useProjectStore(
-    useShallow((s) => ({ saveState: s.saveState, lastSaveError: s.lastSaveError })),
-  );
+  const saveState = useProjectStore((s) => s.saveState);
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const chunks = useChunksStore((s) => s.chunks);
   const latestText = useTranslationHistoryStore((s) => s.latestText);
@@ -29,9 +26,7 @@ export function ProjectSaveButton() {
   const label = isProcessing && hasUnsaved
     ? t('transcription.commandBlocked', { command: saveNow, reason: t('document.reasonRunning') })
     : saveState === 'error'
-      ? lastSaveError
-        ? t('transcription.commandBlocked', { command: t('transcription.saveRetry'), reason: lastSaveError })
-        : t('transcription.saveRetry')
+      ? t('transcription.saveRetry')
       : canSave
         ? `${saveNow} (Ctrl+S)`
         : t('transcription.saveNowNothing');

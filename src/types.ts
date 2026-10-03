@@ -707,6 +707,23 @@ export type Workspace = {
   archivedAt?: string;
 };
 
+export interface TextProvenance {
+  projectId?: string;
+  projectName?: string | null;
+  chunkId?: string;
+  chunkPosition?: number | null;
+  workspaceId?: string | null;
+  workspaceName?: string | null;
+  sourceTitle?: string | null;
+  sourceId?: string | null;
+  sourceVersionId?: string | null;
+  sourceVersionLabel?: string | null;
+  approvedTranslationRevisionId?: string | null;
+  sourceHash?: string;
+  targetHash?: string;
+  selection?: { exact: string; start: number | null; end: number | null };
+}
+
 export type PhraseMatch = {
   phraseMemoryId: string;
   sourcePhrase: string;
@@ -718,6 +735,9 @@ export type PhraseMatch = {
   workspaceId: string | null;
   projectId: string | null;
   chunkId: string | null;
+  provenance?: TextProvenance;
+  embeddingModel?: string;
+  dimensions?: number;
 };
 
 export type EmbeddingJobStatus =

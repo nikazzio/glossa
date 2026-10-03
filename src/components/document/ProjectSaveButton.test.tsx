@@ -42,12 +42,13 @@ describe('ProjectSaveButton', () => {
   });
 
   it('turns into a retry after a failed save', () => {
-    useProjectStore.setState({ saveState: 'error', lastSaveError: null });
+    useProjectStore.setState({ saveState: 'error', lastSaveError: 'database is locked /private/path' });
     render(<ProjectSaveButton />);
 
     fireEvent.click(screen.getByRole('button', { name: 'transcription.saveRetry' }));
 
     expect(saveVersionNow).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /database|private/ })).not.toBeInTheDocument();
   });
 
   it('is off with the reason while the pipeline runs', () => {

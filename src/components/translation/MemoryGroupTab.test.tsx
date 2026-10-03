@@ -13,7 +13,7 @@ describe('MemoryGroupTab', () => {
     );
 
     expect(screen.getByText('similar-phrases')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /memory\.extractButton/ })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /memory\.extractButton/ })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('tab', { name: /memory\.extractButton/ })).toHaveAccessibleName(
       'memory.extractButton — memory.reasonNotVerified',
     );

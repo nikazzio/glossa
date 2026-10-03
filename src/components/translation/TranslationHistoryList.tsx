@@ -39,7 +39,7 @@ export function TranslationHistoryList({ panelId, labelledBy, currentChunk }: Tr
   const revisionTick = useTranslationHistoryStore((s) => s.revisionTick);
   const updateChunkDraft = useChunksStore((s) => s.updateChunkDraft);
   const [history, setHistory] = useState<LoadedHistory | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [failedChunkId, setFailedChunkId] = useState<string | null>(null);
   const chunkId = currentChunk?.id ?? null;
 
   useEffect(() => {
@@ -50,13 +50,13 @@ export function TranslationHistoryList({ panelId, labelledBy, currentChunk }: Tr
       .then((loaded) => {
         if (stale) return;
         setHistory({ chunkId, ...loaded });
-        setLoadError(null);
+        setFailedChunkId(null);
       })
       .catch((error: unknown) => {
         if (stale) return;
         const message = error instanceof Error ? error.message : String(error);
         logger.warn('translation.history.load_failed', { chunkId, error: message });
-        setLoadError(message);
+        setFailedChunkId(chunkId);
       });
     return () => { stale = true; };
   }, [chunkId, revisionTick]);
@@ -75,9 +75,8 @@ export function TranslationHistoryList({ panelId, labelledBy, currentChunk }: Tr
     if (!currentChunk) return;
     updateChunkDraft(currentChunk.id, revision.text);
     recordManualRevision(currentChunk.id, revision.text).catch((error: unknown) => {
-      toast.error(t('document.versionSaveFailed'), {
-        description: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn('translation.history.restore_failed', { chunkId: currentChunk.id, error: error instanceof Error ? error.message : String(error) });
+      toast.error(t('document.versionSaveFailed'));
     });
   };
 
@@ -122,8 +121,8 @@ export function TranslationHistoryList({ panelId, labelledBy, currentChunk }: Tr
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-3">
-      {loadError ? (
-        <p className="text-sm text-editorial-danger">{t('document.historyLoadFailed', { message: loadError })}</p>
+      {failedChunkId !== null && failedChunkId === chunkId ? (
+        <p role="alert" className="text-sm text-editorial-danger">{t('document.historyLoadFailed')}</p>
       ) : revisions.length === 0 ? (
         <p className="text-sm text-editorial-muted">{t('document.historyEmpty')}</p>
       ) : (

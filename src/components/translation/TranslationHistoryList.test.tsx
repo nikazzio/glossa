@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TranslationHistoryList } from './TranslationHistoryList';
 import { useChunksStore } from '../../stores/chunksStore';
 import { makeTranslationChunk } from '../../test/chunkFactory';
+import { toast } from 'sonner';
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
 
 const service = vi.hoisted(() => ({
   listTranslationRevisions: vi.fn(),
@@ -50,5 +52,20 @@ describe('TranslationHistoryList', () => {
     await screen.findByText('Dalla pipeline');
 
     expect(screen.getByRole('button', { name: 'transcription.commandBlocked' })).toBeDisabled();
+  });
+
+  it('shows a translated history load failure without the database details', async () => {
+    service.listTranslationRevisions.mockRejectedValueOnce(new Error('no such table: private'));
+    render(<TranslationHistoryList panelId="p" labelledBy="t" currentChunk={makeTranslationChunk({ id: 'c1' })} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('document.historyLoadFailed');
+    expect(screen.queryByText(/no such table/)).not.toBeInTheDocument();
+  });
+
+  it('shows only translated feedback when recording a restore fails', async () => {
+    service.recordManualRevision.mockRejectedValueOnce(new Error('private constraint'));
+    render(<TranslationHistoryList panelId="p" labelledBy="t" currentChunk={makeTranslationChunk({ id: 'c1', translationDisplayText: 'Corretta' })} />);
+    await screen.findByText('Dalla pipeline');
+    fireEvent.click(screen.getByRole('button', { name: 'transcription.restore' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('document.versionSaveFailed'));
   });
 });

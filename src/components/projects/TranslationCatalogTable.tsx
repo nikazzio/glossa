@@ -3,6 +3,7 @@ import { CommandBar, Tooltip } from '../ui';
 import { ROW_REVEAL_CLASSNAME } from '../ui/catalogStyles';
 import type { TranslationCatalogEntry } from '../../services/translationCatalogService';
 import type { TranslationSort } from '../../utils/translationCatalogFilters';
+import { timestampOf } from '../../utils/libraryCatalogFilters';
 import { TranslationRenameField, useLanguagePair, useTranslationProgress, type TranslationRowProps } from './TranslationCatalogRow';
 
 /** Le colonne che si ordinano cliccando l'intestazione, con l'ordine che scelgono. */
@@ -47,8 +48,12 @@ export function TranslationCatalogTable({ entries, sort, onSort, rowPropsFor }: 
   rowPropsFor: (entry: TranslationCatalogEntry) => TranslationRowProps;
 }) {
   const { t, i18n } = useTranslation();
-  const formatDate = (value: string) =>
-    new Intl.DateTimeFormat(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+  const formatDate = (value: string) => {
+    const timestamp = timestampOf(value);
+    return Number.isFinite(timestamp)
+      ? new Intl.DateTimeFormat(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(timestamp))
+      : '—';
+  };
   return (
     <table className="w-full table-auto border-collapse">
       <thead>

@@ -1,4 +1,4 @@
-import { select, execute } from './dbService';
+import { select, execute, runInTransaction } from './dbService';
 import type {
   DocumentFormat,
   DocumentRenderProfile,
@@ -206,36 +206,46 @@ export async function listProjectsNeedingAttention(limit: number, workspaceId: s
   );
 }
 
+export interface ProjectSourceVersion {
+  id: string;
+  title: string;
+  label: string;
+}
+
+export async function listProjectSourceVersions(): Promise<ProjectSourceVersion[]> {
+  return select<ProjectSourceVersion>(`SELECT v.id, s.title, v.label FROM source_versions v
+    JOIN sources s ON s.id=v.source_id WHERE s.status='active' ORDER BY s.title,v.label`);
+}
+
 export async function createProject(
   name: string,
   sourceLang: string,
   targetLang: string,
   workspaceId: string,
+  sourceVersionId?: string,
 ): Promise<string> {
-  const id = `proj-${Date.now()}`;
-  await execute(
-    `INSERT INTO projects (id, name, source_language, target_language, workspace_id)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [id, name, sourceLang, targetLang, workspaceId],
-  );
-  // Create default pipeline for this project.
-  const pipelineId = `pipeline-${Date.now()}`;
-  await execute(
-    `INSERT INTO pipelines (id, project_id, name, source_language, target_language, stages, judge_prompt, judge_model, judge_provider)
-     VALUES ($1, $2, 'Default', $3, $4, '[]', '', '', '')`,
-    [pipelineId, id, sourceLang, targetLang],
-  );
+  const id = `proj-${crypto.randomUUID()}`;
+  const pipelineId = `pipeline-${crypto.randomUUID()}`;
+  await runInTransaction(async (run) => {
+    await run(`INSERT INTO projects (id, name, source_language, target_language, workspace_id)
+      VALUES ($1, $2, $3, $4, $5)`, [id, name, sourceLang, targetLang, workspaceId]);
+    await run(`INSERT INTO pipelines (id, project_id, name, source_language, target_language, stages, judge_prompt, judge_model, judge_provider)
+      VALUES ($1, $2, 'Default', $3, $4, '[]', '', '', '')`, [pipelineId, id, sourceLang, targetLang]);
+    if (sourceVersionId) await run(`INSERT INTO translation_origins(project_id,origin_type,source_version_id)
+      VALUES($1,'source_level',$2)`, [id, sourceVersionId]);
+  });
   return id;
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await execute('DELETE FROM operation_logs WHERE project_id = $1', [id]);
-  await execute('DELETE FROM project_glossaries WHERE project_id = $1', [id]);
-  await execute('DELETE FROM source_phrase_embeddings WHERE project_id = $1', [id]);
-  await execute('UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1', [id]);
-  await execute('DELETE FROM translations WHERE project_id = $1', [id]);
-  await execute('DELETE FROM pipelines WHERE project_id = $1', [id]);
-  await execute('DELETE FROM projects WHERE id = $1', [id]);
+  await runInTransaction(async (run) => {
+    await run('DELETE FROM operation_logs WHERE project_id = $1', [id]);
+    await run('DELETE FROM project_glossaries WHERE project_id = $1', [id]);
+    await run('UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1', [id]);
+    await run('DELETE FROM translations WHERE project_id = $1', [id]);
+    await run('DELETE FROM pipelines WHERE project_id = $1', [id]);
+    await run('DELETE FROM projects WHERE id = $1', [id]);
+  });
 }
 
 // ── Source text ──────────────────────────────────────────────────────
