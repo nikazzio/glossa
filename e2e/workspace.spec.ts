@@ -34,6 +34,6 @@ test('crea un progetto e apre la sua schermata di importazione', async ({ page }
   await page.getByPlaceholder('Nome del progetto...').fill('Manoscritto E2E');
   await page.getByRole('button', { name: 'Crea', exact: true }).click();
 
-  await expect(page.getByRole('heading', { name: 'Manoscritto E2E' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Manoscritto E2E', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Importa documento' })).toBeVisible();
 });

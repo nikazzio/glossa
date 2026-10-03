@@ -64,6 +64,8 @@ impl UsageAccumulator {
 ///
 /// The factory [`crate::llm::providers::get_provider`] routes provider id strings to concrete
 /// types. Each provider owns its HTTP client selection, SSE parsing, and error formatting.
+// async_trait adds must_use to boxed futures; Clippy 1.99 flags that generated attribute.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
     fn id(&self) -> &'static str;
