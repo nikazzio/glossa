@@ -74,10 +74,16 @@ Apri **Risorse linguistiche → Memorie**. Le risorse generali partono da tutte
 le frasi; quelle del workspace dalla sua raccolta. Puoi filtrare per workspace,
 **Tutti**, **Senza workspace** ed etichetta, oppure cercare nei testi e nei tag.
 
-Ogni frase mostra provenienza, lingue, data e modelli disponibili, con la loro
-dimensione. Scegli un modello e usa il più per aggiungere il suo embedding o la
-freccia circolare per ricalcolarlo. Il calcolo richiede la chiave OpenAI e comporta
-costi: la conferma li segnala. Gli embedding degli altri modelli restano disponibili.
+Ogni voce affianca originale e traduzione; lingue, titolo di provenienza e tag
+permettono di orientarsi senza aprire i dettagli. Il comando **Provenienza, tag
+e misure** apre le informazioni complete della sola voce scelta: libro,
+workspace, traduzione, frammento, data, etichette e modelli di misura.
+
+Nei dettagli scegli un modello e usa il più per aggiungere il suo embedding
+o la freccia circolare per ricalcolarlo. Il calcolo richiede la chiave OpenAI e
+comporta costi, segnalati nella conferma. Gli altri modelli restano disponibili.
+Ricerca e filtri sono bloccati durante la modifica di testi o tag, per
+conservare la bozza; termina o annulla la modifica per usarli di nuovo.
 Nelle impostazioni del workspace puoi calcolare il modello selezionato su tutta
 la sua memoria senza cancellare gli altri modelli. La scelta del modello attivo
 si applica salvando le impostazioni, indipendentemente dal calcolo.
@@ -129,3 +135,5 @@ oppure «importata»). La spunta in cerchio decide quali usare nella traduzione.
 tolgono una a una con il cestino; quelle nuove si spuntano e si aggiungono con
 il dischetto, che non cancella mai le altre. La ricerca usa solo frasi della
 stessa coppia di lingue.
+
+Le voci della raccolta hanno un unico sfondo tenue distinto dalla finestra; i dettagli aperti condividono lo stesso fondo. Nei dettagli gli embedding sono elencati uno per riga; il comando di calcolo mostra una rotellina fino al termine della richiesta.

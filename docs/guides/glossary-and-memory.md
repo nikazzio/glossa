@@ -14,10 +14,10 @@ Apri **Risorse linguistiche** nel workspace. La finestra distingue dizionari,
 modelli di prompt e frasi. Nella scheda dei dizionari puoi creare, rinominare,
 duplicare ed eliminare risorse, modificare voci e importare dati da CSV o TSV.
 
-L’importazione mostra un’anteprima e permette di scegliere tra integrazione
-e sostituzione del contenuto. Verifica l’associazione dei campi sorgente,
-destinazione e note prima di confermare. La sostituzione elimina le voci
-precedenti del dizionario.
+L’importazione dalle risorse crea un nuovo dizionario nel workspace scelto,
+con il nome del file. Il comando a icona apre la scelta del file; l’anteprima
+mostra le prime voci. Per Excel puoi associare le colonne di termine,
+traduzione e note prima di confermare.
 
 Le **Risorse linguistiche generali** offrono la stessa gestione. Il filtro per
 workspace mostra tutti i dizionari collegati, compresi quelli condivisi; puoi
@@ -26,15 +26,22 @@ nelle risorse generali si leggono e modificano sempre gli originali.
 Per creare, importare o copiare un dizionario scegli il workspace di
 destinazione. La ricerca controlla i nomi dei dizionari.
 
-Nel dizionario aperto, **Stai modificando** e **Le modifiche valgono per**
-indicano la risorsa e l’ambito effettivo. Nell’originale condiviso le modifiche
-valgono per tutti i workspace collegati; le correzioni locali già presenti
-restano valide. Salvare una correzione in un workspace ospite cambia solo la
-sua vista delle voci. Un termine nuovo entra invece nell’originale: una riga
-separata lo specifica. Il termine sorgente di una voce esistente non si
-rinomina da una correzione locale.
+Nel dizionario aperto la condivisione indica l’**Originale condiviso** e lo
+scudo le **Correzioni locali**. Il suggerimento dell’icona spiega dove valgono
+le modifiche; nei workspace ospiti il più accanto ricorda che le nuove voci
+entrano nell’originale condiviso. Un termine sorgente esistente non si rinomina
+attraverso una correzione locale.
 
-Il dischetto salva le voci modificate. **Salva e chiudi** rispetta lo stesso
+Le voci affiancano termine e traduzione, senza campi aperti per tutta la lista.
+La matita apre la modifica di una coppia; il quaderno mostra le sue note.
+**+** inserisce una nuova voce in cima e porta il cursore al termine, rendendola
+subito visibile. La spunta termina la modifica della voce: i cambiamenti
+restano da salvare con il dischetto del dizionario.
+
+Più e dischetto restano nell’intestazione delle voci mentre scorri.
+Il dischetto salva le voci modificate. La copia propone i dizionari con il
+workspace di provenienza e segna quello scelto; l’esportazione offre CSV ed
+Excel affiancati. **Salva e chiudi** rispetta lo stesso
 ambito; se il salvataggio fallisce la finestra resta aperta. **Chiudi senza
 salvare** scarta davvero le modifiche. Rinomina ed elimina riguardano il
 dizionario originale condiviso; eliminare richiede conferma. Le esportazioni
@@ -90,6 +97,13 @@ che manca. Il dischetto salva, la croce annulla. Un nome già usato nello stesso
 ambito e flusso richiede di modificare il modello esistente o scegliere un
 altro nome. Il cestino elimina soltanto dopo conferma.
 
+Ogni modello ha un titolo riconoscibile e un’anteprima breve sulla stessa carta tenue della voce. L’occhio apre
+il testo completo, il comando di riduzione torna all’anteprima. Le icone
+accanto al titolo spiegano ambito, flusso e modello al passaggio del mouse o
+premendole. La matita apre il modulo nella stessa voce; durante la modifica
+ricerca e filtri restano bloccati per conservare la bozza. Il modulo affianca
+ambito e flusso, servizio e modello, senza separatori fra i campi.
+
 ## Glossario, memoria ed esempi
 
 | Risorsa | Ruolo |
@@ -100,3 +114,5 @@ altro nome. Il cestino elimina soltanto dopo conferma.
 
 Per estrazione, selezione e salvataggio delle coppie bilingui, consulta
 [Memoria di frasi ed esempi](./phrase-memory).
+
+Le liste di dizionari e prompt distinguono ogni voce con un unico sfondo tenue, condiviso da testo e dettagli aperti. La matita del titolo del dizionario apre il nome al suo posto, mantenendo i comandi sulla stessa riga; Invio salva, Esc annulla.

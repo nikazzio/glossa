@@ -2499,8 +2499,8 @@
             "paragraphs": [],
             "steps": [
               "Apri Risorse linguistiche nel workspace e seleziona Dizionari.",
-              "Crea un dizionario o scegli una risorsa esistente.",
-              "Inserisci termine sorgente, resa richiesta ed eventuali note. Puoi anche importare CSV o TSV, controllando anteprima e modalità di integrazione o sostituzione.",
+              "Crea un dizionario o scegli una risorsa esistente. La matita accanto al titolo lo modifica sulla stessa riga.",
+              "Usa +: la nuova voce appare in cima con il cursore sul termine. La matita modifica una coppia; il quaderno apre le note. La spunta termina la modifica della voce, il dischetto salva il dizionario. Puoi anche importare CSV o TSV.",
               "Assegna il dizionario al progetto e controlla le voci nella scheda Glossario della colonna Strumenti."
             ]
           },
@@ -2522,7 +2522,7 @@
           {
             "title": "Gestire i modelli di prompt",
             "paragraphs": [
-              "Nelle Risorse linguistiche, apri Modelli Prompt. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Persona, Memoria oppure OCR.",
+              "In Modelli Prompt ogni voce ha titolo e anteprima. L’occhio mostra tutto il testo; le icone spiegano ambito, flusso e modello al passaggio del mouse. Cerca nel nome o nel testo e filtra per Fasi, Controllo qualità, Persona, Memoria oppure OCR.",
               "Il comando + apre il modulo; la matita modifica il modello esistente. Compila nome, ambito, flusso e testo; servizio e modello predefinito sono facoltativi. I suggerimenti delle etichette spiegano dove saranno usate le istruzioni.",
               "Scegli servizio e modello per usare Rifinisci; il comando indica il motivo quando manca una chiave o un campo. Il dischetto salva e la croce annulla. Per eliminare un modello usa il suo cestino e conferma."
             ]
@@ -2531,7 +2531,7 @@
             "title": "Risorse generali e ambito delle modifiche",
             "paragraphs": [
               "Nelle Risorse linguistiche generali, il filtro per workspace mostra tutti i dizionari collegati, anche condivisi. Qui modifichi sempre il dizionario originale; il filtro cambia soltanto l’elenco.",
-              "Nel dizionario aperto, «Stai modificando» e «Le modifiche valgono per» indicano originale condiviso o correzioni locali e il workspace interessato. Le correzioni locali valgono solo nel workspace ospite, ma le voci nuove entrano nell’originale condiviso: una riga separata lo indica.",
+              "Nel dizionario aperto l’icona di condivisione indica l’originale condiviso; lo scudo indica correzioni locali. Il suggerimento spiega dove valgono le modifiche. Le correzioni locali valgono solo nel workspace ospite; il più accanto ricorda che le voci nuove entrano nell’originale condiviso.",
               "Il dischetto e «Salva e chiudi» rispettano questo ambito. Un errore lascia la finestra aperta; «Chiudi senza salvare» scarta le modifiche. Rinomina ed elimina riguardano l’originale condiviso. Scegli il workspace di destinazione per creare, importare o copiare dalle risorse generali."
             ]
           }
@@ -2571,7 +2571,7 @@
             "title": "Consultare la raccolta",
             "paragraphs": [
               "Nelle Risorse linguistiche apri Memorie. Filtra per workspace, tutti o senza workspace; cerca nei testi e nelle etichette, oppure scegli un’etichetta. Le risorse generali partono da tutti, quelle del workspace dal workspace corrente. Durante la modifica, la ricerca è disabilitata con il motivo; i titoli lunghi della provenienza vanno a capo.",
-              "Ogni testo mostra provenienza e tutti gli embedding disponibili. Scegli un modello e usa il più per aggiungerlo o la freccia circolare per ricalcolarlo: gli altri embedding restano. Il calcolo tramite OpenAI richiede una chiave e comporta costi, indicati nella conferma.",
+              "Le coppie affiancano originale e traduzione, con lingue, titolo di provenienza e tag visibili. Ogni voce usa un unico sfondo tenue, anche nei dettagli aperti. Il comando dei dettagli apre provenienza completa, data, tag modificabili e misure. Qui scegli un modello e usa il più per aggiungerlo o la freccia circolare per ricalcolarlo: gli altri restano. Il calcolo OpenAI richiede una chiave e ha costi, indicati nella conferma. Ogni embedding disponibile occupa una riga; durante il calcolo il comando mostra una rotellina.",
               "La matita corregge i due testi della memoria, senza cambiare la traduzione di origine. Cambiare solo la traduzione conserva gli embedding; cambiare l’originale ricalcola tutti quelli disponibili e conserva la versione precedente. Se un calcolo fallisce non viene salvata alcuna modifica.",
               "Aggiungi etichette manuali separate da punto e virgola. Il cestino elimina il testo dalla memoria con le sue versioni ed embedding dopo conferma. Il comando del dizionario copia la coppia nel dizionario scelto. Esporta CSV conserva testi, etichette, provenienza e modelli delle sole frasi visibili.",
               "Creando una traduzione puoi indicare il libro e la sua versione dalla Biblioteca. Senza questa scelta il libro resta «Non specificato». Non viene dedotto dal nome del file e non vengono inventati numeri di pagina.",
@@ -3115,10 +3115,10 @@
     "templateLoadError": "Non è stato possibile leggere i modelli",
     "templateSaveError": "Non è stato possibile salvare il modello",
     "templateDuplicate": "Esiste già un modello con questo nome, ambito e flusso. Modifica quello esistente o cambia nome.",
-    "templateDefaultModel": "Modello predefinito",
-    "templateDefaultModelHint": "Facoltativo: viene proposto quando applichi il modello di prompt. Qui serve anche per rifinire il testo.",
-    "templateWorkflowHint": "Indica il flusso per cui conservi queste istruzioni: traduzione o trascrizione.",
-    "templateOcrHint": "I modelli OCR sono disponibili nelle impostazioni OCR del workspace e nello Studio di trascrizione.",
+    "templateDefaultModel": "Modello",
+    "templateDefaultModelHint": "Facoltativo. Usato anche per rifinire il prompt.",
+    "templateWorkflowHint": "Traduzione o trascrizione.",
+    "templateOcrHint": "Istruzioni per leggere le pagine.",
     "noDefaultModel": "Nessuno",
     "workInProgress": "operazione in corso",
     "promptRequired": "scrivi prima il testo del prompt",
@@ -3138,28 +3138,28 @@
     "destinationWorkspace": "Workspace di destinazione",
     "dictionaryNameRequired": "scrivi il nome del dizionario",
     "renameDictionary": "Rinomina l’originale condiviso",
-    "editOriginalHint": "Qui modifichi il dizionario originale: le modifiche valgono per tutti i workspace collegati. Le correzioni locali già presenti restano valide.",
-    "editWorkspaceHint": "Le correzioni alle traduzioni, le note e le voci nascoste valgono solo in questo workspace. Le voci nuove entrano invece nell’originale condiviso.",
+    "editOriginalHint": "Modifichi l’originale condiviso.",
+    "editWorkspaceHint": "Le correzioni valgono in questo workspace.",
     "editingWhat": "Stai modificando",
     "sharedOriginal": "Originale condiviso",
-    "localCorrections": "Correzioni locali alle voci",
+    "localCorrections": "Correzioni locali",
     "appliesWhere": "Le modifiche valgono per",
     "linkedWorkspaces": "Tutti i workspace collegati",
     "newEntriesWhere": "Le voci nuove entrano in",
-    "newEntriesSharedHint": "Un termine nuovo entra nel dizionario originale e sarà disponibile per tutti. Solo le correzioni di voci esistenti restano locali.",
+    "newEntriesSharedHint": "Le nuove voci entrano nell’originale condiviso.",
     "noChanges": "nessuna modifica da salvare",
     "finishEditing": "salva o annulla la modifica in corso",
     "discardDraftTitle": "Abbandonare la modifica?",
     "discardDraftMessage": "La modifica in corso non è stata salvata. Chiudendo verrà scartata.",
     "discardDraft": "Abbandona modifica",
-    "templateContextLabel": "Ambito del template",
-    "templateWorkflowLabel": "Flusso di lavoro del template",
+    "templateContextLabel": "Ambito",
+    "templateWorkflowLabel": "Flusso",
     "templateRefineProviderLabel": "Provider per affinare il prompt",
     "templatePromptPlaceholder": "Testo del prompt...",
-    "templateStageHint": "I template Fase compaiono solo nelle fasi di traduzione e possono salvare provider e modello di default.",
-    "templateAuditHint": "I template Audit sono condivisi tra Prompt Giudice e Prompt Coerenza e possono salvare provider e modello audit di default.",
-    "templatePersonaHint": "I template Persona vengono usati nella sezione Persona della configurazione progetto, in cima alla pipeline.",
-    "templateMemoryHint": "I template Memory sono usati dall'estrattore workspace che crea coppie phrase-memory allineate.",
+    "templateStageHint": "Istruzioni delle fasi di traduzione.",
+    "templateAuditHint": "Istruzioni per qualità e coerenza.",
+    "templatePersonaHint": "Ruolo e stile del traduttore.",
+    "templateMemoryHint": "Istruzioni per estrarre coppie bilingui.",
     "templateDeleteTitle": "Elimina modello",
     "templateDeleteMessage": "Elimina il modello \"{{name}}\"?",
     "csvImportTitle": "Importa CSV",
@@ -3235,6 +3235,13 @@
     "measureMessage": "Verrà calcolato l’embedding con {{model}} tramite OpenAI, con i relativi costi. Gli embedding degli altri modelli resteranno disponibili.",
     "measureSaved": "Embedding salvato",
     "sourceRecalculateMessage": "Modificando l’originale verranno ricalcolati {{count}} embedding tramite OpenAI, con i relativi costi. La versione precedente resterà archiviata. Se un calcolo fallisce, nessuna modifica verrà salvata.",
+    "measureRunning": "Calcolo embedding in corso…",
+    "memoryDetails": "Provenienza, tag e misure",
+    "finishEntry": "Termina modifica — salva il dizionario con il dischetto",
+    "sharedScopeHint": "Modifiche valide per tutti i workspace collegati.",
+    "localScopeHint": "Correzioni valide solo per {{workspace}}.",
+    "expandPrompt": "Leggi tutto il prompt",
+    "collapsePrompt": "Riduci il prompt",
     "searchEditingHint": "Termina la modifica per cercare."
   },
   "stats": {

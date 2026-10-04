@@ -40,6 +40,7 @@ Usare ruoli semantici per le superfici:
 |---|---|
 | `bg-surface-elevated` | dialog, menu, popover, header sticky |
 | `bg-surface-panel` | sidebar, colonne e pannelli |
+| `bg-surface-resource` | unica carta tenue per ciascuna voce delle risorse linguistiche |
 | `bg-surface-hover/50` | hover su righe cliccabili |
 
 Ogni area con un catalogo ha un **inchiostro** e una **carta** propri
@@ -235,9 +236,8 @@ solo**.
   destinazioni e nessuna delle due si comporta come ci si aspetta.
 - `beforeTabs`: blocco fisso fra intestazione e linguette, in vista con
   qualunque scheda (l'esecuzione nello Studio di traduzione).
-- Larghezza: `INSPECTOR_WIDTH` per tutti, con una sola eccezione — lo Studio di
-  traduzione parte da 440 px (minimo e iniziale) perché tiene dieci linguette
-  a misura piena in una riga; si allarga fino al massimo comune.
+- Larghezza: `INSPECTOR_WIDTH` per tutti, incluso lo Studio di traduzione
+  con cinque gruppi di linguette: minimo 320 px, iniziale 400 px, massimo 560 px.
 - `tabRowHeightClassName`: altezza fissa della barra tab quando accanto c'è
   un'altra intestazione (la casella della Ricerca, la barra di un visore): le
   due righe hanno la stessa altezza e lo stesso filetto, e la linea sotto è una
@@ -567,16 +567,49 @@ colonna vivono in `uiStore` e sopravvivono alla chiusura.
 
 ### Elenchi di versioni e comandi per riga
 
-Le Risorse linguistiche usano `TabStrip` nella fila della finestra, ricerca
-`CatalogSearchField`, righe piatte e campi comuni. Modelli di prompt: modulo
-esplicito con nome, ambito (suggerimento), flusso, modello facoltativo e testo,
-con rifinitura, salvataggio e annullamento a icona; nessun editor a matita dello
-Studio dentro il modulo. Dizionari aperti: `StatRow` «Stai modificando» e «Le
-modifiche valgono per» rendono **visibile** la distinzione fra originale
-condiviso e correzioni locali; in un workspace ospite una terza riga dice che
-le voci nuove entrano nell’originale. Il suggerimento approfondisce, non
-sostituisce questa informazione necessaria per scegliere cosa modificare.
-Memorie: provenienza comune, coppie su `StatBlock`, campi e comandi per riga.
+Le Risorse linguistiche usano `TabStrip` nella fila della finestra e ricerca
+`CatalogSearchField`. Ogni voce ha un unico fondo `surface-resource`, carta
+calda appena distinta dalla finestra, separata dalle altre voci con spazio.
+Anteprima e dettagli aperti ereditano questo fondo: niente superfici annidate,
+bianco acceso o separatori fra i campi di un modulo. I campi modificabili
+conservano il proprio fondo `editorial-textbox`. La classe `linguistic-resource`
+usa `resource-muted` per etichette e metadati: contrasto sulla carta 5,01:1
+in chiaro e 6,13:1 in scuro; testo principale 5,37:1 e 11,10:1. Rinomina del dizionario al posto del
+nome, nello stesso flex della testata, senza aggiungere un campo a tutta riga. Titoli editoriali distinguono
+le voci, testo e spaziatura distinguono le informazioni al loro interno.
+La variante `compact` di `Dialog` riduce testata e footer delle risorse e
+finestre collegate, conservando focus, tastiera e semantica della primitiva.
+Copia usa `PopoverItem` con proprietario come seconda riga e scelta segnata;
+importazione usa `IconButton`, spiegazioni nei `Hint`, anteprima su carta leggera;
+esportazione offre CSV/Excel affiancati. Nessun selettore o comando raw locale.
+Riferimento per raggruppamento e superfici: [NN/g, Common Region](https://www.nngroup.com/articles/common-region/).
+
+Dizionari: icona condivisione o scudo per originale condiviso/correzioni locali,
+ambito nel `Hint`; il più vicino allo scudo spiega che le nuove voci sono
+condivise. Le coppie si leggono come testo affiancato; solo la voce in modifica
+mostra i campi comuni. Note a richiesta. Il più inserisce in cima e porta il
+fuoco al termine; spunta = termina modifica della voce, dischetto = salva il
+dizionario. Più e dischetto stanno nella stessa intestazione sticky delle voci.
+
+Modelli di prompt: titolo, icone per ambito/flusso/modello, anteprima breve e
+comando per leggere tutto. Il testo condivide la carta della voce, senza
+riquadro interno: fondo sul contenitore, clamp sull'anteprima interna. Modifica
+nella propria voce, creazione in cima.
+Il modulo usa una griglia responsive a due colonne con `FieldLabel` e campi
+comuni, senza `SettingRow` o filetti ripetuti: è un modulo, non un elenco di
+impostazioni. Nome e testo hanno tutta la larghezza; ambito/flusso e
+servizio/modello sono affiancati. I motivi e le spiegazioni restano nei `Hint`.
+
+Memorie: origine e lingue in una testata compatta, coppia affiancata, tag come
+riassunto breve. Il comando dei dettagli apre una sola voce per volta. Anche
+aperti, i dettagli sono compatti: provenienza a due colonne con `ResourceFact`
+(icona esplicativa e valore che va a capo), misure e tag affiancati, senza
+filetti interni. Numero delle misure visibile; ogni modello disponibile ha una riga propria,
+con dimensione e relativo `Hint`. Durante il calcolo il comando usa `Loader2`
+animato, accompagnato da uno stato accessibile.
+La provenienza estesa nei Riferimenti dello Studio conserva `StatBlock` per
+nomi e titoli lunghi. Ricerca realmente disabilitata con motivo durante le
+modifiche; non ignorare silenziosamente la digitazione.
 
 Quando una riga descrive una cosa su cui si può agire — una versione locale di
 un libro, un profilo, un file — i comandi che la riguardano stanno **su quella
@@ -697,8 +730,8 @@ Niente colori neon o valori locali.
 Il riferimento visivo live è nella guida di stile interna dell'app.
 
 
-Risorse Memorie: elenco piatto, provenienza con StatRow/StatBlock, modelli e tag
-con SettingRow/Select e IconButton neutri. Bozze protette durante cambio scheda,
+Risorse Memorie: elenco piatto, dettagli compatti con ResourceFact, Select e
+IconButton neutri. Bozze protette durante cambio scheda,
 filtri e chiusura. Le correzioni ai testi riguardano la memoria: evidenza iniziale
 congelata e riga esplicita dopo modifica dell’originale. Costi su Popover comune,
 nessun pannello con portal/posizionamento/timer propri. Opzioni vista su righe

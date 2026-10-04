@@ -954,10 +954,21 @@ automatica spenta; con ricerca automatica attiva ne avvia una nuova.
 Risorse linguistiche: `LibraryPanel` usa `TabStrip`; Modelli aggiunge ricerca,
 filtro OCR e `PromptTemplateForm` per creazione/modifica in posto tramite
 `updateTemplate`. Un duplicato nome/ambito/flusso mantiene il modulo aperto
-senza sovrascrivere un modello diverso. I modelli restano globali.
+senza sovrascrivere un modello diverso. I modelli restano globali. La modifica
+si apre nella propria voce; ricerca e filtri restano disabilitati finché la
+bozza è aperta. Anteprima breve e lettura integrale non alterano il prompt.
+`DictionaryEntryEditor` legge le coppie come testo; il più inserisce in cima
+con focus esplicito. Modificare una voce aggiorna ancora la bozza nello store:
+la spunta chiude l'editor, solo il dischetto persiste il dizionario.
+
 Memorie legge `listPhraseMemoryEntries(null)` per «tutti» e «senza workspace»,
 senza dipendere dall’esistenza di workspace; filtro e ricerca restringono
-anche l’esportazione. Correggere la sola resa conserva le misure; correggere l’originale crea una revisione e ricalcola atomicamente tutti i modelli già presenti.
+anche l’esportazione. La lista affianca i testi; i dettagli di una sola voce
+mostrano provenienza compatta, misure e tag. Apertura dei dettagli è stato locale,
+non una modifica ai dati. `measuringId` distingue il calcolo embedding dalle
+altre operazioni impegnate: accende la rotellina del solo comando interessato,
+dopo la conferma, e si azzera anche in caso di errore. Durante correzione/testo o tag sono bloccati ricerca,
+filtri e chiusura dei dettagli, così la bozza non viene smontata. Correggere la sola resa conserva le misure; correggere l’originale crea una revisione e ricalcola atomicamente tutti i modelli già presenti.
 La ricerca richiede misure con modello, dimensioni e profilo compatibili.
 Non esistono embedding senza modello né riferimenti esatti inseriti fuori
 dalla graduatoria semantica. Le coppie salvate restano nella Memoria del frammento.
@@ -1062,9 +1073,17 @@ salvata): (`PipelineSidebarRunSection` + `ChunkCostPanel`, il cui dettaglio
 della stima si apre a sinistra del riquadro) e cinque
 linguette (Glossario, Memoria, Anteprima, Revisione, Documento) su un solo
 stato, `uiStore.studioTab` (`TranslationStudioTab` =
-linguette del frammento ∪ linguette del documento). Revisione (`ReviewTab`) è
-una linguetta della colonna ma tre valori di `studioTab` — `audit`, `notes`,
-`sourceNotes` — mostrati come sottolinguette (`TabStrip`, linguette a icona con
+linguette del frammento ∪ linguette del documento). `studioGroupViews` conserva
+in memoria la scelta di ogni gruppo; `setStudioTab` registra anche la vista
+lasciata aperta dai percorsi di navigazione esterni. Il primo ingresso in
+Revisione sceglie Audit/Note in base alle segnalazioni, i successivi riaprono
+la scelta dell'utente; una vista indisponibile usa il ripiego del suo gruppo.
+Cambio e creazione pipeline sono bloccati durante `chunksStore.isProcessing`,
+nel menu e nelle operazioni di `projectStore`; il cambio ricontrolla il blocco
+anche dopo le letture asincrone, prima di sostituire configurazione e frammenti.
+Revisione (`ReviewTab`) è
+una linguetta della colonna ma quattro valori di `studioTab` — `audit`, `notes`,
+`sourceNotes`, `history` — mostrati come sottolinguette (`TabStrip`, linguette a icona con
 nome e conteggio nell'etichetta, Audit spento con il motivo); `setStudioTab('notes')` da altri punti apre quindi Revisione
 sulle note. Le note del testo (`SourceNotesList`) sono le note a piè di
 pagina importate, in sola lettura. Memoria (`MemoryGroupTab`, colonna

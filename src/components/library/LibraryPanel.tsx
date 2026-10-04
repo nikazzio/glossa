@@ -92,6 +92,8 @@ export function LibraryPanel() {
 
   return (
     <Dialog
+      compact
+      closeDisabled={busy || closing}
       open={showLibraryPanel}
       onOpenChange={(open) => {
         if (!open) void handleClose();
@@ -101,7 +103,7 @@ export function LibraryPanel() {
       icon={<BookMarked size={22} />}
       widthClassName="max-w-3xl"
       panelClassName="h-[85vh]"
-      bodyClassName="px-6 py-6 md:px-8"
+      bodyClassName="px-6 py-4"
       tabBar={tabBar}
       footer={
         <div className="flex justify-end">

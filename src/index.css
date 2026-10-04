@@ -129,6 +129,8 @@
      con opacità diverse a caso. ────────────────────────────────────────── */
   --color-surface-elevated: var(--color-editorial-page); /* dialog, menu, popover, header sticky */
   --color-surface-panel: var(--color-editorial-bg);       /* wrapper strutturali di pannello/colonna/sidebar */
+  --color-surface-resource: var(--color-editorial-paper); /* carta tenue, unica per voce nelle risorse */
+  --color-resource-muted: #666666; /* testo secondario sulla carta delle risorse */
   --color-surface-hover: var(--color-editorial-textbox);  /* usa con /50 — hover su riga/voce cliccabile */
 
   /* ── Inchiostro e carta d'area — identità di Biblioteca, Trascrizioni e
@@ -190,6 +192,7 @@ html.dark {
   --color-editorial-accent:       #3A7A72;
   --color-editorial-danger:       #C8705E;
   --color-editorial-muted:        #857d77;
+  --color-resource-muted:         #a49a91; /* 6.13:1 sulla carta scura delle risorse */
   --color-editorial-border:       #352d28;
   --color-editorial-textbox:      #251f1b;
   --color-editorial-success:      #5c9e7e;
@@ -242,6 +245,12 @@ html.dark {
   --color-terminal-info:      #7898aa;
 
   --color-terminal-accent:    #c49b2a;
+}
+
+/* Mantiene leggibili anche etichette e metadati dei componenti comuni.
+   Una sola carta per voce; i dettagli aperti ereditano la superficie. */
+.linguistic-resource {
+  --color-editorial-muted: var(--color-resource-muted);
 }
 
 /* Didascalia: etichetta maiuscola di un dato o di una colonna di tabella. */

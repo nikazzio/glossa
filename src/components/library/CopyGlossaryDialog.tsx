@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { BookCopy, Loader2 } from 'lucide-react';
+import { BookCopy, Check, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { listGlossaries } from '../../services/glossaryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { Glossary } from '../../types';
-import { Dialog, DialogCancelButton, DialogConfirmButton, Spinner } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, FieldLabel, Hint, PopoverItem, Spinner } from '../ui';
+import { reportUiError } from '../../utils/reportUiError';
 import { FIELD_CLASSNAME } from '../ui/fieldStyles';
 
 interface CopyGlossaryDialogProps {
@@ -33,10 +34,13 @@ export function CopyGlossaryDialog({
     setIsLoading(true);
     setSelectedId(null);
     setName('');
+    let cancelled = false;
     void listGlossaries()
-      .then((glossaries) => setSources(glossaries.filter((item) => item.workspaceId !== destinationWorkspaceId)))
-      .finally(() => setIsLoading(false));
-  }, [open, destinationWorkspaceId]);
+      .then((glossaries) => { if (!cancelled) setSources(glossaries.filter((item) => item.workspaceId !== destinationWorkspaceId)); })
+      .catch((error: unknown) => { if (!cancelled) { setSources([]); reportUiError(t('library.dictionaryLoadError'), error); } })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, destinationWorkspaceId, t]);
 
   const selectSource = (source: Glossary) => {
     setSelectedId(source.id);
@@ -59,13 +63,15 @@ export function CopyGlossaryDialog({
 
   return (
     <Dialog
+      compact
       open={open}
       onOpenChange={(nextOpen) => { if (!nextOpen && !isCopying) onClose(); }}
       title={t('library.copyExistingDictionary')}
       closeLabel={t('common.cancel')}
       icon={<BookCopy size={20} />}
       widthClassName="max-w-lg"
-      bodyClassName="px-5 py-5"
+      bodyClassName="px-6 py-4"
+      closeDisabled={isCopying}
       footer={
         <div className="flex justify-end gap-2">
           <DialogCancelButton onClick={onClose} disabled={isCopying}>{t('common.cancel')}</DialogCancelButton>
@@ -76,47 +82,36 @@ export function CopyGlossaryDialog({
       }
     >
       <div className="space-y-4">
-        <p className="text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
-          {t('library.copyExistingDictionaryHint')}
-        </p>
+        <Hint label={t('library.copyExistingDictionaryHint')} />
         {isLoading ? (
           <Spinner size={14} label={t('common.loading')} className="py-6" />
         ) : sources.length === 0 ? (
-          <p className="border-y border-dashed border-rule py-6 text-center text-sm italic text-editorial-muted">
+          <p className="py-6 text-center text-sm italic text-editorial-muted">
             {t('library.noOtherWorkspaceDictionaries')}
           </p>
         ) : (
-          <div className="max-h-56 space-y-1 overflow-y-auto border-y border-rule py-2 custom-scrollbar">
+          <div className="max-h-56 space-y-1 overflow-y-auto custom-scrollbar">
             {sources.map((source) => {
               const owner = workspaces.find((workspace) => workspace.id === source.workspaceId);
               const selected = source.id === selectedId;
               return (
-                <button
-                  key={source.id}
-                  type="button"
-                  onClick={() => selectSource(source)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    selected ? 'bg-editorial-accent/10 text-editorial-accent' : 'hover:bg-editorial-textbox/30'
-                  }`}
-                >
-                  <span className="truncate font-display text-base italic text-editorial-ink">{source.name}</span>
-                  <span className="shrink-0 text-xs text-editorial-muted">{owner?.name ?? source.workspaceId}</span>
-                </button>
+                <div key={source.id} className={`flex items-center rounded-md ${selected ? 'bg-editorial-accent/10' : ''}`}>
+                  <PopoverItem label={source.name} description={owner?.name ?? t('memory.provenance.unknownWorkspace')} disabled={isCopying} onSelect={() => selectSource(source)} />
+                  {selected && <Check size={14} className="mr-3 shrink-0 text-editorial-accent" aria-hidden="true" />}
+                </div>
               );
             })}
           </div>
         )}
-        <label className="block space-y-1.5">
-          <span className="text-caption font-bold uppercase tracking-caption text-editorial-muted">
-            {t('library.dictionaryNameLabel')}
-          </span>
-          <input
+        <div className="space-y-1.5">
+          <FieldLabel block htmlFor="copy-dictionary-name">{t('library.dictionaryNameLabel')}</FieldLabel>
+          <input id="copy-dictionary-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
             disabled={!selectedId || isCopying}
             className={`${FIELD_CLASSNAME} font-display italic`}
           />
-        </label>
+        </div>
       </div>
     </Dialog>
   );

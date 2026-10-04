@@ -71,10 +71,16 @@ Open **Linguistic resources → Memories**. General resources start with all
 phrases; workspace resources start with its collection. Filter by workspace,
 **All**, **Unassigned** and tag, or search texts and tags.
 
-Each phrase displays provenance, languages, date and all available embedding
-models with their dimensions. Select a model and use plus to add its embedding,
-or the circular arrow to recalculate it. Calculation requires an OpenAI key
-and incurs API costs, described in the confirmation. Other models are preserved.
+Each entry shows source and translation side by side. Languages, an origin
+title and tags help identify it without opening details. **Provenance, tags and
+measurements** opens the full information for the selected entry: book,
+workspace, translation, chunk, date, tags and embedding models.
+
+Select a model in the details and use plus to add its embedding or the circular
+arrow to recalculate it. Calculation requires an OpenAI key and incurs costs,
+described in the confirmation. Other models are preserved. Search and filters
+are disabled while editing text or tags to preserve the draft; finish or cancel
+the edit to use them again.
 Workspace settings can calculate the selected model for all its memory entries.
 Saving settings applies the active search model independently of calculation.
 
@@ -123,3 +129,5 @@ each, under the pair, where it comes from (workspace, translation, segment, or
 one by one with the bin; new ones are checked and added with the disk, which
 never deletes the others. The search only uses phrases of the same language
 pair.
+
+Collection entries have one muted background distinct from the window; expanded details share that same surface. Details list embeddings one per row; the calculation command shows a spinner until the request completes.

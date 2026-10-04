@@ -2499,8 +2499,8 @@
             "paragraphs": [],
             "steps": [
               "Open Language Resources in the workspace and select Dictionaries.",
-              "Create a dictionary or choose an existing resource.",
-              "Enter the source term, required translation and any notes. You can also import CSV or TSV, checking the preview and whether to merge or replace entries.",
+              "Create a dictionary or choose an existing resource. The pencil beside the title edits it on the same row.",
+              "Use +: the new entry appears at the top with focus on its term. The pencil edits a pair; the notebook opens notes. The check finishes editing the entry; the disk saves the dictionary. You can also import CSV or TSV.",
               "Assign the dictionary to the project and check its entries in the Tools column’s Glossary tab."
             ]
           },
@@ -2522,7 +2522,7 @@
           {
             "title": "Managing prompt templates",
             "paragraphs": [
-              "In Language resources, open Prompt Templates. Search names and text, and filter by Stages, Quality control, Persona, Memory, or OCR.",
+              "Each Prompt Template has a title and preview. The eye shows the full text; hover the icons for scope, workflow and model. Search names and text, and filter by Stages, Quality control, Persona, Memory or OCR.",
               "The + command opens the form; the pencil edits an existing template. Enter its name, scope, workflow and text; a default provider and model are optional. Label hints explain where the instructions will be used.",
               "Choose a provider and model to Refine; unavailable commands explain missing credentials or fields. The disk saves and the cross cancels. Use a template’s trash command and confirm to delete it."
             ]
@@ -2531,7 +2531,7 @@
             "title": "General resources and editing scope",
             "paragraphs": [
               "In General language resources, the workspace filter shows all linked dictionaries, including shared ones. You always edit originals here; filtering only changes the list.",
-              "In an open dictionary, “You are editing” and “Changes apply to” identify the shared original or local overrides and the affected workspace. Local overrides apply only to the guest workspace, but new entries are added to the shared original, as a separate row explains.",
+              "In an open dictionary the sharing icon identifies the shared original; the shield identifies local corrections. The hint explains where changes apply. Local corrections affect only the guest workspace; the adjacent plus explains that new entries are added to the shared original.",
               "The disk and “Save and close” respect this scope. A save error keeps the window open; “Close without saving” discards edits. Rename and delete affect the shared original. Choose a destination workspace to create, import or copy from general resources."
             ]
           }
@@ -2571,7 +2571,7 @@
             "title": "Browsing the collection",
             "paragraphs": [
               "Open Linguistic resources → Memories. Filter by workspace, all or unassigned; search texts and tags, or select a tag. General resources start with all entries; workspace resources start with the current workspace.",
-              "Each text shows provenance and all available embeddings. Select a model and use plus to add it or the circular arrow to recalculate it. Other embeddings remain. OpenAI calculation needs a key and incurs costs, described in the confirmation.",
+              "Pairs show source and translation side by side, with languages, an origin title and tags. Each entry uses one muted background, including its expanded details. The details control opens full provenance, date, editable tags and measurements. Select a model there and use plus to add it or the circular arrow to recalculate it; other models remain. OpenAI calculation requires a key and incurs costs, described in the confirmation. Each available embedding has its own row; the calculation command shows a spinner while running.",
               "The pencil edits both memory texts without changing the original translation. Editing only the translation preserves embeddings. Editing the source recalculates all available embeddings and archives the previous revision. If any calculation fails, no changes are saved.",
               "Add manual tags separated by semicolons. After confirmation, the bin removes the memory text, revisions and embeddings. The dictionary command copies the pair into the selected dictionary. CSV export preserves text, tags, provenance and models for visible phrases only.",
               "When creating a translation, you can select a Library book and version. Without this choice, the book is “Not specified”. It is not inferred from the imported filename and page numbers are not invented.",
@@ -3115,10 +3115,10 @@
     "templateLoadError": "Could not load templates",
     "templateSaveError": "Could not save the template",
     "templateDuplicate": "A template with this name, scope and workflow already exists. Edit it or use a different name.",
-    "templateDefaultModel": "Default model",
-    "templateDefaultModelHint": "Optional: suggested when you apply this prompt template. Also used here to refine the text.",
-    "templateWorkflowHint": "The workflow these instructions are saved for: translation or transcription.",
-    "templateOcrHint": "OCR templates are available in workspace OCR settings and the transcription Studio.",
+    "templateDefaultModel": "Model",
+    "templateDefaultModelHint": "Optional. Also used to refine the prompt.",
+    "templateWorkflowHint": "Translation or transcription.",
+    "templateOcrHint": "Instructions for reading pages.",
     "noDefaultModel": "None",
     "workInProgress": "operation in progress",
     "promptRequired": "enter prompt text first",
@@ -3138,28 +3138,28 @@
     "destinationWorkspace": "Destination workspace",
     "dictionaryNameRequired": "enter a dictionary name",
     "renameDictionary": "Rename the shared original",
-    "editOriginalHint": "You are editing the original dictionary: changes apply to all linked workspaces. Existing local overrides remain in effect.",
-    "editWorkspaceHint": "Translation overrides, notes and hidden entries apply only to this workspace. New entries are added to the shared original.",
+    "editOriginalHint": "You edit the shared original.",
+    "editWorkspaceHint": "Corrections apply in this workspace.",
     "editingWhat": "You are editing",
     "sharedOriginal": "Shared original",
-    "localCorrections": "Local entry overrides",
+    "localCorrections": "Local corrections",
     "appliesWhere": "Changes apply to",
     "linkedWorkspaces": "All linked workspaces",
     "newEntriesWhere": "New entries are added to",
-    "newEntriesSharedHint": "A new term is added to the original dictionary for everyone. Only changes to existing entries stay local.",
+    "newEntriesSharedHint": "New entries are added to the shared original.",
     "noChanges": "no changes to save",
     "finishEditing": "save or cancel the current edit",
     "discardDraftTitle": "Discard the current edit?",
     "discardDraftMessage": "Your current edit has not been saved. Closing will discard it.",
     "discardDraft": "Discard edit",
-    "templateContextLabel": "Template scope",
-    "templateWorkflowLabel": "Template workflow",
+    "templateContextLabel": "Scope",
+    "templateWorkflowLabel": "Workflow",
     "templateRefineProviderLabel": "Provider to refine the prompt",
     "templatePromptPlaceholder": "Prompt text...",
-    "templateStageHint": "Stage templates only appear in translation stages and can store a default provider and model.",
-    "templateAuditHint": "Audit templates are shared by both the Judge Prompt and the Coherence Prompt and can store the default audit provider and model.",
-    "templatePersonaHint": "Persona templates are used in the Persona section of the project configuration, at the top of the pipeline.",
-    "templateMemoryHint": "Memory templates are used by the workspace extractor that builds aligned phrase-memory pairs.",
+    "templateStageHint": "Instructions for translation stages.",
+    "templateAuditHint": "Instructions for quality and coherence checks.",
+    "templatePersonaHint": "Translator role and style.",
+    "templateMemoryHint": "Instructions for extracting bilingual pairs.",
     "templateDeleteTitle": "Delete template",
     "templateDeleteMessage": "Delete template \"{{name}}\"?",
     "csvImportTitle": "Import CSV",
@@ -3235,6 +3235,13 @@
     "measureMessage": "The embedding will be calculated with {{model}} through OpenAI, incurring API costs. Embeddings from other models will remain available.",
     "measureSaved": "Embedding saved",
     "sourceRecalculateMessage": "Editing the source will recalculate {{count}} embeddings through OpenAI, incurring API costs. The previous revision remains archived. If any calculation fails, no changes will be saved.",
+    "measureRunning": "Calculating embedding…",
+    "memoryDetails": "Provenance, tags and measurements",
+    "finishEntry": "Finish editing — save the dictionary with Save",
+    "sharedScopeHint": "Changes apply to all linked workspaces.",
+    "localScopeHint": "Corrections apply only to {{workspace}}.",
+    "expandPrompt": "Read the full prompt",
+    "collapsePrompt": "Collapse the prompt",
     "searchEditingHint": "Finish editing to search."
   },
   "stats": {

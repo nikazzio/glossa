@@ -7,7 +7,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { exportGlossaryToCsv, exportGlossaryToXlsx, getGlossaryEntries } from '../../services/glossaryService';
 import type { Glossary } from '../../types';
-import { Dialog, DialogCancelButton, IconButton, SettingRow } from '../ui';
+import { Dialog, DialogCancelButton, IconButton } from '../ui';
 
 export function DictionaryExportDialog({ glossary, onClose }: { glossary: Glossary | null; onClose: () => void }) {
   const { t } = useTranslation();
@@ -28,13 +28,14 @@ export function DictionaryExportDialog({ glossary, onClose }: { glossary: Glossa
     } catch (error: unknown) { reportUiError(t('library.exportError'), error); }
     finally { setBusy(false); }
   };
-  return <Dialog open={glossary !== null} onOpenChange={(open) => { if (!open && !busy) onClose(); }} title={t('library.exportGlossary')}
+  return <Dialog compact closeDisabled={busy} open={glossary !== null} onOpenChange={(open) => { if (!open && !busy) onClose(); }} title={t('library.exportGlossary')}
     closeLabel={t('common.close')} widthClassName="max-w-sm" bodyClassName="px-5 py-4"
     footer={<div className="flex justify-end"><DialogCancelButton onClick={onClose} disabled={busy}>{t('common.cancel')}</DialogCancelButton></div>}>
-    <div className="divide-y divide-rule border-y border-rule">
-      {(['csv', 'xlsx'] as const).map((format) => <SettingRow key={format} label={format === 'csv' ? 'CSV' : 'Excel'}>
+    <div className="flex flex-wrap gap-6">
+      {(['csv', 'xlsx'] as const).map((format) => <div key={format} className="flex items-center gap-3">
+        <span className="text-sm text-editorial-ink">{format === 'csv' ? 'CSV' : 'Excel'}</span>
         <IconButton onClick={() => void handleExport(format)} disabled={busy} title={`${t('library.exportGlossary')} ${format.toUpperCase()}`}><Download size={14} /></IconButton>
-      </SettingRow>)}
+      </div>)}
     </div>
   </Dialog>;
 }

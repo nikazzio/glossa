@@ -18,6 +18,7 @@ interface DialogProps {
   bodyClassName?: string;
   panelClassName?: string;
   closeDisabled?: boolean;
+  compact?: boolean;
 }
 
 export function Dialog({
@@ -36,6 +37,7 @@ export function Dialog({
   bodyClassName = 'px-6 py-6 md:px-8',
   panelClassName = '',
   closeDisabled = false,
+  compact = false,
 }: DialogProps) {
   // closeDisabled: blocca Esc, click overlay e tasto X (es. durante operazioni in corso).
   const guardClose = (event: Event) => {
@@ -52,9 +54,9 @@ export function Dialog({
           onInteractOutside={guardClose}
           className={`fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-modal ${widthClassName} ${panelClassName}`.trim()}
         >
-          <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
+          <div className={`shrink-0 border-b border-editorial-border ${compact ? 'px-6 py-3' : 'px-6 py-5 md:px-8 md:py-6'}`}>
             <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 space-y-2">
+              <div className={`min-w-0 ${compact ? 'space-y-1' : 'space-y-2'}`}>
                 {eyebrow ? (
                   <div className="text-caption font-bold uppercase tracking-section text-editorial-muted">
                     {eyebrow}
@@ -62,7 +64,7 @@ export function Dialog({
                 ) : null}
                 <div className="flex items-center gap-3">
                   {icon ? <span className="shrink-0 text-editorial-accent">{icon}</span> : null}
-                  <RadixDialog.Title className="font-display text-3xl italic tracking-tight text-editorial-ink">
+                  <RadixDialog.Title className={`font-display ${compact ? 'text-2xl' : 'text-3xl'} italic tracking-tight text-editorial-ink`}>
                     {title}
                   </RadixDialog.Title>
                 </div>
@@ -90,13 +92,13 @@ export function Dialog({
                 </RadixDialog.Close>
               </div>
             </div>
-            {tabBar ? <div className="mt-4">{tabBar}</div> : null}
+            {tabBar ? <div className={compact ? 'mt-3' : 'mt-4'}>{tabBar}</div> : null}
           </div>
           <div className={`flex-1 overflow-y-auto custom-scrollbar ${bodyClassName}`.trim()}>
             {children}
           </div>
           {footer ? (
-            <div className="shrink-0 border-t border-editorial-border px-6 py-4 md:px-8">{footer}</div>
+            <div className={`shrink-0 border-t border-editorial-border ${compact ? 'px-6 py-3' : 'px-6 py-4 md:px-8'}`}>{footer}</div>
           ) : null}
         </RadixDialog.Content>
       </RadixDialog.Portal>
