@@ -103,3 +103,27 @@ export const SHARED_TEXTS: Record<string, string> = {
   'context-frame': 'sharedAll',
   'chunk-id': 'sharedAll',
 };
+
+/**
+ * Parts that can be switched off per phase. Always on: the translation context
+ * (required), the phase prompt and user message (no request without them), the
+ * response format (the app reads it), the chunk id and audit findings (they
+ * follow the neighbouring chunks and the refine loop).
+ */
+export const SWITCHABLE_PARTS: ReadonlySet<string> = new Set([
+  'role', 'structural-rules', 'glossary-rules', 'markdown-rules', 'examples',
+  'neighbour-chunks', 'glossary-table', 'review-method', 'output-contract',
+]);
+
+export const partSwitchKey = (phase: PreviewPhase, partId: string): string => `${phase}:${partId}`;
+
+export function isPartOff(config: PipelineConfig, phase: PreviewPhase, partId: string): boolean {
+  return (config.promptComposition?.disabled ?? []).includes(partSwitchKey(phase, partId));
+}
+
+/** New config with the part switched on or off for that phase. */
+export function withPartSwitch(config: PipelineConfig, phase: PreviewPhase, partId: string, isOn: boolean): PipelineConfig {
+  const key = partSwitchKey(phase, partId);
+  const others = (config.promptComposition?.disabled ?? []).filter((entry) => entry !== key);
+  return { ...config, promptComposition: { ...config.promptComposition, disabled: isOn ? others : [...others, key] } };
+}

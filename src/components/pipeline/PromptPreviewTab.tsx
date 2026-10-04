@@ -1,4 +1,4 @@
-import { ArrowUpRight, Braces, Settings2, FileText, Languages, Link2, MessageSquare, Network, ScrollText, ShieldCheck, Wand2 } from 'lucide-react';
+import { ArrowUpRight, Braces, Settings2, ToggleLeft, ToggleRight, FileText, Languages, Link2, MessageSquare, Network, ScrollText, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, PipelineStageConfig, PromptInfo, PromptPart, StageRole, SystemTextInfo, TranslationChunk } from '../../types';
@@ -10,7 +10,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { AUDIT_PREVIEW_ID, COHERENCE_PREVIEW_ID, useChunkPromptPreview } from '../../hooks/useChunkPromptPreview';
 import { PromptMessage } from './PromptCard';
-import { CONDITIONAL_AT_RUN_TIME, PHASE_PARTS, type PartPlace, type PartSpec, type PreviewPhase } from './promptParts';
+import { CONDITIONAL_AT_RUN_TIME, PHASE_PARTS, SWITCHABLE_PARTS, isPartOff, withPartSwitch, type PartPlace, type PartSpec, type PreviewPhase } from './promptParts';
 import { SystemTextCard } from './SystemTextCard';
 import { CommandRule } from './PromptSourceLabel';
 import type { ConfigSection } from './PipelineConfig';
@@ -78,7 +78,7 @@ function kindLabel(spec: PartSpec, t: (key: string, options?: Record<string, str
     : t(`pipeline.promptParts.kind.${spec.kind}`);
 }
 
-function PartCard({ spec, part, config, edit }: { spec: PartSpec; part?: PromptPart; config: PipelineConfig; edit?: EditContext }) {
+function PartCard({ spec, part, config, edit, phase }: { spec: PartSpec; part?: PromptPart; config: PipelineConfig; edit?: EditContext; phase: PreviewPhase }) {
   const { t } = useTranslation();
   const title = t(`pipeline.promptParts.${spec.id}.title`);
   const runtimeCondition = CONDITIONAL_AT_RUN_TIME[spec.id];
@@ -91,26 +91,40 @@ function PartCard({ spec, part, config, edit }: { spec: PartSpec; part?: PromptP
     ? <IconButton size="sm" title={t('pipeline.promptParts.openPlace', { place: t(`pipeline.promptParts.place.${place}`) })}
         onClick={() => edit.onOpenSection(PLACE_SECTION[place])}><ArrowUpRight size={14} /></IconButton>
     : null;
+  // Interruttore del pezzo: solo per i facoltativi, e solo dove si può modificare.
+  const switchable = Boolean(edit) && SWITCHABLE_PARTS.has(spec.id);
+  const off = switchable && isPartOff(config, phase, spec.id);
+  const switchButton = edit && switchable
+    ? <IconButton size="sm" ariaPressed={!off} disabled={Boolean(edit.disabledReason)}
+        title={edit.disabledReason
+          ? t('transcription.commandBlocked', { command: t(off ? 'pipeline.promptParts.switchOn' : 'pipeline.promptParts.switchOff'), reason: edit.disabledReason })
+          : t(off ? 'pipeline.promptParts.switchOn' : 'pipeline.promptParts.switchOff')}
+        onClick={() => edit.setConfig((prev) => withPartSwitch(prev, phase, spec.id, off))}>
+        {off ? <ToggleLeft size={14} /> : <ToggleRight size={14} />}
+      </IconButton>
+    : null;
   // Il tipo è un'icona muted con la spiegazione nel suggerimento; i comandi stanno dopo un filetto.
   const KindIcon = spec.kind === 'auto' ? Braces : Settings2;
   const kindIcon = <Hint label={kindLabel(spec, t)}><KindIcon size={13} className="text-editorial-muted" aria-hidden="true" /></Hint>;
-  if (part) {
+  const commands = openPlace || switchButton ? <>{openPlace}{switchButton}</> : null;
+  if (part && !off) {
     const info = edit && part.textId ? edit.systemTexts.get(part.textId) : undefined;
     // Con la freccia il contenuto si modifica altrove: qui niente lucchetto.
     if (edit && part.textId && info && spec.kind === 'system') {
-      return <SystemTextCard part={part} textId={part.textId} info={info} title={title} hint={hint} kind={kindIcon} commands={openPlace}
+      return <SystemTextCard part={part} textId={part.textId} info={info} title={title} hint={hint} kind={kindIcon} commands={commands}
         config={config} setConfig={edit.setConfig} disabledReason={edit.disabledReason} />;
     }
     return <PromptMessage label={title} hint={hint} text={part.text.trim()}
-      metadata={<>{kindIcon}{openPlace && <><CommandRule />{openPlace}</>}<CommandRule /></>} />;
+      metadata={<>{kindIcon}{commands && <><CommandRule />{commands}</>}<CommandRule /></>} />;
   }
-  const reason = spec.absentReason?.(config);
+  const reason = off ? 'switchedOff' : spec.absentReason?.(config);
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-l-2 border-rule px-4 py-2 text-sm text-editorial-muted">
       <Hint label={`${title} — ${hint}`}><span className="font-display italic">{title}</span></Hint>
       <span>— {t(`pipeline.promptParts.reason.${reason ?? 'notInThisRequest'}`)}</span>
       {kindIcon}
       {openPlace}
+      {off && switchButton}
     </div>
   );
 }
@@ -123,7 +137,7 @@ function ChunkParts({ config, phase, previewId, chunk }: {
   chunk: TranslationChunk;
 }) {
   const { t } = useTranslation();
-  const { preview, isBuilding, error, isDeeplStage, build } = useChunkPromptPreview(chunk);
+  const { preview, error, isDeeplStage, build } = useChunkPromptPreview(chunk);
   const isReview = previewId === AUDIT_ID || previewId === COHERENCE_ID;
   const reviewBlocked = isReview && !chunk.translationProcessingText?.trim();
 
@@ -134,7 +148,7 @@ function ChunkParts({ config, phase, previewId, chunk }: {
 
   if (reviewBlocked) return <p className="text-sm text-editorial-muted">{t('promptPreview.translationRequired')}</p>;
   if (error) return <p role="alert" className="text-sm text-editorial-danger">{error}</p>;
-  if (isBuilding || !preview) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
+  if (!preview) return <p className="text-sm text-editorial-muted">{t('common.loading')}</p>;
   if (isDeeplStage || !phase) {
     return <PromptMessage label={t('pipeline.promptParts.deepl-request.title')} hint={t('pipeline.promptParts.deepl-request.hint')} text={preview.userPrompt}
       metadata={<><Hint label={t('pipeline.promptParts.kind.auto')}><Braces size={13} className="text-editorial-muted" aria-hidden="true" /></Hint><CommandRule /></>} />;
@@ -144,7 +158,7 @@ function ChunkParts({ config, phase, previewId, chunk }: {
     .filter((part) => part.message === message)
     .map((part) => {
       const spec: PartSpec = specs.get(`${message}:${part.id}`) ?? { id: part.id, message, kind: 'auto' };
-      return <PartCard key={`${message}-${part.id}`} spec={spec} part={part} config={config} />;
+      return <PartCard key={`${message}-${part.id}`} spec={spec} part={part} config={config} phase={phase} />;
     });
   return (
     <div className="space-y-6">
@@ -166,7 +180,8 @@ function PhaseParts({ config, phase, stage, edit }: { config: PipelineConfig; ph
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
-    setParts(null);
+    // L'elenco precedente resta finché arriva il nuovo: svuotarlo a ogni modifica
+    // faceva lampeggiare tutta la vista e richiudeva i lucchetti aperti.
     setError(null);
     void requestPreview(config, phase, stage)
       .then((info) => { if (active) setParts(info.parts ?? []); })
@@ -179,7 +194,7 @@ function PhaseParts({ config, phase, stage, edit }: { config: PipelineConfig; ph
   const byId = new Map(parts.map((part) => [`${part.message}:${part.id}`, part]));
   const group = (message: 'system' | 'user') => PHASE_PARTS[phase]
     .filter((spec) => spec.message === message)
-    .map((spec) => <PartCard key={`${message}-${spec.id}`} spec={spec} part={byId.get(`${message}:${spec.id}`)} config={config} edit={edit} />);
+    .map((spec) => <PartCard key={`${message}-${spec.id}`} spec={spec} part={byId.get(`${message}:${spec.id}`)} config={config} edit={edit} phase={phase} />);
 
   return (
     <div className="space-y-6">

@@ -565,7 +565,8 @@
         "noExamples": "no examples entered",
         "onlyRefineLoop": "only when the refine loop revises after an audit",
         "whenGrouped": "appears only when the document is split into groups of chunks",
-        "notInThisRequest": "not present in this request"
+        "notInThisRequest": "not present in this request",
+        "switchedOff": "switched off in this phase"
       },
       "role": {
         "title": "Role",
@@ -638,7 +639,9 @@
       "user-message": {
         "title": "User message",
         "hint": "The chunk to work on and the final request; placeholders in double braces are filled for each chunk."
-      }
+      },
+      "switchOff": "Switch this piece off in this phase",
+      "switchOn": "Switch this piece back on"
     },
     "promptPreviewMode": "What to show",
     "promptPreviewStructure": "Structure",
@@ -2497,7 +2500,8 @@
               "To see the real request for a chunk, open it in the Studio and choose “Open chunk” in Prompt preview: the same pieces fill with its text, neighbouring chunks, checked memory phrases and previous translation; Audit and Coherence use the current translation and say so when there is none. If models, prompts, the Translation context or DeepL options change after an interruption, resuming tells you.",
               "While a chunk is being translated, its translation text is covered by a gold veil reading “Translation in progress…” and cannot be edited: the result arrives when the stage finishes. The stage column in the margin stays usable; other chunks stay free.",
               "In the Studio's Memory tab, References shows similar phrases already in memory, with where they come from; the circled check decides which to use in the translation. Memory opens once the translation is verified: saved pairs are removed with the bin, new ones are checked and added with the disk, which never deletes anything.",
-              "In Prompt preview, Structure mode, system prompts (roles, rules, headings, response format, user message) are locked: unlock them to edit like the other prompts, with System templates and reset. The lock closes when the window closes; the response format asks for an extra confirmation."
+              "In Prompt preview, Structure mode, system prompts (roles, rules, headings, response format, user message) are locked: unlock them to edit like the other prompts, with System templates and reset. The lock closes when the window closes; the response format asks for an extra confirmation.",
+              "In the same view the switch of an optional piece turns it off for that phase only; a switched-off piece stays as a grey line, from which you turn it back on."
             ]
           },
           {

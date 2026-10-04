@@ -565,7 +565,8 @@
         "noExamples": "nessun esempio inserito",
         "onlyRefineLoop": "solo quando il ciclo di raffinamento rivede dopo un audit",
         "whenGrouped": "compare solo quando il documento è diviso in gruppi di frammenti",
-        "notInThisRequest": "non presente in questa richiesta"
+        "notInThisRequest": "non presente in questa richiesta",
+        "switchedOff": "spento in questa fase"
       },
       "role": {
         "title": "Ruolo",
@@ -638,7 +639,9 @@
       "user-message": {
         "title": "Messaggio utente",
         "hint": "Il frammento da lavorare e la consegna finale; i segnaposto tra doppie graffe vengono riempiti a ogni frammento."
-      }
+      },
+      "switchOff": "Spegni questo pezzo in questa fase",
+      "switchOn": "Riaccendi questo pezzo"
     },
     "promptPreviewMode": "Che cosa mostrare",
     "promptPreviewStructure": "Struttura",
@@ -2497,7 +2500,8 @@
               "Per vedere la richiesta vera di un frammento, aprilo nello Studio e scegli «Frammento aperto» in Anteprima prompt: gli stessi pezzi si riempiono con il suo testo, i frammenti vicini, le frasi della memoria spuntate e la traduzione precedente; Audit e Coerenza usano la traduzione attuale e senza traduzione lo dicono. Se dopo un’interruzione cambi modelli, prompt, Contesto di traduzione o opzioni DeepL, la ripresa te lo segnala.",
               "Mentre un frammento si traduce, il testo della sua traduzione è coperto da un velo oro con la scritta «Traduzione in corso…» e non si modifica: il risultato arriva quando la fase finisce. La colonna delle fasi nel margine resta usabile; gli altri frammenti restano liberi.",
               "Nella linguetta Memoria dello Studio, Riferimenti mostra le frasi simili già in memoria, con da dove vengono; la spunta in cerchio decide quali usare nella traduzione. Memoria si apre a traduzione verificata: le coppie già salvate si tolgono con il cestino, quelle nuove si spuntano e si aggiungono con il dischetto, che non cancella niente.",
-              "In Anteprima prompt, modo Struttura, i prompt di sistema (ruoli, regole, intestazioni, formato della risposta, messaggio utente) hanno il lucchetto: aprilo per modificarli come gli altri prompt, con template della categoria Sistema e ripristino. Il lucchetto si richiude chiudendo la finestra; il formato della risposta chiede una conferma in più."
+              "In Anteprima prompt, modo Struttura, i prompt di sistema (ruoli, regole, intestazioni, formato della risposta, messaggio utente) hanno il lucchetto: aprilo per modificarli come gli altri prompt, con template della categoria Sistema e ripristino. Il lucchetto si richiude chiudendo la finestra; il formato della risposta chiede una conferma in più.",
+              "Nella stessa vista l’interruttore di un pezzo facoltativo lo spegne solo per quella fase; un pezzo spento resta come riga grigia, da cui riaccenderlo."
             ]
           },
           {

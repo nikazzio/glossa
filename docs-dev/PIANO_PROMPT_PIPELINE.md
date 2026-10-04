@@ -229,6 +229,9 @@ Ogni passo è piccolo, si prova dal vivo e si salva prima del successivo.
   per i pezzi con contenuto altrove. Campo `prompt_composition` già pronto anche
   per il passo 4 (pezzi spenti).
 
+- Passo 4 fatto: interruttori per fase sui pezzi facoltativi nell'anteprima,
+  salvati in `prompt_composition.disabled`, rispettati in esecuzione.
+
 ## 11. Cambi del database previsti, non ancora fatti
 
 - **Lingue delle memorie** (lingua, varietà, periodo): da decidere nell'analisi

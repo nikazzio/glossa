@@ -138,6 +138,25 @@ fn sys(config: &PipelineConfig, sep: &str, id: &'static str, values: &[(&str, &s
     format!("{sep}{}", render(config, id, values))
 }
 
+/// Whether a switchable part is on for a phase (`phase:part` in the disabled list turns it off).
+fn on(config: &PipelineConfig, phase: &str, part: &str) -> bool {
+    let key = format!("{phase}:{part}");
+    !config
+        .prompt_composition
+        .disabled
+        .iter()
+        .any(|entry| *entry == key)
+}
+
+/// The text when the part is on, nothing when it is switched off.
+fn when_on(config: &PipelineConfig, phase: &str, part: &str, text: String) -> String {
+    if on(config, phase, part) {
+        text
+    } else {
+        String::new()
+    }
+}
+
 fn context_part(config: &PipelineConfig) -> String {
     work_brief(config)
         .map(|brief| sys(config, "\n\n", "context-frame", &[("TRANSLATION_CONTEXT", brief)]))
@@ -158,6 +177,11 @@ pub(crate) fn compose_stage_prompts(
         return compose_format_stage_prompts(text, stage, config);
     }
 
+    let phase = if stage.role.as_deref() == Some("refine") {
+        "refine"
+    } else {
+        "translation"
+    };
     let glossary_table = format_glossary_table(&config.glossary);
     let (glossary_id, glossary_text) = if glossary_table.is_empty() {
         ("translation.glossary-empty", render(config, "translation.glossary-empty", &[]))
@@ -167,27 +191,40 @@ pub(crate) fn compose_stage_prompts(
             render(config, "translation.glossary-rules", &[("GLOSSARY_TABLE", &glossary_table)]),
         )
     };
-    let markdown = if config.markdown_aware.unwrap_or(false) {
+    let markdown = if config.markdown_aware.unwrap_or(false) && on(config, phase, "markdown-rules") {
         sys(config, "\n\n", "translation.markdown-rules", &[])
     } else {
         String::new()
     };
     let examples_list = format_few_shot_list(&config.few_shot_examples);
-    let examples = if examples_list.is_empty() {
+    let examples = if examples_list.is_empty() || !on(config, phase, "examples") {
         String::new()
     } else {
         sys(config, "\n\n", "translation.examples", &[("EXAMPLES", &examples_list)])
     };
 
     let mut system = vec![Parts::default()
-        .push_from("role", Some("translation.role"), render(config, "translation.role", &[]))
+        .push_from(
+            "role",
+            Some("translation.role"),
+            when_on(config, phase, "role", render(config, "translation.role", &[])),
+        )
         .push_from("translation-context", Some("context-frame"), context_part(config))
         .push_from(
             "structural-rules",
             Some("translation.structural-rules"),
-            sys(config, "\n\n", "translation.structural-rules", &[]),
+            when_on(
+                config,
+                phase,
+                "structural-rules",
+                sys(config, "\n\n", "translation.structural-rules", &[]),
+            ),
         )
-        .push_from("glossary-rules", Some(glossary_id), format!("\n\n{glossary_text}"))
+        .push_from(
+            "glossary-rules",
+            Some(glossary_id),
+            when_on(config, phase, "glossary-rules", format!("\n\n{glossary_text}")),
+        )
         .push_from("markdown-rules", Some("translation.markdown-rules"), markdown)
         .push_from("examples", Some("translation.examples"), examples)
         .block(true)];
@@ -197,7 +234,12 @@ pub(crate) fn compose_stage_prompts(
     // longest common prefix — Anthropic via a single breakpoint here, OpenAI/DeepSeek/
     // Gemini via automatic prefix caching — giving cache hits across all stages within
     // the same blob, not only within a single stage.
-    if let Some(blob) = config.blob_context.as_deref().filter(|s| !s.is_empty()) {
+    let neighbours_on = on(config, phase, "neighbour-chunks");
+    if let Some(blob) = config
+        .blob_context
+        .as_deref()
+        .filter(|s| !s.is_empty() && neighbours_on)
+    {
         system.push(
             Parts::default()
                 .push_from(
@@ -225,11 +267,20 @@ pub(crate) fn compose_stage_prompts(
                 Some("translation.stage-frame"),
                 render(config, "translation.stage-frame", &[("STAGE_PROMPT", &stage.prompt)]),
             )
-            .push_from("output-contract", Some(contract_id), sys(config, "\n\n", contract_id, &[]))
+            .push_from(
+                "output-contract",
+                Some(contract_id),
+                when_on(config, phase, "output-contract", sys(config, "\n\n", contract_id, &[])),
+            )
             .block(false),
     );
 
-    let chunk_id = chunk_id_part(config, config.blob_current_chunk_id.as_deref());
+    // The chunk id only points into the neighbouring chunks: it goes with them.
+    let chunk_id = if neighbours_on {
+        chunk_id_part(config, config.blob_current_chunk_id.as_deref())
+    } else {
+        String::new()
+    };
     let user_sep = if chunk_id.is_empty() { "" } else { "\n\n" };
     let user = if is_refine {
         Parts::default()
@@ -277,7 +328,11 @@ fn chunk_id_part(config: &PipelineConfig, id: Option<&str>) -> String {
 fn compose_format_stage_prompts(text: &str, stage: &StageConfig, config: &PipelineConfig) -> ComposedPrompt {
     let system = vec![
         Parts::default()
-            .push_from("role", Some("format.role"), render(config, "format.role", &[]))
+            .push_from(
+                "role",
+                Some("format.role"),
+                when_on(config, "format", "role", render(config, "format.role", &[])),
+            )
             .block(true),
         Parts::default()
             .push_from(
@@ -288,7 +343,12 @@ fn compose_format_stage_prompts(text: &str, stage: &StageConfig, config: &Pipeli
             .push_from(
                 "output-contract",
                 Some("format.output-contract"),
-                sys(config, "\n\n", "format.output-contract", &[]),
+                when_on(
+                    config,
+                    "format",
+                    "output-contract",
+                    sys(config, "\n\n", "format.output-contract", &[]),
+                ),
             )
             .block(false),
     ];
@@ -327,12 +387,12 @@ pub(crate) fn compose_judge_prompts(
     config: &PipelineConfig,
 ) -> ComposedPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
-    let glossary = if glossary_table.is_empty() {
+    let glossary = if glossary_table.is_empty() || !on(config, "audit", "glossary-table") {
         String::new()
     } else {
         sys(config, "\n\n", "audit.glossary", &[("GLOSSARY_TABLE", &glossary_table)])
     };
-    let markdown = if config.markdown_aware.unwrap_or(false) {
+    let markdown = if config.markdown_aware.unwrap_or(false) && on(config, "audit", "markdown-rules") {
         sys(config, "\n\n", "audit.markdown-rules", &[])
     } else {
         String::new()
@@ -342,7 +402,11 @@ pub(crate) fn compose_judge_prompts(
     // block is constant for the whole project run, enabling near-100% cache hit rate
     // across all chunk judge calls.
     let system = vec![Parts::default()
-        .push_from("role", Some("audit.role"), render(config, "audit.role", &[]))
+        .push_from(
+            "role",
+            Some("audit.role"),
+            when_on(config, "audit", "role", render(config, "audit.role", &[])),
+        )
         .push_from("translation-context", Some("context-frame"), context_part(config))
         .push_from(
             "stage-prompt",
@@ -354,7 +418,12 @@ pub(crate) fn compose_judge_prompts(
         .push_from(
             "review-method",
             Some("audit.review-method"),
-            sys(config, "\n\n", "audit.review-method", &[]),
+            when_on(
+                config,
+                "audit",
+                "review-method",
+                sys(config, "\n\n", "audit.review-method", &[]),
+            ),
         )
         .push_from(
             "response-format",
@@ -406,7 +475,7 @@ pub(crate) fn compose_coherence_prompts(
         .as_deref()
         .filter(|s| !s.trim().is_empty())
         .unwrap_or(DEFAULT_COHERENCE_INSTRUCTIONS);
-    let glossary = if glossary_table.is_empty() {
+    let glossary = if glossary_table.is_empty() || !on(config, "coherence", "glossary-table") {
         String::new()
     } else {
         sys(config, "\n", "coherence.glossary", &[("GLOSSARY_TABLE", &glossary_table)])
@@ -417,12 +486,21 @@ pub(crate) fn compose_coherence_prompts(
     // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
     // Constant for the whole project run.
     let mut system = vec![Parts::default()
-        .push_from("role", Some("coherence.role"), render(config, "coherence.role", &[]))
+        .push_from(
+            "role",
+            Some("coherence.role"),
+            when_on(config, "coherence", "role", render(config, "coherence.role", &[])),
+        )
         .push_from("translation-context", Some("context-frame"), context_part(config))
         .push_from(
             "review-method",
             Some("coherence.review-method"),
-            sys(config, "\n", "coherence.review-method", &[]),
+            when_on(
+                config,
+                "coherence",
+                "review-method",
+                sys(config, "\n", "coherence.review-method", &[]),
+            ),
         )
         .push("stage-prompt", format!("\n{instructions}"))
         .push_from("glossary-table", Some("coherence.glossary"), glossary)
@@ -441,7 +519,12 @@ pub(crate) fn compose_coherence_prompts(
     // Block 2 (cacheable): reference document block. Identical for every chunk in the same
     // blob, so it's a second cache breakpoint — placed in system, not the user turn, so
     // providers actually cache it instead of rebilling it at full price on every chunk.
-    if let Some(ctx) = input.blob_context.as_deref().filter(|s| !s.is_empty()) {
+    let neighbours_on = on(config, "coherence", "neighbour-chunks");
+    if let Some(ctx) = input
+        .blob_context
+        .as_deref()
+        .filter(|s| !s.is_empty() && neighbours_on)
+    {
         system.push(
             Parts::default()
                 .push_from(
@@ -453,7 +536,11 @@ pub(crate) fn compose_coherence_prompts(
         );
     }
 
-    let chunk_id = chunk_id_part(config, input.current_chunk_id.as_deref());
+    let chunk_id = if neighbours_on {
+        chunk_id_part(config, input.current_chunk_id.as_deref())
+    } else {
+        String::new()
+    };
     let user_sep = if chunk_id.is_empty() { "" } else { "\n\n" };
     let user = Parts::default()
         .push_from("chunk-id", Some("chunk-id"), chunk_id)

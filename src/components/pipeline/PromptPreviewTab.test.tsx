@@ -74,4 +74,13 @@ describe('PromptPreviewTab', () => {
     await userEvent.click(unlock[0]);
     expect(screen.getByRole('button', { name: 'pipeline.promptParts.lock' })).toBeInTheDocument();
   });
+
+  it('switches an optional piece off for this phase only', async () => {
+    const setConfig = vi.fn();
+    render(<PromptPreviewTab config={config} setConfig={setConfig} onOpenSection={vi.fn()} />);
+    await screen.findByText('You are a translator.');
+    await userEvent.click(screen.getAllByRole('button', { name: 'pipeline.promptParts.switchOff' })[0]);
+    const update = setConfig.mock.calls[0][0] as (prev: PipelineConfig) => PipelineConfig;
+    expect(update(config).promptComposition?.disabled).toEqual(['translation:role']);
+  });
 });

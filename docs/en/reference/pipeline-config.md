@@ -97,7 +97,16 @@ opens that tab, and their heading stays the default. Glossary rules are a
 system prompt instead and are edited here. Prompts are always read and edited
 in a monospaced font. Role, rules and frames of Translation and Refine are shared:
 editing them once applies to both. Changed texts are saved with the pipeline
-and carried to new pipelines created by copy. DeepL shows the request body.
+and carried to new pipelines created by copy.
+
+Optional pieces can be **switched off per phase** with the switch on their
+card: role, structural rules, glossary rules, Markdown rules, examples,
+neighbouring chunks, glossary table, review method, result request. A switched
+off piece stays in the list as a grey “switched off in this phase” line with
+the switch to turn it back on; the choice is saved with the pipeline and also
+applies when running. The Translation context, phase prompt, user message and
+response format are always on. Switching neighbouring chunks off also drops the
+chunk identifier, which only serves to find the chunk among them. DeepL shows the request body.
 
 Prompts can be saved as reusable templates, organised by context: while
 editing, the bookmark saves the prompt under a name and the book opens the

@@ -55,7 +55,7 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
     if (!stage && !isReview) return;
 
     const requestId = ++requestIdRef.current;
-    setPreview(null);
+    // L'anteprima precedente resta visibile finché arriva la nuova.
     setError(null);
     setIsDeeplStage(false);
 

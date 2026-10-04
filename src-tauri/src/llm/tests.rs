@@ -416,6 +416,24 @@ fn markdown_aware_stage_prompt_preserves_syntax() {
     assert!(prompt.user.contains("Text with note[^1]."));
 }
 
+#[test]
+fn switched_off_parts_are_left_out_only_in_their_phase() {
+    let mut config = make_config();
+    config.prompt_composition.disabled = vec!["refine:structural-rules".into(), "audit:review-method".into()];
+    let translation = make_stage("openai");
+    let mut refine = make_stage("openai");
+    refine.role = Some("refine".into());
+
+    let translation_system = build_stage_prompts("Hello", &translation, &config, None, None).flatten_system();
+    let refine_system = build_stage_prompts("Hello", &refine, &config, Some("Ciao"), None).flatten_system();
+    let judge_system = build_judge_prompts("Hello", "Ciao", &config).flatten_system();
+
+    assert!(translation_system.contains("Structural Preservation Rules"));
+    assert!(!refine_system.contains("Structural Preservation Rules"));
+    assert!(!judge_system.contains("Scanning protocol"));
+    assert!(judge_system.contains("You MUST respond"));
+}
+
 // ── build_judge_prompts ──────────────────────────────────────────
 
 #[test]

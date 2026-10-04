@@ -104,7 +104,17 @@ apre quella scheda, e la loro intestazione resta quella predefinita. Le regole
 del glossario sono invece un prompt di sistema e si modificano qui. I prompt si
 leggono e si modificano sempre in carattere a spaziatura fissa. Ruolo, regole e cornici di Traduzione e Refine
 sono in comune: modificarli una volta vale per entrambe. I testi cambiati si
-salvano con la pipeline e passano alle pipeline nuove create per copia. DeepL
+salvano con la pipeline e passano alle pipeline nuove create per copia.
+
+I pezzi facoltativi si possono **spegnere fase per fase** con l’interruttore
+nella loro carta: ruolo, regole strutturali, regole del glossario, regole
+Markdown, esempi, frammenti vicini, tabella del glossario, metodo di controllo,
+consegna del risultato. Un pezzo spento resta nell’elenco come riga grigia
+«spento in questa fase», con l’interruttore per riaccenderlo; la scelta si salva
+con la pipeline e vale anche nell’esecuzione. Restano sempre accesi il Contesto
+di traduzione, il prompt della fase, il messaggio utente e il formato della
+risposta. Spegnendo i frammenti vicini sparisce anche l’identificativo del
+frammento, che serve solo a riconoscerlo fra quelli. DeepL
 mostra il corpo della richiesta.
 
 I prompt possono essere salvati come modelli riutilizzabili, separati per
